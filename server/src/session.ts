@@ -57,6 +57,7 @@ export class AgentSession {
   private setStatus(text: string) {
     this.state.status = text;
     this.emit({ type: 'status', text });
+    this.pushEvent({ id: randomUUID(), kind: 'status', text, at: Date.now() });
   }
 
   private setSession(patch: Partial<SessionInfo>) {

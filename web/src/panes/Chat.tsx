@@ -78,6 +78,7 @@ function Event({ e }: { e: ChatEvent }) {
     case 'assistant':
       return <div className={`msg assistant ${e.streaming ? 'streaming' : ''}`}><pre className="wrap">{e.text}</pre></div>;
     case 'tool_use':
+      if (e.name === 'mcp__agentview__set_status') return null;
       return (
         <details className="msg tool">
           <summary className="mono">{e.summary}</summary>
@@ -90,5 +91,7 @@ function Event({ e }: { e: ChatEvent }) {
       return <div className="msg result muted small">turn done · ${e.costUsd.toFixed(3)}</div>;
     case 'system':
       return <div className="msg system muted small">{e.text}</div>;
+    case 'status':
+      return <div className="msg system muted small">● {e.text}</div>;
   }
 }

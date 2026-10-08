@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { send, useStore } from '../store';
+import { Summary } from './Summary';
 import type { PendingPermission, PendingQuestion } from '../../../shared/protocol';
 
 export function NowPane() {
@@ -7,7 +8,6 @@ export function NowPane() {
   const session = useStore((s) => s.session);
   const pending = useStore((s) => s.pending);
   const events = useStore((s) => s.events);
-  const summaries = useMemo(() => events.filter((e) => e.kind === 'result').slice(-5).reverse(), [events]);
   const lastTool = useMemo(() => [...events].reverse().find((e) => e.kind === 'tool_use'), [events]);
 
   return (
@@ -26,26 +26,9 @@ export function NowPane() {
       {pending.length > 0 && <div className="section-title">Needs you</div>}
       {pending.map((p) => (p.kind === 'question' ? <Question key={p.id} q={p} /> : <Permission key={p.id} p={p} />))}
 
-      {summaries.length > 0 && (
-        <div className="summaries">
-          <div className="section-title">Recent turns</div>
-          {summaries.map((s) =>
-            s.kind === 'result' ? (
-              <details key={s.id} className="summary">
-                <summary>{firstLine(s.text)}</summary>
-                <pre className="wrap">{s.text}</pre>
-              </details>
-            ) : null,
-          )}
-        </div>
-      )}
+      <Summary />
     </div>
   );
-}
-
-function firstLine(t: string) {
-  const l = t.trim().split('\n')[0] ?? '';
-  return l.length > 140 ? l.slice(0, 140) + '…' : l || '(empty)';
 }
 
 function Question({ q }: { q: PendingQuestion }) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { connect, send, setUi, useStore } from './store';
 import { NowPane } from './panes/NowPane';
 import { Chat } from './panes/Chat';
@@ -31,6 +31,28 @@ export function App() {
   const [view, setView] = useState<'agent' | 'explorer'>('agent');
   const [chat, setChat] = useState(true);
   const [pick, setPick] = useState<'model' | 'mode' | null>(null);
+  const [panelH, setPanelH] = useState(() => Number(localStorage.getItem('agentview.panelH')) || 240);
+  const main = useRef<HTMLDivElement>(null);
+
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    document.body.classList.add('resizing');
+    const move = (ev: PointerEvent) => {
+      const r = main.current!.getBoundingClientRect();
+      setPanelH(Math.round(Math.min(Math.max(r.bottom - ev.clientY, 100), r.height - 120)));
+    };
+    const up = () => {
+      document.body.classList.remove('resizing');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  useEffect(() => {
+    try { localStorage.setItem('agentview.panelH', String(panelH)); } catch {}
+  }, [panelH]);
 
   useEffect(() => {
     connect();
@@ -42,6 +64,10 @@ export function App() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
         setSidebar((v) => !v);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setChat((v) => !v);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -76,7 +102,7 @@ export function App() {
           </button>
           <button className={editor === 'browser' ? 'active' : ''} title="Browser" onClick={() => setEditor('browser')}><Icon name="globe" /></button>
           <span className="spacer" />
-          <button className={chat ? 'active' : ''} title="Chat" onClick={() => setChat((v) => !v)}><Icon name="chat" /></button>
+          <button className={chat ? 'active' : ''} title="Chat panel (⌘J)" onClick={() => setChat((v) => !v)}><Icon name="chat" /></button>
         </aside>
 
         <section className="sidebar pane now">
@@ -84,27 +110,35 @@ export function App() {
           {view === 'agent' ? <NowPane /> : <Explorer />}
         </section>
 
-        <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
-          {mobileExplorer && <div className="mobile-only mobile-explorer-host"><Explorer /></div>}
-          <div className="tabs">
-            {openFile && (
-              <button className={`tab ${editor === 'file' ? 'active' : ''}`} onClick={() => setEditor('file')} title={openFile}>
-                <Icon name="file" small /> {fileName}
-                <span className="close" onClick={(e) => { e.stopPropagation(); setUi({ openFile: null }); setEditor('browser'); }}>×</span>
+        <div className="main" ref={main} style={{ '--panel-h': `${panelH}px` } as React.CSSProperties}>
+          <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
+            {mobileExplorer && <div className="mobile-only mobile-explorer-host"><Explorer /></div>}
+            <div className="tabs">
+              {openFile && (
+                <button className={`tab ${editor === 'file' ? 'active' : ''}`} onClick={() => setEditor('file')} title={openFile}>
+                  <Icon name="file" small /> {fileName}
+                  <span className="close" onClick={(e) => { e.stopPropagation(); setUi({ openFile: null }); setEditor('browser'); }}>×</span>
+                </button>
+              )}
+              <button className={`tab ${editor === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')}>
+                <Icon name="globe" small /> Browsers
               </button>
-            )}
-            <button className={`tab ${editor === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')}>
-              <Icon name="globe" small /> Browser
-            </button>
-          </div>
-          <div className={`editor ${editor === 'file' ? 'shown' : ''}`}><CodePane /></div>
-          <div className={`editor browser ${editor === 'browser' ? 'shown' : ''}`}><BrowserPane /></div>
-        </section>
+            </div>
+            <div className={`editor ${editor === 'file' ? 'shown' : ''}`}><CodePane /></div>
+            <div className={`editor browser ${editor === 'browser' ? 'shown' : ''}`}><BrowserPane /></div>
+          </section>
 
-        <section className="auxbar pane chat">
-          <div className="sidebar-title">Chat</div>
-          <Chat />
-        </section>
+          <div className="sash desktop-only" onPointerDown={startResize} />
+
+          <section className="panel pane chat">
+            <div className="panel-title desktop-only">
+              <span className="panel-tab">Chat</span>
+              <span className="spacer" />
+              <button className="ghost" title="Hide panel (⌘J)" onClick={() => setChat(false)}>×</button>
+            </div>
+            <Chat />
+          </section>
+        </div>
       </div>
 
       <footer className="statusbar desktop-only">

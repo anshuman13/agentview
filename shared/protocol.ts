@@ -26,7 +26,8 @@ export type ChatEvent =
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number }
   | { id: string; kind: 'result'; text: string; costUsd: number; isError: boolean; at: number }
-  | { id: string; kind: 'system'; text: string; at: number };
+  | { id: string; kind: 'system'; text: string; at: number }
+  | { id: string; kind: 'status'; text: string; at: number };
 
 export type SessionInfo = {
   sessionId: string | null;
