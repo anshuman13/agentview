@@ -44,7 +44,10 @@ export function send(m: ClientMessage) {
 function handle(m: ServerMessage) {
   switch (m.type) {
     case 'init':
-      set({ ...m.state });
+      set((s) => ({ ...m.state, ui: s.session.cwd && s.session.cwd !== m.state.session.cwd ? { ...s.ui, openFile: null } : s.ui }));
+      break;
+    case 'error':
+      set((s) => ({ events: [...s.events, { id: crypto.randomUUID(), kind: 'system', text: m.text, at: Date.now() }] }));
       break;
     case 'event':
       set((s) => {

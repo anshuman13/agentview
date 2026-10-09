@@ -6,6 +6,7 @@ import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Explorer } from './panes/Explorer';
+import { Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { QuickPick } from './QuickPick';
 import { PERMISSION_MODES } from '../../shared/protocol';
@@ -28,7 +29,7 @@ export function App() {
   const [tab, setTab] = useState<Tab>('now');
   const [editor, setEditor] = useState<'file' | 'browser'>('browser');
   const [sidebar, setSidebar] = useState(true);
-  const [view, setView] = useState<'agent' | 'explorer'>('agent');
+  const [view, setView] = useState<'agent' | 'explorer' | 'sessions'>('agent');
   const [chat, setChat] = useState(true);
   const [pick, setPick] = useState<'model' | 'mode' | null>(null);
   const [panelH, setPanelH] = useState(() => Number(localStorage.getItem('agentview.panelH')) || 240);
@@ -100,14 +101,17 @@ export function App() {
           <button className={sidebar && view === 'explorer' ? 'active' : ''} title="Explorer (⌘P for quick open)" onClick={() => { if (view === 'explorer') setSidebar((v) => !v); else { setView('explorer'); setSidebar(true); } }}>
             <Icon name="files" />
           </button>
+          <button className={sidebar && view === 'sessions' ? 'active' : ''} title="Sessions" onClick={() => { if (view === 'sessions') setSidebar((v) => !v); else { setView('sessions'); setSidebar(true); } }}>
+            <Icon name="history" />
+          </button>
           <button className={editor === 'browser' ? 'active' : ''} title="Browser" onClick={() => setEditor('browser')}><Icon name="globe" /></button>
           <span className="spacer" />
           <button className={chat ? 'active' : ''} title="Chat panel (⌘J)" onClick={() => setChat((v) => !v)}><Icon name="chat" /></button>
         </aside>
 
         <section className="sidebar pane now">
-          <div className="sidebar-title">{view === 'agent' ? 'Agent' : 'Explorer'}</div>
-          {view === 'agent' ? <NowPane /> : <Explorer />}
+          <div className="sidebar-title">{view === 'agent' ? 'Agent' : view === 'explorer' ? 'Explorer' : 'Sessions'}</div>
+          {view === 'agent' ? <NowPane /> : view === 'explorer' ? <Explorer /> : <Sessions />}
         </section>
 
         <div className="main" ref={main} style={{ '--panel-h': `${panelH}px` } as React.CSSProperties}>
@@ -121,7 +125,7 @@ export function App() {
                 </button>
               )}
               <button className={`tab ${editor === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')}>
-                <Icon name="globe" small /> Browsers
+                <Icon name="globe" small /> Browser
               </button>
             </div>
             <div className={`editor ${editor === 'file' ? 'shown' : ''}`}><CodePane /></div>
@@ -145,16 +149,16 @@ export function App() {
         <span className={`item ${session.running ? 'busy' : ''}`}>
           <Icon name={session.running ? 'sync' : 'check'} small /> {session.running ? 'Working' : 'Idle'}
         </span>
-        <span className="item">{status}</span>
+        {!['Idle', 'Working', 'Connecting'].includes(status) && <span className="item">{status}</span>}
         <span className="spacer" />
         <span className="item clickable" title="Switch model" onClick={() => setPick('model')}>
-          {session.models.find((m) => m.value === (session.model ?? 'default'))?.displayName ?? session.model ?? 'default model'}
+          Model: {session.models.find((m) => m.value === (session.model ?? 'default'))?.displayName ?? session.model ?? 'default'}
         </span>
         <span className="item clickable" title="Permission mode" onClick={() => setPick('mode')}>
-          {session.permissionMode ?? 'default'}
+          Mode: {session.permissionMode ?? 'default'}
         </span>
         {session.apiKeySource && <span className="item">{session.apiKeySource === 'none' ? 'claude.ai login' : session.apiKeySource}</span>}
-        <span className={`item ${connected ? '' : 'error'}`}>{connected ? 'Connected' : 'Disconnected'}</span>
+        {!connected && <span className="item error">Disconnected</span>}
       </footer>
 
       <nav className="tabbar mobile-only">

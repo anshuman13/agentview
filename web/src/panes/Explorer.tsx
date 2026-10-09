@@ -38,7 +38,7 @@ export function Explorer() {
 
   useEffect(() => {
     fetch('/api/files').then((r) => r.json()).then(setFiles);
-  }, [recent.length]);
+  }, [recent.length, cwd]);
 
   useEffect(() => {
     if (!openFile) return;

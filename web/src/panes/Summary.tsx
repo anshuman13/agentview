@@ -70,16 +70,17 @@ export function Summary() {
   }
 
   const commands = turns.reduce((n, t) => n + t.commands.length, 0);
+  const totals = [
+    plural(turns.length, 'turn'),
+    plural(commands, 'command'),
+    plural(files.length, 'file'),
+    totalCost > 0 && `$${totalCost.toFixed(2)}${subscription ? ' API equiv.' : ''}`,
+  ].filter(Boolean).join(' · ');
 
   return (
     <div className="summary-pane">
       <div className="section-title">Done so far</div>
-      <div className="stats">
-        <Stat n={turns.length} label="turns" />
-        <Stat n={files.length} label="files" />
-        <Stat n={commands} label="commands" />
-        <Stat n={`$${totalCost.toFixed(2)}`} label={subscription ? 'API equiv.' : 'est. cost'} />
-      </div>
+      <div className="muted small">{totals}</div>
 
       {files.length > 0 && (
         <div className="changed">
@@ -95,51 +96,41 @@ export function Summary() {
       )}
 
       <div className="timeline">
-        {[...turns].reverse().map((t, i) => (
-          <details key={t.id} className={`turn ${t.end ? '' : running ? 'live' : ''}`} open={i === 0}>
-            <summary>
-              <span className="prompt">{firstLine(t.prompt)}</span>
-              <span className="muted small when">{time(t.start)}</span>
-            </summary>
-            <div className="turn-body">
-              {t.steps.length > 0 && (
-                <ul className="steps">
+        {[...turns].reverse().map((t, i) => {
+          const live = !t.end && running && i === 0;
+          const facts = [
+            t.edits.length && plural(t.edits.length, 'file') + ' edited',
+            t.commands.length && plural(t.commands.length, 'command'),
+            t.errors && plural(t.errors, 'error'),
+            t.end && t.end > t.start && duration(t.end - t.start),
+            t.cost > 0 && `$${t.cost.toFixed(3)}`,
+          ].filter(Boolean).join(' · ');
+          return (
+            <div key={t.id} className={`turn ${live ? 'live' : ''}`} onClick={() => scrollToEvent(t.id)} title={t.prompt}>
+              <div className="turn-head">
+                <span className="prompt">{firstLine(t.prompt)}</span>
+                <span className="muted small when">{time(t.start)}</span>
+              </div>
+              {(facts || live) && <div className="muted small">{facts || 'Working…'}</div>}
+              {live && t.steps.length > 0 && (
+                <ul className="steps small">
                   {t.steps.map((s, j) => <li key={j}>{s}</li>)}
                 </ul>
               )}
-              <div className="muted small facts">
-                {[
-                  t.edits.length && `${t.edits.length} file${t.edits.length > 1 ? 's' : ''} edited`,
-                  t.commands.length && `${t.commands.length} command${t.commands.length > 1 ? 's' : ''}`,
-                  t.reads && `${t.reads} lookups`,
-                  t.errors && `${t.errors} errors`,
-                  t.end && duration(t.end - t.start),
-                  t.end && `$${t.cost.toFixed(3)}`,
-                ].filter(Boolean).join(' · ') || (t.end ? 'No tools used' : 'Working…')}
-              </div>
-              {t.edits.length > 0 && (
-                <div className="edits">
-                  {t.edits.map((f) => (
-                    <button key={f} className="link mono small" onClick={() => setUi({ openFile: f, follow: false })}>{f}</button>
-                  ))}
-                </div>
-              )}
-              {t.result && <pre className="wrap result-text">{t.result}</pre>}
             </div>
-          </details>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function Stat({ n, label }: { n: number | string; label: string }) {
-  return (
-    <div className="stat">
-      <div className="n">{n}</div>
-      <div className="muted small">{label}</div>
-    </div>
-  );
+function scrollToEvent(id: string) {
+  document.querySelector(`[data-event="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+function plural(n: number, word: string) {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
 
 function firstLine(t: string) {

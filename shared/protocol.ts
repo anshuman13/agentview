@@ -57,7 +57,16 @@ export type ServerMessage =
   | { type: 'pending'; request: PendingRequest }
   | { type: 'resolved'; id: string }
   | { type: 'file_changed'; path: string; source: 'tool' | 'watcher' }
-  | { type: 'session'; session: SessionInfo };
+  | { type: 'session'; session: SessionInfo }
+  | { type: 'error'; text: string };
+
+export type SavedSession = {
+  sessionId: string;
+  title: string;
+  cwd: string;
+  gitBranch: string | null;
+  lastModified: number;
+};
 
 export type ClientMessage =
   | { type: 'prompt'; text: string }
@@ -65,4 +74,6 @@ export type ClientMessage =
   | { type: 'permission'; id: string; allow: boolean; always?: boolean }
   | { type: 'set_model'; model: string }
   | { type: 'set_permission_mode'; mode: string }
-  | { type: 'interrupt' };
+  | { type: 'interrupt' }
+  | { type: 'open_session'; sessionId: string }
+  | { type: 'new_session' };

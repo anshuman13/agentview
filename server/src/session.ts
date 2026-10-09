@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import {
   query,
+  getSessionMessages,
   createSdkMcpServer,
   tool,
   type Query,
@@ -30,9 +31,9 @@ export class AgentSession {
   state: ServerState;
   private listeners = new Set<(m: ServerMessage) => void>();
 
-  constructor(public cwd: string) {
+  constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { sessionId: null, model: null, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [] },
+      session: { sessionId: resume ?? null, model: null, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [] },
       status: 'Idle',
       events: [],
       pending: [],
@@ -74,7 +75,53 @@ export class AgentSession {
     this.noteFile(rel, 'watcher');
   }
 
+  close() {
+    this.closed = true;
+    this.listeners.clear();
+    for (const resolve of this.resolvers.values()) resolve({ behavior: 'deny', message: 'Session closed' });
+    this.wake?.();
+    this.q?.close();
+  }
+
+  async loadHistory() {
+    if (!this.resume) return;
+    const msgs = await getSessionMessages(this.resume, { dir: this.cwd });
+    let lastText = '';
+    let lastAt = 0;
+    let inTurn = false;
+    const endTurn = () => {
+      if (inTurn) this.state.events.push({ id: randomUUID(), kind: 'result', text: lastText, costUsd: 0, isError: false, at: lastAt });
+      inTurn = false;
+    };
+    for (const m of msgs) {
+      if (m.parent_tool_use_id) continue;
+      const at = Date.parse((m as { timestamp?: string }).timestamp ?? '') || 0;
+      const content = (m.message as { content?: unknown })?.content;
+      const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
+      for (const b of blocks) {
+        if (m.type === 'user' && b.type === 'text' && b.text.startsWith('[Request interrupted')) {
+          this.state.events.push({ id: randomUUID(), kind: 'system', text: 'Interrupted', at });
+        } else if (m.type === 'user' && b.type === 'text' && !b.text.trimStart().startsWith('<')) {
+          endTurn();
+          inTurn = true;
+          this.state.events.push({ id: randomUUID(), kind: 'user', text: b.text, at });
+        } else if (m.type === 'user' && b.type === 'tool_result') {
+          this.state.events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: toolResultText(b).slice(0, 4000), isError: Boolean(b.is_error), at });
+        } else if (m.type === 'assistant' && b.type === 'text') {
+          lastText = b.text;
+          this.state.events.push({ id: randomUUID(), kind: 'assistant', text: b.text, streaming: false, at });
+        } else if (m.type === 'assistant' && b.type === 'tool_use') {
+          const input = (b.input ?? {}) as Record<string, unknown>;
+          this.state.events.push({ id: b.id, kind: 'tool_use', name: b.name, input, summary: summarizeTool(b.name, input), at });
+        }
+      }
+      if (at) lastAt = at;
+    }
+    endTurn();
+  }
+
   start() {
+    if (this.q || this.closed) return;
     const statusServer = createSdkMcpServer({
       name: 'agentview',
       alwaysLoad: true,
@@ -97,6 +144,7 @@ export class AgentSession {
       prompt: this.inputStream(),
       options: {
         cwd: this.cwd,
+        resume: this.resume,
         settingSources: ['user', 'project', 'local'],
         includePartialMessages: true,
         allowedTools: ['mcp__agentview__set_status'],
@@ -125,12 +173,14 @@ export class AgentSession {
   }
 
   async setModel(model: string) {
+    this.start();
     await this.q?.setModel(model);
     this.setSession({ model });
     this.pushEvent({ id: randomUUID(), kind: 'system', text: `Model set to ${model}`, at: Date.now() });
   }
 
   async setPermissionMode(mode: string) {
+    this.start();
     await this.q?.setPermissionMode(mode as PermissionMode);
     this.setSession({ permissionMode: mode });
     this.pushEvent({ id: randomUUID(), kind: 'system', text: `Permission mode: ${mode}`, at: Date.now() });
@@ -148,6 +198,7 @@ export class AgentSession {
   }
 
   sendPrompt(text: string) {
+    this.start();
     this.pushEvent({ id: randomUUID(), kind: 'user', text, at: Date.now() });
     this.setSession({ running: true });
     this.inputQueue.push({
@@ -225,6 +276,7 @@ export class AgentSession {
   }
 
   private liveText = new Map<string, string>();
+  private liveMsgId = '';
 
   private async consume() {
     if (!this.q) return;
@@ -253,8 +305,9 @@ export class AgentSession {
       case 'stream_event': {
         if (msg.parent_tool_use_id) return;
         const ev = msg.event;
+        if (ev.type === 'message_start') this.liveMsgId = ev.message.id;
         if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
-          const key = `${msg.session_id}:${ev.index}`;
+          const key = `${this.liveMsgId}:${ev.index}`;
           const prev = this.liveText.get(key) ?? '';
           const text = prev + ev.delta.text;
           this.liveText.set(key, text);
@@ -267,7 +320,7 @@ export class AgentSession {
           }
         }
         if (ev.type === 'content_block_stop') {
-          const key = `${msg.session_id}:${ev.index}`;
+          const key = `${this.liveMsgId}:${ev.index}`;
           const existing = this.state.events.find((e) => e.id === key);
           if (existing && existing.kind === 'assistant') {
             existing.streaming = false;
@@ -305,10 +358,7 @@ export class AgentSession {
         if (!Array.isArray(content)) return;
         for (const block of content) {
           if (block.type === 'tool_result') {
-            const text =
-              typeof block.content === 'string'
-                ? block.content
-                : (block.content ?? []).map((c: any) => (c.type === 'text' ? c.text : '')).join('\n');
+            const text = toolResultText(block);
             this.pushEvent({
               id: randomUUID(),
               kind: 'tool_result',
@@ -340,6 +390,11 @@ export class AgentSession {
         return;
     }
   }
+}
+
+function toolResultText(block: { content?: unknown }): string {
+  if (typeof block.content === 'string') return block.content;
+  return ((block.content as any[]) ?? []).map((c) => (c.type === 'text' ? c.text : '')).join('\n');
 }
 
 function summarizeTool(name: string, input: Record<string, unknown>): string {

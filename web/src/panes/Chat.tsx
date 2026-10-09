@@ -74,7 +74,7 @@ export function Chat() {
 function Event({ e }: { e: ChatEvent }) {
   switch (e.kind) {
     case 'user':
-      return <div className="msg user"><pre className="wrap">{e.text}</pre></div>;
+      return <div className="msg user" data-event={e.id}><pre className="wrap">{e.text}</pre></div>;
     case 'assistant':
       return <div className={`msg assistant ${e.streaming ? 'streaming' : ''}`}><pre className="wrap">{e.text}</pre></div>;
     case 'tool_use':
@@ -88,7 +88,7 @@ function Event({ e }: { e: ChatEvent }) {
     case 'tool_result':
       return e.isError ? <pre className="msg tool-error mono small">{e.text}</pre> : null;
     case 'result':
-      return <div className="msg result muted small">turn done · ${e.costUsd.toFixed(3)}</div>;
+      return <div className="msg result muted small">turn done{e.costUsd > 0 ? ` · $${e.costUsd.toFixed(3)}` : ''}</div>;
     case 'system':
       return <div className="msg system muted small">{e.text}</div>;
     case 'status':

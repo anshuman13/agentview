@@ -13,10 +13,10 @@ The agent does the work; the view is for watching, steering and verifying.
 
 ```bash
 npm install
-PROJECT_DIR=/path/to/project npm run dev   # server on :7777, vite on :5180
+PROJECT_DIR=/path/to/project npm run dev   # server on :7777, vite on :5173
 ```
 
-Open http://localhost:5180. The server runs the Claude Code CLI you have installed, with whatever login it has.
+Open http://localhost:5173. The server runs the Claude Code CLI you have installed, with whatever login it has.
 
 Production-ish: `npm run build && node server/dist/server/src/index.js /path/to/project`, then
 `tailscale serve 7777` to reach it from your phone.
