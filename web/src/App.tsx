@@ -52,6 +52,10 @@ export function App() {
   };
 
   useEffect(() => {
+    if (pendingCount > 0) { setChat(true); setTab('chat'); }
+  }, [pendingCount]);
+
+  useEffect(() => {
     try { localStorage.setItem('agentview.panelH', String(panelH)); } catch {}
   }, [panelH]);
 
@@ -96,7 +100,6 @@ export function App() {
         <aside className="activitybar desktop-only">
           <button className={sidebar && view === 'agent' ? 'active' : ''} title="Agent (⌘B)" onClick={() => { if (view === 'agent') setSidebar((v) => !v); else { setView('agent'); setSidebar(true); } }}>
             <Icon name="agent" />
-            {pendingCount > 0 && <span className="badge">{pendingCount}</span>}
           </button>
           <button className={sidebar && view === 'explorer' ? 'active' : ''} title="Explorer (⌘P for quick open)" onClick={() => { if (view === 'explorer') setSidebar((v) => !v); else { setView('explorer'); setSidebar(true); } }}>
             <Icon name="files" />
@@ -106,7 +109,10 @@ export function App() {
           </button>
           <button className={editor === 'browser' ? 'active' : ''} title="Browser" onClick={() => setEditor('browser')}><Icon name="globe" /></button>
           <span className="spacer" />
-          <button className={chat ? 'active' : ''} title="Chat panel (⌘J)" onClick={() => setChat((v) => !v)}><Icon name="chat" /></button>
+          <button className={chat ? 'active' : ''} title="Chat panel (⌘J)" onClick={() => setChat((v) => !v)}>
+            <Icon name="chat" />
+            {pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+          </button>
         </aside>
 
         <section className="sidebar pane now">
@@ -166,7 +172,7 @@ export function App() {
           <button key={t} className={tab === t ? 'active' : ''} onClick={() => { setTab(t); if (t === 'browser') setEditor('browser'); if (t === 'code') setEditor('file'); }}>
             <Icon name={t === 'now' ? 'agent' : t === 'chat' ? 'chat' : t === 'code' ? 'files' : 'globe'} />
             <span>{t === 'now' ? 'Agent' : t[0].toUpperCase() + t.slice(1)}</span>
-            {t === 'now' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+            {t === 'chat' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
           </button>
         ))}
       </nav>
