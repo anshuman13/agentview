@@ -84,8 +84,8 @@ const server = http.createServer(async (req, res) => {
         .flat()
         .filter((a) => a && a.family === 'IPv4' && !a.internal)
         .map((a) => a!.address);
-      const lan = (ip: string) => (ip.startsWith('192.168.') || ip.startsWith('10.') ? 0 : 1);
-      ips.sort((a, b) => lan(a) - lan(b));
+      const rank = (ip: string) => (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(ip) ? 0 : ip.startsWith('192.168.') || ip.startsWith('10.') ? 1 : 2);
+      ips.sort((a, b) => rank(a) - rank(b));
       return json({ hostname: os.hostname(), urls: ips.map((ip) => `http://${ip}:${port}`) });
     }
 

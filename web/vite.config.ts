@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    allowedHosts: ['.netbird.cloud'],
     proxy: {
       '/api': 'http://localhost:7777',
       '/ws': { target: 'ws://localhost:7777', ws: true },
