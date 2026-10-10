@@ -4,8 +4,10 @@
   "workspaces": ["server", "web"],
   "scripts": {
     "dev": "concurrently -n server,web -c blue,green \"npm run dev -w server\" \"npm run dev -w web\"",
+    "serve": "concurrently -n server,web -c blue,green \"npm run serve -w server\" \"npm run dev -w web\"",
     "build": "npm run build -w web && npm run build -w server",
-    "start": "npm run start -w server"
+    "start": "npm run start -w server",
+    "menubar": "mkdir -p dist && swiftc -O menubar/AgentViewBar.swift -o dist/agentview-bar && (nohup ./dist/agentview-bar >/dev/null 2>&1 &)"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

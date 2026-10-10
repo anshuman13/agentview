@@ -2,7 +2,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import { WebSocketServer, WebSocket } from 'ws';
 import chokidar, { type FSWatcher } from 'chokidar';
 import { getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
@@ -17,6 +17,11 @@ const WEB_DIST = path.resolve(here, '../../web/dist');
 
 const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|\.tox)(\/|$)/;
 
+const LAST = path.join(os.homedir(), '.agentview-last.json');
+
+process.on('uncaughtException', (err) => console.error('uncaught:', err));
+process.on('unhandledRejection', (err) => console.error('unhandled:', err));
+
 const clients = new Set<(m: ServerMessage) => void>();
 let session: AgentSession;
 let watcher: FSWatcher | null = null;
@@ -27,7 +32,10 @@ async function openSession(cwd: string, resume?: string) {
   session?.close();
   void watcher?.close();
   session = next;
-  session.onMessage((m) => clients.forEach((c) => c(m)));
+  session.onMessage((m) => {
+    clients.forEach((c) => c(m));
+    if (m.type === 'session' && m.session.sessionId) remember(m.session.sessionId);
+  });
   if (!resume) session.start();
   watcher = chokidar
     .watch(cwd, {
@@ -50,7 +58,16 @@ async function openSavedSession(sessionId: string) {
   await openSession(info.cwd, sessionId);
 }
 
-await openSession(PROJECT);
+let remembered = '';
+function remember(sessionId: string) {
+  if (sessionId === remembered) return;
+  remembered = sessionId;
+  writeFile(LAST, JSON.stringify({ sessionId, cwd: session.cwd })).catch(() => {});
+}
+
+const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
+if (last?.cwd === PROJECT) await openSavedSession(last.sessionId).catch(() => openSession(PROJECT));
+else await openSession(PROJECT);
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
