@@ -1,0 +1,9 @@
+.overlay.connect-overlay { justify-content: flex-end; align-items: flex-end; padding: 0 8px 28px; }
+.switcher.connect { width: 280px; max-height: none; }
+.connect-head { display: flex; align-items: center; height: 32px; padding: 0 4px 0 12px; font-size: 11px; text-transform: uppercase; color: var(--text-strong); }
+.connect-head .spacer { flex: 1; }
+.connect-body { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 12px 8px; }
+.connect-qr { width: 180px; height: 180px; background: #fff; padding: 6px; border-radius: 4px; box-sizing: content-box; }
+.connect-url { user-select: all; font-family: var(--mono); font-size: 12px; color: var(--text-strong); word-break: break-all; text-align: center; }
+.connect-others { list-style: none; margin: 0; padding: 0; text-align: center; font-family: var(--mono); user-select: text; }
+.connect-note { padding: 8px 12px 10px; border-top: 1px solid var(--border); line-height: 1.4; }

@@ -1,0 +1,36 @@
+@media (max-width: 900px) {
+  html, body { overflow: hidden; overscroll-behavior: none; }
+  button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+  .workbench { padding-top: env(safe-area-inset-top); }
+  .body { height: calc(100% - 56px - env(safe-area-inset-bottom)); overflow: hidden; }
+  .tabbar {
+    height: calc(56px + env(safe-area-inset-bottom)); flex: none;
+    padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+  }
+
+  .pane.now { flex-direction: column; min-height: 0; }
+  .now-pane { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 24px; }
+
+  .chat { min-width: 0; }
+  .messages { padding: 12px 12px 16px; overflow-x: hidden; overscroll-behavior: contain; }
+  .messages > * { min-width: 0; }
+  .msg.tool summary { overflow: hidden; }
+  .md { overflow-wrap: anywhere; }
+  .md table { display: block; max-width: 100%; overflow-x: auto; }
+
+  .composer { flex: none; padding: 6px 12px 8px; }
+  .composer textarea { font-size: 16px; max-height: 35vh; }
+  .composer-foot { padding: 4px 6px 6px 8px; min-height: 48px; }
+  .composer-foot .keys { display: none; }
+  .composer-foot button.ghost { min-height: 36px; padding: 0 12px; }
+  button.send { width: 36px; height: 36px; border-radius: 8px; font-size: 16px; }
+  .cmd-popup li { height: 40px; }
+
+  .messages .card { padding: 12px; }
+  .messages .card .row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+  .messages .card button { min-height: 44px; }
+  .messages .card .row button:not(.primary) { border-color: var(--input-border); background: var(--side); }
+  .messages .card .option { justify-content: center; padding: 10px 12px; border-color: var(--input-border); border-radius: 6px; }
+  .messages .card input { min-height: 44px; font-size: 16px; }
+}

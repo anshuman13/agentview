@@ -1,0 +1,63 @@
+.now-pane { padding: 0 0 12px; gap: 0; }
+.now-pane .section-title { height: 22px; padding: 0 12px; }
+.now-pane .status-row { height: 22px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 20px; }
+.now-pane .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+.now-pane .dot.running { background: var(--claude); animation: sidebar-blink 1s linear infinite; }
+@keyframes sidebar-blink { 50% { opacity: 0.25; } }
+.now-pane .status-text { flex: 1; min-width: 0; color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-pane .stop { flex: none; height: 18px; padding: 0 6px; line-height: 16px; font-size: 11px; border: 0; border-radius: 2px; background: transparent; color: var(--muted); }
+.now-pane .stop:hover { background: var(--hover); color: var(--text-strong); }
+.now-pane .status-tool {
+  padding: 0 12px 0 35px; font-family: var(--mono); font-size: 12px; line-height: 18px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.summary-pane { gap: 0; margin-top: 8px; }
+.summary-pane .empty { padding: 2px 12px 0 20px; font-size: 12px; color: var(--muted); }
+.summary-pane .totals { height: 22px; line-height: 22px; padding: 0 12px 0 20px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.summary-pane .group {
+  height: 22px; line-height: 22px; margin-top: 4px; padding: 0 12px 0 20px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted);
+}
+.summary-pane .file-item {
+  width: 100%; min-height: 22px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 28px;
+  background: transparent; border: 0; border-radius: 0; text-align: left; color: var(--text); white-space: nowrap;
+}
+.summary-pane .file-item:hover, .summary-pane .turn-item:hover { background: var(--hover); }
+.summary-pane .file-name { color: #e2c08d; flex: none; }
+.summary-pane .file-dir { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.summary-pane .file-turns { flex: none; font-size: 11px; color: var(--muted); }
+.summary-pane .turn-item { min-height: 22px; padding: 0 12px 0 26px; border-left: 2px solid transparent; cursor: pointer; }
+.summary-pane .turn-item.live { border-left-color: var(--claude); }
+.summary-pane .turn-head { height: 22px; display: flex; align-items: center; gap: 8px; }
+.summary-pane .turn-prompt { flex: 1; min-width: 0; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.summary-pane .turn-when { flex: none; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.summary-pane .turn-facts { margin-top: -3px; padding-bottom: 3px; font-size: 11px; line-height: 15px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.summary-pane .turn-steps { margin: 0; padding: 0 0 4px 14px; font-size: 12px; color: var(--muted); }
+.summary-pane .turn-steps li { margin: 1px 0; }
+
+.sessions .sessions-bar { gap: 4px; padding: 0 12px 6px 8px; align-items: center; }
+.sessions .sessions-bar input {
+  height: 22px; padding: 0 6px; font-size: 13px; line-height: 20px;
+  background: var(--input); border: 1px solid var(--input-border); border-radius: 0;
+}
+.sessions .sessions-bar input:focus { outline: 0; border-color: var(--accent); }
+.sessions .sessions-bar .new {
+  flex: none; height: 22px; padding: 0 6px; line-height: 20px; font-size: 12px; white-space: nowrap;
+  border: 0; border-radius: 2px; background: transparent; color: var(--muted);
+}
+.sessions .sessions-bar .new:hover:not(:disabled) { background: var(--hover); color: var(--text-strong); }
+.sessions .sessions-bar .new:disabled { opacity: 0.5; cursor: default; }
+.sessions .hint { padding: 0 12px 6px 8px; font-size: 11px; color: var(--muted); }
+.sessions .tree .row { flex-wrap: nowrap; padding-left: 8px; }
+.sessions .tree .row.project { font-weight: 600; color: var(--text-strong); }
+.sessions .tree .row.session, .sessions .tree .row.more { padding-left: 24px; }
+.sessions .tree .row.selected { background: var(--active); color: var(--text-strong); }
+.sessions .tree .row .name { flex: 1; min-width: 0; }
+.sessions .tree .row .count, .sessions .tree .row .when {
+  flex: none; margin-left: auto; padding: 0 10px 0 8px; font-size: 11px; font-weight: 400;
+  color: var(--muted); font-variant-numeric: tabular-nums; text-align: right;
+}
+.sessions .tree .row .when { min-width: 44px; }
+.sessions .tree .row.more { font-size: 12px; color: var(--muted); }
+.sessions .tree .row.more:hover { color: var(--text); text-decoration: underline; }

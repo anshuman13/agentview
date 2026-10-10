@@ -10,16 +10,17 @@ export function NowPane() {
 
   return (
     <div className="now-pane">
-      <div className={`status-card ${session.running ? 'running' : ''}`}>
-        <div className="section-title">Status</div>
-        <div className="status-text">{status}</div>
-        {session.running && lastTool && lastTool.kind === 'tool_use' && (
-          <div className="muted mono">{lastTool.summary}</div>
-        )}
+      <div className="section-title">Status</div>
+      <div className="status-row">
+        <span className={`dot ${session.running ? 'running' : ''}`} />
+        <span className="status-text">{status}</span>
         {session.running && (
-          <button className="ghost" onClick={() => send({ type: 'interrupt' })}>Stop</button>
+          <button className="ghost stop" onClick={() => send({ type: 'interrupt' })}>Stop</button>
         )}
       </div>
+      {session.running && lastTool && lastTool.kind === 'tool_use' && (
+        <div className="status-tool" title={lastTool.summary}>{lastTool.summary}</div>
+      )}
 
       <Summary />
     </div>

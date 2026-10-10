@@ -25,6 +25,21 @@ function set(patch: Partial<State> | ((s: State) => Partial<State>)) {
   state = { ...state, ...p };
   for (const l of listeners) l();
 }
+
+listeners.add(() => {
+  const n = state.pending.length;
+  const title = n > 0 ? `(${n}) AgentView` : 'AgentView';
+  if (document.title !== title) document.title = title;
+});
+
+function notify(title: string, body: string) {
+  if (document.visibilityState === 'visible') return;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  try {
+    new Notification(title, { body });
+  } catch {}
+}
+
 export function setUi(patch: Partial<UiState>) {
   set((s) => ({ ui: { ...s.ui, ...patch } }));
 }
@@ -50,6 +65,9 @@ function handle(m: ServerMessage) {
       set((s) => ({ events: [...s.events, { id: crypto.randomUUID(), kind: 'system', text: m.text, at: Date.now() }] }));
       break;
     case 'event':
+      if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {
+        notify('Claude finished', m.event.text.trim().split('\n')[0]);
+      }
       set((s) => {
         const i = s.events.findIndex((e) => e.id === m.event.id);
         const events = i >= 0 ? s.events.map((e, j) => (j === i ? m.event : e)) : [...s.events, m.event];
@@ -60,6 +78,10 @@ function handle(m: ServerMessage) {
       set({ status: m.text });
       break;
     case 'pending':
+      if (!state.pending.some((p) => p.id === m.request.id)) {
+        notify('Claude needs you', m.request.kind === 'question' ? m.request.questions[0]?.question ?? '' : m.request.title);
+        if (document.visibilityState !== 'visible') navigator.vibrate?.(200);
+      }
       set((s) => ({ pending: [...s.pending.filter((p) => p.id !== m.request.id), m.request] }));
       break;
     case 'resolved':

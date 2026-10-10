@@ -25,6 +25,8 @@ export function Chat() {
     return commands.filter((c) => c.name.toLowerCase().startsWith(needle)).slice(0, 12);
   }, [text, commands]);
   const bottom = useRef<HTMLDivElement>(null);
+  const [, rerender] = useState(0);
+  const canNotify = 'Notification' in window && Notification.permission === 'default';
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: 'end' });
@@ -77,7 +79,12 @@ export function Chat() {
           }}
         />
         <div className="composer-foot">
-          <span className="muted small">⏎ send · ⇧⏎ new line · / commands</span>
+          <span className="muted small keys">⏎ send · ⇧⏎ new line · / commands</span>
+          {canNotify && (
+            <button className="ghost small" onClick={() => Promise.resolve(Notification.requestPermission()).catch(() => {}).finally(() => rerender((n) => n + 1))}>
+              Enable notifications
+            </button>
+          )}
           <span className="spacer" />
           {running && <button className="ghost small" onClick={() => send({ type: 'interrupt' })}>Stop</button>}
           <button className="send" title="Send" disabled={!text.trim()} onClick={submit}>↑</button>

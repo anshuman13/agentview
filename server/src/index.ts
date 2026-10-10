@@ -1,4 +1,5 @@
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile, stat } from 'node:fs/promises';
@@ -77,6 +78,16 @@ const server = http.createServer(async (req, res) => {
       return json(list.map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
     }
     if (url.pathname === '/api/state') return json(session.state);
+    if (url.pathname === '/api/connect') {
+      const port = url.searchParams.get('port') || (req.headers.host?.match(/:(\d+)$/)?.[1] ?? String(PORT));
+      const ips = Object.values(os.networkInterfaces())
+        .flat()
+        .filter((a) => a && a.family === 'IPv4' && !a.internal)
+        .map((a) => a!.address);
+      const lan = (ip: string) => (ip.startsWith('192.168.') || ip.startsWith('10.') ? 0 : 1);
+      ips.sort((a, b) => lan(a) - lan(b));
+      return json({ hostname: os.hostname(), urls: ips.map((ip) => `http://${ip}:${port}`) });
+    }
 
     let file = path.join(WEB_DIST, url.pathname === '/' ? 'index.html' : url.pathname);
     const exists = await stat(file).then((s) => s.isFile()).catch(() => false);

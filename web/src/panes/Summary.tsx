@@ -64,7 +64,7 @@ export function Summary() {
     return (
       <div className="summary-pane">
         <div className="section-title">Done so far</div>
-        <div className="muted small">Nothing yet. Send Claude a task from the chat panel.</div>
+        <div className="empty">Nothing yet. Send Claude a task from the chat panel.</div>
       </div>
     );
   }
@@ -80,47 +80,46 @@ export function Summary() {
   return (
     <div className="summary-pane">
       <div className="section-title">Done so far</div>
-      <div className="muted small">{totals}</div>
+      <div className="totals">{totals}</div>
 
       {files.length > 0 && (
-        <div className="changed">
-          <div className="label">Files changed</div>
+        <>
+          <div className="group">Files changed</div>
           {files.map(([f, n]) => (
-            <button key={f} className="file-row" title={f} onClick={() => setUi({ openFile: f, follow: false })}>
-              <span className="name">{f.split('/').pop()}</span>
-              <span className="muted small dir">{f.includes('/') ? f.slice(0, f.lastIndexOf('/')) : ''}</span>
-              {n > 1 && <span className="muted small">{n} turns</span>}
+            <button key={f} className="file-item" title={f} onClick={() => setUi({ openFile: f, follow: false })}>
+              <span className="file-name">{f.split('/').pop()}</span>
+              <span className="file-dir">{f.includes('/') ? f.slice(0, f.lastIndexOf('/')) : ''}</span>
+              {n > 1 && <span className="file-turns">{n} turns</span>}
             </button>
           ))}
-        </div>
+        </>
       )}
 
-      <div className="timeline">
-        {[...turns].reverse().map((t, i) => {
-          const live = !t.end && running && i === 0;
-          const facts = [
-            t.edits.length && plural(t.edits.length, 'file') + ' edited',
-            t.commands.length && plural(t.commands.length, 'command'),
-            t.errors && plural(t.errors, 'error'),
-            t.end && t.end > t.start && duration(t.end - t.start),
-            t.cost > 0 && `$${t.cost.toFixed(3)}`,
-          ].filter(Boolean).join(' · ');
-          return (
-            <div key={t.id} className={`turn ${live ? 'live' : ''}`} onClick={() => scrollToEvent(t.id)} title={t.prompt}>
-              <div className="turn-head">
-                <span className="prompt">{firstLine(t.prompt)}</span>
-                <span className="muted small when">{time(t.start)}</span>
-              </div>
-              {(facts || live) && <div className="muted small">{facts || 'Working…'}</div>}
-              {live && t.steps.length > 0 && (
-                <ul className="steps small">
-                  {t.steps.map((s, j) => <li key={j}>{s}</li>)}
-                </ul>
-              )}
+      <div className="group">Turns</div>
+      {[...turns].reverse().map((t, i) => {
+        const live = !t.end && running && i === 0;
+        const facts = [
+          t.edits.length && plural(t.edits.length, 'file') + ' edited',
+          t.commands.length && plural(t.commands.length, 'command'),
+          t.errors && plural(t.errors, 'error'),
+          t.end && t.end > t.start && duration(t.end - t.start),
+          t.cost > 0 && `$${t.cost.toFixed(3)}`,
+        ].filter(Boolean).join(' · ');
+        return (
+          <div key={t.id} className={`turn-item ${live ? 'live' : ''}`} onClick={() => scrollToEvent(t.id)} title={t.prompt}>
+            <div className="turn-head">
+              <span className="turn-prompt">{firstLine(t.prompt)}</span>
+              <span className="turn-when">{time(t.start)}</span>
             </div>
-          );
-        })}
-      </div>
+            {(facts || live) && <div className="turn-facts">{facts || 'Working…'}</div>}
+            {live && t.steps.length > 0 && (
+              <ul className="turn-steps">
+                {t.steps.map((s, j) => <li key={j}>{s}</li>)}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -52,16 +52,16 @@ export function Sessions() {
     <div className="sessions">
       <div className="sessions-bar">
         <input placeholder="Filter sessions" value={filter} onChange={(e) => setFilter(e.target.value)} />
-        <button title="New session in this project" disabled={running} onClick={() => send({ type: 'new_session' })}>+ New</button>
+        <button className="ghost new" title="New session in this project" disabled={running} onClick={() => send({ type: 'new_session' })}>+ New</button>
       </div>
-      {running && <div className="muted small hint">Stop or wait for the current turn before switching.</div>}
+      {running && <div className="hint">Stop or wait for the current turn before switching.</div>}
       <div className="tree">
         {groups.map(([dir, items]) => (
           <div key={dir}>
             <div className="row project" title={dir} onClick={() => flip(setToggled, dir)}>
               <span className="twistie">{isOpen(dir) ? '▾' : '▸'}</span>
               <span className="name">{dir.split('/').pop() || 'Unknown folder'}</span>
-              <span className="m muted">{items.length}</span>
+              <span className="count">{items.length}</span>
             </div>
             {isOpen(dir) &&
               (full.has(dir) || filter ? items : items.slice(0, PAGE)).map((s) => (
@@ -72,11 +72,11 @@ export function Sessions() {
                   onClick={() => open(s.sessionId)}
                 >
                   <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
-                  <span className="when muted small">{ago(s.lastModified)}</span>
+                  <span className="when">{ago(s.lastModified)}</span>
                 </div>
               ))}
             {isOpen(dir) && !filter && items.length > PAGE && (
-              <div className="row session more muted" onClick={() => flip(setFull, dir)}>
+              <div className="row more" onClick={() => flip(setFull, dir)}>
                 {full.has(dir) ? 'Show less' : `Show ${items.length - PAGE} more`}
               </div>
             )}

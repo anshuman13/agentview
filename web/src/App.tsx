@@ -9,6 +9,7 @@ import { Explorer } from './panes/Explorer';
 import { Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { QuickPick } from './QuickPick';
+import { ConnectPopover } from './ConnectPopover';
 import { PERMISSION_MODES } from '../../shared/protocol';
 
 type Tab = 'now' | 'chat' | 'code' | 'browser';
@@ -32,6 +33,7 @@ export function App() {
   const [view, setView] = useState<'agent' | 'explorer' | 'sessions'>('agent');
   const [chat, setChat] = useState(true);
   const [pick, setPick] = useState<'model' | 'mode' | null>(null);
+  const [phone, setPhone] = useState(false);
   const [panelH, setPanelH] = useState(() => Number(localStorage.getItem('agentview.panelH')) || 240);
   const main = useRef<HTMLDivElement>(null);
 
@@ -82,10 +84,6 @@ export function App() {
   useEffect(() => {
     if (openFile) setEditor('file');
   }, [openFile]);
-
-  useEffect(() => {
-    if (pendingCount > 0 && window.matchMedia('(max-width: 900px)').matches) setTab('now');
-  }, [pendingCount]);
 
   const fileName = openFile ? openFile.split('/').pop() : null;
   const mobileExplorer = tab === 'code' && !openFile;
@@ -157,6 +155,7 @@ export function App() {
         </span>
         {!['Idle', 'Working', 'Connecting'].includes(status) && <span className="item">{status}</span>}
         <span className="spacer" />
+        <span className="item clickable" title="Open on phone" onClick={() => setPhone((v) => !v)}>Open on phone</span>
         <span className="item clickable" title="Switch model" onClick={() => setPick('model')}>
           Model: {session.models.find((m) => m.value === (session.model ?? 'default'))?.displayName ?? session.model ?? 'default'}
         </span>
@@ -178,6 +177,7 @@ export function App() {
       </nav>
 
       <FileSwitcher />
+      {phone && <ConnectPopover onClose={() => setPhone(false)} />}
       {pick === 'model' && (
         <QuickPick
           title="Select model"
