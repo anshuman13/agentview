@@ -7,6 +7,7 @@ type UiState = {
   follow: boolean;
   switcherOpen: boolean;
   repoPicker: boolean;
+  center: 'brief' | 'chat';
 };
 
 export type State = ServerState & { live: LiveChat[]; ui: UiState };
@@ -18,7 +19,7 @@ let state: State = {
   pending: [],
   recentFiles: [],
   live: [],
-  ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false },
+  ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false, center: 'brief' },
 };
 
 const listeners = new Set<() => void>();
@@ -40,6 +41,10 @@ function notify(title: string, body: string) {
   try {
     new Notification(title, { body });
   } catch {}
+}
+
+export function notice(text: string) {
+  set((s) => ({ events: [...s.events, { id: crypto.randomUUID(), kind: 'system', text, at: Date.now() }] }));
 }
 
 export function setUi(patch: Partial<UiState>) {
@@ -77,7 +82,7 @@ function handle(m: ServerMessage) {
       set((s) => ({ ...m.state, ui: s.session.cwd && s.session.cwd !== m.state.session.cwd ? { ...s.ui, openFile: null } : s.ui }));
       break;
     case 'error':
-      set((s) => ({ events: [...s.events, { id: crypto.randomUUID(), kind: 'system', text: m.text, at: Date.now() }] }));
+      notice(m.text);
       break;
     case 'event':
       if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {

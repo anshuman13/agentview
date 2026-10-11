@@ -231,6 +231,9 @@ wss.on('connection', (ws: WebSocket) => {
       case 'prompt':
         chat.sendPrompt(msg.text);
         break;
+      case 'steer':
+        void chat.steer(msg.text);
+        break;
       case 'answer':
         chat.answerQuestion(msg.id, msg.answers);
         break;

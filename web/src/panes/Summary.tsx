@@ -60,14 +60,7 @@ export function Summary() {
     return [...m.entries()];
   }, [turns]);
 
-  if (turns.length === 0) {
-    return (
-      <div className="summary-pane">
-        <div className="section-title">Done so far</div>
-        <div className="empty">Nothing yet. Send Claude a task from the chat.</div>
-      </div>
-    );
-  }
+  if (turns.length === 0) return null;
 
   const commands = turns.reduce((n, t) => n + t.commands.length, 0);
   const totals = [
@@ -79,8 +72,7 @@ export function Summary() {
 
   return (
     <div className="summary-pane">
-      <div className="section-title">Done so far</div>
-      <div className="totals">{totals}</div>
+      <div className="label">Done so far <span className="count">{totals}</span></div>
 
       {files.length > 0 && (
         <>
@@ -125,7 +117,8 @@ export function Summary() {
 }
 
 function scrollToEvent(id: string) {
-  document.querySelector(`[data-event="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  setUi({ center: 'chat' });
+  setTimeout(() => document.querySelector(`[data-event="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start' }), 50);
 }
 
 function plural(n: number, word: string) {

@@ -145,7 +145,7 @@ function escapeHtml(t: string) {
   return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function Markdown({ text }: { text: string }) {
+export function Markdown({ text }: { text: string }) {
   const html = useMemo(() => md.parse(text, { async: false }) as string, [text]);
   return <div className="md" dangerouslySetInnerHTML={{ __html: html }} />;
 }

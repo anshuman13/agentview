@@ -129,13 +129,21 @@ export class AgentSession {
     const statusServer = createSdkMcpServer({
       name: 'agentview',
       alwaysLoad: true,
-      instructions:
-        'Call set_status when you begin a multi-step task, whenever your plan changes, and when you finish. Keep it to one short sentence about what you are doing right now.',
+      instructions: [
+        'The user follows your work in a brief view instead of reading the whole chat.',
+        'Call set_status when you begin a task, whenever you move to a new step or your plan changes, and when you finish. Keep text to one short sentence about what you are doing right now.',
+        'Pass next as the remaining steps after the current one, a few words each, in order. Send the full list every time, and an empty list when nothing is left.',
+        'Pass important only for something the user must know without reading the chat: a decision you made on their behalf, a risk, a blocker, or something surprising you found. One or two sentences. Leave it out otherwise.',
+      ].join(' '),
       tools: [
         tool(
           'set_status',
-          'Update the one-line status shown to the user about what you are doing right now.',
-          { text: z.string().max(200) },
+          'Update the one-line status shown to the user about what you are doing right now, and optionally flag something important for them.',
+          {
+            text: z.string().max(200),
+            next: z.array(z.string().max(120)).max(12).optional().describe('Remaining steps after the current one, in order. Empty when done.'),
+            important: z.string().max(500).optional().describe('A decision, risk, blocker or surprise the user must know about. Omit when there is none.'),
+          },
           async ({ text }) => {
             this.setStatus(text);
             return { content: [{ type: 'text', text: 'ok' }] };
@@ -201,9 +209,12 @@ export class AgentSession {
     }
   }
 
+  private turns = 0;
+
   sendPrompt(text: string) {
     this.start();
     this.pushEvent({ id: randomUUID(), kind: 'user', text, at: Date.now() });
+    this.turns++;
     this.setSession({ running: true });
     this.inputQueue.push({
       type: 'user',
@@ -215,6 +226,16 @@ export class AgentSession {
 
   async interrupt() {
     await this.q?.interrupt();
+  }
+
+  async steer(text: string) {
+    if (this.state.session.running) await this.q?.interrupt().catch(() => {});
+    this.sendPrompt(text);
+  }
+
+  private turnEnded() {
+    this.turns = Math.max(0, this.turns - 1);
+    this.setSession({ running: this.turns > 0 });
   }
 
   private async canUseTool(
@@ -289,6 +310,7 @@ export class AgentSession {
     } catch (err) {
       this.pushEvent({ id: randomUUID(), kind: 'system', text: `Session error: ${String(err)}`, at: Date.now() });
     } finally {
+      this.turns = 0;
       this.setSession({ running: false });
     }
   }
@@ -302,7 +324,7 @@ export class AgentSession {
           if (this.state.session.commands.length === 0) void this.loadMeta();
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
-          this.setSession({ running: false });
+          this.turnEnded();
         }
         return;
 
@@ -387,7 +409,7 @@ export class AgentSession {
           isError: msg.is_error,
           at: Date.now(),
         });
-        this.setSession({ running: false });
+        this.turnEnded();
         return;
       }
 

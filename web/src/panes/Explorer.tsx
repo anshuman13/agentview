@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { api, setUi, useStore } from '../store';
+import { FolderPicker, findHere, useWorkspace } from './Sessions';
 import { Icon } from '../Icon';
 
 type Node = { name: string; path: string; children?: Map<string, Node> };
@@ -35,6 +36,8 @@ export function Explorer() {
   const cwd = useStore((s) => s.session.cwd);
   const id = useStore((s) => s.session.id);
   const [files, setFiles] = useState<string[]>([]);
+  const [picking, setPicking] = useState(false);
+  const here = findHere(useWorkspace(cwd).folders, cwd);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -85,7 +88,13 @@ export function Explorer() {
 
   return (
     <div className="explorer">
-      <div className="section-title">{cwd ? cwd.split('/').pop() : 'Files'}</div>
+      <button className="folder-switch" title={`${cwd}\nSwitch worktree or chat`} onClick={() => setPicking(true)}>
+        <Icon name={here.tree ? 'git-branch' : 'repo'} small />
+        <span className="folder-name">{here.folder?.name ?? (cwd ? cwd.split('/').pop() : 'Files')}</span>
+        <span className="folder-branch">{here.label}</span>
+        <Icon name="chevron-down" small />
+      </button>
+      {picking && <FolderPicker onClose={() => setPicking(false)} />}
       <div className="tree">{rows}</div>
     </div>
   );

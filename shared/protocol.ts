@@ -109,6 +109,7 @@ export type Worktree = {
 
 export type ClientMessage =
   | { type: 'prompt'; text: string }
+  | { type: 'steer'; text: string }
   | { type: 'answer'; id: string; answers: Record<string, string> }
   | { type: 'permission'; id: string; allow: boolean; always?: boolean }
   | { type: 'set_model'; model: string }

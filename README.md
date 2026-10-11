@@ -3,12 +3,18 @@
 A VS Code style view for working with Claude Code, built on the Agent SDK instead of the terminal.
 The agent does the work; the view is for watching, steering and verifying.
 
-- Agent: one-line status Claude sets itself, what it is doing now, a summary of each turn
-- Chat: the conversation with tool calls collapsed, questions and permission prompts as buttons, model and permission mode menus
-- Explorer and Code: read-only file tree and viewer that follow Claude's edits and show the diff against HEAD (⌘P to open any file)
-- Browser: iframe preview of your app
+- Brief (main view): what Claude is doing now, its next steps, important notes it flags for you, questions and
+  permission prompts, its last reply and the files it changed. The box at the bottom steers Claude: while it works,
+  sending stops the current step and Claude continues with your message
+- Chat: the full conversation with tool calls collapsed, model and permission mode menus
+- Explorer: file tree of the current folder; its header switches between worktrees and open chats
+- Side panel: read-only file viewer that follows Claude's edits and shows the diff against HEAD (⌘P to open any file),
+  and a browser preview opened from the globe in the activity bar
 - Workspace: every repo in your workspace folders, their chats and Paseo worktrees, and the chats that are open right now
 - Phone: same client with a tab bar, reachable over your local network or NetBird
+
+Claude fills the Brief through a `set_status` tool AgentView adds to every session (current step, next steps,
+important notes).
 
 ## Run
 
@@ -46,4 +52,3 @@ colon-separated list of folders to change that. Chats can only be started inside
 | ⌘O | Start a chat in a repo |
 | ⌘P | Open a file |
 | ⌘B | Toggle the sidebar |
-| ⌘J | Toggle the chat |

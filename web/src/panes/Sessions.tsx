@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { send, setUi, useStore } from '../store';
+import { notice, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
@@ -7,9 +7,9 @@ import { STALE_MS, type LiveChat, type Repo, type SavedSession, type Worktree } 
 
 const PAGE = 10;
 
-type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
+export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
 
-const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
+export const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
 const get = (url: string) => fetch(url).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : [])).catch(() => []);
 
 function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSession[]) {
@@ -33,7 +33,7 @@ function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSession[]) {
 
 const cached = { repos: [] as Repo[], trees: [] as Worktree[], chats: [] as SavedSession[] };
 
-function useWorkspace(key: unknown) {
+export function useWorkspace(key: unknown) {
   const [repos, setRepos] = useState(cached.repos);
   const [trees, setTrees] = useState(cached.trees);
   const [chats, setChats] = useState(cached.chats);
@@ -44,6 +44,57 @@ function useWorkspace(key: unknown) {
   }, [key]);
   const folders = useMemo(() => buildFolders(repos, trees, chats), [repos, trees, chats]);
   return { folders, setTrees, setChats };
+}
+
+export function worktreeRequest(d: Folder, track: (branch: string | null, error?: string) => void): ConfirmRequest {
+  return {
+    title: `New ${d.name} worktree`,
+    detail: `Paseo branches off the default branch and runs the repo's setup. A chat opens in the new folder.`,
+    action: 'Create',
+    icon: 'git-branch-create',
+    input: { value: d.repo?.branch.includes('/') ? `${d.repo.branch.split('/')[0]}/` : '', placeholder: 'Branch name' },
+    run: async (branch) => {
+      track(branch);
+      const r = await fetch('/api/worktrees', { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) });
+      const body = await r.json().catch(() => null);
+      if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
+      track(null, r.ok && body?.cwd ? undefined : body?.error ?? 'Could not create the worktree');
+    },
+  };
+}
+
+export function findHere(folders: Folder[], cwd: string) {
+  const folder = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)));
+  const tree = folder?.trees.find((w) => inside(cwd, w.cwd));
+  return { folder, tree, label: tree ? tree.name : folder?.repo?.branch ?? '' };
+}
+
+export function FolderPicker({ onClose }: { onClose: () => void }) {
+  const cwd = useStore((s) => s.session.cwd);
+  const viewing = useStore((s) => s.session.id);
+  const live = useStore((s) => s.live);
+  const { folders } = useWorkspace(null);
+  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
+  const { folder } = findHere(folders, cwd);
+  if (ask) return <Confirm {...ask} onClose={onClose} />;
+
+  const state = (c?: LiveChat) => (!c ? 'no chat' : c.pending ? 'needs you' : c.running ? 'working' : 'open chat');
+  const dirs = folder ? [{ cwd: folder.cwd, label: folder.name, kind: folder.repo?.branch ?? '' }, ...folder.trees.map((w) => ({ cwd: w.cwd, label: w.name.split('/').pop()!, kind: 'worktree' }))] : [];
+  const items = [
+    ...dirs.map((d) => {
+      const c = live.find((x) => x.cwd === d.cwd);
+      return { value: c ? `live:${c.id}` : `dir:${d.cwd}`, label: d.label, detail: [d.kind, state(c)].filter(Boolean).join(' · ') };
+    }),
+    ...live.filter((c) => !dirs.some((d) => d.cwd === c.cwd)).map((c) => ({ value: `live:${c.id}`, label: c.cwd.split('/').pop()!, detail: `${c.title} · ${state(c)}` })),
+    ...(folder?.repo?.paseo ? [{ value: 'new', label: 'New worktree…', detail: `branch off ${folder.name}` }] : []),
+  ];
+  const pick = (v: string) => {
+    if (v === 'new' && folder) return setAsk(worktreeRequest(folder, (_, err) => err && notice(err)));
+    if (v.startsWith('live:')) send({ type: 'view', id: v.slice(5) });
+    if (v.startsWith('dir:')) send({ type: 'new_session', cwd: v.slice(4) });
+    onClose();
+  };
+  return <QuickPick title="Switch worktree or chat" items={items} current={`live:${viewing}`} onPick={pick} onClose={onClose} />;
 }
 
 export function RepoPicker() {
@@ -142,22 +193,10 @@ export function Sessions() {
     });
 
   const newTree = (d: Folder) =>
-    setAsk({
-      title: `New ${d.name} worktree`,
-      detail: `Paseo branches off the default branch and runs the repo's setup. A chat opens in the new folder.`,
-      action: 'Create',
-      icon: 'git-branch-create',
-      input: { value: d.repo?.branch.includes('/') ? `${d.repo.branch.split('/')[0]}/` : '', placeholder: 'Branch name' },
-      run: async (branch) => {
-        setError(null);
-        setCreating({ repo: d.cwd, branch });
-        const r = await fetch('/api/worktrees', { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) });
-        const body = await r.json().catch(() => null);
-        setCreating(null);
-        if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
-        else setError(body?.error ?? 'Could not create the worktree');
-      },
-    });
+    setAsk(worktreeRequest(d, (branch, err) => {
+      setError(err ?? null);
+      setCreating(branch ? { repo: d.cwd, branch } : null);
+    }));
 
   const flip = (set: (f: (prev: Set<string>) => Set<string>) => void, key: string) =>
     set((prev) => {

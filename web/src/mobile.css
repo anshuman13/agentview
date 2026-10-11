@@ -9,8 +9,11 @@
     padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
   }
 
-  .pane.now { flex-direction: column; min-height: 0; }
-  .now-pane { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 24px; }
+  .pane.side, .pane.center { flex-direction: column; min-height: 0; }
+  .brief-scroll { padding: 14px 14px 20px; overscroll-behavior: contain; }
+  .steer { padding: 6px 12px 8px; }
+  .steer textarea { font-size: 16px; }
+  .folder-switch { height: 40px; }
 
   .chat { min-width: 0; }
   .messages { padding: 12px 12px 16px; overflow-x: hidden; overscroll-behavior: contain; }
