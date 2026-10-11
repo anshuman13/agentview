@@ -31,6 +31,8 @@ Use `npm run dev` when working on the server itself.
 
 `npm run menubar` builds and starts a menu bar app that keeps the Mac awake while you are away.
 
+`npm test` runs the unit tests (Vitest).
+
 To serve the built client from the server: `npm run build && node server/dist/server/src/index.js /path/to/project`.
 
 ## Workspace

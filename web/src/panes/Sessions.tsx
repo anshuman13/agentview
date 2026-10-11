@@ -12,7 +12,7 @@ export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]
 export const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
 const get = (url: string) => fetch(url).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : [])).catch(() => []);
 
-function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSession[]) {
+export function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSession[]) {
   const m = new Map<string, Folder>();
   const folder = (cwd: string, repo?: Repo) => {
     let f = m.get(cwd);

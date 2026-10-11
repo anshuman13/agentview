@@ -7,9 +7,11 @@
     "serve": "concurrently -n server,web -c blue,green \"npm run serve -w server\" \"npm run dev -w web\"",
     "build": "npm run build -w web && npm run build -w server",
     "start": "npm run start -w server",
-    "menubar": "mkdir -p dist && swiftc -O menubar/AgentViewBar.swift -o dist/agentview-bar && (nohup ./dist/agentview-bar >/dev/null 2>&1 &)"
+    "menubar": "mkdir -p dist && swiftc -O menubar/AgentViewBar.swift -o dist/agentview-bar && (nohup ./dist/agentview-bar >/dev/null 2>&1 &)",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "vitest": "^3.2.7"
   }
 }

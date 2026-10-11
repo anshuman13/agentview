@@ -18,7 +18,7 @@ type Turn = {
   cost: number;
 };
 
-function buildTurns(events: ChatEvent[], cwd: string) {
+export function buildTurns(events: ChatEvent[], cwd: string) {
   const turns: Turn[] = [];
   let prevCost = 0;
   for (const e of events) {

@@ -16,6 +16,8 @@ const PASEO_TREES = path.join(home, '.paseo/worktrees');
 
 export const allowedFolder = (dir: string) => [...ROOTS, PASEO_TREES].some((r) => inside(dir, r) && dir !== r);
 
+export const parseBranch = (head: string) => head.replace(/^## (No commits yet on )?/, '').split('...')[0];
+
 export async function listRepos(): Promise<Repo[]> {
   const paseo = (await paseoProjects().catch(() => [])).map((p) => p.path);
   const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(root, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory()).map((d) => path.join(root, d.name))));
@@ -24,7 +26,7 @@ export async function listRepos(): Promise<Repo[]> {
       const status = await git(cwd, 'status', '--porcelain', '-b').catch(() => null);
       if (status === null) return null;
       const [head, ...files] = status.split('\n');
-      const branch = head.replace(/^## (No commits yet on )?/, '').split('...')[0];
+      const branch = parseBranch(head);
       const lastCommit = Number(await git(cwd, 'log', '-1', '--format=%ct').catch(() => '0')) * 1000;
       return { name: path.basename(cwd), root: path.basename(path.dirname(cwd)), cwd, branch, dirty: files.filter(Boolean).length, lastCommit, paseo: paseo.includes(cwd) };
     }),

@@ -6,7 +6,7 @@ import { Summary } from './Summary';
 import { Markdown } from './Chat';
 import type { ChatEvent } from '../../../shared/protocol';
 
-function buildBrief(events: ChatEvent[]) {
+export function buildBrief(events: ChatEvent[]) {
   const notes: { id: string; text: string; at: number }[] = [];
   let next: string[] = [];
   for (const e of events) {
