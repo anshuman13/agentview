@@ -22,7 +22,7 @@ export function Chat() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
   const model = useStore((s) => s.session.model);
   const models = useStore((s) => s.session.models);
-  const [pick, setPick] = useState<'model' | 'mode' | null>(null);
+  const [pick, setPick] = useState<{ kind: 'model' | 'mode'; at: DOMRect } | null>(null);
   const results = useMemo(() => {
     const m = new Map<string, ToolResult>();
     for (const e of events) if (e.kind === 'tool_result') m.set(e.toolUseId, e);
@@ -96,10 +96,10 @@ export function Chat() {
           }}
         />
         <div className="composer-foot">
-          <button className="pill" title={`${MODES[mode]?.detail ?? mode} (Shift+Tab to switch)`} onClick={() => setPick('mode')}>
+          <button className="pill" title={`${MODES[mode]?.detail ?? mode} (Shift+Tab to switch)`} onClick={(e) => setPick({ kind: 'mode', at: e.currentTarget.getBoundingClientRect() })}>
             <Icon name={MODES[mode]?.icon ?? 'shield'} small /> {MODES[mode]?.label ?? mode}
           </button>
-          <button className="pill" title="Switch model" onClick={() => setPick('model')}>
+          <button className="pill" title="Switch model" onClick={(e) => setPick({ kind: 'model', at: e.currentTarget.getBoundingClientRect() })}>
             <Icon name="sparkle" small /> {modelName}
           </button>
           <span className="spacer" />
@@ -107,8 +107,9 @@ export function Chat() {
           <button className="send" title="Send (Enter)" disabled={!text.trim()} onClick={submit}><Icon name="arrow-up" /></button>
         </div>
       </div>
-      {pick === 'model' && (
+      {pick?.kind === 'model' && (
         <QuickPick
+          anchor={pick.at}
           title="Select model"
           current={model}
           items={models.map((m) => ({ value: m.value, label: m.displayName, detail: m.description }))}
@@ -116,8 +117,9 @@ export function Chat() {
           onClose={() => setPick(null)}
         />
       )}
-      {pick === 'mode' && (
+      {pick?.kind === 'mode' && (
         <QuickPick
+          anchor={pick.at}
           title="Permission mode"
           current={mode}
           items={PERMISSION_MODES.map((m) => ({ value: m, label: MODES[m]?.label ?? m, detail: MODES[m]?.detail }))}

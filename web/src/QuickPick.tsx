@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 
 export type PickItem = { value: string; label: string; detail?: string };
 
-export function QuickPick({ title, items, current, onPick, onClose }: {
+export function QuickPick({ title, items, current, anchor, onPick, onClose }: {
   title: string;
+  anchor?: DOMRect;
   items: PickItem[];
   current?: string | null;
   onPick: (value: string) => void;
@@ -16,8 +17,12 @@ export function QuickPick({ title, items, current, onPick, onClose }: {
   const results = items.filter((i) => (i.label + ' ' + (i.detail ?? '')).toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="switcher" onClick={(e) => e.stopPropagation()}>
+    <div className={`overlay ${anchor ? 'anchored' : ''}`} onClick={onClose}>
+      <div
+        className="switcher"
+        style={anchor && { left: Math.max(8, Math.min(anchor.left, window.innerWidth - 348)), bottom: window.innerHeight - anchor.top + 6 }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <input
           ref={input}
           value={q}

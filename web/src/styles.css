@@ -274,10 +274,16 @@ button.send:disabled { opacity: 0.35; cursor: default; }
   border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 .switcher input { margin: 6px; width: auto; }
+.overlay.anchored .switcher { position: fixed; width: min(340px, calc(100vw - 16px)); }
+.overlay.anchored .switcher ul { padding: 4px; }
+.overlay.anchored .switcher li { height: 30px; padding: 0 8px; gap: 10px; border-radius: 4px; }
+.overlay.anchored .switcher li .detail { margin-left: 0; }
+.overlay.anchored .switcher li > span:first-child { min-width: 124px; }
 .switcher ul { list-style: none; margin: 0; padding: 0 0 4px; overflow: auto; }
 .switcher li { padding: 2px 12px; height: 22px; display: flex; gap: 8px; align-items: center; cursor: pointer; font-size: 13px; }
 .switcher li:hover { background: var(--hover); }
 .switcher li.active { background: var(--active); color: var(--text-strong); }
+.switcher li > span:first-child { white-space: nowrap; flex: none; }
 .switcher li .mono { font-family: inherit; font-size: 13px; }
 .switcher .tag { font-size: 10px; color: var(--yellow); margin-left: auto; }
 
