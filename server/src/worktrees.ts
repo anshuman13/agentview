@@ -17,6 +17,7 @@ const PASEO_TREES = path.join(home, '.paseo/worktrees');
 export const allowedFolder = (dir: string) => [...ROOTS, PASEO_TREES].some((r) => inside(dir, r) && dir !== r);
 
 export async function listRepos(): Promise<Repo[]> {
+  const paseo = (await paseoProjects().catch(() => [])).map((p) => p.path);
   const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(root, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory()).map((d) => path.join(root, d.name))));
   const repos = await Promise.all(
     dirs.flat().map(async (cwd) => {
@@ -25,7 +26,7 @@ export async function listRepos(): Promise<Repo[]> {
       const [head, ...files] = status.split('\n');
       const branch = head.replace(/^## (No commits yet on )?/, '').split('...')[0];
       const lastCommit = Number(await git(cwd, 'log', '-1', '--format=%ct').catch(() => '0')) * 1000;
-      return { name: path.basename(cwd), root: path.basename(path.dirname(cwd)), cwd, branch, dirty: files.filter(Boolean).length, lastCommit };
+      return { name: path.basename(cwd), root: path.basename(path.dirname(cwd)), cwd, branch, dirty: files.filter(Boolean).length, lastCommit, paseo: paseo.includes(cwd) };
     }),
   );
   return repos.filter((r) => r !== null);
@@ -59,4 +60,20 @@ export async function removeWorktree(id: string, openCwds: string[]) {
 export async function paseoProjects() {
   const { stdout } = await run('paseo', ['project', 'ls', '--json']);
   return JSON.parse(stdout) as Array<{ projectId: string; name: string; path: string }>;
+}
+
+export async function createWorktree(repo: string, branch: string) {
+  if (!(await paseoProjects()).some((p) => p.path === repo)) throw new Error('This repo is not a Paseo project');
+  if (branch.startsWith('-')) throw new Error('Invalid branch name');
+  await git(repo, 'check-ref-format', '--branch', branch).catch(() => { throw new Error(`Invalid branch name: ${branch}`); });
+  const base = (await git(repo, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD').catch(() => 'origin/main')).replace(/^origin\//, '');
+  const { stdout } = await run('paseo', ['workspace', 'create', '--isolation', 'worktree', '--path', repo, '--mode', 'branch-off', '--new-branch', branch, '--base', base, '--json'], { timeout: 300_000 });
+  const out = JSON.parse(stdout);
+  const cwd: string | undefined = out.cwd ?? out.workspace?.cwd;
+  if (cwd) return cwd;
+  const id = out.workspaceId ?? out.workspace?.workspaceId;
+  const spaces = JSON.parse((await run('paseo', ['workspace', 'ls', '--json'])).stdout) as Array<{ workspaceId: string; cwd: string }>;
+  const made = spaces.find((w) => w.workspaceId === id);
+  if (!made) throw new Error('Paseo created the worktree but did not report its folder');
+  return made.cwd;
 }

@@ -93,6 +93,7 @@ export type Repo = {
   branch: string;
   dirty: number;
   lastCommit: number;
+  paseo: boolean;
 };
 
 export type Worktree = {

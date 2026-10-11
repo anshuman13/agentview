@@ -79,6 +79,7 @@ export function Sessions() {
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState<{ repo: string; branch: string } | null>(null);
 
   useEffect(() => {
     if (lastEvent?.kind === 'system') setOpening(null);
@@ -140,6 +141,24 @@ export function Sessions() {
       },
     });
 
+  const newTree = (d: Folder) =>
+    setAsk({
+      title: `New ${d.name} worktree`,
+      detail: `Paseo branches off the default branch and runs the repo's setup. A chat opens in the new folder.`,
+      action: 'Create',
+      icon: 'git-branch-create',
+      input: { value: d.repo?.branch.includes('/') ? `${d.repo.branch.split('/')[0]}/` : '', placeholder: 'Branch name' },
+      run: async (branch) => {
+        setError(null);
+        setCreating({ repo: d.cwd, branch });
+        const r = await fetch('/api/worktrees', { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) });
+        const body = await r.json().catch(() => null);
+        setCreating(null);
+        if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
+        else setError(body?.error ?? 'Could not create the worktree');
+      },
+    });
+
   const flip = (set: (f: (prev: Set<string>) => Set<string>) => void, key: string) =>
     set((prev) => {
       const next = new Set(prev);
@@ -173,9 +192,19 @@ export function Sessions() {
               {d.repo?.dirty ? <span className="dirty" title={`${d.repo.dirty} uncommitted`}>M</span> : null}
               <span className="count">{d.chats.length || ''}</span>
               <span className="acts">
+                {d.repo?.paseo && (
+                  <button className="icon-btn" title="New worktree" disabled={Boolean(creating)} onClick={(e) => { e.stopPropagation(); newTree(d); }}><Icon name="git-branch-create" small /></button>
+                )}
                 <button className="icon-btn" title={`New chat in ${d.name}`} onClick={(e) => { e.stopPropagation(); start(d.cwd); }}><Icon name="add" small /></button>
               </span>
             </div>
+            {creating?.repo === d.cwd && (
+              <div className="row session worktree removing" title={creating.branch}>
+                <Icon name="git-branch" small />
+                <span className="name">Creating {creating.branch}…</span>
+                <span className="busy"><Icon name="loading" small spin /></span>
+              </div>
+            )}
             {isOpen(d) && d.trees.map((w) => (
               <div
                 key={w.id}

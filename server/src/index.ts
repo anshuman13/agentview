@@ -8,7 +8,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { listFiles, readFileWithOriginal } from './files.js';
-import { allowedFolder, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
+import { allowedFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
@@ -105,6 +105,12 @@ function watchFiles(cwd: string, onChange: (rel: string) => void) {
   }).on('error', (err) => console.error(`watcher: ${String(err)}`));
 }
 
+async function readBody(req: http.IncomingMessage) {
+  let body = '';
+  for await (const chunk of req) body += chunk;
+  return body;
+}
+
 const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
 
 async function openSaved(sessionId: string) {
@@ -170,6 +176,10 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/worktrees' && req.method === 'DELETE') {
       await removeWorktree(url.searchParams.get('id') ?? '', liveCwds);
       return json({ ok: true });
+    }
+    if (url.pathname === '/api/worktrees' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req));
+      return json({ cwd: await createWorktree(String(body.repo ?? ''), String(body.branch ?? '').trim()) });
     }
     if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
     if (url.pathname === '/api/repos') return json(await listRepos());
