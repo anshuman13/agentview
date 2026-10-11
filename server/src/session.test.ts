@@ -110,3 +110,18 @@ describe('Team mode', () => {
     expect(q.setPermissionMode).not.toHaveBeenCalled();
   });
 });
+
+describe('changed files', () => {
+  const run = (isError: boolean) => {
+    const s = new AgentSession('/repo');
+    const handle = (m: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(m);
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'e1', name: 'Write', input: { file_path: '/repo/README.md' } }] } });
+    handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'e1', content: isError ? 'denied' : 'ok', is_error: isError }] } });
+    return s.state.recentFiles;
+  };
+
+  it('marks a file only after the edit succeeds', () => {
+    expect(run(false)).toEqual(['README.md']);
+    expect(run(true)).toEqual([]);
+  });
+});

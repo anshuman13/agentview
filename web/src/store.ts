@@ -7,7 +7,6 @@ type UiState = {
   follow: boolean;
   switcherOpen: boolean;
   repoPicker: boolean;
-  center: 'brief' | 'chat';
 };
 
 export type State = ServerState & { live: LiveChat[]; ui: UiState };
@@ -19,7 +18,7 @@ let state: State = {
   pending: [],
   recentFiles: [],
   live: [],
-  ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false, center: 'brief' },
+  ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false },
 };
 
 const listeners = new Set<() => void>();

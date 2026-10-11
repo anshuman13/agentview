@@ -10,7 +10,7 @@ import { RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
 
-type Tab = 'now' | 'chat' | 'code' | 'browser' | 'repos';
+type Tab = 'chat' | 'code' | 'browser' | 'repos';
 type View = 'explorer' | 'sessions';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
@@ -19,7 +19,6 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
 ];
 
 const TABS: { id: Tab; icon: string; label: string }[] = [
-  { id: 'now', icon: 'sparkle', label: 'Brief' },
   { id: 'chat', icon: 'comment-discussion', label: 'Chat' },
   { id: 'code', icon: 'files', label: 'Files' },
   { id: 'browser', icon: 'globe', label: 'Browser' },
@@ -59,10 +58,9 @@ export function App() {
   const elsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length);
   const openFile = useStore((s) => s.ui.openFile);
   const repoPicker = useStore((s) => s.ui.repoPicker);
-  const center = useStore((s) => s.ui.center);
   const session = useStore((s) => s.session);
   const status = useStore((s) => s.status);
-  const [tab, setTab] = useState<Tab>('now');
+  const [tab, setTab] = useState<Tab>('chat');
   const [editor, setEditor] = useState<'file' | 'browser'>('file');
   const [browser, setBrowser] = useState(false);
   const [sidebar, setSidebar] = useState(true);
@@ -91,16 +89,13 @@ export function App() {
   };
 
   useEffect(() => {
-    if (pendingCount > 0) setTab((t) => (t === 'chat' ? t : 'now'));
+    if (pendingCount > 0) setTab('chat');
   }, [pendingCount]);
 
   useEffect(() => {
-    setTab((t) => (t === 'repos' ? 'now' : t));
+    setTab((t) => (t === 'repos' ? 'chat' : t));
   }, [session.id]);
 
-  useEffect(() => {
-    setTab((t) => (t === 'now' || t === 'chat' ? (center === 'chat' ? 'chat' : 'now') : t));
-  }, [center]);
 
   useEffect(() => {
     try { localStorage.setItem('agentview.sideW', String(sideW)); } catch {}
@@ -164,16 +159,8 @@ export function App() {
         </section>
 
         <section className="main pane center">
-          <div className="tabs desktop-only">
-            <button className={`tab ${center === 'brief' ? 'active' : ''}`} onClick={() => setUi({ center: 'brief' })}>
-              <Icon name="sparkle" small /> Brief
-            </button>
-            <button className={`tab ${center === 'chat' ? 'active' : ''}`} onClick={() => setUi({ center: 'chat' })}>
-              <Icon name="comment-discussion" small /> Chat
-            </button>
-          </div>
-          <div className={`center-view ${center === 'brief' ? 'shown' : ''}`}><Brief /></div>
-          <div className={`center-view ${center === 'chat' ? 'shown' : ''}`}><Chat /></div>
+          <Brief />
+          <Chat />
         </section>
 
         <div className="sash desktop-only" onPointerDown={startResize} />
@@ -222,10 +209,10 @@ export function App() {
 
       <nav className="tabbar mobile-only">
         {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); if (t.id === 'repos') setView('sessions'); if (t.id === 'now') setUi({ center: 'brief' }); if (t.id === 'chat') setUi({ center: 'chat' }); }}>
+          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); if (t.id === 'repos') setView('sessions'); }}>
             <Icon name={t.icon} />
             <span>{t.label}</span>
-            {t.id === 'now' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+            {t.id === 'chat' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
             {t.id === 'repos' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
           </button>
         ))}

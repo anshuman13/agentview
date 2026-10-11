@@ -117,8 +117,7 @@ export function Summary() {
 }
 
 function scrollToEvent(id: string) {
-  setUi({ center: 'chat' });
-  setTimeout(() => document.querySelector(`[data-event="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start' }), 50);
+  document.querySelector(`[data-event="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 function plural(n: number, word: string) {

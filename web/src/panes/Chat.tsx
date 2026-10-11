@@ -48,7 +48,7 @@ export function Chat() {
   const submit = () => {
     const t = text.trim();
     if (!t) return;
-    send({ type: 'prompt', text: t });
+    send({ type: running ? 'steer' : 'prompt', text: t });
     setText('');
   };
 
@@ -73,7 +73,7 @@ export function Chat() {
         <textarea
           value={text}
           rows={1}
-          placeholder={waiting ? 'Answer above, or queue a message' : running ? 'Queue a message' : 'Ask Claude, or type / for commands'}
+          placeholder={waiting ? 'Answer above, or steer Claude' : running ? 'Steer Claude: stops the current step and sends this' : 'Ask Claude, or type / for commands'}
           onChange={(e) => { setText(e.target.value); setCmdIdx(0); }}
           onKeyDown={(e) => {
             if (cmdMatches.length > 0) {
@@ -105,7 +105,7 @@ export function Chat() {
           </button>
           <span className="spacer" />
           {running && <button className="icon-btn stop" title="Stop" onClick={() => send({ type: 'interrupt' })}><Icon name="debug-stop" /></button>}
-          <button className="send" title="Send (Enter)" disabled={!text.trim()} onClick={submit}><Icon name="arrow-up" /></button>
+          <button className={`send ${running ? 'steer' : ''}`} title={running ? 'Steer (Enter)' : 'Send (Enter)'} disabled={!text.trim()} onClick={submit}><Icon name="arrow-up" /></button>
         </div>
       </div>
       {pick?.kind === 'model' && (

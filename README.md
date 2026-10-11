@@ -3,10 +3,11 @@
 A VS Code style view for working with Claude Code, built on the Agent SDK instead of the terminal.
 The agent does the work; the view is for watching, steering and verifying.
 
-- Brief (main view): what Claude is doing now, its next steps, important notes it flags for you, questions and
-  permission prompts, its last reply and the files it changed. The box at the bottom steers Claude: while it works,
-  sending stops the current step and Claude continues with your message
-- Chat: the full conversation with tool calls collapsed, model and permission mode menus
+- Chat (main view): the conversation with tool calls collapsed, questions and permission prompts as buttons, model and
+  permission mode menus. While Claude works, sending a message steers it: the current step stops and Claude continues
+  with your message
+- Brief: a compact bar above the chat with what Claude is doing now, its next steps and the latest important note it
+  flagged; expand it for all notes, changed files and turns
 - Explorer: file tree of the current folder; its header switches between worktrees and open chats
 - Side panel: read-only file viewer that follows Claude's edits and shows the diff against HEAD (⌘P to open any file),
   and a browser preview opened from the globe in the activity bar

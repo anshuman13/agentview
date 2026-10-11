@@ -10,9 +10,7 @@
   }
 
   .pane.side, .pane.center { flex-direction: column; min-height: 0; }
-  .brief-scroll { padding: 14px 14px 20px; overscroll-behavior: contain; }
-  .steer { padding: 6px 12px 8px; }
-  .steer textarea { font-size: 16px; }
+  .brief-bar { padding: 6px 12px; max-height: 40%; }
   .folder-switch { height: 40px; }
 
   .chat { min-width: 0; }

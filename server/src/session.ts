@@ -348,6 +348,7 @@ export class AgentSession {
   }
 
   private liveText = new Map<string, string>();
+  private edits = new Map<string, string>();
   private liveMsgId = '';
 
   private async consume() {
@@ -421,9 +422,7 @@ export class AgentSession {
               summary: summarizeTool(block.name, input),
               at: Date.now(),
             });
-            if (EDIT_TOOLS.has(block.name) && typeof input.file_path === 'string') {
-              this.noteFile(path.relative(this.cwd, input.file_path), 'tool');
-            }
+            if (EDIT_TOOLS.has(block.name) && typeof input.file_path === 'string') this.edits.set(block.id, input.file_path);
           }
         }
         return;
@@ -436,6 +435,9 @@ export class AgentSession {
         for (const block of content) {
           if (block.type === 'tool_result') {
             const text = toolResultText(block);
+            const edited = this.edits.get(block.tool_use_id);
+            this.edits.delete(block.tool_use_id);
+            if (edited && !block.is_error) this.noteFile(path.relative(this.cwd, edited), 'tool');
             this.pushEvent({
               id: randomUUID(),
               kind: 'tool_result',
