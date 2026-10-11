@@ -33,6 +33,7 @@ export type SessionInfo = {
   id: string;
   sessionId: string | null;
   model: string | null;
+  team: boolean;
   cwd: string;
   running: boolean;
   permissionMode: string | null;

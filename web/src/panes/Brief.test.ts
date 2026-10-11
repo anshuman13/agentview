@@ -30,6 +30,15 @@ describe('buildBrief', () => {
     expect(b.lastTool?.kind === 'tool_use' && b.lastTool.name).toBe('Bash');
   });
 
+  it('counts advisor consults and turns Fable answers into notes', () => {
+    const ask: ChatEvent = { id: 'f1', kind: 'tool_use', name: 'Agent', input: { subagent_type: 'big-bro' }, summary: '', at: at() };
+    const answer: ChatEvent = { id: 'f2', kind: 'tool_result', toolUseId: 'f1', text: '[Subagent hand-back] The report follows:\n  Use a lock.\n  Then retry.\nagentId: a1 (use SendMessage)\n<usage>tool_uses: 1</usage>', isError: false, at: at() };
+    const b = buildBrief([user('go'), tool('Advisor'), tool('Advisor'), ask, answer]);
+    expect(b.advisor).toBe(2);
+    expect(b.fable).toBe(1);
+    expect(b.notes[0]).toMatchObject({ text: 'Use a lock.\nThen retry.', fable: true });
+  });
+
   it('shows the last reply only when the turn has ended', () => {
     expect(buildBrief([user('go'), result('done')]).reply).toBe('done');
     expect(buildBrief([user('go'), result('done'), user('again')]).reply).toBeNull();

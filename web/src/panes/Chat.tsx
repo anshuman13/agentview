@@ -22,6 +22,7 @@ export function Chat() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
   const model = useStore((s) => s.session.model);
   const models = useStore((s) => s.session.models);
+  const team = useStore((s) => s.session.team);
   const [pick, setPick] = useState<{ kind: 'model' | 'mode'; at: DOMRect } | null>(null);
   const results = useMemo(() => {
     const m = new Map<string, ToolResult>();
@@ -37,7 +38,7 @@ export function Chat() {
     return commands.filter((c) => c.name.toLowerCase().startsWith(needle)).slice(0, 12);
   }, [text, commands]);
   const bottom = useRef<HTMLDivElement>(null);
-  const modelName = models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
+  const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
   const cycleMode = () => send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] });
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export function Chat() {
         <QuickPick
           anchor={pick.at}
           title="Select model"
-          current={model}
+          current={team ? 'team' : model}
           items={models.map((m) => ({ value: m.value, label: m.displayName, detail: m.description }))}
           onPick={(v) => { send({ type: 'set_model', model: v }); setPick(null); }}
           onClose={() => setPick(null)}

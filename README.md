@@ -35,6 +35,14 @@ Use `npm run dev` when working on the server itself.
 
 To serve the built client from the server: `npm run build && node server/dist/server/src/index.js /path/to/project`.
 
+## Team mode
+
+Pick **Team** in the model menu. Every new task starts in plan mode with Claude Opus 5.5 (Claude Code's `opusplan`).
+When you approve the plan, Claude Sonnet 5.5 builds it and consults Opus through the server-side advisor tool (its
+advice is encrypted, so the Brief only counts the consults). For a really hard problem any chat can ask
+Fable (Claude Fable 5.1) through a `big-bro` sub-agent; every call waits for your approval and Fable's answer shows in
+the Brief under Important. Each advisor consult re-reads the conversation, so long chats make consults more expensive.
+
 ## Workspace
 
 AgentView lists the git repos in `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` to a

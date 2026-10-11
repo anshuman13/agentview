@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { send, useStore } from '../store';
+import { Markdown } from './Chat';
 import type { PendingPermission, PendingQuestion } from '../../../shared/protocol';
 
 export function Pending() {
@@ -64,7 +65,7 @@ function Permission({ p }: { p: PendingPermission }) {
     <div className="card permission">
       <div className="label">Permission</div>
       <div className="q-text">{p.title}</div>
-      <pre className="mono small wrap">{preview(p)}</pre>
+      {typeof p.input.plan === 'string' ? <div className="plan"><Markdown text={p.input.plan} /></div> : <pre className="mono small wrap">{preview(p)}</pre>}
       <div className="row">
         <button className="primary" onClick={() => send({ type: 'permission', id: p.id, allow: true })}>Allow</button>
         {p.canAlwaysAllow && (
@@ -79,6 +80,7 @@ function Permission({ p }: { p: PendingPermission }) {
 function preview(p: PendingPermission) {
   const i = p.input;
   if (typeof i.command === 'string') return i.command;
+  if (typeof i.prompt === 'string') return i.prompt;
   if (typeof i.file_path === 'string') return i.file_path;
   return JSON.stringify(i, null, 2).slice(0, 600);
 }

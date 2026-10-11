@@ -229,7 +229,7 @@ wss.on('connection', (ws: WebSocket) => {
     const chat = client.view;
     switch (msg.type) {
       case 'prompt':
-        chat.sendPrompt(msg.text);
+        void chat.prompt(msg.text);
         break;
       case 'steer':
         void chat.steer(msg.text);

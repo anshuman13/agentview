@@ -420,6 +420,10 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .now-line.running > .codicon { color: var(--claude); }
 .now-text { flex: 1; min-width: 0; }
 .now-tool { margin: 2px 0 0 26px; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .plan { max-height: 50vh; overflow: auto; padding: 4px 10px; background: var(--bg); border-radius: 4px; }
+.team-line { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0 26px; font-size: 12px; color: var(--muted); }
+.notes li.fable { border-left-color: var(--claude); white-space: pre-wrap; }
+.notes li.fable .codicon { color: var(--claude); }
 .brief .card { margin: 0; border-radius: 8px; border: 1px solid var(--input-border); border-left: 3px solid var(--yellow); background: var(--input); }
 .todos, .notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .todos li { display: flex; gap: 10px; align-items: flex-start; line-height: 20px; color: var(--text); }

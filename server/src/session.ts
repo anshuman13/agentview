@@ -11,6 +11,8 @@ import {
   type PermissionResult,
   type PermissionUpdate,
   type PermissionMode,
+  type HookInput,
+  type HookJSONOutput,
 } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import type { CacheInfo, ChatEvent, PendingRequest, ServerMessage, ServerState, SessionInfo } from '../../shared/protocol.js';
@@ -18,6 +20,9 @@ import type { CacheInfo, ChatEvent, PendingRequest, ServerMessage, ServerState, 
 type Resolver = (r: PermissionResult) => void;
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+
+const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
+export const BIG_BRO = 'big-bro';
 
 export class AgentSession {
   private q: Query | null = null;
@@ -36,7 +41,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
+      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
       status: 'Idle',
       events: [],
       pending: [],
@@ -113,6 +118,8 @@ export class AgentSession {
         } else if (m.type === 'assistant' && b.type === 'text') {
           lastText = b.text;
           this.state.events.push({ id: randomUUID(), kind: 'assistant', text: b.text, streaming: false, at });
+        } else if (m.type === 'assistant' && b.type === 'server_tool_use' && b.name === 'advisor') {
+          this.state.events.push(advisorEvent(b.id, at));
         } else if (m.type === 'assistant' && b.type === 'tool_use') {
           const input = (b.input ?? {}) as Record<string, unknown>;
           this.state.events.push({ id: b.id, kind: 'tool_use', name: b.name, input, summary: summarizeTool(b.name, input), at });
@@ -163,6 +170,16 @@ export class AgentSession {
         mcpServers: { agentview: statusServer },
         toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
         canUseTool: (toolName, input, opts) => this.canUseTool(toolName, input, opts),
+        agents: {
+          [BIG_BRO]: {
+            description:
+              'Fable, the most capable model. Only for a really hard problem you could not resolve yourself: a bug that survived several attempts, a risky design decision, or subtle correctness reasoning. The user approves every call, so put the full question and context in the prompt. If the call is declined, continue without it.',
+            prompt: 'You are Fable, consulted as a senior engineer on one hard problem. Investigate what you need, then answer with a clear recommendation and the reasoning behind it. Be concise.',
+            model: 'claude-fable-5-1',
+            tools: ['Read', 'Bash', 'WebSearch', 'WebFetch'],
+          },
+        },
+        hooks: { PreToolUse: [{ matcher: 'Agent|Task', hooks: [(input, _id, { signal }) => this.confirmBigBro(input, signal)] }] },
         stderr: (d) => process.stderr.write(d),
       },
     });
@@ -176,7 +193,10 @@ export class AgentSession {
     try {
       const [models, commands] = await Promise.all([this.q.supportedModels(), this.q.supportedCommands()]);
       this.setSession({
-        models: models.map((m) => ({ value: m.value, displayName: m.displayName, description: m.description })),
+        models: [
+          { value: 'team', displayName: 'Team: Opus plans, Sonnet builds', description: 'Opus plans each task, Sonnet 5.5 builds it with Opus advising. Fable only with your OK' },
+          ...models.map((m) => ({ value: m.value, displayName: m.displayName, description: m.description })),
+        ],
         commands: commands.map((c) => ({ name: c.name, description: c.description })),
       });
     } catch (err) {
@@ -186,9 +206,26 @@ export class AgentSession {
 
   async setModel(model: string) {
     this.start();
-    await this.q?.setModel(model);
-    this.setSession({ model });
-    this.pushEvent({ id: randomUUID(), kind: 'system', text: `Model set to ${model}`, at: Date.now() });
+    const team = model === 'team';
+    if (team || this.state.session.team) await this.q?.applyFlagSettings({ advisorModel: team ? TEAM.advisor : null });
+    await this.q?.setModel(team ? TEAM.model : model);
+    this.setSession({ model: team ? TEAM.model : model, team });
+    const text = team ? 'Team mode: Opus plans each task, Sonnet 5.5 builds it with Opus advising, Fable only with your OK' : `Model set to ${model}`;
+    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now() });
+  }
+
+  private async confirmBigBro(input: HookInput, signal: AbortSignal): Promise<HookJSONOutput> {
+    if (input.hook_event_name !== 'PreToolUse') return {};
+    const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
+    if (toolInput.subagent_type !== BIG_BRO) return {};
+    const r = await this.canUseTool(input.tool_name, toolInput, { signal, title: `Ask Fable: ${String(toolInput.description ?? 'a hard problem')}` });
+    return {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: r.behavior === 'allow' ? 'allow' : 'deny',
+        permissionDecisionReason: r.behavior === 'allow' ? undefined : 'The user declined to ask Fable. Continue without it.',
+      },
+    };
   }
 
   async setPermissionMode(mode: string) {
@@ -228,9 +265,19 @@ export class AgentSession {
     await this.q?.interrupt();
   }
 
+  async prompt(text: string) {
+    if (!this.state.session.running) await this.planFirst();
+    this.sendPrompt(text);
+  }
+
   async steer(text: string) {
     if (this.state.session.running) await this.q?.interrupt().catch(() => {});
+    else await this.planFirst();
     this.sendPrompt(text);
+  }
+
+  private async planFirst() {
+    if (this.state.session.team && this.state.session.permissionMode !== 'plan') await this.setPermissionMode('plan');
   }
 
   private turnEnded() {
@@ -251,7 +298,7 @@ export class AgentSession {
             id,
             kind: 'permission',
             toolName,
-            title: opts.title ?? opts.displayName ?? toolName,
+            title: toolName === 'ExitPlanMode' ? 'Approve the plan to start building' : opts.title ?? opts.displayName ?? toolName,
             input,
             canAlwaysAllow: Boolean(opts.suggestions?.length),
           };
@@ -322,6 +369,8 @@ export class AgentSession {
           this.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource });
           this.pushEvent({ id: randomUUID(), kind: 'system', text: `Session started with ${msg.model}`, at: Date.now() });
           if (this.state.session.commands.length === 0) void this.loadMeta();
+        } else if (msg.subtype === 'status' && msg.permissionMode) {
+          this.setSession({ permissionMode: msg.permissionMode });
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
@@ -361,6 +410,7 @@ export class AgentSession {
         if (msg.parent_tool_use_id) return;
         this.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache) });
         for (const block of msg.message.content) {
+          if (block.type === 'server_tool_use' && block.name === 'advisor') this.pushEvent(advisorEvent(block.id, Date.now()));
           if (block.type === 'tool_use') {
             const input = (block.input ?? {}) as Record<string, unknown>;
             this.pushEvent({
@@ -419,6 +469,10 @@ export class AgentSession {
   }
 }
 
+function advisorEvent(id: string, at: number): ChatEvent {
+  return { id, kind: 'tool_use', name: 'Advisor', input: {}, summary: 'Consulted the advisor', at };
+}
+
 function cacheFrom(usage: any, at: number, prev: CacheInfo | null): CacheInfo | null {
   if (!usage) return prev;
   const c = usage.cache_creation;
@@ -447,6 +501,9 @@ function summarizeTool(name: string, input: Record<string, unknown>): string {
       return `glob ${s(input.pattern)}`;
     case 'AskUserQuestion':
       return 'Asked you a question';
+    case 'Agent':
+    case 'Task':
+      return input.subagent_type === BIG_BRO ? `Asked Fable: ${s(input.description)}` : `Agent: ${s(input.description)}`;
     default:
       return name;
   }

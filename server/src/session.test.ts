@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AgentSession } from './session.js';
+import { AgentSession, BIG_BRO } from './session.js';
 
 function fakeSession() {
   const s = new AgentSession('/tmp/project');
@@ -43,5 +43,70 @@ describe('AgentSession turns', () => {
     result('stray');
     s.sendPrompt('hi');
     expect(s.state.session.running).toBe(true);
+  });
+});
+
+describe('Fable approval', () => {
+  const call = (s: AgentSession, subagent_type: string) =>
+    (s as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<any> }).confirmBigBro(
+      { hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { subagent_type, description: 'race condition', prompt: 'why?' }, tool_use_id: 't1' },
+      new AbortController().signal,
+    );
+
+  it('lets other agents through untouched', async () => {
+    expect(await call(new AgentSession('/tmp/p'), 'Explore')).toEqual({});
+  });
+
+  it('waits for the user and allows when approved', async () => {
+    const s = new AgentSession('/tmp/p');
+    const decision = call(s, BIG_BRO);
+    const req = s.state.pending[0];
+    expect(req).toMatchObject({ kind: 'permission', title: 'Ask Fable: race condition', canAlwaysAllow: false });
+    s.answerPermission(req.id, true);
+    expect((await decision).hookSpecificOutput.permissionDecision).toBe('allow');
+  });
+
+  it('denies when the user declines', async () => {
+    const s = new AgentSession('/tmp/p');
+    const decision = call(s, BIG_BRO);
+    s.answerPermission(s.state.pending[0].id, false);
+    expect((await decision).hookSpecificOutput).toMatchObject({ permissionDecision: 'deny' });
+  });
+});
+
+describe('Team mode', () => {
+  function teamSession() {
+    const s = new AgentSession('/tmp/p');
+    const q = { interrupt: vi.fn(async () => {}), setModel: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}) };
+    Object.assign(s, { q });
+    return { s, q };
+  }
+
+  it('uses opusplan with an Opus advisor, and clears the advisor when leaving', async () => {
+    const { s, q } = teamSession();
+    await s.setModel('team');
+    expect(q.applyFlagSettings).toHaveBeenLastCalledWith({ advisorModel: 'claude-opus-5-5' });
+    expect(q.setModel).toHaveBeenLastCalledWith('opusplan');
+    expect(s.state.session.team).toBe(true);
+    await s.setModel('claude-opus-5-5');
+    expect(q.applyFlagSettings).toHaveBeenLastCalledWith({ advisorModel: null });
+    expect(s.state.session.team).toBe(false);
+  });
+
+  it('starts every new task in plan mode', async () => {
+    const { s, q } = teamSession();
+    await s.setModel('team');
+    await s.prompt('add a feature');
+    expect(q.setPermissionMode).toHaveBeenCalledWith('plan');
+    expect(s.state.session.permissionMode).toBe('plan');
+  });
+
+  it('does not force plan mode outside Team mode or mid-turn', async () => {
+    const { s, q } = teamSession();
+    await s.prompt('hi');
+    expect(q.setPermissionMode).not.toHaveBeenCalled();
+    await s.setModel('team');
+    await s.prompt('queued while running');
+    expect(q.setPermissionMode).not.toHaveBeenCalled();
   });
 });
