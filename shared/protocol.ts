@@ -71,6 +71,18 @@ export type SavedSession = {
   lastModified: number;
 };
 
+export const STALE_MS = 12 * 60 * 60 * 1000;
+
+export type Worktree = {
+  id: string;
+  project: string;
+  name: string;
+  cwd: string;
+  dirty: number;
+  lastActive: number;
+  removable: boolean;
+};
+
 export type ClientMessage =
   | { type: 'prompt'; text: string }
   | { type: 'answer'; id: string; answers: Record<string, string> }

@@ -1,0 +1,35 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { stat } from 'node:fs/promises';
+import path from 'node:path';
+import { listSessions } from '@anthropic-ai/claude-agent-sdk';
+import { STALE_MS, type Worktree } from '../../shared/protocol.js';
+
+const run = promisify(execFile);
+const git = async (cwd: string, ...args: string[]) => (await run('git', ['-C', cwd, ...args])).stdout.trim();
+const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
+
+export async function listWorktrees(openCwd: string): Promise<Worktree[]> {
+  const { stdout } = await run('paseo', ['workspace', 'ls', '--json']);
+  const spaces = (JSON.parse(stdout) as Array<{ workspaceId: string; project: string; name: string; isolation: string; cwd: string }>)
+    .filter((w) => w.isolation === 'worktree');
+  const chats = await listSessions({ limit: 1000 });
+  return Promise.all(
+    spaces.map(async (w) => {
+      const lastCommit = Number(await git(w.cwd, 'log', '-1', '--format=%ct').catch(() => '0')) * 1000;
+      const dirty = (await git(w.cwd, 'status', '--porcelain').catch(() => '')).split('\n').filter(Boolean).map((l) => l.slice(3).split(' -> ').pop()!);
+      const edits = await Promise.all(dirty.map((f) => stat(path.join(w.cwd, f)).then((s) => s.mtimeMs).catch(() => 0)));
+      const lastChat = chats.filter((c) => c.cwd && inside(c.cwd, w.cwd)).map((c) => c.lastModified);
+      const lastActive = Math.max(lastCommit, ...lastChat, ...edits);
+      const open = inside(openCwd, w.cwd);
+      return { id: w.workspaceId, project: w.project, name: w.name, cwd: w.cwd, dirty: dirty.length, lastActive, removable: !open && Date.now() - lastActive > STALE_MS };
+    }),
+  );
+}
+
+export async function removeWorktree(id: string, openCwd: string) {
+  const w = (await listWorktrees(openCwd)).find((x) => x.id === id);
+  if (!w) throw new Error('Worktree not found');
+  if (!w.removable) throw new Error('This worktree was used in the last 12 hours or is open');
+  await run('paseo', ['workspace', 'archive', id]);
+}

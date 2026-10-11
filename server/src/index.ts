@@ -5,10 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { WebSocketServer, WebSocket } from 'ws';
 import chokidar, { type FSWatcher } from 'chokidar';
-import { getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
+import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { listFiles, readFileWithOriginal } from './files.js';
-import type { ClientMessage, ServerMessage } from '../../shared/protocol.js';
+import { removeWorktree, listWorktrees } from './worktrees.js';
+import { STALE_MS, type ClientMessage, type ServerMessage } from '../../shared/protocol.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -67,7 +68,7 @@ function remember(sessionId: string) {
 }
 
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
-if (last?.cwd === PROJECT) await openSavedSession(last.sessionId).catch(() => openSession(PROJECT));
+if (last?.sessionId) await openSavedSession(last.sessionId).catch(() => openSession(PROJECT));
 else await openSession(PROJECT);
 
 const MIME: Record<string, string> = {
@@ -91,6 +92,20 @@ const server = http.createServer(async (req, res) => {
       const rel = url.searchParams.get('path') ?? '';
       return json(await readFileWithOriginal(session.cwd, rel));
     }
+    if (url.pathname === '/api/sessions' && req.method === 'DELETE') {
+      const id = url.searchParams.get('id') ?? '';
+      if (id === session.state.session.sessionId) return json({ error: 'This chat is open. Switch to another one first.' }, 409);
+      const info = await getSessionInfo(id);
+      if (!info) return json({ error: 'Chat not found' }, 404);
+      if (Date.now() - info.lastModified < STALE_MS) return json({ error: 'This chat was used in the last 12 hours.' }, 409);
+      await deleteSession(id, { dir: info.cwd });
+      return json({ ok: true });
+    }
+    if (url.pathname === '/api/worktrees' && req.method === 'DELETE') {
+      await removeWorktree(url.searchParams.get('id') ?? '', session.cwd);
+      return json({ ok: true });
+    }
+    if (url.pathname === '/api/worktrees') return json(await listWorktrees(session.cwd));
     if (url.pathname === '/api/sessions') {
       const list = await listSessions({ limit: 300 });
       return json(list.map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
@@ -115,7 +130,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
     res.end(body);
   } catch (err) {
-    json({ error: String(err) }, 500);
+    json({ error: err instanceof Error ? err.message : String(err) }, 500);
   }
 });
 
