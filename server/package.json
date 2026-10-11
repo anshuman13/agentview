@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "latest",
-    "chokidar": "^4.0.3",
     "ws": "^8.18.0",
     "zod": "^4.0.0"
   },

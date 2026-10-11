@@ -54,11 +54,18 @@
   color: var(--muted); font-variant-numeric: tabular-nums; text-align: right;
 }
 .sessions .tree .row .when { min-width: 44px; }
-.sessions .tree .row .delete { display: none; width: 20px; height: 20px; flex: none; margin-right: 6px; }
-.sessions .tree .row:has(.delete):hover .when { display: none; }
-.sessions .tree .row:hover .delete { display: inline-flex; margin-left: auto; }
-@media (hover: none) { .sessions .tree .row .delete { display: inline-flex; } }
-.sessions .tree .row.worktrees { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 4px; height: auto; }
+.sessions .tree .row.project .name { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.sessions .tree .row.project.here .name { color: var(--claude); }
+.sessions .tree .row .branch {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-left: 4px;
+  font-size: 11px; font-weight: 400; color: var(--muted);
+}
+.sessions .tree .row.worktree { gap: 6px; }
+.sessions .tree .row .acts { display: none; flex: none; gap: 2px; margin: 0 6px 0 auto; }
+.sessions .tree .row .acts .icon-btn { width: 20px; height: 20px; }
+.sessions .tree .row:hover .acts { display: inline-flex; }
+.sessions .tree .row:has(.acts):hover :is(.when, .count) { display: none; }
+@media (hover: none) { .sessions .tree .row .acts { display: inline-flex; margin-left: 0; } }
 .sessions .tree .row.removing { color: var(--muted); pointer-events: none; }
 .sessions .tree .row.removing .when { display: none; }
 .sessions .tree .row .busy { display: inline-flex; margin: 0 10px 0 auto; }

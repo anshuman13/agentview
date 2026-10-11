@@ -73,9 +73,19 @@ export type SavedSession = {
 
 export const STALE_MS = 12 * 60 * 60 * 1000;
 
+export type Repo = {
+  name: string;
+  root: string;
+  cwd: string;
+  branch: string;
+  dirty: number;
+  lastCommit: number;
+};
+
 export type Worktree = {
   id: string;
   project: string;
+  repo: string;
   name: string;
   cwd: string;
   dirty: number;
@@ -91,4 +101,4 @@ export type ClientMessage =
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'interrupt' }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'new_session' };
+  | { type: 'new_session'; cwd?: string };

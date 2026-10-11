@@ -2,13 +2,13 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { watch, type FSWatcher } from 'node:fs';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { WebSocketServer, WebSocket } from 'ws';
-import chokidar, { type FSWatcher } from 'chokidar';
 import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { listFiles, readFileWithOriginal } from './files.js';
-import { removeWorktree, listWorktrees } from './worktrees.js';
+import { allowedFolder, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { STALE_MS, type ClientMessage, type ServerMessage } from '../../shared/protocol.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
@@ -31,7 +31,7 @@ async function openSession(cwd: string, resume?: string) {
   const next = new AgentSession(cwd, resume);
   await next.loadHistory();
   session?.close();
-  void watcher?.close();
+  watcher?.close();
   session = next;
   session.onMessage((m) => {
     clients.forEach((c) => c(m));
@@ -39,16 +39,20 @@ async function openSession(cwd: string, resume?: string) {
   });
   if (resume) remember(resume);
   else session.start();
-  watcher = chokidar
-    .watch(cwd, {
-      ignored: (p) => IGNORED.test(p),
-      ignoreInitial: true,
-      awaitWriteFinish: { stabilityThreshold: 200 },
-    })
-    .on('change', (p) => session.fileChangedExternally(path.relative(cwd, p)))
-    .on('add', (p) => session.fileChangedExternally(path.relative(cwd, p)))
-    .on('error', (err) => console.error(`watcher: ${String(err)}`));
+  watcher = watchFiles(cwd, (rel) => next.fileChangedExternally(rel));
   clients.forEach((c) => c({ type: 'init', state: session.state }));
+}
+
+function watchFiles(cwd: string, onChange: (rel: string) => void) {
+  const timers = new Map<string, NodeJS.Timeout>();
+  return watch(cwd, { recursive: true }, (_, rel) => {
+    if (!rel || IGNORED.test(rel)) return;
+    clearTimeout(timers.get(rel));
+    timers.set(rel, setTimeout(() => {
+      timers.delete(rel);
+      stat(path.join(cwd, rel)).then((s) => s.isFile() && onChange(rel)).catch(() => {});
+    }, 200));
+  }).on('error', (err) => console.error(`watcher: ${String(err)}`));
 }
 
 async function openSavedSession(sessionId: string) {
@@ -58,6 +62,14 @@ async function openSavedSession(sessionId: string) {
   const exists = await stat(info.cwd).then((s) => s.isDirectory()).catch(() => false);
   if (!exists) throw new Error(`Folder no longer exists: ${info.cwd}`);
   await openSession(info.cwd, sessionId);
+}
+
+async function newSession(cwd = session.cwd) {
+  const dir = path.resolve(cwd);
+  if (dir !== session.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
+  const exists = await stat(dir).then((s) => s.isDirectory()).catch(() => false);
+  if (!exists) throw new Error(`Folder no longer exists: ${dir}`);
+  await openSession(dir);
 }
 
 let remembered = '';
@@ -106,6 +118,7 @@ const server = http.createServer(async (req, res) => {
       return json({ ok: true });
     }
     if (url.pathname === '/api/worktrees') return json(await listWorktrees(session.cwd));
+    if (url.pathname === '/api/repos') return json(await listRepos());
     if (url.pathname === '/api/sessions') {
       const list = await listSessions({ limit: 300 });
       return json(list.map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
@@ -172,7 +185,7 @@ wss.on('connection', (ws: WebSocket) => {
         openSavedSession(msg.sessionId).catch(fail);
         break;
       case 'new_session':
-        openSession(session.cwd).catch(fail);
+        newSession(msg.cwd).catch(fail);
         break;
     }
   });

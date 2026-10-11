@@ -1,23 +1,81 @@
 import { useEffect, useMemo, useState } from 'react';
-import { send, useStore } from '../store';
+import { send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
-import { STALE_MS, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { QuickPick } from '../QuickPick';
+import { STALE_MS, type Repo, type SavedSession, type Worktree } from '../../../shared/protocol';
 
 const PAGE = 10;
+
+type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
+
+const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
+const get = (url: string) => fetch(url).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : [])).catch(() => []);
+
+function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSession[]) {
+  const m = new Map<string, Folder>();
+  const folder = (cwd: string, repo?: Repo) => {
+    let f = m.get(cwd);
+    if (!f) m.set(cwd, (f = { cwd, name: cwd.split('/').pop() || 'Unknown folder', repo, trees: [], chats: [], last: repo?.lastCommit ?? 0 }));
+    return f;
+  };
+  for (const r of repos) folder(r.cwd, r);
+  for (const w of trees) folder(w.repo || w.cwd).trees.push(w);
+  const dirs = [...m.keys()].sort((a, b) => b.length - a.length);
+  for (const c of chats) {
+    const tree = trees.find((w) => inside(c.cwd, w.cwd));
+    const f = folder(tree ? tree.repo || tree.cwd : dirs.find((d) => inside(c.cwd, d)) ?? c.cwd);
+    f.chats.push(c);
+    f.last = Math.max(f.last, c.lastModified);
+  }
+  return [...m.values()].sort((a, b) => b.last - a.last);
+}
+
+const cached = { repos: [] as Repo[], trees: [] as Worktree[], chats: [] as SavedSession[] };
+
+function useWorkspace(key: unknown) {
+  const [repos, setRepos] = useState(cached.repos);
+  const [trees, setTrees] = useState(cached.trees);
+  const [chats, setChats] = useState(cached.chats);
+  useEffect(() => {
+    get('/api/repos').then((x) => setRepos((cached.repos = x)));
+    get('/api/sessions').then((x) => setChats((cached.chats = x)));
+    get('/api/worktrees').then((x) => setTrees((cached.trees = x)));
+  }, [key]);
+  const folders = useMemo(() => buildFolders(repos, trees, chats), [repos, trees, chats]);
+  return { folders, setTrees, setChats };
+}
+
+export function RepoPicker() {
+  const cwd = useStore((s) => s.session.cwd);
+  const running = useStore((s) => s.session.running);
+  const { folders } = useWorkspace(null);
+  const close = () => setUi({ repoPicker: false });
+  const items = folders.flatMap((f) => [
+    ...(f.repo ? [{ value: f.cwd, label: f.name, detail: `${f.repo.root} · ${f.repo.branch}` }] : []),
+    ...f.trees.map((w) => ({ value: w.cwd, label: w.name.split('/').pop()!, detail: `${w.project} worktree` })),
+  ]);
+  return (
+    <QuickPick
+      title={running ? 'Stop or wait for the current turn first' : 'Start a chat in…'}
+      items={items}
+      current={folders.find((f) => f.cwd === cwd || f.trees.some((w) => w.cwd === cwd))?.cwd}
+      onPick={(v) => { if (!running) send({ type: 'new_session', cwd: v }); close(); }}
+      onClose={close}
+    />
+  );
+}
 
 export function Sessions() {
   const current = useStore((s) => s.session.sessionId);
   const cwd = useStore((s) => s.session.cwd);
   const running = useStore((s) => s.session.running);
   const lastEvent = useStore((s) => s.events[s.events.length - 1]);
-  const [list, setList] = useState<SavedSession[]>([]);
+  const { folders, setTrees, setChats } = useWorkspace(current + cwd);
   const [filter, setFilter] = useState('');
   const [toggled, setToggled] = useState<Set<string>>(new Set());
   const [full, setFull] = useState<Set<string>>(new Set());
   const [opening, setOpening] = useState<string | null>(null);
-  const [trees, setTrees] = useState<Worktree[] | null>(null);
-  const [treesOpen, setTreesOpen] = useState(false);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
@@ -26,20 +84,20 @@ export function Sessions() {
     if (lastEvent?.kind === 'system') setOpening(null);
   }, [lastEvent]);
 
-  useEffect(() => {
-    fetch('/api/sessions').then((r) => r.json()).then(setList);
-    setOpening(null);
-  }, [current]);
+  useEffect(() => setOpening(null), [current, cwd]);
 
-  const groups = useMemo(() => {
+  const here = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)))?.cwd;
+
+  const shown = useMemo(() => {
     const f = filter.toLowerCase();
-    const m = new Map<string, SavedSession[]>();
-    for (const s of list) {
-      if (f && !`${s.title} ${s.cwd} ${s.gitBranch ?? ''}`.toLowerCase().includes(f)) continue;
-      m.set(s.cwd, [...(m.get(s.cwd) ?? []), s]);
-    }
-    return [...m.entries()];
-  }, [list, filter]);
+    if (!f) return folders;
+    return folders.flatMap((d): Folder[] => {
+      if (`${d.name} ${d.repo?.branch ?? ''}`.toLowerCase().includes(f)) return [d];
+      const chats = d.chats.filter((s) => `${s.title} ${s.gitBranch ?? ''}`.toLowerCase().includes(f));
+      const trees = d.trees.filter((w) => w.name.toLowerCase().includes(f));
+      return chats.length || trees.length ? [{ ...d, chats, trees, hit: true }] : [];
+    });
+  }, [folders, filter]);
 
   const open = (id: string) => {
     if (id === current || running) return;
@@ -47,9 +105,11 @@ export function Sessions() {
     send({ type: 'open_session', sessionId: id });
   };
 
-  useEffect(() => {
-    if (treesOpen) fetch('/api/worktrees').then((r) => r.json()).then((t) => setTrees(Array.isArray(t) ? t : []));
-  }, [treesOpen]);
+  const start = (dir: string) => {
+    if (running) return;
+    setError(null);
+    send({ type: 'new_session', cwd: dir });
+  };
 
   const call = async (url: string, fallback: string) => {
     const r = await fetch(url, { method: 'DELETE' });
@@ -64,7 +124,7 @@ export function Sessions() {
       warning: 'The transcript is removed permanently.',
       action: 'Delete',
       run: async () => {
-        if (await call(`/api/sessions?id=${encodeURIComponent(s.sessionId)}`, 'Could not delete the chat')) setList((l) => l.filter((x) => x.sessionId !== s.sessionId));
+        if (await call(`/api/sessions?id=${encodeURIComponent(s.sessionId)}`, 'Could not delete the chat')) setChats((l) => l.filter((x) => x.sessionId !== s.sessionId));
       },
     });
 
@@ -76,7 +136,7 @@ export function Sessions() {
       action: 'Remove',
       run: async () => {
         flip(setRemoving, w.id);
-        if (await call(`/api/worktrees?id=${encodeURIComponent(w.id)}`, 'Could not remove the worktree')) setTrees((t) => t?.filter((x) => x.id !== w.id) ?? null);
+        if (await call(`/api/worktrees?id=${encodeURIComponent(w.id)}`, 'Could not remove the worktree')) setTrees((t) => t.filter((x) => x.id !== w.id));
         flip(setRemoving, w.id);
       },
     });
@@ -87,26 +147,54 @@ export function Sessions() {
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
-  const isOpen = (dir: string) => Boolean(filter) || (dir === cwd) !== toggled.has(dir);
+  const isOpen = (d: Folder) => Boolean(d.hit) || (d.cwd === here) !== toggled.has(d.cwd);
 
   return (
     <div className="sessions">
       <div className="sessions-bar">
-        <input placeholder="Filter sessions" value={filter} onChange={(e) => setFilter(e.target.value)} />
-        <button className="icon-btn" title="New session in this project" disabled={running} onClick={() => send({ type: 'new_session' })}><Icon name="add" /></button>
+        <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <button className="icon-btn" title="Start a chat in a repo (⌘O)" onClick={() => setUi({ repoPicker: true })}><Icon name="folder-opened" /></button>
+        <button className="icon-btn" title="New chat in this folder" disabled={running} onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
       {running && <div className="hint">Stop or wait for the current turn before switching.</div>}
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
       <div className="tree">
-        {groups.map(([dir, items]) => (
-          <div key={dir}>
-            <div className="row project" title={dir} onClick={() => flip(setToggled, dir)}>
-              <span className="twistie"><Icon name={isOpen(dir) ? 'chevron-down' : 'chevron-right'} small /></span>
-              <span className="name">{dir.split('/').pop() || 'Unknown folder'}</span>
-              <span className="count">{items.length}</span>
+        {shown.map((d) => (
+          <div key={d.cwd}>
+            <div className={`row project ${d.cwd === here ? 'here' : ''}`} title={d.cwd} onClick={() => flip(setToggled, d.cwd)}>
+              <span className="twistie"><Icon name={isOpen(d) ? 'chevron-down' : 'chevron-right'} small /></span>
+              <span className="name">{d.name}</span>
+              {d.repo && <span className="branch">{d.repo.branch}</span>}
+              {d.repo?.dirty ? <span className="dirty" title={`${d.repo.dirty} uncommitted`}>M</span> : null}
+              <span className="count">{d.chats.length || ''}</span>
+              <span className="acts">
+                <button className="icon-btn" title={`New chat in ${d.name}`} disabled={running} onClick={(e) => { e.stopPropagation(); start(d.cwd); }}><Icon name="add" small /></button>
+              </span>
             </div>
-            {isOpen(dir) &&
-              (full.has(dir) || filter ? items : items.slice(0, PAGE)).map((s) => (
+            {isOpen(d) && d.trees.map((w) => (
+              <div
+                key={w.id}
+                className={`row session worktree ${removing.has(w.id) ? 'removing' : ''}`}
+                title={`${w.name}\n${w.cwd}${w.dirty ? `\n${w.dirty} uncommitted` : ''}${w.removable ? '' : '\nUsed in the last 12 hours or open, so it cannot be removed yet'}`}
+              >
+                <Icon name="git-branch" small />
+                <span className="name">{removing.has(w.id) ? 'Removing… ' : ''}{w.name.split('/').pop()}</span>
+                {w.dirty > 0 && <span className="dirty" title={`${w.dirty} uncommitted`}>M</span>}
+                <span className="when">{ago(w.lastActive)}</span>
+                {removing.has(w.id) ? (
+                  <span className="busy"><Icon name="loading" small spin /></span>
+                ) : (
+                  <span className="acts">
+                    <button className="icon-btn" title="New chat in this worktree" disabled={running} onClick={() => start(w.cwd)}><Icon name="add" small /></button>
+                    {w.removable && (
+                      <button className="icon-btn" title="Remove worktree, keep the branch" onClick={() => { setError(null); removeTree(w); }}><Icon name="trash" small /></button>
+                    )}
+                  </span>
+                )}
+              </div>
+            ))}
+            {isOpen(d) &&
+              (full.has(d.cwd) || filter ? d.chats : d.chats.slice(0, PAGE)).map((s) => (
                 <div
                   key={s.sessionId}
                   className={`row session ${s.sessionId === current ? 'selected' : ''}`}
@@ -116,41 +204,16 @@ export function Sessions() {
                   <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
                   <span className="when">{ago(s.lastModified)}</span>
                   {s.sessionId !== current && Date.now() - s.lastModified > STALE_MS && (
-                    <button className="icon-btn delete" title="Delete chat" onClick={(e) => { e.stopPropagation(); setError(null); remove(s); }}>
-                      <Icon name="trash" small />
-                    </button>
+                    <span className="acts">
+                      <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setError(null); remove(s); }}><Icon name="trash" small /></button>
+                    </span>
                   )}
                 </div>
               ))}
-            {isOpen(dir) && !filter && items.length > PAGE && (
-              <div className="row more" onClick={() => flip(setFull, dir)}>
-                {full.has(dir) ? 'Show less' : `Show ${items.length - PAGE} more`}
+            {isOpen(d) && !filter && d.chats.length > PAGE && (
+              <div className="row more" onClick={() => flip(setFull, d.cwd)}>
+                {full.has(d.cwd) ? 'Show less' : `Show ${d.chats.length - PAGE} more`}
               </div>
-            )}
-          </div>
-        ))}
-        <div className="row project worktrees" onClick={() => setTreesOpen((v) => !v)}>
-          <span className="twistie"><Icon name={treesOpen ? 'chevron-down' : 'chevron-right'} small /></span>
-          <span className="name">Worktrees</span>
-          {trees && <span className="count">{trees.length}</span>}
-        </div>
-        {treesOpen && !trees && <div className="row more">Loading…</div>}
-        {treesOpen && trees?.length === 0 && <div className="row more">No Paseo worktrees</div>}
-        {treesOpen && trees?.map((w) => (
-          <div
-            key={w.id}
-            className={`row session ${removing.has(w.id) ? 'removing' : ''}`}
-            title={`${w.name}\n${w.cwd}${w.dirty ? `\n${w.dirty} uncommitted` : ''}${w.removable ? '' : '\nUsed in the last 12 hours or open, so it cannot be removed yet'}`}
-          >
-            <span className="name">{removing.has(w.id) ? 'Removing… ' : ''}{w.name.split('/').pop()}</span>
-            {w.dirty > 0 && <span className="dirty" title={`${w.dirty} uncommitted`}>M</span>}
-            <span className="when">{ago(w.lastActive)}</span>
-            {removing.has(w.id) ? (
-              <span className="busy"><Icon name="loading" small spin /></span>
-            ) : w.removable && (
-              <button className="icon-btn delete" title="Remove worktree, keep the branch" onClick={() => { setError(null); removeTree(w); }}>
-                <Icon name="trash" small />
-              </button>
             )}
           </div>
         ))}

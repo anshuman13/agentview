@@ -6,6 +6,7 @@ type UiState = {
   openFile: string | null;
   follow: boolean;
   switcherOpen: boolean;
+  repoPicker: boolean;
 };
 
 export type State = ServerState & { ui: UiState };
@@ -16,7 +17,7 @@ let state: State = {
   events: [],
   pending: [],
   recentFiles: [],
-  ui: { connected: false, openFile: null, follow: true, switcherOpen: false },
+  ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false },
 };
 
 const listeners = new Set<() => void>();

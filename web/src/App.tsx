@@ -6,7 +6,7 @@ import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Explorer } from './panes/Explorer';
-import { Sessions } from './panes/Sessions';
+import { RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
 
@@ -16,7 +16,7 @@ type View = 'agent' | 'explorer' | 'sessions';
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'agent', icon: 'sparkle', title: 'Agent' },
   { id: 'explorer', icon: 'files', title: 'Explorer' },
-  { id: 'sessions', icon: 'history', title: 'Sessions' },
+  { id: 'sessions', icon: 'repo', title: 'Workspace' },
 ];
 
 const TABS: { id: Tab; icon: string; label: string }[] = [
@@ -57,6 +57,7 @@ export function App() {
   const connected = useStore((s) => s.ui.connected);
   const pendingCount = useStore((s) => s.pending.length);
   const openFile = useStore((s) => s.ui.openFile);
+  const repoPicker = useStore((s) => s.ui.repoPicker);
   const session = useStore((s) => s.session);
   const status = useStore((s) => s.status);
   const [tab, setTab] = useState<Tab>('now');
@@ -101,6 +102,7 @@ export function App() {
       if (!(e.metaKey || e.ctrlKey)) return;
       const k = e.key.toLowerCase();
       if (k === 'p') { e.preventDefault(); setUi({ switcherOpen: true }); }
+      if (k === 'o') { e.preventDefault(); setUi({ repoPicker: true }); }
       if (k === 'b') { e.preventDefault(); setSidebar((v) => !v); }
       if (k === 'j') { e.preventDefault(); setChat((v) => !v); }
     };
@@ -169,7 +171,7 @@ export function App() {
       </div>
 
       <footer className="statusbar desktop-only">
-        <span className="item project" title={session.cwd}><Icon name="folder" small /> {project}</span>
+        <span className="item project clickable" title={`${session.cwd}\nStart a chat in another repo (⌘O)`} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</span>
         <span className={`item ${session.running ? 'busy' : ''}`}>
           <Icon name={session.running ? 'loading' : 'check'} small spin={session.running} /> {session.running ? 'Working' : 'Idle'}
         </span>
@@ -196,6 +198,7 @@ export function App() {
       </nav>
 
       <FileSwitcher />
+      {repoPicker && <RepoPicker />}
       {phone && <ConnectPopover onClose={() => setPhone(false)} />}
     </div>
   );
