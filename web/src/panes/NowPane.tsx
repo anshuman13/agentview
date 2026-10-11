@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { send, useStore } from '../store';
 import { Summary } from './Summary';
+import { Icon } from '../Icon';
 
 export function NowPane() {
   const status = useStore((s) => s.status);
@@ -10,16 +11,16 @@ export function NowPane() {
 
   return (
     <div className="now-pane">
-      <div className="section-title">Status</div>
-      <div className="status-row">
-        <span className={`dot ${session.running ? 'running' : ''}`} />
-        <span className="status-text">{status}</span>
-        {session.running && (
-          <button className="ghost stop" onClick={() => send({ type: 'interrupt' })}>Stop</button>
-        )}
-      </div>
-      {session.running && lastTool && lastTool.kind === 'tool_use' && (
-        <div className="status-tool" title={lastTool.summary}>{lastTool.summary}</div>
+      {session.running && (
+        <>
+          <div className="section-title">Working</div>
+          <div className="status-row">
+            <span className="dot running" />
+            <span className="status-text">{status}</span>
+            <button className="icon-btn" title="Stop" onClick={() => send({ type: 'interrupt' })}><Icon name="debug-stop" /></button>
+          </div>
+          {lastTool && lastTool.kind === 'tool_use' && <div className="status-tool" title={lastTool.summary}>{lastTool.summary}</div>}
+        </>
       )}
 
       <Summary />

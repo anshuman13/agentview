@@ -64,7 +64,7 @@ export function Summary() {
     return (
       <div className="summary-pane">
         <div className="section-title">Done so far</div>
-        <div className="empty">Nothing yet. Send Claude a task from the chat panel.</div>
+        <div className="empty">Nothing yet. Send Claude a task from the chat.</div>
       </div>
     );
   }
@@ -95,7 +95,7 @@ export function Summary() {
         </>
       )}
 
-      <div className="group">Turns</div>
+      {files.length > 0 && <div className="group">Turns</div>}
       {[...turns].reverse().map((t, i) => {
         const live = !t.end && running && i === 0;
         const facts = [
@@ -138,7 +138,10 @@ function firstLine(t: string) {
 }
 
 function time(at: number) {
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const d = new Date(at);
+  return d.toDateString() === new Date().toDateString()
+    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 function duration(ms: number) {

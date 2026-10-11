@@ -2,7 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Marked } from 'marked';
 import { send, useStore } from '../store';
 import { Pending } from './Pending';
-import type { ChatEvent } from '../../../shared/protocol';
+import { Icon } from '../Icon';
+import { QuickPick } from '../QuickPick';
+import { PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
+
+const MODES: Record<string, { label: string; detail: string; icon: string }> = {
+  default: { label: 'Ask before edits', detail: 'Ask before risky tools', icon: 'shield' },
+  acceptEdits: { label: 'Edit automatically', detail: 'Auto-accept file edits, ask for the rest', icon: 'edit' },
+  plan: { label: 'Plan mode', detail: 'Read-only planning, no edits', icon: 'eye' },
+  dontAsk: { label: "Don't ask", detail: 'Deny anything not pre-approved', icon: 'circle-slash' },
+};
 
 export function Chat() {
   const events = useStore((s) => s.events);
@@ -10,7 +19,10 @@ export function Chat() {
   const waiting = useStore((s) => s.pending.length > 0);
   const commands = useStore((s) => s.session.commands);
   const cwd = useStore((s) => s.session.cwd);
-  const mode = useStore((s) => s.session.permissionMode);
+  const mode = useStore((s) => s.session.permissionMode) ?? 'default';
+  const model = useStore((s) => s.session.model);
+  const models = useStore((s) => s.session.models);
+  const [pick, setPick] = useState<'model' | 'mode' | null>(null);
   const results = useMemo(() => {
     const m = new Map<string, ToolResult>();
     for (const e of events) if (e.kind === 'tool_result') m.set(e.toolUseId, e);
@@ -25,8 +37,8 @@ export function Chat() {
     return commands.filter((c) => c.name.toLowerCase().startsWith(needle)).slice(0, 12);
   }, [text, commands]);
   const bottom = useRef<HTMLDivElement>(null);
-  const [, rerender] = useState(0);
-  const canNotify = 'Notification' in window && Notification.permission === 'default';
+  const modelName = models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
+  const cycleMode = () => send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] });
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: 'end' });
@@ -46,7 +58,7 @@ export function Chat() {
         <Pending />
         <div ref={bottom} />
       </div>
-      <div className="composer" data-mode={mode ?? 'default'}>
+      <div className="composer" data-mode={mode}>
         {cmdMatches.length > 0 && (
           <ul className="cmd-popup">
             {cmdMatches.map((c, i) => (
@@ -60,7 +72,7 @@ export function Chat() {
         <textarea
           value={text}
           rows={1}
-          placeholder={waiting ? 'Claude is waiting for your answer above. Messages typed here are queued.' : running ? 'Claude is working. You can still queue a message.' : 'Tell Claude what to do… type / for commands'}
+          placeholder={waiting ? 'Answer above, or queue a message' : running ? 'Queue a message' : 'Ask Claude, or type / for commands'}
           onChange={(e) => { setText(e.target.value); setCmdIdx(0); }}
           onKeyDown={(e) => {
             if (cmdMatches.length > 0) {
@@ -72,6 +84,11 @@ export function Chat() {
                 return;
               }
             }
+            if (e.key === 'Tab' && e.shiftKey) {
+              e.preventDefault();
+              cycleMode();
+              return;
+            }
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               submit();
@@ -79,17 +96,35 @@ export function Chat() {
           }}
         />
         <div className="composer-foot">
-          <span className="muted small keys">⏎ send · ⇧⏎ new line · / commands</span>
-          {canNotify && (
-            <button className="ghost small" onClick={() => Promise.resolve(Notification.requestPermission()).catch(() => {}).finally(() => rerender((n) => n + 1))}>
-              Enable notifications
-            </button>
-          )}
+          <button className="pill" title={`${MODES[mode]?.detail ?? mode} (Shift+Tab to switch)`} onClick={() => setPick('mode')}>
+            <Icon name={MODES[mode]?.icon ?? 'shield'} small /> {MODES[mode]?.label ?? mode}
+          </button>
+          <button className="pill" title="Switch model" onClick={() => setPick('model')}>
+            <Icon name="sparkle" small /> {modelName}
+          </button>
           <span className="spacer" />
-          {running && <button className="ghost small" onClick={() => send({ type: 'interrupt' })}>Stop</button>}
-          <button className="send" title="Send" disabled={!text.trim()} onClick={submit}>↑</button>
+          {running && <button className="icon-btn stop" title="Stop" onClick={() => send({ type: 'interrupt' })}><Icon name="debug-stop" /></button>}
+          <button className="send" title="Send (Enter)" disabled={!text.trim()} onClick={submit}><Icon name="arrow-up" /></button>
         </div>
       </div>
+      {pick === 'model' && (
+        <QuickPick
+          title="Select model"
+          current={model}
+          items={models.map((m) => ({ value: m.value, label: m.displayName, detail: m.description }))}
+          onPick={(v) => { send({ type: 'set_model', model: v }); setPick(null); }}
+          onClose={() => setPick(null)}
+        />
+      )}
+      {pick === 'mode' && (
+        <QuickPick
+          title="Permission mode"
+          current={mode}
+          items={PERMISSION_MODES.map((m) => ({ value: m, label: MODES[m]?.label ?? m, detail: MODES[m]?.detail }))}
+          onPick={(v) => { send({ type: 'set_permission_mode', mode: v }); setPick(null); }}
+          onClose={() => setPick(null)}
+        />
+      )}
     </div>
   );
 }

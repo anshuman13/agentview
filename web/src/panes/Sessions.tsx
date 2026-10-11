@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { send, useStore } from '../store';
+import { Icon } from '../Icon';
 import type { SavedSession } from '../../../shared/protocol';
 
 const PAGE = 10;
@@ -52,14 +53,14 @@ export function Sessions() {
     <div className="sessions">
       <div className="sessions-bar">
         <input placeholder="Filter sessions" value={filter} onChange={(e) => setFilter(e.target.value)} />
-        <button className="ghost new" title="New session in this project" disabled={running} onClick={() => send({ type: 'new_session' })}>+ New</button>
+        <button className="icon-btn" title="New session in this project" disabled={running} onClick={() => send({ type: 'new_session' })}><Icon name="add" /></button>
       </div>
       {running && <div className="hint">Stop or wait for the current turn before switching.</div>}
       <div className="tree">
         {groups.map(([dir, items]) => (
           <div key={dir}>
             <div className="row project" title={dir} onClick={() => flip(setToggled, dir)}>
-              <span className="twistie">{isOpen(dir) ? '▾' : '▸'}</span>
+              <span className="twistie"><Icon name={isOpen(dir) ? 'chevron-down' : 'chevron-right'} small /></span>
               <span className="name">{dir.split('/').pop() || 'Unknown folder'}</span>
               <span className="count">{items.length}</span>
             </div>

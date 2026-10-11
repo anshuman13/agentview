@@ -71,8 +71,8 @@ export function Explorer() {
           onClick={() => (isDir ? toggle(child.path) : setUi({ openFile: child.path, follow: false }))}
           title={child.path}
         >
-          <span className="twistie">{isDir ? (open ? '⌄' : '›') : ''}</span>
-          {!isDir && <Icon name="file" small />}
+          <span className="twistie">{isDir && <Icon name={open ? 'chevron-down' : 'chevron-right'} small />}</span>
+          <Icon name={isDir ? (open ? 'folder-opened' : 'folder') : 'file'} small />
           <span className="name">{child.name}</span>
           {!isDir && recent.includes(child.path) && <span className="m">M</span>}
         </div>,
@@ -84,7 +84,7 @@ export function Explorer() {
 
   return (
     <div className="explorer">
-      <div className="section-title" style={{ padding: '4px 12px' }}>{cwd ? cwd.split('/').pop() : 'Files'}</div>
+      <div className="section-title">{cwd ? cwd.split('/').pop() : 'Files'}</div>
       <div className="tree">{rows}</div>
     </div>
   );

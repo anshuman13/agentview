@@ -42,12 +42,6 @@
   background: var(--input); border: 1px solid var(--input-border); border-radius: 0;
 }
 .sessions .sessions-bar input:focus { outline: 0; border-color: var(--accent); }
-.sessions .sessions-bar .new {
-  flex: none; height: 22px; padding: 0 6px; line-height: 20px; font-size: 12px; white-space: nowrap;
-  border: 0; border-radius: 2px; background: transparent; color: var(--muted);
-}
-.sessions .sessions-bar .new:hover:not(:disabled) { background: var(--hover); color: var(--text-strong); }
-.sessions .sessions-bar .new:disabled { opacity: 0.5; cursor: default; }
 .sessions .hint { padding: 0 12px 6px 8px; font-size: 11px; color: var(--muted); }
 .sessions .tree .row { flex-wrap: nowrap; padding-left: 8px; }
 .sessions .tree .row.project { font-weight: 600; color: var(--text-strong); }

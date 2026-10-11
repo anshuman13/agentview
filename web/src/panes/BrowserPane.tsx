@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Icon } from '../Icon';
 
 type Size = 'fill' | 'tablet' | 'phone';
 type Screen = { id: number; url: string; size: Size };
@@ -38,17 +39,14 @@ export function BrowserPane() {
     <div className="browser-pane">
       <div className="screens">
         {screens.map((s) => (
-          <BrowserScreen key={s.id} s={s} onChange={(p) => update(s.id, p)} onClose={screens.length > 1 ? () => close(s.id) : undefined} />
+          <BrowserScreen key={s.id} s={s} onChange={(p) => update(s.id, p)} onAdd={add} onClose={screens.length > 1 ? () => close(s.id) : undefined} />
         ))}
-      </div>
-      <div className="pane-bar browsers-bar">
-        <button className="ghost" onClick={add}>+ Screen</button>
       </div>
     </div>
   );
 }
 
-function BrowserScreen({ s, onChange, onClose }: { s: Screen; onChange: (p: Partial<Screen>) => void; onClose?: () => void }) {
+function BrowserScreen({ s, onChange, onAdd, onClose }: { s: Screen; onChange: (p: Partial<Screen>) => void; onAdd: () => void; onClose?: () => void }) {
   const [url, setUrl] = useState(s.url);
   const [nonce, setNonce] = useState(0);
 
@@ -62,22 +60,31 @@ function BrowserScreen({ s, onChange, onClose }: { s: Screen; onChange: (p: Part
 
   return (
     <div className={`screen size-${s.size}`}>
-      <div className="pane-bar">
+      <div className="pane-bar browser-bar">
+        <button className="icon-btn" title="Reload" onClick={() => setNonce((n) => n + 1)}><Icon name="refresh" /></button>
         <input className="url" placeholder="localhost:3000" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} />
-        <button title="Reload" onClick={() => setNonce((n) => n + 1)}>↻</button>
         <select value={s.size} onChange={(e) => onChange({ size: e.target.value as Size })} title="Viewport">
           <option value="fill">Fill</option>
           <option value="tablet">Tablet</option>
           <option value="phone">Phone</option>
         </select>
-        {s.url && <a href={s.url} target="_blank" rel="noreferrer"><button title="Open in a new tab">↗</button></a>}
-        {onClose && <button className="ghost" title="Close screen" onClick={onClose}>×</button>}
+        {s.url && <a className="icon-btn" href={s.url} target="_blank" rel="noreferrer" title="Open in a new tab"><Icon name="link-external" /></a>}
+        <button className="icon-btn desktop-only" title="Add a screen" onClick={onAdd}><Icon name="split-horizontal" /></button>
+        {onClose && <button className="icon-btn" title="Close screen" onClick={onClose}><Icon name="close" /></button>}
       </div>
       <div className="frame-host">
         {!s.url ? (
-          <div className="frame-empty muted small">Enter the URL of the app you are working on. Pages that block framing stay blank; use ↗ for those.</div>
+          <div className="empty-state">
+            <Icon name="globe" />
+            <div className="empty-title">Preview your app</div>
+            <div className="muted small">Enter its address above. Sites that block embedding open in a new tab instead.</div>
+          </div>
         ) : isSelf(s.url) ? (
-          <div className="frame-empty muted small">This is AgentView itself. Enter the URL of the app you are working on.</div>
+          <div className="empty-state">
+            <Icon name="globe" />
+            <div className="empty-title">This is AgentView itself</div>
+            <div className="muted small">Enter the address of the app you are working on.</div>
+          </div>
         ) : (
           <iframe key={nonce} src={s.url} title={s.url} style={{ width: WIDTH[s.size] }} />
         )}

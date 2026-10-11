@@ -23,7 +23,11 @@
   .composer textarea { font-size: 16px; max-height: 35vh; }
   .composer-foot { padding: 4px 6px 6px 8px; min-height: 48px; }
   .composer-foot .keys { display: none; }
-  .composer-foot button.ghost { min-height: 36px; padding: 0 12px; }
+  .composer-foot .pill, .composer-foot .icon-btn { height: 36px; min-width: 36px; }
+  .tabbar .codicon.icon { font-size: 20px; }
+  .browser-bar { height: 44px; }
+  .browser-bar .icon-btn, .browser-bar select { height: 32px; min-width: 32px; }
+  .browser-bar input.url { height: 32px; font-size: 16px; }
   button.send { width: 36px; height: 36px; border-radius: 8px; font-size: 16px; }
   .cmd-popup li { height: 40px; }
 

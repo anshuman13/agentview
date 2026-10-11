@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Icon } from './Icon';
 import QRCode from 'qrcode';
 
 export function ConnectPopover({ onClose }: { onClose: () => void }) {
@@ -30,7 +31,7 @@ export function ConnectPopover({ onClose }: { onClose: () => void }) {
         <div className="connect-head">
           <span>Open on phone</span>
           <span className="spacer" />
-          <button className="ghost" title="Close" onClick={onClose}>×</button>
+          <button className="icon-btn" title="Close" onClick={onClose}><Icon name="close" /></button>
         </div>
         {error && <div className="connect-body muted">{error}</div>}
         {urls && urls.length === 0 && <div className="connect-body muted">No network address found.</div>}
@@ -46,7 +47,7 @@ export function ConnectPopover({ onClose }: { onClose: () => void }) {
           </div>
         )}
         <div className="connect-note muted small">
-          Same Wi-Fi only. For outside the network, expose port 5173 (dev) or 7777 (built) with Tailscale or similar.
+          Works on the same Wi-Fi, or from anywhere when the phone is signed in to NetBird.
         </div>
       </div>
     </div>
