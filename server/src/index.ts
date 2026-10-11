@@ -36,7 +36,8 @@ async function openSession(cwd: string, resume?: string) {
     clients.forEach((c) => c(m));
     if (m.type === 'session' && m.session.sessionId) remember(m.session.sessionId);
   });
-  if (!resume) session.start();
+  if (resume) remember(resume);
+  else session.start();
   watcher = chokidar
     .watch(cwd, {
       ignored: (p) => IGNORED.test(p),

@@ -13,7 +13,7 @@ import {
   type PermissionMode,
 } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import type { ChatEvent, PendingRequest, ServerMessage, ServerState, SessionInfo } from '../../shared/protocol.js';
+import type { CacheInfo, ChatEvent, PendingRequest, ServerMessage, ServerState, SessionInfo } from '../../shared/protocol.js';
 
 type Resolver = (r: PermissionResult) => void;
 
@@ -33,7 +33,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { sessionId: resume ?? null, model: null, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [] },
+      session: { sessionId: resume ?? null, model: null, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
       status: 'Idle',
       events: [],
       pending: [],
@@ -116,6 +116,7 @@ export class AgentSession {
         }
       }
       if (at) lastAt = at;
+      if (m.type === 'assistant' && at) this.state.session.cache = cacheFrom((m.message as any)?.usage, at, this.state.session.cache);
     }
     endTurn();
   }
@@ -333,6 +334,7 @@ export class AgentSession {
 
       case 'assistant': {
         if (msg.parent_tool_use_id) return;
+        this.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache) });
         for (const block of msg.message.content) {
           if (block.type === 'tool_use') {
             const input = (block.input ?? {}) as Record<string, unknown>;
@@ -390,6 +392,13 @@ export class AgentSession {
         return;
     }
   }
+}
+
+function cacheFrom(usage: any, at: number, prev: CacheInfo | null): CacheInfo | null {
+  if (!usage) return prev;
+  const c = usage.cache_creation;
+  const ttlMs = c?.ephemeral_1h_input_tokens > 0 ? 3_600_000 : c?.ephemeral_5m_input_tokens > 0 ? 300_000 : prev?.ttlMs ?? 300_000;
+  return { at, ttlMs, readTokens: usage.cache_read_input_tokens ?? 0, writeTokens: usage.cache_creation_input_tokens ?? 0 };
 }
 
 function toolResultText(block: { content?: unknown }): string {

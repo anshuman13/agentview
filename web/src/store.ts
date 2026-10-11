@@ -11,7 +11,7 @@ type UiState = {
 export type State = ServerState & { ui: UiState };
 
 let state: State = {
-  session: { sessionId: null, model: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [] },
+  session: { sessionId: null, model: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
   status: 'Connecting',
   events: [],
   pending: [],

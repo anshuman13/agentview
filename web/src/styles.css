@@ -264,7 +264,7 @@ button.send:disabled { opacity: 0.35; cursor: default; }
 .statusbar .item { display: flex; align-items: center; gap: 4px; padding: 0 6px; height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
 .statusbar .item:hover { background: rgba(255,255,255,0.12); }
 .statusbar .item.project { background: var(--claude-button); color: #fff; padding: 0 8px; }
-.statusbar .item.status-text { color: var(--muted); }
+.statusbar .item.status-text, .statusbar .item.muted { color: var(--muted); }
 .statusbar .item.error { background: var(--red); color: #fff; }
 @keyframes spin { to { transform: rotate(360deg); } }
 

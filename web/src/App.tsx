@@ -34,6 +34,25 @@ function stored(key: string, fallback: number) {
   }
 }
 
+function CacheItem() {
+  const cache = useStore((s) => s.session.cache);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  if (!cache) return null;
+  const expires = cache.at + cache.ttlMs;
+  const left = Math.max(0, Math.round((expires - now) / 1000));
+  const k = (n: number) => `${Math.round(n / 1000)}k`;
+  const title = `Prompt cache (${cache.ttlMs >= 3_600_000 ? '1h' : '5m'} TTL) ${left ? 'expires' : 'expired'} at ${new Date(expires).toLocaleTimeString()}. Last request read ${k(cache.readTokens)} cached tokens, wrote ${k(cache.writeTokens)}.`;
+  return (
+    <span className={`item ${left ? '' : 'muted'}`} title={title}>
+      <Icon name="database" small /> {left ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'Expired'}
+    </span>
+  );
+}
+
 export function App() {
   const connected = useStore((s) => s.ui.connected);
   const pendingCount = useStore((s) => s.pending.length);
@@ -156,6 +175,7 @@ export function App() {
         </span>
         {!['Idle', 'Working', 'Connecting'].includes(status) && <span className="item status-text">{status}</span>}
         <span className="spacer" />
+        <CacheItem />
         {canNotify && (
           <span className="item clickable" title="Notify me when Claude finishes or needs you" onClick={() => Promise.resolve(Notification.requestPermission()).catch(() => {}).finally(() => rerender((n) => n + 1))}>
             <Icon name="bell" small />

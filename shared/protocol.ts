@@ -38,7 +38,10 @@ export type SessionInfo = {
   apiKeySource: string | null;
   models: Array<{ value: string; displayName: string; description?: string }>;
   commands: Array<{ name: string; description: string }>;
+  cache: CacheInfo | null;
 };
+
+export type CacheInfo = { at: number; ttlMs: number; readTokens: number; writeTokens: number };
 
 export const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'dontAsk'] as const;
 
