@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { ClientMessage, ServerMessage, ServerState } from '../../shared/protocol';
+import type { ClientMessage, LiveChat, ServerMessage, ServerState } from '../../shared/protocol';
 
 type UiState = {
   connected: boolean;
@@ -9,14 +9,15 @@ type UiState = {
   repoPicker: boolean;
 };
 
-export type State = ServerState & { ui: UiState };
+export type State = ServerState & { live: LiveChat[]; ui: UiState };
 
 let state: State = {
-  session: { sessionId: null, model: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
+  session: { id: '', sessionId: null, model: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
   status: 'Connecting',
   events: [],
   pending: [],
   recentFiles: [],
+  live: [],
   ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false },
 };
 
@@ -28,7 +29,7 @@ function set(patch: Partial<State> | ((s: State) => Partial<State>)) {
 }
 
 listeners.add(() => {
-  const n = state.pending.length;
+  const n = state.live.reduce((sum, c) => sum + (c.id === state.session.id ? state.pending.length : c.pending), 0);
   const title = n > 0 ? `(${n}) AgentView` : 'AgentView';
   if (document.title !== title) document.title = title;
 });
@@ -50,6 +51,19 @@ export function useStore<T>(selector: (s: State) => T): T {
     (l) => (listeners.add(l), () => listeners.delete(l)),
     () => selector(state),
   );
+}
+
+export const api = (path: string) => `${path}${path.includes('?') ? '&' : '?'}chat=${encodeURIComponent(state.session.id)}`;
+
+const repo = (c: LiveChat) => c.cwd.split('/').pop();
+
+function notifyBackground(chats: LiveChat[]) {
+  for (const c of chats) {
+    const was = state.live.find((x) => x.id === c.id);
+    if (!was || c.id === state.session.id) continue;
+    if (c.pending > was.pending) notify(`Claude needs you in ${repo(c)}`, c.title);
+    else if (was.running && !c.running) notify(`Claude finished in ${repo(c)}`, c.title);
+  }
 }
 
 let ws: WebSocket | null = null;
@@ -96,6 +110,10 @@ function handle(m: ServerMessage) {
       break;
     case 'session':
       set({ session: m.session });
+      break;
+    case 'live':
+      notifyBackground(m.chats);
+      set({ live: m.chats });
       break;
   }
 }

@@ -353,6 +353,7 @@ button.link:hover { background: transparent; text-decoration: underline; }
   .screen, .screen.size-phone, .screen.size-tablet { flex: 1 1 0; min-width: 0; min-height: 240px; }
   .pane { display: none; height: 100%; width: 100%; border: 0; }
   .workbench[data-tab='now'] .pane.now,
+  .workbench[data-tab='repos'] .pane.now,
   .workbench[data-tab='chat'] .pane.chat,
   .workbench[data-tab='code'] .pane.code,
   .workbench[data-tab='browser'] .pane.code { display: flex; }

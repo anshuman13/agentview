@@ -31,7 +31,7 @@ export async function listRepos(): Promise<Repo[]> {
   return repos.filter((r) => r !== null);
 }
 
-export async function listWorktrees(openCwd: string): Promise<Worktree[]> {
+export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
   const [{ stdout }, projects] = await Promise.all([run('paseo', ['workspace', 'ls', '--json']), paseoProjects()]);
   const spaces = (JSON.parse(stdout) as Array<{ workspaceId: string; project: string; name: string; isolation: string; cwd: string }>)
     .filter((w) => w.isolation === 'worktree');
@@ -43,14 +43,14 @@ export async function listWorktrees(openCwd: string): Promise<Worktree[]> {
       const edits = await Promise.all(dirty.map((f) => stat(path.join(w.cwd, f)).then((s) => s.mtimeMs).catch(() => 0)));
       const lastChat = chats.filter((c) => c.cwd && inside(c.cwd, w.cwd)).map((c) => c.lastModified);
       const lastActive = Math.max(lastCommit, ...lastChat, ...edits);
-      const open = inside(openCwd, w.cwd);
+      const open = openCwds.some((c) => inside(c, w.cwd));
       return { id: w.workspaceId, project: w.project, repo: projects.find((p) => p.name === w.project || p.projectId === w.project)?.path ?? '', name: w.name, cwd: w.cwd, dirty: dirty.length, lastActive, removable: !open && Date.now() - lastActive > STALE_MS };
     }),
   );
 }
 
-export async function removeWorktree(id: string, openCwd: string) {
-  const w = (await listWorktrees(openCwd)).find((x) => x.id === id);
+export async function removeWorktree(id: string, openCwds: string[]) {
+  const w = (await listWorktrees(openCwds)).find((x) => x.id === id);
   if (!w) throw new Error('Worktree not found');
   if (!w.removable) throw new Error('This worktree was used in the last 12 hours or is open');
   await run('paseo', ['workspace', 'archive', id]);

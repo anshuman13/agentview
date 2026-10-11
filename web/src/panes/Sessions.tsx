@@ -3,7 +3,7 @@ import { send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
-import { STALE_MS, type Repo, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { STALE_MS, type LiveChat, type Repo, type SavedSession, type Worktree } from '../../../shared/protocol';
 
 const PAGE = 10;
 
@@ -48,7 +48,6 @@ function useWorkspace(key: unknown) {
 
 export function RepoPicker() {
   const cwd = useStore((s) => s.session.cwd);
-  const running = useStore((s) => s.session.running);
   const { folders } = useWorkspace(null);
   const close = () => setUi({ repoPicker: false });
   const items = folders.flatMap((f) => [
@@ -57,10 +56,10 @@ export function RepoPicker() {
   ]);
   return (
     <QuickPick
-      title={running ? 'Stop or wait for the current turn first' : 'Start a chat in…'}
+      title="Start a chat in…"
       items={items}
       current={folders.find((f) => f.cwd === cwd || f.trees.some((w) => w.cwd === cwd))?.cwd}
-      onPick={(v) => { if (!running) send({ type: 'new_session', cwd: v }); close(); }}
+      onPick={(v) => { send({ type: 'new_session', cwd: v }); close(); }}
       onClose={close}
     />
   );
@@ -68,8 +67,9 @@ export function RepoPicker() {
 
 export function Sessions() {
   const current = useStore((s) => s.session.sessionId);
+  const viewing = useStore((s) => s.session.id);
   const cwd = useStore((s) => s.session.cwd);
-  const running = useStore((s) => s.session.running);
+  const live = useStore((s) => s.live);
   const lastEvent = useStore((s) => s.events[s.events.length - 1]);
   const { folders, setTrees, setChats } = useWorkspace(current + cwd);
   const [filter, setFilter] = useState('');
@@ -100,13 +100,12 @@ export function Sessions() {
   }, [folders, filter]);
 
   const open = (id: string) => {
-    if (id === current || running) return;
+    if (id === current) return;
     setOpening(id);
     send({ type: 'open_session', sessionId: id });
   };
 
   const start = (dir: string) => {
-    if (running) return;
     setError(null);
     send({ type: 'new_session', cwd: dir });
   };
@@ -154,11 +153,17 @@ export function Sessions() {
       <div className="sessions-bar">
         <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} />
         <button className="icon-btn" title="Start a chat in a repo (⌘O)" onClick={() => setUi({ repoPicker: true })}><Icon name="folder-opened" /></button>
-        <button className="icon-btn" title="New chat in this folder" disabled={running} onClick={() => start(cwd)}><Icon name="add" /></button>
+        <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
-      {running && <div className="hint">Stop or wait for the current turn before switching.</div>}
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
       <div className="tree">
+        {live.length > 1 && !filter && (
+          <>
+            <div className="group">Open chats</div>
+            {live.map((c) => <LiveRow key={c.id} c={c} selected={c.id === viewing} />)}
+            <div className="group">Repos</div>
+          </>
+        )}
         {shown.map((d) => (
           <div key={d.cwd}>
             <div className={`row project ${d.cwd === here ? 'here' : ''}`} title={d.cwd} onClick={() => flip(setToggled, d.cwd)}>
@@ -168,7 +173,7 @@ export function Sessions() {
               {d.repo?.dirty ? <span className="dirty" title={`${d.repo.dirty} uncommitted`}>M</span> : null}
               <span className="count">{d.chats.length || ''}</span>
               <span className="acts">
-                <button className="icon-btn" title={`New chat in ${d.name}`} disabled={running} onClick={(e) => { e.stopPropagation(); start(d.cwd); }}><Icon name="add" small /></button>
+                <button className="icon-btn" title={`New chat in ${d.name}`} onClick={(e) => { e.stopPropagation(); start(d.cwd); }}><Icon name="add" small /></button>
               </span>
             </div>
             {isOpen(d) && d.trees.map((w) => (
@@ -185,7 +190,7 @@ export function Sessions() {
                   <span className="busy"><Icon name="loading" small spin /></span>
                 ) : (
                   <span className="acts">
-                    <button className="icon-btn" title="New chat in this worktree" disabled={running} onClick={() => start(w.cwd)}><Icon name="add" small /></button>
+                    <button className="icon-btn" title="New chat in this worktree" onClick={() => start(w.cwd)}><Icon name="add" small /></button>
                     {w.removable && (
                       <button className="icon-btn" title="Remove worktree, keep the branch" onClick={() => { setError(null); removeTree(w); }}><Icon name="trash" small /></button>
                     )}
@@ -219,6 +224,20 @@ export function Sessions() {
         ))}
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
+    </div>
+  );
+}
+
+function LiveRow({ c, selected }: { c: LiveChat; selected: boolean }) {
+  const state = c.pending ? 'Needs you' : c.running ? c.status : 'Idle';
+  return (
+    <div className={`row session live ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} onClick={() => selected || send({ type: 'view', id: c.id })}>
+      <span className={`state ${c.pending ? 'waiting' : c.running ? 'running' : ''}`}>
+        <Icon name={c.pending ? 'bell-dot' : c.running ? 'loading' : 'circle-small'} small spin={!c.pending && c.running} />
+      </span>
+      <span className="repo">{c.cwd.split('/').pop()}</span>
+      <span className="name">{c.title}</span>
+      <span className="when">{c.pending ? 'needs you' : c.running ? '' : ago(c.lastActive)}</span>
     </div>
   );
 }

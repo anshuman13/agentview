@@ -30,6 +30,7 @@ export type ChatEvent =
   | { id: string; kind: 'status'; text: string; at: number };
 
 export type SessionInfo = {
+  id: string;
   sessionId: string | null;
   model: string | null;
   cwd: string;
@@ -61,7 +62,19 @@ export type ServerMessage =
   | { type: 'resolved'; id: string }
   | { type: 'file_changed'; path: string; source: 'tool' | 'watcher' }
   | { type: 'session'; session: SessionInfo }
+  | { type: 'live'; chats: LiveChat[] }
   | { type: 'error'; text: string };
+
+export type LiveChat = {
+  id: string;
+  sessionId: string | null;
+  cwd: string;
+  title: string;
+  running: boolean;
+  pending: number;
+  status: string;
+  lastActive: number;
+};
 
 export type SavedSession = {
   sessionId: string;
@@ -100,5 +113,6 @@ export type ClientMessage =
   | { type: 'set_model'; model: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'interrupt' }
+  | { type: 'view'; id: string }
   | { type: 'open_session'; sessionId: string }
   | { type: 'new_session'; cwd?: string };

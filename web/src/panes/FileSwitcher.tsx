@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { setUi, useStore } from '../store';
+import { api, setUi, useStore } from '../store';
 
 export function FileSwitcher() {
   const open = useStore((s) => s.ui.switcherOpen);
@@ -13,7 +13,7 @@ export function FileSwitcher() {
     if (!open) return;
     setQ('');
     setIdx(0);
-    fetch('/api/files').then((r) => r.json()).then(setFiles);
+    fetch(api('/api/files')).then((r) => r.json()).then(setFiles);
     setTimeout(() => input.current?.focus(), 0);
   }, [open]);
 

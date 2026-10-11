@@ -28,12 +28,15 @@ export class AgentSession {
   private resolvers = new Map<string, Resolver>();
   private pendingMeta = new Map<string, { suggestions?: PermissionUpdate[]; input: Record<string, unknown> }>();
 
+  id = randomUUID();
+  title = '';
+  created = Date.now();
   state: ServerState;
   private listeners = new Set<(m: ServerMessage) => void>();
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { sessionId: resume ?? null, model: null, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
+      session: { id: this.id, sessionId: resume ?? null, model: null, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
       status: 'Idle',
       events: [],
       pending: [],

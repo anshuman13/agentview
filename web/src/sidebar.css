@@ -70,5 +70,17 @@
 .sessions .tree .row.removing .when { display: none; }
 .sessions .tree .row .busy { display: inline-flex; margin: 0 10px 0 auto; }
 .sessions .tree .row .dirty { flex: none; font-size: 11px; color: var(--yellow); margin-left: 6px; }
+.sessions .tree .group {
+  height: 22px; line-height: 22px; padding: 0 12px 0 8px; margin-top: 4px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted);
+}
+.sessions .tree .row.live { padding-left: 8px; gap: 6px; }
+.sessions .tree .row.live .state { display: inline-flex; width: 16px; justify-content: center; color: var(--muted); flex: none; }
+.sessions .tree .row.live .state.running { color: var(--claude); }
+.sessions .tree .row.live .state.waiting { color: var(--yellow); }
+.sessions .tree .row.live .repo { flex: none; font-weight: 600; color: var(--text-strong); }
+.sessions .tree .row.live .name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.sessions .tree .row.live.selected .name { color: var(--text); }
+.sessions .tree .row.live .when:empty { display: none; }
 .sessions .tree .row.more { font-size: 12px; color: var(--muted); }
 .sessions .tree .row.more:hover { color: var(--text); text-decoration: underline; }

@@ -30,6 +30,9 @@
   .browser-bar input.url { height: 32px; font-size: 16px; }
   button.send { width: 36px; height: 36px; border-radius: 8px; font-size: 16px; }
   .cmd-popup li { height: 40px; }
+  .sessions .tree .row { height: 36px; }
+  .sessions .tree .row .acts .icon-btn { width: 32px; height: 32px; }
+  .sessions .sessions-bar input { height: 32px; font-size: 16px; }
 
   .messages .card { padding: 12px; }
   .messages .card .row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }

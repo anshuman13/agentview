@@ -9,7 +9,7 @@ import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claud
 import { AgentSession } from './session.js';
 import { listFiles, readFileWithOriginal } from './files.js';
 import { allowedFolder, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
-import { STALE_MS, type ClientMessage, type ServerMessage } from '../../shared/protocol.js';
+import { STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -23,25 +23,75 @@ const LAST = path.join(os.homedir(), '.agentview-last.json');
 process.on('uncaughtException', (err) => console.error('uncaught:', err));
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 
-const clients = new Set<(m: ServerMessage) => void>();
-let session: AgentSession;
-let watcher: FSWatcher | null = null;
+const IDLE_MS = 10 * 60 * 1000;
 
-async function openSession(cwd: string, resume?: string) {
-  const next = new AgentSession(cwd, resume);
-  await next.loadHistory();
-  session?.close();
-  watcher?.close();
-  session = next;
-  session.onMessage((m) => {
-    clients.forEach((c) => c(m));
-    if (m.type === 'session' && m.session.sessionId) remember(m.session.sessionId);
-  });
-  if (resume) remember(resume);
-  else session.start();
-  watcher = watchFiles(cwd, (rel) => next.fileChangedExternally(rel));
-  clients.forEach((c) => c({ type: 'init', state: session.state }));
+type Client = { send: (m: ServerMessage) => void; view: AgentSession };
+const clients = new Set<Client>();
+const live = new Map<string, { chat: AgentSession; watcher: FSWatcher }>();
+let lastViewed: AgentSession;
+
+const viewers = (chat: AgentSession) => [...clients].filter((c) => c.view === chat).length;
+
+function summary(chat: AgentSession): LiveChat {
+  const s = chat.state;
+  const firstPrompt = s.events.find((e) => e.kind === 'user');
+  return {
+    id: chat.id,
+    sessionId: s.session.sessionId,
+    cwd: chat.cwd,
+    title: chat.title || (firstPrompt?.kind === 'user' ? firstPrompt.text.split('\n')[0].slice(0, 80) : 'New chat'),
+    running: s.session.running,
+    pending: s.pending.length,
+    status: s.status,
+    lastActive: s.events[s.events.length - 1]?.at ?? chat.created,
+  };
 }
+
+let liveTimer: NodeJS.Timeout | null = null;
+function broadcastLive() {
+  liveTimer ??= setTimeout(() => {
+    liveTimer = null;
+    const chats = [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
+    clients.forEach((c) => c.send({ type: 'live', chats }));
+  }, 100);
+}
+
+async function createChat(cwd: string, resume?: string, title = '') {
+  const chat = new AgentSession(cwd, resume);
+  chat.title = title;
+  await chat.loadHistory();
+  chat.onMessage((m) => {
+    clients.forEach((c) => c.view === chat && c.send(m));
+    if (m.type === 'session' && chat === lastViewed) remember(chat);
+    if (m.type !== 'event' || m.event.kind === 'user') broadcastLive();
+  });
+  if (!resume) chat.start();
+  live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
+  return chat;
+}
+
+function closeChat(chat: AgentSession) {
+  chat.close();
+  live.get(chat.id)?.watcher.close();
+  live.delete(chat.id);
+  broadcastLive();
+}
+
+const idle = (chat: AgentSession) => !chat.state.session.running && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
+
+function view(client: Client, chat: AgentSession) {
+  const prev = client.view;
+  client.view = chat;
+  lastViewed = chat;
+  remember(chat);
+  client.send({ type: 'init', state: chat.state });
+  if (prev && prev !== chat && idle(prev) && !prev.state.session.sessionId) closeChat(prev);
+  broadcastLive();
+}
+
+setInterval(() => {
+  for (const { chat } of live.values()) if (idle(chat) && Date.now() - summary(chat).lastActive > IDLE_MS) closeChat(chat);
+}, 60_000);
 
 function watchFiles(cwd: string, onChange: (rel: string) => void) {
   const timers = new Map<string, NodeJS.Timeout>();
@@ -55,33 +105,35 @@ function watchFiles(cwd: string, onChange: (rel: string) => void) {
   }).on('error', (err) => console.error(`watcher: ${String(err)}`));
 }
 
-async function openSavedSession(sessionId: string) {
+const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
+
+async function openSaved(sessionId: string) {
+  const open = [...live.values()].find((l) => l.chat.state.session.sessionId === sessionId);
+  if (open) return open.chat;
   const info = await getSessionInfo(sessionId);
   if (!info) throw new Error('Session not found');
   if (!info.cwd) throw new Error('This session has no folder recorded, so it cannot be resumed');
-  const exists = await stat(info.cwd).then((s) => s.isDirectory()).catch(() => false);
-  if (!exists) throw new Error(`Folder no longer exists: ${info.cwd}`);
-  await openSession(info.cwd, sessionId);
+  if (!(await isDir(info.cwd))) throw new Error(`Folder no longer exists: ${info.cwd}`);
+  return createChat(info.cwd, sessionId, info.summary);
 }
 
-async function newSession(cwd = session.cwd) {
+async function newChat(cwd: string, from: AgentSession) {
   const dir = path.resolve(cwd);
-  if (dir !== session.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
-  const exists = await stat(dir).then((s) => s.isDirectory()).catch(() => false);
-  if (!exists) throw new Error(`Folder no longer exists: ${dir}`);
-  await openSession(dir);
+  if (dir !== from.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
+  if (!(await isDir(dir))) throw new Error(`Folder no longer exists: ${dir}`);
+  return createChat(dir);
 }
 
 let remembered = '';
-function remember(sessionId: string) {
-  if (sessionId === remembered) return;
+function remember(chat: AgentSession) {
+  const sessionId = chat.state.session.sessionId;
+  if (!sessionId || sessionId === remembered) return;
   remembered = sessionId;
-  writeFile(LAST, JSON.stringify({ sessionId, cwd: session.cwd })).catch(() => {});
+  writeFile(LAST, JSON.stringify({ sessionId, cwd: chat.cwd })).catch(() => {});
 }
 
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
-if (last?.sessionId) await openSavedSession(last.sessionId).catch(() => openSession(PROJECT));
-else await openSession(PROJECT);
+lastViewed = await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT));
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -99,14 +151,16 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(body));
   };
   try {
-    if (url.pathname === '/api/files') return json(await listFiles(session.cwd));
+    const chat = live.get(url.searchParams.get('chat') ?? '')?.chat ?? lastViewed;
+    const liveCwds = [...live.values()].map((l) => l.chat.cwd);
+    if (url.pathname === '/api/files') return json(await listFiles(chat.cwd));
     if (url.pathname === '/api/file') {
       const rel = url.searchParams.get('path') ?? '';
-      return json(await readFileWithOriginal(session.cwd, rel));
+      return json(await readFileWithOriginal(chat.cwd, rel));
     }
     if (url.pathname === '/api/sessions' && req.method === 'DELETE') {
       const id = url.searchParams.get('id') ?? '';
-      if (id === session.state.session.sessionId) return json({ error: 'This chat is open. Switch to another one first.' }, 409);
+      if ([...live.values()].some((l) => l.chat.state.session.sessionId === id)) return json({ error: 'This chat is still open. It closes after 10 minutes without use.' }, 409);
       const info = await getSessionInfo(id);
       if (!info) return json({ error: 'Chat not found' }, 404);
       if (Date.now() - info.lastModified < STALE_MS) return json({ error: 'This chat was used in the last 12 hours.' }, 409);
@@ -114,16 +168,16 @@ const server = http.createServer(async (req, res) => {
       return json({ ok: true });
     }
     if (url.pathname === '/api/worktrees' && req.method === 'DELETE') {
-      await removeWorktree(url.searchParams.get('id') ?? '', session.cwd);
+      await removeWorktree(url.searchParams.get('id') ?? '', liveCwds);
       return json({ ok: true });
     }
-    if (url.pathname === '/api/worktrees') return json(await listWorktrees(session.cwd));
+    if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
     if (url.pathname === '/api/repos') return json(await listRepos());
     if (url.pathname === '/api/sessions') {
       const list = await listSessions({ limit: 300 });
       return json(list.map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
     }
-    if (url.pathname === '/api/state') return json(session.state);
+    if (url.pathname === '/api/state') return json(chat.state);
     if (url.pathname === '/api/connect') {
       const port = url.searchParams.get('port') || (req.headers.host?.match(/:(\d+)$/)?.[1] ?? String(PORT));
       const ips = Object.values(os.networkInterfaces())
@@ -150,10 +204,10 @@ const server = http.createServer(async (req, res) => {
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', (ws: WebSocket) => {
-  const send = (m: ServerMessage) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m));
-  send({ type: 'init', state: session.state });
-  clients.add(send);
-  const fail = (err: unknown) => send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
+  const client: Client = { send: (m) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m)), view: lastViewed };
+  clients.add(client);
+  view(client, lastViewed);
+  const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
 
   ws.on('message', (raw) => {
     let msg: ClientMessage;
@@ -162,34 +216,44 @@ wss.on('connection', (ws: WebSocket) => {
     } catch {
       return;
     }
+    const chat = client.view;
     switch (msg.type) {
       case 'prompt':
-        session.sendPrompt(msg.text);
+        chat.sendPrompt(msg.text);
         break;
       case 'answer':
-        session.answerQuestion(msg.id, msg.answers);
+        chat.answerQuestion(msg.id, msg.answers);
         break;
       case 'permission':
-        session.answerPermission(msg.id, msg.allow, msg.always);
+        chat.answerPermission(msg.id, msg.allow, msg.always);
         break;
       case 'set_model':
-        void session.setModel(msg.model);
+        void chat.setModel(msg.model);
         break;
       case 'set_permission_mode':
-        void session.setPermissionMode(msg.mode);
+        void chat.setPermissionMode(msg.mode);
         break;
       case 'interrupt':
-        void session.interrupt();
+        void chat.interrupt();
         break;
+      case 'view': {
+        const next = live.get(msg.id)?.chat;
+        if (next) view(client, next);
+        else fail(new Error('This chat was closed'));
+        break;
+      }
       case 'open_session':
-        openSavedSession(msg.sessionId).catch(fail);
+        openSaved(msg.sessionId).then((c) => view(client, c), fail);
         break;
       case 'new_session':
-        newSession(msg.cwd).catch(fail);
+        newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);
         break;
     }
   });
-  ws.on('close', () => clients.delete(send));
+  ws.on('close', () => {
+    clients.delete(client);
+    broadcastLive();
+  });
 });
 
 server.listen(PORT, () => {

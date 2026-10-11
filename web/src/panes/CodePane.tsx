@@ -9,7 +9,7 @@ import { json } from '@codemirror/lang-json';
 import { markdown } from '@codemirror/lang-markdown';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
-import { setUi, useStore } from '../store';
+import { api, setUi, useStore } from '../store';
 
 function lang(path: string) {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
@@ -34,7 +34,7 @@ export function CodePane() {
     if (!openFile || !host.current) return;
     let view: EditorView | MergeView | null = null;
     let cancelled = false;
-    fetch(`/api/file?path=${encodeURIComponent(openFile)}`)
+    fetch(api(`/api/file?path=${encodeURIComponent(openFile)}`))
       .then((r) => r.json())
       .then((d: { content: string; original: string }) => {
         if (cancelled || !host.current) return;

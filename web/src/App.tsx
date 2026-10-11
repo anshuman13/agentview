@@ -10,7 +10,7 @@ import { RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
 
-type Tab = 'now' | 'chat' | 'code' | 'browser';
+type Tab = 'now' | 'chat' | 'code' | 'browser' | 'repos';
 type View = 'agent' | 'explorer' | 'sessions';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
@@ -24,6 +24,7 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'chat', icon: 'comment-discussion', label: 'Chat' },
   { id: 'code', icon: 'files', label: 'Code' },
   { id: 'browser', icon: 'globe', label: 'Browser' },
+  { id: 'repos', icon: 'repo', label: 'Repos' },
 ];
 
 function stored(key: string, fallback: number) {
@@ -56,6 +57,7 @@ function CacheItem() {
 export function App() {
   const connected = useStore((s) => s.ui.connected);
   const pendingCount = useStore((s) => s.pending.length);
+  const elsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length);
   const openFile = useStore((s) => s.ui.openFile);
   const repoPicker = useStore((s) => s.ui.repoPicker);
   const session = useStore((s) => s.session);
@@ -93,6 +95,10 @@ export function App() {
   }, [pendingCount]);
 
   useEffect(() => {
+    setTab((t) => (t === 'repos' ? 'chat' : t));
+  }, [session.id]);
+
+  useEffect(() => {
     try { localStorage.setItem('agentview.chatW', String(chatW)); } catch {}
   }, [chatW]);
 
@@ -125,6 +131,7 @@ export function App() {
           {VIEWS.map((v) => (
             <button key={v.id} className={sidebar && view === v.id ? 'active' : ''} title={v.title} onClick={() => showView(v.id)}>
               <Icon name={v.icon} />
+              {v.id === 'sessions' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
             </button>
           ))}
           <span className="spacer" />
@@ -189,10 +196,11 @@ export function App() {
 
       <nav className="tabbar mobile-only">
         {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); }}>
+          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); if (t.id === 'repos') setView('sessions'); if (t.id === 'now') setView('agent'); }}>
             <Icon name={t.icon} />
             <span>{t.label}</span>
             {t.id === 'chat' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+            {t.id === 'repos' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
           </button>
         ))}
       </nav>

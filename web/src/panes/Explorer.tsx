@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { setUi, useStore } from '../store';
+import { api, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 
 type Node = { name: string; path: string; children?: Map<string, Node> };
@@ -33,12 +33,13 @@ export function Explorer() {
   const openFile = useStore((s) => s.ui.openFile);
   const recent = useStore((s) => s.recentFiles);
   const cwd = useStore((s) => s.session.cwd);
+  const id = useStore((s) => s.session.id);
   const [files, setFiles] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch('/api/files').then((r) => r.json()).then(setFiles);
-  }, [recent.length, cwd]);
+    fetch(api('/api/files')).then((r) => r.json()).then(setFiles);
+  }, [recent.length, id]);
 
   useEffect(() => {
     if (!openFile) return;
