@@ -1,93 +1,213 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 
-type Size = 'fill' | 'tablet' | 'phone';
-type Screen = { id: number; url: string; size: Size };
+type Tab = { id: string; title: string; url: string };
+type State = { state: 'off' | 'connecting' | 'on'; reason: string };
 
-const KEY = 'agentview.browsers.v2';
-const WIDTH: Record<Size, string> = { fill: '100%', tablet: '768px', phone: '390px' };
-const DEFAULT: Screen[] = [{ id: 1, url: '', size: 'fill' }];
-
-function isSelf(url: string) {
-  try {
-    return new URL(url).origin === location.origin;
-  } catch {
-    return false;
-  }
-}
-
-function load(): Screen[] {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '');
-    if (Array.isArray(v) && v.length) return v;
-  } catch {}
-  return DEFAULT;
-}
+const BUTTON = ['left', 'middle', 'right'];
+const mods = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) =>
+  (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0);
 
 export function BrowserPane() {
-  const [screens, setScreens] = useState<Screen[]>(load);
+  const ws = useRef<WebSocket | null>(null);
+  const img = useRef<HTMLImageElement>(null);
+  const kbd = useRef<HTMLTextAreaElement>(null);
+  const host = useRef<HTMLDivElement>(null);
+  const vp = useRef({ w: 0, h: 0 });
+  const touch = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const [state, setState] = useState<State>({ state: 'connecting', reason: '' });
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [current, setCurrent] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<string | null>(null);
+  const [hasFrame, setHasFrame] = useState(false);
+  const [url, setUrl] = useState('');
+  const [editing, setEditing] = useState(false);
+
+  const send = (m: object) => ws.current?.readyState === WebSocket.OPEN && ws.current.send(JSON.stringify(m));
+  const tab = tabs.find((t) => t.id === current);
 
   useEffect(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(screens)); } catch {}
-  }, [screens]);
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const s = new WebSocket(`${proto}://${location.host}/ws?chrome`);
+    ws.current = s;
+    s.onmessage = (ev) => {
+      const m = JSON.parse(ev.data);
+      if (m.t === 'state') setState(m);
+      if (m.t === 'tabs') {
+        setTabs(m.tabs);
+        setCurrent(m.current);
+        setPinned(m.pinned);
+      }
+      if (m.t === 'frame' && img.current) {
+        vp.current = { w: m.w, h: m.h };
+        img.current.src = `data:image/jpeg;base64,${m.data}`;
+        setHasFrame(true);
+      }
+    };
+    s.onclose = () => setState({ state: 'off', reason: 'AgentView server disconnected' });
+    return () => s.close();
+  }, []);
 
-  const update = (id: number, patch: Partial<Screen>) => setScreens((s) => s.map((x) => (x.id === id ? { ...x, ...patch } : x)));
-  const add = () => setScreens((s) => [...s, { id: Math.max(0, ...s.map((x) => x.id)) + 1, url: s[s.length - 1]?.url ?? '', size: 'fill' }]);
-  const close = (id: number) => setScreens((s) => (s.length > 1 ? s.filter((x) => x.id !== id) : s));
+  useEffect(() => {
+    if (!editing) setUrl(tab?.url ?? '');
+  }, [tab?.url, editing]);
+
+  useEffect(() => {
+    const el = host.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      send({ t: 'size', w: Math.round(r.width * dpr), h: Math.round(r.height * dpr) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [state.state]);
+
+  const pos = (e: { clientX: number; clientY: number }) => {
+    const r = img.current!.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * vp.current.w, y: ((e.clientY - r.top) / r.height) * vp.current.h };
+  };
+
+  const onDown = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse') {
+      touch.current = { x: e.clientX, y: e.clientY, moved: false };
+      return;
+    }
+    e.preventDefault();
+    kbd.current?.focus({ preventScroll: true });
+    send({ t: 'mouse', type: 'mousePressed', ...pos(e), button: BUTTON[e.button] ?? 'left', buttons: e.buttons, clickCount: e.detail || 1, modifiers: mods(e) });
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const t = touch.current;
+    if (e.pointerType !== 'mouse') {
+      if (!t) return;
+      const dx = t.x - e.clientX;
+      const dy = t.y - e.clientY;
+      if (!t.moved && Math.hypot(dx, dy) < 8) return;
+      const r = img.current!.getBoundingClientRect();
+      const k = vp.current.w / r.width;
+      send({ t: 'wheel', ...pos(e), dx: dx * k, dy: dy * k });
+      touch.current = { x: e.clientX, y: e.clientY, moved: true };
+      return;
+    }
+    send({ t: 'mouse', type: 'mouseMoved', ...pos(e), button: 'none', buttons: e.buttons, modifiers: mods(e) });
+  };
+  const onUp = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse') {
+      if (touch.current && !touch.current.moved) {
+        send({ t: 'mouse', type: 'mousePressed', ...pos(e), button: 'left', buttons: 1, clickCount: 1 });
+        send({ t: 'mouse', type: 'mouseReleased', ...pos(e), button: 'left', buttons: 0, clickCount: 1 });
+      }
+      touch.current = null;
+      return;
+    }
+    send({ t: 'mouse', type: 'mouseReleased', ...pos(e), button: BUTTON[e.button] ?? 'left', buttons: e.buttons, clickCount: e.detail || 1, modifiers: mods(e) });
+  };
+
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) return;
+    if (e.key === 'Unidentified' || e.key === 'Process') return;
+    if (e.metaKey && e.key === 'v') return;
+    e.preventDefault();
+    send({ t: 'key', key: e.key, code: e.code, keyCode: e.keyCode, modifiers: mods(e) });
+  };
+  const onText = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const text = e.currentTarget.value;
+    e.currentTarget.value = '';
+    if (text) send({ t: 'text', text });
+  };
+
+  const go = () => {
+    setEditing(false);
+    if (url.trim()) send({ t: 'nav', url: url.trim() });
+  };
+
+  if (state.state !== 'on') return <Connect state={state} onConnect={() => send({ t: 'connect' })} />;
 
   return (
     <div className="browser-pane">
-      <div className="screens">
-        {screens.map((s) => (
-          <BrowserScreen key={s.id} s={s} onChange={(p) => update(s.id, p)} onAdd={add} onClose={screens.length > 1 ? () => close(s.id) : undefined} />
-        ))}
+      <div className="pane-bar browser-bar">
+        <button className="icon-btn" title="Back" onClick={() => send({ t: 'back' })}><Icon name="arrow-left" /></button>
+        <button className="icon-btn desktop-only" title="Forward" onClick={() => send({ t: 'forward' })}><Icon name="arrow-right" /></button>
+        <button className="icon-btn" title="Reload" onClick={() => send({ t: 'reload' })}><Icon name="refresh" /></button>
+        <input
+          className="url"
+          placeholder="Address"
+          value={url}
+          onFocus={() => setEditing(true)}
+          onBlur={() => setEditing(false)}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { go(); e.currentTarget.blur(); }
+            if (e.key === 'Escape') e.currentTarget.blur();
+          }}
+        />
+        <select className="tab-pick" value={pinned ?? ''} onChange={(e) => send({ t: 'tab', id: e.target.value || null })} title="Which Chrome tab to show">
+          <option value="">Follow Claude</option>
+          {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
+        </select>
+        <button className="icon-btn phone-only" title="Keyboard" onClick={() => kbd.current?.focus()}><Icon name="keyboard" /></button>
+      </div>
+      <div className="frame-host" ref={host}>
+        <img
+          ref={img}
+          className="chrome-frame"
+          alt=""
+          hidden={!hasFrame}
+          draggable={false}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={() => { touch.current = null; }}
+          onWheel={(e) => send({ t: 'wheel', ...pos(e), dx: e.deltaX, dy: e.deltaY })}
+          onContextMenu={(e) => e.preventDefault()}
+        />
+        {!hasFrame && (
+          <div className="empty-state">
+            <Icon name="globe" />
+            <div className="empty-title">{tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'}</div>
+            <div className="muted small">Chrome only draws the tab that is in front. Pick a tab above to bring it forward.</div>
+          </div>
+        )}
+        <textarea ref={kbd} className="chrome-kbd" aria-label="Type into the page" autoCapitalize="off" autoComplete="off" spellCheck={false} onKeyDown={onKey} onInput={onText} onPaste={(e) => { e.preventDefault(); send({ t: 'text', text: e.clipboardData.getData('text') }); }} />
       </div>
     </div>
   );
 }
 
-function BrowserScreen({ s, onChange, onAdd, onClose }: { s: Screen; onChange: (p: Partial<Screen>) => void; onAdd: () => void; onClose?: () => void }) {
-  const [url, setUrl] = useState(s.url);
-  const [nonce, setNonce] = useState(0);
-
-  const go = () => {
-    if (!url.trim()) return;
-    const u = url.includes('://') ? url : `http://${url}`;
-    setUrl(u);
-    onChange({ url: u });
-    setNonce((n) => n + 1);
-  };
-
-  return (
-    <div className={`screen size-${s.size}`}>
-      <div className="pane-bar browser-bar">
-        <button className="icon-btn" title="Reload" onClick={() => setNonce((n) => n + 1)}><Icon name="refresh" /></button>
-        <input className="url" placeholder="localhost:3000" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} />
-        <select value={s.size} onChange={(e) => onChange({ size: e.target.value as Size })} title="Viewport">
-          <option value="fill">Fill</option>
-          <option value="tablet">Tablet</option>
-          <option value="phone">Phone</option>
-        </select>
-        {s.url && <a className="icon-btn" href={s.url} target="_blank" rel="noreferrer" title="Open in a new tab"><Icon name="link-external" /></a>}
-        <button className="icon-btn desktop-only" title="Add a screen" onClick={onAdd}><Icon name="split-horizontal" /></button>
-        {onClose && <button className="icon-btn" title="Close screen" onClick={onClose}><Icon name="close" /></button>}
+function Connect({ state, onConnect }: { state: State; onConnect: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const address = 'chrome://inspect/#remote-debugging';
+  if (state.state === 'connecting') {
+    return (
+      <div className="browser-pane">
+        <div className="empty-state">
+          <Icon name="loading" spin />
+          <div className="empty-title">Connecting to Chrome</div>
+          <div className="muted small">If Chrome on your Mac asks to allow remote debugging, click Allow.</div>
+        </div>
       </div>
-      <div className="frame-host">
-        {!s.url ? (
-          <div className="empty-state">
-            <Icon name="globe" />
-            <div className="empty-title">Preview your app</div>
-            <div className="muted small">Enter its address above. Sites that block embedding open in a new tab instead.</div>
-          </div>
-        ) : isSelf(s.url) ? (
-          <div className="empty-state">
-            <Icon name="globe" />
-            <div className="empty-title">This is AgentView itself</div>
-            <div className="muted small">Enter the address of the app you are working on.</div>
-          </div>
+    );
+  }
+  return (
+    <div className="browser-pane">
+      <div className="empty-state chrome-setup">
+        <Icon name="globe" />
+        <div className="empty-title">Show your Chrome here</div>
+        {state.reason === 'disabled' ? (
+          <ol className="muted small">
+            <li>
+              In Chrome on your Mac, open <code>{address}</code>
+              <button className="link" onClick={() => { void navigator.clipboard?.writeText(address); setCopied(true); }}>{copied ? 'Copied' : 'Copy'}</button>
+            </li>
+            <li>Tick "Allow remote debugging for this browser instance".</li>
+            <li>Click Connect, then Allow in the dialog Chrome shows.</li>
+          </ol>
         ) : (
-          <iframe key={nonce} src={s.url} title={s.url} style={{ width: WIDTH[s.size] }} />
+          <div className="muted small">{state.reason === 'closed' ? 'The connection to Chrome closed.' : state.reason}</div>
         )}
+        <button className="primary" onClick={onConnect}>Connect</button>
       </div>
     </div>
   );

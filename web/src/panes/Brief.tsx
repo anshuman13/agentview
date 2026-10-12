@@ -26,6 +26,7 @@ export function buildTimeline(events: ChatEvent[]) {
       reply = moments.push({ id: e.id, kind: 'reply', text: e.text.trim(), at: e.at }) - 1;
     }
     if (e.kind === 'plan') next = e.next;
+    if (e.kind === 'system' && e.text.startsWith('Compact')) moments.push({ id: e.id, kind: e.text.startsWith('Compact failed') ? 'note' : 'done', text: e.text, at: e.at });
     if (e.kind === 'tool_use' && e.name === 'Advisor') advisor++;
     if (e.kind === 'tool_use' && e.input.subagent_type === BIG_BRO) fableCalls.add(e.id);
     if (e.kind === 'tool_result' && fableCalls.has(e.toolUseId) && !e.isError) moments.push({ id: e.id, kind: 'fable', text: handBack(e.text), at: e.at });
@@ -53,6 +54,7 @@ export function Brief() {
   const waiting = useStore((s) => s.pending.length > 0);
   const team = useStore((s) => s.session.team);
   const context = useStore((s) => s.session.context);
+  const compacting = useStore((s) => s.session.compacting);
   const { moments, next, lastTool, advisor, fable } = useMemo(() => buildTimeline(events), [events]);
   const [all, setAll] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -70,10 +72,15 @@ export function Brief() {
   return (
     <div className="brief">
       <div className="brief-input"><Composer /></div>
-      {context !== null && context >= COMPACT_AT && (
+      {compacting ? (
+        <div className="compact-banner working">
+          <Icon name="loading" small spin />
+          <span>Compacting the conversation. This takes a minute; the meter drops when it is done.</span>
+        </div>
+      ) : context !== null && context >= COMPACT_AT && (
         <div className="compact-banner">
           <Icon name="warning" small />
-          <span>Context is {Math.round(context / 1000)}k tokens. Compact so Claude stays focused and each turn costs less.</span>
+          <span>Context is {Math.round(context / 1000)}k tokens. {running ? 'It compacts automatically when this turn ends.' : 'Compact so Claude stays focused and each turn costs less.'}</span>
           <button disabled={running} title={running ? 'Wait until Claude finishes this turn' : 'Run /compact'} onClick={() => send({ type: 'prompt', text: '/compact' })}>Compact</button>
         </div>
       )}

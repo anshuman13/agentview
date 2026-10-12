@@ -170,3 +170,36 @@ describe('context tokens', () => {
     expect(contextFrom(undefined)).toBeNull();
   });
 });
+
+describe('compacting', () => {
+  it('shows compacting from /compact until the boundary arrives', () => {
+    const { s } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    s.sendPrompt('/compact');
+    expect(s.state.session.compacting).toBe(true);
+    expect(s.state.status).toBe('Compacting the conversation');
+    handle({ type: 'system', subtype: 'compact_boundary', compact_metadata: { trigger: 'manual', pre_tokens: 295_000, post_tokens: 12_000 } });
+    expect(s.state.session.compacting).toBe(false);
+    expect(s.state.session.context).toBe(12_000);
+  });
+
+  it('compacts automatically when a turn ends past 200k, once', () => {
+    const { s, result } = fakeSession();
+    s.sendPrompt('big task');
+    s.state.session.context = 210_000;
+    result('r1');
+    expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: '/compact' });
+    expect(s.state.session.compacting).toBe(true);
+    result('r2');
+    expect(s.state.session.running).toBe(false);
+  });
+
+  it('stops compacting and says why when it fails', () => {
+    const { s } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    s.sendPrompt('/compact');
+    handle({ type: 'system', subtype: 'status', status: null, compact_result: 'failed', compact_error: 'Prompt is too long' });
+    expect(s.state.session.compacting).toBe(false);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Compact failed: Prompt is too long' });
+  });
+});

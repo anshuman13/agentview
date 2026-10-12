@@ -13,15 +13,17 @@ The agent does the work; the view is for watching, steering and verifying.
 - Explorer: file tree of the current folder; its header switches between worktrees and open chats
 - Editor (center): two tabs, File and Browser, that you switch between with a click, ⌘E or the globe in the activity
   bar. File is a read-only viewer that follows Claude's edits and shows the diff against HEAD (⌘P to open any file);
-  Browser is a preview of your local app. The layout stays fixed: editor in the middle, task box on the right
+  Browser shows a live tab from your own Chrome, where you're logged in to work sites. You can click, type and
+  navigate in it, and pick which tab to show or let it follow Claude. The layout stays fixed: editor in the middle, task box on the right
 - Chats: the chats that are open right now (the ones that need you first) and the most recent chats from every repo
 - Workspace: every repo in your workspace folders, their chats and Paseo worktrees
 - Phone: same client with a tab bar, reachable over your local network or NetBird. The Chats tab switches between
   Chats and Repos. The timeline is on top with the input below
   it, and the terminal has its own tab
 
-The meter next to the model menu shows how many tokens are in the context. Past 200k it turns red and the task box
-asks you to compact, with a button that runs `/compact`.
+The meter next to the model menu shows how many tokens are in the context. Past 200k it turns red, and AgentView runs
+`/compact` by itself when the turn ends (or press Compact in the task box). If a compaction fails it does not retry on
+its own.
 
 Claude fills the timeline through a `set_status` tool AgentView adds to every session (current step, finished parts,
 next steps, important notes).
@@ -44,6 +46,14 @@ Use `npm run dev` when working on the server itself.
 `npm test` runs the unit tests (Vitest).
 
 To serve the built client from the server: `npm run build && node server/dist/server/src/index.js /path/to/project`.
+
+## Chrome
+
+Chats drive your own Chrome through Claude in Chrome (Playwright is turned off for them), so Claude browses with your
+logins. To see that Chrome in the Browser tab, open `chrome://inspect/#remote-debugging` in Chrome once, tick "Allow
+remote debugging for this browser instance", click Connect in the Browser tab and allow it in Chrome.
+
+New chats start in Auto mode: Claude runs what is safe and asks only for risky actions.
 
 ## Team mode
 

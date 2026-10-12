@@ -12,7 +12,7 @@ type UiState = {
 export type State = ServerState & { live: LiveChat[]; ui: UiState };
 
 let state: State = {
-  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null },
+  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false },
   status: 'Connecting',
   events: [],
   pending: [],

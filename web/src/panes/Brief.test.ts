@@ -46,6 +46,15 @@ describe('buildTimeline', () => {
     ]);
   });
 
+  it('shows compaction as done or as a note when it fails', () => {
+    const sys = (text: string): ChatEvent => ({ id: `y${at()}`, kind: 'system', text, at: n });
+    const b = buildTimeline([sys('Session started with opus'), sys('Compacted from 295k to 12k tokens'), sys('Compact failed: prompt too long')]);
+    expect(b.moments.map((m) => [m.kind, m.text])).toEqual([
+      ['done', 'Compacted from 295k to 12k tokens'],
+      ['note', 'Compact failed: prompt too long'],
+    ]);
+  });
+
   it('lets a plan change from the user replace the next steps', () => {
     const plan: ChatEvent = { id: `p${at()}`, kind: 'plan', next: ['curl /check'], at: n };
     expect(buildTimeline([user('go'), status({ text: 'a', next: ['b', 'c'] }), plan]).next).toEqual(['curl /check']);

@@ -64,7 +64,6 @@ export function App() {
   const status = useStore((s) => s.status);
   const [tab, setTab] = useState<Tab>('chat');
   const [editor, setEditor] = useState<'file' | 'browser'>('file');
-  const [browserUsed, setBrowserUsed] = useState(false);
   const [sidebar, setSidebar] = useState(true);
   const [view, setView] = useState<View>('explorer');
   const [phone, setPhone] = useState(false);
@@ -133,10 +132,6 @@ export function App() {
     if (terminal) setTermOpened(true);
   }, [terminal]);
 
-  useEffect(() => {
-    if (editor === 'browser' || tab === 'browser') setBrowserUsed(true);
-  }, [editor, tab]);
-
   const fileName = openFile ? openFile.split('/').pop() : null;
   const closeFile = () => setUi({ openFile: null });
   const showing = tab === 'browser' ? 'browser' : tab === 'code' ? 'file' : editor;
@@ -187,7 +182,7 @@ export function App() {
             </button>
           </div>
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><CodePane /></div>
-          <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{browserUsed && <BrowserPane />}</div>
+          <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <BrowserPane />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <div className="empty-state">
               <Icon name="files" />

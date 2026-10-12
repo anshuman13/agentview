@@ -15,7 +15,7 @@ import {
   type HookJSONOutput,
 } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import type { CacheInfo, ChatEvent, PendingRequest, ServerMessage, ServerState, SessionInfo } from '../../shared/protocol.js';
+import { COMPACT_AT, type CacheInfo, type ChatEvent, type PendingRequest, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 
 type Resolver = (r: PermissionResult) => void;
 
@@ -41,7 +41,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null },
+      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false },
       status: 'Idle',
       events: [],
       pending: [],
@@ -107,7 +107,9 @@ export class AgentSession {
       const content = (m.message as { content?: unknown })?.content;
       const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
       for (const b of blocks) {
-        if (m.type === 'user' && b.type === 'text' && b.text.startsWith('[Request interrupted')) {
+        if (m.type === 'user' && b.type === 'text' && b.text.startsWith(COMPACT_SUMMARY)) {
+          this.state.events.push({ id: randomUUID(), kind: 'system', text: 'Compacted the earlier conversation', at });
+        } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith('[Request interrupted')) {
           this.state.events.push({ id: randomUUID(), kind: 'system', text: 'Interrupted', at });
         } else if (m.type === 'user' && b.type === 'text' && !b.text.trimStart().startsWith('<')) {
           endTurn();
@@ -143,6 +145,7 @@ export class AgentSession {
         'Pass done whenever you finish a meaningful part of the task: what was achieved, a few words, such as "Bearer prefix now required" or "3 invalid-token tests pass". Not for every tool call.',
         'Pass next as the remaining steps after the current one, a few words each, in order. Send the full list every time, and an empty list when nothing is left.',
         'Pass important only for something the user must know without reading the chat: a decision you made on their behalf, a risk, a blocker, or something surprising you found. One or two sentences. Leave it out otherwise.',
+        "For anything in a web browser, use the Claude in Chrome tools. They drive the user's own Chrome, where the user is logged in to work sites, and the user watches that tab in AgentView.",
       ].join(' '),
       tools: [
         tool(
@@ -170,6 +173,9 @@ export class AgentSession {
         settingSources: ['user', 'project', 'local'],
         includePartialMessages: true,
         allowedTools: ['mcp__agentview__set_status'],
+        disallowedTools: ['mcp__playwright'],
+        extraArgs: { chrome: null },
+        permissionMode: 'auto',
         mcpServers: { agentview: statusServer },
         toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
         canUseTool: (toolName, input, opts) => this.canUseTool(toolName, input, opts),
@@ -259,6 +265,7 @@ export class AgentSession {
     this.pushEvent({ id: randomUUID(), kind: 'user', text, at: Date.now() });
     this.turns++;
     this.setSession({ running: true });
+    if (/^\/compact\b/.test(text.trim())) this.startCompacting();
     this.inputQueue.push({
       type: 'user',
       message: { role: 'user', content: text },
@@ -304,15 +311,25 @@ export class AgentSession {
     if (this.state.session.team && this.state.session.permissionMode !== 'plan') await this.setPermissionMode('plan');
   }
 
+  private startCompacting() {
+    this.setSession({ compacting: true });
+    this.setStatus('Compacting the conversation');
+  }
+
   private turnEnded() {
     this.turns = Math.max(0, this.turns - 1);
-    this.setSession({ running: this.turns > 0 });
+    this.setSession({ running: this.turns > 0, compacting: false });
     if (this.turns === 0 && this.planChange) {
       const text = this.planChange;
       this.planChange = null;
       this.sendPrompt(text);
+    } else if (this.turns === 0 && this.autoCompact && (this.state.session.context ?? 0) >= COMPACT_AT) {
+      this.autoCompact = false;
+      this.sendPrompt('/compact');
     }
   }
+
+  private autoCompact = true;
 
   private async canUseTool(
     toolName: string,
@@ -399,11 +416,16 @@ export class AgentSession {
           this.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource });
           this.pushEvent({ id: randomUUID(), kind: 'system', text: `Session started with ${msg.model}`, at: Date.now() });
           if (this.state.session.commands.length === 0) void this.loadMeta();
-        } else if (msg.subtype === 'status' && msg.permissionMode) {
-          this.setSession({ permissionMode: msg.permissionMode });
+        } else if (msg.subtype === 'status') {
+          if (msg.permissionMode) this.setSession({ permissionMode: msg.permissionMode });
+          if (msg.status === 'compacting') this.startCompacting();
+          if (msg.compact_result) this.setSession({ compacting: false });
+          if (msg.compact_result === 'failed') this.pushEvent({ id: randomUUID(), kind: 'system', text: `Compact failed: ${msg.compact_error || 'no reason given'}`, at: Date.now() });
         } else if (msg.subtype === 'compact_boundary') {
-          this.setSession({ context: msg.compact_metadata.post_tokens ?? null });
-          this.pushEvent({ id: randomUUID(), kind: 'system', text: `Compacted from ${Math.round(msg.compact_metadata.pre_tokens / 1000)}k tokens`, at: Date.now() });
+          const { pre_tokens, post_tokens } = msg.compact_metadata;
+          this.setSession({ context: post_tokens ?? null, compacting: false });
+          this.autoCompact = true;
+          this.pushEvent({ id: randomUUID(), kind: 'system', text: `Compacted from ${Math.round(pre_tokens / 1000)}k${post_tokens ? ` to ${Math.round(post_tokens / 1000)}k` : ''} tokens`, at: Date.now() });
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
@@ -506,6 +528,8 @@ export class AgentSession {
 function advisorEvent(id: string, at: number): ChatEvent {
   return { id, kind: 'tool_use', name: 'Advisor', input: {}, summary: 'Consulted the advisor', at };
 }
+
+const COMPACT_SUMMARY = 'This session is being continued from a previous conversation';
 
 export function contextFrom(usage: any): number | null {
   if (!usage) return null;

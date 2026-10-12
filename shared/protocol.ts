@@ -43,6 +43,7 @@ export type SessionInfo = {
   commands: Array<{ name: string; description: string }>;
   cache: CacheInfo | null;
   context: number | null;
+  compacting: boolean;
 };
 
 export type CacheInfo = { at: number; ttlMs: number; readTokens: number; writeTokens: number };
