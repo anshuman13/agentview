@@ -125,6 +125,9 @@ function onMessage(m: Msg) {
       if (watching?.target === m.params.targetId) watching = null;
       pick();
       break;
+    case 'Page.screencastVisibilityChanged':
+      if (m.sessionId === watching?.session && !m.params.visible && !pinned) pick();
+      break;
     case 'Page.screencastFrame':
       if (m.sessionId !== watching?.session) return;
       void call('Page.screencastFrameAck', { sessionId: m.params.sessionId }, m.sessionId).catch(() => {});
@@ -144,11 +147,42 @@ function sendTabs() {
   broadcast({ t: 'tabs', tabs: list, current: watching?.target ?? null, pinned });
 }
 
+async function isVisible(targetId: string) {
+  try {
+    const own = watching?.target === targetId ? watching.session : null;
+    const session = own ?? (await call('Target.attachToTarget', { targetId, flatten: true })).sessionId;
+    const { result } = await call('Runtime.evaluate', { expression: 'document.visibilityState', returnByValue: true }, session);
+    if (!own) void call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
+    return result?.value === 'visible';
+  } catch {
+    return false;
+  }
+}
+
+let picking = 0;
+let pickTimer: NodeJS.Timeout | null = null;
+
 function pick() {
-  if (!viewers.size || !cdp) return sendTabs();
+  sendTabs();
+  if (pickTimer) clearTimeout(pickTimer);
+  pickTimer = setTimeout(() => void choose(), 250);
+}
+
+async function choose() {
+  if (!viewers.size || !cdp) return;
+  const seq = ++picking;
   const list = [...tabs.values()].filter((t) => !isSelf(t.url)).sort((a, b) => b.at - a.at);
-  const target = pinned && tabs.has(pinned) ? pinned : list[0]?.id;
-  if (target && target !== watching?.target) void watch(target);
+  let target = pinned && tabs.has(pinned) ? pinned : null;
+  for (const t of target ? [] : list) {
+    if (await isVisible(t.id)) {
+      target = t.id;
+      break;
+    }
+    if (seq !== picking) return;
+  }
+  target ??= list[0]?.id ?? null;
+  if (seq !== picking) return;
+  if (target && target !== watching?.target) await watch(target);
   sendTabs();
 }
 

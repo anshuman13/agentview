@@ -107,7 +107,9 @@ export class AgentSession {
       const content = (m.message as { content?: unknown })?.content;
       const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
       for (const b of blocks) {
-        if (m.type === 'user' && b.type === 'text' && b.text.startsWith(COMPACT_SUMMARY)) {
+        if (m.type === 'user' && b.type === 'text' && b.text.includes('<local-command-stdout>Compacted')) {
+          this.state.session.context = null;
+        } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith(COMPACT_SUMMARY)) {
           this.state.events.push({ id: randomUUID(), kind: 'system', text: 'Compacted the earlier conversation', at });
         } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith('[Request interrupted')) {
           this.state.events.push({ id: randomUUID(), kind: 'system', text: 'Interrupted', at });
@@ -425,6 +427,7 @@ export class AgentSession {
         } else if (msg.subtype === 'compact_boundary') {
           const { pre_tokens, post_tokens } = msg.compact_metadata;
           this.setSession({ context: post_tokens ?? null, compacting: false });
+          this.setStatus('Compacted');
           this.autoCompact = true;
           this.pushEvent({ id: randomUUID(), kind: 'system', text: `Compacted from ${Math.round(pre_tokens / 1000)}k${post_tokens ? ` to ${Math.round(post_tokens / 1000)}k` : ''} tokens`, at: Date.now() });
         } else if (msg.subtype === 'local_command_output') {
