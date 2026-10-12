@@ -413,8 +413,9 @@ export class AgentSession {
     switch (msg.type) {
       case 'system':
         if (msg.subtype === 'init') {
+          const changed = msg.model !== this.state.session.model;
           this.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource });
-          this.pushEvent({ id: randomUUID(), kind: 'system', text: `Session started with ${msg.model}`, at: Date.now() });
+          if (changed) this.pushEvent({ id: randomUUID(), kind: 'system', text: `Session started with ${msg.model}`, at: Date.now() });
           if (this.state.session.commands.length === 0) void this.loadMeta();
         } else if (msg.subtype === 'status') {
           if (msg.permissionMode) this.setSession({ permissionMode: msg.permissionMode });

@@ -386,6 +386,7 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .tl.note, .tl.fable { cursor: pointer; }
 .tl.note .text { color: var(--text-strong); }
 .tl.note .mark { color: var(--yellow); }
+.tl.note.stale .text, .tl.note.stale .mark { color: var(--muted); }
 .tl.fable .mark, .tl.fable b { color: var(--claude); }
 .tl.now .mark { color: var(--claude); }
 .tl.now .text { color: var(--text-strong); }

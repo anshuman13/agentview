@@ -55,6 +55,20 @@ describe('buildTimeline', () => {
     ]);
   });
 
+  it('marks a note stale once later progress arrives', () => {
+    const b = buildTimeline([
+      user('push it'),
+      status({ text: 'a', important: 'Auto mode blocked the push' }),
+      user('fix the PR'),
+      status({ text: 'b', done: 'Lock pushed' }),
+      status({ text: 'c', important: 'CI is slow today' }),
+    ]);
+    expect(b.moments.filter((m) => m.kind === 'note').map((m) => [m.text, Boolean(m.stale)])).toEqual([
+      ['Auto mode blocked the push', true],
+      ['CI is slow today', false],
+    ]);
+  });
+
   it('lets a plan change from the user replace the next steps', () => {
     const plan: ChatEvent = { id: `p${at()}`, kind: 'plan', next: ['curl /check'], at: n };
     expect(buildTimeline([user('go'), status({ text: 'a', next: ['b', 'c'] }), plan]).next).toEqual(['curl /check']);
