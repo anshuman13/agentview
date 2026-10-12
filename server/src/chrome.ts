@@ -23,17 +23,14 @@ let watchSeq = 0;
 let size = { w: 1600, h: 1200 };
 let viewport = { w: 0, h: 0 };
 
-async function endpoint(): Promise<string | null> {
+async function endpoint() {
   if (process.env.CHROME_CDP) return process.env.CHROME_CDP;
   try {
     const [port, p] = (await readFile(PORT_FILE, 'utf8')).trim().split('\n');
     return `ws://127.0.0.1:${port}${p}`;
-  } catch {}
-  try {
-    const r = await fetch('http://127.0.0.1:9222/json/version');
-    return (await r.json()).webSocketDebuggerUrl ?? null;
-  } catch {}
-  return null;
+  } catch {
+    return 'ws://127.0.0.1:9222/devtools/browser';
+  }
 }
 
 function broadcast(m: object) {
@@ -59,9 +56,7 @@ function call(method: string, params: object = {}, sessionId?: string): Promise<
 async function connect() {
   if (cdp || state === 'connecting') return;
   setState('connecting');
-  const url = await endpoint();
-  if (!url) return setState('off', 'disabled');
-  const ws = new WebSocket(url, { maxPayload: 512 * 1024 * 1024 });
+  const ws = new WebSocket(await endpoint(), { maxPayload: 512 * 1024 * 1024 });
   let failure = '';
   ws.on('open', async () => {
     cdp = ws;

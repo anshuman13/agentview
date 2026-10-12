@@ -17,6 +17,7 @@ const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
 const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIST = path.resolve(here, '../../web/dist');
+const DEV_WEB = process.env.AGENTVIEW_DEV_WEB;
 
 const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|\.tox)(\/|$)/;
 
@@ -209,6 +210,10 @@ const server = http.createServer(async (req, res) => {
       return json({ hostname: os.hostname(), urls: ips.map((ip) => `http://${ip}:${port}`) });
     }
 
+    if (DEV_WEB) {
+      res.writeHead(302, { location: `http://${(req.headers.host ?? 'localhost').replace(/:\d+$/, '')}:${DEV_WEB}${url.pathname}${url.search}` });
+      return res.end();
+    }
     let file = path.join(WEB_DIST, url.pathname === '/' ? 'index.html' : url.pathname);
     const exists = await stat(file).then((s) => s.isFile()).catch(() => false);
     if (!exists) file = path.join(WEB_DIST, 'index.html');

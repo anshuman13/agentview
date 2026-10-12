@@ -178,6 +178,7 @@ export function BrowserPane() {
 
 function Connect({ state, onConnect }: { state: State; onConnect: () => void }) {
   const [copied, setCopied] = useState(false);
+  const [tried, setTried] = useState(false);
   const address = 'chrome://inspect/#remote-debugging';
   if (state.state === 'connecting') {
     return (
@@ -201,13 +202,14 @@ function Connect({ state, onConnect }: { state: State; onConnect: () => void }) 
               In Chrome on your Mac, open <code>{address}</code>
               <button className="link" onClick={() => { void navigator.clipboard?.writeText(address); setCopied(true); }}>{copied ? 'Copied' : 'Copy'}</button>
             </li>
-            <li>Tick "Allow remote debugging for this browser instance".</li>
+            <li>Tick "Allow remote debugging for this browser instance". The page should then say "Server running at 127.0.0.1:9222". If it doesn't, quit and reopen Chrome and tick it again.</li>
             <li>Click Connect, then Allow in the dialog Chrome shows.</li>
           </ol>
         ) : (
           <div className="muted small">{state.reason === 'closed' ? 'The connection to Chrome closed.' : state.reason}</div>
         )}
-        <button className="primary" onClick={onConnect}>Connect</button>
+        {tried && state.reason === 'disabled' && <div className="small error-text">Chrome isn't accepting connections yet, so step 2 hasn't taken effect.</div>}
+        <button className="primary" onClick={() => { setTried(true); onConnect(); }}>Connect</button>
       </div>
     </div>
   );

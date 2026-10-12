@@ -55,7 +55,7 @@ describe('buildTimeline', () => {
     ]);
   });
 
-  it('marks a note stale once later progress arrives', () => {
+  it('drops a note once later progress arrives', () => {
     const b = buildTimeline([
       user('push it'),
       status({ text: 'a', important: 'Auto mode blocked the push' }),
@@ -63,10 +63,7 @@ describe('buildTimeline', () => {
       status({ text: 'b', done: 'Lock pushed' }),
       status({ text: 'c', important: 'CI is slow today' }),
     ]);
-    expect(b.moments.filter((m) => m.kind === 'note').map((m) => [m.text, Boolean(m.stale)])).toEqual([
-      ['Auto mode blocked the push', true],
-      ['CI is slow today', false],
-    ]);
+    expect(b.moments.filter((m) => m.kind === 'note').map((m) => m.text)).toEqual(['CI is slow today']);
   });
 
   it('lets a plan change from the user replace the next steps', () => {

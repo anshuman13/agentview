@@ -285,6 +285,7 @@ select { background: var(--input); color: var(--text); border: 1px solid var(--i
 .chrome-setup ol { margin: 4px 0 8px; padding-left: 18px; text-align: left; line-height: 1.7; }
 .chrome-setup code { padding: 1px 4px; border-radius: 3px; background: var(--input); }
 .chrome-setup .link { margin-left: 6px; }
+.chrome-setup .error-text { color: var(--red); }
 .phone-only { display: none !important; }
 
 button.link { background: transparent; padding: 0; color: #3794ff; text-align: left; line-height: 18px; }
@@ -386,7 +387,6 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .tl.note, .tl.fable { cursor: pointer; }
 .tl.note .text { color: var(--text-strong); }
 .tl.note .mark { color: var(--yellow); }
-.tl.note.stale .text, .tl.note.stale .mark { color: var(--muted); }
 .tl.fable .mark, .tl.fable b { color: var(--claude); }
 .tl.now .mark { color: var(--claude); }
 .tl.now .text { color: var(--text-strong); }

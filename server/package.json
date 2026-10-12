@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "serve": "tsx src/index.ts",
+    "dev": "AGENTVIEW_DEV_WEB=5173 tsx watch src/index.ts",
+    "serve": "AGENTVIEW_DEV_WEB=5173 tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js"
   },

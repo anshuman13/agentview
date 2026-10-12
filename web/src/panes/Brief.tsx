@@ -5,7 +5,7 @@ import { Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
 import { COMPACT_AT, type ChatEvent } from '../../../shared/protocol';
 
-export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply'; text: string; at: number; stale?: boolean };
+export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply'; text: string; at: number };
 
 const BIG_BRO = 'big-bro';
 
@@ -37,12 +37,12 @@ export function buildTimeline(events: ChatEvent[]) {
   }
   const lastTool = [...events].reverse().find((e) => e.kind === 'tool_use' && !e.name.endsWith('__set_status'));
   let later = false;
-  for (let i = moments.length - 1; i >= 0; i--) {
-    const m = moments[i];
-    if (m.kind === 'note' && later) moments[i] = { ...m, stale: true };
+  const current = moments.reduceRight<Moment[]>((kept, m) => {
+    if (m.kind === 'note' && later) return kept;
     if (m.kind === 'done' || m.kind === 'note') later = true;
-  }
-  return { moments, next, lastTool, advisor, fable: fableCalls.size };
+    return [m, ...kept];
+  }, []);
+  return { moments: current, next, lastTool, advisor, fable: fableCalls.size };
 }
 
 function handBack(text: string) {
@@ -131,7 +131,7 @@ function MomentRow({ m, latest }: { m: Moment; latest: boolean }) {
   const [toggled, setToggled] = useState(false);
   const open = latest !== toggled;
   return (
-    <li className={`tl ${m.kind} ${m.stale ? 'stale' : ''}`} title={m.stale ? 'Older note. Claude has made progress since, so it may be out of date.' : undefined} onClick={(e) => { if (!(e.target as HTMLElement).closest('a, pre, code')) setToggled((v) => !v); }}>
+    <li className={`tl ${m.kind}`} onClick={(e) => { if (!(e.target as HTMLElement).closest('a, pre, code')) setToggled((v) => !v); }}>
       <span className="mark"><Icon name={MARKS[m.kind]} small /></span>
       {m.kind === 'reply' && open ? <Markdown text={m.text} /> : (
         <span className={`text ${open ? '' : 'clamp'}`}>{m.kind === 'fable' && <b>Fable: </b>}{m.kind === 'reply' ? plain(m.text) : m.text}</span>
