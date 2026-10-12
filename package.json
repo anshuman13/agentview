@@ -7,6 +7,7 @@
     "serve": "concurrently -n server,web -c blue,green \"npm run serve -w server\" \"npm run dev -w web\"",
     "build": "npm run build -w web && npm run build -w server",
     "start": "npm run start -w server",
+    "up": "./start.sh",
     "menubar": "mkdir -p dist && swiftc -O menubar/AgentViewBar.swift -o dist/agentview-bar && (nohup ./dist/agentview-bar >/dev/null 2>&1 &)",
     "test": "vitest run"
   },

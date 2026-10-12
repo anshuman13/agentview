@@ -32,8 +32,11 @@ next steps, important notes).
 
 ```bash
 npm install
-PROJECT_DIR=/path/to/project npm run serve   # server on :7777, vite on :5173
+./start.sh   # or npm run up
 ```
+
+`start.sh` turns on the menu bar coffee cup (keeps the Mac awake) and runs `npm run serve`: server on :7777, vite on
+:5173. If AgentView is already running it only turns the cup on. Set `PROJECT_DIR=/path/to/project` for the first chat.
 
 Open http://localhost:5173. The server runs the Claude Code CLI you have installed, with whatever login it has.
 `PROJECT_DIR` is only the fallback folder for the first chat; after that AgentView reopens the last chat you viewed.
