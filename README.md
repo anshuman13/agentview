@@ -3,19 +3,23 @@
 A VS Code style view for working with Claude Code, built on the Agent SDK instead of the terminal.
 The agent does the work; the view is for watching, steering and verifying.
 
-- Chat (main view): the conversation with tool calls collapsed, questions and permission prompts as buttons, model and
-  permission mode menus. While Claude works, sending a message steers it: the current step stops and Claude continues
-  with your message
-- Brief: a compact bar above the chat with what Claude is doing now, its next steps and the latest important note it
-  flagged; expand it for all notes, changed files and turns
+- Task box (right column, top): where you tell Claude what to do, with the mode and model menus. While Claude works,
+  sending steers it: the current step stops and Claude continues with your message. Under the input is the timeline:
+  your instructions, the parts Claude finished, important notes, Claude's replies (the latest one open), what it is
+  doing now and its next steps. Edit, remove
+  or add a next step and Claude gets the new plan at its next tool call, without stopping. Approvals that need you
+  (plans, Fable, permissions) show here too
+- Terminal (bottom panel, ⌘J): a shell in the chat's folder, for when you want to run something yourself
 - Explorer: file tree of the current folder; its header switches between worktrees and open chats
-- Side panel: read-only file viewer that follows Claude's edits and shows the diff against HEAD (⌘P to open any file),
-  and a browser preview opened from the globe in the activity bar
+- Editor (center): two tabs, File and Browser, that you switch between with a click, ⌘E or the globe in the activity
+  bar. File is a read-only viewer that follows Claude's edits and shows the diff against HEAD (⌘P to open any file);
+  Browser is a preview of your local app. The layout stays fixed: editor in the middle, task box on the right
 - Workspace: every repo in your workspace folders, their chats and Paseo worktrees, and the chats that are open right now
-- Phone: same client with a tab bar, reachable over your local network or NetBird
+- Phone: same client with a tab bar, reachable over your local network or NetBird. The timeline is on top with the input below
+  it, and the terminal has its own tab
 
-Claude fills the Brief through a `set_status` tool AgentView adds to every session (current step, next steps,
-important notes).
+Claude fills the timeline through a `set_status` tool AgentView adds to every session (current step, finished parts,
+next steps, important notes).
 
 ## Run
 
@@ -40,9 +44,9 @@ To serve the built client from the server: `npm run build && node server/dist/se
 
 Pick **Team** in the model menu. Every new task starts in plan mode with Claude Opus 5.5 (Claude Code's `opusplan`).
 When you approve the plan, Claude Sonnet 5.5 builds it and consults Opus through the server-side advisor tool (its
-advice is encrypted, so the Brief only counts the consults). For a really hard problem any chat can ask
-Fable (Claude Fable 5.1) through a `big-bro` sub-agent; every call waits for your approval and Fable's answer shows in
-the Brief under Important. Each advisor consult re-reads the conversation, so long chats make consults more expensive.
+advice is encrypted, so the task box only counts the consults). For a really hard problem any chat can ask
+Fable (Claude Fable 5.1) through a `big-bro` sub-agent; every call waits for your approval and Fable's answer shows as
+a note in the task box. Each advisor consult re-reads the conversation, so long chats make consults more expensive.
 
 ## Workspace
 
@@ -63,3 +67,5 @@ colon-separated list of folders to change that. Chats can only be started inside
 | ⌘O | Start a chat in a repo |
 | ⌘P | Open a file |
 | ⌘B | Toggle the sidebar |
+| ⌘J | Toggle the terminal |
+| ⌘E | Switch the editor between the file and the browser |

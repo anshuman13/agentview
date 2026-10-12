@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { watch, type FSWatcher } from 'node:fs';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { WebSocketServer, WebSocket } from 'ws';
+import { openTerminal } from './terminal.js';
 import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { listFiles, readFileWithOriginal } from './files.js';
@@ -213,7 +214,9 @@ const server = http.createServer(async (req, res) => {
 
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, req) => {
+  const term = new URL(req.url ?? '', 'http://x').searchParams.get('term');
+  if (term !== null) return openTerminal(ws, (live.get(term)?.chat ?? lastViewed).cwd);
   const client: Client = { send: (m) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m)), view: lastViewed };
   clients.add(client);
   view(client, lastViewed);
@@ -233,6 +236,9 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       case 'steer':
         void chat.steer(msg.text);
+        break;
+      case 'plan':
+        chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
         break;
       case 'answer':
         chat.answerQuestion(msg.id, msg.answers);

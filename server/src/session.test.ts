@@ -125,3 +125,39 @@ describe('changed files', () => {
     expect(run(true)).toEqual([]);
   });
 });
+
+describe('plan changes', () => {
+  const hook = { hook_event_name: 'PostToolUse', session_id: 's', transcript_path: '', cwd: '', tool_name: 'Bash', tool_input: {}, tool_response: '', tool_use_id: 't' } as never;
+
+  it('delivers a plan change at the next tool call without interrupting', () => {
+    const { s, interrupt } = fakeSession();
+    s.sendPrompt('task');
+    s.changePlan(['curl /check', 'stop the server']);
+    expect(interrupt).not.toHaveBeenCalled();
+    const out = s.deliverPlan(hook) as { hookSpecificOutput?: { additionalContext?: string } };
+    expect(out.hookSpecificOutput?.additionalContext).toContain('1. curl /check\n2. stop the server');
+    expect(s.deliverPlan(hook)).toEqual({});
+  });
+
+  it('skips sub-agent tool calls', () => {
+    const { s } = fakeSession();
+    s.sendPrompt('task');
+    s.changePlan(['a']);
+    expect(s.deliverPlan({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
+  });
+
+  it('sends an undelivered plan change as a prompt when the turn ends', () => {
+    const { s, result } = fakeSession();
+    s.sendPrompt('task');
+    s.changePlan(['a']);
+    result('r1');
+    expect(s.state.session.running).toBe(true);
+    expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: expect.stringContaining('1. a') });
+  });
+
+  it('sends right away when idle', () => {
+    const { s } = fakeSession();
+    s.changePlan([]);
+    expect(s.state.session.running).toBe(true);
+  });
+});

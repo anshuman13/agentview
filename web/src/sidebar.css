@@ -1,27 +1,3 @@
-.summary-pane { gap: 0; margin-top: 8px; }
-.summary-pane .empty { padding: 2px 12px 0 20px; font-size: 12px; color: var(--muted); }
-.summary-pane .totals { height: 22px; line-height: 22px; padding: 0 12px 0 20px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.summary-pane .group {
-  height: 22px; line-height: 22px; margin-top: 4px; padding: 0 12px 0 20px;
-  font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted);
-}
-.summary-pane .file-item {
-  width: 100%; min-height: 22px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 28px;
-  background: transparent; border: 0; border-radius: 0; text-align: left; color: var(--text); white-space: nowrap;
-}
-.summary-pane .file-item:hover, .summary-pane .turn-item:hover { background: var(--hover); }
-.summary-pane .file-name { color: #e2c08d; flex: none; }
-.summary-pane .file-dir { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
-.summary-pane .file-turns { flex: none; font-size: 11px; color: var(--muted); }
-.summary-pane .turn-item { min-height: 22px; padding: 0 12px 0 26px; border-left: 2px solid transparent; cursor: pointer; }
-.summary-pane .turn-item.live { border-left-color: var(--claude); }
-.summary-pane .turn-head { height: 22px; display: flex; align-items: center; gap: 8px; }
-.summary-pane .turn-prompt { flex: 1; min-width: 0; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.summary-pane .turn-when { flex: none; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.summary-pane .turn-facts { margin-top: -3px; padding-bottom: 3px; font-size: 11px; line-height: 15px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.summary-pane .turn-steps { margin: 0; padding: 0 0 4px 14px; font-size: 12px; color: var(--muted); }
-.summary-pane .turn-steps li { margin: 1px 0; }
-
 .sessions .sessions-bar { gap: 4px; padding: 0 12px 6px 8px; align-items: center; }
 .sessions .sessions-bar input {
   height: 22px; padding: 0 6px; font-size: 13px; line-height: 20px;

@@ -10,13 +10,17 @@
   }
 
   .pane.side, .pane.center { flex-direction: column; min-height: 0; }
-  .brief-bar { padding: 6px 12px; max-height: 40%; }
+  .main { display: flex; flex-direction: column; }
+  .brief { display: contents; }
+  .brief-status { order: 0; flex: 1 1 0; min-height: 0; overflow: auto; padding: 6px 12px 8px; background: var(--side); border-bottom: 1px solid var(--border); }
+  .brief-cards { order: 1; flex: none; max-height: 50%; overflow: auto; padding: 8px 12px; }
+  .brief-input { order: 2; flex: none; padding: 6px 12px 8px; }
+  .tl.next .acts { opacity: 1; }
+  .tl { font-size: 13px; line-height: 20px; }
   .folder-switch { height: 40px; }
+  .panel-body { padding: 4px 0 0 8px; }
+  .xterm-helper-textarea { font-size: 16px !important; }
 
-  .chat { min-width: 0; }
-  .messages { padding: 12px 12px 16px; overflow-x: hidden; overscroll-behavior: contain; }
-  .messages > * { min-width: 0; }
-  .msg.tool summary { overflow: hidden; }
   .md { overflow-wrap: anywhere; }
   .md table { display: block; max-width: 100%; overflow-x: auto; }
 
@@ -35,10 +39,10 @@
   .sessions .tree .row .acts .icon-btn { width: 32px; height: 32px; }
   .sessions .sessions-bar input { height: 32px; font-size: 16px; }
 
-  .messages .card { padding: 12px; }
-  .messages .card .row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
-  .messages .card button { min-height: 44px; }
-  .messages .card .row button:not(.primary) { border-color: var(--input-border); background: var(--side); }
-  .messages .card .option { justify-content: center; padding: 10px 12px; border-color: var(--input-border); border-radius: 6px; }
-  .messages .card input { min-height: 44px; font-size: 16px; }
+  .brief-cards .card { padding: 12px; }
+  .brief-cards .card .row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+  .brief-cards .card button { min-height: 44px; }
+  .brief-cards .card .row button:not(.primary) { border-color: var(--input-border); background: var(--side); }
+  .brief-cards .card .option { justify-content: center; padding: 10px 12px; border-color: var(--input-border); border-radius: 6px; }
+  .brief-cards .card input { min-height: 44px; font-size: 16px; }
 }

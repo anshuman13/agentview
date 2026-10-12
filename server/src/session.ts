@@ -137,8 +137,9 @@ export class AgentSession {
       name: 'agentview',
       alwaysLoad: true,
       instructions: [
-        'The user follows your work in a brief view instead of reading the whole chat.',
+        'The user follows your work on a timeline instead of reading the whole chat.',
         'Call set_status when you begin a task, whenever you move to a new step or your plan changes, and when you finish. Keep text to one short sentence about what you are doing right now.',
+        'Pass done whenever you finish a meaningful part of the task: what was achieved, a few words, such as "Bearer prefix now required" or "3 invalid-token tests pass". Not for every tool call.',
         'Pass next as the remaining steps after the current one, a few words each, in order. Send the full list every time, and an empty list when nothing is left.',
         'Pass important only for something the user must know without reading the chat: a decision you made on their behalf, a risk, a blocker, or something surprising you found. One or two sentences. Leave it out otherwise.',
       ].join(' '),
@@ -148,6 +149,7 @@ export class AgentSession {
           'Update the one-line status shown to the user about what you are doing right now, and optionally flag something important for them.',
           {
             text: z.string().max(200),
+            done: z.string().max(160).optional().describe('A part of the task you just finished, a few words. Omit when nothing new is done.'),
             next: z.array(z.string().max(120)).max(12).optional().describe('Remaining steps after the current one, in order. Empty when done.'),
             important: z.string().max(500).optional().describe('A decision, risk, blocker or surprise the user must know about. Omit when there is none.'),
           },
@@ -179,7 +181,10 @@ export class AgentSession {
             tools: ['Read', 'Bash', 'WebSearch', 'WebFetch'],
           },
         },
-        hooks: { PreToolUse: [{ matcher: 'Agent|Task', hooks: [(input, _id, { signal }) => this.confirmBigBro(input, signal)] }] },
+        hooks: {
+          PreToolUse: [{ matcher: 'Agent|Task', hooks: [(input, _id, { signal }) => this.confirmBigBro(input, signal)] }],
+          PostToolUse: [{ hooks: [async (input) => this.deliverPlan(input)] }],
+        },
         stderr: (d) => process.stderr.write(d),
       },
     });
@@ -276,6 +281,24 @@ export class AgentSession {
     this.sendPrompt(text);
   }
 
+  private planChange: string | null = null;
+
+  changePlan(next: string[]) {
+    this.pushEvent({ id: randomUUID(), kind: 'plan', next, at: Date.now() });
+    const text = next.length
+      ? `I changed your plan. The remaining steps are now:\n${next.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nFollow this plan from here and update set_status to match.`
+      : 'I removed the remaining steps of your plan. Finish the current step, then stop and tell me where things stand.';
+    if (this.state.session.running) this.planChange = text;
+    else this.sendPrompt(text);
+  }
+
+  deliverPlan(input: HookInput): HookJSONOutput {
+    if (!this.planChange || input.agent_id) return {};
+    const additionalContext = this.planChange;
+    this.planChange = null;
+    return { hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext } };
+  }
+
   private async planFirst() {
     if (this.state.session.team && this.state.session.permissionMode !== 'plan') await this.setPermissionMode('plan');
   }
@@ -283,6 +306,11 @@ export class AgentSession {
   private turnEnded() {
     this.turns = Math.max(0, this.turns - 1);
     this.setSession({ running: this.turns > 0 });
+    if (this.turns === 0 && this.planChange) {
+      const text = this.planChange;
+      this.planChange = null;
+      this.sendPrompt(text);
+    }
   }
 
   private async canUseTool(

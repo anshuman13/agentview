@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Marked } from 'marked';
 import { send, useStore } from '../store';
-import { Pending } from './Pending';
 import { Icon } from '../Icon';
 import { QuickPick } from '../QuickPick';
-import { PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
+import { PERMISSION_MODES } from '../../../shared/protocol';
 
 const MODES: Record<string, { label: string; detail: string; icon: string }> = {
   default: { label: 'Ask before edits', detail: 'Ask before risky tools', icon: 'shield' },
@@ -13,22 +12,15 @@ const MODES: Record<string, { label: string; detail: string; icon: string }> = {
   dontAsk: { label: "Don't ask", detail: 'Deny anything not pre-approved', icon: 'circle-slash' },
 };
 
-export function Chat() {
-  const events = useStore((s) => s.events);
+export function Composer() {
   const running = useStore((s) => s.session.running);
   const waiting = useStore((s) => s.pending.length > 0);
   const commands = useStore((s) => s.session.commands);
-  const cwd = useStore((s) => s.session.cwd);
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
   const model = useStore((s) => s.session.model);
   const models = useStore((s) => s.session.models);
   const team = useStore((s) => s.session.team);
   const [pick, setPick] = useState<{ kind: 'model' | 'mode'; at: DOMRect } | null>(null);
-  const results = useMemo(() => {
-    const m = new Map<string, ToolResult>();
-    for (const e of events) if (e.kind === 'tool_result') m.set(e.toolUseId, e);
-    return m;
-  }, [events]);
   const [text, setText] = useState('');
   const [cmdIdx, setCmdIdx] = useState(0);
   const cmdMatches = useMemo(() => {
@@ -37,13 +29,8 @@ export function Chat() {
     const needle = m[1].toLowerCase();
     return commands.filter((c) => c.name.toLowerCase().startsWith(needle)).slice(0, 12);
   }, [text, commands]);
-  const bottom = useRef<HTMLDivElement>(null);
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
   const cycleMode = () => send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] });
-
-  useEffect(() => {
-    bottom.current?.scrollIntoView({ block: 'end' });
-  }, [events.length, events[events.length - 1], waiting]);
 
   const submit = () => {
     const t = text.trim();
@@ -53,12 +40,7 @@ export function Chat() {
   };
 
   return (
-    <div className="chat">
-      <div className="messages">
-        {events.map((e) => <Event key={e.id} e={e} results={results} cwd={cwd} />)}
-        <Pending />
-        <div ref={bottom} />
-      </div>
+    <>
       <div className="composer" data-mode={mode}>
         {cmdMatches.length > 0 && (
           <ul className="cmd-popup">
@@ -73,7 +55,7 @@ export function Chat() {
         <textarea
           value={text}
           rows={1}
-          placeholder={waiting ? 'Answer above, or steer Claude' : running ? 'Steer Claude: stops the current step and sends this' : 'Ask Claude, or type / for commands'}
+          placeholder={waiting ? 'Answer below, or steer Claude' : running ? 'Steer Claude: stops the current step and sends this' : 'What should Claude do? (/ for commands)'}
           onChange={(e) => { setText(e.target.value); setCmdIdx(0); }}
           onKeyDown={(e) => {
             if (cmdMatches.length > 0) {
@@ -128,7 +110,7 @@ export function Chat() {
           onClose={() => setPick(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -149,52 +131,4 @@ function escapeHtml(t: string) {
 export function Markdown({ text }: { text: string }) {
   const html = useMemo(() => md.parse(text, { async: false }) as string, [text]);
   return <div className="md" dangerouslySetInnerHTML={{ __html: html }} />;
-}
-
-type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;
-
-function toolLabel(name: string) {
-  return name.startsWith('mcp__') ? name.split('__').slice(2).join('__') : name;
-}
-
-function toolArg(input: Record<string, unknown>, cwd: string) {
-  const v = [input.command, input.file_path, input.pattern, input.url, input.description, input.query].find((x) => typeof x === 'string') as string | undefined;
-  if (!v) return '';
-  return cwd && v.startsWith(cwd + '/') ? v.slice(cwd.length + 1) : v;
-}
-
-function Event({ e, results, cwd }: { e: ChatEvent; results: Map<string, ToolResult>; cwd: string }) {
-  switch (e.kind) {
-    case 'user':
-      return <div className="msg user" data-event={e.id}><div className="bubble">{e.text}</div></div>;
-    case 'assistant':
-      return (
-        <div className={`msg tl ${e.streaming ? 'dot-progress' : ''}`}>
-          <Markdown text={e.text} />
-        </div>
-      );
-    case 'tool_use': {
-      if (e.name === 'mcp__agentview__set_status') return null;
-      const r = results.get(e.id);
-      const input = typeof e.input.command === 'string' ? e.input.command : JSON.stringify(e.input, null, 2);
-      return (
-        <details className={`msg tl tool ${!r ? 'dot-progress' : r.isError ? 'dot-fail' : 'dot-ok'}`}>
-          <summary>
-            <span className="tool-name">{toolLabel(e.name)}</span>
-            <span className="tool-arg">{toolArg(e.input, cwd)}</span>
-          </summary>
-          <div className="tool-body">
-            <div className="tool-row"><span className="k">IN</span><pre>{input}</pre></div>
-            {r && <div className={`tool-row ${r.isError ? 'error' : ''}`}><span className="k">OUT</span><pre>{r.text || '(no output)'}</pre></div>}
-          </div>
-        </details>
-      );
-    }
-    case 'status':
-      return <div className="msg tl status">{e.text}</div>;
-    case 'system':
-      return <div className="msg system">{e.text}</div>;
-    default:
-      return null;
-  }
 }

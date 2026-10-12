@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { connect, setUi, useStore } from './store';
 import { Brief } from './panes/Brief';
-import { Chat } from './panes/Chat';
+import { Terminal } from './panes/Terminal';
 import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
 import { FileSwitcher } from './panes/FileSwitcher';
@@ -10,7 +10,7 @@ import { RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
 
-type Tab = 'chat' | 'code' | 'browser' | 'repos';
+type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos';
 type View = 'explorer' | 'sessions';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
@@ -21,6 +21,7 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
 const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'chat', icon: 'comment-discussion', label: 'Chat' },
   { id: 'code', icon: 'files', label: 'Files' },
+  { id: 'term', icon: 'terminal', label: 'Terminal' },
   { id: 'browser', icon: 'globe', label: 'Browser' },
   { id: 'repos', icon: 'repo', label: 'Repos' },
 ];
@@ -62,26 +63,30 @@ export function App() {
   const status = useStore((s) => s.status);
   const [tab, setTab] = useState<Tab>('chat');
   const [editor, setEditor] = useState<'file' | 'browser'>('file');
-  const [browser, setBrowser] = useState(false);
+  const [browserUsed, setBrowserUsed] = useState(false);
   const [sidebar, setSidebar] = useState(true);
   const [view, setView] = useState<View>('explorer');
   const [phone, setPhone] = useState(false);
-  const [sideW, setSideW] = useState(() => stored('agentview.sideW', 560));
+  const [chatW, setChatW] = useState(() => stored('agentview.chatW', 480));
+  const [termH, setTermH] = useState(() => stored('agentview.termH', 240));
+  const [terminal, setTerminal] = useState(true);
+  const [termOpened, setTermOpened] = useState(terminal && window.innerWidth > 900);
   const [, rerender] = useState(0);
   const canNotify = 'Notification' in window && Notification.permission === 'default';
 
-  const startResize = (e: React.PointerEvent) => {
+  const drag = (e: React.PointerEvent, move: (ev: PointerEvent) => void, cls: string) => {
     e.preventDefault();
-    document.body.classList.add('resizing');
-    const move = (ev: PointerEvent) => setSideW(Math.round(Math.min(Math.max(window.innerWidth - ev.clientX, 320), window.innerWidth - 480)));
+    document.body.classList.add(cls);
     const up = () => {
-      document.body.classList.remove('resizing');
+      document.body.classList.remove(cls);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   };
+  const startResize = (e: React.PointerEvent) => drag(e, (ev) => setChatW(Math.round(Math.min(Math.max(window.innerWidth - ev.clientX, 360), window.innerWidth - 420))), 'resizing');
+  const startTermResize = (e: React.PointerEvent) => drag(e, (ev) => setTermH(Math.round(Math.min(Math.max(window.innerHeight - 22 - ev.clientY, 100), window.innerHeight - 200))), 'resizing-v');
 
   const showView = (v: View) => {
     if (v === view) setSidebar((s) => !s);
@@ -98,8 +103,11 @@ export function App() {
 
 
   useEffect(() => {
-    try { localStorage.setItem('agentview.sideW', String(sideW)); } catch {}
-  }, [sideW]);
+    try {
+      localStorage.setItem('agentview.chatW', String(chatW));
+      localStorage.setItem('agentview.termH', String(termH));
+    } catch {}
+  }, [chatW, termH]);
 
   useEffect(() => {
     connect();
@@ -109,6 +117,8 @@ export function App() {
       if (k === 'p') { e.preventDefault(); setUi({ switcherOpen: true }); }
       if (k === 'o') { e.preventDefault(); setUi({ repoPicker: true }); }
       if (k === 'b') { e.preventDefault(); setSidebar((v) => !v); }
+      if (k === 'j') { e.preventDefault(); setTerminal((v) => !v); }
+      if (k === 'e') { e.preventDefault(); setEditor((v) => (v === 'file' ? 'browser' : 'file')); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -118,27 +128,23 @@ export function App() {
     if (openFile) setEditor('file');
   }, [openFile]);
 
+  useEffect(() => {
+    if (terminal) setTermOpened(true);
+  }, [terminal]);
+
+  useEffect(() => {
+    if (editor === 'browser' || tab === 'browser') setBrowserUsed(true);
+  }, [editor, tab]);
+
   const fileName = openFile ? openFile.split('/').pop() : null;
-  const side = Boolean(openFile) || browser;
-  const toggleBrowser = () => {
-    if (browser && editor === 'browser') return closeBrowser();
-    setBrowser(true);
-    setEditor('browser');
-  };
-  const closeBrowser = () => {
-    setBrowser(false);
-    setEditor('file');
-  };
-  const closeFile = () => {
-    setUi({ openFile: null });
-    setEditor('browser');
-  };
-  const active = tab === 'browser' ? 'browser' : tab === 'code' || !browser ? 'file' : !openFile ? 'browser' : editor;
+  const closeFile = () => setUi({ openFile: null });
+  const showing = tab === 'browser' ? 'browser' : tab === 'code' ? 'file' : editor;
+  const active = showing === 'browser' ? 'browser' : openFile ? 'file' : 'empty';
   const project = session.cwd ? session.cwd.split('/').pop() : 'AgentView';
   const mobileExplorer = tab === 'code' && !openFile;
 
   return (
-    <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-side={side} style={{ '--side-w': `${sideW}px` } as React.CSSProperties}>
+    <div className="workbench" data-tab={tab} data-sidebar={sidebar} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <div className="body">
         <aside className="activitybar desktop-only">
           {VIEWS.map((v) => (
@@ -148,7 +154,7 @@ export function App() {
             </button>
           ))}
           <span className="spacer" />
-          <button className={browser && editor === 'browser' ? 'active' : ''} title="Browser" onClick={toggleBrowser}>
+          <button className={editor === 'browser' ? 'active' : ''} title="Switch between the file and the browser (⌘E)" onClick={() => setEditor((v) => (v === 'file' ? 'browser' : 'file'))}>
             <Icon name="globe" />
           </button>
         </aside>
@@ -158,35 +164,47 @@ export function App() {
           {view === 'explorer' ? <Explorer /> : <Sessions />}
         </section>
 
-        <section className="main pane center">
-          <Brief />
-          <Chat />
+        <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
+          {mobileExplorer && <div className="mobile-only mobile-explorer-host"><Explorer /></div>}
+          <div className="tabs">
+            <button className={`tab ${showing === 'file' ? 'active' : ''}`} onClick={() => setEditor('file')} title={openFile ?? 'Files (⌘E to switch)'}>
+              <Icon name="file" small /> {fileName ?? 'File'}
+              {openFile && (
+                <span className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
+                  <Icon name="close" small />
+                </span>
+              )}
+            </button>
+            <button className={`tab ${showing === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')} title="Browser (⌘E to switch)">
+              <Icon name="globe" small /> Browser
+            </button>
+          </div>
+          <div className={`editor ${active === 'file' ? 'shown' : ''}`}><CodePane /></div>
+          <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{browserUsed && <BrowserPane />}</div>
+          <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
+            <div className="empty-state">
+              <Icon name="files" />
+              <div className="empty-title">No file open</div>
+              <div className="muted small">Pick a file in the Explorer or press ⌘P. Files Claude edits open here.</div>
+            </div>
+          </div>
+          <div className="panel" style={terminal ? { height: termH } : undefined}>
+            {terminal && <div className="panel-sash" onPointerDown={startTermResize} />}
+            <div className="panel-head" onClick={() => tab !== 'term' && setTerminal((v) => !v)} title="Toggle the terminal (⌘J)">
+              <Icon name="terminal" small />
+              <span className="panel-title">Terminal</span>
+              <span className="muted">{project}</span>
+              <span className="spacer" />
+              <Icon name={terminal ? 'chevron-down' : 'chevron-up'} small />
+            </div>
+            {(termOpened || tab === 'term') && session.id && <div className="panel-body" hidden={!terminal && tab !== 'term'}><Terminal key={session.id} chat={session.id} /></div>}
+          </div>
         </section>
 
         <div className="sash desktop-only" onPointerDown={startResize} />
 
-        <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
-          {mobileExplorer && <div className="mobile-only mobile-explorer-host"><Explorer /></div>}
-          <div className="tabs">
-            {openFile && (
-              <button className={`tab ${active === 'file' ? 'active' : ''}`} onClick={() => setEditor('file')} title={openFile}>
-                <Icon name="file" small /> {fileName}
-                <span className="close" title="Close" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
-                  <Icon name="close" small />
-                </span>
-              </button>
-            )}
-            {(browser || tab === 'browser') && (
-              <button className={`tab ${active === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')}>
-                <Icon name="globe" small /> Browser
-                <span className="close desktop-only" title="Close" onClick={(e) => { e.stopPropagation(); closeBrowser(); }}>
-                  <Icon name="close" small />
-                </span>
-              </button>
-            )}
-          </div>
-          <div className={`editor ${active === 'file' ? 'shown' : ''}`}><CodePane /></div>
-          <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}><BrowserPane /></div>
+        <section className="main pane center">
+          <Brief />
         </section>
       </div>
 
