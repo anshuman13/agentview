@@ -78,6 +78,14 @@ function closeChat(chat: AgentSession) {
   broadcastLive();
 }
 
+async function closeByUser(chat: AgentSession) {
+  const others = [...live.values()].map((l) => l.chat).filter((c) => c !== chat);
+  const next = others.sort((a, b) => summary(b).lastActive - summary(a).lastActive)[0] ?? (await createChat(chat.cwd));
+  if (lastViewed === chat) lastViewed = next;
+  for (const c of clients) if (c.view === chat) view(c, next);
+  closeChat(chat);
+}
+
 const idle = (chat: AgentSession) => !chat.state.session.running && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
 
 function view(client: Client, chat: AgentSession) {
@@ -255,6 +263,11 @@ wss.on('connection', (ws: WebSocket, req) => {
       case 'interrupt':
         void chat.interrupt();
         break;
+      case 'close': {
+        const target = live.get(msg.id)?.chat;
+        if (target) closeByUser(target).catch(fail);
+        break;
+      }
       case 'view': {
         const next = live.get(msg.id)?.chat;
         if (next) view(client, next);

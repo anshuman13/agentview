@@ -421,3 +421,19 @@ button.send.steer { background: var(--claude-button); }
 .term-host { flex: 1; min-width: 0; }
 .term-host .xterm { height: 100%; }
 .term-host .xterm-viewport { background: var(--side) !important; }
+
+.context { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.context .bar { width: 36px; height: 4px; border-radius: 2px; background: var(--input-border); overflow: hidden; }
+.context .bar > span { display: block; height: 100%; background: var(--muted); }
+.context.near { color: var(--yellow); }
+.context.near .bar > span { background: var(--yellow); }
+.context.over { color: var(--red); }
+.context.over .bar > span { background: var(--red); }
+.compact-banner {
+  flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 12px; line-height: 16px;
+  color: var(--text-strong); background: var(--input); border-left: 3px solid var(--red); border-radius: 3px;
+}
+.compact-banner .codicon { color: var(--red); flex: none; }
+.compact-banner span { flex: 1; min-width: 0; }
+.compact-banner button { flex: none; height: 24px; padding: 0 10px; background: var(--accent); color: #fff; border: 0; border-radius: 3px; }
+.compact-banner button:disabled { opacity: 0.5; }

@@ -42,11 +42,12 @@ export type SessionInfo = {
   models: Array<{ value: string; displayName: string; description?: string }>;
   commands: Array<{ name: string; description: string }>;
   cache: CacheInfo | null;
+  context: number | null;
 };
 
 export type CacheInfo = { at: number; ttlMs: number; readTokens: number; writeTokens: number };
 
-export const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'dontAsk'] as const;
+export const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'auto', 'dontAsk'] as const;
 
 export type ServerState = {
   session: SessionInfo;
@@ -86,6 +87,8 @@ export type SavedSession = {
   lastModified: number;
 };
 
+export const COMPACT_AT = 200_000;
+
 export const STALE_MS = 12 * 60 * 60 * 1000;
 
 export type Repo = {
@@ -119,5 +122,6 @@ export type ClientMessage =
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'interrupt' }
   | { type: 'view'; id: string }
+  | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
   | { type: 'new_session'; cwd?: string };

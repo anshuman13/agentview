@@ -41,7 +41,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null },
+      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null },
       status: 'Idle',
       events: [],
       pending: [],
@@ -127,6 +127,7 @@ export class AgentSession {
       }
       if (at) lastAt = at;
       if (m.type === 'assistant' && at) this.state.session.cache = cacheFrom((m.message as any)?.usage, at, this.state.session.cache);
+      if (m.type === 'assistant') this.state.session.context = contextFrom((m.message as any)?.usage) ?? this.state.session.context;
     }
     endTurn();
   }
@@ -400,6 +401,9 @@ export class AgentSession {
           if (this.state.session.commands.length === 0) void this.loadMeta();
         } else if (msg.subtype === 'status' && msg.permissionMode) {
           this.setSession({ permissionMode: msg.permissionMode });
+        } else if (msg.subtype === 'compact_boundary') {
+          this.setSession({ context: msg.compact_metadata.post_tokens ?? null });
+          this.pushEvent({ id: randomUUID(), kind: 'system', text: `Compacted from ${Math.round(msg.compact_metadata.pre_tokens / 1000)}k tokens`, at: Date.now() });
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
@@ -437,7 +441,7 @@ export class AgentSession {
 
       case 'assistant': {
         if (msg.parent_tool_use_id) return;
-        this.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache) });
+        this.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache), context: contextFrom(msg.message.usage) ?? this.state.session.context });
         for (const block of msg.message.content) {
           if (block.type === 'server_tool_use' && block.name === 'advisor') this.pushEvent(advisorEvent(block.id, Date.now()));
           if (block.type === 'tool_use') {
@@ -501,6 +505,12 @@ export class AgentSession {
 
 function advisorEvent(id: string, at: number): ChatEvent {
   return { id, kind: 'tool_use', name: 'Advisor', input: {}, summary: 'Consulted the advisor', at };
+}
+
+export function contextFrom(usage: any): number | null {
+  if (!usage) return null;
+  const total = (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0);
+  return total > 0 ? total : null;
 }
 
 function cacheFrom(usage: any, at: number, prev: CacheInfo | null): CacheInfo | null {

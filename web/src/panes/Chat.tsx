@@ -3,12 +3,13 @@ import { Marked } from 'marked';
 import { send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { QuickPick } from '../QuickPick';
-import { PERMISSION_MODES } from '../../../shared/protocol';
+import { COMPACT_AT, PERMISSION_MODES } from '../../../shared/protocol';
 
 const MODES: Record<string, { label: string; detail: string; icon: string }> = {
-  default: { label: 'Ask before edits', detail: 'Ask before risky tools', icon: 'shield' },
-  acceptEdits: { label: 'Edit automatically', detail: 'Auto-accept file edits, ask for the rest', icon: 'edit' },
-  plan: { label: 'Plan mode', detail: 'Read-only planning, no edits', icon: 'eye' },
+  default: { label: 'Default', detail: 'Ask before edits and risky commands', icon: 'shield' },
+  acceptEdits: { label: 'Accept edits', detail: 'Edit files without asking, ask for the rest', icon: 'edit' },
+  plan: { label: 'Plan mode', detail: 'Read and plan, no edits', icon: 'eye' },
+  auto: { label: 'Auto mode', detail: 'Claude runs what is safe and asks only for risky actions', icon: 'zap' },
   dontAsk: { label: "Don't ask", detail: 'Deny anything not pre-approved', icon: 'circle-slash' },
 };
 
@@ -85,6 +86,7 @@ export function Composer() {
           <button className="pill" title="Switch model" onClick={(e) => setPick({ kind: 'model', at: e.currentTarget.getBoundingClientRect() })}>
             <Icon name="sparkle" small /> {modelName}
           </button>
+          <ContextMeter />
           <span className="spacer" />
           {running && <button className="icon-btn stop" title="Stop" onClick={() => send({ type: 'interrupt' })}><Icon name="debug-stop" /></button>}
           <button className={`send ${running ? 'steer' : ''}`} title={running ? 'Steer (Enter)' : 'Send (Enter)'} disabled={!text.trim()} onClick={submit}><Icon name="arrow-up" /></button>
@@ -111,6 +113,18 @@ export function Composer() {
         />
       )}
     </>
+  );
+}
+
+function ContextMeter() {
+  const context = useStore((s) => s.session.context);
+  if (!context) return null;
+  const level = context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
+  return (
+    <span className={`context ${level}`} title={`${context.toLocaleString()} tokens in context. Compact once it passes ${COMPACT_AT / 1000}k.`}>
+      <span className="bar"><span style={{ width: `${Math.min(100, (context / COMPACT_AT) * 100)}%` }} /></span>
+      {Math.round(context / 1000)}k
+    </span>
   );
 }
 

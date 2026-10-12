@@ -43,7 +43,7 @@ export function useWorkspace(key: unknown) {
     get('/api/worktrees').then((x) => setTrees((cached.trees = x)));
   }, [key]);
   const folders = useMemo(() => buildFolders(repos, trees, chats), [repos, trees, chats]);
-  return { folders, setTrees, setChats };
+  return { folders, chats, setTrees, setChats };
 }
 
 export function worktreeRequest(d: Folder, track: (branch: string | null, error?: string) => void): ConfirmRequest {
@@ -118,9 +118,7 @@ export function RepoPicker() {
 
 export function Sessions() {
   const current = useStore((s) => s.session.sessionId);
-  const viewing = useStore((s) => s.session.id);
   const cwd = useStore((s) => s.session.cwd);
-  const live = useStore((s) => s.live);
   const lastEvent = useStore((s) => s.events[s.events.length - 1]);
   const { folders, setTrees, setChats } = useWorkspace(current + cwd);
   const [filter, setFilter] = useState('');
@@ -215,13 +213,6 @@ export function Sessions() {
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
       <div className="tree">
-        {live.length > 1 && !filter && (
-          <>
-            <div className="group">Open chats</div>
-            {live.map((c) => <LiveRow key={c.id} c={c} selected={c.id === viewing} />)}
-            <div className="group">Repos</div>
-          </>
-        )}
         {shown.map((d) => (
           <div key={d.cwd}>
             <div className={`row project ${d.cwd === here ? 'here' : ''}`} title={d.cwd} onClick={() => flip(setToggled, d.cwd)}>
@@ -296,7 +287,50 @@ export function Sessions() {
   );
 }
 
-function LiveRow({ c, selected }: { c: LiveChat; selected: boolean }) {
+const RECENT = 12;
+const urgency = (c: LiveChat) => (c.pending ? 0 : c.running ? 1 : 2);
+
+export function OpenChats() {
+  const current = useStore((s) => s.session.sessionId);
+  const viewing = useStore((s) => s.session.id);
+  const cwd = useStore((s) => s.session.cwd);
+  const live = useStore((s) => s.live);
+  const { chats } = useWorkspace(current + cwd);
+  const [opening, setOpening] = useState<string | null>(null);
+  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
+  const close = (c: LiveChat) =>
+    c.running || c.pending
+      ? setAsk({ title: 'Close this chat?', detail: c.title, warning: 'Claude is still working on it and will stop. The transcript is kept.', action: 'Close', run: async () => send({ type: 'close', id: c.id }) })
+      : send({ type: 'close', id: c.id });
+  const open = [...live].sort((a, b) => urgency(a) - urgency(b) || b.lastActive - a.lastActive);
+  const recent = chats.filter((c) => !live.some((l) => l.sessionId === c.sessionId)).sort((a, b) => b.lastModified - a.lastModified).slice(0, RECENT);
+
+  useEffect(() => setOpening(null), [current]);
+
+  return (
+    <div className="sessions">
+      <div className="sessions-bar">
+        <button className="new-chat" onClick={() => setUi({ repoPicker: true })}><Icon name="add" small /> New chat in a repo</button>
+      </div>
+      <div className="tree">
+        <div className="group">Open</div>
+        {open.map((c) => <LiveRow key={c.id} c={c} selected={c.id === viewing} onClose={() => close(c)} />)}
+        <div className="group">Recent</div>
+        {recent.map((s) => (
+          <div key={s.sessionId} className="row session live recent" title={`${s.title}\n${s.cwd}`} onClick={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }}>
+            <span className="state"><Icon name={opening === s.sessionId ? 'loading' : 'history'} small spin={opening === s.sessionId} /></span>
+            <span className="repo">{s.cwd.split('/').pop()}</span>
+            <span className="name">{s.title}</span>
+            <span className="when">{ago(s.lastModified)}</span>
+          </div>
+        ))}
+      </div>
+      {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
+    </div>
+  );
+}
+
+function LiveRow({ c, selected, onClose }: { c: LiveChat; selected: boolean; onClose: () => void }) {
   const state = c.pending ? 'Needs you' : c.running ? c.status : 'Idle';
   return (
     <div className={`row session live ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} onClick={() => selected || send({ type: 'view', id: c.id })}>
@@ -306,6 +340,9 @@ function LiveRow({ c, selected }: { c: LiveChat; selected: boolean }) {
       <span className="repo">{c.cwd.split('/').pop()}</span>
       <span className="name">{c.title}</span>
       <span className="when">{c.pending ? 'needs you' : c.running ? '' : ago(c.lastActive)}</span>
+      <span className="acts">
+        <button className="icon-btn" title="Close chat, keep the transcript" onClick={(e) => { e.stopPropagation(); onClose(); }}><Icon name="close" small /></button>
+      </span>
     </div>
   );
 }

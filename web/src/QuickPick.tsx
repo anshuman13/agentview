@@ -20,7 +20,10 @@ export function QuickPick({ title, items, current, anchor, onPick, onClose }: {
     <div className={`overlay ${anchor ? 'anchored' : ''}`} onClick={onClose}>
       <div
         className="switcher"
-        style={anchor && { left: Math.max(8, Math.min(anchor.left, window.innerWidth - 348)), bottom: window.innerHeight - anchor.top + 6 }}
+        style={anchor && {
+          left: Math.max(8, Math.min(anchor.left, window.innerWidth - 348)),
+          ...(anchor.top > window.innerHeight / 2 ? { bottom: window.innerHeight - anchor.top + 6, maxHeight: anchor.top - 14 } : { top: anchor.bottom + 6, maxHeight: window.innerHeight - anchor.bottom - 14 }),
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <input

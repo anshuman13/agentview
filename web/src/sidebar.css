@@ -46,3 +46,11 @@
 .sessions .tree .row.live .when:empty { display: none; }
 .sessions .tree .row.more { font-size: 12px; color: var(--muted); }
 .sessions .tree .row.more:hover { color: var(--text); text-decoration: underline; }
+.sessions .sessions-bar .new-chat {
+  flex: 1; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 12px; color: var(--text-strong); background: var(--input); border: 1px solid var(--input-border); border-radius: 4px;
+}
+.sessions .sessions-bar .new-chat:hover { border-color: var(--accent); }
+.side-switch { display: flex; gap: 4px; padding: 0 12px 8px 8px; }
+.side-switch button { flex: 1; height: 32px; font-size: 13px; color: var(--muted); background: transparent; border: 1px solid var(--input-border); border-radius: 6px; }
+.side-switch button.active { color: var(--text-strong); background: var(--active); border-color: var(--active); }

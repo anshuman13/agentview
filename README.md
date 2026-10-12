@@ -14,9 +14,14 @@ The agent does the work; the view is for watching, steering and verifying.
 - Editor (center): two tabs, File and Browser, that you switch between with a click, ⌘E or the globe in the activity
   bar. File is a read-only viewer that follows Claude's edits and shows the diff against HEAD (⌘P to open any file);
   Browser is a preview of your local app. The layout stays fixed: editor in the middle, task box on the right
-- Workspace: every repo in your workspace folders, their chats and Paseo worktrees, and the chats that are open right now
-- Phone: same client with a tab bar, reachable over your local network or NetBird. The timeline is on top with the input below
+- Chats: the chats that are open right now (the ones that need you first) and the most recent chats from every repo
+- Workspace: every repo in your workspace folders, their chats and Paseo worktrees
+- Phone: same client with a tab bar, reachable over your local network or NetBird. The Chats tab switches between
+  Chats and Repos. The timeline is on top with the input below
   it, and the terminal has its own tab
+
+The meter next to the model menu shows how many tokens are in the context. Past 200k it turns red and the task box
+asks you to compact, with a button that runs `/compact`.
 
 Claude fills the timeline through a `set_status` tool AgentView adds to every session (current step, finished parts,
 next steps, important notes).
@@ -57,7 +62,8 @@ colon-separated list of folders to change that. Chats can only be started inside
 - Hover a repo for a new chat (+) or, for Paseo projects, a new worktree branched off the default branch
 - Chats keep running when you switch to another one. Open chats show whether they are working or need you,
   and a badge and notification appear when a background chat needs approval
-- A chat closes after 10 minutes with nothing running and no one viewing it; reopen it from its repo
+- Close a chat with the × on its row in Chats (the transcript is kept). A chat also closes by itself after 10 minutes
+  with nothing running and no one viewing it; reopen it from Recent or its repo
 - Chats untouched for 12 hours can be deleted, and Paseo worktrees idle for 12 hours can be removed (the branch is kept)
 
 ## Shortcuts

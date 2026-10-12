@@ -161,3 +161,12 @@ describe('plan changes', () => {
     expect(s.state.session.running).toBe(true);
   });
 });
+
+describe('context tokens', () => {
+  it('adds fresh, cached and newly cached input tokens', async () => {
+    const { contextFrom } = await import('./session.js');
+    expect(contextFrom({ input_tokens: 10, cache_read_input_tokens: 200_000, cache_creation_input_tokens: 5_000 })).toBe(205_010);
+    expect(contextFrom({ input_tokens: 0 })).toBeNull();
+    expect(contextFrom(undefined)).toBeNull();
+  });
+});

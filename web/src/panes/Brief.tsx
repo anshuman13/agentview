@@ -3,7 +3,7 @@ import { send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
-import type { ChatEvent } from '../../../shared/protocol';
+import { COMPACT_AT, type ChatEvent } from '../../../shared/protocol';
 
 export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply'; text: string; at: number };
 
@@ -52,6 +52,7 @@ export function Brief() {
   const running = useStore((s) => s.session.running);
   const waiting = useStore((s) => s.pending.length > 0);
   const team = useStore((s) => s.session.team);
+  const context = useStore((s) => s.session.context);
   const { moments, next, lastTool, advisor, fable } = useMemo(() => buildTimeline(events), [events]);
   const [all, setAll] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -69,6 +70,13 @@ export function Brief() {
   return (
     <div className="brief">
       <div className="brief-input"><Composer /></div>
+      {context !== null && context >= COMPACT_AT && (
+        <div className="compact-banner">
+          <Icon name="warning" small />
+          <span>Context is {Math.round(context / 1000)}k tokens. Compact so Claude stays focused and each turn costs less.</span>
+          <button disabled={running} title={running ? 'Wait until Claude finishes this turn' : 'Run /compact'} onClick={() => send({ type: 'prompt', text: '/compact' })}>Compact</button>
+        </div>
+      )}
       <div className="brief-status">
         <div className="timeline-head">
           <span>Timeline</span>

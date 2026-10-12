@@ -6,15 +6,16 @@ import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Explorer } from './panes/Explorer';
-import { RepoPicker, Sessions } from './panes/Sessions';
+import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
 
 type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos';
-type View = 'explorer' | 'sessions';
+type View = 'explorer' | 'chats' | 'sessions';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'explorer', icon: 'files', title: 'Explorer' },
+  { id: 'chats', icon: 'comment-discussion', title: 'Chats' },
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
 ];
 
@@ -23,7 +24,7 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'code', icon: 'files', label: 'Files' },
   { id: 'term', icon: 'terminal', label: 'Terminal' },
   { id: 'browser', icon: 'globe', label: 'Browser' },
-  { id: 'repos', icon: 'repo', label: 'Repos' },
+  { id: 'repos', icon: 'comment-discussion', label: 'Chats' },
 ];
 
 function stored(key: string, fallback: number) {
@@ -150,7 +151,7 @@ export function App() {
           {VIEWS.map((v) => (
             <button key={v.id} className={sidebar && view === v.id ? 'active' : ''} title={v.title} onClick={() => showView(v.id)}>
               <Icon name={v.icon} />
-              {v.id === 'sessions' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
+              {v.id === 'chats' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
             </button>
           ))}
           <span className="spacer" />
@@ -161,7 +162,13 @@ export function App() {
 
         <section className="sidebar pane side">
           <div className="sidebar-title">{VIEWS.find((v) => v.id === view)!.title}</div>
-          {view === 'explorer' ? <Explorer /> : <Sessions />}
+          {tab === 'repos' && (
+            <div className="side-switch mobile-only">
+              <button className={view !== 'sessions' ? 'active' : ''} onClick={() => setView('chats')}>Chats</button>
+              <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
+            </div>
+          )}
+          {view === 'explorer' ? <Explorer /> : view === 'chats' ? <OpenChats /> : <Sessions />}
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
@@ -227,7 +234,7 @@ export function App() {
 
       <nav className="tabbar mobile-only">
         {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); if (t.id === 'repos') setView('sessions'); }}>
+          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); if (t.id === 'repos') setView('chats'); }}>
             <Icon name={t.icon} />
             <span>{t.label}</span>
             {t.id === 'chat' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
