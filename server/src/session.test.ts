@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AgentSession, BIG_BRO } from './session.js';
+import { contextFrom, historyFrom } from './transcript.js';
 
 function fakeSession() {
   const s = new AgentSession('/tmp/project');
@@ -163,11 +164,28 @@ describe('plan changes', () => {
 });
 
 describe('context tokens', () => {
-  it('adds fresh, cached and newly cached input tokens', async () => {
-    const { contextFrom } = await import('./session.js');
+  it('adds fresh, cached and newly cached input tokens', () => {
     expect(contextFrom({ input_tokens: 10, cache_read_input_tokens: 200_000, cache_creation_input_tokens: 5_000 })).toBe(205_010);
     expect(contextFrom({ input_tokens: 0 })).toBeNull();
     expect(contextFrom(undefined)).toBeNull();
+  });
+});
+
+describe('history', () => {
+  const msg = (type: string, content: unknown, extra: object = {}) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content, ...extra } }) as never;
+
+  it('rebuilds turns, tool calls and the context size', () => {
+    const { events, context } = historyFrom([
+      msg('user', 'fix the bug'),
+      msg('assistant', [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'npm test' } }], { usage: { input_tokens: 5, cache_read_input_tokens: 1000 } }),
+      msg('user', [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }]),
+      msg('assistant', [{ type: 'text', text: 'Fixed' }]),
+      msg('user', '[Request interrupted by user]'),
+    ]);
+    expect(events.map((e) => e.kind)).toEqual(['user', 'tool_use', 'tool_result', 'assistant', 'system', 'result']);
+    expect(events[1]).toMatchObject({ summary: '$ npm test' });
+    expect(events.at(-1)).toMatchObject({ text: 'Fixed' });
+    expect(context).toBe(1005);
   });
 });
 

@@ -1,28 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import {
-  query,
-  getSessionMessages,
-  createSdkMcpServer,
-  tool,
-  type Query,
-  type SDKMessage,
-  type SDKUserMessage,
-  type PermissionResult,
-  type PermissionUpdate,
-  type PermissionMode,
-  type HookInput,
-  type HookJSONOutput,
-} from '@anthropic-ai/claude-agent-sdk';
-import { z } from 'zod';
-import { COMPACT_AT, type CacheInfo, type ChatEvent, type PendingRequest, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
+import { query, getSessionMessages, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
+import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
+import { Approvals } from './approvals.js';
+import { TEAM, agentOptions, userMessage } from './options.js';
+import { BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultText, toolUseEvent } from './transcript.js';
 
-type Resolver = (r: PermissionResult) => void;
+export { BIG_BRO };
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
-
-const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
-export const BIG_BRO = 'big-bro';
 
 export class AgentSession {
   private q: Query | null = null;
@@ -30,14 +16,20 @@ export class AgentSession {
   private wake: (() => void) | null = null;
   private closed = false;
 
-  private resolvers = new Map<string, Resolver>();
-  private pendingMeta = new Map<string, { suggestions?: PermissionUpdate[]; input: Record<string, unknown> }>();
-
   id = randomUUID();
   title = '';
   created = Date.now();
   state: ServerState;
   private listeners = new Set<(m: ServerMessage) => void>();
+  private approvals: Approvals;
+
+  private turns = 0;
+  private planChange: string | null = null;
+  private autoCompact = true;
+
+  private liveText = new Map<string, string>();
+  private edits = new Map<string, string>();
+  private liveMsgId = '';
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
@@ -47,6 +39,7 @@ export class AgentSession {
       pending: [],
       recentFiles: [],
     };
+    this.approvals = new Approvals(this.state, (m) => this.emit(m));
   }
 
   onMessage(fn: (m: ServerMessage) => void) {
@@ -61,6 +54,10 @@ export class AgentSession {
   private pushEvent(ev: ChatEvent) {
     this.state.events.push(ev);
     this.emit({ type: 'event', event: ev });
+  }
+
+  private system(text: string) {
+    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now() });
   }
 
   private setStatus(text: string) {
@@ -86,118 +83,31 @@ export class AgentSession {
   close() {
     this.closed = true;
     this.listeners.clear();
-    for (const resolve of this.resolvers.values()) resolve({ behavior: 'deny', message: 'Session closed' });
+    this.approvals.denyAll();
     this.wake?.();
     this.q?.close();
   }
 
   async loadHistory() {
     if (!this.resume) return;
-    const msgs = await getSessionMessages(this.resume, { dir: this.cwd });
-    let lastText = '';
-    let lastAt = 0;
-    let inTurn = false;
-    const endTurn = () => {
-      if (inTurn) this.state.events.push({ id: randomUUID(), kind: 'result', text: lastText, costUsd: 0, isError: false, at: lastAt });
-      inTurn = false;
-    };
-    for (const m of msgs) {
-      if (m.parent_tool_use_id) continue;
-      const at = Date.parse((m as { timestamp?: string }).timestamp ?? '') || 0;
-      const content = (m.message as { content?: unknown })?.content;
-      const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
-      for (const b of blocks) {
-        if (m.type === 'user' && b.type === 'text' && b.text.includes('<local-command-stdout>Compacted')) {
-          this.state.session.context = null;
-        } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith(COMPACT_SUMMARY)) {
-          this.state.events.push({ id: randomUUID(), kind: 'system', text: 'Compacted the earlier conversation', at });
-        } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith('[Request interrupted')) {
-          this.state.events.push({ id: randomUUID(), kind: 'system', text: 'Interrupted', at });
-        } else if (m.type === 'user' && b.type === 'text' && !b.text.trimStart().startsWith('<')) {
-          endTurn();
-          inTurn = true;
-          this.state.events.push({ id: randomUUID(), kind: 'user', text: b.text, at });
-        } else if (m.type === 'user' && b.type === 'tool_result') {
-          this.state.events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: toolResultText(b).slice(0, 4000), isError: Boolean(b.is_error), at });
-        } else if (m.type === 'assistant' && b.type === 'text') {
-          lastText = b.text;
-          this.state.events.push({ id: randomUUID(), kind: 'assistant', text: b.text, streaming: false, at });
-        } else if (m.type === 'assistant' && b.type === 'server_tool_use' && b.name === 'advisor') {
-          this.state.events.push(advisorEvent(b.id, at));
-        } else if (m.type === 'assistant' && b.type === 'tool_use') {
-          const input = (b.input ?? {}) as Record<string, unknown>;
-          this.state.events.push({ id: b.id, kind: 'tool_use', name: b.name, input, summary: summarizeTool(b.name, input), at });
-        }
-      }
-      if (at) lastAt = at;
-      if (m.type === 'assistant' && at) this.state.session.cache = cacheFrom((m.message as any)?.usage, at, this.state.session.cache);
-      if (m.type === 'assistant') this.state.session.context = contextFrom((m.message as any)?.usage) ?? this.state.session.context;
-    }
-    endTurn();
+    const { events, context, cache } = historyFrom(await getSessionMessages(this.resume, { dir: this.cwd }));
+    this.state.events.push(...events);
+    Object.assign(this.state.session, { context, cache });
   }
 
   start() {
     if (this.q || this.closed) return;
-    const statusServer = createSdkMcpServer({
-      name: 'agentview',
-      alwaysLoad: true,
-      instructions: [
-        'The user follows your work on a timeline instead of reading the whole chat.',
-        'Call set_status when you begin a task, whenever you move to a new step or your plan changes, and when you finish. Keep text to one short sentence about what you are doing right now.',
-        'Pass done whenever you finish a meaningful part of the task: what was achieved, a few words, such as "Bearer prefix now required" or "3 invalid-token tests pass". Not for every tool call.',
-        'Pass next as the remaining steps after the current one, a few words each, in order. Send the full list every time, and an empty list when nothing is left.',
-        'Pass important only for something the user must know without reading the chat: a decision you made on their behalf, a risk, a blocker, or something surprising you found. One or two sentences. Leave it out otherwise.',
-        "For anything in a web browser, use the Claude in Chrome tools. They drive the user's own Chrome, where the user is logged in to work sites, and the user watches that tab in AgentView.",
-      ].join(' '),
-      tools: [
-        tool(
-          'set_status',
-          'Update the one-line status shown to the user about what you are doing right now, and optionally flag something important for them.',
-          {
-            text: z.string().max(200),
-            done: z.string().max(160).optional().describe('A part of the task you just finished, a few words. Omit when nothing new is done.'),
-            next: z.array(z.string().max(120)).max(12).optional().describe('Remaining steps after the current one, in order. Empty when done.'),
-            important: z.string().max(500).optional().describe('A decision, risk, blocker or surprise the user must know about. Omit when there is none.'),
-          },
-          async ({ text }) => {
-            this.setStatus(text);
-            return { content: [{ type: 'text', text: 'ok' }] };
-          },
-        ),
-      ],
-    });
-
     this.q = query({
       prompt: this.inputStream(),
-      options: {
+      options: agentOptions({
         cwd: this.cwd,
         resume: this.resume,
-        settingSources: ['user', 'project', 'local'],
-        includePartialMessages: true,
-        allowedTools: ['mcp__agentview__set_status'],
-        disallowedTools: ['mcp__playwright'],
-        extraArgs: { chrome: null },
-        permissionMode: 'auto',
-        mcpServers: { agentview: statusServer },
-        toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
-        canUseTool: (toolName, input, opts) => this.canUseTool(toolName, input, opts),
-        agents: {
-          [BIG_BRO]: {
-            description:
-              'Fable, the most capable model. Only for a really hard problem you could not resolve yourself: a bug that survived several attempts, a risky design decision, or subtle correctness reasoning. The user approves every call, so put the full question and context in the prompt. If the call is declined, continue without it.',
-            prompt: 'You are Fable, consulted as a senior engineer on one hard problem. Investigate what you need, then answer with a clear recommendation and the reasoning behind it. Be concise.',
-            model: 'claude-fable-5-1',
-            tools: ['Read', 'Bash', 'WebSearch', 'WebFetch'],
-          },
-        },
-        hooks: {
-          PreToolUse: [{ matcher: 'Agent|Task', hooks: [(input, _id, { signal }) => this.confirmBigBro(input, signal)] }],
-          PostToolUse: [{ hooks: [async (input) => this.deliverPlan(input)] }],
-        },
-        stderr: (d) => process.stderr.write(d),
-      },
+        onStatus: (text) => this.setStatus(text),
+        canUseTool: (toolName, input, opts) => this.approvals.ask(toolName, input, opts),
+        beforeAgent: (input, _id, { signal }) => this.confirmBigBro(input, signal),
+        afterTool: async (input) => this.deliverPlan(input),
+      }),
     });
-
     void this.consume();
     void this.loadMeta();
   }
@@ -224,15 +134,21 @@ export class AgentSession {
     if (team || this.state.session.team) await this.q?.applyFlagSettings({ advisorModel: team ? TEAM.advisor : null });
     await this.q?.setModel(team ? TEAM.model : model);
     this.setSession({ model: team ? TEAM.model : model, team });
-    const text = team ? 'Team mode: Opus plans each task, Sonnet 5.5 builds it with Opus advising, Fable only with your OK' : `Model set to ${model}`;
-    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now() });
+    this.system(team ? 'Team mode: Opus plans each task, Sonnet 5.5 builds it with Opus advising, Fable only with your OK' : `Model set to ${model}`);
+  }
+
+  async setPermissionMode(mode: string) {
+    this.start();
+    await this.q?.setPermissionMode(mode as PermissionMode);
+    this.setSession({ permissionMode: mode });
+    this.system(`Permission mode: ${mode}`);
   }
 
   private async confirmBigBro(input: HookInput, signal: AbortSignal): Promise<HookJSONOutput> {
     if (input.hook_event_name !== 'PreToolUse') return {};
     const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
     if (toolInput.subagent_type !== BIG_BRO) return {};
-    const r = await this.canUseTool(input.tool_name, toolInput, { signal, title: `Ask Fable: ${String(toolInput.description ?? 'a hard problem')}` });
+    const r = await this.approvals.ask(input.tool_name, toolInput, { signal, title: `Ask Fable: ${String(toolInput.description ?? 'a hard problem')}` });
     return {
       hookSpecificOutput: {
         hookEventName: 'PreToolUse',
@@ -242,11 +158,12 @@ export class AgentSession {
     };
   }
 
-  async setPermissionMode(mode: string) {
-    this.start();
-    await this.q?.setPermissionMode(mode as PermissionMode);
-    this.setSession({ permissionMode: mode });
-    this.pushEvent({ id: randomUUID(), kind: 'system', text: `Permission mode: ${mode}`, at: Date.now() });
+  answerQuestion(id: string, answers: Record<string, string>) {
+    this.approvals.answerQuestion(id, answers);
+  }
+
+  answerPermission(id: string, allow: boolean, always?: boolean) {
+    this.approvals.answerPermission(id, allow, always);
   }
 
   private async *inputStream(): AsyncGenerator<SDKUserMessage> {
@@ -260,19 +177,13 @@ export class AgentSession {
     }
   }
 
-  private turns = 0;
-
   sendPrompt(text: string) {
     this.start();
     this.pushEvent({ id: randomUUID(), kind: 'user', text, at: Date.now() });
     this.turns++;
     this.setSession({ running: true });
     if (/^\/compact\b/.test(text.trim())) this.startCompacting();
-    this.inputQueue.push({
-      type: 'user',
-      message: { role: 'user', content: text },
-      parent_tool_use_id: null,
-    });
+    this.inputQueue.push(userMessage(text));
     this.wake?.();
   }
 
@@ -290,8 +201,6 @@ export class AgentSession {
     else await this.planFirst();
     this.sendPrompt(text);
   }
-
-  private planChange: string | null = null;
 
   changePlan(next: string[]) {
     this.pushEvent({ id: randomUUID(), kind: 'plan', next, at: Date.now() });
@@ -320,91 +229,30 @@ export class AgentSession {
 
   private turnEnded() {
     this.turns = Math.max(0, this.turns - 1);
-    this.setSession({ running: this.turns > 0, compacting: false });
-    if (this.turns === 0 && this.planChange) {
+    const next = this.turns === 0 ? this.followUp() : null;
+    this.setSession({ running: this.turns > 0 || next !== null, compacting: false });
+    if (next) this.sendPrompt(next);
+  }
+
+  private followUp() {
+    if (this.planChange) {
       const text = this.planChange;
       this.planChange = null;
-      this.sendPrompt(text);
-    } else if (this.turns === 0 && this.autoCompact && (this.state.session.context ?? 0) >= COMPACT_AT) {
+      return text;
+    }
+    if (this.autoCompact && (this.state.session.context ?? 0) >= COMPACT_AT) {
       this.autoCompact = false;
-      this.sendPrompt('/compact');
+      return '/compact';
     }
+    return null;
   }
-
-  private autoCompact = true;
-
-  private async canUseTool(
-    toolName: string,
-    input: Record<string, unknown>,
-    opts: { suggestions?: PermissionUpdate[]; title?: string; displayName?: string; signal: AbortSignal },
-  ): Promise<PermissionResult> {
-    const id = randomUUID();
-    const req: PendingRequest =
-      toolName === 'AskUserQuestion'
-        ? { id, kind: 'question', questions: (input as any).questions ?? [] }
-        : {
-            id,
-            kind: 'permission',
-            toolName,
-            title: toolName === 'ExitPlanMode' ? 'Approve the plan to start building' : opts.title ?? opts.displayName ?? toolName,
-            input,
-            canAlwaysAllow: Boolean(opts.suggestions?.length),
-          };
-
-    this.pendingMeta.set(id, { suggestions: opts.suggestions, input });
-    this.state.pending.push(req);
-    this.emit({ type: 'pending', request: req });
-
-    return new Promise<PermissionResult>((resolve) => {
-      this.resolvers.set(id, resolve);
-      opts.signal.addEventListener('abort', () => {
-        this.finish(id);
-        resolve({ behavior: 'deny', message: 'aborted' });
-      });
-    });
-  }
-
-  private finish(id: string) {
-    this.resolvers.delete(id);
-    this.pendingMeta.delete(id);
-    this.state.pending = this.state.pending.filter((p) => p.id !== id);
-    this.emit({ type: 'resolved', id });
-  }
-
-  answerQuestion(id: string, answers: Record<string, string>) {
-    const resolve = this.resolvers.get(id);
-    const meta = this.pendingMeta.get(id);
-    if (!resolve || !meta) return;
-    this.finish(id);
-    resolve({ behavior: 'allow', updatedInput: { ...meta.input, answers } });
-  }
-
-  answerPermission(id: string, allow: boolean, always?: boolean) {
-    const resolve = this.resolvers.get(id);
-    const meta = this.pendingMeta.get(id);
-    if (!resolve || !meta) return;
-    this.finish(id);
-    if (!allow) {
-      resolve({ behavior: 'deny', message: 'User denied this action in the AgentView UI.' });
-      return;
-    }
-    resolve({
-      behavior: 'allow',
-      updatedInput: meta.input,
-      updatedPermissions: always ? meta.suggestions : undefined,
-    });
-  }
-
-  private liveText = new Map<string, string>();
-  private edits = new Map<string, string>();
-  private liveMsgId = '';
 
   private async consume() {
     if (!this.q) return;
     try {
       for await (const msg of this.q) this.handle(msg);
     } catch (err) {
-      this.pushEvent({ id: randomUUID(), kind: 'system', text: `Session error: ${String(err)}`, at: Date.now() });
+      this.system(`Session error: ${String(err)}`);
     } finally {
       this.turns = 0;
       this.setSession({ running: false });
@@ -417,19 +265,19 @@ export class AgentSession {
         if (msg.subtype === 'init') {
           const changed = msg.model !== this.state.session.model;
           this.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource });
-          if (changed) this.pushEvent({ id: randomUUID(), kind: 'system', text: `Session started with ${msg.model}`, at: Date.now() });
+          if (changed) this.system(`Session started with ${msg.model}`);
           if (this.state.session.commands.length === 0) void this.loadMeta();
         } else if (msg.subtype === 'status') {
           if (msg.permissionMode) this.setSession({ permissionMode: msg.permissionMode });
           if (msg.status === 'compacting') this.startCompacting();
           if (msg.compact_result) this.setSession({ compacting: false });
-          if (msg.compact_result === 'failed') this.pushEvent({ id: randomUUID(), kind: 'system', text: `Compact failed: ${msg.compact_error || 'no reason given'}`, at: Date.now() });
+          if (msg.compact_result === 'failed') this.system(`Compact failed: ${msg.compact_error || 'no reason given'}`);
         } else if (msg.subtype === 'compact_boundary') {
           const { pre_tokens, post_tokens } = msg.compact_metadata;
           this.setSession({ context: post_tokens ?? null, compacting: false });
           this.setStatus('Compacted');
           this.autoCompact = true;
-          this.pushEvent({ id: randomUUID(), kind: 'system', text: `Compacted from ${Math.round(pre_tokens / 1000)}k${post_tokens ? ` to ${Math.round(post_tokens / 1000)}k` : ''} tokens`, at: Date.now() });
+          this.system(`Compacted from ${Math.round(pre_tokens / 1000)}k${post_tokens ? ` to ${Math.round(post_tokens / 1000)}k` : ''} tokens`);
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
@@ -442,8 +290,7 @@ export class AgentSession {
         if (ev.type === 'message_start') this.liveMsgId = ev.message.id;
         if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
           const key = `${this.liveMsgId}:${ev.index}`;
-          const prev = this.liveText.get(key) ?? '';
-          const text = prev + ev.delta.text;
+          const text = (this.liveText.get(key) ?? '') + ev.delta.text;
           this.liveText.set(key, text);
           const existing = this.state.events.find((e) => e.id === key);
           if (existing && existing.kind === 'assistant') {
@@ -471,16 +318,9 @@ export class AgentSession {
         for (const block of msg.message.content) {
           if (block.type === 'server_tool_use' && block.name === 'advisor') this.pushEvent(advisorEvent(block.id, Date.now()));
           if (block.type === 'tool_use') {
-            const input = (block.input ?? {}) as Record<string, unknown>;
-            this.pushEvent({
-              id: block.id,
-              kind: 'tool_use',
-              name: block.name,
-              input,
-              summary: summarizeTool(block.name, input),
-              at: Date.now(),
-            });
-            if (EDIT_TOOLS.has(block.name) && typeof input.file_path === 'string') this.edits.set(block.id, input.file_path);
+            this.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now()));
+            const file = (block.input as { file_path?: unknown })?.file_path;
+            if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
           }
         }
         return;
@@ -491,20 +331,11 @@ export class AgentSession {
         const content = msg.message.content;
         if (!Array.isArray(content)) return;
         for (const block of content) {
-          if (block.type === 'tool_result') {
-            const text = toolResultText(block);
-            const edited = this.edits.get(block.tool_use_id);
-            this.edits.delete(block.tool_use_id);
-            if (edited && !block.is_error) this.noteFile(path.relative(this.cwd, edited), 'tool');
-            this.pushEvent({
-              id: randomUUID(),
-              kind: 'tool_result',
-              toolUseId: block.tool_use_id,
-              text: text.slice(0, 4000),
-              isError: Boolean(block.is_error),
-              at: Date.now(),
-            });
-          }
+          if (block.type !== 'tool_result') continue;
+          const edited = this.edits.get(block.tool_use_id);
+          this.edits.delete(block.tool_use_id);
+          if (edited && !block.is_error) this.noteFile(path.relative(this.cwd, edited), 'tool');
+          this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: toolResultText(block).slice(0, 4000), isError: Boolean(block.is_error), at: Date.now() });
         }
         return;
       }
@@ -526,53 +357,5 @@ export class AgentSession {
       default:
         return;
     }
-  }
-}
-
-function advisorEvent(id: string, at: number): ChatEvent {
-  return { id, kind: 'tool_use', name: 'Advisor', input: {}, summary: 'Consulted the advisor', at };
-}
-
-const COMPACT_SUMMARY = 'This session is being continued from a previous conversation';
-
-export function contextFrom(usage: any): number | null {
-  if (!usage) return null;
-  const total = (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0);
-  return total > 0 ? total : null;
-}
-
-function cacheFrom(usage: any, at: number, prev: CacheInfo | null): CacheInfo | null {
-  if (!usage) return prev;
-  const c = usage.cache_creation;
-  const ttlMs = c?.ephemeral_1h_input_tokens > 0 ? 3_600_000 : c?.ephemeral_5m_input_tokens > 0 ? 300_000 : prev?.ttlMs ?? 300_000;
-  return { at, ttlMs, readTokens: usage.cache_read_input_tokens ?? 0, writeTokens: usage.cache_creation_input_tokens ?? 0 };
-}
-
-function toolResultText(block: { content?: unknown }): string {
-  if (typeof block.content === 'string') return block.content;
-  return ((block.content as any[]) ?? []).map((c) => (c.type === 'text' ? c.text : '')).join('\n');
-}
-
-function summarizeTool(name: string, input: Record<string, unknown>): string {
-  const s = (v: unknown) => (typeof v === 'string' ? v : '');
-  switch (name) {
-    case 'Read':
-    case 'Edit':
-    case 'Write':
-    case 'MultiEdit':
-      return `${name} ${s(input.file_path)}`;
-    case 'Bash':
-      return `$ ${s(input.command).slice(0, 120)}`;
-    case 'Grep':
-      return `grep ${s(input.pattern)}`;
-    case 'Glob':
-      return `glob ${s(input.pattern)}`;
-    case 'AskUserQuestion':
-      return 'Asked you a question';
-    case 'Agent':
-    case 'Task':
-      return input.subagent_type === BIG_BRO ? `Asked Fable: ${s(input.description)}` : `Agent: ${s(input.description)}`;
-    default:
-      return name;
   }
 }
