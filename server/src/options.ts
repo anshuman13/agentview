@@ -4,9 +4,11 @@ import { BIG_BRO } from './transcript.js';
 
 export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
 
+export const STATUS_REMINDER = 'You have not called mcp__agentview__set_status for a while, so the user sees no progress. Call it now with what you are doing, what is done and the next steps.';
+
 const INSTRUCTIONS = [
-  'The user follows your work on a timeline instead of reading the whole chat.',
-  'Call set_status when you begin a task, whenever you move to a new step or your plan changes, and when you finish. Keep text to one short sentence about what you are doing right now.',
+  'The user follows your work on a timeline instead of reading the whole chat, often from a phone.',
+  'Use the mcp__agentview__set_status tool for this. Call it when you begin a task, whenever you move to a new step or your plan changes, and when you finish. Keep text to one short sentence about what you are doing right now.',
   'Pass done whenever you finish a meaningful part of the task: what was achieved, a few words, such as "Bearer prefix now required" or "3 invalid-token tests pass". Not for every tool call.',
   'Pass next as the remaining steps after the current one, a few words each, in order. Send the full list every time, and an empty list when nothing is left.',
   'Pass important only for something the user must know without reading the chat: a decision you made on their behalf, a risk, a blocker, or something surprising you found. One or two sentences. Leave it out otherwise.',
@@ -17,7 +19,6 @@ function statusServer(onStatus: (text: string) => void) {
   return createSdkMcpServer({
     name: 'agentview',
     alwaysLoad: true,
-    instructions: INSTRUCTIONS,
     tools: [
       tool(
         'set_status',
@@ -48,6 +49,7 @@ export function agentOptions(o: {
   return {
     cwd: o.cwd,
     resume: o.resume,
+    systemPrompt: { type: 'preset', preset: 'claude_code', append: INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
     allowedTools: ['mcp__agentview__set_status'],

@@ -53,7 +53,7 @@ function call(method: string, params: object = {}, sessionId?: string): Promise<
   });
 }
 
-async function connect() {
+export async function connect() {
   if (cdp || state === 'connecting') return;
   setState('connecting');
   const ws = new WebSocket(await endpoint(), { maxPayload: 512 * 1024 * 1024 });

@@ -6,7 +6,7 @@ import { watch, type FSWatcher } from 'node:fs';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { WebSocketServer, WebSocket } from 'ws';
 import { openTerminal } from './terminal.js';
-import { openChrome } from './chrome.js';
+import { connect as connectChrome, openChrome } from './chrome.js';
 import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { listFiles, readFileWithOriginal } from './files.js';
@@ -298,4 +298,5 @@ wss.on('connection', (ws: WebSocket, req) => {
 
 server.listen(PORT, () => {
   console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`);
+  void connectChrome();
 });

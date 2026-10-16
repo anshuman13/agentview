@@ -3,12 +3,13 @@ import path from 'node:path';
 import { query, getSessionMessages, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
-import { TEAM, agentOptions, userMessage } from './options.js';
+import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultText, toolUseEvent } from './transcript.js';
 
 export { BIG_BRO };
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+const STATUS_EVERY = 8;
 
 export class AgentSession {
   private q: Query | null = null;
@@ -25,6 +26,7 @@ export class AgentSession {
 
   private turns = 0;
   private planChange: string | null = null;
+  private sinceStatus = 0;
   private autoCompact = true;
 
   private liveText = new Map<string, string>();
@@ -105,7 +107,7 @@ export class AgentSession {
         onStatus: (text) => this.setStatus(text),
         canUseTool: (toolName, input, opts) => this.approvals.ask(toolName, input, opts),
         beforeAgent: (input, _id, { signal }) => this.confirmBigBro(input, signal),
-        afterTool: async (input) => this.deliverPlan(input),
+        afterTool: async (input) => this.afterTool(input),
       }),
     });
     void this.consume();
@@ -211,11 +213,17 @@ export class AgentSession {
     else this.sendPrompt(text);
   }
 
-  deliverPlan(input: HookInput): HookJSONOutput {
-    if (!this.planChange || input.agent_id) return {};
-    const additionalContext = this.planChange;
+  afterTool(input: HookInput): HookJSONOutput {
+    if (input.agent_id || input.hook_event_name !== 'PostToolUse') return {};
+    const notes: string[] = [];
+    if (this.planChange) notes.push(this.planChange);
     this.planChange = null;
-    return { hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext } };
+    if (input.tool_name.endsWith('__set_status')) this.sinceStatus = 0;
+    else if (++this.sinceStatus >= STATUS_EVERY) {
+      this.sinceStatus = 0;
+      notes.push(STATUS_REMINDER);
+    }
+    return notes.length ? { hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: notes.join('\n\n') } } : {};
   }
 
   private async planFirst() {

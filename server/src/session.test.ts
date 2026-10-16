@@ -135,16 +135,16 @@ describe('plan changes', () => {
     s.sendPrompt('task');
     s.changePlan(['curl /check', 'stop the server']);
     expect(interrupt).not.toHaveBeenCalled();
-    const out = s.deliverPlan(hook) as { hookSpecificOutput?: { additionalContext?: string } };
+    const out = s.afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } };
     expect(out.hookSpecificOutput?.additionalContext).toContain('1. curl /check\n2. stop the server');
-    expect(s.deliverPlan(hook)).toEqual({});
+    expect(s.afterTool(hook)).toEqual({});
   });
 
   it('skips sub-agent tool calls', () => {
     const { s } = fakeSession();
     s.sendPrompt('task');
     s.changePlan(['a']);
-    expect(s.deliverPlan({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
+    expect(s.afterTool({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
   });
 
   it('sends an undelivered plan change as a prompt when the turn ends', () => {
@@ -154,6 +154,15 @@ describe('plan changes', () => {
     result('r1');
     expect(s.state.session.running).toBe(true);
     expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: expect.stringContaining('1. a') });
+  });
+
+  it('reminds Claude to report progress after 8 tool calls without set_status', () => {
+    const { s } = fakeSession();
+    const text = () => (s.afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } }).hookSpecificOutput?.additionalContext;
+    for (let i = 0; i < 7; i++) expect(text()).toBeUndefined();
+    expect(text()).toContain('set_status');
+    s.afterTool({ ...(hook as object), tool_name: 'mcp__agentview__set_status' } as never);
+    for (let i = 0; i < 7; i++) expect(text()).toBeUndefined();
   });
 
   it('sends right away when idle', () => {
