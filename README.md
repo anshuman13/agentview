@@ -49,6 +49,9 @@ Chats use Claude in Chrome, so Claude browses with your logins. Playwright is of
 To show that Chrome in the Browser tab: open `chrome://inspect/#remote-debugging`, tick "Allow remote debugging for
 this browser instance", then click Connect in the Browser tab.
 
+macOS only lets apps with Full Disk Access read Chrome's profile folder, so start AgentView from a terminal that has it
+(System Settings → Privacy & Security → Full Disk Access). Otherwise the Browser tab can't connect.
+
 ## Models
 
 New chats start in Auto mode: Claude asks only before risky actions.
