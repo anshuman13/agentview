@@ -1,83 +1,75 @@
 # AgentView
 
-A VS Code style view for working with Claude Code, built on the Agent SDK instead of the terminal.
-The agent does the work; the view is for watching, steering and verifying.
-
-- Task box (right column, top): where you tell Claude what to do, with the mode and model menus. While Claude works,
-  sending steers it: the current step stops and Claude continues with your message. Under the input is the timeline:
-  your instructions, the parts Claude finished, important notes, Claude's replies (the latest one open), what it is
-  doing now and its next steps. Edit, remove
-  or add a next step and Claude gets the new plan at its next tool call, without stopping. Approvals that need you
-  (plans, Fable, permissions) show here too
-- Terminal (bottom panel, ⌘J): a shell in the chat's folder, for when you want to run something yourself
-- Explorer: file tree of the current folder; its header switches between worktrees and open chats
-- Editor (center): two tabs, File and Browser, that you switch between with a click, ⌘E or the globe in the activity
-  bar. File is a read-only viewer that follows Claude's edits and shows the diff against HEAD (⌘P to open any file);
-  Browser shows a live tab from your own Chrome, where you're logged in to work sites. You can click, type and
-  navigate in it, and pick which tab to show or let it follow Claude. The layout stays fixed: editor in the middle, task box on the right
-- Chats: the chats that are open right now (the ones that need you first) and the most recent chats from every repo
-- Workspace: every repo in your workspace folders, their chats and Paseo worktrees
-- Phone: same client with a tab bar, reachable over your local network or NetBird. The Chats tab switches between
-  Chats and Repos. The timeline is on top with the input below
-  it, and the terminal has its own tab
-
-The meter next to the model menu shows how many tokens are in the context. Past 200k it turns red, and AgentView runs
-`/compact` by itself when the turn ends (or press Compact in the task box). If a compaction fails it does not retry on
-its own.
-
-Claude fills the timeline through a `set_status` tool AgentView adds to every session (current step, finished parts,
-next steps, important notes).
+A web UI for Claude Code, built on the Agent SDK. VS Code layout on the desktop, tab bar on the phone.
 
 ## Run
 
 ```bash
 npm install
-./start.sh   # or npm run up
+./start.sh
 ```
 
-`start.sh` turns on the menu bar coffee cup (keeps the Mac awake) and runs `npm run serve`: server on :7777, vite on
-:5173. If AgentView is already running it only turns the cup on. Set `PROJECT_DIR=/path/to/project` for the first chat.
+Opens on http://localhost:5173 (server on :7777). `start.sh` also starts the menu bar app that keeps the Mac awake.
+It uses the Claude Code CLI you have installed and its login.
 
-Open http://localhost:5173. The server runs the Claude Code CLI you have installed, with whatever login it has.
-`PROJECT_DIR` is only the fallback folder for the first chat; after that AgentView reopens the last chat you viewed.
+| Command | |
+| --- | --- |
+| `npm run serve` | Server and vite, no reload on server changes (running turns survive edits) |
+| `npm run dev` | Same, with server reload |
+| `npm run menubar` | Build and start the keep-awake menu bar app |
+| `npm test` | Unit tests |
 
-`npm run serve` does not restart the server when its code changes, so a running turn survives edits.
-Use `npm run dev` when working on the server itself.
+`PROJECT_DIR=/path` sets the folder for the very first chat. After that AgentView reopens the last chat you viewed.
 
-`npm run menubar` builds and starts a menu bar app that keeps the Mac awake while you are away.
+## Layout
 
-`npm test` runs the unit tests (Vitest).
+- **Task box** (right): prompt, mode and model menus, context meter, and the timeline below it
+- **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Browser tab shows your Chrome
+- **Sidebar**: Explorer, Chats (open and recent) and Workspace (repos, chats, Paseo worktrees)
+- **Terminal** (bottom): a shell in the chat's folder
 
-To serve the built client from the server: `npm run build && node server/dist/server/src/index.js /path/to/project`.
+## Timeline and steering
+
+Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
+and notes. The timeline shows these with your prompts and Claude's replies.
+
+- Sending while Claude works stops the current step and continues with your message
+- Editing the next steps sends the new plan at Claude's next tool call, without stopping it
+- Questions, plan approvals and permissions show as buttons in the timeline
+
+## Context
+
+The meter shows the tokens in context and turns red past 200k. AgentView then runs `/compact` when the turn ends.
+A failed compact is not retried.
 
 ## Chrome
 
-Chats drive your own Chrome through Claude in Chrome (Playwright is turned off for them), so Claude browses with your
-logins. To see that Chrome in the Browser tab, open `chrome://inspect/#remote-debugging` in Chrome once, tick "Allow
-remote debugging for this browser instance", click Connect in the Browser tab and allow it in Chrome.
+Chats use Claude in Chrome, so Claude browses with your logins. Playwright is off.
 
-New chats start in Auto mode: Claude runs what is safe and asks only for risky actions.
+To show that Chrome in the Browser tab: open `chrome://inspect/#remote-debugging`, tick "Allow remote debugging for
+this browser instance", then click Connect in the Browser tab.
 
-## Team mode
+## Models
 
-Pick **Team** in the model menu. Every new task starts in plan mode with Claude Opus 5.5 (Claude Code's `opusplan`).
-When you approve the plan, Claude Sonnet 5.5 builds it and consults Opus through the server-side advisor tool (its
-advice is encrypted, so the task box only counts the consults). For a really hard problem any chat can ask
-Fable (Claude Fable 5.1) through a `big-bro` sub-agent; every call waits for your approval and Fable's answer shows as
-a note in the task box. Each advisor consult re-reads the conversation, so long chats make consults more expensive.
+New chats start in Auto mode: Claude asks only before risky actions.
+
+**Team** in the model menu: Opus 5.5 plans each task, Sonnet 5.5 builds it and asks Opus for advice. Advisor calls
+re-read the conversation, so they cost more in long chats.
+
+Any chat can ask Fable 5.1 about a hard problem. Each call needs your approval.
 
 ## Workspace
 
-AgentView lists the git repos in `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` to a
-colon-separated list of folders to change that. Chats can only be started inside these folders or in Paseo worktrees.
+Repos come from `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` (colon-separated) to change that.
+Chats start only inside these folders or Paseo worktrees.
 
-- ⌘O, or clicking the project name in the status bar, picks a repo and starts a new chat in it
-- Hover a repo for a new chat (+) or, for Paseo projects, a new worktree branched off the default branch
-- Chats keep running when you switch to another one. Open chats show whether they are working or need you,
-  and a badge and notification appear when a background chat needs approval
-- Close a chat with the × on its row in Chats (the transcript is kept). A chat also closes by itself after 10 minutes
-  with nothing running and no one viewing it; reopen it from Recent or its repo
-- Chats untouched for 12 hours can be deleted, and Paseo worktrees idle for 12 hours can be removed (the branch is kept)
+- Chats keep running in the background. Ones that need you are marked and listed first
+- A chat closes after 10 idle minutes with no one viewing it. Reopen it from Recent
+- Chats and Paseo worktrees idle for 12 hours can be deleted (worktree branches are kept)
+
+## Phone
+
+Open the phone icon in the status bar for a QR code. Works on the same Wi-Fi or over NetBird.
 
 ## Shortcuts
 
@@ -87,4 +79,4 @@ colon-separated list of folders to change that. Chats can only be started inside
 | ⌘P | Open a file |
 | ⌘B | Toggle the sidebar |
 | ⌘J | Toggle the terminal |
-| ⌘E | Switch the editor between the file and the browser |
+| ⌘E | Switch between file and browser |
