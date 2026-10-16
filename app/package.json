@@ -1,0 +1,13 @@
+{
+  "name": "@agentview/app",
+  "private": true,
+  "scripts": {
+    "tauri": "./env.sh tauri",
+    "dev": "./env.sh tauri dev",
+    "build": "./env.sh tauri build",
+    "android": "./env.sh tauri android build --apk --target aarch64"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.3"
+  }
+}
