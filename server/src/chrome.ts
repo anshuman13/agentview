@@ -21,6 +21,9 @@ let pinned: string | null = null;
 let watching: { target: string; session: string } | null = null;
 let watchSeq = 0;
 let size = { w: 1600, h: 1200 };
+type Dims = { cssW: number; cssH: number; dpr: number; mobile: boolean };
+const sizes = new Map<WebSocket, Dims>();
+let emulated: { session: string; key: string } | null = null;
 let viewport = { w: 0, h: 0 };
 
 async function endpoint() {
@@ -28,7 +31,8 @@ async function endpoint() {
   try {
     const [port, p] = (await readFile(PORT_FILE, 'utf8')).trim().split('\n');
     return `ws://127.0.0.1:${port}${p}`;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EPERM') throw new Error('macOS blocks AgentView from reading Chrome\'s DevToolsActivePort. Start AgentView from your own Terminal');
     return 'ws://127.0.0.1:9222/devtools/browser';
   }
 }
@@ -56,7 +60,13 @@ function call(method: string, params: object = {}, sessionId?: string): Promise<
 export async function connect() {
   if (cdp || state === 'connecting') return;
   setState('connecting');
-  const ws = new WebSocket(await endpoint(), { maxPayload: 512 * 1024 * 1024 });
+  let url: string;
+  try {
+    url = await endpoint();
+  } catch (err) {
+    return setState('off', (err as Error).message);
+  }
+  const ws = new WebSocket(url, { maxPayload: 512 * 1024 * 1024 });
   let failure = '';
   ws.on('open', async () => {
     cdp = ws;
@@ -77,6 +87,7 @@ export async function connect() {
   ws.on('close', () => {
     cdp = null;
     watching = null;
+    emulated = null;
     tabs.clear();
     calls.forEach((c) => c.reject(new Error('Chrome disconnected')));
     calls.clear();
@@ -190,13 +201,14 @@ async function watch(target: string) {
   const seq = ++watchSeq;
   const prev = watching;
   watching = null;
-  if (prev) void call('Target.detachFromTarget', { sessionId: prev.session }).catch(() => {});
+  if (prev) release(prev.session);
   try {
     const { sessionId } = await call('Target.attachToTarget', { targetId: target, flatten: true });
     if (seq !== watchSeq) return void call('Target.detachFromTarget', { sessionId }).catch(() => {});
     watching = { target, session: sessionId };
     sendTabs();
     await call('Page.enable', {}, sessionId);
+    await emulate(false);
     const { cssVisualViewport: v } = await call('Page.getLayoutMetrics', {}, sessionId);
     viewport = { w: v.clientWidth, h: v.clientHeight };
     await screencast();
@@ -212,16 +224,44 @@ async function screencast() {
   await call('Page.startScreencast', { format: 'jpeg', quality: 70, maxWidth: size.w, maxHeight: size.h }, watching.session);
 }
 
+function release(session: string) {
+  if (emulated?.session === session && emulated.key) {
+    void call('Emulation.clearDeviceMetricsOverride', {}, session).catch(() => {});
+    void call('Emulation.setTouchEmulationEnabled', { enabled: false }, session).catch(() => {});
+  }
+  if (emulated?.session === session) emulated = null;
+  void call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
+}
+
+async function emulate(restart = true) {
+  if (!watching) return;
+  const m = [...sizes.values()].reverse().find((d) => d.mobile);
+  const key = m ? `${m.cssW}x${m.cssH}@${m.dpr}` : '';
+  const { session } = watching;
+  if ((emulated?.session === session ? emulated.key : '') === key) return;
+  emulated = { session, key };
+  try {
+    if (m) {
+      await call('Emulation.setDeviceMetricsOverride', { width: m.cssW, height: m.cssH, deviceScaleFactor: m.dpr, mobile: true }, session);
+      await call('Emulation.setTouchEmulationEnabled', { enabled: true }, session);
+    } else {
+      await call('Emulation.clearDeviceMetricsOverride', {}, session);
+      await call('Emulation.setTouchEmulationEnabled', { enabled: false }, session);
+    }
+    if (restart) await screencast();
+  } catch {}
+}
+
 function stop() {
   if (!watching) return;
-  void call('Target.detachFromTarget', { sessionId: watching.session }).catch(() => {});
+  release(watching.session);
   watching = null;
   watchSeq++;
 }
 
 const BUTTONS = new Set(['left', 'right', 'middle', 'none']);
 
-async function input(m: any) {
+async function input(m: any, ws: WebSocket) {
   const s = watching?.session;
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   switch (m.t) {
@@ -233,6 +273,14 @@ async function input(m: any) {
       return pick();
     case 'size':
       size = { w: Math.min(2400, Math.max(200, num(m.w))), h: Math.min(2400, Math.max(200, num(m.h))) };
+      sizes.delete(ws);
+      sizes.set(ws, {
+        cssW: Math.min(2400, Math.max(100, Math.round(num(m.cssW)))),
+        cssH: Math.min(2400, Math.max(100, Math.round(num(m.cssH)))),
+        dpr: Math.min(4, Math.max(1, num(m.dpr) || 1)),
+        mobile: m.mobile === true,
+      });
+      await emulate(false);
       return screencast().catch(() => {});
   }
   if (!s) return;
@@ -287,10 +335,12 @@ export function openChrome(ws: WebSocket, origin: string | undefined) {
     } catch {
       return;
     }
-    input(m).catch((err) => console.error('chrome input:', err.message));
+    input(m, ws).catch((err) => console.error('chrome input:', err.message));
   });
   ws.on('close', () => {
     viewers.delete(ws);
-    if (!viewers.size) stop();
+    const was = sizes.delete(ws);
+    if (!viewers.size) return stop();
+    if (was) void emulate();
   });
 }

@@ -58,7 +58,7 @@ export function BrowserPane() {
     const ro = new ResizeObserver(() => {
       const r = el.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      send({ t: 'size', w: Math.round(r.width * dpr), h: Math.round(r.height * dpr) });
+      send({ t: 'size', w: Math.round(r.width * dpr), h: Math.round(r.height * dpr), cssW: Math.round(r.width), cssH: Math.round(r.height), dpr, mobile: r.width < 700 });
     });
     ro.observe(el);
     return () => ro.disconnect();
