@@ -1,0 +1,33 @@
+.page {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; color: var(--fg);
+  background:
+    radial-gradient(900px 420px at 10% -10%, color-mix(in srgb, var(--page-glow, var(--accent)) 14%, transparent), transparent 60%),
+    radial-gradient(700px 360px at 100% 0%, color-mix(in srgb, var(--agent) 10%, transparent), transparent 60%),
+    var(--bg-raised);
+}
+.page::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.35;
+  background-image: linear-gradient(color-mix(in srgb, var(--fg) 5%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--fg) 5%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 70%);
+}
+.page.observe-page { --page-glow: var(--err); }
+.page.deploy-page { --page-glow: var(--ok); }
+.page-hero { position: relative; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 28px 32px 22px; }
+.page-kicker { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--page-glow, var(--accent)); }
+.page-hero h1 { margin: 4px 0 6px; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+.page-sub { color: var(--fg-muted); font-size: 13px; }
+.page-extra:empty { display: none; }
+.page-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.observe-page .page-body, .deploy-page .page-body { padding: 0 20px 24px; max-width: 1040px; width: 100%; box-sizing: border-box; }
+.observe-page .observe, .deploy-page .deploy { font-size: 13px; }
+.observe-page .obs-head, .observe-page .obs-picker { padding-left: 0; }
+.tab.ptab > .codicon:first-child { color: var(--accent); }
+.tab.ptab-observe > .codicon:first-child { color: var(--err); }
+.tab.ptab-deploy > .codicon:first-child { color: var(--ok); }
+.activitybar .divider { width: 24px; height: 1px; margin: 4px auto; background: var(--border-strong); flex: none; }
+@media (max-width: 900px) {
+  .page-hero { padding: 18px 16px 14px; }
+  .page-hero h1 { font-size: 22px; }
+  .observe-page .page-body, .deploy-page .page-body { padding: 0 8px 16px; }
+}

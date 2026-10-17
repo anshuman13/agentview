@@ -12,14 +12,16 @@ import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
-import { McpItem } from './panes/McpStatus';
+import { McpItem, McpPage } from './panes/McpStatus';
+import './page.css';
 import { Observe } from './panes/Observe';
 import { Deploy } from './panes/Deploy';
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 
 type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos';
-type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions' | 'observe' | 'deploy';
+type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
+type Page = 'observe' | 'deploy' | 'mcp';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'explorer', icon: 'files', title: 'Explorer' },
@@ -27,9 +29,15 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
   { id: 'chats', icon: 'comment-discussion', title: 'Chats' },
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
-  { id: 'observe', icon: 'pulse', title: 'Observe' },
-  { id: 'deploy', icon: 'rocket', title: 'Deploy' },
 ];
+
+const PAGES: { id: Page; icon: string; title: string; kicker: string; sub: (repo: string) => string }[] = [
+  { id: 'observe', icon: 'pulse', title: 'Observe', kicker: 'Sentry · Grafana · Snowflake', sub: (r) => `Errors, logs and data for ${r}, read through the same MCP servers Claude uses.` },
+  { id: 'deploy', icon: 'rocket', title: 'Deploy', kicker: 'Velodrome', sub: (r) => `Deploys of ${r}: what runs where, and a one-click deploy or rollback.` },
+  { id: 'mcp', icon: 'plug', title: 'MCP Servers', kicker: 'Model Context Protocol', sub: (r) => `What Claude can reach from ${r}. Same config as the Claude CLI, checked live.` },
+];
+const isPage = (v: string): v is Page => PAGES.some((p) => p.id === v);
+const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
 
 const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'chat', icon: 'comment-discussion', label: 'Chat' },
@@ -75,7 +83,10 @@ export function App() {
   const session = useStore((s) => s.session);
   const status = useStore((s) => s.status);
   const [tab, setTab] = useState<Tab>('chat');
-  const [editor, setEditor] = useState<'file' | 'browser'>('file');
+  const [editor, setEditor] = useState<'file' | 'browser' | Page>('file');
+  const [page, setPage] = useState<Page | null>(null);
+  const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (window.innerWidth <= 900 ? 'code' : t)); };
+  const closePage = () => { setPage(null); setEditor((e) => (isPage(e) ? 'file' : e)); };
   const [sidebar, setSidebar] = useState(true);
   const [view, setView] = useState<View>('explorer');
   const [phone, setPhone] = useState(false);
@@ -155,6 +166,7 @@ export function App() {
       const [kind, arg] = (e as CustomEvent<{ id: string }>).detail.id.split(':');
       if (kind === 'view') { setView(arg as View); setSidebar(true); }
       else if (kind === 'tab') { setTab(arg as Tab); if (arg === 'browser') setEditor('browser'); if (arg === 'code') setEditor('file'); }
+      else if (kind === 'page' && isPage(arg)) openPage(arg);
       else if (kind === 'terminal') setTerminal((v) => !v);
       else if (kind === 'phone') setPhone((v) => !v);
       else if (kind === 'theme') toggleTheme();
@@ -165,10 +177,10 @@ export function App() {
 
   const fileName = openFile ? openFile.split('/').pop() : null;
   const closeFile = () => setUi({ openFile: null });
-  const showing = tab === 'browser' ? 'browser' : tab === 'code' ? 'file' : editor;
-  const active = showing === 'browser' ? 'browser' : openFile ? 'file' : 'empty';
+  const showing = tab === 'browser' ? 'browser' : tab === 'code' && !isPage(editor) ? 'file' : editor;
+  const active = showing === 'browser' ? 'browser' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
   const project = session.cwd ? session.cwd.split('/').pop() : 'AgentView';
-  const mobileExplorer = tab === 'code' && !openFile;
+  const mobileExplorer = tab === 'code' && !openFile && !isPage(editor);
 
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
@@ -180,6 +192,12 @@ export function App() {
               {v.id === 'chats' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
               {v.id === 'changes' && <ChangesBadge />}
               {v.id === 'github' && <GitHubBadge />}
+            </button>
+          ))}
+          <span className="divider" />
+          {PAGES.map((p) => (
+            <button key={p.id} data-view={p.id} className={showing === p.id ? 'active' : ''} title={p.title} onClick={() => openPage(p.id)}>
+              <Icon name={p.icon} />
             </button>
           ))}
           <span className="spacer" />
@@ -196,7 +214,7 @@ export function App() {
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
             </div>
           )}
-          {view === 'explorer' ? <Explorer /> : view === 'changes' ? <Changes /> : view === 'github' ? <GitHub /> : view === 'chats' ? <OpenChats /> : view === 'observe' ? <Observe /> : view === 'deploy' ? <Deploy /> : <Sessions />}
+          {view === 'explorer' ? <Explorer /> : view === 'changes' ? <Changes /> : view === 'github' ? <GitHub /> : view === 'chats' ? <OpenChats /> : <Sessions />}
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
@@ -213,9 +231,30 @@ export function App() {
             <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')} title="Browser (⌘E to switch)">
               <Icon name="globe" small /> Browser
             </button>
+            {page && (
+              <button className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} onClick={() => setEditor(page)} title={pageOf(page).title}>
+                <Icon name={pageOf(page).icon} small /> {pageOf(page).title}
+                <span className="close" title="Close" onClick={(e) => { e.stopPropagation(); closePage(); }}><Icon name="close" small /></span>
+              </button>
+            )}
           </div>
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><CodePane /></div>
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <BrowserPane />}</div>
+          {page && (
+            <div key={page} className={`editor ${active === page ? 'shown' : ''}`}>
+              <div className={`page ${page}-page`}>
+                <header className="page-hero">
+                  <div>
+                    <div className="page-kicker">{pageOf(page).kicker}</div>
+                    <h1>{pageOf(page).title}</h1>
+                    <div className="page-sub">{pageOf(page).sub(project ?? 'this repo')}</div>
+                  </div>
+                  <div id={`page-${page}-extra`} className="page-extra" />
+                </header>
+                <div className="page-body">{page === 'mcp' ? <McpPage /> : page === 'observe' ? <Observe /> : <Deploy />}</div>
+              </div>
+            </div>
+          )}
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <div className="empty-state">
               <Icon name="files" />

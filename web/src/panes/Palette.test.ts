@@ -7,7 +7,7 @@ const ids = (rows: ReturnType<typeof rankCommands>) => rows.map((r) => r.cmd.id)
 
 describe('buildCommands', () => {
   it('lists views, tabs, one entry per model and per permission mode', () => {
-    expect(ids(rankCommands(cmds, '', [], 100))).toEqual(expect.arrayContaining(['view:explorer', 'view:deploy', 'tab:chat', 'tab:browser', 'model:claude-opus-4-1', 'model:claude-sonnet-4-5', 'mode:default', 'mode:dontAsk', 'terminal', 'newChat', 'compact', 'stop', 'theme', 'notify', 'phone']));
+    expect(ids(rankCommands(cmds, '', [], 100))).toEqual(expect.arrayContaining(['view:explorer', 'page:deploy', 'tab:chat', 'tab:browser', 'model:claude-opus-4-1', 'model:claude-sonnet-4-5', 'mode:default', 'mode:dontAsk', 'terminal', 'newChat', 'compact', 'stop', 'theme', 'notify', 'phone']));
   });
 });
 
@@ -58,8 +58,8 @@ describe('rankCommands', () => {
   });
 
   it('keeps recent matches ahead of other matches', () => {
-    const rows = rankCommands(cmds, 'view', ['view:deploy']);
-    expect(ids(rows)[0]).toBe('view:deploy');
+    const rows = rankCommands(cmds, 'view', ['page:deploy']);
+    expect(ids(rows)[0]).toBe('page:deploy');
     expect(ids(rows)).not.toContain('stop');
   });
 

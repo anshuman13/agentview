@@ -146,6 +146,11 @@ export class AgentSession {
     await this.refreshMcp();
   }
 
+  async toggleMcp(name: string, enabled: boolean) {
+    await this.q?.toggleMcpServer(name, enabled).catch((err) => this.system(`${enabled ? 'Enabling' : 'Disabling'} ${name} failed: ${err instanceof Error ? err.message : String(err)}`));
+    await this.refreshMcp();
+  }
+
   async setModel(model: string) {
     this.start();
     const team = model === 'team';

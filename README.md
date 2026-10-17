@@ -52,9 +52,23 @@ this browser instance", then click Connect in the Browser tab.
 macOS only lets apps with Full Disk Access read Chrome's profile folder, so start AgentView from a terminal that has it
 (System Settings → Privacy & Security → Full Disk Access). Otherwise the Browser tab can't connect.
 
+## Pages
+
+Observe, Deploy and MCP Servers open as tabs in the editor area (the lower three activity bar icons, or the command
+palette), so they get the full width instead of the sidebar. One page is open at a time; opening another replaces it.
+
+## MCP servers
+
+The MCP Servers page reads the same config as the Claude CLI (`~/.claude.json`, the repo's `.mcp.json`) and connects
+to every server itself, like `claude mcp list`: each card shows the connection status, transport, command or URL, version
+and tool count, grouped by where the server comes from. Click a card for the env variable names, the error text and the
+tool list with descriptions. Servers that log in through OAuth show "OAuth via Claude" until Claude starts in the chat;
+from then on the page shows the live status from the chat, with reconnect and disable actions, and claude.ai connectors
+and plugin servers appear too. "Check" connects to everything again; results are cached for a minute.
+
 ## Grafana, Sentry and Snowflake
 
-The Observe view (pulse icon) reads Sentry, Grafana and Snowflake through MCP servers, the same ones Claude uses:
+The Observe page (pulse icon) reads Sentry, Grafana and Snowflake through MCP servers, the same ones Claude uses:
 
 - Grafana uses the `grafana` server from `~/.claude.json`: dashboards matching the repo (`search_dashboards`), error
   lines from Loki for the last hour (`query_loki_logs`) and error patterns (`query_loki_patterns`, Sift, or grouped
