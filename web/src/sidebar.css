@@ -54,3 +54,51 @@
 .side-switch { display: flex; gap: 4px; padding: 0 12px 8px 8px; }
 .side-switch button { flex: 1; height: 32px; font-size: 13px; color: var(--muted); background: transparent; border: 1px solid var(--input-border); border-radius: 6px; }
 .side-switch button.active { color: var(--text-strong); background: var(--active); border-color: var(--active); }
+.sessions.chats .sessions-bar + .sessions-bar input { flex: 1; min-width: 0; }
+.sessions.chats .tree .row.live, .sessions.chats .tree .row.recent { padding-left: 24px; gap: 6px; }
+.sessions .tree.needs { flex: none; max-height: 30%; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.sessions .tree.needs .group { margin-top: 0; color: var(--yellow); display: flex; align-items: center; gap: 6px; }
+.sessions .tree.needs .row.live { padding-left: 8px; }
+.sessions.chats .tree .row.recent .name { color: var(--muted); }
+.sessions.chats .tree .row .meta { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding-right: 2px; font-weight: 400; }
+.sessions.chats .tree .row .meta .count { margin-left: 0; padding: 0 10px 0 2px; min-width: 22px; }
+.sessions.chats .tree .row.project:hover .meta { display: none; }
+.sessions .badge {
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; line-height: 16px; text-transform: none; color: #fff; background: var(--accent);
+}
+.sessions .badge.waiting { background: var(--yellow); color: #1f1f1f; }
+.sessions .badge.running::before { content: ''; width: 6px; height: 6px; margin-right: 3px; border-radius: 50%; background: #fff; }
+.sessions .dot { flex: none; width: 8px; height: 8px; margin: 0 2px; border-radius: 50%; box-sizing: border-box; }
+.sessions .dot.running { background: var(--accent); animation: dot-pulse 1.4s ease-in-out infinite; }
+.sessions .dot.waiting { background: var(--yellow); }
+.sessions .dot.idle { border: 1.5px solid var(--muted); }
+@keyframes dot-pulse { 50% { opacity: 0.35; transform: scale(0.8); } }
+.sessions .tree .row.live .repo { font-weight: 400; color: var(--text); }
+.sessions .tree .hint { padding: 6px 12px 6px 24px; }
+.sessions.chats .tree .row.live .name { color: var(--text); }
+.sessions .tree .row .badges { flex: none; display: inline-flex; align-items: center; margin-left: auto; padding-right: 10px; font-weight: 400; }
+.sessions .tree .row .badges .dirty { width: 14px; margin: 0; text-align: center; }
+.sessions .tree .row .badges .count { width: 24px; margin: 0; padding: 0; }
+.sessions .tree .row.project:hover .badges { display: none; }
+.sessions .tree .row.group-row { margin-top: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); }
+.sessions.chats .tree .row.recent { padding-left: 42px; }
+.sessions .side-switch .seg-count { margin-left: 4px; font-size: 11px; color: var(--muted); }
+.sessions .side-switch button { height: 24px; font-size: 12px; border-radius: 4px; }
+.sessions .tree .row.group-row .count { margin-left: auto; padding-right: 10px; font-weight: 400; text-transform: none; }
+.sessions.workspace .tree .row.repo-row { padding-left: 16px; gap: 4px; font-weight: 400; color: var(--text); }
+.sessions.workspace .tree .row.repo-row > .icon { flex: none; color: var(--muted); }
+.sessions.workspace .tree .row.repo-row .label { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: 2px; }
+.sessions.workspace .tree .row.repo-row .name { flex: none; overflow: hidden; text-overflow: ellipsis; }
+.sessions.workspace .tree .row.repo-row.dim .name { color: var(--muted); }
+.sessions.workspace .tree .row.repo-row.here .name { color: var(--claude); }
+.sessions.workspace .tree .row.repo-row.two { height: auto; min-height: 22px; padding-top: 2px; padding-bottom: 3px; align-items: flex-start; }
+.sessions.workspace .tree .row.repo-row.two > :is(.twistie, .icon, .badges, .acts) { margin-top: 3px; }
+.sessions.workspace .tree .row.repo-row .branch-chip {
+  align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 0 6px; border-radius: 8px; font-size: 10px; line-height: 15px; color: var(--muted); background: var(--input);
+}
+.sessions.workspace .tree .row.repo-row .badges .when { min-width: 28px; padding: 0; margin: 0; }
+.sessions.workspace .tree .row.repo-row .badges .count { width: 20px; }
+.sessions.workspace .tree .row.session, .sessions.workspace .tree .row.more { padding-left: 54px; }
+@media (max-width: 900px) { .sessions.workspace .tree .row.repo-row.two { min-height: 36px; align-items: center; } }

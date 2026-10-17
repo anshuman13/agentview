@@ -1,10 +1,10 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { listSessions } from '@anthropic-ai/claude-agent-sdk';
-import { STALE_MS, type Repo, type Worktree } from '../../shared/protocol.js';
+import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../shared/protocol.js';
 
 const run = promisify(execFile);
 const git = async (cwd: string, ...args: string[]) => (await run('git', ['-C', cwd, ...args])).stdout.trim();
@@ -18,6 +18,32 @@ export const allowedFolder = (dir: string) => [...ROOTS, PASEO_TREES].some((r) =
 
 export const parseBranch = (head: string) => head.replace(/^## (No commits yet on )?/, '').split('...')[0];
 
+export function repoKind(names: string[], pkg = '', name = ''): RepoKind {
+  const has = (n: string) => names.includes(n);
+  if (has('src-tauri') || has('android') || has('ios') || (has('Cargo.toml') && has('app'))) return 'app';
+  if (has('dbt_project.yml') || /dbt/.test(name)) return 'data';
+  if (names.some((n) => n.endsWith('.tf')) || has('Pulumi.yaml') || has('helm') || /terraform|infra/.test(name)) return 'infra';
+  if (/"(react|vite|next|vue|svelte)"/.test(pkg)) return 'web';
+  if (has('pyproject.toml') || has('requirements.txt') || has('go.mod') || has('package.json') || has('Cargo.toml')) return 'service';
+  const files = names.filter((n) => n.includes('.') && !n.startsWith('.'));
+  if (files.length && files.filter((n) => n.endsWith('.md')).length * 2 >= files.length) return 'docs';
+  return 'other';
+}
+
+const pkgOf = (dir: string, names: string[]) => (names.includes('package.json') ? readFile(path.join(dir, 'package.json'), 'utf8').catch(() => '') : Promise.resolve(''));
+
+const detectKind = async (cwd: string) => {
+  const top = await readdir(cwd, { withFileTypes: true }).catch(() => []);
+  const names = top.map((d) => d.name);
+  const kind = repoKind(names, await pkgOf(cwd, names), path.basename(cwd));
+  const weak = kind === 'docs' || kind === 'other' || (kind === 'service' && !['pyproject.toml', 'requirements.txt', 'go.mod', 'Cargo.toml'].some((n) => names.includes(n)));
+  if (!weak) return kind;
+  const subs = top.filter((d) => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules').slice(0, 12).map((d) => path.join(cwd, d.name));
+  const deep = await Promise.all(subs.map(async (d) => { const n = await readdir(d).catch(() => [] as string[]); return { n, pkg: await pkgOf(d, n) }; }));
+  const inner = repoKind(deep.flatMap((d) => d.n), deep.map((d) => d.pkg).join('\n'));
+  return inner === 'docs' || inner === 'other' ? kind : inner;
+};
+
 export async function listRepos(): Promise<Repo[]> {
   const paseo = (await paseoProjects().catch(() => [])).map((p) => p.path);
   const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(root, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory()).map((d) => path.join(root, d.name))));
@@ -28,7 +54,7 @@ export async function listRepos(): Promise<Repo[]> {
       const [head, ...files] = status.split('\n');
       const branch = parseBranch(head);
       const lastCommit = Number(await git(cwd, 'log', '-1', '--format=%ct').catch(() => '0')) * 1000;
-      return { name: path.basename(cwd), root: path.basename(path.dirname(cwd)), cwd, branch, dirty: files.filter(Boolean).length, lastCommit, paseo: paseo.includes(cwd) };
+      return { name: path.basename(cwd), root: path.basename(path.dirname(cwd)), kind: await detectKind(cwd), cwd, branch, dirty: files.filter(Boolean).length, lastCommit, paseo: paseo.includes(cwd) };
     }),
   );
   return repos.filter((r) => r !== null);

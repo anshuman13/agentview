@@ -3,7 +3,7 @@ import { notice, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
-import { STALE_MS, type LiveChat, type Repo, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { STALE_MS, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 
 const PAGE = 10;
 
@@ -63,6 +63,41 @@ export function worktreeRequest(d: Folder, track: (branch: string | null, error?
   };
 }
 
+const WEEK = 7 * 864e5;
+export const isDefault = (b?: string) => !b || b === 'main' || b === 'master';
+
+export const KINDS: [RepoKind, string, string][] = [
+  ['web', 'Web apps', 'globe'], ['service', 'Services', 'server'], ['infra', 'Infra', 'layers'], ['data', 'Data', 'database'],
+  ['app', 'Apps', 'device-mobile'], ['docs', 'Docs', 'book'], ['other', 'Other', 'repo'],
+];
+export const segmentOf = (f: Folder) => (f.repo?.root === 'workspace_personal' || f.cwd.includes('/workspace_personal/') ? 'personal' : 'work');
+
+export const isActive = (f: Folder, live: string[], now = Date.now()) =>
+  Boolean(f.repo?.dirty) || !isDefault(f.repo?.branch) || f.trees.length > 0 || now - f.last < WEEK ||
+  live.some((c) => inside(c, f.cwd) || f.trees.some((w) => inside(c, w.cwd)));
+
+export function groupByKind(folders: Folder[], live: string[], now = Date.now()) {
+  return KINDS.map(([kind, label, icon]) => ({
+    kind, label, icon,
+    items: folders
+      .filter((f) => (f.repo?.kind ?? 'other') === kind)
+      .map((f) => ({ f, active: isActive(f, live, now) }))
+      .sort((x, y) => Number(y.active) - Number(x.active) || x.f.name.localeCompare(y.f.name)),
+  })).filter((g) => g.items.length);
+}
+
+const stored = <T,>(key: string, fallback: T): T => {
+  try { return JSON.parse(localStorage.getItem(key) ?? '') ?? fallback; } catch { return fallback; }
+};
+const save = (key: string, v: unknown) => {
+  try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
+};
+
+const closeChat = (c: LiveChat, ask: (r: ConfirmRequest) => void) =>
+  c.running || c.pending
+    ? ask({ title: 'Close this chat?', detail: c.title, warning: 'Claude is still working on it and will stop. The transcript is kept.', action: 'Close', run: async () => send({ type: 'close', id: c.id }) })
+    : send({ type: 'close', id: c.id });
+
 export function findHere(folders: Folder[], cwd: string) {
   const folder = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)));
   const tree = folder?.trees.find((w) => inside(cwd, w.cwd));
@@ -121,7 +156,11 @@ export function Sessions() {
   const cwd = useStore((s) => s.session.cwd);
   const lastEvent = useStore((s) => s.events[s.events.length - 1]);
   const { folders, setTrees, setChats } = useWorkspace(current + cwd);
+  const live = useStore((s) => s.live);
   const [filter, setFilter] = useState('');
+  const viewing = useStore((s) => s.session.id);
+  const [segment, setSegment] = useState(() => stored('agentview.workspace.segment', 'work'));
+  const [shut, setShut] = useState<string[]>(() => stored('agentview.workspace.kinds', []));
   const [toggled, setToggled] = useState<Set<string>>(new Set());
   const [full, setFull] = useState<Set<string>>(new Set());
   const [opening, setOpening] = useState<string | null>(null);
@@ -202,142 +241,249 @@ export function Sessions() {
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
-  const isOpen = (d: Folder) => Boolean(d.hit) || (d.cwd === here) !== toggled.has(d.cwd);
+  const liveCwds = useMemo(() => live.map((c) => c.cwd), [live]);
+  const counts = { work: shown.filter((f) => segmentOf(f) === 'work').length, personal: shown.filter((f) => segmentOf(f) === 'personal').length };
+  const groups = useMemo(() => groupByKind(shown.filter((f) => segmentOf(f) === segment), liveCwds), [shown, segment, liveCwds]);
+  const waiting = live.filter((c) => c.pending);
+  const pick = (v: string) => { setSegment(v); save('agentview.workspace.segment', v); };
+  const flipKind = (k: string) => { const next = shut.includes(k) ? shut.filter((x) => x !== k) : [...shut, k]; setShut(next); save('agentview.workspace.kinds', next); };
+  const isOpen = (d: Folder) => Boolean(d.hit) || (d.cwd === here || liveCwds.some((c) => inside(c, d.cwd))) !== toggled.has(d.cwd);
+
+  const folderRows = (d: Folder, active: boolean, icon: string) => {
+    const kids = d.chats.length > 0 || d.trees.length > 0;
+    const branch = d.repo && !isDefault(d.repo.branch) ? d.repo.branch : '';
+    return (
+      <div key={d.cwd}>
+        <div className={`row project repo-row ${active ? '' : 'dim'} ${branch ? 'two' : ''} ${d.cwd === here ? 'here' : ''}`} title={d.cwd} onClick={() => kids && flip(setToggled, d.cwd)}>
+          <span className="twistie">{kids && <Icon name={isOpen(d) ? 'chevron-down' : 'chevron-right'} small />}</span>
+          <Icon name={icon} small />
+          <span className="label">
+            <span className="name">{d.name}</span>
+            {branch && <span className="branch-chip" title={branch}>{branch}</span>}
+          </span>
+          <span className="badges">
+            <span className="dirty" title={d.repo?.dirty ? `${d.repo.dirty} uncommitted` : undefined}>{d.repo?.dirty ? 'M' : ''}</span>
+            <span className="count" title={d.chats.length ? `${d.chats.length} chats` : undefined}>{d.chats.length || ''}</span>
+            <span className="when">{d.last ? ago(d.last) : ''}</span>
+          </span>
+          <span className="acts">
+            {d.repo?.paseo && (
+              <button className="icon-btn" title="New worktree" disabled={Boolean(creating)} onClick={(e) => { e.stopPropagation(); newTree(d); }}><Icon name="git-branch-create" small /></button>
+            )}
+            <button className="icon-btn" title={`New chat in ${d.name}`} onClick={(e) => { e.stopPropagation(); start(d.cwd); }}><Icon name="add" small /></button>
+          </span>
+        </div>
+        {creating?.repo === d.cwd && (
+          <div className="row session worktree removing" title={creating.branch}>
+            <Icon name="git-branch" small />
+            <span className="name">Creating {creating.branch}…</span>
+            <span className="busy"><Icon name="loading" small spin /></span>
+          </div>
+        )}
+        {isOpen(d) && d.trees.map((w) => (
+          <div
+            key={w.id}
+            className={`row session worktree ${removing.has(w.id) ? 'removing' : ''}`}
+            title={`${w.name}\n${w.cwd}${w.dirty ? `\n${w.dirty} uncommitted` : ''}${w.removable ? '' : '\nUsed in the last 12 hours or open, so it cannot be removed yet'}`}
+          >
+            <Icon name="git-branch" small />
+            <span className="name">{removing.has(w.id) ? 'Removing… ' : ''}{w.name.split('/').pop()}</span>
+            {w.dirty > 0 && <span className="dirty" title={`${w.dirty} uncommitted`}>M</span>}
+            <span className="when">{ago(w.lastActive)}</span>
+            {removing.has(w.id) ? (
+              <span className="busy"><Icon name="loading" small spin /></span>
+            ) : (
+              <span className="acts">
+                <button className="icon-btn" title="New chat in this worktree" onClick={() => start(w.cwd)}><Icon name="add" small /></button>
+                {w.removable && (
+                  <button className="icon-btn" title="Remove worktree, keep the branch" onClick={() => { setError(null); removeTree(w); }}><Icon name="trash" small /></button>
+                )}
+              </span>
+            )}
+          </div>
+        ))}
+        {isOpen(d) &&
+          (full.has(d.cwd) || filter ? d.chats : d.chats.slice(0, PAGE)).map((s) => (
+            <div
+              key={s.sessionId}
+              className={`row session ${s.sessionId === current ? 'selected' : ''}`}
+              title={`${s.title}\n${s.cwd}${s.gitBranch ? `\n${s.gitBranch}` : ''}`}
+              onClick={() => open(s.sessionId)}
+            >
+              <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
+              <span className="when">{ago(s.lastModified)}</span>
+              {s.sessionId !== current && Date.now() - s.lastModified > STALE_MS && (
+                <span className="acts">
+                  <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setError(null); remove(s); }}><Icon name="trash" small /></button>
+                </span>
+              )}
+            </div>
+          ))}
+        {isOpen(d) && !filter && d.chats.length > PAGE && (
+          <div className="row more" onClick={() => flip(setFull, d.cwd)}>
+            {full.has(d.cwd) ? 'Show less' : `Show ${d.chats.length - PAGE} more`}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="sessions">
+    <div className="sessions workspace">
       <div className="sessions-bar">
-        <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
         <button className="icon-btn" title="Start a chat in a repo (⌘O)" onClick={() => setUi({ repoPicker: true })}><Icon name="folder-opened" /></button>
         <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
+      {waiting.length > 0 && (
+        <div className="tree needs">
+          <div className="group">Needs you <span className="badge waiting">{waiting.length}</span></div>
+          {waiting.map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} onClose={() => closeChat(c, setAsk)} />)}
+        </div>
+      )}
+      <div className="side-switch">
+        {(['work', 'personal'] as const).map((k) => (
+          <button key={k} className={segment === k ? 'active' : ''} onClick={() => pick(k)}>{k === 'work' ? 'Work' : 'Personal'} <span className="seg-count">{counts[k]}</span></button>
+        ))}
+      </div>
       <div className="tree">
-        {shown.map((d) => (
-          <div key={d.cwd}>
-            <div className={`row project ${d.cwd === here ? 'here' : ''}`} title={d.cwd} onClick={() => flip(setToggled, d.cwd)}>
-              <span className="twistie"><Icon name={isOpen(d) ? 'chevron-down' : 'chevron-right'} small /></span>
-              <span className="name">{d.name}</span>
-              {d.repo && <span className="branch">{d.repo.branch}</span>}
-              {d.repo?.dirty ? <span className="dirty" title={`${d.repo.dirty} uncommitted`}>M</span> : null}
-              <span className="count">{d.chats.length || ''}</span>
-              <span className="acts">
-                {d.repo?.paseo && (
-                  <button className="icon-btn" title="New worktree" disabled={Boolean(creating)} onClick={(e) => { e.stopPropagation(); newTree(d); }}><Icon name="git-branch-create" small /></button>
-                )}
-                <button className="icon-btn" title={`New chat in ${d.name}`} onClick={(e) => { e.stopPropagation(); start(d.cwd); }}><Icon name="add" small /></button>
-              </span>
+        {groups.map((g) => (
+          <div key={g.kind}>
+            <div className="row group-row" onClick={() => flipKind(g.kind)}>
+              <span className="twistie"><Icon name={filter || !shut.includes(g.kind) ? 'chevron-down' : 'chevron-right'} small /></span>
+              <span className="name">{g.label}</span>
+              <span className="count">{g.items.length}</span>
             </div>
-            {creating?.repo === d.cwd && (
-              <div className="row session worktree removing" title={creating.branch}>
-                <Icon name="git-branch" small />
-                <span className="name">Creating {creating.branch}…</span>
-                <span className="busy"><Icon name="loading" small spin /></span>
-              </div>
-            )}
-            {isOpen(d) && d.trees.map((w) => (
-              <div
-                key={w.id}
-                className={`row session worktree ${removing.has(w.id) ? 'removing' : ''}`}
-                title={`${w.name}\n${w.cwd}${w.dirty ? `\n${w.dirty} uncommitted` : ''}${w.removable ? '' : '\nUsed in the last 12 hours or open, so it cannot be removed yet'}`}
-              >
-                <Icon name="git-branch" small />
-                <span className="name">{removing.has(w.id) ? 'Removing… ' : ''}{w.name.split('/').pop()}</span>
-                {w.dirty > 0 && <span className="dirty" title={`${w.dirty} uncommitted`}>M</span>}
-                <span className="when">{ago(w.lastActive)}</span>
-                {removing.has(w.id) ? (
-                  <span className="busy"><Icon name="loading" small spin /></span>
-                ) : (
-                  <span className="acts">
-                    <button className="icon-btn" title="New chat in this worktree" onClick={() => start(w.cwd)}><Icon name="add" small /></button>
-                    {w.removable && (
-                      <button className="icon-btn" title="Remove worktree, keep the branch" onClick={() => { setError(null); removeTree(w); }}><Icon name="trash" small /></button>
-                    )}
-                  </span>
-                )}
-              </div>
-            ))}
-            {isOpen(d) &&
-              (full.has(d.cwd) || filter ? d.chats : d.chats.slice(0, PAGE)).map((s) => (
-                <div
-                  key={s.sessionId}
-                  className={`row session ${s.sessionId === current ? 'selected' : ''}`}
-                  title={`${s.title}\n${s.cwd}${s.gitBranch ? `\n${s.gitBranch}` : ''}`}
-                  onClick={() => open(s.sessionId)}
-                >
-                  <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
-                  <span className="when">{ago(s.lastModified)}</span>
-                  {s.sessionId !== current && Date.now() - s.lastModified > STALE_MS && (
-                    <span className="acts">
-                      <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setError(null); remove(s); }}><Icon name="trash" small /></button>
-                    </span>
-                  )}
-                </div>
-              ))}
-            {isOpen(d) && !filter && d.chats.length > PAGE && (
-              <div className="row more" onClick={() => flip(setFull, d.cwd)}>
-                {full.has(d.cwd) ? 'Show less' : `Show ${d.chats.length - PAGE} more`}
-              </div>
-            )}
+            {(filter || !shut.includes(g.kind)) && g.items.map(({ f, active }) => folderRows(f, active, g.icon))}
           </div>
         ))}
+        {!groups.length && <div className="hint">{filter ? 'No repo or chat matches.' : 'No repos here.'}</div>}
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
   );
 }
 
-const RECENT = 12;
+const RECENT = 5;
+const KEY = 'agentview.chats.collapsed';
 const urgency = (c: LiveChat) => (c.pending ? 0 : c.running ? 1 : 2);
+const byUrgency = (a: LiveChat, b: LiveChat) => urgency(a) - urgency(b) || b.lastActive - a.lastActive;
+
+export type RepoGroup = { key: string; name: string; open: LiveChat[]; recent: SavedSession[]; last: number; running: number; waiting: number };
+
+export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter = '') {
+  const q = filter.trim().toLowerCase();
+  const m = new Map<string, RepoGroup>();
+  const add = (cwd: string, title: string, last: number) => {
+    const key = findHere(folders, cwd).folder?.cwd ?? cwd;
+    const name = key.split('/').pop() || key;
+    if (q && !name.toLowerCase().includes(q) && !title.toLowerCase().includes(q)) return null;
+    let g = m.get(key);
+    if (!g) m.set(key, (g = { key, name, open: [], recent: [], last: 0, running: 0, waiting: 0 }));
+    g.last = Math.max(g.last, last);
+    return g;
+  };
+  for (const c of live) {
+    const g = add(c.cwd, c.title, c.lastActive);
+    if (!g) continue;
+    g.open.push(c);
+    if (c.running) g.running++;
+    if (c.pending) g.waiting++;
+  }
+  const ids = new Set(live.map((c) => c.sessionId));
+  for (const s of chats) if (!ids.has(s.sessionId)) add(s.cwd, s.title, s.lastModified)?.recent.push(s);
+  for (const g of m.values()) {
+    g.open.sort(byUrgency);
+    g.recent.sort((a, b) => b.lastModified - a.lastModified);
+  }
+  return [...m.values()].sort((a, b) => b.last - a.last);
+}
+
+const loadCollapsed = (): Record<string, boolean> => {
+  try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; }
+};
 
 export function OpenChats() {
   const current = useStore((s) => s.session.sessionId);
   const viewing = useStore((s) => s.session.id);
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
-  const { chats } = useWorkspace(current + cwd);
+  const { folders, chats } = useWorkspace(current + cwd);
+  const [filter, setFilter] = useState('');
+  const [collapsed, setCollapsed] = useState(loadCollapsed);
+  const [full, setFull] = useState<Set<string>>(new Set());
   const [opening, setOpening] = useState<string | null>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
-  const close = (c: LiveChat) =>
-    c.running || c.pending
-      ? setAsk({ title: 'Close this chat?', detail: c.title, warning: 'Claude is still working on it and will stop. The transcript is kept.', action: 'Close', run: async () => send({ type: 'close', id: c.id }) })
-      : send({ type: 'close', id: c.id });
-  const open = [...live].sort((a, b) => urgency(a) - urgency(b) || b.lastActive - a.lastActive);
-  const recent = chats.filter((c) => !live.some((l) => l.sessionId === c.sessionId)).sort((a, b) => b.lastModified - a.lastModified).slice(0, RECENT);
+  const close = (c: LiveChat) => closeChat(c, setAsk);
+  const groups = useMemo(() => groupByRepo(live, chats, folders, filter), [live, chats, folders, filter]);
+  const waiting = live.filter((c) => c.pending).sort(byUrgency);
+  const isOpen = (g: RepoGroup) => Boolean(filter) || !(collapsed[g.key] ?? !g.open.length);
+  const toggle = (g: RepoGroup) => {
+    const next = { ...collapsed, [g.key]: isOpen(g) };
+    setCollapsed(next);
+    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+  };
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} />;
 
   useEffect(() => setOpening(null), [current]);
 
   return (
-    <div className="sessions">
+    <div className="sessions chats">
       <div className="sessions-bar">
         <button className="new-chat" onClick={() => setUi({ repoPicker: true })}><Icon name="add" small /> New chat in a repo</button>
       </div>
+      <div className="sessions-bar">
+        <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
+      </div>
+      {waiting.length > 0 && (
+        <div className="tree needs">
+          <div className="group">Needs you <span className="badge waiting">{waiting.length}</span></div>
+          {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
+        </div>
+      )}
       <div className="tree">
-        <div className="group">Open</div>
-        {open.map((c) => <LiveRow key={c.id} c={c} selected={c.id === viewing} onClose={() => close(c)} />)}
-        <div className="group">Recent</div>
-        {recent.map((s) => (
-          <div key={s.sessionId} className="row session live recent" title={`${s.title}\n${s.cwd}`} onClick={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }}>
-            <span className="state"><Icon name={opening === s.sessionId ? 'loading' : 'history'} small spin={opening === s.sessionId} /></span>
-            <span className="repo">{s.cwd.split('/').pop()}</span>
-            <span className="name">{s.title}</span>
-            <span className="when">{ago(s.lastModified)}</span>
+        {groups.map((g) => (
+          <div key={g.key}>
+            <div className="row project" title={g.key} onClick={() => toggle(g)}>
+              <span className="twistie"><Icon name={isOpen(g) ? 'chevron-down' : 'chevron-right'} small /></span>
+              <span className="name">{g.name}</span>
+              <span className="meta">
+                {g.running > 0 && <span className="badge running" title={`${g.running} running`}>{g.running}</span>}
+                {g.waiting > 0 && <span className="badge waiting" title={`${g.waiting} need you`}>{g.waiting}</span>}
+                <span className="count">{g.open.length + g.recent.length}</span>
+              </span>
+              <span className="acts">
+                <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); send({ type: 'new_session', cwd: g.key }); }}><Icon name="add" small /></button>
+              </span>
+            </div>
+            {isOpen(g) && g.open.map((c) => row(c))}
+            {isOpen(g) && (full.has(g.key) || filter ? g.recent : g.recent.slice(0, RECENT)).map((s) => (
+              <div key={s.sessionId} className="row session recent" title={`${s.title}\n${s.cwd}`} onClick={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }}>
+                <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
+                <span className="when">{ago(s.lastModified)}</span>
+              </div>
+            ))}
+            {isOpen(g) && !filter && g.recent.length > RECENT && (
+              <div className="row more" onClick={() => setFull((f) => { const n = new Set(f); n.has(g.key) ? n.delete(g.key) : n.add(g.key); return n; })}>
+                {full.has(g.key) ? 'Show less' : `Show ${g.recent.length - RECENT} more`}
+              </div>
+            )}
           </div>
         ))}
+        {!groups.length && <div className="hint">{filter ? 'No repo or chat matches.' : 'No chats yet.'}</div>}
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
   );
 }
 
-function LiveRow({ c, selected, onClose }: { c: LiveChat; selected: boolean; onClose: () => void }) {
+function LiveRow({ c, repo, selected, onClose }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void }) {
   const state = c.pending ? 'Needs you' : c.running ? c.status : 'Idle';
   return (
     <div className={`row session live ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} onClick={() => selected || send({ type: 'view', id: c.id })}>
-      <span className={`state ${c.pending ? 'waiting' : c.running ? 'running' : ''}`}>
-        <Icon name={c.pending ? 'bell-dot' : c.running ? 'loading' : 'circle-small'} small spin={!c.pending && c.running} />
-      </span>
-      <span className="repo">{c.cwd.split('/').pop()}</span>
+      <span className={`dot ${c.pending ? 'waiting' : c.running ? 'running' : 'idle'}`} />
+      {repo && <span className="repo">{repo}</span>}
       <span className="name">{c.title}</span>
       <span className="when">{c.pending ? 'needs you' : c.running ? '' : ago(c.lastActive)}</span>
       <span className="acts">

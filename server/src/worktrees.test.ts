@@ -36,3 +36,15 @@ describe('parseBranch', () => {
     expect(mod.parseBranch('## No commits yet on main')).toBe('main');
   });
 });
+
+describe('repoKind', () => {
+  it('detects the kind of repo from its root files', () => {
+    expect(mod.repoKind(['package.json', 'src'], '{"dependencies":{"react":"18"}}')).toBe('web');
+    expect(mod.repoKind(['pyproject.toml', 'app'])).toBe('service');
+    expect(mod.repoKind(['main.tf', 'README.md'])).toBe('infra');
+    expect(mod.repoKind(['dbt_project.yml', 'models'])).toBe('data');
+    expect(mod.repoKind(['Cargo.toml', 'src-tauri'])).toBe('app');
+    expect(mod.repoKind(['README.md', 'guide.md', 'notes.md'])).toBe('docs');
+    expect(mod.repoKind(['Makefile'])).toBe('other');
+  });
+});
