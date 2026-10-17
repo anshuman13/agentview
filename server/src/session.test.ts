@@ -55,6 +55,17 @@ describe('AgentSession turns', () => {
     expect(s.state.session).toMatchObject({ running: false, stopping: false });
   });
 
+  it('does not auto-compact after a stop', async () => {
+    const { s, result } = fakeSession();
+    s.sendPrompt('big task');
+    Object.assign(s, { inputQueue: [] });
+    s.state.session.context = 210_000;
+    await s.interrupt();
+    result('r1', 'error_during_execution');
+    expect(s.state.session.running).toBe(false);
+    expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: 'big task' });
+  });
+
   it('interrupt drops queued prompts and is a no-op when idle', async () => {
     const { s, interrupt } = fakeSession();
     await s.interrupt();

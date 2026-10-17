@@ -93,12 +93,21 @@ export function Voice({ onText, onSubmit }: { onText: (text: string, final: bool
 }
 
 export function useDictation(text: string, setText: Dispatch<SetStateAction<string>>) {
-  const base = useRef<string | null>(null);
+  const live = useRef({ rendered: text, text });
+  if (live.current.rendered !== text) live.current = { rendered: text, text };
+  const said = useRef<{ base: string; wrote: string } | 'edited' | null>(null);
   return (t: string, final: boolean) => {
-    if (base.current === null || !text.startsWith(base.current)) base.current = text;
-    const b = base.current;
-    setText(b && t ? `${b}${/\s$/.test(b) ? '' : ' '}${t}` : b + t);
-    if (final) base.current = null;
+    let u = said.current;
+    if (u && u !== 'edited' && live.current.text !== u.wrote) u = 'edited';
+    if (u === 'edited') {
+      said.current = final ? null : u;
+      return;
+    }
+    const b = u?.base ?? live.current.text;
+    const value = b && t ? `${b}${/\s$/.test(b) ? '' : ' '}${t}` : b + t;
+    said.current = final ? null : { base: b, wrote: value };
+    live.current.text = value;
+    setText(value);
   };
 }
 
@@ -108,26 +117,30 @@ function speakable(md: string) {
 
 export function ReadAloud() {
   const events = useStore((s) => s.events);
+  const chat = useStore((s) => s.session.id);
   const [on, setOn] = useState(() => { try { return localStorage.getItem('readAloud') === '1'; } catch { return false; } });
-  const since = useRef(Date.now());
-  const spoken = useRef(new Set<string>());
+  const seen = useRef<{ chat: string; ids: Set<string> } | null>(null);
 
   useEffect(() => {
     if (!on) return;
+    const fresh = seen.current?.chat !== chat;
+    if (fresh) seen.current = { chat, ids: new Set() };
+    const { ids } = seen.current!;
     for (const e of events) {
-      if (e.kind !== 'assistant' || e.streaming || !e.text.trim() || e.at < since.current || spoken.current.has(e.id)) continue;
-      spoken.current.add(e.id);
+      if (e.kind !== 'assistant' || e.streaming || !e.text.trim() || ids.has(e.id)) continue;
+      ids.add(e.id);
+      if (fresh) continue;
       const u = new SpeechSynthesisUtterance(speakable(e.text));
       u.lang = navigator.language;
       speechSynthesis.speak(u);
     }
-  }, [events, on]);
+  }, [events, on, chat]);
 
   if (!('speechSynthesis' in window)) return null;
 
   const toggle = () => {
     const next = !on;
-    if (next) since.current = Date.now();
+    if (next) seen.current = null;
     else speechSynthesis.cancel();
     setOn(next);
     try { localStorage.setItem('readAloud', next ? '1' : '0'); } catch { return; }

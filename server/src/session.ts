@@ -4,6 +4,7 @@ import { query, getSessionMessages, type Query, type SDKMessage, type SDKUserMes
 import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
+import { mcpFrom } from './mcp.js';
 import { BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultText, toolUseEvent } from './transcript.js';
 
 export { BIG_BRO };
@@ -35,7 +36,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false },
+      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [] },
       status: 'Idle',
       events: [],
       pending: [],
@@ -128,6 +129,16 @@ export class AgentSession {
     } catch (err) {
       process.stderr.write(`loadMeta failed: ${String(err)}\n`);
     }
+  }
+
+  async refreshMcp() {
+    const list = await this.q?.mcpServerStatus().catch(() => null);
+    if (list) this.setSession({ mcp: mcpFrom(list) });
+  }
+
+  async reconnectMcp(name: string) {
+    await this.q?.reconnectMcpServer(name).catch((err) => this.system(`Reconnecting ${name} failed: ${err instanceof Error ? err.message : String(err)}`));
+    await this.refreshMcp();
   }
 
   async setModel(model: string) {
@@ -264,7 +275,7 @@ export class AgentSession {
 
   private turnEnded() {
     this.turns = Math.max(0, this.turns - 1);
-    const next = this.turns === 0 ? this.followUp() : null;
+    const next = this.turns === 0 && !this.state.session.stopping ? this.followUp() : null;
     this.setSession({ running: this.turns > 0 || next !== null, compacting: false, stopping: false });
     if (next) this.sendPrompt(next);
   }
@@ -299,7 +310,7 @@ export class AgentSession {
       case 'system':
         if (msg.subtype === 'init') {
           const changed = msg.model !== this.state.session.model;
-          this.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource });
+          this.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
           if (changed) this.system(`Session started with ${msg.model}`);
           if (this.state.session.commands.length === 0) void this.loadMeta();
         } else if (msg.subtype === 'status') {

@@ -323,6 +323,9 @@ async function emulate(restart = true) {
 }
 
 function stop() {
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  retryDelay = 2000;
   if (!watching) return;
   release(watching.session);
   watching = null;
