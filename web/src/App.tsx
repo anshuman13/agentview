@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { connect, setUi, useStore } from './store';
+import { connect, getState, setUi, useStore } from './store';
+import { MCP_BAD } from '../../shared/protocol';
 import { Brief } from './panes/Brief';
 import { Terminal } from './panes/Terminal';
 import { CodePane } from './panes/CodePane';
@@ -42,10 +43,9 @@ const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
 const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'chat', icon: 'comment-discussion', label: 'Chat' },
   { id: 'code', icon: 'files', label: 'Files' },
-  { id: 'term', icon: 'terminal', label: 'Terminal' },
   { id: 'browser', icon: 'globe', label: 'Browser' },
-  { id: 'repos', icon: 'comment-discussion', label: 'Chats' },
 ];
+const narrow = () => window.innerWidth <= 900;
 
 function stored(key: string, fallback: number) {
   try {
@@ -80,6 +80,24 @@ function AppUpdate() {
   );
 }
 
+function Offline() {
+  const connected = useStore((s) => s.ui.connected);
+  const [late, setLate] = useState(false);
+  useEffect(() => {
+    setLate(false);
+    if (connected) return;
+    const t = setTimeout(() => setLate(true), 2000);
+    return () => clearTimeout(t);
+  }, [connected]);
+  if (connected || !late) return null;
+  return (
+    <div className="app-update offline mobile-only">
+      <Icon name="plug" small />
+      <span>Disconnected from the Mac, reconnecting</span>
+    </div>
+  );
+}
+
 function CacheItem() {
   const cache = useStore((s) => s.session.cache);
   const [now, setNow] = useState(Date.now());
@@ -107,11 +125,13 @@ export function App() {
   const repoPicker = useStore((s) => s.ui.repoPicker);
   const session = useStore((s) => s.session);
   const status = useStore((s) => s.status);
+  const mcp = useStore((s) => s.session.mcp);
   const [tab, setTab] = useState<Tab>('chat');
   const [editor, setEditor] = useState<'file' | 'browser' | Page>('file');
   const [page, setPage] = useState<Page | null>(null);
   const [more, setMore] = useState(false);
-  const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (window.innerWidth <= 900 ? 'code' : t)); };
+  const [browse, setBrowse] = useState(false);
+  const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (narrow() ? 'code' : t)); };
   const closePage = () => { setPage(null); setEditor((e) => (isPage(e) ? 'file' : e)); };
   const [sidebar, setSidebar] = useState(true);
   const [view, setView] = useState<View>('explorer');
@@ -159,7 +179,7 @@ export function App() {
   }, [chatW, termH]);
 
   useEffect(() => {
-    const show = () => { setTerminal(true); setTab((t) => (window.innerWidth <= 900 ? 'term' : t)); };
+    const show = () => { setTerminal(true); setTab((t) => (narrow() ? 'term' : t)); };
     window.addEventListener('agentview:terminal', show);
     return () => window.removeEventListener('agentview:terminal', show);
   }, []);
@@ -180,7 +200,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (openFile) setEditor('file');
+    if (!openFile) return;
+    setEditor('file');
+    setBrowse(false);
+    if (narrow() && !getState().ui.follow) setTab((t) => (t === 'chat' || t === 'repos' ? 'code' : t));
   }, [openFile]);
 
   useEffect(() => {
@@ -190,10 +213,15 @@ export function App() {
   useEffect(() => {
     const onCommand = (e: Event) => {
       const [kind, arg] = (e as CustomEvent<{ id: string }>).detail.id.split(':');
-      if (kind === 'view') { setView(arg as View); setSidebar(true); }
+      if (kind === 'view') {
+        setView(arg as View);
+        setSidebar(true);
+        if (narrow() && arg === 'explorer') { setTab('code'); setEditor('file'); setBrowse(true); }
+        else if (narrow()) setTab('repos');
+      }
       else if (kind === 'tab') { setTab(arg as Tab); if (arg === 'browser') setEditor('browser'); if (arg === 'code') setEditor('file'); }
       else if (kind === 'page' && isPage(arg)) openPage(arg);
-      else if (kind === 'terminal') setTerminal((v) => !v);
+      else if (kind === 'terminal') { if (narrow()) setTab('term'); else setTerminal((v) => !v); }
       else if (kind === 'phone') setPhone((v) => !v);
       else if (kind === 'theme') toggleTheme();
     };
@@ -206,11 +234,29 @@ export function App() {
   const showing = tab === 'browser' ? 'browser' : tab === 'code' && !isPage(editor) ? 'file' : editor;
   const active = showing === 'browser' ? 'browser' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
   const project = session.cwd ? session.cwd.split('/').pop() : 'AgentView';
-  const mobileExplorer = tab === 'code' && !openFile && !isPage(editor);
+  const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor);
+  const inMore = tab === 'term' || tab === 'repos' || (tab === 'code' && isPage(editor));
+  const chatsView = view === 'chats' || view === 'sessions';
+  const mcpOk = mcp.filter((m) => m.status === 'connected').length;
+  const goTab = (t: Tab) => {
+    setMore(false);
+    if (t === 'code' && tab === 'code' && !isPage(editor) && openFile) setBrowse((v) => !v);
+    setTab(t);
+    if (t === 'browser') setEditor('browser');
+    if (t === 'code') setEditor('file');
+  };
+  const goSide = (v: View) => { setMore(false); setView(v); setTab('repos'); };
+  const act = (f: () => void) => () => { setMore(false); f(); };
+  const reopen = (e: React.MouseEvent) => {
+    const el = e.target as HTMLElement;
+    const row = el.closest<HTMLElement>('.ex-row');
+    if (row && !el.closest('.ex-close') && row.title === getState().ui.openFile) setBrowse(false);
+  };
 
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <AppUpdate />
+      <Offline />
       <div className="body">
         <aside className="activitybar desktop-only">
           {VIEWS.map((v) => (
@@ -235,7 +281,7 @@ export function App() {
 
         <section className="sidebar pane side">
           <div className="sidebar-title">{VIEWS.find((v) => v.id === view)!.title}</div>
-          {tab === 'repos' && (
+          {tab === 'repos' && chatsView && (
             <div className="side-switch mobile-only">
               <button className={view !== 'sessions' ? 'active' : ''} onClick={() => setView('chats')}>Chats</button>
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
@@ -245,9 +291,12 @@ export function App() {
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
-          {mobileExplorer && <div className="mobile-only mobile-explorer-host"><Explorer /></div>}
+          {mobileExplorer && <div className="mobile-only mobile-explorer-host" onClick={reopen}><Explorer /></div>}
           <div className="tabs">
-            <button className={`tab ${showing === 'file' ? 'active' : ''}`} onClick={() => setEditor('file')} title={openFile ?? 'Files (⌘E to switch)'}>
+            <button className={`tab ex-tab mobile-only ${mobileExplorer ? 'active' : ''}`} title="Explorer" onClick={() => { setTab('code'); setEditor('file'); setBrowse(true); }}>
+              <Icon name="files" small />
+            </button>
+            <button className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} onClick={() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' ? 'code' : t)); }} title={openFile ?? 'Files (⌘E to switch)'}>
               {fileName ? <FileIcon name={fileName} /> : <Icon name="file" small />} {fileName ?? 'File'}
               {openFile && (
                 <span className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
@@ -255,11 +304,11 @@ export function App() {
                 </span>
               )}
             </button>
-            <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')} title="Browser (⌘E to switch)">
+            <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => { setEditor('browser'); setTab((t) => (t === 'code' ? 'browser' : t)); }} title="Browser (⌘E to switch)">
               <Icon name="globe" small /> Browser
             </button>
             {page && (
-              <button className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} onClick={() => setEditor(page)} title={pageOf(page).title}>
+              <button className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} onClick={() => { setEditor(page); setTab((t) => (t === 'browser' ? 'code' : t)); }} title={pageOf(page).title}>
                 <Icon name={pageOf(page).icon} small /> {pageOf(page).title}
                 <span className="close" title="Close" onClick={(e) => { e.stopPropagation(); closePage(); }}><Icon name="close" small /></span>
               </button>
@@ -323,27 +372,62 @@ export function App() {
 
       <nav className="tabbar mobile-only">
         {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id && !(t.id === 'code' && isPage(editor)) ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); if (t.id === 'repos') setView('chats'); }}>
+          <button key={t.id} className={tab === t.id && !(t.id === 'code' && isPage(editor)) && !more ? 'active' : ''} onClick={() => goTab(t.id)}>
             <Icon name={t.icon} />
             <span>{t.label}</span>
             {t.id === 'chat' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
-            {t.id === 'repos' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
           </button>
         ))}
-        <button className={more || (tab === 'code' && isPage(editor)) ? 'active' : ''} onClick={() => setMore((v) => !v)}>
+        <button className={more || inMore ? 'active' : ''} onClick={() => setMore((v) => !v)}>
           <Icon name="ellipsis" />
           <span>More</span>
+          {elsewhere > 0 && <span className="badge">{elsewhere}</span>}
         </button>
       </nav>
       {more && (
         <div className="more-sheet-overlay mobile-only" onClick={() => setMore(false)}>
           <div className="more-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="more-status">
+              <button className="more-project" title={`${session.cwd}\nStart a chat in another repo`} onClick={act(() => setUi({ repoPicker: true }))}>
+                <Icon name="folder" small /><span>{project}</span>
+              </button>
+              <CacheItem />
+              {canNotify && (
+                <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
+                  <Icon name={notifying ? 'bell' : 'bell-slash'} />
+                </button>
+              )}
+              <button className="icon-btn" title={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme}><Icon name="color-mode" /></button>
+              <button className="icon-btn" title="Open on phone" onClick={act(() => setPhone(true))}><Icon name="device-mobile" /></button>
+            </div>
+            <button className={tab === 'term' ? 'active' : ''} onClick={() => goTab('term')}>
+              <Icon name="terminal" /><span>Terminal</span>
+            </button>
+            <button className={tab === 'repos' && chatsView ? 'active' : ''} onClick={() => goSide('chats')}>
+              <Icon name="comment-discussion" /><span>Chats</span>
+              {elsewhere > 0 && <span className="badge waiting">{elsewhere}</span>}
+            </button>
+            <button className={tab === 'repos' && view === 'changes' ? 'active' : ''} onClick={() => goSide('changes')}>
+              <Icon name="source-control" /><span>Source Control</span><ChangesBadge />
+            </button>
+            <button className={tab === 'repos' && view === 'github' ? 'active' : ''} onClick={() => goSide('github')}>
+              <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
+            </button>
+            <span className="more-divider" />
             {PAGES.map((p) => (
-              <button key={p.id} className={showing === p.id ? 'active' : ''} onClick={() => { openPage(p.id); setMore(false); }}>
+              <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
                 <Icon name={p.icon} />
                 <span>{p.title}</span>
+                {p.id === 'mcp' && mcp.length > 0 && <span className="more-meta"><span className={`mcp-dot ${mcp.some((m) => MCP_BAD.includes(m.status)) ? 'bad' : mcpOk ? 'ok' : 'off'}`} /> {mcpOk}/{mcp.length}</span>}
               </button>
             ))}
+            <span className="more-divider" />
+            <button onClick={act(() => setUi({ switcherOpen: true }))}>
+              <Icon name="go-to-file" /><span>Go to File</span>
+            </button>
+            <button onClick={act(() => window.dispatchEvent(new Event('agentview:palette')))}>
+              <Icon name="terminal-cmd" /><span>Command Palette</span>
+            </button>
           </div>
         </div>
       )}

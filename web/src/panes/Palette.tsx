@@ -140,8 +140,13 @@ export function Palette() {
       setIdx(0);
       setUi({ switcherOpen: false, repoPicker: false });
     };
+    const onOpen = () => { setOpen(true); setQ(''); setIdx(0); };
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
+    window.addEventListener('agentview:palette', onOpen);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('agentview:palette', onOpen);
+    };
   }, []);
 
   useEffect(() => {
