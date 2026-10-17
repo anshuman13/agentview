@@ -35,7 +35,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false },
+      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false },
       status: 'Idle',
       events: [],
       pending: [],
@@ -180,8 +180,12 @@ export class AgentSession {
   }
 
   sendPrompt(text: string) {
-    this.start();
     this.pushEvent({ id: randomUUID(), kind: 'user', text, at: Date.now() });
+    this.enqueue(text);
+  }
+
+  private enqueue(text: string) {
+    this.start();
     this.turns++;
     this.setSession({ running: true });
     if (/^\/compact\b/.test(text.trim())) this.startCompacting();
@@ -190,7 +194,22 @@ export class AgentSession {
   }
 
   async interrupt() {
-    await this.q?.interrupt();
+    if (!this.q || !this.state.session.running || this.state.session.stopping) return;
+    this.planChange = null;
+    this.turns -= this.inputQueue.length;
+    this.inputQueue = [];
+    if (this.turns <= 0) {
+      this.turns = 0;
+      this.setSession({ running: false, compacting: false });
+      return;
+    }
+    this.setSession({ stopping: true });
+    try {
+      await this.q.interrupt();
+    } catch (err) {
+      this.setSession({ stopping: false });
+      this.system(`Stop failed: ${String(err)}`);
+    }
   }
 
   async prompt(text: string) {
@@ -198,10 +217,18 @@ export class AgentSession {
     this.sendPrompt(text);
   }
 
-  async steer(text: string) {
-    if (this.state.session.running) await this.q?.interrupt().catch(() => {});
-    else await this.planFirst();
-    this.sendPrompt(text);
+  async steer(text: string, id: string = randomUUID()) {
+    const running = this.state.session.running;
+    const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), stopping: running };
+    this.pushEvent(ev);
+    if (running) {
+      this.turns++;
+      await this.q?.interrupt().catch(() => {});
+      this.turns--;
+      ev.stopping = false;
+      this.emit({ type: 'event', event: ev });
+    } else await this.planFirst();
+    this.enqueue(text);
   }
 
   changePlan(next: string[]) {
@@ -238,7 +265,7 @@ export class AgentSession {
   private turnEnded() {
     this.turns = Math.max(0, this.turns - 1);
     const next = this.turns === 0 ? this.followUp() : null;
-    this.setSession({ running: this.turns > 0 || next !== null, compacting: false });
+    this.setSession({ running: this.turns > 0 || next !== null, compacting: false, stopping: false });
     if (next) this.sendPrompt(next);
   }
 
@@ -263,7 +290,7 @@ export class AgentSession {
       this.system(`Session error: ${String(err)}`);
     } finally {
       this.turns = 0;
-      this.setSession({ running: false });
+      this.setSession({ running: false, stopping: false });
     }
   }
 

@@ -21,7 +21,7 @@ export type PendingPermission = {
 export type PendingRequest = PendingQuestion | PendingPermission;
 
 export type ChatEvent =
-  | { id: string; kind: 'user'; text: string; at: number }
+  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean }
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number }
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number }
@@ -44,6 +44,7 @@ export type SessionInfo = {
   cache: CacheInfo | null;
   context: number | null;
   compacting: boolean;
+  stopping: boolean;
 };
 
 export type CacheInfo = { at: number; ttlMs: number; readTokens: number; writeTokens: number };
@@ -115,7 +116,7 @@ export type Worktree = {
 
 export type ClientMessage =
   | { type: 'prompt'; text: string }
-  | { type: 'steer'; text: string }
+  | { type: 'steer'; text: string; id?: string }
   | { type: 'plan'; next: string[] }
   | { type: 'answer'; id: string; answers: Record<string, string> }
   | { type: 'permission'; id: string; allow: boolean; always?: boolean }

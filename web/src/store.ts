@@ -12,7 +12,7 @@ type UiState = {
 export type State = ServerState & { live: LiveChat[]; ui: UiState };
 
 let state: State = {
-  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false },
+  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false },
   status: 'Connecting',
   events: [],
   pending: [],
@@ -73,6 +73,13 @@ function notifyBackground(chats: LiveChat[]) {
 let ws: WebSocket | null = null;
 export function send(m: ClientMessage) {
   ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m));
+}
+
+export function steer(text: string) {
+  if (ws?.readyState !== WebSocket.OPEN) return notice('Not connected, message not sent');
+  const id = crypto.randomUUID();
+  set((s) => ({ events: [...s.events, { id, kind: 'user', text, at: Date.now(), stopping: true }] }));
+  send({ type: 'steer', text, id });
 }
 
 function handle(m: ServerMessage) {

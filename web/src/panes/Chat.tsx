@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Marked } from 'marked';
-import { send, useStore } from '../store';
+import { send, steer, useStore } from '../store';
 import { Icon } from '../Icon';
+import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../QuickPick';
 import { COMPACT_AT, PERMISSION_MODES } from '../../../shared/protocol';
 
@@ -15,6 +16,7 @@ const MODES: Record<string, { label: string; detail: string; icon: string }> = {
 
 export function Composer() {
   const running = useStore((s) => s.session.running);
+  const stopping = useStore((s) => s.session.stopping);
   const waiting = useStore((s) => s.pending.length > 0);
   const commands = useStore((s) => s.session.commands);
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -23,6 +25,7 @@ export function Composer() {
   const team = useStore((s) => s.session.team);
   const [pick, setPick] = useState<{ kind: 'model' | 'mode'; at: DOMRect } | null>(null);
   const [text, setText] = useState('');
+  const dictate = useDictation(text, setText);
   const [cmdIdx, setCmdIdx] = useState(0);
   const cmdMatches = useMemo(() => {
     const m = /^\/(\S*)$/.exec(text);
@@ -36,7 +39,8 @@ export function Composer() {
   const submit = () => {
     const t = text.trim();
     if (!t) return;
-    send({ type: running ? 'steer' : 'prompt', text: t });
+    if (running) steer(t);
+    else send({ type: 'prompt', text: t });
     setText('');
   };
 
@@ -88,8 +92,9 @@ export function Composer() {
           </button>
           <ContextMeter />
           <span className="spacer" />
-          {running && <button className="icon-btn stop" title="Stop" onClick={() => send({ type: 'interrupt' })}><Icon name="debug-stop" /></button>}
-          <button className={`send ${running ? 'steer' : ''}`} title={running ? 'Steer (Enter)' : 'Send (Enter)'} disabled={!text.trim()} onClick={submit}><Icon name="arrow-up" /></button>
+          <Voice onText={dictate} />
+          {running && <button className="stop-btn" title="Stop Claude" disabled={stopping} onClick={() => send({ type: 'interrupt' })}><Icon name={stopping ? 'loading' : 'debug-stop'} small spin={stopping} />{stopping ? 'Stopping…' : 'Stop'}</button>}
+          <button className={`send ${running ? 'steer' : ''}`} title={running ? 'Stop the current step and send (Enter)' : 'Send (Enter)'} disabled={!text.trim()} onClick={submit}><Icon name="arrow-up" small />{running ? 'Stop and send' : 'Send'}</button>
         </div>
       </div>
       {pick?.kind === 'model' && (

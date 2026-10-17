@@ -32,6 +32,38 @@ describe('AgentSession turns', () => {
     expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['long task', 'change of plan']);
   });
 
+  it('steer shows the message before the interrupt finishes', async () => {
+    const { s, interrupt } = fakeSession();
+    let finish = () => {};
+    interrupt.mockImplementationOnce(() => new Promise<void>((r) => (finish = r)));
+    s.sendPrompt('long task');
+    const done = s.steer('change of plan', 'm1');
+    expect(s.state.events.at(-1)).toMatchObject({ id: 'm1', kind: 'user', stopping: true });
+    finish();
+    await done;
+    expect(s.state.events.find((e) => e.id === 'm1')).toMatchObject({ stopping: false });
+  });
+
+  it('interrupt marks stopping until the turn ends', async () => {
+    const { s, interrupt, result } = fakeSession();
+    s.sendPrompt('task');
+    Object.assign(s, { inputQueue: [] });
+    await s.interrupt();
+    expect(interrupt).toHaveBeenCalledOnce();
+    expect(s.state.session.stopping).toBe(true);
+    result('r1', 'error_during_execution');
+    expect(s.state.session).toMatchObject({ running: false, stopping: false });
+  });
+
+  it('interrupt drops queued prompts and is a no-op when idle', async () => {
+    const { s, interrupt } = fakeSession();
+    await s.interrupt();
+    expect(interrupt).not.toHaveBeenCalled();
+    s.sendPrompt('queued');
+    await s.interrupt();
+    expect(s.state.session.running).toBe(false);
+  });
+
   it('steer only sends when idle', async () => {
     const { s, interrupt } = fakeSession();
     await s.steer('next thing');

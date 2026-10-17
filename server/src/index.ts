@@ -251,7 +251,7 @@ wss.on('connection', (ws: WebSocket, req) => {
         void chat.prompt(msg.text);
         break;
       case 'steer':
-        void chat.steer(msg.text);
+        void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
         break;
       case 'plan':
         chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));

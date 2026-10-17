@@ -3,9 +3,10 @@ import { send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
+import { ReadAloud } from './Voice';
 import { COMPACT_AT, type ChatEvent } from '../../../shared/protocol';
 
-export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply'; text: string; at: number };
+export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan'; text: string; at: number; stopping?: boolean };
 
 const BIG_BRO = 'big-bro';
 
@@ -19,13 +20,17 @@ export function buildTimeline(events: ChatEvent[]) {
     if (e.kind === 'user') {
       next = [];
       reply = -1;
-      moments.push({ id: e.id, kind: 'you', text: e.text, at: e.at });
+      moments.push({ id: e.id, kind: 'you', text: e.text, at: e.at, stopping: e.stopping });
     }
     if (e.kind === 'assistant' && e.text.trim()) {
       if (reply >= 0) moments.splice(reply, 1);
       reply = moments.push({ id: e.id, kind: 'reply', text: e.text.trim(), at: e.at }) - 1;
     }
-    if (e.kind === 'plan') next = e.next;
+    if (e.kind === 'plan') {
+      next = e.next;
+      if (moments.at(-1)?.kind === 'plan') moments.pop();
+      moments.push({ id: e.id, kind: 'plan', text: e.next.length ? `You changed the next steps (${e.next.length})` : 'You cleared the next steps', at: e.at });
+    }
     if (e.kind === 'system' && e.text.startsWith('Compact')) moments.push({ id: e.id, kind: e.text.startsWith('Compact failed') ? 'note' : 'done', text: e.text, at: e.at });
     if (e.kind === 'tool_use' && e.name === 'Advisor') advisor++;
     if (e.kind === 'tool_use' && e.input.subagent_type === BIG_BRO) fableCalls.add(e.id);
@@ -61,6 +66,7 @@ export function Brief() {
   const team = useStore((s) => s.session.team);
   const context = useStore((s) => s.session.context);
   const compacting = useStore((s) => s.session.compacting);
+  const stopping = useStore((s) => s.session.stopping);
   const { moments, next, lastTool, advisor, fable } = useMemo(() => buildTimeline(events), [events]);
   const [all, setAll] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -95,7 +101,8 @@ export function Brief() {
           <span>Timeline</span>
           {extras && <span className="extras">{extras}</span>}
           {from > 0 && <button className="link" onClick={() => setAll(true)}>Show earlier</button>}
-          {running && <button className="icon-btn" title="Stop" onClick={() => send({ type: 'interrupt' })}><Icon name="debug-stop" small /></button>}
+          <ReadAloud />
+          {running && <button className="icon-btn" title={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onClick={() => send({ type: 'interrupt' })}><Icon name="debug-stop" small /></button>}
         </div>
         <ol className="timeline">
           {moments.length === 0 && !running && <li className="tl-empty">Your instructions, finished parts and Claude's plan show up here.</li>}
@@ -104,8 +111,8 @@ export function Brief() {
             <li className={`tl now ${waiting ? 'waiting' : ''}`}>
               <span className="mark"><Icon name={waiting ? 'bell-dot' : 'loading'} small spin={!waiting} /></span>
               <span className="text">
-                {waiting ? 'Waiting for you' : status}
-                {!waiting && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
+                {waiting ? 'Waiting for you' : stopping ? 'Stopping…' : status}
+                {!waiting && !stopping && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
               </span>
             </li>
           )}
@@ -125,7 +132,7 @@ export function Brief() {
   );
 }
 
-const MARKS: Record<Moment['kind'], string> = { you: 'account', done: 'check', note: 'flag', fable: 'sparkle', reply: 'comment' };
+const MARKS: Record<Moment['kind'], string> = { you: 'account', done: 'check', note: 'flag', fable: 'sparkle', reply: 'comment', plan: 'edit' };
 
 function MomentRow({ m, latest }: { m: Moment; latest: boolean }) {
   const [toggled, setToggled] = useState(false);
@@ -136,7 +143,7 @@ function MomentRow({ m, latest }: { m: Moment; latest: boolean }) {
       {m.kind === 'reply' && open ? <Markdown text={m.text} /> : (
         <span className={`text ${open ? '' : 'clamp'}`}>{m.kind === 'fable' && <b>Fable: </b>}{m.kind === 'reply' ? plain(m.text) : m.text}</span>
       )}
-      <span className="when">{time(m.at)}</span>
+      {m.stopping ? <span className="tl-state"><Icon name="loading" small spin /> stopping current step…</span> : <span className="when">{time(m.at)}</span>}
     </li>
   );
 }
