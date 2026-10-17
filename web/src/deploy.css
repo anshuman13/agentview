@@ -6,7 +6,7 @@
 select.deploy-app { background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 4px; }
 .deploy-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .deploy-error { display: flex; gap: 6px; align-items: flex-start; color: var(--err); font-size: 12px; word-break: break-word; }
-.deploy-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--bg-raised); }
+.deploy-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
 .deploy-card-head { display: flex; align-items: center; gap: 6px; }
 .deploy-env { color: var(--fg); font-family: var(--mono); font-size: 12px; }
 .deploy-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--fg-muted); }
@@ -19,8 +19,8 @@ select.deploy-app { background: var(--bg-sunken); border: 1px solid var(--border
 .deploy-actions button { padding: 2px 8px; font-size: 12px; }
 .deploy-actions button:disabled { opacity: 0.5; cursor: default; }
 .deploy-log { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-sunken); }
-.deploy-log.ok { border-color: var(--ok); }
-.deploy-log.bad { border-color: var(--err); }
+.deploy-log.ok { border-left: 2px solid var(--ok); }
+.deploy-log.bad { border-left: 2px solid var(--err); }
 .deploy-log-head { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .deploy-log pre { margin: 0; padding: 6px 8px; max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
 
