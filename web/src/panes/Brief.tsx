@@ -5,6 +5,7 @@ import { Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
 import { loopLabel } from './Composer';
 import { ReadAloud } from './Voice';
+import { touch } from '../touch';
 import { Transcript } from './Transcript';
 import { COMPACT_AT, type ChatEvent } from '../../../shared/protocol';
 
@@ -214,7 +215,7 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
   }
   return (
     <li className="step">
-      <span className="text" onClick={() => setEdit(true)}>{text}</span>
+      <span className="text" onClick={() => { if (!touch()) setEdit(true); }}>{text}</span>
       <span className="acts">
         <button className="icon-btn" title="Edit step" onClick={() => setEdit(true)}><Icon name="edit" small /></button>
         <button className="icon-btn" title="Remove step" onClick={onDrop}><Icon name="close" small /></button>
