@@ -64,7 +64,7 @@ if (shellParam) {
 function AppUpdate() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    const shell = Number(localStorage.getItem('agentview.shell'));
+    const shell = Number(localStorage.getItem('agentview.shell')) || (/; wv\)/.test(navigator.userAgent) ? 1 : 0);
     if (!shell) return;
     fetch('/api/app').then((r) => r.json()).then((a) => setReady(a.build > shell)).catch(() => {});
   }, []);
