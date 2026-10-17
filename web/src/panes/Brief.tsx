@@ -4,6 +4,7 @@ import { Icon } from '../Icon';
 import { Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
 import { ReadAloud } from './Voice';
+import { Transcript } from './Transcript';
 import { COMPACT_AT, type ChatEvent } from '../../../shared/protocol';
 
 export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan'; text: string; at: number; stopping?: boolean };
@@ -69,6 +70,8 @@ export function Brief() {
   const stopping = useStore((s) => s.session.stopping);
   const { moments, next, lastTool, advisor, fable } = useMemo(() => buildTimeline(events), [events]);
   const [all, setAll] = useState(false);
+  const [full, setFull] = useState(() => localStorage.getItem('agentview.transcript') === '1');
+  const pick = (v: boolean) => { setFull(v); localStorage.setItem('agentview.transcript', v ? '1' : '0'); };
   const [adding, setAdding] = useState(false);
   const [, tick] = useState(0);
   const end = useRef<HTMLDivElement>(null);
@@ -104,16 +107,21 @@ export function Brief() {
       </div>
       <div className="brief-status">
         <div className="timeline-head">
-          <span className="title">Timeline</span>
+          <span className="tl-tabs">
+            <button className={full ? '' : 'on'} onClick={() => pick(false)}>Timeline</button>
+            <button className={full ? 'on' : ''} onClick={() => pick(true)}>Transcript</button>
+          </span>
           <span className="spacer" />
           {extras && <span className="extras">{extras}</span>}
           <ReadAloud />
-          {from > 0 && <button className="link" onClick={() => setAll(true)}>Show all</button>}
+          {!full && from > 0 && <button className="link" onClick={() => setAll(true)}>Show all</button>}
         </div>
-        <ol className="timeline">
-          {moments.length === 0 && <li className="tl-empty">Send a prompt. Your messages, finished steps and Claude's replies show up here.</li>}
-          {shown.map((m, i) => <MomentRow key={m.id} m={m} sub={m.kind !== 'you' && shown.slice(0, i).some((x) => x.kind === 'you')} />)}
-        </ol>
+        {full ? <Transcript /> : (
+          <ol className="timeline">
+            {moments.length === 0 && <li className="tl-empty">Send a prompt. Your messages, finished steps and Claude's replies show up here.</li>}
+            {shown.map((m, i) => <MomentRow key={m.id} m={m} sub={m.kind !== 'you' && shown.slice(0, i).some((x) => x.kind === 'you')} />)}
+          </ol>
+        )}
         <div className="tl-foot">
           <div className={`tl-now ${state}`}>
             <span className="mark"><Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} /></span>
