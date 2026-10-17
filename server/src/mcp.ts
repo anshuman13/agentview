@@ -17,7 +17,7 @@ export function mcpFrom(list: Status[], toolNames: string[] = []): McpServer[] {
     }));
 }
 
-const readJson = (file: string) => readFile(file, 'utf8').then(JSON.parse).catch(() => ({}));
+export const readJson = (file: string) => readFile(file, 'utf8').then(JSON.parse).catch(() => ({}));
 
 export function configEntries(servers: Servers, scope: McpConfigEntry['scope']): McpConfigEntry[] {
   return Object.entries(servers ?? {}).map(([name, s]) => ({ name, scope, type: s.type ?? (s.url ? 'http' : 'stdio') }));
