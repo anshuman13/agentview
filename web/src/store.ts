@@ -13,7 +13,7 @@ type UiState = {
 export type State = ServerState & { live: LiveChat[]; ui: UiState };
 
 let state: State = {
-  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [] },
+  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null } },
   status: 'Connecting',
   events: [],
   pending: [],
@@ -42,6 +42,8 @@ export function notice(text: string) {
 export function setUi(patch: Partial<UiState>) {
   set((s) => ({ ui: { ...s.ui, ...patch } }));
 }
+
+export const getState = () => state;
 
 export function useStore<T>(selector: (s: State) => T): T {
   return useSyncExternalStore(

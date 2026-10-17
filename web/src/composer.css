@@ -90,3 +90,9 @@
   .cp-under { display: none; }
   .cp-pop { max-height: 40vh; }
 }
+
+.cp-loop.on { color: var(--agent, #a78bfa); border-color: color-mix(in srgb, var(--agent, #a78bfa) 40%, transparent); }
+.cp-loop.on .codicon { color: var(--agent, #a78bfa); }
+.cp-phase { color: var(--agent, #a78bfa); }
+.cp-phase.passed { color: var(--ok, #89d185); }
+.cp-phase.failed { color: var(--err, #f14c4c); }

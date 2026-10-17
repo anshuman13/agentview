@@ -50,6 +50,8 @@ function Row({ it, cwd }: { it: Item; cwd: string }) {
   switch (it.kind) {
     case 'user':
       return <div className={`tr-user ${it.stopping ? 'stopping' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}</div>;
+    case 'phase':
+      return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
     case 'assistant':
       return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} /></div>;
     case 'system':

@@ -78,6 +78,15 @@ const MODES: Record<string, { label: string; detail: string; icon: string }> = {
 };
 
 const STORED_KEY = 'agentview.prompts';
+
+const LOOP_ITEMS = [
+  { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
+  ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Up to ${n} ${n === 1 ? 'round' : 'rounds'}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
+];
+
+const PHASES: Record<string, string> = { plan: 'Planning with Opus', build: 'Building with Opus', test: 'Testing with Sonnet', passed: 'Loop passed', failed: 'Loop stopped' };
+
+export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? `${PHASES[loop.phase] ?? loop.phase}${['plan', 'build', 'test'].includes(loop.phase) && loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 const MAX_HEIGHT = 220;
 const fileCache = new Map<string, string[]>();
 
@@ -118,10 +127,11 @@ export function Composer() {
   const model = useStore((s) => s.session.model);
   const models = useStore((s) => s.session.models);
   const team = useStore((s) => s.session.team);
+  const loop = useStore((s) => s.session.loop);
   const context = useStore((s) => s.session.context);
   const events = useStore((s) => s.events);
 
-  const [pick, setPick] = useState<{ kind: 'model' | 'mode'; at: DOMRect } | null>(null);
+  const [pick, setPick] = useState<{ kind: 'model' | 'mode' | 'loop'; at: DOMRect } | null>(null);
   const [text, setText] = useState('');
   const [caret, setCaret] = useState(0);
   const [sel, setSel] = useState(0);
@@ -273,6 +283,9 @@ export function Composer() {
           <button className="cp-pill" title="Switch model" onClick={(e) => setPick({ kind: 'model', at: e.currentTarget.getBoundingClientRect() })}>
             <span>{modelName}</span><Icon name="chevron-down" small />
           </button>
+          <button className={`cp-pill cp-loop${loop.on ? ' on' : ''}`} title={loop.on ? `Loop on: Opus plans and builds, Sonnet tests, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Loop: plan, build, test until the tester passes'} onClick={(e) => setPick({ kind: 'loop', at: e.currentTarget.getBoundingClientRect() })}>
+            <Icon name="sync" small />{loop.on && <span>Loop {loop.max}</span>}
+          </button>
           <span className="cp-spacer" />
           <Voice onText={dictate} />
           {running && (
@@ -298,6 +311,7 @@ export function Composer() {
           <span>{modeInfo.label}</span>
           {pct !== null && <span className={level} title={`${context!.toLocaleString()} tokens in context. Compact once it passes ${COMPACT_AT / 1000}k.`}>{pct}% context</span>}
           {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
+          {loop.phase && <span className={`cp-phase ${loop.phase}`}>{loopLabel(loop)}</span>}
         </span>
       </div>
       {open && (
@@ -331,6 +345,16 @@ export function Composer() {
           current={team ? 'team' : model}
           items={models.map((m) => ({ value: m.value, label: m.displayName, detail: m.description }))}
           onPick={(v) => { send({ type: 'set_model', model: v }); setPick(null); }}
+          onClose={() => setPick(null)}
+        />
+      )}
+      {pick?.kind === 'loop' && (
+        <QuickPick
+          anchor={pick.at}
+          title="Plan, build, test loop"
+          current={loop.on ? String(loop.max) : 'off'}
+          items={LOOP_ITEMS}
+          onPick={(v) => { send(v === 'off' ? { type: 'set_loop', on: false } : { type: 'set_loop', on: true, max: Number(v) }); setPick(null); }}
           onClose={() => setPick(null)}
         />
       )}

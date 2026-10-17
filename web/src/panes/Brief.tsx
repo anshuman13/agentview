@@ -3,11 +3,14 @@ import { send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
+import { loopLabel } from './Composer';
 import { ReadAloud } from './Voice';
 import { Transcript } from './Transcript';
 import { COMPACT_AT, type ChatEvent } from '../../../shared/protocol';
 
-export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan'; text: string; at: number; stopping?: boolean };
+export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan' | 'phase'; text: string; at: number; stopping?: boolean };
+
+const PHASE_TEXT: Record<string, string> = { plan: 'Plan · Opus', build: 'Build · Opus', test: 'Test · Sonnet' };
 
 const BIG_BRO = 'big-bro';
 
@@ -21,7 +24,8 @@ export function buildTimeline(events: ChatEvent[]) {
     if (e.kind === 'user') {
       next = [];
       reply = -1;
-      moments.push({ id: e.id, kind: 'you', text: e.text, at: e.at, stopping: e.stopping });
+      if (e.phase) moments.push({ id: e.id, kind: 'phase', text: e.text.startsWith('Test') ? `Test ${e.text.slice(5)} · Sonnet` : PHASE_TEXT[e.phase] ?? e.text, at: e.at });
+      else moments.push({ id: e.id, kind: 'you', text: e.text, at: e.at, stopping: e.stopping });
     }
     if (e.kind === 'assistant' && e.text.trim()) {
       if (reply >= 0) moments.splice(reply, 1);
@@ -33,6 +37,7 @@ export function buildTimeline(events: ChatEvent[]) {
       moments.push({ id: e.id, kind: 'plan', text: e.next.length ? `You changed the next steps (${e.next.length})` : 'You cleared the next steps', at: e.at });
     }
     if (e.kind === 'system' && e.text.startsWith('Compact')) moments.push({ id: e.id, kind: e.text.startsWith('Compact failed') ? 'note' : 'done', text: e.text, at: e.at });
+    if (e.kind === 'system' && e.text.startsWith('Loop ')) moments.push({ id: e.id, kind: e.text.startsWith('Loop passed') ? 'done' : e.text.startsWith('Loop on') || e.text === 'Loop off' ? 'phase' : 'note', text: e.text, at: e.at });
     if (e.kind === 'tool_use' && e.name === 'Advisor') advisor++;
     if (e.kind === 'tool_use' && e.input.subagent_type === BIG_BRO) fableCalls.add(e.id);
     if (e.kind === 'tool_result' && fableCalls.has(e.toolUseId) && !e.isError) moments.push({ id: e.id, kind: 'fable', text: handBack(e.text), at: e.at });
@@ -68,6 +73,7 @@ export function Brief() {
   const context = useStore((s) => s.session.context);
   const compacting = useStore((s) => s.session.compacting);
   const stopping = useStore((s) => s.session.stopping);
+  const loop = useStore((s) => s.session.loop);
   const { moments, next, lastTool, advisor, fable } = useMemo(() => buildTimeline(events), [events]);
   const [all, setAll] = useState(false);
   const [full, setFull] = useState(() => localStorage.getItem('agentview.transcript') === '1');
@@ -126,7 +132,7 @@ export function Brief() {
           <div className={`tl-now ${state}`}>
             <span className="mark"><Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} /></span>
             <span className="text">
-              {state === 'waiting' ? 'Waiting for you' : state === 'stopping' ? 'Stopping…' : state === 'running' ? status : lastReply ? 'Idle · last reply' : 'Idle'}
+              {state === 'waiting' ? 'Waiting for you' : state === 'stopping' ? 'Stopping…' : state === 'running' ? (loop.phase && ['plan', 'build', 'test'].includes(loop.phase) ? `${loopLabel(loop)} · ${status}` : status) : lastReply ? 'Idle · last reply' : 'Idle'}
               {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
             </span>
             {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
@@ -153,7 +159,7 @@ export function Brief() {
 
 const CLAUDE = <svg viewBox="0 0 16 16" width="12" height="12"><path d="M8 1.5v13M1.5 8h13M3.4 3.4l9.2 9.2M12.6 3.4l-9.2 9.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 const MARKS: Record<Moment['kind'], ReactNode> = {
-  you: <Icon name="comment" small />, done: <Icon name="check" small />, note: <i className="dot" />, fable: <Icon name="sparkle" small />, reply: CLAUDE, plan: <Icon name="edit" small />,
+  you: <Icon name="comment" small />, done: <Icon name="check" small />, note: <i className="dot" />, fable: <Icon name="sparkle" small />, reply: CLAUDE, plan: <Icon name="edit" small />, phase: <Icon name="sync" small />,
 };
 
 function MomentRow({ m, sub }: { m: Moment; sub: boolean }) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { send, setUi, useStore } from '../store';
+import { getState, send, setUi, useStore } from '../store';
 import { toggleNotify } from '../notify';
 import { PERMISSION_MODES } from '../../../shared/protocol';
 import '../palette.css';
@@ -34,6 +34,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     ...models.map((m) => ({ id: `model:${m.value}`, label: `Model: ${m.displayName}` })),
     ...PERMISSION_MODES.map((m) => ({ id: `mode:${m}`, label: `Permission Mode: ${MODES[m] ?? m}` })),
     { id: 'compact', label: 'Chat: Compact Context' },
+    { id: 'loop', label: 'Chat: Toggle Plan, Build, Test Loop' },
     { id: 'stop', label: 'Chat: Stop Claude' },
     { id: 'theme', label: 'Preferences: Toggle Theme' },
     { id: 'notify', label: 'Preferences: Toggle Notifications' },
@@ -109,6 +110,7 @@ function perform(id: string) {
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
   else if (id === 'newChat') send({ type: 'new_session' });
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
+  else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
   else if (id === 'stop') send({ type: 'interrupt' });
   else if (id === 'file') setUi({ switcherOpen: true });
   else if (id === 'repo') setUi({ repoPicker: true });

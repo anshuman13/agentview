@@ -125,3 +125,10 @@ Open the phone icon in the status bar for a QR code. Works on the same Wi-Fi or 
 | ⌘B | Toggle the sidebar |
 | ⌘J | Toggle the terminal |
 | ⌘E | Switch between file and browser |
+
+## Loop mode
+
+The loop pill in the composer turns a prompt into a plan, build, test cycle. Opus plans in plan mode and starts
+building as soon as the plan is ready, Sonnet then tests the result as a separate model and ends with a verdict, and
+Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
+timeline and transcript, the composer footer shows the current phase and round, and Stop ends the loop.

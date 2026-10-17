@@ -5,6 +5,7 @@ import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type 
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
+import { advance, loopOff, planStep, type LoopStep } from './loop.js';
 import { BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultText, toolUseEvent } from './transcript.js';
 
 export { BIG_BRO };
@@ -29,6 +30,8 @@ export class AgentSession {
   private planChange: string | null = null;
   private sinceStatus = 0;
   private autoCompact = true;
+  private lastResult = '';
+  private loopPrevModel: string | null = null;
 
   private liveText = new Map<string, string>();
   private edits = new Map<string, string>();
@@ -36,7 +39,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [] },
+      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff() },
       status: 'Idle',
       events: [],
       pending: [],
@@ -106,7 +109,7 @@ export class AgentSession {
         cwd: this.cwd,
         resume: this.resume,
         onStatus: (text) => this.setStatus(text),
-        canUseTool: (toolName, input, opts) => this.approvals.ask(toolName, input, opts),
+        canUseTool: (toolName, input, opts) => this.loopPlanDone(toolName, input) ?? this.approvals.ask(toolName, input, opts),
         beforeAgent: (input, _id, { signal }) => this.confirmBigBro(input, signal),
         afterTool: async (input) => this.afterTool(input),
       }),
@@ -207,6 +210,10 @@ export class AgentSession {
   async interrupt() {
     if (!this.q || !this.state.session.running || this.state.session.stopping) return;
     this.planChange = null;
+    if (this.state.session.loop.phase && !['passed', 'failed'].includes(this.state.session.loop.phase)) {
+      this.setSession({ loop: { ...this.state.session.loop, phase: null } });
+      this.endLoop('Loop stopped');
+    }
     this.turns -= this.inputQueue.length;
     this.inputQueue = [];
     if (this.turns <= 0) {
@@ -225,7 +232,54 @@ export class AgentSession {
 
   async prompt(text: string) {
     if (!this.state.session.running) await this.planFirst();
+    const loop = this.state.session.loop;
+    if (loop.on && !this.state.session.running && !text.trim().startsWith('/')) return this.startLoop(text);
     this.sendPrompt(text);
+  }
+
+  setLoop(on: boolean, max?: number) {
+    const loop = this.state.session.loop;
+    const next = { ...loop, on, max: Math.min(9, Math.max(1, Math.round(max ?? loop.max))) };
+    if (!on && loop.phase && !['passed', 'failed'].includes(loop.phase)) next.phase = null;
+    this.setSession({ loop: next });
+    this.system(on ? `Loop on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Loop off');
+  }
+
+  private async startLoop(task: string) {
+    this.pushEvent({ id: randomUUID(), kind: 'user', text: task, at: Date.now() });
+    this.loopPrevModel = this.state.session.model;
+    this.setSession({ loop: { ...this.state.session.loop, round: 1, phase: 'plan' } });
+    await this.runStep(planStep(task), false);
+  }
+
+  private async runStep(step: LoopStep, marker = true) {
+    this.turns++;
+    this.setSession({ running: true });
+    try {
+      if (this.state.session.model !== step.model) await this.setModel(step.model);
+      if (this.state.session.permissionMode !== step.mode) await this.setPermissionMode(step.mode);
+    } finally {
+      this.turns--;
+    }
+    if (marker) this.pushEvent({ id: randomUUID(), kind: 'user', text: step.label, at: Date.now(), phase: step.phase });
+    this.enqueue(step.prompt);
+  }
+
+  private loopPlanDone(toolName: string, input: Record<string, unknown>) {
+    const loop = this.state.session.loop;
+    if (toolName.endsWith('__set_status')) return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
+    if (toolName !== 'ExitPlanMode' || loop.phase !== 'plan') return null;
+    this.setSession({ loop: { ...loop, phase: 'build' } });
+    this.pushEvent({ id: randomUUID(), kind: 'user', text: 'Build', at: Date.now(), phase: 'build' });
+    void this.setPermissionMode('acceptEdits');
+    return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
+  }
+
+  private endLoop(note: string | null) {
+    if (note) this.system(note);
+    const model = this.loopPrevModel;
+    this.loopPrevModel = null;
+    if (model && model !== this.state.session.model) void this.setModel(model);
   }
 
   async steer(text: string, id: string = randomUUID()) {
@@ -275,9 +329,14 @@ export class AgentSession {
 
   private turnEnded() {
     this.turns = Math.max(0, this.turns - 1);
-    const next = this.turns === 0 && !this.state.session.stopping ? this.followUp() : null;
-    this.setSession({ running: this.turns > 0 || next !== null, compacting: false, stopping: false });
-    if (next) this.sendPrompt(next);
+    const idle = this.turns === 0 && !this.state.session.stopping;
+    const loop = idle ? advance(this.state.session.loop, this.lastResult) : null;
+    if (loop) this.setSession({ loop: loop.state });
+    const next = idle && !loop?.step ? this.followUp() : null;
+    this.setSession({ running: this.turns > 0 || next !== null || Boolean(loop?.step), compacting: false, stopping: false });
+    if (loop && !loop.step && loop.note) this.endLoop(loop.note);
+    if (loop?.step) void this.runStep(loop.step);
+    else if (next) this.sendPrompt(next);
   }
 
   private followUp() {
@@ -388,6 +447,7 @@ export class AgentSession {
 
       case 'result': {
         this.liveText.clear();
+        this.lastResult = msg.subtype === 'success' ? msg.result : '';
         this.pushEvent({
           id: msg.uuid,
           kind: 'result',

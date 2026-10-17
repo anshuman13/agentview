@@ -290,6 +290,9 @@ wss.on('connection', (ws: WebSocket, req) => {
       case 'set_permission_mode':
         void chat.setPermissionMode(msg.mode);
         break;
+      case 'set_loop':
+        chat.setLoop(Boolean(msg.on), typeof msg.max === 'number' ? msg.max : undefined);
+        break;
       case 'interrupt':
         void chat.interrupt();
         break;
