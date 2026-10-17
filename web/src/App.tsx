@@ -55,6 +55,30 @@ function stored(key: string, fallback: number) {
   }
 }
 
+const shellParam = new URLSearchParams(location.search).get('shell');
+if (shellParam) {
+  localStorage.setItem('agentview.shell', shellParam);
+  history.replaceState(null, '', location.pathname);
+}
+
+function AppUpdate() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const shell = Number(localStorage.getItem('agentview.shell'));
+    if (!shell) return;
+    fetch('/api/app').then((r) => r.json()).then((a) => setReady(a.build > shell)).catch(() => {});
+  }, []);
+  if (!ready) return null;
+  return (
+    <div className="app-update">
+      <Icon name="cloud-download" small />
+      <span>A new version of the app is ready</span>
+      <a href="/api/app.apk">Install</a>
+      <button className="icon-btn" title="Later" onClick={() => setReady(false)}><Icon name="close" small /></button>
+    </div>
+  );
+}
+
 function CacheItem() {
   const cache = useStore((s) => s.session.cache);
   const [now, setNow] = useState(Date.now());
@@ -184,6 +208,7 @@ export function App() {
 
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
+      <AppUpdate />
       <div className="body">
         <aside className="activitybar desktop-only">
           {VIEWS.map((v) => (

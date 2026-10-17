@@ -60,6 +60,7 @@
       url.value = saved;
       let current = saved;
       let busy = false;
+      const build = fetch('build.txt').then((r) => (r.ok ? r.text() : '')).then((t) => t.trim()).catch(() => '');
 
       async function reachable(u) {
         const abort = new AbortController();
@@ -94,7 +95,8 @@
         busy = false;
         if (ok) {
           localStorage.setItem(KEY, u);
-          location.replace(u);
+          const b = await build;
+          location.replace(b ? `${u}/?shell=${b}` : u);
           return;
         }
         show(true, manual);

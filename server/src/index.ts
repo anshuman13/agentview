@@ -25,6 +25,7 @@ const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? proce
 const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIST = path.resolve(here, '../../web/dist');
 const DEV_WEB = process.env.AGENTVIEW_DEV_WEB;
+const APK = path.resolve(here, '../../dist/AgentView.apk');
 
 const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|\.tox)(\/|$)/;
 
@@ -226,6 +227,12 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/state') return json(chat.state);
     if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
     if (url.pathname.startsWith('/api/deploy/')) return json(await deployRoute(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
+    if (url.pathname === '/api/app') return json({ build: Number(await readFile(`${APK}.txt`, 'utf8').catch(() => '0')) || 0 });
+    if (url.pathname === '/api/app.apk') {
+      const body = await readFile(APK);
+      res.writeHead(200, { 'content-type': 'application/vnd.android.package-archive', 'content-disposition': 'attachment; filename="AgentView.apk"' });
+      return res.end(body);
+    }
     if (url.pathname === '/api/connect') {
       const port = url.searchParams.get('port') || (req.headers.host?.match(/:(\d+)$/)?.[1] ?? String(PORT));
       const ips = Object.values(os.networkInterfaces())

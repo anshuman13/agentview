@@ -5,7 +5,7 @@
     "tauri": "./env.sh tauri",
     "dev": "./env.sh tauri dev",
     "build": "./env.sh tauri build",
-    "android": "./env.sh tauri android build --apk --target aarch64"
+    "android": "date +%s > www/build.txt && ./env.sh tauri android build --apk --target aarch64 && mkdir -p ../dist && cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk ../dist/AgentView.apk && cp www/build.txt ../dist/AgentView.apk.txt"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.3"
