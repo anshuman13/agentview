@@ -20,6 +20,7 @@ It uses the Claude Code CLI you have installed and its login.
 | --- | --- |
 | `npm run serve` | Server and vite, no reload on server changes (running turns survive edits) |
 | `npm run dev` | Same, with server reload |
+| `npm run phone` | Install the latest Android build on a phone plugged in over USB |
 | `npm test` | Unit tests |
 
 `PROJECT_DIR=/path` sets the folder for the very first chat. After that AgentView reopens the last chat you viewed.
