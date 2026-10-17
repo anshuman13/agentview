@@ -5,6 +5,7 @@ import { Terminal } from './panes/Terminal';
 import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
 import { FileSwitcher } from './panes/FileSwitcher';
+import { Palette } from './panes/Palette';
 import { Explorer } from './panes/Explorer';
 import { Changes, ChangesBadge } from './panes/Changes';
 import { GitHub, GitHubBadge } from './panes/GitHub';
@@ -15,6 +16,7 @@ import { McpItem } from './panes/McpStatus';
 import { Observe } from './panes/Observe';
 import { Deploy } from './panes/Deploy';
 import { canNotify, toggleNotify, useNotify } from './notify';
+import { THEME_NAMES, useTheme } from './theme';
 
 type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos';
 type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions' | 'observe' | 'deploy';
@@ -82,6 +84,7 @@ export function App() {
   const [terminal, setTerminal] = useState(true);
   const [termOpened, setTermOpened] = useState(terminal && window.innerWidth > 900);
   const notifying = useNotify();
+  const [theme, toggleTheme] = useTheme();
 
   const drag = (e: React.PointerEvent, move: (ev: PointerEvent) => void, cls: string) => {
     e.preventDefault();
@@ -119,6 +122,12 @@ export function App() {
   }, [chatW, termH]);
 
   useEffect(() => {
+    const show = () => { setTerminal(true); setTab((t) => (window.innerWidth <= 900 ? 'term' : t)); };
+    window.addEventListener('agentview:terminal', show);
+    return () => window.removeEventListener('agentview:terminal', show);
+  }, []);
+
+  useEffect(() => {
     connect();
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
@@ -140,6 +149,19 @@ export function App() {
   useEffect(() => {
     if (terminal) setTermOpened(true);
   }, [terminal]);
+
+  useEffect(() => {
+    const onCommand = (e: Event) => {
+      const [kind, arg] = (e as CustomEvent<{ id: string }>).detail.id.split(':');
+      if (kind === 'view') { setView(arg as View); setSidebar(true); }
+      else if (kind === 'tab') { setTab(arg as Tab); if (arg === 'browser') setEditor('browser'); if (arg === 'code') setEditor('file'); }
+      else if (kind === 'terminal') setTerminal((v) => !v);
+      else if (kind === 'phone') setPhone((v) => !v);
+      else if (kind === 'theme') toggleTheme();
+    };
+    window.addEventListener('agentview:command', onCommand);
+    return () => window.removeEventListener('agentview:command', onCommand);
+  }, [toggleTheme]);
 
   const fileName = openFile ? openFile.split('/').pop() : null;
   const closeFile = () => setUi({ openFile: null });
@@ -228,6 +250,7 @@ export function App() {
             <Icon name={notifying ? 'bell' : 'bell-slash'} small />
           </span>
         )}
+        <span className="item clickable" title={`Theme: ${THEME_NAMES[theme]}. Click to switch`} onClick={toggleTheme}><Icon name="color-mode" small /></span>
         <span className="item clickable" title="Open on phone" onClick={() => setPhone((v) => !v)}><Icon name="device-mobile" small /></span>
         {!connected && <span className="item error"><Icon name="plug" small /> Disconnected</span>}
       </footer>
@@ -244,6 +267,7 @@ export function App() {
       </nav>
 
       <FileSwitcher />
+      <Palette />
       {repoPicker && <RepoPicker />}
       {phone && <ConnectPopover onClose={() => setPhone(false)} />}
     </div>
