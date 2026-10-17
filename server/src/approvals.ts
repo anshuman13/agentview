@@ -4,7 +4,34 @@ import type { PendingRequest, ServerMessage, ServerState } from '../../shared/pr
 
 type Waiting = { resolve: (r: PermissionResult) => void; input: Record<string, unknown>; suggestions?: PermissionUpdate[] };
 
-export type AskOptions = { suggestions?: PermissionUpdate[]; title?: string; displayName?: string; signal: AbortSignal };
+export type AskOptions = {
+  suggestions?: PermissionUpdate[];
+  title?: string;
+  description?: string;
+  decisionReason?: string;
+  defaultToNo?: boolean;
+  suppressAlwaysAllowRule?: boolean;
+  signal: AbortSignal;
+};
+
+export function permissionTitle(toolName: string, input: Record<string, unknown>) {
+  const s = (k: string) => (typeof input[k] === 'string' ? (input[k] as string).trim() : '');
+  const file = (s('file_path') || s('notebook_path')).split('/').pop();
+  switch (toolName) {
+    case 'ExitPlanMode': return 'Approve the plan to start building';
+    case 'Bash': return s('description') || 'Run a shell command';
+    case 'Edit': case 'MultiEdit': case 'NotebookEdit': return file ? `Edit ${file}` : 'Edit a file';
+    case 'Write': return file ? `Write ${file}` : 'Write a file';
+    case 'Read': return file ? `Read ${file}` : 'Read a file';
+    case 'WebSearch': return s('query') ? `Search the web for "${s('query')}"` : 'Search the web';
+    case 'WebFetch': try { return `Fetch a page from ${new URL(s('url')).hostname}`; } catch { return 'Fetch a web page'; }
+  }
+  if (toolName.startsWith('mcp__')) {
+    const [, server, tool = ''] = toolName.split('__');
+    return `Use ${tool.replace(/_/g, ' ')} from ${server}`;
+  }
+  return `Use ${toolName}`;
+}
 
 export class Approvals {
   private waiting = new Map<string, Waiting>();
@@ -20,9 +47,11 @@ export class Approvals {
             id,
             kind: 'permission',
             toolName,
-            title: toolName === 'ExitPlanMode' ? 'Approve the plan to start building' : opts.title ?? opts.displayName ?? toolName,
+            title: (toolName !== 'ExitPlanMode' && opts.title) || permissionTitle(toolName, input),
+            detail: opts.description || opts.decisionReason || undefined,
             input,
-            canAlwaysAllow: Boolean(opts.suggestions?.length),
+            canAlwaysAllow: Boolean(opts.suggestions?.length) && !opts.suppressAlwaysAllowRule,
+            confirmFirst: opts.defaultToNo || undefined,
           };
 
     this.state.pending.push(req);
