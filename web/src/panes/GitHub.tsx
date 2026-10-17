@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { api, send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
+import { fileIcon } from './Explorer';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import '../github.css';
@@ -50,7 +51,12 @@ function ago(iso: string) {
 
 const initials = (login: string) => (login.replace(/^app\//, '').match(/[A-Za-z0-9]+/g) ?? ['?']).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
-const CHECKS: Record<CheckState, string> = { success: 'Checks passed', failure: 'Checks failed', pending: 'Checks running', none: 'No checks' };
+const CHECKS: Record<CheckState, [string, string]> = {
+  success: ['pass', 'Checks passed'],
+  failure: ['error', 'Checks failed'],
+  pending: ['circle-filled', 'Checks running'],
+  none: ['circle-outline', 'No checks'],
+};
 const REVIEW: Record<string, [string, string]> = {
   APPROVED: ['Approved', 'ok'],
   CHANGES_REQUESTED: ['Changes requested', 'bad'],
@@ -59,30 +65,34 @@ const REVIEW: Record<string, [string, string]> = {
   DISMISSED: ['Dismissed', ''],
   PENDING: ['Pending', ''],
 };
+const SETUP: Array<{ test: RegExp; icon: string; title: string; text: string; cmd?: string }> = [
+  { test: /not installed/i, icon: 'terminal', title: 'GitHub CLI not installed', text: 'Install it, then refresh.', cmd: 'brew install gh' },
+  { test: /not logged in/i, icon: 'account', title: 'Not signed in to GitHub', text: 'Sign in with the GitHub CLI, then refresh.', cmd: 'gh auth login' },
+  { test: /no GitHub remote/i, icon: 'github', title: 'No GitHub remote', text: 'Open a chat in a folder whose repository lives on GitHub.' },
+];
 
-function Chip({ pr }: { pr: PullRequest }) {
-  if (pr.draft) return <span className="gh-chip">Draft</span>;
-  const r = REVIEW[pr.review];
-  return r ? <span className={`gh-chip ${r[1]}`}>{r[0]}</span> : null;
-}
-
-const Dot = ({ state }: { state: CheckState }) => <span className={`gh-dot ${state}`} title={CHECKS[state]} />;
+const CheckIcon = ({ state }: { state: CheckState }) => (
+  <span className={`gh-check ${state}`} title={CHECKS[state][1]}><Icon name={CHECKS[state][0]} small /></span>
+);
+const Avatar = ({ login }: { login: string }) => <span className="gh-avatar" title={login}>{initials(login)}</span>;
 const Counts = ({ a, d }: { a: number; d: number }) => <span className="gh-counts"><span className="add">+{a}</span> <span className="del">-{d}</span></span>;
+const StateChip = ({ state }: { state: string }) => {
+  const r = REVIEW[state];
+  return r ? <span className={`gh-chip ${r[1]}`}>{r[0]}</span> : null;
+};
 
 function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
   return (
-    <div className="gh-pr" onClick={onOpen} title={`#${pr.number} ${pr.title}\n${pr.author} · ${pr.branch}`}>
-      <div className="gh-line">
-        <Dot state={pr.checks} />
-        <span className="gh-num">#{pr.number}</span>
-        <span className="gh-title">{pr.title}</span>
-        <span className="gh-when">{ago(pr.updatedAt)}</span>
-      </div>
-      <div className="gh-line sub">
-        <span className="gh-avatar" title={pr.author}>{initials(pr.author)}</span>
+    <div className="gh-pr" onClick={onOpen} title={`#${pr.number} ${pr.title}`}>
+      <CheckIcon state={pr.checks} />
+      <div className="gh-title"><span className="gh-title-text">{pr.title}</span><span className="gh-num">#{pr.number}</span></div>
+      <div className="gh-meta">
+        <span className="gh-author">{pr.author}</span>
+        <span className="gh-sep">·</span>
         <span className="gh-branch">{pr.branch}</span>
-        <Chip pr={pr} />
-        <Counts a={pr.additions} d={pr.deletions} />
+        <span className="gh-sep">·</span>
+        <span className="gh-when">{ago(pr.updatedAt)}</span>
+        {pr.draft ? <span className="gh-chip">Draft</span> : <StateChip state={pr.review} />}
       </div>
     </div>
   );
@@ -94,10 +104,46 @@ function Section({ title, prs, onOpen }: { title: string; prs: PullRequest[]; on
     <>
       <div className="gh-section" onClick={() => setOpen(!open)}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
-        <span>{title}</span>
+        <span className="gh-label">{title}</span>
         <span className="gh-count">{prs.length}</span>
       </div>
       {open && (prs.length ? prs.map((p) => <Row key={p.number} pr={p} onOpen={() => onOpen(p)} />) : <div className="gh-empty">None</div>)}
+    </>
+  );
+}
+
+function Problem({ error }: { error: string }) {
+  const setup = SETUP.find((s) => s.test.test(error));
+  if (!setup) return <div className="gh-error"><Icon name="error" small /> {error}</div>;
+  return (
+    <div className="empty-state">
+      <Icon name={setup.icon} />
+      <div className="empty-title">{setup.title}</div>
+      <div className="muted small">{setup.text}</div>
+      {setup.cmd && <pre className="gh-cmd">{setup.cmd}</pre>}
+    </div>
+  );
+}
+
+function PrList({ onOpen }: { onOpen: (n: number) => void }) {
+  const cwd = useStore((s) => s.session.cwd);
+  const { prs, error, loading } = useList();
+  return (
+    <>
+      <div className="gh-bar">
+        <span className="muted small">{loading ? 'Loading…' : `${prs.length} open`}</span>
+        <span className="spacer" />
+        <button className="icon-btn" title="Refresh" disabled={loading} onClick={() => load(cwd, true)}><Icon name="refresh" small spin={loading} /></button>
+      </div>
+      {error ? (
+        <Problem error={error} />
+      ) : (
+        <div className="gh-list">
+          <Section title="Waiting for my review" prs={prs.filter((p) => p.reviewRequested)} onOpen={(p) => onOpen(p.number)} />
+          <Section title="My pull requests" prs={prs.filter((p) => p.mine)} onOpen={(p) => onOpen(p.number)} />
+          <Section title="All open" prs={prs} onOpen={(p) => onOpen(p.number)} />
+        </div>
+      )}
     </>
   );
 }
@@ -116,7 +162,7 @@ export function GitHubBadge() {
 
 export function GitHub() {
   const cwd = useStore((s) => s.session.cwd);
-  const { prs, error, loading } = useList();
+  const { prs } = useList();
   const [open, setOpen] = useState<number | null>(null);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -129,26 +175,7 @@ export function GitHub() {
 
   return (
     <div className="gh" ref={root}>
-      {pr ? (
-        <Detail key={pr.number} pr={pr} onBack={() => setOpen(null)} />
-      ) : (
-        <>
-          <div className="gh-bar">
-            <span className="muted small">{loading ? 'Loading…' : `${prs.length} open`}</span>
-            <span className="spacer" />
-            <button className="icon-btn" title="Refresh" disabled={loading} onClick={() => load(cwd, true)}><Icon name="refresh" small spin={loading} /></button>
-          </div>
-          {error ? (
-            <div className="gh-error"><Icon name="error" small /> {error}</div>
-          ) : (
-            <div className="gh-list">
-              <Section title="Waiting for my review" prs={prs.filter((p) => p.reviewRequested)} onOpen={(p) => setOpen(p.number)} />
-              <Section title="My PRs" prs={prs.filter((p) => p.mine)} onOpen={(p) => setOpen(p.number)} />
-              <Section title="All open" prs={prs} onOpen={(p) => setOpen(p.number)} />
-            </div>
-          )}
-        </>
-      )}
+      {pr ? <Detail key={pr.number} pr={pr} onBack={() => setOpen(null)} /> : <PrList onOpen={setOpen} />}
     </div>
   );
 }
@@ -162,36 +189,126 @@ function splitDiff(diff: string) {
   return files;
 }
 
+const lineClass = (l: string) => (l[0] === '+' ? 'add' : l[0] === '-' ? 'del' : l.startsWith('@@') ? 'hunk' : '');
+
+function Block({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
+  return (
+    <>
+      <div className="gh-block">{title}{count !== undefined && <span className="gh-count">{count}</span>}</div>
+      {children}
+    </>
+  );
+}
+
+function Review({ r }: { r: PullRequestDetail['reviews'][number] }) {
+  return (
+    <div className="gh-review">
+      <div className="gh-line">
+        <Avatar login={r.author} />
+        <span className="gh-author">{r.author}</span>
+        <StateChip state={r.state} />
+        <span className="gh-when">{ago(r.at)}</span>
+      </div>
+      {r.body && <Markdown text={r.body} />}
+    </div>
+  );
+}
+
+function Files({ files, diffs }: { files: PullRequestDetail['files']; diffs: Map<string, string> }) {
+  const [open, setOpen] = useState<string | null>(null);
+  return (
+    <>
+      {files.map((f) => {
+        const name = f.path.split('/').pop()!;
+        const shown = open === f.path;
+        return (
+          <div key={f.path}>
+            <div className="gh-item click" onClick={() => setOpen(shown ? null : f.path)} title={f.path}>
+              <Icon name={shown ? 'chevron-down' : 'chevron-right'} small />
+              <Icon name={fileIcon(name)} small />
+              <span className="gh-fname">{name}</span>
+              <span className="gh-fdir">{f.path.slice(0, -name.length - 1)}</span>
+              <Counts a={f.additions} d={f.deletions} />
+            </div>
+            {shown && (
+              <pre className="gh-diff">{(diffs.get(f.path) ?? 'No diff').split('\n').map((l, i) => <div key={i} className={lineClass(l)}>{l || ' '}</div>)}</pre>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+type Act = (label: string, path: string, body: object) => Promise<boolean>;
+
+function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean; act: Act; confirm: (c: ConfirmRequest) => void }) {
+  const [text, setText] = useState('');
+  const [method, setMethod] = useState('squash');
+  const needsText = !text.trim();
+  const review = async (event: string) => (await act(event, 'review', { event, body: text })) && setText('');
+  const approve = () => confirm({ title: `Approve #${pr.number}?`, detail: pr.title, action: 'Approve', icon: 'check', run: () => review('approve') });
+  const merge = () =>
+    confirm({
+      title: `Merge #${pr.number}?`,
+      detail: pr.title,
+      warning: `Merges ${pr.branch} (${method === 'merge' ? 'merge commit' : method}).`,
+      action: 'Merge',
+      icon: 'git-merge',
+      run: () => act('merge', 'merge', { method }),
+    });
+  const askClaude = () =>
+    send({ type: 'prompt', text: `Review PR #${pr.number} (${pr.url}): "${pr.title}". Read it with \`gh pr view ${pr.number}\` and \`gh pr diff ${pr.number}\`, then list correctness bugs and risky changes with file and line references. Do not post anything to GitHub.` });
+
+  return (
+    <div className="gh-actionbar">
+      <textarea className="gh-text" placeholder="Leave a comment" value={text} rows={2} onChange={(e) => setText(e.target.value)} />
+      <div className="gh-actions">
+        <button className="primary" disabled={busy} onClick={approve}><Icon name="check" small /> Approve</button>
+        <button disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('request_changes')}><Icon name="request-changes" small /> Request changes</button>
+        <button disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('comment')}><Icon name="comment" small /> Comment</button>
+      </div>
+      <div className="gh-actions">
+        <span className="gh-merge">
+          <button disabled={busy} onClick={merge}><Icon name="git-merge" small /> Merge</button>
+          <select value={method} onChange={(e) => setMethod(e.target.value)} title="Merge method">
+            <option value="squash">Squash</option>
+            <option value="merge">Merge commit</option>
+            <option value="rebase">Rebase</option>
+          </select>
+        </span>
+        <button disabled={busy} title={`Check out ${pr.branch} in this folder`} onClick={() => act('checkout', 'checkout', {})}><Icon name="git-branch" small /> Checkout</button>
+        <button className="gh-claude" title="Send a review prompt to the chat" onClick={askClaude}><Icon name="sparkle" small /> Ask Claude to review</button>
+      </div>
+    </div>
+  );
+}
+
 function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
   const cwd = useStore((s) => s.session.cwd);
   const [d, setD] = useState<PullRequestDetail | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
-  const [text, setText] = useState('');
-  const [method, setMethod] = useState('squash');
-  const [file, setFile] = useState<string | null>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const diffs = useMemo(() => splitDiff(d?.diff ?? ''), [d?.diff]);
 
   const fetchDetail = () => call<PullRequestDetail>(`/api/gh/pr/${pr.number}`).then(setD, (e) => setError(message(e)));
   useEffect(() => void fetchDetail(), []);
 
-  const act = async (label: string, path: string, body: object) => {
+  const act: Act = async (label, path, body) => {
     setBusy(label);
     setError('');
     try {
       await call(`/api/gh/pr/${pr.number}/${path}`, body);
-      if (path === 'review') setText('');
       await Promise.all([fetchDetail(), load(cwd, true)]);
+      return true;
     } catch (e) {
       setError(message(e));
+      return false;
     } finally {
       setBusy('');
     }
   };
-  const review = (event: string) => act(event, 'review', { event, body: text });
-  const askClaude = () =>
-    send({ type: 'prompt', text: `Review PR #${pr.number} (${pr.url}): "${pr.title}". Read it with \`gh pr view ${pr.number}\` and \`gh pr diff ${pr.number}\`, then list correctness bugs and risky changes with file and line references. Do not post anything to GitHub.` });
 
   return (
     <div className="gh-detail">
@@ -204,34 +321,14 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
       <div className="gh-scroll">
         <div className="gh-head">
           <div className="gh-heading">{pr.title}</div>
-          <div className="gh-line sub">
-            <span className="gh-avatar">{initials(pr.author)}</span>
-            <span>{pr.author}</span>
-            <Chip pr={pr} />
+          <div className="gh-line">
+            <Avatar login={pr.author} />
+            <span className="gh-author">{pr.author}</span>
+            {pr.draft && <span className="gh-chip">Draft</span>}
+            <StateChip state={pr.review} />
             <Counts a={pr.additions} d={pr.deletions} />
           </div>
-          <div className="gh-line sub"><Icon name="git-branch" small /><span className="gh-branch">{pr.branch}</span></div>
-        </div>
-
-        <div className="gh-actions">
-          <button className="primary" disabled={!!busy} onClick={() => setAsk({ title: `Approve #${pr.number}?`, detail: pr.title, action: 'Approve', icon: 'check', run: () => review('approve') })}>Approve</button>
-          <button disabled={!!busy || !text.trim()} title={text.trim() ? '' : 'Write a comment first'} onClick={() => review('request_changes')}>Request changes</button>
-          <button disabled={!!busy || !text.trim()} title={text.trim() ? '' : 'Write a comment first'} onClick={() => review('comment')}>Comment</button>
-        </div>
-        <textarea className="gh-text" placeholder="Leave a comment" value={text} onChange={(e) => setText(e.target.value)} rows={3} />
-        <div className="gh-actions">
-          <span className="gh-merge">
-            <button disabled={!!busy} onClick={() => setAsk({ title: `Merge #${pr.number}?`, detail: pr.title, warning: `Merges ${pr.branch} (${method === 'merge' ? 'merge commit' : method}).`, action: 'Merge', icon: 'git-merge', run: () => act('merge', 'merge', { method }) })}>
-              <Icon name="git-merge" small /> Merge
-            </button>
-            <select value={method} onChange={(e) => setMethod(e.target.value)} title="Merge method">
-              <option value="squash">Squash</option>
-              <option value="merge">Merge commit</option>
-              <option value="rebase">Rebase</option>
-            </select>
-          </span>
-          <button disabled={!!busy} title={`Check out ${pr.branch} in this folder`} onClick={() => act('checkout', 'checkout', {})}><Icon name="git-branch" small /> Checkout</button>
-          <button className="gh-claude" title="Send a review prompt to the chat" onClick={askClaude}><Icon name="sparkle" small /> Ask Claude to review</button>
+          <div className="gh-line"><Icon name="git-branch" small /><span className="gh-branch">{pr.branch}</span><span className="gh-when">{ago(pr.updatedAt)}</span></div>
         </div>
         {busy && <div className="muted small gh-pad"><Icon name="loading" small spin /> Running {busy.replace('_', ' ')}…</div>}
         {error && <div className="gh-error"><Icon name="error" small /> {error}</div>}
@@ -240,48 +337,33 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
           !error && <div className="muted small gh-pad">Loading…</div>
         ) : (
           <>
-            <div className="gh-section static">Description</div>
-            <div className="gh-pad">{d.body.trim() ? <Markdown text={d.body} /> : <span className="muted">No description</span>}</div>
-
-            <div className="gh-section static">Checks <span className="gh-count">{d.checks.length}</span></div>
-            {d.checks.map((c, i) => (
-              <a key={i} className="gh-item" href={c.url || undefined} target="_blank" rel="noreferrer"><Dot state={c.state} /><span className="gh-title">{c.name}</span></a>
-            ))}
-
-            <div className="gh-section static">Reviews <span className="gh-count">{d.reviews.length}</span></div>
-            {d.reviews.map((r, i) => (
-              <div key={i} className="gh-review">
-                <div className="gh-line sub">
-                  <span className="gh-avatar">{initials(r.author)}</span>
-                  <span>{r.author}</span>
-                  {REVIEW[r.state] && <span className={`gh-chip ${REVIEW[r.state][1]}`}>{REVIEW[r.state][0]}</span>}
-                  <span className="gh-when">{ago(r.at)}</span>
-                </div>
-                {r.body && <Markdown text={r.body} />}
-              </div>
-            ))}
-
-            <div className="gh-section static">Commits <span className="gh-count">{d.commits.length}</span></div>
-            {d.commits.map((c) => (
-              <div key={c.oid} className="gh-item"><span className="mono muted">{c.oid.slice(0, 7)}</span><span className="gh-title">{c.message}</span></div>
-            ))}
-
-            <div className="gh-section static">Files changed <span className="gh-count">{d.files.length}</span></div>
-            {d.files.map((f) => (
-              <div key={f.path}>
-                <div className="gh-item click" onClick={() => setFile(file === f.path ? null : f.path)} title={f.path}>
-                  <Icon name={file === f.path ? 'chevron-down' : 'chevron-right'} small />
-                  <span className="gh-title rtl">{f.path}</span>
-                  <Counts a={f.additions} d={f.deletions} />
-                </div>
-                {file === f.path && (
-                  <pre className="gh-diff">{(diffs.get(f.path) ?? 'No diff').split('\n').map((l, i) => <div key={i} className={l[0] === '+' ? 'add' : l[0] === '-' ? 'del' : l.startsWith('@@') ? 'hunk' : ''}>{l || ' '}</div>)}</pre>
-                )}
-              </div>
-            ))}
+            <Block title="Description">
+              <div className="gh-pad">{d.body.trim() ? <Markdown text={d.body} /> : <span className="muted">No description</span>}</div>
+            </Block>
+            <Block title="Checks" count={d.checks.length}>
+              {d.checks.map((c, i) => (
+                <a key={i} className="gh-item" href={c.url || undefined} target="_blank" rel="noreferrer">
+                  <CheckIcon state={c.state} />
+                  <span className="gh-msg">{c.name}</span>
+                  {c.url && <Icon name="link-external" small />}
+                </a>
+              ))}
+            </Block>
+            <Block title="Reviews" count={d.reviews.length}>
+              {d.reviews.map((r, i) => <Review key={i} r={r} />)}
+            </Block>
+            <Block title="Commits" count={d.commits.length}>
+              {d.commits.map((c) => (
+                <div key={c.oid} className="gh-item"><span className="gh-sha">{c.oid.slice(0, 7)}</span><span className="gh-msg">{c.message}</span></div>
+              ))}
+            </Block>
+            <Block title="Files changed" count={d.files.length}>
+              <Files files={d.files} diffs={diffs} />
+            </Block>
           </>
         )}
       </div>
+      <ActionBar pr={pr} busy={!!busy} act={act} confirm={setAsk} />
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
   );

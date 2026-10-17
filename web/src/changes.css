@@ -1,31 +1,61 @@
-.changes { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.changes .commit { padding: 2px 12px 8px; display: flex; flex-direction: column; gap: 6px; }
-.changes .commit textarea {
-  resize: none; background: var(--input); color: var(--text); border: 1px solid var(--input-border); border-radius: 2px;
-  padding: 4px 6px; font: inherit; font-size: 13px; line-height: 18px;
+.scm { display: flex; flex-direction: column; flex: 1; min-height: 0; font-size: 13px; }
+
+.scm-branch { flex: none; display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px 0 12px; font-size: 12px; color: var(--fg-muted, #9d9d9d); }
+.scm-branch-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg, #cccccc); }
+.scm-ab { flex: none; display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+.scm-ab .codicon.icon.small { font-size: 12px; }
+.scm-branch .icon-btn { width: 22px; height: 22px; }
+
+.scm-commit { flex: none; display: flex; flex-direction: column; gap: 6px; padding: 0 12px 8px; }
+.scm-commit textarea {
+  width: 100%; resize: none; padding: 5px 8px; font: inherit; font-size: 13px; line-height: 18px;
+  color: var(--fg, #cccccc); background: var(--bg-raised, #1f1f1f); border: 1px solid var(--border-strong, #3c3c3c); border-radius: var(--radius-sm, 4px);
 }
-.changes .commit textarea:focus { outline: none; border-color: var(--accent); }
-.changes .commit button.primary { height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-radius: 2px; }
-.changes .branch { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
-.changes .branch span { display: inline-flex; align-items: center; }
-.changes .error { font-size: 12px; color: var(--red); white-space: pre-wrap; word-break: break-word; }
-.changes .tree .row { padding-right: 12px; }
-.changes .tree .row.group { font-size: 11px; font-weight: 700; color: var(--text); }
-.changes .tree .row.file { padding-left: 20px; }
-.changes .tree .row .dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 12px; color: var(--muted); padding-left: 2px; }
-.changes .tree .row.group .name { flex: 1; text-transform: uppercase; }
-.changes .tree .row .acts { display: none; flex: none; gap: 2px; }
-.changes .tree .row .acts .icon-btn { width: 20px; height: 20px; }
-.changes .tree .row:hover .acts { display: inline-flex; }
-@media (hover: none) { .changes .tree .row .acts { display: inline-flex; } }
-.changes .tree .row .letter { flex: none; width: 12px; margin-left: 6px; text-align: center; font-size: 12px; }
-.changes .tree .row .count {
-  flex: none; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px;
-  background: #616161; color: #fff; font-size: 11px; font-weight: 400; line-height: 18px; text-align: center;
+.scm-commit textarea::placeholder { color: var(--fg-faint, #6e6e6e); }
+.scm-commit textarea:focus { outline: 0; border-color: var(--accent, #0078d4); }
+.scm-commit-actions { display: flex; gap: 6px; }
+.scm-commit-actions button {
+  height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 10px;
+  border-radius: var(--radius-sm, 4px); font-size: 12px; white-space: nowrap;
 }
-.changes .tree .s-M :is(.name, .letter) { color: #e2c08d; }
-.changes .tree .s-A :is(.name, .letter), .changes .tree .s-U :is(.name, .letter), .changes .tree .s-R :is(.name, .letter) { color: #73c991; }
-.changes .tree .s-D :is(.name, .letter) { color: #c74e39; }
-.changes .tree .s-D .name { text-decoration: line-through; }
-.changes .tree .row.selected .name { color: var(--text-strong); }
-.changes .empty { padding: 4px 20px; }
+.scm-commit-actions .primary { flex: 1; }
+.scm-claude { min-width: 0; overflow: hidden; text-overflow: ellipsis; background: transparent; border: 1px solid var(--border-strong, #3c3c3c); color: var(--fg-muted, #9d9d9d); }
+.scm-claude:hover:not(:disabled) { background: var(--bg-hover, #2a2d2e); color: var(--fg, #cccccc); }
+.scm-claude:disabled { opacity: 0.5; cursor: default; }
+.scm-error { padding: 0 12px 6px; font-size: 12px; color: var(--err, #f14c4c); white-space: pre-wrap; word-break: break-word; }
+
+.scm-tree { flex: 1; min-height: 0; overflow: auto; padding-bottom: 8px; }
+.scm-header {
+  height: 22px; display: flex; align-items: center; gap: 2px; padding: 0 12px 0 4px; cursor: pointer; user-select: none;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--fg, #cccccc);
+}
+.scm-header:hover { background: var(--bg-hover, #2a2d2e); }
+.scm-label { flex: 1; min-width: 0; }
+.scm-count {
+  flex: none; min-width: 18px; height: 16px; padding: 0 5px; margin-left: 6px; border-radius: 8px; text-align: center;
+  font-size: 10px; font-weight: 600; line-height: 16px; text-transform: none; background: var(--bg-hover, #2a2d2e); color: var(--fg-muted, #9d9d9d);
+}
+
+.scm-row { height: 22px; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 22px; cursor: pointer; white-space: nowrap; color: var(--fg, #cccccc); }
+.scm-row:hover { background: var(--bg-hover, #2a2d2e); }
+.scm-row.selected { background: var(--accent-soft, rgba(0, 120, 212, 0.15)); }
+.scm-row > .icon { color: var(--fg-muted, #9d9d9d); }
+.scm-name { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.scm-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-left: 2px; font-size: 12px; color: var(--fg-faint, #6e6e6e); }
+.scm-letter { flex: none; width: 14px; margin-left: 4px; text-align: center; font-size: 12px; }
+
+.scm-acts { display: none; flex: none; margin-left: auto; }
+.scm-acts .icon-btn { width: 20px; height: 20px; }
+.scm-row:hover .scm-acts, .scm-header:hover .scm-acts { display: inline-flex; }
+@media (hover: none) { .scm-acts { display: inline-flex; } }
+
+.scm-row.s-M :is(.scm-name, .scm-letter) { color: var(--warn, #cca700); }
+.scm-row.s-A :is(.scm-name, .scm-letter), .scm-row.s-U :is(.scm-name, .scm-letter) { color: var(--ok, #89d185); }
+.scm-row.s-D :is(.scm-name, .scm-letter) { color: var(--err, #f14c4c); }
+.scm-row.s-D .scm-name { text-decoration: line-through; }
+.scm-row.s-R :is(.scm-name, .scm-letter) { color: var(--accent, #0078d4); }
+.scm-empty { padding: 4px 12px 4px 22px; font-size: 12px; color: var(--fg-muted, #9d9d9d); }
+
+@media (max-width: 900px) {
+  .scm-row, .scm-header { height: 34px; }
+}
