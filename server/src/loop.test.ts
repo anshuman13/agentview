@@ -26,7 +26,7 @@ describe('advance', () => {
   it('goes plan, build, test', () => {
     const a = advance({ ...on, phase: 'plan' }, '');
     expect(a.state.phase).toBe('build');
-    expect(a.step?.mode).toBe('acceptEdits');
+    expect(a.step?.mode).toBe('auto');
     const b = advance(a.state, 'done');
     expect(b.state.phase).toBe('test');
     expect(b.step?.model).toContain('sonnet');

@@ -271,7 +271,7 @@ export class AgentSession {
     if (toolName !== 'ExitPlanMode' || loop.phase !== 'plan') return null;
     this.setSession({ loop: { ...loop, phase: 'build' } });
     this.pushEvent({ id: randomUUID(), kind: 'user', text: 'Build', at: Date.now(), phase: 'build' });
-    void this.setPermissionMode('acceptEdits');
+    void this.setPermissionMode('auto');
     return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
   }
 

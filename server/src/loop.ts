@@ -31,7 +31,7 @@ export function buildStep(): LoopStep {
   return {
     phase: 'build',
     model: LOOP_MODELS.build,
-    mode: 'acceptEdits',
+    mode: 'auto',
     label: 'Build',
     prompt: 'Phase 2 of 3: build. Implement the plan fully. Run the project checks yourself (typecheck, tests) before you finish, and end with a short summary of what changed and how to verify it.',
   };
@@ -41,7 +41,7 @@ export function testStep(round: number, max: number): LoopStep {
   return {
     phase: 'test',
     model: LOOP_MODELS.test,
-    mode: 'acceptEdits',
+    mode: 'auto',
     label: `Test ${round}/${max}`,
     prompt: [
       `Phase 3 of 3: test, round ${round} of ${max}. You are a different model acting as the tester. Verify the implementation independently: read the plan and the diff (git diff and git status), run the project tests, typecheck and the commands the plan names, and try the behaviour where practical.`,
@@ -55,7 +55,7 @@ export function fixStep(report: string): LoopStep {
   return {
     phase: 'build',
     model: LOOP_MODELS.build,
-    mode: 'acceptEdits',
+    mode: 'auto',
     label: 'Fix',
     prompt: `Phase 2 again: fix. The tester found these problems:\n\n${report.trim()}\n\nFix them, run the checks again, and end with a short summary.`,
   };
