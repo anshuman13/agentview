@@ -1,0 +1,62 @@
+.gh { flex: 1; min-height: 0; display: flex; flex-direction: column; font-size: 13px; }
+.gh-bar { display: flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 8px 4px 12px; flex: none; }
+.gh-bar .gh-num { font-weight: 600; }
+.gh-list, .gh-scroll { flex: 1; min-height: 0; overflow: auto; }
+.gh-detail { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.gh-section {
+  display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px 0 4px; cursor: pointer;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-strong);
+}
+.gh-section.static { cursor: default; margin-top: 10px; padding-left: 12px; border-top: 1px solid var(--border); height: 28px; }
+.gh-count { margin-left: auto; font-weight: 400; color: var(--muted); }
+.gh-section.static .gh-count { margin-left: 4px; }
+.gh-empty { padding: 2px 24px 6px; color: var(--muted); font-size: 12px; }
+.gh-pr { padding: 3px 10px 4px 20px; cursor: pointer; }
+.gh-pr:hover, .gh-item[href]:hover, .gh-item.click:hover { background: var(--hover); }
+.gh-line { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.gh-line.sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.gh-num { flex: none; color: var(--muted); }
+.gh-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.gh-title.rtl { direction: rtl; text-align: left; }
+.gh-when { flex: none; margin-left: auto; color: var(--muted); font-size: 11px; }
+.gh-branch { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 11px; }
+.gh-avatar {
+  flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--input-border); color: var(--text-strong);
+  font-size: 8px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+.gh-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; }
+.gh-dot.success { background: var(--green); }
+.gh-dot.failure { background: var(--red); }
+.gh-dot.pending { background: var(--yellow); }
+.gh-dot.none { border: 1.5px solid var(--muted); }
+.gh-chip { flex: none; padding: 0 5px; border-radius: 8px; line-height: 15px; font-size: 10px; border: 1px solid var(--input-border); color: var(--muted); }
+.gh-chip.ok { color: var(--green); border-color: rgba(137, 209, 133, 0.5); }
+.gh-chip.bad { color: var(--red); border-color: rgba(241, 76, 76, 0.5); }
+.gh-counts { flex: none; margin-left: auto; font-family: var(--mono); font-size: 11px; }
+.gh-counts .add, .gh-diff .add { color: var(--green); }
+.gh-counts .del, .gh-diff .del { color: var(--red); }
+.gh-head { padding: 0 12px 8px; }
+.gh-heading { font-size: 14px; font-weight: 600; color: var(--text-strong); margin-bottom: 4px; overflow-wrap: anywhere; }
+.gh-head .gh-line.sub { margin-top: 4px; }
+.gh-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 6px; }
+.gh-actions button { display: inline-flex; align-items: center; gap: 4px; }
+.gh-merge { display: inline-flex; }
+.gh-merge button { border-radius: 2px 0 0 2px; }
+.gh-merge select { border-radius: 0 2px 2px 0; border-left: 0; }
+.gh-claude { color: var(--claude); }
+.gh-text {
+  display: block; width: calc(100% - 24px); margin: 0 12px 6px; box-sizing: border-box; resize: vertical;
+  background: var(--input); color: var(--text); border: 1px solid var(--input-border); border-radius: 2px; padding: 4px 6px; font: inherit;
+}
+.gh-text:focus { outline: 0; border-color: var(--accent); }
+.gh-pad { padding: 2px 12px 6px; }
+.gh-error { margin: 4px 12px; color: var(--red); display: flex; gap: 6px; align-items: flex-start; overflow-wrap: anywhere; font-size: 12px; }
+.gh-item { display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px 0 12px; color: var(--text); text-decoration: none; cursor: default; }
+.gh-item[href], .gh-item.click { cursor: pointer; }
+.gh-review { padding: 4px 12px 6px; }
+.gh-review .md { margin-top: 4px; }
+.gh-diff { margin: 0 0 6px; padding: 4px 0; background: var(--bg); font-family: var(--mono); font-size: 11px; overflow: auto; max-height: 400px; }
+.gh-diff > div { padding: 0 8px; white-space: pre; min-width: max-content; }
+.gh-diff .add { background: rgba(137, 209, 133, 0.1); }
+.gh-diff .del { background: rgba(241, 76, 76, 0.1); }
+.gh-diff .hunk { color: #4daafc; }
