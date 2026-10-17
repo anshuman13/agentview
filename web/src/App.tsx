@@ -242,7 +242,7 @@ export function App() {
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <BrowserPane />}</div>
           {page && (
             <div key={page} className={`editor ${active === page ? 'shown' : ''}`}>
-              <div className={`page ${page}-page`}>
+              <div className={`page page-${page}`}>
                 <header className="page-hero">
                   <div>
                     <div className="page-kicker">{pageOf(page).kicker}</div>
