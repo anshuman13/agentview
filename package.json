@@ -10,7 +10,7 @@
     "up": "./start.sh",
     "test": "vitest run",
     "app": "npm run dev -w app",
-    "phone": "./app/env.sh sh -c '\"$ANDROID_HOME/platform-tools/adb\" install -r dist/AgentView.apk'"
+    "phone": "./app/env.sh sh -c 'A=\"$ANDROID_HOME/platform-tools/adb\"; D=$($A devices | awk \"NR==2{print \\$1}\"); $A -s \"$D\" install -r dist/AgentView.apk'"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
