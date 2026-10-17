@@ -48,3 +48,12 @@ describe('repoKind', () => {
     expect(mod.repoKind(['Makefile'])).toBe('other');
   });
 });
+
+describe('createFolder', () => {
+  it('rejects unknown workspaces and names that leave the workspace', async () => {
+    await expect(mod.createFolder('elsewhere', 'x')).rejects.toThrow('Unknown workspace');
+    await expect(mod.createFolder('work', '../evil')).rejects.toThrow('Use letters');
+    await expect(mod.createFolder('work', 'a/b')).rejects.toThrow('Use letters');
+    await expect(mod.createFolder('work', '.hidden')).rejects.toThrow('Use letters');
+  });
+});

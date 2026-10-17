@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { listSessions } from '@anthropic-ai/claude-agent-sdk';
@@ -35,6 +35,7 @@ const pkgOf = (dir: string, names: string[]) => (names.includes('package.json') 
 const detectKind = async (cwd: string) => {
   const top = await readdir(cwd, { withFileTypes: true }).catch(() => []);
   const names = top.map((d) => d.name);
+  if (!names.some((n) => !n.startsWith('.'))) return 'new';
   const kind = repoKind(names, await pkgOf(cwd, names), path.basename(cwd));
   const weak = kind === 'docs' || kind === 'other' || (kind === 'service' && !['pyproject.toml', 'requirements.txt', 'go.mod', 'Cargo.toml'].some((n) => names.includes(n)));
   if (!weak) return kind;
@@ -46,18 +47,29 @@ const detectKind = async (cwd: string) => {
 
 export async function listRepos(): Promise<Repo[]> {
   const paseo = (await paseoProjects().catch(() => [])).map((p) => p.path);
-  const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(root, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory()).map((d) => path.join(root, d.name))));
+  const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(root, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory() && !d.name.startsWith('.')).map((d) => path.join(root, d.name))));
   const repos = await Promise.all(
     dirs.flat().map(async (cwd) => {
       const status = await git(cwd, 'status', '--porcelain', '-b').catch(() => null);
-      if (status === null) return null;
+      const base = { name: path.basename(cwd), root: path.basename(path.dirname(cwd)), kind: await detectKind(cwd), cwd, paseo: paseo.includes(cwd) };
+      if (status === null) return { ...base, branch: '', dirty: 0, lastCommit: (await stat(cwd).catch(() => null))?.mtimeMs ?? 0 };
       const [head, ...files] = status.split('\n');
       const branch = parseBranch(head);
       const lastCommit = Number(await git(cwd, 'log', '-1', '--format=%ct').catch(() => '0')) * 1000;
-      return { name: path.basename(cwd), root: path.basename(path.dirname(cwd)), kind: await detectKind(cwd), cwd, branch, dirty: files.filter(Boolean).length, lastCommit, paseo: paseo.includes(cwd) };
+      return { ...base, branch, dirty: files.filter(Boolean).length, lastCommit };
     }),
   );
-  return repos.filter((r) => r !== null);
+  return repos;
+}
+
+export async function createFolder(root: string, name: string) {
+  const base = ROOTS.find((r) => path.basename(r) === root);
+  if (!base) throw new Error(`Unknown workspace: ${root}`);
+  if (!/^[A-Za-z0-9][\w.-]*$/.test(name)) throw new Error('Use letters, numbers, dots, dashes and underscores');
+  const dir = path.join(base, name);
+  await mkdir(dir).catch((err) => { throw new Error(err.code === 'EEXIST' ? `${name} already exists` : err.message); });
+  await git(dir, 'init', '-b', 'main');
+  return dir;
 }
 
 export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
