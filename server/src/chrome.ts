@@ -2,6 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
 
 type Tab = { id: string; title: string; url: string; at: number };
@@ -28,9 +29,10 @@ let emulated: { session: string; key: string } | null = null;
 let viewport = { w: 0, h: 0 };
 let retryTimer: NodeJS.Timeout | null = null;
 let retryDelay = 2000;
-const RETRY = new Set(['disabled', 'nochrome', 'closed']);
+let fastUntil = 0;
+const RETRY = new Set(['disabled', 'nochrome', 'closed', 'nofda']);
 
-async function endpoint() {
+export async function endpoint() {
   if (process.env.CHROME_CDP) return process.env.CHROME_CDP;
   try {
     const [port, p] = (await readFile(PORT_FILE, 'utf8')).trim().split('\n');
@@ -42,7 +44,7 @@ async function endpoint() {
   }
 }
 
-function chromeRunning() {
+export function chromeRunning() {
   if (process.platform !== 'darwin') return Promise.resolve(true);
   return new Promise<boolean>((resolve) => execFile('pgrep', ['-x', 'Google Chrome'], (err) => resolve(!err)));
 }
@@ -51,6 +53,9 @@ async function failure(err: NodeJS.ErrnoException) {
   if (err.code === 'ECONNREFUSED') return (await chromeRunning()) ? 'disabled' : 'nochrome';
   if (/\b403\b/.test(err.message)) return 'denied';
   if (/\b404\b/.test(err.message)) return 'disabled';
+  if (/\b410\b/.test(err.message)) return 'nochrome';
+  if (/\b451\b/.test(err.message)) return 'nofda';
+  if (/\b504\b/.test(err.message)) return 'timeout';
   if (/handshake has timed out/i.test(err.message)) return 'timeout';
   return err.message;
 }
@@ -62,7 +67,20 @@ function retry() {
     retryTimer = null;
     void connect();
   }, retryDelay);
-  retryDelay = Math.min(retryDelay * 2, 30000);
+  retryDelay = Date.now() < fastUntil ? 1500 : Math.min(retryDelay * 2, 30000);
+}
+
+const SETUP_PAGE = 'chrome://inspect/#remote-debugging';
+
+function setup() {
+  fastUntil = Date.now() + 3 * 60_000;
+  retryDelay = 1500;
+  const run = (...args: string[]) => execFile('open', args, (err) => err && console.error('chrome setup:', err.message));
+  if (process.platform === 'darwin' && reason === 'nofda') {
+    run('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles');
+    run('-R', fileURLToPath(new URL('../../dist/AgentView.app', import.meta.url)));
+  } else if (process.platform === 'darwin') run('-a', 'Google Chrome', SETUP_PAGE);
+  if (state === 'off') setTimeout(() => void connect(), 1500);
 }
 
 function broadcast(m: object) {
@@ -340,6 +358,8 @@ async function input(m: any, ws: WebSocket) {
   switch (m.t) {
     case 'connect':
       return connect();
+    case 'setup':
+      return setup();
     case 'tab':
       pinned = typeof m.id === 'string' && tabs.has(m.id) ? m.id : null;
       if (pinned) await call('Target.activateTarget', { targetId: pinned }).catch(() => {});

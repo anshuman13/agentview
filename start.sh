@@ -2,15 +2,33 @@
 set -e
 cd "$(dirname "$0")"
 
-if [ ! -x dist/agentview-bar ] || [ menubar/AgentViewBar.swift -nt dist/agentview-bar ]; then
-  mkdir -p dist
-  swiftc -O menubar/AgentViewBar.swift -o dist/agentview-bar
+APP=dist/AgentView.app
+BIN=$APP/Contents/MacOS/AgentView
+if [ ! -x "$BIN" ] || [ menubar/AgentViewBar.swift -nt "$BIN" ] || [ start.sh -nt "$BIN" ]; then
+  mkdir -p "$APP/Contents/MacOS"
+  cat > "$APP/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>no.pradhan.agentview</string>
+  <key>CFBundleName</key><string>AgentView</string>
+  <key>CFBundleExecutable</key><string>AgentView</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>LSUIElement</key><true/>
+</dict>
+</plist>
+PLIST
+  swiftc -O menubar/AgentViewBar.swift -o "$BIN"
+  codesign --force --sign - --identifier no.pradhan.agentview "$APP"
 fi
-pkill -x agentview-bar 2>/dev/null || true
-nohup ./dist/agentview-bar >/dev/null 2>&1 &
 
-if lsof -nP -iTCP:7777 -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "AgentView is already running on http://localhost:5173"
-  exit 0
+pkill -x agentview-bar 2>/dev/null || true
+if pgrep -xq AgentView; then
+  echo "AgentView is running. Use the menu bar icon to restart the server, or quit it and run this again."
+else
+  open "$APP"
+  echo "AgentView is starting on http://localhost:5173 (logs in ~/.agentview/logs)"
 fi
-exec npm run serve

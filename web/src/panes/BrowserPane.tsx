@@ -144,7 +144,7 @@ export function BrowserPane() {
     if (url.trim()) send({ t: 'nav', url: url.trim() });
   };
 
-  if (state.state !== 'on') return <Connect state={state} onConnect={() => send({ t: 'connect' })} />;
+  if (state.state !== 'on') return <Connect state={state} onSetup={() => send({ t: 'setup' })} />;
 
   return (
     <div className="browser-pane">
@@ -198,49 +198,47 @@ export function BrowserPane() {
 }
 
 const REASONS: Record<string, string> = {
-  nofda: 'macOS blocks AgentView from reading Chrome\'s profile folder. Give your terminal app Full Disk Access (System Settings, Privacy & Security), then restart AgentView from that terminal.',
-  nochrome: 'Chrome is not running. Open Chrome and AgentView connects on its own.',
-  denied: 'Chrome refused the connection. Click Connect, then Allow in the dialog Chrome shows.',
-  timeout: 'Chrome did not answer. Click Connect, then Allow in the dialog Chrome shows.',
+  nofda: 'macOS blocks AgentView from finding Chrome until AgentView has Full Disk Access.',
+  nochrome: 'Chrome is not running.',
+  disabled: 'Chrome is running, but remote debugging is off.',
+  denied: 'Chrome refused the connection.',
+  timeout: 'Chrome did not answer in time.',
   closed: 'The connection to Chrome closed.',
   server: 'The AgentView server is not reachable.',
 };
 
-function Connect({ state, onConnect }: { state: State; onConnect: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const [tried, setTried] = useState(false);
-  const address = 'chrome://inspect/#remote-debugging';
+function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
+  const [asked, setAsked] = useState(false);
   if (state.state === 'connecting') {
     return (
       <div className="browser-pane">
         <div className="empty-state">
           <Icon name="loading" spin />
           <div className="empty-title">Connecting to Chrome</div>
-          <div className="muted small">If Chrome on your Mac asks to allow remote debugging, click Allow.</div>
+          <div className="muted small">If Chrome asks to allow remote debugging, click Allow.</div>
         </div>
       </div>
     );
   }
+  const fda = state.reason === 'nofda';
   return (
     <div className="browser-pane">
       <div className="empty-state chrome-setup">
         <Icon name="globe" />
         <div className="empty-title">Show your Chrome here</div>
-        {state.reason === 'disabled' ? (
-          <ol className="muted small">
-            <li>
-              In Chrome on your Mac, open <code>{address}</code>
-              <button className="link" onClick={() => { void navigator.clipboard?.writeText(address); setCopied(true); }}>{copied ? 'Copied' : 'Copy'}</button>
-            </li>
-            <li>Tick "Allow remote debugging for this browser instance". The page should then say "Server running at 127.0.0.1:9222". If it doesn't, quit and reopen Chrome and tick it again.</li>
-            <li>Click Connect, then Allow in the dialog Chrome shows.</li>
-          </ol>
-        ) : (
-          <div className="muted small">{REASONS[state.reason] ?? state.reason}</div>
+        <div className="muted small">{REASONS[state.reason] ?? state.reason}</div>
+        {state.reason !== 'server' && (
+          <button className="primary" onClick={() => { setAsked(true); onSetup(); }}>
+            {fda ? 'Open Full Disk Access settings' : 'Connect Chrome'}
+          </button>
         )}
-        {tried && state.reason === 'disabled' && <div className="small error-text">Chrome isn't accepting connections yet, so step 2 hasn't taken effect.</div>}
-        {state.retry && <div className="muted small">Trying again automatically.</div>}
-        {state.reason !== 'server' && <button className="primary" onClick={() => { setTried(true); onConnect(); }}>Connect</button>}
+        {asked && (
+          <div className="muted small">
+            {fda
+              ? 'Drag AgentView from the Finder window into the Full Disk Access list and turn it on. AgentView connects on its own; if it does not, quit and reopen it from the menu bar.'
+              : 'In the Chrome tab that opened, tick "Allow remote debugging for this browser instance", then click Allow. AgentView connects on its own.'}
+          </div>
+        )}
       </div>
     </div>
   );

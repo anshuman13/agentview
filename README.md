@@ -9,14 +9,17 @@ npm install
 ./start.sh
 ```
 
-Opens on http://localhost:5173 (server on :7777). `start.sh` also starts the menu bar app that keeps the Mac awake.
+`start.sh` builds and opens `dist/AgentView.app`, a menu bar app that runs everything: the server on :7777, vite on
+:5173 and a small Chrome relay on :7779. It restarts any of them that exit, keeps the Mac awake, and has menu items
+for Open AgentView, Restart server, Show logs (`~/.agentview/logs`) and Open at login. Quitting it stops AgentView.
+To restart only the server from a shell, kill whatever listens on :7777 and the app starts it again.
+
 It uses the Claude Code CLI you have installed and its login.
 
 | Command | |
 | --- | --- |
 | `npm run serve` | Server and vite, no reload on server changes (running turns survive edits) |
 | `npm run dev` | Same, with server reload |
-| `npm run menubar` | Build and start the keep-awake menu bar app |
 | `npm test` | Unit tests |
 
 `PROJECT_DIR=/path` sets the folder for the very first chat. After that AgentView reopens the last chat you viewed.
@@ -46,11 +49,13 @@ A failed compact is not retried.
 
 Chats use Claude in Chrome, so Claude browses with your logins. Playwright is off.
 
-To show that Chrome in the Browser tab: open `chrome://inspect/#remote-debugging`, tick "Allow remote debugging for
-this browser instance", then click Connect in the Browser tab.
+To show that Chrome in the Browser tab, click Connect Chrome there. It opens Chrome's remote debugging page; tick
+"Allow remote debugging for this browser instance" and click Allow. Chrome turns that checkbox off when it restarts.
 
-macOS only lets apps with Full Disk Access read Chrome's profile folder, so start AgentView from a terminal that has it
-(System Settings → Privacy & Security → Full Disk Access). Otherwise the Browser tab can't connect.
+The relay in AgentView.app holds the Chrome connection, so server restarts do not bring back Chrome's Allow dialog.
+It reads Chrome's port file, which macOS only allows with Full Disk Access: add `dist/AgentView.app` once under
+System Settings, Privacy & Security, Full Disk Access (the Browser tab has a button for it). The grant is tied to the
+build, so it has to be redone when `menubar/AgentViewBar.swift` changes.
 
 ## Pages
 
