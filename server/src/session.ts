@@ -269,9 +269,6 @@ export class AgentSession {
     const loop = this.state.session.loop;
     if (toolName.endsWith('__set_status')) return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
     if (toolName !== 'ExitPlanMode' || loop.phase !== 'plan') return null;
-    this.setSession({ loop: { ...loop, phase: 'build' } });
-    this.pushEvent({ id: randomUUID(), kind: 'user', text: 'Build', at: Date.now(), phase: 'build' });
-    void this.setPermissionMode('auto');
     return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
   }
 
