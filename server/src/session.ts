@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import os from 'node:os';
 import path from 'node:path';
+import { watch, type FSWatcher } from 'node:fs';
 import { query, getSessionMessages, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
@@ -12,6 +14,8 @@ export { BIG_BRO };
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
+const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+const transcriptPath = (cwd: string, sessionId: string) => path.join(CLAUDE_DIR, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'), `${sessionId}.jsonl`);
 
 export class AgentSession {
   private q: Query | null = null;
@@ -38,6 +42,11 @@ export class AgentSession {
   private liveMsgId = '';
 
   private resumedAuto = false;
+
+  private transcript: FSWatcher | null = null;
+  private transcriptTimer: NodeJS.Timeout | undefined;
+  private seen = '';
+  private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
@@ -75,7 +84,9 @@ export class AgentSession {
   }
 
   private setSession(patch: Partial<SessionInfo>) {
+    const wasRunning = this.state.session.running;
     this.state.session = { ...this.state.session, ...patch };
+    if (wasRunning && patch.running === false) setTimeout(() => void this.syncTranscript(true), 500);
     this.emit({ type: 'session', session: this.state.session });
   }
 
@@ -88,8 +99,50 @@ export class AgentSession {
     this.noteFile(rel, 'watcher');
   }
 
+  watchTranscript(on: boolean) {
+    const sessionId = this.state.session.sessionId;
+    if (!on || !sessionId || this.closed) {
+      this.transcript?.close();
+      this.transcript = null;
+      return;
+    }
+    if (this.transcript) return;
+    try {
+      this.transcript = watch(transcriptPath(this.cwd, sessionId), () => {
+        clearTimeout(this.transcriptTimer);
+        this.transcriptTimer = setTimeout(() => void this.syncTranscript(false), 300);
+      }).on('error', () => this.watchTranscript(false));
+    } catch {
+      return;
+    }
+    void this.syncTranscript(false);
+  }
+
+  private async syncTranscript(ownTurn: boolean) {
+    const sessionId = this.state.session.sessionId;
+    if (!sessionId || this.closed || this.state.session.running) return;
+    const msgs = await getSessionMessages(sessionId, { dir: this.cwd }).catch(() => null);
+    const last = msgs?.at(-1)?.uuid;
+    if (!msgs || !last || last === this.seen || this.state.session.running) return;
+    const baseline = ownTurn || !this.seen;
+    this.seen = last;
+    if (baseline) return;
+    const { events, context, cache } = historyFrom(msgs);
+    this.state.events = events;
+    Object.assign(this.state.session, { context, cache });
+    this.emit({ type: 'init', state: this.state });
+    if (!this.q) return;
+    const { model, team, permissionMode } = this.state.session;
+    this.restore = { model, team, permissionMode };
+    this.resume = sessionId;
+    const q = this.q;
+    this.q = null;
+    q.close();
+  }
+
   close() {
     this.closed = true;
+    this.watchTranscript(false);
     this.listeners.clear();
     this.approvals.denyAll();
     this.wake?.();
@@ -98,7 +151,9 @@ export class AgentSession {
 
   async loadHistory() {
     if (!this.resume) return;
-    const { events, context, cache } = historyFrom(await getSessionMessages(this.resume, { dir: this.cwd }));
+    const msgs = await getSessionMessages(this.resume, { dir: this.cwd });
+    this.seen = msgs.at(-1)?.uuid ?? '';
+    const { events, context, cache } = historyFrom(msgs);
     this.state.events.push(...events);
     Object.assign(this.state.session, { context, cache });
   }
@@ -116,6 +171,13 @@ export class AgentSession {
         afterTool: async (input) => this.afterTool(input),
       }),
     });
+    if (this.restore) {
+      const { model, team, permissionMode } = this.restore;
+      this.restore = null;
+      if (team) void this.q.applyFlagSettings({ advisorModel: TEAM.advisor }).catch(() => {});
+      if (model) void this.q.setModel(model).catch(() => {});
+      if (permissionMode) void this.q.setPermissionMode(permissionMode as PermissionMode).catch(() => {});
+    }
     void this.consume();
     void this.loadMeta();
   }
@@ -357,11 +419,12 @@ export class AgentSession {
   }
 
   private async consume() {
-    if (!this.q) return;
+    const q = this.q;
+    if (!q) return;
     try {
-      for await (const msg of this.q) this.handle(msg);
+      for await (const msg of q) this.handle(msg);
     } catch (err) {
-      this.system(`Session error: ${String(err)}`);
+      if (this.q === q) this.system(`Session error: ${String(err)}`);
     } finally {
       this.turns = 0;
       this.setSession({ running: false, stopping: false });

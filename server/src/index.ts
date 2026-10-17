@@ -66,6 +66,7 @@ let liveTimer: NodeJS.Timeout | null = null;
 function broadcastLive() {
   liveTimer ??= setTimeout(() => {
     liveTimer = null;
+    for (const { chat } of live.values()) chat.watchTranscript(viewers(chat) > 0);
     const chats = [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
     clients.forEach((c) => c.send({ type: 'live', chats }));
   }, 100);
