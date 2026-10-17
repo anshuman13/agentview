@@ -17,8 +17,6 @@ const VIEWS = [
   ['github', 'GitHub Pull Requests'],
   ['chats', 'Chats'],
   ['sessions', 'Workspace'],
-  ['observe', 'Observe'],
-  ['deploy', 'Deploy'],
 ];
 const TABS = [['chat', 'Chat'], ['code', 'Code'], ['term', 'Terminal'], ['browser', 'Browser']];
 const MODES: Record<string, string> = { default: 'Default', acceptEdits: 'Accept edits', plan: 'Plan mode', auto: 'Auto mode', dontAsk: "Don't ask" };
@@ -28,6 +26,9 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
     { id: 'terminal', label: 'View: Toggle Terminal', key: '⌘J' },
+    { id: 'page:observe', label: 'View: Observe' },
+    { id: 'page:deploy', label: 'View: Deploy' },
+    { id: 'page:mcp', label: 'View: MCP Servers' },
     { id: 'file', label: 'Go to File', key: '⌘P' },
     { id: 'repo', label: 'Chat: Open Repository', key: '⌘O' },
     { id: 'newChat', label: 'Chat: New Chat' },

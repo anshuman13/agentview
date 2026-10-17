@@ -1,7 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 
 export type McpServerDef = { type?: string; command?: string; args?: string[]; env?: Record<string, string>; url?: string; headers?: Record<string, string> };
-export type McpTool = { name: string; description?: string; inputSchema?: unknown };
+export type McpTool = { name: string; description?: string; inputSchema?: unknown; annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean } };
+export type McpInfo = { name?: string; version?: string };
 export type McpContent = { type: string; text?: string; [k: string]: unknown };
 export type McpResult = { content?: McpContent[]; structuredContent?: unknown; isError?: boolean };
 
@@ -13,6 +14,7 @@ type Pending = { resolve: (v: any) => void; reject: (e: Error) => void; timer: N
 interface Transport {
   ready: Promise<void>;
   dead: boolean;
+  info?: McpInfo;
   request(method: string, params: unknown, timeout: number): Promise<any>;
   stop(): void;
 }
@@ -24,6 +26,7 @@ class Stdio implements Transport {
   private stderr = '';
   private nextId = 1;
   dead = false;
+  info?: McpInfo;
   ready: Promise<void>;
 
   constructor(private key: string, def: McpServerDef, timeout: number) {
@@ -33,7 +36,10 @@ class Stdio implements Transport {
     this.proc.stderr!.setEncoding('utf8').on('data', (c: string) => (this.stderr = (this.stderr + c).slice(-4000)));
     this.proc.on('error', (err) => this.die(`${key} failed to start: ${err.message}`));
     this.proc.on('exit', (code, signal) => this.die(`${key} exited (${code ?? signal})`));
-    this.ready = this.request('initialize', INIT, timeout).then(() => this.notify('notifications/initialized'));
+    this.ready = this.request('initialize', INIT, timeout).then((r) => {
+      this.info = r?.serverInfo;
+      this.notify('notifications/initialized');
+    });
     this.ready.catch(() => {});
   }
 
@@ -100,10 +106,14 @@ class Http implements Transport {
   private session = '';
   private nextId = 1;
   dead = false;
+  info?: McpInfo;
   ready: Promise<void>;
 
   constructor(private key: string, private def: McpServerDef, timeout: number) {
-    this.ready = this.request('initialize', INIT, timeout).then(() => this.post({ jsonrpc: '2.0', method: 'notifications/initialized' }, timeout).then(() => {}));
+    this.ready = this.request('initialize', INIT, timeout).then((r) => {
+      this.info = r?.serverInfo;
+      return this.post({ jsonrpc: '2.0', method: 'notifications/initialized' }, timeout).then(() => {});
+    });
     this.ready.catch(() => (this.dead = true));
   }
 
@@ -183,6 +193,18 @@ export function data(r: McpResult): unknown {
   } catch {
     return t;
   }
+}
+
+export async function probe(key: string, def: McpServerDef, timeout = 12_000): Promise<{ info?: McpInfo; tools: McpTool[] }> {
+  const c = client(key, def, timeout);
+  await c.ready;
+  const r = await c.request('tools/list', {}, timeout);
+  return { info: c.info, tools: r?.tools ?? [] };
+}
+
+export function has(key: string) {
+  const c = clients.get(key);
+  return !!c && !c.dead;
 }
 
 export function pidOf(key: string) {

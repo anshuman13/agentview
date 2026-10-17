@@ -55,9 +55,21 @@ export type LoopPhase = 'plan' | 'build' | 'test' | 'passed' | 'failed';
 
 export type LoopState = { on: boolean; max: number; round: number; phase: LoopPhase | null };
 
-export type McpServer = { name: string; status: string; tools?: number; error?: string };
+export type McpTool = { name: string; description?: string; readOnly?: boolean; destructive?: boolean };
 
-export type McpConfigEntry = { name: string; scope: 'user' | 'local' | 'project'; type: string };
+export type McpServer = {
+  name: string;
+  status: string;
+  scope?: string;
+  type?: string;
+  command?: string;
+  env?: string[];
+  version?: string;
+  error?: string;
+  tools?: McpTool[];
+};
+
+export type McpConfigEntry = { name: string; scope: 'user' | 'local' | 'project'; type: string; command?: string; env?: string[] };
 
 export const MCP_BAD = ['failed', 'needs-auth'];
 
@@ -149,7 +161,8 @@ export type ClientMessage =
   | { type: 'open_session'; sessionId: string }
   | { type: 'new_session'; cwd?: string }
   | { type: 'mcp_status' }
-  | { type: 'mcp_reconnect'; name: string };
+  | { type: 'mcp_reconnect'; name: string }
+  | { type: 'mcp_toggle'; name: string; enabled: boolean };
 
 export type GitFile = { path: string; status: 'M' | 'A' | 'D' | 'R' | '?'; staged: boolean };
 

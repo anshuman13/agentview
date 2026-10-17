@@ -10,7 +10,7 @@ import { connect as connectChrome, openChrome } from './chrome.js';
 import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway } from './notify.js';
-import { mcpConfig } from './mcp.js';
+import { mcpConfig, mcpProbe } from './mcp.js';
 import { listDir, listFiles, readFileWithOriginal } from './files.js';
 import { github } from './github.js';
 import { deployRoute } from './deploy.js';
@@ -214,6 +214,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/repos') return json(await listRepos());
     if (url.pathname.startsWith('/api/observe')) return json(await observe(req, url, chat.cwd));
     if (url.pathname === '/api/mcp/config') return json(await mcpConfig(chat.cwd));
+    if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
     if (url.pathname === '/api/sessions') {
       const list = await listSessions({ limit: 300 });
       return json(list.map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
@@ -315,6 +316,9 @@ wss.on('connection', (ws: WebSocket, req) => {
         break;
       case 'mcp_reconnect':
         void chat.reconnectMcp(String(msg.name));
+        break;
+      case 'mcp_toggle':
+        void chat.toggleMcp(String(msg.name), Boolean(msg.enabled));
         break;
       case 'new_session':
         newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);
