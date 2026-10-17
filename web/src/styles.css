@@ -428,8 +428,8 @@ button.link:hover { background: transparent; text-decoration: underline; }
 
 .brief {
   --brief-bg: var(--bg-raised);
-  flex: 0 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 10px;
-  margin: 12px; padding: 12px 12px 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--brief-bg);
+  flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 10px;
+  margin: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--brief-bg);
 }
 .brief .composer { padding: 0; max-width: none; }
 .brief .composer textarea { min-height: 64px; font-size: 14px; }
@@ -438,8 +438,8 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .ctx-line b { color: var(--err); font-weight: 600; font-variant-numeric: tabular-nums; }
 .ctx-line .codicon { color: var(--claude); }
 .ctx-line .link { font-size: 11px; line-height: 16px; margin-left: auto; }
-.brief-status { flex: 0 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: auto; }
-.brief-cards { flex: none; max-height: 50%; overflow: auto; padding-bottom: 12px; }
+.brief-status { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+.brief-cards { flex: none; max-height: 50%; overflow: auto; }
 .timeline-head {
   position: sticky; top: 0; z-index: 2; background: var(--brief-bg); flex: none;
   display: flex; align-items: center; gap: 6px; height: 22px; font-size: 11px; color: var(--fg-muted);

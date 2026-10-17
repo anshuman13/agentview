@@ -92,7 +92,7 @@ export function App() {
   const [phone, setPhone] = useState(false);
   const [chatW, setChatW] = useState(() => stored('agentview.chatW', 480));
   const [termH, setTermH] = useState(() => stored('agentview.termH', 240));
-  const [terminal, setTerminal] = useState(true);
+  const [terminal, setTerminal] = useState(false);
   const [termOpened, setTermOpened] = useState(terminal && window.innerWidth > 900);
   const notifying = useNotify();
   const [theme, toggleTheme] = useTheme();

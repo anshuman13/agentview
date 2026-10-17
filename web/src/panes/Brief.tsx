@@ -101,17 +101,6 @@ export function Brief() {
 
   return (
     <div className="brief">
-      <div className="brief-input">
-        <Composer />
-        {compacting ? (
-          <div className="ctx-line"><Icon name="loading" small spin /> Compacting the conversation…</div>
-        ) : context !== null && context >= COMPACT_AT && (
-          <div className="ctx-line">
-            <span><b>{Math.round(context / 1000)}k</b> context · {running ? 'compacts when this turn ends' : 'compact to keep turns cheap'}</span>
-            {!running && <button className="link" title="Run /compact" onClick={() => send({ type: 'prompt', text: '/compact' })}>Compact now</button>}
-          </div>
-        )}
-      </div>
       <div className="brief-status">
         <div className="timeline-head">
           <span className="tl-tabs">
@@ -154,6 +143,17 @@ export function Brief() {
         </div>
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}
+      <div className="brief-input">
+        <Composer />
+        {compacting ? (
+          <div className="ctx-line"><Icon name="loading" small spin /> Compacting the conversation…</div>
+        ) : context !== null && context >= COMPACT_AT && (
+          <div className="ctx-line">
+            <span><b>{Math.round(context / 1000)}k</b> context · {running ? 'compacts when this turn ends' : 'compact to keep turns cheap'}</span>
+            {!running && <button className="link" title="Run /compact" onClick={() => send({ type: 'prompt', text: '/compact' })}>Compact now</button>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
