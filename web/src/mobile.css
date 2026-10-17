@@ -11,8 +11,8 @@
 
   .pane.side, .pane.center { flex-direction: column; min-height: 0; }
   .main { display: flex; flex-direction: column; }
-  .brief { display: contents; }
-  .brief-status { order: 0; flex: 1 1 0; min-height: 0; overflow: auto; padding: 6px 12px 8px; background: var(--side); border-bottom: 1px solid var(--border); }
+  .brief { display: contents; --brief-bg: var(--bg); }
+  .brief-status { order: 0; flex: 1 1 0; min-height: 0; overflow: auto; padding: 6px 12px 8px; background: var(--bg); border-bottom: 1px solid var(--border); }
   .brief-cards { order: 1; flex: none; max-height: 50%; overflow: auto; padding: 8px 12px; }
   .brief-input { order: 2; flex: none; padding: 6px 12px 8px; }
   .step .acts { opacity: 1; }
@@ -44,7 +44,7 @@
   .brief-cards .card { padding: 12px; }
   .brief-cards .card .row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
   .brief-cards .card button { min-height: 44px; }
-  .brief-cards .card .row button:not(.primary) { border-color: var(--input-border); background: var(--side); }
-  .brief-cards .card .option { justify-content: center; padding: 10px 12px; border-color: var(--input-border); border-radius: 6px; }
+  .brief-cards .card .row button:not(.primary) { border-color: var(--border-strong); background: var(--bg-raised); }
+  .brief-cards .card .option { justify-content: center; padding: 10px 12px; border-color: var(--border-strong); border-radius: var(--radius-sm); }
   .brief-cards .card input { min-height: 44px; font-size: 16px; }
 }

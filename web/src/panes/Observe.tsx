@@ -3,7 +3,7 @@ import type { ObserveInfo, SentryIssue } from '../../../shared/observe';
 import type { Repo } from '../../../shared/protocol';
 import { api, send, useStore } from '../store';
 import { Icon } from '../Icon';
-import './observe.css';
+import '../observe.css';
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);

@@ -2,9 +2,9 @@
 .term-pane { position: absolute; inset: 0; }
 .term-pane:not(.on) { visibility: hidden; }
 .term-bar { display: flex; align-items: center; gap: 2px; min-width: 0; overflow-x: auto; cursor: default; }
-.term-tab { display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 2px 0 6px; border-radius: 3px; color: var(--muted); white-space: nowrap; cursor: pointer; text-transform: none; }
-.term-tab:hover { background: var(--hover); color: var(--text-strong); }
-.term-tab.on { background: rgba(90, 93, 94, 0.31); color: var(--text-strong); }
+.term-tab { display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 2px 0 8px; border-radius: var(--radius-sm); color: var(--fg-muted); white-space: nowrap; cursor: pointer; text-transform: none; }
+.term-tab:hover { background: var(--bg-hover); color: var(--fg); }
+.term-tab.on { background: var(--accent-soft); color: var(--fg); }
 .term-tab .icon-btn { width: 18px; height: 18px; visibility: hidden; }
 .term-tab:hover .icon-btn, .term-tab.on .icon-btn { visibility: visible; }
 .term-bar > .icon-btn { width: 22px; height: 22px; }

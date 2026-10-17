@@ -1,58 +1,56 @@
 .observe { display: flex; flex-direction: column; flex: 1; min-height: 0; font-size: 13px; }
-.observe .obs-picker { display: flex; align-items: center; gap: 6px; padding: 0 12px 8px 12px; color: var(--muted); }
+.observe .obs-picker { display: flex; align-items: center; gap: 6px; padding: 0 12px 8px 12px; color: var(--fg-muted); }
 .observe .obs-picker input {
-  flex: 1; min-width: 0; height: 24px; padding: 0 6px; font-size: 13px; color: var(--text);
-  background: var(--input); border: 1px solid var(--input-border); border-radius: 2px;
+  flex: 1; min-width: 0; height: 24px; padding: 0 8px; font-size: 13px; color: var(--fg);
+  background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
 .observe .obs-picker input:focus { outline: 0; border-color: var(--accent); }
 .observe .obs-picker .icon-btn { width: 20px; height: 20px; }
 .observe .obs-scroll { flex: 1; min-height: 0; overflow: auto; }
-.observe .obs-hint { padding: 4px 12px; font-size: 12px; color: var(--muted); word-break: break-word; display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-.observe .obs-hint.error, .observe .error { color: var(--red); }
-.observe .obs-hint.setup { margin: 0 12px 8px; padding: 6px 8px; display: block; color: var(--text); border: 1px solid var(--input-border); border-left: 2px solid var(--yellow); }
+.observe .obs-hint { padding: 4px 12px; font-size: 12px; color: var(--fg-muted); word-break: break-word; display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.observe .obs-hint.error, .observe .error { color: var(--err); }
+.observe .obs-hint.setup { margin: 0 12px 8px; padding: 8px 10px; display: block; color: var(--fg); background: var(--bg-raised); border: 1px solid var(--border); border-left: 2px solid var(--warn); border-radius: var(--radius-sm); }
 .observe .obs-hint.mono { font-family: var(--mono); font-size: 11px; }
 .observe .obs-head {
   height: 22px; display: flex; align-items: center; gap: 2px; padding: 0 8px 0 4px; cursor: pointer;
-  font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text); border-top: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg); border-top: 1px solid var(--border);
 }
 .observe .obs-head .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .observe .obs-head .acts { display: inline-flex; }
 .observe .obs-head .icon-btn { width: 20px; height: 20px; }
 .observe .obs-body { padding: 2px 0 10px; }
 .observe .obs-issue { padding: 5px 12px 5px 10px; border-left: 2px solid transparent; }
-.observe .obs-issue:hover { background: var(--hover); }
-.observe .obs-issue.level-error, .observe .obs-issue.level-fatal { border-left-color: var(--red); }
-.observe .obs-issue.level-warning { border-left-color: var(--yellow); }
-.observe .obs-issue .title { color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.observe .obs-issue .culprit { font-size: 12px; color: var(--muted); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.observe .obs-issue .meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.observe .obs-issue:hover { background: var(--bg-hover); }
+.observe .obs-issue.level-error, .observe .obs-issue.level-fatal { border-left-color: var(--err); }
+.observe .obs-issue.level-warning { border-left-color: var(--warn); }
+.observe .obs-issue .title { color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.observe .obs-issue .culprit { font-size: 12px; color: var(--fg-muted); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.observe .obs-issue .meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 11px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 .observe .obs-issue .meta .spacer { flex: 1; }
-.observe .obs-issue .meta .icon-btn { width: 20px; height: 20px; color: var(--muted); }
+.observe .obs-issue .meta .icon-btn { width: 20px; height: 20px; color: var(--fg-muted); }
 .observe .obs-ask {
-  height: 20px; padding: 0 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
-  color: var(--text-strong); background: var(--claude-button); border-radius: 2px;
+  height: 20px; padding: 0 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; border: 0;
+  color: var(--claude); background: color-mix(in srgb, var(--claude) 16%, transparent); border-radius: var(--radius-sm);
 }
-.observe .obs-ask:hover { background: var(--claude); }
+.observe .obs-ask:hover { background: color-mix(in srgb, var(--claude) 28%, transparent); }
 .observe .obs-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 12px; }
 .observe .obs-chip {
   display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; font-size: 12px;
-  color: var(--text); text-decoration: none; background: var(--input); border: 1px solid var(--input-border); border-radius: 11px;
+  color: var(--fg); text-decoration: none; background: var(--border); border: 1px solid transparent; border-radius: var(--radius-sm);
 }
-.observe .obs-chip:hover { border-color: var(--accent); color: var(--text-strong); }
-.observe .obs-link { display: inline-flex; align-items: center; gap: 4px; padding: 2px 12px; font-size: 12px; color: #4daafc; text-decoration: none; }
+.observe .obs-chip:hover { background: var(--border-strong); }
+.observe .obs-link { display: inline-flex; align-items: center; gap: 4px; padding: 2px 12px; font-size: 12px; color: var(--link); text-decoration: none; }
 .observe .obs-link:hover { text-decoration: underline; }
 .observe .obs-quick { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 2px; }
 .observe .obs-quick button {
-  height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 12px; text-align: left;
-  color: var(--text); background: var(--input); border: 1px solid var(--input-border); border-radius: 2px;
+  height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 12px; text-align: left; color: var(--fg);
 }
-.observe .obs-quick button:hover:not(:disabled) { border-color: var(--accent); color: var(--text-strong); }
 .observe .obs-quick button:disabled { opacity: 0.5; cursor: default; }
 .observe .obs-editor {
-  display: block; width: calc(100% - 24px); margin: 4px 12px; padding: 4px 6px; resize: vertical;
-  font-family: var(--mono); font-size: 12px; line-height: 17px; color: var(--text);
-  background: var(--input); border: 1px solid var(--input-border); border-radius: 2px; box-sizing: border-box;
+  display: block; width: calc(100% - 24px); margin: 4px 12px; padding: 6px 8px; resize: vertical;
+  font-family: var(--mono); font-size: 12px; line-height: 17px; color: var(--fg);
+  background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); box-sizing: border-box;
 }
 .observe .obs-editor:focus { outline: 0; border-color: var(--accent); }
 .observe .obs-save { display: flex; align-items: center; gap: 8px; padding: 4px 12px; font-size: 12px; }
-.observe .obs-save button.primary { height: 26px; padding: 0 14px; border-radius: 2px; }
+.observe .obs-save button.primary { height: 26px; padding: 0 14px; border-radius: var(--radius-sm); }
