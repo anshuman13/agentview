@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactN
 import { api, send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
-import { fileIcon } from './Explorer';
+import { FileIcon } from './Explorer';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import '../github.css';
@@ -225,7 +225,7 @@ function Files({ files, diffs }: { files: PullRequestDetail['files']; diffs: Map
           <div key={f.path}>
             <div className="gh-item click" onClick={() => setOpen(shown ? null : f.path)} title={f.path}>
               <Icon name={shown ? 'chevron-down' : 'chevron-right'} small />
-              <Icon name={fileIcon(name)} small />
+              <FileIcon name={name} />
               <span className="gh-fname">{name}</span>
               <span className="gh-fdir">{f.path.slice(0, -name.length - 1)}</span>
               <Counts a={f.additions} d={f.deletions} />

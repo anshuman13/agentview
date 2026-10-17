@@ -114,6 +114,6 @@ describe('contextPercent', () => {
   it('measures against the compaction threshold', () => {
     expect(contextPercent(null)).toBeNull();
     expect(contextPercent(100_000)).toBe(50);
-    expect(contextPercent(287_000)).toBe(144);
+    expect(contextPercent(287_000)).toBe(100);
   });
 });

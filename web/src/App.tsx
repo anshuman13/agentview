@@ -6,7 +6,7 @@ import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Palette } from './panes/Palette';
-import { Explorer } from './panes/Explorer';
+import { Explorer, FileIcon } from './panes/Explorer';
 import { Changes, ChangesBadge } from './panes/Changes';
 import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
@@ -203,14 +203,14 @@ export function App() {
           {mobileExplorer && <div className="mobile-only mobile-explorer-host"><Explorer /></div>}
           <div className="tabs">
             <button className={`tab ${showing === 'file' ? 'active' : ''}`} onClick={() => setEditor('file')} title={openFile ?? 'Files (⌘E to switch)'}>
-              <Icon name="file" small /> {fileName ?? 'File'}
+              {fileName ? <FileIcon name={fileName} /> : <Icon name="file" small />} {fileName ?? 'File'}
               {openFile && (
                 <span className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
                   <Icon name="close" small />
                 </span>
               )}
             </button>
-            <button className={`tab ${showing === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')} title="Browser (⌘E to switch)">
+            <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => setEditor('browser')} title="Browser (⌘E to switch)">
               <Icon name="globe" small /> Browser
             </button>
           </div>
@@ -238,7 +238,7 @@ export function App() {
 
       <footer className="statusbar desktop-only">
         <span className="item project clickable" title={`${session.cwd}\nStart a chat in another repo (⌘O)`} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</span>
-        <span className={`item ${session.running ? 'busy' : ''}`}>
+        <span className={`item ${session.running ? 'busy' : 'idle'}`}>
           <Icon name={session.running ? 'loading' : 'check'} small spin={session.running} /> {session.running ? 'Working' : 'Idle'}
         </span>
         {!['Idle', 'Working', 'Connecting'].includes(status) && <span className="item status-text">{status}</span>}

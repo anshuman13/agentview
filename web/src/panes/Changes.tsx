@@ -3,7 +3,7 @@ import type { GitFile, GitStatus } from '../../../shared/protocol';
 import { api, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
-import { fileIcon } from './Explorer';
+import { FileIcon } from './Explorer';
 import '../changes.css';
 
 let git: { status: GitStatus | null; error: string } = { status: null, error: '' };
@@ -88,7 +88,7 @@ function FileRow({ file, selected, actions }: { file: GitFile; selected: boolean
   const letter = letterOf(file);
   return (
     <div className={`scm-row s-${letter}${selected ? ' selected' : ''}`} title={file.path} onClick={() => setUi({ openFile: file.path, follow: false })}>
-      <Icon name={fileIcon(name)} small />
+      <FileIcon name={name} />
       <span className="scm-name">{name}</span>
       {dir && <span className="scm-dir">{dir}</span>}
       <span className="scm-acts">{actions}</span>

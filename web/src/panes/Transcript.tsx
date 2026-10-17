@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
-import { fileIcon } from './Explorer';
+import { FileIcon } from './Explorer';
 import { buildTranscript, duration, firstLine, relPath, stepLabel, type Item, type ToolResult, type ToolUse } from './steps';
 import type { ChatEvent } from '../../../shared/protocol';
 import '../transcript.css';
@@ -95,7 +95,7 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
   const name = rel.slice(cut + 1);
   return (
     <div className={`tr-file tr-act ${it.error ? 'err' : ''}`} title={rel} onClick={() => setUi({ openFile: rel, follow: false })}>
-      <Icon name={fileIcon(name)} small />
+      <FileIcon name={name} />
       <span className="tr-path"><span className="tr-dir">{cut >= 0 ? rel.slice(0, cut + 1) : ''}</span>{name}</span>
       {it.error ? (
         <span className="tr-err">{it.error}</span>

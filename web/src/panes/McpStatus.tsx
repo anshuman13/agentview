@@ -14,7 +14,7 @@ export function McpItem() {
   return (
     <>
       <span className="item clickable" title="MCP servers" onClick={() => setOpen((v) => !v)}>
-        {bad && <span className="mcp-dot bad" />} MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
+        <span className={`mcp-dot ${bad ? 'bad' : ok ? 'ok' : 'off'}`} /> MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
       </span>
       {open && <McpStatus onClose={() => setOpen(false)} />}
     </>

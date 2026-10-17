@@ -3,7 +3,7 @@ import { api, notice, send, steer, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../QuickPick';
-import { fileIcon } from './Explorer';
+import { FileIcon } from './Explorer';
 import { match } from './FileSwitcher';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import '../composer.css';
@@ -316,7 +316,7 @@ export function Composer() {
             const base = f.lastIndexOf('/') + 1;
             return (
               <li key={f} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} title={f} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
-                <Icon name={fileIcon(f)} small />
+                <FileIcon name={f} />
                 <span className="cp-name">{hl(f.slice(base), r.hits, base)}</span>
                 <span className="cp-detail">{hl(f.slice(0, Math.max(base - 1, 0)), r.hits)}</span>
               </li>

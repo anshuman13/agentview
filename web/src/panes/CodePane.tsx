@@ -12,7 +12,7 @@ import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
 import { api, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
-import { fileIcon } from './Explorer';
+import { FileIcon } from './Explorer';
 import '../code.css';
 
 function lang(path: string) {
@@ -62,7 +62,7 @@ function Breadcrumbs({ path }: { path: string }) {
         <Fragment key={i}>
           {i > 0 && <Icon name="chevron-right" small />}
           <span className="cd-crumb">
-            {i === parts.length - 1 && <Icon name={fileIcon(p)} small />}
+            {i === parts.length - 1 && <FileIcon name={p} />}
             {p}
           </span>
         </Fragment>

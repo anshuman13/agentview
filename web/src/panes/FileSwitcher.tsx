@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, setUi, useStore } from '../store';
 import { useOpened } from './CodePane';
-import { fileIcon } from './Explorer';
+import { FileIcon } from './Explorer';
 import { Icon } from '../Icon';
 
 const cache = new Map<string, string[]>();
@@ -77,7 +77,7 @@ export function FileSwitcher() {
             const label = i === 0 && recent ? 'recently opened' : !recent && results[i - 1]?.recent ? 'file results' : '';
             return (
               <li key={f} className={i === idx ? 'active' : ''} onClick={() => pick(f)} title={f}>
-                <Icon name={fileIcon(f)} small />
+                <FileIcon name={f} />
                 <span className="fs-name"><Hl text={f.slice(base)} from={base} hits={m.hits} /></span>
                 <span className="fs-dir"><Hl text={f.slice(0, Math.max(base - 1, 0))} from={0} hits={m.hits} /></span>
                 {label && <span className="fs-group">{label}</span>}

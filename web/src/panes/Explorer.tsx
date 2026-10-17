@@ -24,12 +24,86 @@ const save = (key: string, v: unknown) => {
 const parentOf = (p: string) => p.slice(0, Math.max(p.lastIndexOf('/'), 0));
 const ancestors = (p: string) => p.split('/').slice(0, -1).map((_, i, a) => a.slice(0, i + 1).join('/'));
 
+const BLUE = '#519aba';
+const YELLOW = '#cbcb41';
+const PURPLE = '#a074c4';
+const ORANGE = '#e37933';
+const GREEN = '#8dc149';
+const RED = '#cc3e44';
+const PINK = '#f55385';
+const CYAN = '#4fc1cf';
+const GRAY = '#6d8086';
+const FOLDER = '#dcb67a';
+
+type Kind = [icon: string, color: string];
+
+const BY_NAME: Record<string, Kind> = {
+  'package.json': ['json', GREEN],
+  'package-lock.json': ['json', GRAY],
+  'yarn.lock': ['lock', GRAY],
+  'pnpm-lock.yaml': ['lock', GRAY],
+  'cargo.lock': ['lock', GRAY],
+  'poetry.lock': ['lock', GRAY],
+  'uv.lock': ['lock', GRAY],
+  'go.sum': ['lock', GRAY],
+  dockerfile: ['package', BLUE],
+  makefile: ['tools', GRAY],
+  license: ['law', YELLOW],
+  '.gitignore': ['git-commit', GRAY],
+  '.gitattributes': ['git-commit', GRAY],
+  '.npmrc': ['settings-gear', GRAY],
+  '.nvmrc': ['settings-gear', GRAY],
+  '.editorconfig': ['settings-gear', GRAY],
+  '.prettierrc': ['settings-gear', GRAY],
+  '.eslintrc': ['settings-gear', GRAY],
+};
+
+const BY_EXT: [RegExp, Kind][] = [
+  [/^readme\.mdx?$/i, ['book', BLUE]],
+  [/\.mdx?$/i, ['markdown', BLUE]],
+  [/\.tsx?$/i, ['file-code', BLUE]],
+  [/\.(jsx?|mjs|cjs)$/i, ['file-code', YELLOW]],
+  [/\.json[c5]?$/i, ['json', YELLOW]],
+  [/\.(css|scss|sass|less)$/i, ['symbol-color', PURPLE]],
+  [/\.(html?|vue|svelte|astro)$/i, ['code', ORANGE]],
+  [/\.py$/i, ['file-code', BLUE]],
+  [/\.go$/i, ['file-code', CYAN]],
+  [/\.rs$/i, ['file-code', ORANGE]],
+  [/\.swift$/i, ['file-code', ORANGE]],
+  [/\.kts?$/i, ['file-code', PURPLE]],
+  [/\.(java|rb|c|cc|cpp|h|hpp|cs)$/i, ['file-code', RED]],
+  [/\.(sh|bash|zsh|fish|bat|ps1)$/i, ['terminal', GREEN]],
+  [/\.ya?ml$/i, ['settings', PURPLE]],
+  [/\.(toml|ini|cfg|conf|properties)$/i, ['settings-gear', GRAY]],
+  [/\.sql$/i, ['database', PINK]],
+  [/\.(png|jpe?g|gif|svg|webp|ico|bmp|avif)$/i, ['file-media', PURPLE]],
+  [/\.pdf$/i, ['file-pdf', RED]],
+  [/\.(zip|tar|gz|tgz|bz2|7z|rar)$/i, ['file-zip', GRAY]],
+  [/\.(lock|lockb)$/i, ['lock', GRAY]],
+  [/\.env(\..*)?$/i, ['settings-gear', GRAY]],
+  [/\.(txt|log|csv)$/i, ['file-text', GRAY]],
+  [/\.(xml|plist|graphql|gql|prisma|proto)$/i, ['code', ORANGE]],
+];
+
+function kindOf(name: string): Kind {
+  const base = name.split('/').pop() ?? name;
+  const named = BY_NAME[base.toLowerCase()] ?? BY_NAME[base.toLowerCase().replace(/\..*$/, '')];
+  if (named) return named;
+  for (const [re, kind] of BY_EXT) if (re.test(base)) return kind;
+  return ['file', GRAY];
+}
+
 export function fileIcon(name: string) {
-  if (/\.mdx?$/i.test(name)) return 'markdown';
-  if (/\.json$/i.test(name)) return 'json';
-  if (/\.(png|jpe?g|gif|svg|webp|ico)$/i.test(name)) return 'file-media';
-  if (/\.(tsx?|jsx?|mjs|cjs|py|go|rs|swift|kt|java|rb|sh|css|html)$/i.test(name)) return 'file-code';
-  return 'file';
+  return kindOf(name)[0];
+}
+
+export function fileColor(name: string) {
+  return kindOf(name)[1];
+}
+
+export function FileIcon({ name, dir, open }: { name: string; dir?: boolean; open?: boolean }) {
+  if (dir) return <Icon name={open ? 'folder-opened' : 'folder'} small color={FOLDER} />;
+  return <Icon name={fileIcon(name)} small color={fileColor(name)} />;
 }
 
 export function Explorer() {
@@ -154,7 +228,7 @@ function ExplorerView({ cwd }: { cwd: string }) {
               <span className="ex-close" title="Close" onClick={(e) => { e.stopPropagation(); close(f); }}>
                 <Icon name="close" small />
               </span>
-              <Icon name={fileIcon(f)} small />
+              <FileIcon name={f} />
               <span className={`ex-name${recent.includes(f) ? ' changed' : ''}`}>{f.split('/').pop()}</span>
               <span className="ex-dir">{parentOf(f)}</span>
             </div>
@@ -198,7 +272,7 @@ function ExplorerView({ cwd }: { cwd: string }) {
               <span className="ex-twistie">
                 {r.dir && <Icon name={open && !dirs[r.path] ? 'loading' : open ? 'chevron-down' : 'chevron-right'} spin={open && !dirs[r.path]} small />}
               </span>
-              <Icon name={r.dir ? (open ? 'folder-opened' : 'folder') : fileIcon(r.name)} small />
+              <FileIcon name={r.name} dir={r.dir} open={open} />
               <span className={`ex-name${changed ? ' changed' : ''}`}>{r.name}</span>
               {changed && <span className="ex-m">M</span>}
             </div>
