@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import type { McpConfigEntry, McpServer, McpTool } from '../../shared/protocol.js';
-import { has, probe, stop, type McpServerDef } from './mcpClient.js';
+import { probe, stop, type McpServerDef } from './mcpClient.js';
 
 type Config = McpServerDef | undefined;
 type Status = {
@@ -68,20 +68,20 @@ export const authError = (msg: string) => /needs auth|HTTP 401|HTTP 403|unauthor
 
 export async function probeOne(name: string, scope: string, def: McpServerDef, run = probe): Promise<McpServer> {
   const base = { name, scope, type: transport(def), command: commandOf(def), env: envOf(def) };
-  const keep = has(name);
+  const key = `probe:${name}`;
   try {
-    const { info, tools } = await run(name, def);
+    const { info, tools } = await run(key, def);
     return { ...base, status: 'connected', version: info?.version, tools: tools.map((t) => ({ name: t.name, description: t.description, readOnly: t.annotations?.readOnlyHint, destructive: t.annotations?.destructiveHint })) };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ...base, status: authError(msg) ? 'needs-auth' : 'failed', error: msg };
   } finally {
-    if (!keep) stop(name);
+    stop(key);
   }
 }
 
 const TTL = 60_000;
-const cache = new Map<string, { at: number; row: McpServer }>();
+const cache = new Map<string, { at: number; done: boolean; row: Promise<McpServer> }>();
 
 export async function mcpProbe(cwd: string, refresh = false): Promise<McpServer[]> {
   const [user, repo] = await Promise.all([readJson(path.join(os.homedir(), '.claude.json')), readJson(path.join(cwd, '.mcp.json'))]);
@@ -89,10 +89,11 @@ export async function mcpProbe(cwd: string, refresh = false): Promise<McpServer[
     configDefs(user, repo, cwd).map(async ({ name, scope, def }) => {
       const key = `${name}:${JSON.stringify(def)}`;
       const hit = cache.get(key);
-      if (hit && !refresh && Date.now() - hit.at < TTL) return hit.row;
-      const row = await probeOne(name, scope, def);
-      cache.set(key, { at: Date.now(), row });
-      return row;
+      if (hit && (!hit.done || (!refresh && Date.now() - hit.at < TTL))) return hit.row;
+      const entry = { at: Date.now(), done: false, row: probeOne(name, scope, def) };
+      void entry.row.then(() => { entry.done = true; entry.at = Date.now(); });
+      cache.set(key, entry);
+      return entry.row;
     }),
   );
 }

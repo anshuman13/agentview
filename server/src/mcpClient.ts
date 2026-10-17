@@ -202,11 +202,6 @@ export async function probe(key: string, def: McpServerDef, timeout = 12_000): P
   return { info: c.info, tools: r?.tools ?? [] };
 }
 
-export function has(key: string) {
-  const c = clients.get(key);
-  return !!c && !c.dead;
-}
-
 export function pidOf(key: string) {
   const c = clients.get(key);
   return c instanceof Stdio ? c.pid : undefined;
