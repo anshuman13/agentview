@@ -23,3 +23,12 @@ select.deploy-app { background: var(--bg-sunken); border: 1px solid var(--border
 .deploy-log.bad { border-color: var(--err); }
 .deploy-log-head { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .deploy-log pre { margin: 0; padding: 6px 8px; max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+
+@media (max-width: 900px) {
+  .deploy-head { min-height: 44px; }
+  .deploy-head .icon-btn { width: 36px; height: 36px; }
+  select.deploy-app { height: 40px; font-size: 16px; }
+  .deploy-actions button { min-height: 44px; padding: 0 14px; font-size: 13px; }
+  .deploy-link, .deploy-meta a { min-height: 36px; display: inline-flex; align-items: center; }
+  .deploy-log pre { max-height: 40vh; }
+}

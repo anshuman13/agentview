@@ -127,3 +127,21 @@
 .observe .obs-field input:focus { outline: 0; border-color: var(--accent, #0078d4); }
 .observe .ok, .observe .obs-hint.ok { color: var(--ok, #89d185); }
 .observe .obs-save .primary:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 900px) {
+  .observe .obs-picker { padding-bottom: 10px; }
+  .observe .obs-picker input, .observe .obs-form input, .observe .obs-field input, .observe .obs-form select, .observe .obs-pick select { height: 40px; font-size: 16px; }
+  .observe .obs-editor { font-size: 16px; line-height: 22px; }
+  .observe .obs-head { height: 44px; }
+  .observe .obs-head .icon-btn, .observe .obs-picker .icon-btn, .observe .obs-issue .meta .icon-btn { width: 36px; height: 36px; }
+  .observe .obs-subhead { min-height: 40px; flex-wrap: wrap; }
+  .observe .obs-add button, .observe .obs-mini, .observe .obs-ask, .observe .obs-save button.primary { height: 44px; padding: 0 12px; font-size: 13px; }
+  .observe .obs-head { gap: 4px; }
+  .observe .obs-head .acts { gap: 2px; }
+  .observe .obs-chip { height: 36px; }
+  .observe .obs-link { min-height: 36px; align-items: center; }
+  .observe .obs-pickers { flex-wrap: wrap; }
+  .observe .obs-pick { flex: 1 1 100%; }
+  .observe .obs-issue { padding-top: 8px; padding-bottom: 8px; }
+  .observe .obs-logs .line, .observe .obs-patterns .pattern { padding-top: 4px; padding-bottom: 4px; }
+}

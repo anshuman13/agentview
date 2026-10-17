@@ -10,16 +10,23 @@
   }
 
   .pane.side, .pane.center { flex-direction: column; min-height: 0; }
-  .main { display: flex; flex-direction: column; }
+  .main { flex-direction: column; }
   .brief { display: contents; --brief-bg: var(--bg); }
   .brief-status { order: 0; flex: 1 1 0; min-height: 0; overflow: auto; padding: 6px 12px 8px; background: var(--bg); border-bottom: 1px solid var(--border); }
   .brief-cards { order: 1; flex: none; max-height: 50%; overflow: auto; padding: 8px 12px; }
   .brief-input { order: 2; flex: none; padding: 6px 12px 8px; }
   .step .acts { opacity: 1; }
-  .step { min-height: 32px; font-size: 13px; }
-  .step .icon-btn { width: 32px; height: 32px; }
+  .step { min-height: 36px; font-size: 13px; }
+  .step .icon-btn { width: 36px; height: 36px; }
+  .step input { height: 36px; font-size: 16px; }
+  .step.add .link { min-height: 36px; }
+  .timeline-head { height: 44px; }
+  .timeline-head .icon-btn { width: 36px; height: 36px; }
   .tl, .tl-now { font-size: 13px; line-height: 20px; }
-  .folder-switch { height: 40px; }
+  .folder-switch { height: 44px; }
+  .tabs, .tab { height: 44px; }
+  .tab.active, .tab.active:hover { margin-bottom: -1px; }
+  .tab .close { width: 36px; height: 36px; margin-left: 0; }
   .panel-body { padding: 4px 0 0 8px; }
   .xterm-helper-textarea { font-size: 16px !important; }
 
@@ -36,10 +43,23 @@
   .browser-bar .icon-btn, .browser-bar select { height: 32px; min-width: 32px; }
   .browser-bar input.url { height: 32px; font-size: 16px; }
   button.send { width: 36px; height: 36px; border-radius: 8px; font-size: 16px; }
-  .cmd-popup li { height: 40px; }
+  .cmd-popup li { height: 44px; }
   .sessions .tree .row { height: 36px; }
-  .sessions .tree .row .acts .icon-btn { width: 32px; height: 32px; }
-  .sessions .sessions-bar input { height: 32px; font-size: 16px; }
+  .sessions .tree .row .acts .icon-btn { width: 36px; height: 36px; }
+  .sessions .sessions-bar input { height: 40px; font-size: 16px; }
+  .sessions .sessions-bar .icon-btn { width: 40px; height: 40px; }
+  .sessions .sessions-bar .new-chat, .side-switch button, .sessions .side-switch button { height: 44px; font-size: 14px; }
+  .sessions .tree .group, .sessions .tree .row.group-row { height: 36px; line-height: 36px; }
+  .switcher input { height: 44px; font-size: 16px; }
+  .switcher li { height: 44px; }
+  .switcher li .detail { font-size: 12px; }
+  .overlay.anchored .switcher li { height: 44px; }
+  .overlay.anchored .switcher li > span:first-child { min-width: 0; }
+  .dialog-actions button, .chrome-setup button.primary { min-height: 44px; }
+  .chrome-setup button.link { min-height: 36px; }
+  .dialog-input { height: 44px; font-size: 16px; }
+  .panel-head { height: 44px; }
+  .statusbar { display: none; }
 
   .brief-cards .card { padding: 12px; }
   .brief-cards .card .row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
@@ -47,4 +67,10 @@
   .brief-cards .card .row button:not(.primary) { border-color: var(--border-strong); background: var(--bg-raised); }
   .brief-cards .card .option { justify-content: center; padding: 10px 12px; border-color: var(--border-strong); border-radius: var(--radius-sm); }
   .brief-cards .card input { min-height: 44px; font-size: 16px; }
+}
+
+@media (max-width: 900px) and (max-height: 500px) {
+  .timeline-head { height: 36px; }
+  .brief-status { padding-top: 2px; }
+  .brief-input { padding-top: 4px; }
 }

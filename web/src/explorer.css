@@ -51,6 +51,10 @@
 .switcher .fs-empty { padding: 4px 12px 6px; color: var(--fg-muted); font-size: 12px; }
 
 @media (max-width: 900px) {
-  .ex-row, .ex button.ex-section { height: 34px; }
-  .ex-close { visibility: visible; }
+  .ex-row, .ex button.ex-section { height: 40px; }
+  .ex-close { visibility: visible; width: 36px; height: 36px; }
+  .ex-editors .ex-row { padding-left: 0; }
+  .ex-actions .icon-btn { width: 40px; height: 40px; }
+  .ex-actions { gap: 0; padding-right: 4px; }
+  .ex-row .ex-twistie { width: 24px; }
 }

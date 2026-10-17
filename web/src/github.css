@@ -115,6 +115,13 @@
 }
 
 @media (max-width: 900px) {
-  .gh-section, .gh-item { height: 34px; }
-  .gh-pr { padding-top: 7px; padding-bottom: 8px; }
+  .gh-section, .gh-item { height: 40px; }
+  .gh-bar { min-height: 44px; }
+  .gh-bar .icon-btn { width: 36px; height: 36px; }
+  .gh-pr { padding-top: 9px; padding-bottom: 10px; }
+  .gh-block { height: 36px; }
+  .gh-text { font-size: 16px; line-height: 22px; }
+  .gh-actions button, .gh-merge select { height: 44px; font-size: 13px; }
+  .gh-actions button { padding: 0 12px; }
+  .gh-diff { max-height: 50vh; }
 }

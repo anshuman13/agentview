@@ -11,3 +11,9 @@
 .editor-group:has(.term-max) > :not(.panel) { display: none !important; }
 .panel:has(.term-max) { flex: 1; height: auto !important; }
 .panel:has(.term-max) > .panel-sash { display: none; }
+
+@media (max-width: 900px) {
+  .term-tab { height: 36px; padding: 0 4px 0 10px; }
+  .term-tab .icon-btn, .term-bar > .icon-btn { width: 36px; height: 36px; visibility: visible; }
+  .term-bar { gap: 4px; }
+}

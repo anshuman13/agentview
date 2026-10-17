@@ -84,8 +84,13 @@
   .tr { padding: 10px 16px 14px; font-size: 14px; }
   .tr-step, .tr-agent, .tr-working { min-height: 28px; line-height: 28px; font-size: 13px; }
   .tr-mark { height: 28px; }
-  .tr-file { min-height: 36px; font-size: 13px; }
+  .tr-file { min-height: 44px; font-size: 13px; }
   .tr-user { padding: 12px 14px; }
+  .tr-step, .tr-agent { min-height: 36px; line-height: 36px; }
+  .tr-mark { height: 36px; }
+  .tr-detail pre, .tr-report { font-size: 12px; max-height: 40vh; }
+  .tl-tabs { gap: 4px; }
+  .tl-tabs button { min-height: 36px; padding: 0 14px; font-size: 13px; }
 }
 
 .tl-tabs { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border, #2b2b2b); border-radius: var(--radius-sm, 4px); background: var(--bg-sunken, #181818); }
