@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 
 type Tab = { id: string; title: string; url: string };
-type State = { state: 'off' | 'connecting' | 'on'; reason: string };
+type State = { state: 'off' | 'connecting' | 'on'; reason: string; retry?: boolean };
 
 const BUTTON = ['left', 'middle', 'right'];
 const mods = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) =>
@@ -27,25 +27,45 @@ export function BrowserPane() {
   const tab = tabs.find((t) => t.id === current);
 
   useEffect(() => {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const s = new WebSocket(`${proto}://${location.host}/ws?chrome`);
-    ws.current = s;
-    s.onmessage = (ev) => {
-      const m = JSON.parse(ev.data);
-      if (m.t === 'state') setState(m);
-      if (m.t === 'tabs') {
-        setTabs(m.tabs);
-        setCurrent(m.current);
-        setPinned(m.pinned);
-      }
-      if (m.t === 'frame' && img.current) {
-        vp.current = { w: m.w, h: m.h };
-        img.current.src = `data:image/jpeg;base64,${m.data}`;
-        setHasFrame(true);
-      }
+    let alive = true;
+    let delay = 1000;
+    let timer: ReturnType<typeof setTimeout>;
+    const open = () => {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      const s = new WebSocket(`${proto}://${location.host}/ws?chrome`);
+      ws.current = s;
+      s.onopen = () => { delay = 1000; };
+      s.onmessage = (ev) => {
+        const m = JSON.parse(ev.data);
+        if (m.t === 'state') {
+          setState(m);
+          if (m.state !== 'on') setHasFrame(false);
+        }
+        if (m.t === 'tabs') {
+          setTabs(m.tabs);
+          setCurrent(m.current);
+          setPinned(m.pinned);
+        }
+        if (m.t === 'frame' && img.current) {
+          vp.current = { w: m.w, h: m.h };
+          img.current.src = `data:image/jpeg;base64,${m.data}`;
+          setHasFrame(true);
+        }
+      };
+      s.onclose = () => {
+        if (!alive) return;
+        setState({ state: 'off', reason: 'server', retry: true });
+        setHasFrame(false);
+        timer = setTimeout(open, delay);
+        delay = Math.min(delay * 2, 10000);
+      };
     };
-    s.onclose = () => setState({ state: 'off', reason: 'AgentView server disconnected' });
-    return () => s.close();
+    open();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      ws.current?.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -65,11 +85,13 @@ export function BrowserPane() {
   }, [state.state]);
 
   const pos = (e: { clientX: number; clientY: number }) => {
-    const r = img.current!.getBoundingClientRect();
+    if (!img.current) return { x: 0, y: 0 };
+    const r = img.current.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * vp.current.w, y: ((e.clientY - r.top) / r.height) * vp.current.h };
   };
 
   const onDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
     if (e.pointerType !== 'mouse') {
       touch.current = { x: e.clientX, y: e.clientY, moved: false };
       return;
@@ -85,8 +107,7 @@ export function BrowserPane() {
       const dx = t.x - e.clientX;
       const dy = t.y - e.clientY;
       if (!t.moved && Math.hypot(dx, dy) < 8) return;
-      const r = img.current!.getBoundingClientRect();
-      const k = vp.current.w / r.width;
+      const k = vp.current.w / (img.current?.getBoundingClientRect().width || 1);
       send({ t: 'wheel', ...pos(e), dx: dx * k, dy: dy * k });
       touch.current = { x: e.clientX, y: e.clientY, moved: true };
       return;
@@ -176,6 +197,15 @@ export function BrowserPane() {
   );
 }
 
+const REASONS: Record<string, string> = {
+  nofda: 'macOS blocks AgentView from reading Chrome\'s profile folder. Give your terminal app Full Disk Access (System Settings, Privacy & Security), then restart AgentView from that terminal.',
+  nochrome: 'Chrome is not running. Open Chrome and AgentView connects on its own.',
+  denied: 'Chrome refused the connection. Click Connect, then Allow in the dialog Chrome shows.',
+  timeout: 'Chrome did not answer. Click Connect, then Allow in the dialog Chrome shows.',
+  closed: 'The connection to Chrome closed.',
+  server: 'The AgentView server is not reachable.',
+};
+
 function Connect({ state, onConnect }: { state: State; onConnect: () => void }) {
   const [copied, setCopied] = useState(false);
   const [tried, setTried] = useState(false);
@@ -206,10 +236,11 @@ function Connect({ state, onConnect }: { state: State; onConnect: () => void }) 
             <li>Click Connect, then Allow in the dialog Chrome shows.</li>
           </ol>
         ) : (
-          <div className="muted small">{state.reason === 'closed' ? 'The connection to Chrome closed.' : state.reason}</div>
+          <div className="muted small">{REASONS[state.reason] ?? state.reason}</div>
         )}
         {tried && state.reason === 'disabled' && <div className="small error-text">Chrome isn't accepting connections yet, so step 2 hasn't taken effect.</div>}
-        <button className="primary" onClick={() => { setTried(true); onConnect(); }}>Connect</button>
+        {state.retry && <div className="muted small">Trying again automatically.</div>}
+        {state.reason !== 'server' && <button className="primary" onClick={() => { setTried(true); onConnect(); }}>Connect</button>}
       </div>
     </div>
   );

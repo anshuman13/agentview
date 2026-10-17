@@ -1,6 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
 import { WebSocket } from 'ws';
 
 type Tab = { id: string; title: string; url: string; at: number };
@@ -25,6 +26,9 @@ type Dims = { cssW: number; cssH: number; dpr: number; mobile: boolean };
 const sizes = new Map<WebSocket, Dims>();
 let emulated: { session: string; key: string } | null = null;
 let viewport = { w: 0, h: 0 };
+let retryTimer: NodeJS.Timeout | null = null;
+let retryDelay = 2000;
+const RETRY = new Set(['disabled', 'nochrome', 'closed']);
 
 async function endpoint() {
   if (process.env.CHROME_CDP) return process.env.CHROME_CDP;
@@ -32,9 +36,33 @@ async function endpoint() {
     const [port, p] = (await readFile(PORT_FILE, 'utf8')).trim().split('\n');
     return `ws://127.0.0.1:${port}${p}`;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'EPERM') throw new Error('macOS blocks AgentView from reading Chrome\'s DevToolsActivePort. Start AgentView from your own Terminal');
-    return 'ws://127.0.0.1:9222/devtools/browser';
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'EPERM' || code === 'EACCES') throw new Error('nofda');
+    throw new Error((await chromeRunning()) ? 'disabled' : 'nochrome');
   }
+}
+
+function chromeRunning() {
+  if (process.platform !== 'darwin') return Promise.resolve(true);
+  return new Promise<boolean>((resolve) => execFile('pgrep', ['-x', 'Google Chrome'], (err) => resolve(!err)));
+}
+
+async function failure(err: NodeJS.ErrnoException) {
+  if (err.code === 'ECONNREFUSED') return (await chromeRunning()) ? 'disabled' : 'nochrome';
+  if (/\b403\b/.test(err.message)) return 'denied';
+  if (/\b404\b/.test(err.message)) return 'disabled';
+  if (/handshake has timed out/i.test(err.message)) return 'timeout';
+  return err.message;
+}
+
+function retry() {
+  if (retryTimer || !viewers.size || !RETRY.has(reason)) return;
+  broadcast({ t: 'state', state, reason, retry: true });
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void connect();
+  }, retryDelay);
+  retryDelay = Math.min(retryDelay * 2, 30000);
 }
 
 function broadcast(m: object) {
@@ -46,18 +74,28 @@ function setState(s: State, why = '') {
   state = s;
   reason = why;
   broadcast({ t: 'state', state, reason });
+  if (s === 'off') retry();
 }
 
-function call(method: string, params: object = {}, sessionId?: string): Promise<any> {
+function call(method: string, params: object = {}, sessionId?: string, ms = 15000): Promise<any> {
   return new Promise((resolve, reject) => {
     if (!cdp || cdp.readyState !== WebSocket.OPEN) return reject(new Error('Chrome is not connected'));
     const id = nextId++;
-    calls.set(id, { resolve, reject });
+    const timer = setTimeout(() => {
+      calls.delete(id);
+      reject(new Error(`${method} timed out`));
+    }, ms);
+    calls.set(id, {
+      resolve: (r) => { clearTimeout(timer); resolve(r); },
+      reject: (e) => { clearTimeout(timer); reject(e); },
+    });
     cdp.send(JSON.stringify({ id, method, params, sessionId }));
   });
 }
 
 export async function connect() {
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
   if (cdp || state === 'connecting') return;
   setState('connecting');
   let url: string;
@@ -66,10 +104,11 @@ export async function connect() {
   } catch (err) {
     return setState('off', (err as Error).message);
   }
-  const ws = new WebSocket(url, { maxPayload: 512 * 1024 * 1024 });
-  let failure = '';
+  const ws = new WebSocket(url, { maxPayload: 512 * 1024 * 1024, handshakeTimeout: 60000 });
+  let failed: Promise<string> | null = null;
   ws.on('open', async () => {
     cdp = ws;
+    retryDelay = 2000;
     setState('on');
     try {
       await call('Target.setDiscoverTargets', { discover: true });
@@ -80,19 +119,26 @@ export async function connect() {
       console.error('chrome:', err);
     }
   });
-  ws.on('message', (raw) => onMessage(JSON.parse(String(raw))));
-  ws.on('error', (err: NodeJS.ErrnoException) => {
-    failure = err.code === 'ECONNREFUSED' ? 'disabled' : err.message;
+  ws.on('message', (raw) => {
+    try {
+      onMessage(JSON.parse(String(raw)));
+    } catch (err) {
+      console.error('chrome message:', err);
+    }
   });
-  ws.on('close', () => {
+  ws.on('error', (err: NodeJS.ErrnoException) => {
+    failed ??= failure(err);
+  });
+  ws.on('close', async () => {
+    const was = cdp === ws;
     cdp = null;
     watching = null;
     emulated = null;
     tabs.clear();
     calls.forEach((c) => c.reject(new Error('Chrome disconnected')));
     calls.clear();
-    setState('off', failure || 'closed');
     sendTabs();
+    setState('off', was ? 'closed' : ((await failed) ?? 'closed'));
   });
 }
 
@@ -159,18 +205,22 @@ function sendTabs() {
 }
 
 async function isVisible(targetId: string) {
+  const own = watching?.target === targetId ? watching.session : null;
+  let session = own;
   try {
-    const own = watching?.target === targetId ? watching.session : null;
-    const session = own ?? (await call('Target.attachToTarget', { targetId, flatten: true })).sessionId;
-    const { result } = await call('Runtime.evaluate', { expression: 'document.visibilityState', returnByValue: true }, session);
-    if (!own) void call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
+    session ??= (await call('Target.attachToTarget', { targetId, flatten: true }, undefined, 3000)).sessionId as string;
+    const { result } = await call('Runtime.evaluate', { expression: 'document.visibilityState', returnByValue: true }, session, 3000);
     return result?.value === 'visible';
   } catch {
     return false;
+  } finally {
+    if (session && !own) void call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
   }
 }
 
 let picking = 0;
+let settled = 0;
+let shown = true;
 let pickTimer: NodeJS.Timeout | null = null;
 
 function pick() {
@@ -191,9 +241,11 @@ async function choose() {
     }
     if (seq !== picking) return;
   }
+  if (!target && watching && tabs.has(watching.target) && !pinned) target = watching.target;
   target ??= list[0]?.id ?? null;
   if (seq !== picking) return;
   if (target && target !== watching?.target) await watch(target);
+  if (seq === picking) settled = seq;
   sendTabs();
 }
 
@@ -212,12 +264,30 @@ async function watch(target: string) {
     const { cssVisualViewport: v } = await call('Page.getLayoutMetrics', {}, sessionId);
     viewport = { w: v.clientWidth, h: v.clientHeight };
     await screencast();
-    const shot = await call('Page.captureScreenshot', { format: 'jpeg', quality: 70 }, sessionId);
-    if (watching?.session === sessionId) frame(shot.data);
+    await snapshot();
   } catch (err) {
     console.error('chrome watch:', err);
+    if (seq === watchSeq && watching) {
+      release(watching.session);
+      watching = null;
+    }
   }
 }
+
+async function snapshot() {
+  const session = watching?.session;
+  if (!session) return;
+  const shot = await call('Page.captureScreenshot', { format: 'jpeg', quality: 70 }, session);
+  if (watching?.session === session) frame(shot.data);
+}
+
+setInterval(async () => {
+  if (!viewers.size || !cdp || picking !== settled) return;
+  if (!watching) return tabs.size && pick();
+  const was = shown;
+  shown = await isVisible(watching.target);
+  if (!pinned && was && !shown) pick();
+}, 2000).unref();
 
 async function screencast() {
   if (!watching) return;
@@ -326,8 +396,10 @@ export function openChrome(ws: WebSocket, origin: string | undefined) {
   if (origin) selfOrigins.add(origin);
   viewers.add(ws);
   ws.send(JSON.stringify({ t: 'state', state, reason }));
-  if (cdp) pick();
-  else void connect();
+  if (cdp) {
+    pick();
+    void snapshot().catch(() => {});
+  } else void connect();
   ws.on('message', (raw) => {
     let m: unknown;
     try {
