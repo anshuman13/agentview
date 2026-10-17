@@ -67,7 +67,7 @@ export function filesEdited(events: ChatEvent[]) {
   return paths.size;
 }
 
-export const contextPercent = (context: number | null) => (context === null ? null : Math.round((context / COMPACT_AT) * 100));
+export const contextPercent = (context: number | null) => (context === null ? null : Math.min(100, Math.round((context / COMPACT_AT) * 100)));
 
 const MODES: Record<string, { label: string; detail: string; icon: string }> = {
   default: { label: 'Default', detail: 'Ask before edits and risky commands', icon: 'shield' },
