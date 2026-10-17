@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView, lineNumbers, highlightActiveLine } from '@codemirror/view';
 import { MergeView } from '@codemirror/merge';
@@ -22,13 +22,29 @@ function lang(path: string) {
   return [];
 }
 
+let opened: string[] = [];
+let openedChat = '';
+const openedSubs = new Set<() => void>();
+export function setOpened(files: string[]) {
+  opened = files;
+  openedSubs.forEach((l) => l());
+}
+export const useOpened = () => useSyncExternalStore((l) => (openedSubs.add(l), () => openedSubs.delete(l)), () => opened);
+
 export function CodePane() {
   const openFile = useStore((s) => s.ui.openFile);
   const follow = useStore((s) => s.ui.follow);
   const recent = useStore((s) => s.recentFiles);
+  const chat = useStore((s) => s.session.id);
   const host = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<'diff' | 'file'>('diff');
   const [info, setInfo] = useState<{ changed: boolean } | null>(null);
+
+  useEffect(() => {
+    const files = openedChat === chat ? opened : [...recent].reverse();
+    openedChat = chat;
+    setOpened(openFile && !files.includes(openFile) ? [...files, openFile] : files);
+  }, [openFile, chat]);
 
   useEffect(() => {
     if (!openFile || !host.current) return;

@@ -1,101 +1,210 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { api, setUi, useStore } from '../store';
 import { FolderPicker, findHere, useWorkspace } from './Sessions';
+import { setOpened, useOpened } from './CodePane';
 import { Icon } from '../Icon';
+import '../explorer.css';
 
-type Node = { name: string; path: string; children?: Map<string, Node> };
+type Entry = { name: string; dir: boolean; hidden: boolean };
+type Row = Entry & { path: string; depth: number };
 
-function buildTree(files: string[]): Node {
-  const root: Node = { name: '', path: '', children: new Map() };
-  for (const f of files) {
-    const parts = f.split('/');
-    let cur = root;
-    parts.forEach((part, i) => {
-      const path = parts.slice(0, i + 1).join('/');
-      let next = cur.children!.get(part);
-      if (!next) {
-        next = i === parts.length - 1 ? { name: part, path } : { name: part, path, children: new Map() };
-        cur.children!.set(part, next);
-      }
-      cur = next;
-    });
+const load = <T,>(key: string, fallback: T): T => {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch {
+    return fallback;
   }
-  return root;
-}
+};
+const save = (key: string, v: unknown) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(v));
+  } catch {}
+};
+const parentOf = (p: string) => p.slice(0, Math.max(p.lastIndexOf('/'), 0));
+const ancestors = (p: string) => p.split('/').slice(0, -1).map((_, i, a) => a.slice(0, i + 1).join('/'));
 
-function sorted(nodes: Iterable<Node>) {
-  return [...nodes].sort((a, b) => {
-    if (!!a.children !== !!b.children) return a.children ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
+export function fileIcon(name: string) {
+  if (/\.mdx?$/i.test(name)) return 'markdown';
+  if (/\.json$/i.test(name)) return 'json';
+  if (/\.(png|jpe?g|gif|svg|webp|ico)$/i.test(name)) return 'file-media';
+  if (/\.(tsx?|jsx?|mjs|cjs|py|go|rs|swift|kt|java|rb|sh|css|html)$/i.test(name)) return 'file-code';
+  return 'file';
 }
 
 export function Explorer() {
+  const cwd = useStore((s) => s.session.cwd);
+  return <ExplorerView key={cwd} cwd={cwd} />;
+}
+
+function ExplorerView({ cwd }: { cwd: string }) {
   const openFile = useStore((s) => s.ui.openFile);
   const recent = useStore((s) => s.recentFiles);
-  const cwd = useStore((s) => s.session.cwd);
-  const id = useStore((s) => s.session.id);
-  const [files, setFiles] = useState<string[]>([]);
+  const opened = useOpened();
   const [picking, setPicking] = useState(false);
   const here = findHere(useWorkspace(cwd).folders, cwd);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [dirs, setDirs] = useState<Record<string, Entry[]>>({});
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(load(`explorer.expanded:${cwd}`, [])));
+  const [showHidden, setShowHidden] = useState<boolean>(() => load('explorer.hidden', false));
+  const [editorsOpen, setEditorsOpen] = useState<boolean>(() => load('explorer.editors', true));
+  const [sel, setSel] = useState<string | null>(openFile);
+  const loading = useRef(new Set<string>());
+  const reveal = useRef<string | null>(openFile);
+  const tree = useRef<HTMLDivElement>(null);
+  const dirsRef = useRef(dirs);
+  dirsRef.current = dirs;
+
+  useEffect(() => save(`explorer.expanded:${cwd}`, [...expanded]), [expanded]);
+  useEffect(() => save('explorer.hidden', showHidden), [showHidden]);
+  useEffect(() => save('explorer.editors', editorsOpen), [editorsOpen]);
+
+  const fetchDir = (p: string) => {
+    loading.current.add(p);
+    fetch(api(`/api/dir?path=${encodeURIComponent(p)}`))
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => [])
+      .then((list: Entry[]) => {
+        loading.current.delete(p);
+        setDirs((d) => ({ ...d, [p]: list }));
+      });
+  };
+  const refresh = (paths = Object.keys(dirsRef.current)) => paths.forEach(fetchDir);
+
+  const rows: Row[] = [];
+  const missing: string[] = [];
+  const walk = (p: string, depth: number) => {
+    const list = dirs[p];
+    if (!list) return void missing.push(p);
+    for (const e of list) {
+      if (e.hidden && !showHidden) continue;
+      const path = p ? `${p}/${e.name}` : e.name;
+      rows.push({ ...e, path, depth });
+      if (e.dir && expanded.has(path)) walk(path, depth + 1);
+    }
+  };
+  walk('', 0);
 
   useEffect(() => {
-    fetch(api('/api/files')).then((r) => r.json()).then(setFiles);
-  }, [recent.length, id]);
+    if (cwd) missing.filter((p) => !loading.current.has(p)).forEach(fetchDir);
+  }, [cwd, missing.join('\n')]);
+
+  useEffect(() => {
+    if (recent[0]) refresh(['', ...ancestors(recent[0])].filter((p) => dirsRef.current[p]));
+  }, [recent[0]]);
 
   useEffect(() => {
     if (!openFile) return;
-    const parts = openFile.split('/');
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      for (let i = 1; i < parts.length; i++) next.add(parts.slice(0, i).join('/'));
-      return next;
-    });
+    setSel(openFile);
+    reveal.current = openFile;
+    setExpanded((prev) => (ancestors(openFile).every((a) => prev.has(a)) ? prev : new Set([...prev, ...ancestors(openFile)])));
   }, [openFile]);
 
-  const tree = useMemo(() => buildTree(files), [files]);
+  useEffect(() => {
+    if (!reveal.current) return;
+    const el = tree.current?.querySelector(`[data-path="${CSS.escape(reveal.current)}"]`);
+    if (el) {
+      el.scrollIntoView({ block: 'nearest' });
+      reveal.current = null;
+    }
+  });
+
   const toggle = (p: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
       next.has(p) ? next.delete(p) : next.add(p);
       return next;
     });
-
-  const rows: ReactElement[] = [];
-  const walk = (node: Node, depth: number) => {
-    for (const child of sorted(node.children!.values())) {
-      const isDir = !!child.children;
-      const open = expanded.has(child.path);
-      rows.push(
-        <div
-          key={child.path}
-          className={`row ${child.path === openFile ? 'selected' : ''} ${recent.includes(child.path) ? 'changed' : ''}`}
-          style={{ paddingLeft: 8 + depth * 12 }}
-          onClick={() => (isDir ? toggle(child.path) : setUi({ openFile: child.path, follow: false }))}
-          title={child.path}
-        >
-          <span className="twistie">{isDir && <Icon name={open ? 'chevron-down' : 'chevron-right'} small />}</span>
-          <Icon name={isDir ? (open ? 'folder-opened' : 'folder') : 'file'} small />
-          <span className="name">{child.name}</span>
-          {!isDir && recent.includes(child.path) && <span className="m">M</span>}
-        </div>,
-      );
-      if (isDir && open) walk(child, depth + 1);
-    }
+  const activate = (r: Row) => (r.dir ? toggle(r.path) : setUi({ openFile: r.path, follow: false }));
+  const go = (r?: Row) => {
+    if (!r) return;
+    setSel(r.path);
+    reveal.current = r.path;
   };
-  walk(tree, 0);
+
+  const onKey = (e: KeyboardEvent) => {
+    const i = rows.findIndex((r) => r.path === sel);
+    const r = rows[i];
+    const open = r?.dir && expanded.has(r.path);
+    if (e.key === 'ArrowDown') go(rows[i + 1]);
+    else if (e.key === 'ArrowUp') go(rows[Math.max(i - 1, 0)]);
+    else if (e.key === 'ArrowRight' && r?.dir) open ? (rows[i + 1]?.depth ?? 0) > r.depth && go(rows[i + 1]) : toggle(r.path);
+    else if (e.key === 'ArrowLeft' && r) open ? toggle(r.path) : go(rows.find((x) => x.path === parentOf(r.path)));
+    else if (e.key === 'Enter' && r) activate(r);
+    else return;
+    e.preventDefault();
+  };
+
+  const close = (f: string) => {
+    const i = opened.indexOf(f);
+    const rest = opened.filter((x) => x !== f);
+    setOpened(rest);
+    if (f === openFile) setUi({ openFile: rest[Math.min(i, rest.length - 1)] ?? null, follow: false });
+  };
 
   return (
-    <div className="explorer">
-      <button className="folder-switch" title={`${cwd}\nSwitch worktree or chat`} onClick={() => setPicking(true)}>
-        <Icon name={here.tree ? 'git-branch' : 'repo'} small />
-        <span className="folder-name">{here.folder?.name ?? (cwd ? cwd.split('/').pop() : 'Files')}</span>
-        <span className="folder-branch">{here.label}</span>
-        <Icon name="chevron-down" small />
+    <div className="explorer ex">
+      <button className="ex-section" onClick={() => setEditorsOpen(!editorsOpen)}>
+        <Icon name={editorsOpen ? 'chevron-down' : 'chevron-right'} small />
+        <span>Open Editors</span>
       </button>
+      {editorsOpen && (
+        <div className="ex-editors">
+          {opened.map((f) => (
+            <div key={f} className={`ex-row${f === openFile ? ' selected' : ''}`} title={f} onClick={() => setUi({ openFile: f, follow: false })}>
+              <span className="ex-close" title="Close" onClick={(e) => { e.stopPropagation(); close(f); }}>
+                <Icon name="close" small />
+              </span>
+              <Icon name={fileIcon(f)} small />
+              <span className={`ex-name${recent.includes(f) ? ' changed' : ''}`}>{f.split('/').pop()}</span>
+              <span className="ex-dir">{parentOf(f)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="ex-head">
+        <button className="folder-switch" title={`${cwd}\nSwitch worktree or chat`} onClick={() => setPicking(true)}>
+          <Icon name={here.tree ? 'git-branch' : 'repo'} small />
+          <span className="folder-name">{here.folder?.name ?? (cwd ? cwd.split('/').pop() : 'Files')}</span>
+          <span className="folder-branch">{here.label}</span>
+          <Icon name="chevron-down" small />
+        </button>
+        <span className="ex-actions">
+          <button className={`icon-btn${showHidden ? ' on' : ''}`} title={showHidden ? 'Hide ignored files' : 'Show ignored files'} onClick={() => setShowHidden(!showHidden)}>
+            <Icon name={showHidden ? 'eye' : 'eye-closed'} small />
+          </button>
+          <button className="icon-btn" title="Refresh Explorer" onClick={() => refresh()}>
+            <Icon name="refresh" small />
+          </button>
+          <button className="icon-btn" title="Collapse Folders in Explorer" onClick={() => setExpanded(new Set())}>
+            <Icon name="collapse-all" small />
+          </button>
+        </span>
+      </div>
       {picking && <FolderPicker onClose={() => setPicking(false)} />}
-      <div className="tree">{rows}</div>
+      <div className="ex-tree" ref={tree} tabIndex={0} onKeyDown={onKey}>
+        {rows.map((r) => {
+          const open = r.dir && expanded.has(r.path);
+          const changed = !r.dir && recent.includes(r.path);
+          return (
+            <div
+              key={r.path}
+              data-path={r.path}
+              className={`ex-row${r.path === sel ? ' selected' : ''}${r.hidden ? ' ignored' : ''}`}
+              style={{ paddingLeft: 8 + r.depth * 8 }}
+              title={r.path}
+              onClick={() => { setSel(r.path); activate(r); }}
+            >
+              <span className="ex-guides">{Array.from({ length: r.depth }, (_, k) => <span key={k} />)}</span>
+              <span className="ex-twistie">
+                {r.dir && <Icon name={open && !dirs[r.path] ? 'loading' : open ? 'chevron-down' : 'chevron-right'} spin={open && !dirs[r.path]} small />}
+              </span>
+              <Icon name={r.dir ? (open ? 'folder-opened' : 'folder') : fileIcon(r.name)} small />
+              <span className={`ex-name${changed ? ' changed' : ''}`}>{r.name}</span>
+              {changed && <span className="ex-m">M</span>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
