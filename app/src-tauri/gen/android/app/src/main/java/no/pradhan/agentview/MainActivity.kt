@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -30,6 +31,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.Locale
@@ -44,10 +46,37 @@ class MainActivity : TauriActivity() {
   private var ttsReady = false
   private val ttsQueue = mutableListOf<(TextToSpeech) -> Unit>()
   private val prefs by lazy { getSharedPreferences("shell", MODE_PRIVATE) }
+  private val shared = JSONArray()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    collectShare(intent)
+  }
+
+  @Suppress("DEPRECATION")
+  private fun collectShare(intent: Intent?) {
+    val uris = when (intent?.action) {
+      Intent.ACTION_SEND -> listOfNotNull(intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
+      Intent.ACTION_SEND_MULTIPLE -> intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
+      else -> return
+    }
+    Thread {
+      for (uri in uris) {
+        try {
+          val name = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "shared"
+          val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: continue
+          if (bytes.size > 20_000_000) { toast("$name is over 20 MB"); continue }
+          val item = JSONObject().put("name", name).put("type", contentResolver.getType(uri) ?: "application/octet-stream").put("data", Base64.encodeToString(bytes, Base64.NO_WRAP))
+          synchronized(shared) { shared.put(item) }
+        } catch (_: Exception) {
+          toast("Could not read a shared file")
+        }
+      }
+      if (uris.isEmpty()) intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text -> synchronized(shared) { shared.put(JSONObject().put("text", text)) } }
+      runOnUiThread { webView?.evaluateJavascript("window.dispatchEvent(new Event('agentview:shared'))", null) }
+    }.start()
+    intent.action = null
   }
 
   override fun onWebViewCreate(webView: WebView) {
@@ -64,6 +93,7 @@ class MainActivity : TauriActivity() {
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
+    collectShare(intent)
     val id = intent.getIntExtra(NOTIFICATION_ID, -1)
     if (id >= 0) emit("notification-click", JSONObject().put("id", id))
   }
@@ -246,6 +276,13 @@ class MainActivity : TauriActivity() {
   }
 
   inner class Shell {
+    @JavascriptInterface
+    fun takeShared(): String = synchronized(shared) {
+      val out = shared.toString()
+      while (shared.length() > 0) shared.remove(0)
+      out
+    }
+
     @JavascriptInterface
     fun features() = "open,save,clipboard,share,wakelock,notifications,speech,tts"
 

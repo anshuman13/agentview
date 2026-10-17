@@ -45,7 +45,7 @@
 .cp-send:disabled, .cp-stop:disabled { background: var(--bg-hover, #2a2d2e); color: var(--fg-faint, #6e6e6e); cursor: default; }
 .cp-send.steer:not(:disabled) { background: transparent; border-color: var(--border-strong, #3c3c3c); color: var(--fg, #cccccc); }
 .cp-send.steer:hover:not(:disabled) { background: var(--bg-hover, #2a2d2e); }
-.cp-foot .icon-btn.voice { width: 28px; height: 28px; border-radius: 50%; }
+.cp-foot .icon-btn.voice, .cp-foot .icon-btn.attach { width: 28px; height: 28px; border-radius: 50%; }
 
 .cp-under { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 0 4px; font-size: 11px; line-height: 16px; color: var(--fg-faint, #6e6e6e); }
 .cp-hint { flex: none; white-space: nowrap; }

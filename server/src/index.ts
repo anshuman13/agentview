@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { watch, type FSWatcher } from 'node:fs';
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './terminal.js';
 import { connect as connectChrome, openChrome } from './chrome.js';
@@ -136,6 +137,22 @@ async function readBody(req: http.IncomingMessage) {
   return body;
 }
 
+const PASTES = path.join(os.homedir(), '.agentview', 'pastes');
+async function savePaste(req: http.IncomingMessage, name: string) {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > 50_000_000) throw new Error('Files over 50 MB cannot be attached');
+    chunks.push(chunk);
+  }
+  await mkdir(PASTES, { recursive: true });
+  const safe = path.basename(name).replace(/[^\w.-]+/g, '-').slice(-80) || 'file';
+  const file = path.join(PASTES, `${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}-${randomUUID().slice(0, 6)}-${safe}`);
+  await writeFile(file, Buffer.concat(chunks));
+  return file;
+}
+
 const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
 
 async function openSaved(sessionId: string) {
@@ -213,6 +230,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
     if (url.pathname === '/api/repos') return json(await listRepos());
+    if (url.pathname === '/api/paste' && req.method === 'POST') return json({ path: await savePaste(req, url.searchParams.get('name') ?? '') });
     if (url.pathname === '/api/folders' && req.method === 'POST') {
       const body = JSON.parse(await readBody(req));
       return json({ cwd: await createFolder(String(body.root ?? ''), String(body.name ?? '').trim()) });

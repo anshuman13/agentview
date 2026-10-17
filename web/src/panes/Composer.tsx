@@ -133,6 +133,7 @@ export function Composer() {
 
   const [pick, setPick] = useState<{ kind: 'model' | 'mode' | 'loop'; at: DOMRect } | null>(null);
   const [text, setText] = useState('');
+  const picker = useRef<HTMLInputElement>(null);
   const [caret, setCaret] = useState(0);
   const [sel, setSel] = useState(0);
   const [dismissed, setDismissed] = useState('');
@@ -221,6 +222,35 @@ export function Composer() {
     apply(h.list[index]);
   };
 
+  const attach = async (list: File[]) => {
+    for (const f of list) {
+      try {
+        const r = await fetch(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`, { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error);
+        setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `);
+      } catch (err) {
+        notice(`Could not attach ${f.name || 'the file'}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    ta.current?.focus();
+  };
+
+  useEffect(() => {
+    const shell = (window as { AgentViewShell?: { takeShared?: () => string } }).AgentViewShell;
+    if (!shell?.takeShared) return;
+    const take = () => {
+      const items = JSON.parse(shell.takeShared!() || '[]') as { name: string; type: string; data: string; text?: string }[];
+      for (const it of items) {
+        if (it.text) setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}${it.text} `);
+        else void attach([new File([Uint8Array.from(atob(it.data), (c) => c.charCodeAt(0))], it.name, { type: it.type })]);
+      }
+    };
+    take();
+    window.addEventListener('agentview:shared', take);
+    return () => window.removeEventListener('agentview:shared', take);
+  }, []);
+
   const submit = () => {
     const t = text.trim();
     if (!t) return;
@@ -262,7 +292,12 @@ export function Composer() {
 
   return (
     <div className="cp" data-mode={mode}>
-      <div ref={card} className={`cp-card${shell ? ' shell' : ''}`}>
+      <div
+        ref={card}
+        className={`cp-card${shell ? ' shell' : ''}`}
+        onDragOver={(e) => e.dataTransfer.types.includes('Files') && e.preventDefault()}
+        onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }}
+      >
         <div className="cp-text">
           <div ref={mirror} className="cp-mirror" aria-hidden><span className="cp-typed">{text}</span><span className="cp-ghost">{ghost}</span></div>
           <textarea
@@ -274,6 +309,7 @@ export function Composer() {
             onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart); }}
             onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
             onKeyDown={onKeyDown}
+            onPaste={(e) => { if (e.clipboardData.files.length) { e.preventDefault(); void attach([...e.clipboardData.files]); } }}
           />
         </div>
         <div className="cp-foot">
@@ -287,6 +323,10 @@ export function Composer() {
             <Icon name="sync" small />{loop.on && <span>Loop {loop.max}</span>}
           </button>
           <span className="cp-spacer" />
+          <input ref={picker} type="file" multiple hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = ''; }} />
+          <button className="icon-btn attach" title="Add files for Claude to look at (or paste or drop them)" aria-label="Add files" onClick={() => picker.current?.click()}>
+            <Icon name="file-add" small />
+          </button>
           <Voice onText={dictate} />
           {running && (
             <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onClick={() => send({ type: 'interrupt' })}>
