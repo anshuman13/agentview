@@ -11,6 +11,7 @@
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <queries>
+        <package android:name="io.netbird.client" />
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>

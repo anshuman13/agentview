@@ -111,7 +111,9 @@
       };
       retry.onclick = () => connect(current, !url.hidden);
       netbird.onclick = () => {
-        location.href = 'intent://#Intent;package=io.netbird.client;end';
+        const netbirdApp = 'intent://#Intent;package=io.netbird.client;end';
+        if (window.AgentViewShell) window.AgentViewShell.open(netbirdApp);
+        else location.href = netbirdApp;
       };
       other.onclick = (e) => {
         e.preventDefault();
