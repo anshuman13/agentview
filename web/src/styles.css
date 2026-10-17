@@ -146,6 +146,15 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 }
 .activitybar button:hover { color: var(--fg); }
 .activitybar button.active { color: var(--fg); border-left-color: var(--accent); }
+.activitybar button[data-view] { color: var(--vc); opacity: 0.7; }
+.activitybar button[data-view]:hover, .activitybar button[data-view].active { color: var(--vc); opacity: 1; }
+.activitybar button[data-view='explorer'] { --vc: var(--prompt); }
+.activitybar button[data-view='changes'] { --vc: var(--warn); }
+.activitybar button[data-view='github'] { --vc: var(--link); }
+.activitybar button[data-view='chats'] { --vc: var(--claude); }
+.activitybar button[data-view='sessions'] { --vc: var(--ok); }
+.activitybar button[data-view='observe'] { --vc: var(--err); }
+.activitybar button[data-view='deploy'] { --vc: var(--agent); }
 .activitybar .codicon.icon { font-size: 24px; }
 .activitybar .badge { position: absolute; right: 8px; bottom: 8px; }
 .badge {
