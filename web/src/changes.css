@@ -1,0 +1,31 @@
+.changes { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.changes .commit { padding: 2px 12px 8px; display: flex; flex-direction: column; gap: 6px; }
+.changes .commit textarea {
+  resize: none; background: var(--input); color: var(--text); border: 1px solid var(--input-border); border-radius: 2px;
+  padding: 4px 6px; font: inherit; font-size: 13px; line-height: 18px;
+}
+.changes .commit textarea:focus { outline: none; border-color: var(--accent); }
+.changes .commit button.primary { height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-radius: 2px; }
+.changes .branch { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.changes .branch span { display: inline-flex; align-items: center; }
+.changes .error { font-size: 12px; color: var(--red); white-space: pre-wrap; word-break: break-word; }
+.changes .tree .row { padding-right: 12px; }
+.changes .tree .row.group { font-size: 11px; font-weight: 700; color: var(--text); }
+.changes .tree .row.file { padding-left: 20px; }
+.changes .tree .row .dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 12px; color: var(--muted); padding-left: 2px; }
+.changes .tree .row.group .name { flex: 1; text-transform: uppercase; }
+.changes .tree .row .acts { display: none; flex: none; gap: 2px; }
+.changes .tree .row .acts .icon-btn { width: 20px; height: 20px; }
+.changes .tree .row:hover .acts { display: inline-flex; }
+@media (hover: none) { .changes .tree .row .acts { display: inline-flex; } }
+.changes .tree .row .letter { flex: none; width: 12px; margin-left: 6px; text-align: center; font-size: 12px; }
+.changes .tree .row .count {
+  flex: none; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px;
+  background: #616161; color: #fff; font-size: 11px; font-weight: 400; line-height: 18px; text-align: center;
+}
+.changes .tree .s-M :is(.name, .letter) { color: #e2c08d; }
+.changes .tree .s-A :is(.name, .letter), .changes .tree .s-U :is(.name, .letter), .changes .tree .s-R :is(.name, .letter) { color: #73c991; }
+.changes .tree .s-D :is(.name, .letter) { color: #c74e39; }
+.changes .tree .s-D .name { text-decoration: line-through; }
+.changes .tree .row.selected .name { color: var(--text-strong); }
+.changes .empty { padding: 4px 20px; }
