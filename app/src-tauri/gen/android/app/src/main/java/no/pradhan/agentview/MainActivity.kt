@@ -52,6 +52,7 @@ class MainActivity : TauriActivity() {
 
   override fun onWebViewCreate(webView: WebView) {
     this.webView = webView
+    WebView.setWebContentsDebuggingEnabled(true)
     webView.setDownloadListener { url, _, _, _, _ -> openExternal(url) }
     webView.addJavascriptInterface(Shell(), "AgentViewShell")
     if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
@@ -83,7 +84,7 @@ class MainActivity : TauriActivity() {
   private fun openExternal(url: String) {
     try {
       val parsed = if (url.startsWith("intent:")) Intent.parseUri(url, Intent.URI_INTENT_SCHEME) else null
-      val app = parsed?.takeIf { it.data?.toString().isNullOrEmpty() }?.`package`?.let { packageManager.getLaunchIntentForPackage(it) }
+      val app = parsed?.takeIf { it.data?.scheme == null }?.`package`?.let { packageManager.getLaunchIntentForPackage(it) }
       if (app != null) return startActivity(app)
       val intent = if (parsed != null) {
         parsed.apply { component = null; selector = null }
@@ -250,6 +251,13 @@ class MainActivity : TauriActivity() {
 
     @JavascriptInterface
     fun open(url: String) = runOnUiThread { openExternal(url) }
+
+    @JavascriptInterface
+    fun launch(pkg: String): Boolean {
+      val intent = packageManager.getLaunchIntentForPackage(pkg) ?: return false
+      runOnUiThread { startActivity(intent) }
+      return true
+    }
 
     @JavascriptInterface
     fun copy(text: String) = runOnUiThread {
