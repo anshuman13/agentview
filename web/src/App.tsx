@@ -62,11 +62,12 @@ if (shellParam) {
 }
 
 function AppUpdate() {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(0);
   useEffect(() => {
     const shell = Number(localStorage.getItem('agentview.shell')) || (/; wv\)/.test(navigator.userAgent) ? 1 : 0);
     if (!shell) return;
-    fetch('/api/app').then((r) => r.json()).then((a) => setReady(a.build > shell)).catch(() => {});
+    const later = Number(localStorage.getItem('agentview.shell.later'));
+    fetch('/api/app').then((r) => r.json()).then((a) => setReady(a.build > shell && a.build > later ? a.build : 0)).catch(() => {});
   }, []);
   if (!ready) return null;
   return (
@@ -74,7 +75,7 @@ function AppUpdate() {
       <Icon name="cloud-download" small />
       <span>A new version of the app is ready</span>
       <a href="/api/app.apk">Install</a>
-      <button className="icon-btn" title="Later" onClick={() => setReady(false)}><Icon name="close" small /></button>
+      <button className="icon-btn" title="Later" onClick={() => { localStorage.setItem('agentview.shell.later', String(ready)); setReady(0); }}><Icon name="close" small /></button>
     </div>
   );
 }
