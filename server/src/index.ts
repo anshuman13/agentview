@@ -5,13 +5,19 @@ import { fileURLToPath } from 'node:url';
 import { watch, type FSWatcher } from 'node:fs';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { WebSocketServer, WebSocket } from 'ws';
-import { openTerminal } from './terminal.js';
+import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './terminal.js';
 import { connect as connectChrome, openChrome } from './chrome.js';
 import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
-import { listFiles, readFileWithOriginal } from './files.js';
+import { notifyAway } from './notify.js';
+import { mcpConfig } from './mcp.js';
+import { listDir, listFiles, readFileWithOriginal } from './files.js';
+import { github } from './github.js';
+import { deployRoute } from './deploy.js';
+import { gitRoute } from './git.js';
+import { observe } from './observe.js';
 import { allowedFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
-import { STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
+import { MCP_BAD, STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -47,6 +53,7 @@ function summary(chat: AgentSession): LiveChat {
     pending: s.pending.length,
     status: s.status,
     lastActive: s.events[s.events.length - 1]?.at ?? chat.created,
+    mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,
   };
 }
 
@@ -65,6 +72,7 @@ async function createChat(cwd: string, resume?: string, title = '') {
   await chat.loadHistory();
   chat.onMessage((m) => {
     clients.forEach((c) => c.view === chat && c.send(m));
+    notifyAway(m, () => (viewers(chat) ? null : summary(chat)));
     if (m.type === 'session' && chat === lastViewed) remember(chat);
     if (m.type !== 'event' || m.event.kind === 'user') broadcastLive();
   });
@@ -75,6 +83,7 @@ async function createChat(cwd: string, resume?: string, title = '') {
 
 function closeChat(chat: AgentSession) {
   chat.close();
+  closeTerminals(chat.id);
   live.get(chat.id)?.watcher.close();
   live.delete(chat.id);
   broadcastLive();
@@ -96,6 +105,7 @@ function view(client: Client, chat: AgentSession) {
   lastViewed = chat;
   remember(chat);
   client.send({ type: 'init', state: chat.state });
+  void chat.refreshMcp();
   if (prev && prev !== chat && idle(prev) && !prev.state.session.sessionId) closeChat(prev);
   broadcastLive();
 }
@@ -170,11 +180,16 @@ const server = http.createServer(async (req, res) => {
   try {
     const chat = live.get(url.searchParams.get('chat') ?? '')?.chat ?? lastViewed;
     const liveCwds = [...live.values()].map((l) => l.chat.cwd);
+    if (url.pathname === '/api/terms' && req.method === 'POST') return json(createTerminal(chat.id, chat.cwd));
+    if (url.pathname === '/api/terms' && req.method === 'DELETE') return json(closeTerminal(url.searchParams.get('id') ?? ''));
+    if (url.pathname === '/api/terms') return json(listTerminals(chat.id));
     if (url.pathname === '/api/files') return json(await listFiles(chat.cwd));
+    if (url.pathname === '/api/dir') return json(await listDir(chat.cwd, url.searchParams.get('path') ?? ''));
     if (url.pathname === '/api/file') {
       const rel = url.searchParams.get('path') ?? '';
       return json(await readFileWithOriginal(chat.cwd, rel));
     }
+    if (url.pathname.startsWith('/api/git/')) return json(await gitRoute(chat.cwd, url.pathname.slice(9), url.searchParams, req.method === 'POST' ? JSON.parse(await readBody(req)) : null));
     if (url.pathname === '/api/sessions' && req.method === 'DELETE') {
       const id = url.searchParams.get('id') ?? '';
       if ([...live.values()].some((l) => l.chat.state.session.sessionId === id)) return json({ error: 'This chat is still open. It closes after 10 minutes without use.' }, 409);
@@ -194,11 +209,15 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
     if (url.pathname === '/api/repos') return json(await listRepos());
+    if (url.pathname.startsWith('/api/observe')) return json(await observe(req, url, chat.cwd));
+    if (url.pathname === '/api/mcp/config') return json(await mcpConfig(chat.cwd));
     if (url.pathname === '/api/sessions') {
       const list = await listSessions({ limit: 300 });
       return json(list.map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
     }
     if (url.pathname === '/api/state') return json(chat.state);
+    if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
+    if (url.pathname.startsWith('/api/deploy/')) return json(await deployRoute(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
     if (url.pathname === '/api/connect') {
       const port = url.searchParams.get('port') || (req.headers.host?.match(/:(\d+)$/)?.[1] ?? String(PORT));
       const ips = Object.values(os.networkInterfaces())
@@ -231,7 +250,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 wss.on('connection', (ws: WebSocket, req) => {
   const params = new URL(req.url ?? '', 'http://x').searchParams;
   const term = params.get('term');
-  if (term !== null) return openTerminal(ws, (live.get(term)?.chat ?? lastViewed).cwd);
+  if (term !== null) return attachTerminal(ws, term);
   if (params.has('chrome')) return openChrome(ws, req.headers.origin);
   const client: Client = { send: (m) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m)), view: lastViewed };
   clients.add(client);
@@ -284,6 +303,12 @@ wss.on('connection', (ws: WebSocket, req) => {
       }
       case 'open_session':
         openSaved(msg.sessionId).then((c) => view(client, c), fail);
+        break;
+      case 'mcp_status':
+        void chat.refreshMcp();
+        break;
+      case 'mcp_reconnect':
+        void chat.reconnectMcp(String(msg.name));
         break;
       case 'new_session':
         newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);

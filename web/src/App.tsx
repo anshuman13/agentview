@@ -6,17 +6,27 @@ import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Explorer } from './panes/Explorer';
+import { Changes, ChangesBadge } from './panes/Changes';
+import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
+import { McpItem } from './panes/McpStatus';
+import { Observe } from './panes/Observe';
+import { Deploy } from './panes/Deploy';
+import { canNotify, toggleNotify, useNotify } from './notify';
 
 type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos';
-type View = 'explorer' | 'chats' | 'sessions';
+type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions' | 'observe' | 'deploy';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'explorer', icon: 'files', title: 'Explorer' },
+  { id: 'changes', icon: 'source-control', title: 'Source Control' },
+  { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
   { id: 'chats', icon: 'comment-discussion', title: 'Chats' },
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
+  { id: 'observe', icon: 'pulse', title: 'Observe' },
+  { id: 'deploy', icon: 'rocket', title: 'Deploy' },
 ];
 
 const TABS: { id: Tab; icon: string; label: string }[] = [
@@ -71,8 +81,7 @@ export function App() {
   const [termH, setTermH] = useState(() => stored('agentview.termH', 240));
   const [terminal, setTerminal] = useState(true);
   const [termOpened, setTermOpened] = useState(terminal && window.innerWidth > 900);
-  const [, rerender] = useState(0);
-  const canNotify = 'Notification' in window && Notification.permission === 'default';
+  const notifying = useNotify();
 
   const drag = (e: React.PointerEvent, move: (ev: PointerEvent) => void, cls: string) => {
     e.preventDefault();
@@ -147,6 +156,8 @@ export function App() {
             <button key={v.id} className={sidebar && view === v.id ? 'active' : ''} title={v.title} onClick={() => showView(v.id)}>
               <Icon name={v.icon} />
               {v.id === 'chats' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
+              {v.id === 'changes' && <ChangesBadge />}
+              {v.id === 'github' && <GitHubBadge />}
             </button>
           ))}
           <span className="spacer" />
@@ -163,7 +174,7 @@ export function App() {
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
             </div>
           )}
-          {view === 'explorer' ? <Explorer /> : view === 'chats' ? <OpenChats /> : <Sessions />}
+          {view === 'explorer' ? <Explorer /> : view === 'changes' ? <Changes /> : view === 'github' ? <GitHub /> : view === 'chats' ? <OpenChats /> : view === 'observe' ? <Observe /> : view === 'deploy' ? <Deploy /> : <Sessions />}
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
@@ -192,14 +203,7 @@ export function App() {
           </div>
           <div className="panel" style={terminal ? { height: termH } : undefined}>
             {terminal && <div className="panel-sash" onPointerDown={startTermResize} />}
-            <div className="panel-head" onClick={() => tab !== 'term' && setTerminal((v) => !v)} title="Toggle the terminal (⌘J)">
-              <Icon name="terminal" small />
-              <span className="panel-title">Terminal</span>
-              <span className="muted">{project}</span>
-              <span className="spacer" />
-              <Icon name={terminal ? 'chevron-down' : 'chevron-up'} small />
-            </div>
-            {(termOpened || tab === 'term') && session.id && <div className="panel-body" hidden={!terminal && tab !== 'term'}><Terminal key={session.id} chat={session.id} /></div>}
+            <Terminal key={session.id} chat={session.id} project={project} open={terminal || tab === 'term'} onToggle={() => tab !== 'term' && setTerminal((v) => !v)} />
           </div>
         </section>
 
@@ -217,10 +221,11 @@ export function App() {
         </span>
         {!['Idle', 'Working', 'Connecting'].includes(status) && <span className="item status-text">{status}</span>}
         <span className="spacer" />
+        <McpItem />
         <CacheItem />
         {canNotify && (
-          <span className="item clickable" title="Notify me when Claude finishes or needs you" onClick={() => Promise.resolve(Notification.requestPermission()).catch(() => {}).finally(() => rerender((n) => n + 1))}>
-            <Icon name="bell" small />
+          <span className="item clickable" title={notifying ? 'Notifying you when Claude finishes or needs you. Click to turn off' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
+            <Icon name={notifying ? 'bell' : 'bell-slash'} small />
           </span>
         )}
         <span className="item clickable" title="Open on phone" onClick={() => setPhone((v) => !v)}><Icon name="device-mobile" small /></span>

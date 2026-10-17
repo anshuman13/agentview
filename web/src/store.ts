@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { ClientMessage, LiveChat, ServerMessage, ServerState } from '../../shared/protocol';
+import { notify } from './notify';
 
 type UiState = {
   connected: boolean;
@@ -12,7 +13,7 @@ type UiState = {
 export type State = ServerState & { live: LiveChat[]; ui: UiState };
 
 let state: State = {
-  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false },
+  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [] },
   status: 'Connecting',
   events: [],
   pending: [],
@@ -34,14 +35,6 @@ listeners.add(() => {
   if (document.title !== title) document.title = title;
 });
 
-function notify(title: string, body: string) {
-  if (document.visibilityState === 'visible') return;
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  try {
-    new Notification(title, { body });
-  } catch {}
-}
-
 export function notice(text: string) {
   set((s) => ({ events: [...s.events, { id: crypto.randomUUID(), kind: 'system', text, at: Date.now() }] }));
 }
@@ -60,13 +53,14 @@ export function useStore<T>(selector: (s: State) => T): T {
 export const api = (path: string) => `${path}${path.includes('?') ? '&' : '?'}chat=${encodeURIComponent(state.session.id)}`;
 
 const repo = (c: LiveChat) => c.cwd.split('/').pop();
+const focus = (id: string) => () => send({ type: 'view', id });
 
 function notifyBackground(chats: LiveChat[]) {
   for (const c of chats) {
     const was = state.live.find((x) => x.id === c.id);
     if (!was || c.id === state.session.id) continue;
-    if (c.pending > was.pending) notify(`Claude needs you in ${repo(c)}`, c.title);
-    else if (was.running && !c.running) notify(`Claude finished in ${repo(c)}`, c.title);
+    if (c.pending > was.pending) notify(`Claude needs you in ${repo(c)}`, c.title, focus(c.id));
+    else if (was.running && !c.running) notify(`Claude finished in ${repo(c)}`, c.title, focus(c.id));
   }
 }
 
@@ -92,7 +86,7 @@ function handle(m: ServerMessage) {
       break;
     case 'event':
       if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {
-        notify('Claude finished', m.event.text.trim().split('\n')[0]);
+        notify('Claude finished', m.event.text.trim().split('\n')[0], focus(state.session.id));
       }
       set((s) => {
         const i = s.events.findIndex((e) => e.id === m.event.id);
@@ -105,7 +99,7 @@ function handle(m: ServerMessage) {
       break;
     case 'pending':
       if (!state.pending.some((p) => p.id === m.request.id)) {
-        notify('Claude needs you', m.request.kind === 'question' ? m.request.questions[0]?.question ?? '' : m.request.title);
+        notify('Claude needs you', m.request.kind === 'question' ? m.request.questions[0]?.question ?? '' : m.request.title, focus(state.session.id));
         if (document.visibilityState !== 'visible') navigator.vibrate?.(200);
       }
       set((s) => ({ pending: [...s.pending.filter((p) => p.id !== m.request.id), m.request] }));

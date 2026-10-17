@@ -14,8 +14,10 @@ export type PendingPermission = {
   kind: 'permission';
   toolName: string;
   title: string;
+  detail?: string;
   input: Record<string, unknown>;
   canAlwaysAllow: boolean;
+  confirmFirst?: boolean;
 };
 
 export type PendingRequest = PendingQuestion | PendingPermission;
@@ -45,7 +47,14 @@ export type SessionInfo = {
   context: number | null;
   compacting: boolean;
   stopping: boolean;
+  mcp: McpServer[];
 };
+
+export type McpServer = { name: string; status: string; tools?: number; error?: string };
+
+export type McpConfigEntry = { name: string; scope: 'user' | 'local' | 'project'; type: string };
+
+export const MCP_BAD = ['failed', 'needs-auth'];
 
 export type CacheInfo = { at: number; ttlMs: number; readTokens: number; writeTokens: number };
 
@@ -79,6 +88,7 @@ export type LiveChat = {
   pending: number;
   status: string;
   lastActive: number;
+  mcpFailed?: number;
 };
 
 export type SavedSession = {
@@ -129,4 +139,52 @@ export type ClientMessage =
   | { type: 'view'; id: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'new_session'; cwd?: string };
+  | { type: 'new_session'; cwd?: string }
+  | { type: 'mcp_status' }
+  | { type: 'mcp_reconnect'; name: string };
+
+export type GitFile = { path: string; status: 'M' | 'A' | 'D' | 'R' | '?'; staged: boolean };
+
+export type GitStatus = { branch: string; ahead: number; behind: number; files: GitFile[] };
+
+export type CheckState = 'success' | 'failure' | 'pending' | 'none';
+
+export type PullRequest = {
+  number: number;
+  title: string;
+  author: string;
+  branch: string;
+  draft: boolean;
+  review: string;
+  checks: CheckState;
+  updatedAt: string;
+  url: string;
+  additions: number;
+  deletions: number;
+  mine: boolean;
+  reviewRequested: boolean;
+};
+
+export type PullRequestDetail = {
+  body: string;
+  checks: Array<{ name: string; state: CheckState; url: string }>;
+  reviews: Array<{ author: string; state: string; body: string; at: string }>;
+  files: Array<{ path: string; additions: number; deletions: number }>;
+  commits: Array<{ oid: string; message: string; author: string }>;
+  diff: string;
+};
+
+export type DeployRecord = { id: number; sha: string; ref: string; state: string; description: string; at: string; by: string; url: string };
+
+export type DeployEnv = { name: string; label: string; defaultBranchOnly: boolean; deployed: DeployRecord | null; latest: DeployRecord | null; rollbackTo: DeployRecord | null; history: DeployRecord[] };
+
+export type DeployStatus = {
+  apps: string[];
+  app: string;
+  repo: string;
+  velodrome: string;
+  head: { sha: string; branch: string };
+  envs: DeployEnv[];
+};
+
+export type DeployJob = { id: string; lines: string[]; done: boolean; ok: boolean; url: string };
