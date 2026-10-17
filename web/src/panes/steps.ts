@@ -44,7 +44,7 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
     case 'Grep': return { verb: 'Searched', object: `"${s('pattern')}" in ${inDir || 'the project'}` };
     case 'Glob': return { verb: 'Listed', object: inDir ? `${inDir}/${s('pattern')}` : s('pattern') };
     case 'LS': return { verb: 'Listed', object: `${inDir || '.'}/` };
-    case 'Bash': return { verb: 'Ran', object: firstLine(s('command')), mono: true };
+    case 'Bash': return s('description') ? { verb: '', object: s('description') } : { verb: 'Ran', object: firstLine(s('command')), mono: true };
     case 'WebFetch': return { verb: 'Fetched', object: s('url').replace(/^https?:\/\//, '').replace(/\/$/, '') };
     case 'WebSearch': return { verb: 'Searched the web for', object: `"${s('query')}"` };
     case 'Agent': case 'Task': return { verb: 'Delegated', object: s('description') };

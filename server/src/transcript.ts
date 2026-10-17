@@ -88,7 +88,7 @@ function summarizeTool(name: string, input: Record<string, unknown>): string {
     case 'MultiEdit':
       return `${name} ${s(input.file_path)}`;
     case 'Bash':
-      return `$ ${s(input.command).slice(0, 120)}`;
+      return s(input.description) || `$ ${s(input.command).slice(0, 120)}`;
     case 'Grep':
       return `grep ${s(input.pattern)}`;
     case 'Glob':

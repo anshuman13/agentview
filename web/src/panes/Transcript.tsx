@@ -73,7 +73,7 @@ function Step({ use, result, cwd }: { use: ToolUse; result?: ToolResult; cwd: st
   return (
     <div className={`tr-step tr-act ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
       <span className="tr-mark">{state === 'pending' ? <Icon name="loading" small spin /> : <i className="tr-hex" />}</span>
-      <span className="tr-text" title={object}>{verb} <span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span></span>
+      <span className="tr-text" title={object}>{verb && `${verb} `}<span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span></span>
       <span className="tr-dur">{dur}</span>
       {state === 'err' && !open && <span className="tr-err">{firstLine(result!.text) || 'Failed'}</span>}
       {open && <Detail use={use} result={result} />}

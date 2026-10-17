@@ -21,6 +21,7 @@ describe('stepLabel', () => {
     expect(stepLabel('Glob', { pattern: '**/*.ts', path: '/w/app/src' }, cwd).object).toBe('src/**/*.ts');
     expect(stepLabel('LS', { path: '/w/app/src' }, cwd)).toEqual({ verb: 'Listed', object: 'src/' });
     expect(stepLabel('Bash', { command: 'npm test\necho done' }, cwd)).toEqual({ verb: 'Ran', object: 'npm test', mono: true });
+    expect(stepLabel('Bash', { command: 'npm test', description: 'Run the unit tests' }, cwd)).toEqual({ verb: '', object: 'Run the unit tests' });
     expect(stepLabel('WebFetch', { url: 'https://example.com/' }, cwd)).toEqual({ verb: 'Fetched', object: 'example.com' });
     expect(stepLabel('Write', { file_path: '/elsewhere/x.md' }, cwd)).toEqual({ verb: 'Wrote', object: '/elsewhere/x.md' });
   });
