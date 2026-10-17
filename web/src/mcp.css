@@ -1,0 +1,21 @@
+.overlay.mcp-overlay { justify-content: flex-end; align-items: flex-end; padding: 0 8px 28px; }
+.switcher.mcp { width: min(460px, calc(100vw - 16px)); max-height: 70vh; overflow: auto; }
+.mcp-head { display: flex; align-items: center; height: 32px; padding: 0 4px 0 12px; font-size: 11px; text-transform: uppercase; color: var(--text-strong); border-top: 1px solid var(--border); }
+.mcp-head:first-child { border-top: none; }
+.mcp-head .spacer, .mcp-line .spacer { flex: 1; }
+.mcp-list { padding: 0 0 6px; }
+.mcp-empty { padding: 4px 12px 8px; line-height: 1.4; }
+.mcp-row { padding: 3px 12px; }
+.mcp-line { display: flex; align-items: center; gap: 8px; min-height: 22px; font-size: 13px; }
+.mcp-name { color: var(--text-strong); white-space: nowrap; }
+.mcp-note { padding: 0 0 2px 16px; color: var(--muted); word-break: break-word; }
+.mcp-note.error-text { color: var(--red); }
+.mcp-chat { padding: 0 12px; cursor: pointer; }
+.mcp-chat:hover { background: var(--hover); }
+.mcp-chat.current { background: var(--active); }
+.mcp-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.mcp-chat .error-text { color: var(--red); }
+.mcp-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); display: inline-block; }
+.mcp-dot.ok { background: var(--green); }
+.mcp-dot.bad { background: var(--red); }
+.mcp-dot.wait { background: var(--yellow); }
