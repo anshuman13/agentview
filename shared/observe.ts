@@ -25,6 +25,7 @@ export type ObserveInfo = {
   repos: string[];
   file: string;
   sentryToken: boolean;
+  sentryTokenSource: 'env' | 'file' | 'none';
   sentryServer: 'config' | 'npx' | 'none';
   grafanaServer: boolean;
   snowflake: SnowflakeInfo;
@@ -46,6 +47,10 @@ export type SentryIssue = {
 export type SentryIssues = { via: 'mcp' | 'rest'; issues: SentryIssue[]; note?: string };
 
 export type SentryDetails = { via: 'mcp' | 'rest'; text: string };
+
+export type SentryTest = { count: number; via: 'mcp' | 'rest'; note?: string };
+
+export type SnowflakeTest = { row: Record<string, unknown>; ms: number };
 
 export type GrafanaDashboard = { uid: string; title: string; url: string; folder?: string };
 

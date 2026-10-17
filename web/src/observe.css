@@ -116,3 +116,14 @@
 .observe .obs-table th { position: sticky; top: 0; padding: 3px 8px; text-align: left; font-weight: 600; color: var(--fg-muted, #9d9d9d); background: var(--bg-raised, #1f1f1f); border-bottom: 1px solid var(--border, #2b2b2b); }
 .observe .obs-table td { padding: 2px 8px; max-width: 320px; overflow: hidden; text-overflow: ellipsis; color: var(--fg, #cccccc); border-bottom: 1px solid var(--border, #2b2b2b); }
 .observe .obs-table tr:last-child td { border-bottom: 0; }
+
+.observe .obs-card { margin: 4px 12px 6px; padding: 6px 0 2px; background: var(--bg-raised, #1f1f1f); border: 1px solid var(--border, #2b2b2b); border-left: 2px solid var(--accent, #0078d4); border-radius: var(--radius-sm, 4px); }
+.observe .obs-card .obs-form, .observe .obs-card .obs-save, .observe .obs-card .obs-hint { padding-left: 10px; padding-right: 10px; }
+.observe .obs-field { display: flex; flex-direction: column; gap: 2px; padding: 0 10px; font-size: 11px; color: var(--fg-muted, #9d9d9d); }
+.observe .obs-field input {
+  height: 24px; padding: 0 6px; font-size: 12px; color: var(--fg, #cccccc);
+  background: var(--bg-sunken, var(--bg-raised, #1f1f1f)); border: 1px solid var(--border, #2b2b2b); border-radius: var(--radius-sm, 4px);
+}
+.observe .obs-field input:focus { outline: 0; border-color: var(--accent, #0078d4); }
+.observe .ok, .observe .obs-hint.ok { color: var(--ok, #89d185); }
+.observe .obs-save .primary:disabled { opacity: 0.5; cursor: default; }

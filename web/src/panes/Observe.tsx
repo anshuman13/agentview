@@ -7,10 +7,12 @@ import type {
   SentryDetails,
   SentryIssue,
   SentryIssues,
+  SentryTest,
   SnowflakeAuth,
   SnowflakeInfo,
   SnowflakeObjects,
   SnowflakeResult,
+  SnowflakeTest,
 } from '../../../shared/observe';
 import type { Repo } from '../../../shared/protocol';
 import { api, send, useStore } from '../store';
@@ -142,22 +144,110 @@ function Issue({ issue, repo }: { issue: SentryIssue; repo: string }) {
   );
 }
 
+const SENTRY_TOKENS = 'https://sentry.io/settings/account/api/auth-tokens/';
+
+function SentrySetup({ info, onInfo, onSaved }: { info: ObserveInfo; onInfo: (i: ObserveInfo) => void; onSaved: () => void }) {
+  const cfg = info.config ?? info.guess;
+  const hasAccess = info.sentryToken || info.inClaude.sentry;
+  const [token, setToken] = useState('');
+  const [org, setOrg] = useState(cfg.sentry?.org ?? '');
+  const [project, setProject] = useState(cfg.sentry?.project ?? '');
+  const [editToken, setEditToken] = useState(!hasAccess);
+  const [msg, setMsg] = useState('');
+  const [test, setTest] = useState<Load<SentryTest>>({ data: null, error: '', busy: false });
+  const dirty = !!token || org !== (cfg.sentry?.org ?? '') || project !== (cfg.sentry?.project ?? '');
+  const tokenLabel = info.sentryTokenSource === 'env' ? 'from environment' : info.sentryTokenSource === 'file' ? 'saved in observe.json' : info.inClaude.sentry ? 'not needed, Sentry MCP comes from your Claude config' : 'missing';
+
+  const save = async () => {
+    setMsg('');
+    const body: Record<string, unknown> = { repo: info.repo, sentry: { org: org.trim(), project: project.trim() } };
+    if (token.trim()) body.sentryToken = token.trim();
+    const next = await post<ObserveInfo>('/api/observe/config', body);
+    onInfo(next);
+    setToken('');
+    setEditToken(false);
+    setMsg('Saved');
+    onSaved();
+  };
+
+  const runTest = async () => {
+    setTest({ data: null, error: '', busy: true });
+    try {
+      if (dirty) await save();
+      setTest({ data: await getJson<SentryTest>(api(`/api/observe/sentry/test?repo=${encodeURIComponent(info.repo)}`)), error: '', busy: false });
+    } catch (e) {
+      setTest({ data: null, error: e instanceof Error ? e.message : String(e), busy: false });
+    }
+  };
+
+  return (
+    <div className="obs-card">
+      {editToken ? (
+        <>
+          <label className="obs-field">
+            <span>User auth token</span>
+            <input type="password" value={token} placeholder={info.sentryToken ? 'leave empty to keep the current token' : 'sntrys_...'} autoComplete="off" spellCheck={false} onChange={(e) => setToken(e.target.value)} />
+          </label>
+          <div className="obs-hint">
+            Create one at <a className="obs-link" href={SENTRY_TOKENS} target="_blank" rel="noreferrer">sentry.io/settings/account/api/auth-tokens</a> with the scopes org:read, project:read and event:read.
+            {hasAccess && <button className="obs-mini" onClick={() => setEditToken(false)}>Cancel</button>}
+          </div>
+        </>
+      ) : (
+        <div className="obs-hint">
+          Token: {tokenLabel}
+          <button className="obs-mini" onClick={() => setEditToken(true)}>Change</button>
+        </div>
+      )}
+      <div className="obs-form">
+        <label>
+          <span>Organization</span>
+          <input value={org} placeholder="org slug" spellCheck={false} onChange={(e) => setOrg(e.target.value)} />
+        </label>
+        <label>
+          <span>Project</span>
+          <input value={project} placeholder="project slug" spellCheck={false} onChange={(e) => setProject(e.target.value)} />
+        </label>
+      </div>
+      <div className="obs-save">
+        <button className="primary" disabled={!dirty} onClick={() => save().catch((e) => setMsg(e.message))}>Save</button>
+        <button className="obs-mini" disabled={test.busy || !org.trim() || !project.trim()} onClick={runTest}>{test.busy ? 'Testing' : 'Test'}</button>
+        {msg && <span className={msg === 'Saved' ? 'muted' : 'error'}>{msg}</span>}
+        {test.data && <span className="ok">{test.data.count} unresolved issue{test.data.count === 1 ? '' : 's'} via {test.data.via === 'mcp' ? 'Sentry MCP' : 'REST'}</span>}
+      </div>
+      {test.data?.note && <div className="obs-hint warn">{test.data.note}</div>}
+      <Err text={test.error} />
+    </div>
+  );
+}
+
 function Sentry({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInfo) => void }) {
-  const [issues, refresh] = useLoad<SentryIssues>(`/api/observe/sentry/issues?repo=${encodeURIComponent(info.repo)}`, []);
+  const cfg = info.config ?? info.guess;
+  const ready = (info.sentryToken || info.inClaude.sentry) && !!cfg.sentry?.org && !!cfg.sentry?.project;
+  const [setup, setSetup] = useState(!ready);
+  const [issues, refresh] = useLoad<SentryIssues>(ready ? `/api/observe/sentry/issues?repo=${encodeURIComponent(info.repo)}` : null, []);
   const path = info.sentryServer === 'config' ? 'Sentry MCP from your Claude config' : info.sentryServer === 'npx' ? 'Sentry MCP (npx @sentry/mcp-server) with your token' : 'no Sentry MCP server and no token';
+  useEffect(() => {
+    if (!ready) setSetup(true);
+  }, [ready]);
   return (
     <Section
       title="Sentry: unresolved issues"
       actions={
         <>
-          <AddToClaude server="sentry" added={info.inClaude.sentry} disabled={!info.sentryToken} title={info.sentryToken ? 'Write the Sentry MCP server into ~/.claude.json' : 'Set sentryToken in the settings first'} onDone={onInfo} />
+          <AddToClaude server="sentry" added={info.inClaude.sentry} disabled={!info.sentryToken} title={info.sentryToken ? 'Write the Sentry MCP server into ~/.claude.json' : 'Save a token first'} onDone={onInfo} />
+          <button className="icon-btn" title="Setup" onClick={() => setSetup((v) => !v)}><Icon name="settings-gear" small /></button>
           <button className="icon-btn" title="Refresh" onClick={refresh}><Icon name="refresh" small /></button>
         </>
       }
     >
-      <div className="obs-hint" title={path}>
-        {issues.data ? `via ${issues.data.via === 'mcp' ? 'Sentry MCP' : 'Sentry REST API'}` : path}
-      </div>
+      {setup && <SentrySetup key={`${info.repo}-${info.sentryTokenSource}`} info={info} onInfo={onInfo} onSaved={refresh} />}
+      {!ready && !setup && <div className="obs-hint">Not set up: open the setup card above</div>}
+      {ready && (
+        <div className="obs-hint" title={path}>
+          {issues.data ? `via ${issues.data.via === 'mcp' ? 'Sentry MCP' : 'Sentry REST API'}` : path}
+        </div>
+      )}
       {issues.data?.note && <div className="obs-hint warn">{issues.data.note}</div>}
       {issues.busy && <Loading />}
       <Err text={issues.error} />
@@ -273,7 +363,17 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
   const [table, setTable] = useState('');
   const [sql, setSql] = useState('');
   const [result, setResult] = useState<Load<SnowflakeResult>>({ data: null, error: '', busy: false });
+  const [test, setTest] = useState<Load<SnowflakeTest>>({ data: null, error: '', busy: false });
   const connected = sf.hasSecret && !!sf.account && !!sf.user;
+  const missing = [...(['account', 'user'] as const).filter((k) => !sf[k]), ...(sf.hasSecret ? [] : [sf.auth === 'pat' ? 'token' : 'password'])];
+
+  const testConnection = () => {
+    setTest({ data: null, error: '', busy: true });
+    post<SnowflakeTest>('/api/observe/snowflake/test', {}).then(
+      (data) => setTest({ data, error: '', busy: false }),
+      (e) => setTest({ data: null, error: e.message, busy: false }),
+    );
+  };
 
   useEffect(() => {
     setForm({ ...sf, secret: '' });
@@ -333,10 +433,20 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
           <input type="password" value={form.secret} placeholder={sf.hasSecret ? 'saved, leave empty to keep' : 'required'} autoComplete="off" onChange={(e) => field('secret', e.target.value)} />
         </label>
       </div>
+      <div className="obs-hint">
+        Tokens: <a className="obs-link" href="https://docs.snowflake.com/en/user-guide/programmatic-access-tokens" target="_blank" rel="noreferrer">Snowflake docs on programmatic access tokens</a>
+      </div>
       <div className="obs-save">
         <button className="primary" onClick={saveForm}>Save connection</button>
-        <span className={saveMsg && saveMsg !== 'Saved' ? 'error' : 'muted'}>{saveMsg || (connected ? `connected as ${sf.user} on ${sf.account}` : 'not connected')}</span>
+        <button className="obs-mini" disabled={!connected || test.busy} title={connected ? 'select current_user(), current_role(), current_warehouse()' : `Missing: ${missing.join(', ')}`} onClick={testConnection}>{test.busy ? 'Testing' : 'Test connection'}</button>
+        <span className={saveMsg && saveMsg !== 'Saved' ? 'error' : 'muted'}>{saveMsg || (connected ? `${sf.user} on ${sf.account}` : `missing: ${missing.join(', ')}`)}</span>
       </div>
+      {test.data && (
+        <div className="obs-hint ok">
+          <Icon name="check" small /> {Object.entries(test.data.row).map(([k, v]) => `${k} ${cell(v) || 'none'}`).join(', ')} ({test.data.ms} ms)
+        </div>
+      )}
+      <Err text={test.error} />
       <div className="obs-pickers">
         <Picker kind="database" parent="" value={db} enabled={connected} onPick={(v) => { setDb(v); setSchema(''); setTable(''); }} />
         <Picker kind="schema" parent={`database=${encodeURIComponent(db)}`} value={schema} enabled={connected && !!db} onPick={(v) => { setSchema(v); setTable(''); }} />

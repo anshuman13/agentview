@@ -17,10 +17,12 @@ import type {
   SentryDetails,
   SentryIssue,
   SentryIssues,
+  SentryTest,
   SnowflakeConfig,
   SnowflakeInfo,
   SnowflakeObjects,
   SnowflakeResult,
+  SnowflakeTest,
 } from '../../shared/observe.js';
 
 const DIR = path.join(os.homedir(), '.agentview');
@@ -110,7 +112,9 @@ async function userServers(cwd: string): Promise<Servers> {
   return { ...repo.mcpServers, ...user.projects?.[cwd]?.mcpServers, ...user.mcpServers };
 }
 
-const sentryToken = (s: Settings) => process.env.SENTRY_AUTH_TOKEN || s.sentryToken || '';
+const envToken = () => process.env.SENTRY_AUTH_TOKEN || process.env.SENTRY_ACCESS_TOKEN || '';
+const sentryToken = (s: Settings) => envToken() || s.sentryToken || '';
+const tokenSource = (s: Settings): ObserveInfo['sentryTokenSource'] => (envToken() ? 'env' : s.sentryToken ? 'file' : 'none');
 
 const snowflakeInfo = (s: Settings): SnowflakeInfo => {
   const { secret, ...rest } = { ...EMPTY_SNOWFLAKE, ...s.snowflake };
@@ -126,6 +130,7 @@ async function info(repo: string, cwd: string): Promise<ObserveInfo> {
     repos: Object.keys(s.repos ?? {}),
     file: FILE,
     sentryToken: !!sentryToken(s),
+    sentryTokenSource: tokenSource(s),
     sentryServer: servers.sentry ? 'config' : sentryToken(s) ? 'npx' : 'none',
     grafanaServer: !!servers.grafana,
     snowflake: snowflakeInfo(s),
@@ -359,6 +364,11 @@ async function sentryIssues(repo: string, cwd: string): Promise<SentryIssues> {
   return { via: r.via, issues: r.value, note: r.note };
 }
 
+async function sentryTest(repo: string, cwd: string): Promise<SentryTest> {
+  const r = await sentryIssues(repo, cwd);
+  return { count: r.issues.length, via: r.via, note: r.note };
+}
+
 async function sentryDetails(repo: string, cwd: string, id: string, shortId: string): Promise<SentryDetails> {
   if (!id && !shortId) throw new Error('Missing issue id');
   const r = await withSentry(
@@ -448,6 +458,13 @@ async function snowflakeQuery(sql: string): Promise<SnowflakeResult> {
   return { columns, rows: items.slice(0, 200).map((o) => columns.map((c) => o[c] ?? null)), truncated: items.length > 200, ms: Date.now() - t0 };
 }
 
+async function snowflakeTest(): Promise<SnowflakeTest> {
+  const def = await snowflakeDef(await load());
+  const t0 = Date.now();
+  const items = rowsOf(await callTool('snowflake', def, 'run_snowflake_query', { statement: 'select current_user() as "user", current_role() as "role", current_warehouse() as "warehouse"' }, 120_000));
+  return { row: items[0] ?? {}, ms: Date.now() - t0 };
+}
+
 async function snowflakeObjects(kind: string, database: string, schema: string): Promise<SnowflakeObjects> {
   if (!['database', 'schema', 'table', 'view'].includes(kind)) throw new Error('kind must be database, schema, table or view');
   const def = await snowflakeDef(await load());
@@ -472,13 +489,28 @@ async function saveSnowflake(input: unknown, cwd: string) {
   return info(await repoName(cwd), cwd);
 }
 
-async function saveConfig(repo: string, config: unknown, cwd: string) {
-  if (config !== null && (typeof config !== 'object' || Array.isArray(config))) throw new Error('Config must be a JSON object');
+async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string) {
   const s = await load();
   const repos = { ...s.repos };
-  if (config) repos[repo] = config as ObserveConfig;
-  else delete repos[repo];
-  await save({ ...s, repos });
+  if ('config' in b) {
+    const config = b.config ?? null;
+    if (config !== null && (typeof config !== 'object' || Array.isArray(config))) throw new Error('Config must be a JSON object');
+    if (config) repos[repo] = config as ObserveConfig;
+    else delete repos[repo];
+  }
+  if (b.sentry && typeof b.sentry === 'object') {
+    const inp = b.sentry as Record<string, unknown>;
+    const current = repos[repo] ?? (await guess(repo, s));
+    const sentry = { ...current.sentry };
+    for (const k of ['org', 'project', 'url'] as const) if (typeof inp[k] === 'string') sentry[k] = (inp[k] as string).trim();
+    repos[repo] = { ...current, sentry };
+  }
+  const next: Settings = { ...s, repos };
+  if (typeof b.sentryToken === 'string') {
+    next.sentryToken = b.sentryToken.trim();
+    stop('sentry');
+  }
+  await save(next);
   lokiCache = '';
   return info(repo, cwd);
 }
@@ -514,9 +546,10 @@ export async function observe(req: http.IncomingMessage, url: URL, cwd: string) 
     const b = await body(req);
     if (p === '/api/observe/config') {
       if (typeof b.repo !== 'string' || !b.repo.trim()) throw new Error('Missing repo');
-      return saveConfig(b.repo.trim(), b.config ?? null, cwd);
+      return saveConfig(b.repo.trim(), b, cwd);
     }
     if (p === '/api/observe/snowflake/config') return saveSnowflake(b.snowflake, cwd);
+    if (p === '/api/observe/snowflake/test') return snowflakeTest();
     if (p === '/api/observe/snowflake/query') return snowflakeQuery(String(b.sql ?? ''));
     if (p === '/api/observe/mcp/add') return addToClaude(String(b.server ?? ''), cwd);
     throw new Error('Not found');
@@ -526,6 +559,7 @@ export async function observe(req: http.IncomingMessage, url: URL, cwd: string) 
   const repo = q('repo') || (await repoName(cwd));
   if (p === '/api/observe') return info(repo, cwd);
   if (p === '/api/observe/sentry/issues') return sentryIssues(repo, cwd);
+  if (p === '/api/observe/sentry/test') return sentryTest(repo, cwd);
   if (p === '/api/observe/sentry/issue') return sentryDetails(repo, cwd, q('id'), q('shortId'));
   if (p.startsWith('/api/observe/grafana/')) {
     const [s, servers] = await Promise.all([load(), userServers(cwd)]);
