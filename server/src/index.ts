@@ -18,6 +18,7 @@ import { gitRoute } from './git.js';
 import { observe } from './observe.js';
 import { allowedFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { MCP_BAD, STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
+import { replyLine, sumEdits } from '../../shared/edits.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -54,6 +55,8 @@ function summary(chat: AgentSession): LiveChat {
     status: s.status,
     lastActive: s.events[s.events.length - 1]?.at ?? chat.created,
     mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,
+    last: replyLine(s.events),
+    edits: sumEdits(s.events),
   };
 }
 

@@ -3,7 +3,9 @@ import { notice, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
-import { STALE_MS, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { STALE_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { replyLine, sumEdits } from '../../../shared/edits';
+import '../chats.css';
 
 const PAGE = 10;
 
@@ -478,14 +480,34 @@ export function OpenChats() {
   );
 }
 
+export function chatLine(c: LiveChat, events: ChatEvent[] | null) {
+  const done = !c.running && !c.pending;
+  const last = c.last ?? (events ? replyLine(events) : undefined);
+  const edits = c.edits ?? (events ? sumEdits(events) : undefined);
+  return { text: c.pending ? 'Needs you' : c.running ? c.status : last ?? '', edits: done ? edits : undefined, done: done && Boolean(edits) };
+}
+
 function LiveRow({ c, repo, selected, onClose }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void }) {
+  const events = useStore((s) => (s.session.id === c.id ? s.events : null));
+  const line = chatLine(c, events);
+  const second = Boolean(line.text || line.edits);
   const state = c.pending ? 'Needs you' : c.running ? c.status : 'Idle';
   return (
-    <div className={`row session live ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} onClick={() => selected || send({ type: 'view', id: c.id })}>
-      <span className={`dot ${c.pending ? 'waiting' : c.running ? 'running' : 'idle'}`} />
-      {repo && <span className="repo">{repo}</span>}
-      <span className="name">{c.title}</span>
-      <span className="when">{c.pending ? 'needs you' : c.running ? '' : ago(c.lastActive)}</span>
+    <div className={`row session live ${second ? 'two' : ''} ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} onClick={() => selected || send({ type: 'view', id: c.id })}>
+      {line.done ? <span className="mark"><Icon name="pass" small /></span> : <span className={`dot ${c.pending ? 'waiting' : c.running ? 'running' : 'idle'}`} />}
+      <span className="lines">
+        <span className="l1">
+          {repo && <span className="repo">{repo}</span>}
+          <span className="name">{c.title}</span>
+          <span className="when">{c.pending ? 'needs you' : c.running ? '' : ago(c.lastActive)}</span>
+        </span>
+        {second && (
+          <span className="l2">
+            <span className="sub">{line.text}</span>
+            {line.edits && <span className="edits"><span className="add">+{line.edits.add}</span> <span className="del">-{line.edits.del}</span></span>}
+          </span>
+        )}
+      </span>
       <span className="acts">
         <button className="icon-btn" title="Close chat, keep the transcript" onClick={(e) => { e.stopPropagation(); onClose(); }}><Icon name="close" small /></button>
       </span>

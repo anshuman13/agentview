@@ -89,6 +89,8 @@ export type LiveChat = {
   status: string;
   lastActive: number;
   mcpFailed?: number;
+  last?: string;
+  edits?: { add: number; del: number };
 };
 
 export type SavedSession = {
