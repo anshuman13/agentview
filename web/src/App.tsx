@@ -110,6 +110,7 @@ export function App() {
   const [tab, setTab] = useState<Tab>('chat');
   const [editor, setEditor] = useState<'file' | 'browser' | Page>('file');
   const [page, setPage] = useState<Page | null>(null);
+  const [more, setMore] = useState(false);
   const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (window.innerWidth <= 900 ? 'code' : t)); };
   const closePage = () => { setPage(null); setEditor((e) => (isPage(e) ? 'file' : e)); };
   const [sidebar, setSidebar] = useState(true);
@@ -322,14 +323,30 @@ export function App() {
 
       <nav className="tabbar mobile-only">
         {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); if (t.id === 'repos') setView('chats'); }}>
+          <button key={t.id} className={tab === t.id && !(t.id === 'code' && isPage(editor)) ? 'active' : ''} onClick={() => { setTab(t.id); if (t.id === 'browser') setEditor('browser'); if (t.id === 'code') setEditor('file'); if (t.id === 'repos') setView('chats'); }}>
             <Icon name={t.icon} />
             <span>{t.label}</span>
             {t.id === 'chat' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
             {t.id === 'repos' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
           </button>
         ))}
+        <button className={more || (tab === 'code' && isPage(editor)) ? 'active' : ''} onClick={() => setMore((v) => !v)}>
+          <Icon name="ellipsis" />
+          <span>More</span>
+        </button>
       </nav>
+      {more && (
+        <div className="more-sheet-overlay mobile-only" onClick={() => setMore(false)}>
+          <div className="more-sheet" onClick={(e) => e.stopPropagation()}>
+            {PAGES.map((p) => (
+              <button key={p.id} className={showing === p.id ? 'active' : ''} onClick={() => { openPage(p.id); setMore(false); }}>
+                <Icon name={p.icon} />
+                <span>{p.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <FileSwitcher />
       <Palette />
