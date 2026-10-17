@@ -3,8 +3,9 @@ import { touch } from './touch';
 
 export type PickItem = { value: string; label: string; detail?: string };
 
-export function QuickPick({ title, items, current, anchor, onPick, onClose }: {
+export function QuickPick({ title, items, current, anchor, extra, onPick, onClose }: {
   title: string;
+  extra?: (q: string) => PickItem[];
   anchor?: DOMRect;
   items: PickItem[];
   current?: string | null;
@@ -15,7 +16,7 @@ export function QuickPick({ title, items, current, anchor, onPick, onClose }: {
   const [idx, setIdx] = useState(Math.max(0, items.findIndex((i) => i.value === current)));
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { if (!touch()) input.current?.focus(); }, []);
-  const results = items.filter((i) => (i.label + ' ' + (i.detail ?? '')).toLowerCase().includes(q.toLowerCase()));
+  const results = [...items.filter((i) => (i.label + ' ' + (i.detail ?? '')).toLowerCase().includes(q.toLowerCase())), ...(extra?.(q.trim()) ?? [])];
 
   return (
     <div className={`overlay ${anchor ? 'anchored' : ''}`} onClick={onClose}>

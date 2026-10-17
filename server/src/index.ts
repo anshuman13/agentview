@@ -16,7 +16,7 @@ import { github } from './github.js';
 import { deployRoute } from './deploy.js';
 import { gitRoute } from './git.js';
 import { observe } from './observe.js';
-import { allowedFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
+import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { MCP_BAD, STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
 
@@ -212,6 +212,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
     if (url.pathname === '/api/repos') return json(await listRepos());
+    if (url.pathname === '/api/folders' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req));
+      return json({ cwd: await createFolder(String(body.root ?? ''), String(body.name ?? '').trim()) });
+    }
     if (url.pathname.startsWith('/api/observe')) return json(await observe(req, url, chat.cwd));
     if (url.pathname === '/api/mcp/config') return json(await mcpConfig(chat.cwd));
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));

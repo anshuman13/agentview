@@ -122,7 +122,7 @@ export const COMPACT_AT = 200_000;
 
 export const STALE_MS = 12 * 60 * 60 * 1000;
 
-export type RepoKind = 'web' | 'service' | 'infra' | 'data' | 'app' | 'docs' | 'other';
+export type RepoKind = 'new' | 'web' | 'service' | 'infra' | 'data' | 'app' | 'docs' | 'other';
 
 export type Repo = {
   name: string;

@@ -68,8 +68,10 @@ export function worktreeRequest(d: Folder, track: (branch: string | null, error?
 const WEEK = 7 * 864e5;
 export const isDefault = (b?: string) => !b || b === 'main' || b === 'master';
 
+const ROOTS = ['workspace_personal', 'workspace'];
+
 export const KINDS: [RepoKind, string, string][] = [
-  ['web', 'Web apps', 'globe'], ['service', 'Services', 'server'], ['infra', 'Infra', 'layers'], ['data', 'Data', 'database'],
+  ['new', 'New', 'new-folder'], ['web', 'Web apps', 'globe'], ['service', 'Services', 'server'], ['infra', 'Infra', 'layers'], ['data', 'Data', 'database'],
   ['app', 'Apps', 'device-mobile'], ['docs', 'Docs', 'book'], ['other', 'Other', 'repo'],
 ];
 export const segmentOf = (f: Folder) => (f.repo?.root === 'workspace_personal' || f.cwd.includes('/workspace_personal/') ? 'personal' : 'work');
@@ -139,15 +141,24 @@ export function RepoPicker() {
   const { folders } = useWorkspace(null);
   const close = () => setUi({ repoPicker: false });
   const items = folders.flatMap((f) => [
-    ...(f.repo ? [{ value: f.cwd, label: f.name, detail: `${f.repo.root} · ${f.repo.branch}` }] : []),
+    ...(f.repo ? [{ value: f.cwd, label: f.name, detail: `${f.repo.root} · ${f.repo.kind === 'new' ? 'empty' : f.repo.branch || 'no git'}` }] : []),
     ...f.trees.map((w) => ({ value: w.cwd, label: w.name.split('/').pop()!, detail: `${w.project} worktree` })),
   ]);
   return (
     <QuickPick
-      title="Start a chat in…"
+      title="Start a chat in a folder, or type a name for a new project"
       items={items}
       current={folders.find((f) => f.cwd === cwd || f.trees.some((w) => w.cwd === cwd))?.cwd}
-      onPick={(v) => { send({ type: 'new_session', cwd: v }); close(); }}
+      extra={(q) => (/^[A-Za-z0-9][\w.-]*$/.test(q) && !folders.some((f) => f.name === q) ? ROOTS.map((root) => ({ value: `create:${root}:${q}`, label: `Create ${q}`, detail: `new project in ~/${root}` })) : [])}
+      onPick={async (v) => {
+        close();
+        if (!v.startsWith('create:')) return send({ type: 'new_session', cwd: v });
+        const [, root, name] = v.split(':');
+        const r = await fetch('/api/folders', { method: 'POST', body: JSON.stringify({ root, name }) });
+        const body = await r.json().catch(() => null);
+        if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
+        else notice(body?.error ?? 'Could not create the folder');
+      }}
       onClose={close}
     />
   );
@@ -334,7 +345,7 @@ export function Sessions() {
     <div className="sessions workspace">
       <div className="sessions-bar">
         <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
-        <button className="icon-btn" title="Start a chat in a repo (⌘O)" onClick={() => setUi({ repoPicker: true })}><Icon name="folder-opened" /></button>
+        <button className="icon-btn" title="Start a chat in a folder or new project (⌘O)" onClick={() => setUi({ repoPicker: true })}><Icon name="folder-opened" /></button>
         <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
