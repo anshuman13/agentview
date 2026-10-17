@@ -442,12 +442,13 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .brief-cards { flex: none; max-height: 50%; overflow: auto; }
 .timeline-head {
   position: sticky; top: 0; z-index: 2; background: var(--brief-bg); flex: none;
-  display: flex; align-items: center; gap: 6px; height: 22px; font-size: 11px; color: var(--fg-muted);
+  display: flex; align-items: center; gap: 6px; min-height: 26px; padding-bottom: 8px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--border); font-size: 11px; color: var(--fg-muted);
 }
 .timeline-head .title { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg); }
 .timeline-head .link { font-size: 11px; }
 .timeline-head .icon-btn { width: 20px; height: 20px; }
-.timeline { list-style: none; margin: 0; padding: 4px 0 0; }
+.timeline { list-style: none; margin: 0; padding: 6px 0 0; }
 .tl {
   position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) 34px; column-gap: 8px; align-items: start;
   padding: 3px 0; font-size: 12px; line-height: 18px; color: var(--fg);
