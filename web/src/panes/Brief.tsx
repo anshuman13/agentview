@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Pending } from './Pending';
@@ -70,12 +70,20 @@ export function Brief() {
   const { moments, next, lastTool, advisor, fable } = useMemo(() => buildTimeline(events), [events]);
   const [all, setAll] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [, tick] = useState(0);
   const end = useRef<HTMLDivElement>(null);
   const prompts = moments.map((m, i) => (m.kind === 'you' ? i : -1)).filter((i) => i >= 0);
   const from = all || prompts.length <= SHOWN_PROMPTS ? 0 : prompts[prompts.length - SHOWN_PROMPTS];
   const shown = moments.slice(from);
   const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const setNext = (list: string[]) => send({ type: 'plan', next: list });
+  const lastReply = [...moments].reverse().find((m) => m.kind === 'reply');
+  const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
+
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'nearest' });
@@ -83,67 +91,88 @@ export function Brief() {
 
   return (
     <div className="brief">
-      <div className="brief-input"><Composer /></div>
-      {compacting ? (
-        <div className="compact-banner working">
-          <Icon name="loading" small spin />
-          <span>Compacting the conversation. This takes a minute; the meter drops when it is done.</span>
-        </div>
-      ) : context !== null && context >= COMPACT_AT && (
-        <div className="compact-banner">
-          <Icon name="warning" small />
-          <span>Context is {Math.round(context / 1000)}k tokens. {running ? 'It compacts automatically when this turn ends.' : 'Compact so Claude stays focused and each turn costs less.'}</span>
-          <button disabled={running} title={running ? 'Wait until Claude finishes this turn' : 'Run /compact'} onClick={() => send({ type: 'prompt', text: '/compact' })}>Compact</button>
-        </div>
-      )}
+      <div className="brief-input">
+        <Composer />
+        {compacting ? (
+          <div className="ctx-line"><Icon name="loading" small spin /> Compacting the conversation…</div>
+        ) : context !== null && context >= COMPACT_AT && (
+          <div className="ctx-line">
+            <span><b>{Math.round(context / 1000)}k</b> context · {running ? 'compacts when this turn ends' : 'compact to keep turns cheap'}</span>
+            {!running && <button className="link" title="Run /compact" onClick={() => send({ type: 'prompt', text: '/compact' })}>Compact now</button>}
+          </div>
+        )}
+      </div>
       <div className="brief-status">
         <div className="timeline-head">
-          <span>Timeline</span>
+          <span className="title">Timeline</span>
+          <span className="spacer" />
           {extras && <span className="extras">{extras}</span>}
-          {from > 0 && <button className="link" onClick={() => setAll(true)}>Show earlier</button>}
           <ReadAloud />
-          {running && <button className="icon-btn" title={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onClick={() => send({ type: 'interrupt' })}><Icon name="debug-stop" small /></button>}
+          {from > 0 && <button className="link" onClick={() => setAll(true)}>Show all</button>}
         </div>
         <ol className="timeline">
-          {moments.length === 0 && !running && <li className="tl-empty">Your instructions, finished parts and Claude's plan show up here.</li>}
-          {shown.map((m) => <MomentRow key={m.id} m={m} latest={!running && m.kind === 'reply' && m === moments[moments.length - 1]} />)}
-          {(running || waiting) && (
-            <li className={`tl now ${waiting ? 'waiting' : ''}`}>
-              <span className="mark"><Icon name={waiting ? 'bell-dot' : 'loading'} small spin={!waiting} /></span>
-              <span className="text">
-                {waiting ? 'Waiting for you' : stopping ? 'Stopping…' : status}
-                {!waiting && !stopping && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
-              </span>
-            </li>
-          )}
-          {next.map((t, i) => (
-            <Step key={`${i}:${t}`} text={t} onSave={(v) => setNext(next.map((x, j) => (j === i ? v : x)).filter(Boolean))} onDrop={() => setNext(next.filter((_, j) => j !== i))} />
-          ))}
-          {adding ? (
-            <Step text="" editing onSave={(v) => { setAdding(false); if (v) setNext([...next, v]); }} onDrop={() => setAdding(false)} />
-          ) : (
-            (running || next.length > 0) && <li className="tl add"><button className="link" onClick={() => setAdding(true)}><Icon name="add" small /> Add a step</button></li>
-          )}
+          {moments.length === 0 && <li className="tl-empty">Send a prompt. Your messages, finished steps and Claude's replies show up here.</li>}
+          {shown.map((m, i) => <MomentRow key={m.id} m={m} sub={m.kind !== 'you' && shown.slice(0, i).some((x) => x.kind === 'you')} />)}
         </ol>
-        <div ref={end} />
+        <div className="tl-foot">
+          <div className={`tl-now ${state}`}>
+            <span className="mark"><Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} /></span>
+            <span className="text">
+              {state === 'waiting' ? 'Waiting for you' : state === 'stopping' ? 'Stopping…' : state === 'running' ? status : lastReply ? 'Idle · last reply' : 'Idle'}
+              {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
+            </span>
+            {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
+          </div>
+          {(next.length > 0 || adding || running) && (
+            <ul className="steps">
+              {next.map((t, i) => (
+                <Step key={`${i}:${t}`} text={t} onSave={(v) => setNext(next.map((x, j) => (j === i ? v : x)).filter(Boolean))} onDrop={() => setNext(next.filter((_, j) => j !== i))} />
+              ))}
+              {adding ? (
+                <Step text="" editing onSave={(v) => { setAdding(false); if (v) setNext([...next, v]); }} onDrop={() => setAdding(false)} />
+              ) : (
+                <li className="step add"><button className="link" onClick={() => setAdding(true)}><Icon name="add" small /> Add a step</button></li>
+              )}
+            </ul>
+          )}
+          <div ref={end} />
+        </div>
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}
     </div>
   );
 }
 
-const MARKS: Record<Moment['kind'], string> = { you: 'account', done: 'check', note: 'flag', fable: 'sparkle', reply: 'comment', plan: 'edit' };
+const CLAUDE = <svg viewBox="0 0 16 16" width="12" height="12"><path d="M8 1.5v13M1.5 8h13M3.4 3.4l9.2 9.2M12.6 3.4l-9.2 9.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
+const MARKS: Record<Moment['kind'], ReactNode> = {
+  you: <Icon name="comment" small />, done: <Icon name="check" small />, note: <i className="dot" />, fable: <Icon name="sparkle" small />, reply: CLAUDE, plan: <Icon name="edit" small />,
+};
 
-function MomentRow({ m, latest }: { m: Moment; latest: boolean }) {
-  const [toggled, setToggled] = useState(false);
-  const open = latest !== toggled;
+function MomentRow({ m, sub }: { m: Moment; sub: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+  const body = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (m.kind === 'reply' && body.current) setLong(body.current.scrollHeight > body.current.clientHeight + 2);
+  }, [m.kind, m.text]);
+  const when = m.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(m.at).toLocaleString()}>{time(m.at)}</span>;
+  if (m.kind === 'reply') {
+    return (
+      <li className={`tl reply ${sub ? 'sub' : ''}`}>
+        <span className="mark">{MARKS.reply}</span>
+        <div className="reply-card">
+          <div ref={body} className={`reply-body ${open ? 'open' : long ? 'clipped' : ''}`}><Markdown text={m.text} /></div>
+          {(long || open) && <button className="link" onClick={() => setOpen((v) => !v)}>{open ? 'Show less' : 'Show more'}</button>}
+        </div>
+        {when}
+      </li>
+    );
+  }
   return (
-    <li className={`tl ${m.kind}`} onClick={(e) => { if (!(e.target as HTMLElement).closest('a, pre, code')) setToggled((v) => !v); }}>
-      <span className="mark"><Icon name={MARKS[m.kind]} small /></span>
-      {m.kind === 'reply' && open ? <Markdown text={m.text} /> : (
-        <span className={`text ${open ? '' : 'clamp'}`}>{m.kind === 'fable' && <b>Fable: </b>}{m.kind === 'reply' ? plain(m.text) : m.text}</span>
-      )}
-      {m.stopping ? <span className="tl-state"><Icon name="loading" small spin /> stopping current step…</span> : <span className="when">{time(m.at)}</span>}
+    <li className={`tl ${m.kind} ${sub ? 'sub' : ''} ${open ? 'open' : ''}`} title={open ? undefined : m.text} onClick={() => setOpen((v) => !v)}>
+      <span className="mark">{MARKS[m.kind]}</span>
+      <span className="text">{m.kind === 'fable' && <b>Fable: </b>}{m.text}</span>
+      {when}
     </li>
   );
 }
@@ -154,8 +183,7 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
   if (edit) {
     const done = () => { setEdit(false); if (value.trim() !== text) onSave(value.trim()); else if (!text) onDrop(); };
     return (
-      <li className="tl next editing">
-        <span className="mark"><Icon name="circle-large-outline" small /></span>
+      <li className="step editing">
         <input
           autoFocus
           value={value}
@@ -171,8 +199,7 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
     );
   }
   return (
-    <li className="tl next">
-      <span className="mark"><Icon name="circle-large-outline" small /></span>
+    <li className="step">
       <span className="text" onClick={() => setEdit(true)}>{text}</span>
       <span className="acts">
         <button className="icon-btn" title="Edit step" onClick={() => setEdit(true)}><Icon name="edit" small /></button>
@@ -182,10 +209,9 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
   );
 }
 
-function plain(md: string) {
-  return md.replace(/[*`#>]/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
-}
-
 function time(at: number) {
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const ago = Date.now() - at;
+  if (ago < 60000) return 'now';
+  if (ago < 3600000) return `${Math.floor(ago / 60000)}m`;
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
