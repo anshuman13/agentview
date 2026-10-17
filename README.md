@@ -52,6 +52,34 @@ this browser instance", then click Connect in the Browser tab.
 macOS only lets apps with Full Disk Access read Chrome's profile folder, so start AgentView from a terminal that has it
 (System Settings → Privacy & Security → Full Disk Access). Otherwise the Browser tab can't connect.
 
+## Grafana and Sentry
+
+The Observe view (pulse icon) shows Sentry's unresolved issues and Grafana dashboards for any repo, and sends Loki
+questions to the chat through the `grafana` MCP server. Settings live in `~/.agentview/observe.json`, created with an
+example on first use and editable in the view:
+
+```json
+{
+  "sentryToken": "",
+  "repos": {
+    "comida": {
+      "grafana": { "url": "https://org.grafana.net", "dashboards": [{ "title": "Overview", "url": "https://..." }], "lokiSelector": "{app=\"comida\"}" },
+      "sentry": { "org": "org", "project": "comida", "url": "https://sentry.io" }
+    }
+  }
+}
+```
+
+Sentry needs a token in `SENTRY_AUTH_TOKEN` or `sentryToken`. Repos without settings get a guess from `centro.yaml`
+or `.sentryclirc` and the other repos' org and Grafana URL.
+
+## Notifications
+
+When a chat asks a question, needs a permission or finishes a turn, AgentView notifies you. On the Mac the server
+shows a system notification with a sound if no window is viewing that chat, at most one per chat every 30 seconds.
+The browser shows its own notification while the tab is hidden; clicking it opens the chat. The bell in the status
+bar turns browser notifications on or off.
+
 ## Models
 
 New chats start in Auto mode: Claude asks only before risky actions.

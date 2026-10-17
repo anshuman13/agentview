@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>AgentView uses the microphone for voice input to Claude.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>AgentView turns your speech into text for prompts to Claude.</string>
+</dict>
+</plist>
