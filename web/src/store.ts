@@ -81,7 +81,16 @@ export function steer(text: string) {
 function handle(m: ServerMessage) {
   switch (m.type) {
     case 'init':
-      set((s) => ({ ...m.state, ui: s.session.cwd && s.session.cwd !== m.state.session.cwd ? { ...s.ui, openFile: null } : s.ui }));
+      set((s) => {
+        const same = s.session.id === m.state.session.id;
+        const old = new Map(s.events.map((e) => [e.id, e]));
+        const events = m.state.events.map((e) => {
+          const o = same ? old.get(e.id) : undefined;
+          return o && JSON.stringify(o) === JSON.stringify(e) ? o : e;
+        });
+        const keep = same && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
+        return { ...m.state, events: keep ? s.events : events, ui: s.session.cwd && s.session.cwd !== m.state.session.cwd ? { ...s.ui, openFile: null } : s.ui };
+      });
       break;
     case 'error':
       notice(m.text);
@@ -125,13 +134,20 @@ function handle(m: ServerMessage) {
   }
 }
 
+let retry: ReturnType<typeof setTimeout> | undefined;
+
 export function connect() {
+  clearTimeout(retry);
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}/ws`);
   ws.onopen = () => setUi({ connected: true });
   ws.onclose = () => {
     setUi({ connected: false });
-    setTimeout(connect, 1500);
+    retry = setTimeout(connect, 1500);
   };
   ws.onmessage = (e) => handle(JSON.parse(e.data));
 }
+
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ws?.readyState !== WebSocket.OPEN && ws?.readyState !== WebSocket.CONNECTING) connect();
+});

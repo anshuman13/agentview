@@ -175,7 +175,7 @@ export function App() {
       <div className="body">
         <aside className="activitybar desktop-only">
           {VIEWS.map((v) => (
-            <button key={v.id} className={sidebar && view === v.id ? 'active' : ''} title={v.title} onClick={() => showView(v.id)}>
+            <button key={v.id} data-view={v.id} className={sidebar && view === v.id ? 'active' : ''} title={v.title} onClick={() => showView(v.id)}>
               <Icon name={v.icon} />
               {v.id === 'chats' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
               {v.id === 'changes' && <ChangesBadge />}
