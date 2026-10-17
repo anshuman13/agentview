@@ -22,6 +22,7 @@ export class AgentSession {
   private inputQueue: SDKUserMessage[] = [];
   private wake: (() => void) | null = null;
   private closed = false;
+  private gen = 0;
 
   id = randomUUID();
   title = '';
@@ -122,7 +123,7 @@ export class AgentSession {
     const sessionId = this.state.session.sessionId;
     if (!sessionId || this.closed || this.state.session.running) return;
     const msgs = await getSessionMessages(sessionId, { dir: this.cwd }).catch(() => null);
-    const last = msgs?.at(-1)?.uuid;
+    const last = msgs?.filter((m) => m.type !== 'system').at(-1)?.uuid;
     if (!msgs || !last || last === this.seen || this.state.session.running) return;
     const baseline = ownTurn || !this.seen;
     this.seen = last;
@@ -137,6 +138,8 @@ export class AgentSession {
     this.resume = sessionId;
     const q = this.q;
     this.q = null;
+    this.gen++;
+    this.wake?.();
     q.close();
   }
 
@@ -152,7 +155,7 @@ export class AgentSession {
   async loadHistory() {
     if (!this.resume) return;
     const msgs = await getSessionMessages(this.resume, { dir: this.cwd });
-    this.seen = msgs.at(-1)?.uuid ?? '';
+    this.seen = msgs.filter((m) => m.type !== 'system').at(-1)?.uuid ?? '';
     const { events, context, cache } = historyFrom(msgs);
     this.state.events.push(...events);
     Object.assign(this.state.session, { context, cache });
@@ -161,7 +164,7 @@ export class AgentSession {
   start() {
     if (this.q || this.closed) return;
     this.q = query({
-      prompt: this.inputStream(),
+      prompt: this.inputStream(this.gen),
       options: agentOptions({
         cwd: this.cwd,
         resume: this.resume,
@@ -251,11 +254,10 @@ export class AgentSession {
     this.approvals.answerPermission(id, allow, always);
   }
 
-  private async *inputStream(): AsyncGenerator<SDKUserMessage> {
-    while (!this.closed) {
+  private async *inputStream(gen: number): AsyncGenerator<SDKUserMessage> {
+    while (!this.closed && gen === this.gen) {
       if (this.inputQueue.length === 0) {
         await new Promise<void>((r) => (this.wake = r));
-        this.wake = null;
         continue;
       }
       yield this.inputQueue.shift()!;
