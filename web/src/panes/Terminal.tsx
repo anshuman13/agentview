@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import '../terminal.css';
 import { Icon } from '../Icon';
+import { touch } from '../touch';
 
 type Tab = { id: string; name: string };
 type Props = { chat: string; project?: string; open: boolean; onToggle: () => void };
@@ -176,7 +177,7 @@ function Pane({ id, on, focus, clears, onGone }: { id: string; on: boolean; focu
   }, [id]);
 
   useEffect(() => {
-    if (!focus) return;
+    if (!focus || touch()) return;
     const xt = term.current;
     if (xt?.element && host.current?.offsetHeight) xt.focus();
     else want.current = true;

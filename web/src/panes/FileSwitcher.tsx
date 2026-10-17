@@ -3,6 +3,7 @@ import { api, setUi, useStore } from '../store';
 import { useOpened } from './CodePane';
 import { FileIcon } from './Explorer';
 import { Icon } from '../Icon';
+import { touch } from '../touch';
 
 const cache = new Map<string, string[]>();
 
@@ -30,7 +31,7 @@ export function FileSwitcher() {
         setFiles(f);
       })
       .catch(() => {});
-    setTimeout(() => input.current?.focus(), 0);
+    if (!touch()) setTimeout(() => input.current?.focus(), 0);
   }, [open, cwd]);
 
   const results = useMemo(() => {

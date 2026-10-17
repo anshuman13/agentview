@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { touch } from './touch';
 
 export type PickItem = { value: string; label: string; detail?: string };
 
@@ -13,7 +14,7 @@ export function QuickPick({ title, items, current, anchor, onPick, onClose }: {
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(Math.max(0, items.findIndex((i) => i.value === current)));
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => input.current?.focus(), []);
+  useEffect(() => { if (!touch()) input.current?.focus(); }, []);
   const results = items.filter((i) => (i.label + ' ' + (i.detail ?? '')).toLowerCase().includes(q.toLowerCase()));
 
   return (

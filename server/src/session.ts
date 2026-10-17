@@ -37,6 +37,8 @@ export class AgentSession {
   private edits = new Map<string, string>();
   private liveMsgId = '';
 
+  private resumedAuto = false;
+
   constructor(public cwd: string, private resume?: string) {
     this.state = {
       session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff() },
@@ -368,6 +370,10 @@ export class AgentSession {
           const changed = msg.model !== this.state.session.model;
           this.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
           if (changed) this.system(`Session started with ${msg.model}`);
+          if (this.resume && msg.permissionMode !== 'auto' && !this.resumedAuto) {
+            this.resumedAuto = true;
+            void this.q?.setPermissionMode('auto').then(() => this.setSession({ permissionMode: 'auto' }));
+          }
           if (this.state.session.commands.length === 0) void this.loadMeta();
         } else if (msg.subtype === 'status') {
           if (msg.permissionMode) this.setSession({ permissionMode: msg.permissionMode });
