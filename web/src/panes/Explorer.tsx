@@ -243,6 +243,9 @@ function ExplorerView({ cwd }: { cwd: string }) {
           <Icon name="chevron-down" small />
         </button>
         <span className="ex-actions">
+          <button className="icon-btn" title="Go to File (⌘P)" onClick={() => setUi({ switcherOpen: true })}>
+            <Icon name="search" small />
+          </button>
           <button className={`icon-btn${showHidden ? ' on' : ''}`} title={showHidden ? 'Hide ignored files' : 'Show ignored files'} onClick={() => setShowHidden(!showHidden)}>
             <Icon name={showHidden ? 'eye' : 'eye-closed'} small />
           </button>

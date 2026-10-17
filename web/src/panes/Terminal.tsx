@@ -33,6 +33,17 @@ const theme = {
   brightWhite: '#e5e5e5',
 };
 
+const KEYS: [label: string, seq: string, icon?: string][] = [
+  ['Esc', '\x1b'],
+  ['Tab', '\t'],
+  ['^C', '\x03'],
+  ['^D', '\x04'],
+  ['Up', '\x1b[A', 'arrow-up'],
+  ['Down', '\x1b[B', 'arrow-down'],
+  ['Left', '\x1b[D', 'arrow-left'],
+  ['Right', '\x1b[C', 'arrow-right'],
+];
+
 export function Terminal({ chat, project, open, onToggle }: Props) {
   const [tabs, setTabs] = useState<Tab[] | null>(null);
   const [active, setActive] = useState('');
@@ -40,6 +51,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
   const [focus, setFocus] = useState(0);
   const [gens, setGens] = useState<Record<string, number>>({});
   const clears = useRef(new Map<string, () => void>());
+  const inputs = useRef(new Map<string, (d: string) => void>());
   const wasOpen = useRef(open);
   const url = (q = '') => `/api/terms?chat=${encodeURIComponent(chat)}${q}`;
 
@@ -111,7 +123,14 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
         <div className="panel-body" hidden={!open}>
           <div className="term-stack">
             {tabs.map((t) => (
-              <Pane key={`${t.id}:${gens[t.id] ?? 0}`} id={t.id} on={t.id === active} focus={t.id === active ? focus : 0} clears={clears.current} onGone={() => void gone(t.id)} />
+              <Pane key={`${t.id}:${gens[t.id] ?? 0}`} id={t.id} on={t.id === active} focus={t.id === active ? focus : 0} clears={clears.current} inputs={inputs.current} onGone={() => void gone(t.id)} />
+            ))}
+          </div>
+          <div className="term-keys mobile-only">
+            {KEYS.map(([label, seq, icon]) => (
+              <button key={label} title={label} onPointerDown={(e) => e.preventDefault()} onClick={() => inputs.current.get(active)?.(seq)}>
+                {icon ? <Icon name={icon} small /> : label}
+              </button>
             ))}
           </div>
         </div>
@@ -120,7 +139,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
   );
 }
 
-function Pane({ id, on, focus, clears, onGone }: { id: string; on: boolean; focus: number; clears: Map<string, () => void>; onGone: () => void }) {
+function Pane({ id, on, focus, clears, inputs, onGone }: { id: string; on: boolean; focus: number; clears: Map<string, () => void>; inputs: Map<string, (d: string) => void>; onGone: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const term = useRef<XTerm | null>(null);
   const want = useRef(false);
@@ -142,6 +161,7 @@ function Pane({ id, on, focus, clears, onGone }: { id: string; on: boolean; focu
       send({ t: 'c' });
     };
     clears.set(id, clear);
+    inputs.set(id, (d) => send({ t: 'i', d }));
     const resize = () => {
       if (!el.offsetHeight || !el.offsetWidth) return;
       if (!xt.element) xt.open(el);
@@ -172,6 +192,7 @@ function Pane({ id, on, focus, clears, onGone }: { id: string; on: boolean; focu
       ws.onclose = null;
       ws.close();
       clears.delete(id);
+      inputs.delete(id);
       xt.dispose();
     };
   }, [id]);

@@ -40,10 +40,23 @@
   .composer-foot .pill, .composer-foot .icon-btn { height: 36px; min-width: 36px; }
   .tabbar .codicon.icon { font-size: 20px; }
   .more-sheet-overlay { position: fixed; inset: 0; bottom: calc(56px + env(safe-area-inset-bottom)); z-index: 50; display: flex; align-items: flex-end; justify-content: flex-end; padding: 8px; background: rgba(0, 0, 0, 0.35); }
-  .more-sheet { width: min(240px, 100%); display: flex; flex-direction: column; padding: 4px; background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: var(--radius); }
-  .more-sheet button { height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 12px; font-size: 15px; color: var(--fg); background: transparent; border: 0; border-radius: var(--radius-sm); text-align: left; }
-  .more-sheet button.active { background: var(--accent-soft); }
+  .more-sheet { width: min(300px, 100%); max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; padding: 4px; background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: var(--radius); }
+  .more-sheet > button { flex: none; height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; font-size: 15px; color: var(--fg); background: transparent; border: 0; border-radius: var(--radius-sm); text-align: left; }
+  .more-sheet > button > span:not(.badge):not(.more-meta) { flex: 1; }
+  .more-sheet > button.active { background: var(--accent-soft); }
   .more-sheet .codicon.icon { font-size: 18px; color: var(--fg-muted); }
+  .more-sheet .badge { background: var(--border-strong); color: var(--fg); }
+  .more-sheet .badge.waiting { background: var(--warn); color: var(--bg); }
+  .more-meta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-muted); }
+  .more-divider { flex: none; height: 1px; margin: 4px 8px; background: var(--border); }
+  .more-status { flex: none; display: flex; align-items: center; gap: 2px; padding: 0 0 4px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .more-status .icon-btn { width: 40px; height: 40px; flex: none; }
+  .more-status .item { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+  .more-status .item.muted { opacity: 0.7; }
+  .more-project { flex: 1; min-width: 0; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 8px; font-size: 13px; color: var(--fg); background: transparent; border: 0; border-radius: var(--radius-sm); text-align: left; }
+  .more-project span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app-update.offline { color: var(--warn); }
+  .tabs .tab.ex-tab { flex: none; width: 44px; justify-content: center; padding: 0; }
   .browser-bar { height: 44px; }
   .browser-bar .icon-btn, .browser-bar select { height: 32px; min-width: 32px; }
   .browser-bar input.url { height: 32px; font-size: 16px; }
