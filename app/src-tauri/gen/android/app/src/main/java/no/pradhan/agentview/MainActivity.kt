@@ -82,8 +82,11 @@ class MainActivity : TauriActivity() {
 
   private fun openExternal(url: String) {
     try {
-      val intent = if (url.startsWith("intent:")) {
-        Intent.parseUri(url, Intent.URI_INTENT_SCHEME).apply { component = null; selector = null }
+      val parsed = if (url.startsWith("intent:")) Intent.parseUri(url, Intent.URI_INTENT_SCHEME) else null
+      val app = parsed?.takeIf { it.data == null && it.action == null }?.`package`?.let { packageManager.getLaunchIntentForPackage(it) }
+      if (app != null) return startActivity(app)
+      val intent = if (parsed != null) {
+        parsed.apply { component = null; selector = null }
       } else {
         Intent(Intent.ACTION_VIEW, Uri.parse(url))
       }
