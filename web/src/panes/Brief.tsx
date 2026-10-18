@@ -80,6 +80,8 @@ export function Brief() {
   const [full, setFull] = useState(() => localStorage.getItem('agentview.transcript') === '1');
   const pick = (v: boolean) => { setFull(v); localStorage.setItem('agentview.transcript', v ? '1' : '0'); };
   const [adding, setAdding] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(() => { try { return localStorage.getItem('agentview.steps') !== '0'; } catch { return true; } });
+  const toggleSteps = () => { setStepsOpen(!stepsOpen); try { localStorage.setItem('agentview.steps', stepsOpen ? '0' : '1'); } catch {} };
   const [, tick] = useState(0);
   const end = useRef<HTMLDivElement>(null);
   const prompts = moments.map((m, i) => (m.kind === 'you' ? i : -1)).filter((i) => i >= 0);
@@ -88,6 +90,7 @@ export function Brief() {
   const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const setNext = (list: string[]) => send({ type: 'plan', next: list });
   const lastReply = [...moments].reverse().find((m) => m.kind === 'reply');
+  const hasSteps = next.length > 0 || adding || running;
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
 
   useEffect(() => {
@@ -127,7 +130,13 @@ export function Brief() {
             </span>
             {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
           </div>
-          {(next.length > 0 || adding || running) && (
+          {hasSteps && (
+            <button className="steps-toggle" aria-expanded={stepsOpen} onClick={toggleSteps}>
+              <Icon name={stepsOpen ? 'chevron-down' : 'chevron-right'} small />
+              <span>{next.length ? `${next.length} next step${next.length === 1 ? '' : 's'}` : 'Next steps'}</span>
+            </button>
+          )}
+          {hasSteps && stepsOpen && (
             <ul className="steps">
               {next.map((t, i) => (
                 <Step key={`${i}:${t}`} text={t} onSave={(v) => setNext(next.map((x, j) => (j === i ? v : x)).filter(Boolean))} onDrop={() => setNext(next.filter((_, j) => j !== i))} />
