@@ -11,7 +11,8 @@ export type Item =
   | { kind: 'system'; id: string; text: string }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
   | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string }
-  | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult };
+  | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult }
+  | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> };
 
 export type Label = { verb: string; object: string; mono?: boolean };
 
@@ -71,6 +72,7 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
     if (e.kind === 'user') items.push(e.phase ? { kind: 'phase', id: e.id, text: e.text } : { kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
     else if (e.kind === 'assistant') { if (e.text.trim()) items.push({ kind: 'assistant', id: e.id, text: e.text, streaming: e.streaming }); }
     else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text });
+    else if (e.kind === 'blocked') items.push({ kind: 'blocked', id: e.id, ev: e });
     else if (e.kind === 'plan') items.push({ kind: 'system', id: e.id, text: e.next.length ? `You changed the next steps (${e.next.length})` : 'You cleared the next steps' });
     else if (e.kind === 'tool_use' && !e.name.endsWith('__set_status')) {
       const result = results.get(e.id);

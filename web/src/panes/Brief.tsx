@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { send, useStore } from '../store';
 import { Icon } from '../Icon';
-import { Pending } from './Pending';
+import { BlockedCard, Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
 import { loopLabel } from './Composer';
 import { ReadAloud } from './Voice';
@@ -9,7 +9,7 @@ import { touch } from '../touch';
 import { Transcript } from './Transcript';
 import { type ChatEvent } from '../../../shared/protocol';
 
-export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan' | 'phase'; text: string; at: number; stopping?: boolean; queued?: boolean };
+export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan' | 'phase' | 'blocked'; text: string; at: number; stopping?: boolean; queued?: boolean; blocked?: Extract<ChatEvent, { kind: 'blocked' }> };
 
 const PHASE_TEXT: Record<string, string> = { plan: 'Plan · Opus', build: 'Build · Opus', test: 'Test · Sonnet' };
 
@@ -40,6 +40,7 @@ export function buildTimeline(events: ChatEvent[]) {
     if (e.kind === 'system' && e.text.startsWith('Compact')) moments.push({ id: e.id, kind: e.text.startsWith('Compact failed') ? 'note' : 'done', text: e.text, at: e.at });
     if (e.kind === 'system' && e.text.startsWith('Claude woke up')) moments.push({ id: e.id, kind: 'phase', text: e.text, at: e.at });
     if (e.kind === 'system' && e.text.startsWith('Loop ')) moments.push({ id: e.id, kind: e.text.startsWith('Loop passed') ? 'done' : e.text.startsWith('Loop on') || e.text === 'Loop off' ? 'phase' : 'note', text: e.text, at: e.at });
+    if (e.kind === 'blocked') moments.push({ id: e.id, kind: 'blocked', text: e.rule, at: e.at, blocked: e });
     if (e.kind === 'tool_use' && e.name === 'Advisor') advisor++;
     if (e.kind === 'tool_use' && e.input.subagent_type === BIG_BRO) fableCalls.add(e.id);
     if (e.kind === 'tool_result' && fableCalls.has(e.toolUseId) && !e.isError) moments.push({ id: e.id, kind: 'fable', text: handBack(e.text), at: e.at });
@@ -160,7 +161,7 @@ export function Brief() {
 
 const CLAUDE = <svg viewBox="0 0 16 16" width="12" height="12"><path d="M8 1.5v13M1.5 8h13M3.4 3.4l9.2 9.2M12.6 3.4l-9.2 9.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 const MARKS: Record<Moment['kind'], ReactNode> = {
-  you: <Icon name="comment" small />, done: <Icon name="check" small />, note: <i className="dot" />, fable: <Icon name="sparkle" small />, reply: CLAUDE, plan: <Icon name="edit" small />, phase: <Icon name="sync" small />,
+  you: <Icon name="comment" small />, done: <Icon name="check" small />, note: <i className="dot" />, fable: <Icon name="sparkle" small />, reply: CLAUDE, plan: <Icon name="edit" small />, phase: <Icon name="sync" small />, blocked: <Icon name="shield" small />,
 };
 
 function MomentRow({ m, sub }: { m: Moment; sub: boolean }) {
@@ -171,6 +172,15 @@ function MomentRow({ m, sub }: { m: Moment; sub: boolean }) {
     if (m.kind === 'reply' && body.current) setLong(body.current.scrollHeight > body.current.clientHeight + 2);
   }, [m.kind, m.text]);
   const when = m.queued ? <span className="tl-state" title="Queued, sends when Claude finishes"><Icon name="clock" small /></span> : m.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(m.at).toLocaleString()}>{time(m.at)}</span>;
+  if (m.blocked) {
+    return (
+      <li className={`tl blocked ${sub ? 'sub' : ''}`}>
+        <span className="mark">{MARKS.blocked}</span>
+        <BlockedCard ev={m.blocked} />
+        {when}
+      </li>
+    );
+  }
   if (m.kind === 'reply') {
     return (
       <li className={`tl reply ${sub ? 'sub' : ''}`}>

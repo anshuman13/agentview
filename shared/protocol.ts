@@ -30,7 +30,8 @@ export type ChatEvent =
   | { id: string; kind: 'result'; text: string; costUsd: number; isError: boolean; at: number }
   | { id: string; kind: 'system'; text: string; at: number }
   | { id: string; kind: 'status'; text: string; at: number }
-  | { id: string; kind: 'plan'; next: string[]; at: number };
+  | { id: string; kind: 'plan'; next: string[]; at: number }
+  | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number };
 
 export type SessionInfo = {
   id: string;
@@ -154,6 +155,7 @@ export type ClientMessage =
   | { type: 'plan'; next: string[] }
   | { type: 'answer'; id: string; answers: Record<string, string> }
   | { type: 'permission'; id: string; allow: boolean; always?: boolean }
+  | { type: 'allow_blocked'; id: string }
   | { type: 'set_model'; model: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_loop'; on: boolean; max?: number }

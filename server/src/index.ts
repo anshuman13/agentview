@@ -351,6 +351,9 @@ wss.on('connection', (ws: WebSocket, req) => {
       case 'permission':
         chat.answerPermission(msg.id, msg.allow, msg.always);
         break;
+      case 'allow_blocked':
+        void chat.allowBlocked(String(msg.id)).catch(fail);
+        break;
       case 'set_model':
         void chat.setModel(msg.model);
         break;

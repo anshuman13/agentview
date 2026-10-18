@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
+import { BlockedCard } from './Pending';
 import { FileIcon } from './Explorer';
 import { buildTranscript, duration, firstLine, relPath, stepLabel, type Item, type ToolResult, type ToolUse } from './steps';
 import type { ChatEvent } from '../../../shared/protocol';
@@ -54,6 +55,8 @@ function Row({ it, cwd }: { it: Item; cwd: string }) {
       return <FileCard it={it} cwd={cwd} />;
     case 'agent':
       return <AgentRow use={it.use} result={it.result} />;
+    case 'blocked':
+      return <BlockedCard ev={it.ev} />;
   }
 }
 

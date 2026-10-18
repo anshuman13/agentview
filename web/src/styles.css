@@ -485,6 +485,8 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .tl.reply { padding: 4px 0; }
 .tl.reply .mark { color: var(--claude); }
 .reply-card { min-width: 0; padding: 6px 10px; border: 1px solid var(--border-card); border-radius: var(--radius); background: var(--bg); }
+.tl .blocked-card { padding: 10px 12px; gap: 8px; }
+.tl.blocked .mark { color: var(--warn); }
 .reply-body { max-height: calc(6 * 1.5em); overflow: hidden; font-size: 12px; line-height: 1.5; }
 .reply-body.open { max-height: none; }
 .reply-body.clipped { mask-image: linear-gradient(#000 60%, transparent); }
