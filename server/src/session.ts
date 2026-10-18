@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
-import { query, getSessionMessages, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
+import { query, getSessionMessages, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
@@ -15,6 +15,14 @@ export { BIG_BRO };
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+export function fireTime(schedule: string, now = Date.now()) {
+  const [m, h, dom, mon] = schedule.trim().split(/\s+/).slice(0, 4).map(Number);
+  if ([m, h, dom, mon].some((n) => !Number.isInteger(n))) return null;
+  const at = new Date(new Date(now).getFullYear(), mon - 1, dom, h, m);
+  if (at.getTime() < now - 60_000) at.setFullYear(at.getFullYear() + 1);
+  return at.getTime();
+}
+
 const transcriptPath = (cwd: string, sessionId: string) => path.join(CLAUDE_DIR, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'), `${sessionId}.jsonl`);
 
 export class AgentSession {
@@ -23,6 +31,8 @@ export class AgentSession {
   private wake: (() => void) | null = null;
   private closed = false;
   private gen = 0;
+  crons: SessionCronSummary[] = [];
+  private wokeAt = 0;
 
   id = randomUUID();
   title = '';
@@ -172,6 +182,10 @@ export class AgentSession {
         canUseTool: (toolName, input, opts) => this.loopPlanDone(toolName, input) ?? this.approvals.ask(toolName, input, opts),
         beforeAgent: (input, _id, { signal }) => this.confirmBigBro(input, signal),
         afterTool: async (input) => this.afterTool(input),
+        onStop: async (input) => {
+          if (input.hook_event_name === 'Stop' && !input.agent_id) this.crons = input.session_crons ?? [];
+          return {};
+        },
       }),
     });
     if (this.restore) {
@@ -395,6 +409,28 @@ export class AgentSession {
     this.setStatus('Compacting the conversation');
   }
 
+  private rearmWakeups() {
+    const since = Date.now();
+    for (const c of this.crons.filter((x) => !x.recurring)) {
+      const at = fireTime(c.schedule, since);
+      if (at === null) continue;
+      setTimeout(() => {
+        if (this.closed || this.wokeAt > since || this.crons.some((x) => !x.recurring && x.prompt === c.prompt && x.schedule !== c.schedule)) return;
+        this.system('Compacting dropped the scheduled wakeup, so AgentView sent it');
+        void this.prompt(c.prompt);
+      }, Math.max(0, at - Date.now()) + 5000);
+    }
+  }
+
+  private turnStartedByClaude() {
+    this.wokeAt = Date.now();
+    this.turns++;
+    this.setSession({ running: true });
+    this.setStatus('Woke up for a scheduled or background task');
+    const cron = this.crons.length === 1 ? this.crons[0] : null;
+    this.system(cron ? `Claude woke up: ${cron.prompt.slice(0, 100)}` : 'Claude woke up on its own');
+  }
+
   private turnEnded() {
     this.turns = Math.max(0, this.turns - 1);
     const idle = this.turns === 0 && !this.state.session.stopping;
@@ -445,6 +481,8 @@ export class AgentSession {
             void this.q?.setPermissionMode('auto').then(() => this.setSession({ permissionMode: 'auto' }));
           }
           if (this.state.session.commands.length === 0) void this.loadMeta();
+        } else if (msg.subtype === 'session_state_changed') {
+          if (msg.state === 'running' && !this.state.session.running) this.turnStartedByClaude();
         } else if (msg.subtype === 'status') {
           if (msg.permissionMode) this.setSession({ permissionMode: msg.permissionMode });
           if (msg.status === 'compacting') this.startCompacting();
@@ -456,6 +494,7 @@ export class AgentSession {
           this.setStatus('Compacted');
           this.autoCompact = true;
           this.system(`Compacted from ${Math.round(pre_tokens / 1000)}k${post_tokens ? ` to ${Math.round(post_tokens / 1000)}k` : ''} tokens`);
+          this.rearmWakeups();
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();

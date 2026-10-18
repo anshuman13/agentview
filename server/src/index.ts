@@ -103,7 +103,7 @@ async function closeByUser(chat: AgentSession) {
   closeChat(chat);
 }
 
-const idle = (chat: AgentSession) => !chat.state.session.running && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
+const idle = (chat: AgentSession) => !chat.state.session.running && chat.crons.length === 0 && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
 
 function view(client: Client, chat: AgentSession) {
   const prev = client.view;

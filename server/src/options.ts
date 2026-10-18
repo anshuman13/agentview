@@ -45,10 +45,12 @@ export function agentOptions(o: {
   canUseTool: CanUseTool;
   beforeAgent: HookCallback;
   afterTool: HookCallback;
+  onStop: HookCallback;
 }): Options {
   return {
     cwd: o.cwd,
     resume: o.resume,
+    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1' },
     systemPrompt: { type: 'preset', preset: 'claude_code', append: INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
@@ -71,6 +73,7 @@ export function agentOptions(o: {
     hooks: {
       PreToolUse: [{ matcher: 'Agent|Task', hooks: [o.beforeAgent] }],
       PostToolUse: [{ hooks: [o.afterTool] }],
+      Stop: [{ hooks: [o.onStop] }],
     },
     stderr: (d) => process.stderr.write(d),
   };
