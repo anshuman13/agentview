@@ -106,13 +106,11 @@ async function closeByUser(chat: AgentSession) {
 const idle = (chat: AgentSession) => !chat.state.session.running && chat.crons.length === 0 && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
 
 function view(client: Client, chat: AgentSession) {
-  const prev = client.view;
   client.view = chat;
   lastViewed = chat;
   remember(chat);
   client.send({ type: 'init', state: chat.state });
   void chat.refreshMcp();
-  if (prev && prev !== chat && idle(prev) && !prev.state.session.sessionId) closeChat(prev);
   broadcastLive();
 }
 
