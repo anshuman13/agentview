@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import { send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
-import type { PendingPermission, PendingQuestion } from '../../../shared/protocol';
+import type { ChatEvent, PendingPermission, PendingQuestion } from '../../../shared/protocol';
 import '../pending.css';
 
 export function Pending() {
@@ -284,5 +284,17 @@ function Option({ n, multi, on, label, description, preview, className, onPick }
       </span>
       <kbd>{n}</kbd>
     </button>
+  );
+}
+
+export function BlockedCard({ ev }: { ev: Extract<ChatEvent, { kind: 'blocked' }> }) {
+  const rule = ev.rule.startsWith('Bash(') ? ev.rule.slice(5, -1).replace(/\\([\\()])/g, '$1') : ev.rule;
+  return (
+    <div className="pd blocked-card">
+      <div className="pd-head"><Icon name="shield" small /><span className="pd-title">Auto mode blocked this</span></div>
+      <pre className="pd-code">{rule}</pre>
+      {ev.reason && <div className="pd-desc">{ev.reason}</div>}
+      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><button className="pd-btn primary" onClick={() => send({ type: 'allow_blocked', id: ev.id })}>Allow and retry</button></div>}
+    </div>
   );
 }

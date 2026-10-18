@@ -54,6 +54,7 @@ export class AgentSession {
   private liveMsgId = '';
 
   private resumedAuto = false;
+  private allowed: string[] = [];
 
   private transcript: FSWatcher | null = null;
   private transcriptTimer: NodeJS.Timeout | undefined;
@@ -196,6 +197,7 @@ export class AgentSession {
       if (model) void this.q.setModel(model).catch(() => {});
       if (permissionMode) void this.q.setPermissionMode(permissionMode as PermissionMode).catch(() => {});
     }
+    if (this.allowed.length) void this.q.applyFlagSettings({ permissions: { allow: this.allowed } }).catch(() => {});
     void this.consume();
     void this.loadMeta();
   }
@@ -267,6 +269,25 @@ export class AgentSession {
 
   answerPermission(id: string, allow: boolean, always?: boolean) {
     this.approvals.answerPermission(id, allow, always);
+  }
+
+  private blocked(toolUseId: string, tool: string, reason: string) {
+    const use = this.state.events.find((e) => e.id === toolUseId);
+    const command = use?.kind === 'tool_use' && typeof use.input.command === 'string' ? use.input.command : '';
+    if (tool === 'Bash' && !command) return;
+    const rule = tool === 'Bash' && command ? `Bash(${command.replace(/[\\()]/g, '\\$&')})` : tool;
+    this.pushEvent({ id: `${toolUseId}:blocked`, kind: 'blocked', rule, reason, allowed: false, at: Date.now() });
+  }
+
+  async allowBlocked(id: string) {
+    const ev = this.state.events.find((e) => e.id === id);
+    if (ev?.kind !== 'blocked' || ev.allowed) return;
+    this.start();
+    this.allowed = [...new Set([...this.allowed, ev.rule])];
+    await this.q?.applyFlagSettings({ permissions: { allow: this.allowed } });
+    ev.allowed = true;
+    this.emit({ type: 'event', event: ev });
+    void this.prompt(`I allowed ${ev.rule} for this chat. Retry it.`);
   }
 
   private async *inputStream(gen: number): AsyncGenerator<SDKUserMessage> {
@@ -526,6 +547,8 @@ export class AgentSession {
           this.autoCompact = true;
           this.system(`Compacted from ${Math.round(pre_tokens / 1000)}k${post_tokens ? ` to ${Math.round(post_tokens / 1000)}k` : ''} tokens`);
           this.rearmWakeups();
+        } else if (msg.subtype === 'permission_denied') {
+          if (msg.decision_reason_type !== 'rule') this.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
