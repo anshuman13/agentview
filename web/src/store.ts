@@ -140,7 +140,8 @@ let heard = 0;
 export function connect() {
   clearTimeout(retry);
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const sock = new WebSocket(`${proto}://${location.host}/ws`);
+  const chat = getState().session.id;
+  const sock = new WebSocket(`${proto}://${location.host}/ws${chat ? `?chat=${encodeURIComponent(chat)}` : ''}`);
   ws = sock;
   heard = Date.now();
   sock.onopen = () => {
@@ -163,7 +164,6 @@ function reconnect() {
   (window as { avlog?: (e: string) => void }).avlog?.('ws stale, reconnecting');
   ws?.close();
   ws = null;
-  setUi({ connected: false });
   connect();
 }
 
@@ -177,5 +177,5 @@ function probe(wait: number) {
 
 if (typeof document !== 'undefined') {
   setInterval(() => document.visibilityState === 'visible' && probe(10000), 15000);
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && probe(3000));
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && probe(8000));
 }
