@@ -43,6 +43,7 @@ export class AgentSession {
 
   private turns = 0;
   private planChange: string | null = null;
+  private queued: Extract<ChatEvent, { kind: 'user' }>[] = [];
   private sinceStatus = 0;
   private autoCompact = true;
   private lastResult = '';
@@ -301,6 +302,7 @@ export class AgentSession {
     }
     this.turns -= this.inputQueue.length;
     this.inputQueue = [];
+    this.dropQueue();
     if (this.turns <= 0) {
       this.turns = 0;
       this.setSession({ running: false, compacting: false });
@@ -315,8 +317,23 @@ export class AgentSession {
     }
   }
 
+  private queue(text: string, id: string = randomUUID()) {
+    const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), queued: true };
+    this.queued.push(ev);
+    this.pushEvent(ev);
+  }
+
+  private dropQueue() {
+    if (!this.queued.length) return;
+    const ids = new Set(this.queued.map((e) => e.id));
+    this.queued = [];
+    this.state.events = this.state.events.filter((e) => !ids.has(e.id));
+    this.emit({ type: 'init', state: this.state });
+  }
+
   async prompt(text: string) {
-    if (!this.state.session.running) await this.planFirst();
+    if (this.state.session.running) return this.queue(text);
+    await this.planFirst();
     const loop = this.state.session.loop;
     if (loop.on && !this.state.session.running && !text.trim().startsWith('/')) return this.startLoop(text);
     this.sendPrompt(text);
@@ -365,6 +382,7 @@ export class AgentSession {
   }
 
   async steer(text: string, id: string = randomUUID()) {
+    if (this.state.session.compacting) return this.queue(text, id);
     const running = this.state.session.running;
     const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), stopping: running };
     this.pushEvent(ev);
@@ -453,6 +471,13 @@ export class AgentSession {
       this.autoCompact = false;
       return '/compact';
     }
+    const ev = this.queued.shift();
+    if (!ev) return null;
+    ev.queued = false;
+    ev.at = Date.now();
+    this.state.events = [...this.state.events.filter((e) => e !== ev), ev];
+    this.emit({ type: 'init', state: this.state });
+    this.enqueue(ev.text);
     return null;
   }
 

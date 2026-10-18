@@ -50,9 +50,8 @@
 }
 .cp-send:hover:not(:disabled), .cp-stop:hover:not(:disabled) { background: #ffffff; }
 .cp-send:disabled, .cp-stop:disabled { background: var(--bg-hover, #2a2d2e); color: var(--fg-faint, #6e6e6e); cursor: default; }
-.cp-send.steer:not(:disabled) { background: transparent; border-color: var(--border-strong, #3c3c3c); color: var(--fg, #cccccc); }
-.cp-send.steer:hover:not(:disabled) { background: var(--bg-hover, #2a2d2e); }
-.cp-foot .icon-btn.voice, .cp-foot .icon-btn.attach { width: 28px; height: 28px; border-radius: 50%; }
+.cp-foot .icon-btn.steer:not(:disabled) { color: var(--fg, #cccccc); }
+.cp-foot .icon-btn.voice, .cp-foot .icon-btn.attach, .cp-foot .icon-btn.steer { width: 28px; height: 28px; border-radius: 50%; }
 
 .cp-under { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 0 4px; font-size: 11px; line-height: 16px; color: var(--fg-faint, #6e6e6e); }
 .cp-hint { flex: none; white-space: nowrap; }
@@ -84,7 +83,7 @@
   .cp-card textarea, .cp-mirror { font-size: 16px; line-height: 22px; }
   .cp-card.shell textarea, .cp-card.shell .cp-mirror { font-size: 15px; }
   .cp-pill { height: 44px; line-height: 44px; font-size: 13px; padding: 0 8px 0 10px; }
-  .cp-send, .cp-stop, .cp-foot .icon-btn.voice { width: 44px; height: 44px; }
+  .cp-send, .cp-stop, .cp-foot .icon-btn.voice, .cp-foot .icon-btn.steer { width: 44px; height: 44px; }
   .cp-foot { gap: 2px; padding: 2px 6px 6px; }
   .cp-pop li { height: 44px; }
   .cp-pop { max-height: min(300px, 45vh); }

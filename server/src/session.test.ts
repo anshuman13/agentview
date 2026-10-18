@@ -32,6 +32,27 @@ describe('AgentSession turns', () => {
     expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['long task', 'change of plan']);
   });
 
+  it('queues a prompt sent while running and sends it when the turn ends', async () => {
+    const { s, interrupt, result } = fakeSession();
+    s.sendPrompt('long task');
+    await s.prompt('next thing');
+    expect(interrupt).not.toHaveBeenCalled();
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'next thing', queued: true });
+    result('r1');
+    expect(s.state.session.running).toBe(true);
+    expect(s.state.events.find((e) => e.kind === 'user' && e.text === 'next thing')).toMatchObject({ queued: false });
+    result('r2');
+    expect(s.state.session.running).toBe(false);
+  });
+
+  it('queues a steer while compacting', async () => {
+    const { s, interrupt } = fakeSession();
+    s.sendPrompt('/compact');
+    await s.steer('after compact');
+    expect(interrupt).not.toHaveBeenCalled();
+    expect(s.state.events.at(-1)).toMatchObject({ text: 'after compact', queued: true });
+  });
+
   it('steer shows the message before the interrupt finishes', async () => {
     const { s, interrupt } = fakeSession();
     let finish = () => {};
