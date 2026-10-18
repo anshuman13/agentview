@@ -7,7 +7,7 @@ import { loopLabel } from './Composer';
 import { ReadAloud } from './Voice';
 import { touch } from '../touch';
 import { Transcript } from './Transcript';
-import { COMPACT_AT, type ChatEvent } from '../../../shared/protocol';
+import { type ChatEvent } from '../../../shared/protocol';
 
 export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan' | 'phase'; text: string; at: number; stopping?: boolean; queued?: boolean };
 
@@ -72,8 +72,6 @@ export function Brief() {
   const running = useStore((s) => s.session.running);
   const waiting = useStore((s) => s.pending.length > 0);
   const team = useStore((s) => s.session.team);
-  const context = useStore((s) => s.session.context);
-  const compacting = useStore((s) => s.session.compacting);
   const stopping = useStore((s) => s.session.stopping);
   const loop = useStore((s) => s.session.loop);
   const { moments, next, lastTool, advisor, fable } = useMemo(() => buildTimeline(events), [events]);
@@ -155,14 +153,6 @@ export function Brief() {
       {waiting && <div className="brief-cards"><Pending /></div>}
       <div className="brief-input">
         <Composer />
-        {compacting ? (
-          <div className="ctx-line"><Icon name="loading" small spin /> Compacting the conversation…</div>
-        ) : context !== null && context >= COMPACT_AT && (
-          <div className="ctx-line">
-            <span><b>{Math.round(context / 1000)}k</b> context · {running ? 'compacts when this turn ends' : 'compact to keep turns cheap'}</span>
-            {!running && <button className="link" title="Run /compact" onClick={() => send({ type: 'prompt', text: '/compact' })}>Compact now</button>}
-          </div>
-        )}
       </div>
     </div>
   );
