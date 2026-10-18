@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type Dispatch, type SetStateAction } from 'react';
 import { useStore } from '../store';
 import { Icon } from '../Icon';
 
@@ -115,14 +115,19 @@ function speakable(md: string) {
   return md.replace(/```[\s\S]*?```/g, ' code block. ').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_#>|~]/g, '');
 }
 
-export function ReadAloud() {
+const readers = new Set<() => void>();
+let reading = (() => { try { return localStorage.getItem('readAloud') === '1'; } catch { return false; } })();
+const subscribe = (f: () => void) => { readers.add(f); return () => { readers.delete(f); }; };
+
+export function ReadAloud({ speak = false }: { speak?: boolean }) {
   const events = useStore((s) => s.events);
   const chat = useStore((s) => s.session.id);
-  const [on, setOn] = useState(() => { try { return localStorage.getItem('readAloud') === '1'; } catch { return false; } });
+  const on = useSyncExternalStore(subscribe, () => reading);
   const seen = useRef<{ chat: string; ids: Set<string> } | null>(null);
 
   useEffect(() => {
-    if (!on) return;
+    if (!speak) return;
+    if (!on) { seen.current = null; return; }
     const fresh = seen.current?.chat !== chat;
     if (fresh) seen.current = { chat, ids: new Set() };
     const { ids } = seen.current!;
@@ -134,16 +139,15 @@ export function ReadAloud() {
       u.lang = navigator.language;
       speechSynthesis.speak(u);
     }
-  }, [events, on, chat]);
+  }, [events, on, chat, speak]);
 
   if (!('speechSynthesis' in window)) return null;
 
   const toggle = () => {
-    const next = !on;
-    if (next) seen.current = null;
-    else speechSynthesis.cancel();
-    setOn(next);
-    try { localStorage.setItem('readAloud', next ? '1' : '0'); } catch { return; }
+    reading = !on;
+    if (!reading) speechSynthesis.cancel();
+    readers.forEach((f) => f());
+    try { localStorage.setItem('readAloud', reading ? '1' : '0'); } catch { return; }
   };
 
   return (

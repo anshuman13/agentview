@@ -79,7 +79,7 @@ export function Brief() {
   const [full, setFull] = useState(() => localStorage.getItem('agentview.transcript') === '1');
   const pick = (v: boolean) => { setFull(v); localStorage.setItem('agentview.transcript', v ? '1' : '0'); };
   const [adding, setAdding] = useState(false);
-  const [stepsOpen, setStepsOpen] = useState(() => { try { return localStorage.getItem('agentview.steps') !== '0'; } catch { return true; } });
+  const [stepsOpen, setStepsOpen] = useState(() => { try { return (localStorage.getItem('agentview.steps') ?? (touch() ? '0' : '1')) === '1'; } catch { return !touch(); } });
   const toggleSteps = () => { setStepsOpen(!stepsOpen); try { localStorage.setItem('agentview.steps', stepsOpen ? '0' : '1'); } catch {} };
   const [, tick] = useState(0);
   const end = useRef<HTMLDivElement>(null);
@@ -105,13 +105,12 @@ export function Brief() {
     <div className="brief">
       <div className="brief-status">
         <div className="timeline-head">
-          <span className="tl-tabs">
-            <button className={full ? '' : 'on'} onClick={() => pick(false)}>Timeline</button>
-            <button className={full ? 'on' : ''} onClick={() => pick(true)}>Transcript</button>
-          </span>
+          <button className="tl-view" title={full ? 'Show the timeline' : 'Show the full transcript'} onClick={() => pick(!full)}>
+            {full ? 'Transcript' : 'Timeline'}<Icon name="arrow-swap" small />
+          </button>
           <span className="spacer" />
           {extras && <span className="extras">{extras}</span>}
-          <ReadAloud />
+          <span className="desktop-only"><ReadAloud speak /></span>
           {!full && from > 0 && <button className="link" onClick={() => setAll(true)}>Show all</button>}
         </div>
         {full ? <Transcript /> : (
@@ -127,14 +126,15 @@ export function Brief() {
               {state === 'waiting' ? 'Waiting for you' : state === 'stopping' ? 'Stopping…' : state === 'running' ? (loop.phase && ['plan', 'build', 'test'].includes(loop.phase) ? `${loopLabel(loop)} · ${status}` : status) : lastReply ? 'Idle · last reply' : 'Idle'}
               {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
             </span>
-            {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
+            <span className="side">
+              {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
+              {hasSteps && (
+                <button className="steps-toggle" aria-expanded={stepsOpen} title={stepsOpen ? 'Hide the next steps' : 'Show the next steps'} onClick={toggleSteps}>
+                  {next.length ? `${next.length} step${next.length === 1 ? '' : 's'}` : 'Steps'}<Icon name={stepsOpen ? 'chevron-up' : 'chevron-down'} small />
+                </button>
+              )}
+            </span>
           </div>
-          {hasSteps && (
-            <button className="steps-toggle" aria-expanded={stepsOpen} onClick={toggleSteps}>
-              <Icon name={stepsOpen ? 'chevron-down' : 'chevron-right'} small />
-              <span>{next.length ? `${next.length} next step${next.length === 1 ? '' : 's'}` : 'Next steps'}</span>
-            </button>
-          )}
           {hasSteps && stepsOpen && (
             <ul className="steps">
               {next.map((t, i) => (
@@ -210,16 +210,13 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
             if (e.key === 'Escape') { setValue(text); setEdit(false); if (!text) onDrop(); }
           }}
         />
+        <button className="icon-btn" title="Remove step" onPointerDown={(e) => e.preventDefault()} onClick={() => { setEdit(false); onDrop(); }}><Icon name="trash" small /></button>
       </li>
     );
   }
   return (
-    <li className="step">
-      <span className="text" onClick={() => { if (!touch()) setEdit(true); }}>{text}</span>
-      <span className="acts">
-        <button className="icon-btn" title="Edit step" onClick={() => setEdit(true)}><Icon name="edit" small /></button>
-        <button className="icon-btn" title="Remove step" onClick={onDrop}><Icon name="close" small /></button>
-      </span>
+    <li className="step" title="Tap to edit" onClick={() => setEdit(true)}>
+      <span className="text">{text}</span>
     </li>
   );
 }

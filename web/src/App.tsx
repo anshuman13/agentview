@@ -19,6 +19,7 @@ import { Observe } from './panes/Observe';
 import { Deploy } from './panes/Deploy';
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
+import { ReadAloud } from './panes/Voice';
 
 type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos';
 type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
@@ -43,7 +44,6 @@ const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
 const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'chat', icon: 'comment-discussion', label: 'Chat' },
   { id: 'code', icon: 'files', label: 'Files' },
-  { id: 'browser', icon: 'globe', label: 'Browser' },
 ];
 const narrow = () => window.innerWidth <= 900;
 
@@ -235,8 +235,9 @@ export function App() {
   const active = showing === 'browser' ? 'browser' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
   const project = session.cwd ? session.cwd.split('/').pop() : 'AgentView';
   const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor);
-  const inMore = tab === 'term' || tab === 'repos' || (tab === 'code' && isPage(editor));
   const chatsView = view === 'chats' || view === 'sessions';
+  const inChats = tab === 'repos' && chatsView;
+  const inMore = tab === 'term' || (tab === 'repos' && !chatsView) || (tab === 'code' && isPage(editor));
   const mcpOk = mcp.filter((m) => m.status === 'connected').length;
   const goTab = (t: Tab) => {
     setMore(false);
@@ -371,17 +372,23 @@ export function App() {
       </footer>
 
       <nav className="tabbar mobile-only">
-        {TABS.map((t) => (
+        {TABS.map((t) => [
           <button key={t.id} className={tab === t.id && !(t.id === 'code' && isPage(editor)) && !more ? 'active' : ''} onClick={() => goTab(t.id)}>
             <Icon name={t.icon} />
             <span>{t.label}</span>
             {t.id === 'chat' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
-          </button>
-        ))}
+          </button>,
+          t.id === 'chat' && (
+            <button key="chats" className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
+              <Icon name="comment-discussion" />
+              <span>Chats</span>
+              {elsewhere > 0 && <span className="badge">{elsewhere}</span>}
+            </button>
+          ),
+        ])}
         <button className={more || inMore ? 'active' : ''} onClick={() => setMore((v) => !v)}>
           <Icon name="ellipsis" />
           <span>More</span>
-          {elsewhere > 0 && <span className="badge">{elsewhere}</span>}
         </button>
       </nav>
       {more && (
@@ -391,21 +398,16 @@ export function App() {
               <button className="more-project" title={`${session.cwd}\nStart a chat in another repo`} onClick={act(() => setUi({ repoPicker: true }))}>
                 <Icon name="folder" small /><span>{project}</span>
               </button>
-              <CacheItem />
+              <ReadAloud />
               {canNotify && (
                 <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
                   <Icon name={notifying ? 'bell' : 'bell-slash'} />
                 </button>
               )}
               <button className="icon-btn" title={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme}><Icon name="color-mode" /></button>
-              <button className="icon-btn" title="Open on phone" onClick={act(() => setPhone(true))}><Icon name="device-mobile" /></button>
             </div>
             <button className={tab === 'term' ? 'active' : ''} onClick={() => goTab('term')}>
               <Icon name="terminal" /><span>Terminal</span>
-            </button>
-            <button className={tab === 'repos' && chatsView ? 'active' : ''} onClick={() => goSide('chats')}>
-              <Icon name="comment-discussion" /><span>Chats</span>
-              {elsewhere > 0 && <span className="badge waiting">{elsewhere}</span>}
             </button>
             <button className={tab === 'repos' && view === 'changes' ? 'active' : ''} onClick={() => goSide('changes')}>
               <Icon name="source-control" /><span>Source Control</span><ChangesBadge />
@@ -413,7 +415,7 @@ export function App() {
             <button className={tab === 'repos' && view === 'github' ? 'active' : ''} onClick={() => goSide('github')}>
               <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
             </button>
-            <span className="more-divider" />
+            <span className="more-label">Tools</span>
             {PAGES.map((p) => (
               <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
                 <Icon name={p.icon} />
@@ -422,9 +424,6 @@ export function App() {
               </button>
             ))}
             <span className="more-divider" />
-            <button onClick={act(() => setUi({ switcherOpen: true }))}>
-              <Icon name="go-to-file" /><span>Go to File</span>
-            </button>
             <button onClick={act(() => window.dispatchEvent(new Event('agentview:palette')))}>
               <Icon name="terminal-cmd" /><span>Command Palette</span>
             </button>

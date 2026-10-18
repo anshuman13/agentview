@@ -11,12 +11,10 @@ export function Transcript() {
   const events = useStore((s) => s.events);
   const cwd = useStore((s) => s.session.cwd);
   const running = useStore((s) => s.session.running);
-  const stopping = useStore((s) => s.session.stopping);
-  const status = useStore((s) => s.status);
-  return <TranscriptView events={events} cwd={cwd} running={running} stopping={stopping} status={status} />;
+  return <TranscriptView events={events} cwd={cwd} running={running} />;
 }
 
-export function TranscriptView({ events, cwd, running, stopping, status }: { events: ChatEvent[]; cwd: string; running: boolean; stopping: boolean; status: string }) {
+export function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: string; running: boolean }) {
   const items = useMemo(() => buildTranscript(events), [events]);
   const box = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -36,12 +34,6 @@ export function TranscriptView({ events, cwd, running, stopping, status }: { eve
     <div ref={box} className="tr" onScroll={onScroll}>
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
       {items.map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
-      {running && (
-        <div className="tr-working">
-          <span className="tr-mark"><Icon name="loading" small spin /></span>
-          <span className="tr-text">{stopping ? 'Stopping…' : status === 'Idle' ? 'Working' : status}</span>
-        </div>
-      )}
     </div>
   );
 }

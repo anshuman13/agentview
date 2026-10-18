@@ -501,7 +501,7 @@ button.link:hover { background: transparent; text-decoration: underline; }
   border: 1px solid var(--border-card); border-radius: var(--radius); background: var(--bg-sunken); box-shadow: 0 0 0 4px var(--brief-bg);
 }
 .tl-now {
-  position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) 34px; column-gap: 8px; align-items: start;
+  position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; column-gap: 8px; align-items: start;
   padding: 4px 0; font-size: 12px; line-height: 18px; color: var(--fg);
 }
 .tl-now .text { min-width: 0; }
@@ -509,19 +509,17 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .tl-now.waiting .mark, .tl-now.waiting .text { color: var(--warn); }
 .tl-now.idle .text { color: var(--fg-muted); }
 .tl-now .tool { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 11px; color: var(--fg-muted); }
+.tl-now .side { display: flex; align-items: center; gap: 8px; }
 .steps-toggle {
-  display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 8px; align-items: center; width: 100%;
-  padding: 2px 0; background: transparent; border: 0; text-align: left; font-size: 11px; color: var(--fg-muted);
+  display: inline-flex; align-items: center; gap: 4px; padding: 0 2px 0 6px; background: transparent; border: 0;
+  font-size: 11px; color: var(--fg-muted); white-space: nowrap;
 }
-.steps-toggle .codicon { justify-self: center; }
 .steps-toggle:hover { background: transparent; color: var(--fg); }
 .steps { list-style: none; margin: 0; padding: 0 0 0 26px; }
-.step { display: flex; align-items: center; gap: 6px; min-height: 22px; font-size: 12px; color: var(--fg-muted); }
+.step { display: flex; align-items: center; gap: 6px; min-height: 22px; font-size: 12px; color: var(--fg-muted); cursor: text; }
 .step::before { content: ''; flex: none; width: 10px; height: 10px; border: 1px solid var(--fg-muted); border-radius: 2px; }
 .step .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
 .step .text:hover { color: var(--fg); }
-.step .acts { display: flex; opacity: 0; }
-.step:hover .acts, .step:focus-within .acts { opacity: 1; }
 .step .icon-btn { width: 20px; height: 20px; }
 .step input { flex: 1; min-width: 0; height: 22px; font-size: 12px; }
 .step.add::before { display: none; }
