@@ -155,22 +155,22 @@ export function connect() {
   };
 }
 
-function check(quiet: number) {
+function reconnect() {
+  ws?.close();
+  ws = null;
+  setUi({ connected: false });
+  connect();
+}
+
+function probe(wait: number) {
   if (ws?.readyState === WebSocket.CONNECTING) return;
-  if (ws?.readyState !== WebSocket.OPEN || Date.now() - heard > quiet) {
-    ws?.close();
-    ws = null;
-    setUi({ connected: false });
-    return connect();
-  }
+  if (ws?.readyState !== WebSocket.OPEN) return reconnect();
+  const sent = Date.now();
   send({ type: 'ping' });
+  setTimeout(() => heard < sent && ws?.readyState === WebSocket.OPEN && reconnect(), wait);
 }
 
 if (typeof document !== 'undefined') {
-  setInterval(() => document.visibilityState === 'visible' && check(35000), 15000);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    check(35000);
-    setTimeout(() => check(4000), 4000);
-  });
+  setInterval(() => document.visibilityState === 'visible' && probe(10000), 15000);
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && probe(3000));
 }
