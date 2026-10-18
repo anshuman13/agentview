@@ -5,7 +5,7 @@ export type ToolUse = Extract<ChatEvent, { kind: 'tool_use' }>;
 export type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;
 
 export type Item =
-  | { kind: 'user'; id: string; text: string; at: number; stopping?: boolean }
+  | { kind: 'user'; id: string; text: string; at: number; stopping?: boolean; queued?: boolean }
   | { kind: 'phase'; id: string; text: string }
   | { kind: 'assistant'; id: string; text: string; streaming: boolean }
   | { kind: 'system'; id: string; text: string }
@@ -68,7 +68,7 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
   for (const e of events) if (e.kind === 'tool_result') results.set(e.toolUseId, e);
   const items: Item[] = [];
   for (const e of events) {
-    if (e.kind === 'user') items.push(e.phase ? { kind: 'phase', id: e.id, text: e.text } : { kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping });
+    if (e.kind === 'user') items.push(e.phase ? { kind: 'phase', id: e.id, text: e.text } : { kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
     else if (e.kind === 'assistant') { if (e.text.trim()) items.push({ kind: 'assistant', id: e.id, text: e.text, streaming: e.streaming }); }
     else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text });
     else if (e.kind === 'plan') items.push({ kind: 'system', id: e.id, text: e.next.length ? `You changed the next steps (${e.next.length})` : 'You cleared the next steps' });

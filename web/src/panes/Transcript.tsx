@@ -49,7 +49,7 @@ export function TranscriptView({ events, cwd, running, stopping, status }: { eve
 function Row({ it, cwd }: { it: Item; cwd: string }) {
   switch (it.kind) {
     case 'user':
-      return <div className={`tr-user ${it.stopping ? 'stopping' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}</div>;
+      return <div className={`tr-user ${it.stopping ? 'stopping' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title="Queued, sends when Claude finishes"><Icon name="clock" small /></span>}</div>;
     case 'phase':
       return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
     case 'assistant':

@@ -9,7 +9,7 @@ import { touch } from '../touch';
 import { Transcript } from './Transcript';
 import { COMPACT_AT, type ChatEvent } from '../../../shared/protocol';
 
-export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan' | 'phase'; text: string; at: number; stopping?: boolean };
+export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan' | 'phase'; text: string; at: number; stopping?: boolean; queued?: boolean };
 
 const PHASE_TEXT: Record<string, string> = { plan: 'Plan · Opus', build: 'Build · Opus', test: 'Test · Sonnet' };
 
@@ -26,7 +26,7 @@ export function buildTimeline(events: ChatEvent[]) {
       next = [];
       reply = -1;
       if (e.phase) moments.push({ id: e.id, kind: 'phase', text: e.text.startsWith('Test') ? `Test ${e.text.slice(5)} · Sonnet` : PHASE_TEXT[e.phase] ?? e.text, at: e.at });
-      else moments.push({ id: e.id, kind: 'you', text: e.text, at: e.at, stopping: e.stopping });
+      else moments.push({ id: e.id, kind: 'you', text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
     }
     if (e.kind === 'assistant' && e.text.trim()) {
       if (reply >= 0) moments.splice(reply, 1);
@@ -180,7 +180,7 @@ function MomentRow({ m, sub }: { m: Moment; sub: boolean }) {
   useLayoutEffect(() => {
     if (m.kind === 'reply' && body.current) setLong(body.current.scrollHeight > body.current.clientHeight + 2);
   }, [m.kind, m.text]);
-  const when = m.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(m.at).toLocaleString()}>{time(m.at)}</span>;
+  const when = m.queued ? <span className="tl-state" title="Queued, sends when Claude finishes"><Icon name="clock" small /></span> : m.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(m.at).toLocaleString()}>{time(m.at)}</span>;
   if (m.kind === 'reply') {
     return (
       <li className={`tl reply ${sub ? 'sub' : ''}`}>
