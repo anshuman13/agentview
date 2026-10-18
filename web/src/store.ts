@@ -143,9 +143,13 @@ export function connect() {
   const sock = new WebSocket(`${proto}://${location.host}/ws`);
   ws = sock;
   heard = Date.now();
-  sock.onopen = () => setUi({ connected: true });
+  sock.onopen = () => {
+    setUi({ connected: true });
+    (window as { avlog?: (e: string) => void }).avlog?.('ws open');
+  };
   sock.onclose = () => {
     if (ws !== sock) return;
+    (window as { avlog?: (e: string) => void }).avlog?.('ws closed');
     setUi({ connected: false });
     retry = setTimeout(connect, 1500);
   };
@@ -156,6 +160,7 @@ export function connect() {
 }
 
 function reconnect() {
+  (window as { avlog?: (e: string) => void }).avlog?.('ws stale, reconnecting');
   ws?.close();
   ws = null;
   setUi({ connected: false });

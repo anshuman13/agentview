@@ -1,3 +1,6 @@
+import { appendFileSync, mkdirSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -9,6 +12,16 @@ function reloadOnlyOnChange(): Plugin {
     configureServer(server) {
       server.watcher.on('all', () => (changed = Date.now()));
       server.middlewares.use('/__changed', (_req, res) => res.end(String(changed)));
+      server.middlewares.use('/__log', (req, res) => {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', () => {
+          const dir = path.join(os.homedir(), '.agentview');
+          mkdirSync(dir, { recursive: true });
+          appendFileSync(path.join(dir, 'lifecycle.log'), `${new Date().toISOString()} ${body.slice(0, 500)}\n`);
+          res.end();
+        });
+      });
     },
     transform(code, id) {
       if (!id.includes('vite/dist/client/client.mjs')) return;

@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './styles.css';
@@ -7,5 +8,17 @@ import './mobile.css';
 import { touch } from './touch';
 
 if (touch()) window.addEventListener('focusout', () => window.scrollTo(0, 0));
+
+if (import.meta.hot) {
+  const nav = (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type;
+  const log = (ev: string) => navigator.sendBeacon('/__log', JSON.stringify({ ev, nav, ua: /; wv\)/.test(navigator.userAgent) ? 'app' : 'browser', w: innerWidth, up: Math.round(performance.now() / 1000) }));
+  log('load');
+  Object.assign(window, { avlog: log });
+  document.addEventListener('visibilitychange', () => log(document.visibilityState));
+  addEventListener('pagehide', (e) => log(`pagehide persisted=${e.persisted}`));
+  addEventListener('pageshow', (e) => e.persisted && log('pageshow bfcache'));
+  import.meta.hot.on('vite:beforeFullReload', () => log('vite full-reload'));
+  import.meta.hot.on('vite:ws:disconnect', () => log('vite ws lost'));
+}
 
 createRoot(document.getElementById('root')!).render(<App />);
