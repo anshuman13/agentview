@@ -182,7 +182,7 @@ export function Composer() {
   const edited = useMemo(() => filesEdited(events), [events]);
   const pct = contextPercent(context);
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
-  const shortModel = modelName.replace(/\s*\(.*\)$/, '');
+  const shortModel = modelName.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
   const modeInfo = MODES[mode] ?? { label: mode, detail: mode, icon: 'shield' };
   const cycleMode = () => send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] });
 

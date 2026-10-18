@@ -21,7 +21,7 @@
 
 .tr-system { padding-left: 24px; font-size: 12px; color: var(--fg-faint, #6e6e6e); }
 
-.tr-step, .tr-agent, .tr-working {
+.tr-step, .tr-agent {
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 8px; align-items: center;
   min-height: 22px; line-height: 22px; font-size: 12px; color: var(--fg-muted, #9d9d9d);
   border-radius: var(--radius-sm, 4px); cursor: pointer;
@@ -75,28 +75,24 @@
   background: var(--bg-sunken, #181818); border: 1px solid var(--border, #2b2b2b); border-radius: var(--radius-sm, 4px);
 }
 
-.tr-working { cursor: default; color: var(--fg-muted, #9d9d9d); }
-.tr-working .tr-mark { color: var(--fg-muted, #9d9d9d); }
 
 @keyframes tr-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 @media (max-width: 900px) {
   .tr { padding: 10px 16px 14px; font-size: 14px; }
-  .tr-step, .tr-agent, .tr-working { min-height: 28px; line-height: 28px; font-size: 13px; }
+  .tr-step, .tr-agent { min-height: 28px; line-height: 28px; font-size: 13px; }
   .tr-mark { height: 28px; }
   .tr-file { min-height: 44px; font-size: 13px; }
   .tr-user { padding: 12px 14px; }
   .tr-step, .tr-agent { min-height: 36px; line-height: 36px; }
   .tr-mark { height: 36px; }
   .tr-detail pre, .tr-report { font-size: 12px; max-height: 40vh; }
-  .tl-tabs { gap: 4px; }
-  .tl-tabs button { min-height: 36px; padding: 0 14px; font-size: 13px; }
+  .tl-view { min-height: 36px; font-size: 13px; }
 }
 
-.tl-tabs { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border, #2b2b2b); border-radius: var(--radius-sm, 4px); background: var(--bg-sunken, #181818); }
-.tl-tabs button { border: 0; background: none; color: var(--fg-muted, #9d9d9d); font: inherit; font-size: 11px; padding: 1px 8px; border-radius: 3px; cursor: pointer; }
-.tl-tabs button.on { background: var(--bg-raised, #1f1f1f); color: var(--fg, #cccccc); }
-.tl-tabs button:hover { color: var(--fg, #cccccc); }
+.tl-view { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg, #cccccc); cursor: pointer; }
+.tl-view .codicon { color: var(--fg-muted, #9d9d9d); }
+.tl-view:hover .codicon { color: var(--fg, #cccccc); }
 
 .tl.phase { padding-top: 10px; }
 .tl.phase .mark, .tl.phase .text { color: var(--agent, #a78bfa); }
