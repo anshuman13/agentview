@@ -8,7 +8,7 @@
 .tr-empty { font-size: 12px; color: var(--fg-faint, #6e6e6e); }
 
 .tr-user {
-  position: relative; padding: 10px 12px; border: 1px solid var(--border, #2b2b2b); border-radius: var(--radius, 8px);
+  position: relative; padding: 10px 12px; border: 1px solid var(--border-card, #454545); border-radius: var(--radius, 8px);
   background: var(--bg-raised, #1f1f1f); color: var(--fg, #cccccc); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .tr-user.stopping { padding-right: 32px; }
@@ -49,10 +49,10 @@
 
 .tr-file {
   display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 10px 0 9px;
-  border: 1px solid var(--border, #2b2b2b); border-radius: var(--radius, 8px); background: var(--bg-raised, #1f1f1f);
+  border: 1px solid var(--border-card, #454545); border-radius: var(--radius, 8px); background: var(--bg-raised, #1f1f1f);
   font-size: 12px; color: var(--fg, #cccccc); cursor: pointer;
 }
-.tr-file:hover { border-color: var(--border-strong, #3c3c3c); }
+.tr-file:hover { border-color: var(--fg-faint, #6e6e6e); }
 .tr-file > .codicon { color: var(--fg-muted, #9d9d9d); }
 .tr-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-dir { color: var(--fg-faint, #6e6e6e); }

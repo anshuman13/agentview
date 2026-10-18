@@ -20,6 +20,8 @@
   .step .icon-btn { width: 36px; height: 36px; }
   .step input { height: 36px; font-size: 16px; }
   .step.add .link { min-height: 36px; }
+  .tl-foot { padding: 4px 10px 6px; }
+  .steps-toggle { min-height: 36px; font-size: 13px; }
   .timeline-head { height: 44px; }
   .timeline-head .icon-btn { width: 36px; height: 36px; }
   .tl, .tl-now { font-size: 13px; line-height: 20px; }
