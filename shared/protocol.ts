@@ -95,6 +95,7 @@ export type ServerMessage =
   | { type: 'session'; session: SessionInfo }
   | { type: 'live'; chats: LiveChat[] }
   | { type: 'pong' }
+  | { type: 'restarting' }
   | { type: 'error'; text: string };
 
 export type LiveChat = {
@@ -164,7 +165,8 @@ export type ClientMessage =
   | { type: 'mcp_status' }
   | { type: 'mcp_reconnect'; name: string }
   | { type: 'mcp_toggle'; name: string; enabled: boolean }
-  | { type: 'ping' };
+  | { type: 'ping' }
+  | { type: 'restart'; now?: boolean };
 
 export type GitFile = { path: string; status: 'M' | 'A' | 'D' | 'R' | '?'; staged: boolean };
 

@@ -2,13 +2,13 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { watch, type FSWatcher } from 'node:fs';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdirSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './terminal.js';
 import { connect as connectChrome, openChrome } from './chrome.js';
-import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
+import { deleteSession, getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway } from './notify.js';
 import { mcpConfig, mcpProbe } from './mcp.js';
@@ -31,6 +31,7 @@ const APK = path.resolve(here, '../../dist/AgentView.apk');
 const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|\.tox)(\/|$)/;
 
 const LAST = path.join(os.homedir(), '.agentview-last.json');
+const RESTORE = path.join(os.homedir(), '.agentview', 'restore.json');
 
 process.on('uncaughtException', (err) => console.error('uncaught:', err));
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
@@ -179,8 +180,39 @@ function remember(chat: AgentSession) {
   writeFile(LAST, JSON.stringify({ sessionId, cwd: chat.cwd })).catch(() => {});
 }
 
+let restarting: NodeJS.Timeout | null = null;
+
+function saveAndExit() {
+  const chats = [...live.values()].map(({ chat }) => ({ sessionId: chat.state.session.sessionId, crons: chat.crons })).filter((c) => c.sessionId);
+  mkdirSync(path.dirname(RESTORE), { recursive: true });
+  writeFileSync(RESTORE, JSON.stringify({ view: lastViewed?.state.session.sessionId, chats }));
+  process.exit(0);
+}
+
+function restart(now: boolean) {
+  if (now) return saveAndExit();
+  if (restarting) return;
+  clients.forEach((c) => c.send({ type: 'restarting' }));
+  restarting = setInterval(() => {
+    if (![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting)) saveAndExit();
+  }, 1000);
+}
+
+process.on('SIGTERM', saveAndExit);
+
+async function restore() {
+  const saved: { view?: string; chats: { sessionId: string; crons: SessionCronSummary[] }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
+  if (!saved) return null;
+  await rm(RESTORE, { force: true });
+  for (const s of saved.chats) {
+    const chat = await openSaved(s.sessionId).catch(() => null);
+    if (chat && s.crons.length) chat.restoreCrons(s.crons);
+  }
+  return [...live.values()].find((l) => l.chat.state.session.sessionId === saved.view)?.chat ?? null;
+}
+
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
-lastViewed = await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT));
+lastViewed = (await restore()) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -242,6 +274,10 @@ const server = http.createServer(async (req, res) => {
       return json(list.map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
     }
     if (url.pathname === '/api/state') return json(chat.state);
+    if (url.pathname === '/api/restart' && req.method === 'POST') {
+      restart(url.searchParams.has('now'));
+      return json({ ok: true });
+    }
     if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
     if (url.pathname.startsWith('/api/deploy/')) return json(await deployRoute(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
     if (url.pathname === '/api/app') return json({ build: Number(await readFile(`${APK}.txt`, 'utf8').catch(() => '0')) || 0 });
@@ -284,10 +320,11 @@ wss.on('connection', (ws: WebSocket, req) => {
   const term = params.get('term');
   if (term !== null) return attachTerminal(ws, term);
   if (params.has('chrome')) return openChrome(ws, req.headers.origin);
-  const chat = live.get(params.get('chat') ?? '')?.chat ?? lastViewed;
+  const chat = live.get(params.get('chat') ?? '')?.chat ?? [...live.values()].find((l) => l.chat.state.session.sessionId === params.get('session'))?.chat ?? lastViewed;
   const client: Client = { send: (m) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m)), view: chat };
   clients.add(client);
   view(client, chat);
+  if (restarting) client.send({ type: 'restarting' });
   const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
 
   ws.on('message', (raw) => {
@@ -351,6 +388,9 @@ wss.on('connection', (ws: WebSocket, req) => {
         break;
       case 'ping':
         client.send({ type: 'pong' });
+        break;
+      case 'restart':
+        restart(Boolean(msg.now));
         break;
       case 'new_session':
         newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);

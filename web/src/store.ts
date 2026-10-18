@@ -4,6 +4,7 @@ import { notify } from './notify';
 
 type UiState = {
   connected: boolean;
+  restarting?: boolean;
   openFile: string | null;
   follow: boolean;
   switcherOpen: boolean;
@@ -95,6 +96,9 @@ function handle(m: ServerMessage) {
     case 'error':
       notice(m.text);
       break;
+    case 'restarting':
+      setUi({ restarting: true });
+      break;
     case 'event':
       if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {
         notify('Claude finished', m.event.text.trim().split('\n')[0], focus(state.session.id));
@@ -140,12 +144,12 @@ let heard = 0;
 export function connect() {
   clearTimeout(retry);
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const chat = getState().session.id;
-  const sock = new WebSocket(`${proto}://${location.host}/ws${chat ? `?chat=${encodeURIComponent(chat)}` : ''}`);
+  const { id, sessionId } = getState().session;
+  const sock = new WebSocket(`${proto}://${location.host}/ws${id ? `?chat=${encodeURIComponent(id)}&session=${encodeURIComponent(sessionId ?? '')}` : ''}`);
   ws = sock;
   heard = Date.now();
   sock.onopen = () => {
-    setUi({ connected: true });
+    setUi({ connected: true, restarting: false });
     (window as { avlog?: (e: string) => void }).avlog?.('ws open');
   };
   sock.onclose = () => {
