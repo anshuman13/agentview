@@ -40,7 +40,8 @@
 .cp-pill:hover { background: var(--bg-hover, #2a2d2e); color: var(--fg, #cccccc); }
 .cp-pill > span { overflow: hidden; text-overflow: ellipsis; }
 .cp-pill .codicon.icon.small { font-size: 13px; }
-.cp[data-mode='plan'] .cp-pill:first-child .codicon:first-child { color: var(--accent, #0078d4); }
+.cp[data-mode='plan'] .cp-chip .codicon:first-child { color: var(--accent, #0078d4); }
+.cp-chip.loop .codicon:nth-of-type(2) { color: var(--agent, #a78bfa); }
 .cp-spacer { flex: 1; }
 
 .cp-send, .cp-stop {
@@ -59,9 +60,12 @@
   flex: 1 1 auto; min-width: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
 }
-.cp-stats > span + span::before { content: ' · '; }
+.cp-stats > * + *::before { content: ' · '; }
+.cp-ctx { padding: 0; border: 0; background: none; font: inherit; color: inherit; }
+.cp-ctx:not(:disabled) { text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .cp-stats .near { color: var(--warn, #cca700); }
 .cp-stats .over { color: var(--err, #f14c4c); }
+.cp-stats .codicon { font-size: 11px; vertical-align: -1px; }
 
 .cp-pop {
   position: fixed; z-index: 20; margin: 0; padding: 4px; list-style: none;
@@ -97,8 +101,6 @@
   .cp-pop { max-height: 40vh; }
 }
 
-.cp-loop.on { color: var(--agent, #a78bfa); border-color: color-mix(in srgb, var(--agent, #a78bfa) 40%, transparent); }
-.cp-loop.on .codicon { color: var(--agent, #a78bfa); }
 .cp-phase { color: var(--agent, #a78bfa); }
 .cp-phase.passed { color: var(--ok, #89d185); }
 .cp-phase.failed { color: var(--err, #f14c4c); }

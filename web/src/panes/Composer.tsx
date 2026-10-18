@@ -151,7 +151,7 @@ export function Composer() {
   const context = useStore((s) => s.session.context);
   const events = useStore((s) => s.events);
 
-  const [pick, setPick] = useState<{ kind: 'model' | 'mode' | 'loop'; at: DOMRect } | null>(null);
+  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop'; at: DOMRect } | null>(null);
   const [text, setText] = useState(() => readDraft(chat));
   const draftFor = useRef(chat);
   const picker = useRef<HTMLInputElement>(null);
@@ -182,6 +182,7 @@ export function Composer() {
   const edited = useMemo(() => filesEdited(events), [events]);
   const pct = contextPercent(context);
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
+  const shortModel = modelName.replace(/\s*\(.*\)$/, '');
   const modeInfo = MODES[mode] ?? { label: mode, detail: mode, icon: 'shield' };
   const cycleMode = () => send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] });
 
@@ -313,9 +314,10 @@ export function Composer() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e.metaKey || e.ctrlKey); }
   };
 
-  const hint = shell ? 'Runs in the terminal' : stopping ? 'Stopping…' : !text && !running ? '/ commands · @ files · ! shell' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude' : compacting ? 'Sends when compacting is done' : running ? 'Sends when Claude finishes, or steer to send now' : 'Ask, plan, build anything';
-  const level = pct === null ? '' : context! >= COMPACT_AT ? 'over' : context! >= COMPACT_AT * 0.75 ? 'near' : '';
+  const typed = text.trim().length > 0;
+  const hint = shell ? 'Runs in the terminal' : '';
+  const placeholder = waiting ? 'Answer below, or message Claude' : compacting ? 'Sends when compacting is done' : running ? 'Sends when Claude finishes, or steer to send now' : 'Ask anything · / commands · @ files';
+  const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
 
   return (
     <div className="cp" data-mode={mode}>
@@ -345,14 +347,8 @@ export function Composer() {
           </button>
         )}
         <div className="cp-foot">
-          <button className="cp-pill" title={`${modeInfo.detail} (Shift+Tab to switch)`} onClick={(e) => setPick({ kind: 'mode', at: e.currentTarget.getBoundingClientRect() })}>
-            <Icon name={modeInfo.icon} small /><span>{modeInfo.label}</span><Icon name="chevron-down" small />
-          </button>
-          <button className="cp-pill" title="Switch model" onClick={(e) => setPick({ kind: 'model', at: e.currentTarget.getBoundingClientRect() })}>
-            <span>{modelName}</span><Icon name="chevron-down" small />
-          </button>
-          <button className={`cp-pill cp-loop${loop.on ? ' on' : ''}`} title={loop.on ? `Loop on: Opus plans and builds, Sonnet tests, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Loop: plan, build, test until the tester passes'} onClick={(e) => setPick({ kind: 'loop', at: e.currentTarget.getBoundingClientRect() })}>
-            <Icon name="sync" small />{loop.on && <span>Loop {loop.max}</span>}
+          <button className={`cp-pill cp-chip${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Loop on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
+            <Icon name={modeInfo.icon} small /><span>{shortModel} · {modeInfo.label}</span>{loop.on && <Icon name="sync" small />}<Icon name="chevron-down" small />
           </button>
           <span className="cp-spacer" />
           <input ref={picker} type="file" multiple hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = ''; }} />
@@ -360,33 +356,34 @@ export function Composer() {
             <Icon name="file-add" small />
           </button>
           <Voice onText={dictate} />
-          {running && (
-            <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onClick={() => send({ type: 'interrupt' })}>
-              <Icon name={stopping ? 'loading' : 'debug-stop'} small spin={stopping} />
-            </button>
-          )}
-          {running && !compacting && !shell && (
-            <button className="icon-btn steer" title="Steer: stop the current step and send this now (Cmd+Enter)" aria-label="Stop and send now" disabled={!text.trim()} onClick={() => submit(true)}>
+          {running && !compacting && !shell && typed && (
+            <button className="icon-btn steer" title="Steer: stop the current step and send this now (Cmd+Enter)" aria-label="Stop and send now" onClick={() => submit(true)}>
               <Icon name="debug-step-over" small />
             </button>
           )}
-          <button
-            className="cp-send"
-            title={shell ? 'Run in the terminal (Enter)' : running ? 'Queue: send when Claude finishes (Enter)' : 'Send (Enter)'}
-            aria-label={shell ? 'Run' : running ? 'Queue' : 'Send'}
-            disabled={!text.trim()}
-            onClick={() => submit()}
-          >
-            <Icon name={shell ? 'terminal' : 'arrow-up'} small />
-          </button>
+          {running && !typed ? (
+            <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onClick={() => send({ type: 'interrupt' })}>
+              <Icon name={stopping ? 'loading' : 'debug-stop'} small spin={stopping} />
+            </button>
+          ) : (
+            <button
+              className="cp-send"
+              title={shell ? 'Run in the terminal (Enter)' : running ? 'Queue: send when Claude finishes (Enter)' : 'Send (Enter)'}
+              aria-label={shell ? 'Run' : running ? 'Queue' : 'Send'}
+              disabled={!typed}
+              onClick={() => submit()}
+            >
+              <Icon name={shell ? 'terminal' : 'arrow-up'} small />
+            </button>
+          )}
         </div>
       </div>
       <div className="cp-under">
         {hint && <span className="cp-hint">{hint}</span>}
         <span className="cp-stats">
-          <span>{modelName}</span>
-          <span>{modeInfo.label}</span>
-          {pct !== null && <span className={level} title={`${context!.toLocaleString()} tokens in context. Compact once it passes ${COMPACT_AT / 1000}k.`}>{pct}% context</span>}
+          {compacting ? <span><Icon name="loading" small spin /> Compacting…</span> : level && (
+            <button className={`cp-ctx ${level}`} disabled={running} title={`${context!.toLocaleString()} tokens in context. ${running ? 'Compacts when this turn ends' : 'Tap to compact'}.`} onClick={() => send({ type: 'prompt', text: '/compact' })}>{pct}% context{!running && ' · compact'}</button>
+          )}
           {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
           {loop.phase && <span className={`cp-phase ${loop.phase}`}>{loopLabel(loop)}</span>}
         </span>
@@ -414,6 +411,19 @@ export function Composer() {
             );
           })}
         </ul>
+      )}
+      {pick?.kind === 'menu' && (
+        <QuickPick
+          anchor={pick.at}
+          title="Chat settings"
+          items={[
+            { value: 'mode', label: 'Permission mode', detail: modeInfo.label },
+            { value: 'model', label: 'Model', detail: modelName },
+            { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
+          ]}
+          onPick={(v) => setPick({ kind: v as 'mode' | 'model' | 'loop', at: pick.at })}
+          onClose={() => setPick(null)}
+        />
       )}
       {pick?.kind === 'model' && (
         <QuickPick
