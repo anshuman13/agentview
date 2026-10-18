@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { connect, getState, setUi, useStore } from './store';
+import { connect, getState, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../shared/protocol';
 import { Brief } from './panes/Brief';
 import { Terminal } from './panes/Terminal';
@@ -80,8 +80,22 @@ function AppUpdate() {
   );
 }
 
+function Restarting() {
+  const restarting = useStore((s) => s.ui.restarting && s.ui.connected);
+  const busy = useStore((s) => s.live.filter((c) => c.running).length);
+  if (!restarting) return null;
+  return (
+    <div className="app-update">
+      <Icon name="debug-restart" small />
+      <span>Restarting AgentView when {busy > 1 ? `${busy} chats finish` : 'Claude finishes'}</span>
+      <a href="#" onClick={(e) => { e.preventDefault(); send({ type: 'restart', now: true }); }}>Restart now</a>
+    </div>
+  );
+}
+
 function Offline() {
   const connected = useStore((s) => s.ui.connected);
+  const restarting = useStore((s) => s.ui.restarting);
   const [late, setLate] = useState(false);
   useEffect(() => {
     setLate(false);
@@ -93,7 +107,7 @@ function Offline() {
   return (
     <div className="app-update offline mobile-only">
       <Icon name="plug" small />
-      <span>Disconnected from the Mac, reconnecting</span>
+      <span>{restarting ? 'AgentView is restarting' : 'Disconnected from the Mac, reconnecting'}</span>
     </div>
   );
 }
@@ -257,6 +271,7 @@ export function App() {
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <AppUpdate />
+      <Restarting />
       <Offline />
       <div className="body">
         <aside className="activitybar desktop-only">

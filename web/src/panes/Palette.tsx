@@ -40,6 +40,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     { id: 'theme', label: 'Preferences: Toggle Theme' },
     { id: 'notify', label: 'Preferences: Toggle Notifications' },
     { id: 'phone', label: 'Open on Phone' },
+    { id: 'restart', label: 'Developer: Restart Server When Claude Is Idle' },
   ];
 }
 
@@ -113,6 +114,7 @@ function perform(id: string) {
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
   else if (id === 'stop') send({ type: 'interrupt' });
+  else if (id === 'restart') send({ type: 'restart' });
   else if (id === 'file') setUi({ switcherOpen: true });
   else if (id === 'repo') setUi({ repoPicker: true });
   else if (id === 'notify') toggleNotify();

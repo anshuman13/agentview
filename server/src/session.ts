@@ -331,6 +331,12 @@ export class AgentSession {
     this.emit({ type: 'init', state: this.state });
   }
 
+  restoreCrons(crons: SessionCronSummary[]) {
+    this.crons = crons;
+    this.system(`AgentView restarted, so Claude is recreating ${crons.length} scheduled ${crons.length === 1 ? 'job' : 'jobs'}`);
+    void this.prompt(`AgentView restarted, which cleared your scheduled jobs. It is now ${new Date().toString()}. Recreate each job below with CronCreate, using the same cron, prompt and recurring flag. If a one-shot job's time has already passed, run its prompt now instead. Reply in one line.\n\n${JSON.stringify(crons.map(({ schedule, prompt, recurring }) => ({ cron: schedule, prompt, recurring })), null, 2)}`);
+  }
+
   async prompt(text: string) {
     if (this.state.session.running) return this.queue(text);
     await this.planFirst();
