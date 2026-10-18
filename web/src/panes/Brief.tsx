@@ -38,6 +38,7 @@ export function buildTimeline(events: ChatEvent[]) {
       moments.push({ id: e.id, kind: 'plan', text: e.next.length ? `You changed the next steps (${e.next.length})` : 'You cleared the next steps', at: e.at });
     }
     if (e.kind === 'system' && e.text.startsWith('Compact')) moments.push({ id: e.id, kind: e.text.startsWith('Compact failed') ? 'note' : 'done', text: e.text, at: e.at });
+    if (e.kind === 'system' && e.text.startsWith('Claude woke up')) moments.push({ id: e.id, kind: 'phase', text: e.text, at: e.at });
     if (e.kind === 'system' && e.text.startsWith('Loop ')) moments.push({ id: e.id, kind: e.text.startsWith('Loop passed') ? 'done' : e.text.startsWith('Loop on') || e.text === 'Loop off' ? 'phase' : 'note', text: e.text, at: e.at });
     if (e.kind === 'tool_use' && e.name === 'Advisor') advisor++;
     if (e.kind === 'tool_use' && e.input.subagent_type === BIG_BRO) fableCalls.add(e.id);

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AgentSession, BIG_BRO } from './session.js';
+import { AgentSession, BIG_BRO, fireTime } from './session.js';
 import { contextFrom, historyFrom } from './transcript.js';
 
 function fakeSession() {
@@ -271,5 +271,18 @@ describe('compacting', () => {
     handle({ type: 'system', subtype: 'status', status: null, compact_result: 'failed', compact_error: 'Prompt is too long' });
     expect(s.state.session.compacting).toBe(false);
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Compact failed: Prompt is too long' });
+  });
+});
+
+describe('fireTime', () => {
+  const now = new Date(2026, 9, 17, 21, 41).getTime();
+  it('reads a one-shot cron as a local time', () => {
+    expect(fireTime('6 22 17 10 *', now)).toBe(new Date(2026, 9, 17, 22, 6).getTime());
+  });
+  it('rolls a past date into next year', () => {
+    expect(fireTime('0 9 1 1 *', now)).toBe(new Date(2027, 0, 1, 9, 0).getTime());
+  });
+  it('ignores recurring expressions', () => {
+    expect(fireTime('*/30 * * * *', now)).toBeNull();
   });
 });
