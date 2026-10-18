@@ -135,19 +135,42 @@ function handle(m: ServerMessage) {
 }
 
 let retry: ReturnType<typeof setTimeout> | undefined;
+let heard = 0;
 
 export function connect() {
   clearTimeout(retry);
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
-  ws.onopen = () => setUi({ connected: true });
-  ws.onclose = () => {
+  const sock = new WebSocket(`${proto}://${location.host}/ws`);
+  ws = sock;
+  heard = Date.now();
+  sock.onopen = () => setUi({ connected: true });
+  sock.onclose = () => {
+    if (ws !== sock) return;
     setUi({ connected: false });
     retry = setTimeout(connect, 1500);
   };
-  ws.onmessage = (e) => handle(JSON.parse(e.data));
+  sock.onmessage = (e) => {
+    heard = Date.now();
+    handle(JSON.parse(e.data));
+  };
 }
 
-if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && ws?.readyState !== WebSocket.OPEN && ws?.readyState !== WebSocket.CONNECTING) connect();
-});
+function check(quiet: number) {
+  if (ws?.readyState === WebSocket.CONNECTING) return;
+  if (ws?.readyState !== WebSocket.OPEN || Date.now() - heard > quiet) {
+    ws?.close();
+    ws = null;
+    setUi({ connected: false });
+    return connect();
+  }
+  send({ type: 'ping' });
+}
+
+if (typeof document !== 'undefined') {
+  setInterval(() => document.visibilityState === 'visible' && check(35000), 15000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    check(35000);
+    setTimeout(() => check(4000), 4000);
+  });
+}

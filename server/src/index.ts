@@ -350,6 +350,9 @@ wss.on('connection', (ws: WebSocket, req) => {
       case 'mcp_toggle':
         void chat.toggleMcp(String(msg.name), Boolean(msg.enabled));
         break;
+      case 'ping':
+        client.send({ type: 'pong' });
+        break;
       case 'new_session':
         newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);
         break;
