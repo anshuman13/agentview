@@ -5,6 +5,7 @@ import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../QuickPick';
 import { FileIcon } from './Explorer';
 import { match } from './FileSwitcher';
+import { touch } from '../touch';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import '../composer.css';
 
@@ -90,6 +91,23 @@ export const loopLabel = (loop: { phase: string | null; round: number; max: numb
 const MAX_HEIGHT = 220;
 const fileCache = new Map<string, string[]>();
 
+const draftKey = (chat: string) => `agentview.draft.${chat}`;
+
+function readDraft(chat: string) {
+  try {
+    return localStorage.getItem(draftKey(chat)) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function saveDraft(chat: string, text: string) {
+  try {
+    if (text) localStorage.setItem(draftKey(chat), text);
+    else localStorage.removeItem(draftKey(chat));
+  } catch {}
+}
+
 function readStored(): string[] {
   try {
     const v = JSON.parse(localStorage.getItem(STORED_KEY) ?? '[]');
@@ -119,6 +137,7 @@ type Hist = { list: string[]; index: number; draft: string };
 
 export function Composer() {
   const cwd = useStore((s) => s.session.cwd);
+  const chat = useStore((s) => s.session.id);
   const running = useStore((s) => s.session.running);
   const stopping = useStore((s) => s.session.stopping);
   const waiting = useStore((s) => s.pending.length > 0);
@@ -132,7 +151,8 @@ export function Composer() {
   const events = useStore((s) => s.events);
 
   const [pick, setPick] = useState<{ kind: 'model' | 'mode' | 'loop'; at: DOMRect } | null>(null);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => readDraft(chat));
+  const draftFor = useRef(chat);
   const picker = useRef<HTMLInputElement>(null);
   const [caret, setCaret] = useState(0);
   const [sel, setSel] = useState(0);
@@ -170,6 +190,12 @@ export function Composer() {
     if (cached) { setFiles(cached); return; }
     fetch(api('/api/files')).then((r) => r.json()).then((f: string[]) => { fileCache.set(cwd, f); setFiles(f); }).catch(() => {});
   }, [trigger?.kind, cwd]);
+
+  useEffect(() => {
+    if (draftFor.current === chat) return saveDraft(chat, text);
+    draftFor.current = chat;
+    setText(readDraft(chat));
+  }, [chat, text]);
 
   useEffect(() => setSel(0), [popKey]);
 
@@ -312,6 +338,11 @@ export function Composer() {
             onPaste={(e) => { if (e.clipboardData.files.length) { e.preventDefault(); void attach([...e.clipboardData.files]); } }}
           />
         </div>
+        {ghost && touch() && (
+          <button className="cp-suggest" title="Use this suggestion" onPointerDown={(e) => e.preventDefault()} onClick={() => apply(text + ghost)}>
+            <Icon name="arrow-right" small /><span>{text.length > 12 && '…'}{text.slice(-12)}<b>{ghost}</b></span>
+          </button>
+        )}
         <div className="cp-foot">
           <button className="cp-pill" title={`${modeInfo.detail} (Shift+Tab to switch)`} onClick={(e) => setPick({ kind: 'mode', at: e.currentTarget.getBoundingClientRect() })}>
             <Icon name={modeInfo.icon} small /><span>{modeInfo.label}</span><Icon name="chevron-down" small />

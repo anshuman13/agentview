@@ -24,6 +24,13 @@
 .cp-mirror { position: absolute; inset: 0 0 auto 0; pointer-events: none; color: transparent; }
 .cp-ghost { color: var(--fg-faint, #6e6e6e); }
 
+.cp-suggest {
+  display: flex; align-items: center; gap: 8px; min-height: 40px; margin: 4px 8px 0; padding: 0 12px;
+  border: 1px solid var(--border-card, #474747); border-radius: var(--radius-sm, 4px); background: var(--bg-sunken, #181818);
+  color: var(--fg-muted, #9d9d9d); font: inherit; font-size: 14px; text-align: left;
+}
+.cp-suggest span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cp-suggest b { color: var(--fg, #cccccc); font-weight: 400; }
 .cp-foot { display: flex; align-items: center; gap: 4px; padding: 4px 8px 8px; }
 .cp-pill {
   height: 24px; padding: 0 5px 0 7px; display: inline-flex; align-items: center; gap: 4px; min-width: 0;
