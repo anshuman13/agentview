@@ -46,7 +46,7 @@ export function merge(probed: McpServer[], live: McpServer[]): Row[] {
   for (const m of live) {
     const i = rows.findIndex((r) => r.name === m.name);
     const tools = m.tools?.some((t) => t.description) ? m.tools : rows[i]?.tools ?? m.tools;
-    if (i >= 0) rows[i] = { ...rows[i], ...m, tools, scope: rows[i].scope ?? m.scope, live: true };
+    if (i >= 0) rows[i] = { ...rows[i], ...m, error: m.error, tools, scope: rows[i].scope ?? m.scope, live: true };
     else rows.push({ ...m, live: true });
   }
   return rows;
