@@ -7,7 +7,7 @@ import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './terminal.js';
-import { connect as connectChrome, openChrome } from './chrome.js';
+import { connect as connectChrome, openChrome, openInChrome } from './chrome.js';
 import { deleteSession, getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway } from './notify.js';
@@ -274,10 +274,10 @@ const server = http.createServer(async (req, res) => {
       if (!def) return json({ error: `${name} is not in your MCP config` }, 404);
       return json(await chat.addMcp(name, def));
     }
-    if (url.pathname === '/api/mcp/login' && req.method === 'POST') return json(await chat.loginMcp(url.searchParams.get('name') ?? ''));
-    if (url.pathname === '/api/mcp/callback' && req.method === 'POST') {
-      await chat.finishMcpLogin(url.searchParams.get('name') ?? '', String(JSON.parse(await readBody(req)).url ?? ''));
-      return json({ ok: true });
+    if (url.pathname === '/api/mcp/login' && req.method === 'POST') {
+      const r = await chat.loginMcp(url.searchParams.get('name') ?? '');
+      if (r.authUrl) openInChrome(r.authUrl);
+      return json(r);
     }
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
     if (url.pathname === '/api/sessions') {

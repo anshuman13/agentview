@@ -70,6 +70,10 @@ function retry() {
   retryDelay = Date.now() < fastUntil ? 1500 : Math.min(retryDelay * 2, 30000);
 }
 
+export function openInChrome(url: string) {
+  execFile('open', process.platform === 'darwin' ? ['-a', 'Google Chrome', url] : [url], (err) => err && console.error('open in chrome:', err.message));
+}
+
 const SETUP_PAGE = 'chrome://inspect/#remote-debugging';
 
 function setup() {

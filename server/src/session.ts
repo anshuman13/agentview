@@ -12,10 +12,7 @@ import { BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultT
 
 export { BIG_BRO };
 
-type McpAuth = {
-  mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }>;
-  mcpSubmitOAuthCallbackUrl(name: string, callbackUrl: string): Promise<void>;
-};
+type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
@@ -252,11 +249,6 @@ export class AgentSession {
   async loginMcp(name: string): Promise<{ authUrl?: string; callbackPort?: number }> {
     this.start();
     return (this.q as Query & McpAuth).mcpAuthenticate(name);
-  }
-
-  async finishMcpLogin(name: string, callbackUrl: string) {
-    await (this.q as Query & McpAuth).mcpSubmitOAuthCallbackUrl(name, callbackUrl);
-    await this.refreshMcp();
   }
 
   async setModel(model: string) {
