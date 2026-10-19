@@ -54,7 +54,7 @@ function Row({ it, cwd }: { it: Item; cwd: string }) {
     case 'file':
       return <FileCard it={it} cwd={cwd} />;
     case 'agent':
-      return <AgentRow use={it.use} result={it.result} />;
+      return <AgentRow it={it} cwd={cwd} />;
     case 'blocked':
       return <BlockedCard ev={it.ev} />;
   }
@@ -62,7 +62,7 @@ function Row({ it, cwd }: { it: Item; cwd: string }) {
 
 function Step({ use, result, cwd }: { use: ToolUse; result?: ToolResult; cwd: string }) {
   const [open, setOpen] = useState(false);
-  const { verb, object, mono } = stepLabel(use.name, use.input, cwd);
+  const { verb, object, mono, cmd } = stepLabel(use.name, use.input, cwd);
   const state = !result ? 'pending' : result.isError ? 'err' : 'ok';
   const dur = result ? duration(result.at - use.at) : '';
   return (
@@ -70,6 +70,7 @@ function Step({ use, result, cwd }: { use: ToolUse; result?: ToolResult; cwd: st
       <span className="tr-mark">{state === 'pending' ? <Icon name="loading" small spin /> : <i className="tr-hex" />}</span>
       <span className="tr-text" title={object}>{verb && <span className="tr-verb">{verb} </span>}<span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span></span>
       <span className="tr-dur">{dur}</span>
+      {cmd && !open && <span className="tr-cmd" title={cmd}>$ {cmd.replace(/\s*\n\s*/g, ' ⏎ ')}</span>}
       {state === 'err' && !open && <span className="tr-err">{firstLine(result!.text) || 'Failed'}</span>}
       {open && <Detail use={use} result={result} />}
     </div>
@@ -103,19 +104,33 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
   );
 }
 
-function AgentRow({ use, result }: { use: ToolUse; result?: ToolResult }) {
+function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: string }) {
+  const { use, result, steps } = it;
   const [open, setOpen] = useState(false);
   const desc = typeof use.input.description === 'string' && use.input.description ? use.input.description : 'Sub-agent';
+  const type = typeof use.input.subagent_type === 'string' ? use.input.subagent_type : '';
   const dur = result ? duration(result.at - use.at) : '';
+  const state = !result ? 'running' : result.isError ? 'failed' : `done${dur ? ` ${dur}` : ''}`;
+  const shown = open ? steps : result ? [] : steps.slice(-3);
+  const canOpen = steps.length > 0 || Boolean(result);
   return (
-    <div className={`tr-agent tr-act ${!result ? 'running' : result.isError ? 'err' : 'done'} ${open ? 'open' : ''}`} onClick={() => result && setOpen((v) => !v)}>
-      <span className="tr-mark"><i className="tr-ring" /></span>
-      <span className="tr-text" title={desc}>
-        {desc}
-        <span className="tr-state"> · {!result ? 'running' : result.isError ? 'failed' : `done${dur ? ` ${dur}` : ''}`}</span>
-        {!result && <Icon name="loading" small spin />}
-      </span>
-      {open && result && <div className="tr-detail" onClick={(e) => e.stopPropagation()}><div className="tr-report"><Markdown text={result.text || '(no output)'} /></div></div>}
+    <div className="tr-agent-box tr-act">
+      <div className={`tr-agent ${!result ? 'running' : result.isError ? 'err' : 'done'} ${open ? 'open' : ''}`} onClick={() => canOpen && setOpen((v) => !v)}>
+        <span className="tr-mark"><i className="tr-ring" /></span>
+        <span className="tr-text" title={desc}>
+          {desc}
+          <span className="tr-state"> · {type && `${type} · `}{state}{steps.length > 0 && ` · ${steps.length} step${steps.length === 1 ? '' : 's'}`}</span>
+          {!result && <Icon name="loading" small spin />}
+        </span>
+        {canOpen && <span className="tr-dur"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>}
+      </div>
+      {shown.length > 0 && (
+        <div className="tr-sub">
+          {!open && steps.length > shown.length && <div className="tr-more" onClick={() => setOpen(true)}>{steps.length - shown.length} earlier steps</div>}
+          {shown.map((s) => <Row key={s.id} it={s} cwd={cwd} />)}
+        </div>
+      )}
+      {open && result && <div className="tr-report"><Markdown text={result.text || '(no output)'} /></div>}
     </div>
   );
 }

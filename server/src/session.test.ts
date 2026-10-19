@@ -262,6 +262,40 @@ describe('history', () => {
   });
 });
 
+describe('subagents', () => {
+  const launched = 'Async agent launched successfully.\nagentId: a1';
+
+  it('keeps a background agent running until its notification and tags its steps', () => {
+    const { s } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    s.sendPrompt('survey');
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
+    handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: launched }] } });
+    handle({ type: 'assistant', parent_tool_use_id: 'ag', message: { content: [{ type: 'tool_use', id: 'g1', name: 'Grep', input: { pattern: 'x' } }] } });
+    handle({ type: 'user', parent_tool_use_id: 'ag', message: { content: [{ type: 'tool_result', tool_use_id: 'g1', content: 'hit' }] } });
+    expect(s.state.events.filter((e) => e.kind === 'tool_result' && e.toolUseId === 'ag')).toEqual([]);
+    expect(s.state.events.filter((e) => 'parent' in e && e.parent === 'ag').map((e) => e.kind)).toEqual(['tool_use', 'tool_result']);
+    handle({ type: 'system', subtype: 'task_notification', tool_use_id: 'ag', status: 'completed', summary: 'Found 3 docs', output_file: '' });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'tool_result', toolUseId: 'ag', text: 'Found 3 docs', isError: false });
+  });
+
+  it('rebuilds subagent steps and the report from history', () => {
+    const msg = (type: string, content: unknown) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
+    const { events } = historyFrom(
+      [
+        msg('user', 'survey'),
+        msg('assistant', [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }]),
+        msg('user', [{ type: 'tool_result', tool_use_id: 'ag', content: launched }]),
+        msg('user', '<task-notification>\n<tool-use-id>ag</tool-use-id>\n<status>completed</status>\n<summary>Agent finished</summary>\n<result>Found 3 docs</result>\n</task-notification>'),
+      ],
+      { ag: [msg('assistant', [{ type: 'tool_use', id: 'g1', name: 'Grep', input: { pattern: 'x' } }]), msg('user', [{ type: 'tool_result', tool_use_id: 'g1', content: 'hit' }])] },
+    );
+    const results = events.filter((e) => e.kind === 'tool_result' && e.toolUseId === 'ag');
+    expect(results).toMatchObject([{ text: 'Found 3 docs', isError: false }]);
+    expect(events.filter((e) => 'parent' in e && e.parent === 'ag')).toMatchObject([{ kind: 'tool_use', name: 'Grep' }, { kind: 'tool_result', text: 'hit' }]);
+  });
+});
+
 describe('compacting', () => {
   it('shows compacting from /compact until the boundary arrives', () => {
     const { s } = fakeSession();
