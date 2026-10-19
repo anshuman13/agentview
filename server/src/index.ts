@@ -11,7 +11,7 @@ import { connect as connectChrome, openChrome } from './chrome.js';
 import { deleteSession, getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway } from './notify.js';
-import { mcpConfig, mcpProbe } from './mcp.js';
+import { configDef, mcpConfig, mcpProbe } from './mcp.js';
 import { listDir, listFiles, readFileWithOriginal } from './files.js';
 import { github } from './github.js';
 import { deployRoute } from './deploy.js';
@@ -268,6 +268,17 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname.startsWith('/api/observe')) return json(await observe(req, url, chat.cwd));
     if (url.pathname === '/api/mcp/config') return json(await mcpConfig(chat.cwd));
+    if (url.pathname === '/api/mcp/add' && req.method === 'POST') {
+      const name = url.searchParams.get('name') ?? '';
+      const def = await configDef(chat.cwd, name);
+      if (!def) return json({ error: `${name} is not in your MCP config` }, 404);
+      return json(await chat.addMcp(name, def));
+    }
+    if (url.pathname === '/api/mcp/login' && req.method === 'POST') return json(await chat.loginMcp(url.searchParams.get('name') ?? ''));
+    if (url.pathname === '/api/mcp/callback' && req.method === 'POST') {
+      await chat.finishMcpLogin(url.searchParams.get('name') ?? '', String(JSON.parse(await readBody(req)).url ?? ''));
+      return json({ ok: true });
+    }
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
     if (url.pathname === '/api/sessions') {
       const list = await listSessions({ limit: 300 });

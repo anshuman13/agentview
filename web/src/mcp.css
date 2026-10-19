@@ -84,6 +84,16 @@
 .mcp-kv dd.bad { color: var(--err); }
 .mcp-kv dd.warn { color: var(--warn); }
 .mcp-kv .link { font-size: 12px; }
+.mcp-act-error { align-self: center; font-size: 12px; }
+.mcp-login { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.mcp-login button, .mcp-login a {
+  height: 26px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; text-decoration: none;
+  color: var(--fg); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.mcp-login button:hover, .mcp-login a:hover { background: var(--bg-hover); }
+.mcp-login-paste { display: flex; gap: 6px; width: 100%; }
+.mcp-login-paste input { flex: 1; min-width: 0; height: 26px; padding: 0 8px; font-size: 12px; font-family: var(--mono); background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.mcp-login-paste input:focus { outline: 0; border-color: var(--accent); }
 .mcp-tools-head { display: flex; align-items: center; gap: 6px; height: 28px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); border-top: 1px solid var(--border); padding-top: 8px; }
 .mcp-tools-head input { width: 120px; height: 22px; padding: 0 8px; font-size: 12px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .mcp-tools-head input:focus { outline: 0; border-color: var(--accent); }
