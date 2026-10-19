@@ -64,6 +64,16 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
   return { verb: 'Used', object: name };
 }
 
+export type Tone = 'read' | 'edit' | 'run' | 'web' | 'mcp' | 'other';
+
+const TONES: Record<string, Tone> = {
+  Read: 'read', Grep: 'read', Glob: 'read', LS: 'read', ToolSearch: 'read',
+  Edit: 'edit', MultiEdit: 'edit', Write: 'edit', NotebookEdit: 'edit',
+  Bash: 'run', WebFetch: 'web', WebSearch: 'web',
+};
+
+export const stepTone = (name: string): Tone => TONES[name] ?? (name.startsWith('mcp__') ? 'mcp' : 'other');
+
 export function buildTranscript(events: ChatEvent[]): Item[] {
   const results = new Map<string, ToolResult>();
   for (const e of events) if (e.kind === 'tool_result') results.set(e.toolUseId, e);

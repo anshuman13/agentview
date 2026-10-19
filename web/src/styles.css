@@ -24,6 +24,11 @@
   --radius: 8px;
   --radius-sm: 4px;
   --claude: #d97757;
+  --t-read: #5b9cf5;
+  --t-edit: var(--ok);
+  --t-run: #e2b453;
+  --t-web: #2dd4bf;
+  --t-mcp: #f472b6;
   --claude-button: #c6613f;
   --mono: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
 
@@ -62,6 +67,10 @@
   --err: #f14c4c;
   --diff-add: #89d185;
   --diff-del: #f14c4c;
+  --t-read: #4daafc;
+  --t-run: #dcdcaa;
+  --t-web: #4ec9b0;
+  --t-mcp: #c586c0;
 
   --side: #181818;
   --statusbar: #181818;
