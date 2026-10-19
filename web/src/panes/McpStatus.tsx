@@ -244,46 +244,29 @@ function AddToChat({ name }: { name: string }) {
 
 function Login({ name }: { name: string }) {
   const [busy, setBusy] = useState(false);
-  const [authUrl, setAuthUrl] = useState('');
-  const [paste, setPaste] = useState('');
+  const [opened, setOpened] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { setAuthUrl(''); setPaste(''); setError(''); }, [name]);
+  useEffect(() => { setOpened(false); setError(''); }, [name]);
   useEffect(() => {
-    if (!authUrl) return;
+    if (!opened) return;
     const t = setInterval(() => send({ type: 'mcp_status' }), 3000);
     return () => clearInterval(t);
-  }, [authUrl]);
-  const q = `name=${encodeURIComponent(name)}`;
+  }, [opened]);
   const start = () => {
     setBusy(true);
     setError('');
-    post(`/api/mcp/login?${q}`)
-      .then((r) => { if (r.authUrl) setAuthUrl(r.authUrl); else send({ type: 'mcp_status' }); })
-      .catch((e) => setError(e.message))
-      .finally(() => setBusy(false));
-  };
-  const submit = () => {
-    setBusy(true);
-    setError('');
-    post(`/api/mcp/callback?${q}`, { url: paste.trim() })
-      .then(() => { setAuthUrl(''); setPaste(''); })
+    post(`/api/mcp/login?name=${encodeURIComponent(name)}`)
+      .then((r) => { if (r.authUrl) setOpened(true); else send({ type: 'mcp_status' }); })
       .catch((e) => setError(e.message))
       .finally(() => setBusy(false));
   };
   return (
     <div className="mcp-login">
-      {!authUrl ? (
-        <button onClick={start} disabled={busy}><Icon name={busy ? 'loading' : 'key'} small spin={busy} /> Log in</button>
-      ) : (
-        <>
-          <a href={authUrl} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open login page</a>
-          <div className="muted">On the Mac it finishes by itself. On the phone the last page fails to load: copy its address and paste it here.</div>
-          <div className="mcp-login-paste">
-            <input placeholder="http://localhost:…/callback?code=…" value={paste} onChange={(e) => setPaste(e.target.value)} spellCheck={false} />
-            <button onClick={submit} disabled={busy || !paste.trim()}>Finish</button>
-          </div>
-        </>
-      )}
+      <div className="mcp-login-acts">
+        <button onClick={start} disabled={busy}><Icon name={busy ? 'loading' : 'key'} small spin={busy} /> {opened ? 'Open again' : 'Log in'}</button>
+        {opened && <button onClick={() => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'tab:browser' } }))}><Icon name="globe" small /> Show browser</button>}
+      </div>
+      {opened && <div className="muted">The login page is open in Chrome on the Mac. This updates once you finish there.</div>}
       {error && <div className="bad">{error}</div>}
     </div>
   );
