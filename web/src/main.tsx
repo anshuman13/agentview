@@ -6,8 +6,19 @@ import './sidebar.css';
 import './connect.css';
 import './mobile.css';
 import { touch } from './touch';
+import { api } from './store';
 
 if (touch()) window.addEventListener('focusout', () => window.scrollTo(0, 0));
+
+// The Mac app's WKWebView drops target=_blank links, so the server opens them in Chrome.
+if (/Macintosh/.test(navigator.userAgent) && !/Safari\//.test(navigator.userAgent)) {
+  window.addEventListener('click', (e) => {
+    const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
+    if (!(a instanceof HTMLAnchorElement) || e.defaultPrevented || e.button !== 0 || !/^https?:$/.test(a.protocol) || a.origin === location.origin) return;
+    e.preventDefault();
+    void fetch(api('/api/open'), { method: 'POST', body: JSON.stringify({ url: a.href }) });
+  });
+}
 
 if (import.meta.hot) {
   const nav = (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type;
