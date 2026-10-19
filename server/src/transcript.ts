@@ -7,6 +7,13 @@ export const BIG_BRO = 'big-bro';
 const COMPACT_SUMMARY = 'This session is being continued from a previous conversation';
 export const ASYNC_LAUNCH = 'Async agent launched';
 
+export type AgentIds = Map<string, string>;
+
+export function noteLaunch(agents: AgentIds, toolUseId: string, text: string) {
+  const id = text.match(/agentId: (\w+)/)?.[1];
+  if (id) agents.set(id, toolUseId);
+}
+
 export function historyFrom(msgs: SessionMessage[], subagents: Record<string, SessionMessage[]> = {}) {
   const events: ChatEvent[] = [];
   let context: number | null = null;
@@ -14,6 +21,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   let lastText = '';
   let lastAt = 0;
   let inTurn = false;
+  const agents: AgentIds = new Map();
   const endTurn = () => {
     if (inTurn) events.push({ id: randomUUID(), kind: 'result', text: lastText, costUsd: 0, isError: false, at: lastAt });
     inTurn = false;
@@ -25,8 +33,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
     const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
     for (const b of blocks) {
       if (m.type === 'user' && b.type === 'text' && b.text.startsWith('<task-notification>')) {
-        const done = notificationResult(b.text, at);
-        if (done) events.push(done);
+        events.push(...notificationResults(b.text, at, agents));
       } else if (m.type === 'user' && b.type === 'text' && b.text.includes('<local-command-stdout>Compacted')) {
         context = null;
       } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith(COMPACT_SUMMARY)) {
@@ -39,14 +46,15 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
         events.push({ id: randomUUID(), kind: 'user', text: b.text, at });
       } else if (m.type === 'user' && b.type === 'tool_result') {
         const text = toolResultText(b);
-        if (!text.startsWith(ASYNC_LAUNCH)) events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: text.slice(0, 4000), isError: Boolean(b.is_error), at });
+        if (text.startsWith(ASYNC_LAUNCH)) noteLaunch(agents, b.tool_use_id, text);
+        else events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: text.slice(0, 4000), isError: Boolean(b.is_error), at });
       } else if (m.type === 'assistant' && b.type === 'text') {
         lastText = b.text;
         events.push({ id: randomUUID(), kind: 'assistant', text: b.text, streaming: false, at });
       } else if (m.type === 'assistant' && b.type === 'server_tool_use' && b.name === 'advisor') {
         events.push(advisorEvent(b.id, at));
       } else if (m.type === 'assistant' && b.type === 'tool_use') {
-        events.push(toolUseEvent(b.id, b.name, b.input, at));
+        events.push(toolUseEvent(b.id, b.name, b.input, at, undefined, agents));
       }
     }
     if (at) lastAt = at;
@@ -55,7 +63,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   }
   endTurn();
   for (const [parent, sub] of Object.entries(subagents)) events.push(...subagentEvents(sub, parent));
-  return { events, context, cache };
+  return { events, context, cache, agents };
 }
 
 function subagentEvents(msgs: SessionMessage[], parent: string) {
@@ -74,20 +82,22 @@ function subagentEvents(msgs: SessionMessage[], parent: string) {
 
 const tag = (text: string, name: string) => text.match(new RegExp(`<${name}>([\\s\\S]*)</${name}>`))?.[1]?.trim();
 
-export function notificationResult(text: string, at: number): ChatEvent | null {
-  const toolUseId = tag(text, 'tool-use-id');
-  if (!toolUseId) return null;
-  const result = tag(text, 'result') ?? tag(text, 'summary') ?? '';
-  return { id: randomUUID(), kind: 'tool_result', toolUseId, text: result.slice(0, 4000), isError: tag(text, 'status') === 'failed', at };
+export function notificationResults(text: string, at: number, agents: AgentIds): ChatEvent[] {
+  const direct = tag(text, 'tool-use-id');
+  const ids = direct ? [direct] : [...text.matchAll(/<task-id>(\w+)<\/task-id>/g)].flatMap((m) => agents.get(m[1]) ?? []);
+  const status = tag(text, 'status');
+  const result = (tag(text, 'result') ?? tag(text, 'summary') ?? '').slice(0, 4000);
+  return ids.map((toolUseId) => ({ id: randomUUID(), kind: 'tool_result', toolUseId, text: result, isError: status === 'failed', at, ...(status === 'stopped' && { stopped: true }) }));
 }
 
 export function advisorEvent(id: string, at: number): ChatEvent {
   return { id, kind: 'tool_use', name: 'Advisor', input: {}, summary: 'Consulted the advisor', at };
 }
 
-export function toolUseEvent(id: string, name: string, rawInput: unknown, at: number, parent?: string): ChatEvent {
+export function toolUseEvent(id: string, name: string, rawInput: unknown, at: number, parent?: string, agents?: AgentIds): ChatEvent {
   const input = (rawInput ?? {}) as Record<string, unknown>;
-  return { id, kind: 'tool_use', name, input, summary: summarizeTool(name, input), at, ...(parent && { parent }) };
+  const agent = name === 'SendMessage' && typeof input.to === 'string' ? agents?.get(input.to) : undefined;
+  return { id, kind: 'tool_use', name, input, summary: summarizeTool(name, input), at, ...(parent && { parent }), ...(agent && { agent }) };
 }
 
 export function contextFrom(usage: any): number | null {

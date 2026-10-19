@@ -39,7 +39,7 @@ export function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; 
   );
 }
 
-function Row({ it, cwd }: { it: Item; cwd: string }) {
+function Row({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolean }) {
   switch (it.kind) {
     case 'user':
       return <div className={`tr-user ${it.stopping ? 'stopping' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title="Queued, sends when Claude finishes"><Icon name="clock" small /></span>}</div>;
@@ -50,7 +50,7 @@ function Row({ it, cwd }: { it: Item; cwd: string }) {
     case 'system':
       return <div className="tr-system">{it.text}</div>;
     case 'step':
-      return <Step use={it.use} result={it.result} cwd={cwd} />;
+      return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
       return <FileCard it={it} cwd={cwd} />;
     case 'agent':
@@ -60,10 +60,10 @@ function Row({ it, cwd }: { it: Item; cwd: string }) {
   }
 }
 
-function Step({ use, result, cwd }: { use: ToolUse; result?: ToolResult; cwd: string }) {
+function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult; cwd: string; settled?: boolean }) {
   const [open, setOpen] = useState(false);
   const { verb, object, mono, cmd } = stepLabel(use.name, use.input, cwd);
-  const state = !result ? 'pending' : result.isError ? 'err' : 'ok';
+  const state = !result ? (settled ? 'idle' : 'pending') : result.isError ? 'err' : 'ok';
   const dur = result ? duration(result.at - use.at) : '';
   return (
     <div className={`tr-step tr-act t-${stepTone(use.name)} ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
@@ -105,32 +105,32 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
 }
 
 function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: string }) {
-  const { use, result, steps } = it;
+  const { use, result, steps, running } = it;
   const [open, setOpen] = useState(false);
   const desc = typeof use.input.description === 'string' && use.input.description ? use.input.description : 'Sub-agent';
   const type = typeof use.input.subagent_type === 'string' ? use.input.subagent_type : '';
   const dur = result ? duration(result.at - use.at) : '';
-  const state = !result ? 'running' : result.isError ? 'failed' : `done${dur ? ` ${dur}` : ''}`;
-  const shown = open ? steps : result ? [] : steps.slice(-3);
+  const state = running ? 'running' : result?.stopped ? 'stopped' : result?.isError ? 'failed' : `done${dur ? ` ${dur}` : ''}`;
+  const shown = open ? steps : running ? steps.slice(-3) : [];
   const canOpen = steps.length > 0 || Boolean(result);
   return (
     <div className="tr-agent-box tr-act">
-      <div className={`tr-agent ${!result ? 'running' : result.isError ? 'err' : 'done'} ${open ? 'open' : ''}`} onClick={() => canOpen && setOpen((v) => !v)}>
+      <div className={`tr-agent ${running ? 'running' : result?.isError ? 'err' : 'done'} ${open ? 'open' : ''}`} onClick={() => canOpen && setOpen((v) => !v)}>
         <span className="tr-mark"><i className="tr-ring" /></span>
         <span className="tr-text" title={desc}>
           {desc}
           <span className="tr-state"> · {type && `${type} · `}{state}{steps.length > 0 && ` · ${steps.length} step${steps.length === 1 ? '' : 's'}`}</span>
-          {!result && <Icon name="loading" small spin />}
+          {running && <Icon name="loading" small spin />}
         </span>
         {canOpen && <span className="tr-dur"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>}
       </div>
       {shown.length > 0 && (
         <div className="tr-sub">
           {!open && steps.length > shown.length && <div className="tr-more" onClick={() => setOpen(true)}>{steps.length - shown.length} earlier steps</div>}
-          {shown.map((s) => <Row key={s.id} it={s} cwd={cwd} />)}
+          {shown.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}
         </div>
       )}
-      {open && result && <div className="tr-report"><Markdown text={result.text || '(no output)'} /></div>}
+      {open && result && !running && <div className="tr-report"><Markdown text={result.text || '(no output)'} /></div>}
     </div>
   );
 }

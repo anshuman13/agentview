@@ -9,7 +9,7 @@ import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
-import { ASYNC_LAUNCH, BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultText, toolUseEvent } from './transcript.js';
+import { ASYNC_LAUNCH, BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 export { BIG_BRO };
 
@@ -94,6 +94,8 @@ export class AgentSession {
   private transcriptTimer: NodeJS.Timeout | undefined;
   private seen = '';
   private seenSubs = 0;
+  private agents: AgentIds = new Map();
+  private tasks = new Set<string>();
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
   constructor(public cwd: string, private resume?: string) {
@@ -178,11 +180,12 @@ export class AgentSession {
     this.seenSubs = countAll(subs);
     if (last === this.seen && !subsMoved) return;
     if (last !== this.seen) {
-      const baseline = ownTurn || !this.seen;
+      const baseline = ownTurn || !this.seen || this.tasks.size > 0;
       this.seen = last;
       if (baseline) return;
     }
-    const { events, context, cache } = historyFrom(msgs, subs);
+    const { events, context, cache, agents } = historyFrom(msgs, subs);
+    this.agents = agents;
     this.state.events = events;
     Object.assign(this.state.session, { context, cache });
     this.emit({ type: 'init', state: this.state });
@@ -212,7 +215,8 @@ export class AgentSession {
     const subs = await subagentMessages(this.cwd, this.resume);
     this.seen = msgs.filter((m) => m.type !== 'system').at(-1)?.uuid ?? '';
     this.seenSubs = countAll(subs);
-    const { events, context, cache } = historyFrom(msgs, subs);
+    const { events, context, cache, agents } = historyFrom(msgs, subs);
+    this.agents = agents;
     this.state.events.push(...events);
     Object.assign(this.state.session, { context, cache });
   }
@@ -580,7 +584,7 @@ export class AgentSession {
   }
 
   private toolUse(block: { id: string; name: string; input: unknown }, parent?: string) {
-    this.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now(), parent));
+    this.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now(), parent, this.agents));
     const file = (block.input as { file_path?: unknown })?.file_path;
     if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
   }
@@ -613,8 +617,13 @@ export class AgentSession {
           this.rearmWakeups();
         } else if (msg.subtype === 'permission_denied') {
           if (msg.decision_reason_type !== 'rule') this.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
-        } else if (msg.subtype === 'task_notification' && msg.tool_use_id) {
-          this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: msg.tool_use_id, text: msg.summary.slice(0, 4000), isError: msg.status === 'failed', at: Date.now() });
+        } else if (msg.subtype === 'task_started') {
+          this.tasks.add(msg.task_id);
+        } else if (msg.subtype === 'task_updated') {
+          if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
+        } else if (msg.subtype === 'task_notification') {
+          this.tasks.delete(msg.task_id);
+          if (msg.tool_use_id) this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: msg.tool_use_id, text: msg.summary.slice(0, 4000), isError: msg.status === 'failed', at: Date.now(), ...(msg.status === 'stopped' && { stopped: true }) });
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
@@ -666,6 +675,7 @@ export class AgentSession {
       case 'user': {
         const parent = msg.parent_tool_use_id ?? undefined;
         const content = msg.message.content;
+        if (typeof content === 'string' && content.startsWith('<task-notification>')) for (const ev of notificationResults(content, Date.now(), this.agents)) this.pushEvent(ev);
         if (!Array.isArray(content)) return;
         for (const block of content) {
           if (block.type !== 'tool_result') continue;
@@ -673,7 +683,10 @@ export class AgentSession {
           this.edits.delete(block.tool_use_id);
           if (edited && !block.is_error) this.noteFile(path.relative(this.cwd, edited), 'tool');
           const text = toolResultText(block);
-          if (!parent && text.startsWith(ASYNC_LAUNCH)) continue;
+          if (!parent && text.startsWith(ASYNC_LAUNCH)) {
+            noteLaunch(this.agents, block.tool_use_id, text);
+            continue;
+          }
           this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: text.slice(0, 4000), isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
         }
         return;
