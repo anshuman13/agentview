@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, send, useStore } from '../store';
+import { api, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protocol';
@@ -81,15 +81,6 @@ export function Deploy() {
       run: () => begin(() => post('/api/deploy/rollback', { app: s.app, env: env.name, sha: env.rollbackTo!.sha })),
     });
 
-  const askClaude = (env: DeployEnv) => {
-    if (!s) return;
-    const d = env.latest;
-    const text = d && tone(d.state) === 'bad'
-      ? `The Velo deploy of ${s.app} to ${env.name} failed: deployment ${d.id}, commit ${d.sha}, "${d.description || d.state}". Find out why and suggest a fix. Velodrome: ${d.url}. Statuses: gh api repos/${s.repo}/deployments/${d.id}/statuses`
-      : `Look at the Velo deploys of ${s.app} to ${env.name}. Deployed: ${env.deployed?.sha ?? 'nothing'}. Summarize what changed between that and HEAD (${s.head.sha}) and whether it is safe to deploy. Velodrome: ${s.velodrome}`;
-    send({ type: 'prompt', text });
-  };
-
   return (
     <div className="deploy" ref={root}>
       <div className="deploy-head">
@@ -127,7 +118,6 @@ export function Deploy() {
             <button onClick={() => deploy(env, s.head.sha)} title={`Deploy ${short(s.head.sha)}`}>Deploy HEAD</button>
             <button onClick={() => deploy(env)}>Deploy…</button>
             <button onClick={() => rollback(env)} disabled={!env.rollbackTo} title={env.rollbackTo ? `Redeploy ${short(env.rollbackTo.sha)}` : 'No earlier deploy to roll back to'}>Rollback</button>
-            <button className="ghost" onClick={() => askClaude(env)} title="Send a prompt about this environment to the chat"><Icon name="sparkle" small /> Ask Claude</button>
           </div>
         </div>
       ))}
