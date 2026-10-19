@@ -4,7 +4,7 @@ import { Icon } from '../Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from './Explorer';
-import { buildTranscript, duration, firstLine, relPath, stepLabel, type Item, type ToolResult, type ToolUse } from './steps';
+import { buildTranscript, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import type { ChatEvent } from '../../../shared/protocol';
 import '../transcript.css';
 
@@ -66,9 +66,9 @@ function Step({ use, result, cwd }: { use: ToolUse; result?: ToolResult; cwd: st
   const state = !result ? 'pending' : result.isError ? 'err' : 'ok';
   const dur = result ? duration(result.at - use.at) : '';
   return (
-    <div className={`tr-step tr-act ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
+    <div className={`tr-step tr-act t-${stepTone(use.name)} ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
       <span className="tr-mark">{state === 'pending' ? <Icon name="loading" small spin /> : <i className="tr-hex" />}</span>
-      <span className="tr-text" title={object}>{verb && `${verb} `}<span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span></span>
+      <span className="tr-text" title={object}>{verb && <span className="tr-verb">{verb} </span>}<span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span></span>
       <span className="tr-dur">{dur}</span>
       {state === 'err' && !open && <span className="tr-err">{firstLine(result!.text) || 'Failed'}</span>}
       {open && <Detail use={use} result={result} />}

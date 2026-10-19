@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTranscript, duration, stepLabel } from './steps';
+import { buildTranscript, duration, stepLabel, stepTone } from './steps';
 import { editCount, replyLine, sumEdits } from '../../../shared/edits';
 import { chatLine } from './Sessions';
 import type { ChatEvent, LiveChat } from '../../../shared/protocol';
@@ -110,5 +110,11 @@ describe('chatLine', () => {
     const events = [user('go'), edit('/w/app/a.ts', 'x', 'y\nz'), say('Changed a.ts')];
     expect(chatLine(live({}), events)).toEqual({ text: 'Changed a.ts', edits: { add: 2, del: 1 }, done: true });
     expect(chatLine(live({}), null)).toEqual({ text: '', edits: undefined, done: false });
+  });
+});
+
+describe('stepTone', () => {
+  it('groups tools by what they do', () => {
+    expect(['Read', 'Grep', 'Edit', 'Bash', 'WebFetch', 'mcp__grafana_prod__query_loki_logs', 'TodoWrite'].map(stepTone)).toEqual(['read', 'read', 'edit', 'run', 'web', 'mcp', 'other']);
   });
 });
