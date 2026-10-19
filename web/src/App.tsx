@@ -148,6 +148,7 @@ export function App() {
   const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (narrow() ? 'code' : t)); };
   const closePage = () => { setPage(null); setEditor((e) => (isPage(e) ? 'file' : e)); };
   const [sidebar, setSidebar] = useState(true);
+  const [chatOpen, setChatOpen] = useState(true);
   const [view, setView] = useState<View>('explorer');
   const [phone, setPhone] = useState(false);
   const [chatW, setChatW] = useState(() => stored('agentview.chatW', 480));
@@ -205,7 +206,8 @@ export function App() {
       const k = e.key.toLowerCase();
       if (k === 'p') { e.preventDefault(); setUi({ switcherOpen: true }); }
       if (k === 'o') { e.preventDefault(); setUi({ repoPicker: true }); }
-      if (k === 'b') { e.preventDefault(); setSidebar((v) => !v); }
+      if (e.code === 'KeyB' && e.altKey) { e.preventDefault(); setChatOpen((v) => !v); }
+      else if (k === 'b') { e.preventDefault(); setSidebar((v) => !v); }
       if (k === 'j') { e.preventDefault(); setTerminal((v) => !v); }
       if (k === 'e') { e.preventDefault(); setEditor((v) => (v === 'file' ? 'browser' : 'file')); }
     };
@@ -237,6 +239,8 @@ export function App() {
       else if (kind === 'page' && isPage(arg)) openPage(arg);
       else if (kind === 'terminal') { if (narrow()) setTab('term'); else setTerminal((v) => !v); }
       else if (kind === 'phone') setPhone((v) => !v);
+      else if (kind === 'toggleSidebar') setSidebar((v) => !v);
+      else if (kind === 'toggleChat') setChatOpen((v) => !v);
       else if (kind === 'theme') toggleTheme();
     };
     window.addEventListener('agentview:command', onCommand);
@@ -269,7 +273,7 @@ export function App() {
   };
 
   return (
-    <div className="workbench" data-tab={tab} data-sidebar={sidebar} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
+    <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <AppUpdate />
       <Restarting />
       <Offline />
@@ -329,6 +333,14 @@ export function App() {
                 <span className="close" title="Close" onClick={(e) => { e.stopPropagation(); closePage(); }}><Icon name="close" small /></span>
               </button>
             )}
+            <span className="tabs-spacer desktop-only" />
+            <button className="tab-tool desktop-only" title={`${sidebar ? 'Hide' : 'Show'} the left sidebar (⌘B)`} onClick={() => setSidebar((v) => !v)}>
+              <Icon name={sidebar ? 'layout-sidebar-left' : 'layout-sidebar-left-off'} small />
+            </button>
+            <button className="tab-tool desktop-only" title={`${chatOpen ? 'Hide' : 'Show'} the chat (⌥⌘B)`} onClick={() => setChatOpen((v) => !v)}>
+              <Icon name={chatOpen ? 'layout-sidebar-right' : 'layout-sidebar-right-off'} small />
+              {!chatOpen && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+            </button>
           </div>
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><CodePane /></div>
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <BrowserPane />}</div>

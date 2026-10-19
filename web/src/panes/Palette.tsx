@@ -26,6 +26,8 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
     { id: 'terminal', label: 'View: Toggle Terminal', key: '⌘J' },
+    { id: 'toggleSidebar', label: 'View: Toggle Left Sidebar', key: '⌘B' },
+    { id: 'toggleChat', label: 'View: Toggle Chat', key: '⌥⌘B' },
     { id: 'page:observe', label: 'View: Observe' },
     { id: 'page:deploy', label: 'View: Deploy' },
     { id: 'page:mcp', label: 'View: MCP Servers' },
