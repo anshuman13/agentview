@@ -366,6 +366,8 @@ button.destructive:hover { background: color-mix(in srgb, var(--err) 28%, transp
 @media (min-width: 901px) {
   .main { flex: none; width: var(--chat-w); border-left: 1px solid var(--border); }
   .workbench[data-chat='false'] .main, .workbench[data-chat='false'] .sash { display: none; }
+  .workbench[data-editor='false'] .editor-group, .workbench[data-editor='false'] .sash { display: none; }
+  .workbench[data-editor='false'] .main { flex: 1; width: auto; border-left: 0; }
 }
 .sash { width: 4px; margin: 0 -2px; flex: none; cursor: ew-resize; position: relative; z-index: 2; }
 .sash:hover { background: var(--accent); }

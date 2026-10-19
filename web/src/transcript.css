@@ -40,6 +40,11 @@
 .tr-step.err .tr-mark { color: var(--err, #f14c4c); }
 .tr-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-obj { color: var(--fg, #cccccc); }
+.tr-cmd {
+  grid-column: 2 / -1; margin-top: -3px; padding-bottom: 2px; line-height: 17px;
+  font-family: var(--mono, Menlo, monospace); font-size: 11px; color: var(--fg-faint, #6e6e6e);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .tr-obj.mono { font-family: var(--mono, Menlo, monospace); font-size: 11.5px; }
 .tr-dur { font-size: 11px; color: var(--fg-faint, #6e6e6e); font-variant-numeric: tabular-nums; padding-right: 2px; }
 .tr-err {
@@ -78,6 +83,12 @@
 .tr-agent .tr-state { color: var(--fg-faint, #6e6e6e); }
 .tr-agent.err .tr-state { color: var(--err, #f14c4c); }
 .tr-agent .tr-text .codicon { margin-left: 6px; color: var(--fg-faint, #6e6e6e); vertical-align: -1px; }
+.tr-sub { margin: 0 0 4px 7px; padding-left: 14px; border-left: 1.5px solid color-mix(in srgb, var(--agent, #a78bfa) 45%, transparent); }
+.tr-sub > .tr-file { margin: 3px 0; }
+.tr-sub > .tr-agent-box { margin: 2px 0; }
+.tr-more { font-size: 11.5px; line-height: 22px; color: var(--fg-faint, #6e6e6e); cursor: pointer; }
+.tr-more:hover { color: var(--fg, #cccccc); }
+.tr-agent-box > .tr-report { margin: 2px 0 8px 22px; }
 .tr-report {
   padding: 8px 10px; max-height: 50vh; overflow: auto; font-size: 12px; line-height: 1.5;
   background: var(--bg-sunken, #181818); border: 1px solid var(--border, #2b2b2b); border-radius: var(--radius-sm, 4px);

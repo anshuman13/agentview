@@ -21,7 +21,7 @@ describe('stepLabel', () => {
     expect(stepLabel('Glob', { pattern: '**/*.ts', path: '/w/app/src' }, cwd).object).toBe('src/**/*.ts');
     expect(stepLabel('LS', { path: '/w/app/src' }, cwd)).toEqual({ verb: 'Listed', object: 'src/' });
     expect(stepLabel('Bash', { command: 'npm test\necho done' }, cwd)).toEqual({ verb: 'Ran', object: 'npm test', mono: true });
-    expect(stepLabel('Bash', { command: 'npm test', description: 'Run the unit tests' }, cwd)).toEqual({ verb: '', object: 'Run the unit tests' });
+    expect(stepLabel('Bash', { command: 'npm test', description: 'Run the unit tests' }, cwd)).toEqual({ verb: '', object: 'Run the unit tests', cmd: 'npm test' });
     expect(stepLabel('WebFetch', { url: 'https://example.com/' }, cwd)).toEqual({ verb: 'Fetched', object: 'example.com' });
     expect(stepLabel('Write', { file_path: '/elsewhere/x.md' }, cwd)).toEqual({ verb: 'Wrote', object: '/elsewhere/x.md' });
   });
@@ -116,5 +116,18 @@ describe('chatLine', () => {
 describe('stepTone', () => {
   it('groups tools by what they do', () => {
     expect(['Read', 'Grep', 'Edit', 'Bash', 'WebFetch', 'mcp__grafana_prod__query_loki_logs', 'TodoWrite'].map(stepTone)).toEqual(['read', 'read', 'edit', 'run', 'web', 'mcp', 'other']);
+  });
+});
+
+describe('subagent steps', () => {
+  it('nests steps under the agent that ran them and keeps them out of the main list', () => {
+    const agent = tool('Agent', { description: 'Survey docs', subagent_type: 'Explore' });
+    const read: ChatEvent = { ...tool('Read', { file_path: '/w/app/a.md' }), parent: agent.id } as ChatEvent;
+    const done: ChatEvent = { ...result(read.id), parent: agent.id } as ChatEvent;
+    const items = buildTranscript([user('go'), agent, read, done, result(agent.id, 'report')]);
+    expect(items.map((i) => i.kind)).toEqual(['user', 'agent']);
+    const row = items[1] as Extract<typeof items[number], { kind: 'agent' }>;
+    expect(row.result?.text).toBe('report');
+    expect(row.steps).toMatchObject([{ kind: 'step', use: { name: 'Read' }, result: { text: 'ok' } }]);
   });
 });

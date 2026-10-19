@@ -273,7 +273,7 @@ export function App() {
   };
 
   return (
-    <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
+    <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <AppUpdate />
       <Restarting />
       <Offline />
@@ -343,7 +343,7 @@ export function App() {
             </button>
           </div>
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><CodePane /></div>
-          <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <BrowserPane />}</div>
+          <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <BrowserPane onEmpty={() => setEditor('file')} />}</div>
           {page && (
             <div key={page} className={`editor ${active === page ? 'shown' : ''}`}>
               <div className={`page page-${page}`}>

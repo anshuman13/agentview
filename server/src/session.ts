@@ -2,13 +2,14 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
-import { query, getSessionMessages, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
+import { readFile, readdir } from 'node:fs/promises';
+import { query, getSessionMessages, getSubagentMessages, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
-import { BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultText, toolUseEvent } from './transcript.js';
+import { ASYNC_LAUNCH, BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultText, toolUseEvent } from './transcript.js';
 
 export { BIG_BRO };
 
@@ -25,7 +26,36 @@ export function fireTime(schedule: string, now = Date.now()) {
   return at.getTime();
 }
 
-const transcriptPath = (cwd: string, sessionId: string) => path.join(CLAUDE_DIR, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'), `${sessionId}.jsonl`);
+const projectDir = (cwd: string) => path.join(CLAUDE_DIR, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'));
+
+async function subagentMessages(cwd: string, sessionId: string) {
+  const dir = path.join(projectDir(cwd), sessionId, 'subagents');
+  const files = await readdir(dir).catch(() => [] as string[]);
+  const out: Record<string, SessionMessage[]> = {};
+  await Promise.all(files.filter((f) => f.endsWith('.meta.json')).map(async (f) => {
+    const meta = await readFile(path.join(dir, f), 'utf8').then(JSON.parse).catch(() => null);
+    if (!meta?.toolUseId) return;
+    out[meta.toolUseId] = await getSubagentMessages(sessionId, f.slice('agent-'.length, -'.meta.json'.length), { dir: cwd }).catch(() => []);
+  }));
+  return out;
+}
+
+// A retry message can point at a parent the CLI never saved; the SDK then drops everything before it.
+export async function sessionMessages(sessionId: string, cwd: string) {
+  const msgs = await getSessionMessages(sessionId, { dir: cwd });
+  const first = msgs[0];
+  if (!first) return msgs;
+  const lines = (await readFile(path.join(projectDir(cwd), `${sessionId}.jsonl`), 'utf8').catch(() => '')).split('\n');
+  const raw = lines.flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } }).filter((e) => e.uuid && !e.isSidechain);
+  const byId = new Map(raw.map((e) => [e.uuid, e]));
+  let root = byId.get(first.uuid);
+  while (root?.parentUuid && byId.has(root.parentUuid)) root = byId.get(root.parentUuid);
+  if (!root?.parentUuid) return msgs;
+  const before = raw.slice(0, raw.indexOf(root)).filter((e) => e.type === 'user' || e.type === 'assistant');
+  return [...before.map((e) => ({ type: e.type, uuid: e.uuid, session_id: sessionId, message: e.message, parent_tool_use_id: null, parent_agent_id: null, timestamp: e.timestamp }) as SessionMessage), ...msgs];
+}
+
+const countAll = (subs: Record<string, SessionMessage[]>) => Object.values(subs).reduce((n, m) => n + m.length, 0);
 
 export class AgentSession {
   private q: Query | null = null;
@@ -63,6 +93,7 @@ export class AgentSession {
   private transcript: FSWatcher | null = null;
   private transcriptTimer: NodeJS.Timeout | undefined;
   private seen = '';
+  private seenSubs = 0;
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
   constructor(public cwd: string, private resume?: string) {
@@ -125,7 +156,8 @@ export class AgentSession {
     }
     if (this.transcript) return;
     try {
-      this.transcript = watch(transcriptPath(this.cwd, sessionId), () => {
+      this.transcript = watch(projectDir(this.cwd), { recursive: true }, (_, file) => {
+        if (file && !file.startsWith(sessionId)) return;
         clearTimeout(this.transcriptTimer);
         this.transcriptTimer = setTimeout(() => void this.syncTranscript(false), 300);
       }).on('error', () => this.watchTranscript(false));
@@ -138,13 +170,19 @@ export class AgentSession {
   private async syncTranscript(ownTurn: boolean) {
     const sessionId = this.state.session.sessionId;
     if (!sessionId || this.closed || this.state.session.running) return;
-    const msgs = await getSessionMessages(sessionId, { dir: this.cwd }).catch(() => null);
+    const msgs = await sessionMessages(sessionId, this.cwd).catch(() => null);
+    const subs = await subagentMessages(this.cwd, sessionId);
     const last = msgs?.filter((m) => m.type !== 'system').at(-1)?.uuid;
-    if (!msgs || !last || last === this.seen || this.state.session.running) return;
-    const baseline = ownTurn || !this.seen;
-    this.seen = last;
-    if (baseline) return;
-    const { events, context, cache } = historyFrom(msgs);
+    if (!msgs || !last || this.state.session.running) return;
+    const subsMoved = !this.q && countAll(subs) !== this.seenSubs;
+    this.seenSubs = countAll(subs);
+    if (last === this.seen && !subsMoved) return;
+    if (last !== this.seen) {
+      const baseline = ownTurn || !this.seen;
+      this.seen = last;
+      if (baseline) return;
+    }
+    const { events, context, cache } = historyFrom(msgs, subs);
     this.state.events = events;
     Object.assign(this.state.session, { context, cache });
     this.emit({ type: 'init', state: this.state });
@@ -170,9 +208,11 @@ export class AgentSession {
 
   async loadHistory() {
     if (!this.resume) return;
-    const msgs = await getSessionMessages(this.resume, { dir: this.cwd });
+    const msgs = await sessionMessages(this.resume, this.cwd);
+    const subs = await subagentMessages(this.cwd, this.resume);
     this.seen = msgs.filter((m) => m.type !== 'system').at(-1)?.uuid ?? '';
-    const { events, context, cache } = historyFrom(msgs);
+    this.seenSubs = countAll(subs);
+    const { events, context, cache } = historyFrom(msgs, subs);
     this.state.events.push(...events);
     Object.assign(this.state.session, { context, cache });
   }
@@ -539,6 +579,12 @@ export class AgentSession {
     }
   }
 
+  private toolUse(block: { id: string; name: string; input: unknown }, parent?: string) {
+    this.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now(), parent));
+    const file = (block.input as { file_path?: unknown })?.file_path;
+    if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
+  }
+
   private handle(msg: SDKMessage) {
     switch (msg.type) {
       case 'system':
@@ -567,6 +613,8 @@ export class AgentSession {
           this.rearmWakeups();
         } else if (msg.subtype === 'permission_denied') {
           if (msg.decision_reason_type !== 'rule') this.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
+        } else if (msg.subtype === 'task_notification' && msg.tool_use_id) {
+          this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: msg.tool_use_id, text: msg.summary.slice(0, 4000), isError: msg.status === 'failed', at: Date.now() });
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
@@ -602,21 +650,21 @@ export class AgentSession {
       }
 
       case 'assistant': {
-        if (msg.parent_tool_use_id) return;
+        const parent = msg.parent_tool_use_id ?? undefined;
+        if (parent) {
+          for (const block of msg.message.content) if (block.type === 'tool_use') this.toolUse(block, parent);
+          return;
+        }
         this.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache), context: contextFrom(msg.message.usage) ?? this.state.session.context });
         for (const block of msg.message.content) {
           if (block.type === 'server_tool_use' && block.name === 'advisor') this.pushEvent(advisorEvent(block.id, Date.now()));
-          if (block.type === 'tool_use') {
-            this.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now()));
-            const file = (block.input as { file_path?: unknown })?.file_path;
-            if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
-          }
+          if (block.type === 'tool_use') this.toolUse(block);
         }
         return;
       }
 
       case 'user': {
-        if (msg.parent_tool_use_id) return;
+        const parent = msg.parent_tool_use_id ?? undefined;
         const content = msg.message.content;
         if (!Array.isArray(content)) return;
         for (const block of content) {
@@ -624,7 +672,9 @@ export class AgentSession {
           const edited = this.edits.get(block.tool_use_id);
           this.edits.delete(block.tool_use_id);
           if (edited && !block.is_error) this.noteFile(path.relative(this.cwd, edited), 'tool');
-          this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: toolResultText(block).slice(0, 4000), isError: Boolean(block.is_error), at: Date.now() });
+          const text = toolResultText(block);
+          if (!parent && text.startsWith(ASYNC_LAUNCH)) continue;
+          this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: text.slice(0, 4000), isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
         }
         return;
       }

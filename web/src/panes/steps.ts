@@ -11,10 +11,10 @@ export type Item =
   | { kind: 'system'; id: string; text: string }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
   | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string }
-  | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult }
+  | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; steps: Item[] }
   | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> };
 
-export type Label = { verb: string; object: string; mono?: boolean };
+export type Label = { verb: string; object: string; mono?: boolean; cmd?: string };
 
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 
@@ -45,7 +45,7 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
     case 'Grep': return { verb: 'Searched', object: `"${s('pattern')}" in ${inDir || 'the project'}` };
     case 'Glob': return { verb: 'Listed', object: inDir ? `${inDir}/${s('pattern')}` : s('pattern') };
     case 'LS': return { verb: 'Listed', object: `${inDir || '.'}/` };
-    case 'Bash': return s('description') ? { verb: '', object: s('description') } : { verb: 'Ran', object: firstLine(s('command')), mono: true };
+    case 'Bash': return s('description') ? { verb: '', object: s('description'), cmd: s('command') } : { verb: 'Ran', object: firstLine(s('command')), mono: true };
     case 'WebFetch': return { verb: 'Fetched', object: s('url').replace(/^https?:\/\//, '').replace(/\/$/, '') };
     case 'WebSearch': return { verb: 'Searched the web for', object: `"${s('query')}"` };
     case 'Agent': case 'Task': return { verb: 'Delegated', object: s('description') };
@@ -76,7 +76,16 @@ export const stepTone = (name: string): Tone => TONES[name] ?? (name.startsWith(
 
 export function buildTranscript(events: ChatEvent[]): Item[] {
   const results = new Map<string, ToolResult>();
-  for (const e of events) if (e.kind === 'tool_result') results.set(e.toolUseId, e);
+  const children = new Map<string, ChatEvent[]>();
+  for (const e of events) {
+    if (e.kind === 'tool_result') results.set(e.toolUseId, e);
+    const parent = (e.kind === 'tool_use' || e.kind === 'tool_result') && e.parent;
+    if (parent) children.set(parent, [...(children.get(parent) ?? []), e]);
+  }
+  return itemsFrom(events.filter((e) => !('parent' in e && e.parent)), results, children);
+}
+
+function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>): Item[] {
   const items: Item[] = [];
   for (const e of events) {
     if (e.kind === 'user') items.push(e.phase ? { kind: 'phase', id: e.id, text: e.text } : { kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
@@ -88,7 +97,7 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
       const result = results.get(e.id);
       const count = editCount(e.name, e.input);
       const path = typeof e.input.file_path === 'string' ? e.input.file_path : '';
-      if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result });
+      if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result, steps: itemsFrom(children.get(e.id) ?? [], results, children) });
       else if (!count || !path) items.push({ kind: 'step', id: e.id, use: e, result });
       else {
         const error = result?.isError ? firstLine(result.text) : undefined;

@@ -8,7 +8,7 @@ const BUTTON = ['left', 'middle', 'right'];
 const mods = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) =>
   (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0);
 
-export function BrowserPane() {
+export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const ws = useRef<WebSocket | null>(null);
   const img = useRef<HTMLImageElement>(null);
   const kbd = useRef<HTMLTextAreaElement>(null);
@@ -22,6 +22,9 @@ export function BrowserPane() {
   const [hasFrame, setHasFrame] = useState(false);
   const [url, setUrl] = useState('');
   const [editing, setEditing] = useState(false);
+  const hadTabs = useRef(false);
+  const emptied = useRef(onEmpty);
+  emptied.current = onEmpty;
 
   const send = (m: object) => ws.current?.readyState === WebSocket.OPEN && ws.current.send(JSON.stringify(m));
   const tab = tabs.find((t) => t.id === current);
@@ -43,6 +46,8 @@ export function BrowserPane() {
         }
         if (m.t === 'tabs') {
           setTabs(m.tabs);
+          if (hadTabs.current && m.tabs.length === 0) emptied.current?.();
+          hadTabs.current = m.tabs.length > 0;
           setCurrent(m.current);
           setPinned(m.pinned);
         }
