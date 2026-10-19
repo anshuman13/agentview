@@ -121,7 +121,7 @@ class Http implements Transport {
     const headers: Record<string, string> = { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...this.def.headers };
     if (this.session) headers['mcp-session-id'] = this.session;
     const res = await fetch(this.def.url!, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeout) });
-    if (res.status === 401 || res.status === 403) throw new Error(`${this.key} needs auth in Claude (HTTP ${res.status}); AgentView cannot run its OAuth flow`);
+    if (res.status === 401 || res.status === 403) throw new Error(`${this.key} needs login (HTTP ${res.status})`);
     if (!res.ok) throw new Error(`${this.key} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const sid = res.headers.get('mcp-session-id');
     if (sid) this.session = sid;
