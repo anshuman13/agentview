@@ -1,6 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
+import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
 import type { McpConfigEntry, McpServer, McpTool } from '../../shared/protocol.js';
 import { probe, stop, type McpServerDef } from './mcpClient.js';
 
@@ -62,6 +63,11 @@ export function configDefs(user: any, repo: any, cwd: string): Def[] {
     for (const [name, def] of Object.entries((servers ?? {}) as Record<string, McpServerDef>)) by.set(name, { name, scope, def });
   }
   return [...by.values()];
+}
+
+export async function configDef(cwd: string, name: string) {
+  const [user, repo] = await Promise.all([readJson(path.join(os.homedir(), '.claude.json')), readJson(path.join(cwd, '.mcp.json'))]);
+  return configDefs(user, repo, cwd).find((d) => d.name === name)?.def as McpServerConfig | undefined;
 }
 
 export const authError = (msg: string) => /needs auth|HTTP 401|HTTP 403|unauthori[sz]ed/i.test(msg);

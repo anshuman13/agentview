@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
-import { query, getSessionMessages, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
+import { query, getSessionMessages, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
@@ -11,6 +11,11 @@ import { advance, loopOff, planStep, type LoopStep } from './loop.js';
 import { BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, toolResultText, toolUseEvent } from './transcript.js';
 
 export { BIG_BRO };
+
+type McpAuth = {
+  mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }>;
+  mcpSubmitOAuthCallbackUrl(name: string, callbackUrl: string): Promise<void>;
+};
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
@@ -55,6 +60,8 @@ export class AgentSession {
 
   private resumedAuto = false;
   private allowed: string[] = [];
+  private mcpServers: Record<string, McpServerConfig> = {};
+  private addedMcp: Record<string, McpServerConfig> = {};
 
   private transcript: FSWatcher | null = null;
   private transcriptTimer: NodeJS.Timeout | undefined;
@@ -175,21 +182,21 @@ export class AgentSession {
 
   start() {
     if (this.q || this.closed) return;
-    this.q = query({
-      prompt: this.inputStream(this.gen),
-      options: agentOptions({
-        cwd: this.cwd,
-        resume: this.resume,
-        onStatus: (text) => this.setStatus(text),
-        canUseTool: (toolName, input, opts) => this.loopPlanDone(toolName, input) ?? this.approvals.ask(toolName, input, opts),
-        beforeAgent: (input, _id, { signal }) => this.confirmBigBro(input, signal),
-        afterTool: async (input) => this.afterTool(input),
-        onStop: async (input) => {
-          if (input.hook_event_name === 'Stop' && !input.agent_id) this.crons = input.session_crons ?? [];
-          return {};
-        },
-      }),
+    const options = agentOptions({
+      cwd: this.cwd,
+      resume: this.resume,
+      onStatus: (text) => this.setStatus(text),
+      canUseTool: (toolName, input, opts) => this.loopPlanDone(toolName, input) ?? this.approvals.ask(toolName, input, opts),
+      beforeAgent: (input, _id, { signal }) => this.confirmBigBro(input, signal),
+      afterTool: async (input) => this.afterTool(input),
+      onStop: async (input) => {
+        if (input.hook_event_name === 'Stop' && !input.agent_id) this.crons = input.session_crons ?? [];
+        return {};
+      },
+      mcp: this.addedMcp,
     });
+    this.mcpServers = options.mcpServers ?? {};
+    this.q = query({ prompt: this.inputStream(this.gen), options });
     if (this.restore) {
       const { model, team, permissionMode } = this.restore;
       this.restore = null;
@@ -230,6 +237,25 @@ export class AgentSession {
 
   async toggleMcp(name: string, enabled: boolean) {
     await this.q?.toggleMcpServer(name, enabled).catch((err) => this.system(`${enabled ? 'Enabling' : 'Disabling'} ${name} failed: ${err instanceof Error ? err.message : String(err)}`));
+    await this.refreshMcp();
+  }
+
+  async addMcp(name: string, def: McpServerConfig) {
+    this.start();
+    this.addedMcp[name] = def;
+    this.mcpServers = { ...this.mcpServers, [name]: def };
+    const r = await this.q!.setMcpServers(this.mcpServers);
+    await this.refreshMcp();
+    return { error: r.errors[name] };
+  }
+
+  async loginMcp(name: string): Promise<{ authUrl?: string; callbackPort?: number }> {
+    this.start();
+    return (this.q as Query & McpAuth).mcpAuthenticate(name);
+  }
+
+  async finishMcpLogin(name: string, callbackUrl: string) {
+    await (this.q as Query & McpAuth).mcpSubmitOAuthCallbackUrl(name, callbackUrl);
     await this.refreshMcp();
   }
 

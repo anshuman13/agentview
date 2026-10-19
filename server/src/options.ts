@@ -1,4 +1,4 @@
-import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { BIG_BRO } from './transcript.js';
 
@@ -46,6 +46,7 @@ export function agentOptions(o: {
   beforeAgent: HookCallback;
   afterTool: HookCallback;
   onStop: HookCallback;
+  mcp?: Record<string, McpServerConfig>;
 }): Options {
   return {
     cwd: o.cwd,
@@ -58,7 +59,7 @@ export function agentOptions(o: {
     disallowedTools: ['mcp__playwright'],
     extraArgs: { chrome: null },
     permissionMode: 'auto',
-    mcpServers: { agentview: statusServer(o.onStatus) },
+    mcpServers: { agentview: statusServer(o.onStatus), ...o.mcp },
     toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
     canUseTool: o.canUseTool,
     agents: {

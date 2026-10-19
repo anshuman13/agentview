@@ -186,21 +186,20 @@ function Detail({ row, onClose }: { row: Row; onClose: () => void }) {
         {row.live && MCP_BAD.includes(row.status) && <button onClick={() => send({ type: 'mcp_reconnect', name: row.name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
         {row.live && row.status === 'disabled' && <button onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}><Icon name="debug-start" small /> Enable</button>}
         {row.live && row.status !== 'disabled' && <button onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
+        {!row.live && <AddToChat name={row.name} />}
         {url && <a href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
       </div>
       <dl className="mcp-kv">
         <dt>Status</dt><dd className={tone}>{label}{row.version ? <span className="muted mono"> · v{row.version}</span> : null}</dd>
         {row.error && (row.live || row.status !== 'needs-auth') && <><dt>Error</dt><dd className="bad mono wrap">{row.error}</dd></>}
-        {row.status === 'needs-auth' && row.live && (
-          <><dt>Log in</dt><dd>Run <code>claude</code> in a terminal here, then <code>/mcp</code> and pick {row.name}. <button className="link" onClick={() => window.dispatchEvent(new Event('agentview:terminal'))}>Open terminal</button></dd></>
-        )}
+        {row.status === 'needs-auth' && row.live && <><dt>Log in</dt><dd><Login name={row.name} /></dd></>}
         {row.status === 'needs-auth' && !row.live && (
-          <><dt>Login</dt><dd>Claude holds this server's OAuth login, which AgentView can't use from here. The live status shows once Claude starts in this chat.</dd></>
+          <><dt>Login</dt><dd>Add it to this chat, then log in here.</dd></>
         )}
         {row.command && <><dt>{url ? 'URL' : 'Command'}</dt><dd className="mono wrap">{row.command}</dd></>}
         {row.env && <><dt>Env</dt><dd className="mono wrap">{row.env.join('  ')}</dd></>}
         <dt>From</dt><dd>{scope}{where ? <span className="muted mono"> · {where}</span> : null}</dd>
-        <dt>In chat</dt><dd>{row.live ? 'Loaded' : 'Loads when Claude starts'}</dd>
+        <dt>In chat</dt><dd>{row.live ? 'Loaded' : 'Not loaded'}</dd>
       </dl>
       <div className="mcp-tools-head">
         <span>Tools</span><span className="muted">{row.tools?.length ?? 0}</span>
@@ -218,5 +217,74 @@ function Detail({ row, onClose }: { row: Row; onClose: () => void }) {
         {!row.tools?.length && <div className="muted">{row.status === 'connected' ? 'No tools reported' : 'Tools appear once it connects'}</div>}
       </div>
     </aside>
+  );
+}
+
+const post = (path: string, body?: unknown) =>
+  fetch(api(path), { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) })
+    .then((r) => r.json())
+    .then((r) => { if (r?.error) throw new Error(r.error); return r; });
+
+function AddToChat({ name }: { name: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => setError(''), [name]);
+  const add = () => {
+    setBusy(true);
+    setError('');
+    post(`/api/mcp/add?name=${encodeURIComponent(name)}`).catch((e) => setError(e.message)).finally(() => setBusy(false));
+  };
+  return (
+    <>
+      <button onClick={add} disabled={busy}><Icon name={busy ? 'loading' : 'add'} small spin={busy} /> Add to this chat</button>
+      {error && <span className="mcp-act-error bad">{error}</span>}
+    </>
+  );
+}
+
+function Login({ name }: { name: string }) {
+  const [busy, setBusy] = useState(false);
+  const [authUrl, setAuthUrl] = useState('');
+  const [paste, setPaste] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => { setAuthUrl(''); setPaste(''); setError(''); }, [name]);
+  useEffect(() => {
+    if (!authUrl) return;
+    const t = setInterval(() => send({ type: 'mcp_status' }), 3000);
+    return () => clearInterval(t);
+  }, [authUrl]);
+  const q = `name=${encodeURIComponent(name)}`;
+  const start = () => {
+    setBusy(true);
+    setError('');
+    post(`/api/mcp/login?${q}`)
+      .then((r) => { if (r.authUrl) setAuthUrl(r.authUrl); else send({ type: 'mcp_status' }); })
+      .catch((e) => setError(e.message))
+      .finally(() => setBusy(false));
+  };
+  const submit = () => {
+    setBusy(true);
+    setError('');
+    post(`/api/mcp/callback?${q}`, { url: paste.trim() })
+      .then(() => { setAuthUrl(''); setPaste(''); })
+      .catch((e) => setError(e.message))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div className="mcp-login">
+      {!authUrl ? (
+        <button onClick={start} disabled={busy}><Icon name={busy ? 'loading' : 'key'} small spin={busy} /> Log in</button>
+      ) : (
+        <>
+          <a href={authUrl} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open login page</a>
+          <div className="muted">On the Mac it finishes by itself. On the phone the last page fails to load: copy its address and paste it here.</div>
+          <div className="mcp-login-paste">
+            <input placeholder="http://localhost:…/callback?code=…" value={paste} onChange={(e) => setPaste(e.target.value)} spellCheck={false} />
+            <button onClick={submit} disabled={busy || !paste.trim()}>Finish</button>
+          </div>
+        </>
+      )}
+      {error && <div className="bad">{error}</div>}
+    </div>
   );
 }
