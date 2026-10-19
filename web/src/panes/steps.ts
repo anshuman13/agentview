@@ -11,7 +11,7 @@ export type Item =
   | { kind: 'system'; id: string; text: string }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
   | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string }
-  | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; steps: Item[] }
+  | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; running: boolean; steps: Item[] }
   | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> };
 
 export type Label = { verb: string; object: string; mono?: boolean; cmd?: string };
@@ -49,6 +49,7 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
     case 'WebFetch': return { verb: 'Fetched', object: s('url').replace(/^https?:\/\//, '').replace(/\/$/, '') };
     case 'WebSearch': return { verb: 'Searched the web for', object: `"${s('query')}"` };
     case 'Agent': case 'Task': return { verb: 'Delegated', object: s('description') };
+    case 'SendMessage': return { verb: 'Messaged agent', object: s('summary') || s('to') };
     case 'TodoWrite': return { verb: 'Updated', object: 'the to-do list' };
     case 'AskUserQuestion': return { verb: 'Asked', object: 'you a question' };
     case 'Skill': return { verb: 'Loaded', object: `the ${s('skill')} skill` };
@@ -64,12 +65,12 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
   return { verb: 'Used', object: name };
 }
 
-export type Tone = 'read' | 'edit' | 'run' | 'web' | 'mcp' | 'other';
+export type Tone = 'read' | 'edit' | 'run' | 'web' | 'mcp' | 'agent' | 'other';
 
 const TONES: Record<string, Tone> = {
   Read: 'read', Grep: 'read', Glob: 'read', LS: 'read', ToolSearch: 'read',
   Edit: 'edit', MultiEdit: 'edit', Write: 'edit', NotebookEdit: 'edit',
-  Bash: 'run', WebFetch: 'web', WebSearch: 'web',
+  Bash: 'run', WebFetch: 'web', WebSearch: 'web', SendMessage: 'agent',
 };
 
 export const stepTone = (name: string): Tone => TONES[name] ?? (name.startsWith('mcp__') ? 'mcp' : 'other');
@@ -77,15 +78,17 @@ export const stepTone = (name: string): Tone => TONES[name] ?? (name.startsWith(
 export function buildTranscript(events: ChatEvent[]): Item[] {
   const results = new Map<string, ToolResult>();
   const children = new Map<string, ChatEvent[]>();
+  const resumed = new Map<string, number>();
   for (const e of events) {
     if (e.kind === 'tool_result') results.set(e.toolUseId, e);
+    if (e.kind === 'tool_use' && e.agent) resumed.set(e.agent, e.at);
     const parent = (e.kind === 'tool_use' || e.kind === 'tool_result') && e.parent;
     if (parent) children.set(parent, [...(children.get(parent) ?? []), e]);
   }
-  return itemsFrom(events.filter((e) => !('parent' in e && e.parent)), results, children);
+  return itemsFrom(events.filter((e) => !('parent' in e && e.parent)), results, children, resumed);
 }
 
-function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>): Item[] {
+function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>): Item[] {
   const items: Item[] = [];
   for (const e of events) {
     if (e.kind === 'user') items.push(e.phase ? { kind: 'phase', id: e.id, text: e.text } : { kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
@@ -97,7 +100,7 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
       const result = results.get(e.id);
       const count = editCount(e.name, e.input);
       const path = typeof e.input.file_path === 'string' ? e.input.file_path : '';
-      if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result, steps: itemsFrom(children.get(e.id) ?? [], results, children) });
+      if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result, running: !result || (resumed.get(e.id) ?? 0) > result.at, steps: itemsFrom(children.get(e.id) ?? [], results, children, resumed) });
       else if (!count || !path) items.push({ kind: 'step', id: e.id, use: e, result });
       else {
         const error = result?.isError ? firstLine(result.text) : undefined;

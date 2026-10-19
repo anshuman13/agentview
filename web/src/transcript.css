@@ -36,6 +36,7 @@
 .tr-step.t-run { --tone: var(--t-run); }
 .tr-step.t-web { --tone: var(--t-web); }
 .tr-step.t-mcp { --tone: var(--t-mcp); }
+.tr-step.t-agent { --tone: var(--agent, #a78bfa); }
 .tr-step .tr-mark, .tr-verb { color: var(--tone); }
 .tr-step.err .tr-mark { color: var(--err, #f14c4c); }
 .tr-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
