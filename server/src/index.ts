@@ -279,6 +279,12 @@ const server = http.createServer(async (req, res) => {
       if (r.authUrl) openInChrome(r.authUrl);
       return json(r);
     }
+    if (url.pathname === '/api/open' && req.method === 'POST') {
+      const target = String(JSON.parse(await readBody(req)).url ?? '');
+      if (!/^https?:\/\//.test(target)) return json({ error: 'Only http(s) links open' }, 400);
+      openInChrome(target);
+      return json({ ok: true });
+    }
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
     if (url.pathname === '/api/sessions') {
       const list = await listSessions({ limit: 300 });
