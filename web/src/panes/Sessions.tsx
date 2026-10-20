@@ -102,6 +102,20 @@ const closeChat = (c: LiveChat, ask: (r: ConfirmRequest) => void) =>
     ? ask({ title: 'Close this chat?', detail: c.title, warning: 'Claude is still working on it and will stop. The transcript is kept.', action: 'Close', run: async () => send({ type: 'close', id: c.id }) })
     : send({ type: 'close', id: c.id });
 
+const canDelete = (s: SavedSession, current: string | null | undefined) => s.sessionId !== current && Date.now() - s.lastModified > STALE_MS;
+
+const deleteChat = (s: SavedSession, onDone: () => void, onError: (e: string) => void): ConfirmRequest => ({
+  title: 'Delete this chat?',
+  detail: s.title,
+  warning: 'The transcript is removed permanently.',
+  action: 'Delete',
+  run: async () => {
+    const r = await fetch(`/api/sessions?id=${encodeURIComponent(s.sessionId)}`, { method: 'DELETE' });
+    if (r.ok) onDone();
+    else onError((await r.json().catch(() => null))?.error ?? 'Could not delete the chat');
+  },
+});
+
 export function findHere(folders: Folder[], cwd: string) {
   const folder = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)));
   const tree = folder?.trees.find((w) => inside(cwd, w.cwd));
@@ -218,16 +232,7 @@ export function Sessions() {
     return r.ok;
   };
 
-  const remove = (s: SavedSession) =>
-    setAsk({
-      title: 'Delete this chat?',
-      detail: s.title,
-      warning: 'The transcript is removed permanently.',
-      action: 'Delete',
-      run: async () => {
-        if (await call(`/api/sessions?id=${encodeURIComponent(s.sessionId)}`, 'Could not delete the chat')) setChats((l) => l.filter((x) => x.sessionId !== s.sessionId));
-      },
-    });
+  const remove = (s: SavedSession) => setAsk(deleteChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), setError));
 
   const removeTree = (w: Worktree) =>
     setAsk({
@@ -325,7 +330,7 @@ export function Sessions() {
             >
               <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
               <span className="when">{ago(s.lastModified)}</span>
-              {s.sessionId !== current && Date.now() - s.lastModified > STALE_MS && (
+              {canDelete(s, current) && (
                 <span className="acts">
                   <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setError(null); remove(s); }}><Icon name="trash" small /></button>
                 </span>
@@ -422,7 +427,7 @@ export function OpenChats() {
   const viewing = useStore((s) => s.session.id);
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
-  const { folders, chats } = useWorkspace(current + cwd);
+  const { folders, chats, setChats } = useWorkspace(current + cwd);
   const [filter, setFilter] = useState('');
   const [collapsed, setCollapsed] = useState(loadCollapsed);
   const [full, setFull] = useState<Set<string>>(new Set());
@@ -475,6 +480,11 @@ export function OpenChats() {
               <div key={s.sessionId} className="row session recent" title={`${s.title}\n${s.cwd}`} onClick={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }}>
                 <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
                 <span className="when">{ago(s.lastModified)}</span>
+                {canDelete(s, current) && (
+                  <span className="acts">
+                    <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setAsk(deleteChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), notice)); }}><Icon name="trash" small /></button>
+                  </span>
+                )}
               </div>
             ))}
             {isOpen(g) && !filter && g.recent.length > RECENT && (
