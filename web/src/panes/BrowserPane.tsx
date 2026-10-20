@@ -14,7 +14,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const kbd = useRef<HTMLTextAreaElement>(null);
   const host = useRef<HTMLDivElement>(null);
   const vp = useRef({ w: 0, h: 0 });
-  const touch = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const touch = useRef(false);
   const [state, setState] = useState<State>({ state: 'connecting', reason: '' });
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
@@ -98,7 +98,8 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const onDown = (e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     if (e.pointerType !== 'mouse') {
-      touch.current = { x: e.clientX, y: e.clientY, moved: false };
+      touch.current = true;
+      send({ t: 'touch', type: 'touchStart', ...pos(e) });
       return;
     }
     e.preventDefault();
@@ -106,26 +107,16 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
     send({ t: 'mouse', type: 'mousePressed', ...pos(e), button: BUTTON[e.button] ?? 'left', buttons: e.buttons, clickCount: e.detail || 1, modifiers: mods(e) });
   };
   const onMove = (e: React.PointerEvent) => {
-    const t = touch.current;
     if (e.pointerType !== 'mouse') {
-      if (!t) return;
-      const dx = t.x - e.clientX;
-      const dy = t.y - e.clientY;
-      if (!t.moved && Math.hypot(dx, dy) < 8) return;
-      const k = vp.current.w / (img.current?.getBoundingClientRect().width || 1);
-      send({ t: 'wheel', ...pos(e), dx: dx * k, dy: dy * k });
-      touch.current = { x: e.clientX, y: e.clientY, moved: true };
+      if (touch.current) send({ t: 'touch', type: 'touchMove', ...pos(e) });
       return;
     }
     send({ t: 'mouse', type: 'mouseMoved', ...pos(e), button: 'none', buttons: e.buttons, modifiers: mods(e) });
   };
   const onUp = (e: React.PointerEvent) => {
     if (e.pointerType !== 'mouse') {
-      if (touch.current && !touch.current.moved) {
-        send({ t: 'mouse', type: 'mousePressed', ...pos(e), button: 'left', buttons: 1, clickCount: 1 });
-        send({ t: 'mouse', type: 'mouseReleased', ...pos(e), button: 'left', buttons: 0, clickCount: 1 });
-      }
-      touch.current = null;
+      if (touch.current) send({ t: 'touch', type: 'touchEnd', ...pos(e) });
+      touch.current = false;
       return;
     }
     send({ t: 'mouse', type: 'mouseReleased', ...pos(e), button: BUTTON[e.button] ?? 'left', buttons: e.buttons, clickCount: e.detail || 1, modifiers: mods(e) });
@@ -185,7 +176,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
-          onPointerCancel={() => { touch.current = null; }}
+          onPointerCancel={() => { if (touch.current) send({ t: 'touch', type: 'touchCancel', x: 0, y: 0 }); touch.current = false; }}
           onWheel={(e) => send({ t: 'wheel', ...pos(e), dx: e.deltaX, dy: e.deltaY })}
           onContextMenu={(e) => e.preventDefault()}
         />
