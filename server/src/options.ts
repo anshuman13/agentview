@@ -62,6 +62,7 @@ export function agentOptions(o: {
     mcpServers: { agentview: statusServer(o.onStatus), ...o.mcp },
     toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
     canUseTool: o.canUseTool,
+    perTaskStopAffordance: true,
     agents: {
       [BIG_BRO]: {
         description:

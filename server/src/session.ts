@@ -96,6 +96,7 @@ export class AgentSession {
   private seenSubs = 0;
   private agents: AgentIds = new Map();
   private tasks = new Set<string>();
+  private taskIds = new Map<string, string>();
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
   constructor(public cwd: string, private resume?: string) {
@@ -400,6 +401,11 @@ export class AgentSession {
     }
   }
 
+  async stopTask(toolUseId: string) {
+    const id = this.taskIds.get(toolUseId);
+    if (id) await this.q?.stopTask(id);
+  }
+
   private queue(text: string, id: string = randomUUID()) {
     const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), queued: true };
     this.queued.push(ev);
@@ -619,6 +625,7 @@ export class AgentSession {
           if (msg.decision_reason_type !== 'rule') this.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
         } else if (msg.subtype === 'task_started') {
           this.tasks.add(msg.task_id);
+          if (msg.tool_use_id) this.taskIds.set(msg.tool_use_id, msg.task_id);
         } else if (msg.subtype === 'task_updated') {
           if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
         } else if (msg.subtype === 'task_notification') {
