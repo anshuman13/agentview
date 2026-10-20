@@ -26,6 +26,7 @@ let size = { w: 1600, h: 1200 };
 type Dims = { cssW: number; cssH: number; dpr: number; mobile: boolean };
 const sizes = new Map<WebSocket, Dims>();
 let emulated: { session: string; key: string } | null = null;
+const touches = new Map<WebSocket, { x: number; y: number; moved: boolean }>();
 let viewport = { w: 0, h: 0 };
 let retryTimer: NodeJS.Timeout | null = null;
 let retryDelay = 2000;
@@ -416,6 +417,26 @@ async function input(m: any, ws: WebSocket) {
     }
     case 'text':
       if (typeof m.text === 'string' && m.text) return call('Input.insertText', { text: m.text }, s);
+      return;
+    case 'touch': {
+      if (!['touchStart', 'touchMove', 'touchEnd', 'touchCancel'].includes(m.type)) return;
+      const x = num(m.x);
+      const y = num(m.y);
+      const ends = m.type === 'touchEnd' || m.type === 'touchCancel';
+      if (emulated?.session === s && emulated.key) return call('Input.dispatchTouchEvent', { type: m.type, touchPoints: ends ? [] : [{ x, y }] }, s);
+      const t = touches.get(ws);
+      if (m.type === 'touchStart') return void touches.set(ws, { x, y, moved: false });
+      if (!t) return;
+      if (!ends) {
+        if (!t.moved && Math.hypot(t.x - x, t.y - y) < 8) return;
+        touches.set(ws, { x, y, moved: true });
+        return call('Input.dispatchMouseEvent', { type: 'mouseWheel', x, y, deltaX: t.x - x, deltaY: t.y - y }, s);
+      }
+      touches.delete(ws);
+      if (m.type === 'touchCancel' || t.moved) return;
+      await call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 }, s);
+      return call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 }, s);
+    }
   }
 }
 
@@ -438,6 +459,7 @@ export function openChrome(ws: WebSocket, origin: string | undefined) {
   });
   ws.on('close', () => {
     viewers.delete(ws);
+    touches.delete(ws);
     const was = sizes.delete(ws);
     if (!viewers.size) return stop();
     if (was) void emulate();
