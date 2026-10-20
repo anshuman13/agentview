@@ -22,6 +22,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const [hasFrame, setHasFrame] = useState(false);
   const [url, setUrl] = useState('');
   const [editing, setEditing] = useState(false);
+  const [full, setFull] = useState(false);
   const hadTabs = useRef(false);
   const emptied = useRef(onEmpty);
   emptied.current = onEmpty;
@@ -72,6 +73,11 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
       ws.current?.close();
     };
   }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle('browser-full', full);
+    return () => document.body.classList.remove('browser-full');
+  }, [full]);
 
   useEffect(() => {
     if (!editing) setUrl(tab?.url ?? '');
@@ -165,8 +171,10 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
         </select>
         <button className="icon-btn phone-only" title="Keyboard" onClick={() => kbd.current?.focus()}><Icon name="keyboard" /></button>
+        <button className="icon-btn phone-only" title="Full screen" onClick={() => setFull(true)}><Icon name="screen-full" /></button>
       </div>
       <div className="frame-host" ref={host}>
+        {full && <button className="icon-btn browser-exit" title="Exit full screen" onClick={() => setFull(false)}><Icon name="screen-normal" /></button>}
         <img
           ref={img}
           className="chrome-frame"
