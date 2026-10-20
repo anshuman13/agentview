@@ -383,6 +383,9 @@ wss.on('connection', (ws: WebSocket, req) => {
       case 'interrupt':
         void chat.interrupt();
         break;
+      case 'stop_task':
+        void chat.stopTask(String(msg.toolUseId)).catch(fail);
+        break;
       case 'close': {
         const target = live.get(msg.id)?.chat;
         if (target) closeByUser(target).catch(fail);

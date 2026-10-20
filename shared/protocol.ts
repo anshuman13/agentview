@@ -160,6 +160,7 @@ export type ClientMessage =
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_loop'; on: boolean; max?: number }
   | { type: 'interrupt' }
+  | { type: 'stop_task'; toolUseId: string }
   | { type: 'view'; id: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }

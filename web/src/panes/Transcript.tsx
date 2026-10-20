@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { setUi, useStore } from '../store';
+import { send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
@@ -122,6 +122,11 @@ function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: stri
           <span className="tr-state"> · {type && `${type} · `}{state}{steps.length > 0 && ` · ${steps.length} step${steps.length === 1 ? '' : 's'}`}</span>
           {running && <Icon name="loading" small spin />}
         </span>
+        {running && (
+          <button className="icon-btn tr-stop" title="Stop this agent" aria-label="Stop agent" onClick={(e) => { e.stopPropagation(); send({ type: 'stop_task', toolUseId: use.id }); }}>
+            <Icon name="debug-stop" small />
+          </button>
+        )}
         {canOpen && <span className="tr-dur"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>}
       </div>
       {shown.length > 0 && (
