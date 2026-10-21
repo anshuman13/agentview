@@ -20,6 +20,7 @@ import { observe } from './observe.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { MCP_BAD, STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
+import { allowedPeer, allowedRequest } from '../../shared/access.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -229,6 +230,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(code, { 'content-type': 'application/json' });
     res.end(JSON.stringify(body));
   };
+  if (!allowedRequest(req.headers)) return json({ error: 'Forbidden' }, 403);
   try {
     const chat = live.get(url.searchParams.get('chat') ?? '')?.chat ?? lastViewed;
     const liveCwds = [...live.values()].map((l) => l.chat.cwd);
@@ -307,10 +309,8 @@ const server = http.createServer(async (req, res) => {
       const port = url.searchParams.get('port') || (req.headers.host?.match(/:(\d+)$/)?.[1] ?? String(PORT));
       const ips = Object.values(os.networkInterfaces())
         .flat()
-        .filter((a) => a && a.family === 'IPv4' && !a.internal)
+        .filter((a) => a && a.family === 'IPv4' && !a.internal && allowedPeer(a.address))
         .map((a) => a!.address);
-      const rank = (ip: string) => (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(ip) ? 0 : ip.startsWith('192.168.') || ip.startsWith('10.') ? 1 : 2);
-      ips.sort((a, b) => rank(a) - rank(b));
       return json({ hostname: os.hostname(), urls: ips.map((ip) => `http://${ip}:${port}`) });
     }
 
@@ -330,7 +330,9 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ server, path: '/ws' });
+server.on('connection', (socket) => allowedPeer(socket.remoteAddress) || socket.destroy());
+
+const wss = new WebSocketServer({ server, path: '/ws', verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers) });
 
 wss.on('connection', (ws: WebSocket, req) => {
   const params = new URL(req.url ?? '', 'http://x').searchParams;
