@@ -98,6 +98,18 @@
   body.browser-full .tabbar, body.browser-full .browser-bar, body.browser-full .editor-group > .tabs { display: none !important; }
   body.browser-full .body { height: 100%; }
   .browser-exit { position: absolute; bottom: calc(12px + env(safe-area-inset-bottom)); right: 12px; z-index: 5; width: 36px; height: 36px; border-radius: 18px; background: rgba(0, 0, 0, 0.55); color: #fff; }
+
+  .workbench[data-tab='agents'] .pane.code { display: flex; }
+  .workbench[data-tab='agents'] .editor-group > .tabs { display: none; }
+  .ag-list { width: 100%; border-right: 0; }
+  .ag-row { padding: 10px 16px; font-size: 14px; }
+  .ag-sub { font-size: 12.5px; }
+  .ag-detail { display: none; padding: 8px 16px 24px; }
+  .ag.picked .ag-list { display: none; }
+  .ag.picked .ag-detail { display: flex; }
+  .ag-back { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; min-height: 40px; padding: 0 4px; border: 0; background: none; color: var(--link); font-size: 14px; }
+  .ag-stop { height: 36px; padding: 0 12px; }
+  .ag-chip { height: 32px; padding: 0 10px; font-size: 12px; }
 }
 
 @media (max-width: 900px) and (max-height: 500px) {
