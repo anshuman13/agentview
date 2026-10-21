@@ -132,7 +132,8 @@ function subagentEvents(msgs: SessionMessage[], parent: string, subagents: Recor
     const content = (m.message as { content?: unknown })?.content;
     if (!Array.isArray(content)) continue;
     for (const b of content) {
-      if (m.type === 'assistant' && b.type === 'tool_use') {
+      if (m.type === 'assistant' && b.type === 'text' && b.text.trim()) events.push({ id: randomUUID(), kind: 'assistant', text: b.text, streaming: false, at, parent });
+      else if (m.type === 'assistant' && b.type === 'tool_use') {
         if (AGENT_TOOLS.has(b.name)) agentUses.add(b.id);
         events.push(toolUseEvent(b.id, b.name, b.input, at, parent));
       } else if (m.type === 'user' && b.type === 'tool_result') {

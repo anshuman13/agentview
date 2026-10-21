@@ -132,7 +132,7 @@ export function ReadAloud({ speak = false }: { speak?: boolean }) {
     if (fresh) seen.current = { chat, ids: new Set() };
     const { ids } = seen.current!;
     for (const e of events) {
-      if (e.kind !== 'assistant' || e.streaming || !e.text.trim() || ids.has(e.id)) continue;
+      if (e.kind !== 'assistant' || e.parent || e.streaming || !e.text.trim() || ids.has(e.id)) continue;
       ids.add(e.id);
       if (fresh) continue;
       const u = new SpeechSynthesisUtterance(speakable(e.text));

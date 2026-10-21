@@ -737,7 +737,10 @@ export class AgentSession {
         if (parent) {
           const model = msg.message.model;
           if (model) this.patchAgent(parent, () => ({ model }));
-          for (const block of msg.message.content) if (block.type === 'tool_use') this.toolUse(block, parent);
+          for (const block of msg.message.content) {
+            if (block.type === 'text' && block.text.trim()) this.pushEvent({ id: randomUUID(), kind: 'assistant', text: block.text, streaming: false, at: Date.now(), parent });
+            if (block.type === 'tool_use') this.toolUse(block, parent);
+          }
           return;
         }
         this.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), this.state.session.cache), context: contextFrom(msg.message.usage) ?? this.state.session.context });
