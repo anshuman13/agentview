@@ -169,7 +169,9 @@ Steps for Claude:
 2. Unpack `~/Downloads/mini-config.tgz` into `~` without overwriting existing files, then delete it
 3. Run `./start.sh`
 4. Check that `curl -s http://localhost:5173/api/connect` lists a NetBird address
-5. Tell me to turn on Open at login in the AgentView menu bar menu, grant Full Disk Access to `dist/AgentView.app`,
+5. `brew install rustup && rustup default stable`, then `npm run build -w app` and copy
+   `app/src-tauri/target/release/bundle/macos/AgentView.app` to `/Applications` (the desktop window app)
+6. Tell me to turn on Open at login in the AgentView menu bar menu, grant Full Disk Access to `dist/AgentView.app`,
    click Allow in Chrome's remote debugging prompt, and add the MCP servers (`claude mcp add`, then `/mcp` to sign in)
 
 The mini does not run local databases, so leave out the `*_local` MCP servers.
