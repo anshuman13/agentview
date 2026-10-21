@@ -10,3 +10,10 @@
 .connect-tabs { display: flex; gap: 2px; padding: 2px; border-radius: var(--radius-sm); background: var(--bg-sunken); }
 .connect-tabs button { height: 24px; padding: 0 10px; font-size: 12px; color: var(--fg-muted); background: transparent; border: 0; border-radius: var(--radius-sm); }
 .connect-tabs button.active { color: var(--fg); background: var(--border-strong); }
+.macs { list-style: none; margin: 0; padding: 4px; }
+.macs li { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: var(--radius-sm); }
+.macs li.clickable { cursor: pointer; }
+.macs li.clickable:hover { background: var(--accent-soft); }
+.macs li.current .mac-name { color: var(--text-strong); }
+.macs .mac-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.macs .detail { color: var(--fg-muted); font-size: 11px; }

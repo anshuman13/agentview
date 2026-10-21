@@ -97,3 +97,6 @@
   .brief-status { padding-top: 2px; }
   .brief-input { padding-top: 4px; }
 }
+@media (max-width: 900px) {
+  .overlay.connect-overlay { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+}

@@ -17,6 +17,7 @@ import { github } from './github.js';
 import { deployRoute } from './deploy.js';
 import { gitRoute } from './git.js';
 import { observe } from './observe.js';
+import { macName, otherMacs } from './macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { MCP_BAD, STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
@@ -311,7 +312,9 @@ const server = http.createServer(async (req, res) => {
         .flat()
         .filter((a) => a && a.family === 'IPv4' && !a.internal && allowedPeer(a.address))
         .map((a) => a!.address);
-      return json({ hostname: os.hostname(), urls: ips.map((ip) => `http://${ip}:${port}`) });
+      const running = [...live.values()].filter(({ chat }) => chat.state.session.running).length;
+      const macs = url.searchParams.has('peer') ? [] : await otherMacs(port);
+      return json({ hostname: macName(os.hostname()), urls: ips.map((ip) => `http://${ip}:${port}`), running, macs });
     }
 
     if (DEV_WEB) {

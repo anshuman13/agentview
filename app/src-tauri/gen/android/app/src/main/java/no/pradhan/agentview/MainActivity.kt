@@ -284,7 +284,19 @@ class MainActivity : TauriActivity() {
     }
 
     @JavascriptInterface
-    fun features() = "open,save,clipboard,share,wakelock,notifications,speech,tts"
+    fun features() = "open,save,clipboard,share,wakelock,notifications,speech,tts,macs"
+
+    @JavascriptInterface
+    fun remember(url: String, name: String) {
+      val macs = JSONArray(prefs.getString("macs", "[]"))
+      val rest = (0 until macs.length()).map { macs.getJSONObject(it) }.filter { it.optString("url") != url }
+      val next = JSONArray().put(JSONObject().put("url", url).put("name", name))
+      rest.forEach { next.put(it) }
+      prefs.edit().putString("macs", next.toString()).apply()
+    }
+
+    @JavascriptInterface
+    fun macs(): String = prefs.getString("macs", "[]") ?: "[]"
 
     @JavascriptInterface
     fun open(url: String) = runOnUiThread { openExternal(url) }
