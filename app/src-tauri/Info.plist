@@ -6,5 +6,10 @@
   <string>AgentView uses the microphone for voice input to Claude.</string>
   <key>NSSpeechRecognitionUsageDescription</key>
   <string>AgentView turns your speech into text for prompts to Claude.</string>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoadsInWebContent</key>
+    <true/>
+  </dict>
 </dict>
 </plist>
