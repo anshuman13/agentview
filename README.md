@@ -36,7 +36,9 @@ It uses the Claude Code CLI you have installed and its login.
 ## Timeline and steering
 
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
-and notes. The timeline shows these with your prompts and Claude's replies.
+and notes. The timeline shows one card per prompt: Claude's final reply, the files changed with line counts,
+commands run and the first error of each failed one, commits, subagents, these notes and the steps behind them.
+Switch to the transcript for every message and step in order.
 
 - Sending while Claude works queues your message. If Claude has been inside one tool call for more than 10 seconds,
   sending stops that call and continues with your message. Cmd+Enter always stops and sends
