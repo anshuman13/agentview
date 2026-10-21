@@ -43,6 +43,18 @@ export function accept(text: string, start: number, caret: number, insert: strin
   return { text: next, caret: start + insert.length + 1 };
 }
 
+export const LONG_TOOL = 10_000;
+
+export function openToolAt(events: ChatEvent[]) {
+  const done = new Set<string>();
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.kind === 'tool_result') done.add(e.toolUseId);
+    else if (e.kind === 'tool_use' && !e.parent) return done.has(e.id) ? null : e.at;
+  }
+  return null;
+}
+
 export function buildHistory(events: ChatEvent[], stored: string[]) {
   const local = events.filter((e) => e.kind === 'user').map((e) => e.text.trim()).reverse();
   const out: string[] = [];
@@ -150,6 +162,14 @@ export function Composer() {
   const loop = useStore((s) => s.session.loop);
   const context = useStore((s) => s.session.context);
   const events = useStore((s) => s.events);
+  const toolAt = useStore((s) => (s.session.running ? openToolAt(s.events) : null));
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (toolAt === null) return;
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [toolAt]);
+  const longTool = toolAt !== null && Date.now() - toolAt > LONG_TOOL;
 
   const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop'; at: DOMRect } | null>(null);
   const [text, setText] = useState(() => readDraft(chat));
@@ -286,7 +306,7 @@ export function Composer() {
       const cmd = t.slice(1).trim();
       if (cmd) runInTerminal(cmd).catch(() => notice('Terminal unavailable'));
     } else {
-      if (now && running) steer(t);
+      if ((now || longTool) && running) steer(t);
       else send({ type: 'prompt', text: t });
       const next = remember(t, stored);
       setStored(next);
@@ -316,7 +336,7 @@ export function Composer() {
 
   const typed = text.trim().length > 0;
   const hint = shell ? 'Runs in the terminal' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude' : compacting ? 'Sends when compacting is done' : running ? 'Sends when Claude finishes, or steer to send now' : 'Ask anything · / commands · @ files';
+  const placeholder = waiting ? 'Answer below, or message Claude' : compacting ? 'Sends when compacting is done' : longTool ? 'Claude is in a long step, Enter stops it and sends' : running ? 'Sends when Claude finishes, or steer to send now' : 'Ask anything · / commands · @ files';
   const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
 
   return (
@@ -368,8 +388,8 @@ export function Composer() {
           ) : (
             <button
               className="cp-send"
-              title={shell ? 'Run in the terminal (Enter)' : running ? 'Queue: send when Claude finishes (Enter)' : 'Send (Enter)'}
-              aria-label={shell ? 'Run' : running ? 'Queue' : 'Send'}
+              title={shell ? 'Run in the terminal (Enter)' : longTool ? 'Stop the current step and send (Enter)' : running ? 'Queue: send when Claude finishes (Enter)' : 'Send (Enter)'}
+              aria-label={shell ? 'Run' : longTool ? 'Stop and send' : running ? 'Queue' : 'Send'}
               disabled={!typed}
               onClick={() => submit()}
             >
