@@ -6,6 +6,8 @@ export const BIG_BRO = 'big-bro';
 
 const COMPACT_SUMMARY = 'This session is being continued from a previous conversation';
 export const ASYNC_LAUNCH = 'Async agent launched';
+export const AGENT_TOOLS = new Set(['Agent', 'Task']);
+const TRAILER = /\s*agentId: \w+[^\n]*\n<usage>[\s\S]*<\/usage>\s*$/;
 
 export type AgentIds = Map<string, string>;
 
@@ -22,6 +24,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   let lastAt = 0;
   let inTurn = false;
   const agents: AgentIds = new Map();
+  const agentUses = new Set<string>();
   const endTurn = () => {
     if (inTurn) events.push({ id: randomUUID(), kind: 'result', text: lastText, costUsd: 0, isError: false, at: lastAt });
     inTurn = false;
@@ -33,7 +36,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
     const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
     for (const b of blocks) {
       if (m.type === 'user' && b.type === 'text' && b.text.startsWith('<task-notification>')) {
-        events.push(...notificationResults(b.text, at, agents));
+        events.push(...notificationResults(b.text, at, agents).map((e) => (e.kind === 'tool_result' && subagents[e.toolUseId] ? { ...e, text: agentReport(e.text, subagents[e.toolUseId]) } : e)));
       } else if (m.type === 'user' && b.type === 'text' && b.text.includes('<local-command-stdout>Compacted')) {
         context = null;
       } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith(COMPACT_SUMMARY)) {
@@ -47,6 +50,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
       } else if (m.type === 'user' && b.type === 'tool_result') {
         const text = toolResultText(b);
         if (text.startsWith(ASYNC_LAUNCH)) noteLaunch(agents, b.tool_use_id, text);
+        else if (agentUses.has(b.tool_use_id)) events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: agentReport(text, subagents[b.tool_use_id]), isError: Boolean(b.is_error), at });
         else events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: text.slice(0, 4000), isError: Boolean(b.is_error), at });
       } else if (m.type === 'assistant' && b.type === 'text') {
         lastText = b.text;
@@ -54,6 +58,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
       } else if (m.type === 'assistant' && b.type === 'server_tool_use' && b.name === 'advisor') {
         events.push(advisorEvent(b.id, at));
       } else if (m.type === 'assistant' && b.type === 'tool_use') {
+        if (AGENT_TOOLS.has(b.name)) agentUses.add(b.id);
         events.push(toolUseEvent(b.id, b.name, b.input, at, undefined, agents));
       }
     }
@@ -62,19 +67,25 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
     if (m.type === 'assistant') context = contextFrom((m.message as any)?.usage) ?? context;
   }
   endTurn();
-  for (const [parent, sub] of Object.entries(subagents)) events.push(...subagentEvents(sub, parent));
+  for (const [parent, sub] of Object.entries(subagents)) events.push(...subagentEvents(sub, parent, subagents));
   return { events, context, cache, agents };
 }
 
-function subagentEvents(msgs: SessionMessage[], parent: string) {
+function subagentEvents(msgs: SessionMessage[], parent: string, subagents: Record<string, SessionMessage[]>) {
   const events: ChatEvent[] = [];
+  const agentUses = new Set<string>();
   for (const m of msgs) {
     const at = Date.parse((m as { timestamp?: string }).timestamp ?? '') || 0;
     const content = (m.message as { content?: unknown })?.content;
     if (!Array.isArray(content)) continue;
     for (const b of content) {
-      if (m.type === 'assistant' && b.type === 'tool_use') events.push(toolUseEvent(b.id, b.name, b.input, at, parent));
-      else if (m.type === 'user' && b.type === 'tool_result') events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: toolResultText(b).slice(0, 4000), isError: Boolean(b.is_error), at, parent });
+      if (m.type === 'assistant' && b.type === 'tool_use') {
+        if (AGENT_TOOLS.has(b.name)) agentUses.add(b.id);
+        events.push(toolUseEvent(b.id, b.name, b.input, at, parent));
+      } else if (m.type === 'user' && b.type === 'tool_result') {
+        const text = toolResultText(b);
+        events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: agentUses.has(b.tool_use_id) ? agentReport(text, subagents[b.tool_use_id]) : text.slice(0, 4000), isError: Boolean(b.is_error), at, parent });
+      }
     }
   }
   return events;
@@ -86,8 +97,37 @@ export function notificationResults(text: string, at: number, agents: AgentIds):
   const direct = tag(text, 'tool-use-id');
   const ids = direct ? [direct] : [...text.matchAll(/<task-id>(\w+)<\/task-id>/g)].flatMap((m) => agents.get(m[1]) ?? []);
   const status = tag(text, 'status');
-  const result = (tag(text, 'result') ?? tag(text, 'summary') ?? '').slice(0, 4000);
+  const result = tag(text, 'result') ?? tag(text, 'summary') ?? '';
   return ids.map((toolUseId) => ({ id: randomUUID(), kind: 'tool_result', toolUseId, text: result, isError: status === 'failed', at, ...(status === 'stopped' && { stopped: true }) }));
+}
+
+const blocksOf = (m: SessionMessage): any[] => {
+  const content = (m.message as { content?: unknown })?.content;
+  return Array.isArray(content) ? content : [];
+};
+
+export function handbackOf(msgs: SessionMessage[]): string | undefined {
+  for (const m of [...msgs].reverse()) {
+    const b = blocksOf(m).find((x) => x.type === 'tool_use' && x.name === 'SubagentHandback' && typeof x.input?.message === 'string');
+    if (b) return b.input.message;
+  }
+}
+
+export function finalText(msgs: SessionMessage[]) {
+  const last = [...msgs].reverse().find((m) => m.type === 'assistant' && blocksOf(m).some((b) => b.type === 'text' && b.text.trim()));
+  return last ? blocksOf(last).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim() : '';
+}
+
+export const stripTrailer = (text: string) => text.replace(TRAILER, '').trim();
+
+export function agentReport(text: string, sub?: SessionMessage[]) {
+  return (sub && handbackOf(sub)) ?? stripTrailer(text);
+}
+
+export function liveReport(text: string, output: any) {
+  if (typeof output?.handbackReport?.text === 'string') return output.handbackReport.text as string;
+  if (output?.status === 'completed' && Array.isArray(output.content)) return output.content.map((c: any) => (c.type === 'text' ? c.text : '')).join('\n').trim();
+  return stripTrailer(text);
 }
 
 export function advisorEvent(id: string, at: number): ChatEvent {
