@@ -5,6 +5,7 @@ import { Brief } from './panes/Brief';
 import { Terminal } from './panes/Terminal';
 import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
+import { AgentsPane, AgentsTab } from './panes/AgentsPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Palette } from './panes/Palette';
 import { Explorer, FileIcon } from './panes/Explorer';
@@ -22,7 +23,7 @@ import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 import { ReadAloud } from './panes/Voice';
 
-type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos';
+type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
 type Page = 'observe' | 'deploy' | 'mcp';
 
@@ -141,7 +142,8 @@ export function App() {
   const status = useStore((s) => s.status);
   const mcp = useStore((s) => s.session.mcp);
   const [tab, setTab] = useState<Tab>('chat');
-  const [editor, setEditor] = useState<'file' | 'browser' | Page>('file');
+  const [editor, setEditor] = useState<'file' | 'browser' | 'agents' | Page>('file');
+  const [agentSel, setAgentSel] = useState<string | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [more, setMore] = useState(false);
   const [browse, setBrowse] = useState(false);
@@ -229,6 +231,17 @@ export function App() {
   }, [terminal]);
 
   useEffect(() => {
+    const open = (e: Event) => {
+      const id = (e as CustomEvent<unknown>).detail;
+      setAgentSel(typeof id === 'string' ? id : null);
+      setEditor('agents');
+      setTab((t) => (narrow() ? 'agents' : t));
+    };
+    window.addEventListener('open-agent', open);
+    return () => window.removeEventListener('open-agent', open);
+  }, []);
+
+  useEffect(() => {
     const onCommand = (e: Event) => {
       const [kind, arg] = (e as CustomEvent<{ id: string }>).detail.id.split(':');
       if (kind === 'view') {
@@ -251,8 +264,8 @@ export function App() {
 
   const fileName = openFile ? openFile.split('/').pop() : null;
   const closeFile = () => setUi({ openFile: null });
-  const showing = tab === 'browser' ? 'browser' : tab === 'code' && !isPage(editor) ? 'file' : editor;
-  const active = showing === 'browser' ? 'browser' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
+  const showing = tab === 'browser' ? 'browser' : tab === 'agents' ? 'agents' : tab === 'code' && !isPage(editor) ? 'file' : editor;
+  const active = showing === 'browser' ? 'browser' : showing === 'agents' ? 'agents' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
   const project = session.cwd ? session.cwd.split('/').pop() : 'AgentView';
   const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor);
   const chatsView = view === 'chats' || view === 'sessions';
@@ -319,7 +332,7 @@ export function App() {
             <button className={`tab ex-tab mobile-only ${mobileExplorer ? 'active' : ''}`} title="Explorer" onClick={() => { setTab('code'); setEditor('file'); setBrowse(true); }}>
               <Icon name="files" small />
             </button>
-            <button className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} onClick={() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' ? 'code' : t)); }} title={openFile ?? 'Files (⌘E to switch)'}>
+            <button className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} onClick={() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); }} title={openFile ?? 'Files (⌘E to switch)'}>
               {fileName ? <FileIcon name={fileName} /> : <Icon name="file" small />} {fileName ?? 'File'}
               {openFile && (
                 <span className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
@@ -327,11 +340,12 @@ export function App() {
                 </span>
               )}
             </button>
-            <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => { setEditor('browser'); setTab((t) => (t === 'code' ? 'browser' : t)); }} title="Browser (⌘E to switch)">
+            <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => { setEditor('browser'); setTab((t) => (t === 'code' || t === 'agents' ? 'browser' : t)); }} title="Browser (⌘E to switch)">
               <Icon name="globe" small /> Browser
             </button>
+            <AgentsTab active={showing === 'agents'} onOpen={() => { setEditor('agents'); setTab((t) => (t === 'code' || t === 'browser' ? 'agents' : t)); }} />
             {page && (
-              <button className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} onClick={() => { setEditor(page); setTab((t) => (t === 'browser' ? 'code' : t)); }} title={pageOf(page).title}>
+              <button className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} onClick={() => { setEditor(page); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); }} title={pageOf(page).title}>
                 <Icon name={pageOf(page).icon} small /> {pageOf(page).title}
                 <span className="close" title="Close" onClick={(e) => { e.stopPropagation(); closePage(); }}><Icon name="close" small /></span>
               </button>
@@ -346,6 +360,7 @@ export function App() {
             </button>
           </div>
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><CodePane /></div>
+          <div className={`editor ${active === 'agents' ? 'shown' : ''}`}>{active === 'agents' && <AgentsPane selected={agentSel} onSelect={setAgentSel} />}</div>
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <BrowserPane onEmpty={() => setEditor('file')} />}</div>
           {page && (
             <div key={page} className={`editor ${active === page ? 'shown' : ''}`}>

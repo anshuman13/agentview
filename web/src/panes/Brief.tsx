@@ -10,6 +10,7 @@ import { Row, Transcript } from './Transcript';
 import { FileIcon } from './Explorer';
 import { relPath } from './steps';
 import { BIG_BRO, buildTurns, type Turn } from './turns';
+import { AgentsChip } from './AgentsPane';
 import { useMacName } from '../MacsPopover';
 import type { PendingRequest } from '../../../shared/protocol';
 
@@ -60,6 +61,7 @@ export function Brief() {
             {full ? 'Transcript' : 'Timeline'}<Icon name="arrow-swap" small />
           </button>
           <span className="spacer" />
+          <AgentsChip />
           {macName && <span className="mobile-only mac-here"><Icon name="vm" small /> {macName}</span>}
           {extras && <span className="extras">{extras}</span>}
           <span className="desktop-only"><ReadAloud speak /></span>
