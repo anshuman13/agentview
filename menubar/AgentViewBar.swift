@@ -134,6 +134,11 @@ final class Bar: NSObject, NSApplicationDelegate {
     }
   }
 
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+    openApp()
+    return false
+  }
+
   func applicationWillTerminate(_ n: Notification) {
     [web, server, relay].forEach { $0.stop() }
   }

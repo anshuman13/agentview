@@ -26,7 +26,7 @@ PLIST
 fi
 
 pkill -x agentview-bar 2>/dev/null || true
-if pgrep -xq AgentView; then
+if ps -axo comm= | grep -q 'AgentView.app/Contents/MacOS/AgentView$'; then
   echo "AgentView is running. Use the menu bar icon to restart the server, or quit it and run this again."
 else
   open "$APP"
