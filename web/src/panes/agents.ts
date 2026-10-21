@@ -68,3 +68,18 @@ export function agentCounts(agents: Agent[]) {
   const running = agents.filter((a) => a.status === 'running').length;
   return { running, done: agents.length - running };
 }
+
+let cache: { events: ChatEvent[]; agents: Agent[] } | null = null;
+export function agentsOf(events: ChatEvent[]) {
+  if (cache?.events !== events) cache = { events, agents: buildAgents(events) };
+  return cache.agents;
+}
+
+export function elapsed(ms: number) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+}
+
+export const tokens = (n: number) => (n < 1000 ? `${n} tokens` : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k tokens`);
