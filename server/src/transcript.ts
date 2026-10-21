@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SessionMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { CacheInfo, ChatEvent } from '../../shared/protocol.js';
+import type { AgentEvent, AgentUsage, CacheInfo, ChatEvent } from '../../shared/protocol.js';
 
 export const BIG_BRO = 'big-bro';
 
@@ -25,6 +25,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   let inTurn = false;
   const agents: AgentIds = new Map();
   const agentUses = new Set<string>();
+  const usages = new Map<string, AgentUsage>();
   const endTurn = () => {
     if (inTurn) events.push({ id: randomUUID(), kind: 'result', text: lastText, costUsd: 0, isError: false, at: lastAt });
     inTurn = false;
@@ -36,7 +37,12 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
     const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
     for (const b of blocks) {
       if (m.type === 'user' && b.type === 'text' && b.text.startsWith('<task-notification>')) {
-        events.push(...notificationResults(b.text, at, agents).map((e) => (e.kind === 'tool_result' && subagents[e.toolUseId] ? { ...e, text: agentReport(e.text, subagents[e.toolUseId]) } : e)));
+        const usage = usageFrom(b.text);
+        for (const e of notificationResults(b.text, at, agents)) {
+          if (e.kind !== 'tool_result') continue;
+          if (usage) usages.set(e.toolUseId, usage);
+          events.push(subagents[e.toolUseId] ? { ...e, text: agentReport(e.text, subagents[e.toolUseId]) } : e);
+        }
       } else if (m.type === 'user' && b.type === 'text' && b.text.includes('<local-command-stdout>Compacted')) {
         context = null;
       } else if (m.type === 'user' && b.type === 'text' && b.text.startsWith(COMPACT_SUMMARY)) {
@@ -50,8 +56,11 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
       } else if (m.type === 'user' && b.type === 'tool_result') {
         const text = toolResultText(b);
         if (text.startsWith(ASYNC_LAUNCH)) noteLaunch(agents, b.tool_use_id, text);
-        else if (agentUses.has(b.tool_use_id)) events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: agentReport(text, subagents[b.tool_use_id]), isError: Boolean(b.is_error), at });
-        else events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: text.slice(0, 4000), isError: Boolean(b.is_error), at });
+        else if (agentUses.has(b.tool_use_id)) {
+          const usage = usageFrom(text);
+          if (usage) usages.set(b.tool_use_id, usage);
+          events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: agentReport(text, subagents[b.tool_use_id]), isError: Boolean(b.is_error), at });
+        } else events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: text.slice(0, 4000), isError: Boolean(b.is_error), at });
       } else if (m.type === 'assistant' && b.type === 'text') {
         lastText = b.text;
         events.push({ id: randomUUID(), kind: 'assistant', text: b.text, streaming: false, at });
@@ -68,7 +77,51 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   }
   endTurn();
   for (const [parent, sub] of Object.entries(subagents)) events.push(...subagentEvents(sub, parent, subagents));
-  return { events, context, cache, agents };
+  return { events: withAgents(events, subagents, usages, agents), context, cache, agents };
+}
+
+export function agentEvent(id: string, rawInput: unknown, at: number, parent?: string): AgentEvent {
+  const input = (rawInput ?? {}) as Record<string, unknown>;
+  const s = (k: string) => (typeof input[k] === 'string' ? (input[k] as string) : '');
+  return { id: `${id}:agent`, kind: 'agent', toolUseId: id, description: s('description'), subagentType: s('subagent_type') || 'general-purpose', model: s('model') || null, background: input.run_in_background === true, prompt: s('prompt'), status: 'running', startedAt: at, endedAt: null, progress: null, usage: null, at, ...(parent && { parent }) };
+}
+
+export function usageFrom(text: string): AgentUsage | null {
+  const m = text.match(/<usage>(?:subagent_tokens|total_tokens): (\d+)\s+tool_uses: (\d+)\s+duration_ms: (\d+)\s*<\/usage>/);
+  return m ? { tokens: Number(m[1]), toolUses: Number(m[2]), durationMs: Number(m[3]) } : null;
+}
+
+const stamp = (m: SessionMessage) => Date.parse((m as { timestamp?: string }).timestamp ?? '') || 0;
+
+function withAgents(events: ChatEvent[], subagents: Record<string, SessionMessage[]>, usages: Map<string, AgentUsage>, agents: AgentIds) {
+  const results = new Map<string, Extract<ChatEvent, { kind: 'tool_result' }>>();
+  const resumed = new Map<string, number>();
+  for (const e of events) {
+    if (e.kind === 'tool_result') results.set(e.toolUseId, e);
+    if (e.kind === 'tool_use' && e.agent) resumed.set(e.agent, e.at);
+  }
+  const launched = new Set(agents.values());
+  return events.flatMap((e) => {
+    if (e.kind !== 'tool_use' || !AGENT_TOOLS.has(e.name)) return [e];
+    const ev = agentEvent(e.id, e.input, e.at, e.parent);
+    const sub = subagents[e.id] ?? [];
+    const result = results.get(e.id);
+    const running = !result || (resumed.get(e.id) ?? 0) > result.at;
+    const last = [...sub].reverse().find((m) => m.type === 'assistant');
+    const model = (sub.find((m) => m.type === 'assistant')?.message as { model?: string })?.model;
+    const endedAt = running ? null : result.at;
+    const tools = sub.reduce((n, m) => n + (m.type === 'assistant' ? blocksOf(m).filter((b) => b.type === 'tool_use').length : 0), 0);
+    const lastUsage = (last?.message as { usage?: any })?.usage;
+    const derived = sub.length ? { tokens: (contextFrom(lastUsage) ?? 0) + (lastUsage?.output_tokens ?? 0), toolUses: tools, durationMs: (endedAt ?? (stamp(sub.at(-1)!) || e.at)) - e.at } : null;
+    Object.assign(ev, {
+      model: model ?? ev.model,
+      background: ev.background || launched.has(e.id),
+      status: running ? 'running' : result.stopped ? 'stopped' : result.isError ? 'failed' : 'done',
+      endedAt,
+      usage: usages.get(e.id) ?? derived,
+    });
+    return [e, ev];
+  });
 }
 
 function subagentEvents(msgs: SessionMessage[], parent: string, subagents: Record<string, SessionMessage[]>) {

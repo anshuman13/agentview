@@ -22,6 +22,28 @@ export type PendingPermission = {
 
 export type PendingRequest = PendingQuestion | PendingPermission;
 
+export type AgentStatus = 'running' | 'done' | 'failed' | 'stopped';
+
+export type AgentUsage = { tokens: number; toolUses: number; durationMs: number };
+
+export type AgentEvent = {
+  id: string;
+  kind: 'agent';
+  toolUseId: string;
+  description: string;
+  subagentType: string;
+  model: string | null;
+  background: boolean;
+  prompt: string;
+  status: AgentStatus;
+  startedAt: number;
+  endedAt: number | null;
+  progress: string | null;
+  usage: AgentUsage | null;
+  at: number;
+  parent?: string;
+};
+
 export type ChatEvent =
   | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; phase?: LoopPhase }
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number }
@@ -31,7 +53,8 @@ export type ChatEvent =
   | { id: string; kind: 'system'; text: string; at: number }
   | { id: string; kind: 'status'; text: string; at: number }
   | { id: string; kind: 'plan'; next: string[]; at: number }
-  | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number };
+  | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number }
+  | AgentEvent;
 
 export type SessionInfo = {
   id: string;

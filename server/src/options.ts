@@ -63,6 +63,7 @@ export function agentOptions(o: {
     toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
     canUseTool: o.canUseTool,
     perTaskStopAffordance: true,
+    agentProgressSummaries: true,
     agents: {
       [BIG_BRO]: {
         description:
