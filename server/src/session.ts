@@ -4,12 +4,12 @@ import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { query, getSessionMessages, getSubagentMessages, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
-import { COMPACT_AT, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
+import { COMPACT_AT, type AgentEvent, type AgentStatus, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 export { BIG_BRO };
 
@@ -54,6 +54,10 @@ export async function sessionMessages(sessionId: string, cwd: string) {
   const before = raw.slice(0, raw.indexOf(root)).filter((e) => e.type === 'user' || e.type === 'assistant');
   return [...before.map((e) => ({ type: e.type, uuid: e.uuid, session_id: sessionId, message: e.message, parent_tool_use_id: null, parent_agent_id: null, timestamp: e.timestamp }) as SessionMessage), ...msgs];
 }
+
+const ENDED: Record<string, AgentStatus> = { completed: 'done', failed: 'failed', stopped: 'stopped', killed: 'stopped' };
+
+const usageOf = (u: { total_tokens: number; tool_uses: number; duration_ms: number }) => ({ tokens: u.total_tokens, toolUses: u.tool_uses, durationMs: u.duration_ms });
 
 const countAll = (subs: Record<string, SessionMessage[]>) => Object.values(subs).reduce((n, m) => n + m.length, 0);
 
@@ -591,8 +595,25 @@ export class AgentSession {
 
   private toolUse(block: { id: string; name: string; input: unknown }, parent?: string) {
     this.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now(), parent, this.agents));
+    if (AGENT_TOOLS.has(block.name)) this.pushEvent(agentEvent(block.id, block.input, Date.now(), parent));
     const file = (block.input as { file_path?: unknown })?.file_path;
     if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
+  }
+
+  private patchAgent(toolUseId: string, patch: (a: AgentEvent) => Partial<AgentEvent>) {
+    const a = this.state.events.find((e): e is AgentEvent => e.kind === 'agent' && e.toolUseId === toolUseId);
+    if (!a) return;
+    const next = patch(a);
+    if (Object.entries(next).every(([k, v]) => JSON.stringify(a[k as keyof AgentEvent]) === JSON.stringify(v))) return;
+    Object.assign(a, next);
+    this.emit({ type: 'event', event: a });
+  }
+
+  private agentResult(toolUseId: string, text: string, isError: boolean, output: any) {
+    const model = typeof output?.resolvedModel === 'string' ? { model: output.resolvedModel as string } : {};
+    if (text.startsWith(ASYNC_LAUNCH)) return this.patchAgent(toolUseId, () => ({ background: true, ...model }));
+    const usage = typeof output?.totalTokens === 'number' ? { tokens: output.totalTokens, toolUses: output.totalToolUseCount ?? 0, durationMs: output.totalDurationMs ?? 0 } : usageFrom(text);
+    this.patchAgent(toolUseId, (a) => ({ status: isError ? 'failed' : 'done', endedAt: Date.now(), ...model, ...(usage ? { usage } : { usage: a.usage }) }));
   }
 
   private isAgent(toolUseId: string) {
@@ -650,12 +671,33 @@ export class AgentSession {
           if (msg.decision_reason_type !== 'rule') this.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
         } else if (msg.subtype === 'task_started') {
           this.tasks.add(msg.task_id);
-          if (msg.tool_use_id) this.taskIds.set(msg.tool_use_id, msg.task_id);
+          if (msg.tool_use_id) {
+            this.taskIds.set(msg.tool_use_id, msg.task_id);
+            this.patchAgent(msg.tool_use_id, (a) => ({
+              status: 'running',
+              background: msg.is_backgrounded ?? a.background,
+              prompt: msg.prompt || a.prompt,
+              subagentType: msg.subagent_type || a.subagentType,
+              ...(a.status !== 'running' && { startedAt: Date.now(), endedAt: null }),
+            }));
+          }
+        } else if (msg.subtype === 'task_progress') {
+          if (msg.tool_use_id) this.patchAgent(msg.tool_use_id, (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
         } else if (msg.subtype === 'task_updated') {
           if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
+          const toolUseId = [...this.taskIds].find(([, t]) => t === msg.task_id)?.[0];
+          const { status, end_time, is_backgrounded } = msg.patch;
+          if (toolUseId) this.patchAgent(toolUseId, () => ({
+            ...(status && ENDED[status] && { status: ENDED[status], endedAt: end_time ?? Date.now() }),
+            ...(is_backgrounded !== undefined && { background: is_backgrounded }),
+          }));
         } else if (msg.subtype === 'task_notification') {
           this.tasks.delete(msg.task_id);
-          if (msg.tool_use_id) this.taskDone(msg.tool_use_id, msg.task_id, msg.status, msg.summary);
+          if (msg.tool_use_id) {
+            const usage = msg.usage && usageOf(msg.usage);
+            this.patchAgent(msg.tool_use_id, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
+            this.taskDone(msg.tool_use_id, msg.task_id, msg.status, msg.summary);
+          }
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
@@ -693,6 +735,8 @@ export class AgentSession {
       case 'assistant': {
         const parent = msg.parent_tool_use_id ?? undefined;
         if (parent) {
+          const model = msg.message.model;
+          if (model) this.patchAgent(parent, () => ({ model }));
           for (const block of msg.message.content) if (block.type === 'tool_use') this.toolUse(block, parent);
           return;
         }
@@ -715,11 +759,13 @@ export class AgentSession {
           this.edits.delete(block.tool_use_id);
           if (edited && !block.is_error) this.noteFile(path.relative(this.cwd, edited), 'tool');
           const text = toolResultText(block);
+          const output = (msg as { tool_use_result?: unknown }).tool_use_result;
+          if (this.isAgent(block.tool_use_id)) this.agentResult(block.tool_use_id, text, Boolean(block.is_error), output);
           if (!parent && text.startsWith(ASYNC_LAUNCH)) {
             noteLaunch(this.agents, block.tool_use_id, text);
             continue;
           }
-          const report = this.isAgent(block.tool_use_id) ? liveReport(text, (msg as { tool_use_result?: unknown }).tool_use_result) : text.slice(0, 4000);
+          const report = this.isAgent(block.tool_use_id) ? liveReport(text, output) : text.slice(0, 4000);
           this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
         }
         return;
