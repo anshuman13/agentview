@@ -195,3 +195,7 @@ The loop pill in the composer turns a prompt into a plan, build, test cycle. Opu
 building as soon as the plan is ready, Sonnet then tests the result as a separate model and ends with a verdict, and
 Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
 timeline and transcript, the composer footer shows the current phase and round, and Stop ends the loop.
+
+## Agents
+
+The Agents tab lists the sub-agents of the chat with their status, elapsed time and tokens, and shows each one's report, prompt and steps.
