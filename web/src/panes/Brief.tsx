@@ -7,6 +7,7 @@ import { loopLabel } from './Composer';
 import { ReadAloud } from './Voice';
 import { touch } from '../touch';
 import { Transcript } from './Transcript';
+import { useMacName } from '../MacsPopover';
 import { type ChatEvent } from '../../../shared/protocol';
 
 export type Moment = { id: string; kind: 'you' | 'done' | 'note' | 'fable' | 'reply' | 'plan' | 'phase' | 'blocked'; text: string; at: number; stopping?: boolean; queued?: boolean; blocked?: Extract<ChatEvent, { kind: 'blocked' }> };
@@ -73,6 +74,7 @@ export function Brief() {
   const running = useStore((s) => s.session.running);
   const waiting = useStore((s) => s.pending.length > 0);
   const team = useStore((s) => s.session.team);
+  const macName = useMacName();
   const stopping = useStore((s) => s.session.stopping);
   const loop = useStore((s) => s.session.loop);
   const { moments, next, lastTool, advisor, fable } = useMemo(() => buildTimeline(events), [events]);
@@ -110,6 +112,7 @@ export function Brief() {
             {full ? 'Transcript' : 'Timeline'}<Icon name="arrow-swap" small />
           </button>
           <span className="spacer" />
+          {macName && <span className="mobile-only mac-here"><Icon name="vm" small /> {macName}</span>}
           {extras && <span className="extras">{extras}</span>}
           <span className="desktop-only"><ReadAloud speak /></span>
           {!full && from > 0 && <button className="link" onClick={() => setAll(true)}>Show all</button>}

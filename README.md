@@ -143,9 +143,9 @@ websockets from other websites.
 
 ## Macs
 
-The Mac's name in the status bar (on the phone: the More sheet) lists the other Macs on NetBird that run AgentView,
-with a dot for whether an agent is working there. Click one to switch to it. The phone app remembers the Mac you
-used last and offers the others when it can't reach it.
+The Mac's name in the status bar (on the phone: the chat header and the More sheet) lists the other Macs on NetBird
+that run AgentView, with a dot for whether an agent is working there. Click one to switch to it; a banner names the
+Mac you landed on. The phone app remembers the Mac you used last and offers the others when it can't reach it.
 
 ## Another Mac
 

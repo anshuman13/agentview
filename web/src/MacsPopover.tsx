@@ -27,15 +27,54 @@ export function useMacName() {
   return name;
 }
 
-export function switchMac(url: string) {
+const switched = typeof location !== 'undefined' && new URLSearchParams(location.search).has('switched');
+
+export async function switchMac(url: string) {
+  try {
+    await fetch(`${url}/api/connect?peer=1`, { mode: 'no-cors', signal: AbortSignal.timeout(4000) });
+  } catch {
+    return false;
+  }
+  const q = new URLSearchParams({ switched: '1' });
   const shell = localStorage.getItem('agentview.shell');
-  location.href = shell ? `${url}/?shell=${shell}` : url;
+  if (shell) q.set('shell', shell);
+  location.href = `${url}/?${q}`;
+  return true;
+}
+
+export function SwitchedBanner() {
+  const name = useMacName();
+  const [shown, setShown] = useState(switched);
+  useEffect(() => {
+    if (!shown || !name) return;
+    const t = setTimeout(() => setShown(false), 5000);
+    return () => clearTimeout(t);
+  }, [shown, name]);
+  if (!shown || !name) return null;
+  return (
+    <div className="app-update">
+      <Icon name="vm" small />
+      <span>Switched to {name}</span>
+      <button className="icon-btn" title="Close" onClick={() => setShown(false)}><Icon name="close" small /></button>
+    </div>
+  );
 }
 
 export function MacsPopover({ onClose }: { onClose: () => void }) {
   const name = useMacName();
   const [macs, setMacs] = useState<Mac[] | null>(null);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState('');
+
+  const go = async (m: Mac) => {
+    if (busy) return;
+    setBusy(m.url);
+    setError('');
+    if (!(await switchMac(m.url))) {
+      setBusy('');
+      setError(`Can't reach ${m.name}. Is NetBird connected and AgentView running there?`);
+    }
+  };
 
   useEffect(() => {
     fetch(`/api/connect?port=${location.port}`)
@@ -65,10 +104,10 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
             <span className="detail">this Mac</span>
           </li>
           {macs?.map((m) => (
-            <li key={m.url} className="clickable" onClick={() => switchMac(m.url)}>
+            <li key={m.url} className="clickable" onClick={() => void go(m)}>
               <span className={`mcp-dot ${m.running ? 'ok' : 'off'}`} />
               <span className="mac-name">{m.name}</span>
-              <span className="detail">{m.running ? `${m.running} working` : 'idle'}</span>
+              <span className="detail">{busy === m.url ? 'connecting' : m.running ? `${m.running} working` : 'idle'}</span>
             </li>
           ))}
         </ul>

@@ -13,7 +13,7 @@ import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
-import { MacsPopover, useMacName } from './MacsPopover';
+import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { McpItem, McpPage } from './panes/McpStatus';
 import './page.css';
 import { Observe } from './panes/Observe';
@@ -56,11 +56,10 @@ function stored(key: string, fallback: number) {
   }
 }
 
-const shellParam = new URLSearchParams(location.search).get('shell');
-if (shellParam) {
-  localStorage.setItem('agentview.shell', shellParam);
-  history.replaceState(null, '', location.pathname);
-}
+const params = new URLSearchParams(location.search);
+const shellParam = params.get('shell');
+if (shellParam) localStorage.setItem('agentview.shell', shellParam);
+if (shellParam || params.has('switched')) history.replaceState(null, '', location.pathname);
 
 function AppUpdate() {
   const [ready, setReady] = useState(0);
@@ -278,6 +277,7 @@ export function App() {
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <AppUpdate />
+      <SwitchedBanner />
       <Restarting />
       <Offline />
       <div className="body">

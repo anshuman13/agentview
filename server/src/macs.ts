@@ -1,5 +1,6 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import os from 'node:os';
 
 export type Mac = { name: string; url: string; running: number };
 
@@ -26,6 +27,14 @@ function peers() {
 }
 
 export const macName = (hostname: string) => hostname.replace(/\.local$/, '');
+
+export const thisMac = (() => {
+  try {
+    return execFileSync('scutil', ['--get', 'LocalHostName'], { timeout: 2000 }).toString().trim() || macName(os.hostname());
+  } catch {
+    return macName(os.hostname());
+  }
+})();
 
 export async function otherMacs(port: string): Promise<Mac[]> {
   const probes = (await peers()).map(async (fqdn) => {
