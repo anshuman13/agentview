@@ -9,7 +9,7 @@ import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
-import { ASYNC_LAUNCH, BIG_BRO, advisorEvent, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 export { BIG_BRO };
 
@@ -595,6 +595,31 @@ export class AgentSession {
     if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
   }
 
+  private isAgent(toolUseId: string) {
+    const use = this.state.events.find((e) => e.id === toolUseId);
+    return use?.kind === 'tool_use' && AGENT_TOOLS.has(use.name);
+  }
+
+  private taskDone(toolUseId: string, taskId: string, status: 'completed' | 'failed' | 'stopped', summary: string) {
+    const last = [...this.state.events].reverse().find((e) => e.kind === 'tool_result' && e.toolUseId === toolUseId);
+    if (last && !this.resumed(toolUseId, last.at)) return;
+    const ev: Extract<ChatEvent, { kind: 'tool_result' }> = { id: randomUUID(), kind: 'tool_result', toolUseId, text: summary, isError: status === 'failed', at: Date.now(), ...(status === 'stopped' && { stopped: true }) };
+    this.pushEvent(ev);
+    const sessionId = this.state.session.sessionId;
+    if (!sessionId || !this.isAgent(toolUseId) || status !== 'completed') return;
+    const agentId = [...this.agents].find(([, t]) => t === toolUseId)?.[0] ?? taskId;
+    void getSubagentMessages(sessionId, agentId, { dir: this.cwd }).catch(() => []).then((sub) => {
+      const text = handbackOf(sub) ?? finalText(sub);
+      if (!text) return;
+      ev.text = text;
+      this.emit({ type: 'event', event: ev });
+    });
+  }
+
+  private resumed(toolUseId: string, since: number) {
+    return this.state.events.some((e) => e.kind === 'tool_use' && e.agent === toolUseId && e.at > since);
+  }
+
   private handle(msg: SDKMessage) {
     switch (msg.type) {
       case 'system':
@@ -630,7 +655,7 @@ export class AgentSession {
           if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
         } else if (msg.subtype === 'task_notification') {
           this.tasks.delete(msg.task_id);
-          if (msg.tool_use_id) this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: msg.tool_use_id, text: msg.summary.slice(0, 4000), isError: msg.status === 'failed', at: Date.now(), ...(msg.status === 'stopped' && { stopped: true }) });
+          if (msg.tool_use_id) this.taskDone(msg.tool_use_id, msg.task_id, msg.status, msg.summary);
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
           this.turnEnded();
@@ -694,7 +719,8 @@ export class AgentSession {
             noteLaunch(this.agents, block.tool_use_id, text);
             continue;
           }
-          this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: text.slice(0, 4000), isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
+          const report = this.isAgent(block.tool_use_id) ? liveReport(text, (msg as { tool_use_result?: unknown }).tool_use_result) : text.slice(0, 4000);
+          this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
         }
         return;
       }

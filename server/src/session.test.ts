@@ -294,6 +294,44 @@ describe('subagents', () => {
     expect(results).toMatchObject([{ text: 'Found 3 docs', isError: false }]);
     expect(events.filter((e) => 'parent' in e && e.parent === 'ag')).toMatchObject([{ kind: 'tool_use', name: 'Grep' }, { kind: 'tool_result', text: 'hit' }]);
   });
+
+  it('keeps the full agent report and caps other tool results', () => {
+    const { s } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const long = 'x'.repeat(6000);
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }, { type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'ls' } }] } });
+    handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: `${long}\nagentId: a1 (use SendMessage with to: 'a1')\n<usage>total_tokens: 5\ntool_uses: 1\nduration_ms: 9</usage>` }, { type: 'tool_result', tool_use_id: 'b1', content: long }] } });
+    const text = (id: string) => (s.state.events.find((e) => e.kind === 'tool_result' && e.toolUseId === id) as { text: string }).text;
+    expect(text('ag')).toBe(long);
+    expect(text('b1')).toHaveLength(4000);
+    handle({ type: 'system', subtype: 'task_notification', tool_use_id: 'ag', task_id: 'a1', status: 'completed', summary: 'Agent "Survey" completed', output_file: '' });
+    expect(s.state.events.filter((e) => e.kind === 'tool_result' && e.toolUseId === 'ag')).toHaveLength(1);
+  });
+
+  it('uses the hand-back report', () => {
+    const { s } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
+    handle({ type: 'user', parent_tool_use_id: null, tool_use_result: { status: 'completed', handbackReport: { text: 'Full report' }, content: [] }, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: 'This agent\'s report was delivered to you as a message' }] } });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'tool_result', text: 'Full report' });
+  });
+
+  it('rebuilds a long or handed-back report from history', () => {
+    const msg = (type: string, content: unknown) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
+    const long = 'y'.repeat(6000);
+    const { events } = historyFrom(
+      [
+        msg('user', 'survey'),
+        msg('assistant', [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }, { type: 'tool_use', id: 'fg', name: 'Agent', input: { description: 'Check' } }]),
+        msg('user', [{ type: 'tool_result', tool_use_id: 'ag', content: launched }, { type: 'tool_result', tool_use_id: 'fg', content: 'delivered as a message\nagentId: a2 (use SendMessage)\n<usage>total_tokens: 5\ntool_uses: 1\nduration_ms: 9</usage>' }]),
+        msg('user', `<task-notification>\n<tool-use-id>ag</tool-use-id>\n<status>completed</status>\n<result>${long}</result>\n</task-notification>`),
+      ],
+      { fg: [msg('assistant', [{ type: 'tool_use', id: 'h1', name: 'SubagentHandback', input: { message: 'Handed back' } }])] },
+    );
+    const report = (id: string) => events.find((e) => e.kind === 'tool_result' && e.toolUseId === id && !e.parent);
+    expect(report('ag')).toMatchObject({ text: long });
+    expect(report('fg')).toMatchObject({ text: 'Handed back' });
+  });
 });
 
 describe('compacting', () => {
