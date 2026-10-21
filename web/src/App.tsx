@@ -13,6 +13,7 @@ import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ConnectPopover } from './ConnectPopover';
+import { MacsPopover, useMacName } from './MacsPopover';
 import { McpItem, McpPage } from './panes/McpStatus';
 import './page.css';
 import { Observe } from './panes/Observe';
@@ -151,6 +152,8 @@ export function App() {
   const [chatOpen, setChatOpen] = useState(true);
   const [view, setView] = useState<View>('explorer');
   const [phone, setPhone] = useState(false);
+  const [macs, setMacs] = useState(false);
+  const macName = useMacName();
   const [chatW, setChatW] = useState(() => stored('agentview.chatW', 480));
   const [termH, setTermH] = useState(() => stored('agentview.termH', 240));
   const [terminal, setTerminal] = useState(false);
@@ -395,6 +398,7 @@ export function App() {
         )}
         <span className="item clickable" title={`Theme: ${THEME_NAMES[theme]}. Click to switch`} onClick={toggleTheme}><Icon name="color-mode" small /></span>
         <span className="item clickable" title="Open on phone" onClick={() => setPhone((v) => !v)}><Icon name="device-mobile" small /></span>
+        <span className="item clickable" title="Switch to another Mac" onClick={() => setMacs((v) => !v)}><Icon name="vm" small /> {macName}</span>
         {!connected && <span className="item error"><Icon name="plug" small /> Disconnected</span>}
       </footer>
 
@@ -451,6 +455,9 @@ export function App() {
               </button>
             ))}
             <span className="more-divider" />
+            <button onClick={act(() => setMacs(true))}>
+              <Icon name="vm" /><span>{macName || 'Macs'}</span><span className="more-meta">switch</span>
+            </button>
             <button onClick={act(() => window.dispatchEvent(new Event('agentview:palette')))}>
               <Icon name="terminal-cmd" /><span>Command Palette</span>
             </button>
@@ -462,6 +469,7 @@ export function App() {
       <Palette />
       {repoPicker && <RepoPicker />}
       {phone && <ConnectPopover onClose={() => setPhone(false)} />}
+      {macs && <MacsPopover onClose={() => setMacs(false)} />}
     </div>
   );
 }

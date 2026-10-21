@@ -139,6 +139,12 @@ Open the phone icon in the status bar for a QR code. Works over NetBird.
 AgentView only accepts connections from this Mac and NetBird addresses (100.64.0.0/10), and refuses requests and
 websockets from other websites.
 
+## Macs
+
+The Mac's name in the status bar (on the phone: the More sheet) lists the other Macs on NetBird that run AgentView,
+with a dot for whether an agent is working there. Click one to switch to it. The phone app remembers the Mac you
+used last and offers the others when it can't reach it.
+
 ## Another Mac
 
 To run AgentView on a second Mac, such as an always-on Mac mini, first do the parts that need you at the keyboard:
