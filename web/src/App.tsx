@@ -5,7 +5,7 @@ import { Brief } from './panes/Brief';
 import { Terminal } from './panes/Terminal';
 import { CodePane } from './panes/CodePane';
 import { BrowserPane } from './panes/BrowserPane';
-import { AgentsPane, AgentsTab } from './panes/AgentsPane';
+import { AgentsBadge, AgentsPane, AgentsTab } from './panes/AgentsPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Palette } from './panes/Palette';
 import { Explorer, FileIcon } from './panes/Explorer';
@@ -275,7 +275,9 @@ export function App() {
   const goTab = (t: Tab) => {
     setMore(false);
     if (t === 'code' && tab === 'code' && !isPage(editor) && openFile) setBrowse((v) => !v);
+    if (t === 'agents' && tab === 'agents') setAgentSel(null);
     setTab(t);
+    if (t === 'agents') setEditor('agents');
     if (t === 'browser') setEditor('browser');
     if (t === 'code') setEditor('file');
   };
@@ -432,6 +434,11 @@ export function App() {
             </button>
           ),
         ])}
+        <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => goTab('agents')}>
+          <Icon name="hubot" />
+          <span>Agents</span>
+          <AgentsBadge />
+        </button>
         <button className={more || inMore ? 'active' : ''} onClick={() => setMore((v) => !v)}>
           <Icon name="ellipsis" />
           <span>More</span>
