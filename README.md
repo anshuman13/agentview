@@ -134,7 +134,38 @@ Chats start only inside these folders or Paseo worktrees.
 
 ## Phone
 
-Open the phone icon in the status bar for a QR code. Works on the same Wi-Fi or over NetBird.
+Open the phone icon in the status bar for a QR code. Works over NetBird.
+
+AgentView only accepts connections from this Mac and NetBird addresses (100.64.0.0/10), and refuses requests and
+websockets from other websites.
+
+## Another Mac
+
+To run AgentView on a second Mac, such as an always-on Mac mini, first do the parts that need you at the keyboard:
+
+1. Install Homebrew (brew.sh) and Google Chrome, sign in to your Chrome profile and add Claude in Chrome
+2. `brew install netbirdio/tap/netbird`, `sudo netbird service install && sudo netbird service start`, `netbird up`,
+   then switch off Login expiration for this Mac in the NetBird dashboard
+3. `brew install gh && gh auth login` with the GitHub account that owns this repo
+4. `brew install --cask claude-code`, run `claude` and log in
+5. On the first Mac, run `tar czf ~/Desktop/mini-config.tgz -C ~ .claude/CLAUDE.md .claude/settings.json .claude/skills .gitconfig .gitconfig-work .gitconfig-personal`
+   and copy the file to `~/Downloads` on this Mac (AirDrop works)
+
+Then paste this into `claude`:
+
+> Clone anshuman13/agentview with gh into ~/workspace_personal/agentview and follow the "Another Mac" section of its
+> README, the steps for Claude.
+
+Steps for Claude:
+
+1. `brew install node git uv`, then `npm install` in the repo
+2. Unpack `~/Downloads/mini-config.tgz` into `~` without overwriting existing files, then delete it
+3. Run `./start.sh`
+4. Check that `curl -s http://localhost:5173/api/connect` lists a NetBird address
+5. Tell me to turn on Open at login in the AgentView menu bar menu, grant Full Disk Access to `dist/AgentView.app`,
+   click Allow in Chrome's remote debugging prompt, and add the MCP servers (`claude mcp add`, then `/mcp` to sign in)
+
+The mini does not run local databases, so leave out the `*_local` MCP servers.
 
 ## Shortcuts
 
