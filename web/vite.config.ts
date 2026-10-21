@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { allowedPeer } from '../shared/access.js';
 
 function reloadOnlyOnChange(): Plugin {
   let changed = Date.now();
@@ -10,6 +11,7 @@ function reloadOnlyOnChange(): Plugin {
     name: 'reload-only-on-change',
     apply: 'serve',
     configureServer(server) {
+      server.httpServer?.on('connection', (socket) => allowedPeer(socket.remoteAddress) || socket.destroy());
       server.watcher.on('all', () => (changed = Date.now()));
       server.middlewares.use('/__changed', (_req, res) => res.end(String(changed)));
       server.middlewares.use('/__log', (req, res) => {

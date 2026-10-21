@@ -35,7 +35,7 @@ export function ConnectPopover({ onClose }: { onClose: () => void }) {
           <button className="icon-btn" title="Close" onClick={onClose}><Icon name="close" /></button>
         </div>
         {error && <div className="connect-body muted">{error}</div>}
-        {urls && urls.length === 0 && <div className="connect-body muted">No network address found.</div>}
+        {urls && urls.length === 0 && <div className="connect-body muted">NetBird is not connected on this Mac.</div>}
         {urls && urls.length > 0 && (
           <div className="connect-body">
             <div className="connect-tabs">
@@ -52,7 +52,7 @@ export function ConnectPopover({ onClose }: { onClose: () => void }) {
           </div>
         )}
         <div className="connect-note muted small">
-          Works on the same Wi-Fi, or from anywhere when the phone is signed in to NetBird.
+          Works from anywhere when the phone is signed in to NetBird.
         </div>
       </div>
     </div>
