@@ -337,6 +337,16 @@ describe('subagents', () => {
     expect(events[i + 1]).toMatchObject({ kind: 'agent', toolUseId: 'ag', prompt: 'Find docs', model: 'claude-opus-5-5', status: 'done', endedAt: Date.parse('2026-10-15T10:01:00Z'), usage: { tokens: 50, toolUses: 3, durationMs: 60000 } });
   });
 
+  it('forwards subagent text live and from history', () => {
+    const { s } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    handle({ type: 'assistant', parent_tool_use_id: 'ag', message: { content: [{ type: 'text', text: 'Looking around' }] } });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'assistant', text: 'Looking around', parent: 'ag' });
+    const msg = (type: string, content: unknown) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
+    const { events } = historyFrom([msg('user', 'survey')], { ag: [msg('assistant', [{ type: 'text', text: 'Looking around' }])] });
+    expect(events.filter((e) => e.kind === 'assistant')).toMatchObject([{ text: 'Looking around', parent: 'ag' }]);
+  });
+
   it('uses the hand-back report', () => {
     const { s } = fakeSession();
     const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);

@@ -76,7 +76,7 @@ export function buildTurns(events: ChatEvent[]) {
     const parent = e.kind === 'tool_use' ? e.parent : e.kind === 'tool_result' ? e.toolUseId : undefined;
     const turn = (parent && turnOf.get(parent)) || current();
     turnOf.set(e.id, turn);
-    if (e.kind === 'assistant' && e.text.trim()) turn.reply = { id: e.id, text: e.text.trim(), streaming: e.streaming, at: e.at };
+    if (e.kind === 'assistant' && !e.parent && e.text.trim()) turn.reply = { id: e.id, text: e.text.trim(), streaming: e.streaming, at: e.at };
     if (e.kind === 'plan') next = e.next;
     if (e.kind === 'blocked') turn.blocked.push(e);
     if (e.kind === 'system' && (e.text.startsWith('Compact') || e.text.startsWith('Loop '))) {
@@ -85,6 +85,7 @@ export function buildTurns(events: ChatEvent[]) {
     if (e.kind === 'tool_result' && fableCalls.has(e.toolUseId) && !e.isError) turn.notes.push({ id: e.id, text: handBack(e.text), kind: 'fable' });
     if (e.kind !== 'tool_use') continue;
     if (e.name.endsWith('__set_status')) {
+      if (e.parent) continue;
       const done = str(e.input.done).trim();
       const important = str(e.input.important).trim();
       if (done) turn.notes.push({ id: `${e.id}:done`, text: done, kind: 'done' });

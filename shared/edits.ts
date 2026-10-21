@@ -34,7 +34,7 @@ export function sumEdits(events: ChatEvent[]): EditCount | undefined {
 export function replyLine(events: ChatEvent[], max = 60): string | undefined {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
-    if (e.kind !== 'assistant' || !e.text.trim()) continue;
+    if (e.kind !== 'assistant' || e.parent || !e.text.trim()) continue;
     const line = e.text.trim().split('\n')[0].replace(/^[#>*\-\s]+/, '').replace(/\*\*/g, '').trim();
     return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
   }
