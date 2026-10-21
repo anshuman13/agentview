@@ -23,6 +23,9 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const [url, setUrl] = useState('');
   const [editing, setEditing] = useState(false);
   const [full, setFull] = useState(false);
+  const [phone, setPhone] = useState(() => {
+    try { return localStorage.getItem('browser-phone') === '1'; } catch { return false; }
+  });
   const hadTabs = useRef(false);
   const emptied = useRef(onEmpty);
   emptied.current = onEmpty;
@@ -89,11 +92,11 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
     const ro = new ResizeObserver(() => {
       const r = el.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      send({ t: 'size', w: Math.round(r.width * dpr), h: Math.round(r.height * dpr) });
+      send({ t: 'size', w: Math.round(r.width * dpr), h: Math.round(r.height * dpr), cssW: Math.round(r.width), cssH: Math.round(r.height), dpr, mobile: phone && r.width < 700 });
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [state.state]);
+  }, [state.state, phone]);
 
   const pos = (e: { clientX: number; clientY: number }) => {
     if (!img.current) return { x: 0, y: 0 };
@@ -170,6 +173,16 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           <option value="">Follow Claude</option>
           {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
         </select>
+        <button
+          className={`icon-btn phone-only${phone ? ' on' : ''}`}
+          title={phone ? 'Phone layout is on. Chrome on the Mac shows the page at phone size' : 'Show the page at phone size. Chrome on the Mac shrinks while this is on'}
+          aria-pressed={phone}
+          onClick={() => {
+            const v = !phone;
+            setPhone(v);
+            try { localStorage.setItem('browser-phone', v ? '1' : '0'); } catch {}
+          }}
+        ><Icon name="device-mobile" /></button>
         <button className="icon-btn phone-only" title="Keyboard" onClick={() => kbd.current?.focus()}><Icon name="keyboard" /></button>
         <button className="icon-btn phone-only" title="Full screen" onClick={() => setFull(true)}><Icon name="screen-full" /></button>
       </div>

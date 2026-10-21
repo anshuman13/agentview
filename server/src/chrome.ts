@@ -23,6 +23,9 @@ let pinned: string | null = null;
 let watching: { target: string; session: string } | null = null;
 let watchSeq = 0;
 let size = { w: 1600, h: 1200 };
+type Dims = { cssW: number; cssH: number; dpr: number; mobile: boolean };
+const sizes = new Map<WebSocket, Dims>();
+let emulated: { session: string; key: string } | null = null;
 const touches = new Map<WebSocket, { x: number; y: number; moved: boolean }>();
 let viewport = { w: 0, h: 0 };
 let retryTimer: NodeJS.Timeout | null = null;
@@ -153,6 +156,7 @@ export async function connect() {
     const was = cdp === ws;
     cdp = null;
     watching = null;
+    emulated = null;
     tabs.clear();
     calls.forEach((c) => c.reject(new Error('Chrome disconnected')));
     calls.clear();
@@ -279,6 +283,7 @@ async function watch(target: string) {
     watching = { target, session: sessionId };
     sendTabs();
     await call('Page.enable', {}, sessionId);
+    await emulate(false);
     const { cssVisualViewport: v } = await call('Page.getLayoutMetrics', {}, sessionId);
     viewport = { w: v.clientWidth, h: v.clientHeight };
     await screencast();
@@ -313,7 +318,31 @@ async function screencast() {
 }
 
 function release(session: string) {
+  if (emulated?.session === session && emulated.key) {
+    void call('Emulation.clearDeviceMetricsOverride', {}, session).catch(() => {});
+    void call('Emulation.setTouchEmulationEnabled', { enabled: false }, session).catch(() => {});
+  }
+  if (emulated?.session === session) emulated = null;
   void call('Target.detachFromTarget', { sessionId: session }).catch(() => {});
+}
+
+async function emulate(restart = true) {
+  if (!watching) return;
+  const m = [...sizes.values()].reverse().find((d) => d.mobile);
+  const key = m ? `${m.cssW}x${m.cssH}@${m.dpr}` : '';
+  const { session } = watching;
+  if ((emulated?.session === session ? emulated.key : '') === key) return;
+  emulated = { session, key };
+  try {
+    if (m) {
+      await call('Emulation.setDeviceMetricsOverride', { width: m.cssW, height: m.cssH, deviceScaleFactor: m.dpr, mobile: true }, session);
+      await call('Emulation.setTouchEmulationEnabled', { enabled: true }, session);
+    } else {
+      await call('Emulation.clearDeviceMetricsOverride', {}, session);
+      await call('Emulation.setTouchEmulationEnabled', { enabled: false }, session);
+    }
+    if (restart) await screencast();
+  } catch {}
 }
 
 function stop() {
@@ -342,6 +371,14 @@ async function input(m: any, ws: WebSocket) {
       return pick();
     case 'size':
       size = { w: Math.min(2400, Math.max(200, num(m.w))), h: Math.min(2400, Math.max(200, num(m.h))) };
+      sizes.delete(ws);
+      sizes.set(ws, {
+        cssW: Math.min(2400, Math.max(100, Math.round(num(m.cssW)))),
+        cssH: Math.min(2400, Math.max(100, Math.round(num(m.cssH)))),
+        dpr: Math.min(4, Math.max(1, num(m.dpr) || 1)),
+        mobile: m.mobile === true,
+      });
+      await emulate(false);
       return screencast().catch(() => {});
   }
   if (!s) return;
@@ -386,6 +423,7 @@ async function input(m: any, ws: WebSocket) {
       const x = num(m.x);
       const y = num(m.y);
       const ends = m.type === 'touchEnd' || m.type === 'touchCancel';
+      if (emulated?.session === s && emulated.key) return call('Input.dispatchTouchEvent', { type: m.type, touchPoints: ends ? [] : [{ x, y }] }, s);
       const t = touches.get(ws);
       if (m.type === 'touchStart') return void touches.set(ws, { x, y, moved: false });
       if (!t) return;
@@ -422,6 +460,8 @@ export function openChrome(ws: WebSocket, origin: string | undefined) {
   ws.on('close', () => {
     viewers.delete(ws);
     touches.delete(ws);
-    if (!viewers.size) stop();
+    const was = sizes.delete(ws);
+    if (!viewers.size) return stop();
+    if (was) void emulate();
   });
 }
