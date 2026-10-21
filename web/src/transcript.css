@@ -114,9 +114,7 @@
 .tl-view .codicon { color: var(--fg-muted, #9d9d9d); }
 .tl-view:hover .codicon { color: var(--fg, #cccccc); }
 
-.tl.phase { padding-top: 10px; }
-.tl.phase .mark, .tl.phase .text { color: var(--agent, #a78bfa); }
-.tl.phase .text { font-weight: 600; font-size: 12px; letter-spacing: 0.02em; }
+.tr.tc-steps { flex: none; overflow: visible; margin-left: 26px; padding: 0; font-size: 12px; }
 .tr-phase { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; color: var(--agent, #a78bfa); font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
 .tr-phase::after { content: ''; flex: 1; height: 1px; background: var(--border, #2b2b2b); }
 .tr-agent .tr-stop { flex: none; margin-left: 4px; color: var(--fg-muted, #9d9d9d); }
