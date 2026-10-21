@@ -23,6 +23,7 @@
   .steps-toggle { min-height: 36px; font-size: 13px; }
   .timeline-head { height: 44px; }
   .timeline-head .icon-btn { width: 36px; height: 36px; }
+  .timeline-head .mac-here { display: inline-flex; align-items: center; gap: 4px; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fg); }
   .tl, .tl-now { font-size: 13px; line-height: 20px; }
   .folder-switch { height: 44px; }
   .tabs, .tab { height: 44px; }
