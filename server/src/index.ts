@@ -20,7 +20,7 @@ import { observe } from './observe.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { MCP_BAD, STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
-import { allowedPeer, allowedRequest } from '../../shared/access.js';
+import { allowedPeer, allowedRequest } from './access.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());

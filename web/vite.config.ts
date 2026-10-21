@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { allowedPeer } from '../shared/access.js';
+import { allowedPeer } from '../server/src/access.js';
 
 function reloadOnlyOnChange(): Plugin {
   let changed = Date.now();
