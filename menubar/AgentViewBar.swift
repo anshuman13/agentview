@@ -2,7 +2,7 @@ import AppKit
 import IOKit.pwr_mgt
 import ServiceManagement
 
-let repo = Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent().path
+let repo = Bundle.main.bundleURL.resolvingSymlinksInPath().deletingLastPathComponent().deletingLastPathComponent().path
 let logs = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".agentview/logs")
 let token = UUID().uuidString
 
