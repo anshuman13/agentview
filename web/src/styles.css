@@ -247,6 +247,7 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 .pane-bar input.url { flex: 1; min-width: 0; height: 24px; padding: 0 10px; font-size: 12px; border-radius: var(--radius-sm); }
 .browser-bar { height: 35px; gap: 4px; padding: 0 6px; border-bottom: 1px solid var(--border); background: var(--bg-raised); }
 .browser-bar select { height: 24px; border-radius: var(--radius-sm); }
+.browser-bar .icon-btn.on { color: var(--accent); }
 .code-pane, .browser-pane { display: flex; flex-direction: column; height: 100%; }
 .editor-host { flex: 1; min-height: 0; overflow: auto; }
 .editor-host .cm-editor, .editor-host .cm-mergeView, .editor-host .cm-mergeViewEditors { height: 100%; }
