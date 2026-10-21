@@ -38,7 +38,8 @@ It uses the Claude Code CLI you have installed and its login.
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
 and notes. The timeline shows these with your prompts and Claude's replies.
 
-- Sending while Claude works stops the current step and continues with your message
+- Sending while Claude works queues your message. If Claude has been inside one tool call for more than 10 seconds,
+  sending stops that call and continues with your message. Cmd+Enter always stops and sends
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
 - Questions, plan approvals and permissions show as buttons in the timeline
 
