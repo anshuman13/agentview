@@ -24,7 +24,14 @@
   .timeline-head { height: 44px; }
   .timeline-head .icon-btn { width: 36px; height: 36px; }
   .timeline-head .mac-here { display: inline-flex; align-items: center; gap: 4px; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fg); }
-  .tl, .tl-now { font-size: 13px; line-height: 20px; }
+  .tc, .tl-now { font-size: 13px; line-height: 20px; }
+  .tc-label, .tc-err, .tc-agent .state { font-size: 12px; }
+  .tc-file, .tc-agent { min-height: 40px; font-size: 13px; }
+  .tc-agent { border-radius: 20px; }
+  .tc-facts, .tr.tc-steps { margin-left: 0; }
+  .tc-steps-toggle, .tc-earlier, .tc-group > .link, .reply-card .link { min-height: 36px; font-size: 13px; }
+  .tc-steps-toggle { margin-left: 0; }
+  .tc .reply-body { font-size: 13px; }
   .folder-switch { height: 44px; }
   .tabs, .tab { height: 44px; }
   .tab.active, .tab.active:hover { margin-bottom: -1px; }
