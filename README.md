@@ -64,7 +64,7 @@ build, so it has to be redone when `menubar/AgentViewBar.swift` changes.
 
 On a Mac that only runs agents, AgentView can use its own Chrome instead: `mkdir ~/.agentview/chrome`. AgentView then
 starts Chrome with that profile and remote debugging on port 9333, so there is no Allow dialog and no Full Disk Access.
-Sign in to the sites you need and add Claude in Chrome in that Chrome once.
+Claude in Chrome is not needed there: chats on that Mac can drive the laptop's Chrome.
 
 ## Pages
 
