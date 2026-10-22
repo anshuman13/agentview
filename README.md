@@ -62,6 +62,10 @@ It reads Chrome's port file, which macOS only allows with Full Disk Access: add 
 System Settings, Privacy & Security, Full Disk Access (the Browser tab has a button for it). The grant is tied to the
 build, so it has to be redone when `menubar/AgentViewBar.swift` changes.
 
+On a Mac that only runs agents, AgentView can use its own Chrome instead: `mkdir ~/.agentview/chrome`. AgentView then
+starts Chrome with that profile and remote debugging on port 9333, so there is no Allow dialog and no Full Disk Access.
+Sign in to the sites you need and add Claude in Chrome in that Chrome once.
+
 ## Pages
 
 Observe, Deploy and MCP Servers open as tabs in the editor area (the lower three activity bar icons, or the command
