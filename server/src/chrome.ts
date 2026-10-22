@@ -13,7 +13,6 @@ type Msg = { id?: number; method?: string; params?: any; result?: any; error?: {
 const PORT_FILE = path.join(os.homedir(), 'Library/Application Support/Google/Chrome/DevToolsActivePort');
 const PROFILE = path.join(os.homedir(), '.agentview/chrome');
 const PROFILE_PORT = 9333;
-let launched = 0;
 
 export const ownProfile = () => existsSync(PROFILE);
 
@@ -46,7 +45,6 @@ export async function endpoint() {
       const r = await fetch(`http://127.0.0.1:${PROFILE_PORT}/json/version`, { signal: AbortSignal.timeout(3000) });
       return ((await r.json()) as { webSocketDebuggerUrl: string }).webSocketDebuggerUrl;
     } catch {
-      if (Date.now() - launched > 60_000) launchProfile();
       throw new Error((await chromeRunning()) ? 'disabled' : 'nochrome');
     }
   }
@@ -67,7 +65,6 @@ export function chromeRunning() {
 }
 
 function launchProfile(...urls: string[]) {
-  launched = Date.now();
   const args = ['-na', 'Google Chrome', '--args', `--user-data-dir=${PROFILE}`, `--remote-debugging-port=${PROFILE_PORT}`, '--no-first-run', '--no-default-browser-check', ...urls];
   execFile('open', args, (err) => err && console.error('chrome profile:', err.message));
 }
@@ -104,7 +101,7 @@ function setup() {
   fastUntil = Date.now() + 3 * 60_000;
   retryDelay = 1500;
   const run = (...args: string[]) => execFile('open', args, (err) => err && console.error('chrome setup:', err.message));
-  if (ownProfile()) launchProfile();
+  if (ownProfile()) void chromeRunning().then((up) => up || launchProfile());
   else if (process.platform === 'darwin' && reason === 'nofda') {
     run('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles');
     run('-R', fileURLToPath(new URL('../../dist/AgentView.app', import.meta.url)));
