@@ -21,3 +21,10 @@
   .sessions .tree .row.live .lines { line-height: 20px; }
   .sessions .tree .row.live .lines .l2 { font-size: 13px; }
 }
+.sessions.chats .sessions-bar .new-chat { height: 30px; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); border: 0; }
+.sessions.chats .sessions-bar .new-chat:hover { background: var(--accent-hover); }
+.sessions.chats .tree .row.project .acts { display: inline-flex; }
+.sessions.chats .tree .row.project .acts .icon-btn, .sessions.chats .tree .row.project .acts .icon-btn .codicon { color: var(--accent); }
+.sessions.chats .tree .row.project:has(.acts):hover .count { display: inline; }
+.sessions.chats .bin { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 4px; }
+.sessions.chats .bin .row.project { color: var(--fg-muted); gap: 4px; }
