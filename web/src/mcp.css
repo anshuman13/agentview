@@ -46,6 +46,8 @@
 .mcp-card-foot > * { flex: none; }
 .mcp-card-foot .mono { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
 .mcp-card-foot .s { font-weight: 600; }
+.mcp-card-foot .use { color: var(--accent); }
+.mcp-card-foot .use.bad { color: var(--err); }
 .mcp-card-foot .s.ok { color: var(--fg-muted); font-weight: 400; }
 .mcp-card-foot .s.bad { color: var(--err); }
 .mcp-card-foot .s.warn { color: var(--warn); }
@@ -100,6 +102,19 @@
 .mcp-tool:hover { background: var(--bg-hover); }
 .mcp-tool .t { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
 .mcp-tool .t .codicon { color: var(--fg-muted); }
+.mcp-calls { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 14px; }
+.mcp-call { border-radius: var(--radius-sm); }
+.mcp-call .t { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 6px; font-size: 12px; border-radius: var(--radius-sm); cursor: pointer; }
+.mcp-call .t:hover { background: var(--bg-hover); }
+.mcp-call .t > .codicon { color: var(--fg-muted); }
+.mcp-call .name { flex: none; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcp-call .in { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--fg-muted); }
+.mcp-call .s { flex: none; font-size: 11px; color: var(--fg-muted); }
+.mcp-call .s.bad { color: var(--err); }
+.mcp-call .r { margin: 2px 0 6px 20px; display: flex; flex-direction: column; gap: 4px; }
+.mcp-call pre { margin: 0; max-height: 240px; overflow: auto; padding: 6px 8px; font-family: var(--mono); font-size: 11px; white-space: pre-wrap; word-break: break-word; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.mcp-call pre.bad { color: var(--err); }
+.mcp-insert:hover .codicon { color: var(--fg) !important; }
 .mcp-tool .mcp-insert, .mcp-call .mcp-insert { width: 20px; height: 20px; opacity: 0; }
 .mcp-tool:hover .mcp-insert, .mcp-call:hover .mcp-insert, .mcp-insert:focus-visible { opacity: 1; }
 @media (hover: none) { .mcp-insert { opacity: 1 !important; } }
