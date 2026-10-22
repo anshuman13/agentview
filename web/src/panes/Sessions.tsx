@@ -3,7 +3,7 @@ import { notice, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
-import { STALE_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { BIN_MS, type BinnedSession, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { save, stored } from './util';
 import '../chats.css';
@@ -103,19 +103,23 @@ const closeChat = (c: LiveChat, ask: (r: ConfirmRequest) => void) =>
     ? ask({ title: 'Close this chat?', detail: c.title, warning: 'Claude is still working on it and will stop. The transcript is kept.', action: 'Close', run: async () => send({ type: 'close', id: c.id }) })
     : send({ type: 'close', id: c.id });
 
-const canDelete = (s: SavedSession, current: string | null | undefined) => s.sessionId !== current && Date.now() - s.lastModified > STALE_MS;
+const refreshBin = () => window.dispatchEvent(new Event('agentview:bin'));
 
-const deleteChat = (s: SavedSession, onDone: () => void, onError: (e: string) => void): ConfirmRequest => ({
-  title: 'Delete this chat?',
-  detail: s.title,
-  warning: 'The transcript is removed permanently.',
-  action: 'Delete',
-  run: async () => {
-    const r = await fetch(`/api/sessions?id=${encodeURIComponent(s.sessionId)}`, { method: 'DELETE' });
-    if (r.ok) onDone();
-    else onError((await r.json().catch(() => null))?.error ?? 'Could not delete the chat');
-  },
-});
+export const deleteChat = (s: { sessionId: string; title: string; lastModified: number }, onDone: () => void, onError: (e: string) => void, purge = false): ConfirmRequest => {
+  const forever = purge || Date.now() - s.lastModified > BIN_MS;
+  return {
+    title: forever ? 'Delete this chat?' : 'Move this chat to the bin?',
+    detail: s.title,
+    warning: forever ? 'The transcript is removed permanently.' : 'You can restore it from the bin for 24 hours.',
+    action: 'Delete',
+    run: async () => {
+      const r = await fetch(`/api/sessions?id=${encodeURIComponent(s.sessionId)}${purge ? '&purge' : ''}`, { method: 'DELETE' });
+      if (!r.ok) return onError((await r.json().catch(() => null))?.error ?? 'Could not delete the chat');
+      onDone();
+      refreshBin();
+    },
+  };
+};
 
 export function findHere(folders: Folder[], cwd: string) {
   const folder = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)));
@@ -325,11 +329,9 @@ export function Sessions() {
             >
               <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
               <span className="when">{ago(s.lastModified)}</span>
-              {canDelete(s, current) && (
-                <span className="acts">
-                  <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setError(null); remove(s); }}><Icon name="trash" small /></button>
-                </span>
-              )}
+              <span className="acts">
+                <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setError(null); remove(s); }}><Icon name="trash" small /></button>
+              </span>
             </div>
           ))}
         {isOpen(d) && !filter && d.chats.length > PAGE && (
@@ -425,6 +427,8 @@ export function OpenChats() {
   const [opening, setOpening] = useState<string | null>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const close = (c: LiveChat) => closeChat(c, setAsk);
+  const drop = (id: string) => () => setChats((l) => l.filter((x) => x.sessionId !== id));
+  const removeLive = (c: LiveChat) => c.sessionId && setAsk(deleteChat({ sessionId: c.sessionId, title: c.title, lastModified: c.lastActive }, drop(c.sessionId), notice));
   const groups = useMemo(() => groupByRepo(live, chats, folders, filter), [live, chats, folders, filter]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
   const isOpen = (g: RepoGroup) => Boolean(filter) || !(collapsed[g.key] ?? !g.open.length);
@@ -433,7 +437,7 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} onDelete={() => removeLive(c)} />;
 
   useEffect(() => setOpening(null), [current]);
 
@@ -471,11 +475,9 @@ export function OpenChats() {
               <div key={s.sessionId} className="row session recent" title={`${s.title}\n${s.cwd}`} onClick={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }}>
                 <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
                 <span className="when">{ago(s.lastModified)}</span>
-                {canDelete(s, current) && (
-                  <span className="acts">
-                    <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setAsk(deleteChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), notice)); }}><Icon name="trash" small /></button>
-                  </span>
-                )}
+                <span className="acts">
+                  <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setAsk(deleteChat(s, drop(s.sessionId), notice)); }}><Icon name="trash" small /></button>
+                </span>
               </div>
             ))}
             {isOpen(g) && !filter && g.recent.length > RECENT && (
@@ -486,8 +488,48 @@ export function OpenChats() {
           </div>
         ))}
         {!groups.length && <div className="hint">{filter ? 'No repo or chat matches.' : 'No chats yet.'}</div>}
+        <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
+    </div>
+  );
+}
+
+function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: (b: BinnedSession) => void }) {
+  const [list, setList] = useState<BinnedSession[]>([]);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const load = () => get('/api/sessions/bin').then(setList);
+    load();
+    window.addEventListener('agentview:bin', load);
+    return () => window.removeEventListener('agentview:bin', load);
+  }, []);
+  if (!list.length) return null;
+  const restore = async (b: BinnedSession) => {
+    const r = await fetch(`/api/sessions/restore?id=${encodeURIComponent(b.sessionId)}`, { method: 'POST' });
+    if (!r.ok) return notice('Could not restore the chat');
+    setList((l) => l.filter((x) => x.sessionId !== b.sessionId));
+    onRestore(b);
+  };
+  const left = (b: BinnedSession) => `${Math.max(1, Math.round((b.deletedAt + BIN_MS - Date.now()) / 3600000))}h left`;
+  return (
+    <div className="bin">
+      <div className="row project" onClick={() => setOpen((v) => !v)}>
+        <span className="twistie"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>
+        <Icon name="trash" small />
+        <span className="name">Bin</span>
+        <span className="meta"><span className="count">{list.length}</span></span>
+      </div>
+      {open && list.map((b) => (
+        <div key={b.sessionId} className="row session recent" title={`${b.title}\n${b.cwd}\nDeleted for good after 24 hours`}>
+          <span className="name">{b.title}</span>
+          <span className="when">{left(b)}</span>
+          <span className="acts">
+            <button className="icon-btn" title="Restore chat" onClick={() => restore(b)}><Icon name="discard" small /></button>
+            <button className="icon-btn" title="Delete for good" onClick={() => ask(deleteChat(b, () => setList((l) => l.filter((x) => x.sessionId !== b.sessionId)), notice, true))}><Icon name="close" small /></button>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -499,7 +541,7 @@ export function chatLine(c: LiveChat, events: ChatEvent[] | null) {
   return { text: c.pending ? 'Needs you' : c.running ? c.status : last ?? '', edits: done ? edits : undefined, done: done && Boolean(edits) };
 }
 
-function LiveRow({ c, repo, selected, onClose }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void }) {
+function LiveRow({ c, repo, selected, onClose, onDelete }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void; onDelete?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const line = chatLine(c, events);
   const second = Boolean(line.text || line.edits);
@@ -522,6 +564,7 @@ function LiveRow({ c, repo, selected, onClose }: { c: LiveChat; repo?: string; s
       </span>
       <span className="acts">
         <button className="icon-btn" title="Close chat, keep the transcript" onClick={(e) => { e.stopPropagation(); onClose(); }}><Icon name="close" small /></button>
+        {c.sessionId && onDelete && <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Icon name="trash" small /></button>}
       </span>
     </div>
   );
