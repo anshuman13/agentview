@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ROOTS, inside } from './worktrees.js';
-import { readJson } from './mcp.js';
+import { readConfigs } from './mcp.js';
 import { callTool, data, listTools, stop, text, type McpResult, type McpServerDef } from './mcpClient.js';
 import type {
   GrafanaDashboards,
@@ -108,7 +108,7 @@ async function configFor(repo: string, s: Settings) {
 }
 
 async function userServers(cwd: string): Promise<Servers> {
-  const [user, repo] = await Promise.all([readJson(CLAUDE), readJson(path.join(cwd, '.mcp.json'))]);
+  const [user, repo] = await readConfigs(cwd);
   return { ...repo.mcpServers, ...user.projects?.[cwd]?.mcpServers, ...user.mcpServers };
 }
 
@@ -148,19 +148,21 @@ const grafanaBase = (def: McpServerDef, cfg: ObserveConfig['grafana']) => (cfg?.
 const RANGE = { startRfc3339: 'now-1h', endRfc3339: 'now' };
 const ERRORS = '|~ "(?i)(error|exception|traceback|fatal|panic)"';
 
-let lokiCache = '';
+const lokiCache = new Map<string, string>();
 
 async function lokiUid(def: McpServerDef, cfg: ObserveConfig['grafana']) {
   if (cfg?.lokiUid) return cfg.lokiUid;
-  if (lokiCache) return lokiCache;
+  const key = grafanaBase(def, cfg);
+  if (lokiCache.has(key)) return lokiCache.get(key)!;
   const r = data(await callTool('grafana', def, 'list_datasources', { type: 'loki' })) as { datasources?: { uid: string }[] } | null;
   const uid = r?.datasources?.[0]?.uid;
   if (!uid) throw new Error('Grafana has no Loki datasource; set grafana.lokiUid in the settings');
-  lokiCache = uid;
+  lokiCache.set(key, uid);
   return uid;
 }
 
-async function deeplink(def: McpServerDef, args: Record<string, unknown>) {
+async function exploreLink(def: McpServerDef, uid: string, expr: string) {
+  const args = { resourceType: 'explore', datasourceUid: uid, queries: [{ refId: 'A', expr }], timeRange: { from: 'now-1h', to: 'now' } };
   const r = await callTool('grafana', def, 'generate_deeplink', args).catch(() => null);
   const url = r ? text(r).trim() : '';
   return /^https?:\/\//.test(url) ? url : undefined;
@@ -193,7 +195,7 @@ async function logs(cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<G
   const uid = await lokiUid(def, cfg);
   const r = data(await callTool('grafana', def, 'query_loki_logs', { datasourceUid: uid, logql, limit: 50, direction: 'backward', ...RANGE })) as any;
   const lines = (r?.data ?? []).map((e: any) => ({ ts: nsToIso(e.timestamp), line: String(e.line ?? ''), level: e.structuredMetadata?.detected_level ?? e.labels?.level ?? e.labels?.severity }));
-  const link = await deeplink(def, { resourceType: 'explore', datasourceUid: uid, queries: [{ refId: 'A', expr: logql }], timeRange: { from: 'now-1h', to: 'now' } });
+  const link = await exploreLink(def, uid, logql);
   return { logs: lines, link, scanned: Number(r?.metadata?.totalLinesScanned) || 0 };
 }
 
@@ -215,7 +217,7 @@ async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef): Promi
   const selector = selectorOf(cfg);
   const uid = await lokiUid(def, cfg);
   const tools = new Set((await listTools('grafana', def)).map((t) => t.name));
-  const link = await deeplink(def, { resourceType: 'explore', datasourceUid: uid, queries: [{ refId: 'A', expr: `${selector} ${ERRORS}` }], timeRange: { from: 'now-1h', to: 'now' } });
+  const link = await exploreLink(def, uid, `${selector} ${ERRORS}`);
   const notes: string[] = [];
   const rank = (rows: LogPattern[]) => rows.sort((a, b) => b.count - a.count).slice(0, 20);
   if (tools.has('query_loki_patterns')) {
@@ -275,7 +277,7 @@ function field(block: string, ...names: string[]) {
   return '';
 }
 
-export function parseIssues(md: string, base: string, org: string): SentryIssue[] {
+function parseIssues(md: string, base: string, org: string): SentryIssue[] {
   return md
     .split(/^##\s+/m)
     .slice(1)
@@ -297,11 +299,14 @@ export function parseIssues(md: string, base: string, org: string): SentryIssue[
     .filter((i) => i.shortId);
 }
 
-async function restIssues(token: string, t: ReturnType<typeof sentryTarget>): Promise<SentryIssue[]> {
-  const url = `${t.base}/api/0/projects/${encodeURIComponent(t.org)}/${encodeURIComponent(t.project)}/issues/?query=is:unresolved&sort=date&limit=25`;
+async function sentryGet(token: string, url: string) {
   const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(`Sentry REST ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const list = (await res.json()) as Array<Record<string, any>>;
+  return res.json() as Promise<any>;
+}
+
+async function restIssues(token: string, t: ReturnType<typeof sentryTarget>): Promise<SentryIssue[]> {
+  const list: Array<Record<string, any>> = await sentryGet(token, `${t.base}/api/0/projects/${encodeURIComponent(t.org)}/${encodeURIComponent(t.project)}/issues/?query=is:unresolved&sort=date&limit=25`);
   return list.map((i) => ({
     id: String(i.id),
     shortId: i.shortId ?? '',
@@ -316,9 +321,7 @@ async function restIssues(token: string, t: ReturnType<typeof sentryTarget>): Pr
 }
 
 async function restDetails(token: string, t: ReturnType<typeof sentryTarget>, id: string) {
-  const res = await fetch(`${t.base}/api/0/organizations/${encodeURIComponent(t.org)}/issues/${encodeURIComponent(id)}/events/latest/`, { headers: { authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`Sentry REST ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const ev = (await res.json()) as Record<string, any>;
+  const ev: Record<string, any> = await sentryGet(token, `${t.base}/api/0/organizations/${encodeURIComponent(t.org)}/issues/${encodeURIComponent(id)}/events/latest/`);
   const out = [`${ev.title ?? ''}`, ev.message ? `message: ${ev.message}` : '', `event ${ev.eventID ?? ''} at ${ev.dateCreated ?? ''}`, ''];
   for (const entry of ev.entries ?? []) {
     if (entry.type !== 'exception') continue;
@@ -411,7 +414,7 @@ async function uvx() {
   return 'uvx';
 }
 
-export async function snowflakeDef(s: Settings): Promise<McpServerDef> {
+async function snowflakeDef(s: Settings): Promise<McpServerDef> {
   const c = { ...EMPTY_SNOWFLAKE, ...s.snowflake };
   if (!c.account || !c.user || !c.secret) throw new Error('Snowflake is not connected: fill in account, user and the token or password in the Snowflake section');
   await mkdir(DIR, { recursive: true });
@@ -423,7 +426,7 @@ export async function snowflakeDef(s: Settings): Promise<McpServerDef> {
   return { type: 'stdio', command: await uvx(), args, env: { SNOWFLAKE_PASSWORD: c.secret } };
 }
 
-export function readOnlySql(sql: string) {
+function readOnlySql(sql: string) {
   const s = sql.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '').trim().replace(/;\s*$/, '').trim();
   if (!s) throw new Error('Empty query');
   if (s.includes(';')) throw new Error('One statement at a time');
@@ -449,29 +452,30 @@ function rowsOf(r: McpResult): Record<string, unknown>[] {
   return items;
 }
 
-async function snowflakeQuery(sql: string): Promise<SnowflakeResult> {
+async function snowflake(tool: string, args: Record<string, string>) {
   const def = await snowflakeDef(await load());
-  const statement = readOnlySql(sql);
   const t0 = Date.now();
-  const items = rowsOf(await callTool('snowflake', def, 'run_snowflake_query', { statement }, 120_000));
+  const items = rowsOf(await callTool('snowflake', def, tool, args, 120_000));
+  return { items, ms: Date.now() - t0 };
+}
+
+async function snowflakeQuery(sql: string): Promise<SnowflakeResult> {
+  const { items, ms } = await snowflake('run_snowflake_query', { statement: readOnlySql(sql) });
   const columns = [...new Set(items.flatMap((o) => Object.keys(o)))];
-  return { columns, rows: items.slice(0, 200).map((o) => columns.map((c) => o[c] ?? null)), truncated: items.length > 200, ms: Date.now() - t0 };
+  return { columns, rows: items.slice(0, 200).map((o) => columns.map((c) => o[c] ?? null)), truncated: items.length > 200, ms };
 }
 
 async function snowflakeTest(): Promise<SnowflakeTest> {
-  const def = await snowflakeDef(await load());
-  const t0 = Date.now();
-  const items = rowsOf(await callTool('snowflake', def, 'run_snowflake_query', { statement: 'select current_user() as "user", current_role() as "role", current_warehouse() as "warehouse"' }, 120_000));
-  return { row: items[0] ?? {}, ms: Date.now() - t0 };
+  const { items, ms } = await snowflake('run_snowflake_query', { statement: 'select current_user() as "user", current_role() as "role", current_warehouse() as "warehouse"' });
+  return { row: items[0] ?? {}, ms };
 }
 
 async function snowflakeObjects(kind: string, database: string, schema: string): Promise<SnowflakeObjects> {
   if (!['database', 'schema', 'table', 'view'].includes(kind)) throw new Error('kind must be database, schema, table or view');
-  const def = await snowflakeDef(await load());
   const args: Record<string, string> = { object_type: kind };
   if (database) args.database_name = database;
   if (schema) args.schema_name = schema;
-  const items = rowsOf(await callTool('snowflake', def, 'list_objects', args, 120_000));
+  const { items } = await snowflake('list_objects', args);
   return { names: items.map((o) => String(o.name ?? o.NAME ?? '')).filter(Boolean) };
 }
 
@@ -511,7 +515,7 @@ async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string)
     stop('sentry');
   }
   await save(next);
-  lokiCache = '';
+  lokiCache.clear();
   return info(repo, cwd);
 }
 

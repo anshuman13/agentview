@@ -1,26 +1,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { api, setUi, useStore } from '../store';
 import { FolderPicker, findHere, useWorkspace } from './Sessions';
-import { setOpened, useOpened } from './CodePane';
+import { setOpened, useOpened } from './opened';
 import { Icon } from '../Icon';
+import { save, stored } from './util';
 import '../explorer.css';
 
 type Entry = { name: string; dir: boolean; hidden: boolean };
 type Row = Entry & { path: string; depth: number };
 
-const load = <T,>(key: string, fallback: T): T => {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-const save = (key: string, v: unknown) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(v));
-  } catch {}
-};
 const parentOf = (p: string) => p.slice(0, Math.max(p.lastIndexOf('/'), 0));
 const ancestors = (p: string) => p.split('/').slice(0, -1).map((_, i, a) => a.slice(0, i + 1).join('/'));
 
@@ -93,17 +81,10 @@ function kindOf(name: string): Kind {
   return ['file', GRAY];
 }
 
-export function fileIcon(name: string) {
-  return kindOf(name)[0];
-}
-
-export function fileColor(name: string) {
-  return kindOf(name)[1];
-}
-
 export function FileIcon({ name, dir, open }: { name: string; dir?: boolean; open?: boolean }) {
   if (dir) return <Icon name={open ? 'folder-opened' : 'folder'} small color={FOLDER} />;
-  return <Icon name={fileIcon(name)} small color={fileColor(name)} />;
+  const [icon, color] = kindOf(name);
+  return <Icon name={icon} small color={color} />;
 }
 
 export function Explorer() {
@@ -118,9 +99,9 @@ function ExplorerView({ cwd }: { cwd: string }) {
   const [picking, setPicking] = useState(false);
   const here = findHere(useWorkspace(cwd).folders, cwd);
   const [dirs, setDirs] = useState<Record<string, Entry[]>>({});
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(load(`explorer.expanded:${cwd}`, [])));
-  const [showHidden, setShowHidden] = useState<boolean>(() => load('explorer.hidden', false));
-  const [editorsOpen, setEditorsOpen] = useState<boolean>(() => load('explorer.editors', true));
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(stored(`explorer.expanded:${cwd}`, [])));
+  const [showHidden, setShowHidden] = useState<boolean>(() => stored('explorer.hidden', false));
+  const [editorsOpen, setEditorsOpen] = useState<boolean>(() => stored('explorer.editors', true));
   const [sel, setSel] = useState<string | null>(openFile);
   const loading = useRef(new Set<string>());
   const reveal = useRef<string | null>(openFile);

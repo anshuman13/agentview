@@ -18,7 +18,7 @@ type Status = {
 };
 
 export const transport = (c: Config) => (c?.type === 'claudeai-proxy' ? 'claudeai' : c?.type ?? (c?.url ? 'http' : c?.command ? 'stdio' : undefined));
-export const commandOf = (c: Config) => c?.url ?? (c?.command ? [c.command, ...(c.args ?? [])].join(' ') : undefined);
+const commandOf = (c: Config) => c?.url ?? (c?.command ? [c.command, ...(c.args ?? [])].join(' ') : undefined);
 const envOf = (c: Config) => (c?.env && Object.keys(c.env).length ? Object.keys(c.env) : undefined);
 
 function toolsOf(s: Status, toolNames: string[]): McpTool[] | undefined {
@@ -46,12 +46,15 @@ export function mcpFrom(list: Status[], toolNames: string[] = []): McpServer[] {
 
 export const readJson = (file: string) => readFile(file, 'utf8').then(JSON.parse).catch(() => ({}));
 
+// ~/.claude.json and the repo's .mcp.json
+export const readConfigs = (cwd: string) => Promise.all([readJson(path.join(os.homedir(), '.claude.json')), readJson(path.join(cwd, '.mcp.json'))]);
+
 export function configEntries(servers: Record<string, Config> | undefined, scope: McpConfigEntry['scope']): McpConfigEntry[] {
   return Object.entries(servers ?? {}).map(([name, s]) => ({ name, scope, type: transport(s) ?? 'stdio', command: commandOf(s), env: envOf(s) }));
 }
 
 export async function mcpConfig(cwd: string): Promise<McpConfigEntry[]> {
-  const [user, repo] = await Promise.all([readJson(path.join(os.homedir(), '.claude.json')), readJson(path.join(cwd, '.mcp.json'))]);
+  const [user, repo] = await readConfigs(cwd);
   return [...configEntries(user.mcpServers, 'user'), ...configEntries(user.projects?.[cwd]?.mcpServers, 'local'), ...configEntries(repo.mcpServers, 'project')];
 }
 
@@ -66,7 +69,7 @@ export function configDefs(user: any, repo: any, cwd: string): Def[] {
 }
 
 export async function configDef(cwd: string, name: string) {
-  const [user, repo] = await Promise.all([readJson(path.join(os.homedir(), '.claude.json')), readJson(path.join(cwd, '.mcp.json'))]);
+  const [user, repo] = await readConfigs(cwd);
   return configDefs(user, repo, cwd).find((d) => d.name === name)?.def as McpServerConfig | undefined;
 }
 
@@ -90,7 +93,7 @@ const TTL = 60_000;
 const cache = new Map<string, { at: number; done: boolean; row: Promise<McpServer> }>();
 
 export async function mcpProbe(cwd: string, refresh = false): Promise<McpServer[]> {
-  const [user, repo] = await Promise.all([readJson(path.join(os.homedir(), '.claude.json')), readJson(path.join(cwd, '.mcp.json'))]);
+  const [user, repo] = await readConfigs(cwd);
   return Promise.all(
     configDefs(user, repo, cwd).map(async ({ name, scope, def }) => {
       const key = `${name}:${JSON.stringify(def)}`;

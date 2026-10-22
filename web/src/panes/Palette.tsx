@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getState, send, setUi, useStore } from '../store';
 import { toggleNotify } from '../notify';
 import { PERMISSION_MODES } from '../../../shared/protocol';
+import { Hl } from './util';
 import '../palette.css';
 
 export type Command = { id: string; label: string; key?: string };
@@ -207,8 +208,4 @@ export function Palette() {
       </div>
     </div>
   );
-}
-
-function Hl({ text, hits }: { text: string; hits: number[] }) {
-  return <>{[...text].map((c, i) => (hits.includes(i) ? <b key={i}>{c}</b> : c))}</>;
 }

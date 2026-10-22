@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { connect, getState, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../shared/protocol';
 import { Brief } from './panes/Brief';
-import { Terminal } from './panes/Terminal';
-import { CodePane } from './panes/CodePane';
-import { BrowserPane } from './panes/BrowserPane';
 import { AgentsBadge, AgentsPane, AgentsTab } from './panes/AgentsPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Palette } from './panes/Palette';
@@ -17,6 +14,11 @@ import { ConnectPopover } from './ConnectPopover';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { McpItem, McpPage } from './panes/McpStatus';
 import './page.css';
+
+const Terminal = lazy(() => import('./panes/Terminal').then((m) => ({ default: m.Terminal })));
+const CodePane = lazy(() => import('./panes/CodePane').then((m) => ({ default: m.CodePane })));
+const BrowserPane = lazy(() => import('./panes/BrowserPane').then((m) => ({ default: m.BrowserPane })));
+const Loading = () => <div style={{ margin: 'auto', padding: 24, fontSize: 13, color: 'var(--fg-faint, #6e6e6e)' }}>Loading…</div>;
 import { Observe } from './panes/Observe';
 import { Deploy } from './panes/Deploy';
 import { canNotify, toggleNotify, useNotify } from './notify';
@@ -158,7 +160,6 @@ export function App() {
   const [chatW, setChatW] = useState(() => stored('agentview.chatW', 480));
   const [termH, setTermH] = useState(() => stored('agentview.termH', 240));
   const [terminal, setTerminal] = useState(false);
-  const [termOpened, setTermOpened] = useState(terminal && window.innerWidth > 900);
   const notifying = useNotify();
   const [theme, toggleTheme] = useTheme();
 
@@ -188,7 +189,6 @@ export function App() {
   useEffect(() => {
     setTab((t) => (t === 'repos' ? 'chat' : t));
   }, [session.id]);
-
 
   useEffect(() => {
     try {
@@ -225,10 +225,6 @@ export function App() {
     setBrowse(false);
     if (narrow() && !getState().ui.follow) setTab((t) => (t === 'chat' || t === 'repos' ? 'code' : t));
   }, [openFile]);
-
-  useEffect(() => {
-    if (terminal) setTermOpened(true);
-  }, [terminal]);
 
   useEffect(() => {
     const open = (e: Event) => {
@@ -286,7 +282,7 @@ export function App() {
   const reopen = (e: React.MouseEvent) => {
     const el = e.target as HTMLElement;
     const row = el.closest<HTMLElement>('.ex-row');
-    if (row && !el.closest('.ex-close') && row.title === getState().ui.openFile) setBrowse(false);
+    if (row && !el.closest('.ex-close') && row.title === openFile) setBrowse(false);
   };
 
   return (
@@ -361,9 +357,9 @@ export function App() {
               {!chatOpen && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
             </button>
           </div>
-          <div className={`editor ${active === 'file' ? 'shown' : ''}`}><CodePane /></div>
+          <div className={`editor ${active === 'file' ? 'shown' : ''}`}><Suspense fallback={<Loading />}><CodePane /></Suspense></div>
           <div className={`editor ${active === 'agents' ? 'shown' : ''}`}>{active === 'agents' && <AgentsPane selected={agentSel} onSelect={setAgentSel} />}</div>
-          <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <BrowserPane onEmpty={() => setEditor('file')} />}</div>
+          <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <Suspense fallback={<Loading />}><BrowserPane onEmpty={() => setEditor('file')} /></Suspense>}</div>
           {page && (
             <div key={page} className={`editor ${active === page ? 'shown' : ''}`}>
               <div className={`page page-${page}`}>
@@ -388,7 +384,7 @@ export function App() {
           </div>
           <div className="panel" style={terminal ? { height: termH } : undefined}>
             {terminal && <div className="panel-sash" onPointerDown={startTermResize} />}
-            <Terminal key={session.id} chat={session.id} project={project} open={terminal || tab === 'term'} onToggle={() => tab !== 'term' && setTerminal((v) => !v)} />
+            <Suspense fallback={null}><Terminal key={session.id} chat={session.id} project={project} open={terminal || tab === 'term'} onToggle={() => tab !== 'term' && setTerminal((v) => !v)} /></Suspense>
           </div>
         </section>
 

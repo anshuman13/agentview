@@ -5,6 +5,7 @@ import { Markdown } from './Chat';
 import { FileIcon } from './Explorer';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
+import { usePoll } from './util';
 import '../github.css';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
@@ -14,7 +15,8 @@ const setList = (p: Partial<List>) => {
   list = { ...list, ...p };
   subs.forEach((f) => f());
 };
-const useList = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => list);
+const subscribe = (f: () => void) => (subs.add(f), () => void subs.delete(f));
+const useList = () => useSyncExternalStore(subscribe, () => list);
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -26,17 +28,19 @@ async function call<T>(path: string, body?: object): Promise<T> {
 }
 
 let inflight = '';
+let latest = 0;
 async function load(cwd: string, fresh = false) {
   if (!cwd || (inflight === cwd && !fresh)) return;
   inflight = cwd;
+  const req = ++latest;
   setList(list.cwd === cwd ? { loading: true } : { cwd, prs: [], error: '', loading: true });
   try {
     const prs = await call<PullRequest[]>(`/api/gh/prs${fresh ? '?fresh=1' : ''}`);
-    if (list.cwd === cwd) setList({ prs, error: '', loading: false });
+    if (req === latest) setList({ prs, error: '', loading: false });
   } catch (e) {
-    if (list.cwd === cwd) setList({ prs: [], error: message(e), loading: false });
+    if (req === latest) setList({ prs: [], error: message(e), loading: false });
   } finally {
-    if (inflight === cwd) inflight = '';
+    if (req === latest) inflight = '';
   }
 }
 
@@ -168,9 +172,8 @@ export function GitHub() {
   useEffect(() => {
     setOpen(null);
     void load(cwd);
-    const t = setInterval(() => document.visibilityState === 'visible' && root.current?.offsetParent && load(cwd, true), 60_000);
-    return () => clearInterval(t);
   }, [cwd]);
+  usePoll(root, 60_000, () => load(cwd, true), [cwd]);
   const pr = prs.find((p) => p.number === open);
 
   return (

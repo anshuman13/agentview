@@ -2,14 +2,15 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
+import { JsonlTail } from './tail.js';
 import { query, getSessionMessages, getSubagentMessages, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
-import { COMPACT_AT, type AgentEvent, type AgentStatus, type ChatEvent, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
+import { COMPACT_AT, type AgentEvent, type AgentStatus, type ChatEvent, type LoopState, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 export { BIG_BRO };
 
@@ -28,25 +29,39 @@ export function fireTime(schedule: string, now = Date.now()) {
 
 const projectDir = (cwd: string) => path.join(CLAUDE_DIR, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'));
 
-async function subagentMessages(cwd: string, sessionId: string) {
+type SubFile = { sig: string; toolUseId: string; msgs: SessionMessage[] };
+
+// Re-reads only the subagent transcripts whose file changed since the last call.
+async function subagentMessages(cwd: string, sessionId: string, cache = new Map<string, SubFile>()) {
   const dir = path.join(projectDir(cwd), sessionId, 'subagents');
-  const files = await readdir(dir).catch(() => [] as string[]);
-  const out: Record<string, SessionMessage[]> = {};
-  await Promise.all(files.filter((f) => f.endsWith('.meta.json')).map(async (f) => {
-    const meta = await readFile(path.join(dir, f), 'utf8').then(JSON.parse).catch(() => null);
-    if (!meta?.toolUseId) return;
-    out[meta.toolUseId] = await getSubagentMessages(sessionId, f.slice('agent-'.length, -'.meta.json'.length), { dir: cwd }).catch(() => []);
+  const metas = (await readdir(dir).catch(() => [] as string[])).filter((f) => f.endsWith('.meta.json'));
+  let changed = false;
+  await Promise.all(metas.map(async (f) => {
+    const agentId = f.slice('agent-'.length, -'.meta.json'.length);
+    const st = await stat(path.join(dir, `agent-${agentId}.jsonl`)).catch(() => null);
+    const sig = st ? `${st.ino}:${st.size}:${st.mtimeMs}` : 'missing';
+    const prev = cache.get(f);
+    if (prev && prev.sig === sig) return;
+    const toolUseId = prev?.toolUseId ?? (await readFile(path.join(dir, f), 'utf8').then(JSON.parse).catch(() => null))?.toolUseId;
+    if (!toolUseId) return;
+    let ok = true;
+    const msgs = await getSubagentMessages(sessionId, agentId, { dir: cwd }).catch(() => ((ok = false), []));
+    cache.set(f, { sig: ok ? sig : '', toolUseId, msgs });
+    changed = true;
   }));
-  return out;
+  for (const f of cache.keys()) if (!metas.includes(f)) (cache.delete(f), (changed = true));
+  const subs: Record<string, SessionMessage[]> = {};
+  for (const { toolUseId, msgs } of cache.values()) subs[toolUseId] = msgs;
+  return { subs, changed };
 }
 
+// The SDK builds the conversation chain from the raw entries we already hold, so nothing is re-read from disk.
 // A retry message can point at a parent the CLI never saved; the SDK then drops everything before it.
-export async function sessionMessages(sessionId: string, cwd: string) {
-  const msgs = await getSessionMessages(sessionId, { dir: cwd });
+async function sessionMessages(sessionId: string, cwd: string, entries: any[]) {
+  const msgs = await getSessionMessages(sessionId, { dir: cwd, sessionStore: { load: async () => entries, append: async () => {} } });
   const first = msgs[0];
   if (!first) return msgs;
-  const lines = (await readFile(path.join(projectDir(cwd), `${sessionId}.jsonl`), 'utf8').catch(() => '')).split('\n');
-  const raw = lines.flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } }).filter((e) => e.uuid && !e.isSidechain);
+  const raw = entries.filter((e) => e?.uuid && !e.isSidechain);
   const byId = new Map(raw.map((e) => [e.uuid, e]));
   let root = byId.get(first.uuid);
   while (root?.parentUuid && byId.has(root.parentUuid)) root = byId.get(root.parentUuid);
@@ -60,6 +75,10 @@ const ENDED: Record<string, AgentStatus> = { completed: 'done', failed: 'failed'
 const usageOf = (u: { total_tokens: number; tool_uses: number; duration_ms: number }) => ({ tokens: u.total_tokens, toolUses: u.tool_uses, durationMs: u.duration_ms });
 
 const countAll = (subs: Record<string, SessionMessage[]>) => Object.values(subs).reduce((n, m) => n + m.length, 0);
+
+const lastUuid = (msgs: SessionMessage[]) => msgs.filter((m) => m.type !== 'system').at(-1)?.uuid;
+
+const looping = (loop: LoopState) => Boolean(loop.phase) && loop.phase !== 'passed' && loop.phase !== 'failed';
 
 export class AgentSession {
   private q: Query | null = null;
@@ -98,9 +117,13 @@ export class AgentSession {
   private transcriptTimer: NodeJS.Timeout | undefined;
   private seen = '';
   private seenSubs = 0;
+  private log: JsonlTail | null = null;
+  private subFiles = new Map<string, SubFile>();
+  private dirty = true;
   private agents: AgentIds = new Map();
   private tasks = new Set<string>();
   private taskIds = new Map<string, string>();
+  private orphans = new Set<string>();
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
   constructor(public cwd: string, private resume?: string) {
@@ -159,6 +182,9 @@ export class AgentSession {
     if (!on || !sessionId || this.closed) {
       this.transcript?.close();
       this.transcript = null;
+      this.log = null;
+      this.subFiles = new Map();
+      this.dirty = true;
       return;
     }
     if (this.transcript) return;
@@ -177,10 +203,15 @@ export class AgentSession {
   private async syncTranscript(ownTurn: boolean) {
     const sessionId = this.state.session.sessionId;
     if (!sessionId || this.closed || this.state.session.running) return;
-    const msgs = await sessionMessages(sessionId, this.cwd).catch(() => null);
-    const subs = await subagentMessages(this.cwd, sessionId);
-    const last = msgs?.filter((m) => m.type !== 'system').at(-1)?.uuid;
+    const t = await this.readTranscript(sessionId).catch(() => null);
+    if (!t || this.state.session.running) return;
+    this.dirty ||= t.read !== 'same' || t.changed;
+    if (!this.dirty) return;
+    const { subs } = t;
+    const msgs = await sessionMessages(sessionId, this.cwd, t.entries).catch(() => null);
+    const last = msgs && lastUuid(msgs);
     if (!msgs || !last || this.state.session.running) return;
+    this.dirty = false;
     const subsMoved = !this.q && countAll(subs) !== this.seenSubs;
     this.seenSubs = countAll(subs);
     if (last === this.seen && !subsMoved) return;
@@ -189,10 +220,7 @@ export class AgentSession {
       this.seen = last;
       if (baseline) return;
     }
-    const { events, context, cache, agents } = historyFrom(msgs, subs);
-    this.agents = agents;
-    this.state.events = events;
-    Object.assign(this.state.session, { context, cache });
+    this.state.events = this.applyHistory(msgs, subs);
     this.emit({ type: 'init', state: this.state });
     if (!this.q) return;
     const { model, team, permissionMode } = this.state.session;
@@ -216,14 +244,31 @@ export class AgentSession {
 
   async loadHistory() {
     if (!this.resume) return;
-    const msgs = await sessionMessages(this.resume, this.cwd);
-    const subs = await subagentMessages(this.cwd, this.resume);
-    this.seen = msgs.filter((m) => m.type !== 'system').at(-1)?.uuid ?? '';
+    const { entries, subs } = await this.readTranscript(this.resume);
+    const msgs = await sessionMessages(this.resume, this.cwd, entries);
+    this.dirty = false;
+    this.seen = lastUuid(msgs) ?? '';
     this.seenSubs = countAll(subs);
+    this.state.events.push(...this.applyHistory(msgs, subs));
+  }
+
+  // Only bytes appended since the last read are parsed; unchanged subagent files are not re-read.
+  private async readTranscript(sessionId: string) {
+    const file = path.join(projectDir(this.cwd), `${sessionId}.jsonl`);
+    if (this.log?.file !== file) {
+      this.log = new JsonlTail(file);
+      this.subFiles = new Map();
+    }
+    const log = this.log;
+    const [read, { subs, changed }] = await Promise.all([log.read(), subagentMessages(this.cwd, sessionId, this.subFiles)]);
+    return { read, entries: log.entries.slice(), subs, changed };
+  }
+
+  private applyHistory(msgs: SessionMessage[], subs: Record<string, SessionMessage[]>) {
     const { events, context, cache, agents } = historyFrom(msgs, subs);
     this.agents = agents;
-    this.state.events.push(...events);
     Object.assign(this.state.session, { context, cache });
+    return [...events, ...stopAgents(events, this.orphans, Date.now())];
   }
 
   start() {
@@ -384,7 +429,7 @@ export class AgentSession {
   async interrupt() {
     if (!this.q || !this.state.session.running || this.state.session.stopping) return;
     this.planChange = null;
-    if (this.state.session.loop.phase && !['passed', 'failed'].includes(this.state.session.loop.phase)) {
+    if (looping(this.state.session.loop)) {
       this.setSession({ loop: { ...this.state.session.loop, phase: null } });
       this.endLoop('Loop stopped');
     }
@@ -406,8 +451,32 @@ export class AgentSession {
   }
 
   async stopTask(toolUseId: string) {
-    const id = this.taskIds.get(toolUseId);
-    if (id) await this.q?.stopTask(id);
+    const id = this.taskIds.get(toolUseId) ?? [...this.agents].find(([, t]) => t === toolUseId)?.[0];
+    if (id && this.q) {
+      const live = this.tasks.has(id);
+      const ok = await this.q.stopTask(id).then(() => true, () => false);
+      if (ok && live) return;
+    }
+    const a = this.agentOf(toolUseId);
+    if (!a || a.status !== 'running') return;
+    if (this.q && this.state.session.running && !a.background) return this.interrupt();
+    this.orphan([toolUseId]);
+  }
+
+  private orphan(ids: string[]) {
+    for (const id of ids) this.orphans.add(id);
+    for (const ev of stopAgents(this.state.events, ids, Date.now())) {
+      this.emit({ type: 'event', event: this.agentOf((ev as { toolUseId: string }).toolUseId)! });
+      this.pushEvent(ev);
+    }
+  }
+
+  private agentOf(toolUseId: string) {
+    return this.state.events.find((e): e is AgentEvent => e.kind === 'agent' && e.toolUseId === toolUseId);
+  }
+
+  private taskToolUse(taskId: string) {
+    return [...this.taskIds].find(([, t]) => t === taskId)?.[0] ?? this.agents.get(taskId);
   }
 
   private queue(text: string, id: string = randomUUID()) {
@@ -441,7 +510,7 @@ export class AgentSession {
   setLoop(on: boolean, max?: number) {
     const loop = this.state.session.loop;
     const next = { ...loop, on, max: Math.min(9, Math.max(1, Math.round(max ?? loop.max))) };
-    if (!on && loop.phase && !['passed', 'failed'].includes(loop.phase)) next.phase = null;
+    if (!on && looping(loop)) next.phase = null;
     this.setSession({ loop: next });
     this.system(on ? `Loop on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Loop off');
   }
@@ -467,10 +536,8 @@ export class AgentSession {
   }
 
   private loopPlanDone(toolName: string, input: Record<string, unknown>) {
-    const loop = this.state.session.loop;
-    if (toolName.endsWith('__set_status')) return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
-    if (toolName !== 'ExitPlanMode' || loop.phase !== 'plan') return null;
-    return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
+    const allow = toolName.endsWith('__set_status') || (toolName === 'ExitPlanMode' && this.state.session.loop.phase === 'plan');
+    return allow ? Promise.resolve({ behavior: 'allow' as const, updatedInput: input }) : null;
   }
 
   private endLoop(note: string | null) {
@@ -590,6 +657,10 @@ export class AgentSession {
     } finally {
       this.turns = 0;
       this.setSession({ running: false, stopping: false });
+      if (this.q === q) {
+        this.tasks.clear();
+        this.orphan(this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : [])));
+      }
     }
   }
 
@@ -601,7 +672,7 @@ export class AgentSession {
   }
 
   private patchAgent(toolUseId: string, patch: (a: AgentEvent) => Partial<AgentEvent>) {
-    const a = this.state.events.find((e): e is AgentEvent => e.kind === 'agent' && e.toolUseId === toolUseId);
+    const a = this.agentOf(toolUseId);
     if (!a) return;
     const next = patch(a);
     if (Object.entries(next).every(([k, v]) => JSON.stringify(a[k as keyof AgentEvent]) === JSON.stringify(v))) return;
@@ -673,6 +744,7 @@ export class AgentSession {
           this.tasks.add(msg.task_id);
           if (msg.tool_use_id) {
             this.taskIds.set(msg.tool_use_id, msg.task_id);
+            this.orphans.delete(msg.tool_use_id);
             this.patchAgent(msg.tool_use_id, (a) => ({
               status: 'running',
               background: msg.is_backgrounded ?? a.background,
@@ -685,7 +757,7 @@ export class AgentSession {
           if (msg.tool_use_id) this.patchAgent(msg.tool_use_id, (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
         } else if (msg.subtype === 'task_updated') {
           if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
-          const toolUseId = [...this.taskIds].find(([, t]) => t === msg.task_id)?.[0];
+          const toolUseId = this.taskToolUse(msg.task_id);
           const { status, end_time, is_backgrounded } = msg.patch;
           if (toolUseId) this.patchAgent(toolUseId, () => ({
             ...(status && ENDED[status] && { status: ENDED[status], endedAt: end_time ?? Date.now() }),
@@ -693,10 +765,11 @@ export class AgentSession {
           }));
         } else if (msg.subtype === 'task_notification') {
           this.tasks.delete(msg.task_id);
-          if (msg.tool_use_id) {
+          const toolUseId = msg.tool_use_id ?? this.taskToolUse(msg.task_id);
+          if (toolUseId) {
             const usage = msg.usage && usageOf(msg.usage);
-            this.patchAgent(msg.tool_use_id, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
-            this.taskDone(msg.tool_use_id, msg.task_id, msg.status, msg.summary);
+            this.patchAgent(toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
+            this.taskDone(toolUseId, msg.task_id, msg.status, msg.summary);
           }
         } else if (msg.subtype === 'local_command_output') {
           this.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
@@ -756,19 +829,20 @@ export class AgentSession {
         const content = msg.message.content;
         if (typeof content === 'string' && content.startsWith('<task-notification>')) for (const ev of notificationResults(content, Date.now(), this.agents)) this.pushEvent(ev);
         if (!Array.isArray(content)) return;
+        const output = (msg as { tool_use_result?: unknown }).tool_use_result;
         for (const block of content) {
           if (block.type !== 'tool_result') continue;
           const edited = this.edits.get(block.tool_use_id);
           this.edits.delete(block.tool_use_id);
           if (edited && !block.is_error) this.noteFile(path.relative(this.cwd, edited), 'tool');
           const text = toolResultText(block);
-          const output = (msg as { tool_use_result?: unknown }).tool_use_result;
-          if (this.isAgent(block.tool_use_id)) this.agentResult(block.tool_use_id, text, Boolean(block.is_error), output);
+          const agent = this.isAgent(block.tool_use_id);
+          if (agent) this.agentResult(block.tool_use_id, text, Boolean(block.is_error), output);
           if (!parent && text.startsWith(ASYNC_LAUNCH)) {
             noteLaunch(this.agents, block.tool_use_id, text);
             continue;
           }
-          const report = this.isAgent(block.tool_use_id) ? liveReport(text, output) : text.slice(0, 4000);
+          const report = agent ? liveReport(text, output) : text.slice(0, 4000);
           this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
         }
         return;

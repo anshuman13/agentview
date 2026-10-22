@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../Icon';
+import { readFlag, saveFlag, wsUrl } from './util';
 
 type Tab = { id: string; title: string; url: string };
 type State = { state: 'off' | 'connecting' | 'on'; reason: string; retry?: boolean };
@@ -23,9 +24,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const [url, setUrl] = useState('');
   const [editing, setEditing] = useState(false);
   const [full, setFull] = useState(false);
-  const [phone, setPhone] = useState(() => {
-    try { return localStorage.getItem('browser-phone') === '1'; } catch { return false; }
-  });
+  const [phone, setPhone] = useState(() => readFlag('browser-phone', false));
   const hadTabs = useRef(false);
   const emptied = useRef(onEmpty);
   emptied.current = onEmpty;
@@ -38,8 +37,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
     let delay = 1000;
     let timer: ReturnType<typeof setTimeout>;
     const open = () => {
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      const s = new WebSocket(`${proto}://${location.host}/ws?chrome`);
+      const s = new WebSocket(wsUrl('chrome'));
       ws.current = s;
       s.onopen = () => { delay = 1000; };
       s.onmessage = (ev) => {
@@ -180,7 +178,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           onClick={() => {
             const v = !phone;
             setPhone(v);
-            try { localStorage.setItem('browser-phone', v ? '1' : '0'); } catch {}
+            saveFlag('browser-phone', v);
           }}
         ><Icon name="device-mobile" /></button>
         <button className="icon-btn phone-only" title="Keyboard" onClick={() => kbd.current?.focus()}><Icon name="keyboard" /></button>

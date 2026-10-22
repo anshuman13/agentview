@@ -24,4 +24,17 @@ describe('buildAgents', () => {
     expect(agents[1].type).toBe('Plan');
     expect(agentCounts(agents)).toEqual({ running: 2, done: 1 });
   });
+
+  it('trusts an ended task over a missing tool result, and tracks the last activity', () => {
+    const events: ChatEvent[] = [
+      use('a1', { description: 'Killed' }, 1),
+      info('a1', { status: 'stopped', endedAt: 5 }),
+      use('a2', { description: 'Quiet' }, 1),
+      info('a2', {}),
+      { id: 's1', kind: 'tool_use', name: 'Read', input: { file_path: 'a.md' }, summary: '', at: 7, parent: 'a2' },
+    ];
+    const agents = buildAgents(events);
+    expect(agents.map((a) => [a.id, a.status, a.endedAt])).toEqual([['a1', 'stopped', 5], ['a2', 'running', null]]);
+    expect(agents[1].lastAt).toBe(7);
+  });
 });

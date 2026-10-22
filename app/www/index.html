@@ -125,10 +125,9 @@
       };
       retry.onclick = () => connect(current, !url.hidden);
       netbird.onclick = () => {
-        const netbirdApp = 'intent://#Intent;package=io.netbird.client;end';
-        if (window.AgentViewShell?.launch) {
-          if (!window.AgentViewShell.launch('io.netbird.client')) msg.textContent = 'NetBird is not installed.';
-        } else location.href = netbirdApp;
+        if (shell?.launch) {
+          if (!shell.launch('io.netbird.client')) msg.textContent = 'NetBird is not installed.';
+        } else location.href = 'intent://#Intent;package=io.netbird.client;end';
       };
       other.onclick = (e) => {
         e.preventDefault();

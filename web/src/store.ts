@@ -104,8 +104,12 @@ function handle(m: ServerMessage) {
         notify('Claude finished', m.event.text.trim().split('\n')[0], focus(state.session.id));
       }
       set((s) => {
-        const i = s.events.findIndex((e) => e.id === m.event.id);
-        const events = i >= 0 ? s.events.map((e, j) => (j === i ? m.event : e)) : [...s.events, m.event];
+        const cur = s.events;
+        let i = cur.length - 1;
+        while (i >= 0 && cur[i].id !== m.event.id) i--;
+        if (i < 0) return { events: [...cur, m.event] };
+        const events = cur.slice();
+        events[i] = m.event;
         return { events };
       });
       break;
@@ -138,6 +142,9 @@ function handle(m: ServerMessage) {
   }
 }
 
+// Dev-only beacon logger installed by main.tsx.
+const avlog = (ev: string) => (window as { avlog?: (e: string) => void }).avlog?.(ev);
+
 let retry: ReturnType<typeof setTimeout> | undefined;
 let heard = 0;
 
@@ -150,11 +157,11 @@ export function connect() {
   heard = Date.now();
   sock.onopen = () => {
     setUi({ connected: true, restarting: false });
-    (window as { avlog?: (e: string) => void }).avlog?.('ws open');
+    avlog('ws open');
   };
   sock.onclose = () => {
     if (ws !== sock) return;
-    (window as { avlog?: (e: string) => void }).avlog?.('ws closed');
+    avlog('ws closed');
     setUi({ connected: false });
     retry = setTimeout(connect, 1500);
   };
@@ -165,7 +172,7 @@ export function connect() {
 }
 
 function reconnect() {
-  (window as { avlog?: (e: string) => void }).avlog?.('ws stale, reconnecting');
+  avlog('ws stale, reconnecting');
   ws?.close();
   ws = null;
   connect();

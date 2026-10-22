@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from './Explorer';
 import { buildTranscript, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
+import { plural } from './util';
 import type { ChatEvent } from '../../../shared/protocol';
 import '../transcript.css';
 
@@ -39,7 +40,35 @@ export function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; 
   );
 }
 
-export function Row({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolean }) {
+function sameItem(a: Item, b: Item): boolean {
+  if (a === b) return true;
+  if (a.kind !== b.kind || a.id !== b.id) return false;
+  switch (a.kind) {
+    case 'file': {
+      const o = b as typeof a;
+      return a.path === o.path && a.error === o.error && a.count.add === o.count.add && a.count.del === o.count.del && a.uses.length === o.uses.length && a.uses.every((u, i) => u === o.uses[i]);
+    }
+    case 'step': {
+      const o = b as typeof a;
+      return a.use === o.use && a.result === o.result;
+    }
+    case 'agent': {
+      const o = b as typeof a;
+      return a.use === o.use && a.result === o.result && a.running === o.running && a.steps.length === o.steps.length && a.steps.every((s, i) => sameItem(s, o.steps[i]));
+    }
+    case 'blocked':
+      return a.ev === (b as typeof a).ev;
+    default: {
+      const x = a as Record<string, unknown>, y = b as Record<string, unknown>;
+      const keys = Object.keys(x);
+      return keys.length === Object.keys(y).length && keys.every((k) => x[k] === y[k]);
+    }
+  }
+}
+
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && sameItem(p.it, n.it));
+
+function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolean }) {
   switch (it.kind) {
     case 'user':
       return <div className={`tr-user ${it.stopping ? 'stopping' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title="Queued, sends when Claude finishes"><Icon name="clock" small /></span>}</div>;
@@ -119,7 +148,7 @@ function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: stri
         <span className="tr-mark"><i className="tr-ring" /></span>
         <span className="tr-text" title={desc}>
           {desc}
-          <span className="tr-state"> · {type && `${type} · `}{state}{steps.length > 0 && ` · ${steps.length} step${steps.length === 1 ? '' : 's'}`}</span>
+          <span className="tr-state"> · {type && `${type} · `}{state}{steps.length > 0 && ` · ${plural(steps.length, 'step')}`}</span>
           {running && <Icon name="loading" small spin />}
         </span>
         {running && (

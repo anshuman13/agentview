@@ -1,27 +1,17 @@
-import { useEffect, useState } from 'react';
 import { send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
 import { Row } from './Transcript';
 import { agentCounts, agentsOf, elapsed, tokens, type Agent } from './agents';
+import { plural, useTick } from './util';
 import type { AgentStatus } from '../../../shared/protocol';
 import '../agents.css';
 
-export const useAgents = () => useStore((s) => agentsOf(s.events));
+const useAgents = () => useStore((s) => agentsOf(s.events));
 
 export const openAgent = (id: string | null = null) => window.dispatchEvent(new CustomEvent('open-agent', { detail: id }));
 
 const STATUS_ICON: Record<AgentStatus, string> = { running: 'loading', done: 'check', failed: 'error', stopped: 'debug-stop' };
-
-function useNow(on: boolean) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    if (!on) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [on]);
-  return now;
-}
 
 const took = (a: Agent, now: number) => elapsed((a.endedAt ?? now) - a.startedAt);
 
@@ -55,7 +45,7 @@ export function AgentsBadge() {
 export function AgentsPane({ selected, onSelect }: { selected: string | null; onSelect: (id: string | null) => void }) {
   const agents = useAgents();
   const cwd = useStore((s) => s.session.cwd);
-  const now = useNow(agents.some((a) => a.status === 'running'));
+  const now = useTick(1000, agents.some((a) => a.status === 'running'));
   const list = [...agents].reverse();
   const current = agents.find((a) => a.id === selected) ?? list[0];
 
@@ -74,7 +64,7 @@ export function AgentsPane({ selected, onSelect }: { selected: string | null; on
       <ul className="ag-list">
         {list.map((a) => {
           const last = (a.status === 'running' && a.info?.progress) || a.lastStep;
-          const sub = [a.status, a.steps.length > 0 && `${a.steps.length} step${a.steps.length === 1 ? '' : 's'}`, last].filter(Boolean).join(' · ');
+          const sub = [a.status, a.steps.length > 0 && plural(a.steps.length, 'step'), last].filter(Boolean).join(' · ');
           return (
             <li key={a.id} className={`ag-row ${a.status} ${a.id === current?.id ? 'active' : ''}`} onClick={() => onSelect(a.id)}>
               <span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={a.status === 'running'} /></span>
@@ -93,7 +83,7 @@ export function AgentsPane({ selected, onSelect }: { selected: string | null; on
 function AgentDetail({ a, cwd, now, onBack }: { a: Agent; cwd: string; now: number; onBack: () => void }) {
   const running = a.status === 'running';
   const usage = a.info?.usage;
-  const meta = [a.type, a.model, took(a, now), usage && tokens(usage.tokens), usage && `${usage.toolUses} tool use${usage.toolUses === 1 ? '' : 's'}`, a.info?.background && 'background'].filter(Boolean);
+  const meta = [a.type, a.model, took(a, now), usage && tokens(usage.tokens), usage && plural(usage.toolUses, 'tool use'), a.info?.background && 'background'].filter(Boolean);
   return (
     <div className="ag-detail">
       <button className="ag-back mobile-only" onClick={onBack}><Icon name="arrow-left" small /> Agents</button>
@@ -109,6 +99,7 @@ function AgentDetail({ a, cwd, now, onBack }: { a: Agent; cwd: string; now: numb
         </div>
         <div className="ag-meta">{meta.join(' · ')}</div>
         {running && a.info?.progress && <div className="ag-progress">{a.info.progress}</div>}
+        {running && <div className="muted small" title={new Date(a.lastAt).toLocaleString()}>Last activity {elapsed(now - a.lastAt)} ago{a.lastStep && ` · ${a.lastStep}`}</div>}
       </header>
       <section className="ag-report">
         {running ? <div className="muted small">The report shows here when the agent finishes.</div> : <Markdown text={a.result?.text || '(no report)'} />}

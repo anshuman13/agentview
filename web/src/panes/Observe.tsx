@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type {
   GrafanaDashboards,
   GrafanaLogs,
@@ -40,9 +40,20 @@ const clock = (iso: string) => {
   return Number.isNaN(t) ? iso : new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
 
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
 type Load<T> = { data: T | null; error: string; busy: boolean };
 
-function useLoad<T>(url: string | null, deps: unknown[]): [Load<T>, () => void] {
+// Mirrors a request into a Load state: busy while it runs, then data or error.
+function track<T>(set: (l: Load<T>) => void, request: () => Promise<T>) {
+  set({ data: null, error: '', busy: true });
+  request().then(
+    (data) => set({ data, error: '', busy: false }),
+    (e) => set({ data: null, error: message(e), busy: false }),
+  );
+}
+
+function useLoad<T>(url: string | null): [Load<T>, () => void] {
   const [state, setState] = useState<Load<T>>({ data: null, error: '', busy: false });
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -56,7 +67,7 @@ function useLoad<T>(url: string | null, deps: unknown[]): [Load<T>, () => void] 
     return () => {
       live = false;
     };
-  }, [url, tick, ...deps]);
+  }, [url, tick]);
   return [state, () => setTick((t) => t + 1)];
 }
 
@@ -105,7 +116,7 @@ function AddToClaude({ server, added, disabled, title, onDone }: { server: 'sent
 
 function Issue({ issue, repo }: { issue: SentryIssue; repo: string }) {
   const [open, setOpen] = useState(false);
-  const [details, refresh] = useLoad<SentryDetails>(open ? `/api/observe/sentry/issue?repo=${encodeURIComponent(repo)}&id=${encodeURIComponent(issue.id)}&shortId=${encodeURIComponent(issue.shortId)}` : null, []);
+  const [details, refresh] = useLoad<SentryDetails>(open ? `/api/observe/sentry/issue?repo=${encodeURIComponent(repo)}&id=${encodeURIComponent(issue.id)}&shortId=${encodeURIComponent(issue.shortId)}` : null);
   const ask = () =>
     send({
       type: 'prompt',
@@ -170,15 +181,11 @@ function SentrySetup({ info, onInfo, onSaved }: { info: ObserveInfo; onInfo: (i:
     onSaved();
   };
 
-  const runTest = async () => {
-    setTest({ data: null, error: '', busy: true });
-    try {
+  const runTest = () =>
+    track(setTest, async () => {
       if (dirty) await save();
-      setTest({ data: await getJson<SentryTest>(api(`/api/observe/sentry/test?repo=${encodeURIComponent(info.repo)}`)), error: '', busy: false });
-    } catch (e) {
-      setTest({ data: null, error: e instanceof Error ? e.message : String(e), busy: false });
-    }
-  };
+      return getJson<SentryTest>(api(`/api/observe/sentry/test?repo=${encodeURIComponent(info.repo)}`));
+    });
 
   return (
     <div className="obs-card">
@@ -225,7 +232,7 @@ function Sentry({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInfo) 
   const cfg = info.config ?? info.guess;
   const ready = (info.sentryToken || info.inClaude.sentry) && !!cfg.sentry?.org && !!cfg.sentry?.project;
   const [setup, setSetup] = useState(!ready);
-  const [issues, refresh] = useLoad<SentryIssues>(ready ? `/api/observe/sentry/issues?repo=${encodeURIComponent(info.repo)}` : null, []);
+  const [issues, refresh] = useLoad<SentryIssues>(ready ? `/api/observe/sentry/issues?repo=${encodeURIComponent(info.repo)}` : null);
   const path = info.sentryServer === 'config' ? 'Sentry MCP from your Claude config' : info.sentryServer === 'npx' ? 'Sentry MCP (npx @sentry/mcp-server) with your token' : 'no Sentry MCP server and no token';
   useEffect(() => {
     if (!ready) setSetup(true);
@@ -259,9 +266,9 @@ function Sentry({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInfo) 
 
 function Grafana({ info }: { info: ObserveInfo }) {
   const repo = encodeURIComponent(info.repo);
-  const [dash, refreshDash] = useLoad<GrafanaDashboards>(`/api/observe/grafana/dashboards?repo=${repo}`, []);
-  const [logs, refreshLogs] = useLoad<GrafanaLogs>(`/api/observe/grafana/logs?repo=${repo}`, []);
-  const [pats, refreshPats] = useLoad<GrafanaPatterns>(`/api/observe/grafana/patterns?repo=${repo}`, []);
+  const [dash, refreshDash] = useLoad<GrafanaDashboards>(`/api/observe/grafana/dashboards?repo=${repo}`);
+  const [logs, refreshLogs] = useLoad<GrafanaLogs>(`/api/observe/grafana/logs?repo=${repo}`);
+  const [pats, refreshPats] = useLoad<GrafanaPatterns>(`/api/observe/grafana/patterns?repo=${repo}`);
   const cfg = info.config ?? info.guess;
   const selector = cfg.grafana?.lokiSelector ?? '';
   const refresh = () => {
@@ -332,13 +339,7 @@ const FIELDS: { key: keyof Omit<SnowflakeInfo, 'auth' | 'hasSecret'>; label: str
 
 function Picker({ kind, parent, value, onPick, enabled }: { kind: 'database' | 'schema' | 'table'; parent: string; value: string; onPick: (v: string) => void; enabled: boolean }) {
   const [list, setList] = useState<Load<SnowflakeObjects>>({ data: null, error: '', busy: false });
-  const load = () => {
-    setList({ data: null, error: '', busy: true });
-    getJson<SnowflakeObjects>(api(`/api/observe/snowflake/objects?kind=${kind}&${parent}`)).then(
-      (data) => setList({ data, error: '', busy: false }),
-      (e) => setList({ data: null, error: e.message, busy: false }),
-    );
-  };
+  const load = () => track(setList, () => getJson<SnowflakeObjects>(api(`/api/observe/snowflake/objects?kind=${kind}&${parent}`)));
   useEffect(() => {
     setList({ data: null, error: '', busy: false });
   }, [parent]);
@@ -367,13 +368,7 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
   const connected = sf.hasSecret && !!sf.account && !!sf.user;
   const missing = [...(['account', 'user'] as const).filter((k) => !sf[k]), ...(sf.hasSecret ? [] : [sf.auth === 'pat' ? 'token' : 'password'])];
 
-  const testConnection = () => {
-    setTest({ data: null, error: '', busy: true });
-    post<SnowflakeTest>('/api/observe/snowflake/test', {}).then(
-      (data) => setTest({ data, error: '', busy: false }),
-      (e) => setTest({ data: null, error: e.message, busy: false }),
-    );
-  };
+  const testConnection = () => track(setTest, () => post<SnowflakeTest>('/api/observe/snowflake/test', {}));
 
   useEffect(() => {
     setForm({ ...sf, secret: '' });
@@ -388,18 +383,13 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
       onInfo(await post<ObserveInfo>('/api/observe/snowflake/config', { snowflake: rest }));
       setSaveMsg('Saved');
     } catch (e) {
-      setSaveMsg(e instanceof Error ? e.message : String(e));
+      setSaveMsg(message(e));
     }
   };
 
-  const run = useCallback(() => {
-    if (!sql.trim()) return;
-    setResult({ data: null, error: '', busy: true });
-    post<SnowflakeResult>('/api/observe/snowflake/query', { sql }).then(
-      (data) => setResult({ data, error: '', busy: false }),
-      (e) => setResult({ data: null, error: e.message, busy: false }),
-    );
-  }, [sql]);
+  const run = () => {
+    if (sql.trim()) track(setResult, () => post<SnowflakeResult>('/api/observe/snowflake/query', { sql }));
+  };
 
   const pickTable = (t: string) => {
     setTable(t);
@@ -537,7 +527,7 @@ export function Observe() {
       show(await post<ObserveInfo>('/api/observe/config', { repo: info.repo, config }));
       setSaveMsg('Saved');
     } catch (e) {
-      setSaveMsg(e instanceof Error ? e.message : String(e));
+      setSaveMsg(message(e));
     }
   };
 

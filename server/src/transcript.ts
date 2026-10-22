@@ -32,7 +32,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   };
   for (const m of msgs) {
     if (m.parent_tool_use_id) continue;
-    const at = Date.parse((m as { timestamp?: string }).timestamp ?? '') || 0;
+    const at = stamp(m);
     const content = (m.message as { content?: unknown })?.content;
     const blocks: any[] = typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : [];
     for (const b of blocks) {
@@ -86,6 +86,20 @@ export function agentEvent(id: string, rawInput: unknown, at: number, parent?: s
   return { id: `${id}:agent`, kind: 'agent', toolUseId: id, description: s('description'), subagentType: s('subagent_type') || 'general-purpose', model: s('model') || null, background: input.run_in_background === true, prompt: s('prompt'), status: 'running', startedAt: at, endedAt: null, progress: null, usage: null, at, ...(parent && { parent }) };
 }
 
+export const ORPHANED = 'Stopped: this agent was no longer running, so it could not report back.';
+
+// Agents whose task is gone (process ended, server restarted) never get a completion: end them as stopped.
+export function stopAgents(events: ChatEvent[], ids: Iterable<string>, at: number, text = ORPHANED): ChatEvent[] {
+  const want = new Set(ids);
+  const out: ChatEvent[] = [];
+  for (const e of events) {
+    if (e.kind !== 'agent' || e.status !== 'running' || !want.has(e.toolUseId)) continue;
+    Object.assign(e, { status: 'stopped', endedAt: at });
+    out.push({ id: randomUUID(), kind: 'tool_result', toolUseId: e.toolUseId, text, isError: false, at, stopped: true, ...(e.parent && { parent: e.parent }) });
+  }
+  return out;
+}
+
 export function usageFrom(text: string): AgentUsage | null {
   const m = text.match(/<usage>(?:subagent_tokens|total_tokens): (\d+)\s+tool_uses: (\d+)\s+duration_ms: (\d+)\s*<\/usage>/);
   return m ? { tokens: Number(m[1]), toolUses: Number(m[2]), durationMs: Number(m[3]) } : null;
@@ -128,10 +142,8 @@ function subagentEvents(msgs: SessionMessage[], parent: string, subagents: Recor
   const events: ChatEvent[] = [];
   const agentUses = new Set<string>();
   for (const m of msgs) {
-    const at = Date.parse((m as { timestamp?: string }).timestamp ?? '') || 0;
-    const content = (m.message as { content?: unknown })?.content;
-    if (!Array.isArray(content)) continue;
-    for (const b of content) {
+    const at = stamp(m);
+    for (const b of blocksOf(m)) {
       if (m.type === 'assistant' && b.type === 'text' && b.text.trim()) events.push({ id: randomUUID(), kind: 'assistant', text: b.text, streaming: false, at, parent });
       else if (m.type === 'assistant' && b.type === 'tool_use') {
         if (AGENT_TOOLS.has(b.name)) agentUses.add(b.id);
@@ -172,9 +184,9 @@ export function finalText(msgs: SessionMessage[]) {
   return last ? blocksOf(last).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim() : '';
 }
 
-export const stripTrailer = (text: string) => text.replace(TRAILER, '').trim();
+const stripTrailer = (text: string) => text.replace(TRAILER, '').trim();
 
-export function agentReport(text: string, sub?: SessionMessage[]) {
+function agentReport(text: string, sub?: SessionMessage[]) {
   return (sub && handbackOf(sub)) ?? stripTrailer(text);
 }
 

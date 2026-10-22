@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { MCP_BAD, type McpServer } from '../../../shared/protocol';
 import { api, send, useStore } from '../store';
 import { Icon } from '../Icon';
+import { useTick } from './util';
 import '../mcp.css';
 
 const STATUS: Record<string, [tone: string, label: string]> = {
@@ -14,7 +15,7 @@ const STATUS: Record<string, [tone: string, label: string]> = {
   probing: ['wait', 'Checking'],
 };
 const statusOf = (s: string) => STATUS[s] ?? ['off', s];
-export const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
+const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
 const stateOf = (r: { status: string; live?: boolean }): [tone: string, label: string] => (r.status === 'needs-auth' && !r.live ? ['off', 'OAuth via Claude'] : statusOf(r.status));
 
 const SCOPES: [id: string, title: string, where: string][] = [
@@ -26,7 +27,8 @@ const SCOPES: [id: string, title: string, where: string][] = [
 ];
 const scopeInfo = (id: string) => SCOPES.find((s) => s[0] === id) ?? [id, id[0].toUpperCase() + id.slice(1), ''];
 
-export const openMcp = () => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'page:mcp' } }));
+const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
+const openMcp = () => command('page:mcp');
 
 export function McpItem() {
   const mcp = useStore((s) => s.session.mcp);
@@ -52,7 +54,7 @@ export function merge(probed: McpServer[], live: McpServer[]): Row[] {
   return rows;
 }
 
-export function sections(rows: Row[]): [string, Row[]][] {
+function sections(rows: Row[]): [string, Row[]][] {
   const by = new Map<string, Row[]>();
   for (const r of rows) by.set(r.scope ?? 'other', [...(by.get(r.scope ?? 'other') ?? []), r]);
   const order = (k: string) => SCOPES.findIndex((s) => s[0] === k) + 1 || 99;
@@ -74,7 +76,6 @@ export function McpPage() {
   const [at, setAt] = useState(0);
   const [error, setError] = useState('');
   const [sel, setSel] = useState<string | null>(null);
-  const [, tick] = useState(0);
 
   const load = (refresh = false) => {
     setBusy(true);
@@ -86,7 +87,7 @@ export function McpPage() {
       .finally(() => setBusy(false));
   };
   useEffect(() => load(), [id]);
-  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 15000); return () => clearInterval(t); }, []);
+  useTick(15000);
 
   const rows = useMemo(() => merge(probed ?? [], mcp), [probed, mcp]);
   const current = rows.find((r) => r.name === sel) ?? null;
@@ -264,7 +265,7 @@ function Login({ name }: { name: string }) {
     <div className="mcp-login">
       <div className="mcp-login-acts">
         <button onClick={start} disabled={busy}><Icon name={busy ? 'loading' : 'key'} small spin={busy} /> {opened ? 'Open again' : 'Log in'}</button>
-        {opened && <button onClick={() => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'tab:browser' } }))}><Icon name="globe" small /> Show browser</button>}
+        {opened && <button onClick={() => command('tab:browser')}><Icon name="globe" small /> Show browser</button>}
       </div>
       {opened && <div className="muted">The login page is open in Chrome on the Mac. This updates once you finish there.</div>}
       {error && <div className="bad">{error}</div>}

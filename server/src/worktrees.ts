@@ -97,7 +97,7 @@ export async function removeWorktree(id: string, openCwds: string[]) {
   await run('paseo', ['workspace', 'archive', id]);
 }
 
-export async function paseoProjects() {
+async function paseoProjects() {
   const { stdout } = await run('paseo', ['project', 'ls', '--json']);
   return JSON.parse(stdout) as Array<{ projectId: string; name: string; path: string }>;
 }
