@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
 
 type Mac = { name: string; url: string; running: number };
-type Connect = { hostname: string; macs: Mac[] };
+type Connect = { hostname: string; macs: Mac[]; netbird?: string };
 
 type Shell = { AgentViewShell?: { remember?: (url: string, name: string) => void } };
 
@@ -64,6 +64,7 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
   const name = useMacName();
   const [macs, setMacs] = useState<Mac[] | null>(null);
   const [error, setError] = useState('');
+  const [netbird, setNetbird] = useState('');
   const [busy, setBusy] = useState('');
 
   const go = async (m: Mac) => {
@@ -79,7 +80,10 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     fetch(`/api/connect?port=${location.port}`)
       .then((r) => r.json())
-      .then((d: Connect) => setMacs(d.macs ?? []))
+      .then((d: Connect) => {
+        setMacs(d.macs ?? []);
+        setNetbird(d.netbird ?? '');
+      })
       .catch((e) => setError(String(e)));
   }, []);
 
@@ -113,7 +117,8 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
         </ul>
         {error && <div className="connect-body muted">{error}</div>}
         {!error && !macs && <div className="connect-body muted">Looking on NetBird</div>}
-        {macs && macs.length === 0 && <div className="connect-body muted">No other Mac on NetBird runs AgentView.</div>}
+        {netbird && <div className="connect-body warn">{netbird}</div>}
+        {macs && macs.length === 0 && !netbird && <div className="connect-body muted">No other Mac on NetBird runs AgentView.</div>}
         <div className="connect-note muted small">Macs on NetBird that run AgentView. Click one to switch to it.</div>
       </div>
     </div>

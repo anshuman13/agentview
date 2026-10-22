@@ -7,18 +7,28 @@ export type Mac = { name: string; url: string; running: number };
 const NETBIRD = ['/opt/homebrew/bin/netbird', '/usr/local/bin/netbird'].find((p) => existsSync(p)) ?? 'netbird';
 const PEERS_TTL = 15_000;
 
-let cached: { at: number; peers: Promise<string[]> } | undefined;
+type Peers = { hosts: string[]; problem?: string };
+type Status = { daemonStatus?: string; management?: { error?: string }; peers?: { details?: { fqdn: string }[] | null } };
+
+let cached: { at: number; peers: Promise<Peers> } | undefined;
+
+export function netbirdProblem(d: Status) {
+  if (d.daemonStatus === 'Connected') return undefined;
+  if (/login has expired/i.test(d.management?.error ?? '')) return 'NetBird login on this Mac has expired. Run netbird up to sign in again.';
+  if (d.daemonStatus === 'NeedsLogin') return 'NetBird on this Mac is not signed in. Run netbird up.';
+  return `NetBird on this Mac is ${d.daemonStatus ?? 'not connected'}.`;
+}
 
 function peers() {
   if (cached && Date.now() - cached.at < PEERS_TTL) return cached.peers;
-  const found = new Promise<string[]>((resolve) =>
+  const found = new Promise<Peers>((resolve) =>
     execFile(NETBIRD, ['status', '--json'], { timeout: 5000 }, (err, out) => {
-      if (err) return resolve([]);
+      if (err) return resolve({ hosts: [], problem: 'NetBird is not running on this Mac.' });
       try {
-        const status = JSON.parse(out) as { peers?: { details?: { fqdn: string }[] } };
-        resolve((status.peers?.details ?? []).map((p) => p.fqdn).filter(Boolean));
+        const status = JSON.parse(out) as Status;
+        resolve({ hosts: (status.peers?.details ?? []).map((p) => p.fqdn).filter(Boolean), problem: netbirdProblem(status) });
       } catch {
-        resolve([]);
+        resolve({ hosts: [], problem: 'Could not read the NetBird status.' });
       }
     }),
   );
@@ -36,8 +46,9 @@ export const thisMac = (() => {
   }
 })();
 
-export async function otherMacs(port: string): Promise<Mac[]> {
-  const probes = (await peers()).map(async (fqdn) => {
+export async function otherMacs(port: string): Promise<{ macs: Mac[]; problem?: string }> {
+  const { hosts, problem } = await peers();
+  const probes = hosts.map(async (fqdn) => {
     const url = `http://${fqdn}:${port}`;
     try {
       const res = await fetch(`${url}/api/connect?peer=1`, { signal: AbortSignal.timeout(1500) });
@@ -48,5 +59,5 @@ export async function otherMacs(port: string): Promise<Mac[]> {
       return null;
     }
   });
-  return (await Promise.all(probes)).filter((m): m is Mac => m !== null);
+  return { macs: (await Promise.all(probes)).filter((m): m is Mac => m !== null), problem };
 }

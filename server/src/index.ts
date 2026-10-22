@@ -360,8 +360,8 @@ const server = http.createServer(async (req, res) => {
         .filter((a) => a && a.family === 'IPv4' && !a.internal && allowedPeer(a.address))
         .map((a) => a!.address);
       const running = [...live.values()].filter(({ chat }) => chat.state.session.running).length;
-      const macs = url.searchParams.has('peer') ? [] : await otherMacs(port);
-      return json({ hostname: thisMac, urls: ips.map((ip) => `http://${ip}:${port}`), running, macs });
+      const { macs, problem } = url.searchParams.has('peer') ? { macs: [] } : await otherMacs(port);
+      return json({ hostname: thisMac, urls: ips.map((ip) => `http://${ip}:${port}`), running, macs, netbird: problem });
     }
 
     if (DEV_WEB) {
