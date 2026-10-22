@@ -13,7 +13,8 @@ import { connect as connectChrome, openChrome, openInChrome, ownProfile } from '
 import { getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway } from './notify.js';
-import { configDef, mcpConfig, mcpProbe } from './mcp.js';
+import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './mcp.js';
+import type { McpServerDef } from './mcpClient.js';
 import { listBin, removeSession, restoreSession } from './bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './files.js';
 import { github } from './github.js';
@@ -335,6 +336,15 @@ const server = http.createServer(async (req, res) => {
       return json({ ok: true });
     }
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
+    if (url.pathname === '/api/mcp/call' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req));
+      const name = String(body.server ?? '');
+      const def = await configDef(chat.cwd, name);
+      if (!def) return json({ error: `${name} is not in your MCP config` }, 404);
+      if (!(await inSettings(chat.cwd, name))) return json({ error: `${name} is not approved in Claude Code, so AgentView does not start it` }, 403);
+      const r = await mcpCall(chat.cwd, name, def as McpServerDef, String(body.tool ?? ''), body.args ?? {});
+      return json(r, 'error' in r ? 400 : 200);
+    }
     if (url.pathname === '/api/sessions') {
       const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
       const binned = new Set(bin.map((b) => b.sessionId));

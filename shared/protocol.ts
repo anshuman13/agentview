@@ -79,7 +79,9 @@ export type LoopPhase = 'plan' | 'build' | 'test' | 'passed' | 'failed';
 
 export type LoopState = { on: boolean; max: number; round: number; phase: LoopPhase | null };
 
-export type McpTool = { name: string; description?: string; readOnly?: boolean; destructive?: boolean };
+export type McpProp = { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown; title?: string; maxLength?: number };
+export type McpSchema = { type?: string; properties?: Record<string, McpProp>; required?: string[] };
+export type McpTool = { name: string; description?: string; readOnly?: boolean; destructive?: boolean; inputSchema?: McpSchema };
 
 export type McpServer = {
   name: string;

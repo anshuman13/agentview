@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatEvent } from '../../../shared/protocol';
-import { mcpCalls, merge, toolId } from './McpStatus';
+import { argsOf, fieldsOf, initialValues, mcpCalls, merge, toolId } from './McpStatus';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -20,5 +20,30 @@ describe('mcpCalls', () => {
     expect(linear.calls.map((c) => [c.tool, c.result?.isError])).toEqual([['get_issue', false], ['list_issues', true]]);
     expect(mcpCalls(events).has('agentview')).toBe(false);
     expect(toolId('claude.ai Linear', 'get_issue')).toBe('mcp__claude_ai_Linear__get_issue');
+  });
+});
+
+describe('fieldsOf', () => {
+  it('maps a tool input schema to form fields and back to arguments', () => {
+    const fields = fieldsOf({
+      properties: {
+        sql: { type: 'string', description: 'SQL to run' },
+        name: { type: 'string' },
+        limit: { type: 'integer', default: 10 },
+        verbose: { type: 'boolean' },
+        order: { type: 'string', enum: ['asc', 'desc'] },
+        filter: { type: 'object' },
+        since: { type: ['string', 'null'] },
+      },
+      required: ['sql', 'order'],
+    });
+    expect(fields.map((f) => [f.name, f.kind, f.required])).toEqual([
+      ['sql', 'long', true], ['name', 'text', false], ['limit', 'integer', false], ['verbose', 'bool', false], ['order', 'enum', true], ['filter', 'json', false], ['since', 'text', false],
+    ]);
+    const values = initialValues(fields);
+    expect(values).toEqual({ sql: '', name: '', limit: '10', order: '"asc"', filter: '', since: '' });
+    expect(() => argsOf(fields, values)).toThrow('sql is required');
+    expect(argsOf(fields, { ...values, sql: 'select 1', verbose: true, filter: '{"a":1}' })).toEqual({ sql: 'select 1', limit: 10, verbose: true, order: 'asc', filter: { a: 1 } });
+    expect(() => argsOf(fields, { ...values, sql: 'x', limit: '1.5' })).toThrow('limit must be a whole number');
   });
 });

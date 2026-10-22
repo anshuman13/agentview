@@ -183,8 +183,8 @@ function client(key: string, def: McpServerDef, timeout: number, cwd?: string) {
   return c;
 }
 
-async function call(key: string, def: McpServerDef, method: string, params: unknown, timeout: number) {
-  const c = client(key, def, timeout);
+async function call(key: string, def: McpServerDef, method: string, params: unknown, timeout: number, cwd?: string) {
+  const c = client(key, def, timeout, cwd);
   await c.ready;
   return c.request(method, params, timeout);
 }
@@ -194,8 +194,8 @@ export async function listTools(key: string, def: McpServerDef, timeout = 30_000
   return r?.tools ?? [];
 }
 
-export async function callTool(key: string, def: McpServerDef, name: string, args: Record<string, unknown> = {}, timeout = 30_000): Promise<McpResult> {
-  const r = (await call(key, def, 'tools/call', { name, arguments: args }, timeout)) as McpResult;
+export async function callTool(key: string, def: McpServerDef, name: string, args: Record<string, unknown> = {}, timeout = 30_000, cwd?: string): Promise<McpResult> {
+  const r = (await call(key, def, 'tools/call', { name, arguments: args }, timeout, cwd)) as McpResult;
   if (r?.isError) throw new Error(`${name}: ${text(r) || 'tool error'}`);
   return r;
 }

@@ -2,8 +2,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
-import type { McpConfigEntry, McpServer, McpTool } from '../../shared/protocol.js';
-import { probe, stop, type McpServerDef } from './mcpClient.js';
+import type { McpConfigEntry, McpSchema, McpServer, McpTool } from '../../shared/protocol.js';
+import { callTool, probe, stop, text, type McpServerDef } from './mcpClient.js';
 
 type Config = McpServerDef | undefined;
 type Status = {
@@ -104,7 +104,7 @@ export async function probeOne(name: string, scope: string, def: McpServerDef, c
   const key = `probe:${cwd}:${name}:${JSON.stringify(def)}`;
   try {
     const { info, tools } = await run(key, def, cwd);
-    return { ...base, status: 'connected', version: info?.version, tools: tools.map((t) => ({ name: t.name, description: t.description, readOnly: t.annotations?.readOnlyHint, destructive: t.annotations?.destructiveHint })) };
+    return { ...base, status: 'connected', version: info?.version, tools: tools.map((t) => ({ name: t.name, description: t.description, readOnly: t.annotations?.readOnlyHint, destructive: t.annotations?.destructiveHint, inputSchema: t.inputSchema as McpSchema | undefined })) };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ...base, status: authError(msg) ? 'needs-auth' : 'failed', error: msg };
@@ -132,4 +132,19 @@ export async function mcpProbe(cwd: string, refresh = false): Promise<McpServer[
       return entry.row;
     }),
   );
+}
+
+export async function mcpCall(cwd: string, name: string, def: McpServerDef, tool: string, args: Record<string, unknown>, run = callTool): Promise<{ text: string; isError: boolean } | { error: string }> {
+  const type = transport(def);
+  if (type === 'claudeai' || type === 'sse') return { error: `${name} is ${type === 'sse' ? 'an SSE server' : 'a claude.ai connector'}, so the MCP tab cannot run its tools. Ask Claude to use it in the chat.` };
+  const key = `call:${cwd}:${name}:${JSON.stringify(def)}`;
+  try {
+    return { text: text(await run(key, def, tool, args, 60_000, cwd)), isError: false };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (authError(msg) || /needs login/.test(msg)) return { error: `${name} needs an OAuth login, so the MCP tab cannot run its tools. Ask Claude to use it in the chat.` };
+    return { text: msg, isError: true };
+  } finally {
+    stop(key);
+  }
 }

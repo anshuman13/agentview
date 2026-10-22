@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MCP_BAD, type ChatEvent, type McpServer } from '../../../shared/protocol';
+import { MCP_BAD, type ChatEvent, type McpSchema, type McpServer, type McpTool } from '../../../shared/protocol';
 import { api, notice, send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { useTick } from './util';
@@ -55,7 +55,8 @@ export function merge(probed: McpServer[], live: McpServer[]): Row[] {
   const rows: Row[] = probed.map((p) => ({ ...p }));
   for (const m of live) {
     const i = rows.findIndex((r) => r.name === m.name);
-    const tools = m.tools?.some((t) => t.description) ? m.tools : rows[i]?.tools ?? m.tools;
+    const probedTools = rows[i]?.tools;
+    const tools = m.tools?.some((t) => t.description) ? m.tools.map((t) => ({ inputSchema: probedTools?.find((p) => p.name === t.name)?.inputSchema, ...t })) : probedTools ?? m.tools;
     if (i >= 0) rows[i] = { ...rows[i], ...m, error: m.error, tools, scope: rows[i].scope ?? m.scope, live: true };
     else rows.push({ ...m, live: true });
   }
@@ -87,20 +88,66 @@ const usageText = (u: Usage) => `${plural(u.calls.length, 'call')}${u.errors ? `
 const brief = (input: Record<string, unknown>) =>
   Object.entries(input).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join(', ').replace(/\s+/g, ' ').slice(0, 160);
 
-async function cite(c: Call) {
-  const name = `mcp__${c.server}__${c.tool}`;
-  const text = c.result?.text ?? '';
-  const verb = c.result?.isError ? 'failed with' : 'returned';
-  if (text.length <= 2000) return insert(`Earlier ${name} call ${verb}: ${text.slice(0, 300).trim()}${text.length > 300 ? '...' : ''} `);
+async function share(lead: string, text: string, file: string) {
+  if (text.length <= 2000) return insert(`${lead}: ${text.slice(0, 300).trim()}${text.length > 300 ? '...' : ''} `);
   try {
-    const r = await fetch(api(`/api/paste?name=${encodeURIComponent(`${c.server}-${c.tool}.txt`)}`), { method: 'POST', headers: { 'content-type': 'text/plain' }, body: text });
+    const r = await fetch(api(`/api/paste?name=${encodeURIComponent(file)}`), { method: 'POST', headers: { 'content-type': 'text/plain' }, body: text });
     const body = await r.json();
     if (!r.ok) throw new Error(body.error);
-    insert(`Earlier ${name} call ${verb}: [File: ${body.path}] `);
+    insert(`${lead}: [File: ${body.path}] `);
   } catch (err) {
     notice(`Could not attach the result: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
+
+const cite = (c: Call) => share(`Earlier mcp__${c.server}__${c.tool} call ${c.result?.isError ? 'failed with' : 'returned'}`, c.result?.text ?? '', `${c.server}-${c.tool}.txt`);
+
+export type Field = { name: string; kind: 'text' | 'long' | 'number' | 'integer' | 'bool' | 'enum' | 'json'; required: boolean; description?: string; options?: unknown[]; default?: unknown };
+export type Values = Record<string, string | boolean>;
+const LONG = /\b(sql|body|content|markdown|code|script|prompt|message|logql|promql|json|yaml|multi-?line)\b/i;
+
+export function fieldsOf(schema?: McpSchema): Field[] {
+  const required = new Set(schema?.required ?? []);
+  return Object.entries(schema?.properties ?? {}).map(([name, p]) => {
+    const type = [p.type].flat().find((t) => t && t !== 'null');
+    const kind: Field['kind'] = p.enum?.length ? 'enum'
+      : type === 'string' ? (LONG.test(`${name} ${p.description ?? ''}`) || (p.maxLength ?? 0) > 200 ? 'long' : 'text')
+      : type === 'number' || type === 'integer' ? type
+      : type === 'boolean' ? 'bool' : 'json';
+    return { name, kind, required: required.has(name), description: p.description, options: p.enum, default: p.default };
+  });
+}
+
+export function initialValues(fields: Field[]): Values {
+  const v: Values = {};
+  for (const f of fields) {
+    if (f.kind === 'bool') { if (f.default !== undefined || f.required) v[f.name] = f.default === true; }
+    else if (f.kind === 'enum') v[f.name] = f.default !== undefined ? JSON.stringify(f.default) : f.required ? JSON.stringify(f.options![0]) : '';
+    else if (f.kind === 'json') v[f.name] = f.default !== undefined ? JSON.stringify(f.default, null, 2) : '';
+    else v[f.name] = f.default !== undefined ? String(f.default) : '';
+  }
+  return v;
+}
+
+export function argsOf(fields: Field[], values: Values): Record<string, unknown> {
+  const args: Record<string, unknown> = {};
+  for (const f of fields) {
+    const v = values[f.name];
+    if (f.kind === 'bool') { if (v !== undefined) args[f.name] = !!v; continue; }
+    const s = typeof v === 'string' ? v : '';
+    if (!s.trim()) { if (f.required) throw new Error(`${f.name} is required`); continue; }
+    if (f.kind === 'number' || f.kind === 'integer') {
+      const n = Number(s);
+      if (!Number.isFinite(n) || (f.kind === 'integer' && !Number.isInteger(n))) throw new Error(`${f.name} must be ${f.kind === 'integer' ? 'a whole number' : 'a number'}`);
+      args[f.name] = n;
+    } else if (f.kind === 'enum' || f.kind === 'json') {
+      try { args[f.name] = JSON.parse(s); } catch { throw new Error(`${f.name} is not valid JSON`); }
+    } else args[f.name] = s;
+  }
+  return args;
+}
+
+const runnable = (r: Row) => r.type !== 'claudeai' && r.type !== 'sse' && r.status !== 'needs-auth' && ['user', 'project', 'local'].includes(r.scope ?? '');
 
 function sections(rows: Row[]): [string, Row[]][] {
   const by = new Map<string, Row[]>();
@@ -234,7 +281,8 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
   const [tone, label] = stateOf(row);
   const [, scope, where] = scopeInfo(row.scope ?? 'other');
   const [q, setQ] = useState('');
-  useEffect(() => setQ(''), [row.name]);
+  const [run, setRun] = useState<string | null>(null);
+  useEffect(() => { setQ(''); setRun(null); }, [row.name]);
   const url = row.command?.startsWith('http');
   const tools = (row.tools ?? []).filter((t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) || t.description?.toLowerCase().includes(q.toLowerCase()));
   return (
@@ -278,9 +326,10 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
       </div>
       <div className="mcp-tools">
         {tools.map((t) => (
-          <div key={t.name} className="mcp-tool">
-            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="mcp-tag ok">read only</span>}{t.destructive && <span className="mcp-tag bad">destructive</span>}<span className="spacer" /><button className="icon-btn mcp-insert" title={`Add ${toolId(row.name, t.name)} to chat`} onClick={() => insert(`Use the ${toolId(row.name, t.name)} tool to `)}><Icon name="insert" small /></button></div>
+          <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
+            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="mcp-tag ok">read only</span>}{t.destructive && <span className="mcp-tag bad">destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <button className={`icon-btn mcp-insert ${run === t.name ? 'on' : ''}`} title={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))}><Icon name={run === t.name ? 'close' : 'play'} small /></button>}<button className="icon-btn mcp-insert" title={`Add ${toolId(row.name, t.name)} to chat`} onClick={() => insert(`Use the ${toolId(row.name, t.name)} tool to `)}><Icon name="insert" small /></button></div>
             {t.description && <div className="d">{t.description}</div>}
+            {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
           </div>
         ))}
         {row.tools && row.tools.length > 0 && tools.length === 0 && <div className="muted">No tool matches</div>}
@@ -309,6 +358,70 @@ function CallRow({ call }: { call: Call }) {
         </div>
       )}
     </div>
+  );
+}
+
+type Out = { text: string; isError: boolean; args: Record<string, unknown> };
+
+function RunForm({ server, tool }: { server: string; tool: McpTool }) {
+  const fields = useMemo(() => fieldsOf(tool.inputSchema), [tool]);
+  const [values, setValues] = useState(() => initialValues(fields));
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [out, setOut] = useState<Out | null>(null);
+  const set = (k: string, v: string | boolean) => { setValues((o) => ({ ...o, [k]: v })); setArmed(false); };
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    let args: Record<string, unknown>;
+    try { args = argsOf(fields, values); } catch (err) { return setError((err as Error).message); }
+    if (tool.destructive && !armed) return setArmed(true);
+    setArmed(false);
+    setBusy(true);
+    post('/api/mcp/call', { server, tool: tool.name, args })
+      .then((r: Out) => setOut({ text: r.text, isError: r.isError, args }), (err) => setError(err.message))
+      .finally(() => setBusy(false));
+  };
+  const lead = (o: Out) => `${toolId(server, tool.name)} run from the MCP tab with ${JSON.stringify(o.args).slice(0, 200)} ${o.isError ? 'failed with' : 'returned'}`;
+  const input = (f: Field) => {
+    const v = values[f.name];
+    const str = typeof v === 'string' ? v : '';
+    if (f.kind === 'bool') return <input type="checkbox" checked={!!v} onChange={(e) => set(f.name, e.target.checked)} />;
+    if (f.kind === 'enum') return (
+      <select value={str} onChange={(e) => set(f.name, e.target.value)}>
+        {!f.required && <option value="">Not set</option>}
+        {f.options!.map((o) => <option key={JSON.stringify(o)} value={JSON.stringify(o)}>{String(o)}</option>)}
+      </select>
+    );
+    if (f.kind === 'long' || f.kind === 'json') return <textarea value={str} rows={f.kind === 'json' ? 3 : 4} placeholder={f.kind === 'json' ? 'JSON' : undefined} onChange={(e) => set(f.name, e.target.value)} spellCheck={false} />;
+    return <input type={f.kind === 'text' ? 'text' : 'number'} step={f.kind === 'integer' ? 1 : 'any'} value={str} onChange={(e) => set(f.name, e.target.value)} spellCheck={false} />;
+  };
+  return (
+    <form className="mcp-run" onSubmit={submit}>
+      {fields.map((f) => (
+        <label key={f.name} className={`mcp-field ${f.kind === 'bool' ? 'bool' : ''}`}>
+          {f.kind === 'bool' && input(f)}
+          <span className="k"><span className="mono">{f.name}</span>{f.required && <span className="req" title="Required">*</span>}<span className="ty mono">{f.kind === 'long' ? 'text' : f.kind}</span></span>
+          {f.kind !== 'bool' && input(f)}
+          {f.description && <span className="d">{f.description}</span>}
+        </label>
+      ))}
+      {!fields.length && <div className="muted">This tool takes no input.</div>}
+      <div className="mcp-run-acts">
+        <button type="submit" className={armed ? 'danger' : 'primary'} disabled={busy}>
+          <Icon name={busy ? 'loading' : armed ? 'warning' : 'play'} small spin={busy} /> {busy ? 'Running' : armed ? 'Confirm run' : 'Run'}
+        </button>
+        {armed && <span className="bad">This tool can change or delete data. Click again to run it.</span>}
+        {error && <span className="bad">{error}</span>}
+      </div>
+      {out && (
+        <div className="mcp-run-out">
+          <pre className={out.isError ? 'bad' : ''}>{out.text || '(no output)'}</pre>
+          <button type="button" onClick={() => void share(lead(out), out.text, `${slug(server)}-${tool.name}.txt`)}><Icon name="insert" small /> Add result to chat</button>
+        </div>
+      )}
+    </form>
   );
 }
 
