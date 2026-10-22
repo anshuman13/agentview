@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import { brotliCompress, gzip, constants as zlib } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './terminal.js';
-import { connect as connectChrome, openChrome, openInChrome } from './chrome.js';
+import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome.js';
 import { deleteSession, getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway } from './notify.js';
@@ -31,6 +31,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIST = path.resolve(here, '../../web/dist');
 const DEV_WEB = process.env.AGENTVIEW_DEV_WEB;
 const APK = path.resolve(here, '../../dist/AgentView.apk');
+
+if (ownProfile()) {
+  process.env.BROWSER = path.resolve(here, '../browser.sh');
+  process.env.AGENTVIEW_PORT = String(PORT);
+}
 
 const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|\.tox)(\/|$)/;
 
