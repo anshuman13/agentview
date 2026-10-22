@@ -8,7 +8,7 @@ import { query, getSessionMessages, getSubagentMessages, type McpServerConfig, t
 import { COMPACT_AT, type AgentEvent, type AgentStatus, type ChatEvent, type LoopState, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
-import { mcpFrom } from './mcp.js';
+import { inSettings, mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
@@ -333,6 +333,10 @@ export class AgentSession {
 
   async addMcp(name: string, def: McpServerConfig) {
     this.start();
+    if (await inSettings(this.cwd, name)) {
+      await this.refreshMcp();
+      return { error: undefined };
+    }
     this.addedMcp[name] = def;
     this.mcpServers = { ...this.mcpServers, [name]: def };
     const r = await this.q!.setMcpServers(this.mcpServers);

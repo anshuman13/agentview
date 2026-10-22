@@ -6,6 +6,17 @@ export type McpInfo = { name?: string; version?: string };
 export type McpContent = { type: string; text?: string; [k: string]: unknown };
 export type McpResult = { content?: McpContent[]; structuredContent?: unknown; isError?: boolean };
 
+type Env = Record<string, string | undefined>;
+
+export const expand = (s: string, env: Env) => s.replace(/\$\{([^}:]+)(?::-([^}]*))?\}/g, (m, k: string, d?: string) => env[k] ?? d ?? m);
+const expandAll = (o: Record<string, string> | undefined, env: Env) => o && Object.fromEntries(Object.entries(o).map(([k, v]) => [k, expand(v, env)]));
+
+export function expandDef(def: McpServerDef, base: Env = process.env): McpServerDef {
+  const env = expandAll(def.env, base);
+  const all = { ...base, ...env };
+  return { ...def, env, command: def.command && expand(def.command, all), args: def.args?.map((a) => expand(a, all)), url: def.url && expand(def.url, all), headers: expandAll(def.headers, all) };
+}
+
 const PROTOCOL = '2025-06-18';
 const INIT = { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'agentview', version: '1' } };
 
@@ -29,9 +40,9 @@ class Stdio implements Transport {
   info?: McpInfo;
   ready: Promise<void>;
 
-  constructor(private key: string, def: McpServerDef, timeout: number) {
+  constructor(private key: string, def: McpServerDef, timeout: number, cwd?: string) {
     if (!def.command) throw new Error(`MCP server ${key} has no command`);
-    this.proc = spawn(def.command, def.args ?? [], { env: { ...process.env, ...def.env }, stdio: ['pipe', 'pipe', 'pipe'] });
+    this.proc = spawn(def.command, def.args ?? [], { cwd, env: { ...process.env, ...def.env }, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
     this.proc.stdout!.setEncoding('utf8').on('data', (c: string) => this.onData(c));
     this.proc.stderr!.setEncoding('utf8').on('data', (c: string) => (this.stderr = (this.stderr + c).slice(-4000)));
     this.proc.on('error', (err) => this.die(`${key} failed to start: ${err.message}`));
@@ -98,7 +109,11 @@ class Stdio implements Transport {
 
   stop() {
     this.die(`${this.key} stopped`);
-    this.proc.kill();
+    try {
+      process.kill(-this.proc.pid!, 'SIGTERM');
+    } catch {
+      this.proc.kill();
+    }
   }
 }
 
@@ -120,19 +135,23 @@ class Http implements Transport {
   private async post(body: unknown, timeout: number) {
     const headers: Record<string, string> = { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...this.def.headers };
     if (this.session) headers['mcp-session-id'] = this.session;
-    const res = await fetch(this.def.url!, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeout) });
-    if (res.status === 401 || res.status === 403) throw new Error(`${this.key} needs login (HTTP ${res.status})`);
-    if (!res.ok) throw new Error(`${this.key} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
-    const sid = res.headers.get('mcp-session-id');
-    if (sid) this.session = sid;
-    return res;
+    try {
+      const res = await fetch(this.def.url!, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeout) });
+      if (res.status === 401 || res.status === 403) throw new Error(`${this.key} needs login (HTTP ${res.status})`);
+      if (!res.ok) throw new Error(`${this.key} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const sid = res.headers.get('mcp-session-id');
+      if (sid) this.session = sid;
+      return { stream: !!res.headers.get('content-type')?.includes('text/event-stream'), text: await res.text() };
+    } catch (err) {
+      if (err instanceof Error && err.name === 'TimeoutError') throw new Error(`${this.key} ${(body as { method: string }).method} timed out after ${timeout}ms`);
+      throw err;
+    }
   }
 
   async request(method: string, params: unknown, timeout: number): Promise<any> {
     const id = this.nextId++;
-    const res = await this.post({ jsonrpc: '2.0', id, method, params }, timeout);
-    const text = await res.text();
-    const payloads = res.headers.get('content-type')?.includes('text/event-stream')
+    const { stream, text } = await this.post({ jsonrpc: '2.0', id, method, params }, timeout);
+    const payloads = stream
       ? text.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim())
       : [text];
     for (const p of payloads) {
@@ -152,12 +171,13 @@ class Http implements Transport {
 
 const clients = new Map<string, Transport>();
 
-function client(key: string, def: McpServerDef, timeout: number) {
+function client(key: string, def: McpServerDef, timeout: number, cwd?: string) {
   let c = clients.get(key);
   if (!c || c.dead) {
     const kind = def.type ?? (def.url ? 'http' : 'stdio');
     if (kind === 'sse') throw new Error(`MCP server ${key} uses SSE, which AgentView does not speak; use it from Claude`);
-    c = kind === 'stdio' ? new Stdio(key, def, timeout) : new Http(key, def, timeout);
+    const d = expandDef(def);
+    c = kind === 'stdio' ? new Stdio(key, d, timeout, cwd) : new Http(key, d, timeout);
     clients.set(key, c);
   }
   return c;
@@ -195,8 +215,8 @@ export function data(r: McpResult): unknown {
   }
 }
 
-export async function probe(key: string, def: McpServerDef, timeout = 12_000): Promise<{ info?: McpInfo; tools: McpTool[] }> {
-  const c = client(key, def, timeout);
+export async function probe(key: string, def: McpServerDef, cwd?: string, timeout = 45_000): Promise<{ info?: McpInfo; tools: McpTool[] }> {
+  const c = client(key, def, timeout, cwd);
   await c.ready;
   const r = await c.request('tools/list', {}, timeout);
   return { info: c.info, tools: r?.tools ?? [] };
@@ -215,3 +235,5 @@ export function stop(key: string) {
 export function stopAll() {
   for (const key of [...clients.keys()]) stop(key);
 }
+
+process.on('exit', stopAll);
