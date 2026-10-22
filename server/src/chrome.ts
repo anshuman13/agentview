@@ -1,5 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +11,11 @@ type State = 'off' | 'connecting' | 'on';
 type Msg = { id?: number; method?: string; params?: any; result?: any; error?: { message: string }; sessionId?: string };
 
 const PORT_FILE = path.join(os.homedir(), 'Library/Application Support/Google/Chrome/DevToolsActivePort');
+const PROFILE = path.join(os.homedir(), '.agentview/chrome');
+const PROFILE_PORT = 9333;
+let launched = 0;
+
+export const ownProfile = () => existsSync(PROFILE);
 
 let cdp: WebSocket | null = null;
 let state: State = 'off';
@@ -35,6 +41,15 @@ const RETRY = new Set(['disabled', 'nochrome', 'closed', 'nofda']);
 
 export async function endpoint() {
   if (process.env.CHROME_CDP) return process.env.CHROME_CDP;
+  if (ownProfile()) {
+    try {
+      const r = await fetch(`http://127.0.0.1:${PROFILE_PORT}/json/version`, { signal: AbortSignal.timeout(3000) });
+      return ((await r.json()) as { webSocketDebuggerUrl: string }).webSocketDebuggerUrl;
+    } catch {
+      if (Date.now() - launched > 60_000) launchProfile();
+      throw new Error((await chromeRunning()) ? 'disabled' : 'nochrome');
+    }
+  }
   try {
     const [port, p] = (await readFile(PORT_FILE, 'utf8')).trim().split('\n');
     return `ws://127.0.0.1:${port}${p}`;
@@ -47,7 +62,14 @@ export async function endpoint() {
 
 export function chromeRunning() {
   if (process.platform !== 'darwin') return Promise.resolve(true);
-  return new Promise<boolean>((resolve) => execFile('pgrep', ['-x', 'Google Chrome'], (err) => resolve(!err)));
+  const args = ownProfile() ? ['-f', `--user-data-dir=${PROFILE}`] : ['-x', 'Google Chrome'];
+  return new Promise<boolean>((resolve) => execFile('pgrep', args, (err) => resolve(!err)));
+}
+
+function launchProfile(...urls: string[]) {
+  launched = Date.now();
+  const args = ['-na', 'Google Chrome', '--args', `--user-data-dir=${PROFILE}`, `--remote-debugging-port=${PROFILE_PORT}`, '--no-first-run', '--no-default-browser-check', ...urls];
+  execFile('open', args, (err) => err && console.error('chrome profile:', err.message));
 }
 
 async function failure(err: NodeJS.ErrnoException) {
@@ -63,7 +85,7 @@ async function failure(err: NodeJS.ErrnoException) {
 
 function retry() {
   if (retryTimer || !viewers.size || !RETRY.has(reason)) return;
-  broadcast({ t: 'state', state, reason, retry: true });
+  broadcast({ t: 'state', state, reason, retry: true, own: ownProfile() });
   retryTimer = setTimeout(() => {
     retryTimer = null;
     void connect();
@@ -72,6 +94,7 @@ function retry() {
 }
 
 export function openInChrome(url: string) {
+  if (ownProfile()) return launchProfile(url);
   execFile('open', process.platform === 'darwin' ? ['-a', 'Google Chrome', url] : [url], (err) => err && console.error('open in chrome:', err.message));
 }
 
@@ -81,7 +104,8 @@ function setup() {
   fastUntil = Date.now() + 3 * 60_000;
   retryDelay = 1500;
   const run = (...args: string[]) => execFile('open', args, (err) => err && console.error('chrome setup:', err.message));
-  if (process.platform === 'darwin' && reason === 'nofda') {
+  if (ownProfile()) launchProfile();
+  else if (process.platform === 'darwin' && reason === 'nofda') {
     run('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles');
     run('-R', fileURLToPath(new URL('../../dist/AgentView.app', import.meta.url)));
   } else if (process.platform === 'darwin') run('-a', 'Google Chrome', SETUP_PAGE);
@@ -96,7 +120,7 @@ function broadcast(m: object) {
 function setState(s: State, why = '') {
   state = s;
   reason = why;
-  broadcast({ t: 'state', state, reason });
+  broadcast({ t: 'state', state, reason, own: ownProfile() });
   if (s === 'off') retry();
 }
 
@@ -443,7 +467,7 @@ async function input(m: any, ws: WebSocket) {
 export function openChrome(ws: WebSocket, origin: string | undefined) {
   if (origin) selfOrigins.add(origin);
   viewers.add(ws);
-  ws.send(JSON.stringify({ t: 'state', state, reason }));
+  ws.send(JSON.stringify({ t: 'state', state, reason, own: ownProfile() }));
   if (cdp) {
     pick();
     void snapshot().catch(() => {});

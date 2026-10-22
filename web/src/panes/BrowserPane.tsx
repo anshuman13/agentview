@@ -3,7 +3,7 @@ import { Icon } from '../Icon';
 import { readFlag, saveFlag, wsUrl } from './util';
 
 type Tab = { id: string; title: string; url: string };
-type State = { state: 'off' | 'connecting' | 'on'; reason: string; retry?: boolean };
+type State = { state: 'off' | 'connecting' | 'on'; reason: string; retry?: boolean; own?: boolean };
 
 const BUTTON = ['left', 'middle', 'right'];
 const mods = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) =>
@@ -230,7 +230,7 @@ function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
         <div className="empty-state">
           <Icon name="loading" spin />
           <div className="empty-title">Connecting to Chrome</div>
-          <div className="muted small">If Chrome asks to allow remote debugging, click Allow.</div>
+          {!state.own && <div className="muted small">If Chrome asks to allow remote debugging, click Allow.</div>}
         </div>
       </div>
     );
@@ -241,7 +241,7 @@ function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
       <div className="empty-state chrome-setup">
         <Icon name="globe" />
         <div className="empty-title">Show your Chrome here</div>
-        <div className="muted small">{REASONS[state.reason] ?? state.reason}</div>
+        <div className="muted small">{state.own && state.reason === 'nochrome' ? 'The AgentView Chrome is not running.' : (REASONS[state.reason] ?? state.reason)}</div>
         {state.reason !== 'server' && (
           <button className="primary" onClick={() => { setAsked(true); onSetup(); }}>
             {fda ? 'Open Full Disk Access settings' : 'Connect Chrome'}
@@ -249,7 +249,9 @@ function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
         )}
         {asked && (
           <div className="muted small">
-            {fda
+            {state.own
+              ? 'AgentView opens its own Chrome window and connects on its own.'
+              : fda
               ? 'Drag AgentView from the Finder window into the Full Disk Access list and turn it on. AgentView connects on its own; if it does not, quit and reopen it from the menu bar.'
               : 'In the Chrome tab that opened, tick "Allow remote debugging for this browser instance", then click Allow. AgentView connects on its own.'}
           </div>
