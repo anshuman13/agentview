@@ -78,13 +78,17 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
   };
 
   useEffect(() => {
-    fetch(`/api/connect?port=${location.port}`)
-      .then((r) => r.json())
-      .then((d: Connect) => {
-        setMacs(d.macs ?? []);
-        setNetbird(d.netbird ?? '');
-      })
-      .catch((e) => setError(String(e)));
+    const load = () =>
+      fetch(`/api/connect?port=${location.port}`)
+        .then((r) => r.json())
+        .then((d: Connect) => {
+          setMacs(d.macs ?? []);
+          setNetbird(d.netbird ?? '');
+        })
+        .catch((e) => setError(String(e)));
+    load();
+    const t = setInterval(load, 10_000);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
