@@ -7,6 +7,7 @@ import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { api, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { FileIcon } from './Explorer';
+import { MarkdownDoc } from './MarkdownDoc';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
 import '../code.css';
 
@@ -116,6 +117,7 @@ export function CodePane() {
   const cwd = useStore((s) => s.session.cwd);
   const [mode, setMode] = useState<'diff' | 'file'>('diff');
   const [wrap, setWrap] = useState(false);
+  const [preview, setPreview] = useState(true);
   const [changesOnly, setChangesOnly] = useState(true);
   const viewRef = useRef<EditorView | null>(null);
   const file = useFile(openFile, recent[0] === openFile ? recent : null);
@@ -135,7 +137,9 @@ export function CodePane() {
   }
 
   const canDiff = Boolean(file?.original) && file?.original !== file?.content;
-  const diff = canDiff && mode === 'diff';
+  const isDoc = /\.(md|markdown|mdx)$/i.test(openFile);
+  const showDoc = preview && isDoc;
+  const diff = canDiff && mode === 'diff' && !showDoc;
 
   const openInVsCode = () => {
     const view = viewRef.current;
@@ -148,14 +152,16 @@ export function CodePane() {
       <div className="cd-bar">
         <Breadcrumbs path={openFile} />
         <div className="cd-actions">
-          {canDiff && <Toggle on={diff} icon="diff" title="Show the change against the last commit" onClick={() => setMode(diff ? 'file' : 'diff')} />}
+          {isDoc && <Toggle on={showDoc} icon="open-preview" title={showDoc ? 'Show the Markdown source' : 'Show the rendered document'} onClick={() => setPreview(!showDoc)} />}
+          {canDiff && <Toggle on={diff} icon="diff" title="Show the change against the last commit" onClick={() => { setPreview(false); setMode(diff ? 'file' : 'diff'); }} />}
           {diff && <Toggle on={changesOnly} icon="fold" title="Changes only" onClick={() => setChangesOnly(!changesOnly)} />}
-          <Toggle on={wrap} icon="word-wrap" title="Word wrap" onClick={() => setWrap(!wrap)} />
+          {!showDoc && <Toggle on={wrap} icon="word-wrap" title="Word wrap" onClick={() => setWrap(!wrap)} />}
           <Toggle on={follow} icon="eye" title="Follow Claude's edits" onClick={() => setUi({ follow: !follow })} />
           <Toggle icon="vscode" title="Open in VS Code" onClick={openInVsCode} />
         </div>
       </div>
-      {file && <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} viewRef={viewRef} />}
+      {file && showDoc && <MarkdownDoc path={file.path} text={file.content} />}
+      {file && !showDoc && <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} viewRef={viewRef} />}
     </div>
   );
 }
