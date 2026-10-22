@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MCP_BAD, type McpServer } from '../../../shared/protocol';
-import { api, send, useStore } from '../store';
+import { MCP_BAD, type ChatEvent, type McpServer } from '../../../shared/protocol';
+import { api, notice, send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { useTick } from './util';
 import '../mcp.css';
@@ -30,7 +30,8 @@ const scopeInfo = (id: string) => SCOPES.find((s) => s[0] === id) ?? [id, id[0].
 const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
 const openMcp = () => command('page:mcp');
 
-export const toolId = (server: string, tool: string) => `mcp__${server.replace(/[^A-Za-z0-9_-]/g, '_')}__${tool}`;
+const slug = (server: string) => server.replace(/[^A-Za-z0-9_-]/g, '_');
+export const toolId = (server: string, tool: string) => `mcp__${slug(server)}__${tool}`;
 const insert = (text: string) => {
   if (window.innerWidth <= 900) command('tab:chat');
   else if (document.querySelector('.workbench')?.getAttribute('data-chat') === 'false') command('toggleChat');
@@ -61,6 +62,46 @@ export function merge(probed: McpServer[], live: McpServer[]): Row[] {
   return rows;
 }
 
+type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;
+export type Call = { id: string; server: string; tool: string; input: Record<string, unknown>; at: number; result?: ToolResult };
+export type Usage = { calls: Call[]; errors: number };
+
+export function mcpCalls(events: ChatEvent[]): Map<string, Usage> {
+  const results = new Map<string, ToolResult>();
+  for (const e of events) if (e.kind === 'tool_result') results.set(e.toolUseId, e);
+  const by = new Map<string, Usage>();
+  for (const e of events) {
+    if (e.kind !== 'tool_use' || !e.name.startsWith('mcp__') || e.name.endsWith('__set_status')) continue;
+    const [, server, ...tool] = e.name.split('__');
+    const result = results.get(e.id);
+    const u = by.get(server) ?? { calls: [], errors: 0 };
+    u.calls.push({ id: e.id, server, tool: tool.join('__'), input: e.input, at: e.at, result });
+    if (result?.isError) u.errors++;
+    by.set(server, u);
+  }
+  return by;
+}
+
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const usageText = (u: Usage) => `${plural(u.calls.length, 'call')}${u.errors ? ` · ${plural(u.errors, 'error')}` : ''}`;
+const brief = (input: Record<string, unknown>) =>
+  Object.entries(input).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join(', ').replace(/\s+/g, ' ').slice(0, 160);
+
+async function cite(c: Call) {
+  const name = `mcp__${c.server}__${c.tool}`;
+  const text = c.result?.text ?? '';
+  const verb = c.result?.isError ? 'failed with' : 'returned';
+  if (text.length <= 2000) return insert(`Earlier ${name} call ${verb}: ${text.slice(0, 300).trim()}${text.length > 300 ? '...' : ''} `);
+  try {
+    const r = await fetch(api(`/api/paste?name=${encodeURIComponent(`${c.server}-${c.tool}.txt`)}`), { method: 'POST', headers: { 'content-type': 'text/plain' }, body: text });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.error);
+    insert(`Earlier ${name} call ${verb}: [File: ${body.path}] `);
+  } catch (err) {
+    notice(`Could not attach the result: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 function sections(rows: Row[]): [string, Row[]][] {
   const by = new Map<string, Row[]>();
   for (const r of rows) by.set(r.scope ?? 'other', [...(by.get(r.scope ?? 'other') ?? []), r]);
@@ -78,6 +119,7 @@ const ago = (t: number) => {
 export function McpPage() {
   const mcp = useStore((s) => s.session.mcp);
   const id = useStore((s) => s.session.id);
+  const events = useStore((s) => s.events);
   const [probed, setProbed] = useState<McpServer[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [at, setAt] = useState(0);
@@ -97,6 +139,10 @@ export function McpPage() {
   useTick(15000);
 
   const rows = useMemo(() => merge(probed ?? [], mcp), [probed, mcp]);
+  const usage = useMemo(() => mcpCalls(events), [events]);
+  const usageOf = (r: Row) => usage.get(slug(r.name));
+  const used = rows.filter((r) => usageOf(r)).sort((a, b) => usageOf(b)!.calls.length - usageOf(a)!.calls.length);
+  const calls = used.reduce((n, r) => n + usageOf(r)!.calls.length, 0);
   const current = rows.find((r) => r.name === sel) ?? null;
   const ok = rows.filter((r) => r.status === 'connected').length;
   const tools = rows.reduce((n, r) => n + (r.tools?.length ?? 0), 0);
@@ -110,6 +156,7 @@ export function McpPage() {
           <div className="mcp-stats">
             <Stat n={ok} of={rows.length} label="connected" tone={attention ? 'warn' : 'ok'} />
             <Stat n={tools} label="tools" />
+            {calls > 0 && <Stat n={calls} label="calls in chat" />}
             {attention > 0 && <Stat n={attention} label="need you" tone="bad" />}
             <button className={`mcp-refresh ${busy ? 'busy' : ''}`} onClick={() => load(true)} disabled={busy} title="Connect to every server again">
               <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at)}` : 'Check'}
@@ -128,7 +175,15 @@ export function McpPage() {
             <div className="muted">Add one with <code>claude mcp add</code> or connect one on claude.ai, then check again.</div>
           </div>
         )}
-        {sections(rows).map(([scope, list]) => {
+        {used.length > 0 && (
+          <section className="mcp-section">
+            <div className="mcp-section-head"><span>Used in this chat</span><span className="muted count">{plural(calls, 'call')}</span></div>
+            <div className="mcp-grid">
+              {used.map((r) => <Card key={r.name} row={r} usage={usageOf(r)} selected={r.name === sel} onClick={() => setSel((s) => (s === r.name ? null : r.name))} />)}
+            </div>
+          </section>
+        )}
+        {sections(rows.filter((r) => !usageOf(r))).map(([scope, list]) => {
           const [, title, where] = scopeInfo(scope);
           return (
             <section key={scope} className="mcp-section">
@@ -140,7 +195,7 @@ export function McpPage() {
           );
         })}
       </div>
-      {current && <Detail row={current} onClose={() => setSel(null)} />}
+      {current && <Detail row={current} usage={usageOf(current)} onClose={() => setSel(null)} />}
     </div>
   );
 }
@@ -154,7 +209,7 @@ function Stat({ n, of, label, tone }: { n: number; of?: number; label: string; t
   );
 }
 
-function Card({ row, selected, onClick }: { row: Row; selected: boolean; onClick: () => void }) {
+function Card({ row, usage, selected, onClick }: { row: Row; usage?: Usage; selected: boolean; onClick: () => void }) {
   const [tone, label] = stateOf(row);
   const url = row.command?.startsWith('http');
   return (
@@ -168,14 +223,14 @@ function Card({ row, selected, onClick }: { row: Row; selected: boolean; onClick
       <div className="mcp-card-cmd mono" title={row.command}>{url ? row.command?.replace(/^https?:\/\//, '') : row.command ?? '—'}</div>
       <div className="mcp-card-foot">
         <span className={`s ${tone}`}>{label}</span>
-        {row.status === 'connected' && row.tools && <span>{row.tools.length} tools</span>}
+        {usage ? <span className={`use ${usage.errors ? 'bad' : ''}`}>{usageText(usage)}</span> : row.status === 'connected' && row.tools && <span>{row.tools.length} tools</span>}
         {row.version && <span className="mono muted" title={row.version}>v{short(row.version)}</span>}
       </div>
     </button>
   );
 }
 
-function Detail({ row, onClose }: { row: Row; onClose: () => void }) {
+function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () => void }) {
   const [tone, label] = stateOf(row);
   const [, scope, where] = scopeInfo(row.scope ?? 'other');
   const [q, setQ] = useState('');
@@ -210,6 +265,12 @@ function Detail({ row, onClose }: { row: Row; onClose: () => void }) {
         <dt>From</dt><dd>{scope}{where ? <span className="muted mono"> · {where}</span> : null}</dd>
         <dt>In chat</dt><dd>{row.live ? 'Loaded' : 'Not loaded'}</dd>
       </dl>
+      {usage && (
+        <>
+          <div className="mcp-tools-head"><span>Used in this chat</span><span className="muted">{usageText(usage)}</span></div>
+          <div className="mcp-calls">{[...usage.calls].reverse().map((c) => <CallRow key={c.id} call={c} />)}</div>
+        </>
+      )}
       <div className="mcp-tools-head">
         <span>Tools</span><span className="muted">{row.tools?.length ?? 0}</span>
         <span className="spacer" />
@@ -226,6 +287,28 @@ function Detail({ row, onClose }: { row: Row; onClose: () => void }) {
         {!row.tools?.length && <div className="muted">{row.status === 'connected' ? 'No tools reported' : 'Tools appear once it connects'}</div>}
       </div>
     </aside>
+  );
+}
+
+function CallRow({ call }: { call: Call }) {
+  const [open, setOpen] = useState(false);
+  const state = !call.result ? 'wait' : call.result.isError ? 'bad' : 'ok';
+  return (
+    <div className={`mcp-call ${state} ${open ? 'open' : ''}`}>
+      <div className="t" onClick={() => setOpen((v) => !v)}>
+        <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
+        <span className="mono name">{call.tool}</span>
+        <span className="in" title={brief(call.input)}>{brief(call.input)}</span>
+        <span className={`s ${state}`}>{state === 'wait' ? 'running' : state === 'bad' ? 'error' : 'ok'}</span>
+        <button className="icon-btn mcp-insert" title="Add the result to chat" disabled={!call.result} onClick={(e) => { e.stopPropagation(); void cite(call); }}><Icon name="insert" small /></button>
+      </div>
+      {open && (
+        <div className="r">
+          <pre>{JSON.stringify(call.input, null, 2)}</pre>
+          {call.result && <pre className={call.result.isError ? 'bad' : ''}>{call.result.text || '(no output)'}</pre>}
+        </div>
+      )}
+    </div>
   );
 }
 
