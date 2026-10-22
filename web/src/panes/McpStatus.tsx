@@ -30,6 +30,13 @@ const scopeInfo = (id: string) => SCOPES.find((s) => s[0] === id) ?? [id, id[0].
 const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
 const openMcp = () => command('page:mcp');
 
+export const toolId = (server: string, tool: string) => `mcp__${server.replace(/[^A-Za-z0-9_-]/g, '_')}__${tool}`;
+const insert = (text: string) => {
+  if (window.innerWidth <= 900) command('tab:chat');
+  else if (document.querySelector('.workbench')?.getAttribute('data-chat') === 'false') command('toggleChat');
+  window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } }));
+};
+
 export function McpItem() {
   const mcp = useStore((s) => s.session.mcp);
   const ok = mcp.filter((m) => m.status === 'connected').length;
@@ -187,6 +194,7 @@ function Detail({ row, onClose }: { row: Row; onClose: () => void }) {
         {row.live && MCP_BAD.includes(row.status) && <button onClick={() => send({ type: 'mcp_reconnect', name: row.name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
         {row.live && row.status === 'disabled' && <button onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}><Icon name="debug-start" small /> Enable</button>}
         {row.live && row.status !== 'disabled' && <button onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
+        {row.live && <button onClick={() => insert(`Use the ${row.name} MCP server to `)} title="Start a message that uses this server"><Icon name="comment" small /> Add to chat</button>}
         {!row.live && <AddToChat name={row.name} />}
         {url && <a href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
       </div>
@@ -210,7 +218,7 @@ function Detail({ row, onClose }: { row: Row; onClose: () => void }) {
       <div className="mcp-tools">
         {tools.map((t) => (
           <div key={t.name} className="mcp-tool">
-            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="mcp-tag ok">read only</span>}{t.destructive && <span className="mcp-tag bad">destructive</span>}</div>
+            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="mcp-tag ok">read only</span>}{t.destructive && <span className="mcp-tag bad">destructive</span>}<span className="spacer" /><button className="icon-btn mcp-insert" title={`Add ${toolId(row.name, t.name)} to chat`} onClick={() => insert(`Use the ${toolId(row.name, t.name)} tool to `)}><Icon name="insert" small /></button></div>
             {t.description && <div className="d">{t.description}</div>}
           </div>
         ))}
