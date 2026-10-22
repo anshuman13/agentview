@@ -16,3 +16,4 @@
 .macs li.current .mac-name { color: var(--text-strong); }
 .macs .mac-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .macs .detail { color: var(--fg-muted); font-size: 11px; }
+.connect-body.warn { color: var(--warn); text-align: center; }
