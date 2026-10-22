@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { callTool, data, listTools, pidOf, stopAll, text } from './mcpClient.js';
+import { callTool, data, expandDef, listTools, pidOf, stopAll, text } from './mcpClient.js';
 
 const FAKE = `
 let buf = '';
@@ -58,5 +58,14 @@ describe('mcpClient', () => {
 
   it('fails clearly when the command does not exist', async () => {
     await expect(listTools('missing', { command: '/nonexistent/mcp-server' }, 2000)).rejects.toThrow(/failed to start|exited/);
+  });
+});
+
+describe('expandDef', () => {
+  it('expands ${VAR} and ${VAR:-default} from the environment and the server env', () => {
+    const def = { command: '${BIN:-npx}', args: ['--db', '${DB}', '${NOPE}'], env: { DB: '${HOME}/db', T: '${TOKEN}' }, url: 'https://${HOST:-x.io}/mcp', headers: { auth: 'Bearer ${TOKEN}' } };
+    expect(expandDef(def, { HOME: '/h', TOKEN: 't', HOST: 'y.io' })).toEqual({
+      command: 'npx', args: ['--db', '/h/db', '${NOPE}'], env: { DB: '/h/db', T: 't' }, url: 'https://y.io/mcp', headers: { auth: 'Bearer t' },
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authError, configDefs, configEntries, mcpFrom, probeOne } from './mcp.js';
+import { approved, authError, configDefs, configEntries, mcpFrom, probeOne } from './mcp.js';
 
 describe('mcpFrom', () => {
   it('lists tools from the init tool list and hides the agentview server', () => {
@@ -66,17 +66,32 @@ describe('configDefs', () => {
 describe('probeOne', () => {
   it('reports a connected server with its version and tools', async () => {
     const run = async () => ({ info: { version: '2.0' }, tools: [{ name: 'q', description: 'Query', annotations: { readOnlyHint: true } }] });
-    expect(await probeOne('db', 'user', { command: 'toolbox', args: ['--stdio'] }, run)).toEqual({
+    expect(await probeOne('db', 'user', { command: 'toolbox', args: ['--stdio'] }, '/repo', run)).toEqual({
       name: 'db', scope: 'user', type: 'stdio', command: 'toolbox --stdio', env: undefined,
       status: 'connected', version: '2.0', tools: [{ name: 'q', description: 'Query', readOnly: true, destructive: undefined }],
     });
   });
 
   it('turns an auth failure into needs-auth and anything else into failed', async () => {
-    const auth = await probeOne('gw', 'user', { url: 'https://gw' }, async () => { throw new Error('gw needs auth in Claude (HTTP 401)'); });
+    const auth = await probeOne('gw', 'user', { url: 'https://gw' }, '/repo', async () => { throw new Error('gw needs auth in Claude (HTTP 401)'); });
     expect(auth).toMatchObject({ status: 'needs-auth', type: 'http', error: expect.stringContaining('401') });
-    const dead = await probeOne('x', 'user', { command: 'nope' }, async () => { throw new Error('x exited (127)'); });
+    const dead = await probeOne('x', 'user', { command: 'nope' }, '/repo', async () => { throw new Error('x exited (127)'); });
     expect(dead).toMatchObject({ status: 'failed', error: 'x exited (127)' });
     expect(authError('Unauthorized')).toBe(true);
+  });
+});
+
+describe('approved', () => {
+  it('runs project servers only when Claude Code approves them', () => {
+    expect(approved('a', [{}, { enabledMcpjsonServers: ['a'] }])).toBe(true);
+    expect(approved('b', [{ enabledMcpjsonServers: ['a'] }])).toBe(false);
+    expect(approved('b', [{ enableAllProjectMcpServers: true }])).toBe(true);
+    expect(approved('a', [{ enableAllProjectMcpServers: true }, { disabledMcpjsonServers: ['a'] }])).toBe(false);
+    expect(approved('a', [{ enabledMcpjsonServers: 'a' }])).toBe(false);
+  });
+
+  it('skips probing SSE servers', async () => {
+    const run = async () => { throw new Error('should not run'); };
+    expect(await probeOne('s', 'user', { type: 'sse', url: 'https://s' }, '/repo', run)).toMatchObject({ status: 'disabled', error: expect.stringContaining('SSE') });
   });
 });

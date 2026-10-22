@@ -73,13 +73,37 @@ export async function configDef(cwd: string, name: string) {
   return configDefs(user, repo, cwd).find((d) => d.name === name)?.def as McpServerConfig | undefined;
 }
 
+type Approval = { enableAllProjectMcpServers?: unknown; enabledMcpjsonServers?: unknown; disabledMcpjsonServers?: unknown };
+const has = (list: unknown, name: string) => Array.isArray(list) && list.includes(name);
+
+export function approved(name: string, sources: Approval[]) {
+  if (sources.some((s) => has(s.disabledMcpjsonServers, name))) return false;
+  return sources.some((s) => s.enableAllProjectMcpServers === true || has(s.enabledMcpjsonServers, name));
+}
+
+const readApprovals = async (cwd: string, user: any): Promise<Approval[]> => [
+  ...(await Promise.all([path.join(os.homedir(), '.claude', 'settings.json'), path.join(cwd, '.claude', 'settings.json'), path.join(cwd, '.claude', 'settings.local.json')].map(readJson))),
+  user.projects?.[cwd] ?? {},
+];
+
+export const runs = (d: Def, sources: Approval[]) => d.scope !== 'project' || approved(d.name, sources);
+
+export async function inSettings(cwd: string, name: string) {
+  const [user, repo] = await readConfigs(cwd);
+  const d = configDefs(user, repo, cwd).find((d) => d.name === name);
+  return !!d && runs(d, await readApprovals(cwd, user));
+}
+
 export const authError = (msg: string) => /needs auth|HTTP 401|HTTP 403|unauthori[sz]ed/i.test(msg);
 
-export async function probeOne(name: string, scope: string, def: McpServerDef, run = probe): Promise<McpServer> {
-  const base = { name, scope, type: transport(def), command: commandOf(def), env: envOf(def) };
-  const key = `probe:${name}`;
+const rowOf = (name: string, scope: string, def: McpServerDef) => ({ name, scope, type: transport(def), command: commandOf(def), env: envOf(def) });
+
+export async function probeOne(name: string, scope: string, def: McpServerDef, cwd?: string, run = probe): Promise<McpServer> {
+  const base = rowOf(name, scope, def);
+  if (base.type === 'sse') return { ...base, status: 'disabled', error: 'The MCP tab cannot probe SSE servers. Claude Code still connects to it in chats.' };
+  const key = `probe:${cwd}:${name}:${JSON.stringify(def)}`;
   try {
-    const { info, tools } = await run(key, def);
+    const { info, tools } = await run(key, def, cwd);
     return { ...base, status: 'connected', version: info?.version, tools: tools.map((t) => ({ name: t.name, description: t.description, readOnly: t.annotations?.readOnlyHint, destructive: t.annotations?.destructiveHint })) };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -94,12 +118,15 @@ const cache = new Map<string, { at: number; done: boolean; row: Promise<McpServe
 
 export async function mcpProbe(cwd: string, refresh = false): Promise<McpServer[]> {
   const [user, repo] = await readConfigs(cwd);
+  const sources = await readApprovals(cwd, user);
   return Promise.all(
-    configDefs(user, repo, cwd).map(async ({ name, scope, def }) => {
-      const key = `${name}:${JSON.stringify(def)}`;
+    configDefs(user, repo, cwd).map(async (d) => {
+      const { name, scope, def } = d;
+      if (!runs(d, sources)) return { ...rowOf(name, scope, def), status: 'disabled', error: 'Not approved in Claude Code, so AgentView does not start it' };
+      const key = `${cwd}:${name}:${JSON.stringify(def)}`;
       const hit = cache.get(key);
       if (hit && (!hit.done || (!refresh && Date.now() - hit.at < TTL))) return hit.row;
-      const entry = { at: Date.now(), done: false, row: probeOne(name, scope, def) };
+      const entry = { at: Date.now(), done: false, row: probeOne(name, scope, def, cwd) };
       void entry.row.then(() => { entry.done = true; entry.at = Date.now(); });
       cache.set(key, entry);
       return entry.row;
