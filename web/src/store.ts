@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { ClientMessage, LiveChat, ServerMessage, ServerState } from '../../shared/protocol';
+import type { ChatEvent, ClientMessage, LiveChat, ServerMessage, ServerState } from '../../shared/protocol';
 import { notify } from './notify';
 
 type UiState = {
@@ -69,19 +69,50 @@ function notifyBackground(chats: LiveChat[]) {
 
 let ws: WebSocket | null = null;
 export function send(m: ClientMessage) {
-  ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m));
+  if (ws?.readyState !== WebSocket.OPEN) return false;
+  ws.send(JSON.stringify(m));
+  return true;
 }
 
-export function steer(text: string) {
-  if (ws?.readyState !== WebSocket.OPEN) return notice('Not connected, message not sent');
+export function steer(text: string, onLost: () => void) {
+  if (ws?.readyState !== WebSocket.OPEN) return false;
   const id = crypto.randomUUID();
   set((s) => ({ events: [...s.events, { id, kind: 'user', text, at: Date.now(), stopping: true }] }));
   send({ type: 'steer', text, id });
+  expect({ id, text }, onLost);
+  return true;
+}
+
+export function prompt(text: string, onLost: () => void) {
+  if (!send({ type: 'prompt', text })) return false;
+  expect({ text }, onLost);
+  return true;
+}
+
+const CONFIRM_WAIT = 15_000;
+type Expected = { id?: string; text: string; onLost: () => void };
+const expected = new Set<Expected>();
+
+function expect(m: { id?: string; text: string }, onLost: () => void) {
+  const e = { ...m, onLost };
+  expected.add(e);
+  setTimeout(() => {
+    if (!expected.delete(e)) return;
+    notice('Message did not reach the server, it is back in the box');
+    onLost();
+    reconnect();
+  }, CONFIRM_WAIT);
+}
+
+function confirm(ev: ChatEvent) {
+  if (ev.kind !== 'user') return;
+  for (const e of expected) if (e.id ? e.id === ev.id : e.text === ev.text) expected.delete(e);
 }
 
 function handle(m: ServerMessage) {
   switch (m.type) {
     case 'init':
+      m.state.events.forEach(confirm);
       set((s) => {
         const same = s.session.id === m.state.session.id;
         const old = new Map(s.events.map((e) => [e.id, e]));
@@ -100,6 +131,7 @@ function handle(m: ServerMessage) {
       setUi({ restarting: true });
       break;
     case 'event':
+      confirm(m.event);
       if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {
         notify('Claude finished', m.event.text.trim().split('\n')[0], focus(state.session.id));
       }
