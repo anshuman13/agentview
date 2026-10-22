@@ -65,7 +65,12 @@ export function chromeRunning() {
 }
 
 function launchProfile(...urls: string[]) {
-  const args = ['-na', 'Google Chrome', '--args', `--user-data-dir=${PROFILE}`, `--remote-debugging-port=${PROFILE_PORT}`, '--no-first-run', '--no-default-browser-check', ...urls];
+  const args = [
+    '-na', 'Google Chrome', '--args', `--user-data-dir=${PROFILE}`, `--remote-debugging-port=${PROFILE_PORT}`,
+    '--no-first-run', '--no-default-browser-check',
+    '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding',
+    ...urls,
+  ];
   execFile('open', args, (err) => err && console.error('chrome profile:', err.message));
 }
 
