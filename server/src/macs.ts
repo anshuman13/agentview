@@ -51,7 +51,7 @@ export async function otherMacs(port: string): Promise<{ macs: Mac[]; problem?: 
   const probes = hosts.map(async (fqdn) => {
     const url = `http://${fqdn}:${port}`;
     try {
-      const res = await fetch(`${url}/api/connect?peer=1`, { signal: AbortSignal.timeout(1500) });
+      const res = await fetch(`${url}/api/connect?peer=1`, { signal: AbortSignal.timeout(6000) });
       if (!res.ok) return null;
       const d = (await res.json()) as { hostname: string; running: number };
       return { name: macName(d.hostname), url, running: d.running ?? 0 };
