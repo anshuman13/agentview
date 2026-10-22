@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import { appendFileSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { AgentSession, BIG_BRO, fireTime } from './session.js';
+import { JsonlTail } from './tail.js';
 import { contextFrom, historyFrom } from './transcript.js';
+import type { ChatEvent, ServerMessage } from '../../shared/protocol.js';
+
+const CLAUDE_DIR = vi.hoisted(() => (process.env.CLAUDE_CONFIG_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`));
 
 function fakeSession() {
   const s = new AgentSession('/tmp/project');
@@ -244,6 +250,87 @@ describe('context tokens', () => {
   });
 });
 
+describe('transcript sync', () => {
+  const cwd = '/tmp/agentview-sync';
+  const dir = path.join(CLAUDE_DIR, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'));
+  let n = 0;
+  const line = (sessionId: string, type: 'user' | 'assistant', text: string, parent: string | null) => {
+    const uuid = `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`;
+    const message = type === 'user' ? { role: 'user', content: text } : { role: 'assistant', content: [{ type: 'text', text }] };
+    return { uuid, text: JSON.stringify({ type, uuid, parentUuid: parent, sessionId, cwd, isSidechain: false, timestamp: new Date(1_800_000_000_000 + n * 1000).toISOString(), message }) + '\n' };
+  };
+  afterAll(() => rmSync(CLAUDE_DIR, { recursive: true, force: true }));
+  const texts = (s: AgentSession) => s.state.events.flatMap((e) => (e.kind === 'user' || e.kind === 'assistant' ? [e.text] : []));
+  async function setup() {
+    mkdirSync(dir, { recursive: true });
+    const sessionId = `11111111-2222-4333-8444-${String(++n).padStart(12, '0')}`;
+    const file = path.join(dir, `${sessionId}.jsonl`);
+    const a = line(sessionId, 'user', 'hello', null);
+    const b = line(sessionId, 'assistant', 'hi there', a.uuid);
+    writeFileSync(file, a.text + b.text);
+    const s = new AgentSession(cwd, sessionId);
+    await s.loadHistory();
+    const sent: ServerMessage[] = [];
+    s.onMessage((m) => sent.push(m));
+    const sync = () => (s as unknown as { syncTranscript: (own: boolean) => Promise<void> }).syncTranscript(false);
+    return { s, sessionId, file, last: b.uuid, sent, sync };
+  }
+
+  it('parses only appended lines and pushes the new history', async () => {
+    const { s, sessionId, file, last, sent, sync } = await setup();
+    expect(texts(s)).toEqual(['hello', 'hi there']);
+    const parse = vi.spyOn(JSON, 'parse');
+    const c = line(sessionId, 'user', 'next', last);
+    const d = line(sessionId, 'assistant', 'done', c.uuid);
+    appendFileSync(file, c.text + d.text.slice(0, 20));
+    await sync();
+    appendFileSync(file, d.text.slice(20));
+    await sync();
+    const lines = parse.mock.calls.filter(([t]) => typeof t === 'string' && t.includes('"sessionId"'));
+    parse.mockRestore();
+    expect(lines.map(([t]) => JSON.parse(t as string).uuid)).toEqual([c.uuid, d.uuid]);
+    expect(texts(s)).toEqual(['hello', 'hi there', 'next', 'done']);
+    expect(sent.filter((m) => m.type === 'init')).toHaveLength(2);
+  });
+
+  it('emits nothing when the transcript did not change', async () => {
+    const { sent, sync } = await setup();
+    await sync();
+    await sync();
+    expect(sent).toEqual([]);
+  });
+
+  it('reloads in full when the file shrank or was replaced', async () => {
+    const { s, sessionId, file, sync } = await setup();
+    const a = line(sessionId, 'user', 'other', null);
+    writeFileSync(file, a.text);
+    await sync();
+    expect(texts(s)).toEqual(['other']);
+    const b = line(sessionId, 'assistant', 'replaced', a.uuid);
+    writeFileSync(`${file}.tmp`, a.text + b.text);
+    renameSync(`${file}.tmp`, file);
+    await sync();
+    expect(texts(s)).toEqual(['other', 'replaced']);
+  });
+
+  it('JsonlTail reports appends, partial lines and rewrites', async () => {
+    mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `tail-${++n}.jsonl`);
+    writeFileSync(file, '{"a":1}\n{"a":2}\n');
+    const t = new JsonlTail(file);
+    expect(await t.read()).toBe('reload');
+    expect(await t.read()).toBe('same');
+    appendFileSync(file, '{"a":3}\n{"a"');
+    expect(await t.read()).toBe('append');
+    appendFileSync(file, ':4}\n');
+    expect(await Promise.all([t.read(), t.read()])).toEqual(['append', 'same']);
+    expect(t.entries).toEqual([{ a: 1 }, { a: 2 }, { a: 3 }, { a: 4 }]);
+    writeFileSync(file, '{"b":1}\n{"a":2}\n{"a":3}\n{"a":4}\n{"a":5}\n');
+    expect(await t.read()).toBe('reload');
+    expect(t.entries).toEqual([{ b: 1 }, { a: 2 }, { a: 3 }, { a: 4 }, { a: 5 }]);
+  });
+});
+
 describe('history', () => {
   const msg = (type: string, content: unknown, extra: object = {}) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content, ...extra } }) as never;
 
@@ -321,6 +408,35 @@ describe('subagents', () => {
     handle({ type: 'system', subtype: 'task_notification', task_id: 'a1', tool_use_id: 'ag', status: 'completed', summary: 'done', output_file: '', usage: { total_tokens: 200, tool_uses: 4, duration_ms: 9000 } });
     expect(agent()).toMatchObject({ status: 'done', usage: { tokens: 200, toolUses: 4 } });
     expect((agent() as { endedAt: number }).endedAt).toBeGreaterThan(0);
+  });
+
+  it('stops an agent whose task is gone instead of leaving it running', async () => {
+    const msg = (type: string, content: unknown) => ({ type, uuid: 'u1', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
+    const history = [
+      msg('user', 'survey'),
+      msg('assistant', [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey', run_in_background: true } }]),
+      msg('user', [{ type: 'tool_result', tool_use_id: 'ag', content: launched }]),
+    ];
+    const s = new AgentSession('/tmp/project');
+    const apply = () => (s as unknown as { applyHistory: (m: unknown[], subs: object) => ChatEvent[] }).applyHistory(history, {});
+    s.state.events = apply();
+    const agent = () => s.state.events.find((e) => e.kind === 'agent');
+    expect(agent()).toMatchObject({ status: 'running' });
+    await s.stopTask('ag');
+    expect(agent()).toMatchObject({ status: 'stopped' });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'tool_result', toolUseId: 'ag', stopped: true });
+    s.state.events = apply();
+    expect(agent()).toMatchObject({ status: 'stopped' });
+  });
+
+  it('resolves a notification that only carries the task id', () => {
+    const { s } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
+    handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: launched }] } });
+    handle({ type: 'system', subtype: 'task_notification', task_id: 'a1', status: 'failed', summary: 'Boom', output_file: '' });
+    expect(s.state.events.find((e) => e.kind === 'agent')).toMatchObject({ status: 'failed' });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'tool_result', toolUseId: 'ag', isError: true });
   });
 
   it('rebuilds the agent from history', () => {

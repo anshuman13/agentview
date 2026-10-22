@@ -3,6 +3,7 @@ import { api, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protocol';
+import { usePoll } from './util';
 import '../deploy.css';
 
 const short = (sha: string) => sha.slice(0, 7);
@@ -39,11 +40,9 @@ export function Deploy() {
   };
 
   useEffect(() => {
-    if (!cwd) return;
-    load();
-    const t = setInterval(() => !document.hidden && root.current?.offsetParent && load(), 60_000);
-    return () => clearInterval(t);
+    if (cwd) load();
   }, [cwd, app]);
+  usePoll(root, 60_000, () => cwd && load(), [cwd, app]);
 
   useEffect(() => {
     if (!job || job.done) return;

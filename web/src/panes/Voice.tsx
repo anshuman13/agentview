@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type Dispatch, type SetStateAction } from 'react';
 import { useStore } from '../store';
 import { Icon } from '../Icon';
+import { readFlag, saveFlag } from './util';
 
 type Result = { isFinal: boolean; 0: { transcript: string } };
 type Recognition = {
@@ -116,7 +117,7 @@ function speakable(md: string) {
 }
 
 const readers = new Set<() => void>();
-let reading = (() => { try { return localStorage.getItem('readAloud') === '1'; } catch { return false; } })();
+let reading = readFlag('readAloud', false);
 const subscribe = (f: () => void) => { readers.add(f); return () => { readers.delete(f); }; };
 
 export function ReadAloud({ speak = false }: { speak?: boolean }) {
@@ -147,7 +148,7 @@ export function ReadAloud({ speak = false }: { speak?: boolean }) {
     reading = !on;
     if (!reading) speechSynthesis.cancel();
     readers.forEach((f) => f());
-    try { localStorage.setItem('readAloud', reading ? '1' : '0'); } catch { return; }
+    saveFlag('readAloud', reading);
   };
 
   return (

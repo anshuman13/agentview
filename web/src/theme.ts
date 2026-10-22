@@ -5,11 +5,11 @@ export type Theme = 'graphite' | 'dark-modern';
 const KEY = 'agentview.theme';
 export const THEME_NAMES: Record<Theme, string> = { graphite: 'Graphite', 'dark-modern': 'Dark Modern' };
 
-export function currentTheme(): Theme {
+function currentTheme(): Theme {
   return document.documentElement.dataset.theme === 'dark-modern' ? 'dark-modern' : 'graphite';
 }
 
-export function applyTheme(theme: Theme) {
+function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   try {
     localStorage.setItem(KEY, theme);

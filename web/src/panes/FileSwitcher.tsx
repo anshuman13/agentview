@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, setUi, useStore } from '../store';
-import { useOpened } from './CodePane';
+import { useOpened } from './opened';
 import { FileIcon } from './Explorer';
 import { Icon } from '../Icon';
 import { touch } from '../touch';
+import { Hl } from './util';
 
 const cache = new Map<string, string[]>();
 
@@ -80,7 +81,7 @@ export function FileSwitcher() {
               <li key={f} className={i === idx ? 'active' : ''} onClick={() => pick(f)} title={f}>
                 <FileIcon name={f} />
                 <span className="fs-name"><Hl text={f.slice(base)} from={base} hits={m.hits} /></span>
-                <span className="fs-dir"><Hl text={f.slice(0, Math.max(base - 1, 0))} from={0} hits={m.hits} /></span>
+                <span className="fs-dir"><Hl text={f.slice(0, Math.max(base - 1, 0))} hits={m.hits} /></span>
                 {label && <span className="fs-group">{label}</span>}
               </li>
             );
@@ -90,10 +91,6 @@ export function FileSwitcher() {
       </div>
     </div>
   );
-}
-
-function Hl({ text, from, hits }: { text: string; from: number; hits: number[] }) {
-  return <>{[...text].map((c, i) => (hits.includes(from + i) ? <b key={i}>{c}</b> : c))}</>;
 }
 
 type Match = { score: number; hits: number[] };

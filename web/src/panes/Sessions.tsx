@@ -5,6 +5,7 @@ import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
 import { STALE_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
+import { save, stored } from './util';
 import '../chats.css';
 
 const PAGE = 10;
@@ -90,12 +91,12 @@ export function groupByKind(folders: Folder[], live: string[], now = Date.now())
   })).filter((g) => g.items.length);
 }
 
-const stored = <T,>(key: string, fallback: T): T => {
-  try { return JSON.parse(localStorage.getItem(key) ?? '') ?? fallback; } catch { return fallback; }
-};
-const save = (key: string, v: unknown) => {
-  try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
-};
+const flip = (set: (f: (prev: Set<string>) => Set<string>) => void, key: string) =>
+  set((prev) => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
 
 const closeChat = (c: LiveChat, ask: (r: ConfirmRequest) => void) =>
   c.running || c.pending
@@ -202,7 +203,7 @@ export function Sessions() {
 
   useEffect(() => setOpening(null), [current, cwd]);
 
-  const here = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)))?.cwd;
+  const here = findHere(folders, cwd).folder?.cwd;
 
   const shown = useMemo(() => {
     const f = filter.toLowerCase();
@@ -253,12 +254,6 @@ export function Sessions() {
       setCreating(branch ? { repo: d.cwd, branch } : null);
     }));
 
-  const flip = (set: (f: (prev: Set<string>) => Set<string>) => void, key: string) =>
-    set((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
   const liveCwds = useMemo(() => live.map((c) => c.cwd), [live]);
   const counts = { work: shown.filter((f) => segmentOf(f) === 'work').length, personal: shown.filter((f) => segmentOf(f) === 'personal').length };
   const groups = useMemo(() => groupByKind(shown.filter((f) => segmentOf(f) === segment), liveCwds), [shown, segment, liveCwds]);
@@ -418,10 +413,6 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
   return [...m.values()].sort((a, b) => b.last - a.last);
 }
 
-const loadCollapsed = (): Record<string, boolean> => {
-  try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; }
-};
-
 export function OpenChats() {
   const current = useStore((s) => s.session.sessionId);
   const viewing = useStore((s) => s.session.id);
@@ -429,7 +420,7 @@ export function OpenChats() {
   const live = useStore((s) => s.live);
   const { folders, chats, setChats } = useWorkspace(current + cwd);
   const [filter, setFilter] = useState('');
-  const [collapsed, setCollapsed] = useState(loadCollapsed);
+  const [collapsed, setCollapsed] = useState(() => stored<Record<string, boolean>>(KEY, {}));
   const [full, setFull] = useState<Set<string>>(new Set());
   const [opening, setOpening] = useState<string | null>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
@@ -440,7 +431,7 @@ export function OpenChats() {
   const toggle = (g: RepoGroup) => {
     const next = { ...collapsed, [g.key]: isOpen(g) };
     setCollapsed(next);
-    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+    save(KEY, next);
   };
   const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} />;
 
@@ -488,7 +479,7 @@ export function OpenChats() {
               </div>
             ))}
             {isOpen(g) && !filter && g.recent.length > RECENT && (
-              <div className="row more" onClick={() => setFull((f) => { const n = new Set(f); n.has(g.key) ? n.delete(g.key) : n.add(g.key); return n; })}>
+              <div className="row more" onClick={() => flip(setFull, g.key)}>
                 {full.has(g.key) ? 'Show less' : `Show ${g.recent.length - RECENT} more`}
               </div>
             )}

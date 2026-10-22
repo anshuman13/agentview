@@ -108,7 +108,7 @@ async function history(cwd: string, repo: string, envs: string[]) {
   return envs.map((_, i) => out.data.repository[`e${i}`].nodes as Node[]);
 }
 
-export async function deployStatus(cwd: string, want: string | null): Promise<DeployStatus> {
+async function deployStatus(cwd: string, want: string | null): Promise<DeployStatus> {
   const { apps, app, repo } = await context(cwd, want);
   const [sha, branch, nodes] = await Promise.all([
     run('git', ['rev-parse', 'HEAD'], cwd),

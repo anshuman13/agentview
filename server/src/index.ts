@@ -40,12 +40,31 @@ process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 
 const IDLE_MS = 10 * 60 * 1000;
 
-type Client = { send: (m: ServerMessage) => void; view: AgentSession };
+type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string) => void; view: AgentSession };
 const clients = new Set<Client>();
+
+// Serializes the message once, and only if some client receives it.
+function broadcast(m: ServerMessage, to: (c: Client) => boolean = () => true) {
+  let data: string | undefined;
+  for (const c of clients) if (to(c)) c.sendRaw((data ??= JSON.stringify(m)));
+}
 const live = new Map<string, { chat: AgentSession; watcher: FSWatcher }>();
 let lastViewed: AgentSession;
 
 const viewers = (chat: AgentSession) => [...clients].filter((c) => c.view === chat).length;
+const bySession = (sessionId: string | null) => [...live.values()].find((l) => l.chat.state.session.sessionId === sessionId)?.chat;
+const lastActive = (chat: AgentSession) => chat.state.events.at(-1)?.at ?? chat.created;
+
+// sumEdits walks every event; tool_use inputs and results are never edited in place, so identity + length is a safe key.
+const editsCache = new WeakMap<AgentSession, { events: unknown[]; length: number; edits: ReturnType<typeof sumEdits> }>();
+function editsOf(chat: AgentSession) {
+  const { events } = chat.state;
+  const hit = editsCache.get(chat);
+  if (hit?.events === events && hit.length === events.length) return hit.edits;
+  const edits = sumEdits(events);
+  editsCache.set(chat, { events, length: events.length, edits });
+  return edits;
+}
 
 function summary(chat: AgentSession): LiveChat {
   const s = chat.state;
@@ -58,10 +77,10 @@ function summary(chat: AgentSession): LiveChat {
     running: s.session.running,
     pending: s.pending.length,
     status: s.status,
-    lastActive: s.events[s.events.length - 1]?.at ?? chat.created,
+    lastActive: lastActive(chat),
     mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,
     last: replyLine(s.events),
-    edits: sumEdits(s.events),
+    edits: editsOf(chat),
   };
 }
 
@@ -71,7 +90,7 @@ function broadcastLive() {
     liveTimer = null;
     for (const { chat } of live.values()) chat.watchTranscript(viewers(chat) > 0);
     const chats = [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
-    clients.forEach((c) => c.send({ type: 'live', chats }));
+    broadcast({ type: 'live', chats });
   }, 100);
 }
 
@@ -80,7 +99,7 @@ async function createChat(cwd: string, resume?: string, title = '') {
   chat.title = title;
   await chat.loadHistory();
   chat.onMessage((m) => {
-    clients.forEach((c) => c.view === chat && c.send(m));
+    broadcast(m, (c) => c.view === chat);
     notifyAway(m, () => (viewers(chat) ? null : summary(chat)));
     if (m.type === 'session' && chat === lastViewed) remember(chat);
     if (m.type !== 'event' || m.event.kind === 'user') broadcastLive();
@@ -100,7 +119,7 @@ function closeChat(chat: AgentSession) {
 
 async function closeByUser(chat: AgentSession) {
   const others = [...live.values()].map((l) => l.chat).filter((c) => c !== chat);
-  const next = others.sort((a, b) => summary(b).lastActive - summary(a).lastActive)[0] ?? (await createChat(chat.cwd));
+  const next = others.sort((a, b) => lastActive(b) - lastActive(a))[0] ?? (await createChat(chat.cwd));
   if (lastViewed === chat) lastViewed = next;
   for (const c of clients) if (c.view === chat) view(c, next);
   closeChat(chat);
@@ -118,7 +137,7 @@ function view(client: Client, chat: AgentSession) {
 }
 
 setInterval(() => {
-  for (const { chat } of live.values()) if (idle(chat) && Date.now() - summary(chat).lastActive > IDLE_MS) closeChat(chat);
+  for (const { chat } of live.values()) if (idle(chat) && Date.now() - lastActive(chat) > IDLE_MS) closeChat(chat);
 }, 60_000);
 
 function watchFiles(cwd: string, onChange: (rel: string) => void) {
@@ -158,8 +177,8 @@ async function savePaste(req: http.IncomingMessage, name: string) {
 const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
 
 async function openSaved(sessionId: string) {
-  const open = [...live.values()].find((l) => l.chat.state.session.sessionId === sessionId);
-  if (open) return open.chat;
+  const open = bySession(sessionId);
+  if (open) return open;
   const info = await getSessionInfo(sessionId);
   if (!info) throw new Error('Session not found');
   if (!info.cwd) throw new Error('This session has no folder recorded, so it cannot be resumed');
@@ -194,7 +213,7 @@ function saveAndExit() {
 function restart(now: boolean) {
   if (now) return saveAndExit();
   if (restarting) return;
-  clients.forEach((c) => c.send({ type: 'restarting' }));
+  broadcast({ type: 'restarting' });
   restarting = setInterval(() => {
     if (![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting)) saveAndExit();
   }, 1000);
@@ -210,7 +229,7 @@ async function restore() {
     const chat = await openSaved(s.sessionId).catch(() => null);
     if (chat && s.crons.length) chat.restoreCrons(s.crons);
   }
-  return [...live.values()].find((l) => l.chat.state.session.sessionId === saved.view)?.chat ?? null;
+  return (saved.view && bySession(saved.view)) || null;
 }
 
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
@@ -240,14 +259,11 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/terms') return json(listTerminals(chat.id));
     if (url.pathname === '/api/files') return json(await listFiles(chat.cwd));
     if (url.pathname === '/api/dir') return json(await listDir(chat.cwd, url.searchParams.get('path') ?? ''));
-    if (url.pathname === '/api/file') {
-      const rel = url.searchParams.get('path') ?? '';
-      return json(await readFileWithOriginal(chat.cwd, rel));
-    }
+    if (url.pathname === '/api/file') return json(await readFileWithOriginal(chat.cwd, url.searchParams.get('path') ?? ''));
     if (url.pathname.startsWith('/api/git/')) return json(await gitRoute(chat.cwd, url.pathname.slice(9), url.searchParams, req.method === 'POST' ? JSON.parse(await readBody(req)) : null));
     if (url.pathname === '/api/sessions' && req.method === 'DELETE') {
       const id = url.searchParams.get('id') ?? '';
-      if ([...live.values()].some((l) => l.chat.state.session.sessionId === id)) return json({ error: 'This chat is still open. It closes after 10 minutes without use.' }, 409);
+      if (bySession(id)) return json({ error: 'This chat is still open. It closes after 10 minutes without use.' }, 409);
       const info = await getSessionInfo(id);
       if (!info) return json({ error: 'Chat not found' }, 404);
       if (Date.now() - info.lastModified < STALE_MS) return json({ error: 'This chat was used in the last 12 hours.' }, 409);
@@ -342,8 +358,9 @@ wss.on('connection', (ws: WebSocket, req) => {
   const term = params.get('term');
   if (term !== null) return attachTerminal(ws, term);
   if (params.has('chrome')) return openChrome(ws, req.headers.origin);
-  const chat = live.get(params.get('chat') ?? '')?.chat ?? [...live.values()].find((l) => l.chat.state.session.sessionId === params.get('session'))?.chat ?? lastViewed;
-  const client: Client = { send: (m) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m)), view: chat };
+  const chat = live.get(params.get('chat') ?? '')?.chat ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? lastViewed;
+  const sendRaw = (data: string) => ws.readyState === WebSocket.OPEN && ws.send(data);
+  const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat };
   clients.add(client);
   view(client, chat);
   if (restarting) client.send({ type: 'restarting' });

@@ -29,7 +29,7 @@ export function useMacName() {
 
 const switched = typeof location !== 'undefined' && new URLSearchParams(location.search).has('switched');
 
-export async function switchMac(url: string) {
+async function switchMac(url: string) {
   try {
     await fetch(`${url}/api/connect?peer=1`, { mode: 'no-cors', signal: AbortSignal.timeout(4000) });
   } catch {

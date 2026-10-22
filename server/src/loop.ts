@@ -1,6 +1,6 @@
 import type { LoopPhase, LoopState } from '../../shared/protocol.js';
 
-export const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: 'claude-sonnet-5-5' } as const;
+const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: 'claude-sonnet-5-5' } as const;
 
 export type LoopStep = { phase: LoopPhase; model: string; mode: string; label: string; prompt: string };
 
@@ -27,7 +27,7 @@ export function planStep(task: string): LoopStep {
   };
 }
 
-export function buildStep(): LoopStep {
+function buildStep(): LoopStep {
   return {
     phase: 'build',
     model: LOOP_MODELS.build,
@@ -37,7 +37,7 @@ export function buildStep(): LoopStep {
   };
 }
 
-export function testStep(round: number, max: number): LoopStep {
+function testStep(round: number, max: number): LoopStep {
   return {
     phase: 'test',
     model: LOOP_MODELS.test,
@@ -51,7 +51,7 @@ export function testStep(round: number, max: number): LoopStep {
   };
 }
 
-export function fixStep(report: string): LoopStep {
+function fixStep(report: string): LoopStep {
   return {
     phase: 'build',
     model: LOOP_MODELS.build,

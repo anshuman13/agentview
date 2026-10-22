@@ -10,7 +10,8 @@ import { Row, Transcript } from './Transcript';
 import { FileIcon } from './Explorer';
 import { relPath } from './steps';
 import { BIG_BRO, buildTurns, type Turn } from './turns';
-import { AgentsChip } from './AgentsPane';
+import { AgentsChip, openAgent } from './AgentsPane';
+import { plural, readFlag, saveFlag, useTick } from './util';
 import { useMacName } from '../MacsPopover';
 import type { PendingRequest } from '../../../shared/protocol';
 
@@ -20,21 +21,20 @@ export function Brief() {
   const events = useStore((s) => s.events);
   const status = useStore((s) => s.status);
   const running = useStore((s) => s.session.running);
-  const waiting = useStore((s) => s.pending.length > 0);
   const team = useStore((s) => s.session.team);
   const macName = useMacName();
   const stopping = useStore((s) => s.session.stopping);
   const loop = useStore((s) => s.session.loop);
   const cwd = useStore((s) => s.session.cwd);
   const pending = useStore((s) => s.pending);
+  const waiting = pending.length > 0;
   const { turns, next, lastTool, advisor, fable } = useMemo(() => buildTurns(events), [events]);
   const [all, setAll] = useState(false);
-  const [full, setFull] = useState(() => localStorage.getItem('agentview.transcript') === '1');
-  const pick = (v: boolean) => { setFull(v); localStorage.setItem('agentview.transcript', v ? '1' : '0'); };
+  const [full, setFull] = useState(() => readFlag('agentview.transcript', false));
+  const pick = (v: boolean) => { setFull(v); saveFlag('agentview.transcript', v); };
   const [adding, setAdding] = useState(false);
-  const [stepsOpen, setStepsOpen] = useState(() => { try { return (localStorage.getItem('agentview.steps') ?? (touch() ? '0' : '1')) === '1'; } catch { return !touch(); } });
-  const toggleSteps = () => { setStepsOpen(!stepsOpen); try { localStorage.setItem('agentview.steps', stepsOpen ? '0' : '1'); } catch {} };
-  const [, tick] = useState(0);
+  const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', !touch()));
+  const toggleSteps = () => { setStepsOpen(!stepsOpen); saveFlag('agentview.steps', !stepsOpen); };
   const end = useRef<HTMLDivElement>(null);
   const from = all ? 0 : Math.max(0, turns.length - SHOWN_TURNS);
   const shown = turns.slice(from);
@@ -44,10 +44,7 @@ export function Brief() {
   const hasSteps = next.length > 0 || adding || running;
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
 
-  useEffect(() => {
-    const t = setInterval(() => tick((n) => n + 1), 30000);
-    return () => clearInterval(t);
-  }, []);
+  useTick(30000);
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'nearest' });
@@ -162,8 +159,6 @@ function Reply({ text, clip }: { text: string; clip: boolean }) {
   );
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-
 function Facts({ turn, cwd, pending }: { turn: Turn; cwd: string; pending: PendingRequest[] }) {
   const [allFiles, setAllFiles] = useState(false);
   const failed = turn.commands.filter((c) => c.error);
@@ -224,7 +219,7 @@ function Facts({ turn, cwd, pending }: { turn: Turn; cwd: string; pending: Pendi
       {turn.agents.length > 0 && (
         <div className="tc-agents">
           {turn.agents.map((a) => (
-            <button key={a.id} className={`tc-agent ${a.state}`} title={a.label} onClick={() => window.dispatchEvent(new CustomEvent('open-agent', { detail: a.id }))}>
+            <button key={a.id} className={`tc-agent ${a.state}`} title={a.label} onClick={() => openAgent(a.id)}>
               <i className="tr-ring" /><span className="name">{a.type === BIG_BRO ? `Fable: ${a.label}` : a.label}</span><span className="state">{a.state}</span>
             </button>
           ))}

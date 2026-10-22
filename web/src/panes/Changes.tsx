@@ -4,11 +4,13 @@ import { api, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { FileIcon } from './Explorer';
+import { usePoll } from './util';
 import '../changes.css';
 
 let git: { status: GitStatus | null; error: string } = { status: null, error: '' };
 const subs = new Set<() => void>();
-const useGit = () => useSyncExternalStore((l) => (subs.add(l), () => subs.delete(l)), () => git);
+const subscribe = (l: () => void) => (subs.add(l), () => void subs.delete(l));
+const useGit = () => useSyncExternalStore(subscribe, () => git);
 
 async function refresh() {
   try {
@@ -121,11 +123,8 @@ export function Changes() {
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const root = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    void refresh();
-    const t = setInterval(() => !document.hidden && root.current?.offsetParent && void refresh(), 5000);
-    return () => clearInterval(t);
-  }, [id]);
+  useEffect(() => void refresh(), [id]);
+  usePoll(root, 5000, refresh, [id]);
 
   const run: Run = async (action, body) => {
     setFailed('');

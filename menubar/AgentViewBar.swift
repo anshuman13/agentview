@@ -76,7 +76,7 @@ final class Child {
     guard pid > 0 else { return }
     kill(-pid, SIGTERM)
     let p = pid
-    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { if p > 0 { kill(-p, SIGKILL) } }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in if self?.pid == p { kill(-p, SIGKILL) } }
   }
 
   func restart() {

@@ -15,6 +15,7 @@ export type Agent = {
   startedAt: number;
   endedAt: number | null;
   lastStep: string;
+  lastAt: number;
 };
 
 function stepText(it: Item | undefined): string {
@@ -28,8 +29,10 @@ function stepText(it: Item | undefined): string {
   return '';
 }
 
-function agentOf(it: Extract<Item, { kind: 'agent' }>, info?: AgentEvent): Agent {
-  const { use, result, steps, running } = it;
+function agentOf(it: Extract<Item, { kind: 'agent' }>, info: AgentEvent | undefined, lastAt: number): Agent {
+  const { use, result, steps } = it;
+  // The server can end a task (task_updated) before or without a tool result; trust it unless the agent was resumed.
+  const running = it.running && !(info && info.status !== 'running' && !result);
   const s = (k: string) => (typeof use.input[k] === 'string' ? (use.input[k] as string) : '');
   const ended: AgentStatus = result?.stopped ? 'stopped' : result?.isError ? 'failed' : 'done';
   return {
@@ -46,17 +49,22 @@ function agentOf(it: Extract<Item, { kind: 'agent' }>, info?: AgentEvent): Agent
     startedAt: info?.startedAt ?? use.at,
     endedAt: running ? null : info?.endedAt ?? result?.at ?? null,
     lastStep: stepText(steps[steps.length - 1]),
+    lastAt: Math.max(lastAt, use.at),
   };
 }
 
 export function buildAgents(events: ChatEvent[]): Agent[] {
   const info = new Map<string, AgentEvent>();
-  for (const e of events) if (e.kind === 'agent') info.set(e.toolUseId, e);
+  const lastAt = new Map<string, number>();
+  for (const e of events) {
+    if (e.kind === 'agent') info.set(e.toolUseId, e);
+    else if ('parent' in e && e.parent) lastAt.set(e.parent, Math.max(lastAt.get(e.parent) ?? 0, e.at));
+  }
   const out: Agent[] = [];
   const walk = (items: Item[]) => {
     for (const it of items) {
       if (it.kind !== 'agent') continue;
-      out.push(agentOf(it, info.get(it.id)));
+      out.push(agentOf(it, info.get(it.id), lastAt.get(it.id) ?? 0));
       walk(it.steps);
     }
   };

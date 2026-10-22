@@ -1,39 +1,25 @@
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type MutableRefObject } from 'react';
-import { EditorState } from '@codemirror/state';
+import { Fragment, useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { syntaxHighlighting } from '@codemirror/language';
 import { unifiedMergeView } from '@codemirror/merge';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
-import { javascript } from '@codemirror/lang-javascript';
-import { python } from '@codemirror/lang-python';
-import { json } from '@codemirror/lang-json';
-import { markdown } from '@codemirror/lang-markdown';
-import { html } from '@codemirror/lang-html';
-import { css } from '@codemirror/lang-css';
 import { api, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { FileIcon } from './Explorer';
+import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
 import '../code.css';
 
-function lang(path: string) {
+async function lang(path: string): Promise<Extension> {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
-  if (['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'].includes(ext)) return javascript({ typescript: ext.startsWith('ts'), jsx: ext.endsWith('x') });
-  if (ext === 'py') return python();
-  if (ext === 'json') return json();
-  if (ext === 'md') return markdown();
-  if (ext === 'html') return html();
-  if (ext === 'css') return css();
+  if (['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'].includes(ext)) return (await import('@codemirror/lang-javascript')).javascript({ typescript: ext.startsWith('ts'), jsx: ext.endsWith('x') });
+  if (ext === 'py') return (await import('@codemirror/lang-python')).python();
+  if (ext === 'json') return (await import('@codemirror/lang-json')).json();
+  if (ext === 'md') return (await import('@codemirror/lang-markdown')).markdown();
+  if (ext === 'html') return (await import('@codemirror/lang-html')).html();
+  if (ext === 'css') return (await import('@codemirror/lang-css')).css();
   return [];
 }
-
-let opened: string[] = [];
-let openedChat = '';
-const openedSubs = new Set<() => void>();
-export function setOpened(files: string[]) {
-  opened = files;
-  openedSubs.forEach((l) => l());
-}
-export const useOpened = () => useSyncExternalStore((l) => (openedSubs.add(l), () => openedSubs.delete(l)), () => opened);
 
 type FileData = { path: string; content: string; original: string };
 
@@ -46,6 +32,9 @@ function useFile(path: string | null, bump: unknown) {
       .then((r) => r.json())
       .then((d: { content: string; original: string }) => {
         if (!cancelled) setFile({ path, content: d.content, original: d.original });
+      })
+      .catch(() => {
+        if (!cancelled) setFile({ path, content: '', original: '' });
       });
     return () => {
       cancelled = true;
@@ -87,21 +76,29 @@ function Editor({ file, diff, wrap, changesOnly, viewRef }: EditorProps) {
 
   useEffect(() => {
     if (!host.current) return;
-    const extensions = [
-      lineNumbers(),
-      EditorView.editable.of(false),
-      EditorState.readOnly.of(true),
-      EditorView.theme({}, { dark: true }),
-      syntaxHighlighting(oneDarkHighlightStyle),
-      lang(file.path),
-      wrap ? EditorView.lineWrapping : [],
-      diff ? unifiedMergeView({ original: file.original, mergeControls: false, collapseUnchanged: changesOnly ? { margin: 3, minSize: 4 } : undefined }) : [],
-      EditorState.phrases.of({ '$ unchanged lines': '⋯ $ unchanged lines' }),
-    ];
-    const view = new EditorView({ state: EditorState.create({ doc: file.content, extensions }), parent: host.current });
-    if (scroll.current?.path === file.path) view.scrollDOM.scrollTop = scroll.current.top;
-    viewRef.current = view;
+    const parent = host.current;
+    let cancelled = false;
+    let view: EditorView | null = null;
+    lang(file.path).then((language) => {
+      if (cancelled) return;
+      const extensions = [
+        lineNumbers(),
+        EditorView.editable.of(false),
+        EditorState.readOnly.of(true),
+        EditorView.theme({}, { dark: true }),
+        syntaxHighlighting(oneDarkHighlightStyle),
+        language,
+        wrap ? EditorView.lineWrapping : [],
+        diff ? unifiedMergeView({ original: file.original, mergeControls: false, collapseUnchanged: changesOnly ? { margin: 3, minSize: 4 } : undefined }) : [],
+        EditorState.phrases.of({ '$ unchanged lines': '⋯ $ unchanged lines' }),
+      ];
+      view = new EditorView({ state: EditorState.create({ doc: file.content, extensions }), parent });
+      if (scroll.current?.path === file.path) view.scrollDOM.scrollTop = scroll.current.top;
+      viewRef.current = view;
+    });
     return () => {
+      cancelled = true;
+      if (!view) return;
       scroll.current = { path: file.path, top: view.scrollDOM.scrollTop };
       viewRef.current = null;
       view.destroy();
@@ -124,8 +121,8 @@ export function CodePane() {
   const file = useFile(openFile, recent[0] === openFile ? recent : null);
 
   useEffect(() => {
-    const files = openedChat === chat ? opened : [...recent].reverse();
-    openedChat = chat;
+    const files = getOpenedChat() === chat ? getOpened() : [...recent].reverse();
+    setOpenedChat(chat);
     setOpened(openFile && !files.includes(openFile) ? [...files, openFile] : files);
   }, [openFile, chat]);
 

@@ -5,6 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 import '../terminal.css';
 import { Icon } from '../Icon';
 import { touch } from '../touch';
+import { wsUrl } from './util';
 
 type Tab = { id: string; name: string };
 type Props = { chat: string; project?: string; open: boolean; onToggle: () => void };
@@ -153,8 +154,7 @@ function Pane({ id, on, focus, clears, inputs, onGone }: { id: string; on: boole
     const fit = new FitAddon();
     xt.loadAddon(fit);
     term.current = xt;
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${location.host}/ws?term=${encodeURIComponent(id)}`);
+    const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(id)}`));
     const send = (m: object) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m));
     const clear = () => {
       xt.clear();

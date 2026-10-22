@@ -28,7 +28,7 @@ const checkState = (c: Check): CheckState => {
   return 'pending';
 };
 
-export function rollup(checks: Check[] = []): CheckState {
+function rollup(checks: Check[] = []): CheckState {
   const states = checks.map(checkState);
   if (!states.length) return 'none';
   return states.includes('failure') ? 'failure' : states.includes('pending') ? 'pending' : 'success';
@@ -36,7 +36,7 @@ export function rollup(checks: Check[] = []): CheckState {
 
 const list = async (cwd: string, ...extra: string[]) => JSON.parse(await gh(cwd, 'pr', 'list', '--json', LIST, '--limit', '30', ...extra));
 
-export async function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
+async function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
   const hit = cache.get(cwd);
   if (!fresh && hit && Date.now() - hit.at < 30_000) return hit.prs;
   const [all, mine, requested] = await Promise.all([list(cwd), list(cwd, '--author', '@me'), list(cwd, '--search', 'review-requested:@me')]);
@@ -65,7 +65,7 @@ export async function listPrs(cwd: string, fresh = false): Promise<PullRequest[]
 
 type Author = { login?: string; name?: string };
 
-export async function prDetail(cwd: string, n: string): Promise<PullRequestDetail> {
+async function prDetail(cwd: string, n: string): Promise<PullRequestDetail> {
   const [view, diff] = await Promise.all([gh(cwd, 'pr', 'view', n, '--json', 'body,reviews,comments,files,commits,statusCheckRollup'), gh(cwd, 'pr', 'diff', n)]);
   const d = JSON.parse(view);
   const reviews = [

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { api, notice, send, steer, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Voice, useDictation } from './Voice';
@@ -6,6 +6,7 @@ import { QuickPick } from '../QuickPick';
 import { FileIcon } from './Explorer';
 import { match } from './FileSwitcher';
 import { touch } from '../touch';
+import { Hl, useTick, wsUrl } from './util';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import '../composer.css';
 
@@ -133,16 +134,11 @@ async function runInTerminal(cmd: string) {
   const list: Array<{ id: string }> = await fetch(api('/api/terms')).then((r) => r.json());
   const term = list.at(-1) ?? (await fetch(api('/api/terms'), { method: 'POST' }).then((r) => r.json()));
   window.dispatchEvent(new CustomEvent('agentview:terminal', { detail: term.id }));
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/ws?term=${encodeURIComponent(term.id)}`);
+  const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(term.id)}`));
   ws.onopen = () => {
     ws.send(JSON.stringify({ t: 'i', d: `${cmd}\r` }));
     ws.close();
   };
-}
-
-function hl(text: string, hits: number[], from = 0): ReactNode {
-  return [...text].map((c, i) => (hits.includes(from + i) ? <b key={i}>{c}</b> : c));
 }
 
 type Hist = { list: string[]; index: number; draft: string };
@@ -163,12 +159,7 @@ export function Composer() {
   const context = useStore((s) => s.session.context);
   const events = useStore((s) => s.events);
   const toolAt = useStore((s) => (s.session.running ? openToolAt(s.events) : null));
-  const [, tick] = useState(0);
-  useEffect(() => {
-    if (toolAt === null) return;
-    const t = setInterval(() => tick((n) => n + 1), 1000);
-    return () => clearInterval(t);
-  }, [toolAt]);
+  useTick(1000, toolAt !== null);
   const longTool = toolAt !== null && Date.now() - toolAt > LONG_TOOL;
 
   const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop'; at: DOMRect } | null>(null);
@@ -415,7 +406,7 @@ export function Composer() {
               const c = r.item as { name: string; description: string };
               return (
                 <li key={c.name} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
-                  <span className="cp-name">/{hl(c.name, r.hits)}</span>
+                  <span className="cp-name">/<Hl text={c.name} hits={r.hits} /></span>
                   <span className="cp-detail">{c.description}</span>
                 </li>
               );
@@ -425,8 +416,8 @@ export function Composer() {
             return (
               <li key={f} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} title={f} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
                 <FileIcon name={f} />
-                <span className="cp-name">{hl(f.slice(base), r.hits, base)}</span>
-                <span className="cp-detail">{hl(f.slice(0, Math.max(base - 1, 0)), r.hits)}</span>
+                <span className="cp-name"><Hl text={f.slice(base)} hits={r.hits} from={base} /></span>
+                <span className="cp-detail"><Hl text={f.slice(0, Math.max(base - 1, 0))} hits={r.hits} /></span>
               </li>
             );
           })}
