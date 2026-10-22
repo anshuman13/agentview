@@ -10,10 +10,11 @@ import { brotliCompress, gzip, constants as zlib } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './terminal.js';
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome.js';
-import { deleteSession, getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
+import { getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway } from './notify.js';
 import { configDef, mcpConfig, mcpProbe } from './mcp.js';
+import { listBin, removeSession, restoreSession } from './bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './files.js';
 import { github } from './github.js';
 import { deployRoute } from './deploy.js';
@@ -21,7 +22,7 @@ import { gitRoute } from './git.js';
 import { observe } from './observe.js';
 import { otherMacs, thisMac } from './macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
-import { MCP_BAD, STALE_MS, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
+import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
 import { allowedPeer, allowedRequest } from './access.js';
 
@@ -290,11 +291,13 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/git/')) return json(await gitRoute(chat.cwd, url.pathname.slice(9), url.searchParams, req.method === 'POST' ? JSON.parse(await readBody(req)) : null));
     if (url.pathname === '/api/sessions' && req.method === 'DELETE') {
       const id = url.searchParams.get('id') ?? '';
-      if (bySession(id)) return json({ error: 'This chat is still open. It closes after 10 minutes without use.' }, 409);
-      const info = await getSessionInfo(id);
-      if (!info) return json({ error: 'Chat not found' }, 404);
-      if (Date.now() - info.lastModified < STALE_MS) return json({ error: 'This chat was used in the last 12 hours.' }, 409);
-      await deleteSession(id, { dir: info.cwd });
+      const open = bySession(id);
+      if (open) await closeByUser(open);
+      return json(await removeSession(id, url.searchParams.has('purge')));
+    }
+    if (url.pathname === '/api/sessions/bin') return json(await listBin());
+    if (url.pathname === '/api/sessions/restore' && req.method === 'POST') {
+      await restoreSession(url.searchParams.get('id') ?? '');
       return json({ ok: true });
     }
     if (url.pathname === '/api/worktrees' && req.method === 'DELETE') {
@@ -333,8 +336,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
     if (url.pathname === '/api/sessions') {
-      const list = await listSessions({ limit: 300 });
-      return json(list.map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
+      const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
+      const binned = new Set(bin.map((b) => b.sessionId));
+      return json(list.filter((x) => !binned.has(x.sessionId)).map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
     }
     if (url.pathname === '/api/state') return json(chat.state);
     if (url.pathname === '/api/restart' && req.method === 'POST') {

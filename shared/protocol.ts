@@ -148,6 +148,10 @@ export const COMPACT_AT = 200_000;
 
 export const STALE_MS = 12 * 60 * 60 * 1000;
 
+export const BIN_MS = 24 * 60 * 60 * 1000;
+
+export type BinnedSession = { sessionId: string; title: string; cwd: string; lastModified: number; deletedAt: number };
+
 export type RepoKind = 'new' | 'web' | 'service' | 'infra' | 'data' | 'app' | 'docs' | 'other';
 
 export type Repo = {
