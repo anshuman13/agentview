@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { Component, Fragment, useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { syntaxHighlighting } from '@codemirror/language';
@@ -22,7 +22,7 @@ async function lang(path: string): Promise<Extension> {
   return [];
 }
 
-type FileData = { path: string; content: string; original: string };
+type FileData = { path: string; content: string; original: string; error?: string };
 
 function useFile(path: string | null, bump: unknown) {
   const [file, setFile] = useState<FileData | null>(null);
@@ -31,17 +31,27 @@ function useFile(path: string | null, bump: unknown) {
     let cancelled = false;
     fetch(api(`/api/file?path=${encodeURIComponent(path)}`))
       .then((r) => r.json())
-      .then((d: { content: string; original: string }) => {
-        if (!cancelled) setFile({ path, content: d.content, original: d.original });
+      .then((d: { content?: string; original?: string; error?: string }) => {
+        if (!cancelled) setFile({ path, content: d.content ?? '', original: d.original ?? '', error: d.error });
       })
       .catch(() => {
-        if (!cancelled) setFile({ path, content: '', original: '' });
+        if (!cancelled) setFile({ path, content: '', original: '', error: 'The file could not be loaded' });
       });
     return () => {
       cancelled = true;
     };
   }, [path, bump]);
   return file?.path === path ? file : null;
+}
+
+class Guard extends Component<{ children: ReactNode }, { error: boolean }> {
+  state = { error: false };
+  static getDerivedStateFromError() {
+    return { error: true };
+  }
+  render() {
+    return this.state.error ? <div className="cd-empty">This file could not be shown</div> : this.props.children;
+  }
 }
 
 function Breadcrumbs({ path }: { path: string }) {
@@ -160,8 +170,12 @@ export function CodePane() {
           <Toggle icon="vscode" title="Open in VS Code" onClick={openInVsCode} />
         </div>
       </div>
-      {file && showDoc && <MarkdownDoc path={file.path} text={file.content} />}
-      {file && !showDoc && <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} viewRef={viewRef} />}
+      {file?.error && <div className="cd-empty">{file.error === 'path outside project' ? 'This file is outside the project folder' : file.error}</div>}
+      {file && !file.error && (
+        <Guard key={`${file.path}:${showDoc}`}>
+          {showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} viewRef={viewRef} />}
+        </Guard>
+      )}
     </div>
   );
 }
