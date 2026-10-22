@@ -290,6 +290,20 @@ export function Composer() {
     return () => window.removeEventListener('agentview:shared', take);
   }, []);
 
+  useEffect(() => {
+    const insert = (e: Event) => {
+      const add = (e as CustomEvent<{ text: string }>).detail.text;
+      setText((t) => {
+        const next = `${t}${t && !/\s$/.test(t) ? ' ' : ''}${add}`;
+        wantCaret.current = next.length;
+        return next;
+      });
+      requestAnimationFrame(() => ta.current?.focus());
+    };
+    window.addEventListener('agentview:insert', insert);
+    return () => window.removeEventListener('agentview:insert', insert);
+  }, []);
+
   const submit = (now = false) => {
     const t = text.trim();
     if (!t) return;
