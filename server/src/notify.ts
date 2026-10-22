@@ -1,8 +1,11 @@
 import { execFile } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { LiveChat, ServerMessage } from '../../shared/protocol.js';
 
 const last = new Map<string, number>();
+const FIFO = path.join(os.homedir(), '.agentview/notify.fifo');
 
 function detail(m: ServerMessage) {
   if (m.type === 'pending') return m.request.kind === 'question' ? m.request.questions[0]?.question ?? 'Claude has a question' : m.request.title;
@@ -17,6 +20,19 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null) {
   if (!chat || Date.now() - (last.get(chat.id) ?? 0) < 30_000) return;
   last.set(chat.id, Date.now());
   const title = `Claude ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
+  post(title, chat.title, body.slice(0, 200));
+}
+
+function post(title: string, subtitle: string, body: string) {
+  try {
+    const fd = fs.openSync(FIFO, fs.constants.O_WRONLY | fs.constants.O_NONBLOCK);
+    try {
+      fs.writeSync(fd, JSON.stringify({ title, subtitle, body }) + '\n');
+    } finally {
+      fs.closeSync(fd);
+    }
+    return;
+  } catch {}
   const script = 'display notification (item 3 of argv) with title (item 1 of argv) subtitle (item 2 of argv) sound name "Glass"';
-  execFile('osascript', ['-e', 'on run argv', '-e', script, '-e', 'end run', title, chat.title, body.slice(0, 200)], () => {});
+  execFile('osascript', ['-e', 'on run argv', '-e', script, '-e', 'end run', title, subtitle, body], () => {});
 }
