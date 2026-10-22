@@ -1,6 +1,7 @@
 import AppKit
 import IOKit.pwr_mgt
 import ServiceManagement
+import UserNotifications
 
 let repo = Bundle.main.bundleURL.resolvingSymlinksInPath().deletingLastPathComponent().deletingLastPathComponent().path
 let logs = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".agentview/logs")
@@ -100,6 +101,50 @@ func freePorts(_ ports: [Int]) {
   }
 }
 
+final class Notifier: NSObject, UNUserNotificationCenterDelegate {
+  let path = logs.deletingLastPathComponent().appendingPathComponent("notify.fifo").path
+  var buffer = Data()
+  var onClick: () -> Void = {}
+
+  func start() {
+    let center = UNUserNotificationCenter.current()
+    center.delegate = self
+    center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    unlink(path)
+    mkfifo(path, 0o600)
+    let fd = open(path, O_RDWR)
+    guard fd >= 0 else { return }
+    FileHandle(fileDescriptor: fd).readabilityHandler = { [weak self] h in
+      let d = h.availableData
+      DispatchQueue.main.async { self?.received(d) }
+    }
+  }
+
+  func received(_ d: Data) {
+    buffer.append(d)
+    while let i = buffer.firstIndex(of: 10) {
+      let line = Data(buffer[..<i])
+      buffer = Data(buffer[(i + 1)...])
+      guard let m = (try? JSONSerialization.jsonObject(with: line)) as? [String: String] else { continue }
+      let content = UNMutableNotificationContent()
+      content.title = m["title"] ?? "AgentView"
+      content.subtitle = m["subtitle"] ?? ""
+      content.body = m["body"] ?? ""
+      content.sound = UNNotificationSound(named: UNNotificationSoundName("Glass"))
+      UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+    }
+  }
+
+  func userNotificationCenter(_ c: UNUserNotificationCenter, willPresent n: UNNotification, withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
+    done([.banner, .sound])
+  }
+
+  func userNotificationCenter(_ c: UNUserNotificationCenter, didReceive r: UNNotificationResponse, withCompletionHandler done: @escaping () -> Void) {
+    onClick()
+    done()
+  }
+}
+
 final class Bar: NSObject, NSApplicationDelegate {
   let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
   let awakeItem = NSMenuItem(title: "Keep Mac awake", action: #selector(toggleAwake), keyEquivalent: "")
@@ -108,9 +153,12 @@ final class Bar: NSObject, NSApplicationDelegate {
   let relay = Child("relay", "node_modules/.bin/tsx server/src/relay.ts", env: ["AGENTVIEW_RELAY_TOKEN": token])
   let server = Child("server", "npm run serve -w server", env: ["CHROME_CDP": "ws://127.0.0.1:7779/\(token)"])
   let web = Child("web", "npm run dev -w web")
+  let notifier = Notifier()
 
   func applicationDidFinishLaunching(_ n: Notification) {
     try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
+    notifier.onClick = { [weak self] in self?.openApp() }
+    notifier.start()
     let menu = NSMenu()
     menu.addItem(withTitle: "Open AgentView", action: #selector(openApp), keyEquivalent: "o").target = self
     menu.addItem(withTitle: "Restart server", action: #selector(restartServer), keyEquivalent: "r").target = self
