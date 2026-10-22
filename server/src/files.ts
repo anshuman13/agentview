@@ -58,6 +58,14 @@ export function safeResolve(cwd: string, rel: string): string {
   return abs;
 }
 
+const IMAGES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp', avif: 'image/avif' };
+
+export async function readImage(cwd: string, rel: string) {
+  const type = IMAGES[path.extname(rel).slice(1).toLowerCase()];
+  if (!type) throw new Error('not an image');
+  return { type, body: await readFile(safeResolve(cwd, rel)) };
+}
+
 export async function readFileWithOriginal(cwd: string, rel: string) {
   const abs = safeResolve(cwd, rel);
   const content = await readFile(abs, 'utf8').catch(() => '');

@@ -29,7 +29,7 @@ It uses the Claude Code CLI you have installed and its login.
 ## Layout
 
 - **Task box** (right): prompt, mode and model menus, context meter, and the timeline below it
-- **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Browser tab shows your Chrome
+- **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. Browser tab shows your Chrome
 - **Sidebar**: Explorer, Chats (open and recent) and Workspace (repos, chats, Paseo worktrees)
 - **Terminal** (bottom): a shell in the chat's folder
 

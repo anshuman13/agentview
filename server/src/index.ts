@@ -14,7 +14,7 @@ import { deleteSession, getSessionInfo, listSessions, type SessionCronSummary } 
 import { AgentSession } from './session.js';
 import { notifyAway } from './notify.js';
 import { configDef, mcpConfig, mcpProbe } from './mcp.js';
-import { listDir, listFiles, readFileWithOriginal } from './files.js';
+import { listDir, listFiles, readFileWithOriginal, readImage } from './files.js';
 import { github } from './github.js';
 import { deployRoute } from './deploy.js';
 import { gitRoute } from './git.js';
@@ -277,6 +277,11 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/files') return json(await listFiles(chat.cwd));
     if (url.pathname === '/api/dir') return json(await listDir(chat.cwd, url.searchParams.get('path') ?? ''));
     if (url.pathname === '/api/file') return json(await readFileWithOriginal(chat.cwd, url.searchParams.get('path') ?? ''));
+    if (url.pathname === '/api/image') {
+      const img = await readImage(chat.cwd, url.searchParams.get('path') ?? '');
+      res.writeHead(200, { 'content-type': img.type, 'cache-control': 'no-cache', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'", 'x-content-type-options': 'nosniff' });
+      return res.end(img.body);
+    }
     if (url.pathname.startsWith('/api/git/')) return json(await gitRoute(chat.cwd, url.pathname.slice(9), url.searchParams, req.method === 'POST' ? JSON.parse(await readBody(req)) : null));
     if (url.pathname === '/api/sessions' && req.method === 'DELETE') {
       const id = url.searchParams.get('id') ?? '';
