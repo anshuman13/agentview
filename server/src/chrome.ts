@@ -91,6 +91,12 @@ function retry() {
 }
 
 export function openInChrome(url: string) {
+  if (ownProfile() && cdp) {
+    call('Target.createTarget', { url })
+      .then(({ targetId }) => call('Target.activateTarget', { targetId }))
+      .catch(() => launchProfile(url));
+    return;
+  }
   if (ownProfile()) return launchProfile(url);
   execFile('open', process.platform === 'darwin' ? ['-a', 'Google Chrome', url] : [url], (err) => err && console.error('open in chrome:', err.message));
 }
