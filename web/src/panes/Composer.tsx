@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { api, notice, send, steer, useStore } from '../store';
+import { api, notice, prompt, send, steer, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../QuickPick';
@@ -162,7 +162,7 @@ export function Composer() {
   useTick(1000, toolAt !== null);
   const longTool = toolAt !== null && Date.now() - toolAt > LONG_TOOL;
 
-  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop'; at: DOMRect } | null>(null);
+  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop' | 'saved'; at: DOMRect } | null>(null);
   const [text, setText] = useState(() => readDraft(chat));
   const draftFor = useRef(chat);
   const picker = useRef<HTMLInputElement>(null);
@@ -311,11 +311,12 @@ export function Composer() {
       const cmd = t.slice(1).trim();
       if (cmd) runInTerminal(cmd).catch(() => notice('Terminal unavailable'));
     } else {
-      if ((now || longTool) && running) steer(t);
-      else send({ type: 'prompt', text: t });
       const next = remember(t, stored);
       setStored(next);
       try { localStorage.setItem(STORED_KEY, JSON.stringify(next)); } catch {}
+      const lost = () => setText((cur) => (cur.trim() ? cur : t));
+      const sent = (now || longTool) && running ? steer(t, lost) : prompt(t, lost);
+      if (!sent) { notice('Not connected, message not sent'); return; }
     }
     setHist(null);
     apply('');
@@ -445,8 +446,9 @@ export function Composer() {
             { value: 'mode', label: 'Permission mode', detail: modeInfo.label },
             { value: 'model', label: 'Model', detail: modelName },
             { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
+            { value: 'saved', label: 'Saved prompts', detail: `${stored.length}` },
           ]}
-          onPick={(v) => setPick({ kind: v as 'mode' | 'model' | 'loop', at: pick.at })}
+          onPick={(v) => setPick({ kind: v as 'mode' | 'model' | 'loop' | 'saved', at: pick.at })}
           onClose={() => setPick(null)}
         />
       )}
@@ -467,6 +469,15 @@ export function Composer() {
           current={loop.on ? String(loop.max) : 'off'}
           items={LOOP_ITEMS}
           onPick={(v) => { send(v === 'off' ? { type: 'set_loop', on: false } : { type: 'set_loop', on: true, max: Number(v) }); setPick(null); }}
+          onClose={() => setPick(null)}
+        />
+      )}
+      {pick?.kind === 'saved' && (
+        <QuickPick
+          anchor={pick.at}
+          title="Saved prompts"
+          items={[...stored].reverse().map((t, i) => ({ value: String(i), label: t.replace(/\s+/g, ' ').slice(0, 200) }))}
+          onPick={(v) => { apply([...stored].reverse()[Number(v)]); setPick(null); ta.current?.focus(); }}
           onClose={() => setPick(null)}
         />
       )}
