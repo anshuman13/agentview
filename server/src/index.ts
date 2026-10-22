@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { mkdirSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { promisify } from 'node:util';
+import { brotliCompress, gzip, constants as zlib } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './terminal.js';
 import { connect as connectChrome, openChrome, openInChrome } from './chrome.js';
@@ -244,6 +246,21 @@ const MIME: Record<string, string> = {
   '.webmanifest': 'application/manifest+json',
 };
 
+// Compressed copies of web/dist files, made once per file version.
+const packed = new Map<string, { mtime: number; br: Buffer; gzip: Buffer }>();
+const brotli = promisify(brotliCompress);
+const gz = promisify(gzip);
+const COMPRESS = new Set(['.html', '.js', '.css', '.json', '.svg', '.webmanifest', '.ttf']);
+
+async function compressed(file: string, body: Buffer, mtime: number) {
+  const hit = packed.get(file);
+  if (hit?.mtime === mtime) return hit;
+  const [br, gzipped] = await Promise.all([brotli(body, { params: { [zlib.BROTLI_PARAM_QUALITY]: 11 } }), gz(body, { level: 9 })]);
+  const entry = { mtime, br, gzip: gzipped };
+  packed.set(file, entry);
+  return entry;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://x');
   const json = (body: unknown, code = 200) => {
@@ -338,12 +355,29 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
     let file = path.join(WEB_DIST, url.pathname === '/' ? 'index.html' : url.pathname);
-    const exists = await stat(file).then((s) => s.isFile()).catch(() => false);
-    if (!exists) file = path.join(WEB_DIST, 'index.html');
-    const body = await readFile(file).catch(() => null);
-    if (!body) return json({ error: 'web client not built, run npm run dev or npm run build' }, 404);
-    res.writeHead(200, { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
-    res.end(body);
+    let info = await stat(file).catch(() => null);
+    if (!info?.isFile()) {
+      file = path.join(WEB_DIST, 'index.html');
+      info = await stat(file).catch(() => null);
+    }
+    const body = info && (await readFile(file).catch(() => null));
+    if (!info || !body) return json({ error: 'web client not built, run npm run dev or npm run build' }, 404);
+    const ext = path.extname(file);
+    const headers: http.OutgoingHttpHeaders = {
+      'content-type': MIME[ext] ?? 'application/octet-stream',
+      // Vite puts a content hash in every file name under assets/, so those never change.
+      'cache-control': file.startsWith(path.join(WEB_DIST, 'assets') + path.sep) ? 'public, max-age=31536000, immutable' : 'no-cache',
+      ...(COMPRESS.has(ext) && { vary: 'accept-encoding' }),
+    };
+    const accept = String(req.headers['accept-encoding'] ?? '');
+    const encoding = !COMPRESS.has(ext) || body.length < 1024 ? null : /\bbr\b/.test(accept) ? 'br' : /\bgzip\b/.test(accept) ? 'gzip' : null;
+    if (!encoding) {
+      res.writeHead(200, headers);
+      return res.end(body);
+    }
+    const out = (await compressed(file, body, info.mtimeMs))[encoding];
+    res.writeHead(200, { ...headers, 'content-encoding': encoding });
+    res.end(out);
   } catch (err) {
     json({ error: err instanceof Error ? err.message : String(err) }, 500);
   }
