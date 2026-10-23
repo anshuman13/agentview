@@ -648,3 +648,39 @@ describe('turns the CLI starts by itself', () => {
     expect(start).toHaveBeenCalledOnce();
   });
 });
+
+describe('/loop after Stop', () => {
+  it('a back to back loop fires again after a grace period, not at once', async () => {
+    vi.useFakeTimers();
+    const { s, interrupt, result } = fakeSession();
+    await s.prompt('/loop until 23:59 do the next round');
+    expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['/loop until 23:59 do the next round', 'do the next round']);
+    Object.assign(s, { inputQueue: [] });
+    await s.interrupt();
+    expect(interrupt).toHaveBeenCalledOnce();
+    result('r1', 'error_during_execution');
+    expect(s.state.session.running).toBe(false);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Loop round 2 at \d\d:\d\d/) });
+    vi.advanceTimersByTime(60_000);
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
+    vi.advanceTimersByTime(61_000);
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
+    expect(s.state.session.repeat?.round).toBe(2);
+    vi.useRealTimers();
+  });
+
+  it('a tick that lands mid turn survives a CLI exit', async () => {
+    vi.useFakeTimers();
+    const { s, result } = fakeSession();
+    await s.prompt('/loop 10m until 23:59 do the next round');
+    vi.advanceTimersByTime(10 * 60_000 + 1);
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
+    (s as unknown as { consume: () => Promise<void> }).consume();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(s.state.session.running).toBe(false);
+    vi.advanceTimersByTime(2 * 60_000 + 1);
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
+    vi.useRealTimers();
+    result('r9');
+  });
+});
