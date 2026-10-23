@@ -109,6 +109,9 @@ const LOOP_ITEMS = [
 
 const PHASES: Record<string, string> = { plan: 'Planning with Opus', build: 'Building with Opus', test: 'Testing with Sonnet', passed: 'Loop passed', failed: 'Loop stopped' };
 
+export const clock = (t: number) => new Date(t).toTimeString().slice(0, 5);
+const span = (ms: number) => (ms % 3_600_000 === 0 ? `${ms / 3_600_000}h` : `${Math.round(ms / 60_000)}m`);
+export const repeatLabel = (r: { every: number; until: number | null; round: number }) => `Loop round ${r.round}, ${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? `${PHASES[loop.phase] ?? loop.phase}${['plan', 'build', 'test'].includes(loop.phase) && loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 const MAX_HEIGHT = 220;
 const fileCache = new Map<string, string[]>();
@@ -165,6 +168,7 @@ export function Composer() {
   const models = useStore((s) => s.session.models);
   const team = useStore((s) => s.session.team);
   const loop = useStore((s) => s.session.loop);
+  const repeat = useStore((s) => s.session.repeat);
   const context = useStore((s) => s.session.context);
   const userCount = useStore((s) => s.events.reduce((n, e) => n + (e.kind === 'user' ? 1 : 0), 0));
   const edited = useStore((s) => editedOf(s.events));
@@ -442,6 +446,7 @@ export function Composer() {
           )}
           {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
           {loop.phase && <span className={`cp-phase ${loop.phase}`}>{loopLabel(loop)}</span>}
+          {repeat && <button className="cp-ctx cp-phase" title={`${repeatLabel(repeat)}. Tap to stop the loop.`} onClick={() => send({ type: 'prompt', text: '/loop off' })}>Loop {repeat.round}{repeat.nextAt ? ` · next ${clock(repeat.nextAt)}` : ''}{repeat.until ? ` · until ${clock(repeat.until)}` : ''}</button>}
         </span>
       </div>
       {open && (
