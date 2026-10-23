@@ -89,6 +89,7 @@ export class AgentSession {
   private gen = 0;
   crons: SessionCronSummary[] = [];
   private wokeAt = 0;
+  private endedAt = 0;
 
   id = randomUUID();
   title = '';
@@ -166,7 +167,10 @@ export class AgentSession {
   private setSession(patch: Partial<SessionInfo>) {
     const wasRunning = this.state.session.running;
     this.state.session = { ...this.state.session, ...patch };
-    if (wasRunning && patch.running === false) setTimeout(() => void this.syncTranscript(true), 500);
+    if (wasRunning && patch.running === false) {
+      this.endedAt = Date.now();
+      setTimeout(() => void this.syncTranscript(true), 500);
+    }
     this.emit({ type: 'session', session: this.state.session });
   }
 
@@ -218,7 +222,8 @@ export class AgentSession {
     this.seenSubs = countAll(subs);
     if (last === this.seen && !subsMoved) return;
     if (last !== this.seen) {
-      const baseline = ownTurn || !this.seen || this.tasks.size > 0;
+      // The CLI's last transcript write lands just before `result`, so the watcher fires before the own-turn sync.
+      const baseline = ownTurn || !this.seen || this.tasks.size > 0 || Date.now() - this.endedAt < 3000;
       this.seen = last;
       if (baseline) return;
     }
@@ -619,13 +624,13 @@ export class AgentSession {
     }
   }
 
-  private turnStartedByClaude() {
+  private turnStartedByClaude(why?: string) {
     this.wokeAt = Date.now();
     this.turns++;
     this.setSession({ running: true });
-    this.setStatus('Woke up for a scheduled or background task');
-    const cron = this.crons.length === 1 ? this.crons[0] : null;
-    this.system(cron ? `Claude woke up: ${cron.prompt.slice(0, 100)}` : 'Claude woke up on its own');
+    this.setStatus(why ?? 'Woke up for a scheduled or background task');
+    const cron = !why && this.crons.length === 1 ? this.crons[0] : null;
+    this.system(why ?? (cron ? `Claude woke up: ${cron.prompt.slice(0, 100)}` : 'Claude woke up on its own'));
   }
 
   private turnEnded() {
@@ -668,9 +673,17 @@ export class AgentSession {
     } catch (err) {
       if (this.q === q) this.system(`Session error: ${String(err)}`);
     } finally {
-      this.turns = 0;
-      this.setSession({ running: false, stopping: false });
       if (this.q === q) {
+        // The CLI is gone; drop it so the next prompt resumes the session in a fresh process.
+        const { model, team, permissionMode, sessionId } = this.state.session;
+        this.restore = { model, team, permissionMode };
+        this.resume = sessionId ?? this.resume;
+        this.q = null;
+        this.gen++;
+        this.inputQueue = [];
+        this.wake?.();
+        this.turns = 0;
+        this.setSession({ running: false, stopping: false });
         this.tasks.clear();
         this.orphan(this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : [])));
       }
@@ -726,6 +739,8 @@ export class AgentSession {
   }
 
   private handle(msg: SDKMessage) {
+    // Turns the CLI starts by itself (a subagent handing back, a scheduled job) come without a prompt from us.
+    if (!this.state.session.running && (msg.type === 'assistant' || msg.type === 'stream_event') && !msg.parent_tool_use_id) this.turnStartedByClaude('Claude continued after a background task');
     switch (msg.type) {
       case 'system':
         if (msg.subtype === 'init') {
