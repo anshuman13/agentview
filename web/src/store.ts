@@ -180,7 +180,7 @@ function handle(m: ServerMessage) {
       break;
     case 'attention':
       for (const it of m.items) {
-        if (state.attention.length && !state.attention.some((x) => x.id === it.id)) notify(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, `#${it.number} ${it.title}`, () => window.open(it.url, '_blank'));
+        if (state.attention.length && !state.attention.some((x) => x.id === it.id)) notify(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, `${it.number ? `#${it.number} ` : ''}${it.title}`, () => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank')));
       }
       set({ attention: m.items });
       break;

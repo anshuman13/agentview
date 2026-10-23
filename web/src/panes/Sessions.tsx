@@ -564,7 +564,7 @@ function LiveRow({ c, repo, selected, onClose, onDelete }: { c: LiveChat; repo?:
   );
 }
 
-const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues' };
+const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues', commit: 'git-commit' };
 
 // Chats waiting on the user plus GitHub items the server flagged (failing CI, reviews, assigned issues).
 function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
@@ -587,12 +587,12 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
       <div className="group">Needs you <span className="badge waiting">{n + items.length}</span></div>
       {children}
       {items.map((it) => (
-        <div key={it.id} className={`row session live two ${busy === it.id ? 'removing' : ''}`} title={`${ATTENTION_LABEL[it.kind]}\n${it.title}\n${it.url}`} onClick={() => window.open(it.url, '_blank')}>
+        <div key={it.id} className={`row session live two ${busy === it.id ? 'removing' : ''}`} title={`${ATTENTION_LABEL[it.kind]}\n${it.title}\n${it.url}`} onClick={() => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank'))}>
           <span className={`state ${it.kind}`}><Icon name={ATTENTION_ICON[it.kind]} small /></span>
           <span className="lines">
             <span className="l1">
               <span className="repo">{it.repo}</span>
-              <span className="name">#{it.number} {it.title}</span>
+              <span className="name">{it.number ? `#${it.number} ` : ''}{it.title}</span>
               <span className="when">{ago(it.since)}</span>
             </span>
             <span className="l2"><span className="sub">{ATTENTION_LABEL[it.kind]}</span></span>

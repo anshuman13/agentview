@@ -251,7 +251,15 @@ async function restore() {
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
 lastViewed = (await restore()) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
 onAttention((items) => broadcast({ type: 'attention', items }));
-startAttention(() => [...new Set([...live.values()].map((l) => l.chat.cwd))]);
+function attentionSources(extra: string[] = []) {
+  const chats = [...live.values()].map((l) => l.chat);
+  const idle = chats.filter((c) => !c.state.session.running && !c.state.pending.length && editsOf(c));
+  return {
+    cwds: [...new Set([...chats.map((c) => c.cwd), ...extra])],
+    edited: idle.map((c) => ({ cwd: c.cwd, chatId: c.id, at: lastActive(c) })).sort((a, b) => b.at - a.at),
+  };
+}
+startAttention(attentionSources);
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -371,7 +379,7 @@ const server = http.createServer(async (req, res) => {
       return json({ ok: true });
     }
     if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
-    if (url.pathname === '/api/attention') return json(url.searchParams.has('fresh') ? await refreshAttention([...liveCwds, chat.cwd]) : attention());
+    if (url.pathname === '/api/attention') return json(url.searchParams.has('fresh') ? await refreshAttention(attentionSources([chat.cwd])) : attention());
     if (url.pathname === '/api/attention/dismiss' && req.method === 'POST') return json(dismissAttention(String(JSON.parse(await readBody(req)).id ?? '')));
     if (url.pathname === '/api/attention/ask' && req.method === 'POST') {
       const wanted = JSON.parse(await readBody(req)).id;
