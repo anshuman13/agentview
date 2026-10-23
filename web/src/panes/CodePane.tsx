@@ -80,9 +80,9 @@ function Toggle({ on, icon, title, onClick }: { on?: boolean; icon: string; titl
   );
 }
 
-type EditorProps = { file: FileData; diff: boolean; wrap: boolean; changesOnly: boolean; viewRef: MutableRefObject<EditorView | null> };
+type EditorProps = { file: FileData; diff: boolean; wrap: boolean; changesOnly: boolean; line?: number | null; viewRef: MutableRefObject<EditorView | null> };
 
-function Editor({ file, diff, wrap, changesOnly, viewRef }: EditorProps) {
+function Editor({ file, diff, wrap, changesOnly, line, viewRef }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const scroll = useRef<{ path: string; top: number } | null>(null);
   const dark = isDark(useThemeName());
@@ -106,7 +106,11 @@ function Editor({ file, diff, wrap, changesOnly, viewRef }: EditorProps) {
         EditorState.phrases.of({ '$ unchanged lines': '⋯ $ unchanged lines' }),
       ];
       view = new EditorView({ state: EditorState.create({ doc: file.content, extensions }), parent });
-      if (scroll.current?.path === file.path) view.scrollDOM.scrollTop = scroll.current.top;
+      if (line && line <= view.state.doc.lines) {
+        // A review finding opens the file on its line.
+        const l = view.state.doc.line(line);
+        view.dispatch({ selection: { anchor: l.from, head: l.to }, effects: EditorView.scrollIntoView(l.from, { y: 'center' }) });
+      } else if (scroll.current?.path === file.path) view.scrollDOM.scrollTop = scroll.current.top;
       viewRef.current = view;
     });
     return () => {
@@ -116,13 +120,14 @@ function Editor({ file, diff, wrap, changesOnly, viewRef }: EditorProps) {
       viewRef.current = null;
       view.destroy();
     };
-  }, [file, diff, wrap, changesOnly, dark]);
+  }, [file, diff, wrap, changesOnly, dark, line]);
 
   return <div className="cd-editor" ref={host} />;
 }
 
 export function CodePane() {
   const openFile = useStore((s) => s.ui.openFile);
+  const openLine = useStore((s) => s.ui.openLine);
   const follow = useStore((s) => s.ui.follow);
   const recent = useStore((s) => s.recentFiles);
   const chat = useStore((s) => s.session.id);
@@ -175,7 +180,7 @@ export function CodePane() {
       {file?.error && <div className="cd-empty">{file.error === 'path outside project' ? 'This file is outside the project folder' : file.error}</div>}
       {file && !file.error && (
         <Guard key={`${file.path}:${showDoc}`}>
-          {showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} viewRef={viewRef} />}
+          {showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} />}
         </Guard>
       )}
     </div>

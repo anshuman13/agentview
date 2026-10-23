@@ -115,8 +115,13 @@ export type ServerState = {
   recentFiles: string[];
 };
 
+export type Finding = { file: string; line: number; summary: string; failure?: string; category?: string; verdict?: string };
+// What /code-review reported for a PR number or the working tree ("local") of one repo.
+export type ReviewFindings = { repo: string; target: string; at: number; findings: Finding[] };
+
 export type ServerMessage =
   | { type: 'init'; state: ServerState; boot?: number }
+  | { type: 'findings'; review: ReviewFindings }
   | { type: 'event'; event: ChatEvent }
   | { type: 'status'; text: string }
   | { type: 'pending'; request: PendingRequest }

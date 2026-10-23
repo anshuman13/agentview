@@ -25,7 +25,7 @@ function promptFor(kind: Exclude<AttentionKind, 'commit' | 'sentry' | 'deploy'>,
     case 'changes':
       return `A reviewer requested changes on my PR ${ref}. Read the review with \`gh pr view ${n} --comments\` and \`gh api repos/{owner}/{repo}/pulls/${n}/comments\`, address each point on branch ${p.branch} and summarise what you changed. Do not reply on GitHub.`;
     case 'review':
-      return `Review PR ${ref}. Read it with \`gh pr view ${n}\` and \`gh pr diff ${n}\`, then list correctness bugs and risky changes with file and line references. Do not post anything to GitHub.`;
+      return `/code-review ${n}`;
     case 'ready':
       return `My PR ${ref} is approved and green. Read \`gh pr view ${n}\` and \`gh pr diff ${n}\`, check nothing looks unsafe to merge, and tell me. Do not merge.`;
     case 'stale':
