@@ -137,7 +137,7 @@ function CacheItem() {
 export function App() {
   const connected = useStore((s) => s.ui.connected);
   const pendingCount = useStore((s) => s.pending.length);
-  const elsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length);
+  const elsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
   const openFile = useStore((s) => s.ui.openFile);
   const repoPicker = useStore((s) => s.ui.repoPicker);
   const session = useStore((s) => s.session);

@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { notice, send, setUi, useStore } from '../store';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { api, notice, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
-import { BIN_MS, type BinnedSession, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { save, stored } from './util';
 import '../chats.css';
@@ -351,12 +351,9 @@ export function Sessions() {
         <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
-      {waiting.length > 0 && (
-        <div className="tree needs">
-          <div className="group">Needs you <span className="badge waiting">{waiting.length}</span></div>
-          {waiting.map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} onClose={() => closeChat(c, setAsk)} />)}
-        </div>
-      )}
+      <NeedsYou n={waiting.length}>
+        {waiting.map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} onClose={() => closeChat(c, setAsk)} />)}
+      </NeedsYou>
       <div className="side-switch">
         {(['work', 'personal'] as const).map((k) => (
           <button key={k} className={segment === k ? 'active' : ''} onClick={() => pick(k)}>{k === 'work' ? 'Work' : 'Personal'} <span className="seg-count">{counts[k]}</span></button>
@@ -449,12 +446,9 @@ export function OpenChats() {
       <div className="sessions-bar">
         <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
       </div>
-      {waiting.length > 0 && (
-        <div className="tree needs">
-          <div className="group">Needs you <span className="badge waiting">{waiting.length}</span></div>
-          {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
-        </div>
-      )}
+      <NeedsYou n={waiting.length}>
+        {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
+      </NeedsYou>
       <div className="tree">
         {groups.map((g) => (
           <div key={g.key}>
@@ -566,6 +560,49 @@ function LiveRow({ c, repo, selected, onClose, onDelete }: { c: LiveChat; repo?:
         <button className="icon-btn" title="Close chat, keep the transcript" onClick={(e) => { e.stopPropagation(); onClose(); }}><Icon name="close" small /></button>
         {c.sessionId && onDelete && <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Icon name="trash" small /></button>}
       </span>
+    </div>
+  );
+}
+
+const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues' };
+
+// Chats waiting on the user plus GitHub items the server flagged (failing CI, reviews, assigned issues).
+function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
+  const items = useStore((s) => s.attention);
+  const [busy, setBusy] = useState<string | null>(null);
+  if (n + items.length === 0) return null;
+  const post = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
+  const ask = async (it: AttentionItem) => {
+    setBusy(it.id);
+    try {
+      const r = await post('/api/attention/ask', it.id);
+      if (r.error) notice(r.error);
+      else send({ type: 'view', id: r.id });
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="tree needs">
+      <div className="group">Needs you <span className="badge waiting">{n + items.length}</span></div>
+      {children}
+      {items.map((it) => (
+        <div key={it.id} className={`row session live two ${busy === it.id ? 'removing' : ''}`} title={`${ATTENTION_LABEL[it.kind]}\n${it.title}\n${it.url}`} onClick={() => window.open(it.url, '_blank')}>
+          <span className={`state ${it.kind}`}><Icon name={ATTENTION_ICON[it.kind]} small /></span>
+          <span className="lines">
+            <span className="l1">
+              <span className="repo">{it.repo}</span>
+              <span className="name">#{it.number} {it.title}</span>
+              <span className="when">{ago(it.since)}</span>
+            </span>
+            <span className="l2"><span className="sub">{ATTENTION_LABEL[it.kind]}</span></span>
+          </span>
+          <span className="acts">
+            <button className="icon-btn" title="Ask Claude to handle this" onClick={(e) => { e.stopPropagation(); void ask(it); }}><Icon name="sparkle" small /></button>
+            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); void post('/api/attention/dismiss', it.id); }}><Icon name="close" small /></button>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

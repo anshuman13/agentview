@@ -36,7 +36,7 @@ function rollup(checks: Check[] = []): CheckState {
 
 const list = async (cwd: string, ...extra: string[]) => JSON.parse(await gh(cwd, 'pr', 'list', '--json', LIST, '--limit', '30', ...extra));
 
-async function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
+export async function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
   const hit = cache.get(cwd);
   if (!fresh && hit && Date.now() - hit.at < 30_000) return hit.prs;
   const [all, mine, requested] = await Promise.all([list(cwd), list(cwd, '--author', '@me'), list(cwd, '--search', 'review-requested:@me')]);
@@ -61,6 +61,12 @@ async function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
   const prs = [...byNumber.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   cache.set(cwd, { at: Date.now(), prs });
   return prs;
+}
+
+export type Issue = { number: number; title: string; url: string; updatedAt: string };
+
+export async function listIssues(cwd: string): Promise<Issue[]> {
+  return JSON.parse(await gh(cwd, 'issue', 'list', '--assignee', '@me', '--json', 'number,title,url,updatedAt', '--limit', '30'));
 }
 
 type Author = { login?: string; name?: string };

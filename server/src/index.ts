@@ -18,6 +18,7 @@ import type { McpServerDef } from './mcpClient.js';
 import { listBin, removeSession, restoreSession } from './bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './files.js';
 import { github } from './github.js';
+import { attention, dismissAttention, onAttention, refreshAttention, startAttention } from './attention.js';
 import { deployRoute } from './deploy.js';
 import { gitRoute } from './git.js';
 import { observe } from './observe.js';
@@ -249,6 +250,8 @@ async function restore() {
 
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
 lastViewed = (await restore()) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
+onAttention((items) => broadcast({ type: 'attention', items }));
+startAttention(() => [...new Set([...live.values()].map((l) => l.chat.cwd))]);
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -368,6 +371,16 @@ const server = http.createServer(async (req, res) => {
       return json({ ok: true });
     }
     if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
+    if (url.pathname === '/api/attention') return json(url.searchParams.has('fresh') ? await refreshAttention([...liveCwds, chat.cwd]) : attention());
+    if (url.pathname === '/api/attention/dismiss' && req.method === 'POST') return json(dismissAttention(String(JSON.parse(await readBody(req)).id ?? '')));
+    if (url.pathname === '/api/attention/ask' && req.method === 'POST') {
+      const wanted = JSON.parse(await readBody(req)).id;
+      const item = attention().find((it) => it.id === wanted);
+      if (!item) throw new Error('That item is gone');
+      const target = [...live.values()].map((l) => l.chat).filter((c) => c.cwd === item.cwd && !c.state.session.running && !c.state.pending.length).sort((a, b) => lastActive(b) - lastActive(a))[0] ?? (await newChat(item.cwd, chat));
+      void target.prompt(item.prompt);
+      return json({ id: target.id });
+    }
     if (url.pathname.startsWith('/api/deploy/')) return json(await deployRoute(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
     if (url.pathname === '/api/app') return json({ build: Number(await readFile(`${APK}.txt`, 'utf8').catch(() => '0')) || 0 });
     if (url.pathname === '/api/app.apk') {
@@ -461,6 +474,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   // A phone coming back after its chat was idle-closed should get that chat back, not whatever was viewed last.
   const wanted = params.get('session');
   if (wanted && chat.state.session.sessionId !== wanted) openSaved(wanted).then((c) => client.view === chat && view(client, c), () => {});
+  client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
   const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
 
