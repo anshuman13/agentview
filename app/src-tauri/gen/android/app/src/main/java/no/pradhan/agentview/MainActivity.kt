@@ -13,7 +13,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.speech.RecognitionListener
@@ -34,7 +33,6 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 import java.util.Locale
 
 private const val CHANNEL = "agentview"
@@ -48,7 +46,7 @@ class MainActivity : TauriActivity() {
   private var ttsReady = false
   private val ttsQueue = mutableListOf<(TextToSpeech) -> Unit>()
   private val prefs by lazy { getSharedPreferences("shell", MODE_PRIVATE) }
-  private val shared = JSONArray()
+  private val shared = mutableListOf<JSONObject>()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
@@ -67,17 +65,20 @@ class MainActivity : TauriActivity() {
       for (uri in uris) {
         try {
           val name = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "shared"
-          val size = contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else -1L } ?: -1L
-          if (size > 20_000_000) { toast("$name is over 20 MB"); continue }
-          val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: continue
+          val bytes = contentResolver.openInputStream(uri)?.use { s ->
+            val buf = ByteArray(20_000_001)
+            var n = 0
+            while (n < buf.size) { val r = s.read(buf, n, buf.size - n); if (r < 0) break; n += r }
+            buf.copyOf(n)
+          } ?: continue
           if (bytes.size > 20_000_000) { toast("$name is over 20 MB"); continue }
           val item = JSONObject().put("name", name).put("type", contentResolver.getType(uri) ?: "application/octet-stream").put("data", Base64.encodeToString(bytes, Base64.NO_WRAP))
-          synchronized(shared) { shared.put(item) }
+          synchronized(shared) { shared.add(item) }
         } catch (_: Exception) {
           toast("Could not read a shared file")
         }
       }
-      if (uris.isEmpty()) intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text -> synchronized(shared) { shared.put(JSONObject().put("text", text)) } }
+      if (uris.isEmpty()) intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text -> synchronized(shared) { shared.add(JSONObject().put("text", text)) } }
       runOnUiThread { webView?.evaluateJavascript("window.dispatchEvent(new Event('agentview:shared'))", null) }
     }.start()
     intent.action = null
@@ -117,15 +118,9 @@ class MainActivity : TauriActivity() {
 
   private fun openExternal(url: String) {
     try {
-      val parsed = if (url.startsWith("intent:")) Intent.parseUri(url, Intent.URI_INTENT_SCHEME) else null
-      val app = parsed?.takeIf { it.data?.scheme == null }?.`package`?.let { packageManager.getLaunchIntentForPackage(it) }
-      if (app != null) return startActivity(app)
-      val intent = if (parsed != null) {
-        parsed.apply { component = null; selector = null }
-      } else {
-        Intent(Intent.ACTION_VIEW, Uri.parse(url))
-      }
-      startActivity(intent.addCategory(Intent.CATEGORY_BROWSABLE))
+      val intent = if (url.startsWith("intent:")) Intent.parseUri(url, Intent.URI_INTENT_SCHEME) else Intent(Intent.ACTION_VIEW, Uri.parse(url))
+      val app = intent.`package`?.takeIf { intent.data?.scheme == null }?.let(packageManager::getLaunchIntentForPackage)
+      startActivity(app ?: intent.apply { component = null; selector = null }.addCategory(Intent.CATEGORY_BROWSABLE))
     } catch (_: Exception) {
       toast("No app can open $url")
     }
@@ -134,21 +129,9 @@ class MainActivity : TauriActivity() {
   private fun granted(permission: String) =
     ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 
-  private fun withPermission(permission: String, denied: () -> Unit, block: () -> Unit) {
-    if (granted(permission)) block() else requestPermissions(arrayOf(permission)) { if (it == true) block() else denied() }
-  }
-
-  private fun notificationState() = when {
-    NotificationManagerCompat.from(this).areNotificationsEnabled() -> "granted"
-    prefs.getBoolean("notifyAsked", false) -> "denied"
-    else -> "default"
-  }
-
   private fun showNotification(id: Int, title: String, body: String, tag: String) {
     val manager = getSystemService(NotificationManager::class.java)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      manager.createNotificationChannel(NotificationChannel(CHANNEL, "AgentView", NotificationManager.IMPORTANCE_HIGH))
-    }
+    manager.createNotificationChannel(NotificationChannel(CHANNEL, "AgentView", NotificationManager.IMPORTANCE_HIGH))
     val intent = Intent(this, MainActivity::class.java)
       .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
       .putExtra(NOTIFICATION_ID, id)
@@ -162,10 +145,7 @@ class MainActivity : TauriActivity() {
       .setAutoCancel(true)
       .setContentIntent(pending)
       .build()
-    try {
-      if (tag.isEmpty()) manager.notify(id, notification) else manager.notify(tag, 0, notification)
-    } catch (_: SecurityException) {
-    }
+    if (tag.isEmpty()) manager.notify(id, notification) else manager.notify(tag, 0, notification)
   }
 
   private fun startListening(lang: String, interim: Boolean) {
@@ -221,14 +201,14 @@ class MainActivity : TauriActivity() {
     ttsQueue.add(block)
     if (engine != null) return
     tts = TextToSpeech(this) { status ->
-      runOnUiThread {
-        val t = tts ?: return@runOnUiThread
+      window.decorView.post {
+        val t = tts ?: return@post
         ttsReady = status == TextToSpeech.SUCCESS
         if (!ttsReady) {
           tts = null
           ttsQueue.clear()
           emit("tts-unavailable", JSONObject())
-          return@runOnUiThread
+          return@post
         }
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
           override fun onStart(utteranceId: String) = ttsEvent(utteranceId, "start")
@@ -266,38 +246,24 @@ class MainActivity : TauriActivity() {
   }
 
   private fun writeDownload(name: String, mime: String, bytes: ByteArray) {
-    val type = mime.ifEmpty { "application/octet-stream" }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      val values = ContentValues().apply {
-        put(MediaStore.Downloads.DISPLAY_NAME, name)
-        put(MediaStore.Downloads.MIME_TYPE, type)
-      }
-      val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("insert failed")
-      contentResolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("open failed")
-    } else {
-      File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), name).writeBytes(bytes)
+    val values = ContentValues().apply {
+      put(MediaStore.Downloads.DISPLAY_NAME, name)
+      put(MediaStore.Downloads.MIME_TYPE, mime.ifEmpty { "application/octet-stream" })
     }
+    val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("insert failed")
+    contentResolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("open failed")
   }
 
   inner class Shell {
     @JavascriptInterface
-    fun takeShared(): String = synchronized(shared) {
-      val out = shared.toString()
-      while (shared.length() > 0) shared.remove(0)
-      out
-    }
-
-    @JavascriptInterface
-    fun features() = "open,save,clipboard,share,wakelock,notifications,speech,tts,macs"
+    fun takeShared(): String = synchronized(shared) { JSONArray(shared).toString().also { shared.clear() } }
 
     @JavascriptInterface
     fun remember(url: String, name: String) {
       if (!MAC_URL.matches(url) || name.length > 64) return
-      val macs = JSONArray(prefs.getString("macs", "[]"))
+      val macs = JSONArray(macs())
       val rest = (0 until macs.length()).map { macs.getJSONObject(it) }.filter { it.optString("url") != url }
-      val next = JSONArray().put(JSONObject().put("url", url).put("name", name))
-      rest.forEach { next.put(it) }
-      prefs.edit().putString("macs", next.toString()).apply()
+      prefs.edit().putString("macs", JSONArray(listOf(JSONObject().put("url", url).put("name", name)) + rest).toString()).apply()
     }
 
     @JavascriptInterface
@@ -339,11 +305,15 @@ class MainActivity : TauriActivity() {
     }
 
     @JavascriptInterface
-    fun notificationPermission() = notificationState()
+    fun notificationPermission() = when {
+      NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled() -> "granted"
+      prefs.getBoolean("notifyAsked", false) -> "denied"
+      else -> "default"
+    }
 
     @JavascriptInterface
     fun requestNotifications() = runOnUiThread {
-      val reply = { emit("notify-permission", JSONObject().put("state", notificationState())) }
+      val reply = { emit("notify-permission", JSONObject().put("state", notificationPermission())) }
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !granted(Manifest.permission.POST_NOTIFICATIONS)) {
         prefs.edit().putBoolean("notifyAsked", true).apply()
         requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS)) { reply() }
@@ -363,7 +333,8 @@ class MainActivity : TauriActivity() {
 
     @JavascriptInterface
     fun listen(lang: String, interim: Boolean) = runOnUiThread {
-      withPermission(Manifest.permission.RECORD_AUDIO, { speechDone("not-allowed") }) { startListening(lang, interim) }
+      if (granted(Manifest.permission.RECORD_AUDIO)) startListening(lang, interim)
+      else requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO)) { if (it == true) startListening(lang, interim) else speechDone("not-allowed") }
     }
 
     @JavascriptInterface
