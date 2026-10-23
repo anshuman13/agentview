@@ -3,7 +3,7 @@
   if (!S || window.__agentview) return;
   const handlers = {};
   const on = (type, f) => (handlers[type] = handlers[type] || []).push(f);
-  window.__agentview = { features: S.features().split(','), emit: (type, data) => (handlers[type] || []).forEach((f) => f(data)) };
+  window.__agentview = { emit: (type, data) => (handlers[type] || []).forEach((f) => f(data)) };
   const define = (obj, key, value) => {
     try {
       Object.defineProperty(obj, key, { value, configurable: true, writable: true });
@@ -24,12 +24,12 @@
         reader.onerror = reject;
         reader.readAsDataURL(b);
       }))
-      .then(([type, data]) => S.save(a.getAttribute('download') || decodeURIComponent(new URL(a.href).pathname.split('/').pop()) || 'download', type, data))
+      .then(([type, data]) => S.save(a.download || decodeURIComponent(new URL(a.href).pathname.split('/').pop()) || 'download', type, data))
       .catch(() => S.open(a.href));
 
   const handle = (a) => {
     if (!a.href) return false;
-    const u = new URL(a.href, location.href);
+    const u = new URL(a.href);
     if (a.hasAttribute('download')) {
       save(a);
       return true;
@@ -106,12 +106,9 @@
     static get permission() {
       return S.notificationPermission();
     }
-    static requestPermission(callback) {
+    static requestPermission() {
       return new Promise((resolve) => {
-        permissionWaiters.push((state) => {
-          if (typeof callback === 'function') callback(state);
-          resolve(state);
-        });
+        permissionWaiters.push(resolve);
         S.requestNotifications();
       });
     }
@@ -209,12 +206,15 @@
     settle();
     S.speak(id, String(u.text), u.lang || navigator.language || '', Number(u.rate) || 1, Number(u.pitch) || 1);
   };
-  synth.cancel = () => {
+  const flush = (error) => {
     const all = [...utterances.values()];
     utterances.clear();
     settle();
+    all.forEach((u) => fire(u, 'error', { error }));
+  };
+  synth.cancel = () => {
     S.cancelSpeech();
-    all.forEach((u) => fire(u, 'error', { error: 'canceled' }));
+    flush('canceled');
   };
   synth.pause = () => {};
   synth.resume = () => {};
@@ -227,12 +227,7 @@
     settle();
     fire(u, d.type === 'error' ? 'error' : 'end', d.type === 'error' ? { error: 'synthesis-failed' } : {});
   });
-  on('tts-unavailable', () => {
-    const all = [...utterances.values()];
-    utterances.clear();
-    settle();
-    all.forEach((u) => fire(u, 'error', { error: 'synthesis-unavailable' }));
-  });
+  on('tts-unavailable', () => flush('synthesis-unavailable'));
   define(window, 'speechSynthesis', synth);
   define(window, 'SpeechSynthesisUtterance', ShellUtterance);
 })();

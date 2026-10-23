@@ -44,7 +44,7 @@
     <form id="form">
       <img src="icon.png" alt="" />
       <h1 id="title">AgentView</h1>
-      <input id="url" hidden placeholder="http://192.168.1.10:5173" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" />
+      <input id="url" hidden placeholder="http://my-mac.netbird.cloud:5173" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" />
       <button id="go" hidden>Connect</button>
       <button id="netbird" class="secondary" hidden>Open NetBird</button>
       <button id="retry" hidden>Retry</button>
@@ -56,83 +56,65 @@
       const MAC_URL = 'http://anshumans-macbook-pro.netbird.cloud:5173';
       const KEY = 'agentview.url';
       const android = /Android/i.test(navigator.userAgent);
-      const phone = /Android|iPhone|iPad/i.test(navigator.userAgent);
       const shell = window.AgentViewShell;
       const TRUSTED = /^http:\/\/([a-z0-9-]+\.netbird\.cloud|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|localhost)(:\d{1,5})?$/i;
-      const known = (() => { try { return (shell?.macs ? JSON.parse(shell.macs()) : []).filter((m) => TRUSTED.test(m.url)); } catch { return []; } })();
-      const saved = known[0]?.url || localStorage.getItem(KEY) || (phone ? MAC_URL : 'http://localhost:5173');
-      const $ = (id) => document.getElementById(id);
-      const [form, url, go, msg, netbird, retry, other, h1, macs] = ['form', 'url', 'go', 'msg', 'netbird', 'retry', 'other', 'title', 'macs'].map($);
+      const known = shell ? JSON.parse(shell.macs()).filter((m) => TRUSTED.test(m.url)) : [];
+      const saved = known[0]?.url || localStorage.getItem(KEY) || (android ? MAC_URL : 'http://localhost:5173');
+      const [form, url, go, msg, netbird, retry, other, h1, macs] = ['form', 'url', 'go', 'msg', 'netbird', 'retry', 'other', 'title', 'macs'].map((id) => document.getElementById(id));
       url.value = saved;
       let current = saved;
       let busy = false;
-      const build = fetch('build.txt').then((r) => (r.ok ? r.text() : '')).then((t) => t.trim()).catch(() => '');
+      const build = fetch('build.txt').then(async (r) => (r.ok ? (await r.text()).trim() : '')).catch(() => '');
 
       async function reachable(u) {
-        const abort = new AbortController();
-        const timer = setTimeout(() => abort.abort(), 4000);
         try {
-          await fetch(`${u}/api/connect`, { mode: 'no-cors', signal: abort.signal });
+          await fetch(`${u}/api/connect?peer=1`, { mode: 'no-cors', signal: AbortSignal.timeout(4000) });
           return true;
         } catch {
           return false;
-        } finally {
-          clearTimeout(timer);
         }
       }
 
-      function show(unreachable, manual) {
-        h1.textContent = unreachable ? "Can't reach your Mac" : 'AgentView';
-        netbird.hidden = retry.hidden = !(unreachable && android);
-        other.hidden = !(unreachable && android) || manual;
-        url.hidden = go.hidden = !(manual || (unreachable && !android));
+      function show(manual) {
+        h1.textContent = "Can't reach your Mac";
+        netbird.hidden = retry.hidden = !android;
+        other.hidden = !android || manual;
+        url.hidden = go.hidden = android && !manual;
         go.disabled = false;
-        macs.replaceChildren(...known.filter((m) => m.url !== current).map((m) => {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'secondary';
-          b.textContent = m.name || m.url;
-          b.onclick = () => connect(m.url, false);
-          return b;
-        }));
-        macs.hidden = !(unreachable || manual) || !macs.childElementCount;
+        macs.replaceChildren(...known.filter((m) => m.url !== current).map((m) => Object.assign(document.createElement('button'), { type: 'button', className: 'secondary', textContent: m.name || m.url, onclick: () => connect(m.url, false) })));
+        macs.hidden = !macs.childElementCount;
       }
 
       async function connect(raw, manual) {
         let u = raw.trim().replace(/\/+$/, '');
         if (!u || busy) return;
         if (!/^https?:\/\//.test(u)) u = `http://${u}`;
+        if (shell && !TRUSTED.test(u)) return (msg.textContent = "Use your Mac's NetBird address.");
         busy = true;
         current = u;
         go.disabled = true;
         msg.textContent = `Connecting to ${u}`;
-        const ok = await reachable(u);
-        busy = false;
-        if (ok) {
+        if (await reachable(u)) {
           localStorage.setItem(KEY, u);
           const b = await build;
-          location.replace(b ? `${u}/?shell=${b}` : u);
-          return;
+          return location.replace(b ? `${u}/?shell=${b}` : u);
         }
-        show(true, manual);
-        msg.textContent = android
-          ? 'NetBird must be connected and AgentView running on your Mac.'
-          : `Can't reach ${u}. Is AgentView running?`;
+        busy = false;
+        show(manual);
+        msg.textContent = android ? 'NetBird must be connected and AgentView running on your Mac.' : `Can't reach ${u}. Is AgentView running?`;
       }
 
       form.onsubmit = (e) => {
         e.preventDefault();
         connect(url.value, true);
       };
-      retry.onclick = () => connect(current, !url.hidden);
+      retry.onclick = () => connect(url.hidden ? current : url.value, !url.hidden);
       netbird.onclick = () => {
-        if (shell?.launch) {
-          if (!shell.launch('io.netbird.client')) msg.textContent = 'NetBird is not installed.';
-        } else location.href = 'intent://#Intent;package=io.netbird.client;end';
+        if (!shell?.launch('io.netbird.client')) msg.textContent = 'NetBird is not installed.';
       };
       other.onclick = (e) => {
         e.preventDefault();
-        show(true, true);
+        show(true);
         url.focus();
       };
       document.addEventListener('visibilitychange', () => {

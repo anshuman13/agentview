@@ -8,9 +8,9 @@ fn trusted(url: &tauri::Url) -> bool {
                 || h == "localhost"
                 || h == "127.0.0.1"
                 || h.ends_with(".netbird.cloud")
-                || h.parse::<Ipv4Addr>().map_or(false, |ip| ip.octets()[0] == 100 && (64..128).contains(&ip.octets()[1]))
+                || h.parse::<Ipv4Addr>().is_ok_and(|ip| ip.octets()[0] == 100 && (64..128).contains(&ip.octets()[1]))
         }
-        None => url.scheme() == "tauri" || url.scheme() == "about",
+        None => matches!(url.scheme(), "tauri" | "about"),
     }
 }
 
