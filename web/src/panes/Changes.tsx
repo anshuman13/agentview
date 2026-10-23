@@ -4,6 +4,7 @@ import { api, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { FileIcon } from './Explorer';
+import { Findings, REVIEW_LOCAL } from './Findings';
 import { usePoll } from './util';
 import '../changes.css';
 
@@ -160,6 +161,11 @@ export function Changes() {
     <div className="scm" ref={root}>
       <BranchBar status={status} onRefresh={() => void refresh()} />
       <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
+      <div className="scm-commit-actions scm-review">
+        <button className="scm-claude" disabled={!files.length} title={files.length ? 'Claude reviews the working tree, findings show below' : 'No changes to review'} onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>
+          <Icon name="search" small /> Review changes with Claude
+        </button>
+      </div>
       {(failed || error) && <div className="scm-error">{failed || error}</div>}
       <div className="scm-tree">
         <Section
@@ -193,6 +199,7 @@ export function Changes() {
           )}
         />
         {status && !files.length && <div className="scm-empty">No changes</div>}
+        <Findings target="local" />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>

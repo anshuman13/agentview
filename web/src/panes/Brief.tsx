@@ -11,6 +11,7 @@ import { FileIcon } from './Explorer';
 import { relPath } from './steps';
 import { BIG_BRO, buildTurns, type Turn } from './turns';
 import { AgentsChip, openAgent } from './AgentsPane';
+import { REVIEW_LOCAL } from './Findings';
 import { plural, readFlag, saveFlag, useTick } from './util';
 import { useMacName } from '../MacsPopover';
 import type { PendingRequest } from '../../../shared/protocol';
@@ -142,7 +143,7 @@ function TurnCard({ turn, latest, live, cwd, pending }: { turn: Turn; latest: bo
         </div>
       )}
       {turn.reply && <Reply text={turn.reply.text} clip={!latest} />}
-      <Facts turn={turn} cwd={cwd} pending={pending} />
+      <Facts turn={turn} cwd={cwd} pending={pending} latest={latest && !live} />
       {turn.steps.length > 0 && (
         <button className="tc-steps-toggle" aria-expanded={stepsOpen} onClick={() => setStepsOpen((v) => !v)}>
           <Icon name={stepsOpen ? 'chevron-down' : 'chevron-right'} small />Steps ({turn.steps.length})
@@ -172,7 +173,7 @@ function Reply({ text, clip }: { text: string; clip: boolean }) {
   );
 }
 
-function Facts({ turn, cwd, pending }: { turn: Turn; cwd: string; pending: PendingRequest[] }) {
+function Facts({ turn, cwd, pending, latest }: { turn: Turn; cwd: string; pending: PendingRequest[]; latest: boolean }) {
   const [allFiles, setAllFiles] = useState(false);
   const failed = turn.commands.filter((c) => c.error);
   const files = allFiles ? turn.files : turn.files.slice(0, FILES_SHOWN);
@@ -212,6 +213,7 @@ function Facts({ turn, cwd, pending }: { turn: Turn; cwd: string; pending: Pendi
             );
           })}
           {turn.files.length > FILES_SHOWN && <button className="link" onClick={() => setAllFiles((v) => !v)}>{allFiles ? 'Show fewer' : `${turn.files.length - FILES_SHOWN} more`}</button>}
+          {latest && <button className="link" title="Claude reviews the working tree, findings show in the Changes view" onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>Review changes</button>}
         </div>
       )}
       {turn.commits.length > 0 && (
