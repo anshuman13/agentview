@@ -52,7 +52,9 @@ Switch to the transcript for every message and step in order.
 
 "Ask Claude to review" on a pull request and the inbox's review prompt run `/code-review <number>`. The findings
 it reports show up in the pull request's pane, most severe first: a row opens the file on that line, Fix sends
-the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentview/findings.json`).
+the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentview/findings.json`). "Review changes
+with Claude" in the Changes view and "Review changes" under the files of the latest turn run `/code-review` on the
+working tree; those findings show at the bottom of the Changes view.
 
 ## Context
 

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { api, send, setFindings, setUi, useStore } from '../store';
+import { api, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
+import { Block, Findings } from './Findings';
 import { Markdown } from './Chat';
 import { FileIcon } from './Explorer';
 import { Confirm, type ConfirmRequest } from '../Confirm';
-import type { CheckState, Finding, PullRequest, PullRequestDetail, ReviewFindings } from '../../../shared/protocol';
+import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { usePoll } from './util';
 import '../github.css';
 
@@ -194,15 +195,6 @@ function splitDiff(diff: string) {
 
 const lineClass = (l: string) => (l[0] === '+' ? 'add' : l[0] === '-' ? 'del' : l.startsWith('@@') ? 'hunk' : '');
 
-function Block({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
-  return (
-    <>
-      <div className="gh-block">{title}{count !== undefined && <span className="gh-count">{count}</span>}</div>
-      {children}
-    </>
-  );
-}
-
 function Review({ r }: { r: PullRequestDetail['reviews'][number] }) {
   return (
     <div className="gh-review">
@@ -283,38 +275,6 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
         <button className="gh-claude" title="Send a review prompt to the chat" onClick={askClaude}><Icon name="sparkle" small /> Ask Claude to review</button>
       </div>
     </div>
-  );
-}
-
-const findingKey = (f: Finding) => `${f.file}:${f.line}:${f.summary.slice(0, 60)}`;
-
-// What /code-review reported, most severe first; a row opens the file on its line.
-function Findings({ target }: { target: string }) {
-  const review = useStore((s) => s.findings[target]);
-  useEffect(() => {
-    call<ReviewFindings | null>(`/api/findings?target=${target}`).then(setFindings, () => {});
-  }, [target]);
-  if (!review) return null;
-  const open = (f: Finding) => setUi({ openFile: f.file, openLine: f.line, follow: false });
-  const fix = (f: Finding) => send({ type: 'prompt', text: `Fix this review finding in ${f.file}:${f.line}: ${f.summary}${f.failure ? ` (${f.failure})` : ''}` });
-  const dismiss = (f: Finding) => call<ReviewFindings | null>('/api/findings/dismiss', { target, key: findingKey(f) }).then(setFindings, () => {});
-  return (
-    <Block title="Findings" count={review.findings.length}>
-      {review.findings.length === 0 && <div className="muted small gh-pad">No findings</div>}
-      {review.findings.map((f) => (
-        <div key={findingKey(f)} className="gh-finding">
-          <div className="gh-item click" title={f.failure ?? f.summary} onClick={() => open(f)}>
-            <Icon name={f.verdict === 'CONFIRMED' ? 'error' : 'warning'} small />
-            <span className="gh-msg">{f.summary}</span>
-          </div>
-          <div className="gh-finding-foot">
-            <span className="gh-sha">{f.file}:{f.line}</span>
-            <button className="gh-mini" onClick={() => fix(f)}>Fix</button>
-            <button className="gh-mini" onClick={() => dismiss(f)}>Dismiss</button>
-          </div>
-        </div>
-      ))}
-    </Block>
   );
 }
 

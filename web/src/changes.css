@@ -24,6 +24,9 @@
 .scm-claude:disabled { opacity: 0.5; cursor: default; }
 .scm-error { padding: 0 12px 6px; font-size: 12px; color: var(--err, #f14c4c); white-space: pre-wrap; word-break: break-word; }
 
+.scm-review { padding: 0 10px 8px; }
+.scm-review .scm-claude { flex: 1; }
+.scm-tree .gh-block { margin-top: 8px; }
 .scm-tree { flex: 1; min-height: 0; overflow: auto; padding-bottom: 8px; }
 .scm-header {
   height: 22px; display: flex; align-items: center; gap: 2px; padding: 0 12px 0 4px; cursor: pointer; user-select: none;
