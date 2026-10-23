@@ -788,6 +788,7 @@ export class AgentSession {
         this.turns = 0;
         this.setSession({ running: false, stopping: false });
         this.planChange = null;
+        this.approvals.denyAll('Claude exited before this was answered.');
         this.tasks.clear();
         // Queued messages are not lost with the process; the first one starts a fresh CLI.
         if (!this.dequeue()) this.deferRepeat();

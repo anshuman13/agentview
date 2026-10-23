@@ -51,7 +51,7 @@ process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 
 const IDLE_MS = 10 * 60 * 1000;
 
-type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: AgentSession };
+type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: AgentSession; close?: () => void };
 const BOOT = Date.now();
 const clients = new Set<Client>();
 const streams = new Map<string, Client>();
@@ -312,8 +312,10 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/cmd' && req.method === 'POST') {
       const msg = JSON.parse(await readBody(req)) as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
-      const client = streams.get(url.searchParams.get('cid') ?? '') ?? { send: () => {}, sendRaw: () => {}, view: chat };
-      handleCommand(client, msg);
+      const client = streams.get(url.searchParams.get('cid') ?? '');
+      // Without a stream or a chat there is no telling which chat the command is for.
+      if (!client && !live.has(url.searchParams.get('chat') ?? '')) return json({ error: 'No stream for this command' }, 409);
+      handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat }, msg);
       return json({ ok: true });
     }
     if (url.pathname === '/api/terms' && req.method === 'POST') return json(createTerminal(chat.id, chat.cwd));
@@ -520,7 +522,10 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive', 'x-accel-buffering': 'no' });
   res.flushHeaders();
   const cid = url.searchParams.get('cid') || randomUUID();
-  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => void res.write(frame(data, id)), view: chat };
+  // A tab that reopens its stream replaces the old one, which may be a half-open socket that would count as a viewer for hours.
+  streams.get(cid)?.close?.();
+  req.socket.setKeepAlive(true, 15_000);
+  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => void res.write(frame(data, id)), view: chat, close: () => res.destroy() };
   clients.add(client);
   streams.set(cid, client);
   const missed = ring.since(Number(url.searchParams.get('last') ?? req.headers['last-event-id']), chat);

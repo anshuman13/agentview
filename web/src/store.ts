@@ -87,6 +87,12 @@ async function post(m: ClientMessage, tries = 1): Promise<boolean> {
     try {
       const r = await fetch(api(`/api/cmd?cid=${cid}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m), signal: AbortSignal.timeout(10_000) });
       if (r.ok) return true;
+      // The server has no stream for this tab; reopen it and try again.
+      if (r.status === 409 && i + 1 < tries) {
+        connect();
+        await sleep(2_000);
+        continue;
+      }
       const body = await r.json().catch(() => ({}));
       notice(body.error ?? `${r.status} ${r.statusText}`);
       return false;
