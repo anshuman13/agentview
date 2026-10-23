@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { api, notice, prompt, send, steer, useStore } from '../store';
+import { api, deliver, discardMessage, notice, prompt, reconnectNow, retryMessage, send, steer, useStore } from '../store';
+import type { OutboxEntry } from '../outbox';
 import { Icon } from '../Icon';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../QuickPick';
@@ -143,6 +144,25 @@ async function runInTerminal(cmd: string) {
 
 type Hist = { list: string[]; index: number; draft: string };
 
+const ACTION_LABEL: Record<string, string> = { plan: 'Plan change', answer: 'Your answer', permission: 'Your approval', allow_blocked: 'Allow blocked tool' };
+
+// A message the server has not acked yet, with what the user can do about it.
+function Unsent({ e, connected, elsewhere, onEdit }: { e: OutboxEntry; connected: boolean; elsewhere: string | null; onEdit: (text: string) => void }) {
+  const text = 'text' in e.msg ? e.msg.text : null;
+  const slow = Date.now() - e.at > 10_000;
+  const status = e.state === 'rejected' ? `Not delivered: ${e.reason}` : e.state === 'held' ? 'Not sent, it is over 10 minutes old' : connected ? 'Sending…' : 'Waiting for connection';
+  return (
+    <li className={`cp-unsent ${e.state}`}>
+      <span className="cp-unsent-text">{elsewhere !== null && <b>{elsewhere}: </b>}{text ?? ACTION_LABEL[e.msg.type] ?? e.msg.type}</span>
+      <span className="cp-unsent-state">{status}</span>
+      {e.state === 'pending' && slow && <button onClick={reconnectNow}>Retry</button>}
+      {e.state !== 'pending' && <button onClick={() => retryMessage(e.cid)}>Send now</button>}
+      {e.state !== 'pending' && text !== null && <button onClick={() => { discardMessage(e.cid); onEdit(text); }}>Edit</button>}
+      <button onClick={() => discardMessage(e.cid)}>Discard</button>
+    </li>
+  );
+}
+
 export function Composer() {
   const cwd = useStore((s) => s.session.cwd);
   const chat = useStore((s) => s.session.id);
@@ -158,6 +178,15 @@ export function Composer() {
   const loop = useStore((s) => s.session.loop);
   const context = useStore((s) => s.session.context);
   const events = useStore((s) => s.events);
+  const outbox = useStore((s) => s.outbox);
+  const connected = useStore((s) => s.ui.connected);
+  const live = useStore((s) => s.live);
+  const sessionId = useStore((s) => s.session.sessionId);
+  // This chat's unsent messages, plus failed ones from other chats so a failure is never hidden.
+  const here = (e: OutboxEntry) => !e.to.chat || e.to.chat === chat || (e.to.session !== null && e.to.session === sessionId);
+  const unsent = outbox.filter((e) => here(e) || e.state !== 'pending');
+  const chatName = (e: OutboxEntry) => (here(e) ? null : live.find((c) => c.id === e.to.chat || (e.to.session && c.sessionId === e.to.session))?.title ?? 'Another chat');
+  useTick(2000, unsent.some((e) => e.state === 'pending'));
   const toolAt = useStore((s) => (s.session.running ? openToolAt(s.events) : null));
   useTick(1000, toolAt !== null);
   const longTool = toolAt !== null && Date.now() - toolAt > LONG_TOOL;
@@ -314,9 +343,8 @@ export function Composer() {
       const next = remember(t, stored);
       setStored(next);
       try { localStorage.setItem(STORED_KEY, JSON.stringify(next)); } catch {}
-      const lost = () => setText((cur) => (cur.trim() ? cur : t));
-      const sent = (now || longTool) && running ? steer(t, lost) : prompt(t, lost);
-      if (!sent) { notice('Not connected, message not sent'); return; }
+      if ((now || longTool) && running) steer(t);
+      else prompt(t);
     }
     setHist(null);
     apply('');
@@ -347,6 +375,11 @@ export function Composer() {
 
   return (
     <div className="cp" data-mode={mode}>
+      {unsent.length > 0 && (
+        <ul className="cp-outbox">
+          {unsent.map((e) => <Unsent key={e.cid} e={e} connected={connected} elsewhere={chatName(e)} onEdit={(t) => apply(text.trim() ? `${text}\n${t}` : t)} />)}
+        </ul>
+      )}
       <div
         ref={card}
         className={`cp-card${shell ? ' shell' : ''}`}
@@ -408,7 +441,7 @@ export function Composer() {
         {hint && <span className="cp-hint">{hint}</span>}
         <span className="cp-stats">
           {compacting ? <span><Icon name="loading" small spin /> Compacting…</span> : level && (
-            <button className={`cp-ctx ${level}`} disabled={running} title={`${context!.toLocaleString()} tokens in context. ${running ? 'Compacts when this turn ends' : 'Tap to compact'}.`} onClick={() => send({ type: 'prompt', text: '/compact' })}>{pct}% context{!running && ' · compact'}</button>
+            <button className={`cp-ctx ${level}`} disabled={running} title={`${context!.toLocaleString()} tokens in context. ${running ? 'Compacts when this turn ends' : 'Tap to compact'}.`} onClick={() => deliver({ type: 'prompt', text: '/compact' })}>{pct}% context{!running && ' · compact'}</button>
           )}
           {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
           {loop.phase && <span className={`cp-phase ${loop.phase}`}>{loopLabel(loop)}</span>}

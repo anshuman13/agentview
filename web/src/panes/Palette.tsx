@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getState, send, setUi, useStore } from '../store';
+import { deliver, getState, send, setUi, useStore } from '../store';
 import { toggleNotify } from '../notify';
 import { PERMISSION_MODES } from '../../../shared/protocol';
 import { Hl } from './util';
@@ -114,7 +114,7 @@ function perform(id: string) {
   if (kind === 'model') send({ type: 'set_model', model: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
   else if (id === 'newChat') send({ type: 'new_session' });
-  else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
+  else if (id === 'compact') deliver({ type: 'prompt', text: '/compact' });
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
   else if (id === 'stop') send({ type: 'interrupt' });
   else if (id === 'restart') send({ type: 'restart' });

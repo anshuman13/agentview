@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { GitFile, GitStatus } from '../../../shared/protocol';
-import { api, send, setUi, useStore } from '../store';
+import { api, deliver, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { FileIcon } from './Explorer';
@@ -76,7 +76,7 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
         <button className="primary" disabled={!canCommit} title={staged ? 'Commit the staged changes' : 'Stage changes to commit them'} onClick={() => void commit()}>
           <Icon name="check" small /> Commit
         </button>
-        <button className="scm-claude" disabled={staged === 0} title={staged ? 'Ask Claude in the chat for a commit subject' : 'Stage changes first'} onClick={() => send({ type: 'prompt', text: DRAFT_PROMPT })}>
+        <button className="scm-claude" disabled={staged === 0} title={staged ? 'Ask Claude in the chat for a commit subject' : 'Stage changes first'} onClick={() => deliver({ type: 'prompt', text: DRAFT_PROMPT })}>
           <Icon name="sparkle" small /> Write message with Claude
         </button>
       </div>

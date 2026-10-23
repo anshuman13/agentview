@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { send, useStore } from '../store';
+import { deliver, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
 import type { ChatEvent, PendingPermission, PendingQuestion } from '../../../shared/protocol';
@@ -87,7 +87,7 @@ export function PlanCard({ p, mode, first }: CardProps) {
 function Decision({ p, mode, first, cardRef, yes, no }: CardProps & { cardRef: RefObject<HTMLDivElement | null>; yes: string; no: string }) {
   const always = p.canAlwaysAllow && p.toolName !== 'ExitPlanMode';
   const keys = !p.confirmFirst;
-  const reply = (allow: boolean, all?: boolean) => send({ type: 'permission', id: p.id, allow, always: all });
+  const reply = (allow: boolean, all?: boolean) => deliver({ type: 'permission', id: p.id, allow, always: all });
   useKeys(cardRef, first, (k) => {
     if (k === 'n') reply(false);
     else if (k === 'y' && keys) reply(true);
@@ -212,7 +212,7 @@ export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean 
   const go = (to: number) => { setStep(to); setPicked([]); setOther(null); };
   const answer = (value: string) => {
     const next = { ...answers, [qq.question]: value };
-    if (step + 1 >= total) return send({ type: 'answer', id: q.id, answers: next });
+    if (step + 1 >= total) return deliver({ type: 'answer', id: q.id, answers: next });
     setAnswers(next);
     go(step + 1);
   };
@@ -294,7 +294,7 @@ export function BlockedCard({ ev }: { ev: Extract<ChatEvent, { kind: 'blocked' }
       <div className="pd-head"><Icon name="shield" small /><span className="pd-title">Auto mode blocked this</span></div>
       <pre className="pd-code">{rule}</pre>
       {ev.reason && <div className="pd-desc">{ev.reason}</div>}
-      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><button className="pd-btn primary" onClick={() => send({ type: 'allow_blocked', id: ev.id })}>Allow and retry</button></div>}
+      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><button className="pd-btn primary" onClick={() => deliver({ type: 'allow_blocked', id: ev.id })}>Allow and retry</button></div>}
     </div>
   );
 }

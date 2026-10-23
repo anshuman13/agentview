@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { api, send, useStore } from '../store';
+import { api, deliver, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
 import { FileIcon } from './Explorer';
@@ -261,7 +261,7 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
       run: () => act('merge', 'merge', { method }),
     });
   const askClaude = () =>
-    send({ type: 'prompt', text: `Review PR #${pr.number} (${pr.url}): "${pr.title}". Read it with \`gh pr view ${pr.number}\` and \`gh pr diff ${pr.number}\`, then list correctness bugs and risky changes with file and line references. Do not post anything to GitHub.` });
+    deliver({ type: 'prompt', text: `Review PR #${pr.number} (${pr.url}): "${pr.title}". Read it with \`gh pr view ${pr.number}\` and \`gh pr diff ${pr.number}\`, then list correctness bugs and risky changes with file and line references. Do not post anything to GitHub.` });
 
   return (
     <div className="gh-actionbar">

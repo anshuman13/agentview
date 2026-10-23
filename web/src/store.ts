@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
-import type { ChatEvent, ClientMessage, LiveChat, ServerMessage, ServerState } from '../../shared/protocol';
+import type { ClientMessage, LiveChat, ReliableMessage, ServerState, Target, WireMessage } from '../../shared/protocol';
 import { notify } from './notify';
+import { Outbox, type OutboxEntry } from './outbox';
+import { touch } from './touch';
 
 type UiState = {
   connected: boolean;
@@ -11,7 +13,7 @@ type UiState = {
   repoPicker: boolean;
 };
 
-export type State = ServerState & { live: LiveChat[]; ui: UiState };
+export type State = ServerState & { live: LiveChat[]; ui: UiState; outbox: OutboxEntry[] };
 
 let state: State = {
   session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null } },
@@ -21,6 +23,7 @@ let state: State = {
   recentFiles: [],
   live: [],
   ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false },
+  outbox: [],
 };
 
 const listeners = new Set<() => void>();
@@ -68,51 +71,74 @@ function notifyBackground(chats: LiveChat[]) {
 }
 
 let ws: WebSocket | null = null;
+let sockId = 0;
+
+// Fire and forget: for messages that are harmless to lose, like view changes and pings.
 export function send(m: ClientMessage) {
   if (ws?.readyState !== WebSocket.OPEN) return false;
   ws.send(JSON.stringify(m));
   return true;
 }
 
-export function steer(text: string, onLost: () => void) {
-  if (ws?.readyState !== WebSocket.OPEN) return false;
-  const id = crypto.randomUUID();
-  set((s) => ({ events: [...s.events, { id, kind: 'user', text, at: Date.now(), stopping: true }] }));
-  send({ type: 'steer', text, id });
-  expect({ id, text }, onLost);
-  return true;
+const VIEW_KEY = 'agentview.view';
+const savedView = (): Target | null => {
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) ?? 'null');
+    return v && typeof v.chat === 'string' ? { chat: v.chat, session: typeof v.session === 'string' ? v.session : null } : null;
+  } catch {
+    return null;
+  }
+};
+function saveView() {
+  const { id, sessionId } = state.session;
+  if (!id) return;
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ chat: id, session: sessionId })); } catch {}
 }
+const currentTarget = (): Target => (state.session.id ? { chat: state.session.id, session: state.session.sessionId } : savedView() ?? { chat: '', session: null });
 
-export function prompt(text: string, onLost: () => void) {
-  if (!send({ type: 'prompt', text })) return false;
-  expect({ text }, onLost);
-  return true;
-}
+const outbox = new Outbox(
+  {
+    get: () => {
+      try { return localStorage.getItem('agentview.outbox'); } catch { return null; }
+    },
+    set: (v) => localStorage.setItem('agentview.outbox', v),
+  },
+  (m) => send(m as ClientMessage),
+  currentTarget,
+  () => set({ outbox: outbox.entries }),
+);
+state = { ...state, outbox: outbox.entries };
 
-const CONFIRM_WAIT = 15_000;
-type Expected = { id?: string; text: string; onLost: () => void };
-const expected = new Set<Expected>();
+// Messages that must reach Claude: saved first, then retried until the server acks them.
+export const deliver = (m: ReliableMessage) => outbox.enqueue(m, currentTarget());
+export const prompt = (text: string) => deliver({ type: 'prompt', text });
+export const steer = (text: string) => deliver({ type: 'steer', text });
+export const retryMessage = (cid: string) => outbox.retry(cid);
+export const discardMessage = (cid: string) => outbox.discard(cid);
 
-function expect(m: { id?: string; text: string }, onLost: () => void) {
-  const e = { ...m, onLost };
-  expected.add(e);
-  setTimeout(() => {
-    if (!expected.delete(e)) return;
-    notice('Message did not reach the server, it is back in the box');
-    onLost();
-    reconnect();
-  }, CONFIRM_WAIT);
-}
+// Where this client is in the current chat's message stream, so a reconnect asks only for what it missed.
+let cursor: { chat: string; epoch: string; seq: number } | null = null;
 
-function confirm(ev: ChatEvent) {
-  if (ev.kind !== 'user') return;
-  for (const e of expected) if (e.id ? e.id === ev.id : e.text === ev.text) expected.delete(e);
-}
-
-function handle(m: ServerMessage) {
+function handle(m: WireMessage, sock: number) {
+  if (m.type === 'init' && m.epoch) cursor = { chat: m.state.session.id, epoch: m.epoch, seq: m.seq ?? 0 };
+  else if (m.type === 'resumed') cursor = { chat: state.session.id, epoch: m.epoch, seq: m.seq };
+  else if (typeof m.seq === 'number') {
+    if (!cursor || m.seq <= cursor.seq) return;
+    if (m.seq !== cursor.seq + 1) {
+      avlog('seq gap, reloading the chat');
+      cursor = null;
+      return reconnect();
+    }
+    cursor.seq = m.seq;
+  }
   switch (m.type) {
+    case 'ack':
+      outbox.ack(m.cid, m.status, m.reason);
+      break;
+    case 'resumed':
+      outbox.ready(sock);
+      break;
     case 'init':
-      m.state.events.forEach(confirm);
       set((s) => {
         const same = s.session.id === m.state.session.id;
         const old = new Map(s.events.map((e) => [e.id, e]));
@@ -123,6 +149,9 @@ function handle(m: ServerMessage) {
         const keep = same && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
         return { ...m.state, events: keep ? s.events : events, ui: s.session.cwd && s.session.cwd !== m.state.session.cwd ? { ...s.ui, openFile: null } : s.ui };
       });
+      saveView();
+      if (m.epoch) outbox.ready(sock);
+      else if (m.seq === undefined) outbox.sendOnce();
       break;
     case 'error':
       notice(m.text);
@@ -131,7 +160,6 @@ function handle(m: ServerMessage) {
       setUi({ restarting: true });
       break;
     case 'event':
-      confirm(m.event);
       if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {
         notify('Claude finished', m.event.text.trim().split('\n')[0], focus(state.session.id));
       }
@@ -166,6 +194,7 @@ function handle(m: ServerMessage) {
       break;
     case 'session':
       set({ session: m.session });
+      saveView();
       break;
     case 'live':
       notifyBackground(m.chats);
@@ -178,47 +207,118 @@ function handle(m: ServerMessage) {
 const avlog = (ev: string) => (window as { avlog?: (e: string) => void }).avlog?.(ev);
 
 let retry: ReturnType<typeof setTimeout> | undefined;
+let attempt = 0;
 let heard = 0;
+let hiddenAt = 0;
+
+// A socket still opening after this long is stuck (no network yet after a resume); start over. Slow links get longer.
+const handshakeMs = () => 4000 + 2000 * Math.min(attempt, 3);
+// The server ticks every 20 s, so this long without a message means the socket is dead.
+const SILENT_MS = 45_000;
+// Android cuts a backgrounded app's sockets after about 5 s, so after a longer hide the socket is assumed dead.
+const AWAY_MS = 4000;
 
 export function connect() {
   clearTimeout(retry);
+  retry = undefined;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const { id, sessionId } = getState().session;
-  const sock = new WebSocket(`${proto}://${location.host}/ws${id ? `?chat=${encodeURIComponent(id)}&session=${encodeURIComponent(sessionId ?? '')}` : ''}`);
+  const to = currentTarget();
+  const q = new URLSearchParams();
+  if (to.chat) q.set('chat', to.chat);
+  if (to.session) q.set('session', to.session);
+  if (cursor && cursor.chat === to.chat) q.set('since', `${cursor.epoch}:${cursor.seq}`);
+  const query = q.toString();
+  const sock = new WebSocket(`${proto}://${location.host}/ws${query ? `?${query}` : ''}`);
+  const id = ++sockId;
   ws = sock;
   heard = Date.now();
+  outbox.lost();
+  const opening = setTimeout(() => {
+    if (ws !== sock || sock.readyState !== WebSocket.CONNECTING) return;
+    avlog('ws handshake timeout');
+    drop();
+    schedule();
+  }, handshakeMs());
   sock.onopen = () => {
+    clearTimeout(opening);
+    if (ws !== sock) return;
+    attempt = 0;
     setUi({ connected: true, restarting: false });
     avlog('ws open');
   };
   sock.onclose = () => {
+    clearTimeout(opening);
     if (ws !== sock) return;
     avlog('ws closed');
+    ws = null;
+    outbox.lost();
     setUi({ connected: false });
-    retry = setTimeout(connect, 1500);
+    schedule();
   };
   sock.onmessage = (e) => {
+    if (ws !== sock) return;
     heard = Date.now();
-    handle(JSON.parse(e.data));
+    handle(JSON.parse(e.data), id);
   };
+}
+
+function drop() {
+  const old = ws;
+  ws = null;
+  outbox.lost();
+  setUi({ connected: false });
+  old?.close();
 }
 
 function reconnect() {
   avlog('ws stale, reconnecting');
-  ws?.close();
-  ws = null;
+  drop();
   connect();
 }
 
+export const reconnectNow = () => reconnect();
+
+// Retries back off while the app is in front. In the background they slow down: a phone has no network then and
+// the resume handlers connect at once, while a desktop tab still wants its notifications.
+function schedule() {
+  if (retry || ws) return;
+  const hidden = document.visibilityState === 'hidden';
+  if (hidden && touch()) return;
+  const wait = hidden ? 30_000 : Math.min(5000, 500 * 2 ** attempt++) * (0.5 + Math.random() / 2);
+  retry = setTimeout(() => {
+    retry = undefined;
+    if (!ws) connect();
+  }, wait);
+}
+
 function probe(wait: number) {
-  if (ws?.readyState === WebSocket.CONNECTING) return;
-  if (ws?.readyState !== WebSocket.OPEN) return reconnect();
+  if (ws?.readyState !== WebSocket.OPEN) return;
   const sent = Date.now();
   send({ type: 'ping' });
   setTimeout(() => heard < sent && ws?.readyState === WebSocket.OPEN && reconnect(), wait);
 }
 
+function wake() {
+  if (document.visibilityState !== 'visible') return;
+  const away = hiddenAt ? Date.now() - hiddenAt : 0;
+  hiddenAt = 0;
+  if (!ws) {
+    attempt = 0;
+    return connect();
+  }
+  if (ws.readyState === WebSocket.CONNECTING) return;
+  if (away > AWAY_MS && touch()) return reconnect();
+  probe(4000);
+}
+
 if (typeof document !== 'undefined') {
-  setInterval(() => document.visibilityState === 'visible' && probe(10000), 15000);
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && probe(8000));
+  document.addEventListener('visibilitychange', () => (document.visibilityState === 'hidden' ? (hiddenAt ||= Date.now()) : wake()));
+  addEventListener('pageshow', wake);
+  addEventListener('focus', wake);
+  addEventListener('online', () => (ws ? reconnect() : wake()));
+  setInterval(() => {
+    if (!ws) return schedule();
+    if (document.visibilityState !== 'visible') return;
+    else if (ws.readyState === WebSocket.OPEN && Date.now() - heard > SILENT_MS) reconnect();
+  }, 5000);
 }

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { send, setUi, useStore } from '../store';
+import { deliver, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { BlockedCard, Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
@@ -39,7 +39,7 @@ export function Brief() {
   const from = all ? 0 : Math.max(0, turns.length - SHOWN_TURNS);
   const shown = turns.slice(from);
   const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
-  const setNext = (list: string[]) => send({ type: 'plan', next: list });
+  const setNext = (list: string[]) => deliver({ type: 'plan', next: list });
   const lastReply = [...turns].reverse().find((t) => t.reply)?.reply;
   const hasSteps = next.length > 0 || adding || running;
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';

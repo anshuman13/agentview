@@ -12,6 +12,9 @@ import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerm
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome.js';
 import { getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
+import { Inbox } from './inbox.js';
+import { Replay } from './replay.js';
+import { findChat, parseSince } from './route.js';
 import { notifyAway } from './notify.js';
 import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './mcp.js';
 import type { McpServerDef } from './mcpClient.js';
@@ -23,7 +26,7 @@ import { gitRoute } from './git.js';
 import { observe } from './observe.js';
 import { otherMacs, thisMac } from './macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
-import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
+import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage, type Target } from '../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
 import { allowedPeer, allowedRequest } from './access.js';
 
@@ -44,12 +47,17 @@ const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|ven
 const LAST = path.join(os.homedir(), '.agentview-last.json');
 const RESTORE = path.join(os.homedir(), '.agentview', 'restore.json');
 
+for (const k of ['log', 'warn', 'error'] as const) {
+  const write = console[k].bind(console);
+  console[k] = (...args: unknown[]) => write(new Date().toISOString(), ...args);
+}
+
 process.on('uncaughtException', (err) => console.error('uncaught:', err));
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 
 const IDLE_MS = 10 * 60 * 1000;
 
-type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string) => void; view: AgentSession };
+type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string) => void; view: AgentSession | null };
 const clients = new Set<Client>();
 
 // Serializes the message once, and only if some client receives it.
@@ -57,8 +65,12 @@ function broadcast(m: ServerMessage, to: (c: Client) => boolean = () => true) {
   let data: string | undefined;
   for (const c of clients) if (to(c)) c.sendRaw((data ??= JSON.stringify(m)));
 }
-const live = new Map<string, { chat: AgentSession; watcher: FSWatcher }>();
+const live = new Map<string, { chat: AgentSession; watcher: FSWatcher; replay: Replay }>();
 let lastViewed: AgentSession;
+const inbox = new Inbox(path.join(os.homedir(), '.agentview', 'inbox.json'));
+// Chats the user closed. A reconnecting client must not bring them back.
+const closedByUser = new Set<string>();
+const openChats = () => [...live.values()].map((l) => l.chat);
 
 const viewers = (chat: AgentSession) => [...clients].filter((c) => c.view === chat).length;
 const bySession = (sessionId: string | null) => [...live.values()].find((l) => l.chat.state.session.sessionId === sessionId)?.chat;
@@ -103,18 +115,21 @@ function broadcastLive() {
   }, 100);
 }
 
-async function createChat(cwd: string, resume?: string, title = '') {
-  const chat = new AgentSession(cwd, resume);
+async function createChat(cwd: string, resume?: string, title = '', id?: string) {
+  const chat = new AgentSession(cwd, resume, id);
   chat.title = title;
   await chat.loadHistory();
+  const replay = new Replay();
+  chat.onDelivered = (cid) => inbox.done(cid);
   chat.onMessage((m) => {
-    broadcast(m, (c) => c.view === chat);
+    const data = replay.stamp(m);
+    for (const c of clients) if (c.view === chat) c.sendRaw(data);
     notifyAway(m, () => (viewers(chat) ? null : summary(chat)));
     if (m.type === 'session' && chat === lastViewed) remember(chat);
     if (m.type !== 'event' || m.event.kind === 'user') broadcastLive();
   });
   if (!resume) chat.start();
-  live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
+  live.set(chat.id, { chat, replay, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
   return chat;
 }
 
@@ -127,6 +142,9 @@ function closeChat(chat: AgentSession) {
 }
 
 async function closeByUser(chat: AgentSession) {
+  closedByUser.add(chat.id);
+  if (chat.state.session.sessionId) closedByUser.add(chat.state.session.sessionId);
+  inbox.dropChat(chat.id);
   const others = [...live.values()].map((l) => l.chat).filter((c) => c !== chat);
   const next = others.sort((a, b) => lastActive(b) - lastActive(a))[0] ?? (await createChat(chat.cwd));
   if (lastViewed === chat) lastViewed = next;
@@ -134,13 +152,19 @@ async function closeByUser(chat: AgentSession) {
   closeChat(chat);
 }
 
-const idle = (chat: AgentSession) => !chat.state.session.running && chat.crons.length === 0 && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
+const idle = (chat: AgentSession) => !chat.state.session.running && chat.waiting === 0 && chat.crons.length === 0 && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
 
-function view(client: Client, chat: AgentSession) {
+// Sends the chat to the client: only the missed messages when it resumes from a seq this chat still holds, else a full init.
+function view(client: Client, chat: AgentSession, since?: { epoch: string; seq: number } | null) {
   client.view = chat;
   lastViewed = chat;
   remember(chat);
-  client.send({ type: 'init', state: chat.state });
+  const replay = live.get(chat.id)!.replay;
+  const missed = since ? replay.since(since.epoch, since.seq) : null;
+  if (missed) {
+    for (const data of missed) client.sendRaw(data);
+    client.send({ type: 'resumed', epoch: replay.epoch, seq: replay.seq });
+  } else client.send({ type: 'init', state: chat.state, epoch: replay.epoch, seq: replay.seq });
   void chat.refreshMcp();
   broadcastLive();
 }
@@ -185,14 +209,83 @@ async function savePaste(req: http.IncomingMessage, name: string) {
 
 const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
 
-async function openSaved(sessionId: string) {
+const opening = new Map<string, Promise<AgentSession>>();
+
+// Opens a saved session once, even when several clients ask for it at the same time.
+function openSaved(sessionId: string, id?: string) {
   const open = bySession(sessionId);
-  if (open) return open;
-  const info = await getSessionInfo(sessionId);
-  if (!info) throw new Error('Session not found');
-  if (!info.cwd) throw new Error('This session has no folder recorded, so it cannot be resumed');
-  if (!(await isDir(info.cwd))) throw new Error(`Folder no longer exists: ${info.cwd}`);
-  return createChat(info.cwd, sessionId, info.summary);
+  if (open) return Promise.resolve(open);
+  let p = opening.get(sessionId);
+  if (!p) {
+    p = (async () => {
+      const info = await getSessionInfo(sessionId);
+      if (!info) throw new Error('Session not found');
+      if (!info.cwd) throw new Error('This session has no folder recorded, so it cannot be resumed');
+      if (!(await isDir(info.cwd))) throw new Error(`Folder no longer exists: ${info.cwd}`);
+      return createChat(info.cwd, sessionId, info.summary, id && !live.has(id) ? id : undefined);
+    })().finally(() => opening.delete(sessionId));
+    opening.set(sessionId, p);
+  }
+  return p;
+}
+
+// The chat a message or a reconnect names. A chat that is not open is reopened from its session, unless the user closed it.
+async function target(to: { chat?: string | null; session?: string | null }) {
+  const hit = findChat(openChats(), to);
+  if (hit) return hit;
+  if (!to.session || closedByUser.has(to.session) || (to.chat && closedByUser.has(to.chat))) return null;
+  return openSaved(to.session, to.chat ?? undefined).catch(() => null);
+}
+
+const reliableTypes = new Set(['prompt', 'steer', 'plan', 'answer', 'permission', 'allow_blocked']);
+// Cids being handled right now, so a resend on another socket during an await is a duplicate too.
+const inFlight = new Set<string>();
+
+// Runs a message the client retries until acked. The cid is saved, with the prompt text, before the message runs,
+// so a resend after a lost ack or a restart is answered with "duplicate" and runs nothing.
+async function reliable(client: Client, msg: ClientMessage & { cid?: string; to?: Target }, run: (chat: AgentSession, id?: string) => void) {
+  const cid = typeof msg.cid === 'string' && msg.cid ? msg.cid.slice(0, 64) : null;
+  if (cid && (inbox.has(cid) || inFlight.has(cid))) return client.send({ type: 'ack', cid, status: 'duplicate' });
+  if (cid) inFlight.add(cid);
+  try {
+    await accepted(client, msg, cid, run);
+  } finally {
+    if (cid) inFlight.delete(cid);
+  }
+}
+
+async function accepted(client: Client, msg: ClientMessage & { to?: Target }, cid: string | null, run: (chat: AgentSession, id?: string) => void) {
+  const chat = msg.to && (msg.to.chat || msg.to.session) ? await target(msg.to) : client.view;
+  if (!chat) {
+    console.log(`rejected ${msg.type} ${cid ?? ''}: chat ${msg.to?.chat ?? '?'} is closed`);
+    if (cid) client.send({ type: 'ack', cid, status: 'rejected', reason: 'This chat was closed' });
+    return;
+  }
+  if (cid) {
+    const text = msg.type === 'prompt' || msg.type === 'steer' ? msg.text : null;
+    try {
+      inbox.accept(cid, text === null ? undefined : { chat: chat.id, session: chat.state.session.sessionId, cwd: chat.cwd, kind: msg.type as 'prompt' | 'steer', text });
+    } catch (err) {
+      console.error(`inbox: ${String(err)}`);
+      return client.send({ type: 'ack', cid, status: 'rejected', reason: `AgentView could not save the message: ${String(err)}` });
+    }
+  }
+  run(chat, cid ?? undefined);
+  if (cid) client.send({ type: 'ack', cid, status: 'accepted' });
+}
+
+// Prompts accepted before the last stop but never handed to Claude go out again, in order.
+async function redeliver() {
+  for (const item of inbox.pending()) {
+    const chat = (await target(item)) ?? (item.session || closedByUser.has(item.chat) ? null : await createChat(item.cwd, undefined, '', item.chat).catch(() => null));
+    if (!chat) {
+      console.log(`dropped saved prompt ${item.cid}: its chat could not be reopened`);
+      inbox.done(item.cid);
+      continue;
+    }
+    console.log(`redelivering saved prompt ${item.cid} to chat ${chat.id}`);
+    void chat.prompt(item.text, item.cid);
+  }
 }
 
 async function newChat(cwd: string, from: AgentSession) {
@@ -207,15 +300,15 @@ function remember(chat: AgentSession) {
   const sessionId = chat.state.session.sessionId;
   if (!sessionId || sessionId === remembered) return;
   remembered = sessionId;
-  writeFile(LAST, JSON.stringify({ sessionId, cwd: chat.cwd })).catch(() => {});
+  writeFile(LAST, JSON.stringify({ sessionId, cwd: chat.cwd, id: chat.id })).catch(() => {});
 }
 
 let restarting: NodeJS.Timeout | null = null;
 
 function saveAndExit() {
-  const chats = [...live.values()].map(({ chat }) => ({ sessionId: chat.state.session.sessionId, crons: chat.crons })).filter((c) => c.sessionId);
+  const chats = [...live.values()].map(({ chat }) => ({ id: chat.id, cwd: chat.cwd, sessionId: chat.state.session.sessionId, crons: chat.crons }));
   mkdirSync(path.dirname(RESTORE), { recursive: true });
-  writeFileSync(RESTORE, JSON.stringify({ view: lastViewed?.state.session.sessionId, chats }));
+  writeFileSync(RESTORE, JSON.stringify({ view: lastViewed?.id, chats }));
   process.exit(0);
 }
 
@@ -231,18 +324,19 @@ function restart(now: boolean) {
 process.on('SIGTERM', saveAndExit);
 
 async function restore() {
-  const saved: { view?: string; chats: { sessionId: string; crons: SessionCronSummary[] }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
+  const saved: { view?: string; chats: { id?: string; cwd?: string; sessionId: string | null; crons: SessionCronSummary[] }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
   if (!saved) return null;
   await rm(RESTORE, { force: true });
   for (const s of saved.chats) {
-    const chat = await openSaved(s.sessionId).catch(() => null);
+    const chat = s.sessionId ? await openSaved(s.sessionId, s.id).catch(() => null) : s.cwd && (await isDir(s.cwd)) ? await createChat(s.cwd, undefined, '', s.id) : null;
     if (chat && s.crons.length) chat.restoreCrons(s.crons);
   }
-  return (saved.view && bySession(saved.view)) || null;
+  return (saved.view && (live.get(saved.view)?.chat ?? bySession(saved.view))) || null;
 }
 
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
-lastViewed = (await restore()) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
+lastViewed = (await restore()) ?? (await (last?.sessionId ? openSaved(last.sessionId, last.id).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
+await redeliver();
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -411,18 +505,42 @@ server.on('connection', (socket) => allowedPeer(socket.remoteAddress) || socket.
 
 const wss = new WebSocketServer({ server, path: '/ws', verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers) });
 
+// Server-side liveness: a socket that misses a pong is dead (a phone that went to the background, a dropped VPN),
+// so it stops counting as a viewer. The tick gives the client traffic to judge its own socket by.
+const alive = new WeakMap<WebSocket, boolean>();
+setInterval(() => {
+  for (const ws of wss.clients) {
+    if (alive.get(ws) === false) {
+      ws.terminate();
+      continue;
+    }
+    alive.set(ws, false);
+    ws.ping();
+  }
+  broadcast({ type: 'tick' });
+}, 20_000);
+
 wss.on('connection', (ws: WebSocket, req) => {
+  alive.set(ws, true);
+  ws.on('pong', () => alive.set(ws, true));
+  ws.on('error', (err) => console.error(`ws: ${String(err)}`));
   const params = new URL(req.url ?? '', 'http://x').searchParams;
   const term = params.get('term');
   if (term !== null) return attachTerminal(ws, term);
   if (params.has('chrome')) return openChrome(ws, req.headers.origin);
-  const chat = live.get(params.get('chat') ?? '')?.chat ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? lastViewed;
+  const want = { chat: params.get('chat') || null, session: params.get('session') || null };
   const sendRaw = (data: string) => ws.readyState === WebSocket.OPEN && ws.send(data);
-  const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat };
+  const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: null };
   clients.add(client);
-  view(client, chat);
-  if (restarting) client.send({ type: 'restarting' });
   const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
+  // Messages run one at a time, in order, after the client is attached to its chat.
+  let chain = (async () => {
+    const chat = (want.chat || want.session ? await target(want) : null) ?? lastViewed;
+    if (!clients.has(client)) return;
+    view(client, chat, chat.id === want.chat ? parseSince(params.get('since')) : null);
+    if (want.chat && chat.id !== want.chat && (!want.session || chat.state.session.sessionId !== want.session)) fail(new Error('That chat was closed, so AgentView opened the latest one'));
+    if (restarting) client.send({ type: 'restarting' });
+  })().catch(fail);
 
   ws.on('message', (raw) => {
     let msg: ClientMessage;
@@ -431,26 +549,37 @@ wss.on('connection', (ws: WebSocket, req) => {
     } catch {
       return;
     }
+    chain = chain.then(() => handle(msg)).catch(fail);
+  });
+
+  async function handle(msg: ClientMessage) {
+    if (!clients.has(client) || !client.view) return;
     const chat = client.view;
+    if (reliableTypes.has(msg.type)) {
+      return reliable(client, msg, (chat, id) => {
+        switch (msg.type) {
+          case 'prompt':
+            void chat.prompt(String(msg.text), id);
+            break;
+          case 'steer':
+            void chat.steer(String(msg.text), id ?? (typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined));
+            break;
+          case 'plan':
+            chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
+            break;
+          case 'answer':
+            chat.answerQuestion(msg.id, msg.answers);
+            break;
+          case 'permission':
+            chat.answerPermission(msg.id, msg.allow, msg.always);
+            break;
+          case 'allow_blocked':
+            void chat.allowBlocked(String(msg.id)).catch(fail);
+            break;
+        }
+      });
+    }
     switch (msg.type) {
-      case 'prompt':
-        void chat.prompt(msg.text);
-        break;
-      case 'steer':
-        void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
-        break;
-      case 'plan':
-        chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
-        break;
-      case 'answer':
-        chat.answerQuestion(msg.id, msg.answers);
-        break;
-      case 'permission':
-        chat.answerPermission(msg.id, msg.allow, msg.always);
-        break;
-      case 'allow_blocked':
-        void chat.allowBlocked(String(msg.id)).catch(fail);
-        break;
       case 'set_model':
         void chat.setModel(msg.model);
         break;
@@ -478,6 +607,7 @@ wss.on('connection', (ws: WebSocket, req) => {
         break;
       }
       case 'open_session':
+        closedByUser.delete(msg.sessionId);
         openSaved(msg.sessionId).then((c) => view(client, c), fail);
         break;
       case 'mcp_status':
@@ -499,7 +629,7 @@ wss.on('connection', (ws: WebSocket, req) => {
         newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);
         break;
     }
-  });
+  }
   ws.on('close', () => {
     clients.delete(client);
     broadcastLive();

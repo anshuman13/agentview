@@ -78,18 +78,20 @@ const countAll = (subs: Record<string, SessionMessage[]>) => Object.values(subs)
 
 const lastUuid = (msgs: SessionMessage[]) => msgs.filter((m) => m.type !== 'system').at(-1)?.uuid;
 
+const RECOVER_MS = [1000, 3000, 10_000];
+
 const looping = (loop: LoopState) => Boolean(loop.phase) && loop.phase !== 'passed' && loop.phase !== 'failed';
 
 export class AgentSession {
   private q: Query | null = null;
-  private inputQueue: SDKUserMessage[] = [];
+  private inputQueue: { msg: SDKUserMessage; cid?: string }[] = [];
   private wake: (() => void) | null = null;
   private closed = false;
   private gen = 0;
   crons: SessionCronSummary[] = [];
   private wokeAt = 0;
 
-  id = randomUUID();
+  id: string;
   title = '';
   created = Date.now();
   state: ServerState;
@@ -125,8 +127,13 @@ export class AgentSession {
   private taskIds = new Map<string, string>();
   private orphans = new Set<string>();
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
+  private recoveries = 0;
 
-  constructor(public cwd: string, private resume?: string) {
+  // Called when a prompt with this id is handed to Claude, or discarded by Stop.
+  onDelivered: (cid: string) => void = () => {};
+
+  constructor(public cwd: string, private resume?: string, id: string = randomUUID()) {
+    this.id = id;
     this.state = {
       session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff() },
       status: 'Idle',
@@ -412,33 +419,39 @@ export class AgentSession {
         await new Promise<void>((r) => (this.wake = r));
         continue;
       }
-      yield this.inputQueue.shift()!;
+      const item = this.inputQueue.shift()!;
+      if (item.cid) this.onDelivered(item.cid);
+      yield item.msg;
     }
   }
 
-  sendPrompt(text: string) {
-    this.pushEvent({ id: randomUUID(), kind: 'user', text, at: Date.now() });
-    this.enqueue(text);
+  sendPrompt(text: string, id: string = randomUUID()) {
+    this.pushEvent({ id, kind: 'user', text, at: Date.now() });
+    this.enqueue(text, id);
   }
 
-  private enqueue(text: string) {
+  private enqueue(text: string, cid?: string) {
+    const fresh = !this.q;
     this.start();
-    this.turns++;
+    this.turns = (fresh ? this.inputQueue.length : this.turns) + 1;
     this.setSession({ running: true });
     if (/^\/compact\b/.test(text.trim())) this.startCompacting();
-    this.inputQueue.push(userMessage(text));
+    this.inputQueue.push({ msg: userMessage(text), cid });
     this.wake?.();
   }
 
   async interrupt() {
-    if (!this.q || !this.state.session.running || this.state.session.stopping) return;
+    if (!this.q) return this.discardWaiting();
+    if (!this.state.session.running || this.state.session.stopping) return;
     this.planChange = null;
     if (looping(this.state.session.loop)) {
       this.setSession({ loop: { ...this.state.session.loop, phase: null } });
       this.endLoop('Loop stopped');
     }
     this.turns -= this.inputQueue.length;
+    const unsent = this.inputQueue;
     this.inputQueue = [];
+    for (const i of unsent) if (i.cid) this.onDelivered(i.cid);
     this.dropQueue();
     if (this.turns <= 0) {
       this.turns = 0;
@@ -452,6 +465,15 @@ export class AgentSession {
       this.setSession({ stopping: false });
       this.system(`Stop failed: ${String(err)}`);
     }
+  }
+
+  // Stop with no Claude process: drop what was kept for the next restart, so it does not run later.
+  private discardWaiting() {
+    const unsent = this.inputQueue;
+    this.inputQueue = [];
+    for (const i of unsent) if (i.cid) this.onDelivered(i.cid);
+    if (unsent.length) this.system(`Stop discarded ${unsent.length} unsent ${unsent.length === 1 ? 'message' : 'messages'}`);
+    this.dropQueue();
   }
 
   async stopTask(toolUseId: string) {
@@ -491,10 +513,13 @@ export class AgentSession {
 
   private dropQueue() {
     if (!this.queued.length) return;
-    const ids = new Set(this.queued.map((e) => e.id));
+    const dropped = this.queued;
+    const ids = new Set(dropped.map((e) => e.id));
     this.queued = [];
+    for (const id of ids) this.onDelivered(id);
     this.state.events = this.state.events.filter((e) => !ids.has(e.id));
     this.emit({ type: 'init', state: this.state });
+    this.system(`Stop discarded ${dropped.length} queued ${dropped.length === 1 ? 'message' : 'messages'}:\n${dropped.map((e) => `- ${e.text}`).join('\n')}`);
   }
 
   restoreCrons(crons: SessionCronSummary[]) {
@@ -503,12 +528,13 @@ export class AgentSession {
     void this.prompt(`AgentView restarted, which cleared your scheduled jobs. It is now ${new Date().toString()}. Recreate each job below with CronCreate, using the same cron, prompt and recurring flag. If a one-shot job's time has already passed, run its prompt now instead. Reply in one line.\n\n${JSON.stringify(crons.map(({ schedule, prompt, recurring }) => ({ cron: schedule, prompt, recurring })), null, 2)}`);
   }
 
-  async prompt(text: string) {
-    if (this.state.session.running) return this.queue(text);
+  // The user event is pushed before any await, so the client sees the message the moment the server accepts it.
+  async prompt(text: string, id: string = randomUUID()) {
+    if (this.state.session.running) return this.queue(text, id);
+    this.pushEvent({ id, kind: 'user', text, at: Date.now() });
     await this.planFirst();
-    const loop = this.state.session.loop;
-    if (loop.on && !this.state.session.running && !text.trim().startsWith('/')) return this.startLoop(text);
-    this.sendPrompt(text);
+    if (this.state.session.loop.on && !this.state.session.running && !text.trim().startsWith('/')) return this.startLoop(text, id);
+    this.enqueue(text, id);
   }
 
   setLoop(on: boolean, max?: number) {
@@ -519,24 +545,25 @@ export class AgentSession {
     this.system(on ? `Loop on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Loop off');
   }
 
-  private async startLoop(task: string) {
-    this.pushEvent({ id: randomUUID(), kind: 'user', text: task, at: Date.now() });
+  private async startLoop(task: string, cid: string) {
     this.loopPrevModel = this.state.session.model;
     this.setSession({ loop: { ...this.state.session.loop, round: 1, phase: 'plan' } });
-    await this.runStep(planStep(task), false);
+    await this.runStep(planStep(task), false, cid);
   }
 
-  private async runStep(step: LoopStep, marker = true) {
+  private async runStep(step: LoopStep, marker = true, cid?: string) {
     this.turns++;
     this.setSession({ running: true });
     try {
       if (this.state.session.model !== step.model) await this.setModel(step.model);
       if (this.state.session.permissionMode !== step.mode) await this.setPermissionMode(step.mode);
+    } catch (err) {
+      this.system(`Could not switch model or mode for this step: ${String(err)}`);
     } finally {
       this.turns--;
     }
     if (marker) this.pushEvent({ id: randomUUID(), kind: 'user', text: step.label, at: Date.now(), phase: step.phase });
-    this.enqueue(step.prompt);
+    this.enqueue(step.prompt, cid);
   }
 
   private loopPlanDone(toolName: string, input: Record<string, unknown>) {
@@ -563,7 +590,7 @@ export class AgentSession {
       ev.stopping = false;
       this.emit({ type: 'event', event: ev });
     } else await this.planFirst();
-    this.enqueue(text);
+    this.enqueue(text, id);
   }
 
   changePlan(next: string[]) {
@@ -589,7 +616,8 @@ export class AgentSession {
   }
 
   private async planFirst() {
-    if (this.state.session.team && this.state.session.permissionMode !== 'plan') await this.setPermissionMode('plan');
+    if (!this.state.session.team || this.state.session.permissionMode === 'plan') return;
+    await this.setPermissionMode('plan').catch((err) => this.system(`Could not switch to plan mode: ${String(err)}`));
   }
 
   private startCompacting() {
@@ -641,31 +669,74 @@ export class AgentSession {
       this.autoCompact = false;
       return '/compact';
     }
+    this.releaseQueued();
+    return null;
+  }
+
+  private releaseQueued() {
     const ev = this.queued.shift();
-    if (!ev) return null;
+    if (!ev) return;
     ev.queued = false;
     ev.at = Date.now();
     this.state.events = [...this.state.events.filter((e) => e !== ev), ev];
     this.emit({ type: 'init', state: this.state });
-    this.enqueue(ev.text);
-    return null;
+    this.enqueue(ev.text, ev.id);
+  }
+
+  // Prompts the chat still owes Claude. A chat with any must not be closed for being idle.
+  get waiting() {
+    return this.inputQueue.length + this.queued.length;
   }
 
   private async consume() {
     const q = this.q;
     if (!q) return;
     try {
-      for await (const msg of q) this.handle(msg);
+      for await (const msg of q) {
+        if (msg.type === 'result') this.recoveries = 0;
+        this.handle(msg);
+      }
     } catch (err) {
       if (this.q === q) this.system(`Session error: ${String(err)}`);
     } finally {
-      this.turns = 0;
-      this.setSession({ running: false, stopping: false });
-      if (this.q === q) {
-        this.tasks.clear();
-        this.orphan(this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : [])));
-      }
+      // A query replaced by a newer one must not touch the newer one's state.
+      if (this.q === q) this.ended();
     }
+  }
+
+  // The Claude process is gone. Clear it so the next prompt starts a fresh one, and resend anything it never took.
+  private ended() {
+    const { model, team, permissionMode, sessionId } = this.state.session;
+    try {
+      this.q?.close();
+    } catch {}
+    this.q = null;
+    this.gen++;
+    this.wake?.();
+    this.resume = sessionId ?? this.resume;
+    this.restore = { model, team, permissionMode };
+    this.turns = 0;
+    this.setSession({ running: false, stopping: false, compacting: false });
+    this.tasks.clear();
+    this.orphan(this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : [])));
+    if (this.closed) return;
+    if (!this.inputQueue.length) {
+      this.releaseQueued();
+      return;
+    }
+    const n = ++this.recoveries;
+    if (n > RECOVER_MS.length) {
+      this.recoveries = 0;
+      this.system('Claude stopped and AgentView could not restart it. Your messages are kept and go out with the next one you send.');
+      return;
+    }
+    this.system('Claude stopped unexpectedly, so AgentView is restarting it');
+    setTimeout(() => {
+      if (this.closed || this.q || !this.inputQueue.length) return;
+      this.start();
+      this.turns = this.inputQueue.length;
+      this.setSession({ running: true });
+    }, RECOVER_MS[n - 1]);
   }
 
   private toolUse(block: { id: string; name: string; input: unknown }, parent?: string) {

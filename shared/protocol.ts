@@ -112,7 +112,10 @@ export type ServerState = {
 };
 
 export type ServerMessage =
-  | { type: 'init'; state: ServerState }
+  | { type: 'init'; state: ServerState; epoch?: string; seq?: number }
+  | { type: 'resumed'; epoch: string; seq: number }
+  | { type: 'ack'; cid: string; status: 'accepted' | 'duplicate' | 'rejected'; reason?: string }
+  | { type: 'tick' }
   | { type: 'event'; event: ChatEvent }
   | { type: 'status'; text: string }
   | { type: 'pending'; request: PendingRequest }
@@ -123,6 +126,9 @@ export type ServerMessage =
   | { type: 'pong' }
   | { type: 'restarting' }
   | { type: 'error'; text: string };
+
+// Chat messages carry a per-chat sequence number so a reconnecting client can ask for only what it missed.
+export type WireMessage = ServerMessage & { seq?: number };
 
 export type LiveChat = {
   id: string;
@@ -178,13 +184,22 @@ export type Worktree = {
   removable: boolean;
 };
 
-export type ClientMessage =
+// The chat a message is meant for. The server rejects it rather than send it to another chat.
+export type Target = { chat: string; session: string | null };
+
+// Messages the client retries until the server acks them. The cid makes a resend a no-op.
+export type Reliable = { cid?: string; to?: Target };
+
+export type ReliableMessage =
   | { type: 'prompt'; text: string }
   | { type: 'steer'; text: string; id?: string }
   | { type: 'plan'; next: string[] }
   | { type: 'answer'; id: string; answers: Record<string, string> }
   | { type: 'permission'; id: string; allow: boolean; always?: boolean }
-  | { type: 'allow_blocked'; id: string }
+  | { type: 'allow_blocked'; id: string };
+
+export type ClientMessage =
+  | (ReliableMessage & Reliable)
   | { type: 'set_model'; model: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_loop'; on: boolean; max?: number }

@@ -15,7 +15,7 @@ import type {
   SnowflakeTest,
 } from '../../../shared/observe';
 import type { Repo } from '../../../shared/protocol';
-import { api, send, useStore } from '../store';
+import { api, deliver, useStore } from '../store';
 import { Icon } from '../Icon';
 import '../observe.css';
 
@@ -118,7 +118,7 @@ function Issue({ issue, repo }: { issue: SentryIssue; repo: string }) {
   const [open, setOpen] = useState(false);
   const [details, refresh] = useLoad<SentryDetails>(open ? `/api/observe/sentry/issue?repo=${encodeURIComponent(repo)}&id=${encodeURIComponent(issue.id)}&shortId=${encodeURIComponent(issue.shortId)}` : null);
   const ask = () =>
-    send({
+    deliver({
       type: 'prompt',
       text: `Investigate Sentry issue ${issue.shortId} (id ${issue.id}) in ${repo}: "${issue.title}" at ${issue.culprit || 'unknown location'}. ${issue.count} events, ${issue.userCount} users, last seen ${issue.lastSeen}. Use the Sentry MCP (get_sentry_resource with resourceType issue and resourceId ${issue.shortId}, or the URL ${issue.permalink}) to read the latest event and stack trace, find the cause in the code and propose a fix.`,
     });
@@ -276,7 +276,7 @@ function Grafana({ info }: { info: ObserveInfo }) {
     refreshLogs();
     refreshPats();
   };
-  const prompt = (text: string) => () => send({ type: 'prompt', text: `Use the grafana MCP for ${info.repo} (Loki selector ${selector}): ${text}` });
+  const prompt = (text: string) => () => deliver({ type: 'prompt', text: `Use the grafana MCP for ${info.repo} (Loki selector ${selector}): ${text}` });
   return (
     <Section title="Grafana" actions={<button className="icon-btn" title="Refresh" onClick={refresh}><Icon name="refresh" small /></button>}>
       {!info.grafanaServer && <div className="obs-hint error">No grafana MCP server in ~/.claude.json</div>}
@@ -462,7 +462,7 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
         {result.data && <span className="muted">{result.data.rows.length}{result.data.truncated ? '+' : ''} rows, {result.data.ms} ms{result.data.truncated ? ', showing the first 200' : ''}</span>}
         {result.busy && <span className="muted"><Icon name="loading" small spin /> Running</span>}
         <span className="spacer" />
-        <button className="obs-ask" disabled={!connected} onClick={() => send({ type: 'prompt', text: `Use the snowflake MCP${db ? ` on ${db}${schema ? `.${schema}` : ''}` : ''}: ${sql.trim() ? `run this query and explain the result:\n${sql.trim()}` : 'list the tables that matter for this service and describe what they hold'}` })}>
+        <button className="obs-ask" disabled={!connected} onClick={() => deliver({ type: 'prompt', text: `Use the snowflake MCP${db ? ` on ${db}${schema ? `.${schema}` : ''}` : ''}: ${sql.trim() ? `run this query and explain the result:\n${sql.trim()}` : 'list the tables that matter for this service and describe what they hold'}` })}>
           <Icon name="sparkle" small /> Ask Claude
         </button>
       </div>

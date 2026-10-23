@@ -117,6 +117,113 @@ describe('AgentSession turns', () => {
   });
 });
 
+describe('AgentSession delivery', () => {
+  const internals = (s: AgentSession) => s as unknown as { q: unknown; consume: () => Promise<void>; inputStream: (gen: number) => AsyncGenerator<unknown>; gen: number };
+
+  it('clears a dead Claude process and resends the prompt it never took', async () => {
+    vi.useFakeTimers();
+    try {
+      const s = new AgentSession('/tmp/project');
+      const start = vi.spyOn(s, 'start').mockImplementation(() => {});
+      internals(s).q = { interrupt: vi.fn(), async *[Symbol.asyncIterator]() { throw new Error('claude exited'); } };
+      s.sendPrompt('hello');
+      await internals(s).consume();
+      expect(internals(s).q).toBeNull();
+      expect(s.state.session.running).toBe(false);
+      vi.advanceTimersByTime(1000);
+      expect(start).toHaveBeenCalled();
+      expect(s.state.session.running).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('starts a fresh process for the next prompt after the old one died with nothing waiting', async () => {
+    const s = new AgentSession('/tmp/project');
+    const start = vi.spyOn(s, 'start').mockImplementation(() => {});
+    internals(s).q = { interrupt: vi.fn(), async *[Symbol.asyncIterator]() {} };
+    await internals(s).consume();
+    start.mockClear();
+    await s.prompt('are you there');
+    expect(start).toHaveBeenCalledOnce();
+    expect(s.state.session.running).toBe(true);
+  });
+
+  it('an old process ending does not stop a newer turn', async () => {
+    const s = new AgentSession('/tmp/project');
+    vi.spyOn(s, 'start').mockImplementation(() => {});
+    let end = () => {};
+    const gate = new Promise<void>((r) => (end = r));
+    internals(s).q = { interrupt: vi.fn(), async *[Symbol.asyncIterator]() { await gate; } };
+    const done = internals(s).consume();
+    internals(s).q = { interrupt: vi.fn() };
+    s.sendPrompt('new turn');
+    end();
+    await done;
+    expect(s.state.session.running).toBe(true);
+  });
+
+  it('sends a queued prompt when the Claude process dies mid-turn', async () => {
+    const s = new AgentSession('/tmp/project');
+    const start = vi.spyOn(s, 'start').mockImplementation(() => {});
+    internals(s).q = { interrupt: vi.fn(), async *[Symbol.asyncIterator]() {} };
+    s.sendPrompt('long task');
+    (s as unknown as { inputQueue: unknown[] }).inputQueue = [];
+    await s.prompt('queued meanwhile', 'c9');
+    expect(s.state.events.at(-1)).toMatchObject({ id: 'c9', queued: true });
+    await internals(s).consume();
+    expect(start).toHaveBeenCalled();
+    expect(s.state.events.find((e) => e.id === 'c9')).toMatchObject({ queued: false });
+    expect(s.waiting).toBe(1);
+  });
+
+  it('Stop with no Claude process discards what was kept for a restart', async () => {
+    const s = new AgentSession('/tmp/project');
+    vi.spyOn(s, 'start').mockImplementation(() => {});
+    const delivered = vi.fn();
+    s.onDelivered = delivered;
+    s.sendPrompt('kept', 'c8');
+    await s.interrupt();
+    expect(delivered).toHaveBeenCalledWith('c8');
+    expect(s.waiting).toBe(0);
+  });
+
+  it('reports a prompt as delivered when it is handed to Claude', async () => {
+    const s = new AgentSession('/tmp/project');
+    vi.spyOn(s, 'start').mockImplementation(() => {});
+    internals(s).q = { interrupt: vi.fn() };
+    const delivered = vi.fn();
+    s.onDelivered = delivered;
+    s.sendPrompt('hello', 'c1');
+    expect(s.state.events.at(-1)).toMatchObject({ id: 'c1', text: 'hello' });
+    await internals(s).inputStream(internals(s).gen).next();
+    expect(delivered).toHaveBeenCalledWith('c1');
+  });
+
+  it('Stop says which queued messages it discarded', async () => {
+    const { s } = fakeSession();
+    const delivered = vi.fn();
+    s.onDelivered = delivered;
+    s.sendPrompt('task');
+    await s.prompt('next thing', 'c2');
+    await s.interrupt();
+    expect(delivered).toHaveBeenCalledWith('c2');
+    expect(s.state.events.some((e) => e.kind === 'user' && e.id === 'c2')).toBe(false);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('next thing') });
+  });
+
+  it('shows the prompt before switching to plan mode, and still sends it when the switch fails', async () => {
+    const { s } = fakeSession();
+    Object.assign(s.state.session, { team: true, permissionMode: 'auto' });
+    vi.spyOn(s, 'setPermissionMode').mockRejectedValue(new Error('control request timed out'));
+    const sent = s.prompt('plan this', 'c3');
+    expect(s.state.events.at(-1)).toMatchObject({ id: 'c3', text: 'plan this' });
+    await sent;
+    expect(s.state.session.running).toBe(true);
+    expect(s.state.events.some((e) => e.kind === 'system' && e.text.includes('plan mode'))).toBe(true);
+  });
+});
+
 describe('Fable approval', () => {
   const call = (s: AgentSession, subagent_type: string) =>
     (s as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<any> }).confirmBigBro(
