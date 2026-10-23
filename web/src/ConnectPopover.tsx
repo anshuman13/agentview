@@ -9,7 +9,7 @@ export function ConnectPopover({ onClose }: { onClose: () => void }) {
   const [apk, setApk] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/connect?port=${location.port}`)
+    fetch(`/api/connect?peer=1&port=${location.port}`)
       .then((r) => r.json())
       .then((d: { urls: string[] }) => setUrls(d.urls))
       .catch((e) => setError(String(e)));

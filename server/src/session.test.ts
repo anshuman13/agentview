@@ -534,3 +534,27 @@ describe('fireTime', () => {
     expect(fireTime('*/30 * * * *', now)).toBeNull();
   });
 });
+
+describe('blocked tools', () => {
+  it('allows a rule once, marks every card for it and does not re-prompt', async () => {
+    const { s } = fakeSession();
+    const applyFlagSettings = vi.fn(async () => {});
+    Object.assign(s, { q: { interrupt: vi.fn(), applyFlagSettings } });
+    const priv = s as unknown as { blocked: (id: string, tool: string, reason: string) => void };
+    const users = () => s.state.events.filter((e) => e.kind === 'user');
+    const cards = () => s.state.events.filter((e) => e.kind === 'blocked').map((e) => e.kind === 'blocked' && e.allowed);
+    priv.blocked('t1', 'mcp__chrome__computer', 'not allowed');
+    priv.blocked('t2', 'mcp__chrome__computer', 'not allowed');
+    await s.allowBlocked('t1:blocked');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(applyFlagSettings).toHaveBeenCalledOnce();
+    expect(cards()).toEqual([true, true]);
+    expect(users()).toHaveLength(1);
+    priv.blocked('t3', 'mcp__chrome__computer', 'not allowed');
+    await s.allowBlocked('t3:blocked');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(applyFlagSettings).toHaveBeenCalledOnce();
+    expect(cards()).toEqual([true, true, true]);
+    expect(users()).toHaveLength(1);
+  });
+});

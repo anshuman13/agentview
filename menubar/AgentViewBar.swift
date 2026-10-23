@@ -26,7 +26,7 @@ final class Child {
   func start() {
     stopping = false
     let path = logs.appendingPathComponent("\(name).log").path
-    let fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0o644)
+    let fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0o600)
     var attr: posix_spawnattr_t?
     posix_spawnattr_init(&attr)
     posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETPGROUP))
@@ -87,17 +87,22 @@ final class Child {
   }
 }
 
+func output(_ tool: String, _ args: [String]) -> String {
+  let p = Process()
+  p.executableURL = URL(fileURLWithPath: tool)
+  p.arguments = args
+  let out = Pipe()
+  p.standardOutput = out
+  try? p.run()
+  p.waitUntilExit()
+  return String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+}
+
+// Stops earlier AgentView processes on our ports, and nothing else (another repo's vite also likes 5173).
 func freePorts(_ ports: [Int]) {
   for port in ports {
-    let p = Process()
-    p.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
-    p.arguments = ["-ti", "tcp:\(port)", "-sTCP:LISTEN"]
-    let out = Pipe()
-    p.standardOutput = out
-    try? p.run()
-    p.waitUntilExit()
-    let pids = String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    pids.split(separator: "\n").compactMap { pid_t($0) }.forEach { kill($0, SIGTERM) }
+    let pids = output("/usr/sbin/lsof", ["-ti", "tcp:\(port)", "-sTCP:LISTEN"]).split(separator: "\n").compactMap { pid_t($0) }
+    for pid in pids where output("/bin/ps", ["-o", "command=", "-p", "\(pid)"]).contains(repo) { kill(pid, SIGTERM) }
   }
 }
 
@@ -156,7 +161,8 @@ final class Bar: NSObject, NSApplicationDelegate {
   let notifier = Notifier()
 
   func applicationDidFinishLaunching(_ n: Notification) {
-    try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
+    try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+    try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: logs.deletingLastPathComponent().path)
     notifier.onClick = { [weak self] in self?.openApp() }
     notifier.start()
     let menu = NSMenu()

@@ -53,6 +53,14 @@ function toHtml(text: string) {
   return meta + (md.parse(body, { async: false }) as string);
 }
 
+const dec = (s: string) => {
+  try {
+    return decodeURI(s);
+  } catch {
+    return s;
+  }
+};
+
 function clean(root: ParentNode, path: string) {
   for (const el of [...root.querySelectorAll('*')]) {
     const tag = el.tagName.toLowerCase();
@@ -72,7 +80,7 @@ function clean(root: ParentNode, path: string) {
       a.removeAttribute('href');
     } else {
       const [file, hash] = href.split('#');
-      const target = file ? resolve(path, decodeURI(file)) : path;
+      const target = file ? resolve(path, dec(file)) : path;
       a.setAttribute('href', target === path && hash ? `#${hash}` : '#');
       if (target !== path) a.setAttribute('data-open', target);
     }
@@ -81,7 +89,7 @@ function clean(root: ParentNode, path: string) {
     const src = img.getAttribute('src') ?? '';
     if (/^https?:/i.test(src)) continue;
     if (external(src) || !src) img.removeAttribute('src');
-    else img.setAttribute('src', api(`/api/image?path=${encodeURIComponent(resolve(path, decodeURI(src.split(/[?#]/)[0])))}`));
+    else img.setAttribute('src', api(`/api/image?path=${encodeURIComponent(resolve(path, dec(src.split(/[?#]/)[0])))}`));
     img.setAttribute('loading', 'lazy');
   }
   for (const input of root.querySelectorAll('input')) {

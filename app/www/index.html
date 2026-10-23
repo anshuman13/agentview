@@ -58,7 +58,8 @@
       const android = /Android/i.test(navigator.userAgent);
       const phone = /Android|iPhone|iPad/i.test(navigator.userAgent);
       const shell = window.AgentViewShell;
-      const known = (() => { try { return shell?.macs ? JSON.parse(shell.macs()) : []; } catch { return []; } })();
+      const MAC_URL = /^http:\/\/([a-z0-9-]+\.netbird\.cloud|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|localhost)(:\d{1,5})?$/i;
+      const known = (() => { try { return (shell?.macs ? JSON.parse(shell.macs()) : []).filter((m) => MAC_URL.test(m.url)); } catch { return []; } })();
       const saved = known[0]?.url || localStorage.getItem(KEY) || (phone ? MAC_URL : 'http://localhost:5173');
       const $ = (id) => document.getElementById(id);
       const [form, url, go, msg, netbird, retry, other, h1, macs] = ['form', 'url', 'go', 'msg', 'netbird', 'retry', 'other', 'title', 'macs'].map($);

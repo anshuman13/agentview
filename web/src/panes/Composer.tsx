@@ -5,6 +5,7 @@ import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../QuickPick';
 import { FileIcon } from './Explorer';
 import { match } from './FileSwitcher';
+import { toolId } from './McpStatus';
 import { touch } from '../touch';
 import { Hl, useTick, wsUrl } from './util';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
@@ -13,6 +14,8 @@ import '../composer.css';
 export type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
 
 export type Ranked<T> = { item: T; hits: number[]; score: number };
+
+export type Use = { server: string; tool?: string };
 
 export const MAX_ROWS = 8;
 export const MAX_STORED = 50;
@@ -42,6 +45,20 @@ export const rankFiles = (files: string[], query: string, limit = MAX_ROWS) => r
 export function accept(text: string, start: number, caret: number, insert: string) {
   const next = `${text.slice(0, start)}${insert} ${text.slice(caret)}`;
   return { text: next, caret: start + insert.length + 1 };
+}
+
+export function addUse(uses: Use[], u: Use): Use[] {
+  const keep = (x: Use) => x.server !== u.server || (!!u.tool && !!x.tool && x.tool !== u.tool);
+  return [...uses.filter(keep), u];
+}
+
+export const useLabel = (u: Use) => (u.tool ? toolId(u.server, u.tool) : u.server);
+
+export function withUses(text: string, uses: Use[]) {
+  if (!uses.length || text.startsWith('/')) return text;
+  const names = uses.map((u) => (u.tool ? `the ${toolId(u.server, u.tool)} tool` : `the ${u.server} MCP server`));
+  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+  return `${text}\n\nUse ${list} for this.`;
 }
 
 export const LONG_TOOL = 10_000;
@@ -158,11 +175,13 @@ export function Composer() {
   const loop = useStore((s) => s.session.loop);
   const context = useStore((s) => s.session.context);
   const events = useStore((s) => s.events);
+  const servers = useStore((s) => s.session.mcp).filter((m) => m.status === 'connected');
   const toolAt = useStore((s) => (s.session.running ? openToolAt(s.events) : null));
   useTick(1000, toolAt !== null);
   const longTool = toolAt !== null && Date.now() - toolAt > LONG_TOOL;
 
-  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop' | 'saved'; at: DOMRect } | null>(null);
+  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools'; at: DOMRect; server?: string } | null>(null);
+  const [uses, setUses] = useState<Use[]>([]);
   const [text, setText] = useState(() => readDraft(chat));
   const draftFor = useRef(chat);
   const picker = useRef<HTMLInputElement>(null);
@@ -208,6 +227,7 @@ export function Composer() {
     if (draftFor.current === chat) return saveDraft(chat, text);
     draftFor.current = chat;
     setText(readDraft(chat));
+    setUses([]);
   }, [chat, text]);
 
   useEffect(() => setSel(0), [popKey]);
@@ -304,6 +324,15 @@ export function Composer() {
     return () => window.removeEventListener('agentview:insert', insert);
   }, []);
 
+  useEffect(() => {
+    const use = (e: Event) => {
+      setUses((u) => addUse(u, (e as CustomEvent<Use>).detail));
+      requestAnimationFrame(() => ta.current?.focus());
+    };
+    window.addEventListener('agentview:use', use);
+    return () => window.removeEventListener('agentview:use', use);
+  }, []);
+
   const submit = (now = false) => {
     const t = text.trim();
     if (!t) return;
@@ -314,9 +343,11 @@ export function Composer() {
       const next = remember(t, stored);
       setStored(next);
       try { localStorage.setItem(STORED_KEY, JSON.stringify(next)); } catch {}
+      const full = withUses(t, uses);
       const lost = () => setText((cur) => (cur.trim() ? cur : t));
-      const sent = (now || longTool) && running ? steer(t, lost) : prompt(t, lost);
+      const sent = (now || longTool) && running ? steer(full, lost) : prompt(full, lost);
       if (!sent) { notice('Not connected, message not sent'); return; }
+      if (full !== t) setUses([]);
     }
     setHist(null);
     apply('');
@@ -342,7 +373,7 @@ export function Composer() {
 
   const typed = text.trim().length > 0;
   const hint = shell ? 'Runs in the terminal' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude' : compacting ? 'Sends when compacting is done' : longTool ? 'Claude is in a long step, Enter stops it and sends' : running ? 'Sends when Claude finishes, or steer to send now' : 'Ask anything · / commands · @ files';
+  const placeholder = waiting ? 'Answer below, or message Claude' : compacting ? 'Sends when compacting is done' : longTool ? 'Claude is in a long step, Enter stops it and sends' : running ? 'Sends when Claude finishes, or steer to send now' : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files';
   const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
 
   return (
@@ -353,6 +384,16 @@ export function Composer() {
         onDragOver={(e) => e.dataTransfer.types.includes('Files') && e.preventDefault()}
         onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }}
       >
+        {uses.length > 0 && (
+          <div className="cp-uses">
+            {uses.map((u) => (
+              <span key={useLabel(u)} className="cp-use" title={u.tool ? `Claude is asked to use ${toolId(u.server, u.tool)}` : `Claude is asked to use the ${u.server} MCP server`}>
+                <Icon name="plug" small /><span>{u.server}</span>{u.tool && <span className="mono">{u.tool}</span>}
+                <button className="icon-btn" aria-label={`Remove ${u.tool ?? u.server}`} onClick={() => setUses((l) => l.filter((x) => x !== u))}><Icon name="close" small /></button>
+              </span>
+            ))}
+          </div>
+        )}
         <div className="cp-text">
           <div ref={mirror} className="cp-mirror" aria-hidden><span className="cp-typed">{text}</span><span className="cp-ghost">{ghost}</span></div>
           <textarea
@@ -377,6 +418,11 @@ export function Composer() {
             <Icon name={modeInfo.icon} small /><span>{shortModel} · {modeInfo.label}</span>{loop.on && <Icon name="sync" small />}<Icon name="chevron-down" small />
           </button>
           <span className="cp-spacer" />
+          {servers.length > 0 && (
+            <button className={`icon-btn mcp${uses.length ? ' on' : ''}`} title="Ask Claude to use an MCP server or tool" aria-label="Use an MCP server" onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })}>
+              <Icon name="plug" small />
+            </button>
+          )}
           <input ref={picker} type="file" multiple hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = ''; }} />
           <button className="icon-btn attach" title="Add files for Claude to look at (or paste or drop them)" aria-label="Add files" onClick={() => picker.current?.click()}>
             <Icon name="file-add" small />
@@ -478,6 +524,24 @@ export function Composer() {
           title="Saved prompts"
           items={[...stored].reverse().map((t, i) => ({ value: String(i), label: t.replace(/\s+/g, ' ').slice(0, 200) }))}
           onPick={(v) => { apply([...stored].reverse()[Number(v)]); setPick(null); ta.current?.focus(); }}
+          onClose={() => setPick(null)}
+        />
+      )}
+      {pick?.kind === 'mcp' && (
+        <QuickPick
+          anchor={pick.at}
+          title="Use an MCP server"
+          items={servers.map((m) => ({ value: m.name, label: m.name, detail: `${m.tools?.length ?? 0} tools` }))}
+          onPick={(v) => setPick({ kind: 'mcpTools', at: pick.at, server: v })}
+          onClose={() => setPick(null)}
+        />
+      )}
+      {pick?.kind === 'mcpTools' && (
+        <QuickPick
+          anchor={pick.at}
+          title={`Tool from ${pick.server}`}
+          items={[{ value: '', label: 'Any tool', detail: 'Claude picks' }, ...(servers.find((m) => m.name === pick.server)?.tools ?? []).map((t) => ({ value: t.name, label: t.name, detail: t.description }))]}
+          onPick={(v) => { setUses((u) => addUse(u, v ? { server: pick.server!, tool: v } : { server: pick.server! })); setPick(null); ta.current?.focus(); }}
           onClose={() => setPick(null)}
         />
       )}

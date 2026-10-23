@@ -2,8 +2,6 @@ import http from 'node:http';
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
 import { chromeRunning, endpoint } from './chrome.js';
 
-delete process.env.CHROME_CDP;
-
 const PORT = Number(process.env.AGENTVIEW_RELAY_PORT ?? 7779);
 const TOKEN = process.env.AGENTVIEW_RELAY_TOKEN ?? '';
 const MAX = 512 * 1024 * 1024;
@@ -77,6 +75,10 @@ function attach(ws: WebSocket) {
     if (s.includes('"Target.attachToTarget"')) {
       try {
         attaching.add(JSON.parse(s).id);
+      } catch {}
+    } else if (s.includes('"Target.detachFromTarget"')) {
+      try {
+        sessions.delete(JSON.parse(s).params?.sessionId);
       } catch {}
     }
     chrome?.send(data, { binary });

@@ -8,6 +8,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -38,6 +39,7 @@ import java.util.Locale
 
 private const val CHANNEL = "agentview"
 private const val NOTIFICATION_ID = "agentview.notification"
+private val MAC_URL = Regex("^http://([a-z0-9-]+\\.netbird\\.cloud|100\\.(6[4-9]|[7-9]\\d|1[01]\\d|12[0-7])\\.\\d+\\.\\d+|localhost)(:\\d{1,5})?$", RegexOption.IGNORE_CASE)
 
 class MainActivity : TauriActivity() {
   private var webView: WebView? = null
@@ -65,6 +67,8 @@ class MainActivity : TauriActivity() {
       for (uri in uris) {
         try {
           val name = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "shared"
+          val size = contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else -1L } ?: -1L
+          if (size > 20_000_000) { toast("$name is over 20 MB"); continue }
           val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: continue
           if (bytes.size > 20_000_000) { toast("$name is over 20 MB"); continue }
           val item = JSONObject().put("name", name).put("type", contentResolver.getType(uri) ?: "application/octet-stream").put("data", Base64.encodeToString(bytes, Base64.NO_WRAP))
@@ -81,12 +85,12 @@ class MainActivity : TauriActivity() {
 
   override fun onWebViewCreate(webView: WebView) {
     this.webView = webView
-    WebView.setWebContentsDebuggingEnabled(true)
+    WebView.setWebContentsDebuggingEnabled((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0)
     webView.setDownloadListener { url, _, _, _, _ -> openExternal(url) }
     webView.addJavascriptInterface(Shell(), "AgentViewShell")
     if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
       val script = resources.openRawResource(R.raw.shell).bufferedReader().use { it.readText() }
-      WebViewCompat.addDocumentStartJavaScript(webView, script, setOf("*"))
+      WebViewCompat.addDocumentStartJavaScript(webView, script, setOf("http://*.netbird.cloud", "http://tauri.localhost", "http://localhost", "http://100.*"))
     }
   }
 
@@ -288,6 +292,7 @@ class MainActivity : TauriActivity() {
 
     @JavascriptInterface
     fun remember(url: String, name: String) {
+      if (!MAC_URL.matches(url) || name.length > 64) return
       val macs = JSONArray(prefs.getString("macs", "[]"))
       val rest = (0 until macs.length()).map { macs.getJSONObject(it) }.filter { it.optString("url") != url }
       val next = JSONArray().put(JSONObject().put("url", url).put("name", name))

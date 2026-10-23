@@ -179,6 +179,7 @@ const avlog = (ev: string) => (window as { avlog?: (e: string) => void }).avlog?
 
 let retry: ReturnType<typeof setTimeout> | undefined;
 let heard = 0;
+let delay = 1000;
 
 export function connect() {
   clearTimeout(retry);
@@ -188,6 +189,7 @@ export function connect() {
   ws = sock;
   heard = Date.now();
   sock.onopen = () => {
+    delay = 1000;
     setUi({ connected: true, restarting: false });
     avlog('ws open');
   };
@@ -195,11 +197,16 @@ export function connect() {
     if (ws !== sock) return;
     avlog('ws closed');
     setUi({ connected: false });
-    retry = setTimeout(connect, 1500);
+    retry = setTimeout(connect, delay);
+    delay = Math.min(delay * 2, 15000);
   };
   sock.onmessage = (e) => {
     heard = Date.now();
-    handle(JSON.parse(e.data));
+    try {
+      handle(JSON.parse(e.data));
+    } catch (err) {
+      avlog(`bad message ${String(err)}`);
+    }
   };
 }
 

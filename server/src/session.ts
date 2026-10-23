@@ -398,12 +398,19 @@ export class AgentSession {
   async allowBlocked(id: string) {
     const ev = this.state.events.find((e) => e.id === id);
     if (ev?.kind !== 'blocked' || ev.allowed) return;
+    const known = this.allowed.includes(ev.rule);
     this.start();
-    this.allowed = [...new Set([...this.allowed, ev.rule])];
-    await this.q?.applyFlagSettings({ permissions: { allow: this.allowed } });
-    ev.allowed = true;
-    this.emit({ type: 'event', event: ev });
-    void this.prompt(`I allowed ${ev.rule} for this chat. Retry it.`);
+    if (!known) {
+      this.allowed = [...this.allowed, ev.rule];
+      await this.q?.applyFlagSettings({ permissions: { allow: this.allowed } });
+    }
+    for (const e of this.state.events) {
+      if (e.kind === 'blocked' && e.rule === ev.rule && !e.allowed) {
+        e.allowed = true;
+        this.emit({ type: 'event', event: e });
+      }
+    }
+    if (!known) void this.prompt(`I allowed ${ev.rule} for this chat. Retry it.`);
   }
 
   private async *inputStream(gen: number): AsyncGenerator<SDKUserMessage> {

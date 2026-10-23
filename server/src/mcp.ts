@@ -81,10 +81,20 @@ export function approved(name: string, sources: Approval[]) {
   return sources.some((s) => s.enableAllProjectMcpServers === true || has(s.enabledMcpjsonServers, name));
 }
 
-const readApprovals = async (cwd: string, user: any): Promise<Approval[]> => [
-  ...(await Promise.all([path.join(os.homedir(), '.claude', 'settings.json'), path.join(cwd, '.claude', 'settings.json'), path.join(cwd, '.claude', 'settings.local.json')].map(readJson))),
-  user.projects?.[cwd] ?? {},
-];
+// The repo's own .claude/settings.json counts only once Claude Code's trust dialog was accepted for that folder.
+const readApprovals = async (cwd: string, user: any): Promise<Approval[]> => {
+  const project = user.projects?.[cwd] ?? {};
+  const files = [path.join(os.homedir(), '.claude', 'settings.json'), path.join(cwd, '.claude', 'settings.local.json')];
+  if (project.hasTrustDialogAccepted === true) files.push(path.join(cwd, '.claude', 'settings.json'));
+  return [...(await Promise.all(files.map(readJson))), project];
+};
+
+// Servers Claude Code would start in this folder: user and local scope, plus approved project servers.
+export async function allowedServers(cwd: string): Promise<Record<string, McpServerDef>> {
+  const [user, repo] = await readConfigs(cwd);
+  const sources = await readApprovals(cwd, user);
+  return Object.fromEntries(configDefs(user, repo, cwd).filter((d) => runs(d, sources)).map((d) => [d.name, d.def]));
+}
 
 export const runs = (d: Def, sources: Approval[]) => d.scope !== 'project' || approved(d.name, sources);
 
