@@ -681,6 +681,38 @@ describe('/loop after Stop', () => {
     vi.useRealTimers();
   });
 
+  it('a usage limit holds the loop until the reset time', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
+    const { s, result } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    await s.prompt('/loop until 06:59 do the next round');
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
+    result('r1');
+    expect(s.state.session.running).toBe(false);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Usage limit reached, loop round 2 at 01:51, /loop off to end it' });
+    vi.advanceTimersByTime(110 * 60_000);
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
+    vi.advanceTimersByTime(2 * 60_000);
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
+    vi.useRealTimers();
+  });
+
+  it('a round that fails waits before the next one', async () => {
+    vi.useFakeTimers();
+    const { s, result } = fakeSession();
+    await s.prompt('/loop until 23:59 do the next round');
+    result('r1', 'error_during_execution');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Loop round 2 at \d\d:\d\d/) });
+    vi.advanceTimersByTime(60_000);
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
+    vi.advanceTimersByTime(61_000);
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
+    result('r2');
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(4);
+    vi.useRealTimers();
+  });
+
   it('a tick that lands mid turn survives a CLI exit', async () => {
     vi.useFakeTimers();
     const { s, result } = fakeSession();

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { advance, loopOff, verdictOf } from './loop.js';
+import { limitReset } from './repeat.js';
 
 describe('verdictOf', () => {
   it('reads the last verdict line', () => {
@@ -54,5 +55,19 @@ describe('advance', () => {
     const r = advance({ ...on, phase: 'test' }, 'Looks fine');
     expect(r.state.phase).toBe('build');
     expect(r.step?.prompt).toContain('no VERDICT line');
+  });
+});
+
+describe('limitReset', () => {
+  const now = new Date(2026, 9, 24, 0, 0, 0).getTime();
+  it('reads the reset clock out of a usage limit message', () => {
+    expect(limitReset("You've hit your session limit · resets 1:50am (Europe/Oslo)", now)).toBe(new Date(2026, 9, 24, 1, 51, 0).getTime());
+    expect(limitReset('Weekly limit reached, resets at 11pm', now)).toBe(new Date(2026, 9, 24, 23, 1, 0).getTime());
+    expect(limitReset('limit resets 13:05', now)).toBe(new Date(2026, 9, 24, 13, 6, 0).getTime());
+  });
+  it('ignores other text', () => {
+    expect(limitReset('All 229 tests pass', now)).toBeNull();
+    expect(limitReset('rate limit resets Oct 25', now)).toBeNull();
+    expect(limitReset('the limit is 5 retries', now)).toBeNull();
   });
 });
