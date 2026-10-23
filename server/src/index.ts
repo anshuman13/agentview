@@ -24,7 +24,7 @@ import { gitRoute } from './git.js';
 import { observe } from './observe.js';
 import { otherMacs, thisMac } from './macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
-import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
+import { MCP_BAD, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
 import { allowedPeer, allowedRequest, requester } from './access.js';
 
@@ -136,7 +136,7 @@ async function closeByUser(chat: AgentSession) {
   closeChat(chat);
 }
 
-const idle = (chat: AgentSession) => !chat.state.session.running && chat.crons.length === 0 && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
+const idle = (chat: AgentSession) => !chat.state.session.running && chat.crons.length === 0 && !chat.state.session.repeat && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
 
 function view(client: Client, chat: AgentSession) {
   client.view = chat;
@@ -221,7 +221,7 @@ function remember(chat: AgentSession) {
 let restarting: NodeJS.Timeout | null = null;
 
 function saveAndExit() {
-  const chats = [...live.values()].map(({ chat }) => ({ sessionId: chat.state.session.sessionId, crons: chat.crons })).filter((c) => c.sessionId);
+  const chats = [...live.values()].map(({ chat }) => ({ sessionId: chat.state.session.sessionId, crons: chat.crons, repeat: chat.state.session.repeat })).filter((c) => c.sessionId);
   mkdirSync(path.dirname(RESTORE), { recursive: true });
   writeFileSync(RESTORE, JSON.stringify({ view: lastViewed?.state.session.sessionId, chats }));
   process.exit(0);
@@ -231,6 +231,7 @@ function restart(now: boolean) {
   if (now) return saveAndExit();
   if (restarting) return;
   broadcast({ type: 'restarting' });
+  for (const { chat } of live.values()) chat.holdRepeat();
   restarting = setInterval(() => {
     if (![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting)) saveAndExit();
   }, 1000);
@@ -239,12 +240,13 @@ function restart(now: boolean) {
 process.on('SIGTERM', saveAndExit);
 
 async function restore() {
-  const saved: { view?: string; chats: { sessionId: string; crons: SessionCronSummary[] }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
+  const saved: { view?: string; chats: { sessionId: string; crons: SessionCronSummary[]; repeat?: Repeat | null }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
   if (!saved) return null;
   await rm(RESTORE, { force: true });
   for (const s of saved.chats) {
     const chat = await openSaved(s.sessionId).catch(() => null);
     if (chat && s.crons.length) chat.restoreCrons(s.crons);
+    if (chat && s.repeat) chat.resumeRepeat(s.repeat);
   }
   return (saved.view && bySession(saved.view)) || null;
 }

@@ -211,6 +211,14 @@ building as soon as the plan is ready, Sonnet then tests the result as a separat
 Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
 timeline and transcript, the composer footer shows the current phase and round, and Stop ends the loop.
 
+## Loops
+
+`/loop 10m <prompt>` sends the prompt again every 10 minutes, `/loop until 07:00 <prompt>` sends it again as soon
+as each round ends until that time, and `/loop 30m until 07:00 <prompt>` combines the two. A fire that lands while
+Claude is still working waits for the round to end. The loop lives in the AgentView server, so it survives a server
+restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but
+keep the loop; `/loop off` ends it. The composer footer shows the round and the next fire time; tap it to stop.
+
 ## Agents
 
 The Agents tab lists the sub-agents of the chat with their status, elapsed time and tokens, and shows each one's report, prompt and steps.

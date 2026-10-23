@@ -3,7 +3,7 @@ import { send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { BlockedCard, Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
-import { loopLabel } from './Composer';
+import { clock, loopLabel } from './Composer';
 import { ReadAloud } from './Voice';
 import { touch } from '../touch';
 import { Row, Transcript } from './Transcript';
@@ -36,6 +36,7 @@ export function Brief() {
   const macName = useMacName();
   const stopping = useStore((s) => s.session.stopping);
   const loop = useStore((s) => s.session.loop);
+  const repeat = useStore((s) => s.session.repeat);
   const cwd = useStore((s) => s.session.cwd);
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;
@@ -89,7 +90,7 @@ export function Brief() {
           <div className={`tl-now ${state}`}>
             <span className="mark"><Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} /></span>
             <span className="text">
-              {state === 'waiting' ? 'Waiting for you' : state === 'stopping' ? 'Stopping…' : state === 'running' ? (loop.phase && ['plan', 'build', 'test'].includes(loop.phase) ? `${loopLabel(loop)} · ${status}` : status) : lastReply ? 'Idle · last reply' : 'Idle'}
+              {state === 'waiting' ? 'Waiting for you' : state === 'stopping' ? 'Stopping…' : state === 'running' ? (loop.phase && ['plan', 'build', 'test'].includes(loop.phase) ? `${loopLabel(loop)} · ${status}` : status) : repeat?.nextAt ? `Idle · next loop round ${clock(repeat.nextAt)}` : lastReply ? 'Idle · last reply' : 'Idle'}
               {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
             </span>
             <span className="side">

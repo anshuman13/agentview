@@ -73,7 +73,11 @@ export type SessionInfo = {
   stopping: boolean;
   mcp: McpServer[];
   loop: LoopState;
+  repeat: Repeat | null;
 };
+
+// A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
+export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null };
 
 export type LoopPhase = 'plan' | 'build' | 'test' | 'passed' | 'failed';
 

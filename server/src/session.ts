@@ -5,11 +5,12 @@ import { watch, type FSWatcher } from 'node:fs';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { JsonlTail } from './tail.js';
 import { query, getSessionMessages, getSubagentMessages, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
-import { COMPACT_AT, type AgentEvent, type AgentStatus, type ChatEvent, type LoopState, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
+import { COMPACT_AT, type AgentEvent, type AgentStatus, type ChatEvent, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
+import { USAGE, clock, describeLoop, parseLoop } from './repeat.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 export { BIG_BRO };
@@ -105,6 +106,9 @@ export class AgentSession {
   private autoCompact = true;
   private lastResult = '';
   private loopPrevModel: string | null = null;
+  private repeatTimer: NodeJS.Timeout | undefined;
+  private repeatDue = false;
+  private repeatHeld = false;
 
   private live = new Map<string, Extract<ChatEvent, { kind: 'assistant' }>>();
   private liveFlush = new Map<string, ReturnType<typeof setTimeout>>();
@@ -131,7 +135,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff() },
+      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null },
       status: 'Idle',
       events: [],
       pending: [],
@@ -242,6 +246,7 @@ export class AgentSession {
 
   close() {
     this.closed = true;
+    clearTimeout(this.repeatTimer);
     this.watchTranscript(false);
     this.listeners.clear();
     this.approvals.denyAll();
@@ -530,11 +535,68 @@ export class AgentSession {
 
   async prompt(text: string, id: string = randomUUID()) {
     if (this.known(id)) return;
+    if (this.loopCommand(text, id)) return;
     if (this.state.session.running) return this.queue(text, id);
     await this.planFirst();
     const loop = this.state.session.loop;
     if (loop.on && !this.state.session.running && !text.trim().startsWith('/')) return this.startLoop(text, id);
     this.sendPrompt(text, id);
+  }
+
+  private loopCommand(text: string, id: string) {
+    const parsed = parseLoop(text);
+    if (!parsed) return false;
+    this.pushEvent({ id, kind: 'user', text, at: Date.now() });
+    if (parsed === 'usage') this.system(USAGE);
+    else if (parsed === 'off') this.setRepeat(null, this.state.session.repeat ? 'Loop off' : 'No loop is running');
+    else this.setRepeat(parsed);
+    return true;
+  }
+
+  setRepeat(r: Repeat | null, note?: string) {
+    clearTimeout(this.repeatTimer);
+    this.repeatDue = false;
+    this.setSession({ repeat: r });
+    if (!r) return this.system(note ?? 'Loop off');
+    this.system(`Loop on, ${describeLoop(r)}`);
+    this.fireRepeat();
+  }
+
+  // A back to back loop never goes idle, so a pending restart holds it; the restarted server resumes it.
+  holdRepeat() {
+    this.repeatHeld = true;
+    clearTimeout(this.repeatTimer);
+  }
+
+  resumeRepeat(r: Repeat) {
+    this.setSession({ repeat: r });
+    this.system(`AgentView restarted, the loop continues ${describeLoop(r)}`);
+    if (!r.nextAt || r.nextAt <= Date.now()) this.fireRepeat();
+    else this.armRepeat();
+  }
+
+  private fireRepeat() {
+    const r = this.state.session.repeat;
+    if (!r || this.repeatHeld) return;
+    if (r.until && Date.now() >= r.until) return this.setRepeat(null, `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`);
+    if (this.state.session.running) {
+      this.repeatDue = true;
+      return;
+    }
+    this.repeatDue = false;
+    const round = r.round + 1;
+    this.setSession({ repeat: { ...r, round, nextAt: r.every ? Date.now() + r.every : null } });
+    this.armRepeat();
+    this.system(`Loop round ${round}`);
+    this.sendPrompt(r.prompt);
+  }
+
+  private armRepeat() {
+    clearTimeout(this.repeatTimer);
+    const r = this.state.session.repeat;
+    const at = Math.min(r?.nextAt ?? Infinity, r?.until ?? Infinity);
+    if (!r || at === Infinity) return;
+    this.repeatTimer = setTimeout(() => this.fireRepeat(), Math.max(0, at - Date.now()));
   }
 
   setLoop(on: boolean, max?: number) {
@@ -579,6 +641,7 @@ export class AgentSession {
 
   async steer(text: string, id: string = randomUUID()) {
     if (this.known(id)) return;
+    if (this.loopCommand(text, id)) return;
     if (this.state.session.compacting) return this.queue(text, id);
     const running = this.state.session.running;
     const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), stopping: running };
@@ -657,6 +720,7 @@ export class AgentSession {
     if (loop && !loop.step && loop.note) this.endLoop(loop.note);
     if (loop?.step) void this.runStep(loop.step);
     else if (next) this.sendPrompt(next);
+    else if (idle && (this.repeatDue || this.state.session.repeat?.every === 0)) this.fireRepeat();
   }
 
   private followUp() {
