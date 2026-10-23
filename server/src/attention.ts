@@ -1,15 +1,17 @@
 import os from 'node:os';
 import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { ATTENTION_LABEL, type AttentionItem, type AttentionKind, type PullRequest } from '../../shared/protocol.js';
+import { ATTENTION_LABEL, type AttentionItem, type AttentionKind, type GitStatus, type PullRequest } from '../../shared/protocol.js';
 import { listIssues, listPrs, type Issue } from './github.js';
+import { gitStatus } from './git.js';
 import { post } from './notify.js';
 
 const FILE = path.join(os.homedir(), '.agentview/attention.json');
 const EVERY = 5 * 60_000;
+const EDIT_AGE = 10 * 60_000;
 const FORGET = 7 * 24 * 60 * 60_000;
 
-function promptFor(kind: AttentionKind, p: { number: number; title: string; url: string; branch?: string }) {
+function promptFor(kind: Exclude<AttentionKind, 'commit'>, p: { number: number; title: string; url: string; branch?: string }) {
   const n = p.number;
   const ref = `#${n} "${p.title}" (${p.url})`;
   switch (kind) {
@@ -29,7 +31,7 @@ function promptFor(kind: AttentionKind, p: { number: number; title: string; url:
 export function itemsFor(cwd: string, prs: PullRequest[], issues: Issue[], now = Date.now()): AttentionItem[] {
   const repo = path.basename(cwd);
   const out: AttentionItem[] = [];
-  const add = (kind: AttentionKind, p: { number: number; title: string; url: string; branch?: string }) =>
+  const add = (kind: Exclude<AttentionKind, 'commit'>, p: { number: number; title: string; url: string; branch?: string }) =>
     out.push({ id: `${kind}:${p.url}`, kind, repo, cwd, number: p.number, title: p.title, url: p.url, since: now, prompt: promptFor(kind, p) });
   for (const p of prs) {
     if (p.mine && p.checks === 'failure') add('ci', p);
@@ -39,6 +41,19 @@ export function itemsFor(cwd: string, prs: PullRequest[], issues: Issue[], now =
   }
   for (const i of issues) add('issue', i);
   return out;
+}
+
+export type Edited = { cwd: string; chatId: string; at: number };
+export type Sources = { cwds: string[]; edited: Edited[] };
+
+// An idle chat left changes in the tree a while ago and nobody committed them.
+export function commitItem(e: Edited, status: GitStatus, now = Date.now()): AttentionItem | null {
+  if (!status.files.length || now - e.at < EDIT_AGE) return null;
+  const repo = path.basename(e.cwd);
+  const n = status.files.length;
+  const title = `${n} changed file${n === 1 ? '' : 's'} on ${status.branch || 'detached HEAD'}`;
+  const prompt = `There are uncommitted changes in ${repo} (${title}) from an earlier chat. Run \`git status\` and \`git diff\`, review them and propose a commit message. Do not commit until I confirm.`;
+  return { id: `commit:${e.cwd}`, kind: 'commit', repo, cwd: e.cwd, number: 0, title, url: '', since: now, prompt, chatId: e.chatId };
 }
 
 type Saved = { seen: Record<string, number>; dismissed: string[] };
@@ -88,23 +103,30 @@ export function merge(found: AttentionItem[], now = Date.now()) {
 
 let polling: Promise<AttentionItem[]> | null = null;
 
-export function refreshAttention(cwds: string[]) {
-  return (polling ??= poll(cwds).finally(() => (polling = null)));
+export function refreshAttention(src: Sources) {
+  return (polling ??= poll(src).finally(() => (polling = null)));
 }
 
-async function poll(cwds: string[]) {
+async function poll(src: Sources) {
   await (loaded ??= load());
   const found: AttentionItem[] = [];
-  await Promise.all(
-    [...new Set(cwds)].map(async (cwd) => {
+  const byCwd = new Map(src.edited.map((e) => [e.cwd, e]));
+  await Promise.all([
+    ...[...new Set(src.cwds)].map(async (cwd) => {
       try {
         const [prs, issues] = await Promise.all([listPrs(cwd, true), listIssues(cwd).catch(() => [])]);
         found.push(...itemsFor(cwd, prs, issues));
       } catch {}
     }),
-  );
+    ...[...byCwd.values()].map(async (e) => {
+      try {
+        const it = commitItem(e, await gitStatus(e.cwd));
+        if (it) found.push(it);
+      } catch {}
+    }),
+  ]);
   const fresh = merge(found);
-  if (seeded) for (const it of fresh) if (!dismissed.has(it.id)) post(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, `#${it.number}`, it.title);
+  if (seeded) for (const it of fresh) if (!dismissed.has(it.id)) post(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, it.number ? `#${it.number}` : it.repo, it.title);
   seeded = true;
   await save().catch(() => {});
   onChange(items);
@@ -119,7 +141,7 @@ export function dismissAttention(id: string) {
   return items;
 }
 
-export function startAttention(cwds: () => string[]) {
-  void refreshAttention(cwds());
-  setInterval(() => void refreshAttention(cwds()), EVERY).unref();
+export function startAttention(src: () => Sources) {
+  void refreshAttention(src());
+  setInterval(() => void refreshAttention(src()), EVERY).unref();
 }

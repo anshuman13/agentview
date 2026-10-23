@@ -38,7 +38,7 @@ export function parseStatus(out: string, prefix = ''): GitStatus {
   return status;
 }
 
-async function gitStatus(cwd: string) {
+export async function gitStatus(cwd: string) {
   const [out, prefix] = await Promise.all([git(cwd, ['status', '--porcelain=v2', '-b', '-z', '-uall']), git(cwd, ['rev-parse', '--show-prefix'])]);
   return parseStatus(out, prefix.trim());
 }

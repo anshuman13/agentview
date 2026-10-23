@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { itemsFor, merge } from './attention.js';
+import { commitItem, itemsFor, merge } from './attention.js';
 import type { PullRequest } from '../../shared/protocol.js';
 
 const pr = (n: number, p: Partial<PullRequest> = {}): PullRequest => ({
@@ -39,5 +39,23 @@ describe('merge', () => {
     merge(one(), 0);
     merge([], 8 * 24 * 60 * 60_000);
     expect(merge(one(), 8 * 24 * 60 * 60_000 + 1)).toHaveLength(1);
+  });
+});
+
+describe('commitItem', () => {
+  const status = (n: number) => ({ branch: 'main', ahead: 0, behind: 0, files: Array.from({ length: n }, (_, i) => ({ path: `f${i}`, status: 'M' as const, staged: false })) });
+  const edited = { cwd: '/w/r', chatId: 'c1', at: 0 };
+
+  it('nudges about changes left by an idle chat', () => {
+    const it = commitItem(edited, status(2), 11 * 60_000);
+    expect(it?.kind).toBe('commit');
+    expect(it?.title).toBe('2 changed files on main');
+    expect(it?.chatId).toBe('c1');
+    expect(it?.prompt).toContain('Do not commit until I confirm');
+  });
+
+  it('stays quiet while the chat is recent or the tree is clean', () => {
+    expect(commitItem(edited, status(2), 5 * 60_000)).toBeNull();
+    expect(commitItem(edited, status(0), 11 * 60_000)).toBeNull();
   });
 });

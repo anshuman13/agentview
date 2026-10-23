@@ -139,7 +139,7 @@ export type LiveChat = {
   edits?: { add: number; del: number };
 };
 
-export type AttentionKind = 'ci' | 'changes' | 'review' | 'ready' | 'issue';
+export type AttentionKind = 'ci' | 'changes' | 'review' | 'ready' | 'issue' | 'commit';
 
 export type AttentionItem = {
   id: string;
@@ -151,6 +151,7 @@ export type AttentionItem = {
   url: string;
   since: number;
   prompt: string;
+  chatId?: string;
 };
 
 export const ATTENTION_LABEL: Record<AttentionKind, string> = {
@@ -159,6 +160,7 @@ export const ATTENTION_LABEL: Record<AttentionKind, string> = {
   review: 'Review requested',
   ready: 'Ready to merge',
   issue: 'Assigned to you',
+  commit: 'Uncommitted changes',
 };
 
 export type SavedSession = {
