@@ -10,7 +10,7 @@ import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
-import { USAGE, clock, describeLoop, parseLoop } from './repeat.js';
+import { USAGE, clock, describeLoop, limitReset, parseLoop } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
@@ -21,6 +21,14 @@ type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; call
 const STREAM_FLUSH_MS = 80;
 // A loop goes on after Stop or a CLI exit, with time to type /loop off first.
 const REPEAT_GRACE_MS = 2 * 60_000;
+const MAX_EVENTS = 3000;
+// A chat keeps its last few thousand events; the CLI transcript still has everything.
+function trimHistory(events: ChatEvent[]) {
+  if (events.length <= MAX_EVENTS) return events;
+  const kept = events.slice(-MAX_EVENTS);
+  return [{ id: randomUUID(), kind: 'system' as const, text: `${events.length - MAX_EVENTS} older events are not shown`, at: kept[0].at }, ...kept];
+}
+
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
@@ -113,6 +121,8 @@ export class AgentSession {
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
   private reviewTarget: string | null = null;
   private repeatDue = false;
+  private limitReset: number | null = null;
+  private lastError = false;
   private repeatHeld = false;
 
   private live = new Map<string, Extract<ChatEvent, { kind: 'assistant' }>>();
@@ -160,6 +170,7 @@ export class AgentSession {
 
   private pushEvent(ev: ChatEvent) {
     this.state.events.push(ev);
+    if (this.state.events.length > MAX_EVENTS + 500) this.state.events = trimHistory(this.state.events);
     this.emit({ type: 'event', event: ev });
   }
 
@@ -285,7 +296,7 @@ export class AgentSession {
     const { events, context, cache, agents } = historyFrom(msgs, subs);
     this.agents = agents;
     Object.assign(this.state.session, { context, cache });
-    return [...events, ...stopAgents(events, this.orphans, Date.now())];
+    return trimHistory([...events, ...stopAgents(events, this.orphans, Date.now())]);
   }
 
   start() {
@@ -732,17 +743,21 @@ export class AgentSession {
       // Messages typed while the stop was in flight go on in a fresh turn.
       this.dequeue();
       this.deferRepeat();
-    } else if (idle && (this.repeatDue || this.state.session.repeat?.every === 0)) this.fireRepeat();
+    } else if (idle && this.limitReset) this.deferRepeat(this.limitReset, 'Usage limit reached, loop round');
+    else if (idle && this.lastError) this.deferRepeat();
+    else if (idle && (this.repeatDue || this.state.session.repeat?.every === 0)) this.fireRepeat();
+    this.limitReset = null;
   }
 
-  private deferRepeat() {
+  // A round that failed waits before the next one, so a loop never spins on an error.
+  private deferRepeat(until = Date.now() + REPEAT_GRACE_MS, why = 'Loop round') {
     const r = this.state.session.repeat;
     if (!r) return;
     this.repeatDue = false;
-    const nextAt = Math.max(r.nextAt ?? 0, Date.now() + REPEAT_GRACE_MS);
+    const nextAt = Math.max(r.nextAt ?? 0, until);
     this.setSession({ repeat: { ...r, nextAt } });
     this.armRepeat();
-    this.system(`Loop round ${r.round + 1} at ${clock(nextAt)}, /loop off to end it`);
+    this.system(`${why} ${r.round + 1} at ${clock(nextAt)}, /loop off to end it`);
   }
 
   private followUp() {
@@ -968,6 +983,7 @@ export class AgentSession {
         for (const block of msg.message.content) {
           if (block.type === 'server_tool_use' && block.name === 'advisor') this.pushEvent(advisorEvent(block.id, Date.now()));
           if (block.type === 'tool_use') this.toolUse(block);
+          if (block.type === 'text') this.limitReset = limitReset(block.text) ?? this.limitReset;
         }
         return;
       }
@@ -1001,6 +1017,8 @@ export class AgentSession {
         this.liveFlush.clear();
         this.live.clear();
         this.lastResult = msg.subtype === 'success' ? msg.result : '';
+        this.lastError = msg.subtype !== 'success' || Boolean(msg.is_error);
+        if (msg.subtype === 'success') this.limitReset = limitReset(msg.result) ?? this.limitReset;
         this.pushEvent({
           id: msg.uuid,
           kind: 'result',
