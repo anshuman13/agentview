@@ -276,9 +276,15 @@ async function compressed(file: string, body: Buffer, mtime: number) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://x');
-  const json = (body: unknown, code = 200) => {
-    res.writeHead(code, { 'content-type': 'application/json' });
-    res.end(JSON.stringify(body));
+  const json = async (body: unknown, code = 200) => {
+    const text = JSON.stringify(body);
+    if (text.length < 1024 || !/\bgzip\b/.test(String(req.headers['accept-encoding'] ?? ''))) {
+      res.writeHead(code, { 'content-type': 'application/json' });
+      return res.end(text);
+    }
+    const out = await gz(text);
+    res.writeHead(code, { 'content-type': 'application/json', 'content-encoding': 'gzip', vary: 'accept-encoding' });
+    res.end(out);
   };
   if (!allowedRequest(req.headers)) return json({ error: 'Forbidden' }, 403);
   try {
@@ -409,7 +415,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { ...headers, 'content-encoding': encoding });
     res.end(out);
   } catch (err) {
-    json({ error: err instanceof Error ? err.message : String(err) }, 500);
+    void json({ error: err instanceof Error ? err.message : String(err) }, 500);
   }
 });
 
@@ -421,7 +427,7 @@ server.on('connection', (socket) => {
   if (!ok) socket.destroy();
 });
 
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8_000_000, verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers) });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8_000_000, perMessageDeflate: { threshold: 1024 }, verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers) });
 
 // Phones that drop off the VPN leave half-open sockets; without this they count as viewers for hours.
 const alive = new WeakSet<WebSocket>();

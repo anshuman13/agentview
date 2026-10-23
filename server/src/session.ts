@@ -16,6 +16,7 @@ export { BIG_BRO };
 
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
+const STREAM_FLUSH_MS = 80;
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
@@ -104,7 +105,8 @@ export class AgentSession {
   private lastResult = '';
   private loopPrevModel: string | null = null;
 
-  private liveText = new Map<string, string>();
+  private live = new Map<string, Extract<ChatEvent, { kind: 'assistant' }>>();
+  private liveFlush = new Map<string, ReturnType<typeof setTimeout>>();
   private edits = new Map<string, string>();
   private liveMsgId = '';
 
@@ -794,24 +796,31 @@ export class AgentSession {
         if (ev.type === 'message_start') this.liveMsgId = ev.message.id;
         if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
           const key = `${this.liveMsgId}:${ev.index}`;
-          const text = (this.liveText.get(key) ?? '') + ev.delta.text;
-          this.liveText.set(key, text);
-          const existing = this.state.events.find((e) => e.id === key);
-          if (existing && existing.kind === 'assistant') {
-            existing.text = text;
-            this.emit({ type: 'event', event: existing });
+          const live = this.live.get(key);
+          if (!live) {
+            const e = { id: key, kind: 'assistant' as const, text: ev.delta.text, streaming: true, at: Date.now() };
+            this.live.set(key, e);
+            this.pushEvent(e);
           } else {
-            this.pushEvent({ id: key, kind: 'assistant', text, streaming: true, at: Date.now() });
+            live.text += ev.delta.text;
+            if (!this.liveFlush.has(key)) {
+              this.liveFlush.set(key, setTimeout(() => {
+                this.liveFlush.delete(key);
+                this.emit({ type: 'event', event: live });
+              }, STREAM_FLUSH_MS));
+            }
           }
         }
         if (ev.type === 'content_block_stop') {
           const key = `${this.liveMsgId}:${ev.index}`;
-          const existing = this.state.events.find((e) => e.id === key);
-          if (existing && existing.kind === 'assistant') {
-            existing.streaming = false;
-            this.emit({ type: 'event', event: existing });
+          const live = this.live.get(key);
+          if (live) {
+            clearTimeout(this.liveFlush.get(key));
+            this.liveFlush.delete(key);
+            live.streaming = false;
+            this.emit({ type: 'event', event: live });
           }
-          this.liveText.delete(key);
+          this.live.delete(key);
         }
         return;
       }
@@ -860,7 +869,9 @@ export class AgentSession {
       }
 
       case 'result': {
-        this.liveText.clear();
+        for (const t of this.liveFlush.values()) clearTimeout(t);
+        this.liveFlush.clear();
+        this.live.clear();
         this.lastResult = msg.subtype === 'success' ? msg.result : '';
         this.pushEvent({
           id: msg.uuid,
