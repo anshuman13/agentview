@@ -675,12 +675,103 @@ describe('/loop after Stop', () => {
     await s.prompt('/loop 10m until 23:59 do the next round');
     vi.advanceTimersByTime(10 * 60_000 + 1);
     expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
-    (s as unknown as { consume: () => Promise<void> }).consume();
+    const priv = s as unknown as { consume: () => Promise<void>; start: () => void };
+    priv.consume();
     await vi.advanceTimersByTimeAsync(0);
     expect(s.state.session.running).toBe(false);
+    vi.spyOn(priv, 'start').mockImplementation(() => {});
     vi.advanceTimersByTime(2 * 60_000 + 1);
     expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
     vi.useRealTimers();
     result('r9');
   });
+});
+
+// A seeded random walk over the send paths. Run with FUZZ_SEEDS=500 to hammer it.
+describe('send queue fuzz', () => {
+  const seeds = Number(process.env.FUZZ_SEEDS ?? 40);
+  const base = Number(process.env.FUZZ_FROM ?? 1);
+  type Priv = { q: { interrupt: () => Promise<void> } | null; inputQueue: unknown[]; consume: () => Promise<void>; start: () => void; queued: unknown[]; enqueue: (text: string) => void };
+
+  function rng(seed: number) {
+    let x = seed * 2654435761 + 1;
+    return () => ((x = (x ^ (x << 13)) >>> 0), (x = (x ^ (x >>> 17)) >>> 0), (x = (x ^ (x << 5)) >>> 0), x / 2 ** 32);
+  }
+
+  for (let seed = base; seed < base + seeds; seed++) {
+    it(`seed ${seed}`, async () => {
+      const r = rng(seed);
+      const { s, interrupt, result } = fakeSession();
+      const priv = s as unknown as Priv;
+      priv.start = () => {
+        if (!priv.q) priv.q = { interrupt };
+      };
+      const sent: { id: string; text: string }[] = [];
+      const dropped = new Set<string>();
+      const started: string[] = [];
+      const enqueue = priv.enqueue.bind(priv);
+      priv.enqueue = (text: string) => {
+        started.push(sent.find((m) => m.text === text)!.id);
+        enqueue(text);
+      };
+      let n = 0;
+      const user = () => s.state.events.filter((e): e is Extract<ChatEvent, { kind: 'user' }> => e.kind === 'user');
+      const trace: string[] = [];
+      // Sent messages sit in the order Claude got them; waiting ones keep the order they were typed; nothing
+      // is lost except what a Stop dropped, and a resend never doubles a message.
+      const check = (op: string) => {
+        trace.push(op);
+        const info = () => `after ${trace.join(' > ')}`;
+        const seen = user().map((e) => e.id);
+        expect(new Set(seen).size, `duplicate user event ${info()}`).toBe(seen.length);
+        expect(user().filter((e) => !e.queued).map((e) => e.id), `sent order ${info()}`).toEqual(started);
+        const waiting = sent.map((m) => m.id).filter((id) => !started.includes(id) && !dropped.has(id));
+        expect(user().filter((e) => e.queued).map((e) => e.id), `queue order ${info()}`).toEqual(waiting);
+        for (const e of user()) expect(e.text, info()).toBe(sent.find((m) => m.id === e.id)?.text);
+      };
+      const queuedIds = () => (priv.queued as { id: string }[]).map((e) => e.id);
+      for (let step = 0; step < 25; step++) {
+        const roll = r();
+        if (roll < 0.3) {
+          const m = { id: `m${seed}-${++n}`, text: `msg ${n}` };
+          sent.push(m);
+          await s.prompt(m.text, m.id);
+          check(`prompt ${m.id}`);
+        } else if (roll < 0.5) {
+          const m = { id: `m${seed}-${++n}`, text: `steer ${n}` };
+          sent.push(m);
+          await s.steer(m.text, m.id);
+          check(`steer ${m.id}`);
+        } else if (roll < 0.6 && sent.length) {
+          const m = sent[Math.floor(r() * sent.length)];
+          if (dropped.has(m.id)) continue;
+          if (r() < 0.5) await s.prompt(m.text, m.id);
+          else await s.steer(m.text, m.id);
+          check(`resend ${m.id}`);
+        } else if (roll < 0.7) {
+          // The CLI has taken what was queued for it; a stop can now reach the running turn.
+          if (r() < 0.5) priv.inputQueue = [];
+          const q = s.state.session.running && !s.state.session.stopping ? queuedIds() : [];
+          await s.interrupt();
+          for (const id of q) dropped.add(id);
+          check('interrupt');
+        } else if (roll < 0.85) {
+          if (s.state.session.running) result(`r${seed}-${step}`, r() < 0.3 ? 'error_during_execution' : 'success');
+          check('result');
+        } else if (roll < 0.92) {
+          sent.push({ id: `c${seed}-${step}`, text: `/compact ${step}` });
+          await s.prompt(`/compact ${step}`, `c${seed}-${step}`);
+          check('compact');
+        } else {
+          // The CLI dies: queued input is lost, the events stay.
+          priv.q = { ...priv.q, [Symbol.asyncIterator]: async function* () {} } as unknown as Priv['q'];
+          await priv.consume();
+          check('exit');
+        }
+      }
+      for (let i = 0; i < 60 && s.state.session.running; i++) result(`drain${i}`);
+      expect(s.state.session.running, `still running after draining: ${trace.join(' > ')}`).toBe(false);
+      expect(user().some((e) => e.queued), `queue not empty after draining: ${trace.join(' > ')}`).toBe(false);
+    });
+  }
 });

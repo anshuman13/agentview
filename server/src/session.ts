@@ -724,8 +724,11 @@ export class AgentSession {
     if (loop && !loop.step && loop.note) this.endLoop(loop.note);
     if (loop?.step) void this.runStep(loop.step);
     else if (next) this.sendPrompt(next);
-    else if (stopped) this.deferRepeat();
-    else if (idle && (this.repeatDue || this.state.session.repeat?.every === 0)) this.fireRepeat();
+    else if (stopped) {
+      // Messages typed while the stop was in flight go on in a fresh turn.
+      this.dequeue();
+      this.deferRepeat();
+    } else if (idle && (this.repeatDue || this.state.session.repeat?.every === 0)) this.fireRepeat();
   }
 
   private deferRepeat() {
@@ -748,14 +751,21 @@ export class AgentSession {
       this.autoCompact = false;
       return '/compact';
     }
+    this.dequeue();
+    return null;
+  }
+
+  // The sent message and the ones still waiting move below the finished turn, in the order they were typed.
+  private dequeue() {
     const ev = this.queued.shift();
-    if (!ev) return null;
+    if (!ev) return false;
     ev.queued = false;
     ev.at = Date.now();
-    this.state.events = [...this.state.events.filter((e) => e !== ev), ev];
+    const tail = new Set<ChatEvent>([ev, ...this.queued]);
+    this.state.events = [...this.state.events.filter((e) => !tail.has(e)), ev, ...this.queued];
     this.emit({ type: 'init', state: this.state });
     this.enqueue(ev.text);
-    return null;
+    return true;
   }
 
   private async consume() {
@@ -777,8 +787,10 @@ export class AgentSession {
         this.wake?.();
         this.turns = 0;
         this.setSession({ running: false, stopping: false });
-        this.deferRepeat();
+        this.planChange = null;
         this.tasks.clear();
+        // Queued messages are not lost with the process; the first one starts a fresh CLI.
+        if (!this.dequeue()) this.deferRepeat();
         this.orphan(this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : [])));
       }
     }
