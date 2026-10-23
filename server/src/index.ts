@@ -496,7 +496,7 @@ wss.on('connection', (ws: WebSocket, req) => {
     const chat = client.view;
     switch (msg.type) {
       case 'prompt':
-        if (typeof msg.text === 'string') void chat.prompt(msg.text);
+        if (typeof msg.text === 'string') void chat.prompt(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
         break;
       case 'steer':
         if (typeof msg.text === 'string') void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);

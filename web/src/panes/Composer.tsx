@@ -334,8 +334,8 @@ export function Composer() {
       try { localStorage.setItem(STORED_KEY, JSON.stringify(next)); } catch {}
       const full = withUses(t, uses);
       const lost = () => setText((cur) => (cur.trim() ? cur : t));
-      const sent = running ? steer(full, lost) : prompt(full, lost);
-      if (!sent) { notice('Not connected, message not sent'); return; }
+      if (running) steer(full, lost);
+      else prompt(full, lost);
       if (full !== t) setUses([]);
     }
     setHist(null);

@@ -81,44 +81,52 @@ export function send(m: ClientMessage) {
     ws.send(JSON.stringify(m));
     return true;
   }
-  if (m.type !== 'ping' && m.type !== 'prompt' && m.type !== 'steer') backlog.push(m);
+  if (m.type !== 'ping') backlog.push(m);
   if (backlog.length > 20) backlog.shift();
+  if (ws?.readyState !== WebSocket.CONNECTING) reconnect();
   return false;
 }
 
 export function steer(text: string, onLost: () => void) {
-  if (ws?.readyState !== WebSocket.OPEN) return false;
   const id = crypto.randomUUID();
   set((s) => ({ events: [...s.events, { id, kind: 'user', text, at: Date.now(), stopping: true }] }));
-  send({ type: 'steer', text, id });
-  expect({ id, text }, onLost);
-  return true;
+  expect({ type: 'steer', text, id }, onLost);
 }
 
 export function prompt(text: string, onLost: () => void) {
-  if (!send({ type: 'prompt', text })) return false;
-  expect({ text }, onLost);
-  return true;
+  expect({ type: 'prompt', text, id: crypto.randomUUID() }, onLost);
 }
 
-const CONFIRM_WAIT = 15_000;
-type Expected = { id?: string; text: string; onLost: () => void };
+// A message is sent until the server echoes it back as a user event. The server ignores repeats by id.
+const CONFIRM_WAIT = 8_000;
+const TRIES = 3;
+type Expected = { msg: { type: 'prompt' | 'steer'; text: string; id: string }; onLost: () => void; tries: number };
 const expected = new Set<Expected>();
 
-function expect(m: { id?: string; text: string }, onLost: () => void) {
-  const e = { ...m, onLost };
+function expect(msg: Expected['msg'], onLost: () => void) {
+  const e: Expected = { msg, onLost, tries: 0 };
   expected.add(e);
+  attempt(e);
+}
+
+function attempt(e: Expected) {
+  e.tries++;
+  send(e.msg);
   setTimeout(() => {
-    if (!expected.delete(e)) return;
+    if (!expected.has(e)) return;
+    if (e.tries < TRIES) {
+      reconnect();
+      return attempt(e);
+    }
+    expected.delete(e);
     notice('Message did not reach the server, it is back in the box');
-    onLost();
-    reconnect();
+    e.onLost();
   }, CONFIRM_WAIT);
 }
 
 function confirm(ev: ChatEvent) {
   if (ev.kind !== 'user') return;
-  for (const e of expected) if (e.id ? e.id === ev.id : e.text === ev.text) expected.delete(e);
+  for (const e of expected) if (e.msg.id === ev.id) expected.delete(e);
 }
 
 function handle(m: ServerMessage) {

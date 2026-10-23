@@ -430,9 +430,14 @@ export class AgentSession {
     }
   }
 
-  sendPrompt(text: string) {
-    this.pushEvent({ id: randomUUID(), kind: 'user', text, at: Date.now() });
+  sendPrompt(text: string, id: string = randomUUID()) {
+    this.pushEvent({ id, kind: 'user', text, at: Date.now() });
     this.enqueue(text);
+  }
+
+  // A client resends a message it got no echo for; the id tells a repeat from a new message.
+  private known(id: string) {
+    return this.state.events.some((e) => e.id === id);
   }
 
   private enqueue(text: string) {
@@ -523,12 +528,13 @@ export class AgentSession {
     void this.prompt(`AgentView restarted, which cleared your scheduled jobs. It is now ${new Date().toString()}. Recreate each job below with CronCreate, using the same cron, prompt and recurring flag. If a one-shot job's time has already passed, run its prompt now instead. Reply in one line.\n\n${JSON.stringify(crons.map(({ schedule, prompt, recurring }) => ({ cron: schedule, prompt, recurring })), null, 2)}`);
   }
 
-  async prompt(text: string) {
-    if (this.state.session.running) return this.queue(text);
+  async prompt(text: string, id: string = randomUUID()) {
+    if (this.known(id)) return;
+    if (this.state.session.running) return this.queue(text, id);
     await this.planFirst();
     const loop = this.state.session.loop;
-    if (loop.on && !this.state.session.running && !text.trim().startsWith('/')) return this.startLoop(text);
-    this.sendPrompt(text);
+    if (loop.on && !this.state.session.running && !text.trim().startsWith('/')) return this.startLoop(text, id);
+    this.sendPrompt(text, id);
   }
 
   setLoop(on: boolean, max?: number) {
@@ -539,8 +545,8 @@ export class AgentSession {
     this.system(on ? `Loop on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Loop off');
   }
 
-  private async startLoop(task: string) {
-    this.pushEvent({ id: randomUUID(), kind: 'user', text: task, at: Date.now() });
+  private async startLoop(task: string, id: string) {
+    this.pushEvent({ id, kind: 'user', text: task, at: Date.now() });
     this.loopPrevModel = this.state.session.model;
     this.setSession({ loop: { ...this.state.session.loop, round: 1, phase: 'plan' } });
     await this.runStep(planStep(task), false);
@@ -572,6 +578,7 @@ export class AgentSession {
   }
 
   async steer(text: string, id: string = randomUUID()) {
+    if (this.known(id)) return;
     if (this.state.session.compacting) return this.queue(text, id);
     const running = this.state.session.running;
     const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), stopping: running };
