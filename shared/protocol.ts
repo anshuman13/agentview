@@ -112,7 +112,7 @@ export type ServerState = {
 };
 
 export type ServerMessage =
-  | { type: 'init'; state: ServerState }
+  | { type: 'init'; state: ServerState; boot?: number }
   | { type: 'event'; event: ChatEvent }
   | { type: 'status'; text: string }
   | { type: 'pending'; request: PendingRequest }

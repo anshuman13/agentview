@@ -51,6 +51,7 @@ process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 const IDLE_MS = 10 * 60 * 1000;
 
 type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string) => void; view: AgentSession };
+const BOOT = Date.now();
 const clients = new Set<Client>();
 
 // Serializes the message once, and only if some client receives it.
@@ -141,7 +142,7 @@ function view(client: Client, chat: AgentSession) {
   client.view = chat;
   lastViewed = chat;
   remember(chat);
-  client.send({ type: 'init', state: chat.state });
+  client.send({ type: 'init', state: chat.state, boot: BOOT });
   void chat.refreshMcp();
   broadcastLive();
 }
@@ -495,9 +496,13 @@ wss.on('connection', (ws: WebSocket, req) => {
     }
     const chat = client.view;
     switch (msg.type) {
-      case 'prompt':
-        if (typeof msg.text === 'string') void chat.prompt(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
+      case 'prompt': {
+        if (typeof msg.text !== 'string') break;
+        const id = typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined;
+        // A client with stale state may send a plain prompt while Claude runs; the user's message still goes first.
+        void (chat.state.session.running ? chat.steer(msg.text, id) : chat.prompt(msg.text, id));
         break;
+      }
       case 'steer':
         if (typeof msg.text === 'string') void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
         break;

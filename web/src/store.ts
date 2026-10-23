@@ -74,6 +74,7 @@ function notifyBackground(chats: LiveChat[]) {
 }
 
 let ws: WebSocket | null = null;
+let boot = 0;
 // Taps made during a reconnect (Allow, answers, chat switches) wait for the next socket instead of vanishing.
 const backlog: ClientMessage[] = [];
 export function send(m: ClientMessage) {
@@ -132,6 +133,9 @@ function confirm(ev: ChatEvent) {
 function handle(m: ServerMessage) {
   switch (m.type) {
     case 'init':
+      // A new server boot means new code on the dev server too; reload so the client matches it.
+      if (m.boot && boot && m.boot !== boot) return location.reload();
+      if (m.boot) boot = m.boot;
       m.state.events.forEach(confirm);
       set((s) => {
         const same = s.session.id === m.state.session.id;
