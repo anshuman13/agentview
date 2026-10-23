@@ -120,6 +120,7 @@ export type ServerMessage =
   | { type: 'file_changed'; path: string; source: 'tool' | 'watcher' }
   | { type: 'session'; session: SessionInfo }
   | { type: 'live'; chats: LiveChat[] }
+  | { type: 'attention'; items: AttentionItem[] }
   | { type: 'pong' }
   | { type: 'restarting' }
   | { type: 'error'; text: string };
@@ -136,6 +137,28 @@ export type LiveChat = {
   mcpFailed?: number;
   last?: string;
   edits?: { add: number; del: number };
+};
+
+export type AttentionKind = 'ci' | 'changes' | 'review' | 'ready' | 'issue';
+
+export type AttentionItem = {
+  id: string;
+  kind: AttentionKind;
+  repo: string;
+  cwd: string;
+  number: number;
+  title: string;
+  url: string;
+  since: number;
+  prompt: string;
+};
+
+export const ATTENTION_LABEL: Record<AttentionKind, string> = {
+  ci: 'CI failing',
+  changes: 'Changes requested',
+  review: 'Review requested',
+  ready: 'Ready to merge',
+  issue: 'Assigned to you',
 };
 
 export type SavedSession = {

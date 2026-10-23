@@ -23,7 +23,7 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null) {
   post(title, chat.title, body.slice(0, 200));
 }
 
-function post(title: string, subtitle: string, body: string) {
+export function post(title: string, subtitle: string, body: string) {
   try {
     const fd = fs.openSync(FIFO, fs.constants.O_WRONLY | fs.constants.O_NONBLOCK);
     try {

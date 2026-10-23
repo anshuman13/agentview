@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { ChatEvent, ClientMessage, LiveChat, ServerMessage, ServerState } from '../../shared/protocol';
+import { ATTENTION_LABEL, type AttentionItem, type ChatEvent, type ClientMessage, type LiveChat, type ServerMessage, type ServerState } from '../../shared/protocol';
 import { notify } from './notify';
 
 type UiState = {
@@ -11,7 +11,7 @@ type UiState = {
   repoPicker: boolean;
 };
 
-export type State = ServerState & { live: LiveChat[]; ui: UiState };
+export type State = ServerState & { live: LiveChat[]; attention: AttentionItem[]; ui: UiState };
 
 let state: State = {
   session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null } },
@@ -20,6 +20,7 @@ let state: State = {
   pending: [],
   recentFiles: [],
   live: [],
+  attention: [],
   ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false },
 };
 
@@ -176,6 +177,12 @@ function handle(m: ServerMessage) {
     case 'live':
       notifyBackground(m.chats);
       set({ live: m.chats });
+      break;
+    case 'attention':
+      for (const it of m.items) {
+        if (state.attention.length && !state.attention.some((x) => x.id === it.id)) notify(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, `#${it.number} ${it.title}`, () => window.open(it.url, '_blank'));
+      }
+      set({ attention: m.items });
       break;
   }
 }
