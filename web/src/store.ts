@@ -68,10 +68,16 @@ function notifyBackground(chats: LiveChat[]) {
 }
 
 let ws: WebSocket | null = null;
+// Taps made during a reconnect (Allow, answers, chat switches) wait for the next socket instead of vanishing.
+const backlog: ClientMessage[] = [];
 export function send(m: ClientMessage) {
-  if (ws?.readyState !== WebSocket.OPEN) return false;
-  ws.send(JSON.stringify(m));
-  return true;
+  if (ws?.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(m));
+    return true;
+  }
+  if (m.type !== 'ping' && m.type !== 'prompt' && m.type !== 'steer') backlog.push(m);
+  if (backlog.length > 20) backlog.shift();
+  return false;
 }
 
 export function steer(text: string, onLost: () => void) {
@@ -179,6 +185,8 @@ const avlog = (ev: string) => (window as { avlog?: (e: string) => void }).avlog?
 
 let retry: ReturnType<typeof setTimeout> | undefined;
 let heard = 0;
+let openedAt = 0;
+let hiddenAt = 0;
 let delay = 1000;
 
 export function connect() {
@@ -187,13 +195,17 @@ export function connect() {
   const { id, sessionId } = getState().session;
   const sock = new WebSocket(`${proto}://${location.host}/ws${id ? `?chat=${encodeURIComponent(id)}&session=${encodeURIComponent(sessionId ?? '')}` : ''}`);
   ws = sock;
-  heard = Date.now();
+  heard = openedAt = Date.now();
+  const handshake = setTimeout(() => sock.readyState === WebSocket.CONNECTING && sock.close(), 10_000);
   sock.onopen = () => {
+    clearTimeout(handshake);
     delay = 1000;
     setUi({ connected: true, restarting: false });
     avlog('ws open');
+    for (const m of backlog.splice(0)) sock.send(JSON.stringify(m));
   };
   sock.onclose = () => {
+    clearTimeout(handshake);
     if (ws !== sock) return;
     avlog('ws closed');
     setUi({ connected: false });
@@ -222,10 +234,19 @@ function probe(wait: number) {
   if (ws?.readyState !== WebSocket.OPEN) return reconnect();
   const sent = Date.now();
   send({ type: 'ping' });
-  setTimeout(() => heard < sent && ws?.readyState === WebSocket.OPEN && reconnect(), wait);
+  setTimeout(() => {
+    if (heard >= sent || ws?.readyState !== WebSocket.OPEN) return;
+    // A large init can take longer than the probe on a slow link; give a fresh socket a minute before calling it stale.
+    if (heard > openedAt || Date.now() - openedAt > 60_000) reconnect();
+  }, wait);
 }
 
 if (typeof document !== 'undefined') {
   setInterval(() => document.visibilityState === 'visible' && probe(10000), 15000);
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && probe(8000));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return void (hiddenAt = Date.now());
+    // Android drops the socket about 5 s into background while the WebView still reports it open.
+    if (hiddenAt && Date.now() - hiddenAt > 10_000) reconnect();
+    else probe(8000);
+  });
 }

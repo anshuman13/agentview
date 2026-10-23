@@ -431,12 +431,16 @@ const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8_000_000, pe
 
 // Phones that drop off the VPN leave half-open sockets; without this they count as viewers for hours.
 const alive = new WeakSet<WebSocket>();
+const missed = new WeakMap<WebSocket, number>();
 setInterval(() => {
   for (const ws of wss.clients) {
-    if (!alive.has(ws)) {
+    // The ping sits behind queued data, so a slow link still downloading a big init gets one more round.
+    const n = alive.has(ws) ? 0 : (missed.get(ws) ?? 0) + 1;
+    if (n > 1 || (n === 1 && ws.bufferedAmount === 0)) {
       ws.terminate();
       continue;
     }
+    missed.set(ws, n);
     alive.delete(ws);
     ws.ping();
   }
@@ -454,6 +458,9 @@ wss.on('connection', (ws: WebSocket, req) => {
   const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat };
   clients.add(client);
   view(client, chat);
+  // A phone coming back after its chat was idle-closed should get that chat back, not whatever was viewed last.
+  const wanted = params.get('session');
+  if (wanted && chat.state.session.sessionId !== wanted) openSaved(wanted).then((c) => client.view === chat && view(client, c), () => {});
   if (restarting) client.send({ type: 'restarting' });
   const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
 

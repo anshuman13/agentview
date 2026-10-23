@@ -582,3 +582,32 @@ describe('streaming', () => {
     expect(s.state.events.filter((e) => e.kind === 'assistant')).toHaveLength(1);
   });
 });
+
+describe('turns the CLI starts by itself', () => {
+  it('marks a hand-back turn as running until its result', () => {
+    const { s, result } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    expect(s.state.session.running).toBe(false);
+    handle({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1' } } });
+    expect(s.state.session.running).toBe(true);
+    expect(s.state.events.filter((e) => e.kind === 'system').map((e) => e.kind === 'system' && e.text)).toEqual(['Claude continued after a background task']);
+    handle({ type: 'stream_event', parent_tool_use_id: 'sub', event: { type: 'message_start', message: { id: 'm2' } } });
+    result('r1');
+    expect(s.state.session.running).toBe(false);
+  });
+
+  it('drops a dead query so the next prompt starts a fresh one', async () => {
+    const { s } = fakeSession();
+    const priv = s as unknown as { q: unknown; gen: number; consume: () => Promise<void>; start: () => void };
+    priv.q = { async *[Symbol.asyncIterator]() {} };
+    const gen = priv.gen;
+    s.sendPrompt('first');
+    await priv.consume();
+    expect(priv.q).toBeNull();
+    expect(priv.gen).toBe(gen + 1);
+    expect(s.state.session.running).toBe(false);
+    const start = vi.spyOn(priv, 'start').mockImplementation(() => {});
+    s.sendPrompt('second');
+    expect(start).toHaveBeenCalledOnce();
+  });
+});
