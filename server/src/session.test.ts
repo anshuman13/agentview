@@ -453,6 +453,20 @@ describe('subagents', () => {
     expect(events[i + 1]).toMatchObject({ kind: 'agent', toolUseId: 'ag', prompt: 'Find docs', model: 'claude-opus-5-5', status: 'done', endedAt: Date.parse('2026-10-15T10:01:00Z'), usage: { tokens: 50, toolUses: 3, durationMs: 60000 } });
   });
 
+  it('marks a resumed background agent done when its hand-back arrives', () => {
+    const msg = (type: string, content: unknown, ts: string) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: ts, message: { content } }) as never;
+    const { events } = historyFrom([
+      msg('user', 'survey', '2026-10-15T10:00:00Z'),
+      msg('assistant', [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey', prompt: 'Find docs', run_in_background: true } }], '2026-10-15T10:00:01Z'),
+      msg('user', [{ type: 'tool_result', tool_use_id: 'ag', content: 'Async agent launched successfully.\nagentId: a1 (use SendMessage)' }], '2026-10-15T10:00:02Z'),
+      msg('user', '<task-notification>\n<task-id>a1</task-id>\n<status>stopped</status>\n<summary>cut off</summary>\n</task-notification>', '2026-10-15T10:01:00Z'),
+      msg('assistant', [{ type: 'tool_use', id: 'sm', name: 'SendMessage', input: { to: 'a1', message: 'continue' } }], '2026-10-15T10:02:00Z'),
+      msg('user', [{ type: 'tool_result', tool_use_id: 'sm', content: 'Resuming agent a1' }], '2026-10-15T10:02:01Z'),
+      msg('user', '<task-notification>\n<task-id>a1</task-id>\n<tool-use-id>sm</tool-use-id>\n<status>completed</status>\n<result>Report</result>\n</task-notification>', '2026-10-15T10:05:00Z'),
+    ]);
+    expect(events.find((e) => e.kind === 'agent')).toMatchObject({ toolUseId: 'ag', status: 'done', endedAt: Date.parse('2026-10-15T10:05:00Z') });
+  });
+
   it('forwards subagent text live and from history', () => {
     const { s } = fakeSession();
     const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);

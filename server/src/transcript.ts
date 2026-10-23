@@ -160,8 +160,10 @@ function subagentEvents(msgs: SessionMessage[], parent: string, subagents: Recor
 const tag = (text: string, name: string) => text.match(new RegExp(`<${name}>([\\s\\S]*)</${name}>`))?.[1]?.trim();
 
 export function notificationResults(text: string, at: number, agents: AgentIds): ChatEvent[] {
+  // A resumed agent reports under the SendMessage call's id; the task id still points at the Agent call.
+  const byTask = [...text.matchAll(/<task-id>(\w+)<\/task-id>/g)].flatMap((m) => agents.get(m[1]) ?? []);
   const direct = tag(text, 'tool-use-id');
-  const ids = direct ? [direct] : [...text.matchAll(/<task-id>(\w+)<\/task-id>/g)].flatMap((m) => agents.get(m[1]) ?? []);
+  const ids = byTask.length ? byTask : direct ? [direct] : [];
   const status = tag(text, 'status');
   const result = tag(text, 'result') ?? tag(text, 'summary') ?? '';
   return ids.map((toolUseId) => ({ id: randomUUID(), kind: 'tool_result', toolUseId, text: result, isError: status === 'failed', at, ...(status === 'stopped' && { stopped: true }) }));

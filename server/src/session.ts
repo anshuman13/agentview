@@ -493,6 +493,12 @@ export class AgentSession {
     return this.state.events.find((e): e is AgentEvent => e.kind === 'agent' && e.toolUseId === toolUseId);
   }
 
+  // A SendMessage that resumes an agent carries its own tool id; follow the link back to the Agent call.
+  private agentToolUse(toolUseId: string) {
+    const link = this.state.events.find((e) => e.kind === 'tool_use' && e.id === toolUseId);
+    return link?.kind === 'tool_use' && link.agent ? link.agent : toolUseId;
+  }
+
   private taskToolUse(taskId: string) {
     return [...this.taskIds].find(([, t]) => t === taskId)?.[0] ?? this.agents.get(taskId);
   }
@@ -771,9 +777,10 @@ export class AgentSession {
         } else if (msg.subtype === 'task_started') {
           this.tasks.add(msg.task_id);
           if (msg.tool_use_id) {
-            this.taskIds.set(msg.tool_use_id, msg.task_id);
-            this.orphans.delete(msg.tool_use_id);
-            this.patchAgent(msg.tool_use_id, (a) => ({
+            const toolUseId = this.agentToolUse(msg.tool_use_id);
+            this.taskIds.set(toolUseId, msg.task_id);
+            this.orphans.delete(toolUseId);
+            this.patchAgent(toolUseId, (a) => ({
               status: 'running',
               background: msg.is_backgrounded ?? a.background,
               prompt: msg.prompt || a.prompt,
@@ -782,7 +789,7 @@ export class AgentSession {
             }));
           }
         } else if (msg.subtype === 'task_progress') {
-          if (msg.tool_use_id) this.patchAgent(msg.tool_use_id, (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
+          if (msg.tool_use_id) this.patchAgent(this.agentToolUse(msg.tool_use_id), (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
         } else if (msg.subtype === 'task_updated') {
           if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
           const toolUseId = this.taskToolUse(msg.task_id);
@@ -793,7 +800,7 @@ export class AgentSession {
           }));
         } else if (msg.subtype === 'task_notification') {
           this.tasks.delete(msg.task_id);
-          const toolUseId = msg.tool_use_id ?? this.taskToolUse(msg.task_id);
+          const toolUseId = msg.tool_use_id ? this.agentToolUse(msg.tool_use_id) : this.taskToolUse(msg.task_id);
           if (toolUseId) {
             const usage = msg.usage && usageOf(msg.usage);
             this.patchAgent(toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
