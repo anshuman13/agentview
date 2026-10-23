@@ -558,3 +558,27 @@ describe('blocked tools', () => {
     expect(users()).toHaveLength(1);
   });
 });
+
+describe('streaming', () => {
+  it('coalesces text deltas into one update per flush window and a final one on stop', async () => {
+    const { s } = fakeSession();
+    const sent: ServerMessage[] = [];
+    s.onMessage((m) => sent.push(JSON.parse(JSON.stringify(m))));
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const delta = (text: string) => handle({ type: 'stream_event', event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } } });
+    handle({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1' } } });
+    delta('Hel');
+    delta('lo ');
+    delta('wor');
+    const texts = () => sent.filter((m) => m.type === 'event' && m.event.kind === 'assistant').map((m) => m.type === 'event' && m.event.kind === 'assistant' && [m.event.text, m.event.streaming]);
+    expect(texts()).toEqual([['Hel', true]]);
+    await new Promise((r) => setTimeout(r, 120));
+    expect(texts()).toEqual([['Hel', true], ['Hello wor', true]]);
+    delta('ld');
+    handle({ type: 'stream_event', event: { type: 'content_block_stop', index: 0 } });
+    expect(texts()).toEqual([['Hel', true], ['Hello wor', true], ['Hello world', false]]);
+    await new Promise((r) => setTimeout(r, 120));
+    expect(texts()).toHaveLength(3);
+    expect(s.state.events.filter((e) => e.kind === 'assistant')).toHaveLength(1);
+  });
+});

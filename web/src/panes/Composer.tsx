@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { api, notice, prompt, send, steer, useStore } from '../store';
+import { api, getState, notice, prompt, send, steer, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../QuickPick';
@@ -98,6 +98,10 @@ export function filesEdited(events: ChatEvent[]) {
   return paths.size;
 }
 
+let editedFor: ChatEvent[] | undefined;
+let editedCount = 0;
+const editedOf = (events: ChatEvent[]) => (events === editedFor ? editedCount : ((editedFor = events), (editedCount = filesEdited(events))));
+
 export const contextPercent = (context: number | null) => (context === null ? null : Math.min(100, Math.round((context / COMPACT_AT) * 100)));
 
 const MODES: Record<string, { label: string; detail: string; icon: string }> = {
@@ -174,7 +178,8 @@ export function Composer() {
   const team = useStore((s) => s.session.team);
   const loop = useStore((s) => s.session.loop);
   const context = useStore((s) => s.session.context);
-  const events = useStore((s) => s.events);
+  const userCount = useStore((s) => s.events.reduce((n, e) => n + (e.kind === 'user' ? 1 : 0), 0));
+  const edited = useStore((s) => editedOf(s.events));
   const servers = useStore((s) => s.session.mcp).filter((m) => m.status === 'connected');
   const toolAt = useStore((s) => (s.session.running ? openToolAt(s.events) : null));
   useTick(1000, toolAt !== null);
@@ -207,9 +212,8 @@ export function Composer() {
     return trigger.kind === 'command' ? rankCommands(commands, trigger.query) : rankFiles(files, trigger.query);
   }, [trigger, popKey, dismissed, commands, files]);
   const open = items.length > 0;
-  const history = useMemo(() => buildHistory(events, stored), [events, stored]);
+  const history = useMemo(() => buildHistory(getState().events, stored), [chat, userCount, stored]);
   const ghost = !open && !shell && at === text.length ? ghostFor(text, history) : '';
-  const edited = useMemo(() => filesEdited(events), [events]);
   const pct = contextPercent(context);
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
   const shortModel = modelName.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
