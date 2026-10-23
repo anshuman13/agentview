@@ -32,6 +32,7 @@
 .ag-steps-list > .tr-assistant, .ag-steps-list > .tr-file { margin: 6px 0; }
 .ag-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 10px; font-size: 11px; color: var(--fg-muted); background: transparent; border: 1px solid var(--border-strong); }
 .ag-chip:hover { color: var(--fg); background: var(--bg-hover); }
+.ag-chip.inbox { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
 .ag-chip.running { color: var(--agent); border-color: color-mix(in srgb, var(--agent) 50%, transparent); }
 .tab.ag-tab > .codicon:first-child { color: var(--agent); }
 
