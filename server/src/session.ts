@@ -18,6 +18,8 @@ export { BIG_BRO };
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
 const STREAM_FLUSH_MS = 80;
+// A loop goes on after Stop or a CLI exit, with time to type /loop off first.
+const REPEAT_GRACE_MS = 2 * 60_000;
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
@@ -467,6 +469,7 @@ export class AgentSession {
     if (this.turns <= 0) {
       this.turns = 0;
       this.setSession({ running: false, compacting: false });
+      this.deferRepeat();
       return;
     }
     this.setSession({ stopping: true });
@@ -712,6 +715,7 @@ export class AgentSession {
 
   private turnEnded() {
     this.turns = Math.max(0, this.turns - 1);
+    const stopped = this.turns === 0 && this.state.session.stopping;
     const idle = this.turns === 0 && !this.state.session.stopping;
     const loop = idle ? advance(this.state.session.loop, this.lastResult) : null;
     if (loop) this.setSession({ loop: loop.state });
@@ -720,7 +724,18 @@ export class AgentSession {
     if (loop && !loop.step && loop.note) this.endLoop(loop.note);
     if (loop?.step) void this.runStep(loop.step);
     else if (next) this.sendPrompt(next);
+    else if (stopped) this.deferRepeat();
     else if (idle && (this.repeatDue || this.state.session.repeat?.every === 0)) this.fireRepeat();
+  }
+
+  private deferRepeat() {
+    const r = this.state.session.repeat;
+    if (!r) return;
+    this.repeatDue = false;
+    const nextAt = Math.max(r.nextAt ?? 0, Date.now() + REPEAT_GRACE_MS);
+    this.setSession({ repeat: { ...r, nextAt } });
+    this.armRepeat();
+    this.system(`Loop round ${r.round + 1} at ${clock(nextAt)}, /loop off to end it`);
   }
 
   private followUp() {
@@ -762,6 +777,7 @@ export class AgentSession {
         this.wake?.();
         this.turns = 0;
         this.setSession({ running: false, stopping: false });
+        this.deferRepeat();
         this.tasks.clear();
         this.orphan(this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : [])));
       }
