@@ -42,8 +42,7 @@ Switch to the transcript for every message and step in order.
 
 - Sending while Claude works stops whatever it is doing, including an open permission or question, and continues
   with your message
-- A message sent while the connection is down is kept and sent as soon as it is back; it only returns to the box
-  after three failed tries
+- A message is one request to the Mac and lands or fails visibly; it returns to the box after three failed tries
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
 - Questions, plan approvals and permissions show as buttons in the timeline
 
@@ -152,6 +151,9 @@ Chats start only inside these folders or Paseo worktrees.
 ## Phone
 
 Open the phone icon in the status bar for a QR code. Works over NetBird.
+
+The page listens on one event stream from the Mac and resumes it from the last event it saw after a drop, so a
+tab that was in the background catches up without a reload. A link that stays silent for 50 s is reopened.
 
 AgentView only accepts connections from this Mac and the peers `netbird status` lists, and refuses requests and
 websockets from other websites, including other servers on localhost.
