@@ -32,6 +32,8 @@ It uses the Claude Code CLI you have installed and its login.
 - **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. Browser tab shows your Chrome
 - **Sidebar**: Explorer, Chats (open and recent) and Workspace (repos, chats, Paseo worktrees)
 - **Terminal** (bottom): a shell in the chat's folder
+- **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
+  follows the system setting; `?theme=light` in the URL picks one
 
 ## Timeline and steering
 

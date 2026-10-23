@@ -4,7 +4,14 @@
     <meta charset="UTF-8" />
     <script>
       try {
-        document.documentElement.dataset.theme = localStorage.getItem('agentview.theme') === 'dark-modern' ? 'dark-modern' : 'graphite';
+        var themes = ['graphite', 'dark-modern', 'light'];
+        var wanted = new URLSearchParams(location.search).get('theme');
+        if (themes.indexOf(wanted) >= 0) localStorage.setItem('agentview.theme', wanted);
+        var stored = localStorage.getItem('agentview.theme');
+        var system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'graphite';
+        var theme = themes.indexOf(stored) >= 0 ? stored : system;
+        document.documentElement.dataset.theme = theme;
+        if (theme === 'light') document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f8f8f8');
       } catch (e) {
         document.documentElement.dataset.theme = 'graphite';
       }
