@@ -564,7 +564,7 @@ function LiveRow({ c, repo, selected, onClose, onDelete }: { c: LiveChat; repo?:
   );
 }
 
-const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues', commit: 'git-commit' };
+const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues', commit: 'git-commit', sentry: 'bug' };
 
 // Chats waiting on the user plus GitHub items the server flagged (failing CI, reviews, assigned issues).
 function NeedsYou({ n, children }: { n: number; children: ReactNode }) {

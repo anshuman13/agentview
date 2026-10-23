@@ -375,6 +375,13 @@ async function sentryIssues(repo: string, cwd: string): Promise<SentryIssues> {
   return { via: r.via, issues: r.value, note: r.note };
 }
 
+// Issues for the background inbox: only repos with an explicit Sentry entry, never the guessed config.
+export async function sentryWatch(cwd: string) {
+  const [s, repo] = await Promise.all([load(), repoName(cwd)]);
+  if (repo === 'example' || !s.repos?.[repo]?.sentry?.project) return null;
+  return { repo, issues: (await sentryIssues(repo, cwd)).issues };
+}
+
 async function sentryTest(repo: string, cwd: string): Promise<SentryTest> {
   const r = await sentryIssues(repo, cwd);
   return { count: r.issues.length, via: r.via, note: r.note };
