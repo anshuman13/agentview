@@ -60,7 +60,7 @@
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--fg, #cccccc); color: var(--bg-sunken, #181818);
 }
-.cp-send:hover:not(:disabled), .cp-stop:hover:not(:disabled) { background: #ffffff; }
+.cp-send:hover:not(:disabled), .cp-stop:hover:not(:disabled) { background: var(--text-strong, #ffffff); }
 .cp-send:disabled, .cp-stop:disabled { background: var(--bg-hover, #2a2d2e); color: var(--fg-faint, #6e6e6e); cursor: default; }
 .cp-foot .icon-btn.voice, .cp-foot .icon-btn.attach, .cp-foot .icon-btn.mcp { width: 28px; height: 28px; border-radius: 50%; }
 .cp-foot .icon-btn.mcp.on { color: var(--fg, #cccccc); }
@@ -90,7 +90,7 @@
 .cp-pop li:hover { background: var(--bg-hover, #2a2d2e); }
 .cp-pop li.active { background: var(--accent-soft, rgba(0, 120, 212, 0.15)); }
 .cp-pop li .codicon { color: var(--fg-muted, #9d9d9d); }
-.cp-pop b { color: #4daafc; font-weight: 600; }
+.cp-pop b { color: var(--link, #4daafc); font-weight: 600; }
 .cp-name { flex: none; }
 .cp-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-faint, #6e6e6e); font-size: 12px; }
 

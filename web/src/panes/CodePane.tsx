@@ -1,7 +1,7 @@
 import { Component, Fragment, useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
-import { syntaxHighlighting } from '@codemirror/language';
+import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { unifiedMergeView } from '@codemirror/merge';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { api, setUi, useStore } from '../store';
@@ -9,6 +9,7 @@ import { Icon } from '../Icon';
 import { FileIcon } from './Explorer';
 import { MarkdownDoc } from './MarkdownDoc';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
+import { isDark, useThemeName } from '../theme';
 import '../code.css';
 
 async function lang(path: string): Promise<Extension> {
@@ -84,6 +85,7 @@ type EditorProps = { file: FileData; diff: boolean; wrap: boolean; changesOnly: 
 function Editor({ file, diff, wrap, changesOnly, viewRef }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const scroll = useRef<{ path: string; top: number } | null>(null);
+  const dark = isDark(useThemeName());
 
   useEffect(() => {
     if (!host.current) return;
@@ -96,8 +98,8 @@ function Editor({ file, diff, wrap, changesOnly, viewRef }: EditorProps) {
         lineNumbers(),
         EditorView.editable.of(false),
         EditorState.readOnly.of(true),
-        EditorView.theme({}, { dark: true }),
-        syntaxHighlighting(oneDarkHighlightStyle),
+        EditorView.theme({}, { dark }),
+        syntaxHighlighting(dark ? oneDarkHighlightStyle : defaultHighlightStyle),
         language,
         wrap ? EditorView.lineWrapping : [],
         diff ? unifiedMergeView({ original: file.original, mergeControls: false, collapseUnchanged: changesOnly ? { margin: 3, minSize: 4 } : undefined }) : [],
@@ -114,7 +116,7 @@ function Editor({ file, diff, wrap, changesOnly, viewRef }: EditorProps) {
       viewRef.current = null;
       view.destroy();
     };
-  }, [file, diff, wrap, changesOnly]);
+  }, [file, diff, wrap, changesOnly, dark]);
 
   return <div className="cd-editor" ref={host} />;
 }

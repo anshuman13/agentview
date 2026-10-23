@@ -95,3 +95,13 @@
   .doc-anchor { display: none; }
   .doc-copy { opacity: 1; }
 }
+
+:root[data-theme='light'] .doc .tok-keyword { color: #a626a4; }
+:root[data-theme='light'] .doc .tok-string, :root[data-theme='light'] .doc .tok-inserted { color: #50a14f; }
+:root[data-theme='light'] .doc .tok-string2, :root[data-theme='light'] .doc .tok-operator, :root[data-theme='light'] .doc .tok-url, :root[data-theme='light'] .doc .tok-link { color: #0184bc; }
+:root[data-theme='light'] .doc .tok-number, :root[data-theme='light'] .doc .tok-bool, :root[data-theme='light'] .doc .tok-atom, :root[data-theme='light'] .doc .tok-literal { color: #986801; }
+:root[data-theme='light'] .doc .tok-comment, :root[data-theme='light'] .doc .tok-meta { color: #a0a1a7; }
+:root[data-theme='light'] .doc .tok-typeName, :root[data-theme='light'] .doc .tok-className, :root[data-theme='light'] .doc .tok-namespace, :root[data-theme='light'] .doc .tok-variableName2 { color: #c18401; }
+:root[data-theme='light'] .doc .tok-propertyName, :root[data-theme='light'] .doc .tok-heading, :root[data-theme='light'] .doc .tok-deleted { color: #e45649; }
+:root[data-theme='light'] .doc .tok-definition, :root[data-theme='light'] .doc .tok-labelName, :root[data-theme='light'] .doc .tok-macroName { color: #4078f2; }
+:root[data-theme='light'] .doc .tok-invalid { color: #c72e2e; }

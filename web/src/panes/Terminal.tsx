@@ -6,11 +6,12 @@ import '../terminal.css';
 import { Icon } from '../Icon';
 import { touch } from '../touch';
 import { wsUrl } from './util';
+import { currentTheme, isDark } from '../theme';
 
 type Tab = { id: string; name: string };
 type Props = { chat: string; project?: string; open: boolean; onToggle: () => void };
 
-const theme = {
+const DARK = {
   background: '#181818',
   foreground: '#cccccc',
   cursor: '#cccccc',
@@ -33,6 +34,31 @@ const theme = {
   brightCyan: '#29b8db',
   brightWhite: '#e5e5e5',
 };
+// VS Code's light terminal colors.
+const LIGHT = {
+  background: '#ffffff',
+  foreground: '#3b3b3b',
+  cursor: '#3b3b3b',
+  selectionBackground: '#add6ff',
+  selectionInactiveBackground: '#e5ebf1',
+  black: '#000000',
+  red: '#cd3131',
+  green: '#107c10',
+  yellow: '#949800',
+  blue: '#0451a5',
+  magenta: '#bc05bc',
+  cyan: '#0598bc',
+  white: '#555555',
+  brightBlack: '#666666',
+  brightRed: '#cd3131',
+  brightGreen: '#14ce14',
+  brightYellow: '#b5ba00',
+  brightBlue: '#0451a5',
+  brightMagenta: '#bc05bc',
+  brightCyan: '#0598bc',
+  brightWhite: '#a5a5a5',
+};
+const termTheme = () => (isDark(currentTheme()) ? DARK : LIGHT);
 
 const KEYS: [label: string, seq: string, icon?: string][] = [
   ['Esc', '\x1b'],
@@ -150,7 +176,9 @@ function Pane({ id, on, focus, clears, inputs, onGone }: { id: string; on: boole
   useEffect(() => {
     const el = host.current!;
     const mono = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim();
-    const xt = new XTerm({ fontFamily: mono || "'SF Mono', Menlo, Monaco, monospace", fontSize: 13, scrollback: 5000, cursorBlink: true, theme });
+    const xt = new XTerm({ fontFamily: mono || "'SF Mono', Menlo, Monaco, monospace", fontSize: 13, scrollback: 5000, cursorBlink: true, theme: termTheme() });
+    const retheme = () => (xt.options.theme = termTheme());
+    window.addEventListener('agentview:theme', retheme);
     const fit = new FitAddon();
     xt.loadAddon(fit);
     term.current = xt;
@@ -191,6 +219,7 @@ function Pane({ id, on, focus, clears, inputs, onGone }: { id: string; on: boole
       ro.disconnect();
       ws.onclose = null;
       ws.close();
+      window.removeEventListener('agentview:theme', retheme);
       clears.delete(id);
       inputs.delete(id);
       xt.dispose();

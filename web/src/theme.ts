@@ -1,27 +1,57 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export type Theme = 'graphite' | 'dark-modern';
+export type Theme = 'graphite' | 'dark-modern' | 'light';
 
 const KEY = 'agentview.theme';
-export const THEME_NAMES: Record<Theme, string> = { graphite: 'Graphite', 'dark-modern': 'Dark Modern' };
+const ORDER: Theme[] = ['graphite', 'dark-modern', 'light'];
+export const THEME_NAMES: Record<Theme, string> = { graphite: 'Graphite', 'dark-modern': 'Dark Modern', light: 'Light' };
+const isTheme = (t: unknown): t is Theme => ORDER.includes(t as Theme);
 
-function currentTheme(): Theme {
-  return document.documentElement.dataset.theme === 'dark-modern' ? 'dark-modern' : 'graphite';
+export function currentTheme(): Theme {
+  const t = document.documentElement.dataset.theme;
+  return isTheme(t) ? t : 'graphite';
 }
+
+export const isDark = (t: Theme) => t !== 'light';
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  try {
-    localStorage.setItem(KEY, theme);
-  } catch {}
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isDark(theme) ? '#181818' : '#f8f8f8');
+  window.dispatchEvent(new Event('agentview:theme'));
+}
+
+// Watches the theme set at boot (index.html) and by the toggle.
+export function useThemeName(): Theme {
+  const [theme, setTheme] = useState<Theme>(currentTheme);
+  useEffect(() => {
+    const on = () => setTheme(currentTheme());
+    window.addEventListener('agentview:theme', on);
+    return () => window.removeEventListener('agentview:theme', on);
+  }, []);
+  return theme;
 }
 
 export function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>(currentTheme);
+  const theme = useThemeName();
+  useEffect(() => {
+    // With no stored choice the page follows the system setting, live.
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const on = () => {
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem(KEY);
+      } catch {}
+      if (!isTheme(stored)) applyTheme(mq.matches ? 'light' : 'graphite');
+    };
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   const toggle = () => {
-    const next: Theme = theme === 'graphite' ? 'dark-modern' : 'graphite';
+    const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length];
     applyTheme(next);
-    setTheme(next);
+    try {
+      localStorage.setItem(KEY, next);
+    } catch {}
   };
   return [theme, toggle];
 }
