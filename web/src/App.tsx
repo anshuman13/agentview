@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { connect, getState, send, setUi, useStore } from './store';
+import { connect, getState, presetChat, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../shared/protocol';
 import { Brief } from './panes/Brief';
 import { AgentsBadge, AgentsPane, AgentsTab } from './panes/AgentsPane';
@@ -62,7 +62,10 @@ function stored(key: string, fallback: number) {
 const params = new URLSearchParams(location.search);
 const shellParam = params.get('shell');
 if (shellParam) localStorage.setItem('agentview.shell', shellParam);
-if (shellParam || params.has('switched')) history.replaceState(null, '', location.pathname);
+// Deep links: ?view=github, ?page=observe, ?chat=<live id> or ?session=<saved id>. Consumed once, then dropped from the URL.
+const deepLink = { view: params.get('view'), page: params.get('page'), chat: params.get('chat'), session: params.get('session') };
+if (deepLink.chat || deepLink.session) presetChat(deepLink.chat, deepLink.session);
+if (params.size) history.replaceState(null, '', location.pathname);
 
 function AppUpdate() {
   const [ready, setReady] = useState(0);
@@ -257,6 +260,11 @@ export function App() {
     window.addEventListener('agentview:command', onCommand);
     return () => window.removeEventListener('agentview:command', onCommand);
   }, [toggleTheme]);
+
+  useEffect(() => {
+    const id = deepLink.page && isPage(deepLink.page) ? `page:${deepLink.page}` : VIEWS.some((v) => v.id === deepLink.view) ? `view:${deepLink.view}` : null;
+    if (id) window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
+  }, []);
 
   const fileName = openFile ? openFile.split('/').pop() : null;
   const closeFile = () => setUi({ openFile: null });

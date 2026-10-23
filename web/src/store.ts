@@ -47,6 +47,11 @@ export function setUi(patch: Partial<UiState>) {
 
 export const getState = () => state;
 
+// Chat to ask for on the first connect, from a deep link.
+export function presetChat(chat: string | null, sessionId: string | null) {
+  set((s) => ({ session: { ...s.session, id: chat ?? s.session.id, sessionId: sessionId ?? s.session.sessionId } }));
+}
+
 export function useStore<T>(selector: (s: State) => T): T {
   return useSyncExternalStore(
     (l) => (listeners.add(l), () => listeners.delete(l)),

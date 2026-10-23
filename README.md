@@ -67,6 +67,12 @@ starts Chrome with that profile and remote debugging on port 9333, so there is n
 Claude in Chrome is not needed there: chats on that Mac can drive the laptop's Chrome. Chats and terminals get
 `BROWSER` set, so logins such as `gcloud auth login` open in that Chrome and show in the Browser tab.
 
+## Deep links
+
+`?view=github` opens a sidebar view (explorer, changes, github, chats, sessions), `?page=observe` opens a page
+(observe, deploy, mcp), `?chat=<id>` opens a running chat and `?session=<id>` reopens a saved one. The parameters
+are read once and removed from the address bar.
+
 ## Pages
 
 Observe, Deploy and MCP Servers open as tabs in the editor area (the lower three activity bar icons, or the command
