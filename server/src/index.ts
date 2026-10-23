@@ -25,6 +25,7 @@ import { observe } from './observe.js';
 import { otherMacs, thisMac } from './macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { MCP_BAD, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../shared/protocol.js';
+import { Ring, frame } from './stream.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
 import { allowedPeer, allowedRequest, requester } from './access.js';
 
@@ -50,14 +51,17 @@ process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 
 const IDLE_MS = 10 * 60 * 1000;
 
-type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string) => void; view: AgentSession };
+type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: AgentSession };
 const BOOT = Date.now();
 const clients = new Set<Client>();
+const streams = new Map<string, Client>();
+const ring = new Ring();
 
-// Serializes the message once, and only if some client receives it.
-function broadcast(m: ServerMessage, to: (c: Client) => boolean = () => true) {
-  let data: string | undefined;
-  for (const c of clients) if (to(c)) c.sendRaw((data ??= JSON.stringify(m)));
+// To every client, or to the viewers of one chat. Each broadcast gets an id so an event stream can resume.
+function broadcast(m: ServerMessage, chat?: AgentSession) {
+  const data = JSON.stringify(m);
+  const id = ring.push(data, chat ?? null);
+  for (const c of clients) if (!chat || c.view === chat) c.sendRaw(data, id);
 }
 const live = new Map<string, { chat: AgentSession; watcher: FSWatcher }>();
 let lastViewed: AgentSession;
@@ -110,7 +114,7 @@ async function createChat(cwd: string, resume?: string, title = '') {
   chat.title = title;
   await chat.loadHistory();
   chat.onMessage((m) => {
-    broadcast(m, (c) => c.view === chat);
+    broadcast(m, chat);
     notifyAway(m, () => (viewers(chat) ? null : summary(chat)));
     if (m.type === 'session' && chat === lastViewed) remember(chat);
     if (m.type !== 'event' || m.event.kind === 'user') broadcastLive();
@@ -304,6 +308,14 @@ const server = http.createServer(async (req, res) => {
   try {
     const chat = live.get(url.searchParams.get('chat') ?? '')?.chat ?? lastViewed;
     const liveCwds = [...live.values()].map((l) => l.chat.cwd);
+    if (url.pathname === '/api/events') return openEvents(req, res, url, (url.searchParams.has('session') && bySession(url.searchParams.get('session'))) || chat);
+    if (url.pathname === '/api/cmd' && req.method === 'POST') {
+      const msg = JSON.parse(await readBody(req)) as ClientMessage;
+      if (typeof msg?.type !== 'string') throw new Error('Bad command');
+      const client = streams.get(url.searchParams.get('cid') ?? '') ?? { send: () => {}, sendRaw: () => {}, view: chat };
+      handleCommand(client, msg);
+      return json({ ok: true });
+    }
     if (url.pathname === '/api/terms' && req.method === 'POST') return json(createTerminal(chat.id, chat.cwd));
     if (url.pathname === '/api/terms' && req.method === 'DELETE') return json(closeTerminal(url.searchParams.get('id') ?? ''));
     if (url.pathname === '/api/terms') return json(listTerminals(chat.id));
@@ -487,7 +499,6 @@ wss.on('connection', (ws: WebSocket, req) => {
   if (wanted && chat.state.session.sessionId !== wanted) openSaved(wanted).then((c) => client.view === chat && view(client, c), () => {});
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
-  const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
 
   ws.on('message', (raw) => {
     let msg: ClientMessage;
@@ -496,85 +507,117 @@ wss.on('connection', (ws: WebSocket, req) => {
     } catch {
       return;
     }
-    const chat = client.view;
-    switch (msg.type) {
-      case 'prompt': {
-        if (typeof msg.text !== 'string') break;
-        const id = typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined;
-        // A client with stale state may send a plain prompt while Claude runs; the user's message still goes first.
-        void (chat.state.session.running ? chat.steer(msg.text, id) : chat.prompt(msg.text, id));
-        break;
-      }
-      case 'steer':
-        if (typeof msg.text === 'string') void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
-        break;
-      case 'plan':
-        if (!Array.isArray(msg.next)) break;
-        chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
-        break;
-      case 'answer':
-        chat.answerQuestion(msg.id, msg.answers);
-        break;
-      case 'permission':
-        chat.answerPermission(msg.id, msg.allow, msg.always);
-        break;
-      case 'allow_blocked':
-        void chat.allowBlocked(String(msg.id)).catch(fail);
-        break;
-      case 'set_model':
-        void chat.setModel(msg.model);
-        break;
-      case 'set_permission_mode':
-        void chat.setPermissionMode(msg.mode);
-        break;
-      case 'set_loop':
-        chat.setLoop(Boolean(msg.on), typeof msg.max === 'number' ? msg.max : undefined);
-        break;
-      case 'interrupt':
-        void chat.interrupt();
-        break;
-      case 'stop_task':
-        void chat.stopTask(String(msg.toolUseId)).catch(fail);
-        break;
-      case 'close': {
-        const target = live.get(msg.id)?.chat;
-        if (target) closeByUser(target).catch(fail);
-        break;
-      }
-      case 'view': {
-        const next = live.get(msg.id)?.chat;
-        if (next) view(client, next);
-        else fail(new Error('This chat was closed'));
-        break;
-      }
-      case 'open_session':
-        openSaved(msg.sessionId).then((c) => view(client, c), fail);
-        break;
-      case 'mcp_status':
-        void chat.refreshMcp();
-        break;
-      case 'mcp_reconnect':
-        void chat.reconnectMcp(String(msg.name));
-        break;
-      case 'mcp_toggle':
-        void chat.toggleMcp(String(msg.name), Boolean(msg.enabled));
-        break;
-      case 'ping':
-        client.send({ type: 'pong' });
-        break;
-      case 'restart':
-        restart(Boolean(msg.now));
-        break;
-      case 'new_session':
-        newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);
-        break;
-    }
+    handleCommand(client, msg);
   });
   ws.on('close', () => {
     clients.delete(client);
     broadcastLive();
   });
 });
+
+// Server-Sent Events: the same ServerMessage stream as /ws, resumable from Last-Event-ID through the ring buffer.
+function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: URL, chat: AgentSession) {
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive', 'x-accel-buffering': 'no' });
+  res.flushHeaders();
+  const cid = url.searchParams.get('cid') || randomUUID();
+  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => void res.write(frame(data, id)), view: chat };
+  clients.add(client);
+  streams.set(cid, client);
+  const missed = ring.since(Number(req.headers['last-event-id']), chat);
+  if (missed) {
+    client.view = chat;
+    for (const e of missed) client.sendRaw(e.data, e.id);
+    broadcastLive();
+  } else view(client, chat);
+  const wanted = url.searchParams.get('session');
+  if (wanted && chat.state.session.sessionId !== wanted) openSaved(wanted).then((c) => client.view === chat && view(client, c), () => {});
+  client.send({ type: 'attention', items: attention() });
+  if (restarting) client.send({ type: 'restarting' });
+  const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
+  req.on('close', () => {
+    clearInterval(ping);
+    clients.delete(client);
+    if (streams.get(cid) === client) streams.delete(cid);
+    broadcastLive();
+  });
+}
+
+function handleCommand(client: Client, msg: ClientMessage) {
+  const chat = client.view;
+  const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
+  switch (msg.type) {
+    case 'prompt': {
+      if (typeof msg.text !== 'string') break;
+      const id = typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined;
+      // A client with stale state may send a plain prompt while Claude runs; the user's message still goes first.
+      void (chat.state.session.running ? chat.steer(msg.text, id) : chat.prompt(msg.text, id));
+      break;
+    }
+    case 'steer':
+      if (typeof msg.text === 'string') void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
+      break;
+    case 'plan':
+      if (!Array.isArray(msg.next)) break;
+      chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
+      break;
+    case 'answer':
+      chat.answerQuestion(msg.id, msg.answers);
+      break;
+    case 'permission':
+      chat.answerPermission(msg.id, msg.allow, msg.always);
+      break;
+    case 'allow_blocked':
+      void chat.allowBlocked(String(msg.id)).catch(fail);
+      break;
+    case 'set_model':
+      void chat.setModel(msg.model);
+      break;
+    case 'set_permission_mode':
+      void chat.setPermissionMode(msg.mode);
+      break;
+    case 'set_loop':
+      chat.setLoop(Boolean(msg.on), typeof msg.max === 'number' ? msg.max : undefined);
+      break;
+    case 'interrupt':
+      void chat.interrupt();
+      break;
+    case 'stop_task':
+      void chat.stopTask(String(msg.toolUseId)).catch(fail);
+      break;
+    case 'close': {
+      const target = live.get(msg.id)?.chat;
+      if (target) closeByUser(target).catch(fail);
+      break;
+    }
+    case 'view': {
+      const next = live.get(msg.id)?.chat;
+      if (next) view(client, next);
+      else fail(new Error('This chat was closed'));
+      break;
+    }
+    case 'open_session':
+      openSaved(msg.sessionId).then((c) => view(client, c), fail);
+      break;
+    case 'mcp_status':
+      void chat.refreshMcp();
+      break;
+    case 'mcp_reconnect':
+      void chat.reconnectMcp(String(msg.name));
+      break;
+    case 'mcp_toggle':
+      void chat.toggleMcp(String(msg.name), Boolean(msg.enabled));
+      break;
+    case 'ping':
+      client.send({ type: 'pong' });
+      break;
+    case 'restart':
+      restart(Boolean(msg.now));
+      break;
+    case 'new_session':
+    newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);
+    break;
+  }
+}
 
 server.listen(PORT, () => {
   console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`);
