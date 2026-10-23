@@ -523,7 +523,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => void res.write(frame(data, id)), view: chat };
   clients.add(client);
   streams.set(cid, client);
-  const missed = ring.since(Number(req.headers['last-event-id']), chat);
+  const missed = ring.since(Number(url.searchParams.get('last') ?? req.headers['last-event-id']), chat);
   if (missed) {
     client.view = chat;
     for (const e of missed) client.sendRaw(e.data, e.id);
@@ -533,7 +533,8 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   if (wanted && chat.state.session.sessionId !== wanted) openSaved(wanted).then((c) => client.view === chat && view(client, c), () => {});
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
-  const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
+  // A named event, not a comment: the client hears it and can tell a dead link from a quiet one.
+  const ping = setInterval(() => res.write('event: ping\ndata:\n\n'), 20_000);
   req.on('close', () => {
     clearInterval(ping);
     clients.delete(client);
@@ -606,9 +607,6 @@ function handleCommand(client: Client, msg: ClientMessage) {
       break;
     case 'mcp_toggle':
       void chat.toggleMcp(String(msg.name), Boolean(msg.enabled));
-      break;
-    case 'ping':
-      client.send({ type: 'pong' });
       break;
     case 'restart':
       restart(Boolean(msg.now));

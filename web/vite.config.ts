@@ -59,8 +59,8 @@ export default defineConfig({
     host: true,
     allowedHosts: ['.netbird.cloud'],
     proxy: {
-      '/api': { target: 'http://localhost:7777', xfwd: true },
-      '/ws': { target: 'ws://localhost:7777', ws: true },
+      '/api': { target: `http://localhost:${process.env.AV_PORT ?? 7777}`, xfwd: true },
+      '/ws': { target: `ws://localhost:${process.env.AV_PORT ?? 7777}`, ws: true },
     },
   },
 });

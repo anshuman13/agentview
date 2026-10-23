@@ -76,61 +76,49 @@ function notifyBackground(chats: LiveChat[]) {
   }
 }
 
-let ws: WebSocket | null = null;
 let boot = 0;
-// Taps made during a reconnect (Allow, answers, chat switches) wait for the next socket instead of vanishing.
-const backlog: ClientMessage[] = [];
-export function send(m: ClientMessage) {
-  if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(m));
-    return true;
+// Identifies this tab's event stream so a command lands on the chat this tab views.
+const cid = uid();
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// A command is one POST; a network failure retries, a server error shows up as a notice.
+async function post(m: ClientMessage, tries = 1): Promise<boolean> {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetch(api(`/api/cmd?cid=${cid}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m), signal: AbortSignal.timeout(10_000) });
+      if (r.ok) return true;
+      const body = await r.json().catch(() => ({}));
+      notice(body.error ?? `${r.status} ${r.statusText}`);
+      return false;
+    } catch {
+      if (i + 1 < tries) await sleep(2_000 * (i + 1));
+    }
   }
-  if (m.type !== 'ping') backlog.push(m);
-  if (backlog.length > 20) backlog.shift();
-  if (ws?.readyState !== WebSocket.CONNECTING) reconnect();
   return false;
+}
+
+export function send(m: ClientMessage) {
+  void post(m, 2);
+  return true;
+}
+
+// Messages carry an id so a retry after a lost reply does not run twice; the server ignores repeats.
+function deliver(msg: ClientMessage, onLost: () => void) {
+  void post(msg, 3).then((ok) => {
+    if (ok) return;
+    notice('Message did not reach the server, it is back in the box');
+    onLost();
+  });
 }
 
 export function steer(text: string, onLost: () => void) {
   const id = uid();
   set((s) => ({ events: [...s.events, { id, kind: 'user', text, at: Date.now(), stopping: true }] }));
-  expect({ type: 'steer', text, id }, onLost);
+  deliver({ type: 'steer', text, id }, onLost);
 }
 
 export function prompt(text: string, onLost: () => void) {
-  expect({ type: 'prompt', text, id: uid() }, onLost);
-}
-
-// A message is sent until the server echoes it back as a user event. The server ignores repeats by id.
-const CONFIRM_WAIT = 8_000;
-const TRIES = 3;
-type Expected = { msg: { type: 'prompt' | 'steer'; text: string; id: string }; onLost: () => void; tries: number };
-const expected = new Set<Expected>();
-
-function expect(msg: Expected['msg'], onLost: () => void) {
-  const e: Expected = { msg, onLost, tries: 0 };
-  expected.add(e);
-  attempt(e);
-}
-
-function attempt(e: Expected) {
-  e.tries++;
-  send(e.msg);
-  setTimeout(() => {
-    if (!expected.has(e)) return;
-    if (e.tries < TRIES) {
-      reconnect();
-      return attempt(e);
-    }
-    expected.delete(e);
-    notice('Message did not reach the server, it is back in the box');
-    e.onLost();
-  }, CONFIRM_WAIT);
-}
-
-function confirm(ev: ChatEvent) {
-  if (ev.kind !== 'user') return;
-  for (const e of expected) if (e.msg.id === ev.id) expected.delete(e);
+  deliver({ type: 'prompt', text, id: uid() }, onLost);
 }
 
 function handle(m: ServerMessage) {
@@ -139,7 +127,6 @@ function handle(m: ServerMessage) {
       // A new server boot means new code on the dev server too; reload so the client matches it.
       if (m.boot && boot && m.boot !== boot) return location.reload();
       if (m.boot) boot = m.boot;
-      m.state.events.forEach(confirm);
       set((s) => {
         const same = s.session.id === m.state.session.id;
         const old = new Map(s.events.map((e) => [e.id, e]));
@@ -158,7 +145,6 @@ function handle(m: ServerMessage) {
       setUi({ restarting: true });
       break;
     case 'event':
-      confirm(m.event);
       if (m.event.kind === 'result' && !state.events.some((e) => e.id === m.event.id)) {
         notify('Claude finished', m.event.text.trim().split('\n')[0], focus(state.session.id));
       }
@@ -210,37 +196,43 @@ function handle(m: ServerMessage) {
 // Dev-only beacon logger installed by main.tsx.
 const avlog = (ev: string) => (window as { avlog?: (e: string) => void }).avlog?.(ev);
 
+let es: EventSource | null = null;
+let streamChat = '';
+let lastId = '';
 let retry: ReturnType<typeof setTimeout> | undefined;
-let heard = 0;
-let openedAt = 0;
 let hiddenAt = 0;
-let delay = 1000;
+let heard = 0;
+// The server sends a ping event every 20 s; a link that stays silent longer is dead even if the browser says open.
+const SILENT_MS = 50_000;
 
+// One EventSource per tab; the browser reconnects it and resumes from Last-Event-ID through the server's ring.
 export function connect() {
   clearTimeout(retry);
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  es?.close();
   const { id, sessionId } = getState().session;
-  const sock = new WebSocket(`${proto}://${location.host}/ws${id ? `?chat=${encodeURIComponent(id)}&session=${encodeURIComponent(sessionId ?? '')}` : ''}`);
-  ws = sock;
-  heard = openedAt = Date.now();
-  const handshake = setTimeout(() => sock.readyState === WebSocket.CONNECTING && sock.close(), 10_000);
-  sock.onopen = () => {
-    clearTimeout(handshake);
-    delay = 1000;
+  streamChat = id;
+  const q = new URLSearchParams({ cid });
+  if (id) q.set('chat', id);
+  if (sessionId) q.set('session', sessionId);
+  if (lastId) q.set('last', lastId);
+  const src = new EventSource(`/api/events?${q}`);
+  es = src;
+  heard = Date.now();
+  src.addEventListener('ping', () => (heard = Date.now()));
+  src.onopen = () => {
     setUi({ connected: true, restarting: false });
-    avlog('ws open');
-    for (const m of backlog.splice(0)) sock.send(JSON.stringify(m));
+    avlog('stream open');
   };
-  sock.onclose = () => {
-    clearTimeout(handshake);
-    if (ws !== sock) return;
-    avlog('ws closed');
+  src.onerror = () => {
+    if (es !== src) return;
     setUi({ connected: false });
-    retry = setTimeout(connect, delay);
-    delay = Math.min(delay * 2, 15000);
+    avlog('stream closed');
+    // The browser retries the URL it was given; after a chat switch that is the wrong chat, so reopen by hand.
+    if (src.readyState === EventSource.CLOSED || streamChat !== getState().session.id) retry = setTimeout(connect, 2_000);
   };
-  sock.onmessage = (e) => {
+  src.onmessage = (e) => {
     heard = Date.now();
+    lastId = e.lastEventId || lastId;
     try {
       handle(JSON.parse(e.data));
     } catch (err) {
@@ -249,31 +241,16 @@ export function connect() {
   };
 }
 
-function reconnect() {
-  avlog('ws stale, reconnecting');
-  ws?.close();
-  ws = null;
-  connect();
-}
-
-function probe(wait: number) {
-  if (ws?.readyState === WebSocket.CONNECTING) return;
-  if (ws?.readyState !== WebSocket.OPEN) return reconnect();
-  const sent = Date.now();
-  send({ type: 'ping' });
-  setTimeout(() => {
-    if (heard >= sent || ws?.readyState !== WebSocket.OPEN) return;
-    // A large init can take longer than the probe on a slow link; give a fresh socket a minute before calling it stale.
-    if (heard > openedAt || Date.now() - openedAt > 60_000) reconnect();
-  }, wait);
-}
-
 if (typeof document !== 'undefined') {
-  setInterval(() => document.visibilityState === 'visible' && probe(10000), 15000);
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && es && Date.now() - heard > SILENT_MS) {
+      avlog('stream silent, reconnecting');
+      connect();
+    }
+  }, 10_000);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return void (hiddenAt = Date.now());
-    // Android drops the socket about 5 s into background while the WebView still reports it open.
-    if (hiddenAt && Date.now() - hiddenAt > 10_000) reconnect();
-    else probe(8000);
+    // Android drops the connection in the background while the WebView still reports it open.
+    if (hiddenAt && Date.now() - hiddenAt > 10_000) connect();
   });
 }
