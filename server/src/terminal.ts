@@ -25,7 +25,10 @@ export function createTerminal(chat: string, cwd: string) {
   const t: Term = { id: String(++seq), chat, name: label(n), pty, buf: '', socks: new Set() };
   pty.onData((d) => {
     t.buf += d;
-    if (t.buf.length > MAX) t.buf = t.buf.slice(t.buf.indexOf('\n', t.buf.length - MAX) + 1);
+    if (t.buf.length > MAX) {
+      const nl = t.buf.indexOf('\n', t.buf.length - MAX);
+      t.buf = t.buf.slice(nl < 0 ? t.buf.length - MAX : nl + 1);
+    }
     t.socks.forEach((ws) => ws.readyState === WebSocket.OPEN && ws.send(d));
   });
   pty.onExit(() => {
@@ -57,7 +60,10 @@ export function attachTerminal(ws: WebSocket, id: string) {
       return;
     }
     if (m.t === 'i' && typeof m.d === 'string') t.pty.write(m.d);
-    if (m.t === 'r' && m.c && m.r) t.pty.resize(Math.max(2, Math.floor(m.c)), Math.max(2, Math.floor(m.r)));
+    if (m.t === 'r') {
+      const dim = (v: unknown) => Math.min(1000, Math.max(2, Math.floor(Number(v)) || 0));
+      if (dim(m.c) > 2 || dim(m.r) > 2) t.pty.resize(dim(m.c), dim(m.r));
+    }
     if (m.t === 'c') t.buf = t.buf.slice(t.buf.lastIndexOf('\n') + 1);
   });
   ws.on('close', () => t.socks.delete(ws));

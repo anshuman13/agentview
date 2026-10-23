@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
 
-type Mac = { name: string; url: string; running: number };
+type Mac = { name: string; url: string; running: number; self?: boolean };
 type Connect = { hostname: string; macs: Mac[]; netbird?: string };
 
 type Shell = { AgentViewShell?: { remember?: (url: string, name: string) => void } };
@@ -29,12 +29,19 @@ export function useMacName() {
 
 const switched = typeof location !== 'undefined' && new URLSearchParams(location.search).has('switched');
 
-async function switchMac(url: string) {
+async function reachable(url: string) {
   try {
     await fetch(`${url}/api/connect?peer=1`, { mode: 'no-cors', signal: AbortSignal.timeout(4000) });
+    return true;
   } catch {
     return false;
   }
+}
+
+// A Mac cannot reach its own NetBird address, so the Mac the page is viewed from (self) opens on localhost.
+async function switchMac(m: Mac) {
+  const url = m.self ? `${location.protocol}//localhost${location.port ? `:${location.port}` : ''}` : (await reachable(m.url)) ? m.url : null;
+  if (!url) return false;
   const q = new URLSearchParams({ switched: '1' });
   const shell = localStorage.getItem('agentview.shell');
   if (shell) q.set('shell', shell);
@@ -71,7 +78,7 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
     if (busy) return;
     setBusy(m.url);
     setError('');
-    if (!(await switchMac(m.url))) {
+    if (!(await switchMac(m))) {
       setBusy('');
       setError(`Can't reach ${m.name}. Is NetBird connected and AgentView running there?`);
     }
@@ -87,7 +94,7 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
         })
         .catch((e) => setError(String(e)));
     load();
-    const t = setInterval(load, 10_000);
+    const t = setInterval(() => document.visibilityState === 'visible' && load(), 10_000);
     return () => clearInterval(t);
   }, []);
 
@@ -115,7 +122,7 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
             <li key={m.url} className="clickable" onClick={() => void go(m)}>
               <span className={`mcp-dot ${m.running ? 'ok' : 'off'}`} />
               <span className="mac-name">{m.name}</span>
-              <span className="detail">{busy === m.url ? 'connecting' : m.running ? `${m.running} working` : 'idle'}</span>
+              <span className="detail">{busy === m.url ? 'connecting' : [m.self && 'you are here', m.running ? `${m.running} working` : 'idle'].filter(Boolean).join(', ')}</span>
             </li>
           ))}
         </ul>

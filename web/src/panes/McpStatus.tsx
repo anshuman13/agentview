@@ -32,10 +32,17 @@ const openMcp = () => command('page:mcp');
 
 const slug = (server: string) => server.replace(/[^A-Za-z0-9_-]/g, '_');
 export const toolId = (server: string, tool: string) => `mcp__${slug(server)}__${tool}`;
-const insert = (text: string) => {
+const showChat = () => {
   if (window.innerWidth <= 900) command('tab:chat');
   else if (document.querySelector('.workbench')?.getAttribute('data-chat') === 'false') command('toggleChat');
+};
+const insert = (text: string) => {
+  showChat();
   window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } }));
+};
+const use = (server: string, tool?: string) => {
+  showChat();
+  window.dispatchEvent(new CustomEvent('agentview:use', { detail: { server, tool } }));
 };
 
 export function McpItem() {
@@ -297,7 +304,7 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
         {row.live && MCP_BAD.includes(row.status) && <button onClick={() => send({ type: 'mcp_reconnect', name: row.name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
         {row.live && row.status === 'disabled' && <button onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}><Icon name="debug-start" small /> Enable</button>}
         {row.live && row.status !== 'disabled' && <button onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
-        {row.live && <button onClick={() => insert(`Use the ${row.name} MCP server to `)} title="Start a message that uses this server"><Icon name="comment" small /> Add to chat</button>}
+        {row.live && row.status === 'connected' && <button onClick={() => use(row.name)} title="Ask Claude to use this server in your next message"><Icon name="comment" small /> Add to chat</button>}
         {!row.live && <AddToChat name={row.name} />}
         {url && <a href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
       </div>
@@ -306,7 +313,7 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
         {row.error && (row.live || row.status !== 'needs-auth') && <><dt>Error</dt><dd className="bad mono wrap">{row.error}</dd></>}
         {row.status === 'needs-auth' && row.live && <><dt>Log in</dt><dd><Login name={row.name} /></dd></>}
         {row.status === 'needs-auth' && !row.live && (
-          <><dt>Login</dt><dd>Add it to this chat, then log in here.</dd></>
+          <><dt>Login</dt><dd>Load it in this chat, then log in here.</dd></>
         )}
         {row.command && <><dt>{url ? 'URL' : 'Command'}</dt><dd className="mono wrap">{row.command}</dd></>}
         {row.env && <><dt>Env</dt><dd className="mono wrap">{row.env.join('  ')}</dd></>}
@@ -327,7 +334,7 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
       <div className="mcp-tools">
         {tools.map((t) => (
           <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
-            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="mcp-tag ok">read only</span>}{t.destructive && <span className="mcp-tag bad">destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <button className={`icon-btn mcp-insert ${run === t.name ? 'on' : ''}`} title={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))}><Icon name={run === t.name ? 'close' : 'play'} small /></button>}<button className="icon-btn mcp-insert" title={`Add ${toolId(row.name, t.name)} to chat`} onClick={() => insert(`Use the ${toolId(row.name, t.name)} tool to `)}><Icon name="insert" small /></button></div>
+            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="mcp-tag ok">read only</span>}{t.destructive && <span className="mcp-tag bad">destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <button className={`icon-btn mcp-insert ${run === t.name ? 'on' : ''}`} title={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))}><Icon name={run === t.name ? 'close' : 'play'} small /></button>}{row.live && <button className="icon-btn mcp-insert" title={`Ask Claude to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)}><Icon name="comment" small /></button>}</div>
             {t.description && <div className="d">{t.description}</div>}
             {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
           </div>
@@ -441,7 +448,7 @@ function AddToChat({ name }: { name: string }) {
   };
   return (
     <>
-      <button onClick={add} disabled={busy}><Icon name={busy ? 'loading' : 'add'} small spin={busy} /> Add to this chat</button>
+      <button onClick={add} disabled={busy}><Icon name={busy ? 'loading' : 'add'} small spin={busy} /> Load in this chat</button>
       {error && <span className="mcp-act-error bad">{error}</span>}
     </>
   );

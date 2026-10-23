@@ -8,7 +8,8 @@ const md = new Marked({
   renderer: {
     html: ({ text }) => escapeHtml(text),
     link({ href, tokens }) {
-      return `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${this.parser.parseInline(tokens)}</a>`;
+      const safe = /^(https?:|mailto:)/i.test(href) ? href : '#';
+      return `<a href="${escapeHtml(safe)}" target="_blank" rel="noreferrer">${this.parser.parseInline(tokens)}</a>`;
     },
   },
 });

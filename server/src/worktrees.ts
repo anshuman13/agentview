@@ -104,7 +104,7 @@ async function paseoProjects() {
 
 export async function createWorktree(repo: string, branch: string) {
   if (!(await paseoProjects()).some((p) => p.path === repo)) throw new Error('This repo is not a Paseo project');
-  if (branch.startsWith('-')) throw new Error('Invalid branch name');
+  if (branch.startsWith('-') || !/^[\w./-]+$/.test(branch)) throw new Error('Invalid branch name');
   await git(repo, 'check-ref-format', '--branch', branch).catch(() => { throw new Error(`Invalid branch name: ${branch}`); });
   const base = (await git(repo, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD').catch(() => 'origin/main')).replace(/^origin\//, '');
   const { stdout } = await run('paseo', ['workspace', 'create', '--isolation', 'worktree', '--path', repo, '--mode', 'branch-off', '--new-branch', branch, '--base', base, '--json'], { timeout: 300_000 });

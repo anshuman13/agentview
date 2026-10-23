@@ -134,7 +134,7 @@ function WebFetchBody({ input }: BodyProps) {
   const prompt = str(input.prompt);
   return (
     <>
-      <a className="pd-path" href={url} target="_blank" rel="noreferrer">{url}</a>
+      <a className="pd-path" href={/^https?:/i.test(url) ? url : undefined} target="_blank" rel="noreferrer">{url}</a>
       {prompt && <div className="pd-desc">{prompt}</div>}
     </>
   );

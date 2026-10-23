@@ -5,8 +5,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ROOTS, inside } from './worktrees.js';
-import { readConfigs } from './mcp.js';
-import { callTool, data, listTools, stop, text, type McpResult, type McpServerDef } from './mcpClient.js';
+import { allowedServers } from './mcp.js';
+import { callTool, data, listTools, stop, stopAll, text, type McpResult, type McpServerDef } from './mcpClient.js';
 import type {
   GrafanaDashboards,
   GrafanaLogs,
@@ -78,6 +78,7 @@ async function repoName(cwd: string) {
 }
 
 async function hints(repo: string) {
+  if (!/^[\w.-]+$/.test(repo) || repo.startsWith('.')) return '';
   const files = ROOTS.flatMap((r) => ['centro.yaml', 'catalog-info.yaml', '.sentryclirc', 'sentry.properties'].map((f) => path.join(r, repo, f)));
   return (await Promise.all(files.map((f) => readFile(f, 'utf8').catch(() => '')))).join('\n');
 }
@@ -107,10 +108,17 @@ async function configFor(repo: string, s: Settings) {
   return s.repos?.[repo] ?? (await guess(repo, s));
 }
 
-async function userServers(cwd: string): Promise<Servers> {
-  const [user, repo] = await readConfigs(cwd);
-  return { ...repo.mcpServers, ...user.projects?.[cwd]?.mcpServers, ...user.mcpServers };
-}
+const userServers = (cwd: string): Promise<Servers> => allowedServers(cwd);
+
+// One client per server definition, so a repo's grafana is never reused for another repo's.
+const keyOf = (name: string, def: McpServerDef) => `${name}:${JSON.stringify(def)}`;
+
+const httpsUrl = (u: string) => {
+  if (!u) return u;
+  const parsed = new URL(u);
+  if (parsed.protocol !== 'https:') throw new Error('Sentry URL must use https');
+  return parsed.origin;
+};
 
 const envToken = () => process.env.SENTRY_AUTH_TOKEN || process.env.SENTRY_ACCESS_TOKEN || '';
 const sentryToken = (s: Settings) => envToken() || s.sentryToken || '';
@@ -154,7 +162,7 @@ async function lokiUid(def: McpServerDef, cfg: ObserveConfig['grafana']) {
   if (cfg?.lokiUid) return cfg.lokiUid;
   const key = grafanaBase(def, cfg);
   if (lokiCache.has(key)) return lokiCache.get(key)!;
-  const r = data(await callTool('grafana', def, 'list_datasources', { type: 'loki' })) as { datasources?: { uid: string }[] } | null;
+  const r = data(await callTool(keyOf('grafana', def), def, 'list_datasources', { type: 'loki' })) as { datasources?: { uid: string }[] } | null;
   const uid = r?.datasources?.[0]?.uid;
   if (!uid) throw new Error('Grafana has no Loki datasource; set grafana.lokiUid in the settings');
   lokiCache.set(key, uid);
@@ -163,7 +171,7 @@ async function lokiUid(def: McpServerDef, cfg: ObserveConfig['grafana']) {
 
 async function exploreLink(def: McpServerDef, uid: string, expr: string) {
   const args = { resourceType: 'explore', datasourceUid: uid, queries: [{ refId: 'A', expr }], timeRange: { from: 'now-1h', to: 'now' } };
-  const r = await callTool('grafana', def, 'generate_deeplink', args).catch(() => null);
+  const r = await callTool(keyOf('grafana', def), def, 'generate_deeplink', args).catch(() => null);
   const url = r ? text(r).trim() : '';
   return /^https?:\/\//.test(url) ? url : undefined;
 }
@@ -181,7 +189,7 @@ const nsToIso = (ts: unknown) => {
 
 async function dashboards(repo: string, cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<GrafanaDashboards> {
   const query = cfg?.query?.trim() || repo;
-  const r = data(await callTool('grafana', def, 'search_dashboards', { query, limit: 20 })) as { dashboards?: Record<string, string>[] } | null;
+  const r = data(await callTool(keyOf('grafana', def), def, 'search_dashboards', { query, limit: 20 })) as { dashboards?: Record<string, string>[] } | null;
   const base = grafanaBase(def, cfg);
   const found = (r?.dashboards ?? []).map((d) => ({ uid: d.uid, title: d.title, url: d.url?.startsWith('/') ? base + d.url : d.url, folder: d.folderTitle }));
   const pinned = (cfg?.dashboards ?? []).map((d) => ({ uid: d.uid ?? '', title: d.title, url: d.url }));
@@ -193,7 +201,7 @@ async function dashboards(repo: string, cfg: ObserveConfig['grafana'], def: McpS
 async function logs(cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<GrafanaLogs> {
   const logql = `${selectorOf(cfg)} ${ERRORS}`;
   const uid = await lokiUid(def, cfg);
-  const r = data(await callTool('grafana', def, 'query_loki_logs', { datasourceUid: uid, logql, limit: 50, direction: 'backward', ...RANGE })) as any;
+  const r = data(await callTool(keyOf('grafana', def), def, 'query_loki_logs', { datasourceUid: uid, logql, limit: 50, direction: 'backward', ...RANGE })) as any;
   const lines = (r?.data ?? []).map((e: any) => ({ ts: nsToIso(e.timestamp), line: String(e.line ?? ''), level: e.structuredMetadata?.detected_level ?? e.labels?.level ?? e.labels?.severity }));
   const link = await exploreLink(def, uid, logql);
   return { logs: lines, link, scanned: Number(r?.metadata?.totalLinesScanned) || 0 };
@@ -222,7 +230,7 @@ async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef): Promi
   const rank = (rows: LogPattern[]) => rows.sort((a, b) => b.count - a.count).slice(0, 20);
   if (tools.has('query_loki_patterns')) {
     try {
-      const rows = collectPatterns(data(await callTool('grafana', def, 'query_loki_patterns', { datasourceUid: uid, logql: selector, ...RANGE })));
+      const rows = collectPatterns(data(await callTool(keyOf('grafana', def), def, 'query_loki_patterns', { datasourceUid: uid, logql: selector, ...RANGE })));
       if (rows.length) return { patterns: rank(rows), source: 'Loki patterns', link };
       notes.push('Loki patterns: none');
     } catch (e) {
@@ -232,14 +240,14 @@ async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef): Promi
   if (tools.has('find_error_pattern_logs')) {
     try {
       const labels = Object.fromEntries([...selector.matchAll(/(\w+)\s*=\s*"([^"]*)"/g)].map((m) => [m[1], m[2]]));
-      const rows = collectPatterns(data(await callTool('grafana', def, 'find_error_pattern_logs', { name: `agentview ${selector}`, labels, start: new Date(Date.now() - 3600_000).toISOString() }, 60_000)));
+      const rows = collectPatterns(data(await callTool(keyOf('grafana', def), def, 'find_error_pattern_logs', { name: `agentview ${selector}`, labels, start: new Date(Date.now() - 3600_000).toISOString() }, 60_000)));
       if (rows.length) return { patterns: rank(rows), source: 'Sift', link };
       notes.push('Sift: none');
     } catch (e) {
       notes.push(`Sift: ${(e as Error).message.split('\n')[0]}`);
     }
   }
-  const r = data(await callTool('grafana', def, 'query_loki_logs', { datasourceUid: uid, logql: `${selector} ${ERRORS}`, limit: 100, format: 'compact', ...RANGE })) as any;
+  const r = data(await callTool(keyOf('grafana', def), def, 'query_loki_logs', { datasourceUid: uid, logql: `${selector} ${ERRORS}`, limit: 100, format: 'compact', ...RANGE })) as any;
   const counts = new Map<string, number>();
   const lines: string[] = (r?.data ?? []).flatMap((e: any) => (Array.isArray(e.lines) ? e.lines.map((l: any) => String(l.line ?? l ?? '')) : [String(e.line ?? '')]));
   for (const l of lines) {
@@ -357,7 +365,7 @@ async function sentryIssues(repo: string, cwd: string): Promise<SentryIssues> {
     repo,
     cwd,
     async (src, t) => {
-      const out = text(await callTool('sentry', src.def, 'search_issues', { organizationSlug: t.org, projectSlugOrId: t.project, query: 'is:unresolved', sort: 'date', limit: 25 }, 90_000));
+      const out = text(await callTool(keyOf('sentry', src.def), src.def, 'search_issues', { organizationSlug: t.org, projectSlugOrId: t.project, query: 'is:unresolved', sort: 'date', limit: 25 }, 90_000));
       const issues = parseIssues(out, t.base, t.org);
       if (!issues.length && out.trim() && !/no issues|0 issues|no results/i.test(out)) throw new Error(`Could not read the Sentry MCP reply: ${out.slice(0, 300)}`);
       return issues;
@@ -377,7 +385,7 @@ async function sentryDetails(repo: string, cwd: string, id: string, shortId: str
   const r = await withSentry(
     repo,
     cwd,
-    async (src, t) => text(await callTool('sentry', src.def, 'get_sentry_resource', { resourceType: 'issue', organizationSlug: t.org, resourceId: shortId || id }, 90_000)),
+    async (src, t) => text(await callTool(keyOf('sentry', src.def), src.def, 'get_sentry_resource', { resourceType: 'issue', organizationSlug: t.org, resourceId: shortId || id }, 90_000)),
     (token, t) => restDetails(token, t, id || shortId),
   );
   return { via: r.via, text: r.note ? `${r.note}\n\n${r.value}` : r.value };
@@ -499,7 +507,11 @@ async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string)
   if ('config' in b) {
     const config = b.config ?? null;
     if (config !== null && (typeof config !== 'object' || Array.isArray(config))) throw new Error('Config must be a JSON object');
-    if (config) repos[repo] = config as ObserveConfig;
+    if (config) {
+      const c = config as ObserveConfig;
+      if (c.sentry?.url) c.sentry.url = httpsUrl(String(c.sentry.url));
+      repos[repo] = c;
+    }
     else delete repos[repo];
   }
   if (b.sentry && typeof b.sentry === 'object') {
@@ -507,12 +519,13 @@ async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string)
     const current = repos[repo] ?? (await guess(repo, s));
     const sentry = { ...current.sentry };
     for (const k of ['org', 'project', 'url'] as const) if (typeof inp[k] === 'string') sentry[k] = (inp[k] as string).trim();
+    if (sentry.url) sentry.url = httpsUrl(sentry.url);
     repos[repo] = { ...current, sentry };
   }
   const next: Settings = { ...s, repos };
   if (typeof b.sentryToken === 'string') {
     next.sentryToken = b.sentryToken.trim();
-    stop('sentry');
+    stopAll('sentry:');
   }
   await save(next);
   lokiCache.clear();
@@ -540,7 +553,10 @@ async function addToClaude(server: string, cwd: string) {
 
 async function body(req: http.IncomingMessage) {
   let raw = '';
-  for await (const chunk of req) raw += chunk;
+  for await (const chunk of req) {
+    raw += chunk;
+    if (raw.length > 1_000_000) throw new Error('Request body too large');
+  }
   return raw ? JSON.parse(raw) : {};
 }
 

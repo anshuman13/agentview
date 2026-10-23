@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 const exec = promisify(execFile);
@@ -31,7 +31,7 @@ async function walk(root: string, rel: string): Promise<string[]> {
 }
 
 export async function listDir(cwd: string, rel: string) {
-  const abs = safeResolve(cwd, rel);
+  const abs = await realResolve(cwd, rel);
   const entries = await readdir(abs, { withFileTypes: true });
   const items = await Promise.all(
     entries.map(async (e) => ({
@@ -50,25 +50,39 @@ export async function listDir(cwd: string, rel: string) {
     .sort((a, b) => (a.dir !== b.dir ? (a.dir ? -1 : 1) : a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })));
 }
 
+const within = (file: string, root: string) => file === root || file.startsWith(root + path.sep);
+
 export function safeResolve(cwd: string, rel: string): string {
   const abs = path.resolve(cwd, rel);
-  if (!abs.startsWith(path.resolve(cwd) + path.sep) && abs !== path.resolve(cwd)) {
-    throw new Error('path outside project');
-  }
+  if (!within(abs, path.resolve(cwd))) throw new Error('path outside project');
   return abs;
 }
+
+// Like safeResolve, and also refuses symlinks that lead out of the project.
+async function realResolve(cwd: string, rel: string) {
+  const abs = safeResolve(cwd, rel);
+  const [real, root] = await Promise.all([realpath(abs).catch(() => abs), realpath(cwd).catch(() => path.resolve(cwd))]);
+  if (!within(real, root)) throw new Error('path outside project');
+  return abs;
+}
+
+const MAX_FILE = 5_000_000;
 
 const IMAGES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp', avif: 'image/avif' };
 
 export async function readImage(cwd: string, rel: string) {
   const type = IMAGES[path.extname(rel).slice(1).toLowerCase()];
   if (!type) throw new Error('not an image');
-  return { type, body: await readFile(safeResolve(cwd, rel)) };
+  const abs = await realResolve(cwd, rel);
+  if ((await stat(abs)).size > 50_000_000) throw new Error('image too large');
+  return { type, body: await readFile(abs) };
 }
 
 export async function readFileWithOriginal(cwd: string, rel: string) {
-  const abs = safeResolve(cwd, rel);
+  const abs = await realResolve(cwd, rel);
+  const size = await stat(abs).then((s) => s.size).catch(() => 0);
+  if (size > MAX_FILE) throw new Error(`File is ${Math.round(size / 1e6)} MB, too large to show`);
   const content = await readFile(abs, 'utf8').catch(() => '');
-  const original = await exec('git', ['show', `HEAD:${rel}`], { cwd, maxBuffer: 64 * 1024 * 1024 }).then((r) => r.stdout, () => '');
+  const original = await exec('git', ['show', `HEAD:./${rel}`], { cwd, maxBuffer: MAX_FILE }).then((r) => r.stdout, () => '');
   return { path: rel, content, original };
 }

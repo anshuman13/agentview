@@ -11,6 +11,9 @@ type State = 'off' | 'connecting' | 'on';
 type Msg = { id?: number; method?: string; params?: any; result?: any; error?: { message: string }; sessionId?: string };
 
 const PORT_FILE = path.join(os.homedir(), 'Library/Application Support/Google/Chrome/DevToolsActivePort');
+// The relay address carries its token. Terminals, Claude and MCP servers inherit process.env, so take it out first.
+const CDP = process.env.CHROME_CDP;
+delete process.env.CHROME_CDP;
 const PROFILE = path.join(os.homedir(), '.agentview/chrome');
 const PROFILE_PORT = 9333;
 
@@ -39,11 +42,13 @@ let fastUntil = 0;
 const RETRY = new Set(['disabled', 'nochrome', 'closed', 'nofda']);
 
 export async function endpoint() {
-  if (process.env.CHROME_CDP) return process.env.CHROME_CDP;
+  if (CDP) return CDP;
   if (ownProfile()) {
     try {
       const r = await fetch(`http://127.0.0.1:${PROFILE_PORT}/json/version`, { signal: AbortSignal.timeout(3000) });
-      return ((await r.json()) as { webSocketDebuggerUrl: string }).webSocketDebuggerUrl;
+      const url = ((await r.json()) as { webSocketDebuggerUrl: string }).webSocketDebuggerUrl;
+      if (!url.startsWith(`ws://127.0.0.1:${PROFILE_PORT}/`)) throw new Error('disabled');
+      return url;
     } catch {
       throw new Error((await chromeRunning()) ? 'disabled' : 'nochrome');
     }
@@ -96,6 +101,7 @@ function retry() {
 }
 
 export function openInChrome(url: string) {
+  if (!/^https?:\/\//i.test(url)) return;
   if (ownProfile() && cdp) {
     call('Target.createTarget', { url })
       .then(({ targetId }) => call('Target.activateTarget', { targetId }))

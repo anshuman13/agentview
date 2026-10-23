@@ -25,7 +25,7 @@ import { otherMacs, thisMac } from './macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
-import { allowedPeer, allowedRequest } from './access.js';
+import { allowedPeer, allowedRequest, requester } from './access.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -161,9 +161,13 @@ function watchFiles(cwd: string, onChange: (rel: string) => void) {
   }).on('error', (err) => console.error(`watcher: ${String(err)}`));
 }
 
-async function readBody(req: http.IncomingMessage) {
+async function readBody(req: http.IncomingMessage, max = 1_000_000) {
   let body = '';
-  for await (const chunk of req) body += chunk;
+  let size = 0;
+  for await (const chunk of req) {
+    if ((size += chunk.length) > max) throw new Error('Request body too large');
+    body += chunk;
+  }
   return body;
 }
 
@@ -192,7 +196,9 @@ async function openSaved(sessionId: string) {
   if (!info) throw new Error('Session not found');
   if (!info.cwd) throw new Error('This session has no folder recorded, so it cannot be resumed');
   if (!(await isDir(info.cwd))) throw new Error(`Folder no longer exists: ${info.cwd}`);
-  return createChat(info.cwd, sessionId, info.summary);
+  const dir = path.resolve(info.cwd);
+  if (dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${info.cwd}`);
+  return createChat(dir, sessionId, info.summary);
 }
 
 async function newChat(cwd: string, from: AgentSession) {
@@ -364,18 +370,18 @@ const server = http.createServer(async (req, res) => {
       return res.end(body);
     }
     if (url.pathname === '/api/connect') {
-      const port = url.searchParams.get('port') || (req.headers.host?.match(/:(\d+)$/)?.[1] ?? String(PORT));
+      const port = [url.searchParams.get('port'), req.headers.host?.match(/:(\d+)$/)?.[1]].find((p) => p && /^\d{1,5}$/.test(p)) ?? String(PORT);
       const ips = Object.values(os.networkInterfaces())
         .flat()
         .filter((a) => a && a.family === 'IPv4' && !a.internal && allowedPeer(a.address))
         .map((a) => a!.address);
       const running = [...live.values()].filter(({ chat }) => chat.state.session.running).length;
-      const { macs, problem } = url.searchParams.has('peer') ? { macs: [] } : await otherMacs(port);
+      const { macs, problem } = url.searchParams.has('peer') ? { macs: [] } : await otherMacs(port, requester(req));
       return json({ hostname: thisMac, urls: ips.map((ip) => `http://${ip}:${port}`), running, macs, netbird: problem });
     }
 
     if (DEV_WEB) {
-      res.writeHead(302, { location: `http://${(req.headers.host ?? 'localhost').replace(/:\d+$/, '')}:${DEV_WEB}${url.pathname}${url.search}` });
+      res.writeHead(302, { location: `http://${new URL(`http://${req.headers.host ?? 'localhost'}`).hostname}:${DEV_WEB}${url.pathname}${url.search}` });
       return res.end();
     }
     let file = path.join(WEB_DIST, url.pathname === '/' ? 'index.html' : url.pathname);
@@ -407,11 +413,32 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.on('connection', (socket) => allowedPeer(socket.remoteAddress) || socket.destroy());
+server.on('connection', (socket) => {
+  let ok = false;
+  try {
+    ok = allowedPeer(socket.remoteAddress);
+  } catch {}
+  if (!ok) socket.destroy();
+});
 
-const wss = new WebSocketServer({ server, path: '/ws', verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers) });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8_000_000, verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers) });
+
+// Phones that drop off the VPN leave half-open sockets; without this they count as viewers for hours.
+const alive = new WeakSet<WebSocket>();
+setInterval(() => {
+  for (const ws of wss.clients) {
+    if (!alive.has(ws)) {
+      ws.terminate();
+      continue;
+    }
+    alive.delete(ws);
+    ws.ping();
+  }
+}, 30_000).unref();
 
 wss.on('connection', (ws: WebSocket, req) => {
+  alive.add(ws);
+  ws.on('pong', () => alive.add(ws));
   const params = new URL(req.url ?? '', 'http://x').searchParams;
   const term = params.get('term');
   if (term !== null) return attachTerminal(ws, term);
@@ -434,12 +461,13 @@ wss.on('connection', (ws: WebSocket, req) => {
     const chat = client.view;
     switch (msg.type) {
       case 'prompt':
-        void chat.prompt(msg.text);
+        if (typeof msg.text === 'string') void chat.prompt(msg.text);
         break;
       case 'steer':
-        void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
+        if (typeof msg.text === 'string') void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
         break;
       case 'plan':
+        if (!Array.isArray(msg.next)) break;
         chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
         break;
       case 'answer':

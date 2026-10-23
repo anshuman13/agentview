@@ -232,8 +232,8 @@ export function stop(key: string) {
   clients.delete(key);
 }
 
-export function stopAll() {
-  for (const key of [...clients.keys()]) stop(key);
+export function stopAll(prefix = '') {
+  for (const key of [...clients.keys()]) if (key.startsWith(prefix)) stop(key);
 }
 
-process.on('exit', stopAll);
+process.on('exit', () => stopAll());
