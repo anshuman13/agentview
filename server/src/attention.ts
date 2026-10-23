@@ -1,10 +1,11 @@
 import os from 'node:os';
 import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { ATTENTION_LABEL, type AttentionItem, type AttentionKind, type GitStatus, type PullRequest } from '../../shared/protocol.js';
+import { ATTENTION_LABEL, type AttentionItem, type AttentionKind, type DeployStatus, type GitStatus, type PullRequest } from '../../shared/protocol.js';
 import { listIssues, listPrs, type Issue } from './github.js';
 import { gitStatus } from './git.js';
 import { sentryWatch } from './observe.js';
+import { deployWatch } from './deploy.js';
 import type { SentryIssue } from '../../shared/observe.js';
 import { post } from './notify.js';
 
@@ -12,9 +13,10 @@ const FILE = path.join(os.homedir(), '.agentview/attention.json');
 const EVERY = 5 * 60_000;
 const EDIT_AGE = 10 * 60_000;
 const NEW_FOR = 24 * 60 * 60_000;
+const STALE_AFTER = 2 * 24 * 60 * 60_000;
 const FORGET = 7 * 24 * 60 * 60_000;
 
-function promptFor(kind: Exclude<AttentionKind, 'commit' | 'sentry'>, p: { number: number; title: string; url: string; branch?: string }) {
+function promptFor(kind: Exclude<AttentionKind, 'commit' | 'sentry' | 'deploy'>, p: { number: number; title: string; url: string; branch?: string }) {
   const n = p.number;
   const ref = `#${n} "${p.title}" (${p.url})`;
   switch (kind) {
@@ -26,6 +28,8 @@ function promptFor(kind: Exclude<AttentionKind, 'commit' | 'sentry'>, p: { numbe
       return `Review PR ${ref}. Read it with \`gh pr view ${n}\` and \`gh pr diff ${n}\`, then list correctness bugs and risky changes with file and line references. Do not post anything to GitHub.`;
     case 'ready':
       return `My PR ${ref} is approved and green. Read \`gh pr view ${n}\` and \`gh pr diff ${n}\`, check nothing looks unsafe to merge, and tell me. Do not merge.`;
+    case 'stale':
+      return `My PR ${ref} has had no activity for days. Check \`gh pr view ${n}\` for requested reviewers and comments, check \`gh pr view ${n} --json mergeable,mergeStateStatus\` for conflicts, and tell me who to ping or what to do. Do not post anything to GitHub.`;
     case 'issue':
       return `Issue ${ref} is assigned to me. Read it with \`gh issue view ${n} --comments\`, find the relevant code and propose a plan to fix it. Wait for my go before changing files.`;
   }
@@ -34,13 +38,14 @@ function promptFor(kind: Exclude<AttentionKind, 'commit' | 'sentry'>, p: { numbe
 export function itemsFor(cwd: string, prs: PullRequest[], issues: Issue[], now = Date.now()): AttentionItem[] {
   const repo = path.basename(cwd);
   const out: AttentionItem[] = [];
-  const add = (kind: Exclude<AttentionKind, 'commit' | 'sentry'>, p: { number: number; title: string; url: string; branch?: string }) =>
+  const add = (kind: Exclude<AttentionKind, 'commit' | 'sentry' | 'deploy'>, p: { number: number; title: string; url: string; branch?: string }) =>
     out.push({ id: `${kind}:${p.url}`, kind, repo, cwd, number: p.number, title: p.title, url: p.url, since: now, prompt: promptFor(kind, p) });
   for (const p of prs) {
     if (p.mine && p.checks === 'failure') add('ci', p);
     if (p.mine && p.review === 'CHANGES_REQUESTED') add('changes', p);
     if (p.reviewRequested && !p.mine) add('review', p);
     if (p.mine && !p.draft && p.review === 'APPROVED' && (p.checks === 'success' || p.checks === 'none')) add('ready', p);
+    if (p.mine && !p.draft && !['APPROVED', 'CHANGES_REQUESTED'].includes(p.review) && now - Date.parse(p.updatedAt) > STALE_AFTER) add('stale', p);
   }
   for (const i of issues) add('issue', i);
   return out;
@@ -57,6 +62,20 @@ export function commitItem(e: Edited, status: GitStatus, now = Date.now()): Atte
   const title = `${n} changed file${n === 1 ? '' : 's'} on ${status.branch || 'detached HEAD'}`;
   const prompt = `There are uncommitted changes in ${repo} (${title}) from an earlier chat. Run \`git status\` and \`git diff\`, review them and propose a commit message. Do not commit until I confirm.`;
   return { id: `commit:${e.cwd}`, kind: 'commit', repo, cwd: e.cwd, number: 0, title, url: '', since: now, prompt, chatId: e.chatId };
+}
+
+// The newest deployment of an environment ended in failure or error. Pending and inactive ones are left alone.
+export function deployItems(cwd: string, d: DeployStatus, now = Date.now()): AttentionItem[] {
+  const repo = path.basename(cwd);
+  return d.envs
+    .filter((e) => e.latest && ['failure', 'error'].includes(e.latest.state))
+    .map((e) => {
+      const l = e.latest!;
+      const sha = l.sha.slice(0, 7);
+      const back = e.rollbackTo ? ` or roll back to ${e.rollbackTo.sha.slice(0, 7)}` : '';
+      const prompt = `The latest deployment of ${d.app} to ${e.label} failed: ${l.description || l.state} (${l.url}), commit ${sha} by ${l.by}. Read the deploy log at that URL, compare with the deployed commit, and tell me whether to fix forward${back}. Do not deploy or roll back yourself.`;
+      return { id: `deploy:${d.repo}:${e.name}:${l.id}`, kind: 'deploy' as const, repo, cwd, number: 0, title: `${e.label}: ${l.description || l.state} (${sha})`, url: l.url, since: now, prompt };
+    });
 }
 
 export type SentryBase = Record<string, { count: number; at: number }>;
@@ -150,6 +169,12 @@ async function poll(src: Sources) {
         const r = sentryItems(cwd, w.repo, w.issues, sentryBase[cwd]);
         sentryBase[cwd] = r.base;
         found.push(...r.items);
+      } catch {}
+    }),
+    ...[...new Set(src.cwds)].map(async (cwd) => {
+      try {
+        const d = await deployWatch(cwd);
+        if (d) found.push(...deployItems(cwd, d));
       } catch {}
     }),
     ...[...byCwd.values()].map(async (e) => {
