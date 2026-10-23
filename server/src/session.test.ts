@@ -711,9 +711,14 @@ describe('send queue fuzz', () => {
       const started: string[] = [];
       const enqueue = priv.enqueue.bind(priv);
       priv.enqueue = (text: string) => {
-        started.push(sent.find((m) => m.text === text)!.id);
+        started.push(sent.find((m) => m.text === text)?.id ?? text);
         enqueue(text);
       };
+      const idOf = (e: Extract<ChatEvent, { kind: 'user' }>) => sent.find((m) => m.id === e.id)?.id ?? e.text;
+      const bigBro = () =>
+        void (s as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<unknown> })
+          .confirmBigBro({ hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { subagent_type: BIG_BRO, description: 'd', prompt: 'p' }, tool_use_id: `t${seed}-${n}` }, new AbortController().signal)
+          .catch(() => {});
       let n = 0;
       const user = () => s.state.events.filter((e): e is Extract<ChatEvent, { kind: 'user' }> => e.kind === 'user');
       const trace: string[] = [];
@@ -724,10 +729,10 @@ describe('send queue fuzz', () => {
         const info = () => `after ${trace.join(' > ')}`;
         const seen = user().map((e) => e.id);
         expect(new Set(seen).size, `duplicate user event ${info()}`).toBe(seen.length);
-        expect(user().filter((e) => !e.queued).map((e) => e.id), `sent order ${info()}`).toEqual(started);
+        expect(user().filter((e) => !e.queued).map(idOf), `sent order ${info()}`).toEqual(started);
         const waiting = sent.map((m) => m.id).filter((id) => !started.includes(id) && !dropped.has(id));
         expect(user().filter((e) => e.queued).map((e) => e.id), `queue order ${info()}`).toEqual(waiting);
-        for (const e of user()) expect(e.text, info()).toBe(sent.find((m) => m.id === e.id)?.text);
+        for (const e of user()) if (sent.some((m) => m.id === e.id)) expect(e.text, info()).toBe(sent.find((m) => m.id === e.id)?.text);
       };
       const queuedIds = () => (priv.queued as { id: string }[]).map((e) => e.id);
       for (let step = 0; step < 25; step++) {
@@ -755,21 +760,37 @@ describe('send queue fuzz', () => {
           await s.interrupt();
           for (const id of q) dropped.add(id);
           check('interrupt');
-        } else if (roll < 0.85) {
-          if (s.state.session.running) result(`r${seed}-${step}`, r() < 0.3 ? 'error_during_execution' : 'success');
+        } else if (roll < 0.82) {
+          // A turn only ends once every card is answered.
+          if (s.state.session.running && !s.state.pending.length) result(`r${seed}-${step}`, r() < 0.3 ? 'error_during_execution' : 'success');
           check('result');
-        } else if (roll < 0.92) {
+        } else if (roll < 0.87) {
           sent.push({ id: `c${seed}-${step}`, text: `/compact ${step}` });
           await s.prompt(`/compact ${step}`, `c${seed}-${step}`);
           check('compact');
-        } else {
+        } else if (roll < 0.9) {
           // The CLI dies: queued input is lost, the events stay.
           priv.q = { ...priv.q, [Symbol.asyncIterator]: async function* () {} } as unknown as Priv['q'];
           await priv.consume();
           check('exit');
+          expect(s.state.pending, `cards survived a CLI exit: ${trace.join(' > ')}`).toHaveLength(0);
+        } else if (roll < 0.94) {
+          if (s.state.session.running && !s.state.pending.length) bigBro();
+          check('ask');
+        } else if (roll < 0.97) {
+          const card = s.state.pending[0];
+          if (card) s.answerPermission(card.id, r() < 0.5);
+          check('answer');
+        } else {
+          s.changePlan([`step ${step}`, 'then stop']);
+          check('plan');
         }
       }
-      for (let i = 0; i < 60 && s.state.session.running; i++) result(`drain${i}`);
+      for (let i = 0; i < 60 && (s.state.session.running || s.state.pending.length); i++) {
+        for (const card of s.state.pending) s.answerPermission(card.id, false);
+        if (s.state.session.running) result(`drain${i}`);
+      }
+      expect(s.state.pending, `cards left after draining: ${trace.join(' > ')}`).toHaveLength(0);
       expect(s.state.session.running, `still running after draining: ${trace.join(' > ')}`).toBe(false);
       expect(user().some((e) => e.queued), `queue not empty after draining: ${trace.join(' > ')}`).toBe(false);
     });
