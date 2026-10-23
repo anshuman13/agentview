@@ -40,8 +40,8 @@ and notes. The timeline shows one card per prompt: Claude's final reply, the fil
 commands run and the first error of each failed one, commits, subagents, these notes and the steps behind them.
 Switch to the transcript for every message and step in order.
 
-- Sending while Claude works queues your message. If Claude has been inside one tool call for more than 10 seconds,
-  sending stops that call and continues with your message. Cmd+Enter always stops and sends
+- Sending while Claude works stops whatever it is doing, including an open permission or question, and continues
+  with your message
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
 - Questions, plan approvals and permissions show as buttons in the timeline
 

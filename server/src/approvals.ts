@@ -78,9 +78,8 @@ export class Approvals {
     else w.resolve({ behavior: 'allow', updatedInput: w.input, updatedPermissions: always ? w.suggestions : undefined });
   }
 
-  denyAll() {
-    for (const w of this.waiting.values()) w.resolve({ behavior: 'deny', message: 'Session closed' });
-    this.waiting.clear();
+  denyAll(message = 'Session closed') {
+    for (const id of [...this.waiting.keys()]) this.finish(id)?.resolve({ behavior: 'deny', message });
   }
 
   private finish(id: string) {
