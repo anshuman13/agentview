@@ -19,6 +19,7 @@ import { listBin, removeSession, restoreSession } from './bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './files.js';
 import { github } from './github.js';
 import { attention, dismissAttention, onAttention, refreshAttention, startAttention } from './attention.js';
+import { dismissFinding, getFindings } from './findings.js';
 import { deployRoute } from './deploy.js';
 import { gitRoute } from './git.js';
 import { observe } from './observe.js';
@@ -397,6 +398,11 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
     if (url.pathname === '/api/attention') return json(url.searchParams.has('fresh') ? await refreshAttention(attentionSources([chat.cwd])) : attention());
+    if (url.pathname === '/api/findings') return json(await getFindings(chat.cwd, url.searchParams.get('target') ?? 'local'));
+    if (url.pathname === '/api/findings/dismiss' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req));
+      return json(await dismissFinding(chat.cwd, String(body.target ?? 'local'), String(body.key ?? '')));
+    }
     if (url.pathname === '/api/attention/dismiss' && req.method === 'POST') return json(dismissAttention(String(JSON.parse(await readBody(req)).id ?? '')));
     if (url.pathname === '/api/attention/ask' && req.method === 'POST') {
       const wanted = JSON.parse(await readBody(req)).id;

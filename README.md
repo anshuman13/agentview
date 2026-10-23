@@ -48,6 +48,12 @@ Switch to the transcript for every message and step in order.
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
 - Questions, plan approvals and permissions show as buttons in the timeline
 
+## Review findings
+
+"Ask Claude to review" on a pull request and the inbox's review prompt run `/code-review <number>`. The findings
+it reports show up in the pull request's pane, most severe first: a row opens the file on that line, Fix sends
+the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentview/findings.json`).
+
 ## Context
 
 The meter shows the tokens in context and turns red past 200k. AgentView then runs `/compact` when the turn ends.

@@ -1,17 +1,18 @@
 import { useSyncExternalStore } from 'react';
-import { ATTENTION_LABEL, type AttentionItem, type ChatEvent, type ClientMessage, type LiveChat, type ServerMessage, type ServerState } from '../../shared/protocol';
+import { ATTENTION_LABEL, type AttentionItem, type ChatEvent, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../shared/protocol';
 import { notify } from './notify';
 
 type UiState = {
   connected: boolean;
   restarting?: boolean;
   openFile: string | null;
+  openLine?: number | null;
   follow: boolean;
   switcherOpen: boolean;
   repoPicker: boolean;
 };
 
-export type State = ServerState & { live: LiveChat[]; attention: AttentionItem[]; ui: UiState };
+export type State = ServerState & { live: LiveChat[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; ui: UiState };
 
 let state: State = {
   session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null }, repeat: null },
@@ -21,6 +22,7 @@ let state: State = {
   recentFiles: [],
   live: [],
   attention: [],
+  findings: {},
   ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false },
 };
 
@@ -49,6 +51,10 @@ export function setUi(patch: Partial<UiState>) {
 }
 
 export const getState = () => state;
+
+export function setFindings(review: ReviewFindings | null) {
+  if (review) set((s) => ({ findings: { ...s.findings, [review.target]: review } }));
+}
 
 // Chat to ask for on the first connect, from a deep link.
 export function presetChat(chat: string | null, sessionId: string | null) {
@@ -141,8 +147,12 @@ function handle(m: ServerMessage) {
           return o && JSON.stringify(o) === JSON.stringify(e) ? o : e;
         });
         const keep = same && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
-        return { ...m.state, events: keep ? s.events : events, ui: s.session.cwd && s.session.cwd !== m.state.session.cwd ? { ...s.ui, openFile: null } : s.ui };
+        const moved = Boolean(s.session.cwd) && s.session.cwd !== m.state.session.cwd;
+        return { ...m.state, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: moved ? { ...s.ui, openFile: null, openLine: null } : s.ui };
       });
+      break;
+    case 'findings':
+      setFindings(m.review);
       break;
     case 'error':
       notice(m.text);

@@ -11,6 +11,7 @@ import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
 import { USAGE, clock, describeLoop, parseLoop } from './repeat.js';
+import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 export { BIG_BRO };
@@ -109,6 +110,8 @@ export class AgentSession {
   private lastResult = '';
   private loopPrevModel: string | null = null;
   private repeatTimer: NodeJS.Timeout | undefined;
+  // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
+  private reviewTarget: string | null = null;
   private repeatDue = false;
   private repeatHeld = false;
 
@@ -448,6 +451,7 @@ export class AgentSession {
   }
 
   private enqueue(text: string) {
+    this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
     this.start();
     this.turns++;
     this.setSession({ running: true });
@@ -800,6 +804,7 @@ export class AgentSession {
   private toolUse(block: { id: string; name: string; input: unknown }, parent?: string) {
     this.pushEvent(toolUseEvent(block.id, block.name, block.input, Date.now(), parent, this.agents));
     if (AGENT_TOOLS.has(block.name)) this.pushEvent(agentEvent(block.id, block.input, Date.now(), parent));
+    if (block.name === 'ReportFindings') void saveFindings(this.cwd, this.reviewTarget ?? 'local', parseFindings(block.input)).then((review) => this.emit({ type: 'findings', review }), () => {});
     const file = (block.input as { file_path?: unknown })?.file_path;
     if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
   }

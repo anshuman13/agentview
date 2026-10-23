@@ -649,6 +649,18 @@ describe('turns the CLI starts by itself', () => {
   });
 });
 
+describe('review findings', () => {
+  it('a ReportFindings call after /code-review reaches the viewers with its PR number', async () => {
+    const { s } = fakeSession();
+    const got: ServerMessage[] = [];
+    s.onMessage((m) => got.push(m));
+    s.sendPrompt('/code-review 42');
+    (s as unknown as { toolUse: (b: unknown) => void }).toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
+    await vi.waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
+    expect(got.find((m) => m.type === 'findings')).toMatchObject({ review: { repo: '/tmp/project', target: '42', findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
+  });
+});
+
 describe('/loop after Stop', () => {
   it('a back to back loop fires again after a grace period, not at once', async () => {
     vi.useFakeTimers();
