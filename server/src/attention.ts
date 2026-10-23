@@ -4,14 +4,17 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ATTENTION_LABEL, type AttentionItem, type AttentionKind, type GitStatus, type PullRequest } from '../../shared/protocol.js';
 import { listIssues, listPrs, type Issue } from './github.js';
 import { gitStatus } from './git.js';
+import { sentryWatch } from './observe.js';
+import type { SentryIssue } from '../../shared/observe.js';
 import { post } from './notify.js';
 
 const FILE = path.join(os.homedir(), '.agentview/attention.json');
 const EVERY = 5 * 60_000;
 const EDIT_AGE = 10 * 60_000;
+const NEW_FOR = 24 * 60 * 60_000;
 const FORGET = 7 * 24 * 60 * 60_000;
 
-function promptFor(kind: Exclude<AttentionKind, 'commit'>, p: { number: number; title: string; url: string; branch?: string }) {
+function promptFor(kind: Exclude<AttentionKind, 'commit' | 'sentry'>, p: { number: number; title: string; url: string; branch?: string }) {
   const n = p.number;
   const ref = `#${n} "${p.title}" (${p.url})`;
   switch (kind) {
@@ -31,7 +34,7 @@ function promptFor(kind: Exclude<AttentionKind, 'commit'>, p: { number: number; 
 export function itemsFor(cwd: string, prs: PullRequest[], issues: Issue[], now = Date.now()): AttentionItem[] {
   const repo = path.basename(cwd);
   const out: AttentionItem[] = [];
-  const add = (kind: Exclude<AttentionKind, 'commit'>, p: { number: number; title: string; url: string; branch?: string }) =>
+  const add = (kind: Exclude<AttentionKind, 'commit' | 'sentry'>, p: { number: number; title: string; url: string; branch?: string }) =>
     out.push({ id: `${kind}:${p.url}`, kind, repo, cwd, number: p.number, title: p.title, url: p.url, since: now, prompt: promptFor(kind, p) });
   for (const p of prs) {
     if (p.mine && p.checks === 'failure') add('ci', p);
@@ -56,11 +59,32 @@ export function commitItem(e: Edited, status: GitStatus, now = Date.now()): Atte
   return { id: `commit:${e.cwd}`, kind: 'commit', repo, cwd: e.cwd, number: 0, title, url: '', since: now, prompt, chatId: e.chatId };
 }
 
-type Saved = { seen: Record<string, number>; dismissed: string[] };
+export type SentryBase = Record<string, { count: number; at: number }>;
+
+// Flags issues that appeared after the first poll (for a day) and issues whose count doubled since first seen.
+// The first poll for a repo only records what exists, so an old backlog never floods the inbox.
+export function sentryItems(cwd: string, repo: string, issues: SentryIssue[], base: SentryBase | undefined, now = Date.now()) {
+  const next: SentryBase = {};
+  const items: AttentionItem[] = [];
+  for (const i of issues) {
+    const was = base?.[i.id];
+    next[i.id] = was ?? { count: i.count, at: base ? now : 0 };
+    const spike = was && i.count >= 2 * was.count && i.count - was.count >= 20;
+    const fresh = was ? was.at > 0 && now - was.at < NEW_FOR : base !== undefined;
+    if (!spike && !fresh) continue;
+    const what = spike ? `${i.count} events, was ${was.count}` : `new, ${i.count} event${i.count === 1 ? '' : 's'}`;
+    const prompt = `Investigate Sentry issue ${i.shortId} "${i.title}" (${i.permalink}) in ${repo}: ${what}, ${i.userCount} users. Read the latest event and stack trace (Observe tab Sentry details or the sentry MCP), find the code path and propose a fix. Do not change files until I confirm.`;
+    items.push({ id: `sentry:${i.id}:${spike ? 'spike' : 'new'}`, kind: 'sentry', repo, cwd, number: 0, title: `${i.shortId} ${i.title} (${what})`, url: i.permalink, since: now, prompt });
+  }
+  return { items, base: next };
+}
+
+type Saved = { seen: Record<string, number>; dismissed: string[]; sentry?: Record<string, SentryBase> };
 
 let items: AttentionItem[] = [];
 let seen = new Map<string, number>();
 let dismissed = new Set<string>();
+let sentryBase: Record<string, SentryBase> = {};
 let loaded: Promise<void> | null = null;
 let onChange: (items: AttentionItem[]) => void = () => {};
 let seeded = false;
@@ -70,11 +94,12 @@ async function load() {
   seeded = saved !== null;
   seen = new Map(Object.entries(saved?.seen ?? {}));
   dismissed = new Set(saved?.dismissed ?? []);
+  sentryBase = saved?.sentry ?? {};
 }
 
 async function save() {
   await mkdir(path.dirname(FILE), { recursive: true });
-  await writeFile(FILE, JSON.stringify({ seen: Object.fromEntries(seen), dismissed: [...dismissed] } satisfies Saved));
+  await writeFile(FILE, JSON.stringify({ seen: Object.fromEntries(seen), dismissed: [...dismissed], sentry: sentryBase } satisfies Saved));
 }
 
 export const attention = () => items;
@@ -116,6 +141,15 @@ async function poll(src: Sources) {
       try {
         const [prs, issues] = await Promise.all([listPrs(cwd, true), listIssues(cwd).catch(() => [])]);
         found.push(...itemsFor(cwd, prs, issues));
+      } catch {}
+    }),
+    ...[...new Set(src.cwds)].map(async (cwd) => {
+      try {
+        const w = await sentryWatch(cwd);
+        if (!w) return;
+        const r = sentryItems(cwd, w.repo, w.issues, sentryBase[cwd]);
+        sentryBase[cwd] = r.base;
+        found.push(...r.items);
       } catch {}
     }),
     ...[...byCwd.values()].map(async (e) => {
