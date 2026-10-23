@@ -17,6 +17,17 @@ import type { PendingRequest } from '../../../shared/protocol';
 
 const SHOWN_TURNS = 5;
 
+// Items waiting outside this chat: other chats needing you plus the GitHub, Sentry and deploy inbox.
+function InboxChip() {
+  const n = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
+  if (!n) return null;
+  return (
+    <button className="ag-chip inbox" title="Show what needs you" onClick={() => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'view:chats' } }))}>
+      <Icon name="inbox" small /> {n} waiting
+    </button>
+  );
+}
+
 export function Brief() {
   const events = useStore((s) => s.events);
   const status = useStore((s) => s.status);
@@ -59,6 +70,7 @@ export function Brief() {
           </button>
           <span className="spacer" />
           <AgentsChip />
+          <InboxChip />
           {macName && <span className="mobile-only mac-here"><Icon name="vm" small /> {macName}</span>}
           {extras && <span className="extras">{extras}</span>}
           <span className="desktop-only"><ReadAloud speak /></span>
