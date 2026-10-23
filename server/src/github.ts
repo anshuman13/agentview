@@ -4,11 +4,16 @@ import type { CheckState, PullRequest, PullRequestDetail } from '../../shared/pr
 
 const run = promisify(execFile);
 const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,additions,deletions';
-const cache = new Map<string, { at: number; prs: PullRequest[] }>();
+const lists = new Map<string, { at: number; prs: PullRequest[] }>();
+const refreshing = new Map<string, Promise<PullRequest[]>>();
+const details = new Map<string, { updatedAt: string; detail: Promise<PullRequestDetail> }>();
+const PREFETCH = 5;
+const KEEP = 20;
+const ENV = { ...process.env, GH_NO_UPDATE_NOTIFIER: '1', GH_PROMPT_DISABLED: '1' };
 
 async function gh(cwd: string, ...args: string[]) {
   try {
-    return (await run('gh', args, { cwd, maxBuffer: 64 * 1024 * 1024 })).stdout;
+    return (await run('gh', args, { cwd, maxBuffer: 64 * 1024 * 1024, env: ENV })).stdout;
   } catch (err) {
     const e = err as NodeJS.ErrnoException & { stderr?: string };
     if (e.code === 'ENOENT') throw new Error('The GitHub CLI is not installed. Install it with: brew install gh');
@@ -36,9 +41,7 @@ function rollup(checks: Check[] = []): CheckState {
 
 const list = async (cwd: string, ...extra: string[]) => JSON.parse(await gh(cwd, 'pr', 'list', '--json', LIST, '--limit', '30', ...extra));
 
-export async function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
-  const hit = cache.get(cwd);
-  if (!fresh && hit && Date.now() - hit.at < 30_000) return hit.prs;
+async function fetchList(cwd: string): Promise<PullRequest[]> {
   const [all, mine, requested] = await Promise.all([list(cwd), list(cwd, '--author', '@me'), list(cwd, '--search', 'review-requested:@me')]);
   const byNumber = new Map<number, PullRequest>();
   for (const p of [...all, ...mine, ...requested]) {
@@ -59,8 +62,40 @@ export async function listPrs(cwd: string, fresh = false): Promise<PullRequest[]
     });
   }
   const prs = [...byNumber.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  cache.set(cwd, { at: Date.now(), prs });
+  lists.set(cwd, { at: Date.now(), prs });
+  for (const p of prs) if (details.get(key(cwd, p.number))?.updatedAt !== p.updatedAt) details.delete(key(cwd, p.number));
+  for (const p of prs.filter((p) => p.reviewRequested).slice(0, PREFETCH)) detail(cwd, p).catch(() => {});
   return prs;
+}
+
+function refresh(cwd: string) {
+  let p = refreshing.get(cwd);
+  if (!p) {
+    p = fetchList(cwd).finally(() => refreshing.delete(cwd));
+    refreshing.set(cwd, p);
+  }
+  return p;
+}
+
+// The last list is served at once, however old; a refresh runs behind it when it is over 30 s old.
+export function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
+  const hit = lists.get(cwd);
+  if (fresh || !hit) return refresh(cwd);
+  if (Date.now() - hit.at > 30_000) refresh(cwd).catch(() => {});
+  return Promise.resolve(hit.prs);
+}
+
+const key = (cwd: string, n: number | string) => `${cwd}#${n}`;
+
+function detail(cwd: string, pr: { number: number; updatedAt: string }) {
+  const k = key(cwd, pr.number);
+  const hit = details.get(k);
+  if (hit && hit.updatedAt === pr.updatedAt) return hit.detail;
+  const d = prDetail(cwd, String(pr.number));
+  details.set(k, { updatedAt: pr.updatedAt, detail: d });
+  d.catch(() => details.delete(k));
+  while (details.size > KEEP) details.delete(details.keys().next().value!);
+  return d;
 }
 
 export type Issue = { number: number; title: string; url: string; updatedAt: string };
@@ -91,9 +126,10 @@ async function prDetail(cwd: string, n: string): Promise<PullRequestDetail> {
 const REVIEW: Record<string, string> = { approve: '--approve', comment: '--comment', request_changes: '--request-changes' };
 const MERGE: Record<string, string> = { squash: '--squash', merge: '--merge', rebase: '--rebase' };
 
-async function act(cwd: string, ...args: string[]) {
-  await gh(cwd, 'pr', ...args);
-  cache.delete(cwd);
+async function act(cwd: string, n: string, verb: string, ...flags: string[]) {
+  await gh(cwd, 'pr', verb, n, ...flags);
+  lists.delete(cwd);
+  details.delete(key(cwd, n));
   return { ok: true };
 }
 
@@ -102,7 +138,10 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
   const [, , , what, n, action] = pathname.split('/');
   if (what === 'prs' && method === 'GET') return listPrs(cwd, url.searchParams.has('fresh'));
   if (what !== 'pr' || !/^\d+$/.test(n ?? '')) throw new Error(`Unknown GitHub route ${pathname}`);
-  if (method === 'GET' && !action) return prDetail(cwd, n);
+  if (method === 'GET' && !action) {
+    const pr = lists.get(cwd)?.prs.find((p) => p.number === Number(n));
+    return pr ? detail(cwd, pr) : prDetail(cwd, n);
+  }
   if (method !== 'POST') throw new Error(`Unknown GitHub route ${pathname}`);
   const body = JSON.parse((await readBody()) || '{}');
   if (action === 'review') {
@@ -110,9 +149,9 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     const text = String(body.body ?? '').trim();
     if (!flag) throw new Error('Review event must be approve, comment or request_changes');
     if (!text && body.event !== 'approve') throw new Error('Write a comment first');
-    return act(cwd, 'review', n, flag, ...(text ? ['--body', text] : []));
+    return act(cwd, n, 'review', flag, ...(text ? ['--body', text] : []));
   }
-  if (action === 'merge') return act(cwd, 'merge', n, MERGE[body.method] ?? '--squash');
-  if (action === 'checkout') return act(cwd, 'checkout', n);
+  if (action === 'merge') return act(cwd, n, 'merge', MERGE[body.method] ?? '--squash');
+  if (action === 'checkout') return act(cwd, n, 'checkout');
   throw new Error(`Unknown GitHub route ${pathname}`);
 }
