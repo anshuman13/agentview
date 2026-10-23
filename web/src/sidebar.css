@@ -58,7 +58,7 @@
 .sessions .tree.needs { flex: none; max-height: 30%; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
 .sessions .tree.needs .group { margin-top: 0; color: var(--warn); display: flex; align-items: center; gap: 6px; }
 .sessions .tree.needs .row.live { padding-left: 8px; }
-.sessions .tree .row.live .state.ci, .sessions .tree .row.live .state.changes, .sessions .tree .row.live .state.sentry { color: var(--err); }
+.sessions .tree .row.live .state.ci, .sessions .tree .row.live .state.changes, .sessions .tree .row.live .state.sentry, .sessions .tree .row.live .state.deploy { color: var(--err); }
 .sessions .tree .row.live .state.ready { color: var(--ok); }
 .sessions.chats .tree .row.recent .name { color: var(--fg-muted); }
 .sessions.chats .tree .row .meta { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding-right: 2px; font-weight: 400; }

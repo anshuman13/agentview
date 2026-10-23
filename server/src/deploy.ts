@@ -125,6 +125,12 @@ async function deployStatus(cwd: string, want: string | null): Promise<DeploySta
   };
 }
 
+// Status for the background inbox: null when the repo has no Velo app, so the poll skips it quietly.
+export async function deployWatch(cwd: string) {
+  const apps = await findApps(await run('git', ['rev-parse', '--show-toplevel'], cwd).catch(() => cwd)).catch(() => []);
+  return apps.length ? deployStatus(cwd, null) : null;
+}
+
 const jobs = new Map<string, DeployJob>();
 
 async function follow(cwd: string, repo: string, id: number, job: DeployJob) {

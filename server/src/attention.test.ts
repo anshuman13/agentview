@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commitItem, itemsFor, merge, sentryItems } from './attention.js';
+import { commitItem, deployItems, itemsFor, merge, sentryItems } from './attention.js';
 import type { PullRequest } from '../../shared/protocol.js';
 
 const pr = (n: number, p: Partial<PullRequest> = {}): PullRequest => ({
@@ -76,5 +76,29 @@ describe('sentryItems', () => {
     expect(r.items[1].title).toBe('APP-3 Boom 3 (new, 1 event)');
     const later = sentryItems('/w/r', 'r', [issue('3', 2)], r.base, 1000 + 25 * 60 * 60_000);
     expect(later.items).toEqual([]);
+  });
+});
+
+describe('stale and deploy items', () => {
+  const day = 24 * 60 * 60_000;
+
+  it('flags my unreviewed PRs with no activity for over two days', () => {
+    const now = Date.parse('2026-10-23T12:00:00Z');
+    const items = itemsFor('/w/r', [
+      pr(1, { updatedAt: new Date(now - 3 * day).toISOString() }),
+      pr(2, { updatedAt: new Date(now - 1 * day).toISOString() }),
+      pr(3, { updatedAt: new Date(now - 3 * day).toISOString(), review: 'APPROVED' }),
+      pr(4, { updatedAt: new Date(now - 3 * day).toISOString(), draft: true }),
+    ], [], now);
+    expect(items.filter((i) => i.kind === 'stale').map((i) => i.number)).toEqual([1]);
+  });
+
+  it('flags environments whose newest deployment failed', () => {
+    const rec = (id: number, state: string) => ({ id, sha: 'abcdef1234', ref: 'main', state, description: state === 'failure' ? 'Build failed' : '', at: '', by: 'me', url: `https://v/${id}` });
+    const env = (label: string, latest: ReturnType<typeof rec>) => ({ name: `app/${label}`, label, defaultBranchOnly: false, deployed: null, latest, rollbackTo: rec(1, 'success'), history: [latest] });
+    const status = { apps: ['app'], app: 'app', repo: 'o/r', velodrome: '', head: { sha: '', branch: '' }, envs: [env('prod', rec(3, 'failure')), env('staging', rec(4, 'pending')), env('dev', rec(5, 'success'))] };
+    const items = deployItems('/w/r', status, 0);
+    expect(items.map((i) => i.title)).toEqual(['prod: Build failed (abcdef1)']);
+    expect(items[0].prompt).toContain('roll back to abcdef1');
   });
 });
