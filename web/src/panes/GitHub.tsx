@@ -135,7 +135,7 @@ function PrList({ onOpen }: { onOpen: (n: number) => void }) {
   return (
     <>
       <div className="gh-bar">
-        <span className="muted small">{loading ? 'Loading…' : `${prs.length} open`}</span>
+        <span className="muted small">{loading && !prs.length ? 'Loading…' : `${prs.length} open`}</span>
         <span className="spacer" />
         <button className="icon-btn" title="Refresh" disabled={loading} onClick={() => load(cwd, true)}><Icon name="refresh" small spin={loading} /></button>
       </div>
@@ -171,9 +171,9 @@ export function GitHub() {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setOpen(null);
-    void load(cwd);
+    void load(cwd).then(() => load(cwd, true));
   }, [cwd]);
-  usePoll(root, 60_000, () => load(cwd, true), [cwd]);
+  usePoll(root, 5 * 60_000, () => load(cwd, true), [cwd]);
   const pr = prs.find((p) => p.number === open);
 
   return (
