@@ -577,6 +577,7 @@ export class AgentSession {
     const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), stopping: running };
     this.pushEvent(ev);
     if (running) {
+      this.approvals.denyAll('The user sent a new message instead of answering.');
       this.turns++;
       await this.q?.interrupt().catch(() => {});
       this.turns--;

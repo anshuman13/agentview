@@ -137,6 +137,18 @@ describe('Fable approval', () => {
     expect((await decision).hookSpecificOutput.permissionDecision).toBe('allow');
   });
 
+  it('a steer denies a pending permission and goes on with the message', async () => {
+    const { s, interrupt } = fakeSession();
+    s.sendPrompt('work');
+    const decision = call(s, BIG_BRO);
+    expect(s.state.pending).toHaveLength(1);
+    await s.steer('do this instead');
+    expect(s.state.pending).toHaveLength(0);
+    expect((await decision).hookSpecificOutput).toMatchObject({ permissionDecision: 'deny' });
+    expect(interrupt).toHaveBeenCalled();
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'do this instead', stopping: false });
+  });
+
   it('denies when the user declines', async () => {
     const s = new AgentSession('/tmp/p');
     const decision = call(s, BIG_BRO);

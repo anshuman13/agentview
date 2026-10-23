@@ -7,7 +7,7 @@ import { FileIcon } from './Explorer';
 import { match } from './FileSwitcher';
 import { toolId } from './McpStatus';
 import { touch } from '../touch';
-import { Hl, useTick, wsUrl } from './util';
+import { Hl, wsUrl } from './util';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import '../composer.css';
 
@@ -59,18 +59,6 @@ export function withUses(text: string, uses: Use[]) {
   const names = uses.map((u) => (u.tool ? `the ${toolId(u.server, u.tool)} tool` : `the ${u.server} MCP server`));
   const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
   return `${text}\n\nUse ${list} for this.`;
-}
-
-export const LONG_TOOL = 10_000;
-
-export function openToolAt(events: ChatEvent[]) {
-  const done = new Set<string>();
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i];
-    if (e.kind === 'tool_result') done.add(e.toolUseId);
-    else if (e.kind === 'tool_use' && !e.parent) return done.has(e.id) ? null : e.at;
-  }
-  return null;
 }
 
 export function buildHistory(events: ChatEvent[], stored: string[]) {
@@ -181,9 +169,6 @@ export function Composer() {
   const userCount = useStore((s) => s.events.reduce((n, e) => n + (e.kind === 'user' ? 1 : 0), 0));
   const edited = useStore((s) => editedOf(s.events));
   const servers = useStore((s) => s.session.mcp).filter((m) => m.status === 'connected');
-  const toolAt = useStore((s) => (s.session.running ? openToolAt(s.events) : null));
-  useTick(1000, toolAt !== null);
-  const longTool = toolAt !== null && Date.now() - toolAt > LONG_TOOL;
 
   const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools'; at: DOMRect; server?: string } | null>(null);
   const [uses, setUses] = useState<Use[]>([]);
@@ -337,7 +322,7 @@ export function Composer() {
     return () => window.removeEventListener('agentview:use', use);
   }, []);
 
-  const submit = (now = false) => {
+  const submit = () => {
     const t = text.trim();
     if (!t) return;
     if (shell) {
@@ -349,7 +334,7 @@ export function Composer() {
       try { localStorage.setItem(STORED_KEY, JSON.stringify(next)); } catch {}
       const full = withUses(t, uses);
       const lost = () => setText((cur) => (cur.trim() ? cur : t));
-      const sent = (now || longTool) && running ? steer(full, lost) : prompt(full, lost);
+      const sent = running ? steer(full, lost) : prompt(full, lost);
       if (!sent) { notice('Not connected, message not sent'); return; }
       if (full !== t) setUses([]);
     }
@@ -372,12 +357,12 @@ export function Composer() {
     if (ghost && (e.key === 'Tab' || e.key === 'ArrowRight') && el.selectionStart === text.length) { e.preventDefault(); apply(text + ghost); return; }
     if (e.key === 'ArrowUp' && (text === '' || onEntry) && !text.slice(0, el.selectionStart).includes('\n')) { e.preventDefault(); stepHistory(1); return; }
     if (e.key === 'ArrowDown' && onEntry && !text.slice(el.selectionEnd).includes('\n')) { e.preventDefault(); stepHistory(-1); return; }
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e.metaKey || e.ctrlKey); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
   };
 
   const typed = text.trim().length > 0;
   const hint = shell ? 'Runs in the terminal' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude' : compacting ? 'Sends when compacting is done' : longTool ? 'Claude is in a long step, Enter stops it and sends' : running ? 'Sends when Claude finishes, or steer to send now' : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files';
+  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? 'Enter stops Claude and sends' : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files';
   const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
 
   return (
@@ -432,11 +417,6 @@ export function Composer() {
             <Icon name="file-add" small />
           </button>
           <Voice onText={dictate} />
-          {running && !compacting && !shell && typed && (
-            <button className="icon-btn steer" title="Steer: stop the current step and send this now (Cmd+Enter)" aria-label="Stop and send now" onClick={() => submit(true)}>
-              <Icon name="debug-step-over" small />
-            </button>
-          )}
           {running && !typed ? (
             <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onClick={() => send({ type: 'interrupt' })}>
               <Icon name={stopping ? 'loading' : 'debug-stop'} small spin={stopping} />
@@ -444,8 +424,8 @@ export function Composer() {
           ) : (
             <button
               className="cp-send"
-              title={shell ? 'Run in the terminal (Enter)' : longTool ? 'Stop the current step and send (Enter)' : running ? 'Queue: send when Claude finishes (Enter)' : 'Send (Enter)'}
-              aria-label={shell ? 'Run' : longTool ? 'Stop and send' : running ? 'Queue' : 'Send'}
+              title={shell ? 'Run in the terminal (Enter)' : compacting ? 'Sends when compacting is done (Enter)' : running ? 'Stop Claude and send (Enter)' : 'Send (Enter)'}
+              aria-label={shell ? 'Run' : running ? 'Stop and send' : 'Send'}
               disabled={!typed}
               onClick={() => submit()}
             >
