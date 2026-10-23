@@ -37,8 +37,11 @@ listeners.add(() => {
   if (document.title !== title) document.title = title;
 });
 
+// crypto.randomUUID only exists on secure origins; the phone and other Macs load over plain http.
+const uid = () => crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+
 export function notice(text: string) {
-  set((s) => ({ events: [...s.events, { id: crypto.randomUUID(), kind: 'system', text, at: Date.now() }] }));
+  set((s) => ({ events: [...s.events, { id: uid(), kind: 'system', text, at: Date.now() }] }));
 }
 
 export function setUi(patch: Partial<UiState>) {
@@ -89,13 +92,13 @@ export function send(m: ClientMessage) {
 }
 
 export function steer(text: string, onLost: () => void) {
-  const id = crypto.randomUUID();
+  const id = uid();
   set((s) => ({ events: [...s.events, { id, kind: 'user', text, at: Date.now(), stopping: true }] }));
   expect({ type: 'steer', text, id }, onLost);
 }
 
 export function prompt(text: string, onLost: () => void) {
-  expect({ type: 'prompt', text, id: crypto.randomUUID() }, onLost);
+  expect({ type: 'prompt', text, id: uid() }, onLost);
 }
 
 // A message is sent until the server echoes it back as a user event. The server ignores repeats by id.
