@@ -90,7 +90,7 @@ class MainActivity : TauriActivity() {
     webView.addJavascriptInterface(Shell(), "AgentViewShell")
     if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
       val script = resources.openRawResource(R.raw.shell).bufferedReader().use { it.readText() }
-      WebViewCompat.addDocumentStartJavaScript(webView, script, setOf("http://*.netbird.cloud", "http://tauri.localhost", "http://localhost", "http://100.*"))
+      WebViewCompat.addDocumentStartJavaScript(webView, script, setOf("*"))
     }
   }
 
