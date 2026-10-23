@@ -42,6 +42,8 @@ Switch to the transcript for every message and step in order.
 
 - Sending while Claude works stops whatever it is doing, including an open permission or question, and continues
   with your message
+- A message sent while the connection is down is kept and sent as soon as it is back; it only returns to the box
+  after three failed tries
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
 - Questions, plan approvals and permissions show as buttons in the timeline
 

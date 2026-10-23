@@ -207,7 +207,7 @@ export type Worktree = {
 };
 
 export type ClientMessage =
-  | { type: 'prompt'; text: string }
+  | { type: 'prompt'; text: string; id?: string }
   | { type: 'steer'; text: string; id?: string }
   | { type: 'plan'; next: string[] }
   | { type: 'answer'; id: string; answers: Record<string, string> }

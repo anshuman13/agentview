@@ -71,6 +71,17 @@ describe('AgentSession turns', () => {
     expect(s.state.events.find((e) => e.id === 'm1')).toMatchObject({ stopping: false });
   });
 
+  it('ignores a message resent with an id it already has', async () => {
+    const { s, interrupt } = fakeSession();
+    await s.prompt('hello', 'p1');
+    await s.prompt('hello', 'p1');
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(1);
+    await s.steer('again', 's1');
+    await s.steer('again', 's1');
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
+    expect(interrupt).toHaveBeenCalledTimes(1);
+  });
+
   it('interrupt marks stopping until the turn ends', async () => {
     const { s, interrupt, result } = fakeSession();
     s.sendPrompt('task');
