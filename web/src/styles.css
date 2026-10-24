@@ -448,6 +448,9 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .tc-commit code { font-family: var(--mono); font-size: 11px; color: var(--link); }
 .tc-commit .text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tc-bad { color: var(--err); }
+.tc-muted { color: var(--fg-muted); }
+.tc-fail.denied { border-left-color: var(--border-card); }
+.tc-fail.denied .tc-err { color: var(--fg-muted); }
 .tc-fail { display: flex; flex-direction: column; min-width: 0; padding-left: 8px; border-left: 2px solid var(--err); }
 .tc-cmd, .tc-err { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tc-err { font-family: var(--mono); font-size: 11px; color: var(--err); }

@@ -176,6 +176,7 @@ function Reply({ text, clip }: { text: string; clip: boolean }) {
 function Facts({ turn, cwd, pending, latest }: { turn: Turn; cwd: string; pending: PendingRequest[]; latest: boolean }) {
   const [allFiles, setAllFiles] = useState(false);
   const failed = turn.commands.filter((c) => c.error);
+  const refused = turn.commands.filter((c) => c.denied);
   const files = allFiles ? turn.files : turn.files.slice(0, FILES_SHOWN);
   const add = turn.files.reduce((n, f) => n + f.add, 0);
   const del = turn.files.reduce((n, f) => n + f.del, 0);
@@ -225,9 +226,12 @@ function Facts({ turn, cwd, pending, latest }: { turn: Turn; cwd: string; pendin
       )}
       {turn.commands.length > 0 && (
         <div className="tc-group">
-          <div className="tc-label">Ran {plural(turn.commands.length, 'command')}{failed.length > 0 && <span className="tc-bad">, {failed.length} failed</span>}</div>
+          <div className="tc-label">Ran {plural(turn.commands.length, 'command')}{failed.length > 0 && <span className="tc-bad">, {failed.length} failed</span>}{refused.length > 0 && <span className="tc-muted">, {refused.length} denied</span>}</div>
           {failed.map((c) => (
             <div key={c.id} className="tc-fail" title={c.error}><span className="tc-cmd">{c.label}</span><span className="tc-err">{c.error}</span></div>
+          ))}
+          {refused.map((c) => (
+            <div key={c.id} className="tc-fail denied" title="You denied this command"><span className="tc-cmd">{c.label}</span><span className="tc-err">Denied</span></div>
           ))}
         </div>
       )}

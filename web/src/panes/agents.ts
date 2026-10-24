@@ -1,5 +1,5 @@
 import type { AgentEvent, AgentStatus, ChatEvent } from '../../../shared/protocol';
-import { buildTranscript, firstLine, stepLabel, type Item, type ToolResult, type ToolUse } from './steps';
+import { buildTranscript, denied, firstLine, stepLabel, type Item, type ToolResult, type ToolUse } from './steps';
 
 export type Agent = {
   id: string;
@@ -34,7 +34,7 @@ function agentOf(it: Extract<Item, { kind: 'agent' }>, info: AgentEvent | undefi
   // The server can end a task (task_updated) before or without a tool result; trust it unless the agent was resumed.
   const running = it.running && !(info && info.status !== 'running' && !result);
   const s = (k: string) => (typeof use.input[k] === 'string' ? (use.input[k] as string) : '');
-  const ended: AgentStatus = result?.stopped ? 'stopped' : result?.isError ? 'failed' : 'done';
+  const ended: AgentStatus = result?.stopped || denied(result) ? 'stopped' : result?.isError ? 'failed' : 'done';
   return {
     id: use.id,
     use,

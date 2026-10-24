@@ -1,11 +1,11 @@
 import { editCount } from '../../../shared/edits';
 import type { ChatEvent } from '../../../shared/protocol';
-import { buildTranscript, firstLine, type Item, type ToolResult, type ToolUse } from './steps';
+import { buildTranscript, denied, firstLine, type Item, type ToolResult, type ToolUse } from './steps';
 
 export type FileFact = { path: string; add: number; del: number };
-export type CommandFact = { id: string; label: string; error?: string };
+export type CommandFact = { id: string; label: string; error?: string; denied?: boolean };
 export type CommitFact = { hash: string; subject: string };
-export type AgentFact = { id: string; label: string; type: string; state: 'running' | 'done' | 'failed' | 'stopped' };
+export type AgentFact = { id: string; label: string; type: string; state: 'running' | 'done' | 'failed' | 'stopped' | 'denied' };
 export type NoteFact = { id: string; text: string; kind: 'done' | 'important' | 'fable' };
 export type Blocked = Extract<ChatEvent, { kind: 'blocked' }>;
 
@@ -105,14 +105,14 @@ export function buildTurns(events: ChatEvent[]) {
     }
     if (e.name === 'Bash') {
       const cmd = str(e.input.command);
-      if (!e.parent) turn.commands.push({ id: e.id, label: str(e.input.description) || firstLine(cmd), error: result?.isError ? errorLine(result.text) : undefined });
+      if (!e.parent) turn.commands.push({ id: e.id, label: str(e.input.description) || firstLine(cmd), ...(denied(result) ? { denied: true } : { error: result?.isError ? errorLine(result.text) : undefined }) });
       if (result && !result.isError && /\bgit\b[\s\S]*\bcommit\b/.test(cmd)) {
         for (const m of result.text.matchAll(COMMIT)) turn.commits.push({ hash: m[2], subject: m[3].trim() });
       }
     }
     if (AGENT_TOOLS.has(e.name) && !e.parent) {
       const running = !result || (resumed.get(e.id) ?? 0) > result.at;
-      const state = running ? 'running' : result.stopped ? 'stopped' : result.isError ? 'failed' : 'done';
+      const state = running ? 'running' : result.stopped ? 'stopped' : denied(result) ? 'denied' : result.isError ? 'failed' : 'done';
       turn.agents.push({ id: e.id, label: str(e.input.description) || 'Sub-agent', type: str(e.input.subagent_type), state });
     }
   }
