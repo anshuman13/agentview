@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -27,7 +26,7 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null) {
   post(title, chat.title, body.slice(0, 200), `${APP}/?chat=${chat.id}`);
 }
 
-// The menu bar app opens url when the notification is clicked; the osascript fallback has no click action.
+// The menu bar app shows the notification and opens url when it is clicked. Without it only the ntfy push goes out.
 export function post(title: string, subtitle: string, body: string, url = `${APP}/?view=chats`) {
   void pushNtfy(title, subtitle, body, url);
   if (process.platform !== 'darwin') return;
@@ -38,10 +37,7 @@ export function post(title: string, subtitle: string, body: string, url = `${APP
     } finally {
       fs.closeSync(fd);
     }
-    return;
   } catch {}
-  const script = 'display notification (item 3 of argv) with title (item 1 of argv) subtitle (item 2 of argv) sound name "Glass"';
-  execFile('osascript', ['-e', 'on run argv', '-e', script, '-e', 'end run', title, subtitle, body], () => {});
 }
 
 export const STALL_MS = 15 * 60_000;
