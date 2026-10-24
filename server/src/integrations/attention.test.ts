@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { commitItem, deployItems, dismissAttention, fixCi, itemsFor, merge, sentryItems } from './attention.js';
 
 vi.mock('node:fs/promises', async (orig) => ({ ...(await orig<typeof import('node:fs/promises')>()), writeFile: vi.fn(async () => {}) }));
-import type { PullRequest } from '../../shared/protocol.js';
+import type { PullRequest } from '../../../shared/protocol.js';
 
 const pr = (n: number, p: Partial<PullRequest> = {}): PullRequest => ({
   number: n, title: `PR ${n}`, author: 'me', branch: `b${n}`, draft: false, review: '', checks: 'success',

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../shared/protocol.js';
+import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../../shared/protocol.js';
 
 const exec = promisify(execFile);
 const VELODROME = 'https://velodrome.prod.nube.tech';
