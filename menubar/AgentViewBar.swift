@@ -136,6 +136,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
       content.subtitle = m["subtitle"] ?? ""
       content.body = m["body"] ?? ""
       content.sound = UNNotificationSound(named: UNNotificationSoundName("Glass"))
+      if let url = m["url"] { content.userInfo = ["url": url] }
       UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
   }
@@ -145,7 +146,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
   }
 
   func userNotificationCenter(_ c: UNUserNotificationCenter, didReceive r: UNNotificationResponse, withCompletionHandler done: @escaping () -> Void) {
-    onClick()
+    if let s = r.notification.request.content.userInfo["url"] as? String, let url = URL(string: s) { NSWorkspace.shared.open(url) } else { onClick() }
     done()
   }
 }
