@@ -10,6 +10,7 @@ import { Row, Transcript } from './Transcript';
 import { FileIcon } from './Explorer';
 import { relPath } from './steps';
 import { BIG_BRO, buildTurns, type Turn } from './turns';
+import { markSeen, readSeen, recap, recapText } from './recap';
 import { AgentsChip, openAgent } from './AgentsPane';
 import { REVIEW_LOCAL } from './Findings';
 import { ago, plural, readFlag, saveFlag, useTick } from './util';
@@ -50,6 +51,9 @@ export function Brief() {
   const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', !touch()));
   const toggleSteps = () => { setStepsOpen(!stepsOpen); saveFlag('agentview.steps', !stepsOpen); };
   const end = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const recapFor = useRef('');
+  const [since, setSince] = useState<{ chat: string; text: string } | null>(null);
   const from = all ? 0 : Math.max(0, turns.length - SHOWN_TURNS);
   const shown = turns.slice(from);
   const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
@@ -66,6 +70,21 @@ export function Brief() {
 
   useTick(30000);
 
+  // On opening a chat, sum what happened after the last event this browser saw; then keep the seen id current while the chat is on screen.
+  useEffect(() => {
+    if (!sessionId || !events.length) return;
+    if (recapFor.current !== sessionId) {
+      recapFor.current = sessionId;
+      const r = recap(events, readSeen(sessionId), waiting);
+      setSince(r ? { chat: sessionId, text: recapText(r) } : null);
+    }
+    const mark = () => { if (document.visibilityState === 'visible' && root.current?.getClientRects().length) markSeen(sessionId, events); };
+    mark();
+    document.addEventListener('visibilitychange', mark);
+    return () => document.removeEventListener('visibilitychange', mark);
+  }, [sessionId, events]);
+  const dismissSince = () => { markSeen(sessionId, events); setSince(null); };
+
   // The end marker sits inside the sticky foot, so scrollIntoView never moves the list; scroll the pane itself.
   const scrollEnd = (always: boolean) => {
     const sc = end.current?.closest('.brief-status');
@@ -81,7 +100,7 @@ export function Brief() {
   }, [sessionId]);
 
   return (
-    <div className="brief">
+    <div className="brief" ref={root}>
       <div className="brief-status">
         <div className="timeline-head">
           <button className="tl-view" title={full ? 'Show the timeline' : 'Show the full transcript'} onClick={() => pick(!full)}>
@@ -94,6 +113,9 @@ export function Brief() {
           {extras && <span className="extras">{extras}</span>}
           <span className="desktop-only"><ReadAloud speak /></span>
         </div>
+        {since?.chat === sessionId && (
+          <button className="tl-recap" title="Tap to dismiss" onClick={dismissSince}><Icon name="history" small />{since.text}</button>
+        )}
         {full ? <Transcript /> : (
           <div className="turns">
             {turns.length === 0 && <div className="tl-empty">Send a prompt. Each prompt shows up here with Claude's reply, the files it changed and the commands it ran.</div>}
