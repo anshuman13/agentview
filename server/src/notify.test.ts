@@ -8,7 +8,7 @@ vi.mock('node:fs/promises', async (orig) => ({
     return files.observe;
   }),
 }));
-import { pushNtfy } from './notify.js';
+import { pushNtfy, stallWatch } from './notify.js';
 
 describe('pushNtfy', () => {
   const sent = vi.fn(async () => new Response(''));
@@ -46,5 +46,39 @@ describe('pushNtfy', () => {
     files.observe = '{"sentryToken":""}';
     expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(false);
     expect(sent).not.toHaveBeenCalled();
+  });
+});
+
+describe('stallWatch', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('reports a running chat once after 15 quiet minutes and clears it on the next message', () => {
+    const onStall = vi.fn();
+    const w = stallWatch(onStall);
+    w.seen('a', true);
+    w.seen('b', false);
+    vi.advanceTimersByTime(14 * 60_000);
+    expect(onStall).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(2 * 60_000);
+    expect(onStall).toHaveBeenCalledTimes(1);
+    expect(onStall).toHaveBeenCalledWith('a');
+    expect(w.stalled('a')).toBe(true);
+    vi.advanceTimersByTime(30 * 60_000);
+    expect(onStall).toHaveBeenCalledTimes(1);
+    expect(w.seen('a', true)).toBe(true);
+    expect(w.stalled('a')).toBe(false);
+    vi.advanceTimersByTime(16 * 60_000);
+    expect(onStall).toHaveBeenCalledTimes(2);
+  });
+
+  it('forgets a chat that stopped running', () => {
+    const onStall = vi.fn();
+    const w = stallWatch(onStall);
+    w.seen('a', true);
+    vi.advanceTimersByTime(10 * 60_000);
+    expect(w.seen('a', false)).toBe(false);
+    vi.advanceTimersByTime(10 * 60_000);
+    expect(onStall).not.toHaveBeenCalled();
   });
 });

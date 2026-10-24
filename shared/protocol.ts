@@ -143,6 +143,7 @@ export type LiveChat = {
   status: string;
   lastActive: number;
   mcpFailed?: number;
+  stalled?: boolean;
   last?: string;
   edits?: { add: number; del: number };
   cost?: number;

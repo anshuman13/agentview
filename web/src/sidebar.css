@@ -67,6 +67,7 @@
 .sessions .dot { flex: none; width: 8px; height: 8px; margin: 0 2px; border-radius: 50%; box-sizing: border-box; }
 .sessions .dot.running { background: var(--accent); animation: dot-pulse 1.4s ease-in-out infinite; }
 .sessions .dot.waiting { background: var(--warn); }
+.sessions .dot.stalled { background: var(--warn); animation: dot-pulse 2.8s ease-in-out infinite; }
 .sessions .dot.idle { border: 1.5px solid var(--fg-muted); }
 @keyframes dot-pulse { 50% { opacity: 0.35; transform: scale(0.8); } }
 .sessions .tree .row.live .repo { font-weight: 400; color: var(--fg); }

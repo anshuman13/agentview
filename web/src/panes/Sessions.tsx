@@ -542,15 +542,15 @@ function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveCh
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const line = chatLine(c, events);
   const second = Boolean(line.text || line.edits || line.cost);
-  const state = c.pending ? 'Needs you' : c.running ? c.status : 'Idle';
+  const state = c.pending ? 'Needs you' : c.stalled ? 'No activity for 15 minutes' : c.running ? c.status : 'Idle';
   return (
     <div className={`row session live ${second ? 'two' : ''} ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} {...pressable(() => { if (!selected) send({ type: 'view', id: c.id }); })}>
-      {line.done ? <span className="mark"><Icon name="pass" small /></span> : <span className={`dot ${c.pending ? 'waiting' : c.running ? 'running' : 'idle'}`} />}
+      {line.done ? <span className="mark"><Icon name="pass" small /></span> : <span className={`dot ${c.pending ? 'waiting' : c.stalled ? 'stalled' : c.running ? 'running' : 'idle'}`} />}
       <span className="lines">
         <span className="l1">
           {repo && <span className="repo">{repo}</span>}
           <span className="name">{c.title}</span>
-          <span className="when">{c.pending ? 'needs you' : c.running ? '' : ago(c.lastActive)}</span>
+          <span className="when">{c.pending ? 'needs you' : c.stalled ? 'quiet' : c.running ? '' : ago(c.lastActive)}</span>
         </span>
         {second && (
           <span className="l2">

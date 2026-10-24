@@ -12,7 +12,7 @@ import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerm
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome.js';
 import { getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
-import { notifyAway } from './notify.js';
+import { notifyAway, notifyStall, stallWatch } from './notify.js';
 import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './mcp.js';
 import type { McpServerDef } from './mcpClient.js';
 import { listBin, removeSession, restoreSession } from './bin.js';
@@ -58,6 +58,12 @@ const clients = new Set<Client>();
 const STALL_MS = 60_000;
 const streams = new Map<string, Client>();
 const ring = new Ring();
+const stalls = stallWatch((id) => {
+  const l = live.get(id);
+  if (!l) return;
+  notifyStall(summary(l.chat));
+  broadcastLive();
+});
 
 // To every client, or to the viewers of one chat. Each broadcast gets an id so an event stream can resume.
 function broadcast(m: ServerMessage, chat?: AgentSession) {
@@ -96,6 +102,7 @@ function summary(chat: AgentSession): LiveChat {
     status: s.status,
     lastActive: lastActive(chat),
     mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,
+    stalled: stalls.stalled(chat.id),
     last: replyLine(s.events),
     edits: editsOf(chat),
   };
@@ -119,7 +126,8 @@ async function createChat(cwd: string, resume?: string, title = '') {
     broadcast(m, chat);
     notifyAway(m, () => (viewers(chat) ? null : summary(chat)));
     if (m.type === 'session' && chat === lastViewed) remember(chat);
-    if (m.type !== 'event' || m.event.kind === 'user') broadcastLive();
+    const woke = stalls.seen(chat.id, chat.state.session.running);
+    if (woke || m.type !== 'event' || m.event.kind === 'user') broadcastLive();
   });
   if (!resume) chat.start();
   live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
@@ -128,6 +136,7 @@ async function createChat(cwd: string, resume?: string, title = '') {
 
 function closeChat(chat: AgentSession) {
   chat.close();
+  stalls.seen(chat.id, false);
   closeTerminals(chat.id);
   live.get(chat.id)?.watcher.close();
   live.delete(chat.id);

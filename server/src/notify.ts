@@ -43,6 +43,34 @@ export function post(title: string, subtitle: string, body: string, url = `${APP
   execFile('osascript', ['-e', 'on run argv', '-e', script, '-e', 'end run', title, subtitle, body], () => {});
 }
 
+export const STALL_MS = 15 * 60_000;
+
+// Running chats that send nothing for a while are reported once; the mark goes at their next message.
+export function stallWatch(onStall: (id: string) => void, every = 60_000) {
+  const at = new Map<string, number>();
+  const stalled = new Set<string>();
+  setInterval(() => {
+    for (const [id, t] of at) {
+      if (stalled.has(id) || Date.now() - t < STALL_MS) continue;
+      stalled.add(id);
+      onStall(id);
+    }
+  }, every).unref();
+  return {
+    // Returns true when the chat was marked stalled until now.
+    seen(id: string, running: boolean) {
+      if (running) at.set(id, Date.now());
+      else at.delete(id);
+      return stalled.delete(id);
+    },
+    stalled: (id: string) => stalled.has(id),
+  };
+}
+
+export function notifyStall(chat: LiveChat) {
+  post(`Claude is quiet in ${path.basename(chat.cwd)}`, chat.title, `No activity for ${STALL_MS / 60_000} minutes`, `${APP}/?chat=${chat.id}`);
+}
+
 // A topic name on ntfy.sh or a full URL, from the environment or the ntfy key in observe.json.
 async function ntfyUrl() {
   const topic = process.env.AGENTVIEW_NTFY || (await readFile(OBSERVE, 'utf8').then((raw) => String(JSON.parse(raw).ntfy ?? '')).catch(() => ''));
