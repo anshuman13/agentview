@@ -11,7 +11,7 @@ if [ ! -x "$BIN" ] || [ menubar/AgentViewBar.swift -nt "$BIN" ] || [ start.sh -n
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleIdentifier</key><string>no.pradhan.agentview</string>
+  <key>CFBundleIdentifier</key><string>no.pradhan.agentview.bar</string>
   <key>CFBundleName</key><string>AgentView</string>
   <key>CFBundleExecutable</key><string>AgentView</string>
   <key>CFBundlePackageType</key><string>APPL</string>
@@ -22,7 +22,7 @@ if [ ! -x "$BIN" ] || [ menubar/AgentViewBar.swift -nt "$BIN" ] || [ start.sh -n
 </plist>
 PLIST
   swiftc -O menubar/AgentViewBar.swift -o "$BIN"
-  codesign --force --sign - --identifier no.pradhan.agentview "$APP"
+  codesign --force --sign - --identifier no.pradhan.agentview.bar "$APP"
 fi
 
 pkill -x agentview-bar 2>/dev/null || true
