@@ -538,6 +538,20 @@ describe('compacting', () => {
     expect(s.state.session.context).toBe(12_000);
   });
 
+  it('a CLI exit while compacting lets the next message go out', async () => {
+    const { s } = fakeSession();
+    const priv = s as unknown as { q: unknown; consume: () => Promise<void>; start: () => void };
+    vi.spyOn(priv, 'start').mockImplementation(() => {});
+    s.sendPrompt('/compact');
+    priv.q = { async *[Symbol.asyncIterator]() {} };
+    await priv.consume();
+    expect(s.state.session.compacting).toBe(false);
+    await s.steer('go on', 'm1');
+    expect(s.state.events.find((e) => e.id === 'm1')).toMatchObject({ kind: 'user', text: 'go on' });
+    expect(s.state.events.find((e) => e.id === 'm1')).not.toHaveProperty('queued', true);
+    expect(s.state.session.running).toBe(true);
+  });
+
   it('compacts automatically when a turn ends past 200k, once', () => {
     const { s, result } = fakeSession();
     s.sendPrompt('big task');

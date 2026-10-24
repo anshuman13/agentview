@@ -807,7 +807,7 @@ export class AgentSession {
         this.inputQueue = [];
         this.wake?.();
         this.turns = 0;
-        this.setSession({ running: false, stopping: false });
+        this.setSession({ running: false, stopping: false, compacting: false });
         this.planChange = null;
         this.approvals.denyAll('Claude exited before this was answered.');
         this.tasks.clear();
