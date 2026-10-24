@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import { brotliCompress, gzip, constants as zlib } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './workspace/terminal.js';
-import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome.js';
+import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
 import { getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway, notifyStall, ntfyTopic, stallWatch } from './integrations/notify.js';

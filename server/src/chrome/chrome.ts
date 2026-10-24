@@ -121,7 +121,7 @@ function setup() {
   if (ownProfile()) void chromeRunning().then((up) => up || launchProfile());
   else if (process.platform === 'darwin' && reason === 'nofda') {
     run('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles');
-    run('-R', fileURLToPath(new URL('../../dist/AgentView.app', import.meta.url)));
+    run('-R', fileURLToPath(new URL('../../../dist/AgentView.app', import.meta.url)));
   } else if (process.platform === 'darwin') run('-a', 'Google Chrome', SETUP_PAGE);
   if (state === 'off') setTimeout(() => void connect(), 1500);
 }
