@@ -39,11 +39,12 @@ const ORPHAN_MS = 5 * 60 * 1000;
 process.on('uncaughtException', (err) => console.error('uncaught:', err));
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 
+const served = () =>
+  new Promise<boolean>((ok) => {
+    const probe = net.connect(SOCK).on('connect', () => { probe.destroy(); ok(true); }).on('error', () => ok(false));
+  });
 // Another host already serving this port's socket keeps it; this one leaves.
-const taken = await new Promise<boolean>((ok) => {
-  const probe = net.connect(SOCK).on('connect', () => { probe.destroy(); ok(true); }).on('error', () => ok(false));
-});
-if (taken) process.exit(0);
+if (await served()) process.exit(0);
 
 const apis = new Set<(v: unknown) => void>();
 const push = (v: unknown) => apis.forEach((send) => send(v));
@@ -338,13 +339,10 @@ async function handle(req: HostRequest): Promise<unknown> {
 }
 
 mkdirSync(path.dirname(SOCK), { recursive: true });
-try {
-  unlinkSync(SOCK);
-} catch {}
 let markReady!: () => void;
 const ready = new Promise<void>((ok) => (markReady = ok));
 // The state of a chat is sent before any later broadcast for it, since replies and broadcasts share one ordered socket.
-net.createServer((sock) => {
+const host = net.createServer((sock) => {
   const send = lines(sock, (v) => {
     const { n, ...req } = v as HostRequest & { n: number };
     const fail = (err: unknown) => n && send({ n, ok: false, error: err instanceof Error ? err.message : String(err) });
@@ -362,7 +360,23 @@ net.createServer((sock) => {
   apis.add(send);
   sock.on('close', () => apis.delete(send));
   sock.on('error', () => {});
-}).listen(SOCK, () => console.log(`agent host on ${SOCK} for ${PROJECT}`));
+});
+// Two hosts can start at once; the one that loses the socket leaves before it opens any chat.
+await new Promise<void>((ok) => {
+  let retried = false;
+  host
+    .on('listening', ok)
+    .on('error', async (err: NodeJS.ErrnoException) => {
+      if (retried || err.code !== 'EADDRINUSE' || (await served())) process.exit(0);
+      retried = true;
+      try {
+        unlinkSync(SOCK);
+      } catch {}
+      host.listen(SOCK);
+    })
+    .listen(SOCK);
+});
+console.log(`agent host on ${SOCK} for ${PROJECT}`);
 
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
 lastViewed = (await restore()) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
