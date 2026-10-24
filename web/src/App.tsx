@@ -50,6 +50,7 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'code', icon: 'files', label: 'Files' },
 ];
 const narrow = () => window.innerWidth <= 900;
+const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 function stored(key: string, fallback: number) {
   try {
@@ -229,7 +230,7 @@ export function App() {
   useEffect(() => {
     connect();
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return;
+      if (!(MAC ? e.metaKey : e.ctrlKey)) return;
       const k = e.key.toLowerCase();
       if (k === 'p') { e.preventDefault(); setUi({ switcherOpen: true }); }
       if (k === 'o') { e.preventDefault(); setUi({ repoPicker: true }); }

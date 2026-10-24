@@ -5,7 +5,7 @@ import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
 import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
-import { save, stored } from './util';
+import { ago, save, stored } from './util';
 import { PullState, usePullRequests } from './GitHub';
 import '../chats.css';
 
@@ -613,9 +613,3 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
   );
 }
 
-function ago(t: number) {
-  const m = Math.round((Date.now() - t) / 60000);
-  if (m < 60) return `${m}m`;
-  if (m < 60 * 24) return `${Math.round(m / 60)}h`;
-  return `${Math.round(m / 1440)}d`;
-}

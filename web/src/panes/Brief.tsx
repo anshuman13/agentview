@@ -12,7 +12,7 @@ import { relPath } from './steps';
 import { BIG_BRO, buildTurns, type Turn } from './turns';
 import { AgentsChip, openAgent } from './AgentsPane';
 import { REVIEW_LOCAL } from './Findings';
-import { plural, readFlag, saveFlag, useTick } from './util';
+import { ago, plural, readFlag, saveFlag, useTick } from './util';
 import { useMacName } from '../MacsPopover';
 import type { PendingRequest } from '../../../shared/protocol';
 
@@ -285,8 +285,8 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
 }
 
 function time(at: number) {
-  const ago = Date.now() - at;
-  if (ago < 60000) return 'now';
-  if (ago < 3600000) return `${Math.floor(ago / 60000)}m`;
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (Date.now() - at < 3_600_000) return ago(at);
+  const d = new Date(at);
+  const clock = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  return d.toDateString() === new Date().toDateString() ? clock : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${clock}`;
 }

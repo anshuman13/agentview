@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { GitFile, GitStatus } from '../../../shared/protocol';
-import { api, send, setUi, useStore } from '../store';
+import { api, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { FileIcon } from './Explorer';
 import { Findings, REVIEW_LOCAL } from './Findings';
-import { usePoll } from './util';
+import { askClaude, usePoll } from './util';
 import '../changes.css';
 
 let git: { status: GitStatus | null; error: string } = { status: null, error: '' };
@@ -77,7 +77,7 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
         <button className="primary" disabled={!canCommit} title={staged ? 'Commit the staged changes' : 'Stage changes to commit them'} onClick={() => void commit()}>
           <Icon name="check" small /> Commit
         </button>
-        <button className="scm-claude" disabled={staged === 0} title={staged ? 'Ask Claude in the chat for a commit subject' : 'Stage changes first'} onClick={() => send({ type: 'prompt', text: DRAFT_PROMPT })}>
+        <button className="scm-claude" disabled={staged === 0} title={staged ? 'Ask Claude in the chat for a commit subject' : 'Stage changes first'} onClick={() => askClaude(DRAFT_PROMPT)}>
           <Icon name="sparkle" small /> Write message with Claude
         </button>
       </div>
@@ -162,7 +162,7 @@ export function Changes() {
       <BranchBar status={status} onRefresh={() => void refresh()} />
       <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
       <div className="scm-commit-actions scm-review">
-        <button className="scm-claude" disabled={!files.length} title={files.length ? 'Claude reviews the working tree, findings show below' : 'No changes to review'} onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>
+        <button className="scm-claude" disabled={!files.length} title={files.length ? 'Claude reviews the working tree, findings show below' : 'No changes to review'} onClick={() => askClaude(REVIEW_LOCAL)}>
           <Icon name="search" small /> Review changes with Claude
         </button>
       </div>

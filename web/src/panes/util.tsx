@@ -1,6 +1,31 @@
 import { useEffect, useState, type RefObject } from 'react';
+import { send } from '../store';
 
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+export const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
+
+// Brings the chat on screen: the Chat tab on a phone, the chat column on the desktop when it is hidden.
+export function showChat() {
+  if (window.innerWidth <= 900) command('tab:chat');
+  else if (document.querySelector('.workbench')?.getAttribute('data-chat') === 'false') command('toggleChat');
+}
+
+// A pane sends a prompt and shows the chat, so the reply is seen.
+export function askClaude(text: string) {
+  showChat();
+  send({ type: 'prompt', text });
+}
+
+// Relative time: now, 5m, 3h, 2d, 4w; a suffix such as ' ago' where a sentence needs one.
+export function ago(t: number | string, suffix = '') {
+  const at = typeof t === 'number' ? t : Date.parse(t);
+  if (Number.isNaN(at)) return typeof t === 'string' ? t : '';
+  const m = Math.max(0, Math.floor((Date.now() - at) / 60_000));
+  if (m < 1) return 'now';
+  const text = m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : m < 10080 ? `${Math.round(m / 1440)}d` : `${Math.round(m / 10080)}w`;
+  return text + suffix;
+}
 
 export const wsUrl = (query: string) => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?${query}`;
 

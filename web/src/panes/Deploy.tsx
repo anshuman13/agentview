@@ -3,16 +3,11 @@ import { api, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protocol';
-import { usePoll } from './util';
+import { ago, usePoll } from './util';
 import '../deploy.css';
 
 const short = (sha: string) => sha.slice(0, 7);
 const tone = (state?: string) => (state === 'success' ? 'ok' : state === 'failure' || state === 'error' ? 'bad' : !state || state === 'inactive' ? 'off' : 'busy');
-
-function ago(at: string) {
-  const s = Math.max(0, (Date.now() - Date.parse(at)) / 1000);
-  return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)}m ago` : s < 86400 ? `${Math.floor(s / 3600)}h ago` : `${Math.floor(s / 86400)}d ago`;
-}
 
 async function post(path: string, body: unknown) {
   const r = await fetch(api(path), { method: 'POST', body: JSON.stringify(body) }).then((x) => x.json());
@@ -73,7 +68,7 @@ export function Deploy() {
   const rollback = (env: DeployEnv) =>
     s && env.deployed && env.rollbackTo && setAsk({
       title: `Roll back ${env.label}?`,
-      detail: `Redeploys ${short(env.rollbackTo.sha)} (deployed ${ago(env.rollbackTo.at)}) in place of ${short(env.deployed.sha)}.`,
+      detail: `Redeploys ${short(env.rollbackTo.sha)} (deployed ${ago(env.rollbackTo.at, ' ago')}) in place of ${short(env.deployed.sha)}.`,
       warning: warning(env),
       action: 'Roll back',
       icon: 'history',
@@ -106,7 +101,7 @@ export function Deploy() {
           {env.deployed ? (
             <div className="deploy-meta">
               <a className="mono" href={`https://github.com/${s.repo}/commit/${env.deployed.sha}`} target="_blank" rel="noreferrer">{short(env.deployed.sha)}</a>
-              <span className="muted">{ago(env.deployed.at)}{env.deployed.by && ` by ${env.deployed.by}`}</span>
+              <span className="muted">{ago(env.deployed.at, ' ago')}{env.deployed.by && ` by ${env.deployed.by}`}</span>
               {env.deployed.sha === s.head.sha && <span className="chip">HEAD</span>}
             </div>
           ) : (
