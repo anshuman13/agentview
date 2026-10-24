@@ -251,11 +251,11 @@ async function restore() {
   const saved: { view?: string; chats: { sessionId: string; crons: SessionCronSummary[]; repeat?: Repeat | null }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
   if (!saved) return null;
   await rm(RESTORE, { force: true });
-  for (const s of saved.chats) {
+  await Promise.all(saved.chats.map(async (s) => {
     const chat = await openSaved(s.sessionId).catch(() => null);
     if (chat && s.crons.length) chat.restoreCrons(s.crons);
     if (chat && s.repeat) chat.resumeRepeat(s.repeat);
-  }
+  }));
   return (saved.view && bySession(saved.view)) || null;
 }
 
