@@ -150,7 +150,7 @@ export class AgentSession {
   private orphans = new Set<string>();
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
-  constructor(public cwd: string, private resume?: string) {
+  constructor(public cwd: string, private resume?: string, private fork = false) {
     this.state = {
       session: { id: this.id, sessionId: resume ?? null, model: null, effort: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null },
       status: 'Idle',
@@ -316,6 +316,7 @@ export class AgentSession {
       },
       mcp: this.addedMcp,
       effort: this.state.session.effort ?? undefined,
+      fork: this.fork,
     });
     this.mcpServers = options.mcpServers ?? {};
     this.q = query({ prompt: this.inputStream(this.gen), options });
@@ -888,6 +889,11 @@ export class AgentSession {
       case 'system':
         if (msg.subtype === 'init') {
           const changed = msg.model !== this.state.session.model;
+          if (this.fork) {
+            this.fork = false;
+            this.watchTranscript(false);
+            this.system('Forked into a new chat');
+          }
           this.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
           if (changed) this.system(`Session started with ${msg.model}`);
           if (this.resume && msg.permissionMode !== 'auto' && !this.resumedAuto) {

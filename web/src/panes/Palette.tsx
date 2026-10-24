@@ -36,6 +36,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     { id: 'file', label: 'Go to File', key: '⌘P' },
     { id: 'repo', label: 'Chat: Open Repository', key: '⌘O' },
     { id: 'newChat', label: 'Chat: New Chat' },
+    { id: 'forkChat', label: 'Chat: Fork Chat' },
     ...models.map((m) => ({ id: `model:${m.value}`, label: `Model: ${m.displayName}` })),
     ...EFFORT_LEVELS.map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
     ...PERMISSION_MODES.map((m) => ({ id: `mode:${m}`, label: `Permission Mode: ${MODES[m] ?? m}` })),
@@ -117,6 +118,10 @@ function perform(id: string) {
   else if (kind === 'effort') send({ type: 'set_effort', effort: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
   else if (id === 'newChat') send({ type: 'new_session' });
+  else if (id === 'forkChat') {
+    const sessionId = getState().session.sessionId;
+    if (sessionId) send({ type: 'new_session', fork: sessionId });
+  }
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
   else if (id === 'loop') send({ type: 'set_loop', on: !getState().session.loop.on });
   else if (id === 'stop') send({ type: 'interrupt' });
