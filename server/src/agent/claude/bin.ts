@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { deleteSession, getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
-import { BIN_MS, type BinnedSession } from '../../shared/protocol.js';
+import { BIN_MS, type BinnedSession } from '../../../../shared/protocol.js';
 
 const FILE = path.join(os.homedir(), '.agentview', 'bin.json');
 

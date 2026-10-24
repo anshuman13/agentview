@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ROOTS, inside } from '../workspace/worktrees.js';
-import { allowedServers } from '../mcp.js';
+import { allowedServers } from '../agent/claude/mcp.js';
 import { callTool, data, listTools, stop, stopAll, text, type McpResult, type McpServerDef } from './mcpClient.js';
 import type {
   GrafanaDashboards,

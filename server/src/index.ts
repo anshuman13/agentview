@@ -13,9 +13,9 @@ import { connect as connectChrome, openChrome, openInChrome, ownProfile } from '
 import { getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
 import { notifyAway, notifyStall, ntfyTopic, stallWatch } from './integrations/notify.js';
-import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './mcp.js';
+import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
-import { listBin, removeSession, restoreSession } from './bin.js';
+import { listBin, removeSession, restoreSession } from './agent/claude/bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './workspace/files.js';
 import { github } from './integrations/github.js';
 import { attention, dismissAttention, onAttention, refreshAttention, startAttention } from './integrations/attention.js';
