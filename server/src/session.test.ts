@@ -126,6 +126,60 @@ describe('AgentSession turns', () => {
     s.sendPrompt('hi');
     expect(s.state.session.running).toBe(true);
   });
+
+  it('sends prompts queued during a turn one per turn, in the order typed', async () => {
+    const { s, result } = fakeSession();
+    const sent = () => s.state.events.filter((e) => e.kind === 'user' && !e.queued).map((e) => e.kind === 'user' && e.text);
+    const waiting = () => s.state.events.filter((e) => e.kind === 'user' && e.queued).map((e) => e.kind === 'user' && e.text);
+    s.sendPrompt('task');
+    await s.prompt('A');
+    await s.prompt('B');
+    await s.prompt('C');
+    expect(sent()).toEqual(['task']);
+    expect(waiting()).toEqual(['A', 'B', 'C']);
+    result('r1');
+    expect(sent()).toEqual(['task', 'A']);
+    expect(waiting()).toEqual(['B', 'C']);
+    result('r2');
+    result('r3');
+    expect(sent()).toEqual(['task', 'A', 'B', 'C']);
+    expect(waiting()).toEqual([]);
+    expect(s.state.session.running).toBe(true);
+    result('r4');
+    expect(s.state.session.running).toBe(false);
+  });
+
+  it('a plan change made during a turn goes out before a queued prompt', async () => {
+    const { s, result } = fakeSession();
+    const sent = () => s.state.events.filter((e) => e.kind === 'user' && !e.queued).map((e) => e.kind === 'user' && e.text);
+    const waiting = () => s.state.events.filter((e) => e.kind === 'user' && e.queued).map((e) => e.kind === 'user' && e.text);
+    s.sendPrompt('task');
+    await s.prompt('next');
+    s.changePlan(['a']);
+    result('r1');
+    expect(sent()).toEqual(['task', expect.stringContaining('1. a')]);
+    expect(waiting()).toEqual(['next']);
+    result('r2');
+    expect(sent()).toEqual(['task', expect.stringContaining('1. a'), 'next']);
+    expect(waiting()).toEqual([]);
+  });
+
+  it('interrupt drops the queued prompts with a single init', async () => {
+    const { s, interrupt, result } = fakeSession();
+    const sent: ServerMessage[] = [];
+    s.onMessage((m) => sent.push(m));
+    s.sendPrompt('task');
+    await s.prompt('A');
+    await s.prompt('B');
+    Object.assign(s, { inputQueue: [] });
+    await s.interrupt();
+    expect(interrupt).toHaveBeenCalledOnce();
+    expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['task']);
+    expect(sent.filter((m) => m.type === 'init')).toHaveLength(1);
+    result('r1', 'error_during_execution');
+    expect(s.state.session.running).toBe(false);
+    expect(sent.filter((m) => m.type === 'init')).toHaveLength(1);
+  });
 });
 
 describe('Fable approval', () => {
