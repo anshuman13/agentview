@@ -6,11 +6,7 @@
 .observe .obs-picker { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-6) var(--sp-4); color: var(--fg-muted); }
 .observe .obs-picker .icon-btn, .observe .obs-head .icon-btn, .observe .obs-issue .meta .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 
-.observe :is(.obs-picker input, .obs-form input, .obs-form select, .obs-pick select, .obs-field input) {
-  min-width: 0; height: var(--size-md); padding: 0 var(--sp-3); font-size: var(--fs-sm); color: var(--fg);
-  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
-}
-.observe :is(.obs-picker input, .obs-form input, .obs-form select, .obs-pick select, .obs-field input, .obs-editor):focus { outline: 0; border-color: var(--accent); }
+.observe :is(.obs-picker input, .obs-form input, .obs-form select, .obs-pick select, .obs-field input) { min-width: 0; height: var(--size-md); padding: 0 var(--sp-3); font-size: var(--fs-sm); }
 .observe .obs-picker input { flex: 1; padding: 0 var(--sp-4); font-size: var(--fs-md); }
 
 .observe .obs-hint { padding: 3px var(--sp-6); font-size: var(--fs-sm); color: var(--fg-muted); word-break: break-word; display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
@@ -90,8 +86,7 @@
 .observe .obs-pick select:disabled { opacity: 0.5; }
 .observe .obs-editor {
   display: block; width: calc(100% - 24px); margin: var(--sp-2) var(--sp-6); padding: var(--sp-3) var(--sp-4); resize: vertical;
-  font-family: var(--mono); font-size: var(--fs-sm); line-height: 17px; color: var(--fg);
-  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--mono); font-size: var(--fs-sm); line-height: 17px;
 }
 .observe .obs-editor:disabled { opacity: 0.6; }
 .observe .obs-save { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-6); font-size: var(--fs-sm); }

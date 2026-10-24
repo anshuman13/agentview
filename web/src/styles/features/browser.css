@@ -13,7 +13,6 @@
 .chrome-setup ol { margin: var(--sp-2) 0 var(--sp-4); padding-left: 18px; text-align: left; line-height: var(--lh-loose); }
 .chrome-setup code { padding: 1px var(--sp-2); border-radius: var(--radius-sm); background: var(--sunken); }
 .chrome-setup .link { margin-left: var(--sp-3); }
-.chrome-setup .error-text { color: var(--err); }
 
 @media (max-width: 900px) {
   .browser-bar { height: var(--touch); }

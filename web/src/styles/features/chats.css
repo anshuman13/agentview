@@ -1,10 +1,6 @@
 .sessions { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 .sessions-bar { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-6) var(--sp-3) var(--sp-4); }
-.sessions-bar input {
-  flex: 1; min-width: 0; height: var(--size-md); padding: 0 var(--sp-4); font-size: var(--fs-md); line-height: var(--size-row);
-  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
-}
-.sessions-bar input:focus { outline: 0; border-color: var(--accent); }
+.sessions-bar input { flex: 1; min-width: 0; height: var(--size-md); padding: 0 var(--sp-4); font-size: var(--fs-md); line-height: var(--size-row); }
 .sessions-bar .new-chat {
   flex: 1; height: var(--size-md); display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-3);
   font-size: var(--fs-sm); color: var(--fg); border-radius: var(--radius-sm);
