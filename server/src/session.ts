@@ -3,16 +3,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { readFile, readdir, stat } from 'node:fs/promises';
-import { JsonlTail } from './tail.js';
+import { JsonlTail } from './agent/claude/tail.js';
 import { query, getSessionMessages, getSubagentMessages, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { COMPACT_AT, EFFORT_LEVELS, MAX_GOAL_ROUNDS, type AgentEvent, type AgentStatus, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
-import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
-import { inSettings, mcpFrom } from './mcp.js';
+import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './agent/claude/options.js';
+import { inSettings, mcpFrom } from './agent/claude/mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
 import { GOAL_USAGE, USAGE, after, clock, describeLoop, goalMet, limitReset, offCommand, parseGoal, parseLoop, roundWord } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './agent/claude/transcript.js';
 
 export { BIG_BRO };
 

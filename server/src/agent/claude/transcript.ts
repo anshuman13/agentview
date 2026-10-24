@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SessionMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { AgentEvent, AgentUsage, CacheInfo, ChatEvent } from '../../shared/protocol.js';
+import type { AgentEvent, AgentUsage, CacheInfo, ChatEvent } from '../../../../shared/protocol.js';
 
 export const BIG_BRO = 'big-bro';
 

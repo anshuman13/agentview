@@ -1,6 +1,6 @@
 import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import type { Effort } from '../../shared/protocol.js';
+import type { Effort } from '../../../../shared/protocol.js';
 import { BIG_BRO } from './transcript.js';
 
 export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
