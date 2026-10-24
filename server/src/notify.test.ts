@@ -7,6 +7,8 @@ vi.mock('node:fs/promises', async (orig) => ({
     if (!files.observe) throw new Error('ENOENT');
     return files.observe;
   }),
+  mkdir: vi.fn(async () => undefined),
+  writeFile: vi.fn(async (_p: string, data: string) => void (files.observe = data)),
 }));
 import { pushNtfy, stallWatch } from './notify.js';
 
@@ -41,9 +43,18 @@ describe('pushNtfy', () => {
     expect(init.body).toBe('Allow?');
   });
 
-  it('sends nothing without a topic', async () => {
-    expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(false);
+  it('makes a random topic once and keeps it in observe.json', async () => {
     files.observe = '{"sentryToken":""}';
+    expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(true);
+    const saved = JSON.parse(files.observe) as { ntfy: string; sentryToken: string };
+    expect(saved.ntfy).toMatch(/^agentview-[0-9a-f]{20}$/);
+    expect(saved.sentryToken).toBe('');
+    await pushNtfy('t', 's', 'b', 'http://x');
+    expect(sent.mock.calls.map((c) => c[0])).toEqual([`https://ntfy.sh/${saved.ntfy}`, `https://ntfy.sh/${saved.ntfy}`]);
+  });
+
+  it('sends nothing when the topic is off', async () => {
+    files.observe = '{"ntfy":"off"}';
     expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(false);
     expect(sent).not.toHaveBeenCalled();
   });

@@ -98,13 +98,13 @@ export function sentryItems(cwd: string, repo: string, issues: SentryIssue[], ba
   return { items, base: next };
 }
 
-type Saved = { seen: Record<string, number>; dismissed: string[]; sentry?: Record<string, SentryBase>; autofix?: string[] };
+type Saved = { seen: Record<string, number>; dismissed: string[]; sentry?: Record<string, SentryBase>; autofix?: string[] | false };
 
 let items: AttentionItem[] = [];
 let seen = new Map<string, number>();
 let dismissed = new Set<string>();
 let sentryBase: Record<string, SentryBase> = {};
-let autofix: string[] = [];
+let autofix: string[] | false = [];
 let fixer: ((item: AttentionItem) => Promise<string>) | null = null;
 let loaded: Promise<void> | null = null;
 let onChange: (items: AttentionItem[]) => void = () => {};
@@ -151,11 +151,13 @@ export function merge(found: AttentionItem[], now = Date.now()) {
 
 const fixes = new Map<string, string>();
 
-// One fix chat per failing head commit on repos listed under autofix in attention.json; the chat ids live in memory only.
-export async function fixCi(list: AttentionItem[], repos: string[], fix: (item: AttentionItem) => Promise<string>, started = fixes) {
+// One fix chat per failing head commit; the chat ids live in memory only. The autofix key in attention.json
+// lists repo names, an empty or missing list means every repo, false turns it off.
+export async function fixCi(list: AttentionItem[], repos: string[] | false, fix: (item: AttentionItem) => Promise<string>, started = fixes) {
+  if (repos === false) return;
   for (const it of list) {
     if (it.kind !== 'ci' || !it.sha) continue;
-    if (!started.has(it.sha) && repos.includes(it.repo)) started.set(it.sha, await fix(it).catch(() => ''));
+    if (!started.has(it.sha) && (!repos.length || repos.includes(it.repo))) started.set(it.sha, await fix(it).catch(() => ''));
     it.fixing = started.get(it.sha) || undefined;
   }
 }

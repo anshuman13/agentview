@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { LiveChat, ServerMessage } from '../../shared/protocol.js';
@@ -72,9 +73,20 @@ export function notifyStall(chat: LiveChat) {
 }
 
 // A topic name on ntfy.sh or a full URL, from the environment or the ntfy key in observe.json.
+// Without either, a random topic is made once and saved there; "off" disables the push.
+export async function ntfyTopic() {
+  if (process.env.AGENTVIEW_NTFY) return process.env.AGENTVIEW_NTFY;
+  const cfg: Record<string, unknown> = await readFile(OBSERVE, 'utf8').then(JSON.parse).catch(() => ({}));
+  if (typeof cfg.ntfy === 'string' && cfg.ntfy) return cfg.ntfy;
+  const topic = `agentview-${randomBytes(10).toString('hex')}`;
+  await mkdir(path.dirname(OBSERVE), { recursive: true });
+  await writeFile(OBSERVE, JSON.stringify({ ...cfg, ntfy: topic }, null, 2));
+  return topic;
+}
+
 async function ntfyUrl() {
-  const topic = process.env.AGENTVIEW_NTFY || (await readFile(OBSERVE, 'utf8').then((raw) => String(JSON.parse(raw).ntfy ?? '')).catch(() => ''));
-  if (!topic) return null;
+  const topic = await ntfyTopic();
+  if (topic === 'off') return null;
   return /^https?:\/\//.test(topic) ? topic : `https://ntfy.sh/${encodeURIComponent(topic)}`;
 }
 

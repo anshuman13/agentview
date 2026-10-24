@@ -156,9 +156,10 @@ clicking it opens that chat in the browser (a GitHub item opens the Chats view).
 The browser shows its own notification while the tab is hidden; clicking it opens the chat. The bell in the status
 bar turns browser notifications on or off.
 
-For a phone in the background, the same notifications go to an [ntfy](https://ntfy.sh) topic: set `AGENTVIEW_NTFY`
-or an `ntfy` key in `~/.agentview/observe.json` to a topic name (sent to ntfy.sh) or a full URL on your own server.
-Tapping the push opens the chat. Without a topic nothing is sent.
+For a phone in the background, the same notifications go to an [ntfy](https://ntfy.sh) topic. The first start
+makes a random topic, saves it as `ntfy` in `~/.agentview/observe.json` and prints it; subscribe to it in the ntfy
+app. Set `AGENTVIEW_NTFY` or that key to your own topic or a full URL on your own server, or to `off`. Tapping the
+push opens the chat.
 
 A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot
 in the chat list until its next message.
@@ -181,9 +182,9 @@ Repos come from `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` 
 Chats start only inside these folders or Paseo worktrees.
 
 - Chats keep running in the background. Ones that need you are marked and listed first
-- Failing CI on your pull request shows under Needs you. List repo names under `autofix` in
-  `~/.agentview/attention.json` and a fix chat starts by itself, once per pushed commit; the item then says
-  "Fixing in" with the chat and opens it
+- Failing CI on your pull request shows under Needs you, and a fix chat starts by itself, once per pushed
+  commit; the item then says "Fixing in" with the chat and opens it. `autofix` in `~/.agentview/attention.json`
+  limits that to the listed repo names, `false` turns it off
 - A chat closes after 10 idle minutes with no one viewing it. Reopen it from Recent
 - Chats and Paseo worktrees idle for 12 hours can be deleted (worktree branches are kept)
 
