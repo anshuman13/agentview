@@ -1,5 +1,6 @@
 // Recent broadcasts, so an event stream that drops can resume from its Last-Event-ID instead of taking a full init.
-type Entry = { id: number; data: string; chat: unknown };
+// Init snapshots are too big to keep; a null body marks where one went by and a resume across it gets a fresh init.
+type Entry = { id: number; data: string | null; chat: unknown };
 
 export class Ring {
   private entries: Entry[] = [];
@@ -8,18 +9,20 @@ export class Ring {
 
   constructor(private size = 500) {}
 
-  push(data: string, chat: unknown) {
+  push(data: string | null, chat: unknown) {
     const id = ++this.seq;
     this.entries.push({ id, data, chat });
     if (this.entries.length > this.size) this.entries.shift();
     return id;
   }
 
-  // Entries after `last` for one chat plus the chat-less ones, or null when `last` is not in the buffer any more.
+  // Entries after `last` for one chat plus the chat-less ones, or null when `last` is not in the buffer any more
+  // or an init for that chat went by since.
   since(last: number, chat: unknown) {
     const oldest = this.entries[0]?.id ?? this.seq + 1;
     if (!Number.isFinite(last) || last > this.seq || last < oldest - 1) return null;
-    return this.entries.filter((e) => e.id > last && (e.chat === null || e.chat === chat));
+    const hits = this.entries.filter((e) => e.id > last && (e.chat === null || e.chat === chat));
+    return hits.some((e) => e.data === null) ? null : (hits as { id: number; data: string }[]);
   }
 }
 

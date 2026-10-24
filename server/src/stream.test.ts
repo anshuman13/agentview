@@ -27,6 +27,20 @@ describe('Ring', () => {
     expect(ring.since(NaN, null)).toBeNull();
   });
 
+  it('keeps no init bodies and asks for a fresh init when one went by', () => {
+    const ring = new Ring(10);
+    const a = {};
+    const b = {};
+    const first = ring.push('a1', a);
+    const init = ring.push(null, a);
+    const other = ring.push(null, b);
+    ring.push('a2', a);
+    expect(ring.since(first, a)).toBeNull();
+    expect(ring.since(init, a)?.map((e) => e.data)).toEqual(['a2']);
+    expect(ring.since(init, b)).toBeNull();
+    expect(ring.since(other, b)).toEqual([]);
+  });
+
   it('frames an event with and without an id', () => {
     expect(frame('{"a":1}', 7)).toBe('id: 7\ndata: {"a":1}\n\n');
     expect(frame('x')).toBe('data: x\n\n');
