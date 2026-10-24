@@ -100,7 +100,9 @@ export function Deploy() {
         <button className="icon-btn" title="Refresh" onClick={load}><Icon name={loading ? 'loading' : 'refresh'} small spin={loading} /></button>
       </div>
       {s && <a className="deploy-link" href={s.velodrome} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open in Velodrome</a>}
-      {error && <div className="deploy-error"><Icon name="error" small /> {error}</div>}
+      {error && (error.includes('no Velo app')
+        ? <div className="deploy-hint">No Velo app in this repo (no .deploy/app.yaml), so there is nothing to deploy from here.</div>
+        : <div className="deploy-error"><Icon name="error" small /> {error}</div>)}
       {s?.envs.map((env) => (
         <div key={env.name} className="deploy-card">
           <div className="deploy-card-head">

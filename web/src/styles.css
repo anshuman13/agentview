@@ -9,10 +9,11 @@
   --border-card: #474747;
   --fg: #e6e6e6;
   --fg-muted: #8c8c8c;
-  --fg-faint: #5c5c5c;
+  --fg-faint: #6b6b6b;
   --accent: #8b7cf6;
   --accent-hover: #9d90f8;
   --accent-soft: rgba(139, 124, 246, 0.15);
+  --on-accent: #121212;
   --agent: #a78bfa;
   --prompt: #5b9cf5;
   --link: #a99cf8;
@@ -49,6 +50,7 @@
   --accent: #0078d4;
   --accent-hover: #026ec1;
   --accent-soft: rgba(0, 120, 212, 0.3);
+  --on-accent: #ffffff;
   --agent: #b180d7;
   --prompt: var(--accent);
   --link: #4daafc;
@@ -81,14 +83,16 @@
   --accent: #005fb8;
   --accent-hover: #0258a8;
   --accent-soft: rgba(0, 95, 184, 0.12);
+  --on-accent: #ffffff;
   --agent: #8a3ffc;
   --prompt: var(--accent);
   --link: #005fb8;
   --ok: #1a7f37;
-  --warn: #9a6700;
+  --warn: #8a5d00;
   --err: #c72e2e;
   --diff-add: #1a7f37;
   --diff-del: #c72e2e;
+  --claude: #b0502d;
   --t-read: #005fb8;
   --t-run: #795e26;
   --t-web: #0f766e;
@@ -124,7 +128,7 @@ button {
 }
 button:hover { background: var(--border-strong); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
-button.primary { background: var(--accent); color: #fff; }
+button.primary { background: var(--accent); color: var(--on-accent); }
 button.primary:hover { background: var(--accent-hover); }
 button.primary:disabled { opacity: 0.5; cursor: default; }
 button.active { color: var(--fg); }
@@ -193,7 +197,7 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
   border-radius: 8px; background: var(--border-strong); color: var(--fg); font-size: 10px; line-height: 16px; font-weight: 600; text-transform: none;
 }
 .badge.waiting, .activitybar button[title='Chats'] .badge, .tabbar .badge { background: var(--warn); color: var(--bg); }
-.badge.running { background: var(--accent); color: #fff; }
+.badge.running { background: var(--accent); color: var(--on-accent); }
 .badge.running::before { content: ''; width: 6px; height: 6px; margin-right: 3px; border-radius: 50%; background: currentColor; }
 
 .sidebar {
@@ -423,7 +427,7 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .tc .mark, .tl-now .mark { position: relative; flex: none; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--fg-muted); }
 .tc .when, .tl-now .when { text-align: right; font-size: 11px; color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tc-prompt { display: grid; grid-template-columns: 18px minmax(0, 1fr) 34px; column-gap: 8px; align-items: start; cursor: pointer; }
-.tc-prompt .mark { border-radius: 50%; background: var(--prompt); color: #fff; }
+.tc-prompt .mark { border-radius: 50%; background: var(--prompt); color: var(--on-accent); }
 .tc-prompt .mark .codicon.icon.small { font-size: 11px; }
 .tc-prompt .text { min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .tc-prompt.open .text { display: block; white-space: pre-wrap; }
