@@ -272,7 +272,8 @@ function Grafana({ info }: { info: ObserveInfo }) {
   const prompt = (text: string) => () => askClaude(`Use the grafana MCP for ${info.repo} (Loki selector ${selector}): ${text}`);
   return (
     <Section title="Grafana" actions={<button className="icon-btn" title="Refresh" onClick={refresh}><Icon name="refresh" small /></button>}>
-      {!info.grafanaServer && <div className="obs-hint error">No grafana MCP server in ~/.claude.json</div>}
+      {!info.grafanaServer && <div className="obs-hint">No grafana MCP server in ~/.claude.json. Add one with: claude mcp add grafana -s user -e GRAFANA_URL=… -e GRAFANA_API_KEY=… -- mcp-grafana</div>}
+      {info.grafanaServer && <>
       <Sub title="Dashboards" link={dash.data?.link} ask={prompt('search the dashboards for this service, open the most relevant one and summarize what its panels show right now')}>
         {dash.busy && <Loading />}
         <Err text={dash.error} />
@@ -317,6 +318,7 @@ function Grafana({ info }: { info: ObserveInfo }) {
         )}
       </Sub>
       {selector && <div className="obs-hint mono">{selector}</div>}
+      </>}
     </Section>
   );
 }

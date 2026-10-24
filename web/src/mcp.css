@@ -46,7 +46,7 @@
 .mcp-card-foot > * { flex: none; }
 .mcp-card-foot .mono { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
 .mcp-card-foot .s { font-weight: 600; }
-.mcp-card-foot .use { color: var(--accent); }
+.mcp-card-foot .use { color: var(--link); }
 .mcp-card-foot .use.bad { color: var(--err); }
 .mcp-card-foot .s.ok { color: var(--fg-muted); font-weight: 400; }
 .mcp-card-foot .s.bad { color: var(--err); }
@@ -126,7 +126,7 @@
 .mcp-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; min-width: 0; }
 .mcp-field .k { display: flex; align-items: baseline; gap: 3px; min-width: 0; }
 .mcp-field .req { color: var(--err); }
-.mcp-field .ty { margin-left: auto; font-size: 10px; color: var(--fg-faint); }
+.mcp-field .ty { margin-left: auto; font-size: 10px; color: var(--fg-muted); }
 .mcp-field .d { font-size: 11px; color: var(--fg-muted); line-height: 1.4; }
 .mcp-field input:not([type='checkbox']), .mcp-field textarea, .mcp-field select {
   width: 100%; min-width: 0; height: 26px; padding: 0 8px; font-size: 12px; color: var(--fg);
@@ -145,7 +145,7 @@
   color: var(--fg); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
 }
 .mcp-run button:hover { background: var(--bg-hover); }
-.mcp-run button.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+.mcp-run button.primary { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 .mcp-run button.primary:hover { background: var(--accent-hover); }
 .mcp-run button.danger { color: #fff; background: var(--err); border-color: var(--err); }
 .mcp-run button:disabled { opacity: 0.6; }

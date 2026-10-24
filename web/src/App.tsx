@@ -168,6 +168,7 @@ export function App() {
   const [more, setMore] = useState(false);
   const [browse, setBrowse] = useState(false);
   const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (narrow() ? 'code' : t)); };
+  const reveal = (el: HTMLElement | null) => el?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   const closePage = () => { setPage(null); setEditor((e) => (isPage(e) ? 'file' : e)); };
   const [sidebar, setSidebar] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
@@ -261,8 +262,10 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // A file Claude edits while a page or the browser is shown goes to Open Editors without taking the editor.
   useEffect(() => {
     if (!openFile) return;
+    if (getState().ui.follow && editor !== 'file') return;
     setEditor('file');
     setBrowse(false);
     if (narrow() && !getState().ui.follow) setTab((t) => (t === 'chat' || t === 'repos' ? 'code' : t));
@@ -412,7 +415,7 @@ export function App() {
             </button>
             <AgentsTab active={showing === 'agents'} onOpen={() => { setEditor('agents'); setTab((t) => (t === 'code' || t === 'browser' ? 'agents' : t)); }} />
             {page && (
-              <div className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} {...pressable(() => { setEditor(page); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={pageOf(page).title}>
+              <div className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} ref={showing === page ? reveal : undefined} {...pressable(() => { setEditor(page); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={pageOf(page).title}>
                 <Icon name={pageOf(page).icon} small /> {pageOf(page).title}
                 <button className="close" title="Close" onClick={(e) => { e.stopPropagation(); closePage(); }}><Icon name="close" small /></button>
               </div>
