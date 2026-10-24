@@ -1,4 +1,4 @@
-import { Component, Fragment, useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
+import { Component, Fragment, useEffect, useRef, useState, type MouseEvent, type MutableRefObject, type PointerEvent, type ReactNode } from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
@@ -9,6 +9,8 @@ import { Icon } from '../Icon';
 import { FileIcon } from './Explorer';
 import { MarkdownDoc } from './MarkdownDoc';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
+import { showChat } from './util';
+import { touch } from '../touch';
 import { isDark, useThemeName } from '../theme';
 import '../code.css';
 
@@ -82,10 +84,48 @@ function Toggle({ on, icon, title, onClick }: { on?: boolean; icon: string; titl
 
 type EditorProps = { file: FileData; diff: boolean; wrap: boolean; changesOnly: boolean; line?: number | null; viewRef: MutableRefObject<EditorView | null> };
 
+const PRESS_MS = 500;
+
+// Puts the line into the composer as `path:line`: code, so a reply can point at it.
+function quoteLine(path: string, line: number, text: string) {
+  showChat();
+  window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: `\`${path}:${line}\`: ${text.trim()}` } }));
+  window.dispatchEvent(new CustomEvent('agentview:focus'));
+}
+
 function Editor({ file, diff, wrap, changesOnly, line, viewRef }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const scroll = useRef<{ path: string; top: number } | null>(null);
+  const press = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> } | null>(null);
   const dark = isDark(useThemeName());
+
+  const quoteAt = (x: number, y: number) => {
+    const view = viewRef.current;
+    const pos = view?.posAtCoords({ x, y });
+    if (!view || pos == null) return;
+    const l = view.state.doc.lineAt(pos);
+    const removed = document.elementFromPoint(x, y)?.closest('.cm-deletedLine');
+    quoteLine(file.path, l.number, removed?.textContent ?? l.text);
+  };
+  const release = () => {
+    if (press.current) clearTimeout(press.current.timer);
+    press.current = null;
+  };
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (!diff || e.button !== 0) return;
+    release();
+    const { clientX: x, clientY: y } = e;
+    press.current = { x, y, timer: setTimeout(() => { press.current = null; quoteAt(x, y); }, PRESS_MS) };
+  };
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (press.current && Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 8) release();
+  };
+  const onContextMenu = (e: MouseEvent<HTMLDivElement>) => {
+    if (!diff) return;
+    e.preventDefault();
+    release();
+    if (!touch()) quoteAt(e.clientX, e.clientY);
+  };
 
   useEffect(() => {
     if (!host.current) return;
@@ -122,7 +162,7 @@ function Editor({ file, diff, wrap, changesOnly, line, viewRef }: EditorProps) {
     };
   }, [file, diff, wrap, changesOnly, dark, line]);
 
-  return <div className="cd-editor" ref={host} />;
+  return <div className="cd-editor" ref={host} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={release} onPointerCancel={release} onContextMenu={onContextMenu} />;
 }
 
 export function CodePane() {
