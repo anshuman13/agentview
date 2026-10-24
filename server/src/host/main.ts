@@ -50,6 +50,7 @@ const apis = new Set<(v: unknown) => void>();
 const push = (v: unknown) => apis.forEach((send) => send(v));
 const broadcast = (m: ServerMessage, chat?: AgentSession) => push({ chat: chat?.id ?? null, m });
 
+let serving = false;
 const live = new Map<string, { chat: AgentSession; watcher: FSWatcher }>();
 let counts: Record<string, number> = {};
 let lastViewed: AgentSession;
@@ -199,6 +200,8 @@ function remember(chat: AgentSession) {
 }
 
 function saveAndExit() {
+  // A host that never got the socket has nothing to save, and the socket and saved chats belong to the one that did.
+  if (!serving) process.exit(0);
   const chats = [...live.values()].map(({ chat }) => ({ sessionId: chat.state.session.sessionId, crons: chat.crons, repeat: chat.state.session.repeat })).filter((c) => c.sessionId);
   mkdirSync(path.dirname(RESTORE), { recursive: true });
   writeFileSync(RESTORE, JSON.stringify({ view: lastViewed?.state.session.sessionId, chats }));
@@ -365,7 +368,10 @@ const host = net.createServer((sock) => {
 await new Promise<void>((ok) => {
   let retried = false;
   host
-    .on('listening', ok)
+    .on('listening', () => {
+      serving = true;
+      ok();
+    })
     .on('error', async (err: NodeJS.ErrnoException) => {
       if (retried || err.code !== 'EADDRINUSE' || (await served())) process.exit(0);
       retried = true;
