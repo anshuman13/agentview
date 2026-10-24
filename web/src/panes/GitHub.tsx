@@ -86,6 +86,17 @@ const StateChip = ({ state }: { state: string }) => {
   return r ? <span className={`gh-chip ${r[1]}`}>{r[0]}</span> : null;
 };
 
+// The cached PR list of a repo, loaded once per cwd, for rows outside this pane.
+export function usePullRequests(cwd: string) {
+  const l = useList();
+  useEffect(() => { if (cwd && l.cwd !== cwd) void load(cwd); }, [cwd]);
+  return l.cwd === cwd ? l.prs : [];
+}
+
+export const PullState = ({ pr }: { pr: PullRequest }) => (
+  <span className="gh-state"><CheckIcon state={pr.checks} />{pr.draft ? <span className="gh-chip">Draft</span> : <StateChip state={pr.review} />}<Counts a={pr.additions} d={pr.deletions} /></span>
+);
+
 function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
   return (
     <div className="gh-pr" onClick={onOpen} title={`#${pr.number} ${pr.title}`}>
