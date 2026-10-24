@@ -55,6 +55,8 @@ cost so far. Switch to the transcript for every message and step in order.
 - Questions, plan approvals and permissions show as buttons in the timeline
 - Opening a chat with activity since this browser last showed it puts a "Since you last looked" line above the
   cards: turns, files changed, failed commands and whether a permission is waiting. Tap it to dismiss
+- "Fork chat" in the chat settings menu (or the palette) starts a new chat that carries the whole conversation so
+  far, so two directions can be tried from the same point
 
 ## Review findings
 

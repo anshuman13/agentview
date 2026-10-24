@@ -120,8 +120,8 @@ function broadcastLive() {
   }, 100);
 }
 
-async function createChat(cwd: string, resume?: string, title = '') {
-  const chat = new AgentSession(cwd, resume);
+async function createChat(cwd: string, resume?: string, title = '', fork = false) {
+  const chat = new AgentSession(cwd, resume, fork);
   chat.title = title;
   await chat.loadHistory();
   chat.onMessage((m) => {
@@ -131,7 +131,7 @@ async function createChat(cwd: string, resume?: string, title = '') {
     const woke = stalls.seen(chat.id, chat.state.session.running);
     if (woke || m.type !== 'event' || m.event.kind === 'user') broadcastLive();
   });
-  if (!resume) chat.start();
+  if (!resume || fork) chat.start();
   live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
   return chat;
 }
@@ -220,11 +220,11 @@ async function openSaved(sessionId: string) {
   return createChat(dir, sessionId, info.summary);
 }
 
-async function newChat(cwd: string, from: AgentSession) {
+async function newChat(cwd: string, from: AgentSession, fork?: string) {
   const dir = path.resolve(cwd);
   if (dir !== from.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
   if (!(await isDir(dir))) throw new Error(`Folder no longer exists: ${dir}`);
-  return createChat(dir);
+  return fork ? createChat(dir, fork, from.title, true) : createChat(dir);
 }
 
 let remembered = '';
@@ -653,7 +653,7 @@ function handleCommand(client: Client, msg: ClientMessage) {
       restart(Boolean(msg.now));
       break;
     case 'new_session':
-    newChat(msg.cwd ?? chat.cwd, chat).then((c) => view(client, c), fail);
+    newChat(msg.cwd ?? chat.cwd, chat, typeof msg.fork === 'string' ? msg.fork : undefined).then((c) => view(client, c), fail);
     break;
   }
 }

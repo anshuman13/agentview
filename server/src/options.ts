@@ -49,10 +49,12 @@ export function agentOptions(o: {
   onStop: HookCallback;
   mcp?: Record<string, McpServerConfig>;
   effort?: Effort;
+  fork?: boolean;
 }): Options {
   return {
     cwd: o.cwd,
     resume: o.resume,
+    forkSession: o.fork,
     effort: o.effort,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1' },
     systemPrompt: { type: 'preset', preset: 'claude_code', append: INSTRUCTIONS },

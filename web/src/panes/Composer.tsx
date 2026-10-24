@@ -159,6 +159,7 @@ type Hist = { list: string[]; index: number; draft: string };
 export function Composer() {
   const cwd = useStore((s) => s.session.cwd);
   const chat = useStore((s) => s.session.id);
+  const sessionId = useStore((s) => s.session.sessionId);
   const running = useStore((s) => s.session.running);
   const stopping = useStore((s) => s.session.stopping);
   const compacting = useStore((s) => s.session.compacting);
@@ -499,8 +500,12 @@ export function Composer() {
             { value: 'effort', label: 'Effort', detail: effortName },
             { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
             { value: 'saved', label: 'Saved prompts', detail: `${stored.length}` },
+            ...(sessionId ? [{ value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }] : []),
           ]}
-          onPick={(v) => setPick({ kind: v as 'mode' | 'model' | 'effort' | 'loop' | 'saved', at: pick.at })}
+          onPick={(v) => {
+            if (v === 'fork') { send({ type: 'new_session', fork: sessionId! }); setPick(null); return; }
+            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'loop' | 'saved', at: pick.at });
+          }}
           onClose={() => setPick(null)}
         />
       )}
