@@ -1,18 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { PermissionResult, PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
 import type { PendingRequest, ServerMessage, ServerState } from '../../../shared/protocol.js';
+import type { AskOptions, Decision } from '../agent/types.js';
 
-type Waiting = { resolve: (r: PermissionResult) => void; input: Record<string, unknown>; suggestions?: PermissionUpdate[] };
-
-export type AskOptions = {
-  suggestions?: PermissionUpdate[];
-  title?: string;
-  description?: string;
-  decisionReason?: string;
-  defaultToNo?: boolean;
-  suppressAlwaysAllowRule?: boolean;
-  signal: AbortSignal;
-};
+type Waiting = { resolve: (r: Decision) => void; input: Record<string, unknown>; suggestions?: unknown[] };
 
 export function permissionTitle(toolName: string, input: Record<string, unknown>) {
   const s = (k: string) => (typeof input[k] === 'string' ? (input[k] as string).trim() : '');
@@ -38,7 +28,7 @@ export class Approvals {
 
   constructor(private state: ServerState, private emit: (m: ServerMessage) => void) {}
 
-  ask(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<PermissionResult> {
+  ask(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<Decision> {
     const id = randomUUID();
     const req: PendingRequest =
       toolName === 'AskUserQuestion'
@@ -57,7 +47,7 @@ export class Approvals {
     this.state.pending.push(req);
     this.emit({ type: 'pending', request: req });
 
-    return new Promise<PermissionResult>((resolve) => {
+    return new Promise<Decision>((resolve) => {
       this.waiting.set(id, { resolve, input, suggestions: opts.suggestions });
       opts.signal.addEventListener('abort', () => {
         this.finish(id);
