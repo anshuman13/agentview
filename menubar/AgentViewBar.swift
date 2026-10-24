@@ -157,7 +157,7 @@ final class Bar: NSObject, NSApplicationDelegate {
   let loginItem = NSMenuItem(title: "Open at login", action: #selector(toggleLogin), keyEquivalent: "")
   var assertion: IOPMAssertionID = 0
   let relay = Child("relay", "bun server/src/relay.ts", env: ["AGENTVIEW_RELAY_TOKEN": token])
-  let server = Child("server", "sh -c 'npx -w web vite build --logLevel warn; cd server && exec bun src/index.ts'", env: ["CHROME_CDP": "ws://127.0.0.1:7779/\(token)"])
+  let server = Child("server", "sh -c 'npx -w web vite build --logLevel warn; cd server && exec bun src/index.ts'", env: ["CHROME_CDP": "ws://127.0.0.1:7779/\(token)", "AGENTVIEW_DEV_WEB": ""])
   let notifier = Notifier()
 
   func applicationDidFinishLaunching(_ n: Notification) {
