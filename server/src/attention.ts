@@ -3,7 +3,7 @@ import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ATTENTION_LABEL, type AttentionItem, type AttentionKind, type DeployStatus, type GitStatus, type PullRequest } from '../../shared/protocol.js';
 import { listIssues, listPrs, type Issue } from './github.js';
-import { gitStatus } from './git.js';
+import { gitStatus } from './workspace/git.js';
 import { sentryWatch } from './observe.js';
 import { deployWatch } from './deploy.js';
 import type { SentryIssue } from '../../shared/observe.js';

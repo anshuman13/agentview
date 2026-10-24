@@ -4,7 +4,7 @@ import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { listSessions } from '@anthropic-ai/claude-agent-sdk';
-import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../shared/protocol.js';
+import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shared/protocol.js';
 
 const run = promisify(execFile);
 const git = async (cwd: string, ...args: string[]) => (await run('git', ['-C', cwd, ...args])).stdout.trim();
