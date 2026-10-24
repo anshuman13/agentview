@@ -62,7 +62,7 @@ const ring = new Ring();
 // To every client, or to the viewers of one chat. Each broadcast gets an id so an event stream can resume.
 function broadcast(m: ServerMessage, chat?: AgentSession) {
   const data = JSON.stringify(m);
-  const id = ring.push(data, chat ?? null);
+  const id = ring.push(m.type === 'init' ? null : data, chat ?? null);
   for (const c of clients) if (!chat || c.view === chat) c.sendRaw(data, id);
 }
 const live = new Map<string, { chat: AgentSession; watcher: FSWatcher }>();
