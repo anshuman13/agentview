@@ -1,7 +1,7 @@
 .sessions .sessions-bar { gap: 4px; padding: 0 12px 6px 8px; align-items: center; }
 .sessions .sessions-bar input {
   height: 24px; padding: 0 8px; font-size: 13px; line-height: 22px;
-  background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
 .sessions .sessions-bar input:focus { outline: 0; border-color: var(--accent); }
 .sessions .hint { padding: 0 12px 6px 8px; font-size: 11px; color: var(--fg-muted); }

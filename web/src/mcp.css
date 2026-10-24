@@ -20,7 +20,7 @@
 .mcp-error { margin: 0 0 16px; padding: 8px 12px; display: flex; gap: 6px; align-items: center; color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); border: 1px solid color-mix(in srgb, var(--err) 40%, transparent); border-radius: var(--radius-sm); }
 .mcp-empty { margin: 60px auto; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .mcp-empty > .codicon.icon { font-size: 44px; color: var(--fg-faint); margin-bottom: 8px; }
-.mcp-empty code, .mcp-kv code { font-family: var(--mono); font-size: 11px; padding: 1px 4px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: 3px; }
+.mcp-empty code, .mcp-kv code { font-family: var(--mono); font-size: 11px; padding: 1px 4px; background: var(--sunken); border: 1px solid var(--border); border-radius: 3px; }
 
 .mcp-section { margin-bottom: 22px; }
 .mcp-section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; white-space: nowrap; overflow: hidden; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); }
@@ -33,7 +33,7 @@
   color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
   transition: border-color 120ms, background 120ms;
 }
-.mcp-card:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+.mcp-card:hover { border-color: var(--border-strong); background: var(--hover); }
 .mcp-card.selected { border-color: var(--accent); background: var(--accent-soft); }
 .mcp-card.bad { border-color: color-mix(in srgb, var(--err) 45%, var(--border-strong)); }
 .mcp-card.warn { border-color: color-mix(in srgb, var(--warn) 45%, var(--border-strong)); }
@@ -69,7 +69,7 @@
 
 .mcp-detail {
   min-width: 0; display: flex; flex-direction: column; overflow: auto; padding: 24px 22px 32px; position: relative;
-  background: var(--bg-raised); border-left: 1px solid var(--border);
+  background: var(--raised); border-left: 1px solid var(--border);
 }
 .mcp-detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .mcp-detail-head h2 { margin: 0; font-size: 18px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -78,7 +78,7 @@
   height: 26px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; text-decoration: none;
   color: var(--fg); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
 }
-.mcp-detail-acts button:hover, .mcp-detail-acts a:hover { background: var(--bg-hover); }
+.mcp-detail-acts button:hover, .mcp-detail-acts a:hover { background: var(--hover); }
 .mcp-kv { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 6px 10px; margin: 0 0 18px; font-size: 12px; }
 .mcp-kv dt { color: var(--fg-muted); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding-top: 2px; }
 .mcp-kv dd { margin: 0; min-width: 0; }
@@ -92,27 +92,27 @@
   height: 26px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; text-decoration: none;
   color: var(--fg); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
 }
-.mcp-login button:hover { background: var(--bg-hover); }
+.mcp-login button:hover { background: var(--hover); }
 .mcp-login-acts { display: flex; flex-wrap: wrap; gap: 6px; }
 .mcp-tools-head { display: flex; align-items: center; gap: 6px; height: 28px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); border-top: 1px solid var(--border); padding-top: 8px; }
-.mcp-tools-head input { width: 120px; height: 22px; padding: 0 8px; font-size: 12px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.mcp-tools-head input { width: 120px; height: 22px; padding: 0 8px; font-size: 12px; background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .mcp-tools-head input:focus { outline: 0; border-color: var(--accent); }
 .mcp-tools { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
 .mcp-tool { padding: 6px 8px; border-radius: var(--radius-sm); }
-.mcp-tool:hover { background: var(--bg-hover); }
+.mcp-tool:hover { background: var(--hover); }
 .mcp-tool .t { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
 .mcp-tool .t .codicon { color: var(--fg-muted); }
 .mcp-calls { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 14px; }
 .mcp-call { border-radius: var(--radius-sm); }
 .mcp-call .t { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 6px; font-size: 12px; border-radius: var(--radius-sm); cursor: pointer; }
-.mcp-call .t:hover { background: var(--bg-hover); }
+.mcp-call .t:hover { background: var(--hover); }
 .mcp-call .t > .codicon { color: var(--fg-muted); }
 .mcp-call .name { flex: none; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mcp-call .in { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--fg-muted); }
 .mcp-call .s { flex: none; font-size: 11px; color: var(--fg-muted); }
 .mcp-call .s.bad { color: var(--err); }
 .mcp-call .r { margin: 2px 0 6px 20px; display: flex; flex-direction: column; gap: 4px; }
-.mcp-call pre { margin: 0; max-height: 240px; overflow: auto; padding: 6px 8px; font-family: var(--mono); font-size: 11px; white-space: pre-wrap; word-break: break-word; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.mcp-call pre { margin: 0; max-height: 240px; overflow: auto; padding: 6px 8px; font-family: var(--mono); font-size: 11px; white-space: pre-wrap; word-break: break-word; background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .mcp-call pre.bad { color: var(--err); }
 .mcp-insert:hover .codicon { color: var(--fg) !important; }
 .mcp-tool .mcp-insert, .mcp-call .mcp-insert { width: 20px; height: 20px; opacity: 0; }
@@ -130,7 +130,7 @@
 .mcp-field .d { font-size: 11px; color: var(--fg-muted); line-height: 1.4; }
 .mcp-field input:not([type='checkbox']), .mcp-field textarea, .mcp-field select {
   width: 100%; min-width: 0; height: 26px; padding: 0 8px; font-size: 12px; color: var(--fg);
-  background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
 .mcp-field textarea { height: auto; min-height: 56px; padding: 6px 8px; font-family: var(--mono); font-size: 11px; line-height: 1.45; resize: vertical; }
 .mcp-field :is(input, textarea, select):focus { outline: 0; border-color: var(--accent); }
@@ -144,13 +144,13 @@
   height: 26px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
   color: var(--fg); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
 }
-.mcp-run button:hover { background: var(--bg-hover); }
+.mcp-run button:hover { background: var(--hover); }
 .mcp-run button.primary { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 .mcp-run button.primary:hover { background: var(--accent-hover); }
 .mcp-run button.danger { color: #fff; background: var(--err); border-color: var(--err); }
 .mcp-run button:disabled { opacity: 0.6; }
 .mcp-run-out { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
-.mcp-run-out pre { align-self: stretch; margin: 0; max-height: 320px; overflow: auto; padding: 6px 8px; font-family: var(--mono); font-size: 11px; white-space: pre-wrap; word-break: break-word; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.mcp-run-out pre { align-self: stretch; margin: 0; max-height: 320px; overflow: auto; padding: 6px 8px; font-family: var(--mono); font-size: 11px; white-space: pre-wrap; word-break: break-word; background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .mcp-run-out pre.bad { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, var(--border)); }
 
 .mcp-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--fg-faint); display: inline-block; }

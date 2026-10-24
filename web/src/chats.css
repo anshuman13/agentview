@@ -2,21 +2,21 @@
 .sessions.chats .tree .row.live.two { padding-left: 24px; }
 .sessions .tree.needs .row.live.two { padding-left: 8px; }
 .sessions .tree .row.live.two > .dot { margin-top: 7px; }
-.sessions .tree .row.live.two > .mark { flex: none; display: inline-flex; width: 12px; justify-content: center; margin: 2px 0 0; color: var(--ok, #89d185); }
+.sessions .tree .row.live.two > .mark { flex: none; display: inline-flex; width: 12px; justify-content: center; margin: 2px 0 0; color: var(--ok); }
 .sessions .tree .row.live.two > .acts { margin-top: 2px; }
 .sessions .tree .row.live .lines { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 18px; }
 .sessions .tree .row.live .lines .l1 { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-.sessions .tree .row.live .lines .l1 .repo { flex: none; font-weight: 600; color: var(--fg, #cccccc); }
-.sessions .tree .row.live .lines .l1 .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg, #cccccc); }
-.sessions .tree .row.live.selected .lines .l1 .name { color: var(--text-strong, #ffffff); }
-.sessions .tree .row.live .lines .l1 .when { flex: none; margin: 0; padding: 0 10px 0 0; min-width: 0; font-size: 11px; color: var(--fg-faint, #6e6e6e); }
-.sessions .tree .row.live .lines .l2 { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 12px; color: var(--fg-muted, #9d9d9d); }
+.sessions .tree .row.live .lines .l1 .repo { flex: none; font-weight: 600; color: var(--fg); }
+.sessions .tree .row.live .lines .l1 .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg); }
+.sessions .tree .row.live.selected .lines .l1 .name { color: var(--fg-strong); }
+.sessions .tree .row.live .lines .l1 .when { flex: none; margin: 0; padding: 0 10px 0 0; min-width: 0; font-size: 11px; color: var(--fg-faint); }
+.sessions .tree .row.live .lines .l2 { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 12px; color: var(--fg-muted); }
 .sessions .tree .row.live .lines .l2 .sub { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sessions .tree .row.live .lines .l2 .sub.fixing { flex: 0 1 auto; white-space: nowrap; color: var(--accent); }
 .sessions .tree .row.live .lines .l2 .edits { flex: none; padding-right: 10px; font-size: 11px; font-variant-numeric: tabular-nums; }
-.sessions .tree .row.live .lines .l2 .edits .add { color: var(--diff-add, #89d185); }
-.sessions .tree .row.live .lines .l2 .edits .del { color: var(--diff-del, #f14c4c); }
-.sessions .tree .row.live .lines .l2 .cost { flex: none; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--fg-faint, #6e6e6e); }
+.sessions .tree .row.live .lines .l2 .edits .add { color: var(--diff-add); }
+.sessions .tree .row.live .lines .l2 .edits .del { color: var(--diff-del); }
+.sessions .tree .row.live .lines .l2 .cost { flex: none; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--fg-faint); }
 .sessions .tree .row.live .lines .l2 .cost:last-child { padding-right: 10px; }
 .sessions .tree .row.live.two:has(.acts):hover .lines .l2 .edits, .sessions .tree .row.live.two:has(.acts):hover .lines .l2 .cost { display: none; }
 .gh-state { flex: none; display: inline-flex; align-items: center; gap: 6px; padding-right: 10px; font-size: 11px; }
