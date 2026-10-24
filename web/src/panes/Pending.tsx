@@ -97,9 +97,9 @@ function Decision({ p, mode, first, cardRef, yes, no }: CardProps & { cardRef: R
   return (
     <>
       <div className="pd-actions">
-        <button className="pd-btn primary" onClick={() => reply(true)}>{yes}{keys && <kbd>Y</kbd>}</button>
-        {always && <button className="pd-btn" onClick={() => reply(true, true)}>Always allow{keys && <kbd>A</kbd>}</button>}
-        <button className="pd-btn" autoFocus={p.confirmFirst} onClick={() => reply(false)}>{no}<kbd>N</kbd></button>
+        <button className="btn lg primary" onClick={() => reply(true)}>{yes}{keys && <kbd>Y</kbd>}</button>
+        {always && <button className="btn lg" onClick={() => reply(true, true)}>Always allow{keys && <kbd>A</kbd>}</button>}
+        <button className="btn lg" autoFocus={p.confirmFirst} onClick={() => reply(false)}>{no}<kbd>N</kbd></button>
       </div>
       {MODE_HINTS[mode] && <div className="pd-hint">{MODE_HINTS[mode]}</div>}
     </>
@@ -260,9 +260,9 @@ export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean 
       </div>
       {(step > 0 || multi || other !== null) && (
         <div className="pd-actions pd-nav">
-          {step > 0 && <button className="pd-btn" onClick={() => go(step - 1)}>Back</button>}
+          {step > 0 && <button className="btn lg" onClick={() => go(step - 1)}>Back</button>}
           {(multi || other !== null) && (
-            <button className="pd-btn" disabled={!result} onClick={() => answer(result)}>{step + 1 < total ? 'Next' : 'Done'}</button>
+            <button className="btn lg" disabled={!result} onClick={() => answer(result)}>{step + 1 < total ? 'Next' : 'Done'}</button>
           )}
         </div>
       )}
@@ -293,7 +293,7 @@ export function BlockedCard({ ev }: { ev: Extract<ChatEvent, { kind: 'blocked' }
       <div className="pd-head"><Icon name="shield" small /><span className="pd-title">Auto mode blocked this</span></div>
       <pre className="pd-code">{rule}</pre>
       {ev.reason && <div className="pd-desc">{ev.reason}</div>}
-      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><button className="pd-btn primary" onClick={() => send({ type: 'allow_blocked', id: ev.id })}>Allow and retry</button></div>}
+      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><button className="btn lg primary" onClick={() => send({ type: 'allow_blocked', id: ev.id })}>Allow and retry</button></div>}
     </div>
   );
 }

@@ -73,10 +73,10 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void commit(); } }}
       />
       <div className="scm-commit-actions">
-        <button className="primary" disabled={!canCommit} title={staged ? 'Commit the staged changes' : 'Stage changes to commit them'} onClick={() => void commit()}>
+        <button className="btn primary" disabled={!canCommit} title={staged ? 'Commit the staged changes' : 'Stage changes to commit them'} onClick={() => void commit()}>
           <Icon name="check" small /> Commit
         </button>
-        <button className="scm-claude" disabled={staged === 0} title={staged ? 'Ask Claude in the chat for a commit subject' : 'Stage changes first'} onClick={() => askClaude(DRAFT_PROMPT)}>
+        <button className="btn quiet scm-claude" disabled={staged === 0} title={staged ? 'Ask Claude in the chat for a commit subject' : 'Stage changes first'} onClick={() => askClaude(DRAFT_PROMPT)}>
           <Icon name="sparkle" small /> Write message with Claude
         </button>
       </div>
@@ -161,7 +161,7 @@ export function Changes() {
       <BranchBar status={status} onRefresh={() => void refresh()} />
       <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
       <div className="scm-commit-actions scm-review">
-        <button className="scm-claude" disabled={!files.length} title={files.length ? 'Claude reviews the working tree, findings show below' : 'No changes to review'} onClick={() => askClaude(REVIEW_LOCAL)}>
+        <button className="btn quiet scm-claude" disabled={!files.length} title={files.length ? 'Claude reviews the working tree, findings show below' : 'No changes to review'} onClick={() => askClaude(REVIEW_LOCAL)}>
           <Icon name="search" small /> Review changes with Claude
         </button>
       </div>

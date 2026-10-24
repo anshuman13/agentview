@@ -46,8 +46,8 @@ export function Findings({ target }: { target: string }) {
           </div>
           <div className="gh-finding-foot">
             <span className="gh-sha">{f.file}:{f.line}</span>
-            <button className="gh-mini" onClick={() => fix(f)}>Fix</button>
-            <button className="gh-mini" onClick={() => dismiss(f)}>Dismiss</button>
+            <button className="btn xs quiet" onClick={() => fix(f)}>Fix</button>
+            <button className="btn xs quiet" onClick={() => dismiss(f)}>Dismiss</button>
           </div>
         </div>
       ))}

@@ -24,3 +24,23 @@ button.link:hover { background: transparent; text-decoration: underline; }
 }
 .icon-btn:hover:not(:disabled) { background: var(--hover); color: var(--fg); }
 .icon-btn:disabled { opacity: 0.4; cursor: default; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--size-lg); padding: 0 var(--sp-5);
+  font: inherit; font-size: var(--fs-sm); white-space: nowrap; text-decoration: none; cursor: pointer;
+  color: var(--fg); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.btn, .btn:hover { background: transparent; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.quiet { color: var(--fg-muted); }
+.btn.quiet:hover:not(:disabled) { color: var(--fg); }
+.btn.primary, .btn.primary:hover { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn.danger, .btn.danger:hover { color: var(--on-color); background: var(--err); border-color: var(--err); }
+.btn.xs { height: var(--size-xs); padding: 0 var(--sp-3); gap: 3px; font-size: var(--fs-xs); }
+.btn.sm { height: var(--size-md); padding: 0 var(--sp-4); }
+.btn.lg { height: var(--size-xl); padding: 0 var(--sp-6); gap: var(--sp-4); font-size: var(--fs-md); }
+@media (max-width: 900px) {
+  .btn, .btn:is(.xs, .sm, .lg) { height: var(--touch); padding: 0 var(--sp-6); font-size: var(--fs-md); }
+}
