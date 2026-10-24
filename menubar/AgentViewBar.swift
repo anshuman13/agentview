@@ -84,6 +84,8 @@ final class Child {
     guard pid > 0 else { return start() }
     stopping = false
     kill(-pid, SIGTERM)
+    let p = pid
+    DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in if self?.pid == p { kill(-p, SIGKILL) } }
   }
 }
 
@@ -155,13 +157,15 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 final class Bar: NSObject, NSApplicationDelegate {
   let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
   let awakeItem = NSMenuItem(title: "Keep Mac awake", action: #selector(toggleAwake), keyEquivalent: "")
-  let loginItem = NSMenuItem(title: "Open at login", action: #selector(toggleLogin), keyEquivalent: "")
   var assertion: IOPMAssertionID = 0
   let relay = Child("relay", "bun server/src/relay.ts", env: ["AGENTVIEW_RELAY_TOKEN": token])
   let server = Child("server", "./serve.sh", env: ["CHROME_CDP": "ws://127.0.0.1:7779/\(token)", "AGENTVIEW_DEV_WEB": ""])
   let notifier = Notifier()
 
   func applicationDidFinishLaunching(_ n: Notification) {
+    // launchd starts AgentView at login and after a crash; a second copy leaves.
+    if NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "").contains(where: { $0.processIdentifier != getpid() && !$0.isTerminated }) { exit(0) }
+    if SMAppService.mainApp.status == .enabled { try? SMAppService.mainApp.unregister() }
     try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: logs.deletingLastPathComponent().path)
     notifier.onClick = { [weak self] in self?.openApp() }
@@ -174,9 +178,6 @@ final class Bar: NSObject, NSApplicationDelegate {
     menu.addItem(.separator())
     awakeItem.target = self
     menu.addItem(awakeItem)
-    loginItem.target = self
-    loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
-    menu.addItem(loginItem)
     menu.addItem(.separator())
     menu.addItem(withTitle: "Quit AgentView", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     item.menu = menu
@@ -185,6 +186,24 @@ final class Bar: NSObject, NSApplicationDelegate {
     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
       self.relay.start()
       self.server.start()
+    }
+    watch()
+  }
+
+  // Restarts a server that has stopped answering for two minutes.
+  func watch() {
+    var failures = 0
+    Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+      guard let self, self.server.pid > 0, Date().timeIntervalSince(self.server.started) > 120 else { failures = 0; return }
+      URLSession.shared.dataTask(with: URLRequest(url: URL(string: "http://127.0.0.1:7777/")!, timeoutInterval: 10)) { _, res, _ in
+        DispatchQueue.main.async {
+          failures = res == nil ? failures + 1 : 0
+          if failures >= 4 {
+            failures = 0
+            self.server.restart()
+          }
+        }
+      }.resume()
     }
   }
 
@@ -219,16 +238,6 @@ final class Bar: NSObject, NSApplicationDelegate {
     p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
     p.arguments = ["-a", "Google Chrome", "chrome://inspect/#remote-debugging"]
     try? p.run()
-  }
-
-  @objc func toggleLogin() {
-    let s = SMAppService.mainApp
-    do {
-      if s.status == .enabled { try s.unregister() } else { try s.register() }
-    } catch {
-      NSAlert(error: error).runModal()
-    }
-    loginItem.state = s.status == .enabled ? .on : .off
   }
 }
 
