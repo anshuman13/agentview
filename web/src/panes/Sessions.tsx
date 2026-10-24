@@ -6,6 +6,7 @@ import { QuickPick } from '../QuickPick';
 import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { save, stored } from './util';
+import { PullState, usePullRequests } from './GitHub';
 import '../chats.css';
 
 const PAGE = 10;
@@ -565,13 +566,17 @@ function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveCh
   );
 }
 
+const PR_KINDS = new Set<AttentionItem['kind']>(['review', 'ci', 'changes', 'ready', 'stale']);
 const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues', stale: 'history', commit: 'git-commit', sentry: 'bug', deploy: 'rocket' };
 
 // Chats waiting on the user plus GitHub items the server flagged (failing CI, reviews, assigned issues).
 function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
   const items = useStore((s) => s.attention);
+  const cwd = useStore((s) => s.session.cwd);
+  const prs = usePullRequests(cwd);
   const [busy, setBusy] = useState<string | null>(null);
   if (n + items.length === 0) return null;
+  const pullOf = (it: AttentionItem) => (it.cwd === cwd && PR_KINDS.has(it.kind) ? prs.find((p) => p.number === it.number) : undefined);
   const post = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
   const ask = async (it: AttentionItem) => {
     setBusy(it.id);
@@ -596,7 +601,7 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
               <span className="name">{it.number ? `#${it.number} ` : ''}{it.title}</span>
               <span className="when">{ago(it.since)}</span>
             </span>
-            <span className="l2"><span className="sub">{ATTENTION_LABEL[it.kind]}</span></span>
+            <span className="l2"><span className="sub">{ATTENTION_LABEL[it.kind]}</span>{pullOf(it) && <PullState pr={pullOf(it)!} />}</span>
           </span>
           <span className="acts">
             <button className="icon-btn" title="Ask Claude to handle this" onClick={(e) => { e.stopPropagation(); void ask(it); }}><Icon name="sparkle" small /></button>

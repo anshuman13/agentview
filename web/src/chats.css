@@ -16,6 +16,8 @@
 .sessions .tree .row.live .lines .l2 .edits .add { color: var(--diff-add, #89d185); }
 .sessions .tree .row.live .lines .l2 .edits .del { color: var(--diff-del, #f14c4c); }
 .sessions .tree .row.live.two:has(.acts):hover .lines .l2 .edits { display: none; }
+.gh-state { flex: none; display: inline-flex; align-items: center; gap: 6px; padding-right: 10px; font-size: 11px; }
+.sessions .tree .row.live.two:has(.acts):hover .lines .l2 .gh-state { display: none; }
 @media (max-width: 900px) {
   .sessions .tree .row.live.two { min-height: 48px; padding-top: 6px; padding-bottom: 6px; }
   .sessions .tree .row.live .lines { line-height: 20px; }
