@@ -213,7 +213,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
 }
 
 const REASONS: Record<string, string> = {
-  nofda: 'macOS blocks AgentView from finding Chrome until AgentView has Full Disk Access.',
+  nofda: 'macOS blocks AgentView from finding Chrome. AgentView needs Full Disk Access, and macOS forgets it each time AgentView is rebuilt.',
   nochrome: 'Chrome is not running.',
   disabled: 'Chrome is running, but remote debugging is off.',
   denied: 'Chrome refused the connection.',
@@ -252,7 +252,7 @@ function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
             {state.own
               ? 'AgentView opens its own Chrome window and connects on its own.'
               : fda
-              ? 'Drag AgentView from the Finder window into the Full Disk Access list and turn it on. AgentView connects on its own; if it does not, quit and reopen it from the menu bar.'
+              ? 'If AgentView is already in the Full Disk Access list, select it and remove it with the minus button. Then drag AgentView from the Finder window into the list and turn it on. AgentView connects on its own; if it does not, quit and reopen it from the menu bar.'
               : 'In the Chrome tab that opened, tick "Allow remote debugging for this browser instance", then click Allow. AgentView connects on its own.'}
           </div>
         )}
