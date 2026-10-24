@@ -93,11 +93,12 @@ let boot = 0;
 const cid = uid();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// A command is one POST; a network failure retries, a server error shows up as a notice.
-async function post(m: ClientMessage, tries = 1): Promise<boolean> {
+// A command is one POST; a network failure retries and returns false, a server error shows up as a notice and returns null.
+async function post(m: ClientMessage, tries = 1): Promise<boolean | null> {
+  const url = api(`/api/cmd?cid=${cid}`);
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(api(`/api/cmd?cid=${cid}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m), signal: AbortSignal.timeout(10_000) });
+      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m), signal: AbortSignal.timeout(10_000) });
       if (r.ok) return true;
       // The server has no stream for this tab; reopen it and try again.
       if (r.status === 409 && i + 1 < tries) {
@@ -107,7 +108,7 @@ async function post(m: ClientMessage, tries = 1): Promise<boolean> {
       }
       const body = await r.json().catch(() => ({}));
       notice(body.error ?? `${r.status} ${r.statusText}`);
-      return false;
+      return null;
     } catch {
       if (i + 1 < tries) await sleep(2_000 * (i + 1));
     }
@@ -116,15 +117,19 @@ async function post(m: ClientMessage, tries = 1): Promise<boolean> {
 }
 
 export function send(m: ClientMessage) {
-  void post(m, 2);
+  void post(m, 2).then((ok) => ok === false && notice('Not connected, that did not reach the server'));
   return true;
 }
 
 // Messages carry an id so a retry after a lost reply does not run twice; the server ignores repeats.
-function deliver(msg: ClientMessage, onLost: () => void) {
+// A lost message goes back in the box only if its chat is still shown, so it never lands in another chat's draft.
+function deliver(msg: { type: 'prompt' | 'steer'; text: string; id: string }, onLost: () => void) {
+  const chat = state.session.id;
   void post(msg, 2).then((ok) => {
     if (ok) return;
-    notice('Message did not reach the server, it is back in the box');
+    if (msg.type === 'steer') set((s) => ({ events: s.events.filter((e) => e.id !== msg.id) }));
+    if (state.session.id !== chat) return notice('A message to another chat may not have reached the server');
+    notice('Message may not have reached the server, it is back in the box');
     onLost();
   });
 }
@@ -250,7 +255,8 @@ export function connect() {
     setUi({ connected: false });
     avlog('stream closed');
     // The browser retries the URL it was given; after a chat switch that is the wrong chat, so reopen by hand.
-    if (src.readyState === EventSource.CLOSED || streamChat !== getState().session.id) retry = setTimeout(connect, 2_000);
+    if (streamChat !== getState().session.id) src.close();
+    if (src.readyState === EventSource.CLOSED) retry = setTimeout(connect, 2_000);
   };
   src.onmessage = (e) => {
     heard = Date.now();

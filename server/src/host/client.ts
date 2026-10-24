@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
-import { mkdirSync, openSync } from 'node:fs';
+import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { lines, socketPath, type HostLine, type HostRequest } from './protocol.js';
 
@@ -71,6 +71,10 @@ export class Host {
     const logs = path.join(os.homedir(), '.agentview', 'logs');
     mkdirSync(logs, { recursive: true });
     const log = openSync(path.join(logs, 'host.log'), 'a');
-    spawn(process.execPath, [MAIN, this.project], { detached: true, stdio: ['ignore', log, log], env: { ...process.env, PORT: String(this.port) } }).unref();
+    try {
+      spawn(process.execPath, [MAIN, this.project], { detached: true, stdio: ['ignore', log, log], env: { ...process.env, PORT: String(this.port) } }).unref();
+    } finally {
+      closeSync(log);
+    }
   }
 }

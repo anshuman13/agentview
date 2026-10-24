@@ -100,7 +100,7 @@ function AddToClaude({ server, added, disabled, title, onDone }: { server: 'sent
   if (added) return <span className="chip ok" title={`${server} is in ~/.claude.json`}><Icon name="check" small /> In Claude</span>;
   return (
     <span className="obs-add">
-      <button className="btn xs" disabled={disabled} title={title} onClick={() => post<{ info: ObserveInfo; backup: string }>('/api/observe/mcp/add', { server }).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
+      <button className="btn xs" disabled={disabled} title={title} onClick={() => post<{ info: ObserveInfo }>('/api/observe/mcp/add', { server }).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
         <Icon name="add" small /> Add to Claude
       </button>
       {msg && <span className="error">{msg}</span>}

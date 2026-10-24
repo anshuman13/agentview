@@ -190,14 +190,24 @@ final class Bar: NSObject, NSApplicationDelegate {
     watch()
   }
 
-  // Restarts a server that has stopped answering for two minutes.
+  // Restarts a server that has stopped answering for two minutes. A run that has not answered yet may still be
+  // installing and building, so its failures only count after 15 minutes.
   func watch() {
     var failures = 0
+    var answered: Date?
     Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-      guard let self, self.server.pid > 0, Date().timeIntervalSince(self.server.started) > 120 else { failures = 0; return }
+      guard let self, self.server.pid > 0 else { failures = 0; return }
+      let started = self.server.started
+      let age = Date().timeIntervalSince(started)
+      guard age > 120 else { failures = 0; return }
       URLSession.shared.dataTask(with: URLRequest(url: URL(string: "http://127.0.0.1:7777/")!, timeoutInterval: 10)) { _, res, _ in
         DispatchQueue.main.async {
-          failures = res == nil ? failures + 1 : 0
+          if res != nil {
+            answered = started
+            failures = 0
+          } else if answered == started || age > 900 {
+            failures += 1
+          }
           if failures >= 4 {
             failures = 0
             self.server.restart()

@@ -41,8 +41,14 @@ export function createTerminal(chat: string, cwd: string) {
   return { id: t.id, name: t.name };
 }
 
+// An interactive shell ignores SIGTERM; SIGHUP is what a closing terminal sends, and SIGKILL follows if that fails.
 export function closeTerminal(id: string) {
-  terms.get(id)?.proc.kill();
+  const proc = terms.get(id)?.proc;
+  if (proc) {
+    proc.kill('SIGHUP');
+    const force = setTimeout(() => proc.kill('SIGKILL'), 3_000);
+    void proc.exited.then(() => clearTimeout(force));
+  }
   terms.delete(id);
   return { ok: true };
 }

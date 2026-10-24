@@ -62,7 +62,7 @@ function stored(key: string, fallback: number) {
 
 const params = new URLSearchParams(location.search);
 const shellParam = params.get('shell');
-if (shellParam) localStorage.setItem('agentview.shell', shellParam);
+if (shellParam) try { localStorage.setItem('agentview.shell', shellParam); } catch {}
 // Deep links: ?view=github, ?page=observe, ?chat=<live id>, ?session=<saved id> or ?beside=<live id>. Consumed once, then dropped from the URL.
 const deepLink = { view: params.get('view'), page: params.get('page'), chat: params.get('chat'), session: params.get('session') };
 if (deepLink.chat || deepLink.session) presetChat(deepLink.chat, deepLink.session);
@@ -208,7 +208,7 @@ export function App() {
 
   useEffect(() => {
     if (besideGone) setUi({ beside: null });
-    else localStorage.setItem('agentview.beside', beside ?? '');
+    else try { localStorage.setItem('agentview.beside', beside ?? ''); } catch {}
   }, [beside, besideGone]);
 
   // The side column tells the page which chat it shows; the page keeps the title and the stored id in step.

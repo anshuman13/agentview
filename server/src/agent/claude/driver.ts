@@ -360,7 +360,14 @@ export class ClaudeDriver implements AgentDriver {
     const q = this.q;
     if (!q) return;
     try {
-      for await (const msg of q) this.handle(msg);
+      for await (const msg of q) {
+        // A bug in handling one message must not end the CLI and the turn with it.
+        try {
+          this.handle(msg);
+        } catch (err) {
+          process.stderr.write(`handle ${msg.type} failed: ${err instanceof Error ? err.stack : String(err)}\n`);
+        }
+      }
     } catch (err) {
       if (this.q === q) this.host.system(`Session error: ${String(err)}`);
     } finally {

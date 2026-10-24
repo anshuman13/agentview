@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { ROOTS, inside } from '../workspace/worktrees.js';
 import { allowedServers } from '../agent/claude/mcp.js';
 import { callTool, data, listTools, stop, stopAll, text, type McpResult, type McpServerDef } from './mcpClient.js';
@@ -54,7 +54,10 @@ const EXAMPLE: Settings = {
 
 async function save(s: Settings) {
   await mkdir(DIR, { recursive: true });
-  await writeFile(FILE, JSON.stringify(s, null, 2) + '\n', { mode: 0o600 });
+  // Written whole and renamed, so a reader never sees half a file.
+  const tmp = `${FILE}.${process.pid}.tmp`;
+  await writeFile(tmp, JSON.stringify(s, null, 2) + '\n', { mode: 0o600 });
+  await rename(tmp, FILE);
 }
 
 async function load(): Promise<Settings> {
@@ -308,7 +311,7 @@ function parseIssues(md: string, base: string, org: string): SentryIssue[] {
 }
 
 async function sentryGet(token: string, url: string) {
-  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
+  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error(`Sentry REST ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return res.json() as Promise<any>;
 }
@@ -549,13 +552,11 @@ async function addToClaude(server: string, cwd: string) {
   } else if (server === 'snowflake') def = await snowflakeDef(s);
   else throw new Error('server must be sentry or snowflake');
   if (servers[server]) throw new Error(`${server} is already in your Claude MCP config`);
-  const raw = await readFile(CLAUDE, 'utf8').catch(() => '{}');
-  const json = JSON.parse(raw);
-  const backup = `${CLAUDE}.${new Date().toISOString().replace(/[:.]/g, '-')}.bak`;
-  await copyFile(CLAUDE, backup).catch(() => {});
-  json.mcpServers = { ...json.mcpServers, [server]: def };
-  await writeFile(CLAUDE, JSON.stringify(json, null, 2) + '\n');
-  return { server, file: CLAUDE, backup, info: await info(await repoName(cwd), cwd) };
+  // The CLI writes ~/.claude.json the same way running Claude sessions do, so neither overwrites the other.
+  await run('claude', ['mcp', 'add-json', '--scope', 'user', server, JSON.stringify(def)], { timeout: 30_000 }).catch((err: { stderr?: string; message: string }) => {
+    throw new Error(err.stderr?.trim() || err.message);
+  });
+  return { server, file: CLAUDE, info: await info(await repoName(cwd), cwd) };
 }
 
 async function body(req: http.IncomingMessage) {

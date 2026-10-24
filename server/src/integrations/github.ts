@@ -13,7 +13,7 @@ const ENV = { ...process.env, GH_NO_UPDATE_NOTIFIER: '1', GH_PROMPT_DISABLED: '1
 
 async function gh(cwd: string, ...args: string[]) {
   try {
-    return (await run('gh', args, { cwd, maxBuffer: 64 * 1024 * 1024, env: ENV })).stdout;
+    return (await run('gh', args, { cwd, maxBuffer: 64 * 1024 * 1024, env: ENV, timeout: 60_000 })).stdout;
   } catch (err) {
     const e = err as NodeJS.ErrnoException & { stderr?: string };
     if (e.code === 'ENOENT') throw new Error('The GitHub CLI is not installed. Install it with: brew install gh');

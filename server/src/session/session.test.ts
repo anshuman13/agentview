@@ -50,6 +50,16 @@ describe('AgentSession turns', () => {
     expect(s.state.session.running).toBe(false);
   });
 
+  it('stops the loop and the running state when a step cannot switch model', async () => {
+    const { s } = fakeSession();
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => { throw new Error('no such model'); }), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
+    s.setLoop(true);
+    await s.prompt('build it');
+    expect(s.state.session.running).toBe(false);
+    expect(s.state.session.loop.phase).toBe('failed');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('Loop stopped') });
+  });
+
   it('queues a steer while compacting', async () => {
     const { s, interrupt } = fakeSession();
     s.sendPrompt('/compact');
@@ -750,6 +760,8 @@ describe('/loop after Stop', () => {
 
   it('a tick that lands mid turn survives a CLI exit', async () => {
     vi.useFakeTimers();
+    // Late in the evening the loop would reach its 23:59 end during the test.
+    vi.setSystemTime(new Date('2026-10-15T12:00:00'));
     const { s, result } = fakeSession();
     await s.prompt('/loop 10m until 23:59 do the next round');
     vi.advanceTimersByTime(10 * 60_000 + 1);

@@ -437,6 +437,12 @@ export function OpenChats() {
   const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} onDelete={() => removeLive(c)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
 
   useEffect(() => setOpening(null), [current]);
+  // A failed or lost open never changes the current chat.
+  useEffect(() => {
+    if (!opening) return;
+    const t = setTimeout(() => setOpening(null), 20_000);
+    return () => clearTimeout(t);
+  }, [opening]);
 
   return (
     <div className="sessions chats">

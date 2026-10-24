@@ -8,7 +8,8 @@ const exec = promisify(execFile);
 
 async function git(cwd: string, args: string[], ok = [0]) {
   try {
-    return (await exec('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 })).stdout;
+    // Long enough for a signing prompt or a slow hook, short enough that a request never hangs for good.
+    return (await exec('git', args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 300_000 })).stdout;
   } catch (err) {
     const e = err as { code?: number; stdout?: string; stderr?: string; message: string };
     if (ok.includes(e.code ?? -1)) return e.stdout ?? '';

@@ -86,7 +86,11 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
     if (e.kind === 'tool_result') results.set(e.toolUseId, e);
     if (e.kind === 'tool_use' && e.agent) resumed.set(e.agent, e.at);
     const parent = (e.kind === 'tool_use' || e.kind === 'tool_result' || e.kind === 'assistant') && e.parent;
-    if (parent) children.set(parent, [...(children.get(parent) ?? []), e]);
+    if (parent) {
+      const list = children.get(parent);
+      if (list) list.push(e);
+      else children.set(parent, [e]);
+    }
   }
   return itemsFrom(events.filter((e) => !('parent' in e && e.parent)), results, children, resumed);
 }

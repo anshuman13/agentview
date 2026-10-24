@@ -73,7 +73,7 @@ export async function createFolder(root: string, name: string) {
 }
 
 export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
-  const [{ stdout }, projects] = await Promise.all([run('paseo', ['workspace', 'ls', '--json']), paseoProjects()]);
+  const [{ stdout }, projects] = await Promise.all([run('paseo', ['workspace', 'ls', '--json'], { timeout: 30_000 }), paseoProjects()]);
   const spaces = (JSON.parse(stdout) as Array<{ workspaceId: string; project: string; name: string; isolation: string; cwd: string }>)
     .filter((w) => w.isolation === 'worktree');
   const chats = await listSessions({ limit: 1000 });
@@ -94,11 +94,11 @@ export async function removeWorktree(id: string, openCwds: string[]) {
   const w = (await listWorktrees(openCwds)).find((x) => x.id === id);
   if (!w) throw new Error('Worktree not found');
   if (!w.removable) throw new Error('This worktree was used in the last 12 hours or is open');
-  await run('paseo', ['workspace', 'archive', id]);
+  await run('paseo', ['workspace', 'archive', id], { timeout: 60_000 });
 }
 
 async function paseoProjects() {
-  const { stdout } = await run('paseo', ['project', 'ls', '--json']);
+  const { stdout } = await run('paseo', ['project', 'ls', '--json'], { timeout: 30_000 });
   return JSON.parse(stdout) as Array<{ projectId: string; name: string; path: string }>;
 }
 
@@ -112,7 +112,7 @@ export async function createWorktree(repo: string, branch: string) {
   const cwd: string | undefined = out.cwd ?? out.workspace?.cwd;
   if (cwd) return cwd;
   const id = out.workspaceId ?? out.workspace?.workspaceId;
-  const spaces = JSON.parse((await run('paseo', ['workspace', 'ls', '--json'])).stdout) as Array<{ workspaceId: string; cwd: string }>;
+  const spaces = JSON.parse((await run('paseo', ['workspace', 'ls', '--json'], { timeout: 30_000 })).stdout) as Array<{ workspaceId: string; cwd: string }>;
   const made = spaces.find((w) => w.workspaceId === id);
   if (!made) throw new Error('Paseo created the worktree but did not report its folder');
   return made.cwd;

@@ -51,7 +51,8 @@ class Stdio implements Transport {
       this.info = r?.serverInfo;
       this.notify('notifications/initialized');
     });
-    this.ready.catch(() => {});
+    // A server that never finished starting is stopped, so the next call starts a fresh one.
+    this.ready.catch(() => this.stop());
   }
 
   get pid() {

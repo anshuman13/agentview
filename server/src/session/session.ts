@@ -331,6 +331,11 @@ export class AgentSession implements AgentHost {
     this.emit({ type: 'init', state: this.state });
   }
 
+  // Messages waiting behind a turn, saved when the host exits so a restart does not drop them.
+  get queuedMessages() {
+    return this.queued.map(({ id, text }) => ({ id, text }));
+  }
+
   restoreCrons(crons: Cron[]) {
     this.crons = crons;
     this.system(`AgentView restarted, so Claude is recreating ${crons.length} scheduled ${crons.length === 1 ? 'job' : 'jobs'}`);
@@ -406,7 +411,8 @@ export class AgentSession implements AgentHost {
     clearTimeout(this.repeatTimer);
     const r = this.state.session.repeat;
     const at = Math.min(r?.nextAt ?? Infinity, r?.until ?? Infinity);
-    if (!r || at === Infinity) return;
+    // The driver reports its exit after close(); a closed chat must not wake up again.
+    if (!r || at === Infinity || this.closed) return;
     this.repeatTimer = after(at, () => this.fireRepeat());
   }
 
@@ -431,6 +437,12 @@ export class AgentSession implements AgentHost {
     try {
       if (this.state.session.model !== step.model) await this.setModel(step.model);
       if (this.state.session.permissionMode !== step.mode) await this.setPermissionMode(step.mode);
+    } catch (err) {
+      // Nothing was sent, so no turn will end and clear running; stop the loop here.
+      this.setSession({ running: this.turns > 1, loop: { ...this.state.session.loop, phase: 'failed' } });
+      this.endLoop(`Loop stopped: could not switch to the ${step.phase} step (${err instanceof Error ? err.message : String(err)})`);
+      if (this.turns === 1) this.dequeue();
+      return;
     } finally {
       this.turns--;
     }

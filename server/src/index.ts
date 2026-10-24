@@ -46,6 +46,8 @@ process.on('uncaughtException', (err) => {
   if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE' && !server.listening) process.exit(1);
 });
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
+// A signal skips the exit event, which stops the MCP servers in their own process groups; exit so it runs.
+for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) process.once(sig, () => process.exit(0));
 
 // The chats live in the agent host (host/main.ts); this process serves the web client and relays to it.
 type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: string; waiting?: boolean; close?: () => void };
@@ -117,6 +119,8 @@ const host = new Host(PORT, PROJECT, {
     // After a host restart the chats come back under new ids; a client follows its chat by session id.
     for (const c of clients) view(c, chats.has(c.view) ? c.view : (bySession(before.get(c.view)?.sessionId ?? null) ?? lastViewed));
     broadcast({ type: 'live', chats: hello.chats });
+    // A new host starts with no viewers, an old one with counts from before; tell it who watches now.
+    reportViewers();
     // A host still running older code restarts once its turns end.
     if (!restarting) host.call({ op: 'restart', now: false, force: false });
   }),
@@ -170,7 +174,8 @@ const server = http.createServer(async (req, res) => {
       const client = streams.get(url.searchParams.get('cid') ?? '');
       // Without a stream or a chat there is no telling which chat the command is for.
       if (!client && !chats.has(url.searchParams.get('chat') ?? '')) return json({ error: 'No stream for this command' }, 409);
-      handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat.id }, msg);
+      // The chat the tab showed when the command was made, so a retry after a chat switch still lands there.
+      handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat.id }, msg, url.searchParams.get('chat') || undefined);
       return json({ ok: true });
     }
     if (url.pathname === '/api/terms' && req.method === 'POST') return json(createTerminal(chat.id, chat.cwd));
@@ -348,6 +353,7 @@ wss.on('connection', (ws: WebSocket, req) => {
 });
 
 // Server-Sent Events: the same ServerMessage stream as /ws, resumable from Last-Event-ID through the ring buffer.
+// The browser's own reconnect sends Last-Event-ID; the last param in its URL is from the first connect and stale by then.
 // found: the stream asked for a chat that exists, so a resume may replay deltas; otherwise it gets a full init.
 function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: URL, chat: string, found = true) {
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive', 'x-accel-buffering': 'no' });
@@ -363,7 +369,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => write(frame(data, id)), view: chat, close: () => res.destroy() };
   clients.add(client);
   streams.set(cid, client);
-  const missed = found ? ring.since(Number(url.searchParams.get('last') ?? req.headers['last-event-id']), chat) : null;
+  const missed = found ? ring.since(Number(req.headers['last-event-id'] ?? url.searchParams.get('last')), chat) : null;
   if (missed) {
     client.view = chat;
     for (const e of missed) client.sendRaw(e.data, e.id);
@@ -383,7 +389,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   });
 }
 
-function handleCommand(client: Client, msg: ClientMessage) {
+function handleCommand(client: Client, msg: ClientMessage, target?: string) {
   const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
   switch (msg.type) {
     case 'close':
@@ -402,8 +408,11 @@ function handleCommand(client: Client, msg: ClientMessage) {
     case 'restart':
       restart(Boolean(msg.now), false);
       break;
-    default:
-      host.req({ op: 'cmd', id: client.view, msg }).catch(fail);
+    default: {
+      const id = target ?? client.view;
+      if (!chats.has(id)) return fail(new Error('This chat was closed'));
+      host.req({ op: 'cmd', id, msg }).catch(fail);
+    }
   }
 }
 
@@ -417,5 +426,5 @@ if (PORT === 7777 && !process.env.AGENTVIEW_DEV_WEB) {
     .on('error', () => {})
     .listen(5173);
 }
-void ntfyTopic().then((t) => console.log(t === 'off' ? 'push off' : `push: subscribe to ntfy topic ${t}`));
+void ntfyTopic().then((t) => console.log(t === 'off' ? 'push off' : 'push on, the ntfy topic is in ~/.agentview/observe.json'));
 void connectChrome();

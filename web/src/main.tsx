@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import { Component, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/index.css';
 import { App } from './App';
@@ -32,4 +33,21 @@ if (import.meta.hot) {
   import.meta.hot.on('vite:ws:disconnect', () => log('vite ws lost'));
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+// A crash anywhere shows a way back instead of a blank page.
+class Guard extends Component<{ children: ReactNode }, { error: string | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(err: unknown) {
+    return { error: String(err) };
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="cd-empty">
+        <p>AgentView hit an error: {this.state.error}</p>
+        <button onClick={() => location.reload()}>Reload</button>
+      </div>
+    );
+  }
+}
+
+createRoot(document.getElementById('root')!).render(<Guard><App /></Guard>);

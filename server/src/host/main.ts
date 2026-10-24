@@ -199,10 +199,18 @@ function remember(chat: AgentSession) {
   writeFile(LAST, JSON.stringify({ sessionId, cwd: chat.cwd })).catch(() => {});
 }
 
+type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; queued?: { id: string; text: string }[] };
+// Saved chats not reopened yet; an exit during the restore keeps them for the next one.
+let unrestored: Saved[] = [];
+
 function saveAndExit() {
   // A host that never got the socket has nothing to save, and the socket and saved chats belong to the one that did.
   if (!serving) process.exit(0);
-  const chats = [...live.values()].map(({ chat }) => ({ sessionId: chat.state.session.sessionId, crons: chat.crons, repeat: chat.state.session.repeat })).filter((c) => c.sessionId);
+  const open: Saved[] = [...live.values()].flatMap(({ chat }) => {
+    const { sessionId, repeat } = chat.state.session;
+    return sessionId ? [{ sessionId, crons: chat.crons, repeat, queued: chat.queuedMessages }] : [];
+  });
+  const chats = [...open, ...unrestored.filter((u) => !open.some((c) => c.sessionId === u.sessionId))];
   mkdirSync(path.dirname(RESTORE), { recursive: true });
   writeFileSync(RESTORE, JSON.stringify({ view: lastViewed?.state.session.sessionId, chats }));
   try {
@@ -230,14 +238,21 @@ process.on('SIGTERM', saveAndExit);
 process.on('SIGINT', saveAndExit);
 
 async function restore() {
-  const saved: { view?: string; chats: { sessionId: string; crons: Cron[]; repeat?: Repeat | null }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
+  const saved: { view?: string; chats: Saved[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
   if (!saved) return null;
-  await rm(RESTORE, { force: true });
+  unrestored = saved.chats.slice();
   await Promise.all(saved.chats.map(async (s) => {
-    const chat = await openSaved(s.sessionId).catch(() => null);
-    if (chat && s.crons.length) chat.restoreCrons(s.crons);
-    if (chat && s.repeat) chat.resumeRepeat(s.repeat);
+    const chat = await openSaved(s.sessionId).catch((err) => {
+      console.error(`could not reopen chat ${s.sessionId}: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    });
+    unrestored = unrestored.filter((u) => u !== s);
+    if (!chat) return;
+    if (s.crons.length) chat.restoreCrons(s.crons);
+    if (s.repeat) chat.resumeRepeat(s.repeat);
+    for (const q of s.queued ?? []) void chat.prompt(q.text, q.id);
   }));
+  await rm(RESTORE, { force: true });
   return (saved.view && bySession(saved.view)) || null;
 }
 
@@ -254,8 +269,8 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
     case 'prompt': {
       if (typeof msg.text !== 'string') return;
       const id = typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined;
-      // A client with stale state may send a plain prompt while Claude runs; the user's message still goes first.
-      void (chat.state.session.running ? chat.steer(msg.text, id) : chat.prompt(msg.text, id));
+      // The composer sends steer to stop Claude; a prompt during a run (Fix, Compact) waits its turn.
+      void chat.prompt(msg.text, id);
       return;
     }
     case 'steer':
@@ -361,7 +376,11 @@ const host = net.createServer((sock) => {
     handle(req).then((r) => n && send({ n, ok: true, r: r ?? null }), fail);
   });
   apis.add(send);
-  sock.on('close', () => apis.delete(send));
+  sock.on('close', () => {
+    apis.delete(send);
+    // Without an API server nobody is watching; stale counts would hold back the phone notifications.
+    if (!apis.size) counts = {};
+  });
   sock.on('error', () => {});
 });
 // Two hosts can start at once; the one that loses the socket leaves before it opens any chat.

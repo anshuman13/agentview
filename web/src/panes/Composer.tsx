@@ -305,10 +305,14 @@ export function Composer() {
     const shell = (window as { AgentViewShell?: { takeShared?: () => string } }).AgentViewShell;
     if (!shell?.takeShared) return;
     const take = () => {
-      const items = JSON.parse(shell.takeShared!() || '[]') as { name: string; type: string; data: string; text?: string }[];
-      for (const it of items) {
-        if (it.text) setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}${it.text} `);
-        else void attach([new File([Uint8Array.from(atob(it.data), (c) => c.charCodeAt(0))], it.name, { type: it.type })]);
+      try {
+        const items = JSON.parse(shell.takeShared!() || '[]') as { name: string; type: string; data: string; text?: string }[];
+        for (const it of items) {
+          if (it.text) setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}${it.text} `);
+          else void attach([new File([Uint8Array.from(atob(it.data), (c) => c.charCodeAt(0))], it.name, { type: it.type })]);
+        }
+      } catch {
+        notice('Could not read what was shared');
       }
     };
     take();
