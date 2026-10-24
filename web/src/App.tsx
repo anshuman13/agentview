@@ -270,9 +270,16 @@ export function App() {
         if (narrow() && arg === 'explorer') { setTab('code'); setEditor('file'); setBrowse(true); }
         else if (narrow()) setTab('repos');
       }
-      else if (kind === 'tab') { setTab(arg as Tab); if (arg === 'browser') setEditor('browser'); if (arg === 'code') setEditor('file'); }
+      else if (kind === 'tab') {
+        if (arg === 'chat') setChatOpen(true);
+        else if (arg === 'term') setTerminal(true);
+        else setEditor(arg === 'code' ? 'file' : (arg as 'browser' | 'agents'));
+        if (narrow()) setTab(arg as Tab);
+        if (arg === 'chat') window.dispatchEvent(new CustomEvent('agentview:focus'));
+      }
       else if (kind === 'page' && isPage(arg)) openPage(arg);
       else if (kind === 'terminal') { if (narrow()) setTab('term'); else setTerminal((v) => !v); }
+      else if (kind === 'switchEditor') setEditor((v) => (v === 'file' ? 'browser' : 'file'));
       else if (kind === 'phone') setPhone((v) => !v);
       else if (kind === 'toggleSidebar') setSidebar((v) => !v);
       else if (kind === 'toggleChat') setChatOpen((v) => !v);
