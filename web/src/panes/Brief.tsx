@@ -39,6 +39,7 @@ export function Brief() {
   const loop = useStore((s) => s.session.loop);
   const repeat = useStore((s) => s.session.repeat);
   const cwd = useStore((s) => s.session.cwd);
+  const sessionId = useStore((s) => s.session.id);
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;
   const { turns, next, lastTool, advisor, fable } = useMemo(() => buildTurns(events), [events]);
@@ -65,9 +66,19 @@ export function Brief() {
 
   useTick(30000);
 
+  // The end marker sits inside the sticky foot, so scrollIntoView never moves the list; scroll the pane itself.
+  const scrollEnd = (always: boolean) => {
+    const sc = end.current?.closest('.brief-status');
+    if (sc && (always || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 400)) sc.scrollTop = sc.scrollHeight;
+  };
+  useEffect(() => scrollEnd(false), [turns.length, next.length, running, waiting]);
+
+  // Cards settle after the first paint (clipped replies, the plan card), so scroll once more a moment later.
   useEffect(() => {
-    end.current?.scrollIntoView({ block: 'nearest' });
-  }, [turns.length, next.length, running, waiting]);
+    scrollEnd(true);
+    const t = setTimeout(() => scrollEnd(true), 400);
+    return () => clearTimeout(t);
+  }, [sessionId]);
 
   return (
     <div className="brief">

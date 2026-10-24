@@ -21,6 +21,7 @@ type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; call
 const STREAM_FLUSH_MS = 80;
 // A loop goes on after Stop or a CLI exit, with time to type /loop off first.
 const REPEAT_GRACE_MS = 2 * 60_000;
+const MIN_ROUND_MS = 60_000;
 const MAX_EVENTS = 3000;
 // A chat keeps its last few thousand events; the CLI transcript still has everything.
 function trimHistory(events: ChatEvent[]) {
@@ -121,6 +122,7 @@ export class AgentSession {
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
   private reviewTarget: string | null = null;
   private repeatDue = false;
+  private roundAt = 0;
   private limitReset: number | null = null;
   private lastError = false;
   private repeatHeld = false;
@@ -602,7 +604,10 @@ export class AgentSession {
       this.repeatDue = true;
       return;
     }
+    // A round that ended within a minute of starting did no work; wait before the next one instead of spinning.
+    if (Date.now() - this.roundAt < MIN_ROUND_MS) return this.deferRepeat(this.roundAt + REPEAT_GRACE_MS);
     this.repeatDue = false;
+    this.roundAt = Date.now();
     const round = r.round + 1;
     this.setSession({ repeat: { ...r, round, nextAt: r.every ? Date.now() + r.every : null } });
     this.armRepeat();

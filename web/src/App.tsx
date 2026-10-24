@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { connect, embedded, getState, presetChat, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../shared/protocol';
 import { Brief } from './panes/Brief';
@@ -223,7 +223,12 @@ export function App() {
     return () => window.removeEventListener('message', on);
   }, [session.id]);
 
+  // The first init swaps the preset chat id for the server's; that is not a chat switch, so a deep-linked view stays.
+  const prevId = useRef(session.id);
   useEffect(() => {
+    const from = prevId.current;
+    prevId.current = session.id;
+    if (deepLink.view && from === deepLink.chat) return;
     setTab((t) => (t === 'repos' ? 'chat' : t));
   }, [session.id]);
 
@@ -302,10 +307,14 @@ export function App() {
     return () => window.removeEventListener('agentview:command', onCommand);
   }, [toggleTheme]);
 
+  // Applied once the first init is in, so the chat switch does not undo it on the phone.
+  const linked = useRef(false);
   useEffect(() => {
+    if (!session.id || linked.current) return;
+    linked.current = true;
     const id = deepLink.page && isPage(deepLink.page) ? `page:${deepLink.page}` : VIEWS.some((v) => v.id === deepLink.view) ? `view:${deepLink.view}` : null;
     if (id) window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
-  }, []);
+  }, [session.id]);
 
   const fileName = openFile ? openFile.split('/').pop() : null;
   const closeFile = () => setUi({ openFile: null });

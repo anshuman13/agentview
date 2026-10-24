@@ -695,6 +695,23 @@ describe('/loop after Stop', () => {
     vi.useRealTimers();
   });
 
+  it('a round that ends at once does not spin the loop', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    const { s, result } = fakeSession();
+    await s.prompt('/loop until 06:59 do the next round');
+    const users = () => s.state.events.filter((e) => e.kind === 'user').length;
+    expect(users()).toBe(2);
+    result('r1');
+    expect(s.state.session.running).toBe(false);
+    expect(users()).toBe(2);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Loop round 2 at 03:02/) });
+    vi.advanceTimersByTime(2 * 60_000 + 1000);
+    expect(users()).toBe(3);
+    expect(s.state.session.repeat?.round).toBe(2);
+    vi.useRealTimers();
+  });
+
   it('a usage limit holds the loop until the reset time', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
@@ -747,6 +764,8 @@ describe('/loop after Stop', () => {
     vi.advanceTimersByTime(61_000);
     expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
     result('r2');
+    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
+    vi.advanceTimersByTime(2 * 60_000 + 1000);
     expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(4);
     vi.useRealTimers();
   });
