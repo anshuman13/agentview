@@ -52,6 +52,8 @@ Switch to the transcript for every message and step in order.
 - The composer shows "No update for Ns" when nothing has arrived from the server for 30 s. The link reopens by
   itself after 50 s of silence, and a message that cannot be delivered goes back into the box with a notice
 - Questions, plan approvals and permissions show as buttons in the timeline
+- Opening a chat with activity since this browser last showed it puts a "Since you last looked" line above the
+  cards: turns, files changed, failed commands and whether a permission is waiting. Tap it to dismiss
 
 ## Review findings
 
