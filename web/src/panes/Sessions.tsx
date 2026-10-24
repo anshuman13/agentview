@@ -8,7 +8,6 @@ import { replyLine, sumEdits } from '../../../shared/edits';
 import { ago, pressable, save, stored } from './util';
 import { chatCost, money } from './turns';
 import { PullState, usePullRequests } from './GitHub';
-import '../chats.css';
 
 const PAGE = 10;
 

@@ -9,7 +9,6 @@ import { toolId } from './McpStatus';
 import { touch } from '../touch';
 import { Hl, wsUrl } from './util';
 import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, MAX_GOAL_ROUNDS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
-import '../composer.css';
 
 export type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
 

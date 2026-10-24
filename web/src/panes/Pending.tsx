@@ -3,7 +3,6 @@ import { send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Markdown } from './Chat';
 import type { ChatEvent, PendingPermission, PendingQuestion } from '../../../shared/protocol';
-import '../pending.css';
 
 export function Pending() {
   const pending = useStore((s) => s.pending);

@@ -1,0 +1,24 @@
+.overlay.connect-overlay { justify-content: flex-end; align-items: flex-end; padding: 0 var(--sp-4) calc(var(--size-row) + var(--sp-3)); }
+.switcher.connect { width: 280px; max-height: none; }
+.connect-head { display: flex; align-items: center; height: var(--size-2xl); padding: 0 var(--sp-2) 0 var(--sp-6); font-size: var(--fs-xs); text-transform: uppercase; color: var(--fg-strong); }
+.connect-body { display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-6) var(--sp-4); }
+.connect-body.warn { color: var(--warn); text-align: center; }
+.connect-qr { width: 180px; height: 180px; background: var(--white); padding: var(--sp-3); border-radius: var(--radius-sm); box-sizing: content-box; }
+.connect-url { user-select: all; font-family: var(--mono); font-size: var(--fs-sm); color: var(--fg-strong); word-break: break-all; text-align: center; }
+.connect-others { list-style: none; margin: 0; padding: 0; text-align: center; font-family: var(--mono); user-select: text; }
+.connect-note { padding: var(--sp-4) var(--sp-6) var(--sp-5); border-top: 1px solid var(--border); line-height: var(--lh-snug); }
+.connect-tabs { display: flex; gap: var(--sp-1); padding: var(--sp-1); border-radius: var(--radius-sm); background: var(--sunken); }
+.connect-tabs button { height: var(--size-md); padding: 0 var(--sp-5); font-size: var(--fs-sm); color: var(--fg-muted); background: transparent; border: 0; border-radius: var(--radius-sm); }
+.connect-tabs button.active { color: var(--fg); background: var(--border-strong); }
+
+.macs { list-style: none; margin: 0; padding: var(--sp-2); }
+.macs li { display: flex; align-items: center; gap: var(--sp-4); height: 30px; padding: 0 var(--sp-4); border-radius: var(--radius-sm); }
+.macs li.clickable { cursor: pointer; }
+.macs li.clickable:hover { background: var(--accent-soft); }
+.macs li.current .mac-name { color: var(--fg-strong); }
+.macs .mac-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.macs .detail { color: var(--fg-muted); font-size: var(--fs-xs); }
+
+@media (max-width: 900px) {
+  .overlay.connect-overlay { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+}

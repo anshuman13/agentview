@@ -1,11 +1,7 @@
 /// <reference types="vite/client" />
 import { createRoot } from 'react-dom/client';
+import './styles/index.css';
 import { App } from './App';
-import './styles/tokens.css';
-import './styles.css';
-import './sidebar.css';
-import './connect.css';
-import './mobile.css';
 import { touch } from './touch';
 import { api } from './store';
 

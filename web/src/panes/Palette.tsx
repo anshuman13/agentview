@@ -3,7 +3,6 @@ import { getState, send, setUi, useStore } from '../store';
 import { toggleNotify } from '../notify';
 import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
 import { Hl } from './util';
-import '../palette.css';
 
 export type Command = { id: string; label: string; key?: string };
 export type Match = { score: number; hits: number[] };

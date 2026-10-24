@@ -7,7 +7,6 @@ import { FileIcon } from './Explorer';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { ago, askClaude, pressable } from './util';
-import '../github.css';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
 let list: List = { cwd: '', prs: [], error: '', loading: false };

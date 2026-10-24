@@ -1,0 +1,16 @@
+input, textarea {
+  background: var(--sunken);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-4);
+  font: inherit;
+  width: 100%;
+}
+input::placeholder, textarea::placeholder { color: var(--fg-faint); }
+input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+textarea { resize: none; }
+select {
+  background: var(--sunken); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font: inherit; font-size: var(--fs-xs); padding: 1px var(--sp-2);
+}

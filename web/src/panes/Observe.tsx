@@ -18,7 +18,7 @@ import type { Repo } from '../../../shared/protocol';
 import { api, useStore } from '../store';
 import { ago, askClaude } from './util';
 import { Icon } from '../Icon';
-import '../observe.css';
+import '../styles/features/observe.css';
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);

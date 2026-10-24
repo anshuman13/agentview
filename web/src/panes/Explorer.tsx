@@ -5,7 +5,6 @@ import { setOpened, useOpened } from './opened';
 import { Icon } from '../Icon';
 import { save, stored } from './util';
 import { touch } from '../touch';
-import '../explorer.css';
 
 type Entry = { name: string; dir: boolean; hidden: boolean };
 type Row = Entry & { path: string; depth: number };

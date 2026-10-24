@@ -3,7 +3,7 @@ import { Marked } from 'marked';
 import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
 import { api, setUi } from '../store';
-import '../doc.css';
+import '../styles/features/doc.css';
 
 type Heading = { id: string; text: string; depth: number };
 
