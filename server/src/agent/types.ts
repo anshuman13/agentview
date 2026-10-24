@@ -1,4 +1,4 @@
-import type { CacheInfo, ChatEvent, Effort, McpServer, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
+import type { CacheInfo, Capabilities, ChatEvent, Effort, McpServer, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
@@ -20,6 +20,7 @@ export type TurnResult = { id: string; ok: boolean; text: string; costUsd: numbe
 
 // What a session asks of the agent behind it.
 export interface AgentDriver {
+  readonly capabilities: Capabilities;
   readonly attached: boolean;
   start(): void;
   send(text: string, id?: string): void;

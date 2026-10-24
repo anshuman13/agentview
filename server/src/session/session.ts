@@ -80,6 +80,7 @@ export class AgentSession implements AgentHost {
     };
     this.approvals = new Approvals(this.state, (m) => this.emit(m));
     this.driver = driver(this);
+    this.state.session.capabilities = this.driver.capabilities;
   }
 
   onMessage(fn: (m: ServerMessage) => void) {
