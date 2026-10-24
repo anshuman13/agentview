@@ -624,6 +624,9 @@ function handleCommand(client: Client, msg: ClientMessage) {
     case 'interrupt':
       void chat.interrupt();
       break;
+    case 'rewind':
+      void chat.rewind(String(msg.id)).catch(fail);
+      break;
     case 'stop_task':
       void chat.stopTask(String(msg.toolUseId)).catch(fail);
       break;

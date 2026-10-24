@@ -158,6 +158,8 @@ export class AgentSession {
   private dirty = true;
   private agents: AgentIds = new Map();
   private tasks = new Set<string>();
+  private sent: { id: string; text: string }[] = [];
+  private rewindIds = new Map<string, string>();
   private taskIds = new Map<string, string>();
   private orphans = new Set<string>();
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
@@ -477,7 +479,7 @@ export class AgentSession {
 
   sendPrompt(text: string, id: string = randomUUID()) {
     this.pushEvent({ id, kind: 'user', text, at: Date.now() });
-    this.enqueue(text);
+    this.enqueue(text, id);
   }
 
   // A client resends a message it got no echo for; the id tells a repeat from a new message.
@@ -485,14 +487,35 @@ export class AgentSession {
     return this.state.events.some((e) => e.id === id);
   }
 
-  private enqueue(text: string) {
+  private enqueue(text: string, id?: string) {
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
     this.start();
     this.turns++;
     this.setSession({ running: true });
     if (/^\/compact\b/.test(text.trim())) this.startCompacting();
+    if (id) this.sent.push({ id, text });
     this.inputQueue.push(userMessage(text));
     this.wake?.();
+  }
+
+  // The CLI echoes each prompt with the uuid it saved it under; that uuid is what a file rewind points at.
+  private noteReplay(msg: { uuid?: string; message: { content: unknown } }) {
+    const c = msg.message.content;
+    const text = typeof c === 'string' ? c : Array.isArray(c) ? (c.find((b) => b?.type === 'text') as { text?: string } | undefined)?.text : undefined;
+    const at = this.sent.findIndex((s) => s.text === text);
+    if (at < 0 || !msg.uuid) return;
+    this.rewindIds.set(this.sent[at].id, msg.uuid);
+    this.sent.splice(0, at + 1);
+  }
+
+  async rewind(id: string) {
+    if (this.state.session.running) return this.system('Stop Claude before rewinding files');
+    this.start();
+    const r = await this.q!.rewindFiles(this.rewindIds.get(id) ?? id.replace(/:\d+$/, ''));
+    if (!r.canRewind) return this.system(`Rewind failed: ${r.error ?? 'no checkpoint for that prompt'}`);
+    const files = r.filesChanged ?? [];
+    this.system(`Rewound ${files.length} ${files.length === 1 ? 'file' : 'files'} to before that prompt`);
+    for (const f of files) this.noteFile(path.relative(this.cwd, f), 'tool');
   }
 
   async interrupt() {
@@ -703,7 +726,7 @@ export class AgentSession {
       ev.stopping = false;
       this.emit({ type: 'event', event: ev });
     } else await this.planFirst();
-    this.enqueue(text);
+    this.enqueue(text, id);
   }
 
   changePlan(next: string[]) {
@@ -815,7 +838,7 @@ export class AgentSession {
     const tail = new Set<ChatEvent>([ev, ...this.queued]);
     this.state.events = [...this.state.events.filter((e) => !tail.has(e)), ev, ...this.queued];
     this.emit({ type: 'init', state: this.state });
-    this.enqueue(ev.text);
+    this.enqueue(ev.text, ev.id);
     return true;
   }
 
@@ -835,6 +858,7 @@ export class AgentSession {
         this.q = null;
         this.gen++;
         this.inputQueue = [];
+        this.sent = [];
         this.wake?.();
         this.turns = 0;
         this.setSession({ running: false, stopping: false, compacting: false });
@@ -1028,6 +1052,7 @@ export class AgentSession {
       case 'user': {
         const parent = msg.parent_tool_use_id ?? undefined;
         const content = msg.message.content;
+        if (!parent && this.sent.length) this.noteReplay(msg);
         if (typeof content === 'string' && content.startsWith('<task-notification>')) for (const ev of notificationResults(content, Date.now(), this.agents)) this.pushEvent(ev);
         if (!Array.isArray(content)) return;
         const output = (msg as { tool_use_result?: unknown }).tool_use_result;
