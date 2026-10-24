@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { api, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
@@ -8,6 +8,28 @@ import '../deploy.css';
 
 const short = (sha: string) => sha.slice(0, 7);
 const tone = (state?: string) => (state === 'success' ? 'ok' : state === 'failure' || state === 'error' ? 'bad' : !state || state === 'inactive' ? 'off' : 'busy');
+
+let jobs: Record<string, DeployJob | null> = {};
+const subs = new Set<() => void>();
+const setJob = (cwd: string, job: DeployJob | null) => {
+  jobs = { ...jobs, [cwd]: job };
+  subs.forEach((f) => f());
+};
+const subscribe = (f: () => void) => (subs.add(f), () => void subs.delete(f));
+export const jobOf = (cwd: string) => jobs[cwd] ?? null;
+const useJob = (cwd: string) => useSyncExternalStore(subscribe, jobOf.bind(null, cwd));
+
+export function track(cwd: string, job: DeployJob, every = 3000) {
+  setJob(cwd, job);
+  if (job.done) return;
+  setTimeout(() => {
+    if (jobs[cwd]?.id !== job.id) return;
+    fetch(api(`/api/deploy/job/${job.id}`))
+      .then((r) => r.json())
+      .then((j) => track(cwd, j.error ? { ...job, done: true, lines: [...job.lines, j.error] } : j, every))
+      .catch(() => track(cwd, job, every));
+  }, every);
+}
 
 async function post(path: string, body: unknown) {
   const r = await fetch(api(path), { method: 'POST', body: JSON.stringify(body) }).then((x) => x.json());
@@ -22,7 +44,7 @@ export function Deploy() {
   const [app, setApp] = useState('');
   const [loading, setLoading] = useState(false);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
-  const [job, setJob] = useState<DeployJob | null>(null);
+  const job = useJob(cwd);
   const root = useRef<HTMLDivElement>(null);
 
   const load = () => {
@@ -36,22 +58,11 @@ export function Deploy() {
 
   useEffect(() => {
     if (cwd) load();
-  }, [cwd, app]);
+  }, [cwd, app, job?.done]);
   usePoll(root, 60_000, () => cwd && load(), [cwd, app]);
 
-  useEffect(() => {
-    if (!job || job.done) return;
-    const t = setTimeout(() => {
-      fetch(api(`/api/deploy/job/${job.id}`))
-        .then((r) => r.json())
-        .then((j) => (j.error ? setJob({ ...job, done: true, lines: [...job.lines, j.error] }) : (setJob(j), j.done && load())))
-        .catch(() => setJob({ ...job }));
-    }, 3000);
-    return () => clearTimeout(t);
-  }, [job]);
-
   const s = status;
-  const begin = (call: () => Promise<DeployJob>) => call().then(setJob, (e: Error) => setJob({ id: '', lines: [e.message], done: true, ok: false, url: '' }));
+  const begin = (call: () => Promise<DeployJob>) => call().then((j) => track(cwd, j), (e: Error) => setJob(cwd, { id: '', lines: [e.message], done: true, ok: false, url: '' }));
   const warning = (env: DeployEnv) => (env.name.includes('prod') ? 'This is a production environment.' : env.defaultBranchOnly ? 'Velodrome only deploys the default branch here.' : undefined);
 
   const deploy = (env: DeployEnv, ref?: string) =>
@@ -122,7 +133,7 @@ export function Deploy() {
             <span>{job.done ? (job.ok ? 'Deployed' : 'Deploy did not succeed') : 'Deploying'}</span>
             <span className="spacer" />
             {job.url && <a href={job.url} target="_blank" rel="noreferrer">Velodrome</a>}
-            {job.done && <button className="icon-btn" title="Close" onClick={() => setJob(null)}><Icon name="close" small /></button>}
+            {job.done && <button className="icon-btn" title="Close" onClick={() => setJob(cwd, null)}><Icon name="close" small /></button>}
           </div>
           <pre className="mono">{job.lines.join('\n')}</pre>
         </div>
