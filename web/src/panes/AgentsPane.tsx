@@ -27,22 +27,12 @@ export function AgentsChip() {
   );
 }
 
-export function AgentsTab({ active, onOpen }: { active: boolean; onOpen: () => void }) {
-  const agents = useAgents();
-  if (!agents.length && !active) return null;
-  return (
-    <button className={`tab ag-tab ${active ? 'active' : ''}`} onClick={onOpen} title="Agents">
-      <Icon name="hubot" small /> Agents ({agents.length})
-    </button>
-  );
-}
-
 export function AgentsBadge() {
   const running = agentCounts(useAgents()).running;
   return running > 0 ? <span className="badge running">{running}</span> : null;
 }
 
-export function AgentsPane({ selected, onSelect }: { selected: string | null; onSelect: (id: string | null) => void }) {
+export function AgentsPane({ selected, onSelect, stack }: { selected: string | null; onSelect: (id: string | null) => void; stack?: boolean }) {
   const agents = useAgents();
   const cwd = useStore((s) => s.session.cwd);
   const now = useTick(1000, agents.some((a) => a.status === 'running'));
@@ -60,7 +50,7 @@ export function AgentsPane({ selected, onSelect }: { selected: string | null; on
   }
 
   return (
-    <div className={`ag ${selected && current?.id === selected ? 'picked' : ''}`}>
+    <div className={`ag ${stack ? 'stack' : ''} ${selected && current?.id === selected ? 'picked' : ''}`}>
       <ul className="ag-list">
         {list.map((a) => {
           const last = (a.status === 'running' && a.info?.progress) || a.lastStep;
@@ -75,18 +65,18 @@ export function AgentsPane({ selected, onSelect }: { selected: string | null; on
           );
         })}
       </ul>
-      {current && <AgentDetail key={current.id} a={current} cwd={cwd} now={now} onBack={() => onSelect(null)} />}
+      {current && <AgentDetail key={current.id} a={current} cwd={cwd} now={now} stack={stack} onBack={() => onSelect(null)} />}
     </div>
   );
 }
 
-function AgentDetail({ a, cwd, now, onBack }: { a: Agent; cwd: string; now: number; onBack: () => void }) {
+function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; now: number; stack?: boolean; onBack: () => void }) {
   const running = a.status === 'running';
   const usage = a.info?.usage;
   const meta = [a.type, a.model, took(a, now), usage && tokens(usage.tokens), usage && plural(usage.toolUses, 'tool use'), a.info?.background && 'background'].filter(Boolean);
   return (
     <div className="ag-detail">
-      <button className="ag-back mobile-only" onClick={onBack}><Icon name="arrow-left" small /> Agents</button>
+      <button className={`ag-back ${stack ? '' : 'mobile-only'}`} onClick={onBack}><Icon name="arrow-left" small /> Agents</button>
       <header className="ag-head">
         <div className="ag-title">
           <span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={running} /></span>
