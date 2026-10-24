@@ -231,7 +231,9 @@ timeline and transcript, the composer footer shows the current phase and round, 
 ## Loops
 
 `/loop 10m <prompt>` sends the prompt again every 10 minutes, `/loop until 07:00 <prompt>` sends it again as soon
-as each round ends until that time, and `/loop 30m until 07:00 <prompt>` combines the two. A fire that lands while
+as each round ends until that time, `/loop 30m until 07:00 <prompt>` combines the two, and `/loop at 01:50 <prompt>`
+sends it once at that time. When a turn ends on a usage limit, the timeline shows the reset time and a "Continue at
+HH:MM" link that schedules the last prompt that way. A fire that lands while
 Claude is still working waits for the round to end. The loop lives in the AgentView server, so it survives a server
 restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but
 keep the loop; `/loop off` ends it. The composer footer shows the round and the next fire time; tap it to stop.

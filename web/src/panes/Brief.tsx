@@ -54,6 +54,12 @@ export function Brief() {
   const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const setNext = (list: string[]) => send({ type: 'plan', next: list });
   const lastReply = [...turns].reverse().find((t) => t.reply)?.reply;
+  // After a usage limit the last prompt can be sent again when the limit resets.
+  const limit = useMemo(() => {
+    const t = turns[turns.length - 1];
+    const m = t && !t.phase ? /^Usage limit reached, resets at (\d\d:\d\d)/.exec(t.notes.at(-1)?.text ?? '') : null;
+    return m ? { at: m[1], prompt: t.prompt } : null;
+  }, [turns]);
   const hasSteps = next.length > 0 || adding || running;
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
 
@@ -95,6 +101,7 @@ export function Brief() {
               {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
             </span>
             <span className="side">
+              {state === 'idle' && !repeat && limit && <button className="link" title="Send the last prompt again when the limit resets" onClick={() => send({ type: 'prompt', text: `/loop at ${limit.at} ${limit.prompt}` })}>Continue at {limit.at}</button>}
               {state === 'idle' && lastReply && <span className="when" title={new Date(lastReply.at).toLocaleString()}>{time(lastReply.at)}</span>}
               {hasSteps && (
                 <button className="steps-toggle" aria-expanded={stepsOpen} title={stepsOpen ? 'Hide the next steps' : 'Show the next steps'} onClick={toggleSteps}>

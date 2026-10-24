@@ -698,6 +698,30 @@ describe('/loop after Stop', () => {
     vi.useRealTimers();
   });
 
+  it('a usage limit without a loop leaves a note, and /loop at sends the prompt once', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
+    const { s, result } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    await s.prompt('do the next round');
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
+    result('r1');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Usage limit reached, resets at 01:51' });
+    expect(s.state.session.repeat).toBeNull();
+    await s.prompt('/loop at 01:51 do the next round');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Loop on, once at 01:51' });
+    const prompts = () => s.state.events.filter((e) => e.kind === 'user' && e.text === 'do the next round').length;
+    vi.advanceTimersByTime(110 * 60_000);
+    expect(prompts()).toBe(1);
+    vi.advanceTimersByTime(2 * 60_000);
+    expect(prompts()).toBe(2);
+    result('r2');
+    expect(prompts()).toBe(2);
+    expect(s.state.session.repeat).toBeNull();
+    expect(s.state.events.some((e) => e.kind === 'system' && /^Loop finished at 01:51 after 1 round/.test(e.text))).toBe(true);
+    vi.useRealTimers();
+  });
+
   it('a round that fails waits before the next one', async () => {
     vi.useFakeTimers();
     const { s, result } = fakeSession();

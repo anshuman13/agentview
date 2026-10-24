@@ -2,7 +2,7 @@ import type { Repeat } from '../../shared/protocol.js';
 
 const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
-export const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop off';
+export const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
 
 // /loop <prompt> alone is refused: a loop needs an interval or an end time.
 export function parseLoop(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
@@ -10,12 +10,20 @@ export function parseLoop(text: string, now = Date.now()): Repeat | 'off' | 'usa
   if (!m) return null;
   const rest = m[1].trim();
   if (/^(off|stop)$/i.test(rest)) return 'off';
-  const p = /^(?:(?:every\s+)?(\d+)\s*(m|min|h)\s+)?(?:until\s+(\d{1,2}):(\d{2})\s+)?([\s\S]+)$/i.exec(rest);
-  if (!p || (!p[1] && !p[3])) return 'usage';
+  const p = /^(?:(?:every\s+)?(\d+)\s*(m|min|h)\s+)?(?:until\s+(\d{1,2}):(\d{2})\s+)?(?:at\s+(\d{1,2}):(\d{2})\s+)?([\s\S]+)$/i.exec(rest);
+  if (!p || (!p[1] && !p[3] && !p[5])) return 'usage';
+  const prompt = p[7].trim();
+  if (p[5]) {
+    const at = nextClock(Number(p[5]), Number(p[6]), now);
+    return { prompt, every: 0, until: at + 1000, round: 0, nextAt: at };
+  }
   const every = p[1] ? Number(p[1]) * UNIT[p[2].toLowerCase()] : 0;
   const until = p[3] ? nextClock(Number(p[3]), Number(p[4]), now) : null;
-  return { prompt: p[5].trim(), every, until, round: 0, nextAt: null };
+  return { prompt, every, until, round: 0, nextAt: null };
 }
+
+// /loop at HH:MM runs the prompt once: the loop ends a second after it fires.
+export const once = (r: Repeat) => !r.every && r.until !== null && r.nextAt !== null && r.until - r.nextAt <= 1000;
 
 export function nextClock(hours: number, minutes: number, now: number) {
   const d = new Date(now);
@@ -37,4 +45,4 @@ export function limitReset(text: string, now = Date.now()): number | null {
 
 const span = (ms: number) => (ms % 3_600_000 === 0 ? `${ms / 3_600_000}h` : `${Math.round(ms / 60_000)}m`);
 
-export const describeLoop = (r: Repeat) => `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
+export const describeLoop = (r: Repeat) => (once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`);
