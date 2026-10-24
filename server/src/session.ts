@@ -94,6 +94,18 @@ const lastUuid = (msgs: SessionMessage[]) => msgs.filter((m) => m.type !== 'syst
 
 const looping = (loop: LoopState) => Boolean(loop.phase) && loop.phase !== 'passed' && loop.phase !== 'failed';
 
+const PR_URL = /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+)/;
+
+const createsPr = (e: ChatEvent) => e.kind === 'tool_use' && e.name === 'Bash' && /\bgh pr create\b/.test(String(e.input.command ?? ''));
+
+// The number of the last pull request a `gh pr create` in this chat printed.
+export function prFrom(events: ChatEvent[]): number | null {
+  const creates = new Set(events.filter(createsPr).map((e) => e.id));
+  let pr: number | null = null;
+  for (const e of events) if (e.kind === 'tool_result' && creates.has(e.toolUseId)) pr = Number(PR_URL.exec(e.text)?.[1]) || pr;
+  return pr;
+}
+
 export class AgentSession {
   private q: Query | null = null;
   private inputQueue: SDKUserMessage[] = [];
@@ -152,7 +164,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string, private fork = false) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, effort: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null },
+      session: { id: this.id, sessionId: resume ?? null, model: null, effort: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null },
       status: 'Idle',
       events: [],
       pending: [],
@@ -297,7 +309,7 @@ export class AgentSession {
   private applyHistory(msgs: SessionMessage[], subs: Record<string, SessionMessage[]>) {
     const { events, context, cache, agents } = historyFrom(msgs, subs);
     this.agents = agents;
-    Object.assign(this.state.session, { context, cache });
+    Object.assign(this.state.session, { context, cache, pr: prFrom(events) ?? this.state.session.pr });
     return trimHistory([...events, ...stopAgents(events, this.orphans, Date.now())]);
   }
 
@@ -1030,6 +1042,8 @@ export class AgentSession {
           }
           const report = agent ? liveReport(text, output) : text.slice(0, 4000);
           this.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId: block.tool_use_id, text: report, isError: Boolean(block.is_error), at: Date.now(), ...(parent && { parent }) });
+          const pr = !parent && PR_URL.exec(text)?.[1];
+          if (pr && this.state.events.some((e) => e.id === block.tool_use_id && createsPr(e))) this.setSession({ pr: Number(pr) });
         }
         return;
       }

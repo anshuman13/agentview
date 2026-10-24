@@ -75,6 +75,7 @@ export type SessionInfo = {
   mcp: McpServer[];
   loop: LoopState;
   repeat: Repeat | null;
+  pr: number | null;
 };
 
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
@@ -154,6 +155,7 @@ export type LiveChat = {
   last?: string;
   edits?: { add: number; del: number };
   cost?: number;
+  pr?: number;
 };
 
 export type AttentionKind = 'ci' | 'changes' | 'review' | 'ready' | 'issue' | 'stale' | 'commit' | 'sentry' | 'deploy';

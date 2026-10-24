@@ -66,6 +66,9 @@ the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentvi
 with Claude" in the Changes view and "Review changes" under the files of the latest turn run `/code-review` on the
 working tree; those findings show at the bottom of the Changes view.
 
+A pull request Claude opened with `gh pr create` stays linked to its chat: the pull request row shows "Open chat"
+while that chat is open.
+
 ## Context
 
 The meter shows the tokens in context and turns red past 200k. AgentView then runs `/compact` when the turn ends.
