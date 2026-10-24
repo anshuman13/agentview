@@ -824,6 +824,38 @@ describe('/loop after Stop', () => {
     vi.useRealTimers();
   });
 
+  it('resumeRepeat with a past nextAt fires the next round now', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    const { s } = fakeSession();
+    s.resumeRepeat({ prompt: 'do the next round', every: 10 * 60_000, until: null, round: 3, nextAt: Date.now() - 1000 });
+    expect(s.state.events.map((e) => e.kind)).toEqual(['system', 'system', 'user']);
+    expect(s.state.events[0]).toMatchObject({ kind: 'system', text: 'AgentView restarted, the loop continues every 10m' });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'do the next round' });
+    expect(s.state.session).toMatchObject({ running: true, repeat: { round: 4, nextAt: Date.now() + 10 * 60_000 } });
+    vi.useRealTimers();
+  });
+
+  it('resumeRepeat with a future nextAt waits until then', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
+    const { s, result } = fakeSession();
+    const users = () => s.state.events.filter((e) => e.kind === 'user').length;
+    s.resumeRepeat({ prompt: 'do the next round', every: 10 * 60_000, until: null, round: 3, nextAt: Date.now() + 5 * 60_000 });
+    expect(users()).toBe(0);
+    expect(s.state.session).toMatchObject({ running: false, repeat: { round: 3 } });
+    vi.advanceTimersByTime(5 * 60_000 - 1);
+    expect(users()).toBe(0);
+    vi.advanceTimersByTime(1);
+    expect(users()).toBe(1);
+    expect(s.state.session.repeat?.round).toBe(4);
+    result('r1');
+    expect(users()).toBe(1);
+    vi.advanceTimersByTime(10 * 60_000);
+    expect(users()).toBe(2);
+    vi.useRealTimers();
+  });
+
   it('a tick that lands mid turn survives a CLI exit', async () => {
     vi.useFakeTimers();
     const { s, result } = fakeSession();
