@@ -3,10 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { promisify } from 'node:util';
-import { brotliCompress, gzip, constants as zlib } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
@@ -29,6 +27,8 @@ import { otherMacs, thisMac } from './http/macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './workspace/worktrees.js';
 import { MCP_BAD, type AttentionItem, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './http/stream.js';
+import { gz, serveWeb } from './http/web.js';
+import { readBody, savePaste } from './http/body.js';
 import { chatCost } from '../../shared/cost.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
 import { allowedPeer, allowedRequest, requester } from './http/access.js';
@@ -36,8 +36,6 @@ import { allowedPeer, allowedRequest, requester } from './http/access.js';
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
 const here = path.dirname(fileURLToPath(import.meta.url));
-const WEB_DIST = path.resolve(here, '../../web/dist');
-const DEV_WEB = process.env.AGENTVIEW_DEV_WEB;
 const APK = path.resolve(here, '../../dist/AgentView.apk');
 
 if (ownProfile()) {
@@ -183,32 +181,6 @@ function watchFiles(cwd: string, onChange: (rel: string) => void) {
   }).on('error', (err) => console.error(`watcher: ${String(err)}`));
 }
 
-async function readBody(req: http.IncomingMessage, max = 1_000_000) {
-  let body = '';
-  let size = 0;
-  for await (const chunk of req) {
-    if ((size += chunk.length) > max) throw new Error('Request body too large');
-    body += chunk;
-  }
-  return body;
-}
-
-const PASTES = path.join(os.homedir(), '.agentview', 'pastes');
-async function savePaste(req: http.IncomingMessage, name: string) {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > 50_000_000) throw new Error('Files over 50 MB cannot be attached');
-    chunks.push(chunk);
-  }
-  await mkdir(PASTES, { recursive: true });
-  const safe = path.basename(name).replace(/[^\w.-]+/g, '-').slice(-80) || 'file';
-  const file = path.join(PASTES, `${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}-${randomUUID().slice(0, 6)}-${safe}`);
-  await writeFile(file, Buffer.concat(chunks));
-  return file;
-}
-
 const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
 
 async function openSaved(sessionId: string) {
@@ -290,30 +262,6 @@ async function fixChat(item: AttentionItem) {
   return chat.id;
 }
 startAttention(attentionSources, fixChat);
-
-const MIME: Record<string, string> = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.svg': 'image/svg+xml',
-  '.webmanifest': 'application/manifest+json',
-};
-
-// Compressed copies of web/dist files, made once per file version.
-const packed = new Map<string, { mtime: number; br: Buffer; gzip: Buffer }>();
-const brotli = promisify(brotliCompress);
-const gz = promisify(gzip);
-const COMPRESS = new Set(['.html', '.js', '.css', '.json', '.svg', '.webmanifest', '.ttf']);
-
-async function compressed(file: string, body: Buffer, mtime: number) {
-  const hit = packed.get(file);
-  if (hit?.mtime === mtime) return hit;
-  const [br, gzipped] = await Promise.all([brotli(body, { params: { [zlib.BROTLI_PARAM_QUALITY]: 11 } }), gz(body, { level: 9 })]);
-  const entry = { mtime, br, gzip: gzipped };
-  packed.set(file, entry);
-  return entry;
-}
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://x');
@@ -455,34 +403,7 @@ const server = http.createServer(async (req, res) => {
       return json({ hostname: thisMac, urls: ips.map((ip) => `http://${ip}:${port}`), running, macs, netbird: problem });
     }
 
-    if (DEV_WEB) {
-      res.writeHead(302, { location: `http://${new URL(`http://${req.headers.host ?? 'localhost'}`).hostname}:${DEV_WEB}${url.pathname}${url.search}` });
-      return res.end();
-    }
-    let file = path.join(WEB_DIST, url.pathname === '/' ? 'index.html' : url.pathname);
-    let info = await stat(file).catch(() => null);
-    if (!info?.isFile()) {
-      file = path.join(WEB_DIST, 'index.html');
-      info = await stat(file).catch(() => null);
-    }
-    const body = info && (await readFile(file).catch(() => null));
-    if (!info || !body) return json({ error: 'web client not built, run npm run dev or npm run build' }, 404);
-    const ext = path.extname(file);
-    const headers: http.OutgoingHttpHeaders = {
-      'content-type': MIME[ext] ?? 'application/octet-stream',
-      // Vite puts a content hash in every file name under assets/, so those never change.
-      'cache-control': file.startsWith(path.join(WEB_DIST, 'assets') + path.sep) ? 'public, max-age=31536000, immutable' : 'no-cache',
-      ...(COMPRESS.has(ext) && { vary: 'accept-encoding' }),
-    };
-    const accept = String(req.headers['accept-encoding'] ?? '');
-    const encoding = !COMPRESS.has(ext) || body.length < 1024 ? null : /\bbr\b/.test(accept) ? 'br' : /\bgzip\b/.test(accept) ? 'gzip' : null;
-    if (!encoding) {
-      res.writeHead(200, headers);
-      return res.end(body);
-    }
-    const out = (await compressed(file, body, info.mtimeMs))[encoding];
-    res.writeHead(200, { ...headers, 'content-encoding': encoding });
-    res.end(out);
+    if (!(await serveWeb(req, res, url))) return json({ error: 'web client not built, run npm run dev or npm run build' }, 404);
   } catch (err) {
     void json({ error: err instanceof Error ? err.message : String(err) }, 500);
   }
