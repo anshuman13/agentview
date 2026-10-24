@@ -1,5 +1,6 @@
 import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
+import type { Effort } from '../../shared/protocol.js';
 import { BIG_BRO } from './transcript.js';
 
 export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
@@ -47,10 +48,12 @@ export function agentOptions(o: {
   afterTool: HookCallback;
   onStop: HookCallback;
   mcp?: Record<string, McpServerConfig>;
+  effort?: Effort;
 }): Options {
   return {
     cwd: o.cwd,
     resume: o.resume,
+    effort: o.effort,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1' },
     systemPrompt: { type: 'preset', preset: 'claude_code', append: INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
