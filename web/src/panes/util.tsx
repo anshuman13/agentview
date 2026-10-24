@@ -1,5 +1,14 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import { send } from '../store';
+
+export function pressable(onClick: (e: MouseEvent<HTMLElement>) => void) {
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    e.currentTarget.click();
+  };
+  return { role: 'button' as const, tabIndex: 0, onClick, onKeyDown };
+}
 
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 

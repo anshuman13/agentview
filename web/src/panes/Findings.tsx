@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { api, send, setFindings, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
+import { pressable } from './util';
 import type { Finding, ReviewFindings } from '../../../shared/protocol';
 import '../github.css';
 
@@ -40,7 +41,7 @@ export function Findings({ target }: { target: string }) {
       {review.findings.length === 0 && <div className="muted small gh-pad">No findings</div>}
       {review.findings.map((f) => (
         <div key={findingKey(f)} className="gh-finding">
-          <div className="gh-item click" title={f.failure ?? f.summary} onClick={() => open(f)}>
+          <div className="gh-item click" title={f.failure ?? f.summary} {...pressable(() => open(f))}>
             <Icon name={f.verdict === 'CONFIRMED' ? 'error' : 'warning'} small />
             <span className="gh-msg">{f.summary}</span>
           </div>

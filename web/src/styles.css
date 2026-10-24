@@ -211,13 +211,14 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 .editor-group { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
 .tabs { height: 35px; flex: none; display: flex; background: var(--side); border-bottom: 1px solid var(--border); overflow-x: auto; }
 .tab {
+  cursor: pointer;
   height: 35px; padding: 0 12px; background: transparent; color: var(--fg-muted); border: 0; border-radius: 0;
   border-right: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap;
 }
 .tab:hover { background: var(--bg-hover); color: var(--fg); }
 .tab.active, .tab.active:hover { background: var(--bg-raised); color: var(--fg); border-bottom: 1px solid var(--bg-raised); margin-bottom: -1px; }
 .tab.browser > .codicon:first-child { color: #519aba; }
-.tab .close { margin-left: 4px; color: var(--fg-muted); width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); }
+.tab .close { margin-left: 4px; padding: 0; background: none; border: 0; color: var(--fg-muted); width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); }
 .tab .close:hover { background: var(--bg-hover); color: var(--fg); }
 .tabs-spacer { flex: 1; }
 .tab-tool {
@@ -373,6 +374,7 @@ button.link:hover { background: transparent; text-decoration: underline; }
 }
 @media (min-width: 901px) { .mobile-only { display: none !important; } }
 
+.statusbar button.item { background: none; border: 0; border-radius: 0; color: inherit; padding: 0 6px; }
 .statusbar .item.clickable { cursor: pointer; }
 .switcher li .detail { margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 

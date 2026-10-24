@@ -10,6 +10,7 @@ import { Changes, ChangesBadge } from './panes/Changes';
 import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
+import { pressable } from './panes/util';
 import { ConnectPopover } from './ConnectPopover';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { McpItem, McpPage } from './panes/McpStatus';
@@ -377,23 +378,23 @@ export function App() {
             <button className={`tab ex-tab mobile-only ${mobileExplorer ? 'active' : ''}`} title="Explorer" onClick={() => { setTab('code'); setEditor('file'); setBrowse(true); }}>
               <Icon name="files" small />
             </button>
-            <button className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} onClick={() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); }} title={openFile ?? 'Files (⌘E to switch)'}>
+            <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={openFile ?? 'Files (⌘E to switch)'}>
               {fileName ? <FileIcon name={fileName} /> : <Icon name="file" small />} {fileName ?? 'File'}
               {openFile && (
-                <span className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
+                <button className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
                   <Icon name="close" small />
-                </span>
+                </button>
               )}
-            </button>
+            </div>
             <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => { setEditor('browser'); setTab((t) => (t === 'code' || t === 'agents' ? 'browser' : t)); }} title="Browser (⌘E to switch)">
               <Icon name="globe" small /> Browser
             </button>
             <AgentsTab active={showing === 'agents'} onOpen={() => { setEditor('agents'); setTab((t) => (t === 'code' || t === 'browser' ? 'agents' : t)); }} />
             {page && (
-              <button className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} onClick={() => { setEditor(page); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); }} title={pageOf(page).title}>
+              <div className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} {...pressable(() => { setEditor(page); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={pageOf(page).title}>
                 <Icon name={pageOf(page).icon} small /> {pageOf(page).title}
-                <span className="close" title="Close" onClick={(e) => { e.stopPropagation(); closePage(); }}><Icon name="close" small /></span>
-              </button>
+                <button className="close" title="Close" onClick={(e) => { e.stopPropagation(); closePage(); }}><Icon name="close" small /></button>
+              </div>
             )}
             <span className="tabs-spacer desktop-only" />
             <button className="tab-tool desktop-only" title={`${sidebar ? 'Hide' : 'Show'} the left sidebar (⌘B)`} onClick={() => setSidebar((v) => !v)}>
@@ -455,7 +456,7 @@ export function App() {
       </div>
 
       <footer className="statusbar desktop-only">
-        <span className="item project clickable" title={`${session.cwd}\nStart a chat in another repo (⌘O)`} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</span>
+        <button className="item project clickable" title={`${session.cwd}\nStart a chat in another repo (⌘O)`} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</button>
         <span className={`item ${session.running ? 'busy' : 'idle'}`}>
           <Icon name={session.running ? 'loading' : 'check'} small spin={session.running} /> {session.running ? 'Working' : 'Idle'}
         </span>
@@ -464,13 +465,13 @@ export function App() {
         <McpItem />
         <CacheItem />
         {canNotify && (
-          <span className="item clickable" title={notifying ? 'Notifying you when Claude finishes or needs you. Click to turn off' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
+          <button className="item clickable" title={notifying ? 'Notifying you when Claude finishes or needs you. Click to turn off' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
             <Icon name={notifying ? 'bell' : 'bell-slash'} small />
-          </span>
+          </button>
         )}
-        <span className="item clickable" title={`Theme: ${THEME_NAMES[theme]}. Click to switch`} onClick={toggleTheme}><Icon name="color-mode" small /></span>
-        <span className="item clickable" title="Open on phone" onClick={() => setPhone((v) => !v)}><Icon name="device-mobile" small /></span>
-        <span className="item clickable" title="Switch to another Mac" onClick={() => setMacs((v) => !v)}><Icon name="vm" small /> {macName}</span>
+        <button className="item clickable" title={`Theme: ${THEME_NAMES[theme]}. Click to switch`} onClick={toggleTheme}><Icon name="color-mode" small /></button>
+        <button className="item clickable" title="Open on phone" onClick={() => setPhone((v) => !v)}><Icon name="device-mobile" small /></button>
+        <button className="item clickable" title="Switch to another Mac" onClick={() => setMacs((v) => !v)}><Icon name="vm" small /> {macName}</button>
         {!connected && <span className="item error"><Icon name="plug" small /> Disconnected</span>}
       </footer>
 
