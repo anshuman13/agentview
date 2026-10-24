@@ -1,8 +1,11 @@
 #!/bin/sh
-# Builds the web app into a fresh folder and swaps it in only when the build succeeds, then runs the server.
+# Installs dependencies when the lockfile changes and builds the web app into a fresh folder, swapping it in only when the build succeeds. Then runs the server.
 # A failed build keeps the last good one, and the server reports it.
 cd "$(dirname "$0")"
 FAILED="$HOME/.agentview/web-build-failed"
+if [ package-lock.json -nt node_modules/.installed ]; then
+  npm install --no-audit --no-fund && touch node_modules/.installed
+fi
 rm -rf web/dist-next
 if npx -w web vite build --outDir dist-next --emptyOutDir --logLevel warn; then
   rm -rf web/dist-old
