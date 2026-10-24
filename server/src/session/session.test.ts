@@ -1,18 +1,17 @@
-import { afterAll, describe, expect, it, vi } from 'vitest';
-import { appendFileSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { AgentSession, BIG_BRO, fireTime, prFrom } from './session.js';
-import { JsonlTail } from '../agent/claude/tail.js';
-import { contextFrom, historyFrom } from '../agent/claude/transcript.js';
+import { describe, expect, it, vi } from 'vitest';
+import { fireTime, prFrom, type AgentSession } from './session.js';
+import { claudeSession, type ClaudeDriver } from '../agent/claude/driver.js';
+import { BIG_BRO, historyFrom } from '../agent/claude/transcript.js';
+import type { History } from '../agent/types.js';
 import type { ChatEvent, ServerMessage } from '../../../shared/protocol.js';
 
-const CLAUDE_DIR = vi.hoisted(() => (process.env.CLAUDE_CONFIG_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`));
+vi.hoisted(() => (process.env.CLAUDE_CONFIG_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`));
 
 function fakeSession() {
-  const s = new AgentSession('/tmp/project');
+  const s = claudeSession('/tmp/project');
   const interrupt = vi.fn(async () => {});
-  Object.assign(s, { q: { interrupt } });
-  const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+  Object.assign(s.driver, { q: { interrupt } });
+  const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
   const result = (uuid: string, subtype = 'success') => handle({ type: 'result', subtype, uuid, result: 'done', total_cost_usd: 0, is_error: subtype !== 'success' });
   return { s, interrupt, result };
 }
@@ -85,7 +84,7 @@ describe('AgentSession turns', () => {
   it('interrupt marks stopping until the turn ends', async () => {
     const { s, interrupt, result } = fakeSession();
     s.sendPrompt('task');
-    Object.assign(s, { inputQueue: [] });
+    Object.assign(s.driver, { inputQueue: [] });
     await s.interrupt();
     expect(interrupt).toHaveBeenCalledOnce();
     expect(s.state.session.stopping).toBe(true);
@@ -96,7 +95,7 @@ describe('AgentSession turns', () => {
   it('does not auto-compact after a stop', async () => {
     const { s, result } = fakeSession();
     s.sendPrompt('big task');
-    Object.assign(s, { inputQueue: [] });
+    Object.assign(s.driver, { inputQueue: [] });
     s.state.session.context = 210_000;
     await s.interrupt();
     result('r1', 'error_during_execution');
@@ -171,7 +170,7 @@ describe('AgentSession turns', () => {
     s.sendPrompt('task');
     await s.prompt('A');
     await s.prompt('B');
-    Object.assign(s, { inputQueue: [] });
+    Object.assign(s.driver, { inputQueue: [] });
     await s.interrupt();
     expect(interrupt).toHaveBeenCalledOnce();
     expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['task']);
@@ -184,17 +183,17 @@ describe('AgentSession turns', () => {
 
 describe('Fable approval', () => {
   const call = (s: AgentSession, subagent_type: string) =>
-    (s as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<any> }).confirmBigBro(
+    (s.driver as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<any> }).confirmBigBro(
       { hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { subagent_type, description: 'race condition', prompt: 'why?' }, tool_use_id: 't1' },
       new AbortController().signal,
     );
 
   it('lets other agents through untouched', async () => {
-    expect(await call(new AgentSession('/tmp/p'), 'Explore')).toEqual({});
+    expect(await call(claudeSession('/tmp/p'), 'Explore')).toEqual({});
   });
 
   it('waits for the user and allows when approved', async () => {
-    const s = new AgentSession('/tmp/p');
+    const s = claudeSession('/tmp/p');
     const decision = call(s, BIG_BRO);
     const req = s.state.pending[0];
     expect(req).toMatchObject({ kind: 'permission', title: 'Ask Fable: race condition', canAlwaysAllow: false });
@@ -215,7 +214,7 @@ describe('Fable approval', () => {
   });
 
   it('denies when the user declines', async () => {
-    const s = new AgentSession('/tmp/p');
+    const s = claudeSession('/tmp/p');
     const decision = call(s, BIG_BRO);
     s.answerPermission(s.state.pending[0].id, false);
     expect((await decision).hookSpecificOutput).toMatchObject({ permissionDecision: 'deny' });
@@ -224,9 +223,9 @@ describe('Fable approval', () => {
 
 describe('Team mode', () => {
   function teamSession() {
-    const s = new AgentSession('/tmp/p');
+    const s = claudeSession('/tmp/p');
     const q = { interrupt: vi.fn(async () => {}), setModel: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}) };
-    Object.assign(s, { q });
+    Object.assign(s.driver, { q });
     return { s, q };
   }
 
@@ -261,8 +260,8 @@ describe('Team mode', () => {
 
 describe('changed files', () => {
   const run = (isError: boolean) => {
-    const s = new AgentSession('/repo');
-    const handle = (m: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(m);
+    const s = claudeSession('/repo');
+    const handle = (m: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(m);
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'e1', name: 'Write', input: { file_path: '/repo/README.md' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'e1', content: isError ? 'denied' : 'ok', is_error: isError }] } });
     return s.state.recentFiles;
@@ -282,16 +281,16 @@ describe('plan changes', () => {
     s.sendPrompt('task');
     s.changePlan(['curl /check', 'stop the server']);
     expect(interrupt).not.toHaveBeenCalled();
-    const out = s.afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } };
+    const out = (s.driver as ClaudeDriver).afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } };
     expect(out.hookSpecificOutput?.additionalContext).toContain('1. curl /check\n2. stop the server');
-    expect(s.afterTool(hook)).toEqual({});
+    expect((s.driver as ClaudeDriver).afterTool(hook)).toEqual({});
   });
 
   it('skips sub-agent tool calls', () => {
     const { s } = fakeSession();
     s.sendPrompt('task');
     s.changePlan(['a']);
-    expect(s.afterTool({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
+    expect((s.driver as ClaudeDriver).afterTool({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
   });
 
   it('sends an undelivered plan change as a prompt when the turn ends', () => {
@@ -305,10 +304,10 @@ describe('plan changes', () => {
 
   it('reminds Claude to report progress after 8 tool calls without set_status', () => {
     const { s } = fakeSession();
-    const text = () => (s.afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } }).hookSpecificOutput?.additionalContext;
+    const text = () => ((s.driver as ClaudeDriver).afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } }).hookSpecificOutput?.additionalContext;
     for (let i = 0; i < 7; i++) expect(text()).toBeUndefined();
     expect(text()).toContain('set_status');
-    s.afterTool({ ...(hook as object), tool_name: 'mcp__agentview__set_status' } as never);
+    (s.driver as ClaudeDriver).afterTool({ ...(hook as object), tool_name: 'mcp__agentview__set_status' } as never);
     for (let i = 0; i < 7; i++) expect(text()).toBeUndefined();
   });
 
@@ -319,119 +318,12 @@ describe('plan changes', () => {
   });
 });
 
-describe('context tokens', () => {
-  it('adds fresh, cached and newly cached input tokens', () => {
-    expect(contextFrom({ input_tokens: 10, cache_read_input_tokens: 200_000, cache_creation_input_tokens: 5_000 })).toBe(205_010);
-    expect(contextFrom({ input_tokens: 0 })).toBeNull();
-    expect(contextFrom(undefined)).toBeNull();
-  });
-});
-
-describe('transcript sync', () => {
-  const cwd = '/tmp/agentview-sync';
-  const dir = path.join(CLAUDE_DIR, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'));
-  let n = 0;
-  const line = (sessionId: string, type: 'user' | 'assistant', text: string, parent: string | null) => {
-    const uuid = `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`;
-    const message = type === 'user' ? { role: 'user', content: text } : { role: 'assistant', content: [{ type: 'text', text }] };
-    return { uuid, text: JSON.stringify({ type, uuid, parentUuid: parent, sessionId, cwd, isSidechain: false, timestamp: new Date(1_800_000_000_000 + n * 1000).toISOString(), message }) + '\n' };
-  };
-  afterAll(() => rmSync(CLAUDE_DIR, { recursive: true, force: true }));
-  const texts = (s: AgentSession) => s.state.events.flatMap((e) => (e.kind === 'user' || e.kind === 'assistant' ? [e.text] : []));
-  async function setup() {
-    mkdirSync(dir, { recursive: true });
-    const sessionId = `11111111-2222-4333-8444-${String(++n).padStart(12, '0')}`;
-    const file = path.join(dir, `${sessionId}.jsonl`);
-    const a = line(sessionId, 'user', 'hello', null);
-    const b = line(sessionId, 'assistant', 'hi there', a.uuid);
-    writeFileSync(file, a.text + b.text);
-    const s = new AgentSession(cwd, sessionId);
-    await s.loadHistory();
-    const sent: ServerMessage[] = [];
-    s.onMessage((m) => sent.push(m));
-    const sync = () => (s as unknown as { syncTranscript: (own: boolean) => Promise<void> }).syncTranscript(false);
-    return { s, sessionId, file, last: b.uuid, sent, sync };
-  }
-
-  it('parses only appended lines and pushes the new history', async () => {
-    const { s, sessionId, file, last, sent, sync } = await setup();
-    expect(texts(s)).toEqual(['hello', 'hi there']);
-    const parse = vi.spyOn(JSON, 'parse');
-    const c = line(sessionId, 'user', 'next', last);
-    const d = line(sessionId, 'assistant', 'done', c.uuid);
-    appendFileSync(file, c.text + d.text.slice(0, 20));
-    await sync();
-    appendFileSync(file, d.text.slice(20));
-    await sync();
-    const lines = parse.mock.calls.filter(([t]) => typeof t === 'string' && t.includes('"sessionId"'));
-    parse.mockRestore();
-    expect(lines.map(([t]) => JSON.parse(t as string).uuid)).toEqual([c.uuid, d.uuid]);
-    expect(texts(s)).toEqual(['hello', 'hi there', 'next', 'done']);
-    expect(sent.filter((m) => m.type === 'init')).toHaveLength(2);
-  });
-
-  it('emits nothing when the transcript did not change', async () => {
-    const { sent, sync } = await setup();
-    await sync();
-    await sync();
-    expect(sent).toEqual([]);
-  });
-
-  it('reloads in full when the file shrank or was replaced', async () => {
-    const { s, sessionId, file, sync } = await setup();
-    const a = line(sessionId, 'user', 'other', null);
-    writeFileSync(file, a.text);
-    await sync();
-    expect(texts(s)).toEqual(['other']);
-    const b = line(sessionId, 'assistant', 'replaced', a.uuid);
-    writeFileSync(`${file}.tmp`, a.text + b.text);
-    renameSync(`${file}.tmp`, file);
-    await sync();
-    expect(texts(s)).toEqual(['other', 'replaced']);
-  });
-
-  it('JsonlTail reports appends, partial lines and rewrites', async () => {
-    mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, `tail-${++n}.jsonl`);
-    writeFileSync(file, '{"a":1}\n{"a":2}\n');
-    const t = new JsonlTail(file);
-    expect(await t.read()).toBe('reload');
-    expect(await t.read()).toBe('same');
-    appendFileSync(file, '{"a":3}\n{"a"');
-    expect(await t.read()).toBe('append');
-    appendFileSync(file, ':4}\n');
-    expect(await Promise.all([t.read(), t.read()])).toEqual(['append', 'same']);
-    expect(t.entries).toEqual([{ a: 1 }, { a: 2 }, { a: 3 }, { a: 4 }]);
-    writeFileSync(file, '{"b":1}\n{"a":2}\n{"a":3}\n{"a":4}\n{"a":5}\n');
-    expect(await t.read()).toBe('reload');
-    expect(t.entries).toEqual([{ b: 1 }, { a: 2 }, { a: 3 }, { a: 4 }, { a: 5 }]);
-  });
-});
-
-describe('history', () => {
-  const msg = (type: string, content: unknown, extra: object = {}) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content, ...extra } }) as never;
-
-  it('rebuilds turns, tool calls and the context size', () => {
-    const { events, context } = historyFrom([
-      msg('user', 'fix the bug'),
-      msg('assistant', [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'npm test' } }], { usage: { input_tokens: 5, cache_read_input_tokens: 1000 } }),
-      msg('user', [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }]),
-      msg('assistant', [{ type: 'text', text: 'Fixed' }]),
-      msg('user', '[Request interrupted by user]'),
-    ]);
-    expect(events.map((e) => e.kind)).toEqual(['user', 'tool_use', 'tool_result', 'assistant', 'system', 'result']);
-    expect(events[1]).toMatchObject({ summary: '$ npm test' });
-    expect(events.at(-1)).toMatchObject({ text: 'Fixed' });
-    expect(context).toBe(1005);
-  });
-});
-
 describe('subagents', () => {
   const launched = 'Async agent launched successfully.\nagentId: a1';
 
   it('keeps a background agent running until its notification and tags its steps', () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     s.sendPrompt('survey');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: launched }] } });
@@ -461,7 +353,7 @@ describe('subagents', () => {
 
   it('keeps the full agent report and caps other tool results', () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     const long = 'x'.repeat(6000);
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }, { type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'ls' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: `${long}\nagentId: a1 (use SendMessage with to: 'a1')\n<usage>total_tokens: 5\ntool_uses: 1\nduration_ms: 9</usage>` }, { type: 'tool_result', tool_use_id: 'b1', content: long }] } });
@@ -474,7 +366,7 @@ describe('subagents', () => {
 
   it('tracks an agent from start to notification', () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     const agent = () => s.state.events.find((e) => e.kind === 'agent');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey', subagent_type: 'Explore', prompt: 'Find docs' } }] } });
     expect(agent()).toMatchObject({ id: 'ag:agent', toolUseId: 'ag', description: 'Survey', subagentType: 'Explore', prompt: 'Find docs', status: 'running' });
@@ -494,8 +386,8 @@ describe('subagents', () => {
       msg('assistant', [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey', run_in_background: true } }]),
       msg('user', [{ type: 'tool_result', tool_use_id: 'ag', content: launched }]),
     ];
-    const s = new AgentSession('/tmp/project');
-    const apply = () => (s as unknown as { applyHistory: (m: unknown[], subs: object) => ChatEvent[] }).applyHistory(history, {});
+    const s = claudeSession('/tmp/project');
+    const apply = () => (s as unknown as { applyHistory: (h: History) => ChatEvent[] }).applyHistory((s.driver as unknown as { history: (m: unknown[], subs: object) => History }).history(history, {}));
     s.state.events = apply();
     const agent = () => s.state.events.find((e) => e.kind === 'agent');
     expect(agent()).toMatchObject({ status: 'running' });
@@ -508,7 +400,7 @@ describe('subagents', () => {
 
   it('resolves a notification that only carries the task id', () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: launched }] } });
     handle({ type: 'system', subtype: 'task_notification', task_id: 'a1', status: 'failed', summary: 'Boom', output_file: '' });
@@ -546,7 +438,7 @@ describe('subagents', () => {
 
   it('forwards subagent text live and from history', () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     handle({ type: 'assistant', parent_tool_use_id: 'ag', message: { content: [{ type: 'text', text: 'Looking around' }] } });
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'assistant', text: 'Looking around', parent: 'ag' });
     const msg = (type: string, content: unknown) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
@@ -556,7 +448,7 @@ describe('subagents', () => {
 
   it('uses the hand-back report', () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, tool_use_result: { status: 'completed', handbackReport: { text: 'Full report' }, content: [] }, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: 'This agent\'s report was delivered to you as a message' }] } });
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'tool_result', text: 'Full report' });
@@ -583,7 +475,7 @@ describe('subagents', () => {
 describe('compacting', () => {
   it('shows compacting from /compact until the boundary arrives', () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     s.sendPrompt('/compact');
     expect(s.state.session.compacting).toBe(true);
     expect(s.state.status).toBe('Compacting the conversation');
@@ -594,7 +486,7 @@ describe('compacting', () => {
 
   it('a CLI exit while compacting lets the next message go out', async () => {
     const { s } = fakeSession();
-    const priv = s as unknown as { q: unknown; consume: () => Promise<void>; start: () => void };
+    const priv = s.driver as unknown as { q: unknown; consume: () => Promise<void>; start: () => void };
     vi.spyOn(priv, 'start').mockImplementation(() => {});
     s.sendPrompt('/compact');
     priv.q = { async *[Symbol.asyncIterator]() {} };
@@ -619,7 +511,7 @@ describe('compacting', () => {
 
   it('stops compacting and says why when it fails', () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     s.sendPrompt('/compact');
     handle({ type: 'system', subtype: 'status', status: null, compact_result: 'failed', compact_error: 'Prompt is too long' });
     expect(s.state.session.compacting).toBe(false);
@@ -644,7 +536,7 @@ describe('blocked tools', () => {
   it('allows a rule once, marks every card for it and does not re-prompt', async () => {
     const { s } = fakeSession();
     const applyFlagSettings = vi.fn(async () => {});
-    Object.assign(s, { q: { interrupt: vi.fn(), applyFlagSettings } });
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), applyFlagSettings } });
     const priv = s as unknown as { blocked: (id: string, tool: string, reason: string) => void };
     const users = () => s.state.events.filter((e) => e.kind === 'user');
     const cards = () => s.state.events.filter((e) => e.kind === 'blocked').map((e) => e.kind === 'blocked' && e.allowed);
@@ -669,7 +561,7 @@ describe('streaming', () => {
     const { s } = fakeSession();
     const sent: ServerMessage[] = [];
     s.onMessage((m) => sent.push(JSON.parse(JSON.stringify(m))));
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     const delta = (text: string) => handle({ type: 'stream_event', event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } } });
     handle({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1' } } });
     delta('Hel');
@@ -691,7 +583,7 @@ describe('streaming', () => {
 describe('turns the CLI starts by itself', () => {
   it('marks a hand-back turn as running until its result', () => {
     const { s, result } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     expect(s.state.session.running).toBe(false);
     handle({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1' } } });
     expect(s.state.session.running).toBe(true);
@@ -703,7 +595,7 @@ describe('turns the CLI starts by itself', () => {
 
   it('drops a dead query so the next prompt starts a fresh one', async () => {
     const { s } = fakeSession();
-    const priv = s as unknown as { q: unknown; gen: number; consume: () => Promise<void>; start: () => void };
+    const priv = s.driver as unknown as { q: unknown; gen: number; consume: () => Promise<void>; start: () => void };
     priv.q = { async *[Symbol.asyncIterator]() {} };
     const gen = priv.gen;
     s.sendPrompt('first');
@@ -723,7 +615,7 @@ describe('review findings', () => {
     const got: ServerMessage[] = [];
     s.onMessage((m) => got.push(m));
     s.sendPrompt('/code-review 42');
-    (s as unknown as { toolUse: (b: unknown) => void }).toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
+    (s.driver as unknown as { toolUse: (b: unknown) => void }).toolUse({ id: 't1', name: 'ReportFindings', input: { findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
     await vi.waitFor(() => expect(got.some((m) => m.type === 'findings')).toBe(true));
     expect(got.find((m) => m.type === 'findings')).toMatchObject({ review: { repo: '/tmp/project', target: '42', findings: [{ file: 'x.ts', line: 9, summary: 'Leak' }] } });
   });
@@ -735,7 +627,7 @@ describe('/loop after Stop', () => {
     const { s, interrupt, result } = fakeSession();
     await s.prompt('/loop until 23:59 do the next round');
     expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['/loop until 23:59 do the next round', 'do the next round']);
-    Object.assign(s, { inputQueue: [] });
+    Object.assign(s.driver, { inputQueue: [] });
     await s.interrupt();
     expect(interrupt).toHaveBeenCalledOnce();
     result('r1', 'error_during_execution');
@@ -770,7 +662,7 @@ describe('/loop after Stop', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
     const { s, result } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     await s.prompt('/loop until 06:59 do the next round');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
     result('r1');
@@ -787,7 +679,7 @@ describe('/loop after Stop', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
     const { s, result } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     await s.prompt('do the next round');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
     result('r1');
@@ -862,7 +754,7 @@ describe('/loop after Stop', () => {
     await s.prompt('/loop 10m until 23:59 do the next round');
     vi.advanceTimersByTime(10 * 60_000 + 1);
     expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
-    const priv = s as unknown as { consume: () => Promise<void>; start: () => void };
+    const priv = s.driver as unknown as { consume: () => Promise<void>; start: () => void };
     priv.consume();
     await vi.advanceTimersByTimeAsync(0);
     expect(s.state.session.running).toBe(false);
@@ -877,7 +769,7 @@ describe('/loop after Stop', () => {
 describe('/goal', () => {
   const CHECK = 'Check whether this goal is met: the tests pass. Reply GOAL MET when it is, otherwise keep working on it.';
   const users = (s: AgentSession) => s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text);
-  const reply = (s: AgentSession, uuid: string, text: string) => (s as unknown as { handle: (m: unknown) => void }).handle({ type: 'result', subtype: 'success', uuid, result: text, total_cost_usd: 0, is_error: false });
+  const reply = (s: AgentSession, uuid: string, text: string) => (s.driver as unknown as { handle: (m: unknown) => void }).handle({ type: 'result', subtype: 'success', uuid, result: text, total_cost_usd: 0, is_error: false });
 
   it('sends the check when idle and stops on GOAL MET', async () => {
     vi.useFakeTimers();
@@ -925,7 +817,8 @@ describe('/goal', () => {
 describe('send queue fuzz', () => {
   const seeds = Number(process.env.FUZZ_SEEDS ?? 40);
   const base = Number(process.env.FUZZ_FROM ?? 1);
-  type Priv = { q: { interrupt: () => Promise<void> } | null; inputQueue: unknown[]; consume: () => Promise<void>; start: () => void; queued: unknown[]; enqueue: (text: string) => void };
+  type Priv = { queued: unknown[]; enqueue: (text: string) => void };
+  type Drv = { q: { interrupt: () => Promise<void> } | null; inputQueue: unknown[]; consume: () => Promise<void>; start: () => void };
 
   function rng(seed: number) {
     let x = seed * 2654435761 + 1;
@@ -937,8 +830,9 @@ describe('send queue fuzz', () => {
       const r = rng(seed);
       const { s, interrupt, result } = fakeSession();
       const priv = s as unknown as Priv;
-      priv.start = () => {
-        if (!priv.q) priv.q = { interrupt };
+      const drv = s.driver as unknown as Drv;
+      drv.start = () => {
+        if (!drv.q) drv.q = { interrupt };
       };
       const sent: { id: string; text: string }[] = [];
       const dropped = new Set<string>();
@@ -950,7 +844,7 @@ describe('send queue fuzz', () => {
       };
       const idOf = (e: Extract<ChatEvent, { kind: 'user' }>) => sent.find((m) => m.id === e.id)?.id ?? e.text;
       const bigBro = () =>
-        void (s as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<unknown> })
+        void (s.driver as unknown as { confirmBigBro: (i: unknown, sig: AbortSignal) => Promise<unknown> })
           .confirmBigBro({ hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_input: { subagent_type: BIG_BRO, description: 'd', prompt: 'p' }, tool_use_id: `t${seed}-${n}` }, new AbortController().signal)
           .catch(() => {});
       let n = 0;
@@ -989,7 +883,7 @@ describe('send queue fuzz', () => {
           check(`resend ${m.id}`);
         } else if (roll < 0.7) {
           // The CLI has taken what was queued for it; a stop can now reach the running turn.
-          if (r() < 0.5) priv.inputQueue = [];
+          if (r() < 0.5) drv.inputQueue = [];
           const q = s.state.session.running && !s.state.session.stopping ? queuedIds() : [];
           await s.interrupt();
           for (const id of q) dropped.add(id);
@@ -1004,8 +898,8 @@ describe('send queue fuzz', () => {
           check('compact');
         } else if (roll < 0.9) {
           // The CLI dies: queued input is lost, the events stay.
-          priv.q = { ...priv.q, [Symbol.asyncIterator]: async function* () {} } as unknown as Priv['q'];
-          await priv.consume();
+          drv.q = { ...drv.q, [Symbol.asyncIterator]: async function* () {} } as unknown as Drv['q'];
+          await drv.consume();
           check('exit');
           expect(s.state.pending, `cards survived a CLI exit: ${trace.join(' > ')}`).toHaveLength(0);
         } else if (roll < 0.94) {
@@ -1035,8 +929,8 @@ describe('rewind files', () => {
   it('rewinds to the uuid the CLI echoed for the prompt, or the history id', async () => {
     const { s, result } = fakeSession();
     const rewindFiles = vi.fn(async () => ({ canRewind: true, filesChanged: ['/tmp/project/a.ts'] }));
-    Object.assign(s, { q: { interrupt: vi.fn(), rewindFiles } });
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), rewindFiles } });
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     await s.prompt('fix it', 'ev1');
     handle({ type: 'user', uuid: 'u1', parent_tool_use_id: null, message: { role: 'user', content: 'fix it' } });
     await s.rewind('ev1');
@@ -1060,7 +954,7 @@ describe('pull request link', () => {
 
   it('records the PR number a gh pr create printed, live and from history', async () => {
     const { s } = fakeSession();
-    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     await s.prompt('open a PR');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [create], usage: {} } });
     handle({ type: 'user', parent_tool_use_id: null, message: { role: 'user', content: [made] } });

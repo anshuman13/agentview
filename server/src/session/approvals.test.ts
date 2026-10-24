@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
 import { Approvals, permissionTitle } from './approvals.js';
 import type { ServerMessage, ServerState } from '../../../shared/protocol.js';
 
@@ -13,7 +12,7 @@ describe('permissionTitle', () => {
 });
 
 describe('Approvals', () => {
-  const suggestions: PermissionUpdate[] = [{ type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'ls' }], behavior: 'allow', destination: 'session' }];
+  const suggestions = [{ type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'ls' }], behavior: 'allow', destination: 'session' }];
 
   function setup() {
     const state = { pending: [] } as unknown as ServerState;

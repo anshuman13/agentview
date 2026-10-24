@@ -105,20 +105,6 @@ export function agentEvent(id: string, rawInput: unknown, at: number, parent?: s
   return { id: `${id}:agent`, kind: 'agent', toolUseId: id, description: s('description'), subagentType: s('subagent_type') || 'general-purpose', model: s('model') || null, background: input.run_in_background === true, prompt: s('prompt'), status: 'running', startedAt: at, endedAt: null, progress: null, usage: null, at, ...(parent && { parent }) };
 }
 
-export const ORPHANED = 'Stopped: this agent was no longer running, so it could not report back.';
-
-// Agents whose task is gone (process ended, server restarted) never get a completion: end them as stopped.
-export function stopAgents(events: ChatEvent[], ids: Iterable<string>, at: number, text = ORPHANED): ChatEvent[] {
-  const want = new Set(ids);
-  const out: ChatEvent[] = [];
-  for (const e of events) {
-    if (e.kind !== 'agent' || e.status !== 'running' || !want.has(e.toolUseId)) continue;
-    Object.assign(e, { status: 'stopped', endedAt: at });
-    out.push({ id: `${e.toolUseId}:stopped`, kind: 'tool_result', toolUseId: e.toolUseId, text, isError: false, at, stopped: true, ...(e.parent && { parent: e.parent }) });
-  }
-  return out;
-}
-
 export function usageFrom(text: string): AgentUsage | null {
   const m = text.match(/<usage>(?:subagent_tokens|total_tokens): (\d+)\s+tool_uses: (\d+)\s+duration_ms: (\d+)\s*<\/usage>/);
   return m ? { tokens: Number(m[1]), toolUses: Number(m[2]), durationMs: Number(m[3]) } : null;

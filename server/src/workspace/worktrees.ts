@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { listSessions } from '@anthropic-ai/claude-agent-sdk';
+import { listSessions } from '../agent/claude/sessions.js';
 import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shared/protocol.js';
 
 const run = promisify(execFile);

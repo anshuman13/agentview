@@ -10,8 +10,10 @@ import { brotliCompress, gzip, constants as zlib } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
-import { getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
-import { AgentSession } from './session/session.js';
+import { getSessionInfo, listSessions } from './agent/claude/sessions.js';
+import { claudeSession } from './agent/claude/driver.js';
+import type { AgentSession } from './session/session.js';
+import type { Cron } from './agent/types.js';
 import { notifyAway, notifyStall, ntfyTopic, stallWatch } from './integrations/notify.js';
 import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
@@ -115,14 +117,14 @@ let liveTimer: NodeJS.Timeout | null = null;
 function broadcastLive() {
   liveTimer ??= setTimeout(() => {
     liveTimer = null;
-    for (const { chat } of live.values()) chat.watchTranscript(viewers(chat) > 0);
+    for (const { chat } of live.values()) chat.watchHistory(viewers(chat) > 0);
     const chats = [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
     broadcast({ type: 'live', chats });
   }, 100);
 }
 
 async function createChat(cwd: string, resume?: string, title = '', fork = false) {
-  const chat = new AgentSession(cwd, resume, fork);
+  const chat = claudeSession(cwd, resume, fork);
   chat.title = title;
   await chat.loadHistory();
   chat.onMessage((m) => {
@@ -260,7 +262,7 @@ function restart(now: boolean) {
 process.on('SIGTERM', saveAndExit);
 
 async function restore() {
-  const saved: { view?: string; chats: { sessionId: string; crons: SessionCronSummary[]; repeat?: Repeat | null }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
+  const saved: { view?: string; chats: { sessionId: string; crons: Cron[]; repeat?: Repeat | null }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
   if (!saved) return null;
   await rm(RESTORE, { force: true });
   await Promise.all(saved.chats.map(async (s) => {
