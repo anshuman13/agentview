@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { PermissionResult, PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
-import type { PendingRequest, ServerMessage, ServerState } from '../../shared/protocol.js';
+import type { PendingRequest, ServerMessage, ServerState } from '../../../shared/protocol.js';
 
 type Waiting = { resolve: (r: PermissionResult) => void; input: Record<string, unknown>; suggestions?: PermissionUpdate[] };
 

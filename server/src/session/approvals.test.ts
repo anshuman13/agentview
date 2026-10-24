@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
 import { Approvals, permissionTitle } from './approvals.js';
-import type { ServerMessage, ServerState } from '../../shared/protocol.js';
+import type { ServerMessage, ServerState } from '../../../shared/protocol.js';
 
 describe('permissionTitle', () => {
   it('describes tools in plain words', () => {
