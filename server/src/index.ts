@@ -401,5 +401,13 @@ function handleCommand(client: Client, msg: ClientMessage) {
 }
 
 server.listen(PORT, () => console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`));
+
+// The web app used to be on :5173; send old bookmarks and phone shells here.
+if (PORT === 7777 && !process.env.AGENTVIEW_DEV_WEB) {
+  http
+    .createServer((req, res) => res.writeHead(301, { location: `http://${new URL(`http://${req.headers.host ?? 'localhost'}`).hostname}:${PORT}${req.url ?? '/'}` }).end())
+    .on('error', () => {})
+    .listen(5173);
+}
 void ntfyTopic().then((t) => console.log(t === 'off' ? 'push off' : `push: subscribe to ntfy topic ${t}`));
 void connectChrome();

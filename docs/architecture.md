@@ -2,13 +2,12 @@
 
 ## Processes
 
-`dist/AgentView.app` (built from `menubar/AgentViewBar.swift` by `start.sh`) supervises three processes and restarts
+`dist/AgentView.app` (built from `menubar/AgentViewBar.swift` by `start.sh`) supervises two processes and restarts
 any that exit:
 
 | Process | Port | Role |
 | --- | --- | --- |
-| API server (`server/src/index.ts`) | :7777 | Web app, event stream, files, git, terminals, GitHub, Observe, Deploy |
-| Vite (`web/`) | :5173 | Dev server for the React client |
+| API server (`server/src/index.ts`) | :7777 | Web app (the `web/dist` build), event stream, files, git, terminals, GitHub, Observe, Deploy |
 | Chrome relay (`server/src/chrome/relay.ts`) | :7779 | Holds the Chrome DevTools connection across server restarts |
 
 The API server starts a fourth process, the agent host (`server/src/host/main.ts`), in its own process group. The
@@ -17,6 +16,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 
 ## Restarts
 
+- The API server builds `web/` each time it starts, so web changes go live on its next restart.
 - Restarting the API server (menu item, `POST /api/restart`, a file change under `npm run dev`) leaves the host and
   running turns alone. Clients reconnect and resume.
 - The host hashes its own import graph at boot. On a restart request, and whenever an API server connects, it

@@ -9,7 +9,7 @@ import type { LiveChat, ServerMessage } from '../../../shared/protocol.js';
 const last = new Map<string, number>();
 const FIFO = path.join(os.homedir(), '.agentview/notify.fifo');
 const OBSERVE = path.join(os.homedir(), '.agentview/observe.json');
-const APP = 'http://localhost:5173';
+const APP = 'http://localhost:7777';
 
 function detail(m: ServerMessage) {
   if (m.type === 'pending') return m.request.kind === 'question' ? m.request.questions[0]?.question ?? 'Claude has a question' : m.request.title;

@@ -157,8 +157,7 @@ final class Bar: NSObject, NSApplicationDelegate {
   let loginItem = NSMenuItem(title: "Open at login", action: #selector(toggleLogin), keyEquivalent: "")
   var assertion: IOPMAssertionID = 0
   let relay = Child("relay", "bun server/src/relay.ts", env: ["AGENTVIEW_RELAY_TOKEN": token])
-  let server = Child("server", "bun --cwd server src/index.ts", env: ["CHROME_CDP": "ws://127.0.0.1:7779/\(token)", "AGENTVIEW_DEV_WEB": "5173"])
-  let web = Child("web", "npm run dev -w web")
+  let server = Child("server", "sh -c 'npx -w web vite build --logLevel warn; cd server && exec bun src/index.ts'", env: ["CHROME_CDP": "ws://127.0.0.1:7779/\(token)"])
   let notifier = Notifier()
 
   func applicationDidFinishLaunching(_ n: Notification) {
@@ -185,7 +184,6 @@ final class Bar: NSObject, NSApplicationDelegate {
     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
       self.relay.start()
       self.server.start()
-      self.web.start()
     }
   }
 
@@ -195,7 +193,7 @@ final class Bar: NSObject, NSApplicationDelegate {
   }
 
   func applicationWillTerminate(_ n: Notification) {
-    [web, server, relay].forEach { $0.stop() }
+    [server, relay].forEach { $0.stop() }
   }
 
   func setAwake(_ on: Bool) {
@@ -211,7 +209,7 @@ final class Bar: NSObject, NSApplicationDelegate {
   }
 
   @objc func toggleAwake() { setAwake(assertion == 0) }
-  @objc func openApp() { NSWorkspace.shared.open(URL(string: "http://localhost:5173")!) }
+  @objc func openApp() { NSWorkspace.shared.open(URL(string: "http://localhost:7777")!) }
   @objc func restartServer() { server.restart() }
   @objc func showLogs() { NSWorkspace.shared.open(logs) }
 

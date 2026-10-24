@@ -30,5 +30,5 @@ if ps -axo comm= | grep -q 'AgentView.app/Contents/MacOS/AgentView$'; then
   echo "AgentView is running. Use the menu bar icon to restart the server, or quit it and run this again."
 else
   open "$APP"
-  echo "AgentView is starting on http://localhost:5173 (logs in ~/.agentview/logs)"
+  echo "AgentView is starting on http://localhost:7777 (logs in ~/.agentview/logs)"
 fi

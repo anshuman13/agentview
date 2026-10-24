@@ -10,8 +10,8 @@ npm install
 ./start.sh
 ```
 
-`start.sh` builds and opens `dist/AgentView.app`, a menu bar app that runs the server on :7777, vite on :5173 and a
-Chrome relay on :7779, restarts any that exit and keeps the Mac awake. Its menu has Open AgentView, Restart server,
+`start.sh` builds and opens `dist/AgentView.app`, a menu bar app that runs the server on :7777 and a Chrome relay on
+:7779, restarts any that exit and keeps the Mac awake. Its menu has Open AgentView, Restart server,
 Show logs (`~/.agentview/logs`) and Open at login. Quitting it stops AgentView. It uses the Claude Code CLI you have
 installed and its login.
 
