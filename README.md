@@ -153,6 +153,9 @@ For a phone in the background, the same notifications go to an [ntfy](https://nt
 or an `ntfy` key in `~/.agentview/observe.json` to a topic name (sent to ntfy.sh) or a full URL on your own server.
 Tapping the push opens the chat. Without a topic nothing is sent.
 
+A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot
+in the chat list until its next message.
+
 ## Models
 
 New chats start in Auto mode: Claude asks only before risky actions.
