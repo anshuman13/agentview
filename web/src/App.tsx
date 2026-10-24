@@ -24,6 +24,7 @@ import { Observe } from './panes/Observe';
 import { Deploy } from './panes/Deploy';
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
+import { touch } from './touch';
 import { ReadAloud } from './panes/Voice';
 
 type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
@@ -427,7 +428,7 @@ export function App() {
             <div className="empty-state">
               <Icon name="files" />
               <div className="empty-title">No file open</div>
-              <div className="muted small">Pick a file in the Explorer or press ⌘P. Files Claude edits open here.</div>
+              <div className="muted small">Pick a file in the Explorer{touch() ? '' : ' or press ⌘P'}. Files Claude edits open here.</div>
             </div>
           </div>
           <div className="panel" style={terminal ? { height: termH } : undefined}>

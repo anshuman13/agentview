@@ -145,13 +145,7 @@ export function CodePane() {
     setOpened(openFile && !files.includes(openFile) ? [...files, openFile] : files);
   }, [openFile, chat]);
 
-  if (!openFile) {
-    return (
-      <div className="cd-pane">
-        <div className="cd-empty">Open a file from the Explorer or ⌘P</div>
-      </div>
-    );
-  }
+  if (!openFile) return null;
 
   const canDiff = Boolean(file?.original) && file?.original !== file?.content;
   const isDoc = /\.(md|markdown|mdx)$/i.test(openFile);

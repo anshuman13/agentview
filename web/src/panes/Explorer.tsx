@@ -4,6 +4,7 @@ import { FolderPicker, findHere, useWorkspace } from './Sessions';
 import { setOpened, useOpened } from './opened';
 import { Icon } from '../Icon';
 import { save, stored } from './util';
+import { touch } from '../touch';
 import '../explorer.css';
 
 type Entry = { name: string; dir: boolean; hidden: boolean };
@@ -204,6 +205,7 @@ function ExplorerView({ cwd }: { cwd: string }) {
       </button>
       {editorsOpen && (
         <div className="ex-editors">
+          {opened.length === 0 && <div className="ex-empty">Files you open or Claude edits show here</div>}
           {opened.map((f) => (
             <div key={f} className={`ex-row${f === openFile ? ' selected' : ''}`} title={f} onClick={() => setUi({ openFile: f, follow: false })}>
               <span className="ex-close" title="Close" onClick={(e) => { e.stopPropagation(); close(f); }}>
@@ -224,7 +226,7 @@ function ExplorerView({ cwd }: { cwd: string }) {
           <Icon name="chevron-down" small />
         </button>
         <span className="ex-actions">
-          <button className="icon-btn" title="Go to File (⌘P)" onClick={() => setUi({ switcherOpen: true })}>
+          <button className="icon-btn" title={touch() ? 'Go to File' : 'Go to File (⌘P)'} onClick={() => setUi({ switcherOpen: true })}>
             <Icon name="search" small />
           </button>
           <button className={`icon-btn${showHidden ? ' on' : ''}`} title={showHidden ? 'Hide ignored files' : 'Show ignored files'} onClick={() => setShowHidden(!showHidden)}>

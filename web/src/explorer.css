@@ -8,6 +8,7 @@
 .ex button.ex-section:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 .ex-editors { flex: none; max-height: 30%; overflow: auto; border-bottom: 1px solid var(--border); padding-bottom: 2px; }
 .ex-editors .ex-row { padding-left: 4px; }
+.ex-empty { padding: 2px 8px 4px; color: var(--fg-muted); font-size: 12px; }
 .ex-close { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); visibility: hidden; color: var(--fg-muted); }
 .ex-close:hover { background: var(--bg-hover); color: var(--fg); }
 .ex-row:hover .ex-close, .ex-row.selected .ex-close { visibility: visible; }
