@@ -29,7 +29,7 @@ It uses the Claude Code CLI you have installed and its login.
 ## Layout
 
 - **Task box** (right): prompt, mode and model menus, context meter, and the timeline below it. ⌥⌘B hides it
-- **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. Browser tab shows your Chrome. Agents tab shows the subagents of the current chat. Observe, Deploy and MCP open as further tabs here
+- **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. In the diff, a long press or a right click on a line quotes it into the composer as `path:line`. Browser tab shows your Chrome. Agents tab shows the subagents of the current chat. Observe, Deploy and MCP open as further tabs here
 - **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Chats (open and recent) and Workspace (repos, chats, Paseo worktrees)
 - **Side chat**: the split icon on a chat row in the Chats view opens that chat in a second column with its
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
