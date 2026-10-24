@@ -1,4 +1,4 @@
-import type { LoopPhase, LoopState } from '../../shared/protocol.js';
+import type { LoopPhase, LoopState } from '../../../shared/protocol.js';
 
 const LOOP_MODELS = { plan: 'claude-opus-5-5', build: 'claude-opus-5-5', test: 'claude-sonnet-5-5' } as const;
 

@@ -2,9 +2,9 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { appendFileSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { AgentSession, BIG_BRO, fireTime, prFrom } from './session.js';
-import { JsonlTail } from './agent/claude/tail.js';
-import { contextFrom, historyFrom } from './agent/claude/transcript.js';
-import type { ChatEvent, ServerMessage } from '../../shared/protocol.js';
+import { JsonlTail } from '../agent/claude/tail.js';
+import { contextFrom, historyFrom } from '../agent/claude/transcript.js';
+import type { ChatEvent, ServerMessage } from '../../../shared/protocol.js';
 
 const CLAUDE_DIR = vi.hoisted(() => (process.env.CLAUDE_CONFIG_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`));
 

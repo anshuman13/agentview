@@ -1,4 +1,4 @@
-import { MAX_GOAL_ROUNDS, type Repeat } from '../../shared/protocol.js';
+import { MAX_GOAL_ROUNDS, type Repeat } from '../../../shared/protocol.js';
 
 const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 

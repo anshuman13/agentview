@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { Finding, ReviewFindings } from '../../shared/protocol.js';
+import type { Finding, ReviewFindings } from '../../../shared/protocol.js';
 
 const FILE = path.join(process.env.AGENTVIEW_FINDINGS_DIR ?? path.join(os.homedir(), '.agentview'), 'findings.json');
 
