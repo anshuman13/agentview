@@ -76,7 +76,11 @@ export type SessionInfo = {
   loop: LoopState;
   repeat: Repeat | null;
   pr: number | null;
+  capabilities?: Capabilities;
 };
+
+// What the agent behind a chat supports.
+export type Capabilities = { rewind: boolean; mcp: boolean; effort: boolean; team: boolean; stopTask: boolean };
 
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
 export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string };

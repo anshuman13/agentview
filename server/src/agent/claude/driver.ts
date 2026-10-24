@@ -26,6 +26,7 @@ export const claudeSession = (cwd: string, resume?: string, fork = false) => new
 
 // Runs a chat on the Claude Agent SDK: one CLI process at a time, resumed from its transcript when it exits.
 export class ClaudeDriver implements AgentDriver {
+  readonly capabilities = { rewind: true, mcp: true, effort: true, team: true, stopTask: true };
   private q: Query | null = null;
   private inputQueue: SDKUserMessage[] = [];
   private wake: (() => void) | null = null;
