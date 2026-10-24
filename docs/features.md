@@ -60,7 +60,7 @@ re-read the conversation, so they cost more in long chats.
 
 Any chat can ask Fable 5.1 about a hard problem. Each call needs your approval.
 
-**Effort** in the same menu (or the palette) sets how hard the model thinks, from low to max, per chat. The footer
+**Effort** in the same menu (or the palette) sets how hard the model thinks, from low to max, per chat. New chats start at medium. The footer
 pill shows the current level next to the model.
 
 ## Workspace

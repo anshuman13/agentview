@@ -72,7 +72,7 @@ export class AgentSession implements AgentHost {
 
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
-      session: { id: this.id, sessionId, model: null, effort: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null },
+      session: { id: this.id, sessionId, model: null, effort: 'medium', team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null },
       status: 'Idle',
       events: [],
       pending: [],
