@@ -18,6 +18,13 @@ for Open AgentView, Restart server, Show logs (`~/.agentview/logs`) and Open at 
 example by double-clicking it, opens the UI in your browser. Quitting it stops AgentView.
 To restart only the server from a shell, kill whatever listens on :7777 and the app starts it again.
 
+The server is two processes. The agent host owns the chats and their Claude processes and listens on a Unix socket
+(`~/.agentview/host-7777.sock`, log in `~/.agentview/logs/host.log`). The API server on :7777 serves the web app,
+files, git and integrations, and starts the host when none is running. Restarting the API server (the menu item,
+`POST /api/restart`) leaves running turns alone. The host restarts only when its own code changed, after its turns
+end, or with `POST /api/restart?full`. With no API server for five minutes and nothing running, the host saves its
+chats and exits.
+
 It uses the Claude Code CLI you have installed and its login.
 
 | Command | |

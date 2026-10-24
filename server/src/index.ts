@@ -2,17 +2,13 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
-import { readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
-import { getSessionInfo, listSessions } from './agent/claude/sessions.js';
-import { claudeSession } from './agent/claude/driver.js';
-import type { AgentSession } from './session/session.js';
-import type { Cron } from './agent/types.js';
-import { notifyAway, notifyStall, ntfyTopic, stallWatch } from './integrations/notify.js';
+import { listSessions } from './agent/claude/sessions.js';
+import { ntfyTopic } from './integrations/notify.js';
 import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
 import { listBin, removeSession, restoreSession } from './agent/claude/bin.js';
@@ -24,14 +20,14 @@ import { deployRoute } from './integrations/deploy.js';
 import { gitRoute } from './workspace/git.js';
 import { observe } from './integrations/observe.js';
 import { otherMacs, thisMac } from './http/macs.js';
-import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './workspace/worktrees.js';
-import { MCP_BAD, type AttentionItem, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../shared/protocol.js';
+import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './workspace/worktrees.js';
+import type { AttentionItem, ClientMessage, LiveChat, ServerMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './http/stream.js';
 import { gz, serveWeb } from './http/web.js';
 import { readBody, savePaste } from './http/body.js';
-import { chatCost } from '../../shared/cost.js';
-import { replyLine, sumEdits } from '../../shared/edits.js';
 import { allowedPeer, allowedRequest, requester } from './http/access.js';
+import { Host } from './host/client.js';
+import type { Hello } from './host/protocol.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -43,224 +39,101 @@ if (ownProfile()) {
   process.env.AGENTVIEW_PORT = String(PORT);
 }
 
-const IGNORED = /(^|\/)(node_modules|\.git|dist|build|coverage|\.next|\.venv|venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|\.tox)(\/|$)/;
-
-const LAST = path.join(os.homedir(), '.agentview-last.json');
-const RESTORE = path.join(os.homedir(), '.agentview', 'restore.json');
-
 process.on('uncaughtException', (err) => console.error('uncaught:', err));
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 
-const IDLE_MS = 10 * 60 * 1000;
-
-type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: AgentSession; close?: () => void };
+// The chats live in the agent host (host/main.ts); this process serves the web client and relays to it.
+type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: string; waiting?: boolean; close?: () => void };
 const BOOT = Date.now();
 const clients = new Set<Client>();
 const STALL_MS = 60_000;
 const streams = new Map<string, Client>();
 const ring = new Ring();
-const stalls = stallWatch((id) => {
-  const l = live.get(id);
-  if (!l) return;
-  notifyStall(summary(l.chat));
-  broadcastLive();
-});
+let chats = new Map<string, LiveChat>();
+let lastViewed = '';
+let restarting = false;
 
 // To every client, or to the viewers of one chat. Each broadcast gets an id so an event stream can resume.
-function broadcast(m: ServerMessage, chat?: AgentSession) {
+function broadcast(m: ServerMessage, chat: string | null = null) {
   const data = JSON.stringify(m);
-  const id = ring.push(m.type === 'init' ? null : data, chat ?? null);
-  for (const c of clients) if (!chat || c.view === chat) c.sendRaw(data, id);
-}
-const live = new Map<string, { chat: AgentSession; watcher: FSWatcher }>();
-let lastViewed: AgentSession;
-
-const viewers = (chat: AgentSession) => [...clients].filter((c) => c.view === chat).length;
-const bySession = (sessionId: string | null) => [...live.values()].find((l) => l.chat.state.session.sessionId === sessionId)?.chat;
-const lastActive = (chat: AgentSession) => chat.state.events.at(-1)?.at ?? chat.created;
-
-// sumEdits walks every event; tool_use inputs and results are never edited in place, so identity + length is a safe key.
-const editsCache = new WeakMap<AgentSession, { events: unknown[]; length: number; edits: ReturnType<typeof sumEdits> }>();
-function editsOf(chat: AgentSession) {
-  const { events } = chat.state;
-  const hit = editsCache.get(chat);
-  if (hit?.events === events && hit.length === events.length) return hit.edits;
-  const edits = sumEdits(events);
-  editsCache.set(chat, { events, length: events.length, edits });
-  return edits;
+  const id = ring.push(m.type === 'init' ? null : data, chat);
+  for (const c of clients) if (!chat || (c.view === chat && !c.waiting)) c.sendRaw(data, id);
 }
 
-function summary(chat: AgentSession): LiveChat {
-  const s = chat.state;
-  const firstPrompt = s.events.find((e) => e.kind === 'user');
-  return {
-    id: chat.id,
-    sessionId: s.session.sessionId,
-    cwd: chat.cwd,
-    title: chat.title || (firstPrompt?.kind === 'user' ? firstPrompt.text.split('\n')[0].slice(0, 80) : 'New chat'),
-    running: s.session.running,
-    pending: s.pending.length,
-    status: s.status,
-    lastActive: lastActive(chat),
-    mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,
-    cost: chatCost(s.events),
-    stalled: stalls.stalled(chat.id),
-    last: replyLine(s.events),
-    edits: editsOf(chat),
-    ...(s.session.pr && { pr: s.session.pr }),
-  };
+const bySession = (sessionId: string | null) => [...chats.values()].find((c) => c.sessionId === sessionId)?.id;
+
+let viewersTimer: NodeJS.Timeout | null = null;
+function reportViewers() {
+  viewersTimer ??= setTimeout(() => {
+    viewersTimer = null;
+    const counts: Record<string, number> = {};
+    for (const c of clients) counts[c.view] = (counts[c.view] ?? 0) + 1;
+    host.notify({ op: 'viewers', counts, last: lastViewed });
+  }, 50);
 }
 
-let liveTimer: NodeJS.Timeout | null = null;
-function broadcastLive() {
-  liveTimer ??= setTimeout(() => {
-    liveTimer = null;
-    for (const { chat } of live.values()) chat.watchHistory(viewers(chat) > 0);
-    const chats = [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
-    broadcast({ type: 'live', chats });
-  }, 100);
-}
-
-async function createChat(cwd: string, resume?: string, title = '', fork = false) {
-  const chat = claudeSession(cwd, resume, fork);
-  chat.title = title;
-  await chat.loadHistory();
-  chat.onMessage((m) => {
-    broadcast(m, chat);
-    notifyAway(m, () => (viewers(chat) ? null : summary(chat)));
-    if (m.type === 'session' && chat === lastViewed) remember(chat);
-    const woke = stalls.seen(chat.id, chat.state.session.running);
-    if (woke || m.type !== 'event' || m.event.kind === 'user') broadcastLive();
+// Broadcasts for the chat are held back until its state arrives; the host sends the state before any later broadcast.
+function view(client: Client, id: string) {
+  client.view = id;
+  client.waiting = true;
+  lastViewed = id;
+  reportViewers();
+  host.call({ op: 'state', id }, (err, state) => {
+    if (client.view !== id) return;
+    client.waiting = false;
+    if (err) return client.send({ type: 'error', text: err });
+    client.send({ type: 'init', state: state as Extract<ServerMessage, { type: 'init' }>['state'], boot: BOOT });
+    host.notify({ op: 'cmd', id, msg: { type: 'mcp_status' } });
   });
-  if (!resume || fork) chat.start();
-  live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });
-  return chat;
 }
 
-function closeChat(chat: AgentSession) {
-  chat.close();
-  stalls.seen(chat.id, false);
-  closeTerminals(chat.id);
-  live.get(chat.id)?.watcher.close();
-  live.delete(chat.id);
-  broadcastLive();
+async function closeByUser(id: string) {
+  const next = await host.req<string>({ op: 'close', id });
+  if (lastViewed === id) lastViewed = next;
+  for (const c of clients) if (c.view === id) view(c, next);
 }
 
-async function closeByUser(chat: AgentSession) {
-  const others = [...live.values()].map((l) => l.chat).filter((c) => c !== chat);
-  const next = others.sort((a, b) => lastActive(b) - lastActive(a))[0] ?? (await createChat(chat.cwd));
-  if (lastViewed === chat) lastViewed = next;
-  for (const c of clients) if (c.view === chat) view(c, next);
-  closeChat(chat);
+const host = new Host(PORT, PROJECT, {
+  push: (l) => {
+    if ('closed' in l) return closeTerminals(l.closed);
+    if (l.m.type === 'live') chats = new Map(l.m.chats.map((c) => [c.id, c]));
+    if (l.m.type === 'restarting') restarting = true;
+    broadcast(l.m, l.chat);
+  },
+  up: () => host.call({ op: 'hello' }, (err, r) => {
+    if (err) return;
+    const hello = r as Hello;
+    const before = chats;
+    chats = new Map(hello.chats.map((c) => [c.id, c]));
+    restarting = hello.restarting;
+    lastViewed = chats.has(lastViewed) ? lastViewed : hello.last;
+    // After a host restart the chats come back under new ids; a client follows its chat by session id.
+    for (const c of clients) view(c, chats.has(c.view) ? c.view : (bySession(before.get(c.view)?.sessionId ?? null) ?? lastViewed));
+    broadcast({ type: 'live', chats: hello.chats });
+    // A host still running older code restarts once its turns end.
+    if (!restarting) host.call({ op: 'restart', now: false, force: false });
+  }),
+  down: () => {
+    if (!restarting) broadcast({ type: 'restarting' });
+    restarting = true;
+  },
+});
+
+// Restarts this server at once; the host and its chats keep running unless its code changed or `full` asks for it.
+function restart(now: boolean, full: boolean) {
+  host.call({ op: 'restart', now, force: full }, () => setTimeout(() => process.exit(0), 100));
 }
 
-const idle = (chat: AgentSession) => !chat.state.session.running && chat.crons.length === 0 && !chat.state.session.repeat && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
-
-function view(client: Client, chat: AgentSession) {
-  client.view = chat;
-  lastViewed = chat;
-  remember(chat);
-  client.send({ type: 'init', state: chat.state, boot: BOOT });
-  void chat.refreshMcp();
-  broadcastLive();
-}
-
-setInterval(() => {
-  for (const { chat } of live.values()) if (idle(chat) && Date.now() - lastActive(chat) > IDLE_MS) closeChat(chat);
-}, 60_000);
-
-function watchFiles(cwd: string, onChange: (rel: string) => void) {
-  const timers = new Map<string, NodeJS.Timeout>();
-  return watch(cwd, { recursive: true }, (_, rel) => {
-    if (!rel || IGNORED.test(rel)) return;
-    clearTimeout(timers.get(rel));
-    timers.set(rel, setTimeout(() => {
-      timers.delete(rel);
-      stat(path.join(cwd, rel)).then((s) => s.isFile() && onChange(rel)).catch(() => {});
-    }, 200));
-  }).on('error', (err) => console.error(`watcher: ${String(err)}`));
-}
-
-const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
-
-async function openSaved(sessionId: string) {
-  const open = bySession(sessionId);
-  if (open) return open;
-  const info = await getSessionInfo(sessionId);
-  if (!info) throw new Error('Session not found');
-  if (!info.cwd) throw new Error('This session has no folder recorded, so it cannot be resumed');
-  if (!(await isDir(info.cwd))) throw new Error(`Folder no longer exists: ${info.cwd}`);
-  const dir = path.resolve(info.cwd);
-  if (dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${info.cwd}`);
-  return createChat(dir, sessionId, info.summary);
-}
-
-async function newChat(cwd: string, from: AgentSession, fork?: string) {
-  const dir = path.resolve(cwd);
-  if (dir !== from.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
-  if (!(await isDir(dir))) throw new Error(`Folder no longer exists: ${dir}`);
-  return fork ? createChat(dir, fork, from.title, true) : createChat(dir);
-}
-
-let remembered = '';
-function remember(chat: AgentSession) {
-  const sessionId = chat.state.session.sessionId;
-  if (!sessionId || sessionId === remembered) return;
-  remembered = sessionId;
-  writeFile(LAST, JSON.stringify({ sessionId, cwd: chat.cwd })).catch(() => {});
-}
-
-let restarting: NodeJS.Timeout | null = null;
-
-function saveAndExit() {
-  const chats = [...live.values()].map(({ chat }) => ({ sessionId: chat.state.session.sessionId, crons: chat.crons, repeat: chat.state.session.repeat })).filter((c) => c.sessionId);
-  mkdirSync(path.dirname(RESTORE), { recursive: true });
-  writeFileSync(RESTORE, JSON.stringify({ view: lastViewed?.state.session.sessionId, chats }));
-  process.exit(0);
-}
-
-function restart(now: boolean) {
-  if (now) return saveAndExit();
-  if (restarting) return;
-  broadcast({ type: 'restarting' });
-  for (const { chat } of live.values()) chat.holdRepeat();
-  // A turn that never ends (a card nobody answers) must not hold the restart and every loop for good.
-  const deadline = Date.now() + 10 * 60_000;
-  restarting = setInterval(() => {
-    if (Date.now() > deadline || ![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting)) saveAndExit();
-  }, 1000);
-}
-
-process.on('SIGTERM', saveAndExit);
-
-async function restore() {
-  const saved: { view?: string; chats: { sessionId: string; crons: Cron[]; repeat?: Repeat | null }[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
-  if (!saved) return null;
-  await rm(RESTORE, { force: true });
-  await Promise.all(saved.chats.map(async (s) => {
-    const chat = await openSaved(s.sessionId).catch(() => null);
-    if (chat && s.crons.length) chat.restoreCrons(s.crons);
-    if (chat && s.repeat) chat.resumeRepeat(s.repeat);
-  }));
-  return (saved.view && bySession(saved.view)) || null;
-}
-
-const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
-lastViewed = (await restore()) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
 onAttention((items) => broadcast({ type: 'attention', items }));
 function attentionSources(extra: string[] = []) {
-  const chats = [...live.values()].map((l) => l.chat);
-  const idle = chats.filter((c) => !c.state.session.running && !c.state.pending.length && editsOf(c));
+  const all = [...chats.values()];
+  const idle = all.filter((c) => !c.running && !c.pending && c.edits);
   return {
-    cwds: [...new Set([...chats.map((c) => c.cwd), ...extra])],
-    edited: idle.map((c) => ({ cwd: c.cwd, chatId: c.id, at: lastActive(c) })).sort((a, b) => b.at - a.at),
+    cwds: [...new Set([...all.map((c) => c.cwd), ...extra])],
+    edited: idle.map((c) => ({ cwd: c.cwd, chatId: c.id, at: c.lastActive })).sort((a, b) => b.at - a.at),
   };
 }
-async function fixChat(item: AttentionItem) {
-  const chat = await createChat(item.cwd);
-  void chat.prompt(item.prompt);
-  return chat.id;
-}
+const fixChat = (item: AttentionItem) => host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, fresh: true });
 startAttention(attentionSources, fixChat);
 
 const server = http.createServer(async (req, res) => {
@@ -277,19 +150,20 @@ const server = http.createServer(async (req, res) => {
   };
   if (!allowedRequest(req.headers)) return json({ error: 'Forbidden' }, 403);
   try {
-    const chat = live.get(url.searchParams.get('chat') ?? '')?.chat ?? lastViewed;
-    const liveCwds = [...live.values()].map((l) => l.chat.cwd);
+    const chat = chats.get(url.searchParams.get('chat') ?? '') ?? chats.get(lastViewed);
+    if (!chat) return json({ error: 'The agent host is starting' }, 503);
+    const liveCwds = [...chats.values()].map((c) => c.cwd);
     if (url.pathname === '/api/events') {
-      const asked = (url.searchParams.has('session') && bySession(url.searchParams.get('session'))) || live.get(url.searchParams.get('chat') ?? '')?.chat;
-      return openEvents(req, res, url, asked ?? chat, Boolean(asked));
+      const asked = (url.searchParams.has('session') && bySession(url.searchParams.get('session'))) || (chats.has(url.searchParams.get('chat') ?? '') ? url.searchParams.get('chat')! : undefined);
+      return openEvents(req, res, url, asked ?? chat.id, Boolean(asked));
     }
     if (url.pathname === '/api/cmd' && req.method === 'POST') {
       const msg = JSON.parse(await readBody(req)) as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
       const client = streams.get(url.searchParams.get('cid') ?? '');
       // Without a stream or a chat there is no telling which chat the command is for.
-      if (!client && !live.has(url.searchParams.get('chat') ?? '')) return json({ error: 'No stream for this command' }, 409);
-      handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat }, msg);
+      if (!client && !chats.has(url.searchParams.get('chat') ?? '')) return json({ error: 'No stream for this command' }, 409);
+      handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat.id }, msg);
       return json({ ok: true });
     }
     if (url.pathname === '/api/terms' && req.method === 'POST') return json(createTerminal(chat.id, chat.cwd));
@@ -334,12 +208,11 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/mcp/config') return json(await mcpConfig(chat.cwd));
     if (url.pathname === '/api/mcp/add' && req.method === 'POST') {
       const name = url.searchParams.get('name') ?? '';
-      const def = await configDef(chat.cwd, name);
-      if (!def) return json({ error: `${name} is not in your MCP config` }, 404);
-      return json(await chat.addMcp(name, def));
+      if (!(await configDef(chat.cwd, name))) return json({ error: `${name} is not in your MCP config` }, 404);
+      return json(await host.req({ op: 'mcp_add', id: chat.id, name }));
     }
     if (url.pathname === '/api/mcp/login' && req.method === 'POST') {
-      const r = await chat.loginMcp(url.searchParams.get('name') ?? '');
+      const r = await host.req<{ authUrl?: string }>({ op: 'mcp_login', id: chat.id, name: url.searchParams.get('name') ?? '' });
       if (r.authUrl) openInChrome(r.authUrl);
       return json(r);
     }
@@ -364,9 +237,9 @@ const server = http.createServer(async (req, res) => {
       const binned = new Set(bin.map((b) => b.sessionId));
       return json(list.filter((x) => !binned.has(x.sessionId)).map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
     }
-    if (url.pathname === '/api/state') return json(chat.state);
+    if (url.pathname === '/api/state') return json(await host.req({ op: 'state', id: chat.id }));
     if (url.pathname === '/api/restart' && req.method === 'POST') {
-      restart(url.searchParams.has('now'));
+      restart(url.searchParams.has('now'), url.searchParams.has('full'));
       return json({ ok: true });
     }
     if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
@@ -381,9 +254,7 @@ const server = http.createServer(async (req, res) => {
       const wanted = JSON.parse(await readBody(req)).id;
       const item = attention().find((it) => it.id === wanted);
       if (!item) throw new Error('That item is gone');
-      const target = [...live.values()].map((l) => l.chat).filter((c) => c.cwd === item.cwd && !c.state.session.running && !c.state.pending.length).sort((a, b) => lastActive(b) - lastActive(a))[0] ?? (await newChat(item.cwd, chat));
-      void target.prompt(item.prompt);
-      return json({ id: target.id });
+      return json({ id: await host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, from: chat.id }) });
     }
     if (url.pathname.startsWith('/api/deploy/')) return json(await deployRoute(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
     if (url.pathname === '/api/app') return json({ build: Number(await readFile(`${APK}.txt`, 'utf8').catch(() => '0')) || 0 });
@@ -398,7 +269,7 @@ const server = http.createServer(async (req, res) => {
         .flat()
         .filter((a) => a && a.family === 'IPv4' && !a.internal && allowedPeer(a.address))
         .map((a) => a!.address);
-      const running = [...live.values()].filter(({ chat }) => chat.state.session.running).length;
+      const running = [...chats.values()].filter((c) => c.running).length;
       const { macs, problem } = url.searchParams.has('peer') ? { macs: [] } : await otherMacs(port, requester(req));
       return json({ hostname: thisMac, urls: ips.map((ip) => `http://${ip}:${port}`), running, macs, netbird: problem });
     }
@@ -443,14 +314,14 @@ wss.on('connection', (ws: WebSocket, req) => {
   const term = params.get('term');
   if (term !== null) return attachTerminal(ws, term);
   if (params.has('chrome')) return openChrome(ws, req.headers.origin);
-  const chat = live.get(params.get('chat') ?? '')?.chat ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? lastViewed;
+  const chat = (chats.has(params.get('chat') ?? '') ? params.get('chat')! : undefined) ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? lastViewed;
   const sendRaw = (data: string) => ws.readyState === WebSocket.OPEN && ws.send(data);
   const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat };
   clients.add(client);
   view(client, chat);
   // A phone coming back after its chat was idle-closed should get that chat back, not whatever was viewed last.
   const wanted = params.get('session');
-  if (wanted && chat.state.session.sessionId !== wanted) openSaved(wanted).then((c) => client.view === chat && view(client, c), () => {});
+  if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
 
@@ -465,13 +336,13 @@ wss.on('connection', (ws: WebSocket, req) => {
   });
   ws.on('close', () => {
     clients.delete(client);
-    broadcastLive();
+    reportViewers();
   });
 });
 
 // Server-Sent Events: the same ServerMessage stream as /ws, resumable from Last-Event-ID through the ring buffer.
 // found: the stream asked for a chat that exists, so a resume may replay deltas; otherwise it gets a full init.
-function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: URL, chat: AgentSession, found = true) {
+function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: URL, chat: string, found = true) {
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive', 'x-accel-buffering': 'no' });
   res.flushHeaders();
   const cid = url.searchParams.get('cid') || randomUUID();
@@ -489,10 +360,10 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   if (missed) {
     client.view = chat;
     for (const e of missed) client.sendRaw(e.data, e.id);
-    broadcastLive();
+    reportViewers();
   } else view(client, chat);
   const wanted = url.searchParams.get('session');
-  if (wanted && chat.state.session.sessionId !== wanted) openSaved(wanted).then((c) => client.view === chat && view(client, c), () => {});
+  if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
   // A named event, not a comment: the client hears it and can tell a dead link from a quiet one.
@@ -501,92 +372,34 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
     clearInterval(ping);
     clients.delete(client);
     if (streams.get(cid) === client) streams.delete(cid);
-    broadcastLive();
+    reportViewers();
   });
 }
 
 function handleCommand(client: Client, msg: ClientMessage) {
-  const chat = client.view;
   const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
   switch (msg.type) {
-    case 'prompt': {
-      if (typeof msg.text !== 'string') break;
-      const id = typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined;
-      // A client with stale state may send a plain prompt while Claude runs; the user's message still goes first.
-      void (chat.state.session.running ? chat.steer(msg.text, id) : chat.prompt(msg.text, id));
+    case 'close':
+      if (chats.has(msg.id)) closeByUser(msg.id).catch(fail);
       break;
-    }
-    case 'steer':
-      if (typeof msg.text === 'string') void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
-      break;
-    case 'plan':
-      if (!Array.isArray(msg.next)) break;
-      chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
-      break;
-    case 'answer':
-      chat.answerQuestion(msg.id, msg.answers);
-      break;
-    case 'permission':
-      chat.answerPermission(msg.id, msg.allow, msg.always);
-      break;
-    case 'allow_blocked':
-      void chat.allowBlocked(String(msg.id)).catch(fail);
-      break;
-    case 'set_model':
-      void chat.setModel(msg.model);
-      break;
-    case 'set_effort':
-      void chat.setEffort(String(msg.effort)).catch(fail);
-      break;
-    case 'set_permission_mode':
-      void chat.setPermissionMode(msg.mode);
-      break;
-    case 'set_loop':
-      chat.setLoop(Boolean(msg.on), typeof msg.max === 'number' ? msg.max : undefined);
-      break;
-    case 'interrupt':
-      void chat.interrupt();
-      break;
-    case 'rewind':
-      void chat.rewind(String(msg.id)).catch(fail);
-      break;
-    case 'stop_task':
-      void chat.stopTask(String(msg.toolUseId)).catch(fail);
-      break;
-    case 'close': {
-      const target = live.get(msg.id)?.chat;
-      if (target) closeByUser(target).catch(fail);
-      break;
-    }
-    case 'view': {
-      const next = live.get(msg.id)?.chat;
-      if (next) view(client, next);
+    case 'view':
+      if (chats.has(msg.id)) view(client, msg.id);
       else fail(new Error('This chat was closed'));
       break;
-    }
     case 'open_session':
-      openSaved(msg.sessionId).then((c) => view(client, c), fail);
-      break;
-    case 'mcp_status':
-      void chat.refreshMcp();
-      break;
-    case 'mcp_reconnect':
-      void chat.reconnectMcp(String(msg.name));
-      break;
-    case 'mcp_toggle':
-      void chat.toggleMcp(String(msg.name), Boolean(msg.enabled));
-      break;
-    case 'restart':
-      restart(Boolean(msg.now));
+      host.req<string>({ op: 'open', sessionId: msg.sessionId }).then((c) => view(client, c), fail);
       break;
     case 'new_session':
-    newChat(msg.cwd ?? chat.cwd, chat, typeof msg.fork === 'string' ? msg.fork : undefined).then((c) => view(client, c), fail);
-    break;
+      host.req<string>({ op: 'new', cwd: msg.cwd ?? chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }) }).then((c) => view(client, c), fail);
+      break;
+    case 'restart':
+      restart(Boolean(msg.now), false);
+      break;
+    default:
+      host.req({ op: 'cmd', id: client.view, msg }).catch(fail);
   }
 }
 
-server.listen(PORT, () => {
-  console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`);
-  void ntfyTopic().then((t) => console.log(t === 'off' ? 'push off' : `push: subscribe to ntfy topic ${t}`));
-  void connectChrome();
-});
+server.listen(PORT, () => console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`));
+void ntfyTopic().then((t) => console.log(t === 'off' ? 'push off' : `push: subscribe to ntfy topic ${t}`));
+void connectChrome();
