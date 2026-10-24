@@ -99,10 +99,11 @@ func output(_ tool: String, _ args: [String]) -> String {
 }
 
 // Stops earlier AgentView processes on our ports, and nothing else (another repo's vite also likes 5173).
+// The server runs as `bun src/index.ts`, so its working directory names the repo, not its command.
 func freePorts(_ ports: [Int]) {
   for port in ports {
     let pids = output("/usr/sbin/lsof", ["-ti", "tcp:\(port)", "-sTCP:LISTEN"]).split(separator: "\n").compactMap { pid_t($0) }
-    for pid in pids where output("/bin/ps", ["-o", "command=", "-p", "\(pid)"]).contains(repo) { kill(pid, SIGTERM) }
+    for pid in pids where (output("/bin/ps", ["-o", "command=", "-p", "\(pid)"]) + output("/usr/sbin/lsof", ["-a", "-p", "\(pid)", "-d", "cwd", "-Fn"])).contains(repo) { kill(pid, SIGTERM) }
   }
 }
 
@@ -157,7 +158,7 @@ final class Bar: NSObject, NSApplicationDelegate {
   let loginItem = NSMenuItem(title: "Open at login", action: #selector(toggleLogin), keyEquivalent: "")
   var assertion: IOPMAssertionID = 0
   let relay = Child("relay", "bun server/src/relay.ts", env: ["AGENTVIEW_RELAY_TOKEN": token])
-  let server = Child("server", "sh -c 'npx -w web vite build --logLevel warn; cd server && exec bun src/index.ts'", env: ["CHROME_CDP": "ws://127.0.0.1:7779/\(token)", "AGENTVIEW_DEV_WEB": ""])
+  let server = Child("server", "./serve.sh", env: ["CHROME_CDP": "ws://127.0.0.1:7779/\(token)", "AGENTVIEW_DEV_WEB": ""])
   let notifier = Notifier()
 
   func applicationDidFinishLaunching(_ n: Notification) {

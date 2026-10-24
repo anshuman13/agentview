@@ -2,13 +2,14 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
 import { listSessions } from './agent/claude/sessions.js';
-import { ntfyTopic } from './integrations/notify.js';
+import { ntfyTopic, post } from './integrations/notify.js';
 import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
 import { listBin, removeSession, restoreSession } from './agent/claude/bin.js';
@@ -39,12 +40,18 @@ if (ownProfile()) {
   process.env.AGENTVIEW_PORT = String(PORT);
 }
 
-process.on('uncaughtException', (err) => console.error('uncaught:', err));
+process.on('uncaughtException', (err) => {
+  console.error('uncaught:', err);
+  // Bun throws a taken port from inside listen. Without its port this process is useless; the menu bar app starts it again.
+  if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE' && !server.listening) process.exit(1);
+});
 process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 
 // The chats live in the agent host (host/main.ts); this process serves the web client and relays to it.
 type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: string; waiting?: boolean; close?: () => void };
 const BOOT = Date.now();
+// serve.sh leaves this when the web build fails and the previous build is served.
+const BUILD_FAILED = path.join(os.homedir(), '.agentview', 'web-build-failed');
 const clients = new Set<Client>();
 const STALL_MS = 60_000;
 const streams = new Map<string, Client>();
@@ -401,6 +408,7 @@ function handleCommand(client: Client, msg: ClientMessage) {
 }
 
 server.listen(PORT, () => console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`));
+if (existsSync(BUILD_FAILED)) post('The AgentView web build failed', 'Serving the previous build', 'See ~/.agentview/logs/server.log');
 
 // The web app used to be on :5173; send old bookmarks and phone shells here.
 if (PORT === 7777 && !process.env.AGENTVIEW_DEV_WEB) {
