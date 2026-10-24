@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { MCP_BAD, type ChatEvent, type McpSchema, type McpServer, type McpTool } from '../../../shared/protocol';
 import { api, notice, send, useStore } from '../store';
 import { Icon } from '../Icon';
-import { ago, command, showChat, useTick } from './util';
+import { ago, command, pressable, showChat, useTick } from './util';
 import '../mcp.css';
 
 const STATUS: Record<string, [tone: string, label: string]> = {
@@ -45,9 +45,9 @@ export function McpItem() {
   const ok = mcp.filter((m) => m.status === 'connected').length;
   const bad = mcp.some((m) => MCP_BAD.includes(m.status));
   return (
-    <span className="item clickable" title="MCP servers" onClick={openMcp}>
+    <button className="item clickable" title="MCP servers" onClick={openMcp}>
       <span className={`mcp-dot ${bad ? 'bad' : ok ? 'ok' : 'off'}`} /> MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
-    </span>
+    </button>
   );
 }
 
@@ -342,7 +342,7 @@ function CallRow({ call }: { call: Call }) {
   const state = !call.result ? 'wait' : call.result.isError ? 'bad' : 'ok';
   return (
     <div className={`mcp-call ${state} ${open ? 'open' : ''}`}>
-      <div className="t" onClick={() => setOpen((v) => !v)}>
+      <div className="t" {...pressable(() => setOpen((v) => !v))}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
         <span className="mono name">{call.tool}</span>
         <span className="in" title={brief(call.input)}>{brief(call.input)}</span>

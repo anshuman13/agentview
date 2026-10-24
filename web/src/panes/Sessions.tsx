@@ -5,7 +5,7 @@ import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
 import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
-import { ago, save, stored } from './util';
+import { ago, pressable, save, stored } from './util';
 import { PullState, usePullRequests } from './GitHub';
 import '../chats.css';
 
@@ -272,7 +272,7 @@ export function Sessions() {
     const branch = d.repo && !isDefault(d.repo.branch) ? d.repo.branch : '';
     return (
       <div key={d.cwd}>
-        <div className={`row project repo-row ${active ? '' : 'dim'} ${branch ? 'two' : ''} ${d.cwd === here ? 'here' : ''}`} title={d.cwd} onClick={() => kids && flip(setToggled, d.cwd)}>
+        <div className={`row project repo-row ${active ? '' : 'dim'} ${branch ? 'two' : ''} ${d.cwd === here ? 'here' : ''}`} title={d.cwd} {...pressable(() => kids && flip(setToggled, d.cwd))}>
           <span className="twistie">{kids && <Icon name={isOpen(d) ? 'chevron-down' : 'chevron-right'} small />}</span>
           <Icon name={icon} small />
           <span className="label">
@@ -336,7 +336,7 @@ export function Sessions() {
             </div>
           ))}
         {isOpen(d) && !filter && d.chats.length > PAGE && (
-          <div className="row more" onClick={() => flip(setFull, d.cwd)}>
+          <div className="row more" {...pressable(() => flip(setFull, d.cwd))}>
             {full.has(d.cwd) ? 'Show less' : `Show ${d.chats.length - PAGE} more`}
           </div>
         )}
@@ -363,7 +363,7 @@ export function Sessions() {
       <div className="tree">
         {groups.map((g) => (
           <div key={g.kind}>
-            <div className="row group-row" onClick={() => flipKind(g.kind)}>
+            <div className="row group-row" {...pressable(() => flipKind(g.kind))}>
               <span className="twistie"><Icon name={filter || !shut.includes(g.kind) ? 'chevron-down' : 'chevron-right'} small /></span>
               <span className="name">{g.label}</span>
               <span className="count">{g.items.length}</span>
@@ -453,7 +453,7 @@ export function OpenChats() {
       <div className="tree">
         {groups.map((g) => (
           <div key={g.key}>
-            <div className="row project" title={g.key} onClick={() => toggle(g)}>
+            <div className="row project" title={g.key} {...pressable(() => toggle(g))}>
               <span className="twistie"><Icon name={isOpen(g) ? 'chevron-down' : 'chevron-right'} small /></span>
               <span className="name">{g.name}</span>
               <span className="meta">
@@ -467,7 +467,7 @@ export function OpenChats() {
             </div>
             {isOpen(g) && g.open.map((c) => row(c))}
             {isOpen(g) && (full.has(g.key) || filter ? g.recent : g.recent.slice(0, RECENT)).map((s) => (
-              <div key={s.sessionId} className="row session recent" title={`${s.title}\n${s.cwd}`} onClick={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }}>
+              <div key={s.sessionId} className="row session recent" title={`${s.title}\n${s.cwd}`} {...pressable(() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); })}>
                 <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
                 <span className="when">{ago(s.lastModified)}</span>
                 <span className="acts">
@@ -476,7 +476,7 @@ export function OpenChats() {
               </div>
             ))}
             {isOpen(g) && !filter && g.recent.length > RECENT && (
-              <div className="row more" onClick={() => flip(setFull, g.key)}>
+              <div className="row more" {...pressable(() => flip(setFull, g.key))}>
                 {full.has(g.key) ? 'Show less' : `Show ${g.recent.length - RECENT} more`}
               </div>
             )}
@@ -509,7 +509,7 @@ function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: 
   const left = (b: BinnedSession) => `${Math.max(1, Math.round((b.deletedAt + BIN_MS - Date.now()) / 3600000))}h left`;
   return (
     <div className="bin">
-      <div className="row project" onClick={() => setOpen((v) => !v)}>
+      <div className="row project" {...pressable(() => setOpen((v) => !v))}>
         <span className="twistie"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>
         <Icon name="trash" small />
         <span className="name">Bin</span>
@@ -542,7 +542,7 @@ function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveCh
   const second = Boolean(line.text || line.edits);
   const state = c.pending ? 'Needs you' : c.running ? c.status : 'Idle';
   return (
-    <div className={`row session live ${second ? 'two' : ''} ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} onClick={() => selected || send({ type: 'view', id: c.id })}>
+    <div className={`row session live ${second ? 'two' : ''} ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} {...pressable(() => { if (!selected) send({ type: 'view', id: c.id }); })}>
       {line.done ? <span className="mark"><Icon name="pass" small /></span> : <span className={`dot ${c.pending ? 'waiting' : c.running ? 'running' : 'idle'}`} />}
       <span className="lines">
         <span className="l1">
@@ -593,7 +593,7 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
       <div className="group">Needs you <span className="badge waiting">{n + items.length}</span></div>
       {children}
       {items.map((it) => (
-        <div key={it.id} className={`row session live two ${busy === it.id ? 'removing' : ''}`} title={`${ATTENTION_LABEL[it.kind]}\n${it.title}\n${it.url}`} onClick={() => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank'))}>
+        <div key={it.id} className={`row session live two ${busy === it.id ? 'removing' : ''}`} title={`${ATTENTION_LABEL[it.kind]}\n${it.title}\n${it.url}`} {...pressable(() => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank')))}>
           <span className={`state ${it.kind}`}><Icon name={ATTENTION_ICON[it.kind]} small /></span>
           <span className="lines">
             <span className="l1">

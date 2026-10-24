@@ -5,7 +5,7 @@ import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { FileIcon } from './Explorer';
 import { Findings, REVIEW_LOCAL } from './Findings';
-import { askClaude, usePoll } from './util';
+import { askClaude, pressable, usePoll } from './util';
 import '../changes.css';
 
 let git: { status: GitStatus | null; error: string } = { status: null, error: '' };
@@ -90,7 +90,7 @@ function FileRow({ file, selected, actions }: { file: GitFile; selected: boolean
   const dir = file.path.slice(0, -name.length - 1);
   const letter = letterOf(file);
   return (
-    <div className={`scm-row s-${letter}${selected ? ' selected' : ''}`} title={file.path} onClick={() => setUi({ openFile: file.path, follow: false })}>
+    <div className={`scm-row s-${letter}${selected ? ' selected' : ''}`} title={file.path} {...pressable(() => setUi({ openFile: file.path, follow: false }))}>
       <FileIcon name={name} />
       <span className="scm-name">{name}</span>
       {dir && <span className="scm-dir">{dir}</span>}
@@ -105,7 +105,7 @@ function Section({ label, files, selected, actions, rowActions }: { label: strin
   if (!files.length) return null;
   return (
     <>
-      <div className="scm-header" onClick={() => setOpen(!open)}>
+      <div className="scm-header" {...pressable(() => setOpen(!open))}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
         <span className="scm-label">{label}</span>
         <span className="scm-acts">{actions}</span>

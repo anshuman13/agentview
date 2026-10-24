@@ -6,7 +6,7 @@ import { Markdown } from './Chat';
 import { FileIcon } from './Explorer';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
-import { ago, askClaude, usePoll } from './util';
+import { ago, askClaude, pressable, usePoll } from './util';
 import '../github.css';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
@@ -90,7 +90,7 @@ export const PullState = ({ pr }: { pr: PullRequest }) => (
 
 function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
   return (
-    <div className="gh-pr" onClick={onOpen} title={`#${pr.number} ${pr.title}`}>
+    <div className="gh-pr" {...pressable(onOpen)} title={`#${pr.number} ${pr.title}`}>
       <CheckIcon state={pr.checks} />
       <div className="gh-title"><span className="gh-title-text">{pr.title}</span><span className="gh-num">#{pr.number}</span></div>
       <div className="gh-meta">
@@ -109,7 +109,7 @@ function Section({ title, prs, onOpen }: { title: string; prs: PullRequest[]; on
   const [open, setOpen] = useState(true);
   return (
     <>
-      <div className="gh-section" onClick={() => setOpen(!open)}>
+      <div className="gh-section" {...pressable(() => setOpen(!open))}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
         <span className="gh-label">{title}</span>
         <span className="gh-count">{prs.length}</span>
@@ -220,7 +220,7 @@ function Files({ files, diffs }: { files: PullRequestDetail['files']; diffs: Map
         const shown = open === f.path;
         return (
           <div key={f.path}>
-            <div className="gh-item click" onClick={() => setOpen(shown ? null : f.path)} title={f.path}>
+            <div className="gh-item click" {...pressable(() => setOpen(shown ? null : f.path))} title={f.path}>
               <Icon name={shown ? 'chevron-down' : 'chevron-right'} small />
               <FileIcon name={name} />
               <span className="gh-fname">{name}</span>
