@@ -79,7 +79,9 @@ export type SessionInfo = {
 };
 
 // A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
-export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null };
+export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string };
+
+export const MAX_GOAL_ROUNDS = 20;
 
 export type LoopPhase = 'plan' | 'build' | 'test' | 'passed' | 'failed';
 

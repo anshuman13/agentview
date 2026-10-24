@@ -1,8 +1,28 @@
-import type { Repeat } from '../../shared/protocol.js';
+import { MAX_GOAL_ROUNDS, type Repeat } from '../../shared/protocol.js';
 
 const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
 export const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
+
+export const GOAL_USAGE = 'Usage: /goal <condition>, /goal off';
+
+export const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it.`;
+
+// /goal <condition> checks the condition whenever Claude goes idle, until it reports GOAL MET or the rounds run out.
+export function parseGoal(text: string): Repeat | 'off' | 'usage' | null {
+  const m = /^\/goal\b([\s\S]*)$/.exec(text.trim());
+  if (!m) return null;
+  const goal = m[1].trim();
+  if (/^(off|stop)$/i.test(goal)) return 'off';
+  if (!goal) return 'usage';
+  return { prompt: goalPrompt(goal), every: 0, until: null, round: 0, nextAt: null, goal };
+}
+
+export const goalMet = (text: string) => /\bGOAL MET\b/.test(text);
+
+export const roundWord = (r: Repeat) => (r.goal ? 'Goal check' : 'Loop round');
+
+export const offCommand = (r: Repeat) => (r.goal ? '/goal off' : '/loop off');
 
 // /loop <prompt> alone is refused: a loop needs an interval or an end time.
 export function parseLoop(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
@@ -55,4 +75,5 @@ export function limitReset(text: string, now = Date.now()): number | null {
 
 const span = (ms: number) => (ms % 3_600_000 === 0 ? `${ms / 3_600_000}h` : `${Math.round(ms / 60_000)}m`);
 
-export const describeLoop = (r: Repeat) => (once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`);
+export const describeLoop = (r: Repeat) =>
+  r.goal ? `checked whenever Claude goes idle until "${r.goal}" is met, up to ${MAX_GOAL_ROUNDS} checks` : once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;

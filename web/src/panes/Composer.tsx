@@ -8,7 +8,7 @@ import { match } from './FileSwitcher';
 import { toolId } from './McpStatus';
 import { touch } from '../touch';
 import { Hl, wsUrl } from './util';
-import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
+import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, MAX_GOAL_ROUNDS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import '../composer.css';
 
 export type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
@@ -112,7 +112,11 @@ const PHASES: Record<string, string> = { plan: 'Planning with Opus', build: 'Bui
 export const clock = (t: number) => new Date(t).toTimeString().slice(0, 5);
 const span = (ms: number) => (ms % 3_600_000 === 0 ? `${ms / 3_600_000}h` : `${Math.round(ms / 60_000)}m`);
 const once = (r: { every: number; until: number | null; nextAt: number | null }) => !r.every && r.until !== null && r.nextAt !== null && r.until - r.nextAt <= 1000;
-export const repeatLabel = (r: { every: number; until: number | null; round: number; nextAt: number | null }) => (once(r) ? `Continues once at ${clock(r.nextAt!)}` : `Loop round ${r.round}, ${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`);
+export const repeatLabel = (r: { every: number; until: number | null; round: number; nextAt: number | null; goal?: string }) =>
+  r.goal ? `Goal check ${r.round} of ${MAX_GOAL_ROUNDS}: ${r.goal}` : once(r) ? `Continues once at ${clock(r.nextAt!)}` : `Loop round ${r.round}, ${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
+
+export const repeatPill = (r: { every: number; until: number | null; round: number; nextAt: number | null; goal?: string }) =>
+  r.goal ? `Goal ${r.round}/${MAX_GOAL_ROUNDS}${r.nextAt ? ` · next ${clock(r.nextAt)}` : ''}` : once(r) ? `Continue at ${clock(r.nextAt!)}` : `Loop ${r.round}${r.nextAt ? ` · next ${clock(r.nextAt)}` : ''}${r.until ? ` · until ${clock(r.until)}` : ''}`;
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? `${PHASES[loop.phase] ?? loop.phase}${['plan', 'build', 'test'].includes(loop.phase) && loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 const MAX_HEIGHT = 220;
 const fileCache = new Map<string, string[]>();
@@ -463,7 +467,7 @@ export function Composer() {
           {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
           {loop.phase && <span className={`cp-phase ${loop.phase}`}>{loopLabel(loop)}</span>}
           {stale >= 30 && <span className="cp-phase cp-stale" title="Nothing has arrived from the server. The link is reopened after 50 s of silence.">No update for {stale}s</span>}
-          {repeat && <button className="cp-ctx cp-phase" title={`${repeatLabel(repeat)}. Tap to stop the loop.`} onClick={() => send({ type: 'prompt', text: '/loop off' })}>{once(repeat) ? `Continue at ${clock(repeat.nextAt!)}` : `Loop ${repeat.round}${repeat.nextAt ? ` · next ${clock(repeat.nextAt)}` : ''}${repeat.until ? ` · until ${clock(repeat.until)}` : ''}`}</button>}
+          {repeat && <button className="cp-ctx cp-phase" title={`${repeatLabel(repeat)}. Tap to stop ${repeat.goal ? 'checking' : 'the loop'}.`} onClick={() => send({ type: 'prompt', text: repeat.goal ? '/goal off' : '/loop off' })}>{repeatPill(repeat)}</button>}
         </span>
       </div>
       {open && (

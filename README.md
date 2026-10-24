@@ -273,6 +273,10 @@ Claude is still working waits for the round to end. The loop lives in the AgentV
 restart and never depends on the CLI's own scheduled jobs. Your messages and Stop interrupt the current round but
 keep the loop; `/loop off` ends it. The composer footer shows the round and the next fire time; tap it to stop.
 
+`/goal <condition>` asks Claude to check the condition whenever it goes idle and to keep working until it is met.
+Claude replies GOAL MET to end it; the check also stops by itself after 20 rounds. `/goal off` ends it early, and
+the footer shows the check count the way it shows loop rounds.
+
 ## Agents
 
 The Agents tab lists the sub-agents of the chat with their status, elapsed time and tokens, and shows each one's report, prompt and steps.
