@@ -576,6 +576,7 @@ const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', cha
 function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
   const items = useStore((s) => s.attention);
   const cwd = useStore((s) => s.session.cwd);
+  const live = useStore((s) => s.live);
   const prs = usePullRequests(cwd);
   const [busy, setBusy] = useState<string | null>(null);
   if (n + items.length === 0) return null;
@@ -596,7 +597,7 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
       <div className="group">Needs you <span className="badge waiting">{n + items.length}</span></div>
       {children}
       {items.map((it) => (
-        <div key={it.id} className={`row session live two ${busy === it.id ? 'removing' : ''}`} title={`${ATTENTION_LABEL[it.kind]}\n${it.title}\n${it.url}`} {...pressable(() => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank')))}>
+        <div key={it.id} className={`row session live two ${busy === it.id ? 'removing' : ''}`} title={`${ATTENTION_LABEL[it.kind]}\n${it.title}\n${it.url}`} {...pressable(() => { const id = it.chatId ?? it.fixing; id ? send({ type: 'view', id }) : window.open(it.url, '_blank'); })}>
           <span className={`state ${it.kind}`}><Icon name={ATTENTION_ICON[it.kind]} small /></span>
           <span className="lines">
             <span className="l1">
@@ -604,7 +605,11 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
               <span className="name">{it.number ? `#${it.number} ` : ''}{it.title}</span>
               <span className="when">{ago(it.since)}</span>
             </span>
-            <span className="l2"><span className="sub">{ATTENTION_LABEL[it.kind]}</span>{pullOf(it) && <PullState pr={pullOf(it)!} />}</span>
+            <span className="l2">
+              <span className="sub">{ATTENTION_LABEL[it.kind]}</span>
+              {pullOf(it) && <PullState pr={pullOf(it)!} />}
+              {it.fixing && <span className="sub fixing">Fixing in {live.find((c) => c.id === it.fixing)?.title ?? 'a chat'}</span>}
+            </span>
           </span>
           <span className="acts">
             <button className="icon-btn" title="Ask Claude to handle this" onClick={(e) => { e.stopPropagation(); void ask(it); }}><Icon name="sparkle" small /></button>

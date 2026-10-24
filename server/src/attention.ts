@@ -38,8 +38,8 @@ function promptFor(kind: Exclude<AttentionKind, 'commit' | 'sentry' | 'deploy'>,
 export function itemsFor(cwd: string, prs: PullRequest[], issues: Issue[], now = Date.now()): AttentionItem[] {
   const repo = path.basename(cwd);
   const out: AttentionItem[] = [];
-  const add = (kind: Exclude<AttentionKind, 'commit' | 'sentry' | 'deploy'>, p: { number: number; title: string; url: string; branch?: string }) =>
-    out.push({ id: `${kind}:${p.url}`, kind, repo, cwd, number: p.number, title: p.title, url: p.url, since: now, prompt: promptFor(kind, p) });
+  const add = (kind: Exclude<AttentionKind, 'commit' | 'sentry' | 'deploy'>, p: { number: number; title: string; url: string; branch?: string; sha?: string }) =>
+    out.push({ id: `${kind}:${p.url}`, kind, repo, cwd, number: p.number, title: p.title, url: p.url, since: now, prompt: promptFor(kind, p), sha: p.sha });
   for (const p of prs) {
     if (p.mine && p.checks === 'failure') add('ci', p);
     if (p.mine && p.review === 'CHANGES_REQUESTED') add('changes', p);
@@ -98,12 +98,14 @@ export function sentryItems(cwd: string, repo: string, issues: SentryIssue[], ba
   return { items, base: next };
 }
 
-type Saved = { seen: Record<string, number>; dismissed: string[]; sentry?: Record<string, SentryBase> };
+type Saved = { seen: Record<string, number>; dismissed: string[]; sentry?: Record<string, SentryBase>; autofix?: string[] };
 
 let items: AttentionItem[] = [];
 let seen = new Map<string, number>();
 let dismissed = new Set<string>();
 let sentryBase: Record<string, SentryBase> = {};
+let autofix: string[] = [];
+let fixer: ((item: AttentionItem) => Promise<string>) | null = null;
 let loaded: Promise<void> | null = null;
 let onChange: (items: AttentionItem[]) => void = () => {};
 let seeded = false;
@@ -114,11 +116,12 @@ async function load() {
   seen = new Map(Object.entries(saved?.seen ?? {}));
   dismissed = new Set(saved?.dismissed ?? []);
   sentryBase = saved?.sentry ?? {};
+  autofix = saved?.autofix ?? [];
 }
 
 async function save() {
   await mkdir(path.dirname(FILE), { recursive: true });
-  await writeFile(FILE, JSON.stringify({ seen: Object.fromEntries(seen), dismissed: [...dismissed], sentry: sentryBase } satisfies Saved));
+  await writeFile(FILE, JSON.stringify({ seen: Object.fromEntries(seen), dismissed: [...dismissed], sentry: sentryBase, autofix } satisfies Saved));
 }
 
 export const attention = () => items;
@@ -144,6 +147,17 @@ export function merge(found: AttentionItem[], now = Date.now()) {
   for (const id of dismissed) if (!current.has(id) && !seen.has(id)) dismissed.delete(id);
   items = [...current.values()].filter((it) => !dismissed.has(it.id)).sort((a, b) => b.since - a.since);
   return fresh;
+}
+
+const fixes = new Map<string, string>();
+
+// One fix chat per failing head commit on repos listed under autofix in attention.json; the chat ids live in memory only.
+export async function fixCi(list: AttentionItem[], repos: string[], fix: (item: AttentionItem) => Promise<string>, started = fixes) {
+  for (const it of list) {
+    if (it.kind !== 'ci' || !it.sha) continue;
+    if (!started.has(it.sha) && repos.includes(it.repo)) started.set(it.sha, await fix(it).catch(() => ''));
+    it.fixing = started.get(it.sha) || undefined;
+  }
 }
 
 let polling: Promise<AttentionItem[]> | null = null;
@@ -186,6 +200,7 @@ async function poll(src: Sources) {
     }),
   ]);
   const fresh = merge(found);
+  if (fixer) await fixCi(items, autofix, fixer);
   if (seeded) for (const it of fresh) if (!dismissed.has(it.id)) post(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, it.number ? `#${it.number}` : it.repo, it.title);
   seeded = true;
   await save().catch(() => {});
@@ -201,7 +216,8 @@ export function dismissAttention(id: string) {
   return items;
 }
 
-export function startAttention(src: () => Sources) {
+export function startAttention(src: () => Sources, fix: (item: AttentionItem) => Promise<string>) {
+  fixer = fix;
   void refreshAttention(src());
   setInterval(() => void refreshAttention(src()), EVERY).unref();
 }

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { commitItem, deployItems, dismissAttention, itemsFor, merge, sentryItems } from './attention.js';
+import { commitItem, deployItems, dismissAttention, fixCi, itemsFor, merge, sentryItems } from './attention.js';
 
 vi.mock('node:fs/promises', async (orig) => ({ ...(await orig<typeof import('node:fs/promises')>()), writeFile: vi.fn(async () => {}) }));
 import type { PullRequest } from '../../shared/protocol.js';
 
 const pr = (n: number, p: Partial<PullRequest> = {}): PullRequest => ({
   number: n, title: `PR ${n}`, author: 'me', branch: `b${n}`, draft: false, review: '', checks: 'success',
-  updatedAt: '', url: `https://github.com/o/r/pull/${n}`, additions: 0, deletions: 0, mine: true, reviewRequested: false, ...p,
+  updatedAt: '', url: `https://github.com/o/r/pull/${n}`, sha: `sha${n}`, additions: 0, deletions: 0, mine: true, reviewRequested: false, ...p,
 });
 
 describe('itemsFor', () => {
@@ -117,5 +117,36 @@ describe('dismissals', () => {
     expect(merge(item(), 2 * day).map((i) => i.id)).not.toContain(id);
     merge([], 10 * day);
     expect(merge(item(), 10 * day).map((i) => i.id)).toContain(id);
+  });
+});
+
+describe('fixCi', () => {
+  it('starts one fix chat per failing head commit on listed repos', async () => {
+    const fix = vi.fn(async (it: { number: number }) => `chat${it.number}`);
+    const started = new Map<string, string>();
+    const items = () => itemsFor('/w/r', [pr(1, { checks: 'failure' }), pr(2, { checks: 'failure', review: 'CHANGES_REQUESTED' })], []);
+    const first = items();
+    await fixCi(first, ['r'], fix, started);
+    expect(fix.mock.calls.map((c) => c[0].id)).toEqual(['ci:https://github.com/o/r/pull/1', 'ci:https://github.com/o/r/pull/2']);
+    expect(first.map((i) => i.fixing)).toEqual(['chat1', 'chat2', undefined]);
+    const again = items();
+    await fixCi(again, ['r'], fix, started);
+    expect(fix).toHaveBeenCalledTimes(2);
+    expect(again[0].fixing).toBe('chat1');
+    const pushed = itemsFor('/w/r', [pr(1, { checks: 'failure', sha: 'sha1b' })], []);
+    await fixCi(pushed, ['r'], fix, started);
+    expect(fix).toHaveBeenCalledTimes(3);
+  });
+
+  it('leaves other repos and failed starts alone', async () => {
+    const fix = vi.fn(async () => { throw new Error('no'); });
+    const started = new Map<string, string>();
+    const other = itemsFor('/w/r', [pr(3, { checks: 'failure' })], []);
+    await fixCi(other, ['x'], fix, started);
+    expect(fix).not.toHaveBeenCalled();
+    await fixCi(other, ['r'], fix, started);
+    await fixCi(other, ['r'], fix, started);
+    expect(fix).toHaveBeenCalledTimes(1);
+    expect(other[0].fixing).toBeUndefined();
   });
 });

@@ -171,6 +171,9 @@ Repos come from `~/workspace` and `~/workspace_personal`. Set `AGENTVIEW_ROOTS` 
 Chats start only inside these folders or Paseo worktrees.
 
 - Chats keep running in the background. Ones that need you are marked and listed first
+- Failing CI on your pull request shows under Needs you. List repo names under `autofix` in
+  `~/.agentview/attention.json` and a fix chat starts by itself, once per pushed commit; the item then says
+  "Fixing in" with the chat and opens it
 - A chat closes after 10 idle minutes with no one viewing it. Reopen it from Recent
 - Chats and Paseo worktrees idle for 12 hours can be deleted (worktree branches are kept)
 

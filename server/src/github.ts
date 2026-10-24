@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../shared/protocol.js';
 
 const run = promisify(execFile);
-const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,additions,deletions';
+const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,headRefOid,additions,deletions';
 const lists = new Map<string, { at: number; prs: PullRequest[] }>();
 const refreshing = new Map<string, Promise<PullRequest[]>>();
 const details = new Map<string, { updatedAt: string; detail: Promise<PullRequestDetail> }>();
@@ -55,6 +55,7 @@ async function fetchList(cwd: string): Promise<PullRequest[]> {
       checks: rollup(p.statusCheckRollup),
       updatedAt: p.updatedAt,
       url: p.url,
+      sha: p.headRefOid ?? '',
       additions: p.additions,
       deletions: p.deletions,
       mine: mine.some((m: { number: number }) => m.number === p.number),
