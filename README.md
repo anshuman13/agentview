@@ -149,6 +149,10 @@ clicking it opens that chat in the browser (a GitHub item opens the Chats view).
 The browser shows its own notification while the tab is hidden; clicking it opens the chat. The bell in the status
 bar turns browser notifications on or off.
 
+For a phone in the background, the same notifications go to an [ntfy](https://ntfy.sh) topic: set `AGENTVIEW_NTFY`
+or an `ntfy` key in `~/.agentview/observe.json` to a topic name (sent to ntfy.sh) or a full URL on your own server.
+Tapping the push opens the chat. Without a topic nothing is sent.
+
 ## Models
 
 New chats start in Auto mode: Claude asks only before risky actions.
