@@ -333,6 +333,12 @@ export function Composer() {
     return () => window.removeEventListener('agentview:use', use);
   }, []);
 
+  useEffect(() => {
+    const focus = () => requestAnimationFrame(() => ta.current?.focus());
+    window.addEventListener('agentview:focus', focus);
+    return () => window.removeEventListener('agentview:focus', focus);
+  }, []);
+
   const submit = () => {
     const t = text.trim();
     if (!t) return;
