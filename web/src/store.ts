@@ -122,7 +122,7 @@ export function send(m: ClientMessage) {
 
 // Messages carry an id so a retry after a lost reply does not run twice; the server ignores repeats.
 function deliver(msg: ClientMessage, onLost: () => void) {
-  void post(msg, 3).then((ok) => {
+  void post(msg, 2).then((ok) => {
     if (ok) return;
     notice('Message did not reach the server, it is back in the box');
     onLost();
@@ -262,6 +262,9 @@ export function connect() {
     }
   };
 }
+
+// Seconds since the stream last delivered anything, for the composer's stale notice.
+export const sinceHeard = () => Math.round((Date.now() - heard) / 1000);
 
 if (typeof document !== 'undefined') {
   setInterval(() => {

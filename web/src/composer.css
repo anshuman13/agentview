@@ -117,3 +117,4 @@
 .cp-phase { color: var(--agent, #a78bfa); }
 .cp-phase.passed { color: var(--ok, #89d185); }
 .cp-phase.failed { color: var(--err, #f14c4c); }
+.cp-phase.cp-stale { color: var(--warn, #cca700); }
