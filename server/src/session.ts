@@ -5,12 +5,12 @@ import { watch, type FSWatcher } from 'node:fs';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { JsonlTail } from './tail.js';
 import { query, getSessionMessages, getSubagentMessages, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
-import { COMPACT_AT, EFFORT_LEVELS, type AgentEvent, type AgentStatus, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
+import { COMPACT_AT, EFFORT_LEVELS, MAX_GOAL_ROUNDS, type AgentEvent, type AgentStatus, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
-import { USAGE, after, clock, describeLoop, limitReset, parseLoop } from './repeat.js';
+import { GOAL_USAGE, USAGE, after, clock, describeLoop, goalMet, limitReset, offCommand, parseGoal, parseLoop, roundWord } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
@@ -586,11 +586,13 @@ export class AgentSession {
   }
 
   private loopCommand(text: string, id: string) {
-    const parsed = parseLoop(text);
+    const goal = text.trim().startsWith('/goal');
+    const parsed = goal ? parseGoal(text) : parseLoop(text);
     if (!parsed) return false;
     this.pushEvent({ id, kind: 'user', text, at: Date.now() });
-    if (parsed === 'usage') this.system(USAGE);
-    else if (parsed === 'off') this.setRepeat(null, this.state.session.repeat ? 'Loop off' : 'No loop is running');
+    const word = goal ? 'Goal' : 'Loop';
+    if (parsed === 'usage') this.system(goal ? GOAL_USAGE : USAGE);
+    else if (parsed === 'off') this.setRepeat(null, this.state.session.repeat ? `${word} off` : `No ${word.toLowerCase()} is running`);
     else this.setRepeat(parsed);
     return true;
   }
@@ -600,7 +602,7 @@ export class AgentSession {
     this.repeatDue = false;
     this.setSession({ repeat: r });
     if (!r) return this.system(note ?? 'Loop off');
-    this.system(`Loop on, ${describeLoop(r)}`);
+    this.system(`${r.goal ? 'Goal' : 'Loop'} on, ${describeLoop(r)}`);
     if (r.nextAt && r.nextAt > Date.now()) this.armRepeat();
     else this.fireRepeat();
   }
@@ -613,7 +615,7 @@ export class AgentSession {
 
   resumeRepeat(r: Repeat) {
     this.setSession({ repeat: r });
-    this.system(`AgentView restarted, the loop continues ${describeLoop(r)}`);
+    this.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} continues, ${describeLoop(r)}`);
     if (!r.nextAt || r.nextAt <= Date.now()) this.fireRepeat();
     else this.armRepeat();
   }
@@ -622,6 +624,7 @@ export class AgentSession {
     const r = this.state.session.repeat;
     if (!r || this.repeatHeld) return;
     if (r.until && Date.now() >= r.until) return this.setRepeat(null, `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`);
+    if (r.goal && r.round >= MAX_GOAL_ROUNDS) return this.setRepeat(null, `Goal not met after ${r.round} checks: ${r.goal}`);
     if (this.state.session.running) {
       this.repeatDue = true;
       return;
@@ -633,7 +636,7 @@ export class AgentSession {
     const round = r.round + 1;
     this.setSession({ repeat: { ...r, round, nextAt: r.every ? Date.now() + r.every : null } });
     this.armRepeat();
-    this.system(`Loop round ${round}`);
+    this.system(`${roundWord(r)} ${round}`);
     this.sendPrompt(r.prompt);
   }
 
@@ -779,14 +782,14 @@ export class AgentSession {
   }
 
   // A round that failed waits before the next one, so a loop never spins on an error.
-  private deferRepeat(until = Date.now() + REPEAT_GRACE_MS, why = 'Loop round') {
+  private deferRepeat(until = Date.now() + REPEAT_GRACE_MS, why?: string) {
     const r = this.state.session.repeat;
     if (!r) return;
     this.repeatDue = false;
     const nextAt = Math.max(r.nextAt ?? 0, until);
     this.setSession({ repeat: { ...r, nextAt } });
     this.armRepeat();
-    this.system(`${why} ${r.round + 1} at ${clock(nextAt)}, /loop off to end it`);
+    this.system(`${why ?? roundWord(r)} ${r.round + 1} at ${clock(nextAt)}, ${offCommand(r)} to end it`);
   }
 
   private followUp() {
@@ -1063,6 +1066,8 @@ export class AgentSession {
           isError: msg.is_error,
           at: Date.now(),
         });
+        const goal = this.state.session.repeat;
+        if (goal?.goal && goalMet(this.lastResult)) this.setRepeat(null, `Goal met after ${goal.round} ${goal.round === 1 ? 'check' : 'checks'}: ${goal.goal}`);
         this.turnEnded();
         return;
       }

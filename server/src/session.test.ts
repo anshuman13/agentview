@@ -874,6 +874,53 @@ describe('/loop after Stop', () => {
   });
 });
 
+describe('/goal', () => {
+  const CHECK = 'Check whether this goal is met: the tests pass. Reply GOAL MET when it is, otherwise keep working on it.';
+  const users = (s: AgentSession) => s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text);
+  const reply = (s: AgentSession, uuid: string, text: string) => (s as unknown as { handle: (m: unknown) => void }).handle({ type: 'result', subtype: 'success', uuid, result: text, total_cost_usd: 0, is_error: false });
+
+  it('sends the check when idle and stops on GOAL MET', async () => {
+    vi.useFakeTimers();
+    const { s } = fakeSession();
+    await s.prompt('/goal the tests pass');
+    expect(users(s)).toEqual(['/goal the tests pass', CHECK]);
+    expect(s.state.session.repeat).toMatchObject({ goal: 'the tests pass', round: 1, every: 0, until: null });
+    reply(s, 'r1', 'Two tests fail, fixing them');
+    expect(s.state.session.running).toBe(false);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Goal check 2 at \d\d:\d\d, \/goal off to end it$/) });
+    vi.advanceTimersByTime(2 * 60_000 + 1);
+    expect(users(s)).toHaveLength(3);
+    expect(s.state.session.repeat?.round).toBe(2);
+    reply(s, 'r2', 'All green. GOAL MET');
+    expect(s.state.session.repeat).toBeNull();
+    expect(users(s)).toHaveLength(3);
+    expect(s.state.events.some((e) => e.kind === 'system' && e.text === 'Goal met after 2 checks: the tests pass')).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it('gives up after 20 checks, and /goal off ends it early', async () => {
+    vi.useFakeTimers();
+    const { s } = fakeSession();
+    await s.prompt('/goal the build is green');
+    for (let i = 1; i < 20; i++) {
+      reply(s, `r${i}`, 'still red');
+      vi.advanceTimersByTime(2 * 60_000 + 1);
+      expect(s.state.session.repeat?.round).toBe(i + 1);
+    }
+    reply(s, 'r20', 'still red');
+    expect(s.state.session.repeat).toBeNull();
+    expect(users(s)).toHaveLength(21);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Goal not met after 20 checks: the build is green' });
+    await s.prompt('/goal ship it');
+    expect(s.state.session.repeat?.goal).toBe('ship it');
+    await s.prompt('/goal off');
+    expect(s.state.session.repeat).toBeNull();
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Goal off' });
+    expect(s.state.events.filter((e) => e.kind === 'system' && e.text === 'Goal on, checked whenever Claude goes idle until "ship it" is met, up to 20 checks')).toHaveLength(1);
+    vi.useRealTimers();
+  });
+});
+
 // A seeded random walk over the send paths. Run with FUZZ_SEEDS=500 to hammer it.
 describe('send queue fuzz', () => {
   const seeds = Number(process.env.FUZZ_SEEDS ?? 40);
