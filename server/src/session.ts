@@ -577,7 +577,8 @@ export class AgentSession {
     this.setSession({ repeat: r });
     if (!r) return this.system(note ?? 'Loop off');
     this.system(`Loop on, ${describeLoop(r)}`);
-    this.fireRepeat();
+    if (r.nextAt && r.nextAt > Date.now()) this.armRepeat();
+    else this.fireRepeat();
   }
 
   // A back to back loop never goes idle, so a pending restart holds it; the restarted server resumes it.
@@ -743,7 +744,8 @@ export class AgentSession {
       // Messages typed while the stop was in flight go on in a fresh turn.
       this.dequeue();
       this.deferRepeat();
-    } else if (idle && this.limitReset) this.deferRepeat(this.limitReset, 'Usage limit reached, loop round');
+    } else if (idle && this.limitReset && this.state.session.repeat) this.deferRepeat(this.limitReset, 'Usage limit reached, loop round');
+    else if (idle && this.limitReset) this.system(`Usage limit reached, resets at ${clock(this.limitReset)}`);
     else if (idle && this.lastError) this.deferRepeat();
     else if (idle && (this.repeatDue || this.state.session.repeat?.every === 0)) this.fireRepeat();
     this.limitReset = null;

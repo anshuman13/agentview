@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { advance, loopOff, verdictOf } from './loop.js';
-import { limitReset } from './repeat.js';
+import { limitReset, parseLoop } from './repeat.js';
 
 describe('verdictOf', () => {
   it('reads the last verdict line', () => {
@@ -69,5 +69,15 @@ describe('limitReset', () => {
     expect(limitReset('All 229 tests pass', now)).toBeNull();
     expect(limitReset('rate limit resets Oct 25', now)).toBeNull();
     expect(limitReset('the limit is 5 retries', now)).toBeNull();
+  });
+});
+
+describe('parseLoop at', () => {
+  it('runs a prompt once at a clock time', () => {
+    const now = new Date(2026, 9, 24, 0, 0, 0).getTime();
+    const r = parseLoop('/loop at 01:50 do the next round', now);
+    expect(r).toMatchObject({ prompt: 'do the next round', every: 0, round: 0 });
+    const at = new Date(2026, 9, 24, 1, 50, 0).getTime();
+    expect(r).toMatchObject({ nextAt: at, until: at + 1000 });
   });
 });
