@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { CheckState, PullRequest, PullRequestDetail } from '../../shared/protocol.js';
+import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
 
 const run = promisify(execFile);
 const LIST = 'number,title,author,headRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,url,headRefOid,additions,deletions';

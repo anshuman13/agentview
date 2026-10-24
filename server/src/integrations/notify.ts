@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { LiveChat, ServerMessage } from '../../shared/protocol.js';
+import type { LiveChat, ServerMessage } from '../../../shared/protocol.js';
 
 const last = new Map<string, number>();
 const FIFO = path.join(os.homedir(), '.agentview/notify.fifo');

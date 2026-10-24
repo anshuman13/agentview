@@ -3,7 +3,7 @@ import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
 import type { McpConfigEntry, McpSchema, McpServer, McpTool } from '../../shared/protocol.js';
-import { callTool, probe, stop, text, type McpServerDef } from './mcpClient.js';
+import { callTool, probe, stop, text, type McpServerDef } from './integrations/mcpClient.js';
 
 type Config = McpServerDef | undefined;
 type Status = {

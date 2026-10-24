@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseApp, summarize } from './deploy.js';
-import type { DeployRecord } from '../../shared/protocol.js';
+import type { DeployRecord } from '../../../shared/protocol.js';
 
 describe('parseApp', () => {
   it('reads the project and environments', () => {
