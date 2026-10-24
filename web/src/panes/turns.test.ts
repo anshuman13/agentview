@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTurns } from './turns';
+import { buildTurns, chatCost, elapsed, money } from './turns';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;
@@ -89,5 +89,25 @@ describe('buildTurns', () => {
     expect(b.advisor).toBe(2);
     expect(b.fable).toBe(1);
     expect(b.turns[0].notes.at(-1)).toMatchObject({ kind: 'fable', text: 'Use a lock.\nThen retry.' });
+  });
+
+  it('gives each turn its rise in the running cost and its end time', () => {
+    const done = (costUsd: number): ChatEvent => ({ id: `d${at()}`, kind: 'result', text: 'ok', costUsd, isError: false, at: n });
+    const { turns } = buildTurns([user('a'), done(0.5), user('b'), done(0.8), user('c'), done(0.1)]);
+    expect(turns.map((t) => [t.cost, t.ended! - t.at])).toEqual([[0.5, 1], [0.8 - 0.5, 1], [0.1, 1]]);
+    const restored = buildTurns([user('a'), done(0), user('b'), done(2), user('c'), done(2.25)]);
+    expect(restored.turns.map((t) => t.cost)).toEqual([undefined, undefined, 0.25]);
+    expect(chatCost([user('a'), done(0), user('b'), done(2), user('c'), done(2.25), done(0.1)])).toBeCloseTo(2.35);
+  });
+});
+
+describe('elapsed and money', () => {
+  it('shows seconds, then minutes, then hours with minutes', () => {
+    expect(elapsed(400)).toBe('0s');
+    expect(elapsed(42_000)).toBe('42s');
+    expect(elapsed(3 * 60_000 + 20_000)).toBe('3m');
+    expect(elapsed(62 * 60_000)).toBe('1h 2m');
+    expect(money(1.234)).toBe('$1.23');
+    expect(money(0.001)).toBe('<$0.01');
   });
 });

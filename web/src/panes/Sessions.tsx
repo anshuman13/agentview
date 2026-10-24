@@ -6,6 +6,7 @@ import { QuickPick } from '../QuickPick';
 import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { ago, pressable, save, stored } from './util';
+import { chatCost, money } from './turns';
 import { PullState, usePullRequests } from './GitHub';
 import '../chats.css';
 
@@ -533,13 +534,14 @@ export function chatLine(c: LiveChat, events: ChatEvent[] | null) {
   const done = !c.running && !c.pending;
   const last = c.last ?? (events ? replyLine(events) : undefined);
   const edits = c.edits ?? (events ? sumEdits(events) : undefined);
-  return { text: c.pending ? 'Needs you' : c.running ? c.status : last ?? '', edits: done ? edits : undefined, done: done && Boolean(edits) };
+  const cost = c.cost ?? (events ? chatCost(events) : 0);
+  return { text: c.pending ? 'Needs you' : c.running ? c.status : last ?? '', edits: done ? edits : undefined, cost: cost > 0 ? money(cost) : undefined, done: done && Boolean(edits) };
 }
 
 function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void; onDelete?: () => void; onBeside?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const line = chatLine(c, events);
-  const second = Boolean(line.text || line.edits);
+  const second = Boolean(line.text || line.edits || line.cost);
   const state = c.pending ? 'Needs you' : c.running ? c.status : 'Idle';
   return (
     <div className={`row session live ${second ? 'two' : ''} ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} {...pressable(() => { if (!selected) send({ type: 'view', id: c.id }); })}>
@@ -553,6 +555,7 @@ function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveCh
         {second && (
           <span className="l2">
             <span className="sub">{line.text}</span>
+            {line.cost && <span className="cost" title="Cost of this chat so far">{line.cost}</span>}
             {line.edits && <span className="edits"><span className="add">+{line.edits.add}</span> <span className="del">-{line.edits.del}</span></span>}
           </span>
         )}

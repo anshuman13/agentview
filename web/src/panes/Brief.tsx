@@ -9,7 +9,7 @@ import { touch } from '../touch';
 import { Row, Transcript } from './Transcript';
 import { FileIcon } from './Explorer';
 import { relPath } from './steps';
-import { BIG_BRO, buildTurns, type Turn } from './turns';
+import { BIG_BRO, buildTurns, elapsed, money, type Turn } from './turns';
 import { markSeen, readSeen, recap, recapText } from './recap';
 import { AgentsChip, openAgent } from './AgentsPane';
 import { REVIEW_LOCAL } from './Findings';
@@ -220,7 +220,8 @@ function Facts({ turn, cwd, pending, latest }: { turn: Turn; cwd: string; pendin
   const files = allFiles ? turn.files : turn.files.slice(0, FILES_SHOWN);
   const add = turn.files.reduce((n, f) => n + f.add, 0);
   const del = turn.files.reduce((n, f) => n + f.del, 0);
-  const any = pending.length || turn.blocked.length || turn.notes.length || turn.files.length || turn.commits.length || turn.commands.length || turn.agents.length;
+  const meta = [turn.cost !== undefined && money(turn.cost), turn.ended !== undefined && elapsed(turn.ended - turn.at)].filter(Boolean).join(' · ');
+  const any = pending.length || turn.blocked.length || turn.notes.length || turn.files.length || turn.commits.length || turn.commands.length || turn.agents.length || meta;
   if (!any) return null;
   return (
     <div className="tc-facts">
@@ -284,6 +285,7 @@ function Facts({ turn, cwd, pending, latest }: { turn: Turn; cwd: string; pendin
           ))}
         </div>
       )}
+      {meta && <div className="tc-label tc-meta" title="Cost of this turn and the time it took">{meta}</div>}
     </div>
   );
 }
