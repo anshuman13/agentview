@@ -28,12 +28,13 @@ It uses the Claude Code CLI you have installed and its login.
 
 ## Layout
 
-- **Task box** (right): prompt, mode and model menus, context meter, and the timeline below it
-- **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. Browser tab shows your Chrome
-- **Sidebar**: Explorer, Chats (open and recent) and Workspace (repos, chats, Paseo worktrees)
+- **Task box** (right): prompt, mode and model menus, context meter, and the timeline below it. ⌥⌘B hides it
+- **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. Browser tab shows your Chrome. Agents tab shows the subagents of the current chat. Observe, Deploy and MCP open as further tabs here
+- **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Chats (open and recent) and Workspace (repos, chats, Paseo worktrees)
 - **Side chat**: the split icon on a chat row in the Chats view opens that chat in a second column with its
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
-- **Terminal** (bottom): a shell in the chat's folder
+- **Terminal** (bottom, ⌘J): a shell in the chat's folder
+- **Command palette** (⇧⌘P or F1): every view, tab, page, model and mode as a searchable list
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
   follows the system setting; `?theme=light` in the URL picks one
 
@@ -213,13 +214,26 @@ The mini does not run local databases, so leave out the `*_local` MCP servers.
 
 ## Shortcuts
 
+⌘ on a Mac, Ctrl elsewhere. Letter shortcuts stay out of the way of text fields.
+
 | Key | Action |
 | --- | --- |
 | ⌘O | Start a chat in a repo |
 | ⌘P | Open a file |
+| ⇧⌘P or F1 | Command palette |
 | ⌘B | Toggle the sidebar |
+| ⌥⌘B | Toggle the task box |
 | ⌘J | Toggle the terminal |
 | ⌘E | Switch between file and browser |
+| ⌘K | Clear the terminal |
+| Enter | Send; Shift+Enter for a new line |
+| Tab | Accept the suggested command or the ghost text |
+| Shift+Tab | Cycle the permission mode |
+| ↑ / ↓ | Step through sent prompts when the box is empty |
+| Esc | Close a popup or clear a filter |
+| y / n / a | Allow, deny or always allow the top permission card |
+| 1-9 | Pick an answer on the top question card |
+| ⌘Enter | Commit in Source Control; run the query in Observe |
 
 ## Loop mode
 
