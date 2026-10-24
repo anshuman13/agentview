@@ -27,7 +27,6 @@ const SCOPES: [id: string, title: string, where: string][] = [
 ];
 const scopeInfo = (id: string) => SCOPES.find((s) => s[0] === id) ?? [id, id[0].toUpperCase() + id.slice(1), ''];
 
-const openMcp = () => command('page:mcp');
 
 const slug = (server: string) => server.replace(/[^A-Za-z0-9_-]/g, '_');
 export const toolId = (server: string, tool: string) => `mcp__${slug(server)}__${tool}`;
@@ -39,17 +38,6 @@ const use = (server: string, tool?: string) => {
   showChat();
   window.dispatchEvent(new CustomEvent('agentview:use', { detail: { server, tool } }));
 };
-
-export function McpItem() {
-  const mcp = useStore((s) => s.session.mcp);
-  const ok = mcp.filter((m) => m.status === 'connected').length;
-  const bad = mcp.some((m) => MCP_BAD.includes(m.status));
-  return (
-    <button className="item clickable" title="MCP servers" onClick={openMcp}>
-      <span className={`mcp-dot ${bad ? 'bad' : ok ? 'ok' : 'off'}`} /> MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
-    </button>
-  );
-}
 
 export type Row = McpServer & { live?: boolean };
 
@@ -452,7 +440,7 @@ function Login({ name }: { name: string }) {
   useEffect(() => { setOpened(false); setError(''); }, [name]);
   useEffect(() => {
     if (!opened) return;
-    const t = setInterval(() => send({ type: 'mcp_status' }), 3000);
+    const t = setInterval(() => !document.hidden && send({ type: 'mcp_status' }), 3000);
     return () => clearInterval(t);
   }, [opened]);
   const start = () => {

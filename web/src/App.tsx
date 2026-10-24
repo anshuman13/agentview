@@ -10,18 +10,18 @@ import { Changes, ChangesBadge } from './panes/Changes';
 import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
-import { pressable } from './panes/util';
-import { ConnectPopover } from './ConnectPopover';
+import { command, pressable } from './panes/util';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
-import { McpItem, McpPage } from './panes/McpStatus';
 import './page.css';
 
 const Terminal = lazy(() => import('./panes/Terminal').then((m) => ({ default: m.Terminal })));
 const CodePane = lazy(() => import('./panes/CodePane').then((m) => ({ default: m.CodePane })));
 const BrowserPane = lazy(() => import('./panes/BrowserPane').then((m) => ({ default: m.BrowserPane })));
+const Observe = lazy(() => import('./panes/Observe').then((m) => ({ default: m.Observe })));
+const Deploy = lazy(() => import('./panes/Deploy').then((m) => ({ default: m.Deploy })));
+const McpPage = lazy(() => import('./panes/McpStatus').then((m) => ({ default: m.McpPage })));
+const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
 const Loading = () => <div style={{ margin: 'auto', padding: 24, fontSize: 13, color: 'var(--fg-faint, #6e6e6e)' }}>Loading…</div>;
-import { Observe } from './panes/Observe';
-import { Deploy } from './panes/Deploy';
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 import { touch } from './touch';
@@ -119,6 +119,17 @@ function Offline() {
       <Icon name="plug" small />
       <span>{restarting ? 'AgentView is restarting' : 'Disconnected from the Mac, reconnecting'}</span>
     </div>
+  );
+}
+
+function McpItem() {
+  const mcp = useStore((s) => s.session.mcp);
+  const ok = mcp.filter((m) => m.status === 'connected').length;
+  const bad = mcp.some((m) => MCP_BAD.includes(m.status));
+  return (
+    <button className="item clickable" title="MCP servers" onClick={() => command('page:mcp')}>
+      <span className={`mcp-dot ${bad ? 'bad' : ok ? 'ok' : 'off'}`} /> MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
+    </button>
   );
 }
 
@@ -420,7 +431,7 @@ export function App() {
                   </div>
                   <div id={`page-${page}-extra`} className="page-extra" />
                 </header>
-                <div className="page-body">{page === 'mcp' ? <McpPage /> : page === 'observe' ? <Observe /> : <Deploy />}</div>
+                <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'observe' ? <Observe /> : <Deploy />}</Suspense></div>
               </div>
             </div>
           )}
@@ -547,7 +558,7 @@ export function App() {
       <FileSwitcher />
       <Palette />
       {repoPicker && <RepoPicker />}
-      {phone && <ConnectPopover onClose={() => setPhone(false)} />}
+      {phone && <Suspense fallback={null}><ConnectPopover onClose={() => setPhone(false)} /></Suspense>}
       {macs && <MacsPopover onClose={() => setMacs(false)} />}
     </div>
   );

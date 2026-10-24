@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { api, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Block, Findings } from './Findings';
@@ -6,7 +6,7 @@ import { Markdown } from './Chat';
 import { FileIcon } from './Explorer';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
-import { ago, askClaude, pressable, usePoll } from './util';
+import { ago, askClaude, pressable } from './util';
 import '../github.css';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
@@ -155,12 +155,14 @@ function PrList({ onOpen }: { onOpen: (n: number) => void }) {
   );
 }
 
+let viewOpen = false;
+
 export function GitHubBadge() {
   const cwd = useStore((s) => s.session.cwd);
   const { prs } = useList();
   useEffect(() => {
     void load(cwd);
-    const t = setInterval(() => load(cwd), 5 * 60_000);
+    const t = setInterval(() => !document.hidden && load(cwd, viewOpen), 5 * 60_000);
     return () => clearInterval(t);
   }, [cwd]);
   const n = prs.filter((p) => p.reviewRequested).length;
@@ -171,16 +173,18 @@ export function GitHub() {
   const cwd = useStore((s) => s.session.cwd);
   const { prs } = useList();
   const [open, setOpen] = useState<number | null>(null);
-  const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setOpen(null);
     void load(cwd).then(() => load(cwd, true));
   }, [cwd]);
-  usePoll(root, 5 * 60_000, () => load(cwd, true), [cwd]);
+  useEffect(() => {
+    viewOpen = true;
+    return () => { viewOpen = false; };
+  }, []);
   const pr = prs.find((p) => p.number === open);
 
   return (
-    <div className="gh" ref={root}>
+    <div className="gh">
       {pr ? <Detail key={pr.number} pr={pr} onBack={() => setOpen(null)} /> : <PrList onOpen={setOpen} />}
     </div>
   );
