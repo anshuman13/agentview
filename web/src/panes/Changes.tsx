@@ -104,11 +104,11 @@ function Section({ label, files, selected, actions, rowActions }: { label: strin
   if (!files.length) return null;
   return (
     <>
-      <div className="scm-header" {...pressable(() => setOpen(!open))}>
+      <div className="section-head" {...pressable(() => setOpen(!open))}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
-        <span className="scm-label">{label}</span>
+        <span className="label">{label}</span>
         <span className="scm-acts">{actions}</span>
-        <span className="scm-count">{files.length}</span>
+        <span className="badge quiet">{files.length}</span>
       </div>
       {open && files.map((f) => <FileRow key={f.path} file={f} selected={selected === f.path} actions={rowActions(f)} />)}
     </>

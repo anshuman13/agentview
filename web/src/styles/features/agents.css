@@ -28,13 +28,7 @@
 .ag-label { font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-muted); margin-bottom: var(--sp-3); }
 .ag-steps-list { font-size: var(--fs-md); line-height: var(--lh-relaxed); }
 .ag-steps-list > :is(.tr-assistant, .tr-file) { margin: var(--sp-3) 0; }
-.ag-chip {
-  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--size-sm); padding: 0 var(--sp-4); border-radius: var(--radius-pill);
-  font-size: var(--fs-xs); color: var(--fg-muted); background: transparent; border: 1px solid var(--border-strong);
-}
-.ag-chip:hover { color: var(--fg); background: var(--hover); }
-.ag-chip.inbox { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
-.ag-chip.running { color: var(--agent); border-color: color-mix(in srgb, var(--agent) 50%, transparent); }
+.ag-chip { height: var(--size-sm); padding: 0 var(--sp-4); }
 .ag-back { display: none; align-self: flex-start; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: none; color: var(--link); font-size: var(--fs-sm); cursor: pointer; }
 
 .ag.stack { margin: 0 calc(-1 * var(--sp-6)); }

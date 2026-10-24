@@ -34,8 +34,6 @@
 .observe .obs-subhead { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-6) var(--sp-1); font-size: var(--fs-sm); color: var(--fg-muted); }
 .observe .obs-subhead .name { flex: 1; min-width: 0; font-weight: 600; }
 
-.observe .obs-tag { display: inline-flex; align-items: center; gap: 3px; height: var(--size-xs); padding: 0 var(--sp-3); font-size: var(--fs-xs); border-radius: var(--radius-sm); background: var(--raised); color: var(--fg-muted); }
-.observe .obs-tag.ok { color: var(--ok); }
 .observe .obs-add { display: inline-flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-xs); }
 .observe .obs-ask:disabled { opacity: 0.5; cursor: default; }
 .observe .obs-ask {
@@ -47,7 +45,6 @@
 .observe .obs-issue { padding: 5px var(--sp-6) 5px var(--sp-5); border-left: 2px solid transparent; }
 .observe .obs-issue:hover { background: var(--hover); }
 .observe .obs-issue .row { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
-.observe .obs-issue .dot { flex: none; width: 8px; height: 8px; border-radius: var(--radius-round); background: var(--fg-faint); }
 .observe .obs-issue:is(.level-error, .level-fatal) .dot { background: var(--err); }
 .observe .obs-issue.level-warning .dot { background: var(--warn); }
 .observe .obs-issue.level-info .dot { background: var(--prompt); }

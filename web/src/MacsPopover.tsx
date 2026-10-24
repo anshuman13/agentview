@@ -114,13 +114,13 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
         </div>
         <ul className="macs">
           <li className="current">
-            <span className="mcp-dot ok" />
+            <span className="dot ok" />
             <span className="mac-name">{name || location.hostname}</span>
             <span className="detail">this Mac</span>
           </li>
           {macs?.map((m) => (
             <li key={m.url} className="clickable" onClick={() => void go(m)}>
-              <span className={`mcp-dot ${m.running ? 'ok' : 'off'}`} />
+              <span className={`dot ${m.running ? 'ok' : 'off'}`} />
               <span className="mac-name">{m.name}</span>
               <span className="detail">{busy === m.url ? 'connecting' : [m.self && 'you are here', m.running ? `${m.running} working` : 'idle'].filter(Boolean).join(', ')}</span>
             </li>

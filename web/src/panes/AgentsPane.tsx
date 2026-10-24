@@ -20,7 +20,7 @@ export function AgentsChip() {
   const { running, done } = agentCounts(agents);
   const text = [running && `${running} running`, done && `${done} done`].filter(Boolean).join(', ');
   return (
-    <button className={`ag-chip ${running ? 'running' : ''}`} title="Show the agents" onClick={() => openAgent()}>
+    <button className={`chip outline pill ag-chip ${running ? 'agent' : ''}`} title="Show the agents" onClick={() => openAgent()}>
       <Icon name={running ? 'loading' : 'hubot'} small spin={running > 0} /> {text}
     </button>
   );

@@ -106,7 +106,7 @@ export function Deploy() {
       {s?.envs.map((env) => (
         <div key={env.name} className="deploy-card">
           <div className="deploy-card-head">
-            <span className={`deploy-dot ${tone(env.latest?.state)}`} title={env.latest?.state ?? 'Never deployed'} />
+            <span className={`dot ${tone(env.latest?.state)}`} title={env.latest?.state ?? 'Never deployed'} />
             <span className="deploy-env">{env.label}</span>
             <span className="spacer" />
             {env.latest && env.latest.id !== env.deployed?.id && <a className="chip" href={env.latest.url} target="_blank" rel="noreferrer">{env.latest.state}</a>}
