@@ -14,6 +14,7 @@ if [ ! -x "$BIN" ] || [ menubar/AgentViewBar.swift -nt "$BIN" ] || [ start.sh -n
   <key>CFBundleIdentifier</key><string>no.pradhan.agentview.bar</string>
   <key>CFBundleName</key><string>AgentView</string>
   <key>CFBundleExecutable</key><string>AgentView</string>
+  <key>CFBundleIconFile</key><string>icon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
@@ -21,6 +22,8 @@ if [ ! -x "$BIN" ] || [ menubar/AgentViewBar.swift -nt "$BIN" ] || [ start.sh -n
 </dict>
 </plist>
 PLIST
+  mkdir -p "$APP/Contents/Resources"
+  cp app/src-tauri/icons/icon.icns "$APP/Contents/Resources/"
   swiftc -O menubar/AgentViewBar.swift -o "$BIN"
   codesign --force --sign - --identifier no.pradhan.agentview.bar "$APP"
 fi
