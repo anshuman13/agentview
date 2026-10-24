@@ -12,16 +12,16 @@ type Row = Entry & { path: string; depth: number };
 const parentOf = (p: string) => p.slice(0, Math.max(p.lastIndexOf('/'), 0));
 const ancestors = (p: string) => p.split('/').slice(0, -1).map((_, i, a) => a.slice(0, i + 1).join('/'));
 
-const BLUE = '#519aba';
-const YELLOW = '#cbcb41';
-const PURPLE = '#a074c4';
-const ORANGE = '#e37933';
-const GREEN = '#8dc149';
-const RED = '#cc3e44';
-const PINK = '#f55385';
-const CYAN = '#4fc1cf';
-const GRAY = '#6d8086';
-const FOLDER = '#dcb67a';
+const BLUE = 'var(--file-blue)';
+const YELLOW = 'var(--file-yellow)';
+const PURPLE = 'var(--file-purple)';
+const ORANGE = 'var(--file-orange)';
+const GREEN = 'var(--file-green)';
+const RED = 'var(--file-red)';
+const PINK = 'var(--file-pink)';
+const CYAN = 'var(--file-cyan)';
+const GRAY = 'var(--file-gray)';
+const FOLDER = 'var(--file-folder)';
 
 type Kind = [icon: string, color: string];
 
