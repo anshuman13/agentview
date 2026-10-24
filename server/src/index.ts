@@ -23,13 +23,13 @@ import { dismissFinding, getFindings } from './findings.js';
 import { deployRoute } from './integrations/deploy.js';
 import { gitRoute } from './workspace/git.js';
 import { observe } from './integrations/observe.js';
-import { otherMacs, thisMac } from './macs.js';
+import { otherMacs, thisMac } from './http/macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './workspace/worktrees.js';
 import { MCP_BAD, type AttentionItem, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../shared/protocol.js';
-import { Ring, frame } from './stream.js';
+import { Ring, frame } from './http/stream.js';
 import { chatCost } from '../../shared/cost.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
-import { allowedPeer, allowedRequest, requester } from './access.js';
+import { allowedPeer, allowedRequest, requester } from './http/access.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
