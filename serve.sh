@@ -4,7 +4,7 @@
 cd "$(dirname "$0")"
 FAILED="$HOME/.agentview/web-build-failed"
 if [ package-lock.json -nt node_modules/.installed ]; then
-  npm install --no-audit --no-fund && touch node_modules/.installed
+  npm install --no-save --no-audit --no-fund && touch node_modules/.installed
 fi
 rm -rf web/dist-next
 if npx -w web vite build --outDir dist-next --emptyOutDir --logLevel warn; then
