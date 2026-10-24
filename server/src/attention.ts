@@ -140,7 +140,8 @@ export function merge(found: AttentionItem[], now = Date.now()) {
     } else it.since = since;
   }
   for (const id of seen.keys()) if (!current.has(id) && now - (seen.get(id) ?? 0) > FORGET) seen.delete(id);
-  for (const id of dismissed) if (!current.has(id)) dismissed.delete(id);
+  // A dismissal outlives a missed poll; it goes when the item has been gone for the forget period.
+  for (const id of dismissed) if (!current.has(id) && !seen.has(id)) dismissed.delete(id);
   items = [...current.values()].filter((it) => !dismissed.has(it.id)).sort((a, b) => b.since - a.since);
   return fresh;
 }

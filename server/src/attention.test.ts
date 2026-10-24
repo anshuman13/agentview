@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { commitItem, deployItems, itemsFor, merge, sentryItems } from './attention.js';
+import { describe, expect, it, vi } from 'vitest';
+import { commitItem, deployItems, dismissAttention, itemsFor, merge, sentryItems } from './attention.js';
+
+vi.mock('node:fs/promises', async (orig) => ({ ...(await orig<typeof import('node:fs/promises')>()), writeFile: vi.fn(async () => {}) }));
 import type { PullRequest } from '../../shared/protocol.js';
 
 const pr = (n: number, p: Partial<PullRequest> = {}): PullRequest => ({
@@ -100,5 +102,20 @@ describe('stale and deploy items', () => {
     const items = deployItems('/w/r', status, 0);
     expect(items.map((i) => i.title)).toEqual(['prod: Build failed (abcdef1)']);
     expect(items[0].prompt).toContain('roll back to abcdef1');
+  });
+});
+
+describe('dismissals', () => {
+  it('survive a poll that misses the item and end when it has been gone for a week', () => {
+    const day = 24 * 60 * 60_000;
+    const item = () => itemsFor('/w/r', [pr(9, { checks: 'failure' })], []);
+    const id = item()[0].id;
+    expect(merge(item(), 0).map((i) => i.id)).toContain(id);
+    dismissAttention(id);
+    merge([], day);
+    merge(item(), 2 * day);
+    expect(merge(item(), 2 * day).map((i) => i.id)).not.toContain(id);
+    merge([], 10 * day);
+    expect(merge(item(), 10 * day).map((i) => i.id)).toContain(id);
   });
 });

@@ -10,7 +10,7 @@ import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { advance, loopOff, planStep, type LoopStep } from './loop.js';
-import { USAGE, clock, describeLoop, limitReset, parseLoop } from './repeat.js';
+import { USAGE, after, clock, describeLoop, limitReset, parseLoop } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, stopAgents, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
@@ -615,7 +615,7 @@ export class AgentSession {
     const r = this.state.session.repeat;
     const at = Math.min(r?.nextAt ?? Infinity, r?.until ?? Infinity);
     if (!r || at === Infinity) return;
-    this.repeatTimer = setTimeout(() => this.fireRepeat(), Math.max(0, at - Date.now()));
+    this.repeatTimer = after(at, () => this.fireRepeat());
   }
 
   setLoop(on: boolean, max?: number) {
@@ -712,11 +712,11 @@ export class AgentSession {
     for (const c of this.crons.filter((x) => !x.recurring)) {
       const at = fireTime(c.schedule, since);
       if (at === null) continue;
-      setTimeout(() => {
+      after(at + 5000, () => {
         if (this.closed || this.wokeAt > since || this.crons.some((x) => !x.recurring && x.prompt === c.prompt && x.schedule !== c.schedule)) return;
         this.system('Compacting dropped the scheduled wakeup, so AgentView sent it');
         void this.prompt(c.prompt);
-      }, Math.max(0, at - Date.now()) + 5000);
+      });
     }
   }
 
