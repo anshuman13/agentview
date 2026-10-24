@@ -145,6 +145,7 @@ export type LiveChat = {
   mcpFailed?: number;
   last?: string;
   edits?: { add: number; del: number };
+  cost?: number;
 };
 
 export type AttentionKind = 'ci' | 'changes' | 'review' | 'ready' | 'issue' | 'stale' | 'commit' | 'sentry' | 'deploy';

@@ -43,7 +43,8 @@ It uses the Claude Code CLI you have installed and its login.
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
 and notes. The timeline shows one card per prompt: Claude's final reply, the files changed with line counts,
 commands run and the first error of each failed one, commits, subagents, these notes and the steps behind them.
-Switch to the transcript for every message and step in order.
+A finished card ends with the turn's cost and how long it took; a chat row in the Chats view shows the chat's
+cost so far. Switch to the transcript for every message and step in order.
 
 - Sending while Claude works stops whatever it is doing, including an open permission or question, and continues
   with your message

@@ -15,7 +15,9 @@
 .sessions .tree .row.live .lines .l2 .edits { flex: none; padding-right: 10px; font-size: 11px; font-variant-numeric: tabular-nums; }
 .sessions .tree .row.live .lines .l2 .edits .add { color: var(--diff-add, #89d185); }
 .sessions .tree .row.live .lines .l2 .edits .del { color: var(--diff-del, #f14c4c); }
-.sessions .tree .row.live.two:has(.acts):hover .lines .l2 .edits { display: none; }
+.sessions .tree .row.live .lines .l2 .cost { flex: none; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--fg-faint, #6e6e6e); }
+.sessions .tree .row.live .lines .l2 .cost:last-child { padding-right: 10px; }
+.sessions .tree .row.live.two:has(.acts):hover .lines .l2 .edits, .sessions .tree .row.live.two:has(.acts):hover .lines .l2 .cost { display: none; }
 .gh-state { flex: none; display: inline-flex; align-items: center; gap: 6px; padding-right: 10px; font-size: 11px; }
 .sessions .tree .row.live.two:has(.acts):hover .lines .l2 .gh-state { display: none; }
 @media (max-width: 900px) {

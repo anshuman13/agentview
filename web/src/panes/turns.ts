@@ -17,6 +17,8 @@ export type Turn = {
   stopping?: boolean;
   queued?: boolean;
   reply?: { id: string; text: string; streaming: boolean; at: number };
+  ended?: number;
+  cost?: number;
   files: FileFact[];
   commands: CommandFact[];
   commits: CommitFact[];
@@ -43,6 +45,29 @@ export function errorLine(text: string) {
   return text.split('\n').map((l) => l.trim()).find((l) => l && !/^Exit code \d+$/.test(l)) ?? 'Failed';
 }
 
+export function elapsed(ms: number) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+export const money = (usd: number) => (usd < 0.005 ? '<$0.01' : `$${usd.toFixed(2)}`);
+
+// A result carries the running total of its session, which starts over after /clear.
+const costRise = (costUsd: number, last: number) => (costUsd >= last ? costUsd - last : costUsd);
+
+export function chatCost(events: ChatEvent[]) {
+  let last = 0;
+  let total = 0;
+  for (const e of events) {
+    if (e.kind !== 'result' || e.costUsd <= 0) continue;
+    total += costRise(e.costUsd, last);
+    last = e.costUsd;
+  }
+  return total;
+}
+
 function newTurn(id: string, prompt: string, at: number, phase = false): Turn {
   return { id, prompt, phase, at, files: [], commands: [], commits: [], agents: [], notes: [], blocked: [], steps: [] };
 }
@@ -60,6 +85,8 @@ export function buildTurns(events: ChatEvent[]) {
   let next: string[] = [];
   let advisor = 0;
   let lastTool: ToolUse | undefined;
+  // -1 once restored results (cost 0) came first: the next live total spans those turns and is not one turn's cost.
+  let lastCost: number | null = null;
   const current = () => turns.at(-1) ?? turns[turns.push(newTurn('start', '', events[0]?.at ?? 0)) - 1];
 
   for (const e of events) {
@@ -79,6 +106,14 @@ export function buildTurns(events: ChatEvent[]) {
     if (e.kind === 'assistant' && !e.parent && e.text.trim()) turn.reply = { id: e.id, text: e.text.trim(), streaming: e.streaming, at: e.at };
     if (e.kind === 'plan') next = e.next;
     if (e.kind === 'blocked') turn.blocked.push(e);
+    if (e.kind === 'result') {
+      turn.ended = e.at;
+      if (e.costUsd > 0) {
+        const cost = lastCost === null ? e.costUsd : lastCost < 0 ? 0 : costRise(e.costUsd, lastCost);
+        if (cost > 0) turn.cost = (turn.cost ?? 0) + cost;
+        lastCost = e.costUsd;
+      } else if (lastCost === null) lastCost = -1;
+    }
     if (e.kind === 'system' && (e.text.startsWith('Compact') || e.text.startsWith('Loop ') || e.text.startsWith('Usage limit'))) {
       turn.notes.push({ id: e.id, text: e.text, kind: /fail|limit/i.test(e.text) ? 'important' : 'done' });
     }
