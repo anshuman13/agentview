@@ -69,8 +69,7 @@
 .mcp-login { display: flex; flex-direction: column; gap: var(--sp-3); align-items: flex-start; }
 
 .mcp-tools-head { display: flex; align-items: center; gap: var(--sp-3); height: var(--size-xl); border-top: 1px solid var(--border); padding-top: var(--sp-4); }
-.mcp-tools-head input { width: 120px; height: var(--size-row); padding: 0 var(--sp-4); font-size: var(--fs-sm); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-.mcp-tools-head input:focus { outline: 0; border-color: var(--accent); }
+.mcp-tools-head input { width: 120px; height: var(--size-row); padding: 0 var(--sp-4); font-size: var(--fs-sm); }
 .mcp-tools, .mcp-calls { display: flex; flex-direction: column; gap: var(--sp-1); }
 .mcp-tools { margin-top: var(--sp-2); }
 .mcp-tool { padding: var(--sp-3) var(--sp-4); border-radius: var(--radius-sm); }
@@ -111,12 +110,8 @@
 .mcp-field .req { color: var(--err); }
 .mcp-field .ty { margin-left: auto; font-size: var(--fs-2xs); color: var(--fg-muted); }
 .mcp-field .d { font-size: var(--fs-xs); color: var(--fg-muted); line-height: var(--lh-snug); }
-.mcp-field input:not([type='checkbox']), .mcp-field textarea, .mcp-field select {
-  width: 100%; min-width: 0; height: var(--size-lg); padding: 0 var(--sp-4); font-size: var(--fs-sm); color: var(--fg);
-  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
-}
+.mcp-field input:not([type='checkbox']), .mcp-field textarea, .mcp-field select { width: 100%; min-width: 0; height: var(--size-lg); padding: 0 var(--sp-4); font-size: var(--fs-sm); }
 .mcp-field textarea { height: auto; min-height: 56px; padding: var(--sp-3) var(--sp-4); font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--lh); resize: vertical; }
-.mcp-field :is(input, textarea, select):focus { outline: 0; border-color: var(--accent); }
 .mcp-field.bool { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .mcp-field.bool input { margin: 0; accent-color: var(--accent); }
 .mcp-field.bool .k { flex: 1; }
