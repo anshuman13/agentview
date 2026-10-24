@@ -1,14 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const files = vi.hoisted(() => ({ observe: '' }));
+const files = vi.hoisted(() => ({ observe: '', tmp: '' }));
 vi.mock('node:fs/promises', async (orig) => ({
   ...(await orig<typeof import('node:fs/promises')>()),
   readFile: vi.fn(async () => {
-    if (!files.observe) throw new Error('ENOENT');
+    if (!files.observe) throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
     return files.observe;
   }),
   mkdir: vi.fn(async () => undefined),
-  writeFile: vi.fn(async (_p: string, data: string) => void (files.observe = data)),
+  writeFile: vi.fn(async (_p: string, data: string) => void (files.tmp = data)),
+  rename: vi.fn(async () => void (files.observe = files.tmp)),
 }));
 import { pushNtfy, stallWatch } from './notify.js';
 
@@ -31,6 +32,7 @@ describe('pushNtfy', () => {
       method: 'POST',
       headers: { Title: 'Claude finished in repo', Click: 'http://localhost:5173/?chat=c1' },
       body: 'Fix the thing\nDone',
+      signal: expect.any(AbortSignal),
     });
   });
 
@@ -43,14 +45,11 @@ describe('pushNtfy', () => {
     expect(init.body).toBe('Allow?');
   });
 
-  it('makes a random topic once and keeps it in observe.json', async () => {
-    files.observe = '{"sentryToken":""}';
-    expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(true);
-    const saved = JSON.parse(files.observe) as { ntfy: string; sentryToken: string };
-    expect(saved.ntfy).toMatch(/^agentview-[0-9a-f]{20}$/);
-    expect(saved.sentryToken).toBe('');
-    await pushNtfy('t', 's', 'b', 'http://x');
-    expect(sent.mock.calls.map((c) => c[0])).toEqual([`https://ntfy.sh/${saved.ntfy}`, `https://ntfy.sh/${saved.ntfy}`]);
+  it('sends nothing without a topic', async () => {
+    files.observe = '{"sentryToken":"secret"}';
+    expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(false);
+    expect(files.observe).toBe('{"sentryToken":"secret"}');
+    expect(sent).not.toHaveBeenCalled();
   });
 
   it('sends nothing when the topic is off', async () => {

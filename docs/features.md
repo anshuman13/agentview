@@ -83,10 +83,9 @@ clicking it opens that chat in the browser (a GitHub item opens the Chats view).
 The browser shows its own notification while the tab is hidden; clicking it opens the chat. The bell in the status
 bar turns browser notifications on or off.
 
-For a phone in the background, the same notifications go to an [ntfy](https://ntfy.sh) topic. The first start
-makes a random topic, saves it as `ntfy` in `~/.agentview/observe.json` and prints it; subscribe to it in the ntfy
-app. Set `AGENTVIEW_NTFY` or that key to your own topic or a full URL on your own server, or to `off`. Tapping the
-push opens the chat.
+For a phone in the background, the same notifications can go to an [ntfy](https://ntfy.sh) topic. Push is off
+until you set `AGENTVIEW_NTFY`, or `ntfy` in `~/.agentview/observe.json`, to a topic name or a full URL on your own
+server, then subscribe to it in the ntfy app. Tapping the push opens the chat.
 
 A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot
 in the chat list until its next message.

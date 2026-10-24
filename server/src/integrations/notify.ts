@@ -1,6 +1,5 @@
 import fs from 'node:fs';
-import { randomBytes } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { LiveChat, ServerMessage } from '../../../shared/protocol.js';
@@ -68,16 +67,11 @@ export function notifyStall(chat: LiveChat) {
   post(`Claude is quiet in ${path.basename(chat.cwd)}`, chat.title, `No activity for ${STALL_MS / 60_000} minutes`, `${APP}/?chat=${chat.id}`);
 }
 
-// A topic name on ntfy.sh or a full URL, from the environment or the ntfy key in observe.json.
-// Without either, a random topic is made once and saved there; "off" disables the push.
+// A topic name on ntfy.sh or a full URL, from the environment or the ntfy key in observe.json. Off without either.
 export async function ntfyTopic() {
   if (process.env.AGENTVIEW_NTFY) return process.env.AGENTVIEW_NTFY;
-  const cfg: Record<string, unknown> = await readFile(OBSERVE, 'utf8').then(JSON.parse).catch(() => ({}));
-  if (typeof cfg.ntfy === 'string' && cfg.ntfy) return cfg.ntfy;
-  const topic = `agentview-${randomBytes(10).toString('hex')}`;
-  await mkdir(path.dirname(OBSERVE), { recursive: true });
-  await writeFile(OBSERVE, JSON.stringify({ ...cfg, ntfy: topic }, null, 2));
-  return topic;
+  const cfg = await readFile(OBSERVE, 'utf8').then(JSON.parse).catch(() => ({}));
+  return typeof cfg?.ntfy === 'string' && cfg.ntfy ? cfg.ntfy : 'off';
 }
 
 async function ntfyUrl() {
@@ -92,6 +86,6 @@ const header = (s: string) => (/^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffe
 export async function pushNtfy(title: string, subtitle: string, body: string, url: string) {
   const to = await ntfyUrl();
   if (!to) return false;
-  await fetch(to, { method: 'POST', headers: { Title: header(title), Click: url }, body: [subtitle, body].filter(Boolean).join('\n') }).catch(() => {});
+  await fetch(to, { method: 'POST', headers: { Title: header(title), Click: url }, body: [subtitle, body].filter(Boolean).join('\n'), signal: AbortSignal.timeout(10_000) }).catch(() => {});
   return true;
 }

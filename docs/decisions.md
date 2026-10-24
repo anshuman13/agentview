@@ -19,4 +19,4 @@ do not depend on the CLI's own jobs.
 **Chrome through a relay.** The relay keeps the DevTools connection while the server restarts, so Chrome's Allow
 dialog does not come back.
 
-**ntfy for phone pushes.** No app of our own to publish; a random topic is generated on first start.
+**ntfy for phone pushes.** No app of our own to publish. Off until a topic is set, since a public ntfy server would get chat text without the user choosing it.
