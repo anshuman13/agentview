@@ -25,7 +25,6 @@ const Loading = () => <div style={{ margin: 'auto', padding: 24, fontSize: 13, c
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 import { touch } from './touch';
-import { ReadAloud } from './panes/Voice';
 
 type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
@@ -532,7 +531,6 @@ export function App() {
               <button className="more-project" title={`${session.cwd}\nStart a chat in another repo`} onClick={act(() => setUi({ repoPicker: true }))}>
                 <Icon name="folder" small /><span>{project}</span>
               </button>
-              <ReadAloud />
               {canNotify && (
                 <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
                   <Icon name={notifying ? 'bell' : 'bell-slash'} />

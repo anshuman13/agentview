@@ -5,7 +5,6 @@ import { Confirm, type ConfirmRequest } from '../Confirm';
 import { BlockedCard, Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
 import { clock, loopLabel } from './Composer';
-import { ReadAloud } from './Voice';
 import { touch } from '../touch';
 import { Row, Transcript } from './Transcript';
 import { FileIcon } from './Explorer';
@@ -124,17 +123,16 @@ export function Brief() {
           <button className={`tl-view tl-tab ${showAgents ? '' : 'active'}`} title={showAgents ? 'Show the chat' : full ? 'Show the timeline' : 'Show the full transcript'} onClick={() => (showAgents ? setShowAgents(false) : pick(!full))}>
             {full ? 'Transcript' : 'Timeline'}{!showAgents && <Icon name="arrow-swap" small />}
           </button>
-          {(agents.length > 0 || showAgents) && (
-            <button className={`tl-view tl-tab desktop-only ${showAgents ? 'active' : ''}`} title="Show the agents" onClick={() => { setShowAgents(true); if (showAgents) setAgentSel(null); }}>
-              Agents{agentsRunning > 0 ? <Icon name="loading" small spin /> : <span className="count">{agents.length}</span>}
-            </button>
-          )}
           <span className="spacer" />
           <span className="mobile-only"><AgentsChip /></span>
           <InboxChip />
           {macName && <span className="mobile-only mac-here"><Icon name="vm" small /> {macName}</span>}
           {extras && <span className="extras">{extras}</span>}
-          <span className="desktop-only"><ReadAloud speak /></span>
+          {(agents.length > 0 || showAgents) && (
+            <button className={`tl-view tl-tab desktop-only ${showAgents ? 'active' : ''}`} title="Show the agents" onClick={() => { setShowAgents(true); if (showAgents) setAgentSel(null); }}>
+              Agents{agentsRunning > 0 ? <Icon name="loading" small spin /> : <span className="count">{agents.length}</span>}
+            </button>
+          )}
         </div>
         {since?.chat === sessionId && (
           <button className="tl-recap" title="Tap to dismiss" onClick={dismissSince}><Icon name="history" small />{since.text}</button>
