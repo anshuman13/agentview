@@ -5,9 +5,12 @@ A web UI for Claude Code, built on the Agent SDK. VS Code layout on the desktop,
 ## Run
 
 ```bash
+brew install oven-sh/bun/bun
 npm install
 ./start.sh
 ```
+
+The server and the Chrome relay run on [Bun](https://bun.sh); the web app builds with vite on Node.
 
 `start.sh` builds and opens `dist/AgentView.app`, a menu bar app that runs everything: the server on :7777, vite on
 :5173 and a small Chrome relay on :7779. It restarts any of them that exit, keeps the Mac awake, and has menu items
@@ -225,7 +228,7 @@ Then paste this into `claude`:
 
 Steps for Claude:
 
-1. `brew install node git uv`, then `npm install` in the repo
+1. `brew install node git uv oven-sh/bun/bun`, then `npm install` in the repo
 2. Unpack `~/Downloads/mini-config.tgz` into `~` without overwriting existing files, then delete it
 3. Run `./start.sh`
 4. Check that `curl -s http://localhost:5173/api/connect` lists a NetBird address

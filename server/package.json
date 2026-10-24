@@ -3,18 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "AGENTVIEW_DEV_WEB=5173 tsx watch src/index.ts",
-    "serve": "AGENTVIEW_DEV_WEB=5173 tsx src/index.ts",
+    "dev": "AGENTVIEW_DEV_WEB=5173 bun --watch src/index.ts",
+    "serve": "AGENTVIEW_DEV_WEB=5173 bun src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js"
+    "start": "bun src/index.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "latest",
-    "node-pty": "^1.0.0",
+    "@anthropic-ai/claude-agent-sdk": "0.3.292",
     "ws": "^8.18.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.4",
     "@types/node": "^22.10.0",
     "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",

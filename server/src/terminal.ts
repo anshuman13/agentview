@@ -1,9 +1,8 @@
 import path from 'node:path';
-import { spawn, type IPty } from 'node-pty';
 import { WebSocket } from 'ws';
 
 const MAX = 200_000;
-type Term = { id: string; chat: string; name: string; pty: IPty; buf: string; socks: Set<WebSocket> };
+type Term = { id: string; chat: string; name: string; proc: Bun.Subprocess; buf: string; socks: Set<WebSocket> };
 const terms = new Map<string, Term>();
 let seq = 0;
 
@@ -15,23 +14,26 @@ export function createTerminal(chat: string, cwd: string) {
   const label = (n: number) => (n === 1 ? path.basename(shell) : `${path.basename(shell)} ${n}`);
   let n = 1;
   while (used.has(label(n))) n++;
-  const pty = spawn(shell, ['-l'], {
-    name: 'xterm-256color',
-    cols: 80,
-    rows: 24,
+  const utf8 = new TextDecoder();
+  const t: Term = { id: String(++seq), chat, name: label(n), proc: null!, buf: '', socks: new Set() };
+  t.proc = Bun.spawn([shell, '-l'], {
     cwd,
-    env: { ...process.env, TERM: 'xterm-256color' } as Record<string, string>,
+    env: { ...process.env, TERM: 'xterm-256color' },
+    terminal: {
+      cols: 80,
+      rows: 24,
+      data(_term, bytes) {
+        const d = utf8.decode(bytes, { stream: true });
+        t.buf += d;
+        if (t.buf.length > MAX) {
+          const nl = t.buf.indexOf('\n', t.buf.length - MAX);
+          t.buf = t.buf.slice(nl < 0 ? t.buf.length - MAX : nl + 1);
+        }
+        t.socks.forEach((ws) => ws.readyState === WebSocket.OPEN && ws.send(d));
+      },
+    },
   });
-  const t: Term = { id: String(++seq), chat, name: label(n), pty, buf: '', socks: new Set() };
-  pty.onData((d) => {
-    t.buf += d;
-    if (t.buf.length > MAX) {
-      const nl = t.buf.indexOf('\n', t.buf.length - MAX);
-      t.buf = t.buf.slice(nl < 0 ? t.buf.length - MAX : nl + 1);
-    }
-    t.socks.forEach((ws) => ws.readyState === WebSocket.OPEN && ws.send(d));
-  });
-  pty.onExit(() => {
+  void t.proc.exited.then(() => {
     terms.delete(t.id);
     t.socks.forEach((ws) => ws.close());
   });
@@ -40,7 +42,7 @@ export function createTerminal(chat: string, cwd: string) {
 }
 
 export function closeTerminal(id: string) {
-  terms.get(id)?.pty.kill();
+  terms.get(id)?.proc.kill();
   terms.delete(id);
   return { ok: true };
 }
@@ -59,10 +61,10 @@ export function attachTerminal(ws: WebSocket, id: string) {
     } catch {
       return;
     }
-    if (m.t === 'i' && typeof m.d === 'string') t.pty.write(m.d);
+    if (m.t === 'i' && typeof m.d === 'string') t.proc.terminal?.write(m.d);
     if (m.t === 'r') {
       const dim = (v: unknown) => Math.min(1000, Math.max(2, Math.floor(Number(v)) || 0));
-      if (dim(m.c) > 2 || dim(m.r) > 2) t.pty.resize(dim(m.c), dim(m.r));
+      if (dim(m.c) > 2 || dim(m.r) > 2) t.proc.terminal?.resize(dim(m.c), dim(m.r));
     }
     if (m.t === 'c') t.buf = t.buf.slice(t.buf.lastIndexOf('\n') + 1);
   });
