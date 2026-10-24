@@ -87,16 +87,14 @@
 .sessions .lines .l2 { gap: var(--sp-4); font-size: var(--fs-sm); color: var(--fg-muted); }
 .sessions .lines .l2 .sub { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sessions .lines .l2 .sub.fixing { flex: 0 1 auto; white-space: nowrap; color: var(--accent); }
-.sessions .lines .l2 :is(.edits, .cost) { flex: none; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.sessions .lines .l2 .edits { flex: none; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 .sessions .lines .l2 .edits { padding-right: var(--sp-5); }
 .sessions .lines .l2 .edits .add { color: var(--diff-add); }
 .sessions .lines .l2 .edits .del { color: var(--diff-del); }
-.sessions .lines .l2 .cost { color: var(--fg-faint); }
-.sessions .lines .l2 .cost:last-child { padding-right: var(--sp-5); }
-.sessions .row.live.two:has(.acts):hover .l2 :is(.edits, .cost, .gh-state) { display: none; }
+.sessions .row.live.two:has(.acts):hover .l2 :is(.edits, .gh-state) { display: none; }
 .gh-state { flex: none; display: inline-flex; align-items: center; gap: var(--sp-3); padding-right: var(--sp-5); font-size: var(--fs-xs); }
 
-.sessions.chats .row.project .acts { display: inline-flex; }
+.sessions.chats .row.project .acts { display: inline-flex; margin-left: 0; }
 .sessions.chats .row.project .acts .icon-btn, .sessions.chats .row.project .acts .icon-btn .codicon { color: var(--accent); }
 .sessions.chats .row.project:has(.acts):hover .count { display: inline; }
 .sessions.chats .row .meta { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-1); font-weight: 400; }
