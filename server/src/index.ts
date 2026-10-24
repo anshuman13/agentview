@@ -12,7 +12,7 @@ import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerm
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome.js';
 import { getSessionInfo, listSessions, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession } from './session.js';
-import { notifyAway, notifyStall, stallWatch } from './notify.js';
+import { notifyAway, notifyStall, ntfyTopic, stallWatch } from './notify.js';
 import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './mcp.js';
 import type { McpServerDef } from './mcpClient.js';
 import { listBin, removeSession, restoreSession } from './bin.js';
@@ -664,5 +664,6 @@ function handleCommand(client: Client, msg: ClientMessage) {
 
 server.listen(PORT, () => {
   console.log(`agentview on http://localhost:${PORT} for ${PROJECT}`);
+  void ntfyTopic().then((t) => console.log(t === 'off' ? 'push off' : `push: subscribe to ntfy topic ${t}`));
   void connectChrome();
 });

@@ -143,7 +143,10 @@ describe('fixCi', () => {
     const started = new Map<string, string>();
     const other = itemsFor('/w/r', [pr(3, { checks: 'failure' })], []);
     await fixCi(other, ['x'], fix, started);
+    await fixCi(other, false, fix, started);
     expect(fix).not.toHaveBeenCalled();
+    await fixCi(other, [], fix, started);
+    expect(fix).toHaveBeenCalledTimes(1);
     await fixCi(other, ['r'], fix, started);
     await fixCi(other, ['r'], fix, started);
     expect(fix).toHaveBeenCalledTimes(1);
