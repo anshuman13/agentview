@@ -140,7 +140,8 @@ Repos without settings get a guess from `centro.yaml` or `.sentryclirc` and the 
 ## Notifications
 
 When a chat asks a question, needs a permission or finishes a turn, AgentView notifies you. On the Mac the server
-shows a system notification with a sound if no window is viewing that chat, at most one per chat every 30 seconds.
+shows a system notification with a sound if no window is viewing that chat, at most one per chat every 30 seconds;
+clicking it opens that chat in the browser (a GitHub item opens the Chats view).
 The browser shows its own notification while the tab is hidden; clicking it opens the chat. The bell in the status
 bar turns browser notifications on or off.
 

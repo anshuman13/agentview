@@ -6,6 +6,7 @@ import type { LiveChat, ServerMessage } from '../../shared/protocol.js';
 
 const last = new Map<string, number>();
 const FIFO = path.join(os.homedir(), '.agentview/notify.fifo');
+const APP = 'http://localhost:5173';
 
 function detail(m: ServerMessage) {
   if (m.type === 'pending') return m.request.kind === 'question' ? m.request.questions[0]?.question ?? 'Claude has a question' : m.request.title;
@@ -20,14 +21,15 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null) {
   if (!chat || Date.now() - (last.get(chat.id) ?? 0) < 30_000) return;
   last.set(chat.id, Date.now());
   const title = `Claude ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
-  post(title, chat.title, body.slice(0, 200));
+  post(title, chat.title, body.slice(0, 200), `${APP}/?chat=${chat.id}`);
 }
 
-export function post(title: string, subtitle: string, body: string) {
+// The menu bar app opens url when the notification is clicked; the osascript fallback has no click action.
+export function post(title: string, subtitle: string, body: string, url = `${APP}/?view=chats`) {
   try {
     const fd = fs.openSync(FIFO, fs.constants.O_WRONLY | fs.constants.O_NONBLOCK);
     try {
-      fs.writeSync(fd, JSON.stringify({ title, subtitle, body }) + '\n');
+      fs.writeSync(fd, JSON.stringify({ title, subtitle, body, url }) + '\n');
     } finally {
       fs.closeSync(fd);
     }
