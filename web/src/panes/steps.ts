@@ -10,7 +10,7 @@ export type Item =
   | { kind: 'assistant'; id: string; text: string; streaming: boolean }
   | { kind: 'system'; id: string; text: string }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
-  | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string }
+  | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string; denied?: boolean }
   | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; running: boolean; steps: Item[] }
   | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> };
 
@@ -19,6 +19,9 @@ export type Label = { verb: string; object: string; mono?: boolean; cmd?: string
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 
 export const firstLine = (text: string) => text.trim().split('\n')[0] ?? '';
+
+const DENIED = /^(The user doesn't want to proceed|User denied this action|aborted\b|Session closed|The user sent a new message instead|Claude exited before this was answered)/;
+export const denied = (result?: ToolResult) => Boolean(result?.isError && DENIED.test(result.text.trim()));
 
 export function relPath(p: string, cwd: string) {
   if (!cwd) return p;
@@ -103,12 +106,12 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
       if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result, running: !result || (resumed.get(e.id) ?? 0) > result.at, steps: itemsFrom(children.get(e.id) ?? [], results, children, resumed) });
       else if (!count || !path) items.push({ kind: 'step', id: e.id, use: e, result });
       else {
-        const error = result?.isError ? firstLine(result.text) : undefined;
+        const error = result?.isError ? (denied(result) ? 'Denied' : firstLine(result.text)) : undefined;
         const prev = items[items.length - 1];
         if (!error && prev?.kind === 'file' && prev.path === path && !prev.error) {
           prev.uses.push(e);
           prev.count = { add: prev.count.add + count.add, del: prev.count.del + count.del };
-        } else items.push({ kind: 'file', id: e.id, path, count: error ? { add: 0, del: 0 } : count, uses: [e], error });
+        } else items.push({ kind: 'file', id: e.id, path, count: error ? { add: 0, del: 0 } : count, uses: [e], error, ...(denied(result) && { denied: true }) });
       }
     }
   }

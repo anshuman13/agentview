@@ -39,6 +39,7 @@
 .tr-step.t-agent { --tone: var(--agent, #a78bfa); }
 .tr-step .tr-mark, .tr-verb { color: var(--tone); }
 .tr-step.err .tr-mark { color: var(--err, #f14c4c); }
+.tr-step.denied .tr-mark, .tr-step.denied .tr-err, .tr-file.denied .tr-err { color: var(--fg-faint, #6e6e6e); }
 .tr-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-obj { color: var(--fg, #cccccc); }
 .tr-cmd {

@@ -49,6 +49,22 @@ describe('buildTurns', () => {
     expect(t.commits).toEqual([{ hash: '1a2b3c4', subject: 'Fix it' }]);
   });
 
+  it('shows a denied tool as denied, not failed', () => {
+    const push = tool('Bash', { command: 'git push', description: 'Push to main' });
+    const edit = tool('Edit', { file_path: '/w/a.ts', old_string: 'x', new_string: 'y' });
+    const fable = tool('Agent', { subagent_type: 'big-bro', description: 'Check the design' });
+    const { turns } = buildTurns([
+      user('go'), push, result(push, "The user doesn't want to proceed with this tool use. The tool use was rejected.", true),
+      edit, result(edit, 'User denied this action in the AgentView UI.', true),
+      fable, result(fable, 'aborted', true),
+    ]);
+    const t = turns[0];
+    expect(t.commands).toEqual([{ id: push.id, label: 'Push to main', denied: true }]);
+    expect(t.files).toEqual([]);
+    expect(t.agents[0].state).toBe('denied');
+    expect(t.steps.filter((s) => s.kind === 'file')).toMatchObject([{ path: '/w/a.ts', error: 'Denied', denied: true }]);
+  });
+
   it('lists subagents with their state and keeps their steps in the turn that launched them', () => {
     const agent = tool('Agent', { description: 'Review', subagent_type: 'general-purpose' });
     const child = tool('Edit', { file_path: '/w/c.ts', old_string: 'a', new_string: 'b' }, agent.id);

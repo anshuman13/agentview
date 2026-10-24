@@ -4,7 +4,7 @@ import { Icon } from '../Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from './Explorer';
-import { buildTranscript, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
+import { buildTranscript, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { plural } from './util';
 import type { ChatEvent } from '../../../shared/protocol';
 import '../transcript.css';
@@ -92,7 +92,7 @@ function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolea
 function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult; cwd: string; settled?: boolean }) {
   const [open, setOpen] = useState(false);
   const { verb, object, mono, cmd } = stepLabel(use.name, use.input, cwd);
-  const state = !result ? (settled ? 'idle' : 'pending') : result.isError ? 'err' : 'ok';
+  const state = !result ? (settled ? 'idle' : 'pending') : denied(result) ? 'denied' : result.isError ? 'err' : 'ok';
   const dur = result ? duration(result.at - use.at) : '';
   return (
     <div className={`tr-step tr-act t-${stepTone(use.name)} ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
@@ -101,6 +101,7 @@ function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult
       <span className="tr-dur">{dur}</span>
       {cmd && !open && <span className="tr-cmd" title={cmd}>$ {cmd.replace(/\s*\n\s*/g, ' ⏎ ')}</span>}
       {state === 'err' && !open && <span className="tr-err">{firstLine(result!.text) || 'Failed'}</span>}
+      {state === 'denied' && !open && <span className="tr-err">Denied</span>}
       {open && <Detail use={use} result={result} />}
     </div>
   );
@@ -111,7 +112,7 @@ function Detail({ use, result }: { use: ToolUse; result?: ToolResult }) {
   return (
     <div className="tr-detail" onClick={(e) => e.stopPropagation()}>
       <pre>{input}</pre>
-      {result && <pre className={result.isError ? 'err' : ''}>{result.text || '(no output)'}</pre>}
+      {result && <pre className={result.isError && !denied(result) ? 'err' : ''}>{result.text || '(no output)'}</pre>}
     </div>
   );
 }
@@ -121,7 +122,7 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
   const cut = rel.lastIndexOf('/');
   const name = rel.slice(cut + 1);
   return (
-    <div className={`tr-file tr-act ${it.error ? 'err' : ''}`} title={rel} onClick={() => setUi({ openFile: rel, follow: false })}>
+    <div className={`tr-file tr-act ${it.denied ? 'denied' : it.error ? 'err' : ''}`} title={rel} onClick={() => setUi({ openFile: rel, follow: false })}>
       <FileIcon name={name} />
       <span className="tr-path"><span className="tr-dir">{cut >= 0 ? rel.slice(0, cut + 1) : ''}</span>{name}</span>
       {it.error ? (
@@ -139,12 +140,12 @@ function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: stri
   const desc = typeof use.input.description === 'string' && use.input.description ? use.input.description : 'Sub-agent';
   const type = typeof use.input.subagent_type === 'string' ? use.input.subagent_type : '';
   const dur = result ? duration(result.at - use.at) : '';
-  const state = running ? 'running' : result?.stopped ? 'stopped' : result?.isError ? 'failed' : `done${dur ? ` ${dur}` : ''}`;
+  const state = running ? 'running' : result?.stopped ? 'stopped' : denied(result) ? 'denied' : result?.isError ? 'failed' : `done${dur ? ` ${dur}` : ''}`;
   const shown = open ? steps : running ? steps.slice(-3) : [];
   const canOpen = steps.length > 0 || Boolean(result);
   return (
     <div className="tr-agent-box tr-act">
-      <div className={`tr-agent ${running ? 'running' : result?.isError ? 'err' : 'done'} ${open ? 'open' : ''}`} onClick={() => canOpen && setOpen((v) => !v)}>
+      <div className={`tr-agent ${running ? 'running' : result?.isError && !denied(result) ? 'err' : 'done'} ${open ? 'open' : ''}`} onClick={() => canOpen && setOpen((v) => !v)}>
         <span className="tr-mark"><i className="tr-ring" /></span>
         <span className="tr-text" title={desc}>
           {desc}
