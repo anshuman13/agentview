@@ -10,7 +10,7 @@
 .ex-editors .ex-row { padding-left: 4px; }
 .ex-empty { padding: 2px 8px 4px; color: var(--fg-muted); font-size: 12px; }
 .ex-close { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); visibility: hidden; color: var(--fg-muted); }
-.ex-close:hover { background: var(--bg-hover); color: var(--fg); }
+.ex-close:hover { background: var(--hover); color: var(--fg); }
 .ex-row:hover .ex-close, .ex-row.selected .ex-close { visibility: visible; }
 .ex-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-muted); font-size: 12px; }
 
@@ -27,8 +27,8 @@
   position: relative; height: 22px; display: flex; align-items: center; gap: 4px; padding-right: 8px;
   cursor: pointer; white-space: nowrap; color: var(--fg); user-select: none;
 }
-.ex-row:hover { background: var(--bg-hover); }
-.ex-row.selected { background: var(--bg-hover); }
+.ex-row:hover { background: var(--hover); }
+.ex-row.selected { background: var(--hover); }
 .ex-tree:focus .ex-row.selected { background: var(--accent-soft); color: var(--fg); outline: 1px solid var(--accent); outline-offset: -1px; }
 .ex-row .icon { color: var(--fg-muted); }
 .ex-row.ignored { color: var(--fg-muted); }

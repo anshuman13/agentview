@@ -21,7 +21,7 @@ const Observe = lazy(() => import('./panes/Observe').then((m) => ({ default: m.O
 const Deploy = lazy(() => import('./panes/Deploy').then((m) => ({ default: m.Deploy })));
 const McpPage = lazy(() => import('./panes/McpStatus').then((m) => ({ default: m.McpPage })));
 const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
-const Loading = () => <div style={{ margin: 'auto', padding: 24, fontSize: 13, color: 'var(--fg-faint, #6e6e6e)' }}>Loading…</div>;
+const Loading = () => <div style={{ margin: 'auto', padding: 24, fontSize: 13, color: 'var(--fg-faint)' }}>Loading…</div>;
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 import { touch } from './touch';

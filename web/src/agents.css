@@ -1,10 +1,10 @@
 .ag { flex: 1; min-height: 0; display: flex; }
-.ag-list { flex: none; width: 300px; margin: 0; padding: 4px 0; list-style: none; overflow-y: auto; border-right: 1px solid var(--border); background: var(--side); }
+.ag-list { flex: none; width: 300px; margin: 0; padding: 4px 0; list-style: none; overflow-y: auto; border-right: 1px solid var(--border); background: var(--surface); }
 .ag-row {
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 8px; align-items: center;
   padding: 6px 12px; font-size: 13px; color: var(--fg); cursor: pointer;
 }
-.ag-row:hover { background: var(--bg-hover); }
+.ag-row:hover { background: var(--hover); }
 .ag-row.active { background: var(--accent-soft); }
 .ag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ag-time { font-size: 11px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
@@ -21,7 +21,7 @@
 .ag-stop { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; font-size: 12px; }
 .ag-meta { font-size: 12px; color: var(--fg-muted); padding-left: 24px; }
 .ag-progress { font-size: 12px; color: var(--agent); padding-left: 24px; }
-.ag-report { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-sunken); line-height: 1.55; }
+.ag-report { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--sunken); line-height: 1.55; }
 .ag-report .md > :last-child { margin-bottom: 0; }
 .ag-prompt { border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .ag-prompt summary { cursor: pointer; padding: 6px 10px; font-size: 12px; color: var(--fg-muted); }
@@ -31,7 +31,7 @@
 .ag-steps-list { font-size: 13px; line-height: 1.6; }
 .ag-steps-list > .tr-assistant, .ag-steps-list > .tr-file { margin: 6px 0; }
 .ag-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 10px; font-size: 11px; color: var(--fg-muted); background: transparent; border: 1px solid var(--border-strong); }
-.ag-chip:hover { color: var(--fg); background: var(--bg-hover); }
+.ag-chip:hover { color: var(--fg); background: var(--hover); }
 .ag-chip.inbox { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
 .ag-chip.running { color: var(--agent); border-color: color-mix(in srgb, var(--agent) 50%, transparent); }
 

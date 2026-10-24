@@ -1,0 +1,233 @@
+/*
+  Design tokens. Modelled on how claude.ai styles itself: a small set of raw
+  primitives (scales) that nothing outside this file names by value, and
+  semantic tokens that say what a value is for (bg, raised, fg-muted, accent,
+  err) and are the only thing components read. A theme only reassigns the
+  semantic colour tokens on :root[data-theme]; scales are theme independent.
+
+  1. Scales: spacing (2px unit, --sp-N = N * 2px), type, line height, radius,
+     control sizes, elevation, motion, z-index.
+  2. Semantic colours for graphite (default), dark-modern and light.
+  Components use only these names; one-off geometry (tree indents, fixed
+  widths) stays local to its feature file.
+*/
+:root {
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 6px;
+  --sp-4: 8px;
+  --sp-5: 10px;
+  --sp-6: 12px;
+  --sp-7: 14px;
+  --sp-8: 16px;
+  --sp-10: 20px;
+  --sp-12: 24px;
+  --sp-16: 32px;
+  --sp-20: 40px;
+  --sp-24: 48px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, sans-serif;
+  --font-doc: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  --mono: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+  --fs-2xs: 10px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 14px;
+  --fs-xl: 15px;
+  --fs-2xl: 16px; /* also the minimum that stops iOS zooming into a focused field */
+  --fs-3xl: 18px;
+  --fs-4xl: 22px;
+  --fs-5xl: 26px;
+  --fs-6xl: 28px;
+  --lh-none: 1;
+  --lh-tight: 1.3;
+  --lh-snug: 1.4;
+  --lh: 1.5;
+  --lh-relaxed: 1.6;
+  --lh-loose: 1.7;
+  --tracking-tight: -0.01em;
+  --tracking: 0.02em;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.08em;
+
+  --icon-sm: 14px;
+  --icon: 16px;
+  --icon-md: 18px;
+  --icon-lg: 20px;
+  --icon-xl: 24px;
+  --icon-hero: 40px;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius: 8px;
+  --radius-pill: 999px;
+  --radius-round: 50%;
+
+  --size-2xs: 16px;
+  --size-xs: 18px;
+  --size-sm: 20px;
+  --size-row: 22px;
+  --size-md: 24px;
+  --size-lg: 26px;
+  --size-xl: 28px;
+  --size-2xl: 32px;
+  --size-bar: 35px;
+  --touch-sm: 36px;
+  --touch-md: 40px;
+  --touch: 44px;
+  --tabbar-h: 56px;
+  --activitybar-w: 48px;
+  --sidebar-w: 300px;
+
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --scrim: rgba(0, 0, 0, 0.4);
+  --scrim-strong: rgba(0, 0, 0, 0.55);
+
+  --dur-fast: 100ms;
+  --dur: 120ms;
+  --ease: ease-in-out;
+  --pulse-fast: 1.2s;
+  --pulse: 1.4s;
+  --pulse-slow: 2.8s;
+
+  --z-raised: 2;
+  --z-float: 5;
+  --z-overlay: 10;
+  --z-popover: 20;
+  --z-sheet: 50;
+
+  --white: #ffffff;
+  --file-blue: #519aba;
+  --file-yellow: #cbcb41;
+  --file-purple: #a074c4;
+  --file-orange: #e37933;
+  --file-green: #8dc149;
+  --file-red: #cc3e44;
+  --file-pink: #f55385;
+  --file-cyan: #4fc1cf;
+  --file-gray: #6d8086;
+  --file-folder: #dcb67a;
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #181818;
+  --surface: var(--bg);
+  --raised: #202020;
+  --sunken: #121212;
+  --hover: rgba(255, 255, 255, 0.06);
+  --border: #2a2a2a;
+  --border-strong: #363636;
+  --border-card: #474747;
+  --fg: #e6e6e6;
+  --fg-strong: var(--fg);
+  --fg-muted: #8c8c8c;
+  --fg-faint: #6b6b6b;
+  --accent: #8b7cf6;
+  --accent-hover: #9d90f8;
+  --accent-soft: rgba(139, 124, 246, 0.15);
+  --on-accent: #121212;
+  --on-color: #ffffff;
+  --link: #a99cf8;
+  --prompt: #5b9cf5;
+  --agent: #a78bfa;
+  --claude: #d97757;
+  --ok: #4ade80;
+  --warn: #e2b453;
+  --err: #f87171;
+  --diff-add: #4ade80;
+  --diff-del: #f87171;
+  --t-read: #5b9cf5;
+  --t-edit: var(--ok);
+  --t-run: #e2b453;
+  --t-web: #2dd4bf;
+  --t-mcp: #f472b6;
+
+  --syn-keyword: #c678dd;
+  --syn-string: #98c379;
+  --syn-operator: #56b6c2;
+  --syn-number: #d19a66;
+  --syn-comment: #7f848e;
+  --syn-type: #e5c07b;
+  --syn-property: #e06c75;
+  --syn-definition: #61afef;
+  --syn-invalid: #ff6b6b;
+}
+
+:root[data-theme='dark-modern'] {
+  --bg: #1f1f1f;
+  --surface: #181818;
+  --raised: #1f1f1f;
+  --sunken: #181818;
+  --hover: #2a2d2e;
+  --border: #2b2b2b;
+  --border-strong: #3c3c3c;
+  --border-card: #454545;
+  --fg: #cccccc;
+  --fg-strong: #ffffff;
+  --fg-muted: #9d9d9d;
+  --fg-faint: #6e6e6e;
+  --accent: #0078d4;
+  --accent-hover: #026ec1;
+  --accent-soft: rgba(0, 120, 212, 0.3);
+  --on-accent: #ffffff;
+  --link: #4daafc;
+  --prompt: var(--accent);
+  --agent: #b180d7;
+  --ok: #89d185;
+  --warn: #cca700;
+  --err: #f14c4c;
+  --diff-add: #89d185;
+  --diff-del: #f14c4c;
+  --t-read: #4daafc;
+  --t-run: #dcdcaa;
+  --t-web: #4ec9b0;
+  --t-mcp: #c586c0;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f8f8f8;
+  --raised: #f8f8f8;
+  --sunken: #f3f3f3;
+  --hover: rgba(0, 0, 0, 0.05);
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --border-card: #c6c6c6;
+  --fg: #3b3b3b;
+  --fg-strong: #1f1f1f;
+  --fg-muted: #616161;
+  --fg-faint: #8b8b8b;
+  --accent: #005fb8;
+  --accent-hover: #0258a8;
+  --accent-soft: rgba(0, 95, 184, 0.12);
+  --on-accent: #ffffff;
+  --link: #005fb8;
+  --prompt: var(--accent);
+  --agent: #8a3ffc;
+  --claude: #b0502d;
+  --ok: #1a7f37;
+  --warn: #8a5d00;
+  --err: #c72e2e;
+  --diff-add: #1a7f37;
+  --diff-del: #c72e2e;
+  --t-read: #005fb8;
+  --t-run: #795e26;
+  --t-web: #0f766e;
+  --t-mcp: #a21caf;
+
+  --syn-keyword: #a626a4;
+  --syn-string: #50a14f;
+  --syn-operator: #0184bc;
+  --syn-number: #986801;
+  --syn-comment: #a0a1a7;
+  --syn-type: #c18401;
+  --syn-property: #e45649;
+  --syn-definition: #4078f2;
+  --syn-invalid: #c72e2e;
+}

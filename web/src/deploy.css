@@ -3,7 +3,7 @@
 .deploy a:hover { text-decoration: underline; }
 .deploy-head { display: flex; align-items: center; gap: 6px; }
 .deploy-app { color: var(--fg); font-weight: 600; background: transparent; border: none; font-size: 13px; padding: 2px 0; }
-select.deploy-app { background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 4px; }
+select.deploy-app { background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 4px; }
 .deploy-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .deploy-hint { color: var(--fg-muted); font-size: 12px; }
 .deploy-error { display: flex; gap: 6px; align-items: flex-start; color: var(--err); font-size: 12px; word-break: break-word; }
@@ -19,7 +19,7 @@ select.deploy-app { background: var(--bg-sunken); border: 1px solid var(--border
 .deploy-actions { display: flex; flex-wrap: wrap; gap: 4px; }
 .deploy-actions button { padding: 2px 8px; font-size: 12px; }
 .deploy-actions button:disabled { opacity: 0.5; cursor: default; }
-.deploy-log { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-sunken); }
+.deploy-log { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--sunken); }
 .deploy-log.ok { border-left: 2px solid var(--ok); }
 .deploy-log.bad { border-left: 2px solid var(--err); }
 .deploy-log-head { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
