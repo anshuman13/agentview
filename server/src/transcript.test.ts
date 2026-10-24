@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clipInput, historyFrom, toolUseEvent } from './transcript.js';
+import { cacheFrom, clipInput, historyFrom, toolResultText, toolUseEvent, usageFrom } from './transcript.js';
 import { editCount } from '../../shared/edits.js';
 
 const msg = (uuid: string, type: string, content: unknown) => ({ type, uuid, session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
@@ -45,5 +45,50 @@ describe('clipInput', () => {
     const e = toolUseEvent('t', 'Write', { file_path: 'a.ts', content: one }, 0) as Extract<ReturnType<typeof toolUseEvent>, { kind: 'tool_use' }>;
     expect(e.input.content).toMatch(/ …$/);
     expect(editCount('Write', e.input)).toEqual({ add: 1, del: 0 });
+  });
+});
+
+describe('usageFrom', () => {
+  it('reads the usage trailer of an agent report', () => {
+    expect(usageFrom('Report\nagentId: a1\n<usage>total_tokens: 50\ntool_uses: 3\nduration_ms: 6000</usage>')).toEqual({ tokens: 50, toolUses: 3, durationMs: 6000 });
+    expect(usageFrom('<usage>subagent_tokens: 7 tool_uses: 0 duration_ms: 1</usage>')).toEqual({ tokens: 7, toolUses: 0, durationMs: 1 });
+  });
+
+  it('gives null without a complete trailer', () => {
+    expect(usageFrom('Report')).toBeNull();
+    expect(usageFrom('<usage>total_tokens: 50</usage>')).toBeNull();
+  });
+});
+
+describe('toolResultText', () => {
+  it('takes a string as is', () => {
+    expect(toolResultText({ content: 'ok' })).toBe('ok');
+  });
+
+  it('joins the text blocks and skips the rest', () => {
+    expect(toolResultText({ content: [{ type: 'text', text: 'a' }, { type: 'image', source: {} }, { type: 'text', text: 'b' }] })).toBe('a\n\nb');
+  });
+
+  it('is empty without content', () => {
+    expect(toolResultText({})).toBe('');
+  });
+});
+
+describe('cacheFrom', () => {
+  it('keeps the previous info when the message has no usage', () => {
+    const prev = { at: 1, ttlMs: 300_000, readTokens: 10, writeTokens: 0 };
+    expect(cacheFrom(undefined, 2, prev)).toBe(prev);
+    expect(cacheFrom(undefined, 2, null)).toBeNull();
+  });
+
+  it('reads the token counts and picks the ttl from the cache creation', () => {
+    expect(cacheFrom({ cache_read_input_tokens: 100, cache_creation_input_tokens: 20, cache_creation: { ephemeral_1h_input_tokens: 20 } }, 5, null)).toEqual({ at: 5, ttlMs: 3_600_000, readTokens: 100, writeTokens: 20 });
+    expect(cacheFrom({ cache_creation: { ephemeral_5m_input_tokens: 3 } }, 5, null)).toEqual({ at: 5, ttlMs: 300_000, readTokens: 0, writeTokens: 0 });
+  });
+
+  it('keeps the earlier ttl when nothing new was cached', () => {
+    const prev = { at: 1, ttlMs: 3_600_000, readTokens: 10, writeTokens: 10 };
+    expect(cacheFrom({ cache_read_input_tokens: 40 }, 9, prev)).toEqual({ at: 9, ttlMs: 3_600_000, readTokens: 40, writeTokens: 0 });
+    expect(cacheFrom({ cache_read_input_tokens: 40 }, 9, null)?.ttlMs).toBe(300_000);
   });
 });
