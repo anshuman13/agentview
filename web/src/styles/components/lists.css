@@ -1,0 +1,9 @@
+.tree { overflow: auto; flex: 1; font-size: var(--fs-md); }
+.tree .row { height: var(--size-row); display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; white-space: nowrap; color: var(--fg); }
+.tree .row:hover { background: var(--hover); }
+.tree .row.selected { background: var(--accent-soft); color: var(--fg); }
+.tree .row.changed .name { color: var(--warn); }
+.tree .twistie { width: var(--icon); display: inline-flex; justify-content: center; color: var(--fg-muted); flex: none; }
+.tree .name { overflow: hidden; text-overflow: ellipsis; }
+.tree .m { margin-left: auto; margin-right: var(--sp-5); color: var(--warn); font-size: var(--fs-xs); }
+.tree .icon { color: var(--fg-muted); }

@@ -5,7 +5,6 @@ import { Row } from './Transcript';
 import { agentCounts, agentsOf, elapsed, tokens, type Agent } from './agents';
 import { plural, useTick } from './util';
 import type { AgentStatus } from '../../../shared/protocol';
-import '../agents.css';
 
 const useAgents = () => useStore((s) => agentsOf(s.events));
 

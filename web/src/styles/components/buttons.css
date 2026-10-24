@@ -1,0 +1,26 @@
+button {
+  background: var(--border);
+  color: var(--fg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 3px var(--sp-5);
+  cursor: pointer;
+  font: inherit;
+  line-height: 18px;
+}
+button:hover { background: var(--border-strong); }
+button.primary { background: var(--accent); color: var(--on-accent); }
+button.primary:hover { background: var(--accent-hover); }
+button.primary:disabled { opacity: 0.5; cursor: default; }
+button.active { color: var(--fg); }
+button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+button.destructive:hover { background: color-mix(in srgb, var(--err) 28%, transparent); }
+button.link { background: transparent; border: 0; padding: 0; color: var(--link); text-align: left; line-height: 18px; }
+button.link:hover { background: transparent; text-decoration: underline; }
+
+.icon-btn {
+  width: var(--size-md); height: var(--size-md); padding: 0; flex: none; border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--fg-muted); display: inline-flex; align-items: center; justify-content: center;
+}
+.icon-btn:hover:not(:disabled) { background: var(--hover); color: var(--fg); }
+.icon-btn:disabled { opacity: 0.4; cursor: default; }

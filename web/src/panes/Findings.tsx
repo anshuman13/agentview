@@ -3,7 +3,6 @@ import { api, send, setFindings, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { pressable } from './util';
 import type { Finding, ReviewFindings } from '../../../shared/protocol';
-import '../github.css';
 
 async function call<T>(path: string, body?: object): Promise<T> {
   const r = await fetch(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);

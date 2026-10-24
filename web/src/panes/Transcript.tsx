@@ -7,7 +7,6 @@ import { FileIcon } from './Explorer';
 import { buildTranscript, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { plural } from './util';
 import type { ChatEvent } from '../../../shared/protocol';
-import '../transcript.css';
 
 export function Transcript() {
   const events = useStore((s) => s.events);

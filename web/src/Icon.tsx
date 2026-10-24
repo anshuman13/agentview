@@ -1,5 +1,3 @@
-import '@vscode/codicons/dist/codicon.css';
-
 export function Icon({ name, small, spin, color }: { name: string; small?: boolean; spin?: boolean; color?: string }) {
   return (
     <i

@@ -4,7 +4,6 @@ import { MCP_BAD, type ChatEvent, type McpSchema, type McpServer, type McpTool }
 import { api, notice, send, useStore } from '../store';
 import { Icon } from '../Icon';
 import { ago, command, pressable, showChat, useTick } from './util';
-import '../mcp.css';
 
 const STATUS: Record<string, [tone: string, label: string]> = {
   connected: ['ok', 'Connected'],

@@ -12,7 +12,7 @@ import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
 import { showChat } from './util';
 import { touch } from '../touch';
 import { isDark, useThemeName } from '../theme';
-import '../code.css';
+import '../styles/features/code.css';
 
 async function lang(path: string): Promise<Extension> {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';

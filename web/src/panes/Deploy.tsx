@@ -4,7 +4,7 @@ import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protocol';
 import { ago, usePoll } from './util';
-import '../deploy.css';
+import '../styles/features/deploy.css';
 
 const short = (sha: string) => sha.slice(0, 7);
 const tone = (state?: string) => (state === 'success' ? 'ok' : state === 'failure' || state === 'error' ? 'bad' : !state || state === 'inactive' ? 'off' : 'busy');

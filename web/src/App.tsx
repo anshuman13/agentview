@@ -12,7 +12,6 @@ import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { command, pressable } from './panes/util';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
-import './page.css';
 
 const Terminal = lazy(() => import('./panes/Terminal').then((m) => ({ default: m.Terminal })));
 const CodePane = lazy(() => import('./panes/CodePane').then((m) => ({ default: m.CodePane })));
@@ -21,7 +20,7 @@ const Observe = lazy(() => import('./panes/Observe').then((m) => ({ default: m.O
 const Deploy = lazy(() => import('./panes/Deploy').then((m) => ({ default: m.Deploy })));
 const McpPage = lazy(() => import('./panes/McpStatus').then((m) => ({ default: m.McpPage })));
 const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
-const Loading = () => <div style={{ margin: 'auto', padding: 24, fontSize: 13, color: 'var(--fg-faint)' }}>Loading…</div>;
+const Loading = () => <div className="loading">Loading…</div>;
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 import { touch } from './touch';

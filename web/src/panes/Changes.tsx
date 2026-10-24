@@ -6,7 +6,6 @@ import { Confirm, type ConfirmRequest } from '../Confirm';
 import { FileIcon } from './Explorer';
 import { Findings, REVIEW_LOCAL } from './Findings';
 import { askClaude, pressable, usePoll } from './util';
-import '../changes.css';
 
 let git: { status: GitStatus | null; error: string } = { status: null, error: '' };
 const subs = new Set<() => void>();

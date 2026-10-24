@@ -1,0 +1,36 @@
+.palette {
+  width: min(600px, calc(100vw - 16px)); max-height: min(60vh, 440px); display: flex; flex-direction: column; overflow: hidden;
+  background: var(--raised); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: var(--shadow-md);
+}
+.palette-input {
+  display: flex; align-items: center; gap: var(--sp-3); flex: none; margin: var(--sp-4); height: var(--size-xl); padding: 0 var(--sp-4);
+  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.palette-input:focus-within { border-color: var(--accent); }
+.palette-prefix { color: var(--fg-muted); font-family: var(--mono); font-size: var(--fs-md); }
+.palette-input input { flex: 1; min-width: 0; width: auto; background: none; border: 0; padding: 0; color: var(--fg); font-size: var(--fs-md); }
+.palette-input input:focus { outline: none; }
+.palette ul { list-style: none; margin: 0; padding: 0 var(--sp-4) var(--sp-4); overflow: auto; }
+.palette li {
+  display: flex; align-items: center; gap: var(--sp-5); height: var(--size-lg); padding: 0 var(--sp-4);
+  border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; font-size: var(--fs-md); color: var(--fg);
+}
+.palette li:hover { background: var(--hover); }
+.palette li.active { background: var(--accent-soft); }
+.palette-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.palette-label b { color: var(--accent); font-weight: 600; }
+.palette-key, .palette-group { flex: none; color: var(--fg-faint); font-size: var(--fs-xs); }
+.palette-key { font-family: var(--mono); }
+.palette-empty { padding: 0 var(--sp-8) var(--sp-5); color: var(--fg-muted); font-size: var(--fs-sm); }
+
+.switcher li .fs-name { flex: none; white-space: nowrap; }
+.switcher li .fs-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); font-size: var(--fs-sm); }
+.switcher li .fs-group { flex: none; margin-left: auto; color: var(--fg-muted); font-size: var(--fs-xs); }
+.switcher .fs-empty { padding: var(--sp-2) var(--sp-6) var(--sp-3); color: var(--fg-muted); font-size: var(--fs-sm); }
+
+@media (max-width: 900px) {
+  .palette { max-height: 70vh; }
+  .palette-input { height: var(--touch); }
+  .palette-input input, .palette-prefix { font-size: var(--fs-2xl); }
+  .palette li { height: var(--touch); font-size: var(--fs-lg); }
+}
