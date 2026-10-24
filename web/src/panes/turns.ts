@@ -1,5 +1,7 @@
 import { editCount } from '../../../shared/edits';
 import type { ChatEvent } from '../../../shared/protocol';
+import { chatCost, costRise } from '../../../shared/cost';
+export { chatCost };
 import { buildTranscript, denied, firstLine, type Item, type ToolResult, type ToolUse } from './steps';
 
 export type FileFact = { path: string; add: number; del: number };
@@ -54,19 +56,6 @@ export function elapsed(ms: number) {
 
 export const money = (usd: number) => (usd < 0.005 ? '<$0.01' : `$${usd.toFixed(2)}`);
 
-// A result carries the running total of its session, which starts over after /clear.
-const costRise = (costUsd: number, last: number) => (costUsd >= last ? costUsd - last : costUsd);
-
-export function chatCost(events: ChatEvent[]) {
-  let last = 0;
-  let total = 0;
-  for (const e of events) {
-    if (e.kind !== 'result' || e.costUsd <= 0) continue;
-    total += costRise(e.costUsd, last);
-    last = e.costUsd;
-  }
-  return total;
-}
 
 function newTurn(id: string, prompt: string, at: number, phase = false): Turn {
   return { id, prompt, phase, at, files: [], commands: [], commits: [], agents: [], notes: [], blocked: [], steps: [] };

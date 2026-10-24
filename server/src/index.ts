@@ -27,6 +27,7 @@ import { otherMacs, thisMac } from './macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
 import { MCP_BAD, type AttentionItem, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './stream.js';
+import { chatCost } from '../../shared/cost.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
 import { allowedPeer, allowedRequest, requester } from './access.js';
 
@@ -102,6 +103,7 @@ function summary(chat: AgentSession): LiveChat {
     status: s.status,
     lastActive: lastActive(chat),
     mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,
+    cost: chatCost(s.events),
     stalled: stalls.stalled(chat.id),
     last: replyLine(s.events),
     edits: editsOf(chat),
