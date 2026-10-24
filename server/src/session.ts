@@ -638,7 +638,7 @@ export class AgentSession {
 
   resumeRepeat(r: Repeat) {
     this.setSession({ repeat: r });
-    this.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} continues, ${describeLoop(r)}`);
+    this.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} continues ${describeLoop(r)}`);
     if (!r.nextAt || r.nextAt <= Date.now()) this.fireRepeat();
     else this.armRepeat();
   }
