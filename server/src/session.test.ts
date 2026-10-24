@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { appendFileSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { AgentSession, BIG_BRO, fireTime } from './session.js';
+import { AgentSession, BIG_BRO, fireTime, prFrom } from './session.js';
 import { JsonlTail } from './tail.js';
 import { contextFrom, historyFrom } from './transcript.js';
 import type { ChatEvent, ServerMessage } from '../../shared/protocol.js';
@@ -982,4 +982,24 @@ describe('send queue fuzz', () => {
       expect(user().some((e) => e.queued), `queue not empty after draining: ${trace.join(' > ')}`).toBe(false);
     });
   }
+});
+
+describe('pull request link', () => {
+  const create = { type: 'tool_use', id: 'gh1', name: 'Bash', input: { command: 'gh pr create --title "Fix" --body "x"' } };
+  const made = { type: 'tool_result', tool_use_id: 'gh1', content: 'Creating pull request for a into main in o/r\n\nhttps://github.com/o/r/pull/42\n' };
+
+  it('records the PR number a gh pr create printed, live and from history', async () => {
+    const { s } = fakeSession();
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    await s.prompt('open a PR');
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [create], usage: {} } });
+    handle({ type: 'user', parent_tool_use_id: null, message: { role: 'user', content: [made] } });
+    expect(s.state.session.pr).toBe(42);
+    const events: ChatEvent[] = [
+      { id: 'gh1', kind: 'tool_use', name: 'Bash', input: create.input, summary: '', at: 1 },
+      { id: 'r', kind: 'tool_result', toolUseId: 'gh1', text: made.content, isError: false, at: 2 },
+    ];
+    expect(prFrom(events)).toBe(42);
+    expect(prFrom([{ id: 'x', kind: 'tool_result', toolUseId: 'other', text: made.content, isError: false, at: 2 }])).toBeNull();
+  });
 });

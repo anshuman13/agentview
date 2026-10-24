@@ -107,6 +107,7 @@ function summary(chat: AgentSession): LiveChat {
     stalled: stalls.stalled(chat.id),
     last: replyLine(s.events),
     edits: editsOf(chat),
+    ...(s.session.pr && { pr: s.session.pr }),
   };
 }
 

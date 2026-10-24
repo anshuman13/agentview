@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { api, setUi, useStore } from '../store';
+import { api, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Block, Findings } from './Findings';
 import { Markdown } from './Chat';
@@ -89,6 +89,7 @@ export const PullState = ({ pr }: { pr: PullRequest }) => (
 );
 
 function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
+  const chat = useStore((s) => s.live.find((c) => c.pr === pr.number));
   return (
     <div className="gh-pr" {...pressable(onOpen)} title={`#${pr.number} ${pr.title}`}>
       <CheckIcon state={pr.checks} />
@@ -99,6 +100,7 @@ function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
         <span className="gh-branch">{pr.branch}</span>
         <span className="gh-sep">·</span>
         <span className="gh-when">{ago(pr.updatedAt)}</span>
+        {chat && <button className="gh-chip gh-open-chat" title={`Open the chat that created this pull request: ${chat.title}`} onClick={(e) => { e.stopPropagation(); send({ type: 'view', id: chat.id }); }}><Icon name="comment" small /> Open chat</button>}
         {pr.draft ? <span className="gh-chip">Draft</span> : <StateChip state={pr.review} />}
       </div>
     </div>
