@@ -12,7 +12,8 @@ import { FileIcon } from './Explorer';
 import { relPath } from './steps';
 import { BIG_BRO, buildTurns, elapsed, money, type Turn } from './turns';
 import { markSeen, readSeen, recap, recapText } from './recap';
-import { AgentsChip, openAgent } from './AgentsPane';
+import { AgentsChip, AgentsPane, openAgent } from './AgentsPane';
+import { agentCounts, agentsOf } from './agents';
 import { REVIEW_LOCAL } from './Findings';
 import { ago, plural, readFlag, saveFlag, useTick } from './util';
 import { useMacName } from '../MacsPopover';
@@ -49,6 +50,10 @@ export function Brief() {
   const [full, setFull] = useState(() => readFlag('agentview.transcript', false));
   const pick = (v: boolean) => { setFull(v); saveFlag('agentview.transcript', v); };
   const [adding, setAdding] = useState(false);
+  const agents = useMemo(() => agentsOf(events), [events]);
+  const agentsRunning = agentCounts(agents).running;
+  const [agentSel, setAgentSel] = useState<string | null>(null);
+  const [showAgents, setShowAgents] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', !touch()));
   const toggleSteps = () => { setStepsOpen(!stepsOpen); saveFlag('agentview.steps', !stepsOpen); };
   const end = useRef<HTMLDivElement>(null);
@@ -70,6 +75,18 @@ export function Brief() {
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
 
   useTick(30000);
+
+  useEffect(() => {
+    const open = (e: Event) => {
+      if (window.innerWidth <= 900) return;
+      const id = (e as CustomEvent<unknown>).detail;
+      setAgentSel(typeof id === 'string' ? id : null);
+      setShowAgents(true);
+    };
+    window.addEventListener('open-agent', open);
+    return () => window.removeEventListener('open-agent', open);
+  }, []);
+  useEffect(() => { setShowAgents(false); setAgentSel(null); }, [sessionId]);
 
   // On opening a chat, sum what happened after the last event this browser saw; then keep the seen id current while the chat is on screen.
   useEffect(() => {
@@ -104,11 +121,16 @@ export function Brief() {
     <div className="brief" ref={root}>
       <div className="brief-status">
         <div className="timeline-head">
-          <button className="tl-view" title={full ? 'Show the timeline' : 'Show the full transcript'} onClick={() => pick(!full)}>
-            {full ? 'Transcript' : 'Timeline'}<Icon name="arrow-swap" small />
+          <button className={`tl-view tl-tab ${showAgents ? '' : 'active'}`} title={showAgents ? 'Show the chat' : full ? 'Show the timeline' : 'Show the full transcript'} onClick={() => (showAgents ? setShowAgents(false) : pick(!full))}>
+            {full ? 'Transcript' : 'Timeline'}{!showAgents && <Icon name="arrow-swap" small />}
           </button>
+          {(agents.length > 0 || showAgents) && (
+            <button className={`tl-view tl-tab desktop-only ${showAgents ? 'active' : ''}`} title="Show the agents" onClick={() => { setShowAgents(true); if (showAgents) setAgentSel(null); }}>
+              Agents{agentsRunning > 0 ? <Icon name="loading" small spin /> : <span className="count">{agents.length}</span>}
+            </button>
+          )}
           <span className="spacer" />
-          <AgentsChip />
+          <span className="mobile-only"><AgentsChip /></span>
           <InboxChip />
           {macName && <span className="mobile-only mac-here"><Icon name="vm" small /> {macName}</span>}
           {extras && <span className="extras">{extras}</span>}
@@ -117,7 +139,7 @@ export function Brief() {
         {since?.chat === sessionId && (
           <button className="tl-recap" title="Tap to dismiss" onClick={dismissSince}><Icon name="history" small />{since.text}</button>
         )}
-        {full ? <Transcript /> : (
+        {showAgents ? <AgentsPane stack selected={agentSel} onSelect={setAgentSel} /> : full ? <Transcript /> : (
           <div className="turns">
             {turns.length === 0 && <div className="tl-empty">Send a prompt. Each prompt shows up here with Claude's reply, the files it changed and the commands it ran.</div>}
             {from > 0 && <button className="link tc-earlier" onClick={() => setAll(true)}>Show {from} earlier turn{from === 1 ? '' : 's'}</button>}
@@ -127,7 +149,7 @@ export function Brief() {
             })}
           </div>
         )}
-        <div className="tl-foot">
+        {!showAgents && <div className="tl-foot">
           <div className={`tl-now ${state}`}>
             <span className="mark"><Icon name={state === 'waiting' ? 'bell-dot' : state === 'idle' ? 'circle-large-outline' : 'loading'} small spin={state === 'running' || state === 'stopping'} /></span>
             <span className="text">
@@ -157,7 +179,7 @@ export function Brief() {
             </ul>
           )}
           <div ref={end} />
-        </div>
+        </div>}
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}
       <div className="brief-input">

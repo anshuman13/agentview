@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { connect, embedded, getState, presetChat, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../shared/protocol';
 import { Brief } from './panes/Brief';
-import { AgentsBadge, AgentsPane, AgentsTab } from './panes/AgentsPane';
+import { AgentsBadge, AgentsPane, openAgent } from './panes/AgentsPane';
 import { FileSwitcher } from './panes/FileSwitcher';
 import { Palette } from './panes/Palette';
 import { Explorer, FileIcon } from './panes/Explorer';
@@ -273,6 +273,7 @@ export function App() {
 
   useEffect(() => {
     const open = (e: Event) => {
+      if (!narrow()) return setChatOpen(true);
       const id = (e as CustomEvent<unknown>).detail;
       setAgentSel(typeof id === 'string' ? id : null);
       setEditor('agents');
@@ -292,6 +293,7 @@ export function App() {
         else if (narrow()) setTab('repos');
       }
       else if (kind === 'tab') {
+        if (arg === 'agents' && !narrow()) return openAgent();
         if (arg === 'chat') setChatOpen(true);
         else if (arg === 'term') setTerminal(true);
         else setEditor(arg === 'code' ? 'file' : (arg as 'browser' | 'agents'));
@@ -413,7 +415,6 @@ export function App() {
             <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => { setEditor('browser'); setTab((t) => (t === 'code' || t === 'agents' ? 'browser' : t)); }} title="Browser (⌘E to switch)">
               <Icon name="globe" small /> Browser
             </button>
-            <AgentsTab active={showing === 'agents'} onOpen={() => { setEditor('agents'); setTab((t) => (t === 'code' || t === 'browser' ? 'agents' : t)); }} />
             {page && (
               <div className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} ref={showing === page ? reveal : undefined} {...pressable(() => { setEditor(page); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={pageOf(page).title}>
                 <Icon name={pageOf(page).icon} small /> {pageOf(page).title}

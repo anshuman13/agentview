@@ -34,5 +34,13 @@
 .ag-chip:hover { color: var(--fg); background: var(--bg-hover); }
 .ag-chip.inbox { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
 .ag-chip.running { color: var(--agent); border-color: color-mix(in srgb, var(--agent) 50%, transparent); }
-.tab.ag-tab > .codicon:first-child { color: var(--agent); }
 
+.ag.stack { margin: 0 -12px; }
+.ag.stack .ag-list { width: 100%; border-right: 0; background: none; }
+.ag.stack .ag-detail { display: none; padding: 4px 12px 16px; }
+.ag.stack.picked .ag-list { display: none; }
+.ag.stack.picked .ag-detail { display: flex; }
+.ag.stack .ag-back { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--link); font-size: 12px; cursor: pointer; }
+.tl-tab { opacity: 0.55; }
+.tl-tab.active, .tl-tab:hover { opacity: 1; }
+.tl-tab .count { font-weight: 400; color: var(--fg-muted); }
