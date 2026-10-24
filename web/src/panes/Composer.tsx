@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { api, getState, notice, prompt, send, steer, useStore } from '../store';
+import { api, getState, notice, prompt, send, sinceHeard, steer, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../QuickPick';
@@ -169,6 +169,12 @@ export function Composer() {
   const team = useStore((s) => s.session.team);
   const loop = useStore((s) => s.session.loop);
   const repeat = useStore((s) => s.session.repeat);
+  const [stale, setStale] = useState(0);
+  useEffect(() => {
+    const tick = () => setStale(document.visibilityState === 'visible' ? sinceHeard() : 0);
+    const t = setInterval(tick, 5_000);
+    return () => clearInterval(t);
+  }, []);
   const context = useStore((s) => s.session.context);
   const userCount = useStore((s) => s.events.reduce((n, e) => n + (e.kind === 'user' ? 1 : 0), 0));
   const edited = useStore((s) => editedOf(s.events));
@@ -446,6 +452,7 @@ export function Composer() {
           )}
           {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
           {loop.phase && <span className={`cp-phase ${loop.phase}`}>{loopLabel(loop)}</span>}
+          {stale >= 30 && <span className="cp-phase cp-stale" title="Nothing has arrived from the server. The link is reopened after 50 s of silence.">No update for {stale}s</span>}
           {repeat && <button className="cp-ctx cp-phase" title={`${repeatLabel(repeat)}. Tap to stop the loop.`} onClick={() => send({ type: 'prompt', text: '/loop off' })}>Loop {repeat.round}{repeat.nextAt ? ` · next ${clock(repeat.nextAt)}` : ''}{repeat.until ? ` · until ${clock(repeat.until)}` : ''}</button>}
         </span>
       </div>

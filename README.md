@@ -48,6 +48,8 @@ Switch to the transcript for every message and step in order.
   with your message
 - A message is one request to the Mac and lands or fails visibly; it returns to the box after three failed tries
 - Editing the next steps sends the new plan at Claude's next tool call, without stopping it
+- The composer shows "No update for Ns" when nothing has arrived from the server for 30 s. The link reopens by
+  itself after 50 s of silence, and a message that cannot be delivered goes back into the box with a notice
 - Questions, plan approvals and permissions show as buttons in the timeline
 
 ## Review findings
