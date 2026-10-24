@@ -55,6 +55,7 @@ const IDLE_MS = 10 * 60 * 1000;
 type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: AgentSession; close?: () => void };
 const BOOT = Date.now();
 const clients = new Set<Client>();
+const STALL_MS = 60_000;
 const streams = new Map<string, Client>();
 const ring = new Ring();
 
@@ -237,8 +238,10 @@ function restart(now: boolean) {
   if (restarting) return;
   broadcast({ type: 'restarting' });
   for (const { chat } of live.values()) chat.holdRepeat();
+  // A turn that never ends (a card nobody answers) must not hold the restart and every loop for good.
+  const deadline = Date.now() + 10 * 60_000;
   restarting = setInterval(() => {
-    if (![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting)) saveAndExit();
+    if (Date.now() > deadline || ![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting)) saveAndExit();
   }, 1000);
 }
 
@@ -309,7 +312,10 @@ const server = http.createServer(async (req, res) => {
   try {
     const chat = live.get(url.searchParams.get('chat') ?? '')?.chat ?? lastViewed;
     const liveCwds = [...live.values()].map((l) => l.chat.cwd);
-    if (url.pathname === '/api/events') return openEvents(req, res, url, (url.searchParams.has('session') && bySession(url.searchParams.get('session'))) || chat);
+    if (url.pathname === '/api/events') {
+      const asked = (url.searchParams.has('session') && bySession(url.searchParams.get('session'))) || live.get(url.searchParams.get('chat') ?? '')?.chat;
+      return openEvents(req, res, url, asked ?? chat, Boolean(asked));
+    }
     if (url.pathname === '/api/cmd' && req.method === 'POST') {
       const msg = JSON.parse(await readBody(req)) as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
@@ -524,17 +530,22 @@ wss.on('connection', (ws: WebSocket, req) => {
 });
 
 // Server-Sent Events: the same ServerMessage stream as /ws, resumable from Last-Event-ID through the ring buffer.
-function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: URL, chat: AgentSession) {
+// found: the stream asked for a chat that exists, so a resume may replay deltas; otherwise it gets a full init.
+function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: URL, chat: AgentSession, found = true) {
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive', 'x-accel-buffering': 'no' });
   res.flushHeaders();
   const cid = url.searchParams.get('cid') || randomUUID();
   // A tab that reopens its stream replaces the old one, which may be a half-open socket that would count as a viewer for hours.
   streams.get(cid)?.close?.();
   req.socket.setKeepAlive(true, 15_000);
-  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => void res.write(frame(data, id)), view: chat, close: () => res.destroy() };
+  // A write that does not drain for a minute means a half-open socket (a phone that left the VPN); it is no viewer.
+  let stalled = 0;
+  const write = (data: string) => { if (!res.write(data)) stalled ||= Date.now(); };
+  res.on('drain', () => (stalled = 0));
+  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => write(frame(data, id)), view: chat, close: () => res.destroy() };
   clients.add(client);
   streams.set(cid, client);
-  const missed = ring.since(Number(url.searchParams.get('last') ?? req.headers['last-event-id']), chat);
+  const missed = found ? ring.since(Number(url.searchParams.get('last') ?? req.headers['last-event-id']), chat) : null;
   if (missed) {
     client.view = chat;
     for (const e of missed) client.sendRaw(e.data, e.id);
@@ -545,7 +556,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
   // A named event, not a comment: the client hears it and can tell a dead link from a quiet one.
-  const ping = setInterval(() => res.write('event: ping\ndata:\n\n'), 20_000);
+  const ping = setInterval(() => (stalled && Date.now() - stalled > STALL_MS ? res.destroy() : write('event: ping\ndata:\n\n')), 20_000);
   req.on('close', () => {
     clearInterval(ping);
     clients.delete(client);

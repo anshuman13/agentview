@@ -13,6 +13,7 @@ export function parseLoop(text: string, now = Date.now()): Repeat | 'off' | 'usa
   const p = /^(?:(?:every\s+)?(\d+)\s*(m|min|h)\s+)?(?:until\s+(\d{1,2}):(\d{2})\s+)?(?:at\s+(\d{1,2}):(\d{2})\s+)?([\s\S]+)$/i.exec(rest);
   if (!p || (!p[1] && !p[3] && !p[5])) return 'usage';
   const prompt = p[7].trim();
+  if (p[1] && Number(p[1]) * UNIT[p[2].toLowerCase()] > MAX_EVERY) return 'usage';
   if (p[5]) {
     const at = nextClock(Number(p[5]), Number(p[6]), now);
     return { prompt, every: 0, until: at + 1000, round: 0, nextAt: at };
@@ -24,6 +25,15 @@ export function parseLoop(text: string, now = Date.now()): Repeat | 'off' | 'usa
 
 // /loop at HH:MM runs the prompt once: the loop ends a second after it fires.
 export const once = (r: Repeat) => !r.every && r.until !== null && r.nextAt !== null && r.until - r.nextAt <= 1000;
+
+const MAX_EVERY = 7 * 24 * 3_600_000;
+const MAX_TIMER = 2 ** 31 - 1;
+
+// Node clamps setTimeout at 24.8 days and fires at once past it; longer waits go in chunks.
+export function after(at: number, fn: () => void): NodeJS.Timeout {
+  const left = at - Date.now();
+  return setTimeout(() => (Date.now() >= at ? fn() : void after(at, fn)), Math.min(Math.max(0, left), MAX_TIMER));
+}
 
 export function nextClock(hours: number, minutes: number, now: number) {
   const d = new Date(now);

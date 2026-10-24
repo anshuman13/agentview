@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { advance, loopOff, verdictOf } from './loop.js';
-import { limitReset, parseLoop } from './repeat.js';
+import { after, limitReset, parseLoop } from './repeat.js';
 
 describe('verdictOf', () => {
   it('reads the last verdict line', () => {
@@ -79,5 +79,29 @@ describe('parseLoop at', () => {
     expect(r).toMatchObject({ prompt: 'do the next round', every: 0, round: 0 });
     const at = new Date(2026, 9, 24, 1, 50, 0).getTime();
     expect(r).toMatchObject({ nextAt: at, until: at + 1000 });
+  });
+});
+
+describe('long waits', () => {
+  it('refuses a loop interval over 7 days', () => {
+    expect(parseLoop('/loop 169h do it')).toBe('usage');
+    expect(parseLoop('/loop 168h do it')).toMatchObject({ every: 168 * 3_600_000 });
+  });
+
+  it('after() never hands Node a delay over its clamp and still fires once at the time', () => {
+    vi.useFakeTimers();
+    const delays: number[] = [];
+    const real = globalThis.setTimeout;
+    const spy = vi.spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void, ms?: number) => (delays.push(ms ?? 0), real(fn, ms))) as typeof setTimeout);
+    const fn = vi.fn();
+    after(Date.now() + 40 * 24 * 3_600_000, fn);
+    vi.advanceTimersByTime(39 * 24 * 3_600_000);
+    expect(fn).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(24 * 3_600_000);
+    expect(fn).toHaveBeenCalledOnce();
+    expect(Math.max(...delays)).toBeLessThanOrEqual(2 ** 31 - 1);
+    expect(delays.length).toBeGreaterThan(1);
+    spy.mockRestore();
+    vi.useRealTimers();
   });
 });
