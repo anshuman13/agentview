@@ -20,7 +20,7 @@ const storedBeside = () => { try { return embedded ? null : localStorage.getItem
 export type State = ServerState & { live: LiveChat[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; ui: UiState };
 
 let state: State = {
-  session: { id: '', sessionId: null, model: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null }, repeat: null },
+  session: { id: '', sessionId: null, model: null, effort: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null }, repeat: null },
   status: 'Connecting',
   events: [],
   pending: [],

@@ -611,6 +611,9 @@ function handleCommand(client: Client, msg: ClientMessage) {
     case 'set_model':
       void chat.setModel(msg.model);
       break;
+    case 'set_effort':
+      void chat.setEffort(String(msg.effort)).catch(fail);
+      break;
     case 'set_permission_mode':
       void chat.setPermissionMode(msg.mode);
       break;

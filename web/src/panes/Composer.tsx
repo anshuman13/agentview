@@ -8,7 +8,7 @@ import { match } from './FileSwitcher';
 import { toolId } from './McpStatus';
 import { touch } from '../touch';
 import { Hl, wsUrl } from './util';
-import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
+import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import '../composer.css';
 
 export type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
@@ -167,6 +167,7 @@ export function Composer() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
   const model = useStore((s) => s.session.model);
   const models = useStore((s) => s.session.models);
+  const effort = useStore((s) => s.session.effort);
   const team = useStore((s) => s.session.team);
   const loop = useStore((s) => s.session.loop);
   const repeat = useStore((s) => s.session.repeat);
@@ -181,7 +182,7 @@ export function Composer() {
   const edited = useStore((s) => editedOf(s.events));
   const servers = useStore((s) => s.session.mcp).filter((m) => m.status === 'connected');
 
-  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools'; at: DOMRect; server?: string } | null>(null);
+  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'effort' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools'; at: DOMRect; server?: string } | null>(null);
   const [uses, setUses] = useState<Use[]>([]);
   const [text, setText] = useState(() => readDraft(chat));
   const draftFor = useRef(chat);
@@ -213,6 +214,7 @@ export function Composer() {
   const pct = contextPercent(context);
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
   const shortModel = modelName.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);
+  const effortName = effort ? EFFORT_LABEL[effort] : 'Default';
   const modeInfo = MODES[mode] ?? { label: mode, detail: mode, icon: 'shield' };
   const cycleMode = () => send({ type: 'set_permission_mode', mode: PERMISSION_MODES[(PERMISSION_MODES.indexOf(mode as never) + 1) % PERMISSION_MODES.length] });
 
@@ -421,7 +423,7 @@ export function Composer() {
         )}
         <div className="cp-foot">
           <button className={`cp-pill cp-chip${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Loop on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
-            <Icon name={modeInfo.icon} small /><span>{shortModel} · {modeInfo.label}</span>{loop.on && <Icon name="sync" small />}<Icon name="chevron-down" small />
+            <Icon name={modeInfo.icon} small /><span>{shortModel}{effort && ` · ${effortName}`} · {modeInfo.label}</span>{loop.on && <Icon name="sync" small />}<Icon name="chevron-down" small />
           </button>
           <span className="cp-spacer" />
           {servers.length > 0 && (
@@ -494,10 +496,11 @@ export function Composer() {
           items={[
             { value: 'mode', label: 'Permission mode', detail: modeInfo.label },
             { value: 'model', label: 'Model', detail: modelName },
+            { value: 'effort', label: 'Effort', detail: effortName },
             { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
             { value: 'saved', label: 'Saved prompts', detail: `${stored.length}` },
           ]}
-          onPick={(v) => setPick({ kind: v as 'mode' | 'model' | 'loop' | 'saved', at: pick.at })}
+          onPick={(v) => setPick({ kind: v as 'mode' | 'model' | 'effort' | 'loop' | 'saved', at: pick.at })}
           onClose={() => setPick(null)}
         />
       )}
@@ -508,6 +511,16 @@ export function Composer() {
           current={team ? 'team' : model}
           items={models.map((m) => ({ value: m.value, label: m.displayName, detail: m.description }))}
           onPick={(v) => { send({ type: 'set_model', model: v }); setPick(null); }}
+          onClose={() => setPick(null)}
+        />
+      )}
+      {pick?.kind === 'effort' && (
+        <QuickPick
+          anchor={pick.at}
+          title="Select effort"
+          current={effort}
+          items={EFFORT_LEVELS.map((e) => ({ value: e, label: EFFORT_LABEL[e] }))}
+          onPick={(v) => { send({ type: 'set_effort', effort: v }); setPick(null); }}
           onClose={() => setPick(null)}
         />
       )}

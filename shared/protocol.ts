@@ -60,6 +60,7 @@ export type SessionInfo = {
   id: string;
   sessionId: string | null;
   model: string | null;
+  effort: Effort | null;
   team: boolean;
   cwd: string;
   running: boolean;
@@ -106,6 +107,12 @@ export const MCP_BAD = ['failed', 'needs-auth'];
 export type CacheInfo = { at: number; ttlMs: number; readTokens: number; writeTokens: number };
 
 export const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'auto', 'dontAsk'] as const;
+
+export const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+
+export type Effort = (typeof EFFORT_LEVELS)[number];
+
+export const EFFORT_LABEL: Record<Effort, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' };
 
 export type ServerState = {
   session: SessionInfo;
@@ -226,6 +233,7 @@ export type ClientMessage =
   | { type: 'permission'; id: string; allow: boolean; always?: boolean }
   | { type: 'allow_blocked'; id: string }
   | { type: 'set_model'; model: string }
+  | { type: 'set_effort'; effort: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_loop'; on: boolean; max?: number }
   | { type: 'interrupt' }

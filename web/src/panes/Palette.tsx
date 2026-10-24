@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getState, send, setUi, useStore } from '../store';
 import { toggleNotify } from '../notify';
-import { PERMISSION_MODES } from '../../../shared/protocol';
+import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
 import { Hl } from './util';
 import '../palette.css';
 
@@ -37,6 +37,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     { id: 'repo', label: 'Chat: Open Repository', key: '⌘O' },
     { id: 'newChat', label: 'Chat: New Chat' },
     ...models.map((m) => ({ id: `model:${m.value}`, label: `Model: ${m.displayName}` })),
+    ...EFFORT_LEVELS.map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
     ...PERMISSION_MODES.map((m) => ({ id: `mode:${m}`, label: `Permission Mode: ${MODES[m] ?? m}` })),
     { id: 'compact', label: 'Chat: Compact Context' },
     { id: 'loop', label: 'Chat: Toggle Plan, Build, Test Loop' },
@@ -113,6 +114,7 @@ function perform(id: string) {
   const [kind, ...rest] = id.split(':');
   const arg = rest.join(':');
   if (kind === 'model') send({ type: 'set_model', model: arg });
+  else if (kind === 'effort') send({ type: 'set_effort', effort: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
   else if (id === 'newChat') send({ type: 'new_session' });
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });

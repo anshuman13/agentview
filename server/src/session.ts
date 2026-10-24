@@ -5,7 +5,7 @@ import { watch, type FSWatcher } from 'node:fs';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { JsonlTail } from './tail.js';
 import { query, getSessionMessages, getSubagentMessages, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type HookInput, type HookJSONOutput, type SessionCronSummary } from '@anthropic-ai/claude-agent-sdk';
-import { COMPACT_AT, type AgentEvent, type AgentStatus, type ChatEvent, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
+import { COMPACT_AT, EFFORT_LEVELS, type AgentEvent, type AgentStatus, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../shared/protocol.js';
 import { Approvals } from './approvals.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
@@ -152,7 +152,7 @@ export class AgentSession {
 
   constructor(public cwd: string, private resume?: string) {
     this.state = {
-      session: { id: this.id, sessionId: resume ?? null, model: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null },
+      session: { id: this.id, sessionId: resume ?? null, model: null, effort: null, team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null },
       status: 'Idle',
       events: [],
       pending: [],
@@ -315,6 +315,7 @@ export class AgentSession {
         return {};
       },
       mcp: this.addedMcp,
+      effort: this.state.session.effort ?? undefined,
     });
     this.mcpServers = options.mcpServers ?? {};
     this.q = query({ prompt: this.inputStream(this.gen), options });
@@ -386,6 +387,14 @@ export class AgentSession {
     await this.q?.setModel(team ? TEAM.model : model);
     this.setSession({ model: team ? TEAM.model : model, team });
     this.system(team ? 'Team mode: Opus plans each task, Sonnet 5.5 builds it with Opus advising, Fable only with your OK' : `Model set to ${model}`);
+  }
+
+  async setEffort(level: string) {
+    if (!EFFORT_LEVELS.includes(level as Effort)) return;
+    this.start();
+    await this.q?.applyFlagSettings({ effortLevel: level as Effort });
+    this.setSession({ effort: level as Effort });
+    this.system(`Effort set to ${level}`);
   }
 
   async setPermissionMode(mode: string) {
