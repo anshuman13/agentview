@@ -154,7 +154,7 @@ function handle(m: ServerMessage) {
         });
         const keep = same && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
         const moved = Boolean(s.session.cwd) && s.session.cwd !== m.state.session.cwd;
-        return { ...m.state, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: moved ? { ...s.ui, openFile: null, openLine: null } : s.ui };
+        return { ...m.state, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: { ...s.ui, restarting: false, ...(moved && { openFile: null, openLine: null }) } };
       });
       break;
     case 'findings':
