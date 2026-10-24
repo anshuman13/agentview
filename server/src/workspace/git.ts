@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 import { safeResolve } from './files.js';
-import type { GitFile, GitStatus } from '../../shared/protocol.js';
+import type { GitFile, GitStatus } from '../../../shared/protocol.js';
 
 const exec = promisify(execFile);
 
