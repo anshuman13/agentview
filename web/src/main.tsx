@@ -7,6 +7,9 @@ import { api } from './store';
 
 if (touch()) window.addEventListener('focusout', () => window.scrollTo(0, 0));
 
+// A rebuild replaces the hashed chunks; a page from the previous build reloads instead of failing to open a pane.
+window.addEventListener('vite:preloadError', () => location.reload());
+
 // The Mac app's WKWebView drops target=_blank links, so the server opens them in Chrome.
 if (/Macintosh/.test(navigator.userAgent) && !/Safari\//.test(navigator.userAgent)) {
   window.addEventListener('click', (e) => {
