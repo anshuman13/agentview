@@ -77,7 +77,7 @@
 .sessions .row.live.two > .dot { margin-top: 7px; }
 .sessions .row.live.two > .mark { flex: none; display: inline-flex; width: var(--sp-6); justify-content: center; margin: var(--sp-1) 0 0; color: var(--ok); }
 .sessions .row.live.two > .acts { margin-top: var(--sp-1); }
-.sessions .lines { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 18px; }
+.sessions .lines { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: var(--line-sm); }
 .sessions .lines :is(.l1, .l2) { display: flex; align-items: baseline; min-width: 0; }
 .sessions .lines .l1 { gap: var(--sp-3); }
 .sessions .lines .l1 .repo { flex: none; font-weight: 600; color: var(--fg); }
@@ -128,7 +128,7 @@
   .sessions-bar .icon-btn { width: var(--touch-md); height: var(--touch-md); }
   .sessions .sessions-bar .new-chat, .side-switch button, .sessions .side-switch button { height: var(--touch); font-size: var(--fs-lg); }
   .sessions .row.live.two { min-height: 48px; padding-top: var(--sp-3); padding-bottom: var(--sp-3); }
-  .sessions .lines { line-height: 20px; }
+  .sessions .lines { line-height: var(--line-md); }
   .sessions .lines .l2 { font-size: var(--fs-md); }
   .sessions.workspace .row.repo-row.two { min-height: var(--touch-sm); align-items: center; }
 }

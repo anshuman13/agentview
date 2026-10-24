@@ -63,7 +63,7 @@ button.gh-open-chat { color: var(--fg); }
 .gh-diff {
   margin: var(--sp-1) var(--sp-6) var(--sp-3); padding: var(--sp-2) 0; max-height: 400px; overflow: auto;
   background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  font-family: var(--mono); font-size: var(--fs-xs); line-height: 16px;
+  font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--line-xs);
 }
 .gh-diff > div { padding: 0 var(--sp-4); white-space: pre; min-width: max-content; }
 .gh-diff .add { background: color-mix(in srgb, var(--diff-add) 10%, transparent); }
@@ -101,7 +101,7 @@ button.gh-open-chat { color: var(--fg); }
   .gh-bar .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .gh-pr { padding-top: 9px; padding-bottom: var(--sp-5); }
   .gh-block { height: var(--touch-sm); }
-  .gh-text { font-size: var(--fs-2xl); line-height: 22px; }
+  .gh-text { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .gh-merge select { height: var(--touch); font-size: var(--fs-md); }
   .gh-diff { max-height: 50vh; }
 }

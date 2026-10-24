@@ -66,14 +66,14 @@
 .observe .obs-link { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--link); text-decoration: none; white-space: nowrap; }
 .observe .obs-link:hover { text-decoration: underline; }
 
-.observe .obs-logs { margin: var(--sp-1) var(--sp-6); max-height: 260px; line-height: 16px; }
+.observe .obs-logs { margin: var(--sp-1) var(--sp-6); max-height: 260px; line-height: var(--line-xs); }
 .observe .obs-logs .line { display: flex; gap: var(--sp-4); padding: 1px var(--sp-4); border-left: 2px solid transparent; }
 .observe .obs-logs .line:is(.level-error, .level-fatal, .level-critical) { border-left-color: var(--err); }
 .observe .obs-logs .line:is(.level-warn, .level-warning) { border-left-color: var(--warn); }
 .observe .obs-logs .ts { flex: none; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 .observe :is(.obs-logs, .obs-patterns) .text { color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .observe :is(.obs-logs .line, .obs-patterns .pattern):hover .text { white-space: normal; word-break: break-all; }
-.observe .obs-patterns { margin: var(--sp-1) var(--sp-6); font-family: var(--mono); font-size: var(--fs-xs); line-height: 16px; }
+.observe .obs-patterns { margin: var(--sp-1) var(--sp-6); font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--line-xs); }
 .observe .obs-patterns .pattern { display: flex; gap: var(--sp-4); padding: var(--sp-1) 0; border-bottom: 1px solid var(--border); }
 .observe .obs-patterns .count { flex: none; min-width: var(--touch-sm); text-align: right; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 
@@ -92,7 +92,7 @@
 .observe .obs-save { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-6); font-size: var(--fs-sm); }
 
 .observe .obs-table { margin: var(--sp-1) var(--sp-6) var(--sp-3); max-height: 360px; }
-.observe .obs-table table { border-collapse: collapse; font-family: var(--mono); font-size: var(--fs-xs); line-height: 16px; white-space: nowrap; }
+.observe .obs-table table { border-collapse: collapse; font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--line-xs); white-space: nowrap; }
 .observe .obs-table :is(th, td) { border-bottom: 1px solid var(--border); }
 .observe .obs-table th { position: sticky; top: 0; padding: 3px var(--sp-4); text-align: left; font-weight: 600; color: var(--fg-muted); background: var(--sunken); }
 .observe .obs-table td { padding: var(--sp-1) var(--sp-4); max-width: 320px; overflow: hidden; text-overflow: ellipsis; color: var(--fg); }
@@ -104,7 +104,7 @@
 @media (max-width: 900px) {
   .observe .obs-picker { padding-bottom: var(--sp-5); }
   .observe :is(.obs-picker input, .obs-form input, .obs-field input, .obs-form select, .obs-pick select) { height: var(--touch-md); font-size: var(--fs-2xl); }
-  .observe .obs-editor { font-size: var(--fs-2xl); line-height: 22px; }
+  .observe .obs-editor { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .observe .obs-head { height: var(--touch); gap: var(--sp-2); }
   .observe .obs-head .acts { gap: var(--sp-1); }
   .observe :is(.obs-head, .obs-picker, .obs-issue .meta) .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }

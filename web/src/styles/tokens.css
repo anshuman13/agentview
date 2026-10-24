@@ -46,6 +46,10 @@
   --lh: 1.5;
   --lh-relaxed: 1.6;
   --lh-loose: 1.7;
+  --line-xs: 16px;
+  --line-sm: 18px;
+  --line-md: 20px;
+  --line-lg: 22px;
   --tracking-tight: -0.01em;
   --tracking: 0.02em;
   --tracking-wide: 0.04em;
