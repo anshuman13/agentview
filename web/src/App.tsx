@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { connect, getState, presetChat, send, setUi, useStore } from './store';
+import { connect, embedded, getState, presetChat, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../shared/protocol';
 import { Brief } from './panes/Brief';
 import { AgentsBadge, AgentsPane, AgentsTab } from './panes/AgentsPane';
@@ -62,9 +62,10 @@ function stored(key: string, fallback: number) {
 const params = new URLSearchParams(location.search);
 const shellParam = params.get('shell');
 if (shellParam) localStorage.setItem('agentview.shell', shellParam);
-// Deep links: ?view=github, ?page=observe, ?chat=<live id> or ?session=<saved id>. Consumed once, then dropped from the URL.
+// Deep links: ?view=github, ?page=observe, ?chat=<live id>, ?session=<saved id> or ?beside=<live id>. Consumed once, then dropped from the URL.
 const deepLink = { view: params.get('view'), page: params.get('page'), chat: params.get('chat'), session: params.get('session') };
 if (deepLink.chat || deepLink.session) presetChat(deepLink.chat, deepLink.session);
+if (params.get('beside') && !embedded) setUi({ beside: params.get('beside') });
 if (params.size) history.replaceState(null, '', location.pathname);
 
 function AppUpdate() {
@@ -165,6 +166,9 @@ export function App() {
   const [terminal, setTerminal] = useState(false);
   const notifying = useNotify();
   const [theme, toggleTheme] = useTheme();
+  const beside = useStore((s) => (s.ui.beside && s.ui.beside !== s.session.id ? s.ui.beside : null));
+  const besideChat = useStore((s) => s.live.find((c) => c.id === s.ui.beside));
+  const besideGone = useStore((s) => Boolean(s.ui.beside) && s.live.length > 0 && !s.live.some((c) => c.id === s.ui.beside));
 
   const drag = (e: React.PointerEvent, move: (ev: PointerEvent) => void, cls: string) => {
     e.preventDefault();
@@ -188,6 +192,22 @@ export function App() {
   useEffect(() => {
     if (pendingCount > 0) setTab('chat');
   }, [pendingCount]);
+
+  useEffect(() => {
+    if (besideGone) setUi({ beside: null });
+    else localStorage.setItem('agentview.beside', beside ?? '');
+  }, [beside, besideGone]);
+
+  // The side column tells the page which chat it shows; the page keeps the title and the stored id in step.
+  useEffect(() => {
+    if (embedded) {
+      if (session.id) window.parent.postMessage({ type: 'agentview:chat', id: session.id }, location.origin);
+      return;
+    }
+    const on = (e: MessageEvent) => { if (e.origin === location.origin && e.data?.type === 'agentview:chat' && typeof e.data.id === 'string') setUi({ beside: e.data.id }); };
+    window.addEventListener('message', on);
+    return () => window.removeEventListener('message', on);
+  }, [session.id]);
 
   useEffect(() => {
     setTab((t) => (t === 'repos' ? 'chat' : t));
@@ -292,6 +312,17 @@ export function App() {
     const row = el.closest<HTMLElement>('.ex-row');
     if (row && !el.closest('.ex-close') && row.title === openFile) setBrowse(false);
   };
+
+  if (embedded) {
+    return (
+      <div className="workbench embed" data-tab="chat" data-sidebar="false" data-chat="true" data-editor="false">
+        <SwitchedBanner />
+        <Restarting />
+        <Offline />
+        <div className="body"><section className="main pane center"><Brief /></section></div>
+      </div>
+    );
+  }
 
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
@@ -401,6 +432,18 @@ export function App() {
         <section className="main pane center">
           <Brief />
         </section>
+        {beside && (
+          <section className="main pane center beside desktop-only">
+            <div className="beside-head">
+              <Icon name="comment-discussion" small />
+              <span className="name" title={besideChat ? `${besideChat.title}\n${besideChat.cwd}` : ''}>{besideChat ? `${besideChat.cwd.split('/').pop()} · ${besideChat.title}` : 'Chat'}</span>
+              <span className="spacer" />
+              <button className="icon-btn" title="Show this chat in the main column" onClick={() => send({ type: 'view', id: beside })}><Icon name="arrow-left" small /></button>
+              <button className="icon-btn" title="Close the side chat" onClick={() => setUi({ beside: null })}><Icon name="close" small /></button>
+            </div>
+            <iframe key={beside} className="beside-frame" title="Side chat" src={`/?chat=${encodeURIComponent(beside)}`} />
+          </section>
+        )}
       </div>
 
       <footer className="statusbar desktop-only">

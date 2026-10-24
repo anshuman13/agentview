@@ -10,7 +10,12 @@ type UiState = {
   follow: boolean;
   switcherOpen: boolean;
   repoPicker: boolean;
+  beside: string | null;
 };
+
+// A side chat column is this app in an iframe; it shows one chat and nothing else.
+export const embedded = typeof window !== 'undefined' && window.self !== window.top;
+const storedBeside = () => { try { return embedded ? null : localStorage.getItem('agentview.beside') || null; } catch { return null; } };
 
 export type State = ServerState & { live: LiveChat[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; ui: UiState };
 
@@ -23,7 +28,7 @@ let state: State = {
   live: [],
   attention: [],
   findings: {},
-  ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false },
+  ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false, beside: storedBeside() },
 };
 
 const listeners = new Set<() => void>();
@@ -74,6 +79,7 @@ const repo = (c: LiveChat) => c.cwd.split('/').pop();
 const focus = (id: string) => () => send({ type: 'view', id });
 
 function notifyBackground(chats: LiveChat[]) {
+  if (embedded) return;
   for (const c of chats) {
     const was = state.live.find((x) => x.id === c.id);
     if (!was || c.id === state.session.id) continue;

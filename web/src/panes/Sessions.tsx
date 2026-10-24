@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, notice, send, setUi, useStore } from '../store';
+import { api, embedded, notice, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import { QuickPick } from '../QuickPick';
@@ -434,7 +434,7 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} onDelete={() => removeLive(c)} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} onDelete={() => removeLive(c)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
 
   useEffect(() => setOpening(null), [current]);
 
@@ -535,7 +535,7 @@ export function chatLine(c: LiveChat, events: ChatEvent[] | null) {
   return { text: c.pending ? 'Needs you' : c.running ? c.status : last ?? '', edits: done ? edits : undefined, done: done && Boolean(edits) };
 }
 
-function LiveRow({ c, repo, selected, onClose, onDelete }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void; onDelete?: () => void }) {
+function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void; onDelete?: () => void; onBeside?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const line = chatLine(c, events);
   const second = Boolean(line.text || line.edits);
@@ -557,6 +557,7 @@ function LiveRow({ c, repo, selected, onClose, onDelete }: { c: LiveChat; repo?:
         )}
       </span>
       <span className="acts">
+        {onBeside && <button className="icon-btn desktop-only" title="Open beside the current chat" onClick={(e) => { e.stopPropagation(); onBeside(); }}><Icon name="split-horizontal" small /></button>}
         <button className="icon-btn" title="Close chat, keep the transcript" onClick={(e) => { e.stopPropagation(); onClose(); }}><Icon name="close" small /></button>
         {c.sessionId && onDelete && <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Icon name="trash" small /></button>}
       </span>
