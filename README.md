@@ -57,6 +57,8 @@ cost so far. Switch to the transcript for every message and step in order.
   cards: turns, files changed, failed commands and whether a permission is waiting. Tap it to dismiss
 - "Fork chat" in the chat settings menu (or the palette) starts a new chat that carries the whole conversation so
   far, so two directions can be tried from the same point
+- "Rewind files" under the files of a turn puts them back to how they were before that prompt (later turns' edits
+  go too); the conversation itself stays
 
 ## Review findings
 

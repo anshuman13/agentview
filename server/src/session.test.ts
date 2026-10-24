@@ -1031,6 +1031,29 @@ describe('send queue fuzz', () => {
   }
 });
 
+describe('rewind files', () => {
+  it('rewinds to the uuid the CLI echoed for the prompt, or the history id', async () => {
+    const { s, result } = fakeSession();
+    const rewindFiles = vi.fn(async () => ({ canRewind: true, filesChanged: ['/tmp/project/a.ts'] }));
+    Object.assign(s, { q: { interrupt: vi.fn(), rewindFiles } });
+    const handle = (msg: unknown) => (s as unknown as { handle: (m: unknown) => void }).handle(msg);
+    await s.prompt('fix it', 'ev1');
+    handle({ type: 'user', uuid: 'u1', parent_tool_use_id: null, message: { role: 'user', content: 'fix it' } });
+    await s.rewind('ev1');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Stop Claude before rewinding files' });
+    result('r1');
+    await s.rewind('ev1');
+    expect(rewindFiles).toHaveBeenCalledWith('u1');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Rewound 1 file to before that prompt' });
+    expect(s.state.recentFiles).toEqual(['a.ts']);
+    await s.rewind('hist-uuid:3');
+    expect(rewindFiles).toHaveBeenLastCalledWith('hist-uuid');
+    rewindFiles.mockResolvedValueOnce({ canRewind: false, error: 'no checkpoint', filesChanged: [] });
+    await s.rewind('ev1');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Rewind failed: no checkpoint' });
+  });
+});
+
 describe('pull request link', () => {
   const create = { type: 'tool_use', id: 'gh1', name: 'Bash', input: { command: 'gh pr create --title "Fix" --body "x"' } };
   const made = { type: 'tool_result', tool_use_id: 'gh1', content: 'Creating pull request for a into main in o/r\n\nhttps://github.com/o/r/pull/42\n' };

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
+import { Confirm, type ConfirmRequest } from '../Confirm';
 import { BlockedCard, Pending } from './Pending';
 import { Composer, Markdown } from './Chat';
 import { clock, loopLabel } from './Composer';
@@ -183,7 +184,7 @@ function TurnCard({ turn, latest, live, cwd, pending }: { turn: Turn; latest: bo
         </div>
       )}
       {turn.reply && <Reply text={turn.reply.text} clip={!latest} />}
-      <Facts turn={turn} cwd={cwd} pending={pending} latest={latest && !live} />
+      <Facts turn={turn} cwd={cwd} pending={pending} latest={latest && !live} settled={!live} />
       {turn.steps.length > 0 && (
         <button className="tc-steps-toggle" aria-expanded={stepsOpen} onClick={() => setStepsOpen((v) => !v)}>
           <Icon name={stepsOpen ? 'chevron-down' : 'chevron-right'} small />Steps ({turn.steps.length})
@@ -213,8 +214,17 @@ function Reply({ text, clip }: { text: string; clip: boolean }) {
   );
 }
 
-function Facts({ turn, cwd, pending, latest }: { turn: Turn; cwd: string; pending: PendingRequest[]; latest: boolean }) {
+const rewindRequest = (turn: Turn): ConfirmRequest => ({
+  title: 'Rewind files?',
+  detail: `Puts every file Claude changed back to how it was before "${turn.prompt.split('\n')[0].slice(0, 80)}". Edits from later turns are undone too; the conversation stays.`,
+  action: 'Rewind',
+  icon: 'discard',
+  run: async () => send({ type: 'rewind', id: turn.id }),
+});
+
+function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: string; pending: PendingRequest[]; latest: boolean; settled: boolean }) {
   const [allFiles, setAllFiles] = useState(false);
+  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const failed = turn.commands.filter((c) => c.error);
   const refused = turn.commands.filter((c) => c.denied);
   const files = allFiles ? turn.files : turn.files.slice(0, FILES_SHOWN);
@@ -256,6 +266,8 @@ function Facts({ turn, cwd, pending, latest }: { turn: Turn; cwd: string; pendin
           })}
           {turn.files.length > FILES_SHOWN && <button className="link" onClick={() => setAllFiles((v) => !v)}>{allFiles ? 'Show fewer' : `${turn.files.length - FILES_SHOWN} more`}</button>}
           {latest && <button className="link" title="Claude reviews the working tree, findings show in the Changes view" onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>Review changes</button>}
+          {settled && <button className="link" title="Put the files back to how they were before this prompt" onClick={() => setAsk(rewindRequest(turn))}>Rewind files</button>}
+          {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
         </div>
       )}
       {turn.commits.length > 0 && (

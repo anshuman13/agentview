@@ -60,6 +60,7 @@ export function agentOptions(o: {
     systemPrompt: { type: 'preset', preset: 'claude_code', append: INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
+    enableFileCheckpointing: true,
     allowedTools: ['mcp__agentview__set_status'],
     disallowedTools: ['mcp__playwright'],
     extraArgs: { chrome: null },
