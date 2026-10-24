@@ -27,7 +27,7 @@
 
 .turns { display: flex; flex-direction: column; gap: var(--sp-6); padding: var(--sp-3) 0 0; }
 .tc-earlier { align-self: center; font-size: var(--fs-xs); }
-.tc { display: flex; flex-direction: column; gap: var(--sp-3); padding-bottom: var(--sp-6); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); line-height: 18px; color: var(--fg); }
+.tc { display: flex; flex-direction: column; gap: var(--sp-3); padding-bottom: var(--sp-6); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); line-height: var(--line-sm); color: var(--fg); }
 .tc.latest { padding-bottom: 0; border-bottom: 0; }
 .tc .mark, .tl-now .mark { position: relative; flex: none; width: var(--size-xs); height: var(--size-xs); display: flex; align-items: center; justify-content: center; color: var(--fg-muted); }
 .tc .when, .tl-now .when { text-align: right; font-size: var(--fs-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -110,7 +110,7 @@
 }
 .tl-now {
   position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; column-gap: var(--sp-4); align-items: start;
-  padding: var(--sp-2) 0; font-size: var(--fs-sm); line-height: 18px; color: var(--fg);
+  padding: var(--sp-2) 0; font-size: var(--fs-sm); line-height: var(--line-sm); color: var(--fg);
 }
 .tl-now .text { min-width: 0; }
 .tl-now:is(.running, .stopping) .mark { color: var(--claude); }
@@ -142,7 +142,7 @@
   .timeline-head .icon-btn, .step .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .timeline-head .mac-here { display: inline-flex; align-items: center; gap: var(--sp-2); max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fg); }
   .tl-view { min-height: var(--touch-sm); }
-  .tc, .tl-now { font-size: var(--fs-md); line-height: 20px; }
+  .tc, .tl-now { font-size: var(--fs-md); line-height: var(--line-md); }
   .tc-label, .tc-err, .tc-agent .state { font-size: var(--fs-sm); }
   .tc-file, .tc-agent { min-height: var(--touch-md); font-size: var(--fs-md); }
   .tc-facts, .tr.tc-steps { margin-left: 0; }

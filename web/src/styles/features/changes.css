@@ -7,7 +7,7 @@
 
 .scm-commit { flex: none; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-6) var(--sp-4); }
 .scm-commit textarea {
-  width: 100%; resize: none; padding: 5px var(--sp-4); font: inherit; font-size: var(--fs-md); line-height: 18px;
+  width: 100%; resize: none; padding: 5px var(--sp-4); font: inherit; font-size: var(--fs-md); line-height: var(--line-sm);
   color: var(--fg); background: var(--raised); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
 }
 .scm-commit textarea:focus { outline: 0; border-color: var(--accent); }
@@ -44,5 +44,5 @@
   .scm-row { height: var(--touch-md); }
   .scm-branch { height: var(--touch); }
   .scm-branch .icon-btn, .scm-acts .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
-  .scm-commit textarea { font-size: var(--fs-2xl); line-height: 22px; }
+  .scm-commit textarea { font-size: var(--fs-2xl); line-height: var(--line-lg); }
 }

@@ -6,7 +6,7 @@ button {
   padding: 3px var(--sp-5);
   cursor: pointer;
   font: inherit;
-  line-height: 18px;
+  line-height: var(--line-sm);
 }
 button:hover { background: var(--border-strong); }
 button.primary { background: var(--accent); color: var(--on-accent); }
@@ -15,7 +15,7 @@ button.primary:disabled { opacity: 0.5; cursor: default; }
 button.active { color: var(--fg); }
 button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
 button.destructive:hover { background: color-mix(in srgb, var(--err) 28%, transparent); }
-button.link { background: transparent; border: 0; padding: 0; color: var(--link); text-align: left; line-height: 18px; }
+button.link { background: transparent; border: 0; padding: 0; color: var(--link); text-align: left; line-height: var(--line-sm); }
 button.link:hover { background: transparent; text-decoration: underline; }
 
 .icon-btn {

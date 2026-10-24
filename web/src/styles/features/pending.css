@@ -18,14 +18,14 @@
   margin: 0; min-width: 0; overflow: auto;
   background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
-.pd-code, .pd-diff, .pd-preview { max-height: 240px; padding: var(--sp-4) var(--sp-5); white-space: pre-wrap; word-break: break-word; font: var(--fs-sm)/18px var(--mono); }
+.pd-code, .pd-diff, .pd-preview { max-height: 240px; padding: var(--sp-4) var(--sp-5); white-space: pre-wrap; word-break: break-word; font: var(--fs-sm)/var(--line-sm) var(--mono); }
 .pd-diff { padding: var(--sp-2) 0; }
 .pd-diff > div { padding: 0 var(--sp-5); min-height: 18px; }
 .pd-diff .add { background: color-mix(in srgb, var(--diff-add) 14%, transparent); }
 .pd-diff .del { background: color-mix(in srgb, var(--diff-del) 14%, transparent); }
 .pd-diff .pd-cut { color: var(--fg-faint); }
 .pd-plan { max-height: 50vh; padding: var(--sp-5) var(--sp-6); }
-.pd-path { font: var(--fs-sm)/18px var(--mono); color: var(--fg); word-break: break-all; }
+.pd-path { font: var(--fs-sm)/var(--line-sm) var(--mono); color: var(--fg); word-break: break-all; }
 a.pd-path { text-decoration: underline; text-decoration-color: var(--fg-faint); }
 a.pd-path:hover { text-decoration-color: currentColor; }
 
@@ -43,7 +43,7 @@ button.pd-more:hover { background: none; color: var(--fg); }
 .pd-options { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--sp-4)); }
 button.pd-option {
   display: flex; align-items: flex-start; gap: var(--sp-5); width: 100%; padding: var(--sp-3) var(--sp-4); text-align: left;
-  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); line-height: 18px;
+  border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); line-height: var(--line-sm);
 }
 button.pd-option:hover { background: var(--hover); }
 .pd-mark { flex: none; font-family: var(--mono); color: var(--fg-muted); }

@@ -16,7 +16,7 @@
 .cd-editor { flex: 1; min-height: 0; overflow: hidden; }
 .cd-editor .cm-editor { height: 100%; background: var(--bg); color: var(--fg); }
 .cd-editor .cm-editor.cm-focused { outline: none; }
-.cd-editor .cm-editor .cm-scroller { overflow: auto; font-family: var(--mono); font-size: var(--fs-md); line-height: 18px; }
+.cd-editor .cm-editor .cm-scroller { overflow: auto; font-family: var(--mono); font-size: var(--fs-md); line-height: var(--line-sm); }
 .cd-editor .cm-editor .cm-content { padding: 0 0 var(--sp-12); }
 .cd-editor .cm-editor .cm-line { padding: 0 var(--sp-12) 0 var(--sp-2); }
 .cd-editor .cm-editor ::selection { background: color-mix(in srgb, var(--accent) 40%, transparent); }
@@ -44,6 +44,6 @@
 @media (max-width: 900px) {
   .cd-bar { height: var(--touch); padding: 0 var(--sp-2) 0 var(--sp-7); }
   .cd-btn { width: var(--touch-md); height: var(--touch-md); }
-  .cd-editor .cm-editor .cm-scroller { font-size: var(--fs-lg); line-height: 20px; }
+  .cd-editor .cm-editor .cm-scroller { font-size: var(--fs-lg); line-height: var(--line-md); }
   .cd-editor .cm-editor .cm-lineNumbers .cm-gutterElement { min-width: 36px; padding: 0 var(--sp-4) 0 var(--sp-5); }
 }
