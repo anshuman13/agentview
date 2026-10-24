@@ -86,16 +86,9 @@ button.gh-open-chat:hover { background: var(--hover); }
 }
 .gh-text:focus { outline: 0; border-color: var(--accent); }
 .gh-actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
-.gh-actions button {
-  height: var(--size-md); display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-4); font-size: var(--fs-sm); white-space: nowrap;
-  background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--fg);
-}
-.gh-actions button:hover:not(:disabled) { background: var(--hover); }
-.gh-actions button:disabled { opacity: 0.5; cursor: default; }
-.gh-actions button.primary { border-color: transparent; }
 .gh-actions .gh-claude { color: var(--claude); }
 .gh-merge { display: inline-flex; }
-.gh-merge button { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.gh-merge .btn { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
 .gh-merge select {
   height: var(--size-md); padding: 0 var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); background: transparent;
   border: 1px solid var(--border-strong); border-left: 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
@@ -110,8 +103,6 @@ button.gh-open-chat:hover { background: var(--hover); }
 .gh-finding .gh-item .codicon { color: var(--warn); }
 .gh-finding-foot { display: flex; align-items: center; gap: var(--sp-4); padding: 0 var(--sp-6) 0 30px; font-size: var(--fs-xs); color: var(--fg-muted); }
 .gh-finding-foot .gh-sha { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.gh-mini { height: var(--size-xs); padding: 0 var(--sp-3); font-size: var(--fs-xs); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: transparent; color: var(--fg-muted); cursor: pointer; }
-.gh-mini:hover { color: var(--fg); background: var(--hover); }
 
 @media (max-width: 900px) {
   .gh-section, .gh-item { height: var(--touch-md); }
@@ -120,7 +111,6 @@ button.gh-open-chat:hover { background: var(--hover); }
   .gh-pr { padding-top: 9px; padding-bottom: var(--sp-5); }
   .gh-block { height: var(--touch-sm); }
   .gh-text { font-size: var(--fs-2xl); line-height: 22px; }
-  .gh-actions button, .gh-merge select { height: var(--touch); font-size: var(--fs-md); }
-  .gh-actions button { padding: 0 var(--sp-6); }
+  .gh-merge select { height: var(--touch); font-size: var(--fs-md); }
   .gh-diff { max-height: 50vh; }
 }

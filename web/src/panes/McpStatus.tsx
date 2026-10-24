@@ -190,7 +190,7 @@ export function McpPage() {
             <Stat n={tools} label="tools" />
             {calls > 0 && <Stat n={calls} label="calls in chat" />}
             {attention > 0 && <Stat n={attention} label="need you" tone="bad" />}
-            <button className={`mcp-refresh ${busy ? 'busy' : ''}`} onClick={() => load(true)} disabled={busy} title="Connect to every server again">
+            <button className={`btn mcp-refresh ${busy ? 'busy' : ''}`} onClick={() => load(true)} disabled={busy} title="Connect to every server again">
               <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at, ' ago')}` : 'Check'}
             </button>
           </div>,
@@ -279,12 +279,12 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
         <button className="icon-btn" title="Close" onClick={onClose}><Icon name="close" small /></button>
       </div>
       <div className="mcp-detail-acts">
-        {row.live && MCP_BAD.includes(row.status) && <button onClick={() => send({ type: 'mcp_reconnect', name: row.name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
-        {row.live && row.status === 'disabled' && <button onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}><Icon name="debug-start" small /> Enable</button>}
-        {row.live && row.status !== 'disabled' && <button onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
-        {row.live && row.status === 'connected' && <button onClick={() => use(row.name)} title="Ask Claude to use this server in your next message"><Icon name="comment" small /> Add to chat</button>}
+        {row.live && MCP_BAD.includes(row.status) && <button className="btn" onClick={() => send({ type: 'mcp_reconnect', name: row.name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
+        {row.live && row.status === 'disabled' && <button className="btn" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}><Icon name="debug-start" small /> Enable</button>}
+        {row.live && row.status !== 'disabled' && <button className="btn" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
+        {row.live && row.status === 'connected' && <button className="btn" onClick={() => use(row.name)} title="Ask Claude to use this server in your next message"><Icon name="comment" small /> Add to chat</button>}
         {!row.live && <AddToChat name={row.name} />}
-        {url && <a href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
+        {url && <a className="btn" href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
       </div>
       <dl className="mcp-kv">
         <dt>Status</dt><dd className={tone}>{label}{row.version ? <span className="muted mono"> · v{row.version}</span> : null}</dd>
@@ -394,7 +394,7 @@ function RunForm({ server, tool }: { server: string; tool: McpTool }) {
       ))}
       {!fields.length && <div className="muted">This tool takes no input.</div>}
       <div className="mcp-run-acts">
-        <button type="submit" className={armed ? 'danger' : 'primary'} disabled={busy}>
+        <button type="submit" className={armed ? 'btn danger' : 'btn primary'} disabled={busy}>
           <Icon name={busy ? 'loading' : armed ? 'warning' : 'play'} small spin={busy} /> {busy ? 'Running' : armed ? 'Confirm run' : 'Run'}
         </button>
         {armed && <span className="bad">This tool can change or delete data. Click again to run it.</span>}
@@ -403,7 +403,7 @@ function RunForm({ server, tool }: { server: string; tool: McpTool }) {
       {out && (
         <div className="mcp-run-out">
           <pre className={out.isError ? 'bad' : ''}>{out.text || '(no output)'}</pre>
-          <button type="button" onClick={() => void share(lead(out), out.text, `${slug(server)}-${tool.name}.txt`)}><Icon name="insert" small /> Add result to chat</button>
+          <button type="button" className="btn" onClick={() => void share(lead(out), out.text, `${slug(server)}-${tool.name}.txt`)}><Icon name="insert" small /> Add result to chat</button>
         </div>
       )}
     </form>
@@ -426,7 +426,7 @@ function AddToChat({ name }: { name: string }) {
   };
   return (
     <>
-      <button onClick={add} disabled={busy}><Icon name={busy ? 'loading' : 'add'} small spin={busy} /> Load in this chat</button>
+      <button className="btn" onClick={add} disabled={busy}><Icon name={busy ? 'loading' : 'add'} small spin={busy} /> Load in this chat</button>
       {error && <span className="mcp-act-error bad">{error}</span>}
     </>
   );
@@ -453,8 +453,8 @@ function Login({ name }: { name: string }) {
   return (
     <div className="mcp-login">
       <div className="mcp-login-acts">
-        <button onClick={start} disabled={busy}><Icon name={busy ? 'loading' : 'key'} small spin={busy} /> {opened ? 'Open again' : 'Log in'}</button>
-        {opened && <button onClick={() => command('tab:browser')}><Icon name="globe" small /> Show browser</button>}
+        <button className="btn" onClick={start} disabled={busy}><Icon name={busy ? 'loading' : 'key'} small spin={busy} /> {opened ? 'Open again' : 'Log in'}</button>
+        {opened && <button className="btn" onClick={() => command('tab:browser')}><Icon name="globe" small /> Show browser</button>}
       </div>
       {opened && <div className="muted">The login page is open in Chrome on the Mac. This updates once you finish there.</div>}
       {error && <div className="bad">{error}</div>}

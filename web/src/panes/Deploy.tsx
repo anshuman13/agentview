@@ -122,9 +122,9 @@ export function Deploy() {
           )}
           {env.latest?.description && tone(env.latest.state) !== 'ok' && <div className="deploy-meta muted">{env.latest.description}</div>}
           <div className="deploy-actions">
-            <button onClick={() => deploy(env, s.head.sha)} title={`Deploy ${short(s.head.sha)}`}>Deploy HEAD</button>
-            <button onClick={() => deploy(env)}>Deploy…</button>
-            <button onClick={() => rollback(env)} disabled={!env.rollbackTo} title={env.rollbackTo ? `Redeploy ${short(env.rollbackTo.sha)}` : 'No earlier deploy to roll back to'}>Rollback</button>
+            <button className="btn sm" onClick={() => deploy(env, s.head.sha)} title={`Deploy ${short(s.head.sha)}`}>Deploy HEAD</button>
+            <button className="btn sm" onClick={() => deploy(env)}>Deploy…</button>
+            <button className="btn sm" onClick={() => rollback(env)} disabled={!env.rollbackTo} title={env.rollbackTo ? `Redeploy ${short(env.rollbackTo.sha)}` : 'No earlier deploy to roll back to'}>Rollback</button>
           </div>
         </div>
       ))}

@@ -81,7 +81,7 @@ function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; no
           <span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={running} /></span>
           <h2 title={a.description}>{a.description}</h2>
           {running && (
-            <button className="ag-stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>
+            <button className="btn sm" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>
               <Icon name="debug-stop" small /> Stop
             </button>
           )}

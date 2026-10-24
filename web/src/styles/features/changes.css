@@ -12,14 +12,8 @@
 }
 .scm-commit textarea:focus { outline: 0; border-color: var(--accent); }
 .scm-commit-actions { display: flex; gap: var(--sp-3); }
-.scm-commit-actions button {
-  height: var(--size-lg); display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 var(--sp-5);
-  border-radius: var(--radius-sm); font-size: var(--fs-sm); white-space: nowrap;
-}
 .scm-commit-actions .primary { flex: 1; }
-.scm-claude { min-width: 0; overflow: hidden; text-overflow: ellipsis; background: transparent; border: 1px solid var(--border-strong); color: var(--fg-muted); }
-.scm-claude:hover:not(:disabled) { background: var(--hover); color: var(--fg); }
-.scm-claude:disabled { opacity: 0.5; cursor: default; }
+.scm-claude { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .scm-error { padding: 0 var(--sp-6) var(--sp-3); font-size: var(--fs-sm); color: var(--err); white-space: pre-wrap; word-break: break-word; }
 .scm-review { padding: 0 var(--sp-5) var(--sp-4); }
 .scm-review .scm-claude { flex: 1; }
@@ -61,5 +55,4 @@
   .scm-branch { height: var(--touch); }
   .scm-branch .icon-btn, .scm-acts .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .scm-commit textarea { font-size: var(--fs-2xl); line-height: 22px; }
-  .scm-commit-actions button { height: var(--touch); font-size: var(--fs-md); }
 }

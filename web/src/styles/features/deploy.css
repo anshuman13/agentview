@@ -15,8 +15,6 @@ select.deploy-app { background: var(--sunken); border: 1px solid var(--border); 
 .deploy-dot.busy { background: var(--warn); animation: pulse var(--pulse-fast) var(--ease) infinite; }
 .deploy-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); color: var(--fg-muted); word-break: break-word; }
 .deploy-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.deploy-actions button { padding: var(--sp-1) var(--sp-4); font-size: var(--fs-sm); }
-.deploy-actions button:disabled { opacity: 0.5; cursor: default; }
 .deploy-log { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--sunken); }
 .deploy-log.ok { border-left: 2px solid var(--ok); }
 .deploy-log.bad { border-left: 2px solid var(--err); }
@@ -27,7 +25,6 @@ select.deploy-app { background: var(--sunken); border: 1px solid var(--border); 
   .deploy-head { min-height: var(--touch); }
   .deploy-head .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   select.deploy-app { height: var(--touch-md); font-size: var(--fs-2xl); }
-  .deploy-actions button { min-height: var(--touch); padding: 0 var(--sp-7); font-size: var(--fs-md); }
   .deploy-link, .deploy-meta a { min-height: var(--touch-sm); display: inline-flex; align-items: center; }
   .deploy-log pre { max-height: 40vh; }
 }

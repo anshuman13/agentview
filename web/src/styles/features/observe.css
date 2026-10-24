@@ -37,11 +37,7 @@
 .observe .obs-tag { display: inline-flex; align-items: center; gap: 3px; height: var(--size-xs); padding: 0 var(--sp-3); font-size: var(--fs-xs); border-radius: var(--radius-sm); background: var(--raised); color: var(--fg-muted); }
 .observe .obs-tag.ok { color: var(--ok); }
 .observe .obs-add { display: inline-flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-xs); }
-.observe .obs-add button, .observe .obs-mini {
-  height: var(--size-xs); padding: 0 var(--sp-3); display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-xs);
-  color: var(--fg); background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm);
-}
-.observe :is(.obs-add button, .obs-mini, .obs-ask, .obs-save button.primary):disabled { opacity: 0.5; cursor: default; }
+.observe .obs-ask:disabled { opacity: 0.5; cursor: default; }
 .observe .obs-ask {
   height: var(--size-sm); padding: 0 var(--sp-3); display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); border: 0;
   color: var(--fg-muted); background: transparent; border-radius: var(--radius-sm);
@@ -102,7 +98,6 @@
 }
 .observe .obs-editor:disabled { opacity: 0.6; }
 .observe .obs-save { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-6); font-size: var(--fs-sm); }
-.observe .obs-save button.primary { height: var(--size-lg); padding: 0 var(--sp-7); display: inline-flex; align-items: center; gap: var(--sp-2); border-radius: var(--radius-sm); }
 
 .observe .obs-table { margin: var(--sp-1) var(--sp-6) var(--sp-3); max-height: 360px; }
 .observe .obs-table table { border-collapse: collapse; font-family: var(--mono); font-size: var(--fs-xs); line-height: 16px; white-space: nowrap; }
@@ -122,7 +117,7 @@
   .observe .obs-head .acts { gap: var(--sp-1); }
   .observe :is(.obs-head, .obs-picker, .obs-issue .meta) .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .observe .obs-subhead { min-height: var(--touch-md); flex-wrap: wrap; }
-  .observe :is(.obs-add button, .obs-mini, .obs-ask, .obs-save button.primary) { height: var(--touch); padding: 0 var(--sp-6); font-size: var(--fs-md); }
+  .observe .obs-ask { height: var(--touch); padding: 0 var(--sp-6); font-size: var(--fs-md); }
   .observe .obs-chip { height: var(--touch-sm); }
   .observe .obs-link { min-height: var(--touch-sm); align-items: center; }
   .observe .obs-pickers { flex-wrap: wrap; }

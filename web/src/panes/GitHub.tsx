@@ -265,13 +265,13 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
     <div className="gh-actionbar">
       <textarea className="gh-text" placeholder="Leave a comment" value={text} rows={2} onChange={(e) => setText(e.target.value)} />
       <div className="gh-actions">
-        <button className="primary" disabled={busy} onClick={approve}><Icon name="check" small /> Approve</button>
-        <button disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('request_changes')}><Icon name="request-changes" small /> Request changes</button>
-        <button disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('comment')}><Icon name="comment" small /> Comment</button>
+        <button className="btn sm primary" disabled={busy} onClick={approve}><Icon name="check" small /> Approve</button>
+        <button className="btn sm" disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('request_changes')}><Icon name="request-changes" small /> Request changes</button>
+        <button className="btn sm" disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('comment')}><Icon name="comment" small /> Comment</button>
       </div>
       <div className="gh-actions">
         <span className="gh-merge">
-          <button disabled={busy} onClick={merge}><Icon name="git-merge" small /> Merge</button>
+          <button className="btn sm" disabled={busy} onClick={merge}><Icon name="git-merge" small /> Merge</button>
           <select value={method} onChange={(e) => setMethod(e.target.value)} title="Merge method">
             <option value="squash">Squash</option>
             <option value="merge">Merge commit</option>
@@ -279,7 +279,7 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
           </select>
         </span>
         <button disabled={busy} title={`Check out ${pr.branch} in this folder`} onClick={() => act('checkout', 'checkout', {})}><Icon name="git-branch" small /> Checkout</button>
-        <button className="gh-claude" title="Send a review prompt to the chat" onClick={askReview}><Icon name="sparkle" small /> Ask Claude to review</button>
+        <button className="btn sm gh-claude" title="Send a review prompt to the chat" onClick={askReview}><Icon name="sparkle" small /> Ask Claude to review</button>
       </div>
     </div>
   );

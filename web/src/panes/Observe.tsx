@@ -100,7 +100,7 @@ function AddToClaude({ server, added, disabled, title, onDone }: { server: 'sent
   if (added) return <span className="obs-tag ok" title={`${server} is in ~/.claude.json`}><Icon name="check" small /> In Claude</span>;
   return (
     <span className="obs-add">
-      <button disabled={disabled} title={title} onClick={() => post<{ info: ObserveInfo; backup: string }>('/api/observe/mcp/add', { server }).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
+      <button className="btn xs" disabled={disabled} title={title} onClick={() => post<{ info: ObserveInfo; backup: string }>('/api/observe/mcp/add', { server }).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
         <Icon name="add" small /> Add to Claude
       </button>
       {msg && <span className="error">{msg}</span>}
@@ -127,7 +127,7 @@ function Issue({ issue, repo }: { issue: SentryIssue; repo: string }) {
         {issue.userCount > 0 && <span title="Users">{issue.userCount} users</span>}
         <span title={issue.lastSeen}>{ago(issue.lastSeen, ' ago')}</span>
         <span className="spacer" />
-        <button className="obs-mini" onClick={() => setOpen((v) => !v)}>{open ? 'Hide' : 'Details'}</button>
+        <button className="btn xs" onClick={() => setOpen((v) => !v)}>{open ? 'Hide' : 'Details'}</button>
         <a className="icon-btn" href={issue.permalink} target="_blank" rel="noreferrer" title="Open in Sentry"><Icon name="link-external" small /></a>
         <button className="obs-ask" onClick={ask}><Icon name="sparkle" small /> Ask Claude</button>
       </div>
@@ -135,7 +135,7 @@ function Issue({ issue, repo }: { issue: SentryIssue; repo: string }) {
         <div className="obs-details">
           {details.busy && <Loading />}
           <Err text={details.error} />
-          {details.error && <button className="obs-mini" onClick={refresh}>Retry</button>}
+          {details.error && <button className="btn xs" onClick={refresh}>Retry</button>}
           {details.data && (
             <>
               <div className="obs-hint">via {details.data.via === 'mcp' ? 'Sentry MCP' : 'Sentry REST API'}</div>
@@ -190,13 +190,13 @@ function SentrySetup({ info, onInfo, onSaved }: { info: ObserveInfo; onInfo: (i:
           </label>
           <div className="obs-hint">
             Create one at <a className="obs-link" href={SENTRY_TOKENS} target="_blank" rel="noreferrer">sentry.io/settings/account/api/auth-tokens</a> with the scopes org:read, project:read and event:read.
-            {hasAccess && <button className="obs-mini" onClick={() => setEditToken(false)}>Cancel</button>}
+            {hasAccess && <button className="btn xs" onClick={() => setEditToken(false)}>Cancel</button>}
           </div>
         </>
       ) : (
         <div className="obs-hint">
           Token: {tokenLabel}
-          <button className="obs-mini" onClick={() => setEditToken(true)}>Change</button>
+          <button className="btn xs" onClick={() => setEditToken(true)}>Change</button>
         </div>
       )}
       <div className="obs-form">
@@ -210,8 +210,8 @@ function SentrySetup({ info, onInfo, onSaved }: { info: ObserveInfo; onInfo: (i:
         </label>
       </div>
       <div className="obs-save">
-        <button className="primary" disabled={!dirty} onClick={() => save().catch((e) => setMsg(e.message))}>Save</button>
-        <button className="obs-mini" disabled={test.busy || !org.trim() || !project.trim()} onClick={runTest}>{test.busy ? 'Testing' : 'Test'}</button>
+        <button className="btn primary" disabled={!dirty} onClick={() => save().catch((e) => setMsg(e.message))}>Save</button>
+        <button className="btn xs" disabled={test.busy || !org.trim() || !project.trim()} onClick={runTest}>{test.busy ? 'Testing' : 'Test'}</button>
         {msg && <span className={msg === 'Saved' ? 'muted' : 'error'}>{msg}</span>}
         {test.data && <span className="ok">{test.data.count} unresolved issue{test.data.count === 1 ? '' : 's'} via {test.data.via === 'mcp' ? 'Sentry MCP' : 'REST'}</span>}
       </div>
@@ -422,8 +422,8 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
         Tokens: <a className="obs-link" href="https://docs.snowflake.com/en/user-guide/programmatic-access-tokens" target="_blank" rel="noreferrer">Snowflake docs on programmatic access tokens</a>
       </div>
       <div className="obs-save">
-        <button className="primary" onClick={saveForm}>Save connection</button>
-        <button className="obs-mini" disabled={!connected || test.busy} title={connected ? 'select current_user(), current_role(), current_warehouse()' : `Missing: ${missing.join(', ')}`} onClick={testConnection}>{test.busy ? 'Testing' : 'Test connection'}</button>
+        <button className="btn primary" onClick={saveForm}>Save connection</button>
+        <button className="btn xs" disabled={!connected || test.busy} title={connected ? 'select current_user(), current_role(), current_warehouse()' : `Missing: ${missing.join(', ')}`} onClick={testConnection}>{test.busy ? 'Testing' : 'Test connection'}</button>
         <span className={saveMsg && saveMsg !== 'Saved' ? 'error' : 'muted'}>{saveMsg || (connected ? `${sf.user} on ${sf.account}` : `missing: ${missing.join(', ')}`)}</span>
       </div>
       {test.data && (
@@ -453,7 +453,7 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
         }}
       />
       <div className="obs-save">
-        <button className="primary" disabled={!connected || result.busy || !sql.trim()} onClick={run}><Icon name="play" small /> Run</button>
+        <button className="btn primary" disabled={!connected || result.busy || !sql.trim()} onClick={run}><Icon name="play" small /> Run</button>
         {result.data && <span className="muted">{result.data.rows.length}{result.data.truncated ? '+' : ''} rows, {result.data.ms} ms{result.data.truncated ? ', showing the first 200' : ''}</span>}
         {result.busy && <span className="muted"><Icon name="loading" small spin /> Running</span>}
         <span className="spacer" />
@@ -562,7 +562,7 @@ export function Observe() {
           <Section title="Settings" open={!info.config}>
             <textarea className="obs-editor" value={draft} spellCheck={false} rows={14} onChange={(e) => setDraft(e.target.value)} />
             <div className="obs-save">
-              <button className="primary" onClick={saveConfig}>Save</button>
+              <button className="btn primary" onClick={saveConfig}>Save</button>
               {saveMsg && <span className={saveMsg === 'Saved' ? 'muted' : 'error'}>{saveMsg}</span>}
             </div>
             <div className="obs-hint">Sentry token: {info.sentryToken ? 'set' : `missing. Set SENTRY_AUTH_TOKEN or "sentryToken" in ${info.file}`}</div>
