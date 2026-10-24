@@ -162,6 +162,8 @@ export type AttentionItem = {
   since: number;
   prompt: string;
   chatId?: string;
+  sha?: string;
+  fixing?: string;
 };
 
 export const ATTENTION_LABEL: Record<AttentionKind, string> = {
@@ -253,6 +255,7 @@ export type PullRequest = {
   checks: CheckState;
   updatedAt: string;
   url: string;
+  sha: string;
   additions: number;
   deletions: number;
   mine: boolean;

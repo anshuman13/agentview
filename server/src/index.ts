@@ -25,7 +25,7 @@ import { gitRoute } from './git.js';
 import { observe } from './observe.js';
 import { otherMacs, thisMac } from './macs.js';
 import { allowedFolder, createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './worktrees.js';
-import { MCP_BAD, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../shared/protocol.js';
+import { MCP_BAD, type AttentionItem, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './stream.js';
 import { replyLine, sumEdits } from '../../shared/edits.js';
 import { allowedPeer, allowedRequest, requester } from './access.js';
@@ -279,7 +279,12 @@ function attentionSources(extra: string[] = []) {
     edited: idle.map((c) => ({ cwd: c.cwd, chatId: c.id, at: lastActive(c) })).sort((a, b) => b.at - a.at),
   };
 }
-startAttention(attentionSources);
+async function fixChat(item: AttentionItem) {
+  const chat = await createChat(item.cwd);
+  void chat.prompt(item.prompt);
+  return chat.id;
+}
+startAttention(attentionSources, fixChat);
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
