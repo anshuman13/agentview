@@ -73,7 +73,7 @@ const Avatar = ({ login }: { login: string }) => <span className="gh-avatar" tit
 const Counts = ({ a, d }: { a: number; d: number }) => <span className="gh-counts"><span className="add">+{a}</span> <span className="del">-{d}</span></span>;
 const StateChip = ({ state }: { state: string }) => {
   const r = REVIEW[state];
-  return r ? <span className={`gh-chip ${r[1]}`}>{r[0]}</span> : null;
+  return r ? <span className={`chip outline pill sm ${r[1]}`}>{r[0]}</span> : null;
 };
 
 // The cached PR list of a repo, loaded once per cwd, for rows outside this pane.
@@ -84,7 +84,7 @@ export function usePullRequests(cwd: string) {
 }
 
 export const PullState = ({ pr }: { pr: PullRequest }) => (
-  <span className="gh-state"><CheckIcon state={pr.checks} />{pr.draft ? <span className="gh-chip">Draft</span> : <StateChip state={pr.review} />}<Counts a={pr.additions} d={pr.deletions} /></span>
+  <span className="gh-state"><CheckIcon state={pr.checks} />{pr.draft ? <span className="chip outline pill sm">Draft</span> : <StateChip state={pr.review} />}<Counts a={pr.additions} d={pr.deletions} /></span>
 );
 
 function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
@@ -99,8 +99,8 @@ function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
         <span className="gh-branch">{pr.branch}</span>
         <span className="gh-sep">·</span>
         <span className="gh-when">{ago(pr.updatedAt)}</span>
-        {chat && <button className="gh-chip gh-open-chat" title={`Open the chat that created this pull request: ${chat.title}`} onClick={(e) => { e.stopPropagation(); send({ type: 'view', id: chat.id }); }}><Icon name="comment" small /> Open chat</button>}
-        {pr.draft ? <span className="gh-chip">Draft</span> : <StateChip state={pr.review} />}
+        {chat && <button className="chip outline pill sm gh-open-chat" title={`Open the chat that created this pull request: ${chat.title}`} onClick={(e) => { e.stopPropagation(); send({ type: 'view', id: chat.id }); }}><Icon name="comment" small /> Open chat</button>}
+        {pr.draft ? <span className="chip outline pill sm">Draft</span> : <StateChip state={pr.review} />}
       </div>
     </div>
   );
@@ -110,10 +110,10 @@ function Section({ title, prs, onOpen }: { title: string; prs: PullRequest[]; on
   const [open, setOpen] = useState(true);
   return (
     <>
-      <div className="gh-section" {...pressable(() => setOpen(!open))}>
+      <div className="section-head" {...pressable(() => setOpen(!open))}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
-        <span className="gh-label">{title}</span>
-        <span className="gh-count">{prs.length}</span>
+        <span className="label">{title}</span>
+        <span className="badge quiet">{prs.length}</span>
       </div>
       {open && (prs.length ? prs.map((p) => <Row key={p.number} pr={p} onOpen={() => onOpen(p)} />) : <div className="gh-empty">None</div>)}
     </>
@@ -325,7 +325,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
           <div className="gh-line">
             <Avatar login={pr.author} />
             <span className="gh-author">{pr.author}</span>
-            {pr.draft && <span className="gh-chip">Draft</span>}
+            {pr.draft && <span className="chip outline pill sm">Draft</span>}
             <StateChip state={pr.review} />
             <Counts a={pr.additions} d={pr.deletions} />
           </div>

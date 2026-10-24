@@ -14,7 +14,7 @@ async function call<T>(path: string, body?: object): Promise<T> {
 export function Block({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
   return (
     <>
-      <div className="gh-block">{title}{count !== undefined && <span className="gh-count">{count}</span>}</div>
+      <div className="gh-block">{title}{count !== undefined && <span className="badge quiet">{count}</span>}</div>
       {children}
     </>
   );

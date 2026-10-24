@@ -277,7 +277,7 @@ export function Sessions() {
           <Icon name={icon} small />
           <span className="label">
             <span className="name">{d.name}</span>
-            {branch && <span className="branch-chip" title={branch}>{branch}</span>}
+            {branch && <span className="chip sm branch-chip" title={branch}>{branch}</span>}
           </span>
           <span className="badges">
             <span className="dirty" title={d.repo?.dirty ? `${d.repo.dirty} uncommitted` : undefined}>{d.repo?.dirty ? 'M' : ''}</span>

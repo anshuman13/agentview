@@ -1,16 +1,38 @@
 .badge {
-  display: inline-flex; align-items: center; justify-content: center; min-width: var(--size-2xs); height: var(--size-2xs); padding: 0 5px;
+  flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: var(--size-2xs); height: var(--size-2xs); padding: 0 5px;
   border-radius: var(--radius-pill); background: var(--border-strong); color: var(--fg);
   font-size: var(--fs-2xs); line-height: var(--size-2xs); font-weight: 600; text-transform: none;
 }
+.badge.quiet { background: var(--hover); color: var(--fg-muted); }
 .badge.waiting, .tabbar .badge, .activitybar [data-view='chats'] .badge { background: var(--warn); color: var(--bg); }
 .badge.running { background: var(--accent); color: var(--on-accent); }
 .badge.running::before { content: ''; width: 6px; height: 6px; margin-right: 3px; border-radius: var(--radius-round); background: currentColor; }
 
 .chip {
-  display: inline-block; font-size: var(--fs-xs); line-height: 18px; padding: 0 var(--sp-3);
-  border-radius: var(--radius-sm); background: var(--border); color: var(--fg-muted);
+  flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3);
+  font-size: var(--fs-xs); line-height: 18px; color: var(--fg-muted); background: var(--border); border-radius: var(--radius-sm);
 }
+.chip.outline { background: transparent; border: 1px solid var(--border-strong); }
+.chip.pill { border-radius: var(--radius-pill); }
+.chip.sm { font-size: var(--fs-2xs); line-height: 15px; }
+.chip.ok { --tone: var(--ok); }
+.chip.bad { --tone: var(--err); }
+.chip.warn { --tone: var(--warn); }
+.chip.agent { --tone: var(--agent); }
+.chip:is(.ok, .bad, .warn, .agent) { color: var(--tone); border-color: color-mix(in srgb, var(--tone) 50%, transparent); }
+button.chip { cursor: pointer; }
+button.chip:hover { color: var(--fg); background: var(--hover); }
+
+.dot { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-round); background: var(--fg-faint); }
+.dot.ok { background: var(--ok); }
+.dot.bad { background: var(--err); }
+.dot:is(.warn, .waiting) { background: var(--warn); }
+.dot.busy { background: var(--warn); animation: pulse var(--pulse-fast) var(--ease) infinite; }
+.dot.wait { background: var(--fg-muted); animation: shimmer var(--pulse-fast) var(--ease) infinite; }
+.dot.running { background: var(--accent); animation: pulse-shrink var(--pulse) var(--ease) infinite; }
+.dot.stalled { background: var(--warn); animation: pulse-shrink var(--pulse-slow) var(--ease) infinite; }
+.dot.idle { background: transparent; border: 1.5px solid var(--fg-muted); }
 
 @keyframes pulse { 50% { opacity: 0.35; } }
 @keyframes pulse-shrink { 50% { opacity: 0.35; transform: scale(0.8); } }
+@keyframes shimmer { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }

@@ -126,7 +126,7 @@ function McpItem() {
   const bad = mcp.some((m) => MCP_BAD.includes(m.status));
   return (
     <button className="item clickable" title="MCP servers" onClick={() => command('page:mcp')}>
-      <span className={`mcp-dot ${bad ? 'bad' : ok ? 'ok' : 'off'}`} /> MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
+      <span className={`dot ${bad ? 'bad' : ok ? 'ok' : 'off'}`} /> MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
     </button>
   );
 }
@@ -551,7 +551,7 @@ export function App() {
               <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
                 <Icon name={p.icon} />
                 <span>{p.title}</span>
-                {p.id === 'mcp' && mcp.length > 0 && <span className="more-meta"><span className={`mcp-dot ${mcp.some((m) => MCP_BAD.includes(m.status)) ? 'bad' : mcpOk ? 'ok' : 'off'}`} /> {mcpOk}/{mcp.length}</span>}
+                {p.id === 'mcp' && mcp.length > 0 && <span className="more-meta"><span className={`dot ${mcp.some((m) => MCP_BAD.includes(m.status)) ? 'bad' : mcpOk ? 'ok' : 'off'}`} /> {mcpOk}/{mcp.length}</span>}
               </button>
             ))}
             <span className="more-divider" />

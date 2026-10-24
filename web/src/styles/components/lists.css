@@ -7,3 +7,12 @@
 .tree .name { overflow: hidden; text-overflow: ellipsis; }
 .tree .m { margin-left: auto; margin-right: var(--sp-5); color: var(--warn); font-size: var(--fs-xs); }
 .tree .icon { color: var(--fg-muted); }
+
+.section-head {
+  height: var(--size-row); display: flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-6) 0 var(--sp-2); cursor: pointer; user-select: none;
+  font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; color: var(--fg);
+}
+.section-head:hover { background: var(--hover); }
+.section-head .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.section-head .badge { margin-left: var(--sp-3); }
+@media (max-width: 900px) { .section-head { height: var(--touch-md); } }

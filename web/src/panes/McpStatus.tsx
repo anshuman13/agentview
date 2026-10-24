@@ -247,10 +247,10 @@ function Card({ row, usage, selected, onClick }: { row: Row; usage?: Usage; sele
   return (
     <button className={`mcp-card ${tone} ${selected ? 'selected' : ''}`} onClick={onClick}>
       <div className="mcp-card-top">
-        <span className={`mcp-orb ${tone}`} />
+        <span className={`dot ${tone}`} />
         <span className="mcp-card-name">{row.name}</span>
-        {row.type && <span className="mcp-tag">{row.type}</span>}
-        {row.live && <span className="mcp-tag live" title="Loaded in this chat">chat</span>}
+        {row.type && <span className="chip outline sm mcp-tag">{row.type}</span>}
+        {row.live && <span className="chip outline sm mcp-tag live" title="Loaded in this chat">chat</span>}
       </div>
       <div className="mcp-card-cmd mono" title={row.command}>{url ? row.command?.replace(/^https?:\/\//, '') : row.command ?? '—'}</div>
       <div className="mcp-card-foot">
@@ -273,7 +273,7 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
   return (
     <aside className="mcp-detail">
       <div className="mcp-detail-head">
-        <span className={`mcp-orb ${tone}`} />
+        <span className={`dot ${tone}`} />
         <h2>{row.name}</h2>
         <span className="spacer" />
         <button className="icon-btn" title="Close" onClick={onClose}><Icon name="close" small /></button>
@@ -312,7 +312,7 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
       <div className="mcp-tools">
         {tools.map((t) => (
           <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
-            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="mcp-tag ok">read only</span>}{t.destructive && <span className="mcp-tag bad">destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <button className={`icon-btn mcp-insert ${run === t.name ? 'on' : ''}`} title={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))}><Icon name={run === t.name ? 'close' : 'play'} small /></button>}{row.live && <button className="icon-btn mcp-insert" title={`Ask Claude to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)}><Icon name="comment" small /></button>}</div>
+            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="chip outline sm mcp-tag ok">read only</span>}{t.destructive && <span className="chip outline sm mcp-tag bad">destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <button className={`icon-btn mcp-insert ${run === t.name ? 'on' : ''}`} title={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))}><Icon name={run === t.name ? 'close' : 'play'} small /></button>}{row.live && <button className="icon-btn mcp-insert" title={`Ask Claude to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)}><Icon name="comment" small /></button>}</div>
             {t.description && <div className="d">{t.description}</div>}
             {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
           </div>
