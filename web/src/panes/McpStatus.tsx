@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { MCP_BAD, type ChatEvent, type McpSchema, type McpServer, type McpTool } from '../../../shared/protocol';
 import { api, notice, send, useStore } from '../store';
 import { Icon } from '../Icon';
-import { useTick } from './util';
+import { ago, command, showChat, useTick } from './util';
 import '../mcp.css';
 
 const STATUS: Record<string, [tone: string, label: string]> = {
@@ -27,15 +27,10 @@ const SCOPES: [id: string, title: string, where: string][] = [
 ];
 const scopeInfo = (id: string) => SCOPES.find((s) => s[0] === id) ?? [id, id[0].toUpperCase() + id.slice(1), ''];
 
-const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
 const openMcp = () => command('page:mcp');
 
 const slug = (server: string) => server.replace(/[^A-Za-z0-9_-]/g, '_');
 export const toolId = (server: string, tool: string) => `mcp__${slug(server)}__${tool}`;
-const showChat = () => {
-  if (window.innerWidth <= 900) command('tab:chat');
-  else if (document.querySelector('.workbench')?.getAttribute('data-chat') === 'false') command('toggleChat');
-};
 const insert = (text: string) => {
   showChat();
   window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } }));
@@ -165,10 +160,6 @@ function sections(rows: Row[]): [string, Row[]][] {
 
 const short = (v: string) => v.split('+')[0];
 
-const ago = (t: number) => {
-  const s = Math.round((Date.now() - t) / 1000);
-  return s < 5 ? 'just now' : s < 60 ? `${s}s ago` : `${Math.round(s / 60)}m ago`;
-};
 
 export function McpPage() {
   const mcp = useStore((s) => s.session.mcp);
@@ -213,7 +204,7 @@ export function McpPage() {
             {calls > 0 && <Stat n={calls} label="calls in chat" />}
             {attention > 0 && <Stat n={attention} label="need you" tone="bad" />}
             <button className={`mcp-refresh ${busy ? 'busy' : ''}`} onClick={() => load(true)} disabled={busy} title="Connect to every server again">
-              <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at)}` : 'Check'}
+              <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at, ' ago')}` : 'Check'}
             </button>
           </div>,
           extra,

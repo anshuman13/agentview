@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { api, send, setUi, useStore } from '../store';
+import { api, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Block, Findings } from './Findings';
 import { Markdown } from './Chat';
 import { FileIcon } from './Explorer';
 import { Confirm, type ConfirmRequest } from '../Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
-import { usePoll } from './util';
+import { ago, askClaude, usePoll } from './util';
 import '../github.css';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
@@ -43,15 +43,6 @@ async function load(cwd: string, fresh = false) {
   } finally {
     if (req === latest) inflight = '';
   }
-}
-
-function ago(iso: string) {
-  const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
-  if (m < 1) return 'now';
-  if (m < 60) return `${m}m`;
-  if (m < 1440) return `${Math.round(m / 60)}h`;
-  if (m < 10080) return `${Math.round(m / 1440)}d`;
-  return `${Math.round(m / 10080)}w`;
 }
 
 const initials = (login: string) => (login.replace(/^app\//, '').match(/[A-Za-z0-9]+/g) ?? ['?']).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -263,7 +254,7 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
       icon: 'git-merge',
       run: () => act('merge', 'merge', { method }),
     });
-  const askClaude = () => send({ type: 'prompt', text: `/code-review ${pr.number}` });
+  const askReview = () => askClaude(`/code-review ${pr.number}`);
 
   return (
     <div className="gh-actionbar">
@@ -283,7 +274,7 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
           </select>
         </span>
         <button disabled={busy} title={`Check out ${pr.branch} in this folder`} onClick={() => act('checkout', 'checkout', {})}><Icon name="git-branch" small /> Checkout</button>
-        <button className="gh-claude" title="Send a review prompt to the chat" onClick={askClaude}><Icon name="sparkle" small /> Ask Claude to review</button>
+        <button className="gh-claude" title="Send a review prompt to the chat" onClick={askReview}><Icon name="sparkle" small /> Ask Claude to review</button>
       </div>
     </div>
   );
