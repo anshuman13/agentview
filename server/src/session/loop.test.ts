@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { advance, loopOff, verdictOf } from './loop.js';
+import { advance, loopOff, needsApproval, verdictOf } from './loop.js';
 import { after, limitReset, parseLoop } from './repeat.js';
 
 describe('verdictOf', () => {
@@ -13,6 +13,16 @@ describe('verdictOf', () => {
   it('returns null without a verdict', () => {
     expect(verdictOf('All good I think')).toBe(null);
     expect(verdictOf('')).toBe(null);
+  });
+});
+
+describe('needsApproval', () => {
+  it('reads the last approval line', () => {
+    expect(needsApproval('1. drop the table\n\nAPPROVAL: NEEDED, deletes data')).toBe(true);
+    expect(needsApproval('**APPROVAL: NEEDED**')).toBe(true);
+    expect(needsApproval('APPROVAL: NOT NEEDED')).toBe(false);
+    expect(needsApproval('APPROVAL: NEEDED\n...\nAPPROVAL: NOT NEEDED')).toBe(false);
+    expect(needsApproval('A plan without the line')).toBe(false);
   });
 });
 
@@ -32,6 +42,13 @@ describe('advance', () => {
     expect(b.state.phase).toBe('test');
     expect(b.step?.model).toContain('sonnet');
     expect(b.step?.label).toBe('Test 1/2');
+  });
+
+  it('stops when the plan was not approved', () => {
+    const r = advance({ ...on, phase: 'plan' }, '', true);
+    expect(r.state.phase).toBe('failed');
+    expect(r.step).toBe(null);
+    expect(r.note).toContain('not approved');
   });
 
   it('passes when the tester says so', () => {

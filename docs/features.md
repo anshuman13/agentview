@@ -92,8 +92,10 @@ in the chat list until its next message.
 
 ## Loop mode
 
-The loop pill in the composer turns a prompt into a plan, build, test cycle. Opus plans in plan mode and starts
-building as soon as the plan is ready, Sonnet then tests the result as a separate model and ends with a verdict, and
+The loop pill in the composer turns a prompt into a plan, build, test cycle. Opus plans in plan mode, detailed
+enough that someone who missed the conversation could build from it, and starts building as soon as the plan is
+ready. A plan that deletes data, changes a schema, auth or security, reaches outside the repo, pushes or deploys,
+or guesses at an open question waits for your approval instead, and rejecting it stops the loop. Sonnet then tests the result as a separate model and ends with a verdict, and
 Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
 timeline and transcript, the composer footer shows the current phase and round, and Stop ends the loop.
 

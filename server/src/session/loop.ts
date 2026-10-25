@@ -11,6 +11,11 @@ export function verdictOf(text: string): 'pass' | 'fail' | null {
   return m ? (m[1].toUpperCase() === 'PASS' ? 'pass' : 'fail') : null;
 }
 
+export function needsApproval(plan: string): boolean {
+  const m = [...plan.matchAll(/^\s*\**APPROVAL:?\**\s*\**(NOT NEEDED|NEEDED)/gim)].at(-1);
+  return m?.[1].toUpperCase() === 'NEEDED';
+}
+
 export function planStep(task: string): LoopStep {
   return {
     phase: 'plan',
@@ -19,7 +24,8 @@ export function planStep(task: string): LoopStep {
     label: 'Plan',
     prompt: [
       'You are in a plan, build, test loop. Phase 1 of 3: plan. Another model will test your work afterwards.',
-      'Investigate what you need, then write a short plan: the changes you will make, and how a tester can verify them (exact commands to run, behaviour to try). Then call ExitPlanMode.',
+      'Investigate what you need, then write a plan an engineer who missed this conversation could implement alone: which files change and in what order, what could break, and how a tester proves it done (exact commands to run, behaviour to try).',
+      'End the plan with one line: `APPROVAL: NEEDED` and the reason if it deletes data or files, changes a schema, auth or security, touches anything outside this repo, pushes or deploys, or rests on a guess about an open question. Otherwise `APPROVAL: NOT NEEDED`. Then call ExitPlanMode.',
       '',
       'Task:',
       task,
@@ -61,8 +67,9 @@ function fixStep(report: string): LoopStep {
   };
 }
 
-export function advance(state: LoopState, result: string): { state: LoopState; step: LoopStep | null; note: string | null } {
+export function advance(state: LoopState, result: string, planDenied = false): { state: LoopState; step: LoopStep | null; note: string | null } {
   if (!state.on || !state.phase) return { state, step: null, note: null };
+  if (state.phase === 'plan' && planDenied) return { state: { ...state, phase: 'failed' }, step: null, note: 'Loop stopped: the plan was not approved' };
   if (state.phase === 'plan') return { state: { ...state, phase: 'build' }, step: buildStep(), note: null };
   if (state.phase === 'build') return { state: { ...state, phase: 'test' }, step: testStep(state.round, state.max), note: null };
   if (state.phase === 'test') {

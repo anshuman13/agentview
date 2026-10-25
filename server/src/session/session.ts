@@ -3,7 +3,7 @@ import path from 'node:path';
 import { COMPACT_AT, EFFORT_LEVELS, MAX_GOAL_ROUNDS, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
-import { advance, loopOff, planStep, type LoopStep } from './loop.js';
+import { advance, loopOff, needsApproval, planStep, type LoopStep } from './loop.js';
 import { GOAL_USAGE, USAGE, after, clock, describeLoop, goalMet, limitReset, offCommand, parseGoal, parseLoop, roundWord } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { agentOf, stopAgents } from './events.js';
@@ -60,6 +60,7 @@ export class AgentSession implements AgentHost {
   private autoCompact = true;
   private lastResult = '';
   private loopPrevModel: string | null = null;
+  private planDenied = false;
   private repeatTimer: NodeJS.Timeout | undefined;
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
   private reviewTarget: string | null = null;
@@ -200,7 +201,7 @@ export class AgentSession implements AgentHost {
   }
 
   canUseTool(toolName: string, input: Record<string, unknown>, opts: AskOptions) {
-    return this.loopPlanDone(toolName, input) ?? this.approvals.ask(toolName, input, opts);
+    return this.loopPlanDone(toolName, input, opts) ?? this.approvals.ask(toolName, input, opts);
   }
 
   ask(toolName: string, input: Record<string, unknown>, opts: AskOptions) {
@@ -427,6 +428,7 @@ export class AgentSession implements AgentHost {
   private async startLoop(task: string, id: string) {
     this.pushEvent({ id, kind: 'user', text: task, at: Date.now() });
     this.loopPrevModel = this.state.session.model;
+    this.planDenied = false;
     this.setSession({ loop: { ...this.state.session.loop, round: 1, phase: 'plan' } });
     await this.runStep(planStep(task), false);
   }
@@ -450,8 +452,15 @@ export class AgentSession implements AgentHost {
     this.enqueue(step.prompt);
   }
 
-  private loopPlanDone(toolName: string, input: Record<string, unknown>): Promise<Decision> | null {
-    const allow = toolName.endsWith('__set_status') || (toolName === 'ExitPlanMode' && this.state.session.loop.phase === 'plan');
+  private loopPlanDone(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<Decision> | null {
+    const plan = toolName === 'ExitPlanMode' && this.state.session.loop.phase === 'plan';
+    if (plan && needsApproval(String(input.plan ?? ''))) {
+      return this.approvals.ask(toolName, input, opts).then((d) => {
+        this.planDenied = d.behavior === 'deny';
+        return d;
+      });
+    }
+    const allow = plan || toolName.endsWith('__set_status');
     return allow ? Promise.resolve({ behavior: 'allow' as const, updatedInput: input }) : null;
   }
 
@@ -552,7 +561,7 @@ export class AgentSession implements AgentHost {
     this.turns = Math.max(0, this.turns - 1);
     const stopped = this.turns === 0 && this.state.session.stopping;
     const idle = this.turns === 0 && !this.state.session.stopping;
-    const loop = idle ? advance(this.state.session.loop, this.lastResult) : null;
+    const loop = idle ? advance(this.state.session.loop, this.lastResult, this.planDenied) : null;
     if (loop) this.setSession({ loop: loop.state });
     const next = idle && !loop?.step ? this.followUp() : null;
     this.setSession({ running: this.turns > 0 || next !== null || Boolean(loop?.step), compacting: false, stopping: false });

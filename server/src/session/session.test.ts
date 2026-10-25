@@ -60,6 +60,21 @@ describe('AgentSession turns', () => {
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('Loop stopped') });
   });
 
+  it('asks for a loop plan only when the planner says it needs approval', async () => {
+    const { s, result } = fakeSession();
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
+    s.setLoop(true);
+    await s.prompt('build it');
+    await expect(s.canUseTool('ExitPlanMode', { plan: 'Edit a.ts\nAPPROVAL: NOT NEEDED' }, { signal: new AbortController().signal })).resolves.toMatchObject({ behavior: 'allow' });
+    const asked = s.canUseTool('ExitPlanMode', { plan: 'Drop the users table\nAPPROVAL: NEEDED, deletes data' }, { signal: new AbortController().signal });
+    expect(s.state.pending).toHaveLength(1);
+    s.answerPermission(s.state.pending[0].id, false);
+    await expect(asked).resolves.toMatchObject({ behavior: 'deny' });
+    result('r1');
+    expect(s.state.session.loop.phase).toBe('failed');
+    expect(s.state.events.some((e) => e.kind === 'system' && e.text === 'Loop stopped: the plan was not approved')).toBe(true);
+  });
+
   it('queues a steer while compacting', async () => {
     const { s, interrupt } = fakeSession();
     s.sendPrompt('/compact');
