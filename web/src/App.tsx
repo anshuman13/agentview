@@ -21,6 +21,7 @@ const CodePane = lazy(() => import('./panes/CodePane').then((m) => ({ default: m
 const BrowserPane = lazy(() => import('./panes/BrowserPane').then((m) => ({ default: m.BrowserPane })));
 const Observe = lazy(() => import('./panes/Observe').then((m) => ({ default: m.Observe })));
 const Deploy = lazy(() => import('./panes/Deploy').then((m) => ({ default: m.Deploy })));
+const Assistant = lazy(() => import('./panes/Assistant').then((m) => ({ default: m.Assistant })));
 const McpPage = lazy(() => import('./panes/McpStatus').then((m) => ({ default: m.McpPage })));
 const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
 const Loading = () => <div className="loading">Loading…</div>;
@@ -30,7 +31,7 @@ import { touch } from './touch';
 
 type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
-type Page = 'observe' | 'deploy' | 'mcp';
+type Page = 'assistant' | 'observe' | 'deploy' | 'mcp';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'explorer', icon: 'files', title: 'Explorer' },
@@ -41,6 +42,7 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
 ];
 
 const PAGES: { id: Page; icon: string; title: string; kicker: string; sub: (repo: string) => string }[] = [
+  { id: 'assistant', icon: 'checklist', title: 'Assistant', kicker: 'Tasks · Notes · Capture', sub: () => 'Your tasks and notes from every source, one list on all your devices.' },
   { id: 'observe', icon: 'pulse', title: 'Observe', kicker: 'Sentry · Grafana · Snowflake', sub: (r) => `Errors, logs and data for ${r}, read through the same MCP servers Claude uses.` },
   { id: 'deploy', icon: 'rocket', title: 'Deploy', kicker: 'Velodrome', sub: (r) => `Deploys of ${r}: what runs where, and a one-click deploy or rollback.` },
   { id: 'mcp', icon: 'plug', title: 'MCP Servers', kicker: 'Model Context Protocol', sub: (r) => `What Claude can reach from ${r}. Same config as the Claude CLI, checked live.` },
@@ -480,7 +482,7 @@ export function App() {
                   </div>
                   <div id={`page-${page}-extra`} className="page-extra" />
                 </header>
-                <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'observe' ? <Observe /> : <Deploy />}</Suspense></div>
+                <div className="page-body"><Suspense fallback={<Loading />}>{page === 'assistant' ? <Assistant /> : page === 'mcp' ? <McpPage /> : page === 'observe' ? <Observe /> : <Deploy />}</Suspense></div>
               </div>
             </div>
           )}

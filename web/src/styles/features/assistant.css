@@ -1,0 +1,50 @@
+.assistant { flex: 1; min-height: 0; display: flex; flex-direction: column; width: 100%; max-width: 720px; margin: 0 auto; color: var(--fg); font-size: var(--fs-md); }
+.assistant.locked { align-items: center; justify-content: center; gap: var(--sp-6); text-align: center; padding: var(--sp-12); }
+.assistant.locked > .codicon.icon { font-size: var(--icon-hero); color: var(--fg-faint); }
+.as-lock-title { font-size: var(--fs-3xl); font-weight: 600; }
+
+.as-head { flex: none; display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--sp-6); }
+.as-tabs, .as-seg { flex: 1; display: flex; gap: var(--sp-2); }
+.as-seg { flex: none; }
+:is(.as-tabs, .as-seg) button { flex: 1; height: var(--size-2xl); font-size: var(--fs-md); color: var(--fg-muted); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); }
+:is(.as-tabs, .as-seg) button.active { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+.as-tabs .seg-count { margin-left: var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); }
+.as-error { flex: none; margin: 0 var(--sp-6) var(--sp-4); padding: var(--sp-3) var(--sp-5); border-radius: var(--radius-sm); font-size: var(--fs-sm); color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); overflow-wrap: anywhere; cursor: pointer; }
+.as-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--sp-6) var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-4); }
+.as-filters { display: flex; gap: var(--sp-3); overflow-x: auto; flex: none; }
+.as-filters .chip.on { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+.as-section { font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-muted); padding-top: var(--sp-4); }
+.as-empty { padding: var(--sp-12) 0; text-align: center; }
+
+.as-swipe { position: relative; flex: none; border-radius: var(--radius); overflow: hidden; }
+.as-swipe-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--sp-8); font-size: var(--fs-sm); font-weight: 600; opacity: 0; }
+.as-swipe.right .as-swipe-bg { opacity: 1; background: color-mix(in srgb, var(--ok) 22%, var(--raised)); color: var(--ok); }
+.as-swipe.left .as-swipe-bg { opacity: 1; background: color-mix(in srgb, var(--warn) 22%, var(--raised)); color: var(--warn); }
+.as-swipe.right .as-swipe-bg span:last-child, .as-swipe.left .as-swipe-bg span:first-child { visibility: hidden; }
+.as-swipe-row { position: relative; touch-action: pan-y; transition: transform var(--dur) var(--ease); }
+
+.as-task, .as-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-5) var(--sp-6); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
+.as-note { flex: none; align-items: flex-start; }
+.as-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.as-title { font-weight: 500; line-height: var(--lh-snug); overflow-wrap: anywhere; }
+.as-text { color: var(--fg-muted); font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.as-meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); font-size: var(--fs-xs); color: var(--fg-muted); }
+.as-tag.work { color: var(--prompt); border-color: color-mix(in srgb, var(--prompt) 50%, transparent); }
+.as-tag.personal { color: var(--agent); border-color: color-mix(in srgb, var(--agent) 50%, transparent); }
+.as-done:hover:not(:disabled) { color: var(--ok); }
+
+.as-capture { display: flex; flex-direction: column; gap: var(--sp-5); }
+.as-capture textarea { height: 160px; padding: var(--sp-5); font-size: var(--fs-2xl); }
+.as-capture-bar { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+.as-capture-bar .as-seg button { padding: 0 var(--sp-5); }
+.as-capture-bar .voice { margin-left: auto; }
+.as-msg { min-height: var(--line-sm); }
+
+@media (max-width: 900px) {
+  .page-assistant .page-hero { display: none; }
+  .as-head { padding-top: var(--sp-6); }
+  :is(.as-tabs, .as-seg) button { height: var(--touch); font-size: var(--fs-lg); }
+  .as-head .icon-btn, .as-task .icon-btn, .as-note .icon-btn, .as-capture-bar .icon-btn { width: var(--touch); height: var(--touch); }
+  .as-filters .chip { height: var(--touch-sm); padding: 0 var(--sp-8); font-size: var(--fs-md); }
+  .as-title { font-size: var(--fs-lg); }
+}
