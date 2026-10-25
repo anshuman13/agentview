@@ -27,7 +27,7 @@ export function fireTime(schedule: string, now = Date.now()) {
   return at.getTime();
 }
 
-const accountName = (a: Account) => (a === 'main' ? 'main' : 'second');
+const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
 
 const looping = (loop: LoopState) => Boolean(loop.phase) && loop.phase !== 'passed' && loop.phase !== 'failed';
@@ -201,7 +201,7 @@ export class AgentSession implements AgentHost {
 
   setAccount(a: string) {
     const accounts = this.driver.accounts();
-    if (!accounts.includes(a as Account)) return this.system('No second Claude account is logged in. Run ./claude-alt.sh first');
+    if (!accounts.includes(a as Account)) return this.system('No work Claude account is logged in. Run ./claude-alt.sh first');
     if (this.state.session.running) return this.system('Stop Claude before switching account');
     if (a === this.driver.account) return;
     this.driver.setAccount(a as Account);

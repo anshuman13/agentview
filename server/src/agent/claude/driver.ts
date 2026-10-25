@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { query, getSubagentMessages, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
-import type { Account, AgentEvent, AgentStatus, ChatEvent, Effort } from '../../../../shared/protocol.js';
+import type { Account, AgentEvent, UsageWindow, AgentStatus, ChatEvent, Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { agentOf } from '../../session/events.js';
@@ -128,6 +128,7 @@ export class ClaudeDriver implements AgentDriver {
 
   settled() {
     this.endedAt = Date.now();
+    void this.loadUsage();
     setTimeout(() => void this.syncTranscript(true), 500);
   }
 
@@ -221,6 +222,7 @@ export class ClaudeDriver implements AgentDriver {
     if (this.allowed.length) void this.q.applyFlagSettings({ permissions: { allow: this.allowed } }).catch(() => {});
     void this.consume();
     void this.loadMeta();
+    void this.loadUsage();
   }
 
   private async loadMeta() {
@@ -236,6 +238,20 @@ export class ClaudeDriver implements AgentDriver {
       });
     } catch (err) {
       process.stderr.write(`loadMeta failed: ${String(err)}\n`);
+    }
+  }
+
+  private async loadUsage() {
+    const q = this.q;
+    if (!q) return;
+    const window = (w?: { utilization: number | null; resets_at: string | null } | null): UsageWindow | null =>
+      w && w.utilization !== null ? { pct: Math.round(w.utilization), resetsAt: w.resets_at ? Date.parse(w.resets_at) : null } : null;
+    try {
+      const u = await q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true });
+      const r = u.rate_limits_available ? u.rate_limits : null;
+      if (q === this.q) this.host.setSession({ usage: r ? { fiveHour: window(r.five_hour), week: window(r.seven_day) } : null });
+    } catch (err) {
+      process.stderr.write(`loadUsage failed: ${String(err)}\n`);
     }
   }
 

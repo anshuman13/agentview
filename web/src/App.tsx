@@ -10,6 +10,7 @@ import { Changes, ChangesBadge } from './panes/Changes';
 import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
+import { ACCOUNT_LABEL } from './panes/Composer';
 import { command, pressable } from './panes/util';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 
@@ -128,6 +129,30 @@ function McpItem() {
     <button className="item clickable" title="MCP servers" onClick={() => command('page:mcp')}>
       <span className={`dot ${bad ? 'bad' : ok ? 'ok' : 'off'}`} /> MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
     </button>
+  );
+}
+
+function UsageItem() {
+  const usage = useStore((s) => s.session.usage);
+  const account = useStore((s) => s.session.account) ?? 'main';
+  const accounts = useStore((s) => s.session.accounts) ?? [];
+  if (!usage) return null;
+  const { fiveHour, week } = usage;
+  const at = (t: number | null) => (t ? new Date(t).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'unknown');
+  const title = [
+    `Claude plan usage${accounts.length > 1 ? ` on the ${ACCOUNT_LABEL[account]} account` : ''}`,
+    fiveHour && `5-hour: ${fiveHour.pct}% used, resets ${at(fiveHour.resetsAt)}`,
+    week && `Week: ${week.pct}% used, resets ${at(week.resetsAt)}`,
+  ].filter(Boolean).join('\n');
+  const high = Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
+  return (
+    <span className={`item${high ? ' warn' : ''}`} title={title}>
+      <Icon name="pulse" small />
+      {accounts.length > 1 && `${ACCOUNT_LABEL[account]} · `}
+      {fiveHour && `5h ${fiveHour.pct}%`}
+      {fiveHour && week && ' · '}
+      {week && `Week ${week.pct}%`}
+    </span>
   );
 }
 
@@ -486,6 +511,7 @@ export function App() {
         {!['Idle', 'Working', 'Connecting'].includes(status) && <span className="item status-text">{status}</span>}
         <span className="spacer" />
         <McpItem />
+        <UsageItem />
         <CacheItem />
         {canNotify && (
           <button className="item clickable" title={notifying ? 'Notifying you when Claude finishes or needs you. Click to turn off' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>

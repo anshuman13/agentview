@@ -59,6 +59,10 @@ export type ChatEvent =
 // The Claude login a chat runs on: the main one, or a second one to fall back to.
 export type Account = 'main' | 'alt';
 
+// Share of the Claude plan's 5-hour and weekly limits used, from the CLI's usage API.
+export type UsageWindow = { pct: number; resetsAt: number | null };
+export type PlanUsage = { fiveHour: UsageWindow | null; week: UsageWindow | null };
+
 export type SessionInfo = {
   id: string;
   sessionId: string | null;
@@ -81,6 +85,7 @@ export type SessionInfo = {
   pr: number | null;
   account: Account;
   accounts: Account[];
+  usage?: PlanUsage | null;
   capabilities?: Capabilities;
 };
 

@@ -99,12 +99,13 @@ or guesses at an open question waits for your approval instead, and rejecting it
 Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
 timeline and transcript, the composer footer shows the current phase and round, and Stop ends the loop.
 
-## Second Claude account
+## Personal and work Claude accounts
 
-`./claude-alt.sh` sets up `~/.claude-alt` for a second Claude login. It shares settings, skills, plugins and chat
+`./claude-alt.sh` sets up `~/.claude-alt` for the work Claude login next to the personal one in `~/.claude`. It shares settings, skills, plugins and chat
 history with `~/.claude` and keeps its own login; log in once with `CLAUDE_CONFIG_DIR=~/.claude-alt claude` and
 `/login`. When a turn ends on a usage limit, the chat moves to the other account and continues where it stopped,
-and new chats start there until the limit resets. The composer menu shows the account and switches it by hand.
+and new chats start there until the limit resets. The composer menu shows the account (Personal or Work) and switches it by hand. The status bar shows the account's
+5-hour and weekly usage, turning yellow from 80%, with the reset times on hover.
 
 ## Loops
 

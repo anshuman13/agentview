@@ -107,7 +107,7 @@ describe('AgentSession turns', () => {
     const setAccount = vi.fn();
     Object.assign(s.driver, { setAccount, accounts: () => ['main'] });
     s.setAccount('alt');
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('No second Claude account') });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('No work Claude account') });
     Object.assign(s.driver, { accounts: () => ['main', 'alt'] });
     s.sendPrompt('work');
     s.setAccount('alt');

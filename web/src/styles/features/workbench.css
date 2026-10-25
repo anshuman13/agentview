@@ -72,6 +72,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
 .statusbar .item.busy .codicon { color: var(--accent); }
 .statusbar .item.idle .codicon { color: var(--ok); }
 .statusbar .item.status-text, .statusbar .item.muted { color: var(--fg-muted); }
+.statusbar .item.warn { color: var(--warn); }
 .statusbar .item.error { background: var(--err); color: var(--bg); }
 
 .tabbar { display: none; }

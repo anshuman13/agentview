@@ -18,7 +18,7 @@ export type Use = { server: string; tool?: string };
 
 export const MAX_ROWS = 8;
 export const MAX_STORED = 50;
-const ACCOUNT_LABEL: Record<Account, string> = { main: 'Main', alt: 'Second' };
+export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Personal', alt: 'Work' };
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
 
 export function triggerAt(text: string, caret: number): Trigger {
