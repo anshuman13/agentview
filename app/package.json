@@ -4,11 +4,9 @@
   "scripts": {
     "tauri": "./env.sh tauri",
     "build:ui": "npm --prefix ../web run build && rm -rf www/assets && cp -R ../web/dist/. www/",
-    "build:web": "npm run build:ui && bun build src/assistant.ts --outfile www/assistant.js --target browser",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "npm run build:web && ./env.sh tauri dev",
-    "build": "npm run build:web && ./env.sh tauri build",
-    "android": "npm run build:web && date +%s > www/build.txt && ./env.sh tauri android build --apk --target aarch64 && mkdir -p ../dist && cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk ../dist/AgentView.apk && cp www/build.txt ../dist/AgentView.apk.txt"
+    "dev": "npm run build:ui && ./env.sh tauri dev",
+    "build": "npm run build:ui && ./env.sh tauri build",
+    "android": "npm run build:ui && date +%s > www/build.txt && ./env.sh tauri android build --apk --target aarch64 && mkdir -p ../dist && cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk ../dist/AgentView.apk && cp www/build.txt ../dist/AgentView.apk.txt"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.3"

@@ -74,7 +74,7 @@ Capture (mic and text) and Notes; later notifications with Done and Snooze, a sh
 1. Mini hub: database schema, sync API, launchd services, nightly backup (done)
 2. NetBird identity instead of device keys
 3. Web UI bundled into the phone app; AgentView accepts the app's requests from NetBird peers
-4. Assistant pane in the web app on one data layer (local copy on the phone, the server on a Mac); remove the separate page
+4. Assistant pane in the web app on one data layer (local copy on the phone, the server on a Mac); remove the separate page (done)
 5. Device list and reset of a lost phone copy
 6. Scheduler on the mini: work Slack, Calendar and Linear feeding Today
 7. Meeting notes and action items, facts and search
