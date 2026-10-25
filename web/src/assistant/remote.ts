@@ -1,5 +1,5 @@
-import { BaseStore, type AssistantStore } from './store';
-import { edited, newCapture, nextNine, runSync, toRow } from './engine';
+import { BaseStore, type AssistantStore, type Patch } from './store';
+import { edited, newCapture, runSync, toRow } from './engine';
 import { mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply } from './sync';
 
@@ -59,16 +59,13 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.syncNow();
   }
 
-  async capture(text: string, type: 'task' | 'note', profile: Profile) {
-    this.put(newCapture(text, type, profile, Date.now()));
+  async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null) {
+    const row = newCapture(text, type, profile, Date.now(), at);
+    this.put(row);
+    return row;
   }
 
-  private edit(row: ItemRow, patch: Parameters<typeof edited>[1]) {
+  async update(row: ItemRow, patch: Patch) {
     this.put(edited(this.rows.get(keyOf(row)) ?? row, patch, Date.now()));
-    return Promise.resolve();
   }
-
-  done = (row: ItemRow) => this.edit(row, { status: 'done' });
-  snooze = (row: ItemRow) => this.edit(row, { at: nextNine() });
-  remove = (row: ItemRow) => this.edit(row, { deleted: 1 });
 }

@@ -1,7 +1,8 @@
 import { errorText } from './engine';
-import type { ItemRow, Profile } from './sync';
+import type { ItemFields, ItemRow, Profile } from './sync';
 
 export type SyncStatus = { syncing: boolean; last: number; error: string };
+export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at'>> & { deleted?: number };
 export type Snapshot = { phase: 'locked' | 'unlocking' | 'ready'; message: string; items: ItemRow[]; sync: SyncStatus };
 
 export interface AssistantStore {
@@ -9,10 +10,8 @@ export interface AssistantStore {
   subscribe(fn: () => void): () => void;
   snapshot(): Snapshot;
   unlock(): Promise<void>;
-  capture(text: string, type: 'task' | 'note', profile: Profile): Promise<void>;
-  done(row: ItemRow): Promise<void>;
-  snooze(row: ItemRow): Promise<void>;
-  remove(row: ItemRow): Promise<void>;
+  capture(text: string, type: 'task' | 'note', profile: Profile, at?: number | null): Promise<ItemRow>;
+  update(row: ItemRow, patch: Patch): Promise<void>;
   syncNow(): Promise<void>;
 }
 

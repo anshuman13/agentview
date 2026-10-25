@@ -15,13 +15,13 @@ import { ACCOUNT_LABEL } from './panes/Composer';
 import { command, pressable, weekPace } from './panes/util';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
+import { Assistant, AssistantNav, useTodayCount } from './panes/Assistant';
 
 const Terminal = lazy(() => import('./panes/Terminal').then((m) => ({ default: m.Terminal })));
 const CodePane = lazy(() => import('./panes/CodePane').then((m) => ({ default: m.CodePane })));
 const BrowserPane = lazy(() => import('./panes/BrowserPane').then((m) => ({ default: m.BrowserPane })));
 const Observe = lazy(() => import('./panes/Observe').then((m) => ({ default: m.Observe })));
 const Deploy = lazy(() => import('./panes/Deploy').then((m) => ({ default: m.Deploy })));
-const Assistant = lazy(() => import('./panes/Assistant').then((m) => ({ default: m.Assistant })));
 const McpPage = lazy(() => import('./panes/McpStatus').then((m) => ({ default: m.McpPage })));
 const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
 const Loading = () => <div className="loading">Loading…</div>;
@@ -29,11 +29,12 @@ import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 import { touch } from './touch';
 
-type Tab = 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
-type View = 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
-type Page = 'assistant' | 'observe' | 'deploy' | 'mcp';
+type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
+type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
+type Page = 'observe' | 'deploy' | 'mcp';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
+  { id: 'assistant', icon: 'sparkle', title: 'Assistant' },
   { id: 'explorer', icon: 'files', title: 'Explorer' },
   { id: 'changes', icon: 'source-control', title: 'Source Control' },
   { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
@@ -42,7 +43,6 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
 ];
 
 const PAGES: { id: Page; icon: string; title: string; kicker: string; sub: (repo: string) => string }[] = [
-  { id: 'assistant', icon: 'checklist', title: 'Assistant', kicker: 'Tasks · Notes · Capture', sub: () => 'Your tasks and notes from every source, one list on all your devices.' },
   { id: 'observe', icon: 'pulse', title: 'Observe', kicker: 'Sentry · Grafana · Snowflake', sub: (r) => `Errors, logs and data for ${r}, read through the same MCP servers Claude uses.` },
   { id: 'deploy', icon: 'rocket', title: 'Deploy', kicker: 'Velodrome', sub: (r) => `Deploys of ${r}: what runs where, and a one-click deploy or rollback.` },
   { id: 'mcp', icon: 'plug', title: 'MCP Servers', kicker: 'Model Context Protocol', sub: (r) => `What Claude can reach from ${r}. Same config as the Claude CLI, checked live.` },
@@ -50,11 +50,13 @@ const PAGES: { id: Page; icon: string; title: string; kicker: string; sub: (repo
 const isPage = (v: string): v is Page => PAGES.some((p) => p.id === v);
 const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
 
-const TABS: { id: Tab; icon: string; label: string }[] = [
-  { id: 'chat', icon: 'comment-discussion', label: 'Chat' },
-  { id: 'code', icon: 'files', label: 'Files' },
-];
 const narrow = () => window.innerWidth <= 900;
+const LONG_PRESS = 450;
+
+function AssistantBadge() {
+  const n = useTodayCount();
+  return n > 0 ? <span className="badge">{n}</span> : null;
+}
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 function stored(key: string, fallback: number) {
@@ -198,8 +200,11 @@ export function App() {
   const session = useStore((s) => s.session);
   const status = useStore((s) => s.status);
   const mcp = useStore((s) => s.session.mcp);
-  const [tab, setTab] = useState<Tab>('chat');
-  const [editor, setEditor] = useState<'file' | 'browser' | 'agents' | Page>('file');
+  const [tab, setTab] = useState<Tab>(() => (narrow() && !deepLink.chat && !deepLink.session ? 'assistant' : 'chat'));
+  const [editor, setEditor] = useState<'file' | 'browser' | 'agents' | 'assistant' | Page>('file');
+  const [seenAssistant, setSeenAssistant] = useState(false);
+  const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pressed = useRef(false);
   const [agentSel, setAgentSel] = useState<string | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [more, setMore] = useState(false);
@@ -237,8 +242,18 @@ export function App() {
   const startTermResize = (e: React.PointerEvent) => drag(e, (ev) => setTermH(Math.round(Math.min(Math.max(window.innerHeight - 22 - ev.clientY, 100), window.innerHeight - 200))), 'resizing-v');
 
   const showView = (v: View) => {
+    if (v === 'assistant') return openAssistant(view === 'assistant' && editor === 'assistant' && sidebar);
     if (v === view) setSidebar((s) => !s);
     else { setView(v); setSidebar(true); }
+  };
+  // Desktop: the lists go in the sidebar and the feed in the editor area. Phone: its own tab.
+  const openAssistant = (toggleSidebar = false) => {
+    setMore(false);
+    setEditor('assistant');
+    if (narrow()) setTab('assistant');
+    else if (toggleSidebar) setSidebar(false);
+    else { setView('assistant'); setSidebar(true); }
+    window.dispatchEvent(new Event('assistant:shown'));
   };
 
   useEffect(() => {
@@ -294,6 +309,7 @@ export function App() {
       else if (k === 'b') { e.preventDefault(); setSidebar((v) => !v); }
       if (k === 'j') { e.preventDefault(); setTerminal((v) => !v); }
       if (k === 'e') { e.preventDefault(); setEditor((v) => (v === 'file' ? 'browser' : 'file')); }
+      if (k === 'i') { e.preventDefault(); window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'assistant' } })); setTimeout(() => window.dispatchEvent(new Event('assistant:focus')), 50); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -323,7 +339,8 @@ export function App() {
   useEffect(() => {
     const onCommand = (e: Event) => {
       const [kind, arg] = (e as CustomEvent<{ id: string }>).detail.id.split(':');
-      if (kind === 'view') {
+      if (kind === 'assistant' || (kind === 'view' && arg === 'assistant')) openAssistant();
+      else if (kind === 'view') {
         setView(arg as View);
         setSidebar(true);
         if (narrow() && arg === 'explorer') { setTab('code'); setEditor('file'); setBrowse(true); }
@@ -360,14 +377,14 @@ export function App() {
 
   const fileName = openFile ? openFile.split('/').pop() : null;
   const closeFile = () => setUi({ openFile: null });
-  const showing = tab === 'browser' ? 'browser' : tab === 'agents' ? 'agents' : tab === 'code' && !isPage(editor) ? 'file' : editor;
+  const showing = tab === 'assistant' ? 'assistant' : tab === 'browser' ? 'browser' : tab === 'agents' ? 'agents' : tab === 'code' && !isPage(editor) ? 'file' : editor;
   const unreachable = useUnreachable();
-  const active = unreachable ? 'offline' : showing === 'browser' ? 'browser' : showing === 'agents' ? 'agents' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
+  const active = showing === 'assistant' ? 'assistant' : unreachable ? 'offline' : showing === 'browser' ? 'browser' : showing === 'agents' ? 'agents' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
   const project = session.cwd ? session.cwd.split('/').pop() : 'AgentView';
   const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor);
   const chatsView = view === 'chats' || view === 'sessions';
   const inChats = tab === 'repos' && chatsView;
-  const inMore = tab === 'term' || (tab === 'repos' && !chatsView) || (tab === 'code' && isPage(editor));
+  const inMore = tab === 'term' || tab === 'code' || (tab === 'repos' && !chatsView);
   const mcpOk = mcp.filter((m) => m.status === 'connected').length;
   const goTab = (t: Tab) => {
     setMore(false);
@@ -377,6 +394,18 @@ export function App() {
     if (t === 'agents') setEditor('agents');
     if (t === 'browser') setEditor('browser');
     if (t === 'code') setEditor('file');
+    if (t === 'assistant') { setEditor('assistant'); window.dispatchEvent(new Event('assistant:shown')); }
+  };
+  useEffect(() => { if (showing === 'assistant') setSeenAssistant(true); }, [showing]);
+  const assistantPress = {
+    onPointerDown: () => {
+      pressed.current = false;
+      pressTimer.current = setTimeout(() => { pressed.current = true; goTab('assistant'); setTimeout(() => window.dispatchEvent(new Event('assistant:voice')), 100); }, LONG_PRESS);
+    },
+    onPointerUp: () => clearTimeout(pressTimer.current),
+    onPointerCancel: () => clearTimeout(pressTimer.current),
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+    onClick: () => { if (!pressed.current) goTab('assistant'); pressed.current = false; },
   };
   const goSide = (v: View) => { setMore(false); setView(v); setTab('repos'); };
   const act = (f: () => void) => () => { setMore(false); f(); };
@@ -406,7 +435,7 @@ export function App() {
       <div className="body">
         <aside className="activitybar desktop-only">
           {VIEWS.map((v) => (
-            <button key={v.id} data-view={v.id} className={sidebar && view === v.id ? 'active' : ''} title={v.title} onClick={() => showView(v.id)}>
+            <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? 'Assistant (⌘I)' : v.title} onClick={() => showView(v.id)}>
               <Icon name={v.icon} />
               {v.id === 'chats' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
               {v.id === 'changes' && <ChangesBadge />}
@@ -433,16 +462,19 @@ export function App() {
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
             </div>
           )}
-          {view === 'explorer' ? <Explorer /> : view === 'changes' ? <Changes /> : view === 'github' ? <GitHub /> : view === 'chats' ? <OpenChats /> : <Sessions />}
+          {view === 'assistant' ? <AssistantNav /> : view === 'explorer' ? <Explorer /> : view === 'changes' ? <Changes /> : view === 'github' ? <GitHub /> : view === 'chats' ? <OpenChats /> : <Sessions />}
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
           {mobileExplorer && <div className="mobile-only mobile-explorer-host" onClick={reopen}><Explorer /></div>}
           <div className="tabs">
+            <div className={`tab as-tab desktop-only ${showing === 'assistant' ? 'active' : ''}`} {...pressable(() => openAssistant())} title="Assistant (⌘I)">
+              <Icon name="sparkle" small /> Assistant
+            </div>
             <button className={`tab ex-tab mobile-only ${mobileExplorer ? 'active' : ''}`} title="Explorer" onClick={() => { setTab('code'); setEditor('file'); setBrowse(true); }}>
               <Icon name="files" small />
             </button>
-            <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={openFile ?? 'Files (⌘E to switch)'}>
+            <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' || t === 'assistant' ? 'code' : t)); })} title={openFile ?? 'Files (⌘E to switch)'}>
               {fileName ? <FileIcon name={fileName} /> : <Icon name="file" small />} {fileName ?? 'File'}
               {openFile && (
                 <button className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
@@ -482,10 +514,11 @@ export function App() {
                   </div>
                   <div id={`page-${page}-extra`} className="page-extra" />
                 </header>
-                <div className="page-body"><Suspense fallback={<Loading />}>{page === 'assistant' ? <Assistant /> : page === 'mcp' ? <McpPage /> : page === 'observe' ? <Observe /> : <Deploy />}</Suspense></div>
+                <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'observe' ? <Observe /> : <Deploy />}</Suspense></div>
               </div>
             </div>
           )}
+          <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Assistant />}</div>
           <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable onMacs={() => setMacs(true)} />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <div className="empty-state">
@@ -541,20 +574,21 @@ export function App() {
       </footer>
 
       <nav className="tabbar mobile-only">
-        {TABS.map((t) => [
-          <button key={t.id} className={tab === t.id && !(t.id === 'code' && isPage(editor)) && !more ? 'active' : ''} onClick={() => goTab(t.id)}>
-            <Icon name={t.icon} />
-            <span>{t.label}</span>
-            {t.id === 'chat' && pendingCount > 0 && <span className="badge">{pendingCount}</span>}
-          </button>,
-          t.id === 'chat' && (
-            <button key="chats" className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
-              <Icon name="comment-discussion" />
-              <span>Chats</span>
-              {elsewhere > 0 && <span className="badge">{elsewhere}</span>}
-            </button>
-          ),
-        ])}
+        <button className={tab === 'assistant' && !more ? 'active' : ''} title="Assistant. Hold to talk" {...assistantPress}>
+          <Icon name="sparkle" />
+          <span>Assistant</span>
+          <AssistantBadge />
+        </button>
+        <button className={tab === 'chat' && !more ? 'active' : ''} onClick={() => goTab('chat')}>
+          <Icon name="comment" />
+          <span>Chat</span>
+          {pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+        </button>
+        <button className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
+          <Icon name="comment-discussion" />
+          <span>Chats</span>
+          {elsewhere > 0 && <span className="badge">{elsewhere}</span>}
+        </button>
         <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => goTab('agents')}>
           <Icon name="hubot" />
           <span>Agents</span>
@@ -579,6 +613,9 @@ export function App() {
               )}
               <button className="icon-btn" title={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme}><Icon name="color-mode" /></button>
             </div>
+            <button className={tab === 'code' ? 'active' : ''} onClick={() => goTab('code')}>
+              <Icon name="files" /><span>Files</span>
+            </button>
             <button className={tab === 'term' ? 'active' : ''} onClick={() => goTab('term')}>
               <Icon name="terminal" /><span>Terminal</span>
             </button>

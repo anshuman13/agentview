@@ -1,7 +1,9 @@
-import { BaseStore, type AssistantStore } from './store';
-import { errorText, newCapture, nextNine, runSync, toRow } from './engine';
+import { BaseStore, type AssistantStore, type Patch } from './store';
+import { errorText, newCapture, runSync, toRow } from './engine';
 import { FIELDS, mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply } from './sync';
+
+const PATCHABLE = ['title', 'text', 'status', 'at', 'deleted'] as const;
 
 type Invoke = <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 type SqlValue = string | number | null;
@@ -165,15 +167,16 @@ export class LocalStore extends BaseStore implements AssistantStore {
     });
   }
 
-  async capture(text: string, type: 'task' | 'note', profile: Profile) {
-    const r = newCapture(text, type, profile, Date.now());
+  async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null) {
+    const r = newCapture(text, type, profile, Date.now(), at);
     await this.exec(
-      `INSERT INTO items (id, profile, version, updated_at, deleted, field_times, title, text, source, status, dirty)
-       VALUES (?, ?, 0, ?, 0, ?, ?, ?, 'capture', ?, 1)`,
-      [r.id, r.profile, r.updated_at, r.field_times, r.title, r.text, r.status],
+      `INSERT INTO items (id, profile, version, updated_at, deleted, field_times, title, text, source, at, status, dirty)
+       VALUES (?, ?, 0, ?, 0, ?, ?, ?, 'capture', ?, ?, 1)`,
+      [r.id, r.profile, r.updated_at, r.field_times, r.title, r.text, r.at, r.status],
     );
     await this.refresh();
     this.syncNow();
+    return r;
   }
 
   private async edit(row: ItemRow, sql: string, params: (now: number) => SqlValue[]) {
@@ -190,7 +193,11 @@ export class LocalStore extends BaseStore implements AssistantStore {
     }
   }
 
-  done = (row: ItemRow) => this.edit(row, `status = 'done', field_times = json_set(field_times, '$.status', ?)`, (now) => [now]);
-  snooze = (row: ItemRow) => this.edit(row, `at = ?, field_times = json_set(field_times, '$.at', ?)`, (now) => [nextNine(), now]);
-  remove = (row: ItemRow) => this.edit(row, `deleted = 1, field_times = json_set(field_times, '$.deleted', ?)`, (now) => [now]);
+  update = (row: ItemRow, patch: Patch) => {
+    const keys = PATCHABLE.filter((k) => k in patch);
+    if (!keys.length) return Promise.resolve();
+    const sets = keys.map((k) => `${k} = ?`).join(', ');
+    const times = keys.map((k) => `'$.${k}', ?`).join(', ');
+    return this.edit(row, `${sets}, field_times = json_set(field_times, ${times})`, (now) => [...keys.map((k) => patch[k] ?? null), ...keys.map(() => now)]);
+  };
 }

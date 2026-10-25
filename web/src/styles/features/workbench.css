@@ -86,8 +86,8 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
   .main { flex-direction: column; }
   .workbench[data-tab='chat'] .pane.center,
   .workbench[data-tab='repos'] .pane.side,
-  .workbench:is([data-tab='code'], [data-tab='browser'], [data-tab='term'], [data-tab='agents']) .pane.code { display: flex; }
-  .workbench[data-tab='agents'] .editor-group > .tabs { display: none; }
+  .workbench:is([data-tab='code'], [data-tab='browser'], [data-tab='term'], [data-tab='agents'], [data-tab='assistant']) .pane.code { display: flex; }
+  .workbench:is([data-tab='agents'], [data-tab='assistant']) .editor-group > .tabs { display: none; }
 
   .tabbar {
     display: flex; flex: none; height: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface);

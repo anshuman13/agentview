@@ -30,7 +30,7 @@ const ERRORS: Record<string, string> = {
 
 const HOLD_MS = 400;
 
-export function Voice({ onText, onSubmit }: { onText: (text: string, final: boolean) => void; onSubmit?: () => void }) {
+export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, final: boolean) => void; onSubmit?: () => void; autoStart?: number }) {
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
   const rec = useRef<Recognition | null>(null);
@@ -38,7 +38,9 @@ export function Voice({ onText, onSubmit }: { onText: (text: string, final: bool
   handlers.current = { onText, onSubmit };
   const pressed = useRef(0);
 
+  const begin = useRef<() => void>(undefined);
   useEffect(() => () => rec.current?.stop(), []);
+  useEffect(() => { if (autoStart && !rec.current) begin.current?.(); }, [autoStart]);
 
   const SR = recognizer();
   if (!SR) return null;
@@ -69,6 +71,7 @@ export function Voice({ onText, onSubmit }: { onText: (text: string, final: bool
     r.start();
     setListening(true);
   };
+  begin.current = start;
   const stop = () => rec.current?.stop();
 
   return (
