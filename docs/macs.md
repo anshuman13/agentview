@@ -15,6 +15,10 @@ websockets from other websites, including other servers on localhost.
 The Mac's name in the status bar (on the phone: the chat header and the More sheet) lists the other Macs on NetBird
 that run AgentView, with a dot for whether an agent is working there. Click one to switch to it; a banner names the
 Mac you landed on. The phone app remembers the Mac you used last and offers the others when it can't reach it.
+In the phone app the web UI is bundled and opens without a Mac; it calls the chosen Mac over NetBird (the server accepts
+the origins `http://tauri.localhost` and `tauri://localhost` only from this Mac and NetBird peers) and shows an offline
+state with Retry and the Mac list when that Mac cannot be reached. Switching Macs there changes the address the app calls
+and reopens the event stream.
 A Mac cannot reach its own NetBird address, so the Mac you are viewing from is marked "you are here" and opens on
 localhost.
 

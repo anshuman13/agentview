@@ -7,3 +7,9 @@ app/www/build.txt
 dist-next
 dist-old
 app/www/assistant.js
+app/www/index.html
+app/www/assets
+app/www/icon-192.png
+app/www/icon-512.png
+app/www/apple-touch-icon.png
+app/www/manifest.webmanifest

@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "tauri": "./env.sh tauri",
-    "build:web": "bun build src/assistant.ts --outfile www/assistant.js --target browser",
+    "build:ui": "npm --prefix ../web run build && rm -rf www/assets && cp -R ../web/dist/. www/",
+    "build:web": "npm run build:ui && bun build src/assistant.ts --outfile www/assistant.js --target browser",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "npm run build:web && ./env.sh tauri dev",
     "build": "npm run build:web && ./env.sh tauri build",
