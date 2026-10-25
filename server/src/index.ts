@@ -15,6 +15,7 @@ import type { McpServerDef } from './integrations/mcpClient.js';
 import { listBin, removeSession, restoreSession } from './agent/claude/bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './workspace/files.js';
 import { github } from './integrations/github.js';
+import { assistantRoute } from './integrations/assistant.js';
 import { attention, dismissAttention, onAttention, refreshAttention, startAttention } from './integrations/attention.js';
 import { dismissFinding, getFindings } from './session/findings.js';
 import { deployRoute } from './integrations/deploy.js';
@@ -175,6 +176,10 @@ const server = http.createServer(async (req, res) => {
     }
   }
   try {
+    if (url.pathname.startsWith('/api/assistant/')) {
+      const r = await assistantRoute(req.method ?? 'GET', url, () => readBody(req, 5_000_000));
+      return json(r.body, r.status);
+    }
     const chat = chats.get(url.searchParams.get('chat') ?? '') ?? chats.get(lastViewed);
     if (!chat) return json({ error: 'The agent host is starting' }, 503);
     const liveCwds = [...chats.values()].map((c) => c.cwd);
