@@ -132,7 +132,7 @@ Progress checklist:
 - [x] 4. Nav entries for Meetings and Wiki, view state module, routing in Codex
 - [x] 5. Wiki index: overview card, sections of page cards (New page card moved to 9)
 - [x] 6. Wiki index: Recently updated feed with contested filter, Ask the wiki composer
-- [ ] 7. Wiki page: header, headings, claim rows with sources, dates and anchors, On this page rail
+- [x] 7. Wiki page: header, headings, claim rows with sources, dates and anchors, On this page rail
 - [ ] 8. Contest and resolve, superseded claims, feed links to claims
 - [ ] 9. Wiki search and New page placeholder
 - [ ] 10. Meetings list

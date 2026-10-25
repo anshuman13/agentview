@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useCodex } from '../../assistant';
 import { ask, wikiAskText } from '../../assistant/ask';
-import { contestOf, factTime, live, pageStats, sourcesOf, type Fact, type Page, type Source } from '../../assistant/wiki';
+import { contestOf, factTime, live, pageClaims, pageStats, sourcesOf, type Fact, type Page, type Source } from '../../assistant/wiki';
 import { Icon } from '../../Icon';
 import { ago } from '../util';
 import { setView, useView } from './view';
 import '../../styles/features/wiki.css';
 
-export const SOURCE_ICON: Record<Source['kind'], string> = { meeting: 'record', slack: 'comment-discussion', linear: 'issues', pr: 'git-pull-request', doc: 'file' };
+export const SOURCE_ICON: Record<Source['kind'], string> = { meeting: 'calendar', slack: 'comment-discussion', linear: 'issues', pr: 'git-pull-request', doc: 'file' };
 const SECTION_ORDER = ['Teams', 'Projects', 'People', 'Practices'];
 
 export function shortDate(t: number, now = Date.now()) {
@@ -155,16 +155,103 @@ function WikiIndex({ onMenu }: { onMenu: () => void }) {
   );
 }
 
+const SOURCE_NAME: Record<Source['kind'], [string, string]> = { meeting: ['meeting', 'meetings'], slack: ['Slack thread', 'Slack threads'], linear: ['Linear issue', 'Linear issues'], pr: ['pull request', 'pull requests'], doc: ['doc', 'docs'] };
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+function SourceChip({ s }: { s: Source }) {
+  const body = <><Icon name={SOURCE_ICON[s.kind]} small /> {s.label}</>;
+  return s.url ? <a className="wk-src" href={s.url} target="_blank" rel="noreferrer">{body}</a> : <span className="wk-src">{body}</span>;
+}
+
+function Claim({ fact, old }: { fact: Fact; old: Fact[] }) {
+  const c = contestOf(fact);
+  return (
+    <div className={`wk-claim${c ? ' contested' : ''}`} id={`claim-${fact.id}`}>
+      <p className="wk-claim-text">{fact.text}</p>
+      <div className="wk-claim-foot">
+        {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
+        {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
+      </div>
+      {c && (
+        <div className="wk-contest">
+          <div className="wk-contest-head"><Icon name="warning" small /> Contested by {c.by} · {ago(c.at, ' ago')}</div>
+          {c.note && <div className="wk-contest-note">{c.note}</div>}
+        </div>
+      )}
+      {old.map((o) => (
+        <div key={o.id} className="wk-old">
+          <s>{o.text}</s>
+          <span>Replaced {o.at != null ? shortDate(o.at) : ''}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WikiPage({ id }: { id: string }) {
+  const { pages, facts, sample } = useCodex();
+  const page = live(pages).find((p) => p.id === id);
+  const groups = useMemo(() => pageClaims(facts, id), [facts, id]);
+  const st = pageStats(facts, id);
+  const counts = useMemo(() => {
+    const n = new Map<Source['kind'], Set<string>>();
+    for (const g of groups) for (const { fact } of g.claims) for (const s of sourcesOf(fact)) n.set(s.kind, (n.get(s.kind) ?? new Set()).add(s.label));
+    return [...n].map(([kind, set]) => ({ kind, n: set.size }));
+  }, [groups]);
+  const back = () => setView({ open: null, anchor: null });
+  const section = page?.section === 'overview' ? null : page?.section;
+  return (
+    <div className="wk">
+      <header className="wk-head">
+        <button className="icon-btn" title="Back to the wiki" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
+        <nav className="wk-crumbs"><button onClick={back}>Wiki</button>{section && <><Icon name="chevron-right" small /><span>{section}</span></>}</nav>
+        <span className="spacer" />
+        {sample && <span className="wk-sample" title="Sample data until the scheduler fills the wiki">Sample</span>}
+      </header>
+      <div className="wk-scroll">
+        {!page ? (
+          <div className="as-empty"><Icon name="book" /><div>This page is gone.</div><button className="btn" onClick={back}>Back to the wiki</button></div>
+        ) : (
+          <div className="wk-doc">
+            <article className="wk-article">
+              <h1 className="wk-title">{page.title}</h1>
+              {page.summary && <p className="wk-lede">{page.summary}</p>}
+              <div className="wk-meta wk-page-meta">
+                <span>Updated {shortDate(Math.max(page.updated_at, st.updated))}</span>
+                <span>{st.claims} claims</span>
+                {st.contested > 0 && <span className="wk-warn">{st.contested} contested</span>}
+              </div>
+              {groups.map((g) => (
+                <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
+                  <h2>{g.heading}</h2>
+                  {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} />)}
+                </section>
+              ))}
+              {!groups.length && <div className="wk-none">No claims yet. They appear here as meetings, Slack threads and issues mention {page.title}.</div>}
+            </article>
+            <aside className="wk-rail">
+              {groups.length > 1 && (
+                <div className="wk-rail-block">
+                  <div className="wk-label">On this page</div>
+                  {groups.map((g) => <a key={g.heading} href={`#h-${slug(g.heading)}`} onClick={(e) => { e.preventDefault(); document.getElementById(`h-${slug(g.heading)}`)?.scrollIntoView({ behavior: 'smooth' }); }}>{g.heading}</a>)}
+                </div>
+              )}
+              {counts.length > 0 && (
+                <div className="wk-rail-block">
+                  <div className="wk-label">Sources</div>
+                  {counts.map(({ kind, n }) => <span key={kind} className="wk-rail-src"><Icon name={SOURCE_ICON[kind]} small /> {n} {SOURCE_NAME[kind][n === 1 ? 0 : 1]}</span>)}
+                </div>
+              )}
+            </aside>
+          </div>
+        )}
+      </div>
+      {page && <AskBar placeholder={`Ask about ${page.title}`} onAsk={(q) => ask(wikiAskText(q, pages, facts, id))} />}
+    </div>
+  );
+}
+
 export function Wiki({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
-  if (open) {
-    return (
-      <div className="wk">
-        <header className="wk-head">
-          <button className="icon-btn" title="Back" aria-label="Back" onClick={() => setView({ open: null, anchor: null })}><Icon name="arrow-left" /></button>
-        </header>
-      </div>
-    );
-  }
-  return <WikiIndex onMenu={onMenu} />;
+  return open ? <WikiPage id={open} /> : <WikiIndex onMenu={onMenu} />;
 }
