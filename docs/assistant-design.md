@@ -158,7 +158,66 @@ a capture or a question: "call the bank tomorrow 9" becomes a task with the date
 Alex ask for?" becomes a question. The created item shows as a card with Undo. Recipe chips sit above the field
 and change with the time of day (Plan my day in the morning, Wrap up in the evening).
 
-## Meetings
+## Stilla walkthrough (2026-10-25)
+
+Read-only pass over the signed-in web app.
+
+| Page | What it is |
+| --- | --- |
+| Rail | Home, Meetings, Skills, Automations, More (Wiki, Pull requests); notifications and account at the bottom |
+| Home | Centred composer ("Tell Stilla what to do"), a two-column grid of recipe rows (Plan my day, Prep for my next meeting, Check my follow-ups, Draft my weekly update, Review my PRs...), each with the source icons it uses. Sidebar: Recents and Folders |
+| Meetings | Filters (My meetings, Date) and search at the top, Take notes button with a language menu. Upcoming card with today's date, then past meetings grouped by day: calendar icon, title, time, an "0 of 3" action count, avatars |
+| Meeting | Two panes. Left: "Recording stopped on ... by ..." then the agent's thread: a canvas preview card, an approve card per action (Send Slack message with ✕ and ✓), a short reply listing what it could not turn into actions. Composer at the bottom ("Chat with Stilla and others"). Right: the canvas, a document with summary, discussion, decisions and next steps, with comments and version history |
+| Canvas with actions | Proposal cards for Linear issues: id, title, text, field chips (team, cycle, state, priority, assignee), View diff, Reject, Update issue |
+| Automations | Table: name, trigger, last run, next run, runs, creator, sharing. Detail: health (success rate over 20 runs), average duration, instructions, trigger and model, runs table, and a composer to change it in words |
+| Skills | Cards with author, use count, Install. Tabs: Installed, Organization, Discover, Built-in |
+| Folders, Canvases | Tables of canvases with a chat bound to the folder at the bottom; sharing and resources in a right panel |
+| Wiki | Organisation pages as cards, a recently updated feed on the right, Ask the wiki composer |
+| Notifications | Small popover, "You're all caught up" |
+
+Patterns to take: every page has its own composer scoped to that page; the agent's output is a document (canvas)
+next to the thread, not inside it; actions are approve cards; meetings list shows open action counts.
+
+## Meetings in Codex
+
+Same split as Stilla, mapped to our layout: the meeting canvas in the main column, the conversation in the right
+chat pane (a chat bound to the meeting). On the phone the canvas is the page and the chat opens from a button.
+
+```
+Meetings list (Codex sidebar: Today, Upcoming, Meetings, Notes, Done)
+┌──────────────────────────────────────────┐
+│ Meetings                   🔍  [● Notes] │
+│ TODAY                                    │
+│ ◷ Standup            10:00-10:15   ○○○ │
+│ UPCOMING                                 │
+│ ◷ Pricing sync   Tue 14:00-15:00   ○○+4 │
+│ PAST · Wed 21 Oct                        │
+│ ◷ Edge service    14:00-15:00  0/3  ○○ │
+└──────────────────────────────────────────┘
+
+Meeting page (main column; chat on the right is bound to it)
+┌──────────────────────────────────────────┐
+│ ← Edge service · Wed 21 Oct 14:00   ↗Cal │
+│ Ben, Maria, +9          Recorded 46 min  │
+├──────────────────────────────────────────┤
+│ MY NOTES                                 │
+│ - ask Maria about warehouse MCP          │
+│ SUMMARY (grey, AI)                       │
+│ Gateway handles auth and budgets ...     │
+│ DECISIONS                                │
+│ - Vendor MCPs connect directly           │
+│ ACTIONS · 0 of 3                         │
+│ ┌──────────────────────────────────────┐ │
+│ │ ✉ Slack to #infra: who owns ...      │ │
+│ │              [Edit] [✕] [✓ Approve]  │ │
+│ ├──────────────────────────────────────┤ │
+│ │ ◆ Linear: Add gateway to SSO         │ │
+│ │              [Edit] [✕] [✓ Approve]  │ │
+│ └──────────────────────────────────────┘ │
+└──────────────────────────────────────────┘
+```
+
+## Meetings (earlier sketch)
 
 ```
 ┌──────────────────────────────────┐
