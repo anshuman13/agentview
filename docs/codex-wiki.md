@@ -127,7 +127,7 @@ Each step runs `npx tsc -p web/tsconfig.json --noEmit`, `npm test`, and the scre
 Progress checklist:
 
 - [x] 1. Write this design doc
-- [ ] 2. Preview page with an in-memory sample store and the screenshot script
+- [x] 2. Preview page with an in-memory sample store and the screenshot script
 - [ ] 3. Data model: hub tables and column migration, client types and sample data
 - [ ] 4. Nav entries for Meetings and Wiki, view state module, routing in Codex
 - [ ] 5. Wiki index: overview card, sections of page cards, New page card

@@ -12,6 +12,9 @@ export function assistantStore(): AssistantStore {
   return (store ??= invoke ? new LocalStore(invoke) : new RemoteStore());
 }
 
+// The preview page swaps in an in-memory store before the first render.
+export const setAssistantStore = (s: AssistantStore) => void (store = s);
+
 export function useAssistant() {
   const s = assistantStore();
   return { store: s, snap: useSyncExternalStore(s.subscribe, s.snapshot) };
