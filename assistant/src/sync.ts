@@ -1,5 +1,7 @@
 import Database from 'better-sqlite3';
-import { TABLES } from './db.js';
+import { TABLES, nextVersion } from './db.js';
+
+export class SyncError extends Error {}
 
 export type Change = {
   table: string;
@@ -17,12 +19,11 @@ export type PulledChange = Change & {
   field_times: Record<string, number>;
 };
 
-function getNextVersion(db: Database.Database): number {
-  const metaStmt = db.prepare('UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ?');
-  metaStmt.run('version');
-  const row = db.prepare('SELECT CAST(value AS INTEGER) as value FROM meta WHERE key = ?').get('version') as { value: number };
-  return row.value;
-}
+export type PullResult = {
+  version: number;
+  changes: PulledChange[];
+  hasMore: boolean;
+};
 
 export function applyChanges(
   db: Database.Database,
@@ -30,27 +31,37 @@ export function applyChanges(
 ): { version: number; applied: number } {
   // Validate all changes first
   for (const change of changes) {
-    if (!(change.table in TABLES)) {
-      throw new Error(`Invalid table: ${change.table}`);
+    if (!Object.hasOwn(TABLES, change.table)) {
+      throw new SyncError(`Invalid table: ${change.table}`);
     }
     if (typeof change.id !== 'string' || !change.id) {
-      throw new Error(`Invalid id: must be non-empty string`);
+      throw new SyncError(`Invalid id: must be non-empty string`);
     }
     if (change.profile !== 'work' && change.profile !== 'personal') {
-      throw new Error(`Invalid profile: ${change.profile}`);
+      throw new SyncError(`Invalid profile: ${change.profile}`);
+    }
+    if (typeof change.updated_at !== 'number' || !Number.isFinite(change.updated_at)) {
+      throw new SyncError(`Invalid updated_at: must be a finite number`);
     }
     const validColumns = TABLES[change.table];
     for (const field of Object.keys(change.fields)) {
       if (!validColumns.includes(field)) {
-        throw new Error(
+        throw new SyncError(
           `Invalid field ${field} for table ${change.table}`
         );
       }
       const value = change.fields[field];
       if (value !== null && typeof value !== 'string' && typeof value !== 'number') {
-        throw new Error(
+        throw new SyncError(
           `Invalid value type for ${field}: must be string, number, or null`
         );
+      }
+    }
+    if (change.field_times) {
+      for (const [field, time] of Object.entries(change.field_times)) {
+        if (typeof time !== 'number' || !Number.isFinite(time)) {
+          throw new SyncError(`Invalid field_times.${field}: must be a finite number`);
+        }
       }
     }
   }
@@ -86,16 +97,17 @@ export function applyChanges(
         }
       }
 
-      const changeDeletedTime = updated_at;
-      const storedDeletedTime = storedFieldTimes['deleted'] ?? 0;
-      const changeDeleted = deleted ?? false;
-
       let finalDeleted = storedDeleted;
-      if (changeDeletedTime > storedDeletedTime) {
-        finalDeleted = changeDeleted ? 1 : 0;
-        newFieldTimes['deleted'] = changeDeletedTime;
-        if ((changeDeleted ? 1 : 0) !== storedDeleted) {
-          hasChanges = true;
+      if (deleted !== undefined) {
+        const changeDeletedTime = updated_at;
+        const storedDeletedTime = storedFieldTimes['deleted'] ?? 0;
+
+        if (changeDeletedTime > storedDeletedTime) {
+          finalDeleted = deleted ? 1 : 0;
+          newFieldTimes['deleted'] = changeDeletedTime;
+          if ((deleted ? 1 : 0) !== storedDeleted) {
+            hasChanges = true;
+          }
         }
       }
 
@@ -104,7 +116,7 @@ export function applyChanges(
       }
 
       const newUpdatedAt = Math.max(storedUpdatedAt, updated_at);
-      const newVersion = getNextVersion(db);
+      const newVersion = nextVersion(db);
 
       if (!row) {
         const dataColumns = Object.keys(valuesToSet);
@@ -157,44 +169,57 @@ export function pullChanges(
   db: Database.Database,
   since: number,
   limit = 1000
-): { version: number; changes: PulledChange[] } {
-  const changes: PulledChange[] = [];
-  let maxVersion = since;
+): PullResult {
+  const allRows: Array<{ table: string; row: any }> = [];
 
   for (const table of Object.keys(TABLES)) {
-    if (changes.length >= limit) break;
-
     const dataColumns = TABLES[table];
     let sql = `SELECT id, profile, version, updated_at, deleted, field_times, `;
     sql += dataColumns.join(', ');
     sql += ` FROM ${table} WHERE version > ? ORDER BY version, id LIMIT ?`;
 
     const selectStmt = db.prepare(sql);
-    const rows = selectStmt.all(since, limit - changes.length) as any[];
+    const rows = selectStmt.all(since, limit) as any[];
 
     for (const row of rows) {
-      const fieldTimes = JSON.parse(row.field_times);
-      const fields: Record<string, unknown> = {};
-
-      for (const col of dataColumns) {
-        fields[col] = row[col];
-      }
-
-      const change: PulledChange = {
-        table,
-        id: row.id,
-        profile: row.profile,
-        deleted: row.deleted === 1,
-        updated_at: row.updated_at,
-        version: row.version,
-        fields,
-        field_times: fieldTimes,
-      };
-
-      changes.push(change);
-      maxVersion = Math.max(maxVersion, row.version);
+      allRows.push({ table, row });
     }
   }
 
-  return { version: maxVersion, changes };
+  allRows.sort((a, b) => {
+    const versionDiff = a.row.version - b.row.version;
+    if (versionDiff !== 0) return versionDiff;
+    return a.row.id.localeCompare(b.row.id);
+  });
+
+  const hasMore = allRows.length > limit;
+  const changes: PulledChange[] = [];
+  let maxVersion = since;
+
+  for (let i = 0; i < Math.min(limit, allRows.length); i++) {
+    const { table, row } = allRows[i];
+    const dataColumns = TABLES[table];
+    const fieldTimes = JSON.parse(row.field_times);
+    const fields: Record<string, unknown> = {};
+
+    for (const col of dataColumns) {
+      fields[col] = row[col];
+    }
+
+    const change: PulledChange = {
+      table,
+      id: row.id,
+      profile: row.profile,
+      deleted: row.deleted === 1,
+      updated_at: row.updated_at,
+      version: row.version,
+      fields,
+      field_times: fieldTimes,
+    };
+
+    changes.push(change);
+    maxVersion = row.version;
+  }
+
+  return { version: maxVersion, changes, hasMore };
 }

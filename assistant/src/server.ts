@@ -3,8 +3,15 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { allowedPeer } from '../../server/src/http/access.js';
 import { readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion } from './db.js';
-import { applyChanges, pullChanges, type Change } from './sync.js';
+import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 import { deviceFor } from './devices.js';
+
+class BadRequest extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BadRequest';
+  }
+}
 
 let db: ReturnType<typeof openDb> | null = null;
 
@@ -17,92 +24,113 @@ function getDb() {
 
 export function createServer(): http.Server {
   const server = http.createServer(async (req, res) => {
-    const addr = req.socket.remoteAddress ?? '';
-    if (!allowedPeer(addr)) {
-      res.writeHead(403, { 'Content-Type': 'application/json' });
-      res.end('{"error":"Forbidden"}');
-      return;
-    }
-
-    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-    const pathname = url.pathname;
-
-    if (pathname === '/health' && req.method === 'GET') {
-      const version = currentVersion(getDb());
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, version }));
-      return;
-    }
-
-    const authHeader = req.headers.authorization ?? '';
-    const match = authHeader.match(/^Bearer\s+(.+)$/);
-    const key = match ? match[1] : undefined;
-
-    if (pathname === '/sync' && req.method === 'POST') {
-      const device = deviceFor(key);
-      if (!device) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end('{"error":"Unauthorized"}');
+    try {
+      const addr = req.socket.remoteAddress ?? '';
+      if (!allowedPeer(addr)) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end('{"error":"Forbidden"}');
         return;
       }
 
-      try {
-        const body = await readBody(req, 5_000_000);
-        const data = JSON.parse(body) as { since: number; changes: Change[] };
-        const applied = applyChanges(getDb(), data.changes ?? []);
-        const pulled = pullChanges(getDb(), data.since);
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const pathname = url.pathname;
+
+      if (pathname === '/health' && req.method === 'GET') {
+        const version = currentVersion(getDb());
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          version: pulled.version,
-          changes: pulled.changes,
-          device,
-        }));
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        if (message === 'Request body too large') {
-          res.writeHead(413, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Request body too large' }));
-        } else {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: message }));
+        res.end(JSON.stringify({ ok: true, version }));
+        return;
+      }
+
+      const authHeader = req.headers.authorization ?? '';
+      const match = authHeader.match(/^Bearer\s+(.+)$/);
+      const key = match ? match[1] : undefined;
+
+      if (pathname === '/sync' && req.method === 'POST') {
+        const device = deviceFor(key);
+        if (!device) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end('{"error":"Unauthorized"}');
+          return;
         }
-      }
-      return;
-    }
 
-    if (pathname === '/changes' && req.method === 'GET') {
-      const device = deviceFor(key);
-      if (!device) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end('{"error":"Unauthorized"}');
+        try {
+          const body = await readBody(req, 5_000_000);
+          const data = JSON.parse(body) as { since: number; changes: Change[] };
+          if (!data.since && data.since !== 0) {
+            throw new BadRequest('Missing or invalid since field');
+          }
+          if (!Array.isArray(data.changes)) {
+            throw new BadRequest('Invalid changes field');
+          }
+          const applied = applyChanges(getDb(), data.changes ?? []);
+          const pulled = pullChanges(getDb(), data.since);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            version: pulled.version,
+            changes: pulled.changes,
+            hasMore: pulled.hasMore,
+            device,
+          }));
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          if (message === 'Request body too large') {
+            res.writeHead(413, { 'Content-Type': 'application/json', 'Connection': 'close' });
+            res.end(JSON.stringify({ error: 'Request body too large' }));
+          } else if (err instanceof BadRequest || err instanceof SyncError) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: message }));
+          } else {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'internal error' }));
+          }
+        }
         return;
       }
 
-      const since = parseInt(url.searchParams.get('since') ?? '0');
-      if (isNaN(since)) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid since parameter' }));
+      if (pathname === '/changes' && req.method === 'GET') {
+        const device = deviceFor(key);
+        if (!device) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end('{"error":"Unauthorized"}');
+          return;
+        }
+
+        const since = parseInt(url.searchParams.get('since') ?? '0');
+        if (isNaN(since)) {
+          throw new BadRequest('Invalid since parameter');
+        }
+
+        try {
+          const pulled = pullChanges(getDb(), since);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            version: pulled.version,
+            changes: pulled.changes,
+            hasMore: pulled.hasMore,
+            device,
+          }));
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          if (err instanceof BadRequest || err instanceof SyncError) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: message }));
+          } else {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'internal error' }));
+          }
+        }
         return;
       }
 
-      try {
-        const pulled = pullChanges(getDb(), since);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          version: pulled.version,
-          changes: pulled.changes,
-          device,
-        }));
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: message }));
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end('{"error":"Not found"}');
+    } catch (err) {
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'internal error' }));
       }
-      return;
     }
-
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end('{"error":"Not found"}');
   });
 
   return server;

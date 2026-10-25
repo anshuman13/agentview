@@ -10,6 +10,10 @@
     <string>-lc</string>
     <string>cd /Users/oda/workspace_personal/agentview &amp;&amp; exec npm run start -w assistant</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>WorkingDirectory</key><string>/Users/oda/workspace_personal/agentview</string>

@@ -17,7 +17,7 @@ export const TABLES: Record<string, string[]> = {
 };
 
 const COMMON_COLUMNS = `
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL,
   profile TEXT NOT NULL CHECK (profile IN ('work','personal')),
   version INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
@@ -30,6 +30,7 @@ function createTableSQL(tableName: string, dataColumns: string[]): string {
   for (const col of dataColumns) {
     columns.push(`${col}`);
   }
+  columns.push(`PRIMARY KEY (profile, id)`);
   return `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(',')})`;
 }
 
@@ -69,17 +70,14 @@ export function openDb(file: string = DB_PATH): Database.Database {
 
 export function nextVersion(db: Database.Database): number {
   const result = db
-    .prepare('UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ? RETURNING CAST(value AS INTEGER)')
+    .prepare('UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ? RETURNING CAST(value AS INTEGER) AS value')
     .get('version') as { value: number } | undefined;
 
   if (result) {
     return result.value;
   }
 
-  const updateStmt = db.prepare('UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ?');
-  updateStmt.run('version');
-  const row = db.prepare('SELECT CAST(value AS INTEGER) as value FROM meta WHERE key = ?').get('version') as { value: number };
-  return row.value;
+  throw new Error('Failed to update version');
 }
 
 export function currentVersion(db: Database.Database): number {

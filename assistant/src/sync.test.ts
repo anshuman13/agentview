@@ -379,4 +379,173 @@ describe('sync', () => {
     const pulled = pullChanges(db, 0);
     expect(pulled.changes.length).toBe(2);
   });
+
+  it('same id in work and personal creates two rows', () => {
+    const changeWork = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Work Item' },
+    };
+
+    const changePersonal = {
+      table: 'items',
+      id: 'item1',
+      profile: 'personal' as const,
+      updated_at: 1000,
+      fields: { title: 'Personal Item' },
+    };
+
+    applyChanges(db, [changeWork]);
+    applyChanges(db, [changePersonal]);
+
+    const pulled = pullChanges(db, 0);
+    expect(pulled.changes.length).toBe(2);
+    const workItem = pulled.changes.find((c) => c.profile === 'work');
+    const personalItem = pulled.changes.find((c) => c.profile === 'personal');
+    expect(workItem?.fields.title).toBe('Work Item');
+    expect(personalItem?.fields.title).toBe('Personal Item');
+  });
+
+  it('pulls all changes across tables with limit', () => {
+    const changes = [
+      {
+        table: 'items',
+        id: 'item1',
+        profile: 'work' as const,
+        updated_at: 1000,
+        fields: { title: 'Item 1' },
+      },
+      {
+        table: 'items',
+        id: 'item2',
+        profile: 'work' as const,
+        updated_at: 2000,
+        fields: { title: 'Item 2' },
+      },
+      {
+        table: 'people',
+        id: 'person1',
+        profile: 'work' as const,
+        updated_at: 3000,
+        fields: { name: 'Person 1' },
+      },
+      {
+        table: 'people',
+        id: 'person2',
+        profile: 'work' as const,
+        updated_at: 4000,
+        fields: { name: 'Person 2' },
+      },
+    ];
+
+    applyChanges(db, changes);
+
+    const pulled1 = pullChanges(db, 0, 2);
+    expect(pulled1.changes.length).toBe(2);
+    expect(pulled1.hasMore).toBe(true);
+    const lastVersion = pulled1.version;
+
+    const pulled2 = pullChanges(db, lastVersion, 2);
+    expect(pulled2.changes.length).toBe(2);
+    expect(pulled2.hasMore).toBe(false);
+
+    const allChanges = [...pulled1.changes, ...pulled2.changes];
+    expect(allChanges.length).toBe(4);
+  });
+
+  it('invalid table name throws', () => {
+    expect(() => {
+      applyChanges(db, [
+        {
+          table: 'toString',
+          id: 'item1',
+          profile: 'work' as const,
+          updated_at: 1000,
+          fields: {},
+        },
+      ]);
+    }).toThrow('Invalid table');
+  });
+
+  it('delete then field-only edit without deleted leaves row deleted', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 100,
+      fields: { title: 'Original' },
+    };
+
+    applyChanges(db, [change1]);
+
+    const change2 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 100,
+      fields: {},
+      deleted: true,
+    };
+
+    applyChanges(db, [change2]);
+
+    const change3 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 150,
+      fields: { title: 'Edited' },
+    };
+
+    applyChanges(db, [change3]);
+
+    const pulled = pullChanges(db, 0);
+    const item = pulled.changes.find((c) => c.id === 'item1');
+    expect(item?.deleted).toBe(true);
+  });
+
+  it('missing updated_at throws', () => {
+    expect(() => {
+      applyChanges(db, [
+        {
+          table: 'items',
+          id: 'item1',
+          profile: 'work' as const,
+          updated_at: undefined as any,
+          fields: { title: 'Item' },
+        },
+      ]);
+    }).toThrow('Invalid updated_at');
+  });
+
+  it('non-finite updated_at throws', () => {
+    expect(() => {
+      applyChanges(db, [
+        {
+          table: 'items',
+          id: 'item1',
+          profile: 'work' as const,
+          updated_at: Infinity,
+          fields: { title: 'Item' },
+        },
+      ]);
+    }).toThrow('Invalid updated_at');
+  });
+
+  it('non-finite field_times value throws', () => {
+    expect(() => {
+      applyChanges(db, [
+        {
+          table: 'items',
+          id: 'item1',
+          profile: 'work' as const,
+          updated_at: 1000,
+          fields: { title: 'Item' },
+          field_times: { title: Infinity },
+        },
+      ]);
+    }).toThrow('Invalid field_times');
+  });
 });
