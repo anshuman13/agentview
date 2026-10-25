@@ -81,3 +81,24 @@ export function pageStats(facts: Fact[], pageId: string) {
   const mine = live(facts).filter((f) => f.page_id === pageId && !f.superseded_by);
   return { claims: mine.length, contested: mine.filter((f) => f.contested).length, updated: Math.max(0, ...mine.map(factTime)) };
 }
+
+export function newPage(title: string, section: string, sort: number, profile: Profile = 'work', now = Date.now()): Page {
+  return {
+    id: crypto.randomUUID(), profile, version: 0, updated_at: now, deleted: 0, dirty: 1,
+    field_times: JSON.stringify({ title: now, section: now, summary: now, sort: now }),
+    title, section, summary: null, sort,
+  };
+}
+
+// Pages whose title or summary match every word, then current claims that do.
+export function searchWiki(pages: Page[], facts: Fact[], query: string) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = (...texts: (string | null)[]) => {
+    const hay = texts.join(' ').toLowerCase();
+    return words.length > 0 && words.every((w) => hay.includes(w));
+  };
+  return {
+    pages: live(pages).filter((p) => hit(p.title, p.summary)),
+    claims: live(facts).filter((f) => !f.superseded_by && hit(f.text, ...sourcesOf(f).map((s) => s.label))).slice(0, 30),
+  };
+}

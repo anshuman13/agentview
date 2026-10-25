@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCodex } from '../../assistant';
 import { ask, wikiAskText } from '../../assistant/ask';
-import { contestOf, factTime, live, pageClaims, pageStats, sourcesOf, type Fact, type Page, type Source } from '../../assistant/wiki';
+import { contestOf, factTime, live, newPage, pageClaims, pageStats, searchWiki, sourcesOf, type Fact, type Page, type Source } from '../../assistant/wiki';
 import { Icon } from '../../Icon';
 import { ago } from '../util';
 import { setView, showSnack, useView } from './view';
@@ -125,8 +125,59 @@ export function AskBar({ placeholder, onAsk }: { placeholder: string; onAsk: (q:
   );
 }
 
+function NewPageCard({ section, sort }: { section: string; sort: number }) {
+  const { store } = useCodex();
+  const [title, setTitle] = useState<string | null>(null);
+  const create = () => {
+    const t = title?.trim();
+    setTitle(null);
+    if (!t) return;
+    const page = newPage(t, section, sort);
+    void store.editRow('pages', page, {});
+    setView({ open: page.id, anchor: null });
+  };
+  if (title === null) return <button className="wk-card wk-new" onClick={() => setTitle('')}><Icon name="add" /> New page</button>;
+  return (
+    <div className="wk-card wk-new editing">
+      <input autoFocus value={title} placeholder="Page title" onChange={(e) => setTitle(e.target.value)} onBlur={create}
+        onKeyDown={(e) => { if (e.key === 'Enter') create(); if (e.key === 'Escape') setTitle(null); }} />
+      <span className="wk-card-summary">Claims about it are added as meetings, Slack and Linear mention it.</span>
+    </div>
+  );
+}
+
+function Results({ pages, facts, query }: { pages: Page[]; facts: Fact[]; query: string }) {
+  const r = useMemo(() => searchWiki(pages, facts, query), [pages, facts, query]);
+  const title = new Map(pages.map((p) => [p.id, p.title]));
+  if (!r.pages.length && !r.claims.length) return <div className="wk-none">Nothing in the wiki matches “{query}”. Ask the wiki below to search Slack and Linear too.</div>;
+  return (
+    <>
+      {r.pages.length > 0 && (
+        <section>
+          <div className="wk-label">Pages</div>
+          <div className="wk-cards">{r.pages.map((p) => <PageCard key={p.profile + p.id} page={p} facts={facts} />)}</div>
+        </section>
+      )}
+      {r.claims.length > 0 && (
+        <section>
+          <div className="wk-label">Claims · {r.claims.length}</div>
+          <div className="wk-hits">
+            {r.claims.map((f) => (
+              <button key={f.profile + f.id} className="wk-hit" onClick={() => setView({ open: f.page_id, anchor: f.id })}>
+                <span className="wk-feed-page">{title.get(f.page_id ?? '')}</span>
+                <span className="wk-hit-text">{f.text}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
 function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const { pages, facts, sample } = useCodex();
+  const [query, setQuery] = useState('');
   const overview = live(pages).find((p) => p.section === 'overview');
   return (
     <div className="wk">
@@ -135,17 +186,29 @@ function WikiIndex({ onMenu }: { onMenu: () => void }) {
         <h1>Wiki</h1>
         {sample && <span className="wk-sample" title="The scheduler fills the wiki from meetings, Slack and Linear; until then this is sample data">Sample</span>}
         <span className="spacer" />
+        <label className="wk-search">
+          <Icon name="search" small />
+          <input value={query} placeholder="Search" aria-label="Search the wiki" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
+          {query && <button className="icon-btn" aria-label="Clear" onClick={() => setQuery('')}><Icon name="close" small /></button>}
+        </label>
       </header>
       <div className="wk-scroll">
         <div className="wk-index">
           <div className="wk-main">
-            {overview && <Overview page={overview} facts={facts} pages={pages} />}
-            {sections(pages).map((s) => (
-              <section key={s.name}>
-                <div className="wk-label">{s.name}</div>
-                <div className="wk-cards">{s.pages.map((p) => <PageCard key={p.profile + p.id} page={p} facts={facts} />)}</div>
-              </section>
-            ))}
+            {query.trim() ? <Results pages={pages} facts={facts} query={query} /> : (
+              <>
+                {overview && <Overview page={overview} facts={facts} pages={pages} />}
+                {sections(pages).map((s) => (
+                  <section key={s.name}>
+                    <div className="wk-label">{s.name}</div>
+                    <div className="wk-cards">
+                      {s.pages.map((p) => <PageCard key={p.profile + p.id} page={p} facts={facts} />)}
+                      <NewPageCard section={s.name} sort={Math.max(0, ...s.pages.map((p) => p.sort ?? 0)) + 1} />
+                    </div>
+                  </section>
+                ))}
+              </>
+            )}
           </div>
           <Feed pages={pages} facts={facts} />
         </div>

@@ -134,7 +134,7 @@ Progress checklist:
 - [x] 6. Wiki index: Recently updated feed with contested filter, Ask the wiki composer
 - [x] 7. Wiki page: header, headings, claim rows with sources, dates and anchors, On this page rail
 - [x] 8. Contest and resolve, superseded claims, feed links to claims
-- [ ] 9. Wiki search and New page placeholder
+- [x] 9. Wiki search and New page placeholder
 - [ ] 10. Meetings list
 - [ ] 11. Meeting page with notes, summary, decisions and action approve cards
 - [ ] 12. Client sync of pages, facts, meetings and actions (remote and phone local store)

@@ -158,3 +158,26 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 @media (hover: none) {
   .wk-claim-acts { opacity: 1; }
 }
+
+.wk-search { display: flex; align-items: center; gap: var(--sp-3); width: 240px; height: 34px; padding: 0 var(--sp-3) 0 var(--sp-6); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--fg-faint); transition: border-color var(--dur), width var(--dur) var(--ease); }
+.wk-search:focus-within { width: 300px; border-color: var(--border-strong); color: var(--fg-muted); }
+.wk-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); }
+.wk-search .icon-btn { width: 24px; height: 24px; }
+.wk-new { align-items: center; justify-content: center; flex-direction: row; gap: var(--sp-3); border-style: dashed; background: transparent; color: var(--fg-faint); font-size: var(--fs-lg); }
+.wk-new:hover { color: var(--fg-muted); box-shadow: none; }
+.wk-new.editing { flex-direction: column; align-items: stretch; justify-content: flex-start; border-style: solid; border-color: var(--accent); background: var(--surface); transform: none; cursor: default; }
+.wk-new input { border: 0; outline: 0; background: transparent; color: var(--fg-strong); font: inherit; font-size: var(--fs-xl); font-weight: 600; }
+.wk-hits { display: flex; flex-direction: column; }
+.wk-hit { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-6) var(--sp-6); margin: 0 calc(-1 * var(--sp-6)); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg); text-align: left; font: inherit; cursor: pointer; }
+.wk-hit:hover { background: var(--hover); }
+.wk-hit .wk-feed-page { font-size: var(--fs-sm); }
+.wk-hit-text { font-size: var(--fs-xl); line-height: var(--lh); }
+
+@media (max-width: 900px) {
+  .wk-search { width: 40px; padding: 0; justify-content: center; border-color: transparent; background: transparent; }
+  .wk-search input { flex: 0 0 0; width: 0; }
+  .wk-search:focus-within { position: absolute; left: var(--sp-6); right: var(--sp-6); width: auto; padding: 0 var(--sp-3) 0 var(--sp-6); justify-content: flex-start; border-color: var(--border-strong); background: var(--raised); z-index: 2; }
+  .wk-search:focus-within input { flex: 1; font-size: var(--fs-2xl); }
+  .wk-head { position: relative; }
+  .wk-new { min-height: 56px; }
+}

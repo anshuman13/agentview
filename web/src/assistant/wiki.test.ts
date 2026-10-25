@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sampleWiki } from './sample';
-import { contestOf, pageClaims, pageStats } from './wiki';
+import { contestOf, pageClaims, pageStats, searchWiki } from './wiki';
 
 describe('wiki', () => {
   const { facts } = sampleWiki(Date.UTC(2026, 9, 25));
@@ -16,5 +16,20 @@ describe('wiki', () => {
   it('counts claims and contested claims per page', () => {
     expect(pageStats(facts, 'edge-service')).toMatchObject({ claims: 5, contested: 1 });
     expect(contestOf(facts.find((f) => f.contested)!)?.by).toBe('Ben');
+  });
+});
+
+describe('searchWiki', () => {
+  const { pages, facts } = sampleWiki(Date.UTC(2026, 9, 25));
+
+  it('matches every word in pages and current claims', () => {
+    const r = searchWiki(pages, facts, 'vendor mcp');
+    expect(r.pages).toEqual([]);
+    expect(r.claims.map((f) => f.id)).toEqual(['f-vendor']);
+  });
+
+  it('matches source labels and returns nothing for an empty query', () => {
+    expect(searchWiki(pages, facts, 'aie-924').claims).toHaveLength(2);
+    expect(searchWiki(pages, facts, '  ')).toEqual({ pages: [], claims: [] });
   });
 });
