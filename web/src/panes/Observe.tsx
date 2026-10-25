@@ -16,6 +16,7 @@ import type {
 } from '../../../shared/observe';
 import type { Repo } from '../../../shared/protocol';
 import { api, useStore } from '../store';
+import { apiUrl } from '../api';
 import { ago, askClaude } from './util';
 import { Icon } from '../Icon';
 import '../styles/features/observe.css';
@@ -492,7 +493,7 @@ export function Observe() {
   const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
-    getJson<Repo[]>('/api/repos').then((x) => setNames(x.map((r) => r.name)), () => {});
+    getJson<Repo[]>(apiUrl('/api/repos')).then((x) => setNames(x.map((r) => r.name)), () => {});
   }, []);
 
   useEffect(() => setPicked(''), [chat]);

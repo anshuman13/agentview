@@ -52,6 +52,7 @@ async function reloadWhenChanged(since) {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react(), reloadOnlyOnChange()],
   server: {
     port: 5173,

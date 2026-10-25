@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { ATTENTION_LABEL, type AttentionItem, type ChatEvent, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../shared/protocol';
 import { notify } from './notify';
+import { apiUrl } from './api';
 
 type UiState = {
   connected: boolean;
@@ -51,6 +52,14 @@ export function notice(text: string) {
   set((s) => ({ events: [...s.events, { id: uid(), kind: 'system', text, at: Date.now() }] }));
 }
 
+// A different Mac has its own chats and event ids, so the view starts over and the stream reopens.
+export function switchedMac() {
+  lastId = '';
+  boot = 0;
+  set((s) => ({ session: { ...s.session, id: '', sessionId: null }, events: [], pending: [], live: [], findings: {}, ui: { ...s.ui, connected: false, openFile: null, openLine: null, beside: null } }));
+  connect();
+}
+
 export function setUi(patch: Partial<UiState>) {
   set((s) => ({ ui: { ...s.ui, ...patch } }));
 }
@@ -73,7 +82,7 @@ export function useStore<T>(selector: (s: State) => T): T {
   );
 }
 
-export const api = (path: string) => `${path}${path.includes('?') ? '&' : '?'}chat=${encodeURIComponent(state.session.id)}`;
+export const api = (path: string) => apiUrl(`${path}${path.includes('?') ? '&' : '?'}chat=${encodeURIComponent(state.session.id)}`);
 
 const repo = (c: LiveChat) => c.cwd.split('/').pop();
 const focus = (id: string) => () => send({ type: 'view', id });
@@ -95,10 +104,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // A command is one POST; a network failure retries and returns false, a server error shows up as a notice and returns null.
 async function post(m: ClientMessage, tries = 1): Promise<boolean | null> {
-  const url = api(`/api/cmd?cid=${cid}`);
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m), signal: AbortSignal.timeout(10_000) });
+      const r = await fetch(api(`/api/cmd?cid=${cid}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m), signal: AbortSignal.timeout(10_000) });
       if (r.ok) return true;
       // The server has no stream for this tab; reopen it and try again.
       if (r.status === 409 && i + 1 < tries) {
@@ -242,7 +250,7 @@ export function connect() {
   if (id) q.set('chat', id);
   if (sessionId) q.set('session', sessionId);
   if (lastId) q.set('last', lastId);
-  const src = new EventSource(`/api/events?${q}`);
+  const src = new EventSource(apiUrl(`/api/events?${q}`));
   es = src;
   heard = Date.now();
   src.addEventListener('ping', () => (heard = Date.now()));

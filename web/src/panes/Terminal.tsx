@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { Icon } from '../Icon';
 import { touch } from '../touch';
+import { apiUrl } from '../api';
 import { wsUrl } from './util';
 import { currentTheme, isDark } from '../theme';
 
@@ -79,7 +80,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
   const clears = useRef(new Map<string, () => void>());
   const inputs = useRef(new Map<string, (d: string) => void>());
   const wasOpen = useRef(open);
-  const url = (q = '') => `/api/terms?chat=${encodeURIComponent(chat)}${q}`;
+  const url = (q = '') => apiUrl(`/api/terms?chat=${encodeURIComponent(chat)}${q}`);
 
   const load = async () => {
     const list: Tab[] = await fetch(url()).then((r) => r.json());

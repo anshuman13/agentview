@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { apiUrl } from '../api';
 import { api, embedded, notice, send, setUi, useStore } from '../store';
 import { Icon } from '../Icon';
 import { Confirm, type ConfirmRequest } from '../Confirm';
@@ -13,7 +14,7 @@ const PAGE = 10;
 export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
 
 export const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
-const get = (url: string) => fetch(url).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : [])).catch(() => []);
+const get = (url: string) => fetch(apiUrl(url)).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : [])).catch(() => []);
 
 export function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSession[]) {
   const m = new Map<string, Folder>();
@@ -58,7 +59,7 @@ export function worktreeRequest(d: Folder, track: (branch: string | null, error?
     input: { value: d.repo?.branch.includes('/') ? `${d.repo.branch.split('/')[0]}/` : '', placeholder: 'Branch name' },
     run: async (branch) => {
       track(branch);
-      const r = await fetch('/api/worktrees', { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) });
+      const r = await fetch(apiUrl('/api/worktrees'), { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) });
       const body = await r.json().catch(() => null);
       if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
       track(null, r.ok && body?.cwd ? undefined : body?.error ?? 'Could not create the worktree');
@@ -113,7 +114,7 @@ export const deleteChat = (s: { sessionId: string; title: string; lastModified: 
     warning: forever ? 'The transcript is removed permanently.' : 'You can restore it from the bin for 24 hours.',
     action: 'Delete',
     run: async () => {
-      const r = await fetch(`/api/sessions?id=${encodeURIComponent(s.sessionId)}${purge ? '&purge' : ''}`, { method: 'DELETE' });
+      const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(s.sessionId)}${purge ? '&purge' : ''}`), { method: 'DELETE' });
       if (!r.ok) return onError((await r.json().catch(() => null))?.error ?? 'Could not delete the chat');
       onDone();
       refreshBin();
@@ -173,7 +174,7 @@ export function RepoPicker() {
         close();
         if (!v.startsWith('create:')) return send({ type: 'new_session', cwd: v });
         const [, root, name] = v.split(':');
-        const r = await fetch('/api/folders', { method: 'POST', body: JSON.stringify({ root, name }) });
+        const r = await fetch(apiUrl('/api/folders'), { method: 'POST', body: JSON.stringify({ root, name }) });
         const body = await r.json().catch(() => null);
         if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
         else notice(body?.error ?? 'Could not create the folder');
@@ -232,7 +233,7 @@ export function Sessions() {
   };
 
   const call = async (url: string, fallback: string) => {
-    const r = await fetch(url, { method: 'DELETE' });
+    const r = await fetch(apiUrl(url), { method: 'DELETE' });
     if (!r.ok) setError((await r.json().catch(() => null))?.error ?? fallback);
     return r.ok;
   };
@@ -506,7 +507,7 @@ function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: 
   }, []);
   if (!list.length) return null;
   const restore = async (b: BinnedSession) => {
-    const r = await fetch(`/api/sessions/restore?id=${encodeURIComponent(b.sessionId)}`, { method: 'POST' });
+    const r = await fetch(apiUrl(`/api/sessions/restore?id=${encodeURIComponent(b.sessionId)}`), { method: 'POST' });
     if (!r.ok) return notice('Could not restore the chat');
     setList((l) => l.filter((x) => x.sessionId !== b.sessionId));
     onRestore(b);

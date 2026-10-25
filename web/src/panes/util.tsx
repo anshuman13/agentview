@@ -36,7 +36,7 @@ export function ago(t: number | string, suffix = '') {
   return text + suffix;
 }
 
-export const wsUrl = (query: string) => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?${query}`;
+export { wsUrl } from '../api';
 
 export const stored = <T,>(key: string, fallback: T): T => {
   try { return JSON.parse(localStorage.getItem(key) ?? '') ?? fallback; } catch { return fallback; }

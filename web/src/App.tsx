@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { apiUrl, bundled, useApiBase } from './api';
 import { connect, embedded, getState, presetChat, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../shared/protocol';
 import { Brief } from './panes/Brief';
@@ -12,6 +13,7 @@ import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ACCOUNT_LABEL } from './panes/Composer';
 import { command, pressable, weekPace } from './panes/util';
+import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 
 const Terminal = lazy(() => import('./panes/Terminal').then((m) => ({ default: m.Terminal })));
@@ -72,18 +74,18 @@ if (params.size) history.replaceState(null, '', location.pathname);
 
 function AppUpdate() {
   const [ready, setReady] = useState(0);
+  const base = useApiBase();
   useEffect(() => {
-    const shell = Number(localStorage.getItem('agentview.shell')) || (/; wv\)/.test(navigator.userAgent) ? 1 : 0);
-    if (!shell) return;
+    const own = bundled ? fetch('build.txt').then((r) => (r.ok ? r.text() : '')).then(Number).catch(() => 0) : Promise.resolve(Number(localStorage.getItem('agentview.shell')) || (/; wv\)/.test(navigator.userAgent) ? 1 : 0));
     const later = Number(localStorage.getItem('agentview.shell.later'));
-    fetch('/api/app').then((r) => r.json()).then((a) => setReady(a.build > shell && a.build > later ? a.build : 0)).catch(() => {});
-  }, []);
+    void own.then((shell) => (shell ? fetch(apiUrl('/api/app')).then((r) => r.json()).then((a) => setReady(a.build > shell && a.build > later ? a.build : 0)).catch(() => {}) : undefined));
+  }, [base]);
   if (!ready) return null;
   return (
     <div className="app-update">
       <Icon name="cloud-download" small />
       <span>A new version of the app is ready</span>
-      <a href="/api/app.apk">Install</a>
+      <a href={apiUrl('/api/app.apk')}>Install</a>
       <button className="icon-btn" title="Later" onClick={() => { localStorage.setItem('agentview.shell.later', String(ready)); setReady(0); }}><Icon name="close" small /></button>
     </div>
   );
@@ -357,7 +359,8 @@ export function App() {
   const fileName = openFile ? openFile.split('/').pop() : null;
   const closeFile = () => setUi({ openFile: null });
   const showing = tab === 'browser' ? 'browser' : tab === 'agents' ? 'agents' : tab === 'code' && !isPage(editor) ? 'file' : editor;
-  const active = showing === 'browser' ? 'browser' : showing === 'agents' ? 'agents' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
+  const unreachable = useUnreachable();
+  const active = unreachable ? 'offline' : showing === 'browser' ? 'browser' : showing === 'agents' ? 'agents' : isPage(showing) ? showing : openFile ? 'file' : 'empty';
   const project = session.cwd ? session.cwd.split('/').pop() : 'AgentView';
   const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor);
   const chatsView = view === 'chats' || view === 'sessions';
@@ -481,6 +484,7 @@ export function App() {
               </div>
             </div>
           )}
+          <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable onMacs={() => setMacs(true)} />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <div className="empty-state">
               <Icon name="files" />

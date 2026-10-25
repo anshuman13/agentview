@@ -7,6 +7,7 @@ import { FileIcon } from './Explorer';
 import { match } from './FileSwitcher';
 import { toolId } from './McpStatus';
 import { touch } from '../touch';
+import { apiUrl } from '../api';
 import { Hl, wsUrl } from './util';
 import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, MAX_GOAL_ROUNDS, PERMISSION_MODES, type Account, type ChatEvent } from '../../../shared/protocol';
 
@@ -293,7 +294,7 @@ export function Composer() {
   const attach = async (list: File[]) => {
     for (const f of list) {
       try {
-        const r = await fetch(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`, { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });
+        const r = await fetch(apiUrl(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`), { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });
         const body = await r.json();
         if (!r.ok) throw new Error(body.error);
         setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `);
