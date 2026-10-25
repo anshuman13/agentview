@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { applyChanges, pullChanges } from './sync.js';
 import { openDb, TABLES } from './db.js';
+import { Database } from 'bun:sqlite';
+import fs from 'fs';
+import os from 'os';
 
 let db: ReturnType<typeof openDb>;
 
@@ -546,5 +549,22 @@ describe('sync', () => {
         },
       ]);
     }).toThrow('Invalid field_times');
+  });
+});
+
+describe('openDb', () => {
+  it('adds new columns to an existing table', () => {
+    const file = `${os.tmpdir()}/assistant-migrate-${Date.now()}.db`;
+    const old = new Database(file);
+    old.exec(`CREATE TABLE facts (id TEXT NOT NULL, profile TEXT NOT NULL, version INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+      deleted INTEGER NOT NULL DEFAULT 0, field_times TEXT NOT NULL DEFAULT '{}', text, item_id, superseded_by, PRIMARY KEY (profile, id))`);
+    old.exec(`INSERT INTO facts (id, profile, version, updated_at, text) VALUES ('f1', 'work', 1, 1, 'kept')`);
+    old.close();
+    const migrated = openDb(file);
+    const cols = (migrated.prepare('PRAGMA table_info(facts)').all() as { name: string }[]).map((c) => c.name);
+    expect(cols).toEqual(expect.arrayContaining(TABLES.facts));
+    expect(migrated.prepare('SELECT text FROM facts').get()).toEqual({ text: 'kept' });
+    migrated.close();
+    fs.rmSync(file, { force: true });
   });
 });

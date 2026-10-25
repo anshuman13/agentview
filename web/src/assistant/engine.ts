@@ -1,5 +1,5 @@
 import { parseTimes, rowToChange } from './sync';
-import type { Change, ItemFields, ItemRow, MergedRow, Profile, PulledChange, Reply } from './sync';
+import type { Change, ItemRow, MergedRow, Profile, PulledChange, Reply } from './sync';
 
 export const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
 
@@ -146,7 +146,7 @@ export function newCapture(text: string, type: 'task' | 'note', profile: Profile
   };
 }
 
-export function edited(row: ItemRow, patch: Partial<ItemFields> & { deleted?: number }, now: number): ItemRow {
+export function edited<T extends { field_times: string; updated_at: number }>(row: T, patch: Partial<T>, now: number): T {
   const times = parseTimes(row.field_times);
   for (const k of Object.keys(patch)) times[k] = now;
   return { ...row, ...patch, field_times: JSON.stringify(times), updated_at: Math.max(row.updated_at, now), dirty: 1 };

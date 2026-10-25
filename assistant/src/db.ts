@@ -8,7 +8,10 @@ export const DB_PATH = path.join(DB_DIR, 'assistant.db');
 
 export const TABLES: Record<string, string[]> = {
   items: ['title', 'text', 'source', 'source_url', 'people', 'at', 'status'],
-  facts: ['text', 'item_id', 'superseded_by'],
+  facts: ['text', 'item_id', 'superseded_by', 'page_id', 'heading', 'sources', 'at', 'contested'],
+  pages: ['title', 'section', 'summary', 'sort'],
+  meetings: ['title', 'starts_at', 'ends_at', 'people', 'calendar_url', 'recorded_ms', 'notes', 'summary', 'decisions'],
+  actions: ['meeting_id', 'kind', 'target', 'title', 'body', 'fields', 'status', 'result_url'],
   people: ['name', 'slack_id', 'emails', 'calendar_names'],
   links: ['from_type', 'from_id', 'to_type', 'to_id', 'kind'],
   embeddings: ['owner_type', 'owner_id', 'model', 'vector'],
@@ -58,6 +61,10 @@ export function openDb(file: string = DB_PATH): Database {
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));
     db.exec(createIndexSQL(tableName));
+    const existing = new Set((db.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[]).map((c) => c.name));
+    for (const col of dataColumns) {
+      if (!existing.has(col)) db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${col}`);
+    }
   }
 
   const versionRow = db.prepare('SELECT value FROM meta WHERE key = ?').get('version');

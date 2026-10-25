@@ -128,7 +128,7 @@ Progress checklist:
 
 - [x] 1. Write this design doc
 - [x] 2. Preview page with an in-memory sample store and the screenshot script
-- [ ] 3. Data model: hub tables and column migration, client types and sample data
+- [x] 3. Data model: hub tables and column migration, client types and sample data
 - [ ] 4. Nav entries for Meetings and Wiki, view state module, routing in Codex
 - [ ] 5. Wiki index: overview card, sections of page cards, New page card
 - [ ] 6. Wiki index: Recently updated feed with contested filter, Ask the wiki composer

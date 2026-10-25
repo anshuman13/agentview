@@ -1,9 +1,15 @@
-import { errorText } from './engine';
+import { edited, errorText } from './engine';
 import type { ItemFields, ItemRow, Profile } from './sync';
+import type { Table, Tables } from './wiki';
 
 export type SyncStatus = { syncing: boolean; last: number; error: string };
 export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at'>> & { deleted?: number };
-export type Snapshot = { phase: 'locked' | 'unlocking' | 'ready'; message: string; items: ItemRow[]; sync: SyncStatus };
+export type Snapshot = {
+  phase: 'locked' | 'unlocking' | 'ready';
+  message: string;
+  items: ItemRow[];
+  sync: SyncStatus;
+} & { [K in Table]: Tables[K][] };
 
 export interface AssistantStore {
   readonly kind: 'local' | 'remote';
@@ -12,6 +18,7 @@ export interface AssistantStore {
   unlock(): Promise<void>;
   capture(text: string, type: 'task' | 'note', profile: Profile, at?: number | null): Promise<ItemRow>;
   update(row: ItemRow, patch: Patch): Promise<void>;
+  editRow<K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>): Promise<void>;
   syncNow(): Promise<void>;
 }
 
@@ -22,7 +29,7 @@ export abstract class BaseStore {
   private again = false;
 
   constructor(phase: Snapshot['phase']) {
-    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '' } };
+    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '' }, pages: [], facts: [], meetings: [], actions: [] };
   }
 
   subscribe = (fn: () => void) => {
@@ -44,6 +51,14 @@ export abstract class BaseStore {
   protected get ready() {
     return this.snap.phase === 'ready';
   }
+
+  // Wiki and meeting rows stay in memory until their sync lands; an edit to a row not held yet adds it.
+  editRow = async <K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>) => {
+    const rows = this.snap[table] as Tables[K][];
+    const same = (r: Tables[K]) => r.profile === row.profile && r.id === row.id;
+    const next = edited(rows.find(same) ?? row, patch, Date.now());
+    this.set({ [table]: rows.some(same) ? rows.map((r) => (same(r) ? next : r)) : [...rows, next] } as Partial<Snapshot>);
+  };
 
   protected abstract syncOnce(): Promise<void>;
   protected abstract refresh(): Promise<void>;
