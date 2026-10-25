@@ -130,8 +130,8 @@ Progress checklist:
 - [x] 2. Preview page with an in-memory sample store and the screenshot script
 - [x] 3. Data model: hub tables and column migration, client types and sample data
 - [x] 4. Nav entries for Meetings and Wiki, view state module, routing in Codex
-- [ ] 5. Wiki index: overview card, sections of page cards, New page card
-- [ ] 6. Wiki index: Recently updated feed with contested filter, Ask the wiki composer
+- [x] 5. Wiki index: overview card, sections of page cards (New page card moved to 9)
+- [x] 6. Wiki index: Recently updated feed with contested filter, Ask the wiki composer
 - [ ] 7. Wiki page: header, headings, claim rows with sources, dates and anchors, On this page rail
 - [ ] 8. Contest and resolve, superseded claims, feed links to claims
 - [ ] 9. Wiki search and New page placeholder

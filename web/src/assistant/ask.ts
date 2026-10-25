@@ -1,6 +1,7 @@
 import { getState, notice, prompt, send } from '../store';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
+import { sourcesOf, type Fact, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
@@ -39,4 +40,17 @@ export function ask(text: string) {
   }, 150);
   window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'tab:chat' } }));
   return true;
+}
+
+export function wikiAskText(question: string, pages: Page[], facts: Fact[], pageId?: string) {
+  const title = new Map(pages.map((p) => [p.id, p.title ?? '']));
+  const claims = facts
+    .filter((f) => !f.deleted && !f.superseded_by && (!pageId || f.page_id === pageId))
+    .slice(0, 200)
+    .map((f) => `- [${title.get(f.page_id ?? '') ?? ''}] ${f.text}${sourcesOf(f).length ? ` (${sourcesOf(f).map((s) => s.label).join(', ')})` : ''}${f.contested ? ' (contested)' : ''}`);
+  return [
+    question,
+    `\n${pageId ? `Claims on the wiki page "${title.get(pageId)}"` : 'Claims in my team wiki'}:\n${claims.join('\n')}`,
+    '\nAnswer from these claims first and name the claims you used; use my Slack, Linear and Calendar connectors when they are not enough.',
+  ].join('\n');
 }
