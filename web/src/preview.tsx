@@ -3,6 +3,7 @@ import './styles/index.css';
 import { setAssistantStore } from './assistant';
 import { SampleStore } from './assistant/sample';
 import { Assistant, AssistantNav } from './panes/Assistant';
+import { setView, type List } from './panes/codex/view';
 
 // Codex with sample data for screenshots: /preview.html?theme=light. Headless Chrome windows are at least 500px
 // wide, so ?w=390 renders the page in a frame of that width.
@@ -10,6 +11,7 @@ const params = new URLSearchParams(location.search);
 const w = params.get('w');
 params.delete('w');
 setAssistantStore(new SampleStore());
+setView({ list: (params.get('list') as List) || 'today', open: params.get('open'), anchor: params.get('anchor') });
 
 createRoot(document.getElementById('root')!).render(w ? (
   <iframe src={`?${params}`} style={{ width: `${w}px`, height: '100vh', border: 0, display: 'block' }} />

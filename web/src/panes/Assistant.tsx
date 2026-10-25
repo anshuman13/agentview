@@ -8,25 +8,22 @@ import { Icon } from '../Icon';
 import { touch } from '../touch';
 import { Voice, useDictation } from './Voice';
 import { ago, readFlag, saveFlag } from './util';
+import { hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './codex/view';
+import { Wiki } from './codex/Wiki';
+import { Meetings } from './codex/Meetings';
 import '../styles/features/assistant.css';
 
-type List = 'today' | 'upcoming' | 'notes' | 'done';
-type Filter = 'all' | Profile;
 type Mode = 'task' | 'note' | 'ask';
-
-// The list and filter are shared by the sidebar on desktop and the drawer on the phone.
-let view: { list: List; filter: Filter } = { list: 'today', filter: 'all' };
-const viewSubs = new Set<() => void>();
-const setView = (patch: Partial<typeof view>) => { view = { ...view, ...patch }; viewSubs.forEach((f) => f()); };
-const useView = () => useSyncExternalStore((f) => (viewSubs.add(f), () => viewSubs.delete(f)), () => view);
 
 const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Today' },
   { id: 'upcoming', icon: 'calendar', label: 'Upcoming' },
+  { id: 'meetings', icon: 'record', label: 'Meetings' },
+  { id: 'wiki', icon: 'book', label: 'Wiki' },
   { id: 'notes', icon: 'note', label: 'Notes' },
   { id: 'done', icon: 'pass', label: 'Done' },
 ];
-const SOON = [{ icon: 'record', label: 'Meetings' }, { icon: 'history', label: 'Jobs' }, { icon: 'device-mobile', label: 'Devices' }];
+const SOON = [{ icon: 'history', label: 'Jobs' }, { icon: 'device-mobile', label: 'Devices' }];
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
 const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
@@ -43,7 +40,6 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
 const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 
 const SWIPE = 80;
-const SNACK_MS = 5000;
 
 function when(at: number, now = Date.now()) {
   const d = new Date(at);
@@ -66,19 +62,6 @@ function dayLabel(at: number) {
 }
 
 const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
-
-// Snackbar with Undo, one at a time.
-type Snack = { text: string; undo?: () => void; id: number };
-let snack: Snack | null = null;
-const snackSubs = new Set<() => void>();
-let snackTimer: ReturnType<typeof setTimeout> | undefined;
-function showSnack(text: string, undo?: () => void) {
-  snack = { text, undo, id: Date.now() };
-  snackSubs.forEach((f) => f());
-  clearTimeout(snackTimer);
-  snackTimer = setTimeout(() => { snack = null; snackSubs.forEach((f) => f()); }, SNACK_MS);
-}
-const useSnack = () => useSyncExternalStore((f) => (snackSubs.add(f), () => snackSubs.delete(f)), () => snack);
 
 function useActions() {
   const { store } = useAssistant();
@@ -356,7 +339,7 @@ function SnackBar() {
   return (
     <div className="as-snack" key={s.id}>
       <span>{s.text}</span>
-      {s.undo && <button onClick={() => { s.undo!(); snack = null; snackSubs.forEach((f) => f()); }}>Undo</button>}
+      {s.undo && <button onClick={() => { s.undo!(); hideSnack(); }}>Undo</button>}
     </div>
   );
 }
@@ -375,11 +358,11 @@ function useSplit() {
 export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { list } = useView();
   const s = useSplit();
-  const count: Record<List, number> = { today: s.today.length + s.next.length, upcoming: s.later.length, notes: s.notes.length, done: 0 };
+  const count: Record<List, number> = { today: s.today.length + s.next.length, upcoming: s.later.length, meetings: 0, wiki: 0, notes: s.notes.length, done: 0 };
   return (
     <nav className="as-nav">
       {LISTS.map((l) => (
-        <button key={l.id} className={list === l.id ? 'active' : ''} onClick={() => { setView({ list: l.id }); onPick?.(); }}>
+        <button key={l.id} className={list === l.id ? 'active' : ''} onClick={() => { setView({ list: l.id, open: null, anchor: null }); onPick?.(); }}>
           <Icon name={l.icon} /><span>{l.label}</span>{count[l.id] > 0 && <span className="as-count">{count[l.id]}</span>}
         </button>
       ))}
@@ -428,6 +411,25 @@ export function Assistant() {
         <div className="as-lock-title">Codex is locked</div>
         <div className="muted">{snap.message === 'Locked' ? 'Your tasks and notes are encrypted on this phone.' : snap.message}</div>
         {snap.phase === 'locked' && <button className="btn primary lg" onClick={() => store.unlock()}>{snap.message === 'Locked' ? 'Unlock' : 'Retry'}</button>}
+      </div>
+    );
+  }
+
+  const drawerSheet = drawer && (
+    <div className="as-drawer-overlay" onClick={() => setDrawer(false)}>
+      <div className="as-drawer" onClick={(e) => e.stopPropagation()}>
+        <div className="as-drawer-title">Codex</div>
+        <AssistantNav onPick={() => setDrawer(false)} />
+      </div>
+    </div>
+  );
+
+  if (list === 'wiki' || list === 'meetings') {
+    return (
+      <div className="assistant wide" ref={root}>
+        {list === 'wiki' ? <Wiki onMenu={() => setDrawer(true)} /> : <Meetings onMenu={() => setDrawer(true)} />}
+        <SnackBar />
+        {drawerSheet}
       </div>
     );
   }
@@ -492,14 +494,7 @@ export function Assistant() {
       <SnackBar />
       <Composer items={snap.items} next={s.next[0]} filter={filter} />
       {current && <Sheet row={current} items={snap.items} onClose={() => setOpen(null)} />}
-      {drawer && (
-        <div className="as-drawer-overlay" onClick={() => setDrawer(false)}>
-          <div className="as-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="as-drawer-title">Codex</div>
-            <AssistantNav onPick={() => setDrawer(false)} />
-          </div>
-        </div>
-      )}
+      {drawerSheet}
     </div>
   );
 }
