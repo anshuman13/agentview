@@ -40,4 +40,5 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
 - [Features](docs/features.md): layout, timeline, models, workspace, notifications, loops, shortcuts
 - [Integrations](docs/integrations.md): Chrome, MCP servers, Grafana, Sentry and Snowflake
 - [Phone and other Macs](docs/macs.md)
+- [Assistant plan](docs/assistant.md)
 - [Architecture](docs/architecture.md) and [decisions](docs/decisions.md)
