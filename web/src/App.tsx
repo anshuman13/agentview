@@ -11,7 +11,7 @@ import { GitHub, GitHubBadge } from './panes/GitHub';
 import { OpenChats, RepoPicker, Sessions } from './panes/Sessions';
 import { Icon } from './Icon';
 import { ACCOUNT_LABEL } from './panes/Composer';
-import { command, pressable } from './panes/util';
+import { command, pressable, weekPace } from './panes/util';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 
 const Terminal = lazy(() => import('./panes/Terminal').then((m) => ({ default: m.Terminal })));
@@ -134,25 +134,38 @@ function McpItem() {
 
 function UsageItem() {
   const usage = useStore((s) => s.session.usage);
+  const running = useStore((s) => s.session.running);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
   if (!usage) return null;
   const { fiveHour, week } = usage;
   const at = (t: number | null) => (t ? new Date(t).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'unknown');
+  const pace = week?.resetsAt ? weekPace(week.resetsAt) : null;
+  const ahead = week && pace !== null && week.pct > pace;
+  const other = accounts.find((a) => a !== account);
+  const advice = ahead ? (other ? `Ahead of pace: switch this chat to ${ACCOUNT_LABEL[other]}` : 'Ahead of pace: slow down or add a second account') : null;
   const title = [
     `Claude plan usage${accounts.length > 1 ? ` on the ${ACCOUNT_LABEL[account]} account` : ''}`,
     fiveHour && `5-hour: ${fiveHour.pct}% used, resets ${at(fiveHour.resetsAt)}`,
     week && `Week: ${week.pct}% used, resets ${at(week.resetsAt)}`,
+    pace !== null && `Even pace (100/7 a day): ${pace}% by now`,
+    advice && (other && running ? `${advice} once Claude stops` : other ? `${advice}. Click to switch` : advice),
   ].filter(Boolean).join('\n');
-  const high = Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
-  return (
-    <span className={`item${high ? ' warn' : ''}`} title={title}>
+  const warn = ahead || Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
+  const body = (
+    <>
       <Icon name="pulse" small />
       {accounts.length > 1 && `${ACCOUNT_LABEL[account]} · `}
       {fiveHour && `5h ${fiveHour.pct}%`}
       {fiveHour && week && ' · '}
-      {week && `Week ${week.pct}%`}
-    </span>
+      {week && `Week ${week.pct}%${pace !== null ? ` / ${pace}%` : ''}`}
+      {ahead && other && <> · Switch to {ACCOUNT_LABEL[other]}</>}
+    </>
+  );
+  return ahead && other && !running ? (
+    <button className={`item clickable${warn ? ' warn' : ''}`} title={title} onClick={() => send({ type: 'set_account', account: other })}>{body}</button>
+  ) : (
+    <span className={`item${warn ? ' warn' : ''}`} title={title}>{body}</span>
   );
 }
 

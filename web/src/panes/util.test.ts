@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ago } from './util';
+import { ago, weekPace } from './util';
 
 describe('ago', () => {
   afterEach(() => vi.useRealTimers());
@@ -14,5 +14,17 @@ describe('ago', () => {
     expect(ago(new Date(now - 2 * 86_400_000).toISOString())).toBe('2d');
     expect(ago(now - 21 * 86_400_000)).toBe('3w');
     expect(ago('not a date')).toBe('not a date');
+  });
+});
+
+describe('weekPace', () => {
+  const reset = new Date('2026-10-31T08:00:00Z').getTime();
+  const h = 3_600_000;
+  it('grows by 100/7 a day, counted in whole hours', () => {
+    expect(weekPace(reset, reset - 7 * 24 * h)).toBe(0);
+    expect(weekPace(reset, reset - 6 * 24 * h)).toBe(14);
+    expect(weekPace(reset, reset - 6 * 24 * h - 30 * 60_000)).toBe(14);
+    expect(weekPace(reset, reset - 84 * h)).toBe(50);
+    expect(weekPace(reset, reset)).toBe(100);
   });
 });
