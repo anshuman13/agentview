@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCodex } from '../../assistant';
 import { ask, wikiAskText } from '../../assistant/ask';
 import { contestOf, factTime, live, pageClaims, pageStats, sourcesOf, type Fact, type Page, type Source } from '../../assistant/wiki';
 import { Icon } from '../../Icon';
 import { ago } from '../util';
-import { setView, useView } from './view';
+import { setView, showSnack, useView } from './view';
 import '../../styles/features/wiki.css';
 
 export const SOURCE_ICON: Record<Source['kind'], string> = { meeting: 'calendar', slack: 'comment-discussion', linear: 'issues', pr: 'git-pull-request', doc: 'file' };
@@ -163,18 +163,55 @@ function SourceChip({ s }: { s: Source }) {
   return s.url ? <a className="wk-src" href={s.url} target="_blank" rel="noreferrer">{body}</a> : <span className="wk-src">{body}</span>;
 }
 
-function Claim({ fact, old }: { fact: Fact; old: Fact[] }) {
+function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: string; flash: boolean }) {
+  const { store } = useCodex();
+  const [contesting, setContesting] = useState(false);
+  const [note, setNote] = useState('');
   const c = contestOf(fact);
+  const contest = () => {
+    void store.editRow('facts', fact, { contested: JSON.stringify({ by: 'you', at: Date.now(), note: note.trim() }) });
+    setContesting(false);
+    setNote('');
+    showSnack('Claim contested', () => void store.editRow('facts', fact, { contested: null }));
+  };
+  const resolve = () => {
+    void store.editRow('facts', fact, { contested: null });
+    showSnack('Marked as resolved', () => void store.editRow('facts', fact, { contested: fact.contested }));
+  };
+  const cite = () => {
+    const srcs = sourcesOf(fact).map((s) => s.label);
+    const text = `${page}: ${fact.text}${srcs.length ? ` (${srcs.join(', ')}${fact.at ? `, ${shortDate(fact.at)}` : ''})` : ''}`;
+    navigator.clipboard?.writeText(text).then(() => showSnack('Claim copied'), () => showSnack('Could not copy'));
+  };
   return (
-    <div className={`wk-claim${c ? ' contested' : ''}`} id={`claim-${fact.id}`}>
+    <div className={`wk-claim${c ? ' contested' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
       <p className="wk-claim-text">{fact.text}</p>
       <div className="wk-claim-foot">
         {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
         {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
+        <span className="spacer" />
+        <span className="wk-claim-acts">
+          <button className="icon-btn" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
+          {!c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
+        </span>
       </div>
+      {contesting && (
+        <div className="wk-contest-form">
+          <textarea autoFocus rows={2} value={note} placeholder="What is wrong or out of date? Link a source if you have one." onChange={(e) => setNote(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setContesting(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) contest(); }} />
+          <div className="wk-contest-btns">
+            <button className="btn" onClick={() => setContesting(false)}>Cancel</button>
+            <button className="btn primary" onClick={contest}>Contest</button>
+          </div>
+        </div>
+      )}
       {c && (
         <div className="wk-contest">
-          <div className="wk-contest-head"><Icon name="warning" small /> Contested by {c.by} · {ago(c.at, ' ago')}</div>
+          <div className="wk-contest-head">
+            <Icon name="warning" small /> Contested by {c.by} · {ago(c.at, ' ago')}
+            <span className="spacer" />
+            <button className="wk-act" title="The claim is right, or the agent has replaced it" onClick={resolve}><Icon name="check" small /> Resolve</button>
+          </div>
           {c.note && <div className="wk-contest-note">{c.note}</div>}
         </div>
       )}
@@ -190,7 +227,17 @@ function Claim({ fact, old }: { fact: Fact; old: Fact[] }) {
 
 function WikiPage({ id }: { id: string }) {
   const { pages, facts, sample } = useCodex();
+  const { anchor } = useView();
+  const [flash, setFlash] = useState<string | null>(null);
   const page = live(pages).find((p) => p.id === id);
+  useEffect(() => {
+    if (!anchor) return;
+    document.getElementById(`claim-${anchor}`)?.scrollIntoView({ block: 'center' });
+    setFlash(anchor);
+    setView({ anchor: null });
+    const t = setTimeout(() => setFlash(null), 1600);
+    return () => clearTimeout(t);
+  }, [anchor]);
   const groups = useMemo(() => pageClaims(facts, id), [facts, id]);
   const st = pageStats(facts, id);
   const counts = useMemo(() => {
@@ -224,7 +271,7 @@ function WikiPage({ id }: { id: string }) {
               {groups.map((g) => (
                 <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
                   <h2>{g.heading}</h2>
-                  {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} />)}
+                  {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page.title ?? ''} flash={flash === fact.id} />)}
                 </section>
               ))}
               {!groups.length && <div className="wk-none">No claims yet. They appear here as meetings, Slack threads and issues mention {page.title}.</div>}

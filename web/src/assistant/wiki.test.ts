@@ -15,6 +15,6 @@ describe('wiki', () => {
 
   it('counts claims and contested claims per page', () => {
     expect(pageStats(facts, 'edge-service')).toMatchObject({ claims: 5, contested: 1 });
-    expect(contestOf(facts.find((f) => f.contested)!)?.by).toBe('Anshuman');
+    expect(contestOf(facts.find((f) => f.contested)!)?.by).toBe('Ben');
   });
 });

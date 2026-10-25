@@ -142,3 +142,19 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
   .wk-claim-text { font-size: 17px; }
   .wk-src { height: 26px; font-size: var(--fs-md); }
 }
+
+.wk-claim-acts { display: inline-flex; align-items: center; gap: var(--sp-2); opacity: 0; transition: opacity var(--dur); }
+.wk-claim:hover .wk-claim-acts, .wk-claim:focus-within .wk-claim-acts { opacity: 1; }
+.wk-claim-acts .icon-btn { width: 26px; height: 26px; }
+.wk-act { display: inline-flex; align-items: center; gap: var(--sp-2); height: 26px; padding: 0 var(--sp-5); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.wk-act:hover { background: var(--hover); color: var(--fg); }
+.wk-contest-head .wk-act { color: var(--fg-muted); font-weight: 500; }
+.wk-contest-form { margin-top: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); }
+.wk-contest-form textarea { width: 100%; resize: vertical; min-height: 64px; padding: var(--sp-5) var(--sp-6); border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border-strong)); border-radius: var(--radius-md); background: var(--raised); color: var(--fg); font: inherit; font-size: var(--fs-lg); line-height: var(--lh); outline: 0; }
+.wk-contest-btns { display: flex; justify-content: flex-end; gap: var(--sp-4); }
+.wk-claim.flash { animation: wk-flash 1.6s var(--ease); }
+@keyframes wk-flash { 0%, 40% { background: color-mix(in srgb, var(--accent) 16%, transparent); } }
+
+@media (hover: none) {
+  .wk-claim-acts { opacity: 1; }
+}
