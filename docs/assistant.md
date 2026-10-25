@@ -43,7 +43,10 @@ sides run on the personal account.
 | Table | Contents |
 | --- | --- |
 | items | Tasks, notes, captures, meeting notes, Slack and mail snippets: title, text, source link, people, time, status |
-| facts | Memory: short statements linked to the item they came from; a contradicting fact supersedes the old one |
+| facts | Memory and wiki claims: one-sentence statements with their sources, page and heading; a contradicting fact supersedes the old one, and a claim can be contested |
+| pages | Wiki pages grouped in sections |
+| meetings | Calendar meetings with my notes, the summary and decisions |
+| actions | Proposed Slack messages, Linear issues and tasks from a meeting, approved or rejected in Codex |
 | people | One row per person, with Slack id, emails and calendar names merged |
 | links | Item to person and item to item |
 | embeddings | Vector per item and fact |
@@ -77,6 +80,7 @@ Capture (mic and text) and Notes; later notifications with Done and Snooze, a sh
 4. Assistant pane in the web app on one data layer (local copy on the phone, the server on a Mac); remove the separate page (done)
 5. Device list and reset of a lost phone copy
 6. Scheduler on the mini: work Slack, Calendar and Linear feeding Today
-7. Meeting notes and action items, facts and search
+7. Meeting notes and action items, facts and search (screens and data model done with sample data, see
+   [codex-wiki.md](codex-wiki.md); the scheduler fills them)
 8. Notifications, share target, widget
 9. Personal profile collection

@@ -124,6 +124,8 @@ Each step runs `npx tsc -p web/tsconfig.json --noEmit`, `npm test`, and the scre
 
 ## Work plan
 
+ALL DONE
+
 Progress checklist:
 
 - [x] 1. Write this design doc
@@ -139,4 +141,4 @@ Progress checklist:
 - [x] 11. Meeting page with notes, summary, decisions and action approve cards
 - [x] 12. Client sync of pages, facts, meetings and actions (remote and phone local store)
 - [x] 13. Polish: light theme, phone spacing, empty states, keyboard focus
-- [ ] 14. Update assistant.md and features.md
+- [x] 14. Update assistant.md and features.md
