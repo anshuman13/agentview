@@ -1,6 +1,20 @@
-import type { Change, PulledChange } from '../../assistant/src/sync';
+export type Change = {
+  table: string;
+  id: string;
+  profile: 'work' | 'personal';
+  deleted?: boolean;
+  updated_at: number;
+  fields: Record<string, unknown>;
+  field_times?: Record<string, number>;
+};
 
-export type { Change, PulledChange };
+export type PulledChange = Change & {
+  version: number;
+  deleted: boolean;
+  field_times: Record<string, number>;
+};
+
+export type Reply ={ version: number; changes: PulledChange[]; hasMore?: boolean };
 
 export const FIELDS = ['title', 'text', 'source', 'source_url', 'people', 'at', 'status'] as const;
 

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { FIELDS, rowToChange, mergeIncoming } from './src/assistant-sync';
+import { FIELDS, rowToChange, mergeIncoming, type ItemRow, type PulledChange } from './sync';
 
 const empty = Object.fromEntries(FIELDS.map((f) => [f, null]));
 
 function localRow(over: Record<string, unknown> = {}) {
-  return { id: 'id1', profile: 'work', version: 1, updated_at: 1000, deleted: 0, dirty: 0, field_times: '{}', ...empty, ...over };
+  return { id: 'id1', profile: 'work', version: 1, updated_at: 1000, deleted: 0, dirty: 0, field_times: '{}', ...empty, ...over } as ItemRow;
 }
 
 function hubChange(over: Record<string, unknown> = {}, fields: Record<string, unknown> = {}) {
@@ -18,7 +18,7 @@ function hubChange(over: Record<string, unknown> = {}, fields: Record<string, un
     field_times: {},
     ...over,
     fields: { ...empty, ...fields },
-  };
+  } as PulledChange;
 }
 
 describe('rowToChange', () => {
