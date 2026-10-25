@@ -126,6 +126,7 @@ class MainActivity : TauriActivity() {
   }
 
   private fun assistantResult(key: String?, error: String?) {
+    if (webView?.url?.startsWith("http://tauri.localhost") != true) return
     val detail = JSONObject().put(if (key != null) "key" else "error", key ?: error)
     val js = "window.dispatchEvent(new CustomEvent('assistant-key',{detail:$detail}))"
     runOnUiThread { webView?.evaluateJavascript(js, null) }
@@ -139,6 +140,7 @@ class MainActivity : TauriActivity() {
       .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
       .setKeySize(256)
       .setUserAuthenticationRequired(true)
+      .setInvalidatedByBiometricEnrollment(false)
       .apply {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
         else @Suppress("DEPRECATION") setUserAuthenticationValidityDurationSeconds(-1)
@@ -326,7 +328,7 @@ class MainActivity : TauriActivity() {
 
   inner class Shell {
     @JavascriptInterface
-    fun unlock() = runOnUiThread { unlockAssistant() }
+    fun unlock() = runOnUiThread { if (webView?.url?.startsWith("http://tauri.localhost") == true) unlockAssistant() }
 
     @JavascriptInterface
     fun takeShared(): String = synchronized(shared) { JSONArray(shared).toString().also { shared.clear() } }

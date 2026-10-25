@@ -39,11 +39,15 @@ impl Store {
             return Err("invalid key".into());
         }
         let conn = Connection::open(path).map_err(|e| e.to_string())?;
-        conn.pragma_update(None, "key", format!("x'{key}'")).map_err(|e| e.to_string())?;
+        conn.execute_batch(&format!("PRAGMA key = \"x'{key}'\";")).map_err(|e| e.to_string())?;
         conn.query_row("select count(*) from sqlite_master", [], |r| r.get::<_, i64>(0)).map_err(|_| "wrong key or damaged database".to_string())?;
         conn.pragma_update(None, "journal_mode", "WAL").map_err(|e| e.to_string())?;
         *self.0.lock().unwrap() = Some(conn);
         Ok(())
+    }
+
+    pub fn close(&self) {
+        *self.0.lock().unwrap() = None;
     }
 
     fn with<T>(&self, f: impl FnOnce(&Connection) -> rusqlite::Result<T>) -> Result<T, String> {
@@ -140,6 +144,18 @@ mod tests {
         assert!(s2.query("select 1", &[]).is_err());
         assert!(s2.open(&file, "short").is_err());
         s2.open(&file, KEY).unwrap();
+    }
+
+    #[test]
+    fn close_locks_the_store() {
+        let d = tmp("cl");
+        let s = Store::new();
+        s.open(&d.join("a.db"), KEY).unwrap();
+        s.batch("create table t(a)").unwrap();
+        s.close();
+        assert_eq!(s.query("select 1", &[]).unwrap_err(), "locked");
+        s.open(&d.join("a.db"), KEY).unwrap();
+        assert!(s.query("select * from t", &[]).is_ok());
     }
 
     #[test]

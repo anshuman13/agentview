@@ -31,6 +31,11 @@ fn assistant_open(app: tauri::AppHandle, store: State<Store>, key: String) -> Re
 }
 
 #[tauri::command]
+fn assistant_close(store: State<Store>) {
+    store.close();
+}
+
+#[tauri::command]
 fn assistant_dev_key(app: tauri::AppHandle) -> Result<String, String> {
     if cfg!(target_os = "android") {
         return Err("not available".into());
@@ -57,7 +62,7 @@ fn assistant_query(store: State<Store>, sql: String, params: Vec<Value>) -> Resu
 pub fn run() {
     tauri::Builder::default()
         .manage(Store::new())
-        .invoke_handler(tauri::generate_handler![assistant_open, assistant_dev_key, assistant_batch, assistant_exec, assistant_query])
+        .invoke_handler(tauri::generate_handler![assistant_open, assistant_close, assistant_dev_key, assistant_batch, assistant_exec, assistant_query])
         .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(|_, url| trusted(url)).build())
         .run(tauri::generate_context!())
         .expect("error while running AgentView");
