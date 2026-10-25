@@ -17,7 +17,7 @@ so a power cut, an outage or a reboot at home only pauses scans and sync.
 
 ## Stack
 
-- Node with `better-sqlite3`, one database file, in the `assistant/` workspace of this repo
+- Bun with `bun:sqlite`, one database file, in the `assistant/` workspace of this repo
 - Sync: every row carries a version; clients push their changes and pull "changes since N"; last edit wins per field
 - Search: SQLite FTS5 for keywords, plus embeddings from a small local multilingual model (Norwegian and English),
   compared in memory
