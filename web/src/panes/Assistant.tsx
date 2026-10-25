@@ -425,7 +425,7 @@ export function Assistant() {
     return (
       <div className="assistant locked" ref={root}>
         <Icon name="lock" />
-        <div className="as-lock-title">Assistant is locked</div>
+        <div className="as-lock-title">Codex is locked</div>
         <div className="muted">{snap.message === 'Locked' ? 'Your tasks and notes are encrypted on this phone.' : snap.message}</div>
         {snap.phase === 'locked' && <button className="btn primary lg" onClick={() => store.unlock()}>{snap.message === 'Locked' ? 'Unlock' : 'Retry'}</button>}
       </div>
@@ -495,7 +495,7 @@ export function Assistant() {
       {drawer && (
         <div className="as-drawer-overlay" onClick={() => setDrawer(false)}>
           <div className="as-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="as-drawer-title">Assistant</div>
+            <div className="as-drawer-title">Codex</div>
             <AssistantNav onPick={() => setDrawer(false)} />
           </div>
         </div>

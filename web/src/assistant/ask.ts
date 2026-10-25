@@ -13,7 +13,7 @@ export function askText(question: string, items: ItemRow[], about?: ItemRow) {
   return [
     question,
     about && `\nAbout this item:\n${line(about)}${about.text ? `\n${about.text}` : ''}`,
-    open.length ? `\nMy open items in the Assistant:\n${open.map(line).join('\n')}` : '',
+    open.length ? `\nMy open items in Codex:\n${open.map(line).join('\n')}` : '',
     '\nUse my Slack, Calendar, Gmail and Linear connectors when the question needs them.',
   ].filter(Boolean).join('\n');
 }

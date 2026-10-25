@@ -34,7 +34,7 @@ type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'session
 type Page = 'observe' | 'deploy' | 'mcp';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
-  { id: 'assistant', icon: 'sparkle', title: 'Assistant' },
+  { id: 'assistant', icon: 'sparkle', title: 'Codex' },
   { id: 'explorer', icon: 'files', title: 'Explorer' },
   { id: 'changes', icon: 'source-control', title: 'Source Control' },
   { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
@@ -243,6 +243,7 @@ export function App() {
 
   const showView = (v: View) => {
     if (v === 'assistant') return openAssistant(view === 'assistant' && editor === 'assistant' && sidebar);
+    if (editor === 'assistant') { setEditor('file'); setView(v); setSidebar(true); return; }
     if (v === view) setSidebar((s) => !s);
     else { setView(v); setSidebar(true); }
   };
@@ -427,7 +428,7 @@ export function App() {
   }
 
   return (
-    <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
+    <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} data-codex={active === 'assistant'} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <AppUpdate />
       <SwitchedBanner />
       <Restarting />
@@ -435,7 +436,7 @@ export function App() {
       <div className="body">
         <aside className="activitybar desktop-only">
           {VIEWS.map((v) => (
-            <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? 'Assistant (⌘I)' : v.title} onClick={() => showView(v.id)}>
+            <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? 'Codex (⌘I)' : v.title} onClick={() => showView(v.id)}>
               <Icon name={v.icon} />
               {v.id === 'chats' && elsewhere > 0 && <span className="badge">{elsewhere}</span>}
               {v.id === 'changes' && <ChangesBadge />}
@@ -468,13 +469,10 @@ export function App() {
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
           {mobileExplorer && <div className="mobile-only mobile-explorer-host" onClick={reopen}><Explorer /></div>}
           <div className="tabs">
-            <div className={`tab as-tab desktop-only ${showing === 'assistant' ? 'active' : ''}`} {...pressable(() => openAssistant())} title="Assistant (⌘I)">
-              <Icon name="sparkle" small /> Assistant
-            </div>
             <button className={`tab ex-tab mobile-only ${mobileExplorer ? 'active' : ''}`} title="Explorer" onClick={() => { setTab('code'); setEditor('file'); setBrowse(true); }}>
               <Icon name="files" small />
             </button>
-            <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' || t === 'assistant' ? 'code' : t)); })} title={openFile ?? 'Files (⌘E to switch)'}>
+            <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={openFile ?? 'Files (⌘E to switch)'}>
               {fileName ? <FileIcon name={fileName} /> : <Icon name="file" small />} {fileName ?? 'File'}
               {openFile && (
                 <button className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
@@ -574,9 +572,9 @@ export function App() {
       </footer>
 
       <nav className="tabbar mobile-only">
-        <button className={tab === 'assistant' && !more ? 'active' : ''} title="Assistant. Hold to talk" {...assistantPress}>
+        <button className={tab === 'assistant' && !more ? 'active' : ''} title="Codex. Hold to talk" {...assistantPress}>
           <Icon name="sparkle" />
-          <span>Assistant</span>
+          <span>Codex</span>
           <AssistantBadge />
         </button>
         <button className={tab === 'chat' && !more ? 'active' : ''} onClick={() => goTab('chat')}>

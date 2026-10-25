@@ -123,3 +123,5 @@
   .as-sheet-actions .btn { height: var(--touch-sm); }
   @keyframes as-sheet { from { transform: translateY(40px); opacity: 0; } }
 }
+
+.workbench[data-codex='true'] .editor-group > :is(.tabs, .panel) { display: none; }
