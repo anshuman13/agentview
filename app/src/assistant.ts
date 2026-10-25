@@ -393,7 +393,10 @@ el.settingsSave.addEventListener('click', async () => {
   if (!unlocked) return;
   try {
     const hubUrl = el.hubUrl.value.trim().replace(/\/+$/, '');
-    if (hubUrl !== (await getState('hub_url'))) await setState('since', 0);
+    if (hubUrl !== (await getState('hub_url'))) {
+      await setState('since', 0);
+      await exec('UPDATE items SET dirty = 1');
+    }
     await setState('hub_url', hubUrl);
     await setState('device_key', el.deviceKey.value.trim());
     el.hubUrl.blur();

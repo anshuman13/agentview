@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { statSync, readFileSync } from 'node:fs';
+import { DB_DIR } from './db.js';
 
-export const DB_DIR = path.join(process.env.HOME ?? '~', '.agentview', 'assistant');
 
 let cachedDevices: Map<string, string> | null = null;
 let cachedMtime: number | null = null;
@@ -16,9 +16,7 @@ export function loadDevices(file = path.join(DB_DIR, 'devices.json')): Map<strin
     for (const [deviceName, key] of Object.entries(data)) {
       result.set(key, deviceName);
     }
-  } catch {
-    // File missing or invalid JSON, return empty map
-  }
+  } catch {}
   return result;
 }
 
@@ -28,9 +26,7 @@ export function deviceFor(key: string | undefined): string | undefined {
   let mtime: number | null = null;
   try {
     mtime = statSync(file).mtimeMs;
-  } catch {
-    // File doesn't exist
-  }
+  } catch {}
 
   if (file !== cachedFile || mtime !== cachedMtime) {
     cachedDevices = loadDevices(file);

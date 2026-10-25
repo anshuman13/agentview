@@ -29,7 +29,6 @@ export function applyChanges(
   db: Database,
   changes: Change[]
 ): { version: number; applied: number } {
-  // Validate all changes first
   for (const change of changes) {
     if (!Object.hasOwn(TABLES, change.table)) {
       throw new SyncError(`Invalid table: ${change.table}`);
@@ -42,6 +41,9 @@ export function applyChanges(
     }
     if (typeof change.updated_at !== 'number' || !Number.isFinite(change.updated_at)) {
       throw new SyncError(`Invalid updated_at: must be a finite number`);
+    }
+    if (!change.fields || typeof change.fields !== 'object') {
+      throw new SyncError('Invalid fields: must be an object');
     }
     const validColumns = TABLES[change.table];
     for (const field of Object.keys(change.fields)) {
@@ -105,9 +107,7 @@ export function applyChanges(
         if (changeDeletedTime > storedDeletedTime) {
           finalDeleted = deleted ? 1 : 0;
           newFieldTimes['deleted'] = changeDeletedTime;
-          if ((deleted ? 1 : 0) !== storedDeleted) {
-            hasChanges = true;
-          }
+          hasChanges = true;
         }
       }
 
@@ -179,7 +179,7 @@ export function pullChanges(
     sql += ` FROM ${table} WHERE version > ? ORDER BY version, id LIMIT ?`;
 
     const selectStmt = db.prepare(sql);
-    const rows = selectStmt.all(since, limit) as any[];
+    const rows = selectStmt.all(since, limit + 1) as any[];
 
     for (const row of rows) {
       allRows.push({ table, row });

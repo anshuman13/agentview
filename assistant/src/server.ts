@@ -69,8 +69,13 @@ export function createServer(): http.Server {
 
         try {
           const body = await readBody(req, 5_000_000);
-          const data = JSON.parse(body) as { since: number; changes: Change[] };
-          if (!data.since && data.since !== 0) {
+          let data: { since: number; changes: Change[] };
+          try {
+            data = JSON.parse(body);
+          } catch {
+            throw new BadRequest('Invalid JSON');
+          }
+          if (!data || !Number.isInteger(data.since) || data.since < 0) {
             throw new BadRequest('Missing or invalid since field');
           }
           if (!Array.isArray(data.changes)) {
@@ -109,9 +114,11 @@ export function createServer(): http.Server {
           return;
         }
 
-        const since = parseInt(url.searchParams.get('since') ?? '0');
-        if (isNaN(since)) {
-          throw new BadRequest('Invalid since parameter');
+        const since = Number(url.searchParams.get('since') ?? '0');
+        if (!Number.isInteger(since) || since < 0) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end('{"error":"Invalid since parameter"}');
+          return;
         }
 
         try {

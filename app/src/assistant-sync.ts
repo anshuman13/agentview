@@ -74,7 +74,7 @@ export function mergeIncoming(local: ItemRow | null, incoming: PulledChange): Me
   let localNewer = false;
 
   for (const f of FIELDS) {
-    const it = inTimes[f] ?? incoming.updated_at;
+    const it = inTimes[f] ?? (localTimes[f] ? 0 : incoming.updated_at);
     const lt = localTimes[f] ?? 0;
     if (!local || it > lt) {
       mergedFields[f] = values[f] ?? null;
