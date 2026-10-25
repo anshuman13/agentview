@@ -1,4 +1,5 @@
-import { FIELDS, rowToChange, mergeIncoming } from './assistant-sync.js';
+import { FIELDS, rowToChange, mergeIncoming } from './assistant-sync';
+import type { Change, ItemRow, Profile, PulledChange } from './assistant-sync';
 
 const invoke = window.__TAURI__?.core?.invoke;
 const shell = window.AgentViewShell;
@@ -20,7 +21,7 @@ const SCHEMA = `
   CREATE TABLE IF NOT EXISTS sync_state (key TEXT PRIMARY KEY, value TEXT);
 `;
 
-const $ = (id) => document.getElementById(id);
+const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = {
   lock: $('lock-screen'),
   lockMsg: $('lock-msg'),
@@ -32,59 +33,61 @@ const el = {
   laterList: $('later-list'),
   laterTitle: $('later-title'),
   notes: $('notes'),
-  captureText: $('capture-text'),
+  captureText: $<HTMLTextAreaElement>('capture-text'),
   taskToggle: $('task-toggle'),
   noteToggle: $('note-toggle'),
   workToggle: $('work-toggle'),
   personalToggle: $('personal-toggle'),
   save: $('save-btn'),
   saveConfirm: $('save-confirm'),
-  hubUrl: $('hub-url'),
-  deviceKey: $('device-key'),
+  hubUrl: $<HTMLInputElement>('hub-url'),
+  deviceKey: $<HTMLInputElement>('device-key'),
   settingsSave: $('settings-save'),
   syncNow: $('sync-now'),
   syncStatus: $('sync-status'),
 };
 
 let unlocked = false;
-let unlocking = null;
-let closing = Promise.resolve();
+let unlocking: Promise<void> | null = null;
+let closing: Promise<void> = Promise.resolve();
 let syncing = false;
 let syncAgain = false;
 let saving = false;
 let tab = 'today';
-let filter = 'all';
+let filter: 'all' | Profile = 'all';
 let captureType = 'task';
-let captureProfile = localStorage.getItem('assistant-profile') === 'personal' ? 'personal' : 'work';
+let captureProfile: Profile = localStorage.getItem('assistant-profile') === 'personal' ? 'personal' : 'work';
 let hiddenAt = 0;
-let lockTimer = null;
+let lockTimer: ReturnType<typeof setTimeout> | undefined;
 
-const errorText = (err) => err?.message || String(err);
-const query = async (sql, params = []) => (await invoke('assistant_query', { sql, params })) || [];
-const exec = (sql, params = []) => invoke('assistant_exec', { sql, params });
+type SqlValue = string | number | null;
 
-async function getState(key) {
-  const rows = await query('SELECT value FROM sync_state WHERE key = ?', [key]);
+const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
+const query = async <T = ItemRow>(sql: string, params: SqlValue[] = []) => (await invoke!<T[] | null>('assistant_query', { sql, params })) || [];
+const exec = (sql: string, params: SqlValue[] = []) => invoke!<number>('assistant_exec', { sql, params });
+
+async function getState(key: string) {
+  const rows = await query<{ value: string }>('SELECT value FROM sync_state WHERE key = ?', [key]);
   return rows[0]?.value ?? '';
 }
 
-const setState = (key, value) => exec('INSERT OR REPLACE INTO sync_state (key, value) VALUES (?, ?)', [key, String(value)]);
+const setState = (key: string, value: string | number) => exec('INSERT OR REPLACE INTO sync_state (key, value) VALUES (?, ?)', [key, String(value)]);
 
-function node(tag, className, text) {
+function node<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string | null, text?: string | null) {
   const e = document.createElement(tag);
   if (className) e.className = className;
   if (text != null) e.textContent = text;
   return e;
 }
 
-function button(text, onClick, className) {
+function button(text: string, onClick: () => void, className?: string) {
   const b = node('button', className, text);
   b.type = 'button';
   b.addEventListener('click', onClick);
   return b;
 }
 
-function showLock(message, label) {
+function showLock(message: string, label: string | null) {
   el.lockMsg.textContent = message;
   el.unlock.textContent = label || '';
   el.unlock.hidden = !label;
@@ -93,8 +96,8 @@ function showLock(message, label) {
   el.nav.hidden = true;
 }
 
-function getKey() {
-  if (!shell) return invoke('assistant_dev_key');
+function getKey(): Promise<string> {
+  if (!shell) return invoke!<string>('assistant_dev_key');
   return new Promise((resolve, reject) => {
     window.addEventListener('assistant-key', (e) => {
       if (e.detail?.key) resolve(e.detail.key);
@@ -143,14 +146,14 @@ function lock() {
   el.hubUrl.value = el.deviceKey.value = '';
   el.syncStatus.textContent = '';
   showLock('Locked', 'Unlock');
-  closing = invoke('assistant_close').catch((err) => console.error('assistant_close failed', err));
+  closing = invoke!<void>('assistant_close').catch((err) => console.error('assistant_close failed', err));
 }
 
-function atTime(at) {
+function atTime(at: ItemRow['at']) {
   if (at == null || at === '') return null;
   const n = Number(at);
   if (Number.isFinite(n)) return n;
-  const parsed = Date.parse(at);
+  const parsed = Date.parse(String(at));
   return Number.isNaN(parsed) ? null : parsed;
 }
 
@@ -159,7 +162,7 @@ function nextNine() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9).getTime();
 }
 
-async function edit(row, sql, params) {
+async function edit(row: ItemRow, sql: string, params: (now: number) => SqlValue[]) {
   try {
     const now = Date.now();
     await exec(
@@ -173,11 +176,11 @@ async function edit(row, sql, params) {
   }
 }
 
-const markDone = (row) => edit(row, `status = 'done', field_times = json_set(field_times, '$.status', ?)`, (now) => [now]);
-const snooze = (row) => edit(row, `at = ?, field_times = json_set(field_times, '$.at', ?)`, (now) => [nextNine(), now]);
-const remove = (row) => edit(row, `deleted = 1, field_times = json_set(field_times, '$.deleted', ?)`, (now) => [now]);
+const markDone = (row: ItemRow) => edit(row, `status = 'done', field_times = json_set(field_times, '$.status', ?)`, (now) => [now]);
+const snooze = (row: ItemRow) => edit(row, `at = ?, field_times = json_set(field_times, '$.at', ?)`, (now) => [nextNine(), now]);
+const remove = (row: ItemRow) => edit(row, `deleted = 1, field_times = json_set(field_times, '$.deleted', ?)`, (now) => [now]);
 
-function taskRow(row) {
+function taskRow(row: ItemRow) {
   const content = node('div', 'task-content');
   content.append(node('span', 'task-tag', row.profile === 'work' ? 'Work' : 'Personal'), node('div', 'task-title', row.title || '(Untitled)'));
   const actions = node('div', 'task-actions');
@@ -187,7 +190,7 @@ function taskRow(row) {
   return div;
 }
 
-function noteItem(row) {
+function noteItem(row: ItemRow) {
   const div = node('div', 'note-item');
   div.append(node('div', 'note-item-title', row.title || '(Untitled)'));
   if (row.text) div.append(node('div', 'note-item-text', String(row.text).slice(0, 100)));
@@ -203,7 +206,7 @@ async function renderToday() {
   );
   if (!unlocked) return;
   const now = Date.now();
-  const isLater = (r) => (atTime(r.at) ?? 0) > now;
+  const isLater = (r: ItemRow) => (atTime(r.at) ?? 0) > now;
   const later = rows.filter(isLater);
   el.todayList.replaceChildren(...rows.filter((r) => !isLater(r)).map(taskRow));
   el.laterList.replaceChildren(...later.map(taskRow));
@@ -235,9 +238,9 @@ async function render() {
   }
 }
 
-function switchTab(name) {
+function switchTab(name: string) {
   tab = name;
-  for (const s of document.querySelectorAll('.screen')) s.classList.toggle('active', s.id === name);
+  for (const s of document.querySelectorAll<HTMLElement>('.screen')) s.classList.toggle('active', s.id === name);
   for (const b of el.nav.querySelectorAll('button')) b.classList.toggle('active', b.dataset.tab === name);
   if (name === 'capture') el.captureText.focus();
   render();
@@ -267,7 +270,7 @@ async function saveCapture() {
   }
 }
 
-async function applyChange(change) {
+async function applyChange(change: PulledChange) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const local = (await query('SELECT * FROM items WHERE profile = ? AND id = ?', [change.profile, change.id]))[0];
     const m = mergeIncoming(local ?? null, change);
@@ -288,7 +291,7 @@ async function applyChange(change) {
   throw new Error(`Could not merge item ${change.id}`);
 }
 
-async function post(hubUrl, deviceKey, body) {
+async function post(hubUrl: string, deviceKey: string, body: { since: number; changes: Change[] }): Promise<{ version: number; changes: PulledChange[]; hasMore?: boolean }> {
   const resp = await fetch(`${hubUrl}/sync`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${deviceKey}`, 'Content-Type': 'application/json' },
@@ -354,9 +357,9 @@ async function sync() {
 
 el.unlock.addEventListener('click', unlockDb);
 
-for (const b of el.nav.querySelectorAll('button')) b.addEventListener('click', () => switchTab(b.dataset.tab));
+for (const b of el.nav.querySelectorAll('button')) b.addEventListener('click', () => switchTab(b.dataset.tab!));
 
-for (const p of ['all', 'work', 'personal']) {
+for (const p of ['all', 'work', 'personal'] as const) {
   const chip = button(p[0].toUpperCase() + p.slice(1), () => {
     filter = p;
     for (const c of el.filters.children) c.classList.toggle('active', c === chip);
@@ -365,13 +368,13 @@ for (const p of ['all', 'work', 'personal']) {
   el.filters.append(chip);
 }
 
-function setType(type) {
+function setType(type: 'task' | 'note') {
   captureType = type;
   el.taskToggle.classList.toggle('active', type === 'task');
   el.noteToggle.classList.toggle('active', type === 'note');
 }
 
-function setProfile(profile) {
+function setProfile(profile: Profile) {
   captureProfile = profile;
   localStorage.setItem('assistant-profile', profile);
   el.workToggle.classList.toggle('active', profile === 'work');

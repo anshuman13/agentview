@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FIELDS, rowToChange, mergeIncoming } from './www/assistant-sync.js';
+import { FIELDS, rowToChange, mergeIncoming } from './src/assistant-sync';
 
 const empty = Object.fromEntries(FIELDS.map((f) => [f, null]));
 
