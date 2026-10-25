@@ -69,7 +69,11 @@ export class ClaudeDriver implements AgentDriver {
   setAccount(a: Account) {
     if (a === this.account) return;
     this.account = a;
-    if (this.q) this.restart();
+    this.host.setSession({ usage: null });
+    if (!this.q) return;
+    // Started again at once so the new account's usage shows before the next prompt.
+    this.restart();
+    this.start();
   }
 
   limitHit(until: number) {

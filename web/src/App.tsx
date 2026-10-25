@@ -152,14 +152,13 @@ function UsageItem() {
     advice && (other && running ? `${advice} once Claude stops` : other ? `${advice}. Click to switch` : advice),
   ].filter(Boolean).join('\n');
   const warn = ahead || Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
+  const hot = fiveHour && fiveHour.pct >= 80;
   const body = (
     <>
       <Icon name="pulse" small />
-      {accounts.length > 1 && `${ACCOUNT_LABEL[account]} · `}
-      {fiveHour && `5h ${fiveHour.pct}%`}
-      {fiveHour && week && ' · '}
-      {week && `Week ${week.pct}%${pace !== null ? ` / ${pace}%` : ''}`}
-      {ahead && other && <> · Switch to {ACCOUNT_LABEL[other]}</>}
+      {accounts.length > 1 && `${ACCOUNT_LABEL[account]} `}
+      {week ? `${week.pct}%` : fiveHour && `${fiveHour.pct}%`}
+      {hot && week && ` · 5h ${fiveHour.pct}%`}
     </>
   );
   return ahead && other && !running ? (
