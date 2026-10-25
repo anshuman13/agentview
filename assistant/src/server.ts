@@ -1,10 +1,9 @@
 import http from 'node:http';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { allowedPeer } from '../../server/src/http/access.js';
+import { allowedPeer, peerName } from '../../server/src/http/access.js';
 import { readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion } from './db.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
-import { deviceFor } from './devices.js';
 
 class BadRequest extends Error {
   constructor(message: string) {
@@ -26,7 +25,8 @@ export function createServer(): http.Server {
   const server = http.createServer(async (req, res) => {
     try {
       const addr = req.socket.remoteAddress ?? '';
-      if (!allowedPeer(addr)) {
+      const device = allowedPeer(addr) ? peerName(addr) : undefined;
+      if (!device) {
         res.writeHead(403, { 'Content-Type': 'application/json' });
         res.end('{"error":"Forbidden"}');
         return;
@@ -35,7 +35,7 @@ export function createServer(): http.Server {
       const origin = req.headers.origin ?? '';
       if (origin === 'http://tauri.localhost' || origin === 'tauri://localhost') {
         res.setHeader('Access-Control-Allow-Origin', origin);
-        res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
         res.setHeader('Vary', 'Origin');
       }
@@ -55,18 +55,8 @@ export function createServer(): http.Server {
         return;
       }
 
-      const authHeader = req.headers.authorization ?? '';
-      const match = authHeader.match(/^Bearer\s+(.+)$/);
-      const key = match ? match[1] : undefined;
 
       if (pathname === '/sync' && req.method === 'POST') {
-        const device = deviceFor(key);
-        if (!device) {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end('{"error":"Unauthorized"}');
-          return;
-        }
-
         try {
           const body = await readBody(req, 5_000_000);
           let data: { since: number; changes: Change[] };
@@ -107,13 +97,6 @@ export function createServer(): http.Server {
       }
 
       if (pathname === '/changes' && req.method === 'GET') {
-        const device = deviceFor(key);
-        if (!device) {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end('{"error":"Unauthorized"}');
-          return;
-        }
-
         const since = Number(url.searchParams.get('since') ?? '0');
         if (!Number.isInteger(since) || since < 0) {
           res.writeHead(400, { 'Content-Type': 'application/json' });

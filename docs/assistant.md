@@ -51,17 +51,32 @@ sides run on the personal account.
 
 Raw Slack and mail text is kept for 90 days; tasks, notes and facts stay.
 
-## Phone
+## Devices and access
 
-The Assistant screen in the Android app: Today (tasks and the next meeting, swipe to finish or snooze), Capture (mic
-and text, saved at once) and Notes. Later: notifications with Done and Snooze, a share target for Slack and Gmail,
-a home screen widget. The local copy is encrypted with an Android Keystore key behind fingerprint unlock.
+There are no keys to copy. NetBird is the identity: each device has its own WireGuard key enrolled through SSO, and a
+device cannot send traffic as another one's address. The hub answers only NetBird peers, names each request by its
+peer (`pixel-9`, `macbook`, `macmini`) and records which device changed an item. Removing a device in the NetBird
+dashboard cuts it off. AgentView and the hub share this check (`server/src/http/access.ts`).
+
+The phone's copy is encrypted with an Android Keystore key behind fingerprint unlock. If that key is lost, the app
+resets the copy and downloads it again from the hub.
+
+## One app
+
+The web UI is bundled into the phone app, so it opens without a Mac. The Assistant is an activity bar entry next to
+Chats and Code. The editor connects to the Mac picked in the Macs switcher and shows offline when none is reachable;
+the Assistant is the same everywhere: on the phone it reads the encrypted local copy and syncs with the hub, on a Mac
+it goes through the AgentView server to the hub. Today (tasks and the next meeting, swipe to finish or snooze),
+Capture (mic and text) and Notes; later notifications with Done and Snooze, a share target and a widget.
 
 ## Build order
 
-1. Mini hub: database schema, sync API, launchd services, nightly backup
-2. Phone Assistant screen: Today and Capture on the local copy, on-device voice transcription
-3. Scheduler on the mini: work Slack, Calendar and Linear feeding Today
-4. Meeting notes and action items, facts and search
-5. Notifications, share target, widget
-6. Personal profile collection
+1. Mini hub: database schema, sync API, launchd services, nightly backup (done)
+2. NetBird identity instead of device keys
+3. Web UI bundled into the phone app; AgentView accepts the app's requests from NetBird peers
+4. Assistant pane in the web app on one data layer (local copy on the phone, the server on a Mac); remove the separate page
+5. Device list and reset of a lost phone copy
+6. Scheduler on the mini: work Slack, Calendar and Linear feeding Today
+7. Meeting notes and action items, facts and search
+8. Notifications, share target, widget
+9. Personal profile collection

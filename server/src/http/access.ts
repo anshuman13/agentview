@@ -8,6 +8,7 @@ const TTL = 15_000;
 export type NetbirdPeer = { fqdn: string; netbirdIp?: string; netbirdIpv6?: string };
 export type NetbirdStatus = {
   daemonStatus?: string;
+  fqdn?: string;
   management?: { error?: string };
   netbirdIp?: string;
   netbirdIpv6?: string;
@@ -67,6 +68,16 @@ export const allowedPeer = (addr = '') => {
   if (loopback(a) || peers.has(a)) return true;
   void netbirdStatus();
   return false;
+};
+
+const short = (fqdn?: string) => fqdn?.split('.')[0] || undefined;
+
+// The NetBird name of the device a request comes from, such as "macmini"; loopback is this Mac.
+export const peerName = (addr = '') => {
+  const a = canon(addr);
+  if (loopback(a) || a === status?.netbirdIp || a === status?.netbirdIpv6) return short(status?.fqdn) ?? 'local';
+  const p = status?.peers?.details?.find((d) => (d.netbirdIp && canon(d.netbirdIp) === a) || (d.netbirdIpv6 && canon(d.netbirdIpv6) === a));
+  return short(p?.fqdn);
 };
 
 const hostOf = (u: string) => {

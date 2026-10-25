@@ -41,7 +41,6 @@ const el = {
   save: $('save-btn'),
   saveConfirm: $('save-confirm'),
   hubUrl: $<HTMLInputElement>('hub-url'),
-  deviceKey: $<HTMLInputElement>('device-key'),
   settingsSave: $('settings-save'),
   syncNow: $('sync-now'),
   syncStatus: $('sync-status'),
@@ -65,6 +64,7 @@ type SqlValue = string | number | null;
 const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
 const query = async <T = ItemRow>(sql: string, params: SqlValue[] = []) => (await invoke!<T[] | null>('assistant_query', { sql, params })) || [];
 const exec = (sql: string, params: SqlValue[] = []) => invoke!<number>('assistant_exec', { sql, params });
+const HUB = 'http://macmini.netbird.cloud:7790';
 
 async function getState(key: string) {
   const rows = await query<{ value: string }>('SELECT value FROM sync_state WHERE key = ?', [key]);
@@ -143,7 +143,7 @@ function lock() {
   unlocked = false;
   for (const list of [el.todayList, el.laterList, el.notes]) list.replaceChildren();
   el.laterTitle.hidden = true;
-  el.hubUrl.value = el.deviceKey.value = '';
+  el.hubUrl.value = '';
   el.syncStatus.textContent = '';
   showLock('Locked', 'Unlock');
   closing = invoke!<void>('assistant_close').catch((err) => console.error('assistant_close failed', err));
@@ -219,10 +219,9 @@ async function renderNotes() {
 }
 
 async function renderSettings() {
-  const [hubUrl, deviceKey, lastSync, lastError] = await Promise.all(['hub_url', 'device_key', 'last_sync', 'last_error'].map(getState));
+  const [hubUrl, lastSync, lastError] = await Promise.all(['hub_url', 'last_sync', 'last_error'].map(getState));
   if (!unlocked) return;
-  if (document.activeElement !== el.hubUrl) el.hubUrl.value = hubUrl;
-  if (document.activeElement !== el.deviceKey) el.deviceKey.value = deviceKey;
+  if (document.activeElement !== el.hubUrl) el.hubUrl.value = hubUrl || HUB;
   const status = lastSync ? `Last sync: ${new Date(Number(lastSync)).toLocaleString()}` : 'Never synced';
   el.syncStatus.textContent = lastError ? `${status}\nError: ${lastError}` : status;
 }
@@ -291,10 +290,10 @@ async function applyChange(change: PulledChange) {
   throw new Error(`Could not merge item ${change.id}`);
 }
 
-async function post(hubUrl: string, deviceKey: string, body: { since: number; changes: Change[] }): Promise<{ version: number; changes: PulledChange[]; hasMore?: boolean }> {
+async function post(hubUrl: string, body: { since: number; changes: Change[] }): Promise<{ version: number; changes: PulledChange[]; hasMore?: boolean }> {
   const resp = await fetch(`${hubUrl}/sync`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${deviceKey}`, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(30000),
   });
@@ -305,14 +304,12 @@ async function post(hubUrl: string, deviceKey: string, body: { since: number; ch
 }
 
 async function syncOnce() {
-  const hubUrl = await getState('hub_url');
-  const deviceKey = await getState('device_key');
-  if (!hubUrl || !deviceKey) return;
+  const hubUrl = (await getState('hub_url')) || HUB;
   let since = Number(await getState('since')) || 0;
   let pushed = await query('SELECT * FROM items WHERE dirty = 1');
   let more = true;
   while (more && unlocked) {
-    const data = await post(hubUrl, deviceKey, { since, changes: pushed.map(rowToChange) });
+    const data = await post(hubUrl, { since, changes: pushed.map(rowToChange) });
     for (const row of pushed) {
       await exec(
         'UPDATE items SET dirty = 0 WHERE profile = ? AND id = ? AND updated_at = ? AND field_times = ?',
@@ -398,9 +395,7 @@ el.settingsSave.addEventListener('click', async () => {
       await exec('UPDATE items SET dirty = 1');
     }
     await setState('hub_url', hubUrl);
-    await setState('device_key', el.deviceKey.value.trim());
     el.hubUrl.blur();
-    el.deviceKey.blur();
     await renderSettings();
     sync();
   } catch (err) {
