@@ -48,6 +48,7 @@
       <h1 id="title">AgentView</h1>
       <input id="url" hidden placeholder="http://my-mac.netbird.cloud:7777" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" />
       <button id="go" hidden>Connect</button>
+      <button id="open" type="button" hidden>Open AgentView</button>
       <button id="netbird" class="secondary" hidden>Open NetBird</button>
       <button id="retry" hidden>Retry</button>
       <div id="macs" hidden></div>
@@ -55,7 +56,10 @@
       <a id="other" href="#" hidden>Use another address</a>
     </form>
     <script>
-      if (localStorage.getItem('agentview.start') === 'assistant' && location.hash !== '#agentview') location.replace('assistant.html');
+      const start = location.hash === '#agentview' ? 'agentview' : localStorage.getItem('agentview.start');
+      const toAssistant = start === 'assistant';
+      if (toAssistant) location.replace('assistant.html');
+      let auto = start === 'agentview';
       document.querySelector('.assistant').onclick = () => localStorage.setItem('agentview.start', 'assistant');
       const MAC_URL = 'http://anshumans-macbook-pro.netbird.cloud:7777';
       const KEY = 'agentview.url';
@@ -64,7 +68,7 @@
       const TRUSTED = /^http:\/\/([a-z0-9-]+\.netbird\.cloud|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|localhost)(:\d{1,5})?$/i;
       const known = shell ? JSON.parse(shell.macs()).filter((m) => TRUSTED.test(m.url)) : [];
       const saved = known[0]?.url || localStorage.getItem(KEY)?.replace(/:5173$/, ':7777') || (android ? MAC_URL : 'http://localhost:7777');
-      const [form, url, go, msg, netbird, retry, other, h1, macs] = ['form', 'url', 'go', 'msg', 'netbird', 'retry', 'other', 'title', 'macs'].map((id) => document.getElementById(id));
+      const [form, url, go, msg, netbird, retry, other, h1, macs, open] = ['form', 'url', 'go', 'msg', 'netbird', 'retry', 'other', 'title', 'macs', 'open'].map((id) => document.getElementById(id));
       url.value = saved;
       let current = saved;
       let busy = false;
@@ -80,6 +84,7 @@
       }
 
       function show(manual) {
+        open.hidden = true;
         h1.textContent = "Can't reach your Mac";
         netbird.hidden = retry.hidden = !android;
         other.hidden = !android || manual;
@@ -121,10 +126,16 @@
         show(true);
         url.focus();
       };
+      open.onclick = () => {
+        localStorage.setItem('agentview.start', 'agentview');
+        auto = true;
+        connect(saved, false);
+      };
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') connect(current, !url.hidden);
+        if (auto && document.visibilityState === 'visible') connect(current, !url.hidden);
       });
-      connect(saved, false);
+      if (auto) connect(saved, false);
+      else if (!toAssistant) open.hidden = false;
     </script>
   </body>
 </html>

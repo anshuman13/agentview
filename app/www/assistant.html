@@ -133,20 +133,20 @@
       #settings input { width: 100%; }
       #settings .actions { display: flex; gap: 8px; }
       #settings .actions button { flex: 1; }
-      .status-text { font-size: 11px; color: #9d9d9d; }
-      #settings a { color: #3794ff; text-decoration: none; font-size: 12px; }
+      .status-text { font-size: 11px; color: #9d9d9d; white-space: pre-line; }
+      #settings a, #lock-screen a { color: #3794ff; text-decoration: none; font-size: 12px; }
 
       .confirmation { font-size: 12px; color: #0078d4; }
     </style>
   </head>
   <body>
-    <div id="lock-screen" hidden>
-      <h1>Unlock</h1>
-      <p id="lock-msg">Tap to unlock with fingerprint</p>
-      <button id="unlock-btn" class="primary" style="width: 100%;">Unlock</button>
-      <button id="retry-btn" class="secondary" style="width: 100%;" hidden>Retry</button>
+    <div id="lock-screen">
+      <h1>Assistant</h1>
+      <p id="lock-msg">Unlocking</p>
+      <button id="unlock-btn" class="primary" hidden></button>
+      <a href="index.html#agentview" onclick="localStorage.setItem('agentview.start', 'agentview')">AgentView</a>
     </div>
-    <div id="content">
+    <div id="content" hidden>
       <div id="today" class="screen active">
         <div class="filters" id="filters"></div>
         <div id="today-list"></div>
@@ -155,7 +155,7 @@
       </div>
 
       <div id="capture" class="screen">
-        <textarea id="capture-text" placeholder="What's on your mind?" autofocus></textarea>
+        <textarea id="capture-text" placeholder="What's on your mind?"></textarea>
         <div class="toggle-group">
           <button id="task-toggle" class="active">Task</button>
           <button id="note-toggle">Note</button>
@@ -188,7 +188,7 @@
       </div>
     </div>
 
-    <nav id="nav">
+    <nav id="nav" hidden>
       <button id="today-tab" class="active" data-tab="today">Today</button>
       <button id="capture-tab" data-tab="capture">Capture</button>
       <button id="notes-tab" data-tab="notes">Notes</button>

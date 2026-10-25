@@ -1,331 +1,143 @@
 import { describe, it, expect } from 'vitest';
 import { FIELDS, rowToChange, mergeIncoming } from './www/assistant-sync.js';
 
-describe('assistant-sync', () => {
-  describe('FIELDS', () => {
-    it('includes all synced fields', () => {
-      expect(FIELDS).toEqual(['title', 'text', 'source', 'source_url', 'people', 'at', 'status']);
+const empty = Object.fromEntries(FIELDS.map((f) => [f, null]));
+
+function localRow(over: Record<string, unknown> = {}) {
+  return { id: 'id1', profile: 'work', version: 1, updated_at: 1000, deleted: 0, dirty: 0, field_times: '{}', ...empty, ...over };
+}
+
+function hubChange(over: Record<string, unknown> = {}, fields: Record<string, unknown> = {}) {
+  return {
+    table: 'items',
+    id: 'id1',
+    profile: 'work',
+    deleted: false,
+    updated_at: 1000,
+    version: 2,
+    field_times: {},
+    ...over,
+    fields: { ...empty, ...fields },
+  };
+}
+
+describe('rowToChange', () => {
+  it('sends only fields with a local field time', () => {
+    const row = localRow({ title: 'Task', text: 'Body', status: 'open', field_times: '{"title":900,"status":950}' });
+    expect(rowToChange(row)).toEqual({
+      table: 'items',
+      id: 'id1',
+      profile: 'work',
+      updated_at: 1000,
+      fields: { title: 'Task', status: 'open' },
+      field_times: { title: 900, status: 950 },
     });
   });
 
-  describe('rowToChange', () => {
-    it('extracts synced fields and field times', () => {
-      const row = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 1000,
-        deleted: 0,
-        field_times: '{"title":900}',
-        title: 'Task',
-        text: 'Description',
-        source: 'capture',
-        source_url: null,
-        people: null,
-        at: null,
-        status: 'open',
-      };
-      const change = rowToChange(row);
-      expect(change).toEqual({
-        table: 'items',
-        id: 'id1',
-        profile: 'work',
-        deleted: false,
-        updated_at: 1000,
-        fields: {
-          title: 'Task',
-          text: 'Description',
-          source: 'capture',
-          source_url: null,
-          people: null,
-          at: null,
-          status: 'open',
-        },
-        field_times: { title: 900 },
-      });
-    });
-
-    it('includes deleted time in field_times if deleted', () => {
-      const row = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 1000,
-        deleted: 2000,
-        field_times: '{}',
-        title: null,
-        text: null,
-        source: null,
-        source_url: null,
-        people: null,
-        at: null,
-        status: null,
-      };
-      const change = rowToChange(row);
-      expect(change.deleted).toBe(true);
-      expect(change.field_times.deleted).toBe(2000);
-    });
-
-    it('handles field_times as object', () => {
-      const row = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 1000,
-        deleted: 0,
-        field_times: { title: 900 },
-        title: 'Task',
-        text: null,
-        source: null,
-        source_url: null,
-        people: null,
-        at: null,
-        status: null,
-      };
-      const change = rowToChange(row);
-      expect(change.field_times).toEqual({ title: 900 });
-    });
+  it('omits deleted unless its field time is set', () => {
+    expect(rowToChange(localRow({ deleted: 1, field_times: '{"title":900}' }))).not.toHaveProperty('deleted');
+    expect(rowToChange(localRow({ deleted: 0 }))).not.toHaveProperty('deleted');
   });
 
-  describe('mergeIncoming', () => {
-    it('uses newer incoming field when incoming is newer', () => {
-      const local = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 1000,
-        deleted: 0,
-        field_times: { title: 900 },
-        title: 'Old',
-        text: null,
-        status: null,
-      };
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 2,
-        updated_at: 2000,
-        deleted: 0,
-        field_times: { title: 1500 },
-        title: 'New',
-        text: null,
-        status: null,
-      };
-      const merged = mergeIncoming(local, incoming);
-      expect(merged.title).toBe('New');
-      expect(merged.dirty).toBe(0);
-    });
+  it('sends deleted with its own time as updated_at', () => {
+    const change = rowToChange(localRow({ deleted: 1, updated_at: 3000, field_times: '{"deleted":2000,"title":3000}' }));
+    expect(change.deleted).toBe(true);
+    expect(change.updated_at).toBe(2000);
+    expect(change.field_times).toEqual({ title: 3000 });
+  });
 
-    it('keeps local field when local is newer', () => {
-      const local = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 2000,
-        deleted: 0,
-        field_times: { title: 1500 },
-        title: 'Local',
-        text: null,
-        status: null,
-      };
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 2,
-        updated_at: 1000,
-        deleted: 0,
-        field_times: { title: 900 },
-        title: 'Incoming',
-        text: null,
-        status: null,
-      };
-      const merged = mergeIncoming(local, incoming);
-      expect(merged.title).toBe('Local');
-      expect(merged.dirty).toBe(1);
-    });
+  it('accepts field_times as an object', () => {
+    expect(rowToChange(localRow({ title: 'T', field_times: { title: 900 } })).fields).toEqual({ title: 'T' });
+  });
+});
 
-    it('keeps local on tie (same time)', () => {
-      const local = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 1000,
-        deleted: 0,
-        field_times: { title: 1000 },
-        title: 'Local',
-        text: null,
-        status: null,
-      };
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 2,
-        updated_at: 1000,
-        deleted: 0,
-        field_times: { title: 1000 },
-        title: 'Incoming',
-        text: null,
-        status: null,
-      };
-      const merged = mergeIncoming(local, incoming);
-      expect(merged.title).toBe('Local');
-      expect(merged.dirty).toBe(0);
-    });
+describe('mergeIncoming', () => {
+  it('reads values from the nested fields object', () => {
+    const merged = mergeIncoming(null, hubChange({ field_times: { title: 1000, status: 1000 } }, { title: 'New', status: 'open', people: 'Ola' }));
+    expect(merged.title).toBe('New');
+    expect(merged.status).toBe('open');
+    expect(merged.people).toBe('Ola');
+    expect(merged.deleted).toBe(0);
+    expect(merged.version).toBe(2);
+    expect(merged.dirty).toBe(0);
+  });
 
-    it('merges per-field with different times', () => {
-      const local = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 2000,
-        deleted: 0,
-        field_times: { title: 2000, text: 1500 },
-        title: 'Local Title',
-        text: 'Local Text',
-        status: null,
-      };
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 2,
-        updated_at: 1800,
-        deleted: 0,
-        field_times: { title: 1800, text: 1800 },
-        title: 'Incoming Title',
-        text: 'Incoming Text',
-        status: 'open',
-      };
-      const merged = mergeIncoming(local, incoming);
-      expect(merged.title).toBe('Local Title');
-      expect(merged.text).toBe('Incoming Text');
-      expect(merged.status).toBe('open');
-      expect(merged.dirty).toBe(1);
-    });
+  it('takes incoming field when newer', () => {
+    const merged = mergeIncoming(
+      localRow({ title: 'Old', field_times: '{"title":900}' }),
+      hubChange({ updated_at: 2000, field_times: { title: 1500 } }, { title: 'New' }),
+    );
+    expect(merged.title).toBe('New');
+    expect(merged.field_times.title).toBe(1500);
+    expect(merged.dirty).toBe(0);
+  });
 
-    it('inserts new row from incoming when local is null', () => {
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 1,
-        updated_at: 1000,
-        deleted: 0,
-        field_times: { title: 1000 },
-        title: 'New Item',
-        text: null,
-        status: 'open',
-      };
-      const merged = mergeIncoming(null, incoming);
-      expect(merged.id).toBe('id1');
-      expect(merged.title).toBe('New Item');
-      expect(merged.status).toBe('open');
-      expect(merged.version).toBe(1);
-      expect(merged.dirty).toBe(0);
-    });
+  it('keeps local field when newer and marks dirty', () => {
+    const merged = mergeIncoming(
+      localRow({ title: 'Local', updated_at: 2000, field_times: '{"title":1500}' }),
+      hubChange({ field_times: { title: 900 } }, { title: 'Hub' }),
+    );
+    expect(merged.title).toBe('Local');
+    expect(merged.field_times.title).toBe(1500);
+    expect(merged.dirty).toBe(1);
+  });
 
-    it('merges deleted flag per-field', () => {
-      const local = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 2000,
-        deleted: 1500,
-        field_times: { deleted: 1500 },
-        title: 'Local',
-        text: null,
-        status: null,
-      };
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 2,
-        updated_at: 1000,
-        deleted: 0,
-        field_times: {},
-        title: 'Incoming',
-        text: null,
-        status: null,
-      };
-      const merged = mergeIncoming(local, incoming);
-      expect(merged.deleted).toBe(1500);
-      expect(merged.field_times.deleted).toBe(1500);
-      expect(merged.dirty).toBe(1);
-    });
+  it('keeps local on a tie without marking dirty', () => {
+    const merged = mergeIncoming(
+      localRow({ title: 'Local', field_times: '{"title":1000}' }),
+      hubChange({ field_times: { title: 1000 } }, { title: 'Hub' }),
+    );
+    expect(merged.title).toBe('Local');
+    expect(merged.dirty).toBe(0);
+  });
 
-    it('undeletes when incoming is newer without deleted', () => {
-      const local = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 1000,
-        deleted: 1500,
-        field_times: { deleted: 1500 },
-        title: 'Task',
-        text: null,
-        status: null,
-      };
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 2,
-        updated_at: 2000,
-        deleted: 0,
-        field_times: {},
-        title: 'Task',
-        text: null,
-        status: null,
-      };
-      const merged = mergeIncoming(local, incoming);
-      expect(merged.deleted).toBe(0);
-      expect(merged.dirty).toBe(0);
-    });
+  it('keeps an existing dirty flag', () => {
+    const merged = mergeIncoming(localRow({ dirty: 1, field_times: '{"title":1000}' }), hubChange({ field_times: { title: 1000 } }));
+    expect(merged.dirty).toBe(1);
+  });
 
-    it('uses incoming updated_at when field time missing', () => {
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 1,
-        updated_at: 1500,
-        deleted: 0,
-        field_times: {},
-        title: 'Task',
-        text: null,
-        status: null,
-      };
-      const merged = mergeIncoming(null, incoming);
-      expect(merged.field_times.title).toBe(1500);
-    });
+  it('merges each field on its own time', () => {
+    const merged = mergeIncoming(
+      localRow({ title: 'Local title', text: 'Local text', updated_at: 2000, field_times: '{"title":2000,"text":1500}' }),
+      hubChange({ updated_at: 1800, field_times: { title: 1800, text: 1800, status: 1800 } }, { title: 'Hub title', text: 'Hub text', status: 'open' }),
+    );
+    expect(merged.title).toBe('Local title');
+    expect(merged.text).toBe('Hub text');
+    expect(merged.status).toBe('open');
+    expect(merged.field_times).toEqual({ title: 2000, text: 1800, status: 1800, source: 1800, source_url: 1800, people: 1800, at: 1800 });
+    expect(merged.dirty).toBe(1);
+  });
 
-    it('sets version from incoming', () => {
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 42,
-        updated_at: 1000,
-        deleted: 0,
-        field_times: {},
-        title: 'Task',
-        text: null,
-        status: null,
-      };
-      const merged = mergeIncoming(null, incoming);
-      expect(merged.version).toBe(42);
-    });
+  it('falls back to incoming updated_at for missing field times', () => {
+    const merged = mergeIncoming(null, hubChange({ updated_at: 1500 }, { title: 'Task' }));
+    expect(merged.field_times.title).toBe(1500);
+  });
 
-    it('sets updated_at to max of incoming and local', () => {
-      const local = {
-        id: 'id1',
-        profile: 'work',
-        updated_at: 1000,
-        deleted: 0,
-        field_times: { title: 2000 },
-        title: 'Local',
-        text: null,
-        status: null,
-      };
-      const incoming = {
-        id: 'id1',
-        profile: 'work',
-        version: 2,
-        updated_at: 1500,
-        deleted: 0,
-        field_times: { text: 1200 },
-        title: 'Incoming',
-        text: 'Text',
-        status: null,
-      };
-      const merged = mergeIncoming(local, incoming);
-      expect(merged.updated_at).toBe(1500);
-    });
+  it('sets updated_at to the max of local and incoming', () => {
+    const local = localRow({ updated_at: 3000, field_times: '{"title":3000}' });
+    expect(mergeIncoming(local, hubChange({ updated_at: 1500 })).updated_at).toBe(3000);
+    expect(mergeIncoming(local, hubChange({ updated_at: 4000 })).updated_at).toBe(4000);
+  });
+
+  it('keeps a newer local delete', () => {
+    const merged = mergeIncoming(localRow({ deleted: 1, field_times: '{"deleted":1500}' }), hubChange({ updated_at: 1000 }));
+    expect(merged.deleted).toBe(1);
+    expect(merged.field_times.deleted).toBe(1500);
+    expect(merged.dirty).toBe(1);
+  });
+
+  it('takes a newer hub undelete', () => {
+    const merged = mergeIncoming(
+      localRow({ deleted: 1, field_times: '{"deleted":1500}' }),
+      hubChange({ updated_at: 2000, deleted: false, field_times: { deleted: 2000 } }),
+    );
+    expect(merged.deleted).toBe(0);
+    expect(merged.field_times.deleted).toBe(2000);
+    expect(merged.dirty).toBe(0);
+  });
+
+  it('takes a newer hub delete', () => {
+    const merged = mergeIncoming(localRow(), hubChange({ deleted: true, field_times: { deleted: 1200 } }));
+    expect(merged.deleted).toBe(1);
   });
 });
