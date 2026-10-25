@@ -32,6 +32,19 @@ export function createServer(): http.Server {
         return;
       }
 
+      const origin = req.headers.origin ?? '';
+      if (origin === 'http://tauri.localhost' || origin === 'tauri://localhost') {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
+        res.setHeader('Vary', 'Origin');
+      }
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+
       const url = new URL(req.url ?? '/', 'http://localhost');
       const pathname = url.pathname;
 
