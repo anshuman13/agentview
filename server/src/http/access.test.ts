@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { allowedPeer, allowedRequest, canon, loadStatus, requester } from './access.js';
+import { allowedPeer, allowedRequest, appOrigin, canon, loadStatus, requester } from './access.js';
 
 const status = JSON.stringify({
   daemonStatus: 'Connected',
@@ -89,6 +89,30 @@ describe('allowedRequest', () => {
     expect(allowedRequest({ host: 'localhost:7777', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'no-cors' })).toBe(false);
     expect(allowedRequest({ host: 'localhost:7777', 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' })).toBe(true);
     expect(allowedRequest({ host: 'localhost:7777', 'sec-fetch-site': 'none', 'sec-fetch-mode': 'navigate' })).toBe(true);
+  });
+});
+
+describe('bundled app origin', () => {
+  const app = (origin: string, extra = {}) => ({ host: 'macmini.netbird.cloud:7777', origin, 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'cors', ...extra });
+
+  it('is accepted from loopback and NetBird peers', () => {
+    for (const origin of ['http://tauri.localhost', 'tauri://localhost']) {
+      expect(allowedRequest(app(origin), '100.102.111.164')).toBe(true);
+      expect(allowedRequest(app(origin), '127.0.0.1')).toBe(true);
+      expect(appOrigin(app(origin), '100.102.111.164')).toBe(origin);
+    }
+  });
+
+  it('is refused from other addresses or without one', () => {
+    expect(allowedRequest(app('http://tauri.localhost'), '192.168.1.20')).toBe(false);
+    expect(allowedRequest(app('http://tauri.localhost'))).toBe(false);
+    expect(appOrigin(app('http://tauri.localhost'), '192.168.1.20')).toBeUndefined();
+  });
+
+  it('does not widen other origins or hosts', () => {
+    expect(allowedRequest(app('http://evil.example'), '100.102.111.164')).toBe(false);
+    expect(allowedRequest(app('https://tauri.localhost'), '100.102.111.164')).toBe(false);
+    expect(allowedRequest(app('http://tauri.localhost', { host: 'evil.example' }), '100.102.111.164')).toBe(false);
   });
 });
 

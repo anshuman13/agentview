@@ -99,13 +99,19 @@ const sameOrigin = (origin: string, host: string) => {
   }
 };
 
+// The bundled app loads from its own origin and calls this server across origins.
+const APP_ORIGINS = new Set(['http://tauri.localhost', 'tauri://localhost']);
+export const appOrigin = (h: RequestHeaders, addr?: string) => (h.origin && APP_ORIGINS.has(h.origin) && addr !== undefined && allowedPeer(addr) ? h.origin : undefined);
+
 export type RequestHeaders = { host?: string; origin?: string; 'sec-fetch-site'?: string; 'sec-fetch-mode'?: string };
 
 // The page must be served by this server (Host allowed, Origin equal to it). Browsers send no Origin on plain GETs, so
 // Sec-Fetch-Site catches cross-site image and script loads; cross-site navigations into AgentView stay allowed.
-export const allowedRequest = (h: RequestHeaders) => {
+// The bundled app's origin is accepted when addr, the requester's address, is this Mac or a NetBird peer.
+export const allowedRequest = (h: RequestHeaders, addr?: string) => {
   const host = h.host ?? '';
   if (!/^[\w.\-:[\]]+$/.test(host) || !allowedHost(hostOf(`http://${host}`))) return false;
+  if (appOrigin(h, addr)) return true;
   if (h.origin && !sameOrigin(h.origin, host)) return false;
   const site = h['sec-fetch-site'];
   return !site || site === 'same-origin' || site === 'none' || h['sec-fetch-mode'] === 'navigate';

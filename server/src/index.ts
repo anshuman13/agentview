@@ -26,7 +26,7 @@ import type { AttentionItem, ClientMessage, LiveChat, ServerMessage } from '../.
 import { Ring, frame } from './http/stream.js';
 import { gz, serveWeb } from './http/web.js';
 import { readBody, savePaste } from './http/body.js';
-import { allowedPeer, allowedRequest, requester } from './http/access.js';
+import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
 import { Host } from './host/client.js';
 import type { Hello } from './host/protocol.js';
 
@@ -156,10 +156,24 @@ const server = http.createServer(async (req, res) => {
       return res.end(text);
     }
     const out = await gz(text);
-    res.writeHead(code, { 'content-type': 'application/json', 'content-encoding': 'gzip', vary: 'accept-encoding' });
+    res.writeHead(code, { 'content-type': 'application/json', 'content-encoding': 'gzip', vary: 'accept-encoding, origin' });
     res.end(out);
   };
-  if (!allowedRequest(req.headers)) return json({ error: 'Forbidden' }, 403);
+  if (!allowedRequest(req.headers, requester(req))) return json({ error: 'Forbidden' }, 403);
+  const app = appOrigin(req.headers, requester(req));
+  if (app) {
+    res.setHeader('access-control-allow-origin', app);
+    res.setHeader('vary', 'origin');
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+        'access-control-allow-headers': 'content-type, last-event-id',
+        'access-control-max-age': '600',
+        ...(req.headers['access-control-request-private-network'] && { 'access-control-allow-private-network': 'true' }),
+      });
+      return res.end();
+    }
+  }
   try {
     const chat = chats.get(url.searchParams.get('chat') ?? '') ?? chats.get(lastViewed);
     if (!chat) return json({ error: 'The agent host is starting' }, 503);
@@ -300,7 +314,7 @@ server.on('connection', (socket) => {
   if (!ok) socket.destroy();
 });
 
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8_000_000, perMessageDeflate: { threshold: 1024 }, verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers) });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8_000_000, perMessageDeflate: { threshold: 1024 }, verifyClient: ({ req }: { req: http.IncomingMessage }) => allowedRequest(req.headers, requester(req)) });
 
 // Phones that drop off the VPN leave half-open sockets; without this they count as viewers for hours.
 const alive = new WeakSet<WebSocket>();
