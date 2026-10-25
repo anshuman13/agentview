@@ -102,3 +102,28 @@ export function searchWiki(pages: Page[], facts: Fact[], query: string) {
     claims: live(facts).filter((f) => !f.superseded_by && hit(f.text, ...sourcesOf(f).map((s) => s.label))).slice(0, 30),
   };
 }
+
+const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
+
+// Today, then upcoming soonest first, then past days newest first.
+export function groupMeetings(meetings: Meeting[], now = Date.now()) {
+  const rows = live(meetings).filter((m) => m.starts_at != null);
+  const today = dayStart(now);
+  const groups: { label: string; rows: Meeting[] }[] = [];
+  const add = (label: string, rs: Meeting[]) => rs.length && groups.push({ label, rows: rs });
+  add('Today', rows.filter((m) => dayStart(m.starts_at!) === today).sort((a, b) => a.starts_at! - b.starts_at!));
+  add('Upcoming', rows.filter((m) => dayStart(m.starts_at!) > today).sort((a, b) => a.starts_at! - b.starts_at!));
+  const past = rows.filter((m) => dayStart(m.starts_at!) < today).sort((a, b) => dayStart(b.starts_at!) - dayStart(a.starts_at!) || a.starts_at! - b.starts_at!);
+  for (const m of past) {
+    const label = new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+    const last = groups[groups.length - 1];
+    if (last?.label === label) last.rows.push(m);
+    else groups.push({ label, rows: [m] });
+  }
+  return groups;
+}
+
+export function actionCount(actions: Action[], meetingId: string) {
+  const mine = live(actions).filter((a) => a.meeting_id === meetingId);
+  return { total: mine.length, handled: mine.filter((a) => a.status !== 'proposed').length };
+}

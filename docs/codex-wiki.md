@@ -135,7 +135,7 @@ Progress checklist:
 - [x] 7. Wiki page: header, headings, claim rows with sources, dates and anchors, On this page rail
 - [x] 8. Contest and resolve, superseded claims, feed links to claims
 - [x] 9. Wiki search and New page placeholder
-- [ ] 10. Meetings list
+- [x] 10. Meetings list
 - [ ] 11. Meeting page with notes, summary, decisions and action approve cards
 - [ ] 12. Client sync of pages, facts, meetings and actions (remote and phone local store)
 - [ ] 13. Polish: light theme, phone spacing, empty states, keyboard focus
