@@ -7,6 +7,7 @@
     "frontendDist": "../www"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "AgentView",

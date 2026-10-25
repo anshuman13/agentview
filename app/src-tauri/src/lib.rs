@@ -1,4 +1,9 @@
+mod assistant;
+
+use assistant::Store;
+use serde_json::{Map, Value};
 use std::net::Ipv4Addr;
+use tauri::{Manager, State};
 
 // The WebView gets a JavaScript bridge (clipboard, files, intents), so it may only show AgentView itself.
 fn trusted(url: &tauri::Url) -> bool {
@@ -14,9 +19,45 @@ fn trusted(url: &tauri::Url) -> bool {
     }
 }
 
+fn data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir)
+}
+
+#[tauri::command]
+fn assistant_open(app: tauri::AppHandle, store: State<Store>, key: String) -> Result<(), String> {
+    store.open(&data_dir(&app)?.join("assistant.db"), &key)
+}
+
+#[tauri::command]
+fn assistant_dev_key(app: tauri::AppHandle) -> Result<String, String> {
+    if cfg!(target_os = "android") {
+        return Err("not available".into());
+    }
+    assistant::dev_key(&data_dir(&app)?)
+}
+
+#[tauri::command]
+fn assistant_batch(store: State<Store>, sql: String) -> Result<(), String> {
+    store.batch(&sql)
+}
+
+#[tauri::command]
+fn assistant_exec(store: State<Store>, sql: String, params: Vec<Value>) -> Result<usize, String> {
+    store.exec(&sql, &params)
+}
+
+#[tauri::command]
+fn assistant_query(store: State<Store>, sql: String, params: Vec<Value>) -> Result<Vec<Map<String, Value>>, String> {
+    store.query(&sql, &params)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(Store::new())
+        .invoke_handler(tauri::generate_handler![assistant_open, assistant_dev_key, assistant_batch, assistant_exec, assistant_query])
         .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(|_, url| trusted(url)).build())
         .run(tauri::generate_context!())
         .expect("error while running AgentView");

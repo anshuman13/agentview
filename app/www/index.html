@@ -38,9 +38,11 @@
       #macs button { width: 100%; }
       a { color: #3794ff; font-size: 12px; }
       [hidden] { display: none !important; }
+      .assistant { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 16px; font-size: 14px; }
     </style>
   </head>
   <body>
+    <a class="assistant" href="assistant.html">Assistant</a>
     <form id="form">
       <img src="icon.png" alt="" />
       <h1 id="title">AgentView</h1>
@@ -53,6 +55,8 @@
       <a id="other" href="#" hidden>Use another address</a>
     </form>
     <script>
+      if (localStorage.getItem('agentview.start') === 'assistant' && location.hash !== '#agentview') location.replace('assistant.html');
+      document.querySelector('.assistant').onclick = () => localStorage.setItem('agentview.start', 'assistant');
       const MAC_URL = 'http://anshumans-macbook-pro.netbird.cloud:7777';
       const KEY = 'agentview.url';
       const android = /Android/i.test(navigator.userAgent);

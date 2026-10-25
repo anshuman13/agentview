@@ -20,12 +20,16 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -33,9 +37,16 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.KeyStore
+import java.security.SecureRandom
 import java.util.Locale
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
 private const val CHANNEL = "agentview"
+private const val KEY_ALIAS = "assistant-db-key"
 private const val NOTIFICATION_ID = "agentview.notification"
 private val MAC_URL = Regex("^http://([a-z0-9-]+\\.netbird\\.cloud|100\\.(6[4-9]|[7-9]\\d|1[01]\\d|12[0-7])\\.\\d+\\.\\d+|localhost)(:\\d{1,5})?$", RegexOption.IGNORE_CASE)
 
@@ -112,6 +123,65 @@ class MainActivity : TauriActivity() {
   private fun emit(type: String, data: JSONObject) {
     val js = "window.__agentview&&__agentview.emit(${JSONObject.quote(type)},$data)"
     runOnUiThread { webView?.evaluateJavascript(js, null) }
+  }
+
+  private fun assistantResult(key: String?, error: String?) {
+    val detail = JSONObject().put(if (key != null) "key" else "error", key ?: error)
+    val js = "window.dispatchEvent(new CustomEvent('assistant-key',{detail:$detail}))"
+    runOnUiThread { webView?.evaluateJavascript(js, null) }
+  }
+
+  private fun keystoreKey(): SecretKey {
+    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    (store.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+    val spec = KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+      .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+      .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+      .setKeySize(256)
+      .setUserAuthenticationRequired(true)
+      .apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
+        else @Suppress("DEPRECATION") setUserAuthenticationValidityDurationSeconds(-1)
+      }
+      .build()
+    return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply { init(spec) }.generateKey()
+  }
+
+  private fun unlockAssistant() {
+    if (BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) != BiometricManager.BIOMETRIC_SUCCESS) {
+      return assistantResult(null, "Set up a fingerprint on this phone first")
+    }
+    val wrapped = prefs.getString("assistantKey", null)?.split(":")
+    val cipher = try {
+      Cipher.getInstance("AES/GCM/NoPadding").also {
+        if (wrapped == null) it.init(Cipher.ENCRYPT_MODE, keystoreKey())
+        else it.init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(128, Base64.decode(wrapped[0], Base64.NO_WRAP)))
+      }
+    } catch (e: Exception) {
+      return assistantResult(null, "Unlock key unavailable: ${e.message}")
+    }
+    val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+      override fun onAuthenticationError(errorCode: Int, errString: CharSequence) = assistantResult(null, errString.toString())
+      override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+        try {
+          val c = result.cryptoObject!!.cipher!!
+          val raw = if (wrapped == null) ByteArray(32).also { SecureRandom().nextBytes(it) } else c.doFinal(Base64.decode(wrapped[1], Base64.NO_WRAP))
+          if (wrapped == null) {
+            val blob = c.doFinal(raw)
+            prefs.edit().putString("assistantKey", Base64.encodeToString(c.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(blob, Base64.NO_WRAP)).apply()
+          }
+          assistantResult(raw.joinToString("") { "%02x".format(it) }, null)
+        } catch (e: Exception) {
+          assistantResult(null, "Could not unlock: ${e.message}")
+        }
+      }
+    })
+    val info = BiometricPrompt.PromptInfo.Builder()
+      .setTitle("Unlock Assistant")
+      .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+      .setNegativeButtonText("Cancel")
+      .build()
+    prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher))
   }
 
   private fun toast(text: String) = runOnUiThread { Toast.makeText(this, text, Toast.LENGTH_SHORT).show() }
@@ -255,6 +325,9 @@ class MainActivity : TauriActivity() {
   }
 
   inner class Shell {
+    @JavascriptInterface
+    fun unlock() = runOnUiThread { unlockAssistant() }
+
     @JavascriptInterface
     fun takeShared(): String = synchronized(shared) { JSONArray(shared).toString().also { shared.clear() } }
 
