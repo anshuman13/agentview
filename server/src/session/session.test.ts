@@ -5,7 +5,12 @@ import { BIG_BRO, historyFrom } from '../agent/claude/transcript.js';
 import type { History } from '../agent/types.js';
 import type { ChatEvent, ServerMessage } from '../../../shared/protocol.js';
 
-vi.hoisted(() => (process.env.CLAUDE_CONFIG_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`));
+vi.hoisted(() => {
+  const dir = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`;
+  process.env.CLAUDE_CONFIG_DIR = dir;
+  process.env.AGENTVIEW_ALT_CLAUDE = `${dir}/alt`;
+  process.env.AGENTVIEW_LIMITS_DIR = dir;
+});
 
 function fakeSession() {
   const s = claudeSession('/tmp/project');
@@ -73,6 +78,41 @@ describe('AgentSession turns', () => {
     result('r1');
     expect(s.state.session.loop.phase).toBe('failed');
     expect(s.state.events.some((e) => e.kind === 'system' && e.text === 'Loop stopped: the plan was not approved')).toBe(true);
+  });
+
+  it('continues on the other account when a turn ends on a usage limit', async () => {
+    const { s } = fakeSession();
+    const limitHit = vi.fn(() => 'alt' as const);
+    Object.assign(s.driver, { limitHit, accounts: () => ['main', 'alt'] });
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    s.sendPrompt('long task');
+    handle({ type: 'result', subtype: 'success', uuid: 'r1', result: "You've hit your session limit · resets 1:50am", total_cost_usd: 0, is_error: false });
+    expect(limitHit).toHaveBeenCalledOnce();
+    expect(s.state.session).toMatchObject({ account: 'alt', running: true });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: expect.stringContaining('Continue where you stopped') });
+  });
+
+  it('waits for the reset when no other account has usage left', async () => {
+    const { s } = fakeSession();
+    Object.assign(s.driver, { limitHit: vi.fn(() => null) });
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    s.sendPrompt('long task');
+    handle({ type: 'result', subtype: 'success', uuid: 'r1', result: "You've hit your session limit · resets 1:50am", total_cost_usd: 0, is_error: false });
+    expect(s.state.session).toMatchObject({ account: 'main', running: false });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('Usage limit reached') });
+  });
+
+  it('switches account only when idle and logged in', () => {
+    const { s } = fakeSession();
+    const setAccount = vi.fn();
+    Object.assign(s.driver, { setAccount, accounts: () => ['main'] });
+    s.setAccount('alt');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('No second Claude account') });
+    Object.assign(s.driver, { accounts: () => ['main', 'alt'] });
+    s.sendPrompt('work');
+    s.setAccount('alt');
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Stop Claude before switching account' });
+    expect(setAccount).not.toHaveBeenCalled();
   });
 
   it('queues a steer while compacting', async () => {

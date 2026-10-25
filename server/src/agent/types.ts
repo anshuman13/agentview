@@ -1,4 +1,4 @@
-import type { CacheInfo, Capabilities, ChatEvent, Effort, McpServer, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
+import type { Account, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
@@ -22,6 +22,12 @@ export type TurnResult = { id: string; ok: boolean; text: string; costUsd: numbe
 export interface AgentDriver {
   readonly capabilities: Capabilities;
   readonly attached: boolean;
+  readonly account: Account;
+  accounts(): Account[];
+  // Moves the chat to another account; it resumes there with its next prompt.
+  setAccount(a: Account): void;
+  // The account is out of usage until then; returns the account the chat moved to, if any has usage left.
+  limitHit(until: number): Account | null;
   start(): void;
   send(text: string, id?: string): void;
   dropInput(): number;

@@ -8,7 +8,7 @@ import { match } from './FileSwitcher';
 import { toolId } from './McpStatus';
 import { touch } from '../touch';
 import { Hl, wsUrl } from './util';
-import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, MAX_GOAL_ROUNDS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
+import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, MAX_GOAL_ROUNDS, PERMISSION_MODES, type Account, type ChatEvent } from '../../../shared/protocol';
 
 export type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
 
@@ -18,6 +18,7 @@ export type Use = { server: string; tool?: string };
 
 export const MAX_ROWS = 8;
 export const MAX_STORED = 50;
+const ACCOUNT_LABEL: Record<Account, string> = { main: 'Main', alt: 'Second' };
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
 
 export function triggerAt(text: string, caret: number): Trigger {
@@ -172,6 +173,8 @@ export function Composer() {
   const model = useStore((s) => s.session.model);
   const models = useStore((s) => s.session.models);
   const effort = useStore((s) => s.session.effort);
+  const account = useStore((s) => s.session.account) ?? 'main';
+  const accounts = useStore((s) => s.session.accounts) ?? [];
   const team = useStore((s) => s.session.team);
   const loop = useStore((s) => s.session.loop);
   const repeat = useStore((s) => s.session.repeat);
@@ -186,7 +189,7 @@ export function Composer() {
   const edited = useStore((s) => editedOf(s.events));
   const servers = useStore((s) => s.session.mcp).filter((m) => m.status === 'connected');
 
-  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'effort' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools'; at: DOMRect; server?: string } | null>(null);
+  const [pick, setPick] = useState<{ kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'loop' | 'saved' | 'mcp' | 'mcpTools'; at: DOMRect; server?: string } | null>(null);
   const [uses, setUses] = useState<Use[]>([]);
   const [text, setText] = useState(() => readDraft(chat));
   const draftFor = useRef(chat);
@@ -505,13 +508,14 @@ export function Composer() {
             { value: 'mode', label: 'Permission mode', detail: modeInfo.label },
             { value: 'model', label: 'Model', detail: modelName },
             { value: 'effort', label: 'Effort', detail: effortName },
+            ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),
             { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
             { value: 'saved', label: 'Saved prompts', detail: `${stored.length}` },
             ...(sessionId ? [{ value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }] : []),
           ]}
           onPick={(v) => {
             if (v === 'fork') { send({ type: 'new_session', fork: sessionId! }); setPick(null); return; }
-            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'loop' | 'saved', at: pick.at });
+            setPick({ kind: v as 'mode' | 'model' | 'effort' | 'account' | 'loop' | 'saved', at: pick.at });
           }}
           onClose={() => setPick(null)}
         />
@@ -533,6 +537,16 @@ export function Composer() {
           current={effort}
           items={EFFORT_LEVELS.map((e) => ({ value: e, label: EFFORT_LABEL[e] }))}
           onPick={(v) => { send({ type: 'set_effort', effort: v }); setPick(null); }}
+          onClose={() => setPick(null)}
+        />
+      )}
+      {pick?.kind === 'account' && (
+        <QuickPick
+          anchor={pick.at}
+          title="Select Claude account"
+          current={account}
+          items={accounts.map((a) => ({ value: a, label: ACCOUNT_LABEL[a] }))}
+          onPick={(v) => { send({ type: 'set_account', account: v }); setPick(null); }}
           onClose={() => setPick(null)}
         />
       )}

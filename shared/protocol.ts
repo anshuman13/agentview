@@ -56,6 +56,9 @@ export type ChatEvent =
   | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number }
   | AgentEvent;
 
+// The Claude login a chat runs on: the main one, or a second one to fall back to.
+export type Account = 'main' | 'alt';
+
 export type SessionInfo = {
   id: string;
   sessionId: string | null;
@@ -76,6 +79,8 @@ export type SessionInfo = {
   loop: LoopState;
   repeat: Repeat | null;
   pr: number | null;
+  account: Account;
+  accounts: Account[];
   capabilities?: Capabilities;
 };
 
@@ -242,6 +247,7 @@ export type ClientMessage =
   | { type: 'allow_blocked'; id: string }
   | { type: 'set_model'; model: string }
   | { type: 'set_effort'; effort: string }
+  | { type: 'set_account'; account: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_loop'; on: boolean; max?: number }
   | { type: 'interrupt' }

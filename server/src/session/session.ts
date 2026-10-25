@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { COMPACT_AT, EFFORT_LEVELS, MAX_GOAL_ROUNDS, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { COMPACT_AT, EFFORT_LEVELS, MAX_GOAL_ROUNDS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
 import { advance, loopOff, needsApproval, planStep, type LoopStep } from './loop.js';
@@ -26,6 +26,9 @@ export function fireTime(schedule: string, now = Date.now()) {
   if (at.getTime() < now - 60_000) at.setFullYear(at.getFullYear() + 1);
   return at.getTime();
 }
+
+const accountName = (a: Account) => (a === 'main' ? 'main' : 'second');
+const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
 
 const looping = (loop: LoopState) => Boolean(loop.phase) && loop.phase !== 'passed' && loop.phase !== 'failed';
 
@@ -73,7 +76,7 @@ export class AgentSession implements AgentHost {
 
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
-      session: { id: this.id, sessionId, model: null, effort: 'medium', team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null },
+      session: { id: this.id, sessionId, model: null, effort: 'medium', team: false, cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: loopOff(), repeat: null, pr: null, account: 'main', accounts: [] },
       status: 'Idle',
       events: [],
       pending: [],
@@ -82,6 +85,8 @@ export class AgentSession implements AgentHost {
     this.approvals = new Approvals(this.state, (m) => this.emit(m));
     this.driver = driver(this);
     this.state.session.capabilities = this.driver.capabilities;
+    this.state.session.account = this.driver.account;
+    this.state.session.accounts = this.driver.accounts();
   }
 
   onMessage(fn: (m: ServerMessage) => void) {
@@ -192,6 +197,27 @@ export class AgentSession implements AgentHost {
     await this.driver.setEffort(level as Effort);
     this.setSession({ effort: level as Effort });
     this.system(`Effort set to ${level}`);
+  }
+
+  setAccount(a: string) {
+    const accounts = this.driver.accounts();
+    if (!accounts.includes(a as Account)) return this.system('No second Claude account is logged in. Run ./claude-alt.sh first');
+    if (this.state.session.running) return this.system('Stop Claude before switching account');
+    if (a === this.driver.account) return;
+    this.driver.setAccount(a as Account);
+    this.setSession({ account: a as Account, accounts });
+    this.system(`Switched to the ${accountName(a as Account)} Claude account`);
+  }
+
+  // A turn that ended on a usage limit goes on under the other account, if it has usage left.
+  private failOver(until: number) {
+    const from = this.driver.account;
+    const to = this.driver.limitHit(until);
+    if (!to) return false;
+    this.setSession({ account: to, accounts: this.driver.accounts() });
+    this.system(`Usage limit on the ${accountName(from)} account until ${clock(until)}, continuing on the ${accountName(to)} account`);
+    this.sendPrompt(CONTINUE);
+    return true;
   }
 
   async setPermissionMode(mode: string) {
@@ -561,6 +587,11 @@ export class AgentSession implements AgentHost {
     this.turns = Math.max(0, this.turns - 1);
     const stopped = this.turns === 0 && this.state.session.stopping;
     const idle = this.turns === 0 && !this.state.session.stopping;
+    if (idle && this.limitReset && this.failOver(this.limitReset)) {
+      this.limitReset = null;
+      this.setSession({ compacting: false });
+      return;
+    }
     const loop = idle ? advance(this.state.session.loop, this.lastResult, this.planDenied) : null;
     if (loop) this.setSession({ loop: loop.state });
     const next = idle && !loop?.step ? this.followUp() : null;

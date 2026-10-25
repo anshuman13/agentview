@@ -50,13 +50,14 @@ export function agentOptions(o: {
   mcp?: Record<string, McpServerConfig>;
   effort?: Effort;
   fork?: boolean;
+  configDir?: string;
 }): Options {
   return {
     cwd: o.cwd,
     resume: o.resume,
     forkSession: o.fork,
     effort: o.effort,
-    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1' },
+    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(o.configDir && { CLAUDE_CONFIG_DIR: o.configDir }) },
     systemPrompt: { type: 'preset', preset: 'claude_code', append: INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,

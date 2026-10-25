@@ -2,13 +2,14 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { query, getSubagentMessages, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
-import type { AgentEvent, AgentStatus, ChatEvent, Effort } from '../../../../shared/protocol.js';
+import type { Account, AgentEvent, AgentStatus, ChatEvent, Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { agentOf } from '../../session/events.js';
 import { JsonlTail } from './tail.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
+import { configDir, freshAccount, hasAlt, markLimited, otherAccount } from './accounts.js';
 import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, type SubFile } from './history.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
@@ -22,7 +23,7 @@ const ENDED: Record<string, AgentStatus> = { completed: 'done', failed: 'failed'
 
 const usageOf = (u: { total_tokens: number; tool_uses: number; duration_ms: number }) => ({ tokens: u.total_tokens, toolUses: u.tool_uses, durationMs: u.duration_ms });
 
-export const claudeSession = (cwd: string, resume?: string, fork = false) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork), resume ?? null);
+export const claudeSession = (cwd: string, resume?: string, fork = false, account = freshAccount()) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
 
 // Runs a chat on the Claude Agent SDK: one CLI process at a time, resumed from its transcript when it exits.
 export class ClaudeDriver implements AgentDriver {
@@ -59,7 +60,36 @@ export class ClaudeDriver implements AgentDriver {
   private taskIds = new Map<string, string>();
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
-  constructor(private host: AgentHost, private resume?: string, private fork = false) {}
+  constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main') {}
+
+  accounts(): Account[] {
+    return hasAlt() ? ['main', 'alt'] : ['main'];
+  }
+
+  setAccount(a: Account) {
+    if (a === this.account) return;
+    this.account = a;
+    if (this.q) this.restart();
+  }
+
+  limitHit(until: number) {
+    markLimited(this.account, until);
+    const next = otherAccount(this.account);
+    if (next) this.setAccount(next);
+    return next;
+  }
+
+  // Ends the CLI process; the next prompt resumes the session in a fresh one with the same settings.
+  private restart() {
+    const q = this.q!;
+    const { model, team, permissionMode, sessionId } = this.state.session;
+    this.restore = { model, team, permissionMode };
+    this.resume = sessionId ?? this.resume;
+    this.q = null;
+    this.gen++;
+    this.wake?.();
+    q.close();
+  }
 
   get attached() {
     return this.q !== null;
@@ -123,15 +153,7 @@ export class ClaudeDriver implements AgentDriver {
       if (baseline) return;
     }
     this.host.replaceHistory(this.history(msgs, subs));
-    if (!this.q) return;
-    const { model, team, permissionMode } = this.state.session;
-    this.restore = { model, team, permissionMode };
-    this.resume = sessionId;
-    const q = this.q;
-    this.q = null;
-    this.gen++;
-    this.wake?.();
-    q.close();
+    if (this.q) this.restart();
   }
 
   close() {
@@ -185,6 +207,7 @@ export class ClaudeDriver implements AgentDriver {
       mcp: this.addedMcp,
       effort: this.state.session.effort ?? undefined,
       fork: this.fork,
+      configDir: configDir(this.account),
     });
     this.mcpServers = options.mcpServers ?? {};
     this.q = query({ prompt: this.inputStream(this.gen), options });

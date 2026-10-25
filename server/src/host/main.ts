@@ -293,6 +293,9 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
       return;
     case 'set_effort':
       return chat.setEffort(String(msg.effort));
+    case 'set_account':
+      chat.setAccount(String(msg.account));
+      return;
     case 'set_permission_mode':
       void chat.setPermissionMode(msg.mode);
       return;
