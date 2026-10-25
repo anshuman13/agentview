@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCodex } from '../../assistant';
-import { actionCount, groupMeetings, live, type Meeting } from '../../assistant/wiki';
+import { ask, meetingAskText } from '../../assistant/ask';
+import { actionCount, fieldsOf, groupMeetings, listOf, live, type Action, type Meeting } from '../../assistant/wiki';
 import { Icon } from '../../Icon';
-import { setView, useView } from './view';
+import { setView, showSnack, useView } from './view';
+import { AskBar } from './Wiki';
 import '../../styles/features/wiki.css';
 
 const HUES = ['--accent', '--claude', '--prompt', '--ok', '--warn', '--agent'];
@@ -97,19 +99,162 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
   );
 }
 
+const KIND: Record<string, { icon: string; label: (target: string) => string }> = {
+  slack: { icon: 'comment-discussion', label: (t) => `Slack message to ${t}` },
+  linear: { icon: 'issues', label: (t) => `Linear issue in ${t}` },
+  task: { icon: 'pass', label: () => 'Task in Codex' },
+};
+
+function ActionCard({ a }: { a: Action }) {
+  const { store } = useCodex();
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(a.title ?? '');
+  const [body, setBody] = useState(a.body ?? '');
+  const kind = KIND[a.kind ?? ''] ?? { icon: 'circle-small', label: (t: string) => t };
+  const set = (status: string, text: string) => {
+    const before = a.status;
+    void store.editRow('actions', a, { status });
+    showSnack(text, () => void store.editRow('actions', a, { status: before }));
+  };
+  const save = () => {
+    void store.editRow('actions', a, { title: title.trim() || a.title, body });
+    setEditing(false);
+  };
+  if (a.status === 'rejected') {
+    return (
+      <div className="mt-action rejected">
+        <Icon name={kind.icon} small /><s>{a.title}</s><span className="spacer" />
+        <button className="wk-act" onClick={() => void store.editRow('actions', a, { status: 'proposed' })}>Restore</button>
+      </div>
+    );
+  }
+  const fields = Object.entries(fieldsOf(a));
+  return (
+    <div className={`mt-action ${a.status}`}>
+      <div className="mt-action-kind"><span className={`mt-kind ${a.kind}`}><Icon name={kind.icon} small /></span>{kind.label(a.target ?? '')}</div>
+      {editing ? (
+        <div className="mt-action-edit">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Title" />
+          <textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} aria-label="Text" />
+        </div>
+      ) : (
+        <>
+          <div className="mt-action-title">{a.title}</div>
+          {a.body && <div className="mt-action-body">{a.body}</div>}
+        </>
+      )}
+      {fields.length > 0 && <div className="mt-fields">{fields.map(([k, v]) => <span key={k}><em>{k}</em> {v}</span>)}</div>}
+      <div className="mt-action-foot">
+        {a.status === 'proposed' && !editing && (
+          <>
+            <button className="wk-act" onClick={() => setEditing(true)}><Icon name="edit" small /> Edit</button>
+            <span className="spacer" />
+            <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => set('rejected', 'Action rejected')}><Icon name="close" /></button>
+            <button className="btn primary mt-approve" onClick={() => set('approved', 'Approved')}><Icon name="check" small /> Approve</button>
+          </>
+        )}
+        {editing && (
+          <>
+            <span className="spacer" />
+            <button className="btn" onClick={() => { setEditing(false); setTitle(a.title ?? ''); setBody(a.body ?? ''); }}>Cancel</button>
+            <button className="btn primary" onClick={save}>Save</button>
+          </>
+        )}
+        {a.status === 'approved' && (
+          <>
+            <span className="mt-state"><Icon name="pass-filled" small /> Approved</span>
+            <span className="mt-wait">{a.kind === 'task' ? 'Added when the scheduler runs' : 'Sends when the scheduler runs'}</span>
+            <span className="spacer" />
+            <button className="wk-act" onClick={() => void store.editRow('actions', a, { status: 'proposed' })}>Undo</button>
+          </>
+        )}
+        {a.status === 'sent' && (
+          <>
+            <span className="mt-state"><Icon name="pass-filled" small /> Sent</span>
+            {a.result_url && <a className="wk-act" href={a.result_url} target="_blank" rel="noreferrer">Open <Icon name="link-external" small /></a>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Notes({ m }: { m: Meeting }) {
+  const { store } = useCodex();
+  const [text, setText] = useState(m.notes ?? '');
+  const area = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = area.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [text]);
+  return (
+    <textarea ref={area} className="mt-notes" value={text} rows={2} placeholder="Write your notes. They stay yours; the summary is written separately."
+      onChange={(e) => setText(e.target.value)} onBlur={() => text !== (m.notes ?? '') && void store.editRow('meetings', m, { notes: text })} />
+  );
+}
+
+function MeetingPage({ m }: { m: Meeting }) {
+  const { actions, sample } = useCodex();
+  const mine = live(actions).filter((a) => a.meeting_id === m.id);
+  const count = actionCount(actions, m.id);
+  const decisions = listOf(m.decisions);
+  const people = peopleOf(m);
+  const back = () => setView({ open: null });
+  const day = m.starts_at ? new Date(m.starts_at).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+  return (
+    <div className="wk narrow">
+      <header className="wk-head">
+        <button className="icon-btn" title="Back to meetings" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
+        <nav className="wk-crumbs"><button onClick={back}>Meetings</button></nav>
+        <span className="spacer" />
+        {sample && <span className="wk-sample" title="Sample data until the scheduler fills meetings">Sample</span>}
+        {m.calendar_url && <a className="btn sm" href={m.calendar_url} target="_blank" rel="noreferrer"><Icon name="calendar" small /> Calendar</a>}
+      </header>
+      <div className="wk-scroll">
+        <article className="mt-page">
+          <h1 className="wk-title">{m.title}</h1>
+          <div className="wk-meta mt-when">
+            <span>{day}</span>
+            {m.starts_at && <span>{clock(m.starts_at)}{m.ends_at ? `–${clock(m.ends_at)}` : ''}</span>}
+            {m.recorded_ms ? <span><Icon name="record" small /> Recorded {Math.round(m.recorded_ms / 60000)} min</span> : null}
+          </div>
+          {people.length > 0 && <div className="mt-people"><Avatars people={people} max={5} /><span>{people.slice(0, 3).join(', ')}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
+
+          <section className="mt-sec">
+            <h2>My notes</h2>
+            <Notes key={m.id} m={m} />
+          </section>
+
+          <section className="mt-sec">
+            <h2><Icon name="sparkle" small /> Summary</h2>
+            {m.summary ? <p className="mt-summary">{m.summary}</p> : <p className="mt-pending">The summary is written after the recording is transcribed.</p>}
+          </section>
+
+          {decisions.length > 0 && (
+            <section className="mt-sec">
+              <h2>Decisions</h2>
+              <ul className="mt-decisions">{decisions.map((d) => <li key={d}>{d}</li>)}</ul>
+            </section>
+          )}
+
+          <section className="mt-sec">
+            <h2>Actions{count.total > 0 && <span className="mt-of">{count.handled} of {count.total}</span>}</h2>
+            {mine.length ? <div className="mt-actions">{mine.map((a) => <ActionCard key={a.profile + a.id} a={a} />)}</div>
+              : <p className="mt-pending">Proposed Slack messages, Linear issues and tasks appear here after the meeting.</p>}
+          </section>
+        </article>
+      </div>
+      <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, mine))} />
+    </div>
+  );
+}
+
 export function Meetings({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
   const { meetings } = useCodex();
   const m = open ? live(meetings).find((x) => x.id === open) : undefined;
-  if (open) {
-    return (
-      <div className="wk">
-        <header className="wk-head">
-          <button className="icon-btn" title="Back" aria-label="Back" onClick={() => setView({ open: null })}><Icon name="arrow-left" /></button>
-          <h1>{m?.title}</h1>
-        </header>
-      </div>
-    );
-  }
+  if (m) return <MeetingPage m={m} />;
   return <MeetingsList onMenu={onMenu} />;
 }

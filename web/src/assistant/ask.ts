@@ -1,7 +1,7 @@
 import { getState, notice, prompt, send } from '../store';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { sourcesOf, type Fact, type Page } from './wiki';
+import { listOf, sourcesOf, type Action, type Fact, type Meeting, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
@@ -53,4 +53,17 @@ export function wikiAskText(question: string, pages: Page[], facts: Fact[], page
     `\n${pageId ? `Claims on the wiki page "${title.get(pageId)}"` : 'Claims in my team wiki'}:\n${claims.join('\n')}`,
     '\nAnswer from these claims first and name the claims you used; use my Slack, Linear and Calendar connectors when they are not enough.',
   ].join('\n');
+}
+
+export function meetingAskText(question: string, m: Meeting, actions: Action[]) {
+  const when = m.starts_at ? new Date(m.starts_at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  return [
+    question,
+    `\nAbout the meeting "${m.title}" (${when}) with ${m.people || 'no listed people'}.`,
+    m.notes && `\nMy notes:\n${m.notes}`,
+    m.summary && `\nSummary:\n${m.summary}`,
+    listOf(m.decisions).length ? `\nDecisions:\n${listOf(m.decisions).map((d) => `- ${d}`).join('\n')}` : '',
+    actions.length ? `\nProposed actions:\n${actions.map((a) => `- [${a.status}] ${a.kind} ${a.target}: ${a.title}`).join('\n')}` : '',
+    '\nUse my Calendar, Slack and Linear connectors when the question needs them.',
+  ].filter(Boolean).join('\n');
 }
