@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import type { Profile } from '../../assistant/sync';
 
 export type List = 'today' | 'upcoming' | 'meetings' | 'wiki' | 'notes' | 'done';
@@ -32,4 +32,17 @@ export const useSnack = () => useSyncExternalStore((f) => (snackSubs.add(f), () 
 export function hideSnack() {
   snack = null;
   snackSubs.forEach((f) => f());
+}
+
+// Escape goes back from a wiki page or meeting unless a field has focus.
+export function useEscapeBack(back: () => void) {
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.key !== 'Escape' || e.defaultPrevented || el?.closest('input, textarea, [contenteditable]')) return;
+      back();
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  });
 }

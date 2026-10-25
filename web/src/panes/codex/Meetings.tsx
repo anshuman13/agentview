@@ -3,7 +3,7 @@ import { useCodex } from '../../assistant';
 import { ask, meetingAskText } from '../../assistant/ask';
 import { actionCount, fieldsOf, groupMeetings, listOf, live, type Action, type Meeting } from '../../assistant/wiki';
 import { Icon } from '../../Icon';
-import { setView, showSnack, useView } from './view';
+import { setView, showSnack, useEscapeBack, useView } from './view';
 import { AskBar } from './Wiki';
 import '../../styles/features/wiki.css';
 
@@ -202,6 +202,7 @@ function MeetingPage({ m }: { m: Meeting }) {
   const decisions = listOf(m.decisions);
   const people = peopleOf(m);
   const back = () => setView({ open: null });
+  useEscapeBack(back);
   const day = m.starts_at ? new Date(m.starts_at).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) : '';
   return (
     <div className="wk narrow">

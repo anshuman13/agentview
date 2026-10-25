@@ -4,7 +4,7 @@ import { ask, wikiAskText } from '../../assistant/ask';
 import { contestOf, factTime, live, newPage, pageClaims, pageStats, searchWiki, sourcesOf, type Fact, type Page, type Source } from '../../assistant/wiki';
 import { Icon } from '../../Icon';
 import { ago } from '../util';
-import { setView, showSnack, useView } from './view';
+import { setView, showSnack, useEscapeBack, useView } from './view';
 import '../../styles/features/wiki.css';
 
 export const SOURCE_ICON: Record<Source['kind'], string> = { meeting: 'calendar', slack: 'comment-discussion', linear: 'issues', pr: 'git-pull-request', doc: 'file' };
@@ -309,6 +309,7 @@ function WikiPage({ id }: { id: string }) {
     return [...n].map(([kind, set]) => ({ kind, n: set.size }));
   }, [groups]);
   const back = () => setView({ open: null, anchor: null });
+  useEscapeBack(back);
   const section = page?.section === 'overview' ? null : page?.section;
   return (
     <div className="wk">
