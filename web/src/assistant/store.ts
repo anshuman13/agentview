@@ -2,6 +2,8 @@ import { edited, errorText } from './engine';
 import type { ItemFields, ItemRow, Profile } from './sync';
 import type { Table, Tables } from './wiki';
 
+export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions'];
+
 export type SyncStatus = { syncing: boolean; last: number; error: string };
 export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at'>> & { deleted?: number };
 export type Snapshot = {

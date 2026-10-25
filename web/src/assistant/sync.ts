@@ -18,6 +18,15 @@ export type Reply ={ version: number; changes: PulledChange[]; hasMore?: boolean
 
 export const FIELDS = ['title', 'text', 'source', 'source_url', 'people', 'at', 'status'] as const;
 
+// Synced data columns per table, the same as TABLES in assistant/src/db.ts.
+export const TABLE_FIELDS: Record<string, readonly string[]> = {
+  items: FIELDS,
+  facts: ['text', 'item_id', 'superseded_by', 'page_id', 'heading', 'sources', 'at', 'contested'],
+  pages: ['title', 'section', 'summary', 'sort'],
+  meetings: ['title', 'starts_at', 'ends_at', 'people', 'calendar_url', 'recorded_ms', 'notes', 'summary', 'decisions'],
+  actions: ['meeting_id', 'kind', 'target', 'title', 'body', 'fields', 'status', 'result_url'],
+};
+
 export type Field = (typeof FIELDS)[number];
 export type FieldTimes = Record<string, number>;
 export type Profile = Change['profile'];
@@ -42,9 +51,9 @@ export type ItemRow = ItemFields & {
   dirty: number;
 };
 
-export type MergedRow = Omit<ItemRow, 'field_times'> & { field_times: FieldTimes };
-
-type FieldValues = Record<Field, ItemFields[Field]>;
+export type SyncRow = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
+export type Merged<R extends SyncRow> = Omit<R, 'field_times'> & { field_times: FieldTimes };
+export type MergedRow = Merged<ItemRow>;
 
 export function parseTimes(value: unknown): FieldTimes {
   if (!value) return {};
@@ -59,17 +68,18 @@ export function parseTimes(value: unknown): FieldTimes {
 
 const isTime = (t: unknown): t is number => typeof t === 'number' && Number.isFinite(t);
 
-export function rowToChange(row: ItemRow): Change {
+export function rowToChange<R extends SyncRow>(row: R, table = 'items'): Change {
   const times = parseTimes(row.field_times);
+  const values = row as unknown as Record<string, unknown>;
   const fields: Record<string, unknown> = {};
   const field_times: FieldTimes = {};
-  for (const f of FIELDS) {
+  for (const f of TABLE_FIELDS[table]) {
     if (isTime(times[f])) {
-      fields[f] = row[f] ?? null;
+      fields[f] = values[f] ?? null;
       field_times[f] = times[f];
     }
   }
-  const change: Change = { table: 'items', id: row.id, profile: row.profile, updated_at: row.updated_at, fields, field_times };
+  const change: Change = { table, id: row.id, profile: row.profile, updated_at: row.updated_at, fields, field_times };
   if (isTime(times.deleted)) {
     // The hub times the deleted flag with updated_at.
     change.deleted = !!row.deleted;
@@ -78,23 +88,24 @@ export function rowToChange(row: ItemRow): Change {
   return change;
 }
 
-export function mergeIncoming(local: ItemRow | null, incoming: PulledChange): MergedRow {
+export function mergeIncoming<R extends SyncRow = ItemRow>(local: NoInfer<R> | null, incoming: PulledChange): Merged<R> {
   const inTimes = parseTimes(incoming.field_times);
   const localTimes = local ? parseTimes(local.field_times) : {};
-  const values = (incoming.fields || {}) as Partial<FieldValues>;
+  const values = (incoming.fields || {}) as Record<string, unknown>;
+  const localValues = (local ?? {}) as Record<string, unknown>;
   const times: FieldTimes = { ...localTimes };
-  const merged = { id: incoming.id, profile: incoming.profile, version: incoming.version } as MergedRow;
-  const mergedFields: FieldValues = merged;
+  const merged = { id: incoming.id, profile: incoming.profile, version: incoming.version } as Merged<R>;
+  const mergedFields = merged as unknown as Record<string, unknown>;
   let localNewer = false;
 
-  for (const f of FIELDS) {
+  for (const f of TABLE_FIELDS[incoming.table] ?? FIELDS) {
     const it = inTimes[f] ?? (localTimes[f] ? 0 : incoming.updated_at);
     const lt = localTimes[f] ?? 0;
     if (!local || it > lt) {
       mergedFields[f] = values[f] ?? null;
       if (isTime(it)) times[f] = it;
     } else {
-      mergedFields[f] = local[f] ?? null;
+      mergedFields[f] = localValues[f] ?? null;
       if (lt > it) localNewer = true;
     }
   }

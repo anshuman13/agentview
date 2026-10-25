@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { FIELDS, rowToChange, mergeIncoming, type ItemRow, type PulledChange } from './sync';
+import { FIELDS, rowToChange, mergeIncoming, type Change, type ItemRow, type PulledChange } from './sync';
+import { runSync } from './engine';
 
 const empty = Object.fromEntries(FIELDS.map((f) => [f, null]));
 
@@ -139,5 +140,40 @@ describe('mergeIncoming', () => {
   it('takes a newer hub delete', () => {
     const merged = mergeIncoming(localRow(), hubChange({ deleted: true, field_times: { deleted: 1200 } }));
     expect(merged.deleted).toBe(1);
+  });
+});
+
+describe('wiki tables', () => {
+  const fact = { id: 'f1', profile: 'work' as const, version: 0, updated_at: 2000, deleted: 0, dirty: 1, field_times: '{"contested":2000}', text: 'Budgets reset monthly', contested: '{"by":"you"}' };
+
+  it('sends only the timed fields of a wiki row with its table', () => {
+    expect(rowToChange(fact, 'facts')).toEqual({ table: 'facts', id: 'f1', profile: 'work', updated_at: 2000, fields: { contested: '{"by":"you"}' }, field_times: { contested: 2000 } });
+  });
+
+  it('merges a pulled wiki row on the fields of its table', () => {
+    const change: PulledChange = { table: 'facts', id: 'f1', profile: 'work', version: 7, deleted: false, updated_at: 1500, fields: { text: 'Budgets reset weekly', contested: null, page_id: 'p1' }, field_times: { text: 1500, contested: 1500, page_id: 1500 } };
+    const merged = mergeIncoming<typeof fact>(fact, change) as unknown as Record<string, unknown>;
+    expect(merged).toMatchObject({ text: 'Budgets reset weekly', contested: '{"by":"you"}', page_id: 'p1', version: 7, dirty: 1 });
+    expect(merged).not.toHaveProperty('title');
+  });
+
+  it('pushes rows from every table and applies known tables only', async () => {
+    const posted: Change[] = [];
+    const applied: string[] = [];
+    await runSync({
+      active: () => true,
+      since: async () => 0,
+      saveSince: async () => {},
+      dirty: async () => [{ table: 'facts', row: fact }],
+      post: async (_since, changes) => {
+        posted.push(...changes);
+        const base = { profile: 'work' as const, version: 1, deleted: false, updated_at: 1, fields: {}, field_times: {} };
+        return { version: 1, changes: [{ ...base, table: 'pages', id: 'p1' }, { ...base, table: 'secrets', id: 's1' }] };
+      },
+      clean: async () => {},
+      apply: async (c) => void applied.push(c.table),
+    });
+    expect(posted.map((c) => c.table)).toEqual(['facts']);
+    expect(applied).toEqual(['pages']);
   });
 });

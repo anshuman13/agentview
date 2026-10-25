@@ -1,19 +1,21 @@
-import { parseTimes, rowToChange } from './sync';
-import type { Change, ItemRow, MergedRow, Profile, PulledChange, Reply } from './sync';
+import { TABLE_FIELDS, parseTimes, rowToChange } from './sync';
+import type { Change, ItemRow, Merged, Profile, PulledChange, Reply, SyncRow } from './sync';
 
 export const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
 
-export function toRow(m: MergedRow): ItemRow {
-  return { ...m, field_times: JSON.stringify(m.field_times) };
+export function toRow<R extends SyncRow = ItemRow>(m: Merged<R>): R {
+  return { ...m, field_times: JSON.stringify(m.field_times) } as unknown as R;
 }
+
+export type Dirty = { table: string; row: SyncRow };
 
 export type SyncIO = {
   active(): boolean;
   since(): Promise<number>;
   saveSince(since: number): Promise<void>;
-  dirty(): Promise<ItemRow[]>;
+  dirty(): Promise<Dirty[]>;
   post(since: number, changes: Change[]): Promise<Reply>;
-  clean(row: ItemRow): Promise<void>;
+  clean(d: Dirty): Promise<void>;
   apply(change: PulledChange): Promise<void>;
 };
 
@@ -22,12 +24,12 @@ export async function runSync(io: SyncIO) {
   let pushed = await io.dirty();
   let more = true;
   while (more && io.active()) {
-    const data = await io.post(since, pushed.map(rowToChange));
+    const data = await io.post(since, pushed.map((d) => rowToChange(d.row, d.table)));
     if (!Array.isArray(data?.changes) || typeof data.version !== 'number') throw new Error('Unexpected hub response');
     for (const row of pushed) await io.clean(row);
     pushed = [];
     for (const change of data.changes) {
-      if (change?.table !== 'items' || typeof change.id !== 'string' || !['work', 'personal'].includes(change.profile)) continue;
+      if (!Object.hasOwn(TABLE_FIELDS, change?.table) || typeof change.id !== 'string' || !['work', 'personal'].includes(change.profile)) continue;
       await io.apply(change);
     }
     more = data.hasMore === true;

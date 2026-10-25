@@ -1,7 +1,8 @@
-import { BaseStore, type AssistantStore, type Patch } from './store';
-import { edited, newCapture, runSync, toRow } from './engine';
+import { BaseStore, WIKI_TABLES, type AssistantStore, type Patch } from './store';
+import { edited, newCapture, runSync, toRow, type Dirty } from './engine';
 import { mergeIncoming } from './sync';
-import type { Change, ItemRow, Profile, PulledChange, Reply } from './sync';
+import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
+import type { Table, Tables } from './wiki';
 
 const SYNC_EVERY = 30000;
 
@@ -14,11 +15,11 @@ async function hub(path: string, body?: unknown): Promise<Reply> {
   return data;
 }
 
-const keyOf = (row: Pick<ItemRow, 'profile' | 'id'>) => `${row.profile}:${row.id}`;
+const keyOf = (row: Pick<SyncRow, 'profile' | 'id'>) => `${row.profile}:${row.id}`;
 
 export class RemoteStore extends BaseStore implements AssistantStore {
   readonly kind = 'remote';
-  private rows = new Map<string, ItemRow>();
+  private tables: Record<string, Map<string, SyncRow>> = Object.fromEntries(['items', ...WIKI_TABLES].map((t) => [t, new Map()]));
   private since = 0;
 
   constructor() {
@@ -28,12 +29,22 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && this.syncNow());
   }
 
+  private get rows() {
+    return this.tables.items as Map<string, ItemRow>;
+  }
+
   async unlock() {
     await this.syncNow();
   }
 
   protected async refresh() {
-    this.set({ items: [...this.rows.values()] });
+    const all = <K extends Table>(t: K) => [...this.tables[t].values()] as Tables[K][];
+    this.set({ items: [...this.rows.values()], pages: all('pages'), facts: all('facts'), meetings: all('meetings'), actions: all('actions') });
+  }
+
+  // Wiki rows are pushed only once the hub has sent some, so a hub without the tables is never asked to store them.
+  private hubHasWiki() {
+    return WIKI_TABLES.some((t) => [...this.tables[t].values()].some((r) => r.version > 0));
   }
 
   protected syncOnce() {
@@ -41,31 +52,41 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       active: () => true,
       since: async () => this.since,
       saveSince: async (since) => void (this.since = since),
-      dirty: async () => [...this.rows.values()].filter((r) => r.dirty),
+      dirty: async () => {
+        const tables = this.hubHasWiki() ? Object.keys(this.tables) : ['items'];
+        return tables.flatMap((table) => [...this.tables[table].values()].filter((r) => r.dirty).map((row): Dirty => ({ table, row })));
+      },
       post: (since, changes: Change[]) => (changes.length ? hub('/api/assistant/sync', { since, changes }) : hub(`/api/assistant/changes?since=${since}`)),
-      clean: async (row) => {
-        const now = this.rows.get(keyOf(row));
-        if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) this.rows.set(keyOf(row), { ...now, dirty: 0 });
+      clean: async ({ table, row }) => {
+        const map = this.tables[table];
+        const now = map.get(keyOf(row));
+        if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) map.set(keyOf(row), { ...now, dirty: 0 });
       },
       apply: async (change: PulledChange) => {
-        this.rows.set(keyOf(change), toRow(mergeIncoming(this.rows.get(keyOf(change)) ?? null, change)));
+        const map = this.tables[change.table];
+        map.set(keyOf(change), toRow(mergeIncoming<SyncRow>(map.get(keyOf(change)) ?? null, change)));
       },
     });
   }
 
-  private put(row: ItemRow) {
-    this.rows.set(keyOf(row), row);
+  private put(table: string, row: SyncRow) {
+    this.tables[table].set(keyOf(row), row);
     this.refresh();
     this.syncNow();
   }
 
   async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null) {
     const row = newCapture(text, type, profile, Date.now(), at);
-    this.put(row);
+    this.put('items', row);
     return row;
   }
 
   async update(row: ItemRow, patch: Patch) {
-    this.put(edited(this.rows.get(keyOf(row)) ?? row, patch, Date.now()));
+    this.put('items', edited(this.rows.get(keyOf(row)) ?? row, patch, Date.now()));
   }
+
+  editRow = async <K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>) => {
+    const current = (this.tables[table].get(keyOf(row)) as Tables[K] | undefined) ?? row;
+    this.put(table, edited(current, patch, Date.now()));
+  };
 }

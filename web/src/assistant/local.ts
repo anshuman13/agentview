@@ -1,7 +1,8 @@
-import { BaseStore, type AssistantStore, type Patch } from './store';
-import { errorText, newCapture, runSync, toRow } from './engine';
-import { FIELDS, mergeIncoming } from './sync';
-import type { Change, ItemRow, Profile, PulledChange, Reply } from './sync';
+import { BaseStore, WIKI_TABLES, type AssistantStore, type Patch } from './store';
+import { edited, errorText, newCapture, runSync, toRow, type Dirty } from './engine';
+import { FIELDS, TABLE_FIELDS, mergeIncoming } from './sync';
+import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
+import type { Table, Tables } from './wiki';
 
 const PATCHABLE = ['title', 'text', 'status', 'at', 'deleted'] as const;
 
@@ -25,20 +26,28 @@ const HUB = 'http://macmini.netbird.cloud:7790';
 const LOCK_AFTER = 60000;
 const SYNC_EVERY = 60000;
 
-const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS items (
+const table = (name: string) => `
+  CREATE TABLE IF NOT EXISTS ${name} (
     id TEXT NOT NULL,
     profile TEXT NOT NULL,
     version INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL,
     deleted INTEGER NOT NULL DEFAULT 0,
     field_times TEXT NOT NULL DEFAULT '{}',
-    ${FIELDS.join(',\n    ')},
+    ${TABLE_FIELDS[name].join(',\n    ')},
     dirty INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (profile, id)
-  );
+  );`;
+
+const SCHEMA = `${['items', ...WIKI_TABLES].map(table).join('\n')}
   CREATE TABLE IF NOT EXISTS sync_state (key TEXT PRIMARY KEY, value TEXT);
 `;
+
+const upsertSQL = (name: string) => {
+  const cols = ['id', 'profile', 'version', 'updated_at', 'deleted', 'field_times', ...TABLE_FIELDS[name], 'dirty'];
+  const sets = cols.slice(2).map((c) => `${c} = excluded.${c}`).join(', ');
+  return { cols, sql: `INSERT INTO ${name} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')}) ON CONFLICT (profile, id) DO UPDATE SET ${sets}` };
+};
 
 async function post(since: number, changes: Change[]): Promise<Reply> {
   const resp = await fetch(`${HUB}/sync`, {
@@ -121,17 +130,20 @@ export class LocalStore extends BaseStore implements AssistantStore {
   private lock() {
     clearTimeout(this.lockTimer);
     if (!this.ready) return;
-    this.set({ phase: 'locked', message: 'Locked', items: [], sync: { syncing: false, last: 0, error: '' } });
+    this.set({ phase: 'locked', message: 'Locked', items: [], pages: [], facts: [], meetings: [], actions: [], sync: { syncing: false, last: 0, error: '' } });
     this.closing = this.invoke<void>('assistant_close').catch((err) => console.error('assistant_close failed', err));
   }
 
   protected async refresh() {
     if (!this.ready) return;
     const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND status IN ('open', 'note')`);
-    if (this.ready) this.set({ items });
+    const all = <K extends Table>(t: K) => this.query<Tables[K]>(`SELECT * FROM ${t} WHERE deleted = 0`);
+    const [pages, facts, meetings, actions] = await Promise.all([all('pages'), all('facts'), all('meetings'), all('actions')]);
+    if (this.ready) this.set({ items, pages, facts, meetings, actions });
   }
 
   private async applyChange(change: PulledChange) {
+    if (change.table !== 'items') return this.applyRow(change);
     for (let attempt = 0; attempt < 5; attempt++) {
       const local = (await this.query('SELECT * FROM items WHERE profile = ? AND id = ?', [change.profile, change.id]))[0];
       const m = toRow(mergeIncoming(local ?? null, change));
@@ -152,15 +164,42 @@ export class LocalStore extends BaseStore implements AssistantStore {
     throw new Error(`Could not merge item ${change.id}`);
   }
 
+  private async applyRow(change: PulledChange) {
+    const local = (await this.query<SyncRow>(`SELECT * FROM ${change.table} WHERE profile = ? AND id = ?`, [change.profile, change.id]))[0];
+    await this.write(change.table, toRow(mergeIncoming<SyncRow>(local ?? null, change)));
+  }
+
+  private write(name: string, row: SyncRow) {
+    const { cols, sql } = upsertSQL(name);
+    const values = row as unknown as Record<string, SqlValue>;
+    return this.exec(sql, cols.map((c) => values[c] ?? null));
+  }
+
+  // Wiki rows are pushed only once the hub has sent some, so a hub without the tables is never asked to store them.
+  private async dirtyRows(): Promise<Dirty[]> {
+    const wiki = (await this.query(WIKI_TABLES.map((t) => `SELECT 1 FROM ${t} WHERE version > 0`).join(' UNION ') + ' LIMIT 1')).length > 0;
+    const tables = wiki ? ['items', ...WIKI_TABLES] : ['items'];
+    const rows = await Promise.all(tables.map(async (t) => (await this.query<SyncRow>(`SELECT * FROM ${t} WHERE dirty = 1`)).map((row): Dirty => ({ table: t, row }))));
+    return rows.flat();
+  }
+
+  editRow = async <K extends Table>(name: K, row: Tables[K], patch: Partial<Tables[K]>) => {
+    if (!this.ready) return;
+    const current = (await this.query<Tables[K]>(`SELECT * FROM ${name} WHERE profile = ? AND id = ?`, [row.profile, row.id]))[0] ?? row;
+    await this.write(name, edited(current, patch, Date.now()));
+    await this.refresh();
+    this.syncNow();
+  };
+
   protected syncOnce() {
     return runSync({
       active: () => this.ready,
       since: async () => Number(await this.getState('since')) || 0,
       saveSince: (since) => this.setState('since', since).then(() => {}),
-      dirty: () => this.query('SELECT * FROM items WHERE dirty = 1'),
+      dirty: () => this.dirtyRows(),
       post,
-      clean: (row) => this.exec(
-        'UPDATE items SET dirty = 0 WHERE profile = ? AND id = ? AND updated_at = ? AND field_times = ?',
+      clean: ({ table: name, row }) => this.exec(
+        `UPDATE ${name} SET dirty = 0 WHERE profile = ? AND id = ? AND updated_at = ? AND field_times = ?`,
         [row.profile, row.id, row.updated_at, row.field_times],
       ).then(() => {}),
       apply: (change) => this.applyChange(change),

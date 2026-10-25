@@ -28,9 +28,9 @@ const overlay = <T extends Common>(base: T[], mine: T[]) => {
   return [...base.map((r) => edits.get(key(r)) ?? r), ...mine.filter((r) => !base.some((b) => key(b) === key(r)))];
 };
 
-// Wiki and meeting rows; until the hub has any pages, sample data shows with edits kept on top.
+// Wiki and meeting rows; until the hub has sent any pages, sample data shows with edits kept on top.
 export function withSample(snap: Snapshot): { [K in Table]: Tables[K][] } & { sample: boolean } {
-  if (snap.pages.length) return { pages: snap.pages, facts: snap.facts, meetings: snap.meetings, actions: snap.actions, sample: false };
+  if (snap.pages.some((p) => p.version > 0)) return { pages: snap.pages, facts: snap.facts, meetings: snap.meetings, actions: snap.actions, sample: false };
   const s = sampleWiki();
   return { pages: overlay(s.pages, snap.pages), facts: overlay(s.facts, snap.facts), meetings: overlay(s.meetings, snap.meetings), actions: overlay(s.actions, snap.actions), sample: true };
 }

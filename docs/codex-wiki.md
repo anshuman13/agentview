@@ -137,6 +137,6 @@ Progress checklist:
 - [x] 9. Wiki search and New page placeholder
 - [x] 10. Meetings list
 - [x] 11. Meeting page with notes, summary, decisions and action approve cards
-- [ ] 12. Client sync of pages, facts, meetings and actions (remote and phone local store)
+- [x] 12. Client sync of pages, facts, meetings and actions (remote and phone local store)
 - [ ] 13. Polish: light theme, phone spacing, empty states, keyboard focus
 - [ ] 14. Update assistant.md and features.md
