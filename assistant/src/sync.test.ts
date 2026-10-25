@@ -1,0 +1,382 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import Database from 'better-sqlite3';
+import { applyChanges, pullChanges } from './sync.js';
+import { openDb, TABLES } from './db.js';
+
+let db: Database.Database;
+
+beforeEach(() => {
+  db = openDb(':memory:');
+});
+
+describe('sync', () => {
+  it('insert then pull', () => {
+    const changes = [
+      {
+        table: 'items',
+        id: 'item1',
+        profile: 'work' as const,
+        updated_at: 1000,
+        fields: { title: 'Item 1', text: 'Description' },
+      },
+    ];
+
+    const applied = applyChanges(db, changes);
+    expect(applied.applied).toBe(1);
+    expect(applied.version).toBeGreaterThan(0);
+
+    const pulled = pullChanges(db, 0);
+    expect(pulled.changes.length).toBe(1);
+    expect(pulled.changes[0].id).toBe('item1');
+    expect(pulled.changes[0].fields.title).toBe('Item 1');
+    expect(pulled.changes[0].fields.text).toBe('Description');
+  });
+
+  it('newer field edit wins', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Old Title', text: 'Text 1' },
+      field_times: { title: 1000, text: 1000 },
+    };
+
+    applyChanges(db, [change1]);
+
+    const change2 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 2000,
+      fields: { title: 'New Title' },
+      field_times: { title: 2000 },
+    };
+
+    applyChanges(db, [change2]);
+
+    const pulled = pullChanges(db, 0);
+    const item = pulled.changes.find((c) => c.id === 'item1');
+    expect(item?.fields.title).toBe('New Title');
+    expect(item?.fields.text).toBe('Text 1');
+  });
+
+  it('older field edit loses', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 2000,
+      fields: { title: 'New Title' },
+      field_times: { title: 2000 },
+    };
+
+    applyChanges(db, [change1]);
+
+    const change2 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Old Title' },
+      field_times: { title: 1000 },
+    };
+
+    applyChanges(db, [change2]);
+
+    const pulled = pullChanges(db, 0);
+    const item = pulled.changes.find((c) => c.id === 'item1');
+    expect(item?.fields.title).toBe('New Title');
+  });
+
+  it('per-field merge - two devices edit different fields', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Item 1', source: 'web' },
+      field_times: { title: 1000, source: 1000 },
+    };
+
+    applyChanges(db, [change1]);
+
+    const change2 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 2000,
+      fields: { text: 'A description' },
+      field_times: { text: 2000 },
+    };
+
+    applyChanges(db, [change2]);
+
+    const pulled = pullChanges(db, 0);
+    const item = pulled.changes[pulled.changes.length - 1];
+    expect(item.fields.title).toBe('Item 1');
+    expect(item.fields.source).toBe('web');
+    expect(item.fields.text).toBe('A description');
+  });
+
+  it('tie keeps stored value', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'First' },
+      field_times: { title: 1000 },
+    };
+
+    applyChanges(db, [change1]);
+
+    const change2 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Second' },
+      field_times: { title: 1000 },
+    };
+
+    applyChanges(db, [change2]);
+
+    const pulled = pullChanges(db, 0);
+    const item = pulled.changes.find((c) => c.id === 'item1');
+    expect(item?.fields.title).toBe('First');
+  });
+
+  it('unchanged apply does not bump version', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Item 1' },
+      field_times: { title: 1000 },
+    };
+
+    applyChanges(db, [change1]);
+    const pulled1 = pullChanges(db, 0);
+    const version1 = pulled1.version;
+
+    const change2 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 500,
+      fields: { title: 'Old Value' },
+      field_times: { title: 500 },
+    };
+
+    const result = applyChanges(db, [change2]);
+    expect(result.applied).toBe(0);
+
+    const pulled2 = pullChanges(db, 0);
+    expect(pulled2.version).toBe(version1);
+  });
+
+  it('delete as last-write-wins', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Item 1' },
+    };
+
+    applyChanges(db, [change1]);
+
+    const change2 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 2000,
+      fields: {},
+      deleted: true,
+    };
+
+    applyChanges(db, [change2]);
+
+    const pulled = pullChanges(db, 0);
+    const item = pulled.changes.find((c) => c.id === 'item1');
+    expect(item?.deleted).toBe(true);
+  });
+
+  it('newer edit after delete does not resurrect when delete is newer', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Item 1' },
+    };
+
+    applyChanges(db, [change1]);
+
+    const change2 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 3000,
+      fields: {},
+      deleted: true,
+    };
+
+    applyChanges(db, [change2]);
+
+    const change3 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 2000,
+      fields: { title: 'Item 1 Updated' },
+      field_times: { title: 2000 },
+    };
+
+    applyChanges(db, [change3]);
+
+    const pulled = pullChanges(db, 0);
+    const item = pulled.changes.find((c) => c.id === 'item1');
+    expect(item?.deleted).toBe(true);
+  });
+
+  it('pull since N returns only newer', () => {
+    const change1 = {
+      table: 'items',
+      id: 'item1',
+      profile: 'work' as const,
+      updated_at: 1000,
+      fields: { title: 'Item 1' },
+    };
+
+    applyChanges(db, [change1]);
+    const pulled1 = pullChanges(db, 0);
+    const version1 = pulled1.changes[0].version;
+
+    const change2 = {
+      table: 'items',
+      id: 'item2',
+      profile: 'work' as const,
+      updated_at: 2000,
+      fields: { title: 'Item 2' },
+    };
+
+    applyChanges(db, [change2]);
+
+    const pulled2 = pullChanges(db, version1);
+    expect(pulled2.changes.length).toBe(1);
+    expect(pulled2.changes[0].id).toBe('item2');
+  });
+
+  it('invalid table throws and applies nothing', () => {
+    const changes = [
+      {
+        table: 'invalid_table',
+        id: 'item1',
+        profile: 'work' as const,
+        updated_at: 1000,
+        fields: { name: 'Item 1' },
+      },
+    ];
+
+    expect(() => applyChanges(db, changes)).toThrow('Invalid table');
+
+    const pulled = pullChanges(db, 0);
+    expect(pulled.changes.length).toBe(0);
+  });
+
+  it('invalid field throws and applies nothing', () => {
+    const changes = [
+      {
+        table: 'items',
+        id: 'item1',
+        profile: 'work' as const,
+        updated_at: 1000,
+        fields: { invalid_field: 'value' },
+      },
+    ];
+
+    expect(() => applyChanges(db, changes)).toThrow('Invalid field');
+
+    const pulled = pullChanges(db, 0);
+    expect(pulled.changes.length).toBe(0);
+  });
+
+  it('invalid id throws and applies nothing', () => {
+    const changes = [
+      {
+        table: 'items',
+        id: '',
+        profile: 'work' as const,
+        updated_at: 1000,
+        fields: { name: 'Item 1' },
+      },
+    ];
+
+    expect(() => applyChanges(db, changes)).toThrow('Invalid id');
+
+    const pulled = pullChanges(db, 0);
+    expect(pulled.changes.length).toBe(0);
+  });
+
+  it('invalid profile throws and applies nothing', () => {
+    const changes = [
+      {
+        table: 'items',
+        id: 'item1',
+        profile: 'invalid' as any,
+        updated_at: 1000,
+        fields: { name: 'Item 1' },
+      },
+    ];
+
+    expect(() => applyChanges(db, changes)).toThrow('Invalid profile');
+
+    const pulled = pullChanges(db, 0);
+    expect(pulled.changes.length).toBe(0);
+  });
+
+  it('invalid value type throws and applies nothing', () => {
+    const changes = [
+      {
+        table: 'items',
+        id: 'item1',
+        profile: 'work' as const,
+        updated_at: 1000,
+        fields: { title: { nested: 'object' } },
+      },
+    ];
+
+    expect(() => applyChanges(db, changes)).toThrow('Invalid value type');
+
+    const pulled = pullChanges(db, 0);
+    expect(pulled.changes.length).toBe(0);
+  });
+
+  it('multiple changes in transaction', () => {
+    const changes = [
+      {
+        table: 'items',
+        id: 'item1',
+        profile: 'work' as const,
+        updated_at: 1000,
+        fields: { title: 'Item 1' },
+      },
+      {
+        table: 'items',
+        id: 'item2',
+        profile: 'work' as const,
+        updated_at: 1000,
+        fields: { title: 'Item 2' },
+      },
+    ];
+
+    const result = applyChanges(db, changes);
+    expect(result.applied).toBe(2);
+
+    const pulled = pullChanges(db, 0);
+    expect(pulled.changes.length).toBe(2);
+  });
+});
