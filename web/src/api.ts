@@ -10,7 +10,7 @@ const TRUSTED = /^http:\/\/([a-z0-9-]+\.netbird\.cloud|100\.(6[4-9]|[7-9]\d|1[01
 export const shell = () => (window as { AgentViewShell?: Shell }).AgentViewShell;
 
 // The bundled app loads from the app's own origin and talks to a Mac; a page a Mac serves uses relative URLs.
-export const bundled = location.hostname === 'tauri.localhost' || location.protocol === 'tauri:';
+export const bundled = typeof location !== 'undefined' && (location.hostname === 'tauri.localhost' || location.protocol === 'tauri:');
 
 export const trusted = (url: string) => TRUSTED.test(url);
 
