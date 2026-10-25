@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import { TABLES, nextVersion } from './db.js';
 
 export class SyncError extends Error {}
@@ -26,7 +26,7 @@ export type PullResult = {
 };
 
 export function applyChanges(
-  db: Database.Database,
+  db: Database,
   changes: Change[]
 ): { version: number; applied: number } {
   // Validate all changes first
@@ -166,7 +166,7 @@ export function applyChanges(
 }
 
 export function pullChanges(
-  db: Database.Database,
+  db: Database,
   since: number,
   limit = 1000
 ): PullResult {

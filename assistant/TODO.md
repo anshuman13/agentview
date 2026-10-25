@@ -1,7 +1,7 @@
 # Assistant step 1 status
 
 ## Works
-- Workspace `assistant/` (Node, better-sqlite3), database at ~/.agentview/assistant/assistant.db
+- Workspace `assistant/` (Bun, bun:sqlite; tests run with `bun test` in assistant/, not in root vitest), database at ~/.agentview/assistant/assistant.db
 - Schema: items, facts, people, links, embeddings, jobs, runs, each with profile, version, updated_at, deleted and per-field edit times
 - Sync API on port 7790 (POST /sync, GET /changes?since=N, GET /health), localhost and NetBird peers only, per-device bearer keys in ~/.agentview/assistant/devices.json (`{"phone":"<key>"}`)
 - Last edit wins per field, tested in src/sync.test.ts

@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import Database from 'better-sqlite3';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { applyChanges, pullChanges } from './sync.js';
 import { openDb, TABLES } from './db.js';
 
-let db: Database.Database;
+let db: ReturnType<typeof openDb>;
 
 beforeEach(() => {
   db = openDb(':memory:');

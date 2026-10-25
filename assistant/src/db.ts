@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -38,15 +38,15 @@ function createIndexSQL(tableName: string): string {
   return `CREATE INDEX IF NOT EXISTS ${tableName}_version_idx ON ${tableName}(version)`;
 }
 
-export function openDb(file: string = DB_PATH): Database.Database {
+export function openDb(file: string = DB_PATH): Database {
   if (file !== ':memory:') {
     fs.mkdirSync(DB_DIR, { recursive: true });
   }
 
   const db = new Database(file);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = OFF');
-  db.pragma('busy_timeout = 5000');
+  db.run('PRAGMA journal_mode = WAL');
+  db.run('PRAGMA foreign_keys = OFF');
+  db.run('PRAGMA busy_timeout = 5000');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS meta (
@@ -68,7 +68,7 @@ export function openDb(file: string = DB_PATH): Database.Database {
   return db;
 }
 
-export function nextVersion(db: Database.Database): number {
+export function nextVersion(db: Database): number {
   const result = db
     .prepare('UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ? RETURNING CAST(value AS INTEGER) AS value')
     .get('version') as { value: number } | undefined;
@@ -80,7 +80,7 @@ export function nextVersion(db: Database.Database): number {
   throw new Error('Failed to update version');
 }
 
-export function currentVersion(db: Database.Database): number {
+export function currentVersion(db: Database): number {
   const row = db.prepare('SELECT CAST(value AS INTEGER) as value FROM meta WHERE key = ?').get('version') as { value: number } | undefined;
   return row ? row.value : 0;
 }
