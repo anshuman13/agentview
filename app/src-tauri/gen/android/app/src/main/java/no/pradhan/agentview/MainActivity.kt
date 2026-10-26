@@ -47,6 +47,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 private const val CHANNEL = "agentview"
 private const val KEY_ALIAS = "assistant-db-key"
+private const val DEVICE_KEY_ALIAS = "assistant-device-key"
 private const val NOTIFICATION_ID = "agentview.notification"
 private val MAC_URL = Regex("^http://([a-z0-9-]+\\.netbird\\.cloud|100\\.(6[4-9]|[7-9]\\d|1[01]\\d|12[0-7])\\.\\d+\\.\\d+|localhost)(:\\d{1,5})?$", RegexOption.IGNORE_CASE)
 
@@ -149,15 +150,47 @@ class MainActivity : TauriActivity() {
     return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply { init(spec) }.generateKey()
   }
 
+  // Usable whenever the phone itself is unlocked, so the phone's own lock guards the database.
+  private fun deviceKey(): SecretKey {
+    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    (store.getKey(DEVICE_KEY_ALIAS, null) as? SecretKey)?.let { return it }
+    val spec = KeyGenParameterSpec.Builder(DEVICE_KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+      .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+      .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+      .setKeySize(256)
+      .setUnlockedDeviceRequired(true)
+      .build()
+    return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply { init(spec) }.generateKey()
+  }
+
+  private fun saveDeviceKey(raw: ByteArray) {
+    val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, deviceKey()) }
+    val blob = c.doFinal(raw)
+    prefs.edit().putString("assistantDeviceKey", Base64.encodeToString(c.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(blob, Base64.NO_WRAP)).remove("assistantKey").apply()
+  }
+
   private fun unlockAssistant() {
+    try {
+      val saved = prefs.getString("assistantDeviceKey", null)?.split(":")
+      if (saved != null) {
+        val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, deviceKey(), GCMParameterSpec(128, Base64.decode(saved[0], Base64.NO_WRAP))) }
+        return assistantResult(c.doFinal(Base64.decode(saved[1], Base64.NO_WRAP)).joinToString("") { "%02x".format(it) }, null)
+      }
+      if (prefs.getString("assistantKey", null) == null) {
+        val raw = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        saveDeviceKey(raw)
+        return assistantResult(raw.joinToString("") { "%02x".format(it) }, null)
+      }
+    } catch (e: Exception) {
+      return assistantResult(null, "Could not unlock: ${e.message}")
+    }
     if (BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) != BiometricManager.BIOMETRIC_SUCCESS) {
       return assistantResult(null, "Set up a fingerprint on this phone first")
     }
-    val wrapped = prefs.getString("assistantKey", null)?.split(":")
+    val wrapped = prefs.getString("assistantKey", null)!!.split(":")
     val cipher = try {
       Cipher.getInstance("AES/GCM/NoPadding").also {
-        if (wrapped == null) it.init(Cipher.ENCRYPT_MODE, keystoreKey())
-        else it.init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(128, Base64.decode(wrapped[0], Base64.NO_WRAP)))
+        it.init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(128, Base64.decode(wrapped[0], Base64.NO_WRAP)))
       }
     } catch (e: Exception) {
       return assistantResult(null, "Unlock key unavailable: ${e.message}")
@@ -167,11 +200,8 @@ class MainActivity : TauriActivity() {
       override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
         try {
           val c = result.cryptoObject!!.cipher!!
-          val raw = if (wrapped == null) ByteArray(32).also { SecureRandom().nextBytes(it) } else c.doFinal(Base64.decode(wrapped[1], Base64.NO_WRAP))
-          if (wrapped == null) {
-            val blob = c.doFinal(raw)
-            prefs.edit().putString("assistantKey", Base64.encodeToString(c.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(blob, Base64.NO_WRAP)).apply()
-          }
+          val raw = c.doFinal(Base64.decode(wrapped[1], Base64.NO_WRAP))
+          saveDeviceKey(raw)
           assistantResult(raw.joinToString("") { "%02x".format(it) }, null)
         } catch (e: Exception) {
           assistantResult(null, "Could not unlock: ${e.message}")

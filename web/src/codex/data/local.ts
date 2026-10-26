@@ -23,7 +23,6 @@ declare global {
 export const tauriInvoke = () => window.__TAURI__?.core?.invoke ?? window.__TAURI_INTERNALS__?.invoke;
 
 const HUB = 'http://macmini.netbird.cloud:7790';
-const LOCK_AFTER = 60000;
 const SYNC_EVERY = 60000;
 // Edits to the removed sample meetings and pages were saved on the phone; cleared once.
 const SAMPLE_GONE = Date.UTC(2026, 9, 26, 11);
@@ -65,25 +64,13 @@ async function post(since: number, changes: Change[]): Promise<Reply> {
 export class LocalStore extends BaseStore implements AssistantStore {
   readonly kind = 'local';
   private unlocking: Promise<void> | null = null;
-  private closing: Promise<void> = Promise.resolve();
-  private hiddenAt = 0;
-  private lockTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private invoke: Invoke) {
     super('locked');
     this.set({ message: 'Locked' });
     setInterval(this.syncNow, SYNC_EVERY);
     window.addEventListener('online', this.syncNow);
-    document.addEventListener('visibilitychange', () => {
-      clearTimeout(this.lockTimer);
-      if (document.visibilityState === 'hidden') {
-        this.hiddenAt = Date.now();
-        this.lockTimer = setTimeout(() => this.lock(), LOCK_AFTER);
-        return;
-      }
-      if (this.hiddenAt && Date.now() - this.hiddenAt >= LOCK_AFTER) this.lock();
-      this.syncNow();
-    });
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && this.syncNow());
   }
 
   private query = async <T = ItemRow>(sql: string, params: SqlValue[] = []) => (await this.invoke<T[] | null>('assistant_query', { sql, params })) || [];
@@ -112,7 +99,6 @@ export class LocalStore extends BaseStore implements AssistantStore {
   private async open() {
     this.set({ phase: 'unlocking', message: 'Unlocking' });
     try {
-      await this.closing;
       await this.invoke('assistant_open', { key: await this.getKey() });
       await this.invoke('assistant_batch', { sql: SCHEMA });
       for (const t of ['items', ...WIKI_TABLES]) {
@@ -135,13 +121,6 @@ export class LocalStore extends BaseStore implements AssistantStore {
     if (this.ready) return;
     this.unlocking ??= this.open().finally(() => (this.unlocking = null));
     return this.unlocking;
-  }
-
-  private lock() {
-    clearTimeout(this.lockTimer);
-    if (!this.ready) return;
-    this.set({ phase: 'locked', message: 'Locked', items: [], pages: [], facts: [], meetings: [], actions: [], sync: { syncing: false, last: 0, error: '' } });
-    this.closing = this.invoke<void>('assistant_close').catch((err) => console.error('assistant_close failed', err));
   }
 
   protected async refresh() {
