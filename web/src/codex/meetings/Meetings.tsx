@@ -269,7 +269,7 @@ function TranscriptButton({ m }: { m: Meeting }) {
     }
   };
   return (
-    <button className="btn sm mt-sync" disabled={busy} title="Read the Gemini notes and transcript for this meeting" onClick={run}>
+    <button className="btn sm mt-sync" disabled={busy} title="Read the transcript and add my action items" onClick={run}>
       <Icon name={busy ? 'loading' : 'sync'} small spin={busy} /> {busy ? 'Syncing' : 'Sync transcript'}
     </button>
   );
@@ -309,7 +309,7 @@ function MeetingPage({ m }: { m: Meeting }) {
 
           <section className="mt-sec">
             <h2><Icon name="sparkle" small /> Summary<TranscriptButton m={m} /></h2>
-            {m.summary ? <p className="mt-summary">{m.summary}</p> : <p className="mt-pending">The summary is written from the Gemini transcript up to 30 minutes after the meeting.</p>}
+            {m.summary ? <p className="mt-summary">{m.summary}</p> : <p className="mt-pending">The summary and your action items are written from the transcript after the meeting.</p>}
           </section>
 
           {decisions.length > 0 && (

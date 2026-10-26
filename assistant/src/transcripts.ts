@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,8 +18,14 @@ const CHUNK = 30_000;
 const Notes = z.object({
   id: z.string().describe('The meeting id from the list'),
   summary: z.string().describe('3-6 plain sentences: what was decided and what happens next'),
-  decisions: z.array(z.string()).describe('One short line per decision'),
-  notes: z.string().describe('Plain-text notes grouped by topic with "- " bullets, ending with action items and their owners'),
+  doc_url: z.string().describe('Link to the doc that holds the transcript'),
+  my_actions: z
+    .array(z.object({
+      title: z.string().describe('Short imperative task, e.g. "Send the rollout slides to Kim"'),
+      context: z.string().describe('One sentence from the meeting on why, with who asked'),
+      due: z.string().nullable().describe('ISO date or date-time when a deadline was said, else null'),
+    }))
+    .describe('Only things I (the calendar owner) agreed or was asked to do; empty when there are none'),
 });
 export type MeetingNotes = z.infer<typeof Notes>;
 
@@ -47,17 +54,27 @@ export function markTried(db: Database, profile: Profile, meetings: Pending[], n
   }
 }
 
-// Writes summary and decisions; notes only when the meeting has none, so your own notes stay.
-// Notes get the oldest field time so notes typed on a device that has not synced yet still win.
+export const actionId = (meeting: string, title: string) => `meet:${createHash('sha1').update(`${meeting}\n${title.trim().toLowerCase()}`).digest('hex').slice(0, 16)}`;
+
+// Writes the summary, and adds my action items as open tasks. Meeting notes are only ever what I type.
+// A task that already exists is left alone, so one I finished or deleted does not come back.
 export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[], now = Date.now()) {
-  const row = db.prepare('SELECT notes FROM meetings WHERE profile = ? AND id = ? AND deleted = 0');
+  const row = db.prepare('SELECT title FROM meetings WHERE profile = ? AND id = ? AND deleted = 0');
+  const has = db.prepare('SELECT 1 FROM items WHERE profile = ? AND id = ?');
   const changes: Change[] = [];
   for (const n of found) {
-    const old = row.get(profile, n.id) as { notes: string | null } | null;
-    if (!old || !n.summary.trim()) continue;
-    const fields: Change['fields'] = { summary: n.summary.trim(), decisions: JSON.stringify(n.decisions) };
-    if (!old.notes?.trim() && n.notes.trim()) fields.notes = n.notes.trim();
-    changes.push({ table: 'meetings', id: n.id, profile, updated_at: now, fields, ...(fields.notes ? { field_times: { notes: 1 } } : {}) });
+    const m = row.get(profile, n.id) as { title: string | null } | null;
+    if (!m || !n.summary.trim()) continue;
+    changes.push({ table: 'meetings', id: n.id, profile, updated_at: now, fields: { summary: n.summary.trim() } });
+    for (const a of n.my_actions) {
+      const id = actionId(n.id, a.title);
+      if (!a.title.trim() || has.get(profile, id)) continue;
+      const due = a.due ? Date.parse(a.due) : NaN;
+      changes.push({
+        table: 'items', id, profile, updated_at: now,
+        fields: { title: a.title.trim(), text: a.context.trim() || null, source: 'meeting', source_url: n.doc_url || null, people: m.title, at: Number.isFinite(due) ? due : null, status: 'open' },
+      });
+    }
   }
   return applyChanges(db, changes).applied;
 }
@@ -97,9 +114,11 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     'These meetings on my primary Google Calendar have ended:',
     ...meetings.map((m) => `- id ${m.id}, Google Calendar event id ${m.id.slice(4)}: "${m.title}" ${new Date(m.starts_at).toISOString()} to ${new Date(m.ends_at).toISOString()}`),
     '',
-    'For each one, get the event and look for a Gemini notes attachment ("Notes by Gemini", "Notater fra Gemini" or similar). Read that Google Doc with the Google Drive read_file_content tool (the Google Docs read_doc tool also works); it holds the Gemini summary and the transcript.',
-    'If the output is saved to a file because it is large, read that file with read_saved_output. The Gemini summary, decisions, next steps and details come first; read the transcript only when the details leave something unclear.',
-    'When a meeting has such a doc, call save_meeting_notes once for it, written in English from my point of view (I am the calendar owner).',
+    'For each one, get the event and find the attached Google Doc with the meeting transcript (Gemini attaches it as "Notes by Gemini", "Notater fra Gemini" or similar). Read it with the Google Drive read_file_content tool (the Google Docs read_doc tool also works).',
+    'If the output is saved to a file because it is large, read that file with read_saved_output, all of it.',
+    'Work from the transcript only. Ignore the summary, notes, details and next steps Gemini wrote at the top of the doc; do not copy or rely on them.',
+    'I am the calendar owner: the attendee marked as self on the event. Find my name in the transcript.',
+    'Call save_meeting_notes once per meeting that has a transcript, in English: a short summary for me, and only the action items that are mine (I said I would do it, or someone asked me and I agreed). Things owned by others or by the whole group do not go in my_actions.',
     'A speaker named after a meeting room is the room microphone; attribute what was said there to a person only when the transcript makes it clear.',
     'Say things directly and briefly. Do not use the em dash character.',
     'Skip meetings without a Gemini notes doc. Do not do anything else.',

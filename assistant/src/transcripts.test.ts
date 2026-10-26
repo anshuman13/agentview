@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { dueMeetings, markTried, readSaved, saveNotes } from './transcripts.js';
+import { actionId, dueMeetings, markTried, readSaved, saveNotes } from './transcripts.js';
 
 const MIN = 60_000;
 const now = Date.parse('2026-10-26T16:00:00Z');
@@ -31,23 +31,20 @@ describe('transcripts', () => {
     expect(dueMeetings(db, 'work', now + 120 * MIN)).toEqual([]);
   });
 
-  it('saves summary and decisions and keeps notes I wrote', () => {
+  it('saves only the summary and adds my action items once', () => {
     const db = openDb(':memory:');
-    applyChanges(db, [meeting('cal:a', MIN), meeting('cal:b', MIN, { notes: 'mine' })]);
-    const n = (id: string) => ({ id, summary: ' Done. ', decisions: ['Ship it'], notes: '- from Gemini' });
-    expect(saveNotes(db, 'work', [n('cal:a'), n('cal:b'), n('cal:gone')], now)).toBe(2);
-    expect(db.prepare('SELECT id, summary, decisions, notes FROM meetings ORDER BY id').all()).toEqual([
-      { id: 'cal:a', summary: 'Done.', decisions: '["Ship it"]', notes: '- from Gemini' },
-      { id: 'cal:b', summary: 'Done.', decisions: '["Ship it"]', notes: 'mine' },
+    applyChanges(db, [meeting('cal:a', MIN, { notes: 'mine' }), meeting('cal:b', MIN)]);
+    const n = (id: string) => ({ id, summary: ' Done. ', doc_url: 'https://docs/x', my_actions: [{ title: 'Send the slides', context: 'Kim asked.', due: '2026-10-28T09:00:00Z' }] });
+    expect(saveNotes(db, 'work', [n('cal:a'), n('cal:b'), n('cal:gone')], now)).toBe(4);
+    expect(db.prepare('SELECT id, summary, notes FROM meetings ORDER BY id').all()).toEqual([
+      { id: 'cal:a', summary: 'Done.', notes: 'mine' },
+      { id: 'cal:b', summary: 'Done.', notes: null },
     ]);
-  });
-
-  it('lets notes typed on a device that has not synced win over imported notes', () => {
-    const db = openDb(':memory:');
-    applyChanges(db, [meeting('cal:a', MIN)]);
-    saveNotes(db, 'work', [{ id: 'cal:a', summary: 'Done.', decisions: [], notes: '- from Gemini' }], now);
-    applyChanges(db, [{ table: 'meetings', id: 'cal:a', profile: 'work', updated_at: now - MIN, fields: { notes: 'typed' } }]);
-    expect(db.prepare('SELECT summary, notes FROM meetings').get()).toEqual({ summary: 'Done.', notes: 'typed' });
+    const task = db.prepare('SELECT title, text, source, source_url, people, at, status FROM items WHERE id = ?').get(actionId('cal:a', 'Send the slides'));
+    expect(task).toEqual({ title: 'Send the slides', text: 'Kim asked.', source: 'meeting', source_url: 'https://docs/x', people: 'cal:a', at: Date.parse('2026-10-28T09:00:00Z'), status: 'open' });
+    db.prepare("UPDATE items SET status = 'done'").run();
+    expect(saveNotes(db, 'work', [n('cal:a')], now + MIN)).toBe(1);
+    expect(db.prepare("SELECT count(*) n FROM items WHERE status = 'open'").get()).toEqual({ n: 0 });
   });
 
   it('reads saved tool outputs in chunks and nothing else', () => {
