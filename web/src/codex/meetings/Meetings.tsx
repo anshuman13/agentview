@@ -48,7 +48,7 @@ function Badge({ m, now }: { m: Meeting; now: number }) {
   return null;
 }
 
-export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
+function MeetingRow({ m, now }: { m: Meeting; now: number }) {
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
@@ -294,7 +294,7 @@ function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
 
 // One line on where the meeting is, so an empty action list always has a reason.
 function StateLine({ m, now }: { m: Meeting; now: number }) {
-  const { snap } = useAssistant();
+  const { store, snap } = useAssistant();
   const c = actionCount(snap.items, m);
   const others = othersOf(m).length;
   const state = meetingState(m, now);
@@ -314,6 +314,7 @@ function StateLine({ m, now }: { m: Meeting; now: number }) {
     <div className={`mt-state ${state}`}>
       <span>{parts.join(' · ')}</span>
       {(state === 'waiting' || state === 'missing') && <TranscriptButton m={m} label={state === 'missing' ? 'Retry' : 'Read now'} />}
+      {state === 'missing' && <button className="btn sm" title="Nothing to add for this meeting" onClick={() => void store.editRow('meetings', m, { transcript: 'done' })}>Dismiss</button>}
     </div>
   );
 }
@@ -387,7 +388,7 @@ function MeetingPage({ m }: { m: Meeting }) {
             <h2>My actions{count.total > 0 && <span className="mt-of">{count.done} of {count.total} done</span>}</h2>
             {mine.length > 0 && <div className="mt-tasks">{mine.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>}
             {!mine.length && !review.length && (
-              <p className="mt-pending">{state === 'missing' ? 'No transcript, so add your actions by hand.' : state === 'done' ? 'Nothing for you in the transcript.' : 'Your actions from the transcript land here and in Today.'}</p>
+              <p className="mt-pending">{state === 'missing' ? 'No transcript. Add actions below.' : state === 'done' ? 'Nothing for you in the transcript.' : 'Your actions from the transcript land here and in Today.'}</p>
             )}
             <AddAction m={m} />
           </section>

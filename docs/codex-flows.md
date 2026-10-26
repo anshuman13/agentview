@@ -37,12 +37,11 @@ of four buckets, so "zero for me" is always explained.
 
 | List | Question | Contents |
 | --- | --- | --- |
-| Today | What needs me now? | Overdue, Next card, Is this yours?, Needs you, Done today row |
-| Upcoming | What is coming? | "Later today", then 7 days by day: meetings and dated tasks together |
+| Today | What needs me? | Overdue, Next card, Is this yours?, Today, then dated tasks by day for 7 days and Later, Done today row |
 | Meetings | What happened? | Past meetings only, newest first, with pipeline state; search covers tasks and meetings |
 | Wiki | What do I know? | Unchanged |
 
-Cut: the Notes list and the Done list (see decisions below).
+Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its day, so it never leaves the page.
 
 ## Decisions taken in draft 2
 

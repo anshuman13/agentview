@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import { useAssistant, useCodex } from './data';
-import { live, meetingState, proposals, type Meeting } from './data/wiki';
+import { live, proposals, type Meeting } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { SNOOZES, atTime, errorText, isQuestion, nextNine, parseWhen, reviewedSince, split, stripWhen } from './data/engine';
 import type { Patch } from './data/store';
@@ -12,7 +12,7 @@ import { Voice, useDictation } from '../chat/Voice';
 import { ago, readFlag, saveFlag } from '../ui/util';
 import { hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
-import { ActionRow, MeetingRow, Meetings, clock, confirmAll, peopleOf } from './meetings/Meetings';
+import { ActionRow, Meetings, clock, confirmAll, peopleOf } from './meetings/Meetings';
 import { PickTime, when } from './time';
 import '../styles/features/assistant.css';
 
@@ -20,7 +20,6 @@ type Mode = 'task' | 'ask';
 
 const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Today' },
-  { id: 'upcoming', icon: 'calendar', label: 'Upcoming' },
   { id: 'meetings', icon: 'record', label: 'Meetings' },
   { id: 'wiki', icon: 'book', label: 'Wiki' },
 ];
@@ -53,7 +52,6 @@ function greeting(h = new Date().getHours()) {
 function dayLabel(at: number) {
   const d = new Date(at);
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
-  if (days === 0) return 'Later today';
   if (days === 1) return 'Tomorrow';
   return d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' });
 }
@@ -431,11 +429,9 @@ function useSplit() {
     // Open actions from earlier meetings with the same title.
     const carried = next ? snap.items.filter((r) => !r.deleted && r.status === 'open' && r.meeting_id && r.profile === next.profile && r.meeting_id !== next.id
       && all.some((m) => m.id === r.meeting_id && m.profile === next.profile && m.title === next.title && m.starts_at! < next.starts_at!)).length : 0;
-    const missing = all.filter((m) => meetingState(m, now) === 'missing' && (m.ends_at ?? 0) > now - DAY);
     return {
-      ...split(snap.items, filter, now), next, then: today[1], carried, missing,
-      laterToday: today.filter((m) => m !== next && m.starts_at! > now),
-      meetingsLater: ahead.filter((m) => m.starts_at! >= endOfDay),
+      ...split(snap.items, filter, now), next, then: today[1], carried, endOfDay,
+      nextLater: today.find((m) => m !== next && m.starts_at! > now) ?? ahead.find((m) => m.starts_at! >= endOfDay),
     };
   }, [snap.items, meetings, filter, minute]);
 }
@@ -445,7 +441,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { store, snap } = useAssistant();
   const s = useSplit();
   const { facts } = useCodex();
-  const count: Record<List, number> = { today: s.overdue.length + s.today.length + s.review.length, upcoming: s.later.length + s.meetingsLater.length, meetings: 0, wiki: proposals(facts).length };
+  const count: Record<List, number> = { today: s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < s.endOfDay).length + s.review.length, meetings: 0, wiki: proposals(facts).length };
   const { sync } = snap;
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
   const dot = sync.error ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
@@ -471,8 +467,10 @@ export function useTodayCount() {
   const { snap } = useAssistant();
   useMinute();
   if (snap.phase !== 'ready') return 0;
-  const s = split(snap.items, 'all', Date.now());
-  return s.overdue.length + s.today.length + s.review.length;
+  const now = Date.now();
+  const s = split(snap.items, 'all', now);
+  const endOfDay = new Date(now).setHours(24, 0, 0, 0);
+  return s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
 }
 
 const CALENDAR_FRESH = 15 * 60_000;
@@ -565,17 +563,15 @@ export function Assistant() {
   }
 
   const now = Date.now();
+  // Today holds everything due before midnight; later tasks follow by day, so a dated action never leaves the page.
   const horizon = new Date(now).setHours(24 * (UPCOMING_DAYS + 1), 0, 0, 0);
-  const dated: ({ at: number; row: ItemRow } | { at: number; meeting: Meeting })[] = [
-    ...s.later.map((row) => ({ at: atTime(row.at)!, row })),
-    ...s.laterToday.map((meeting) => ({ at: meeting.starts_at!, meeting })),
-    ...s.meetingsLater.map((meeting) => ({ at: meeting.starts_at!, meeting })),
-  ].sort((a, b) => a.at - b.at);
-  const upcoming = dated.reduce<{ label: string; rows: typeof dated }[]>((acc, e) => {
-    const label = e.at >= horizon ? 'Later' : dayLabel(e.at);
+  const dueToday = [...s.today, ...s.later.filter((r) => atTime(r.at)! < s.endOfDay)];
+  const coming = s.later.filter((r) => atTime(r.at)! >= s.endOfDay).reduce<{ label: string; rows: ItemRow[] }[]>((acc, r) => {
+    const at = atTime(r.at)!;
+    const label = at >= horizon ? 'Later' : dayLabel(at);
     const last = acc[acc.length - 1];
-    if (last?.label === label) last.rows.push(e);
-    else acc.push({ label, rows: [e] });
+    if (last?.label === label) last.rows.push(r);
+    else acc.push({ label, rows: [r] });
     return acc;
   }, []);
   const fresh = s.review.filter((r) => now - reviewedSince(r) < DAY);
@@ -587,8 +583,8 @@ export function Assistant() {
     for (const r of moved) void store.update(r, { at });
     showSnack(`Moved ${moved.length} to tomorrow`, () => moved.forEach((r) => void store.update(r, { at: r.at as number | null })));
   };
-  const empty = !s.overdue.length && !s.today.length && !s.review.length && !s.next;
-  const nextLater = s.laterToday[0] ?? s.meetingsLater[0];
+  const empty = !s.overdue.length && !dueToday.length && !coming.length && !s.review.length && !s.next;
+  const nextLater = s.nextLater;
 
   return (
     <div className="assistant" ref={root}>
@@ -617,11 +613,6 @@ export function Assistant() {
                 <NextCard m={s.next} then={s.then} carried={s.carried} onPrep={() => ask(askText(prepText(s.next!), snap.items))} />
               </section>
             )}
-            {s.missing.map((m) => (
-              <button key={m.profile + m.id} className="as-notice" onClick={() => setView({ list: 'meetings', open: `${m.profile}:${m.id}` })}>
-                <Icon name="warning" small /> <span><b>{m.title}</b>: no transcript found</span> <span className="as-notice-act">Add actions by hand</span>
-              </button>
-            ))}
             <Review rows={fresh} />
             {older.length > 0 && (
               <section>
@@ -629,12 +620,18 @@ export function Assistant() {
                 {olderOpen && <Review rows={older} />}
               </section>
             )}
-            {s.today.length > 0 && (
+            {dueToday.length > 0 && (
               <section>
-                <div className="as-section">Needs you · {s.today.length}</div>
-                {rows(s.today)}
+                <div className="as-section">Today · {dueToday.length}</div>
+                {rows(dueToday)}
               </section>
             )}
+            {coming.map((g) => (
+              <section key={g.label}>
+                <div className="as-section later">{g.label} · {g.rows.length}</div>
+                {rows(g.rows)}
+              </section>
+            ))}
             {loading ? <div className="as-end">Loading</div> : empty && (
               <div className="as-empty">
                 <Icon name="pass" />
@@ -650,9 +647,6 @@ export function Assistant() {
             )}
           </>
         )}
-        {list === 'upcoming' && (upcoming.length ? upcoming.map((g) => (
-          <section key={g.label}><div className="as-section">{g.label}</div><div className="as-group">{g.rows.map((e) => ('meeting' in e ? <MeetingRow key={e.meeting.profile + e.meeting.id} m={e.meeting} now={now} /> : <Row key={e.row.profile + e.row.id} row={e.row} onOpen={() => setOpen(e.row)} />))}</div></section>
-        )) : <div className="as-empty"><Icon name="calendar" /><div>Nothing else this week.</div><div className="muted small">Meetings and tasks with a date show here.</div></div>)}
       </div>
 
       <SnackBar />
