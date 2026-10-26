@@ -234,8 +234,33 @@ final class Bar: NSObject, NSApplicationDelegate {
       assertion = 0
     }
     awakeItem.state = on ? .on : .off
-    item.button?.image = NSImage(systemSymbolName: on ? "eye.fill" : "eye", accessibilityDescription: "AgentView")
+    item.button?.image = promptIcon(filled: on)
     item.button?.toolTip = on ? "AgentView: keeping Mac awake" : "AgentView"
+  }
+
+  // The app icon's >_ as a template image; filled while keeping the Mac awake.
+  func promptIcon(filled: Bool) -> NSImage {
+    let img = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { r in
+      NSColor.black.set()
+      let chevron = NSBezierPath()
+      chevron.lineWidth = 1.8
+      chevron.lineCapStyle = .round
+      chevron.lineJoinStyle = .round
+      chevron.move(to: NSPoint(x: 5, y: 5.5))
+      chevron.line(to: NSPoint(x: 8.5, y: 9))
+      chevron.line(to: NSPoint(x: 5, y: 12.5))
+      let bar = NSBezierPath(roundedRect: NSRect(x: 9.8, y: 11.4, width: 4, height: 1.8), xRadius: 0.9, yRadius: 0.9)
+      if filled {
+        NSBezierPath(roundedRect: r.insetBy(dx: 1, dy: 1), xRadius: 4, yRadius: 4).fill()
+        NSGraphicsContext.current?.compositingOperation = .destinationOut
+      }
+      chevron.stroke()
+      bar.fill()
+      return true
+    }
+    img.isTemplate = true
+    img.accessibilityDescription = "AgentView"
+    return img
   }
 
   @objc func toggleAwake() { setAwake(assertion == 0) }
