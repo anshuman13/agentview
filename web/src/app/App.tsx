@@ -38,14 +38,14 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'explorer', icon: 'files', title: 'Explorer' },
   { id: 'changes', icon: 'source-control', title: 'Source Control' },
   { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
-  { id: 'chats', icon: 'comment-discussion', title: 'Chats' },
+  { id: 'chats', icon: 'comment-discussion', title: 'Sessions' },
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
 ];
 
 const PAGES: { id: Page; icon: string; title: string; kicker: string; sub: (repo: string) => string }[] = [
-  { id: 'observe', icon: 'pulse', title: 'Observe', kicker: 'Sentry · Grafana · Snowflake', sub: (r) => `Errors, logs and data for ${r}, read through the same MCP servers Claude uses.` },
+  { id: 'observe', icon: 'pulse', title: 'Observe', kicker: 'Grafana · Snowflake', sub: (r) => `Dashboards, logs and data for ${r}. Ask Claude to query Grafana for you.` },
   { id: 'deploy', icon: 'rocket', title: 'Deploy', kicker: 'Velodrome', sub: (r) => `Deploys of ${r}: what runs where, and a one-click deploy or rollback.` },
-  { id: 'mcp', icon: 'plug', title: 'MCP Servers', kicker: 'Model Context Protocol', sub: (r) => `What Claude can reach from ${r}. Same config as the Claude CLI, checked live.` },
+  { id: 'mcp', icon: 'plug', title: 'MCP Servers', kicker: 'Model Context Protocol', sub: () => 'Work and personal servers, grouped by service. Same config as the Claude CLI, checked live.' },
 ];
 const isPage = (v: string): v is Page => PAGES.some((p) => p.id === v);
 const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
@@ -459,7 +459,7 @@ export function App() {
           <div className="sidebar-title">{VIEWS.find((v) => v.id === view)!.title}</div>
           {tab === 'repos' && chatsView && (
             <div className="side-switch mobile-only">
-              <button className={view !== 'sessions' ? 'active' : ''} onClick={() => setView('chats')}>Chats</button>
+              <button className={view !== 'sessions' ? 'active' : ''} onClick={() => setView('chats')}>Sessions</button>
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
             </div>
           )}
@@ -584,7 +584,7 @@ export function App() {
         </button>
         <button className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
           <Icon name="comment-discussion" />
-          <span>Chats</span>
+          <span>Sessions</span>
           {elsewhere > 0 && <span className="badge">{elsewhere}</span>}
         </button>
         <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => goTab('agents')}>

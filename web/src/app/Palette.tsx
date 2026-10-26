@@ -15,7 +15,7 @@ const VIEWS = [
   ['explorer', 'Explorer'],
   ['changes', 'Source Control'],
   ['github', 'GitHub Pull Requests'],
-  ['chats', 'Chats'],
+  ['chats', 'Sessions'],
   ['sessions', 'Workspace'],
 ];
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];

@@ -5,8 +5,8 @@
 - **Task box** (right): prompt, mode and model menus, context meter, and the timeline below it. An Agents tab at the
   right of its header lists the chat's subagents. ⌥⌘B hides it
 - **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. In the diff, a long press or a right click on a line quotes it into the composer as `path:line`. Browser tab shows your Chrome. Observe, Deploy and MCP open as further tabs here
-- **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Chats (open and recent) and Workspace (repos, chats, Paseo worktrees)
-- **Side chat**: the split icon on a chat row in the Chats view opens that chat in a second column with its
+- **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Sessions (open and recent chats) and Workspace (repos, chats, Paseo worktrees)
+- **Side chat**: the split icon on a chat row in the Sessions view opens that chat in a second column with its
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
 - **Codex** (top of the activity bar): Today, Upcoming, Meetings, Wiki, Notes and Done. The wiki is built from
   claims with sources, which can be contested; meetings show notes, summary, decisions and actions to approve.
@@ -21,7 +21,7 @@
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps
 and notes. The timeline shows one card per prompt: Claude's final reply, the files changed with line counts,
 commands run and the first error of each failed one, commits, subagents, these notes and the steps behind them.
-A finished card ends with the turn's cost and how long it took; a chat row in the Chats view shows the chat's
+A finished card ends with the turn's cost and how long it took; a chat row in the Sessions view shows the chat's
 cost so far. Switch to the transcript for every message and step in order.
 
 - Sending while Claude works stops whatever it is doing, including an open permission or question, and continues
@@ -82,7 +82,7 @@ Chats start only inside these folders or Paseo worktrees.
 
 When a chat asks a question, needs a permission or finishes a turn, AgentView notifies you. On the Mac the server
 shows a system notification with a sound if no window is viewing that chat, at most one per chat every 30 seconds;
-clicking it opens that chat in the browser (a GitHub item opens the Chats view).
+clicking it opens that chat in the browser (a GitHub item opens the Sessions view).
 The browser shows its own notification while the tab is hidden; clicking it opens the chat. The bell in the status
 bar turns browser notifications on or off.
 

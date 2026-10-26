@@ -347,7 +347,7 @@ export function Sessions() {
   return (
     <div className="sessions workspace">
       <div className="sessions-bar">
-        <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
+        <input placeholder="Filter repos and sessions" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
         <button className="icon-btn" title="Start a chat in a folder or new project (⌘O)" onClick={() => setUi({ repoPicker: true })}><Icon name="folder-opened" /></button>
         <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
@@ -448,10 +448,10 @@ export function OpenChats() {
   return (
     <div className="sessions chats">
       <div className="sessions-bar">
-        <button className="new-chat" onClick={() => setUi({ repoPicker: true })}><Icon name="add" small /> New chat in a repo</button>
+        <button className="new-chat" onClick={() => setUi({ repoPicker: true })}><Icon name="add" small /> New session in a repo</button>
       </div>
       <div className="sessions-bar">
-        <input placeholder="Filter repos and chats" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
+        <input placeholder="Filter repos and sessions" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
       </div>
       <NeedsYou n={waiting.length}>
         {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
@@ -488,7 +488,7 @@ export function OpenChats() {
             )}
           </div>
         ))}
-        {!groups.length && <div className="hint">{filter ? 'No repo or chat matches.' : 'No chats yet.'}</div>}
+        {!groups.length && <div className="hint">{filter ? 'No repo or session matches.' : 'No sessions yet.'}</div>}
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
@@ -573,7 +573,7 @@ function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveCh
 }
 
 const PR_KINDS = new Set<AttentionItem['kind']>(['review', 'ci', 'changes', 'ready', 'stale']);
-const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues', stale: 'history', commit: 'git-commit', sentry: 'bug', deploy: 'rocket' };
+const ATTENTION_ICON: Record<AttentionItem['kind'], string> = { ci: 'error', changes: 'request-changes', review: 'eye', ready: 'check', issue: 'issues', stale: 'history', commit: 'git-commit', deploy: 'rocket' };
 
 // Chats waiting on the user plus GitHub items the server flagged (failing CI, reviews, assigned issues).
 function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
