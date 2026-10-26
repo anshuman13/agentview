@@ -173,6 +173,7 @@ type Group = 'work' | 'personal';
 
 // claude.ai connectors belong to the chat's Claude account: alt is the work account, main the personal one.
 const accountGroup = (a: string): Group => (a === 'alt' ? 'work' : 'personal');
+const hideKey = (s: Service) => `hide:${s.name}`;
 const groupKey = (r: Row) => (r.account ? `${r.account}:${r.name}` : splitName(r.name)[0]);
 const CONNECTORS = 'agentview.mcp.connectors';
 
@@ -198,7 +199,8 @@ export function McpPage() {
   const [at, setAt] = useState(0);
   const [error, setError] = useState('');
   const [sel, setSel] = useState<string | null>(null);
-  const [groups, setGroups] = useState<Record<string, Group>>({});
+  const [groups, setGroups] = useState<Record<string, Group | 'hidden'>>({});
+  const [showHidden, setShowHidden] = useState(false);
 
   const load = (refresh = false) => {
     setBusy(true);
@@ -217,8 +219,8 @@ export function McpPage() {
   }, []);
   useTick(15000);
 
-  const setGroup = (service: string, group: Group) => {
-    setGroups((g) => ({ ...g, [service]: group }));
+  const setGroup = (service: string, group: Group | 'hidden' | 'shown') => {
+    setGroups((g) => { const { [service]: _, ...rest } = g; return group === 'shown' ? rest : { ...rest, [service]: group }; });
     post('/api/mcp/groups', { service, group }).then(setGroups, (e) => notice(`Could not save the group: ${e.message}`));
   };
 
@@ -234,7 +236,10 @@ export function McpPage() {
   const ok = rows.filter((r) => r.status === 'connected').length;
   const attention = rows.filter(needsYou).length;
   const extra = document.getElementById('page-mcp-extra');
-  const groupOf = (r: Row): Group => groups[groupKey(r)] ?? (r.account ? accountGroup(r.account) : 'work');
+  const groupOf = (r: Row): Group => { const g = groups[groupKey(r)]; return g === 'work' || g === 'personal' ? g : r.account ? accountGroup(r.account) : 'work'; };
+  const hidden = (s: Service) => groups[hideKey(s)] === 'hidden';
+  const shown = list.filter((s) => !hidden(s));
+  const hiddenList = list.filter(hidden);
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
 
   return (
@@ -262,7 +267,7 @@ export function McpPage() {
           </div>
         )}
         {(['work', 'personal'] as Group[]).map((g) => {
-          const mine = list.filter((s) => groupOf(s.variants[0].row) === g);
+          const mine = shown.filter((s) => groupOf(s.variants[0].row) === g);
           if (!mine.length) return null;
           return (
             <section key={g} className="mcp-section">
@@ -274,7 +279,7 @@ export function McpPage() {
                   <div key={k} className="mcp-kind">
                     <div className="mcp-section-head"><span>{k}</span></div>
                     <div className="mcp-list">
-                      {of.map((s) => <ServiceRow key={rowKey(s.variants[0].row)} service={s} sel={sel} usageOf={usageOf} onPick={pick} group={g} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} />)}
+                      {of.map((s) => <ServiceRow key={rowKey(s.variants[0].row)} service={s} sel={sel} usageOf={usageOf} onPick={pick} group={g} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} onHide={() => setGroup(hideKey(s), 'hidden')} />)}
                     </div>
                   </div>
                 );
@@ -282,13 +287,25 @@ export function McpPage() {
             </section>
           );
         })}
+        {hiddenList.length > 0 && (
+          <section className="mcp-section">
+            <button className="mcp-group-head mcp-hidden-head" onClick={() => setShowHidden((v) => !v)}>
+              <Icon name={showHidden ? 'chevron-down' : 'chevron-right'} small />Hidden<span className="muted count">{hiddenList.length}</span>
+            </button>
+            {showHidden && (
+              <div className="mcp-list">
+                {hiddenList.map((s) => <ServiceRow key={rowKey(s.variants[0].row)} service={s} sel={sel} usageOf={usageOf} onPick={pick} group={groupOf(s.variants[0].row)} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} onHide={() => setGroup(hideKey(s), 'shown')} isHidden />)}
+              </div>
+            )}
+          </section>
+        )}
       </div>
       {current && <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} onClose={() => setSel(null)} />}
     </div>
   );
 }
 
-function ServiceRow({ service, sel, usageOf, onPick, group, onGroup }: { service: Service; sel: string | null; usageOf: (r: Row) => Usage | undefined; onPick: (name: string) => void; group: Group; onGroup: (g: Group) => void }) {
+function ServiceRow({ service, sel, usageOf, onPick, group, onGroup, onHide, isHidden }: { service: Service; sel: string | null; usageOf: (r: Row) => Usage | undefined; onPick: (name: string) => void; group: Group; onGroup: (g: Group) => void; onHide: () => void; isHidden?: boolean }) {
   const calls = service.variants.reduce((n, v) => n + (usageOf(v.row)?.calls.length ?? 0), 0);
   const errors = service.variants.reduce((n, v) => n + (usageOf(v.row)?.errors ?? 0), 0);
   const other: Group = group === 'work' ? 'personal' : 'work';
@@ -308,6 +325,7 @@ function ServiceRow({ service, sel, usageOf, onPick, group, onGroup }: { service
         })}
       </div>
       {calls > 0 && <span className={`mcp-row-use ${errors ? 'bad' : ''}`}>{plural(calls, 'call')}</span>}
+      <button className="icon-btn mcp-row-move" title={isHidden ? 'Show' : 'Hide'} onClick={onHide}><Icon name={isHidden ? 'eye' : 'eye-closed'} small /></button>
       <button className="icon-btn mcp-row-move" title={`Move to ${other === 'work' ? 'Work' : 'Personal'}`} onClick={() => onGroup(other)}><Icon name={other === 'work' ? 'briefcase' : 'home'} small /></button>
     </div>
   );

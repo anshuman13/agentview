@@ -160,19 +160,19 @@ export async function mcpCall(cwd: string, name: string, def: McpServerDef, tool
 }
 
 const GROUPS = path.join(os.homedir(), '.agentview', 'mcp-groups.json');
-export type McpGroups = Record<string, 'work' | 'personal'>;
+export type McpGroups = Record<string, 'work' | 'personal' | 'hidden'>;
 
 export async function mcpGroups(): Promise<McpGroups> {
   const g = await readJson(GROUPS);
   const out: McpGroups = {};
   if (Array.isArray(g.personal)) for (const s of g.personal) if (typeof s === 'string') out[s] = 'personal';
-  for (const [k, v] of Object.entries(g)) if (v === 'work' || v === 'personal') out[k] = v;
+  for (const [k, v] of Object.entries(g)) if (v === 'work' || v === 'personal' || v === 'hidden') out[k] = v;
   return out;
 }
 
 export async function setMcpGroup(service: string, group: string): Promise<McpGroups> {
   const g = await mcpGroups();
-  if (group === 'work' || group === 'personal') g[service] = group;
+  if (group === 'work' || group === 'personal' || group === 'hidden') g[service] = group;
   else delete g[service];
   await mkdir(path.dirname(GROUPS), { recursive: true });
   await writeFile(GROUPS, JSON.stringify(g, null, 2));

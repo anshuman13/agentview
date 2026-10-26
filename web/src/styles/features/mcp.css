@@ -122,3 +122,4 @@
   .mcp-page.with-detail { grid-template-columns: minmax(0, 1fr); }
   .mcp-detail { position: absolute; inset: 0; z-index: 2; border-left: 0; }
 }
+.mcp-hidden-head { width: 100%; background: none; border-width: 0 0 1px; color: var(--fg); cursor: pointer; text-align: left; align-items: center; }
