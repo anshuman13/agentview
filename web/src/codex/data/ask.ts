@@ -2,7 +2,7 @@ import { getState, notice, prompt, queueNext, send } from '../../app/store';
 import { macOrigin } from '../../app/api';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { listOf, live, sourcesOf, type Action, type Fact, type Meeting, type Page } from './wiki';
+import { factTime, listOf, live, sourcesOf, type Action, type Fact, type Meeting, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
@@ -25,6 +25,7 @@ const KEY = 'codex-chat';
 const today = () => new Date().toDateString();
 const readDaily = (): Daily | null => { try { return JSON.parse(localStorage.getItem(KEY) ?? 'null'); } catch { return null; } };
 const saveDaily = (d: Daily) => localStorage.setItem(KEY, JSON.stringify(d));
+let asking = false;
 
 // Sends the question to today's Codex chat on the current Mac. The first question of the day, or fresh, opens a new chat.
 export function ask(text: string, fresh = false) {
@@ -33,6 +34,8 @@ export function ask(text: string, fresh = false) {
     notice('Not connected to a Mac, the question was not sent');
     return false;
   }
+  if (asking) return false;
+  asking = true;
   const mac = macOrigin();
   const d = readDaily();
   const reuse = !fresh && d?.day === today() && d.mac === mac ? d : null;
@@ -51,10 +54,12 @@ export function ask(text: string, fresh = false) {
     const { session } = getState();
     if (ready(session.id)) {
       clearInterval(t);
+      asking = false;
       (session.running ? queueNext : prompt)(text, () => {});
       remember(mac, session.id, session.sessionId ?? (open ? open.sessionId : reuse?.sessionId) ?? null);
     } else if (Date.now() - started > 15000) {
       clearInterval(t);
+      asking = false;
       notice('The Codex chat did not open, the question was not sent');
     }
   }, 150);
@@ -78,8 +83,9 @@ export function wikiAskText(question: string, pages: Page[], facts: Fact[], page
   const title = new Map(pages.map((p) => [p.id, p.title ?? '']));
   const claims = live(facts)
     .filter((f) => !f.superseded_by && (!pageId || f.page_id === pageId))
+    .sort((a, b) => factTime(b) - factTime(a))
     .slice(0, 200)
-    .map((f) => `- [${title.get(f.page_id ?? '') ?? ''}] ${f.text}${sourcesOf(f).length ? ` (${sourcesOf(f).map((s) => s.label).join(', ')})` : ''}${f.contested ? ' (contested)' : ''}`);
+    .map((f) => `- [${title.get(f.page_id ?? '') || 'Memory'}] ${f.text}${sourcesOf(f).length ? ` (${sourcesOf(f).map((s) => s.label).join(', ')})` : ''}${f.contested ? ' (contested)' : ''}`);
   return [
     question,
     `\n${pageId ? `Claims on the wiki page "${title.get(pageId)}"` : 'Claims in my team wiki'}:\n${claims.join('\n')}`,
@@ -91,7 +97,7 @@ export function meetingAskText(question: string, m: Meeting, actions: Action[]) 
   const when = m.starts_at ? new Date(m.starts_at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
   return [
     question,
-    `\nAbout the meeting "${m.title}" (${when}) with ${m.people || 'no listed people'}.`,
+    `\nAbout the meeting "${m.title}" (${when}) with ${(m.people?.startsWith('[') ? listOf(m.people) : [m.people]).filter(Boolean).join(', ') || 'no listed people'}.`,
     m.notes && `\nMy notes:\n${m.notes}`,
     m.summary && `\nSummary:\n${m.summary}`,
     listOf(m.decisions).length ? `\nDecisions:\n${listOf(m.decisions).map((d) => `- ${d}`).join('\n')}` : '',

@@ -42,6 +42,7 @@ const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circ
 
 const SWIPE = 80;
 const QUICK = ['In 1 hour', 'Tonight', 'Tomorrow'];
+const snoozes = (now = new Date()) => SNOOZES.filter((s) => s.label !== 'Tonight' || now.getHours() < 19);
 
 function when(at: number, now = Date.now()) {
   const d = new Date(at);
@@ -90,6 +91,7 @@ function Swipe({ onRight, onLeft, children }: { onRight: () => void; onLeft?: ()
   const [dx, setDx] = useState(0);
   const from = useRef<{ x: number; y: number } | null>(null);
   const moving = useRef(false);
+  const swiped = useRef(false);
   const reset = () => { from.current = null; moving.current = false; setDx(0); };
   return (
     <div className={`as-swipe${dx > 0 ? ' right' : dx < 0 ? ' left' : ''}`}>
@@ -110,12 +112,13 @@ function Swipe({ onRight, onLeft, children }: { onRight: () => void; onLeft?: ()
           setDx(onLeft || mx > 0 ? mx : 0);
         }}
         onPointerUp={() => {
+          if (moving.current) { swiped.current = true; setTimeout(() => { swiped.current = false; }, 0); }
           if (moving.current && dx > SWIPE) onRight();
           else if (moving.current && dx < -SWIPE) onLeft?.();
           reset();
         }}
         onPointerCancel={reset}
-        onClickCapture={(e) => { if (moving.current) e.stopPropagation(); }}
+        onClickCapture={(e) => { if (swiped.current) e.stopPropagation(); }}
       >
         {children}
       </div>
@@ -132,7 +135,7 @@ function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
   const isDone = row.status === 'done';
   const isNote = row.status === 'note';
   const quote = row.source !== 'capture' ? firstLine(row.text) : '';
-  const due = at != null && !isNote ? (at < now ? (now - at > 12 * 3600_000 ? `since ${when(at, now)}` : when(at, now)) : when(at, now)) : null;
+  const due = at != null && !isNote && !isDone ? (at < now ? (now - at > 12 * 3600_000 ? `since ${when(at, now)}` : when(at, now)) : when(at, now)) : null;
   const tick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isDone) return act.reopen(row);
@@ -140,7 +143,7 @@ function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
     setTimeout(() => act.done(row), 260);
   };
   const body = (
-    <div className={`as-row ${row.profile}${checked || isDone ? ' checked' : ''}`} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onOpen()}>
+    <div className={`as-row ${row.profile}${checked || isDone ? ' checked' : ''}`} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && onOpen()}>
       <span className={`as-src ${isNote ? 'note' : row.source ?? 'capture'}`} title={src.label}><Icon name={isNote ? 'note' : src.icon} /></span>
       <div className="as-body">
         <div className="as-title">{row.title || '(Untitled)'}</div>
@@ -149,7 +152,7 @@ function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
         ) : (
           <div className="as-ctx">
             {row.source && row.source !== 'capture' && <span>{src.label}</span>}
-            {row.people && <span>{row.people}</span>}
+            {row.people && <span className="as-people">{row.people}</span>}
             {quote && <span className="as-quote">“{quote}”</span>}
             {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
             {!quote && !due && !row.people && <span>{ago(row.updated_at, ' ago')}</span>}
@@ -164,14 +167,14 @@ function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
     </div>
   );
   if (isNote || isDone) return body;
-  return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row)}>{body}</Swipe>;
+  return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, nextNine(new Date(Math.max(at ?? 0, now))))}>{body}</Swipe>;
 }
 
 function NextCard({ row, onOpen, onPrep }: { row: ItemRow; onOpen: () => void; onPrep: () => void }) {
   const at = atTime(row.at)!;
   const mins = Math.round((at - Date.now()) / 60000);
   return (
-    <div className="as-next" onClick={onOpen} role="button" tabIndex={0}>
+    <div className="as-next" onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && onOpen()}>
       <div className="as-next-head"><Icon name="calendar" small /> {when(at)} <span className="muted">· {mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`}</span></div>
       <div className="as-next-title">{row.title}</div>
       {row.people && <div className="as-ctx"><span>{row.people}</span></div>}
@@ -187,23 +190,24 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
   const act = useActions();
   const [title, setTitle] = useState(row.title ?? '');
   const [text, setText] = useState(row.text ?? '');
+  const initial = useRef({ title: row.title ?? '', text: row.text ?? '' });
   const [snoozing, setSnoozing] = useState(false);
   const src = sourceOf(row);
   const fromSource = row.source && row.source !== 'capture';
   const at = atTime(row.at);
-  const close = () => {
+  const save = () => {
     const patch: Patch = {};
-    if (title.trim() && title !== (row.title ?? '')) patch.title = title.trim();
-    if (!fromSource && text !== (row.text ?? '')) patch.text = text || null;
+    if (title.trim() && title !== initial.current.title) patch.title = title.trim();
+    if (!fromSource && text !== initial.current.text) patch.text = text || null;
     if (Object.keys(patch).length) act.edit(row, patch);
-    onClose();
   };
+  const close = () => { save(); onClose(); };
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && close();
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   });
-  const then = (f: () => void) => () => { f(); onClose(); };
+  const then = (f: () => void) => () => { save(); f(); onClose(); };
   return (
     <div className="as-sheet-overlay" onClick={close}>
       <div className="as-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={row.title ?? 'Item'}>
@@ -222,8 +226,8 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
         {row.source_url && <a className="as-sheet-link" href={row.source_url} target="_blank" rel="noreferrer">Open in {src.label} <Icon name="link-external" small /></a>}
         {snoozing ? (
           <div className="as-sheet-actions">
-            {SNOOZES.map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
-            <PickTime className="btn" value={at} onPick={(t) => { act.snooze(row, t); onClose(); }} />
+            {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
+            <PickTime className="btn" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
             <button className="icon-btn" title="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
           </div>
         ) : (
@@ -248,6 +252,15 @@ const localInput = (t: number) => { const d = new Date(t); return `${d.getFullYe
 // A button that opens the system date and time picker.
 function PickTime({ className, value, onPick }: { className: string; value?: number | null; onPick: (at: number) => void }) {
   const input = useRef<HTMLInputElement>(null);
+  const pick = useRef(onPick);
+  pick.current = onPick;
+  // React's onChange fires on every input event; the native change event fires once the picker is confirmed.
+  useEffect(() => {
+    const el = input.current!;
+    const change = () => { const t = new Date(el.value).getTime(); if (Number.isFinite(t)) pick.current(t); };
+    el.addEventListener('change', change);
+    return () => el.removeEventListener('change', change);
+  }, []);
   const open = () => {
     const el = input.current;
     if (!el) return;
@@ -257,7 +270,7 @@ function PickTime({ className, value, onPick }: { className: string; value?: num
   return (
     <span className="as-pick">
       <button className={className} onClick={open}><Icon name="calendar" small /> Pick time</button>
-      <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden onChange={(e) => { const t = new Date(e.target.value).getTime(); if (Number.isFinite(t)) onPick(t); }} />
+      <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden />
     </span>
   );
 }
@@ -320,12 +333,14 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
   const dated = pick != null || w != null;
 
   const reset = () => { setText(''); setMode(null); setNoWhen(false); setPick(null); setFresh(false); setProfile(null); };
+  const busy = useRef(false);
   const submit = async () => {
-    if (!typed) return;
+    if (!typed || busy.current) return;
     if (m === 'ask') {
       if (ask(askText(typed, items), fresh)) reset();
       return;
     }
+    busy.current = true;
     try {
       const title = m === 'task' ? stripWhen(text, w) || typed : typed;
       const row = await store.capture(title, m, prof, due);
@@ -334,6 +349,8 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
       showSnack(m === 'note' ? 'Note saved' : due != null ? `Added for ${when(due)}` : 'Added to Today', () => void store.update(row, { deleted: 1 }));
     } catch (err) {
       showSnack(`Not saved: ${(err as Error).message}`);
+    } finally {
+      busy.current = false;
     }
   };
   const cycle = () => setMode((x) => ((x ?? m) === 'task' ? 'note' : (x ?? m) === 'note' ? 'ask' : 'task'));
@@ -341,7 +358,7 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
 
   return (
     <div className="as-composer">
-      <div className="as-chips">
+      <div className="as-chips" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('button') && document.activeElement === area.current) e.preventDefault(); }}>
         {typed ? (
           <>
             <button className="as-chip on" title="Task, note or a question for Claude" onClick={cycle}><Icon name={MODE[m].icon} small /> {MODE[m].label}</button>
@@ -351,7 +368,7 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
               <button className="as-chip when on" title="Remove the time" onClick={() => { setPick(null); setNoWhen(true); }}><Icon name="clock" small /> {due != null ? when(due) : 'Today'} <Icon name="close" small /></button>
             ) : (
               <>
-                {SNOOZES.filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => setPick(s.at(new Date()))}><Icon name="clock" small /> {s.label}</button>)}
+                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => setPick(s.at(new Date()))}><Icon name="clock" small /> {s.label}</button>)}
                 <PickTime className="as-chip time" onPick={setPick} />
               </>
             ))}
@@ -375,7 +392,7 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
         <div className="cp-foot">
           <span className="cp-spacer" />
           <Voice onText={dictate} autoStart={voice} />
-          <button className="cp-send" title={m === 'ask' ? (fresh ? 'Ask Claude in a new chat' : "Ask Claude in today's Codex chat") : 'Save'} aria-label="Send" disabled={!typed} onClick={() => void submit()}>
+          <button className="cp-send" onPointerDown={(e) => e.preventDefault()} title={m === 'ask' ? (fresh ? 'Ask Claude in a new chat' : "Ask Claude in today's Codex chat") : 'Save'} aria-label="Send" disabled={!typed} onClick={() => void submit()}>
             <Icon name="arrow-up" />
           </button>
         </div>
@@ -395,15 +412,24 @@ function SnackBar() {
   );
 }
 
+// Re-renders every minute and when the app comes back to the front, so due tasks move into Today.
+function useMinute() {
+  const [minute, tick] = useState(0);
+  useEffect(() => {
+    const bump = () => tick((n) => n + 1);
+    const t = setInterval(bump, 60000);
+    const shown = () => document.visibilityState === 'visible' && bump();
+    document.addEventListener('visibilitychange', shown);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', shown); };
+  }, []);
+  return minute;
+}
+
 function useSplit() {
   const { snap } = useAssistant();
   const { meetings } = useCodex();
   const { filter } = useView();
-  const [minute, tick] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => tick((n) => n + 1), 60000);
-    return () => clearInterval(t);
-  }, []);
+  const minute = useMinute();
   return useMemo(() => {
     const now = Date.now();
     const mine = live(meetings).filter((m) => m.starts_at != null && (m.ends_at ?? m.starts_at) > now && (filter === 'all' || m.profile === filter)).sort((a, b) => a.starts_at! - b.starts_at!);
@@ -432,8 +458,8 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
 
 export function useTodayCount() {
   const { snap } = useAssistant();
-  const now = Date.now();
-  return snap.phase === 'ready' ? snap.items.filter((r) => !r.deleted && r.status === 'open' && (atTime(r.at) ?? 0) <= now).length : 0;
+  useMinute();
+  return snap.phase === 'ready' ? split(snap.items, 'all', Date.now()).today.length : 0;
 }
 
 export function Assistant() {

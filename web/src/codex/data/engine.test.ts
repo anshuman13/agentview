@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseWhen, stripWhen } from './engine';
+import { isQuestion, parseWhen, stripWhen } from './engine';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
 const local = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
@@ -31,6 +31,7 @@ describe('parseWhen', () => {
     expect(read('run tomorrow morning')).toEqual({ at: local(27, 9), title: 'run' });
     expect(read('movie tonight at 8').at).toBe(local(26, 20));
     expect(read('gym this morning').at).toBe(local(27, 9));
+    expect(read('dinner tomorrow evening 8')).toEqual({ at: local(27, 20), title: 'dinner' });
   });
 
   it('keeps today without a time in Today', () => {
@@ -40,5 +41,14 @@ describe('parseWhen', () => {
   it('leaves amounts that are not times alone', () => {
     expect(read('buy 2 days of food').at).toBeUndefined();
     expect(read('buy 12 eggs').at).toBeUndefined();
+  });
+});
+
+describe('isQuestion', () => {
+  it('keeps imperative tasks as tasks', () => {
+    expect(isQuestion('Do laundry tomorrow')).toBe(false);
+    expect(isQuestion('Prep slides fri 10')).toBe(false);
+    expect(isQuestion('What is on today')).toBe(true);
+    expect(isQuestion('laundry?')).toBe(true);
   });
 });

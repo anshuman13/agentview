@@ -57,7 +57,7 @@ export function nextNine(now = new Date()) {
 export const SNOOZES: { label: string; at: (now: Date) => number }[] = [
   { label: 'In 1 hour', at: (now) => Math.ceil((now.getTime() + 3600_000) / 60_000) * 60_000 },
   { label: 'In 3 hours', at: (now) => now.getTime() + 3 * 3600_000 },
-  { label: 'Tonight', at: (now) => (now.getHours() < 18 ? at(now, 0, 19) : at(now, 1, 19)) },
+  { label: 'Tonight', at: (now) => (now.getHours() < 19 ? at(now, 0, 19) : at(now, 1, 19)) },
   { label: 'Tomorrow', at: (now) => nextNine(now) },
   { label: 'Next week', at: (now) => at(now, ((8 - now.getDay()) % 7) || 7, 9) },
 ];
@@ -99,7 +99,7 @@ export function parseWhen(text: string, now = new Date()): When | null {
       days = ((i - now.getDay() + 7) % 7) || 7;
     }
   }
-  const anchor = d ?? p;
+  const anchor = d && p ? (d.index > p.index ? d : p) : d ?? p;
   const offset = anchor ? anchor.index + anchor[0].length : 0;
   const rest = text.slice(offset);
   const t = TIME_RE.exec(rest);
@@ -132,7 +132,7 @@ export function stripWhen(text: string, w: When | null) {
   return out.replace(/^\s*(?:add a task to|add a task|remind me to|reminder to)\s+/i, '').replace(/[\s,]*(?:and )?(?:set|add) a reminder\s*$/i, '').replace(/\s{2,}/g, ' ').trim();
 }
 
-const ASK_RE = /^(what|when|who|whom|why|how|which|where|did|do|does|is|are|was|were|can|could|should|will|would|summari[sz]e|plan|prep|prepare|find|show|list|tell|explain)\b/i;
+const ASK_RE = /^(what|when|who|whom|why|how|which|where|did|does|is|are|was|were|can|could|should|will|would|summari[sz]e|explain)\b/i;
 
 export const isQuestion = (text: string) => /\?\s*$/.test(text) || ASK_RE.test(text.trim());
 

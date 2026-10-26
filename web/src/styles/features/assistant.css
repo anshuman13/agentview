@@ -53,6 +53,8 @@
 .as-row.checked .as-title { color: var(--fg-faint); text-decoration: line-through; }
 .as-ctx { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; font-size: var(--fs-sm); color: var(--fg-muted); white-space: nowrap; }
 .as-ctx > span { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }
+.as-ctx { overflow: hidden; }
+.as-ctx > .as-people { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: block; }
 .as-ctx > span + span::before { content: "·"; margin-right: var(--sp-3); color: var(--fg-faint); }
 .as-ctx > .as-quote { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: block; }
 .as-ctx > .as-due { padding: 1px var(--sp-4); border-radius: var(--radius-pill); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
