@@ -173,6 +173,7 @@ type Group = 'work' | 'personal';
 
 // claude.ai connectors belong to the chat's Claude account: alt is the work account, main the personal one.
 const accountGroup = (a: string): Group => (a === 'alt' ? 'work' : 'personal');
+const shortName = (name: string) => name.replace(/^claude\.ai /, '');
 const hideKey = (s: Service) => `hide:${s.name}`;
 const groupKey = (r: Row) => (r.account ? `${r.account}:${r.name}` : splitName(r.name)[0]);
 const CONNECTORS = 'agentview.mcp.connectors';
@@ -321,7 +322,7 @@ function ServiceRow({ service, sel, usageOf, onPick, group, onGroup, onHide, isH
   const other: Group = group === 'work' ? 'personal' : 'work';
   return (
     <div className={`mcp-row ${service.variants.some((v) => rowKey(v.row) === sel) ? 'selected' : ''}`}>
-      <button className="mcp-row-name" onClick={() => onPick(rowKey(service.variants[0].row))}>{service.name}</button>
+      <button className="mcp-row-name" onClick={() => onPick(rowKey(service.variants[0].row))}>{shortName(service.name)}</button>
       <div className="mcp-chips">
         {service.variants.map(({ variant, row }) => {
           const [tone, label] = stateOf(row);
@@ -353,7 +354,7 @@ function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usa
     <aside className="mcp-detail">
       <div className="mcp-detail-head">
         <span className={`dot ${tone}`} />
-        <h2>{row.name}</h2>
+        <h2>{shortName(row.name)}</h2>
         <span className="spacer" />
         <button className="icon-btn" title="Close" onClick={onClose}><Icon name="close" small /></button>
       </div>
