@@ -385,7 +385,7 @@ export function App() {
   const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor);
   const chatsView = view === 'chats' || view === 'sessions';
   const inChats = tab === 'repos' && chatsView;
-  const inMore = tab === 'term' || tab === 'code' || (tab === 'repos' && !chatsView);
+  const inMore = tab === 'term' || tab === 'browser' || tab === 'code' || (tab === 'repos' && !chatsView);
   const mcpOk = mcp.filter((m) => m.status === 'connected').length;
   const goTab = (t: Tab) => {
     setMore(false);
@@ -472,17 +472,20 @@ export function App() {
             <button className={`tab ex-tab mobile-only ${mobileExplorer ? 'active' : ''}`} title="Explorer" onClick={() => { setTab('code'); setEditor('file'); setBrowse(true); }}>
               <Icon name="files" small />
             </button>
-            <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={openFile ?? 'Files (⌘E to switch)'}>
+            {(openFile || showing === 'file') && <div className={`tab ${showing === 'file' && !mobileExplorer ? 'active' : ''}`} {...pressable(() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={openFile ?? 'Files (⌘E to switch)'}>
               {fileName ? <FileIcon name={fileName} /> : <Icon name="file" small />} {fileName ?? 'File'}
               {openFile && (
                 <button className="close" title="Close file" onClick={(e) => { e.stopPropagation(); closeFile(); }}>
                   <Icon name="close" small />
                 </button>
               )}
-            </div>
-            <button className={`tab browser ${showing === 'browser' ? 'active' : ''}`} onClick={() => { setEditor('browser'); setTab((t) => (t === 'code' || t === 'agents' ? 'browser' : t)); }} title="Browser (⌘E to switch)">
-              <Icon name="globe" small /> Browser
-            </button>
+            </div>}
+            {showing === 'browser' && (
+              <div className="tab browser active" title="Browser (⌘E to switch)">
+                <Icon name="globe" small /> Browser
+                <button className="close" title="Close the browser" onClick={() => { setEditor('file'); setTab((t) => (t === 'browser' ? 'chat' : t)); }}><Icon name="close" small /></button>
+              </div>
+            )}
             {page && (
               <div className={`tab ptab ptab-${page} ${showing === page ? 'active' : ''}`} ref={showing === page ? reveal : undefined} {...pressable(() => { setEditor(page); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); })} title={pageOf(page).title}>
                 <Icon name={pageOf(page).icon} small /> {pageOf(page).title}
@@ -613,6 +616,9 @@ export function App() {
             </div>
             <button className={tab === 'code' ? 'active' : ''} onClick={() => goTab('code')}>
               <Icon name="files" /><span>Files</span>
+            </button>
+            <button className={tab === 'browser' ? 'active' : ''} onClick={() => goTab('browser')}>
+              <Icon name="globe" /><span>Browser</span>
             </button>
             <button className={tab === 'term' ? 'active' : ''} onClick={() => goTab('term')}>
               <Icon name="terminal" /><span>Terminal</span>

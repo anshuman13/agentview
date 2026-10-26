@@ -29,7 +29,7 @@ let state: State = {
   live: [],
   attention: [],
   findings: {},
-  ui: { connected: false, openFile: null, follow: true, switcherOpen: false, repoPicker: false, beside: storedBeside() },
+  ui: { connected: false, openFile: null, follow: false, switcherOpen: false, repoPicker: false, beside: storedBeside() },
 };
 
 const listeners = new Set<() => void>();
