@@ -4,14 +4,15 @@
     <meta charset="UTF-8" />
     <script>
       try {
-        var themes = ['gradianto', 'dark-modern', 'light'];
+        var themes = ['gradianto', 'dark-modern', 'light', 'solarized-dark', 'solarized-light'];
         var wanted = new URLSearchParams(location.search).get('theme');
         if (themes.indexOf(wanted) >= 0) localStorage.setItem('agentview.theme', wanted);
         var stored = localStorage.getItem('agentview.theme');
         var system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'gradianto';
         var theme = themes.indexOf(stored) >= 0 ? stored : system;
         document.documentElement.dataset.theme = theme;
-        if (theme === 'light') document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f8f8f8');
+        var bg = { light: '#f8f8f8', 'solarized-dark': '#002b36', 'solarized-light': '#fdf6e3' }[theme];
+        if (bg) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg);
       } catch (e) {
         document.documentElement.dataset.theme = 'gradianto';
       }
