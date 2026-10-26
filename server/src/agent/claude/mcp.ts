@@ -1,8 +1,10 @@
+import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
 import type { McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
+import { configDir, hasAlt } from './accounts.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
 
 type Config = McpServerDef | undefined;
@@ -177,4 +179,32 @@ export async function setMcpGroup(service: string, group: string): Promise<McpGr
   await mkdir(path.dirname(GROUPS), { recursive: true });
   await writeFile(GROUPS, JSON.stringify(g, null, 2));
   return g;
+}
+
+// claude.ai connector status per Claude account, from `claude mcp list`, so the page knows both accounts without a chat on each.
+type Connector = { name: string; status: string };
+let connectorCache: { at: number; value: Promise<Record<string, Connector[]>> } | null = null;
+
+function listConnectors(account: 'main' | 'alt'): Promise<Connector[]> {
+  const env = { ...process.env };
+  delete env.CLAUDE_CONFIG_DIR;
+  const dir = configDir(account);
+  if (dir) env.CLAUDE_CONFIG_DIR = dir;
+  return new Promise((resolve) => {
+    execFile('claude', ['mcp', 'list'], { cwd: os.tmpdir(), env, timeout: 60_000 }, (_err, stdout) => {
+      resolve(String(stdout ?? '').split('\n').flatMap((line) => {
+        const m = /^(claude\.ai [^:]+): .* - (.+)$/.exec(line.trim());
+        if (!m) return [];
+        return [{ name: m[1], status: /Connected/.test(m[2]) ? 'connected' : /auth/i.test(m[2]) ? 'needs-auth' : 'failed' }];
+      }));
+    });
+  });
+}
+
+export function connectorStatus(refresh = false) {
+  if (!connectorCache || refresh || Date.now() - connectorCache.at > 5 * 60_000) {
+    const value = Promise.all([listConnectors('main'), hasAlt() ? listConnectors('alt') : Promise.resolve([])]).then(([main, alt]) => ({ main, alt }));
+    connectorCache = { at: Date.now(), value };
+  }
+  return connectorCache.value;
 }

@@ -11,7 +11,7 @@ import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerm
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
 import { listSessions } from './agent/claude/sessions.js';
 import { ntfyTopic, post } from './integrations/notify.js';
-import { configDef, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
+import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
 import { listBin, removeSession, restoreSession } from './agent/claude/bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './workspace/files.js';
@@ -256,6 +256,7 @@ const server = http.createServer(async (req, res) => {
       else openInChrome(target);
       return json({ ok: true });
     }
+    if (url.pathname === '/api/mcp/connectors') return json(await connectorStatus(url.searchParams.has('refresh')));
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
     if (url.pathname === '/api/mcp/groups' && req.method === 'POST') {
       const body = JSON.parse(await readBody(req));

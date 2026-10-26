@@ -15,7 +15,7 @@ const STATUS: Record<string, [tone: string, label: string]> = {
 };
 const statusOf = (s: string) => STATUS[s] ?? ['off', s];
 const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
-const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.account && !r.live ? [statusOf(r.status)[0], `${statusOf(r.status)[1]} (last seen)`] : r.status === 'needs-auth' && !r.live ? ['off', 'OAuth via Claude'] : statusOf(r.status));
+const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.account && !r.live ? [statusOf(r.status)[0], `${statusOf(r.status)[1]} · other account`] : r.status === 'needs-auth' && !r.live ? ['off', 'OAuth via Claude'] : statusOf(r.status));
 
 const SCOPES: [id: string, title: string, where: string][] = [
   ['user', 'Your servers', '~/.claude.json'],
@@ -201,6 +201,7 @@ export function McpPage() {
   const [sel, setSel] = useState<string | null>(null);
   const [groups, setGroups] = useState<Record<string, Group | 'hidden'>>({});
   const [showHidden, setShowHidden] = useState(false);
+  const [accounts, setAccounts] = useState<Record<string, { name: string; status: string }[]>>({});
 
   const load = (refresh = false) => {
     setBusy(true);
@@ -208,6 +209,7 @@ export function McpPage() {
     send({ type: 'mcp_status' });
     // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
     for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth') send({ type: 'mcp_reconnect', name: m.name });
+    fetch(api(`/api/mcp/connectors${refresh ? '?refresh=1' : ''}`)).then((r) => r.json()).then((a) => a && !a.error && setAccounts(a), () => undefined);
     fetch(api(`/api/mcp/probe${refresh ? '?refresh=1' : ''}`))
       .then((r) => r.json())
       .then((p) => { if (Array.isArray(p)) { setProbed(p); setAt(Date.now()); } else setError(p?.error ?? 'Probe failed'); }, (e) => setError(e.message))
@@ -227,8 +229,16 @@ export function McpPage() {
   const rows = useMemo(() => {
     const merged: Row[] = merge(probed ?? [], mcp).map((r) => (r.type === 'claudeai' ? { ...r, account } : r));
     const other = connectorsByAccount(account, merged).filter((o) => !merged.some((r) => r.name === o.name && r.account === o.account));
+    for (const [a, list] of Object.entries(accounts)) {
+      if (a === account) continue;
+      for (const c of list) {
+        const i = other.findIndex((o) => o.account === a && o.name === c.name);
+        if (i >= 0) other[i] = { ...other[i], status: c.status };
+        else other.push({ name: c.name, type: 'claudeai', status: c.status, account: a, live: false } as Row);
+      }
+    }
     return [...merged, ...other];
-  }, [probed, mcp, account]);
+  }, [probed, mcp, account, accounts]);
   const list = useMemo(() => services(rows), [rows]);
   const usage = useMemo(() => mcpCalls(events), [events]);
   const usageOf = (r: Row) => usage.get(slug(r.name));
