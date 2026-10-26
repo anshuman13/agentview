@@ -190,7 +190,7 @@ Rejecting keeps the row as `rejected` so Claude sees it in `wiki_search` and doe
 ### Steps
 
 - [x] 15. Columns `state`, `replaces`, `added_by` and pages `state`; client types; proposed and rejected rows hidden from pages, feed and search
-- [ ] 16. Server hub helper and `wiki_search`, `wiki_page`
-- [ ] 17. `wiki_propose` with profile from the chat folder, and the prompt rules
+- [x] 16. Server hub helper and `wiki_search`, `wiki_page`
+- [x] 17. `wiki_propose` with profile from the chat folder, and the prompt rules
 - [ ] 18. To review section with approve cards, nav count, Memory card, Claude chip
 - [ ] 19. Check in Chrome: a chat proposes, I approve on desktop and on the phone

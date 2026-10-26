@@ -2,6 +2,7 @@ import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpS
 import { z } from 'zod';
 import type { Effort } from '../../../../shared/protocol.js';
 import { BIG_BRO } from './transcript.js';
+import { WIKI_RULES, wikiTools } from './wiki.js';
 
 export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
 
@@ -14,9 +15,10 @@ const INSTRUCTIONS = [
   'Pass next as the remaining steps after the current one, a few words each, in order. Send the full list every time, and an empty list when nothing is left.',
   'Pass important only for something the user must know without reading the chat: a decision you made on their behalf, a risk, a blocker, or something surprising you found. One or two sentences. Leave it out otherwise.',
   "For anything in a web browser, use the Claude in Chrome tools. They drive the user's own Chrome, where the user is logged in to work sites, and the user watches that tab in AgentView.",
+  WIKI_RULES,
 ].join(' ');
 
-function statusServer(onStatus: (text: string) => void) {
+function statusServer(onStatus: (text: string) => void, wiki: ReturnType<typeof wikiTools>) {
   return createSdkMcpServer({
     name: 'agentview',
     alwaysLoad: true,
@@ -35,6 +37,7 @@ function statusServer(onStatus: (text: string) => void) {
           return { content: [{ type: 'text', text: 'ok' }] };
         },
       ),
+      ...wiki,
     ],
   });
 }
@@ -43,6 +46,7 @@ export function agentOptions(o: {
   cwd: string;
   resume?: string;
   onStatus: (text: string) => void;
+  chat: () => string | null;
   canUseTool: CanUseTool;
   beforeAgent: HookCallback;
   afterTool: HookCallback;
@@ -62,11 +66,11 @@ export function agentOptions(o: {
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
     enableFileCheckpointing: true,
-    allowedTools: ['mcp__agentview__set_status'],
+    allowedTools: ['mcp__agentview__set_status', 'mcp__agentview__wiki_search', 'mcp__agentview__wiki_page', 'mcp__agentview__wiki_propose'],
     disallowedTools: ['mcp__playwright'],
     extraArgs: { chrome: null },
     permissionMode: 'auto',
-    mcpServers: { agentview: statusServer(o.onStatus), ...o.mcp },
+    mcpServers: { agentview: statusServer(o.onStatus, wikiTools({ cwd: o.cwd, chat: o.chat })), ...o.mcp },
     toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
     canUseTool: o.canUseTool,
     perTaskStopAffordance: true,
