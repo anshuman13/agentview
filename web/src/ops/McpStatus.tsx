@@ -244,13 +244,14 @@ export function McpPage() {
   const usage = useMemo(() => mcpCalls(events), [events]);
   const usageOf = (r: Row) => usage.get(slug(r.name));
   const current = rows.find((r) => rowKey(r) === sel) ?? null;
-  const ok = rows.filter((r) => r.status === 'connected').length;
-  const attention = rows.filter(needsYou).length;
-  const extra = document.getElementById('page-mcp-extra');
   const groupOf = (r: Row): Group => (r.account ? accountGroup(r.account) : groups[groupKey(r)] === 'personal' ? 'personal' : 'work');
   const hidden = (s: Service) => groups[hideKey(s)] === 'hidden';
   const shown = list.filter((s) => !hidden(s));
   const hiddenList = list.filter(hidden);
+  const shownRows = shown.flatMap((s) => s.variants.map((v) => v.row));
+  const ok = shownRows.filter((r) => r.status === 'connected').length;
+  const attention = shownRows.filter(needsYou).length;
+  const extra = document.getElementById('page-mcp-extra');
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
 
   return (
@@ -258,7 +259,7 @@ export function McpPage() {
       <div className="mcp-main">
         {extra && createPortal(
           <div className="mcp-stats">
-            {probed !== null && <span className={attention ? 'warn' : ''}><b>{ok}</b> connected of {rows.length}</span>}
+            {probed !== null && <span className={attention ? 'warn' : ''}><b>{ok}</b> connected of {shownRows.length}</span>}
             {attention > 0 && <span className="bad"><b>{attention}</b> need you</span>}
             <button className={`btn mcp-refresh ${busy ? 'busy' : ''}`} onClick={() => load(true)} disabled={busy} title="Connect to every server again">
               <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at, ' ago')}` : 'Check'}
