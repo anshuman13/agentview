@@ -10,7 +10,7 @@ cost nothing per month.
 | --- | --- |
 | Mac mini | Hub: the main SQLite database, the sync API and the scheduler, running as launchd services |
 | Phone | Full local copy in SQLite, the Assistant screen, voice capture transcribed on the phone |
-| Laptop | Client like the phone, plus a nightly copy of the mini's database as a backup |
+| Laptop | Client like the phone, keeping its copy in the browser's IndexedDB, plus a nightly copy of the mini's database as a backup |
 
 Devices reach the mini over NetBird. The phone reads and writes its own copy and syncs when the mini is reachable,
 so a power cut, an outage or a reboot at home only pauses scans and sync.
