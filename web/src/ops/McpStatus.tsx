@@ -15,7 +15,7 @@ const STATUS: Record<string, [tone: string, label: string]> = {
 };
 const statusOf = (s: string) => STATUS[s] ?? ['off', s];
 const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
-const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.account && !r.live ? [statusOf(r.status)[0], `${statusOf(r.status)[1]} · other account`] : r.status === 'needs-auth' && !r.live ? ['off', 'OAuth via Claude'] : statusOf(r.status));
+const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.status === 'needs-auth' && !r.live && !r.account ? ['off', 'OAuth via Claude'] : statusOf(r.status));
 
 const SCOPES: [id: string, title: string, where: string][] = [
   ['user', 'Your servers', '~/.claude.json'],
@@ -175,7 +175,7 @@ type Group = 'work' | 'personal';
 const accountGroup = (a: string): Group => (a === 'alt' ? 'work' : 'personal');
 const shortName = (name: string) => name.replace(/^claude\.ai /, '');
 const hideKey = (s: Service) => `hide:${s.name}`;
-const groupKey = (r: Row) => (r.account ? `${r.account}:${r.name}` : splitName(r.name)[0]);
+const groupKey = (r: Row) => splitName(r.name)[0];
 const CONNECTORS = 'agentview.mcp.connectors';
 
 // Keeps the last connector list seen per account, so both accounts show whichever one this chat runs on.
@@ -247,7 +247,7 @@ export function McpPage() {
   const ok = rows.filter((r) => r.status === 'connected').length;
   const attention = rows.filter(needsYou).length;
   const extra = document.getElementById('page-mcp-extra');
-  const groupOf = (r: Row): Group => { const g = groups[groupKey(r)]; return g === 'work' || g === 'personal' ? g : r.account ? accountGroup(r.account) : 'work'; };
+  const groupOf = (r: Row): Group => (r.account ? accountGroup(r.account) : groups[groupKey(r)] === 'personal' ? 'personal' : 'work');
   const hidden = (s: Service) => groups[hideKey(s)] === 'hidden';
   const shown = list.filter((s) => !hidden(s));
   const hiddenList = list.filter(hidden);
@@ -337,7 +337,7 @@ function ServiceRow({ service, sel, usageOf, onPick, group, onGroup, onHide, isH
       </div>
       {calls > 0 && <span className={`mcp-row-use ${errors ? 'bad' : ''}`}>{plural(calls, 'call')}</span>}
       <button className="icon-btn mcp-row-move" title={isHidden ? 'Show' : 'Hide'} onClick={onHide}><Icon name={isHidden ? 'eye' : 'eye-closed'} small /></button>
-      <button className="icon-btn mcp-row-move" title={`Move to ${other === 'work' ? 'Work' : 'Personal'}`} onClick={() => onGroup(other)}><Icon name={other === 'work' ? 'briefcase' : 'home'} small /></button>
+      {!service.variants[0].row.account && <button className="icon-btn mcp-row-move" title={`Move to ${other === 'work' ? 'Work' : 'Personal'}`} onClick={() => onGroup(other)}><Icon name={other === 'work' ? 'briefcase' : 'home'} small /></button>}
     </div>
   );
 }
@@ -364,7 +364,7 @@ function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usa
         {row.live && row.status !== 'disabled' && <button className="btn" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
         {row.live && row.status === 'connected' && <button className="btn" onClick={() => use(row.name)} title="Ask Claude to use this server in your next message"><Icon name="comment" small /> Add to chat</button>}
         {!row.live && !row.account && <AddToChat name={row.name} />}
-        {row.type === 'claudeai' && row.status !== 'needs-auth' && <button className="btn" onClick={() => openConnectors(row.account)}><Icon name="key" small /> {row.account && !row.live ? 'Log in on claude.ai' : 'Manage on claude.ai'}</button>}
+        {row.type === 'claudeai' && row.status !== 'needs-auth' && <button className="btn" onClick={() => openConnectors(row.account)}><Icon name="key" small /> Manage on claude.ai</button>}
         {url && <a className="btn" href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
       </div>
       <dl className="mcp-kv">
@@ -379,11 +379,12 @@ function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usa
         {row.env && <><dt>Env</dt><dd className="mono wrap">{row.env.join('  ')}</dd></>}
         <dt>From</dt><dd>{scope}{where ? <span className="muted mono"> · {where}</span> : null}</dd>
         <dt>In chat</dt><dd>{row.live ? 'Loaded' : 'Not loaded'}</dd>
-        <dt>Group</dt>
-        <dd className="mcp-seg">
-          {(['work', 'personal'] as Group[]).map((g) => <button key={g} className={`btn ${g === group ? 'on' : ''}`} onClick={() => g !== group && onGroup(g)}>{g === 'work' ? 'Work' : 'Personal'}</button>)}
-        </dd>
-        {row.account && <><dt>Account</dt><dd>{row.account === 'alt' ? 'Work' : 'Personal'} Claude account</dd></>}
+        {row.account ? <><dt>Account</dt><dd>{row.account === 'alt' ? 'Work' : 'Personal'} Claude account</dd></> : <>
+          <dt>Group</dt>
+          <dd className="mcp-seg">
+            {(['work', 'personal'] as Group[]).map((g) => <button key={g} className={`btn ${g === group ? 'on' : ''}`} onClick={() => g !== group && onGroup(g)}>{g === 'work' ? 'Work' : 'Personal'}</button>)}
+          </dd>
+        </>}
       </dl>
       {usage && (
         <>
