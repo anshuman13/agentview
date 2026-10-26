@@ -13,7 +13,7 @@ import { ago, readFlag, saveFlag } from '../ui/util';
 import { hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
 import { Jobs } from './jobs/Jobs';
-import { ActionRow, Meetings, clock, confirmAll, peopleOf } from './meetings/Meetings';
+import { ActionRow, MeetingRow, Meetings, clock, confirmAll, peopleOf } from './meetings/Meetings';
 import { PickTime, when } from './time';
 import '../styles/features/assistant.css';
 
@@ -21,6 +21,7 @@ type Mode = 'task' | 'ask';
 
 const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Overview' },
+  { id: 'tasks', icon: 'checklist', label: 'Tasks' },
   { id: 'meetings', icon: 'record', label: 'Meetings' },
   { id: 'jobs', icon: 'history', label: 'Jobs' },
   { id: 'wiki', icon: 'book', label: 'Wiki' },
@@ -428,11 +429,16 @@ function useSplit() {
     const endOfDay = new Date(now).setHours(24, 0, 0, 0);
     const today = ahead.filter((m) => m.starts_at! < endOfDay);
     const next = today[0];
+    const startOfDay = new Date(now).setHours(0, 0, 0, 0);
+    const endOfTomorrow = new Date(now).setHours(48, 0, 0, 0);
+    const byStart = (a: Meeting, b: Meeting) => a.starts_at! - b.starts_at!;
     // Open actions from earlier meetings with the same title.
     const carried = next ? snap.items.filter((r) => !r.deleted && r.status === 'open' && r.meeting_id && r.profile === next.profile && r.meeting_id !== next.id
       && all.some((m) => m.id === r.meeting_id && m.profile === next.profile && m.title === next.title && m.starts_at! < next.starts_at!)).length : 0;
     return {
-      ...split(snap.items, filter, now), next, then: today[1], carried, endOfDay,
+      ...split(snap.items, filter, now), next, then: today[1], carried, endOfDay, endOfTomorrow,
+      meetingsToday: all.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay).sort(byStart),
+      meetingsTomorrow: all.filter((m) => m.starts_at! >= endOfDay && m.starts_at! < endOfTomorrow).sort(byStart),
       nextLater: today.find((m) => m !== next && m.starts_at! > now) ?? ahead.find((m) => m.starts_at! >= endOfDay),
     };
   }, [snap.items, meetings, filter, minute]);
@@ -443,7 +449,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { store, snap } = useAssistant();
   const s = useSplit();
   const { facts } = useCodex();
-  const count: Record<List, number> = { today: s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < s.endOfDay).length + s.review.length, meetings: 0, jobs: 0, wiki: proposals(facts).length };
+  const count: Record<List, number> = { today: 0, tasks: s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < s.endOfDay).length + s.review.length, meetings: 0, jobs: 0, wiki: proposals(facts).length };
   const { sync } = snap;
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
   const dot = sync.error ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
@@ -493,6 +499,73 @@ function Review({ rows }: { rows: ItemRow[] }) {
       </div>
     </section>
   ));
+}
+
+type Split = ReturnType<typeof useSplit>;
+
+// The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
+function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
+  const { snap } = useAssistant();
+  const { filter } = useView();
+  const now = Date.now();
+  const tomorrow = s.later.filter((r) => atTime(r.at)! >= s.endOfDay && atTime(r.at)! < s.endOfTomorrow);
+  const startOfDay = new Date(now).setHours(0, 0, 0, 0);
+  const jobs = snap.jobs.filter((j) => !j.deleted && (filter === 'all' || j.profile === filter));
+  const reports = jobs.flatMap((j) => {
+    const r = snap.runs.filter((x) => !x.deleted && x.profile === j.profile && x.job_id === j.id && x.status === 'ok' && (x.started_at ?? 0) >= startOfDay).sort((a, b) => b.started_at! - a.started_at!)[0];
+    return r?.output ? [{ j, r }] : [];
+  });
+  const tasks = () => setView({ list: 'tasks', open: null });
+  const stats = [
+    { n: dueToday.length, label: 'to do today', cls: '' },
+    { n: s.overdue.length, label: 'overdue', cls: 'late' },
+    { n: s.review.length, label: 'to confirm', cls: 'review' },
+    { n: s.doneToday.length, label: 'done', cls: 'done' },
+  ].filter((x, i) => i === 0 || x.n > 0);
+  const shown = (rs: ItemRow[]) => (
+    <button className="ov-list" onClick={tasks}>
+      {rs.slice(0, 5).map((r) => <span key={r.profile + r.id}><Icon name="circle-large-outline" small /> {r.title}</span>)}
+      {rs.length > 5 && <span className="muted">+{rs.length - 5} more</span>}
+    </button>
+  );
+  return (
+    <>
+      <div className="ov-stats">
+        {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
+      </div>
+      {s.next && (
+        <section>
+          <div className="as-section next">Next</div>
+          <NextCard m={s.next} then={s.then} carried={s.carried} onPrep={onPrep} />
+        </section>
+      )}
+      {s.meetingsToday.length > 0 && (
+        <section>
+          <div className="as-section">Meetings today · {s.meetingsToday.length}</div>
+          <div className="mt-rows ov-meetings">{s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+        </section>
+      )}
+      {dueToday.length > 0 && (
+        <section>
+          <div className="as-section">To do today · {dueToday.length}</div>
+          {shown(dueToday)}
+        </section>
+      )}
+      {(s.meetingsTomorrow.length > 0 || tomorrow.length > 0) && (
+        <section>
+          <div className="as-section later">Tomorrow</div>
+          {s.meetingsTomorrow.length > 0 && <div className="mt-rows ov-meetings">{s.meetingsTomorrow.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>}
+          {tomorrow.length > 0 && shown(tomorrow)}
+        </section>
+      )}
+      {reports.map(({ j, r }) => (
+        <section key={j.profile + j.id}>
+          <button className="as-section as-toggle" onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })}>{j.name} · {clock(r.started_at!)}</button>
+          <div className="ov-report">{r.output}</div>
+        </section>
+      ))}
+    </>
+  );
 }
 
 export function Assistant() {
@@ -552,7 +625,7 @@ export function Assistant() {
     </div>
   );
 
-  if (list !== 'today') {
+  if (list !== 'today' && list !== 'tasks') {
     const Page = { wiki: Wiki, meetings: Meetings, jobs: Jobs }[list];
     return (
       <div className="assistant wide" ref={root}>
@@ -584,7 +657,7 @@ export function Assistant() {
     for (const r of moved) void store.update(r, { at });
     showSnack(`Moved ${moved.length} to tomorrow`, () => moved.forEach((r) => void store.update(r, { at: r.at as number | null })));
   };
-  const empty = !s.overdue.length && !dueToday.length && !coming.length && !s.review.length && !s.next;
+  const empty = !s.overdue.length && !dueToday.length && !coming.length && !s.review.length;
   const nextLater = s.nextLater;
 
   return (
@@ -600,18 +673,13 @@ export function Assistant() {
       {calError && <button className="as-error" onClick={() => store.syncCalendar().then(() => setCalError(''), (err) => setCalError(errorText(err)))}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 
       <div className="as-scroll">
-        {list === 'today' && (
+        {list === 'today' && <Overview s={s} dueToday={dueToday} onPrep={() => ask(askText(prepText(s.next!), snap.items))} />}
+        {list === 'tasks' && (
           <>
             {s.overdue.length > 0 && (
               <section>
                 <div className="as-section late">Overdue · {s.overdue.length}</div>
                 {rows(s.overdue)}
-              </section>
-            )}
-            {s.next && (
-              <section>
-                <div className="as-section next">Next</div>
-                <NextCard m={s.next} then={s.then} carried={s.carried} onPrep={() => ask(askText(prepText(s.next!), snap.items))} />
               </section>
             )}
             <Review rows={fresh} />

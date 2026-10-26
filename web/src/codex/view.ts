@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { Profile } from './data/sync';
 
-export type List = 'today' | 'meetings' | 'jobs' | 'wiki';
+export type List = 'today' | 'tasks' | 'meetings' | 'jobs' | 'wiki';
 export type Filter = 'all' | Profile;
 
 // The list, filter and open page or meeting are shared by the sidebar on desktop and the drawer on the phone.

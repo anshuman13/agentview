@@ -49,7 +49,7 @@ function Badge({ m, now }: { m: Meeting; now: number }) {
   return null;
 }
 
-function MeetingRow({ m, now }: { m: Meeting; now: number }) {
+export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
