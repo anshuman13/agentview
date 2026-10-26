@@ -31,17 +31,18 @@ describe('transcripts', () => {
     expect(dueMeetings(db, 'work', now + 120 * MIN)).toEqual([]);
   });
 
-  it('saves only the summary and adds my action items once', () => {
+  it('saves only the summary and adds my actions once', () => {
     const db = openDb(':memory:');
     applyChanges(db, [meeting('cal:a', MIN, { notes: 'mine' }), meeting('cal:b', MIN)]);
-    const n = (id: string) => ({ id, summary: ' Done. ', doc_url: 'https://docs/x', my_actions: [{ title: 'Send the slides', context: 'Kim asked.', due: '2026-10-28T09:00:00Z' }] });
-    expect(saveNotes(db, 'work', [n('cal:a'), n('cal:b'), n('cal:gone')], now)).toBe(4);
+    const n = (id: string) => ({ id, summary: ' Done. ', doc_url: 'https://docs/x', actions: [{ title: 'Send the slides', context: 'Kim asked.', due: '2026-10-28T09:00:00Z', sure: true }, { title: 'Book the room', context: 'Said from the room.', due: null, sure: false }] });
+    expect(saveNotes(db, 'work', [n('cal:a'), n('cal:b'), n('cal:gone')], now)).toBe(6);
     expect(db.prepare('SELECT id, summary, notes FROM meetings ORDER BY id').all()).toEqual([
       { id: 'cal:a', summary: 'Done.', notes: 'mine' },
       { id: 'cal:b', summary: 'Done.', notes: null },
     ]);
-    const task = db.prepare('SELECT title, text, source, source_url, people, at, status FROM items WHERE id = ?').get(actionId('cal:a', 'Send the slides'));
-    expect(task).toEqual({ title: 'Send the slides', text: 'Kim asked.', source: 'meeting', source_url: 'https://docs/x', people: 'cal:a', at: Date.parse('2026-10-28T09:00:00Z'), status: 'open' });
+    const task = db.prepare('SELECT title, text, source, source_url, people, at, status, meeting_id FROM items WHERE id = ?').get(actionId('cal:a', 'Send the slides'));
+    expect(task).toEqual({ title: 'Send the slides', text: 'Kim asked.', source: 'action', source_url: 'https://docs/x', people: 'cal:a', at: Date.parse('2026-10-28T09:00:00Z'), status: 'open', meeting_id: 'cal:a' });
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(actionId('cal:a', 'Book the room'))).toEqual({ status: 'suggested' });
     db.prepare("UPDATE items SET status = 'done'").run();
     expect(saveNotes(db, 'work', [n('cal:a')], now + MIN)).toBe(1);
     expect(db.prepare("SELECT count(*) n FROM items WHERE status = 'open'").get()).toEqual({ n: 0 });

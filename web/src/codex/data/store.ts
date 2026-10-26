@@ -6,6 +6,7 @@ export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions'];
 
 export type SyncStatus = { syncing: boolean; last: number; error: string };
 export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at'>> & { deleted?: number };
+export type MeetingRef = { id: string; title: string | null } | null;
 export type Snapshot = {
   phase: 'locked' | 'unlocking' | 'ready';
   message: string;
@@ -18,7 +19,7 @@ export interface AssistantStore {
   subscribe(fn: () => void): () => void;
   snapshot(): Snapshot;
   unlock(): Promise<void>;
-  capture(text: string, type: 'task' | 'note', profile: Profile, at?: number | null): Promise<ItemRow>;
+  capture(text: string, type: 'task' | 'note', profile: Profile, at?: number | null, meeting?: MeetingRef): Promise<ItemRow>;
   update(row: ItemRow, patch: Patch): Promise<void>;
   editRow<K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>): Promise<void>;
   syncNow(): Promise<void>;

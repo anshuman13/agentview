@@ -106,7 +106,7 @@
 .as-prof.personal { color: var(--personal); }
 .as-sheet-quote { margin: 0; padding: var(--sp-5) var(--sp-7); border-left: 2px solid var(--border-card); background: var(--sunken); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); font-size: var(--fs-lg); max-height: 40vh; overflow-y: auto; }
 .as-sheet-text { min-height: 90px; padding: var(--sp-5) var(--sp-6); font-size: var(--fs-lg); resize: vertical; }
-.as-sheet-link { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--accent); font-size: var(--fs-md); }
+.as-sheet-link { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: var(--fs-md); cursor: pointer; }
 .as-sheet-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-4); }
 .as-sheet-actions .spacer { flex: 1; }
 

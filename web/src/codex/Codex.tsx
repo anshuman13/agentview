@@ -11,7 +11,7 @@ import { Voice, useDictation } from '../chat/Voice';
 import { ago, readFlag, saveFlag } from '../ui/util';
 import { hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
-import { MeetingRow, Meetings } from './meetings/Meetings';
+import { ActionRow, MeetingRow, Meetings } from './meetings/Meetings';
 import '../styles/features/assistant.css';
 
 type Mode = 'task' | 'note' | 'ask';
@@ -35,6 +35,7 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
   mail: { icon: 'mail', label: 'Mail' },
   calendar: { icon: 'calendar', label: 'Calendar' },
   meeting: { icon: 'record', label: 'Meeting' },
+  action: { icon: 'checklist', label: 'Meeting' },
   github: { icon: 'github', label: 'GitHub' },
   capture: { icon: 'edit', label: 'You' },
 };
@@ -193,7 +194,7 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
   const initial = useRef({ title: row.title ?? '', text: row.text ?? '' });
   const [snoozing, setSnoozing] = useState(false);
   const src = sourceOf(row);
-  const fromSource = row.source && row.source !== 'capture';
+  const fromSource = row.source && row.source !== 'capture' && row.source !== 'action';
   const at = atTime(row.at);
   const save = () => {
     const patch: Patch = {};
@@ -223,7 +224,8 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
         {fromSource ? (row.text && <blockquote className="as-sheet-quote">{row.text}</blockquote>) : (
           <textarea className="as-sheet-text" value={text} placeholder="Add details" onChange={(e) => setText(e.target.value)} />
         )}
-        {row.source_url && <a className="as-sheet-link" href={row.source_url} target="_blank" rel="noreferrer">Open in {src.label} <Icon name="link-external" small /></a>}
+        {row.meeting_id && <button className="as-sheet-link" onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))}>Open the meeting <Icon name="arrow-right" small /></button>}
+        {row.source_url && <a className="as-sheet-link" href={row.source_url} target="_blank" rel="noreferrer">{row.meeting_id ? 'Open the transcript' : `Open in ${src.label}`} <Icon name="link-external" small /></a>}
         {snoozing ? (
           <div className="as-sheet-actions">
             {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
@@ -559,6 +561,12 @@ export function Assistant() {
               <section>
                 <div className="as-section">Meetings · {s.meetingsToday.length}</div>
                 <div className="as-group">{s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+              </section>
+            )}
+            {s.review.length > 0 && (
+              <section>
+                <div className="as-section">From meetings · is this yours?</div>
+                <div className="as-group">{s.review.map((r) => <ActionRow key={r.profile + r.id} row={r} showMeeting />)}</div>
               </section>
             )}
             {s.today.length > 0 && (

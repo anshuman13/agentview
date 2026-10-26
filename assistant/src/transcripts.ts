@@ -19,13 +19,14 @@ const Notes = z.object({
   id: z.string().describe('The meeting id from the list'),
   summary: z.string().describe('3-6 plain sentences: what was decided and what happens next'),
   doc_url: z.string().describe('Link to the doc that holds the transcript'),
-  my_actions: z
+  actions: z
     .array(z.object({
       title: z.string().describe('Short imperative task, e.g. "Send the rollout slides to Kim"'),
-      context: z.string().describe('One sentence from the meeting on why, with who asked'),
+      context: z.string().describe('One sentence on why, with who asked'),
       due: z.string().nullable().describe('ISO date or date-time when a deadline was said, else null'),
+      sure: z.boolean().describe('true when the transcript names me as the owner; false when it is probably mine but not certain'),
     }))
-    .describe('Only things I (the calendar owner) agreed or was asked to do; empty when there are none'),
+    .describe('Follow-ups that are mine or probably mine; empty when there are none'),
 });
 export type MeetingNotes = z.infer<typeof Notes>;
 
@@ -56,8 +57,9 @@ export function markTried(db: Database, profile: Profile, meetings: Pending[], n
 
 export const actionId = (meeting: string, title: string) => `meet:${createHash('sha1').update(`${meeting}\n${title.trim().toLowerCase()}`).digest('hex').slice(0, 16)}`;
 
-// Writes the summary, and adds my action items as open tasks. Meeting notes are only ever what I type.
-// A task that already exists is left alone, so one I finished or deleted does not come back.
+// Writes the summary and adds my actions as tasks linked to the meeting: certain ones go to Today, the rest wait for
+// me to keep or dismiss them. Meeting notes are only ever what I type. A task that already exists is left alone, so one
+// I finished or dismissed does not come back.
 export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[], now = Date.now()) {
   const row = db.prepare('SELECT title FROM meetings WHERE profile = ? AND id = ? AND deleted = 0');
   const has = db.prepare('SELECT 1 FROM items WHERE profile = ? AND id = ?');
@@ -66,13 +68,13 @@ export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[],
     const m = row.get(profile, n.id) as { title: string | null } | null;
     if (!m || !n.summary.trim()) continue;
     changes.push({ table: 'meetings', id: n.id, profile, updated_at: now, fields: { summary: n.summary.trim() } });
-    for (const a of n.my_actions) {
+    for (const a of n.actions) {
       const id = actionId(n.id, a.title);
       if (!a.title.trim() || has.get(profile, id)) continue;
       const due = a.due ? Date.parse(a.due) : NaN;
       changes.push({
         table: 'items', id, profile, updated_at: now,
-        fields: { title: a.title.trim(), text: a.context.trim() || null, source: 'meeting', source_url: n.doc_url || null, people: m.title, at: Number.isFinite(due) ? due : null, status: 'open' },
+        fields: { title: a.title.trim(), text: a.context.trim() || null, source: 'action', source_url: n.doc_url || null, people: m.title, at: Number.isFinite(due) ? due : null, status: a.sure ? 'open' : 'suggested', meeting_id: n.id },
       });
     }
   }
@@ -94,10 +96,10 @@ export function readSaved(root: string, file: string, offset = 0) {
   return `${text.slice(offset, end)}\n[characters ${offset}-${end} of ${text.length}]`;
 }
 
-// Asks Claude to read the Gemini notes attached to each meeting's event and saves what it finds.
+// Asks Claude to read the transcript in the Gemini doc attached to each meeting's event and saves what it finds.
 async function readTranscripts(db: Database, profile: Profile, meetings: Pending[], now: number) {
   const found: MeetingNotes[] = [];
-  const save = tool('save_meeting_notes', 'Save the summary, decisions and notes for one meeting.', Notes.shape, async (a) => {
+  const save = tool('save_meeting_notes', 'Save the summary and my actions for one meeting.', Notes.shape, async (a) => {
     found.push(a);
     return { content: [{ type: 'text', text: 'saved' }] };
   });
@@ -118,8 +120,10 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     'If the output is saved to a file because it is large, read that file with read_saved_output, all of it.',
     'Work from the transcript only. Ignore the summary, notes, details and next steps Gemini wrote at the top of the doc; do not copy or rely on them.',
     'I am the calendar owner: the attendee marked as self on the event. Find my name in the transcript.',
-    'Call save_meeting_notes once per meeting that has a transcript, in English: a short summary for me, and only the action items that are mine (I said I would do it, or someone asked me and I agreed). Things owned by others or by the whole group do not go in my_actions.',
-    'A speaker named after a meeting room is the room microphone; attribute what was said there to a person only when the transcript makes it clear.',
+    'Call save_meeting_notes once per meeting that has a transcript, in English: a short summary for me, and my follow-ups as actions.',
+    'An action is sure when I said I would do it, someone asked me by name and I agreed, or I was named as the owner.',
+    'An action is not sure when it is probably mine: it was taken on by a speaker named after a meeting room (the room microphone) and I was likely in that room (the room is on the event and I do not speak under my own name), or it is a group follow-up nobody else took.',
+    'Leave out what another person by name took on, asked about or owns. Write each action as a task for me.',
     'Say things directly and briefly. Do not use the em dash character.',
     'Skip meetings without a Gemini notes doc. Do not do anything else.',
   ].join('\n');

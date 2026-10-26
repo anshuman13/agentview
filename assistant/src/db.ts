@@ -7,7 +7,7 @@ export const DB_DIR = path.join(os.homedir(), '.agentview', 'assistant');
 export const DB_PATH = path.join(DB_DIR, 'assistant.db');
 
 export const TABLES: Record<string, string[]> = {
-  items: ['title', 'text', 'source', 'source_url', 'people', 'at', 'status'],
+  items: ['title', 'text', 'source', 'source_url', 'people', 'at', 'status', 'meeting_id'],
   facts: ['text', 'item_id', 'superseded_by', 'page_id', 'heading', 'sources', 'at', 'contested', 'state', 'replaces', 'added_by'],
   pages: ['title', 'section', 'summary', 'sort', 'state'],
   meetings: ['title', 'starts_at', 'ends_at', 'people', 'calendar_url', 'recorded_ms', 'notes', 'summary', 'decisions'],

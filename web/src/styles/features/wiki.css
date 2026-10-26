@@ -201,6 +201,7 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .mt-badge.live { background: color-mix(in srgb, var(--err) 16%, transparent); color: var(--err); }
 .mt-count { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 2px var(--sp-5); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font-size: var(--fs-sm); font-weight: 500; }
 .mt-count.done { background: transparent; color: var(--fg-faint); }
+.mt-count.review { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
 .mt-count .codicon.icon { font-size: 12px; }
 .mt-avatars { flex: none; display: flex; }
 .mt-avatars > span { width: 26px; height: 26px; display: grid; place-items: center; margin-left: -7px; border-radius: 50%; border: 2px solid var(--wk-card); background: color-mix(in srgb, var(--hue) 30%, var(--raised)); color: color-mix(in srgb, var(--hue) 70%, var(--fg-strong)); font-size: 10px; font-weight: 600; }
@@ -274,3 +275,22 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .wk-reviews { display: grid; gap: var(--sp-4); max-width: 720px; }
 .wk-review .mt-action-kind em { font-style: normal; color: var(--fg-muted); }
 .wk-review .wk-claim-foot { margin-top: var(--sp-3); }
+
+.mt-tasks { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 14px; background: var(--raised); overflow: hidden; }
+.mt-task { display: flex; align-items: flex-start; gap: var(--sp-5); padding: var(--sp-6) var(--sp-7); }
+.mt-task + .mt-task { border-top: 1px solid var(--border); }
+.mt-task .as-check { margin: -4px -4px 0 -6px; }
+.mt-task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.mt-task-title { font-size: var(--fs-lg); font-weight: 500; color: var(--fg-strong); line-height: var(--lh-snug); }
+.mt-task.done .mt-task-title { color: var(--fg-faint); text-decoration: line-through; }
+.mt-task .as-ctx { flex-wrap: wrap; white-space: normal; }
+.mt-task-why { color: var(--fg-muted); }
+.mt-task-from { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; cursor: pointer; }
+.mt-task.suggested { background: color-mix(in srgb, var(--warn) 5%, transparent); }
+.mt-task-pick { flex: none; display: flex; align-items: center; gap: var(--sp-3); }
+.mt-task-pick .btn { border-radius: var(--radius-pill); }
+.mt-add { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-5); padding: 0 var(--sp-7); min-height: var(--touch-sm); border: 1px dashed var(--border-strong); border-radius: 14px; color: var(--fg-faint); }
+.mt-add:focus-within { border-style: solid; border-color: var(--accent); }
+.mt-add input { flex: 1; min-width: 0; height: var(--touch-sm); border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-lg); outline: 0; }
+.mt-task .as-ctx > .mt-task-why { flex: 1 1 100%; display: block; }
+.mt-task .as-ctx > .mt-task-why::before { display: none; }

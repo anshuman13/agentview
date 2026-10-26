@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, type AssistantStore, type Patch } from './store';
+import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Patch } from './store';
 import { edited, newCapture, runSync, toRow, type Dirty } from './engine';
 import { mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
@@ -116,8 +116,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.syncNow();
   }
 
-  async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null) {
-    const row = newCapture(text, type, profile, Date.now(), at);
+  async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null, meeting: MeetingRef = null) {
+    const row = newCapture(text, type, profile, Date.now(), at, meeting);
     this.put('items', row);
     return row;
   }

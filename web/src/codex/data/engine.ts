@@ -148,12 +148,14 @@ export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
     next: open.filter((r) => meeting(r) && isLater(r) && atTime(r.at)! - now < 12 * 3600_000).slice(0, 1),
     today: open.filter((r) => !meeting(r) && !isLater(r)),
     later: open.filter((r) => !meeting(r) && isLater(r)),
+    review: mine.filter((r) => r.status === 'suggested').sort((a, b) => b.updated_at - a.updated_at),
     notes: mine.filter((r) => r.status === 'note').sort((a, b) => b.updated_at - a.updated_at),
     done: mine.filter((r) => r.status === 'done' && now - r.updated_at < 7 * DAY).sort((a, b) => b.updated_at - a.updated_at),
   };
 }
 
-export function newCapture(text: string, type: 'task' | 'note', profile: Profile, now: number, at: number | null = null): ItemRow {
+// A task added from a meeting is an action of that meeting, labelled with its title.
+export function newCapture(text: string, type: 'task' | 'note', profile: Profile, now: number, at: number | null = null, meeting: { id: string; title: string | null } | null = null): ItemRow {
   const [first, ...rest] = text.split('\n');
   return {
     id: crypto.randomUUID(),
@@ -161,14 +163,15 @@ export function newCapture(text: string, type: 'task' | 'note', profile: Profile
     version: 0,
     updated_at: now,
     deleted: 0,
-    field_times: JSON.stringify({ title: now, text: now, source: now, status: now, ...(at != null && { at: now }) }),
+    field_times: JSON.stringify({ title: now, text: now, source: now, status: now, ...(at != null && { at: now }), ...(meeting && { people: now, meeting_id: now }) }),
     title: first.slice(0, 120),
     text: rest.join('\n').trim() || null,
-    source: 'capture',
+    source: meeting ? 'action' : 'capture',
     source_url: null,
-    people: null,
+    people: meeting?.title ?? null,
     at,
     status: type === 'note' ? 'note' : 'open',
+    meeting_id: meeting?.id ?? null,
     dirty: 1,
   };
 }

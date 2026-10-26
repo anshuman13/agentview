@@ -2,7 +2,7 @@ import { getState, notice, prompt, queueNext, send } from '../../app/store';
 import { macOrigin } from '../../app/api';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { factTime, listOf, live, sourcesOf, type Action, type Fact, type Meeting, type Page } from './wiki';
+import { factTime, listOf, live, sourcesOf, type Fact, type Meeting, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
@@ -93,7 +93,7 @@ export function wikiAskText(question: string, pages: Page[], facts: Fact[], page
   ].join('\n');
 }
 
-export function meetingAskText(question: string, m: Meeting, actions: Action[]) {
+export function meetingAskText(question: string, m: Meeting, actions: ItemRow[]) {
   const when = m.starts_at ? new Date(m.starts_at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
   return [
     question,
@@ -101,7 +101,7 @@ export function meetingAskText(question: string, m: Meeting, actions: Action[]) 
     m.notes && `\nMy notes:\n${m.notes}`,
     m.summary && `\nSummary:\n${m.summary}`,
     listOf(m.decisions).length ? `\nDecisions:\n${listOf(m.decisions).map((d) => `- ${d}`).join('\n')}` : '',
-    actions.length ? `\nProposed actions:\n${actions.map((a) => `- [${a.status}] ${a.kind} ${a.target}: ${a.title}`).join('\n')}` : '',
+    actions.length ? `\nMy actions from it:\n${actions.map((a) => `- [${a.status}] ${a.title}`).join('\n')}` : '',
     '\nUse my Calendar, Slack and Linear connectors when the question needs them.',
   ].filter(Boolean).join('\n');
 }

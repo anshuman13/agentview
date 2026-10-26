@@ -1,4 +1,4 @@
-import type { Profile } from './sync';
+import type { ItemRow, Profile } from './sync';
 
 export type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
 
@@ -165,9 +165,10 @@ export function groupMeetings(meetings: Meeting[], now = Date.now()) {
   return groups;
 }
 
-export const actionsOf = (actions: Action[], m: { profile: Profile; id: string }) => live(actions).filter((a) => a.meeting_id === m.id && a.profile === m.profile);
+// A meeting's actions are the tasks linked to it: suggested ones wait for me to keep or dismiss them.
+export const actionsOf = (items: ItemRow[], m: { profile: Profile; id: string }) => items.filter((r) => !r.deleted && r.meeting_id === m.id && r.profile === m.profile);
 
-export function actionCount(actions: Action[], m: { profile: Profile; id: string }) {
-  const mine = actionsOf(actions, m);
-  return { total: mine.length, handled: mine.filter((a) => a.status !== 'proposed').length };
+export function actionCount(items: ItemRow[], m: { profile: Profile; id: string }) {
+  const mine = actionsOf(items, m);
+  return { total: mine.filter((r) => r.status !== 'suggested').length, done: mine.filter((r) => r.status === 'done').length, review: mine.filter((r) => r.status === 'suggested').length };
 }

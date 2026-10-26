@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { actionCount, approveChanges, contestOf, groupMeetings, pageClaims, pageStats, searchWiki, type Action, type Fact, type Meeting, type Page } from './wiki';
+import type { ItemRow } from './sync';
+import { actionCount, approveChanges, contestOf, groupMeetings, pageClaims, pageStats, searchWiki, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -66,8 +67,8 @@ describe('meetings', () => {
   const meeting = (id: string, starts_at: number): Meeting => ({
     ...common(id), title: id, starts_at, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null,
   });
-  const action = (id: string, meeting_id: string, status: string): Action => ({
-    ...common(id), meeting_id, kind: 'task', target: null, title: id, body: null, fields: null, status, result_url: null,
+  const action = (id: string, meeting_id: string, status: string): ItemRow => ({
+    ...common(id), meeting_id, title: id, text: null, source: 'action', source_url: null, people: null, at: null, status,
   });
 
   it('groups today, upcoming and past days', () => {
@@ -76,9 +77,9 @@ describe('meetings', () => {
     expect(g.map((x) => x.rows.map((m) => m.id))).toEqual([['today'], ['later'], ['past1', 'past2'], ['old']]);
   });
 
-  it('counts handled actions', () => {
-    const actions = [action('a1', 'm', 'proposed'), action('a2', 'm', 'approved'), action('a3', 'n', 'rejected'), { ...action('a4', 'm', 'approved'), profile: 'personal' as const }];
-    expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, handled: 1 });
-    expect(actionCount(actions, { profile: 'personal', id: 'm' })).toEqual({ total: 1, handled: 1 });
+  it('counts my actions per meeting', () => {
+    const actions = [action('a1', 'm', 'open'), action('a2', 'm', 'done'), action('a3', 'm', 'suggested'), action('a4', 'n', 'open'), { ...action('a5', 'm', 'done'), profile: 'personal' as const }, { ...action('a6', 'm', 'open'), deleted: 1 }];
+    expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1 });
+    expect(actionCount(actions, { profile: 'personal', id: 'm' })).toEqual({ total: 1, done: 1, review: 0 });
   });
 });

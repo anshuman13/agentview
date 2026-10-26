@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useCodex } from '../data';
+import { useAssistant, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
-import { actionCount, actionsOf, fieldsOf, groupMeetings, listOf, live, type Action, type Meeting } from '../data/wiki';
+import { atTime, parseWhen, stripWhen } from '../data/engine';
+import type { Patch } from '../data/store';
+import type { ItemRow } from '../data/sync';
+import { actionCount, actionsOf, groupMeetings, listOf, live, type Meeting } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { AskBar } from '../wiki/Wiki';
@@ -26,8 +29,8 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
 }
 
 export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
-  const { actions } = useCodex();
-  const count = actionCount(actions, m);
+  const { snap } = useAssistant();
+  const count = actionCount(snap.items, m);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
@@ -43,9 +46,9 @@ export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
           {!m.recorded_ms && !m.summary && <span>{peopleOf(m).length} people</span>}
         </span>
       </span>
-      {count.total > 0 && (
-        <span className={`mt-count${count.handled === count.total ? ' done' : ''}`} title="Actions handled">
-          <Icon name={count.handled === count.total ? 'pass' : 'circle-large-outline'} small /> {count.handled} of {count.total}
+      {count.review > 0 ? <span className="mt-count review" title="Suggested actions to keep or dismiss">{count.review} to review</span> : count.total > 0 && (
+        <span className={`mt-count${count.done === count.total ? ' done' : ''}`} title="My actions done">
+          <Icon name={count.done === count.total ? 'pass' : 'circle-large-outline'} small /> {count.done} of {count.total}
         </span>
       )}
       <Avatars people={peopleOf(m)} />
@@ -126,83 +129,66 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
   );
 }
 
-const KIND: Record<string, { icon: string; label: (target: string) => string }> = {
-  slack: { icon: 'comment-discussion', label: (t) => `Slack message to ${t}` },
-  linear: { icon: 'issues', label: (t) => `Linear issue in ${t}` },
-  task: { icon: 'pass', label: () => 'Task in Codex' },
-};
+const openMeeting = (r: ItemRow) => setView({ list: 'meetings', open: `${r.profile}:${r.meeting_id}` });
 
-function ActionCard({ a }: { a: Action }) {
-  const { store } = useCodex();
-  const [editing, setEditing] = useState(false);
-  const [title, setTitle] = useState(a.title ?? '');
-  const [body, setBody] = useState(a.body ?? '');
-  const kind = KIND[a.kind ?? ''] ?? { icon: 'circle-small', label: (t: string) => t };
-  const set = (status: string, text: string) => {
-    const before = a.status;
-    void store.editRow('actions', a, { status });
-    showSnack(text, () => void store.editRow('actions', a, { status: before }));
+// One of my actions from a meeting. A suggested one is kept as a task in Today or dismissed.
+export function ActionRow({ row, showMeeting = false }: { row: ItemRow; showMeeting?: boolean }) {
+  const { store } = useAssistant();
+  const change = (patch: Patch, text: string) => {
+    const before = Object.fromEntries(Object.keys(patch).map((k) => [k, k === 'deleted' ? 0 : row[k as keyof ItemRow]])) as Patch;
+    void store.update(row, patch);
+    showSnack(text, () => void store.update(row, before));
   };
-  const save = () => {
-    void store.editRow('actions', a, { title: title.trim() || a.title, body });
-    setEditing(false);
-  };
-  if (a.status === 'rejected') {
-    return (
-      <div className="mt-action rejected">
-        <Icon name={kind.icon} small /><s>{a.title}</s><span className="spacer" />
-        <button className="wk-act" onClick={() => void store.editRow('actions', a, { status: 'proposed' })}>Restore</button>
-      </div>
-    );
-  }
-  const fields = Object.entries(fieldsOf(a));
+  const suggested = row.status === 'suggested';
+  const done = row.status === 'done';
+  const at = atTime(row.at);
   return (
-    <div className={`mt-action ${a.status}`}>
-      <div className="mt-action-kind"><span className={`mt-kind ${a.kind}`}><Icon name={kind.icon} small /></span>{kind.label(a.target ?? '')}</div>
-      {editing ? (
-        <div className="mt-action-edit">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Title" />
-          <textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} aria-label="Text" />
-        </div>
-      ) : (
-        <>
-          <div className="mt-action-title">{a.title}</div>
-          {a.body && <div className="mt-action-body">{a.body}</div>}
-        </>
+    <div className={`mt-task ${row.status ?? ''}`}>
+      {!suggested && (
+        <button className="as-check" title={done ? 'Not done' : 'Done'} aria-label={done ? 'Not done' : 'Done'} onClick={() => change({ status: done ? 'open' : 'done' }, done ? 'Moved back to Today' : 'Done')}>
+          <Icon name={done ? 'pass-filled' : 'circle-large-outline'} />
+        </button>
       )}
-      {fields.length > 0 && <div className="mt-fields">{fields.map(([k, v]) => <span key={k}><em>{k}</em> {v}</span>)}</div>}
-      <div className="mt-action-foot">
-        {a.status === 'proposed' && !editing && (
-          <>
-            <button className="wk-act" onClick={() => { setTitle(a.title ?? ''); setBody(a.body ?? ''); setEditing(true); }}><Icon name="edit" small /> Edit</button>
-            <span className="spacer" />
-            <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => set('rejected', 'Action rejected')}><Icon name="close" /></button>
-            <button className="btn primary mt-approve" onClick={() => set('approved', 'Approved')}><Icon name="check" small /> Approve</button>
-          </>
-        )}
-        {editing && (
-          <>
-            <span className="spacer" />
-            <button className="btn" onClick={() => { setEditing(false); setTitle(a.title ?? ''); setBody(a.body ?? ''); }}>Cancel</button>
-            <button className="btn primary" onClick={save}>Save</button>
-          </>
-        )}
-        {a.status === 'approved' && (
-          <>
-            <span className="mt-state"><Icon name="pass-filled" small /> Approved</span>
-            <span className="mt-wait">{a.kind === 'task' ? 'Added when the scheduler runs' : 'Sends when the scheduler runs'}</span>
-            <span className="spacer" />
-            <button className="wk-act" onClick={() => void store.editRow('actions', a, { status: 'proposed' })}>Undo</button>
-          </>
-        )}
-        {a.status === 'sent' && (
-          <>
-            <span className="mt-state"><Icon name="pass-filled" small /> Sent</span>
-            {a.result_url && <a className="wk-act" href={a.result_url} target="_blank" rel="noreferrer">Open <Icon name="link-external" small /></a>}
-          </>
-        )}
+      <div className="mt-task-body">
+        <div className="mt-task-title">{row.title}</div>
+        <div className="as-ctx">
+          {showMeeting && row.meeting_id && <button className="mt-task-from" onClick={() => openMeeting(row)}><Icon name="calendar" small /> {row.people || 'Meeting'}</button>}
+          {at != null && !done && <span className={at < Date.now() ? 'as-due late' : 'as-due'}>{new Date(at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
+          {row.text && <span className="mt-task-why">{row.text}</span>}
+        </div>
       </div>
+      {suggested && (
+        <div className="mt-task-pick">
+          <button className="icon-btn" title="Not mine" aria-label="Dismiss" onClick={() => change({ deleted: 1 }, 'Dismissed')}><Icon name="close" /></button>
+          <button className="btn sm primary" onClick={() => change({ status: 'open' }, 'Added to Today')}><Icon name="check" small /> Mine</button>
+        </div>
+      )}
     </div>
+  );
+}
+
+const ORDER: Record<string, number> = { suggested: 0, open: 1, done: 2 };
+
+function MeetingActions({ m }: { m: Meeting }) {
+  const { store, snap } = useAssistant();
+  const [text, setText] = useState('');
+  const rows = actionsOf(snap.items, m).sort((a, b) => (ORDER[a.status ?? ''] ?? 3) - (ORDER[b.status ?? ''] ?? 3) || a.updated_at - b.updated_at);
+  const add = () => {
+    const t = text.trim();
+    if (!t) return;
+    const w = parseWhen(t);
+    void store.capture(stripWhen(t, w) || t, 'task', m.profile, w?.at ?? null, { id: m.id, title: m.title });
+    setText('');
+  };
+  return (
+    <>
+      {rows.length > 0 && <div className="mt-tasks">{rows.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>}
+      {!rows.length && <p className="mt-pending">Your action items from the transcript land here and in Today.</p>}
+      <form className="mt-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <Icon name="add" small />
+        <input value={text} placeholder="Add an action, like “send the slides friday”" aria-label="Add an action" onChange={(e) => setText(e.target.value)} />
+      </form>
+    </>
   );
 }
 
@@ -269,16 +255,16 @@ function TranscriptButton({ m }: { m: Meeting }) {
     }
   };
   return (
-    <button className="btn sm mt-sync" disabled={busy} title="Read the transcript and add my action items" onClick={run}>
+    <button className="btn sm mt-sync" disabled={busy} title="Read the transcript again: summary and suggested actions" onClick={run}>
       <Icon name={busy ? 'loading' : 'sync'} small spin={busy} /> {busy ? 'Syncing' : 'Sync transcript'}
     </button>
   );
 }
 
 function MeetingPage({ m }: { m: Meeting }) {
-  const { actions } = useCodex();
-  const mine = actionsOf(actions, m);
-  const count = actionCount(actions, m);
+  const { snap } = useAssistant();
+  const mine = actionsOf(snap.items, m);
+  const count = actionCount(snap.items, m);
   const decisions = listOf(m.decisions);
   const people = peopleOf(m);
   const back = () => setView({ open: null });
@@ -320,9 +306,8 @@ function MeetingPage({ m }: { m: Meeting }) {
           )}
 
           <section className="mt-sec">
-            <h2>Actions{count.total > 0 && <span className="mt-of">{count.handled} of {count.total}</span>}</h2>
-            {mine.length ? <div className="mt-actions">{mine.map((a) => <ActionCard key={a.profile + a.id} a={a} />)}</div>
-              : <p className="mt-pending">Proposed Slack messages, Linear issues and tasks appear here after the meeting.</p>}
+            <h2>My actions{count.total > 0 && <span className="mt-of">{count.done} of {count.total} done</span>}</h2>
+            <MeetingActions m={m} />
           </section>
         </article>
       </div>

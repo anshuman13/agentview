@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, type AssistantStore, type Patch } from './store';
+import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Patch } from './store';
 import { edited, errorText, newCapture, runSync, toRow, type Dirty } from './engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
@@ -141,7 +141,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
 
   protected async refresh() {
     if (!this.ready) return;
-    const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND status IN ('open', 'note')`);
+    const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND (status != 'done' OR meeting_id IS NOT NULL OR updated_at > ?)`, [Date.now() - 7 * 86400_000]);
     const all = <K extends Table>(t: K) => this.query<Tables[K]>(`SELECT * FROM ${t} WHERE deleted = 0`);
     const [pages, facts, meetings, actions] = await Promise.all([all('pages'), all('facts'), all('meetings'), all('actions')]);
     if (this.ready) this.set({ items, pages, facts, meetings, actions });
@@ -195,12 +195,12 @@ export class LocalStore extends BaseStore implements AssistantStore {
     });
   }
 
-  async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null) {
-    const r = newCapture(text, type, profile, Date.now(), at);
+  async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null, meeting: MeetingRef = null) {
+    const r = newCapture(text, type, profile, Date.now(), at, meeting);
     await this.exec(
-      `INSERT INTO items (id, profile, version, updated_at, deleted, field_times, title, text, source, at, status, dirty)
-       VALUES (?, ?, 0, ?, 0, ?, ?, ?, 'capture', ?, ?, 1)`,
-      [r.id, r.profile, r.updated_at, r.field_times, r.title, r.text, r.at, r.status],
+      `INSERT INTO items (id, profile, version, updated_at, deleted, field_times, title, text, source, people, at, status, meeting_id, dirty)
+       VALUES (?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [r.id, r.profile, r.updated_at, r.field_times, r.title, r.text, r.source, r.people, r.at, r.status, r.meeting_id],
     );
     await this.refresh();
     this.syncNow();
