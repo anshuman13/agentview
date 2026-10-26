@@ -1,4 +1,4 @@
-# Codex flows (low fidelity, draft 2)
+# Codex flows (draft 2, built)
 
 Goal: one coherent product. Every object has one home, every list answers one question, and everything a meeting
 produces ends up where I already look (Today). Draft 2 folds in a product review and a simulated Monday.

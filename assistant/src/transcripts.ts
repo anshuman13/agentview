@@ -10,75 +10,100 @@ import { PROFILES, type Profile } from './calendar.js';
 import { applyChanges, type Change } from './sync.js';
 
 const MIN = 60_000;
-const WITHIN = 24 * 60 * MIN;
-const TRIES = 4;
-const RETRY = 20 * MIN;
+const DAY = 24 * 60 * MIN;
+const WITHIN = 3 * DAY;
+export const TRIES = 8;
+const RETRY = 15 * MIN;
+const EXPIRE = 7 * DAY;
 const CHUNK = 30_000;
 
 const Notes = z.object({
   id: z.string().describe('The meeting id from the list'),
   summary: z.string().describe('3-6 plain sentences: what was decided and what happens next'),
   doc_url: z.string().describe('Link to the doc that holds the transcript'),
+  room: z.string().nullable().describe('The speaker named after a meeting room (the room microphone), or null when there is none'),
   actions: z
     .array(z.object({
       title: z.string().describe('Short imperative task, e.g. "Send the rollout slides to Kim"'),
       context: z.string().describe('One sentence on why, with who asked'),
       due: z.string().nullable().describe('ISO date or date-time when a deadline was said, else null'),
-      sure: z.boolean().describe('true when the transcript names me as the owner; false when it is probably mine but not certain'),
+      owner: z.enum(['me', 'maybe', 'nobody']).describe('me: certainly mine; maybe: probably mine; nobody: a follow-up no one took'),
     }))
-    .describe('Follow-ups that are mine or probably mine; empty when there are none'),
+    .describe('Follow-ups that are mine, probably mine, or that nobody took; empty when there are none'),
+  others: z.array(z.object({ who: z.string(), what: z.string() })).describe('What other people by name said they would do'),
 });
 export type MeetingNotes = z.infer<typeof Notes>;
 
-type Pending = { id: string; title: string; starts_at: number; ends_at: number };
+type Pending = { id: string; title: string; starts_at: number; ends_at: number; room_me: number | null };
 
 const tried = (profile: Profile, id: string) => `transcript:${profile}:${id}`;
+const triesOf = (db: Database, profile: Profile, id: string) => ((db.prepare('SELECT value FROM meta WHERE key = ?').get(tried(profile, id)) as { value: string } | null)?.value ?? '0,0').split(',').map(Number);
 
-// Calendar meetings without a summary that ended in the last day, tried at most TRIES times, RETRY apart.
+// Calendar meetings that ended in the last days and are not processed yet, tried at most TRIES times, RETRY apart.
+// A meeting summarized by hand before it ended is still waiting; one summarized before this state existed is done.
 export function dueMeetings(db: Database, profile: Profile, now = Date.now()): Pending[] {
-  const get = db.prepare('SELECT value FROM meta WHERE key = ?');
   const rows = db.prepare(
-    "SELECT id, title, starts_at, ends_at FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND (summary IS NULL OR summary = '') AND ends_at <= ? AND ends_at >= ? ORDER BY ends_at",
+    "SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND (transcript = 'waiting' OR (transcript IS NULL AND (summary IS NULL OR summary = ''))) AND ends_at <= ? AND ends_at >= ? ORDER BY ends_at",
   ).all(profile, now, now - WITHIN) as Pending[];
   return rows.filter((m) => {
-    const [count, last] = ((get.get(tried(profile, m.id)) as { value: string } | null)?.value ?? '0,0').split(',').map(Number);
+    const [count, last] = triesOf(db, profile, m.id);
     return count < TRIES && now - last >= RETRY;
   });
 }
 
-export function markTried(db: Database, profile: Profile, meetings: Pending[], now = Date.now()) {
-  const get = db.prepare('SELECT value FROM meta WHERE key = ?');
+// Counts a try for each meeting with no transcript yet and shows it on the meeting; after the last try it is missing.
+// An import that failed (usage limit, crash) only delays the next try and does not count.
+export function markTried(db: Database, profile: Profile, meetings: Pending[], now = Date.now(), failed = false) {
   const set = db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
+  const changes: Change[] = [];
   for (const m of meetings) {
-    const count = Number((get.get(tried(profile, m.id)) as { value: string } | null)?.value.split(',')[0] ?? 0);
-    set.run(tried(profile, m.id), `${count + 1},${now}`);
+    const count = triesOf(db, profile, m.id)[0] + (failed ? 0 : 1);
+    set.run(tried(profile, m.id), `${count},${now}`);
+    if (!failed) changes.push({ table: 'meetings', id: m.id, profile, updated_at: now, fields: { transcript: count >= TRIES ? 'missing' : 'waiting', tries: count } });
   }
+  applyChanges(db, changes);
 }
 
 export const actionId = (meeting: string, title: string) => `meet:${createHash('sha1').update(`${meeting}\n${title.trim().toLowerCase()}`).digest('hex').slice(0, 16)}`;
 
-// Writes the summary and adds my actions as tasks linked to the meeting: certain ones go to Today, the rest wait for
-// me to keep or dismiss them. Meeting notes are only ever what I type. A task that already exists is left alone, so one
-// I finished or dismissed does not come back.
+const STATUS = { me: 'open', maybe: 'suggested', nobody: 'unassigned' } as const;
+
+// Writes the summary and adds the actions as tasks linked to the meeting: mine go to Today, probable ones wait for me
+// to keep or dismiss them, and ones nobody took stay on the meeting. A task that exists is left alone, so one I finished
+// or dismissed does not come back; a suggested or unassigned one becomes mine when a later read is sure.
 export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[], now = Date.now()) {
-  const row = db.prepare('SELECT title FROM meetings WHERE profile = ? AND id = ? AND deleted = 0');
-  const has = db.prepare('SELECT 1 FROM items WHERE profile = ? AND id = ?');
+  const row = db.prepare('SELECT title, ends_at FROM meetings WHERE profile = ? AND id = ? AND deleted = 0');
+  const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ? AND deleted = 0');
   const changes: Change[] = [];
   for (const n of found) {
-    const m = row.get(profile, n.id) as { title: string | null } | null;
+    const m = row.get(profile, n.id) as { title: string | null; ends_at: number | null } | null;
     if (!m || !n.summary.trim()) continue;
-    changes.push({ table: 'meetings', id: n.id, profile, updated_at: now, fields: { summary: n.summary.trim() } });
+    changes.push({
+      table: 'meetings', id: n.id, profile, updated_at: now,
+      fields: { summary: n.summary.trim(), room: n.room?.trim() || null, others: JSON.stringify(n.others ?? []), transcript: (m.ends_at ?? 0) <= now ? 'done' : 'waiting' },
+    });
     for (const a of n.actions) {
+      if (!a.title.trim()) continue;
       const id = actionId(n.id, a.title);
-      if (!a.title.trim() || has.get(profile, id)) continue;
+      const old = has.get(profile, id) as { status: string | null } | null;
+      if (old) {
+        if (a.owner === 'me' && (old.status === 'suggested' || old.status === 'unassigned')) changes.push({ table: 'items', id, profile, updated_at: now, fields: { status: 'open' } });
+        continue;
+      }
       const due = a.due ? Date.parse(a.due) : NaN;
       changes.push({
         table: 'items', id, profile, updated_at: now,
-        fields: { title: a.title.trim(), text: a.context.trim() || null, source: 'action', source_url: n.doc_url || null, people: m.title, at: Number.isFinite(due) ? due : null, status: a.sure ? 'open' : 'suggested', meeting_id: n.id },
+        fields: { title: a.title.trim(), text: a.context.trim() || null, source: 'action', source_url: n.doc_url || null, people: m.title, at: Number.isFinite(due) ? due : null, status: STATUS[a.owner] ?? 'suggested', meeting_id: n.id },
       });
     }
   }
   return applyChanges(db, changes).applied;
+}
+
+// Suggested actions I left for a week leave Today and wait on their meeting as unassigned.
+export function expireSuggested(db: Database, now = Date.now()) {
+  const rows = db.prepare("SELECT id, profile FROM items WHERE deleted = 0 AND status = 'suggested' AND CAST(COALESCE(json_extract(field_times, '$.status'), updated_at) AS INTEGER) < ?").all(now - EXPIRE) as { id: string; profile: Profile }[];
+  return applyChanges(db, rows.map((r) => ({ table: 'items', id: r.id, profile: r.profile, updated_at: now, fields: { status: 'unassigned' } }))).applied;
 }
 
 // Large tool outputs are saved under the config dir's tool-results folders; this reads the text back in chunks.
@@ -112,18 +137,29 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
       return { content: [{ type: 'text', text: err instanceof Error ? err.message : String(err) }], isError: true };
     }
   });
+  const known = db.prepare("SELECT title, status FROM items WHERE profile = ? AND meeting_id = ? AND deleted = 0");
   const prompt = [
     'These meetings on my primary Google Calendar have ended:',
-    ...meetings.map((m) => `- id ${m.id}, Google Calendar event id ${m.id.slice(4)}: "${m.title}" ${new Date(m.starts_at).toISOString()} to ${new Date(m.ends_at).toISOString()}`),
+    ...meetings.flatMap((m) => {
+      const old = known.all(profile, m.id) as { title: string; status: string }[];
+      return [
+        `- id ${m.id}, Google Calendar event id ${m.id.slice(4)}: "${m.title}" ${new Date(m.starts_at).toISOString()} to ${new Date(m.ends_at).toISOString()}`,
+        ...(m.room_me === 1 ? ['  I was on the room microphone in this meeting: the speaker named after the room is me.'] : []),
+        ...(m.room_me === 0 ? ['  I was not on the room microphone in this meeting.'] : []),
+        ...(old.length ? ['  Actions already recorded for it; when you find the same action again, use exactly this title:', ...old.map((a) => `  - ${a.title}`)] : []),
+      ];
+    }),
     '',
     'For each one, get the event and find the attached Google Doc with the meeting transcript (Gemini attaches it as "Notes by Gemini", "Notater fra Gemini" or similar). Read it with the Google Drive read_file_content tool (the Google Docs read_doc tool also works).',
     'If the output is saved to a file because it is large, read that file with read_saved_output, all of it.',
     'Work from the transcript only. Ignore the summary, notes, details and next steps Gemini wrote at the top of the doc; do not copy or rely on them.',
     'I am the calendar owner: the attendee marked as self on the event. Find my name in the transcript.',
-    'Call save_meeting_notes once per meeting that has a transcript, in English: a short summary for me, and my follow-ups as actions.',
-    'An action is sure when I said I would do it, someone asked me by name and I agreed, or I was named as the owner.',
-    'An action is not sure when it is probably mine: it was taken on by a speaker named after a meeting room (the room microphone) and I was likely in that room (the room is on the event and I do not speak under my own name), or it is a group follow-up nobody else took.',
-    'Leave out what another person by name took on, asked about or owns. Write each action as a task for me.',
+    'Call save_meeting_notes once per meeting that has a transcript, in English: a short summary for me, my follow-ups as actions, and what others took on.',
+    'Set room to the speaker named after a meeting room, if there is one.',
+    'An action is owner "me" when I said I would do it, someone asked me by name and I agreed, I was named as the owner, or the room microphone said it and I was on it.',
+    'An action is owner "maybe" when it is probably mine: the room microphone took it on and I do not speak under my own name, so I was likely in that room.',
+    'An action is owner "nobody" when it is a follow-up the group agreed on that no one took.',
+    'What another person by name took on goes in others, with their name, not in actions. Write each action as a task for me.',
     'Say things directly and briefly. Do not use the em dash character.',
     'Skip meetings without a Gemini notes doc. Do not do anything else.',
   ].join('\n');
@@ -154,14 +190,15 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Transcript import ended with ${m.subtype}`);
   }
   const ids = new Set(meetings.map((m) => m.id));
-  return saveNotes(db, profile, found.filter((n) => ids.has(n.id)), now);
+  const mine = found.filter((n) => ids.has(n.id) && n.summary.trim());
+  return { saved: saveNotes(db, profile, mine, now), found: new Set(mine.map((n) => n.id)) };
 }
 
 // The manual sync for one meeting, at any time after it started, replacing an earlier summary.
 export async function syncTranscript(db: Database, profile: Profile, id: string, now = Date.now()) {
-  const m = db.prepare("SELECT id, title, starts_at, ends_at FROM meetings WHERE profile = ? AND id = ? AND deleted = 0 AND id LIKE 'cal:%'").get(profile, id) as Pending | null;
+  const m = db.prepare("SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND id = ? AND deleted = 0 AND id LIKE 'cal:%'").get(profile, id) as Pending | null;
   if (!m) throw new Error('No calendar meeting with that id');
-  return readTranscripts(db, profile, [m], now);
+  return (await readTranscripts(db, profile, [m], now)).saved;
 }
 
 export function startTranscripts(db: () => Database, every = 5 * MIN) {
@@ -170,14 +207,21 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
     if (busy) return;
     busy = true;
     for (const profile of Object.keys(PROFILES) as Profile[]) {
+      const due = dueMeetings(db(), profile);
+      if (!due.length) continue;
       try {
-        const due = dueMeetings(db(), profile);
-        markTried(db(), profile, due);
-        const n = due.length ? await readTranscripts(db(), profile, due, Date.now()) : 0;
-        if (n) console.log(`transcripts ${profile}: ${n} meetings summarized`);
+        const { found } = await readTranscripts(db(), profile, due, Date.now());
+        markTried(db(), profile, due.filter((m) => !found.has(m.id)));
+        if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
       } catch (err) {
+        markTried(db(), profile, due, Date.now(), true);
         console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
       }
+    }
+    try {
+      expireSuggested(db());
+    } catch (err) {
+      console.error('expire suggested:', err instanceof Error ? err.message : err);
     }
     busy = false;
   };

@@ -93,14 +93,15 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
   return saveMeetings(db, profile, events, from, to, now);
 }
 
-const FIRST = 8;
-const LAST = 14;
+const FIRST = 7;
+const LAST = 19;
+const EVERY = 30 * 60_000;
 
-// True once per hour from 08:00 to 14:00 on weekdays.
+// True once per half hour from 07:00 to 19:00 on weekdays.
 export function importDue(last: number, now = Date.now()) {
   const d = new Date(now);
-  const hour = new Date(now).setMinutes(0, 0, 0);
-  return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= FIRST && d.getHours() <= LAST && last < hour;
+  const slot = Math.floor(now / EVERY) * EVERY;
+  return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= FIRST && d.getHours() < LAST && last < slot;
 }
 
 const lastKey = (p: Profile) => `calendar:last:${p}`;
@@ -134,7 +135,7 @@ export function syncCalendar(db: () => Database, profiles = Object.keys(PROFILES
   })().finally(() => (running = null)));
 }
 
-export function startCalendar(db: () => Database, every = 15 * 60_000) {
+export function startCalendar(db: () => Database, every = 5 * 60_000) {
   const run = () => {
     const due = (Object.keys(PROFILES) as Profile[]).filter((p) => importDue(lastImport(db(), p)));
     if (due.length) void syncCalendar(db, due);

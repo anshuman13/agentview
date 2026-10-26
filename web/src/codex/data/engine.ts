@@ -136,23 +136,26 @@ const ASK_RE = /^(what|when|who|whom|why|how|which|where|did|does|is|are|was|wer
 
 export const isQuestion = (text: string) => /\?\s*$/.test(text) || ASK_RE.test(text.trim());
 
-const MEETING_SOURCES = ['calendar', 'meeting'];
-const DAY = 24 * 3600_000;
+// Calendar rows were tasks before meetings had their own table; they stay hidden.
+const isCalendar = (r: ItemRow) => r.source === 'calendar';
+const statusTime = (r: ItemRow) => parseTimes(r.field_times).status ?? r.updated_at;
 
 export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
   const mine = items.filter((r) => !r.deleted && (profile === 'all' || r.profile === profile));
-  const open = mine.filter((r) => r.status === 'open').sort((a, b) => (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0) || a.updated_at - b.updated_at);
-  const meeting = (r: ItemRow) => MEETING_SOURCES.includes(r.source ?? '');
-  const isLater = (r: ItemRow) => (atTime(r.at) ?? 0) > now;
+  const open = mine.filter((r) => r.status === 'open' && !isCalendar(r)).sort((a, b) => (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0) || a.updated_at - b.updated_at);
+  const today = new Date(now).setHours(0, 0, 0, 0);
+  const at = (r: ItemRow) => atTime(r.at);
   return {
-    next: open.filter((r) => meeting(r) && isLater(r) && atTime(r.at)! - now < 12 * 3600_000).slice(0, 1),
-    today: open.filter((r) => !meeting(r) && !isLater(r)),
-    later: open.filter((r) => !meeting(r) && isLater(r)),
-    review: mine.filter((r) => r.status === 'suggested').sort((a, b) => b.updated_at - a.updated_at),
+    overdue: open.filter((r) => at(r) != null && at(r)! < today),
+    today: open.filter((r) => at(r) == null || (at(r)! >= today && at(r)! <= now)),
+    later: open.filter((r) => (at(r) ?? 0) > now),
+    review: mine.filter((r) => r.status === 'suggested').sort((a, b) => statusTime(b) - statusTime(a)),
     notes: mine.filter((r) => r.status === 'note').sort((a, b) => b.updated_at - a.updated_at),
-    done: mine.filter((r) => r.status === 'done' && now - r.updated_at < 7 * DAY).sort((a, b) => b.updated_at - a.updated_at),
+    doneToday: mine.filter((r) => r.status === 'done' && statusTime(r) >= today).sort((a, b) => statusTime(b) - statusTime(a)),
   };
 }
+
+export const reviewedSince = (r: ItemRow) => statusTime(r);
 
 // A task added from a meeting is an action of that meeting, labelled with its title.
 export function newCapture(text: string, type: 'task' | 'note', profile: Profile, now: number, at: number | null = null, meeting: { id: string; title: string | null } | null = null): ItemRow {

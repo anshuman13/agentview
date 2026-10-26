@@ -113,9 +113,20 @@ export class LocalStore extends BaseStore implements AssistantStore {
     try {
       await this.invoke('assistant_open', { key: await this.getKey() });
       await this.invoke('assistant_batch', { sql: SCHEMA });
+      // Rows pulled before a column existed never get its value unless everything is pulled again.
+      let added = false;
       for (const t of ['items', ...WIKI_TABLES]) {
         const have = new Set((await this.query<{ name: string }>(`PRAGMA table_info(${t})`)).map((c) => c.name));
-        for (const c of TABLE_FIELDS[t]) if (!have.has(c)) await this.invoke('assistant_batch', { sql: `ALTER TABLE ${t} ADD COLUMN ${c}` });
+        if (!have.size) continue;
+        for (const c of TABLE_FIELDS[t]) {
+          if (have.has(c)) continue;
+          await this.invoke('assistant_batch', { sql: `ALTER TABLE ${t} ADD COLUMN ${c}` });
+          added = true;
+        }
+      }
+      if (added || !(await this.getState('meeting_link_repulled'))) {
+        await this.setState('since', 0);
+        await this.setState('meeting_link_repulled', 1);
       }
       if (!(await this.getState('sample_cleared'))) {
         await this.invoke('assistant_batch', { sql: WIKI_TABLES.map((t) => `DELETE FROM ${t} WHERE updated_at < ${SAMPLE_GONE};`).join('\n') });
@@ -141,7 +152,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
 
   protected async refresh() {
     if (!this.ready) return;
-    const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND (status != 'done' OR meeting_id IS NOT NULL OR updated_at > ?)`, [Date.now() - 7 * 86400_000]);
+    const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND (IFNULL(status, '') != 'done' OR updated_at > ?)`, [Date.now() - 60 * 86400_000]);
     const all = <K extends Table>(t: K) => this.query<Tables[K]>(`SELECT * FROM ${t} WHERE deleted = 0`);
     const [pages, facts, meetings, actions] = await Promise.all([all('pages'), all('facts'), all('meetings'), all('actions')]);
     if (this.ready) this.set({ items, pages, facts, meetings, actions });
@@ -242,8 +253,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return Number(data?.saved ?? 0);
   };
 
-  syncCalendar = async () => {
-    const resp = await fetch(`${HUB}/calendar`, { method: 'POST', signal: AbortSignal.timeout(300000) });
+  syncCalendar = async (fresh = 0) => {
+    const resp = await fetch(`${HUB}/calendar${fresh ? `?fresh=${fresh}` : ''}`, { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data = await resp.json().catch(() => null);
     if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
     await this.syncNow();

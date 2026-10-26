@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, approveChanges, contestOf, groupMeetings, pageClaims, pageStats, searchWiki, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, approveChanges, contestOf, groupMeetings, meetingState, pageClaims, pageStats, searchWiki, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -65,21 +65,32 @@ describe('meetings', () => {
   const now = new Date(2026, 9, 25, 12).getTime();
   const at = (days: number, hour: number) => new Date(2026, 9, 25 + days, hour).getTime();
   const meeting = (id: string, starts_at: number): Meeting => ({
-    ...common(id), title: id, starts_at, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null,
+    ...common(id), title: id, starts_at, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
   });
   const action = (id: string, meeting_id: string, status: string): ItemRow => ({
     ...common(id), meeting_id, title: id, text: null, source: 'action', source_url: null, people: null, at: null, status,
   });
 
-  it('groups today, upcoming and past days', () => {
-    const g = groupMeetings([meeting('later', at(2, 9)), meeting('today', at(0, 10)), meeting('past2', at(-1, 14)), meeting('past1', at(-1, 9)), meeting('old', at(-3, 9))], now);
-    expect(g.map((x) => x.label).slice(0, 2)).toEqual(['Today', 'Upcoming']);
-    expect(g.map((x) => x.rows.map((m) => m.id))).toEqual([['today'], ['later'], ['past1', 'past2'], ['old']]);
+  it('groups meetings that have started by day, newest day first', () => {
+    const g = groupMeetings([meeting('later', at(2, 9)), meeting('soon', at(0, 14)), meeting('today', at(0, 10)), meeting('past2', at(-1, 14)), meeting('past1', at(-1, 9)), meeting('old', at(-3, 9))], now);
+    expect(g[0].label).toBe('Today');
+    expect(g.map((x) => x.rows.map((m) => m.id))).toEqual([['today'], ['past1', 'past2'], ['old']]);
+  });
+
+  it('tells where a meeting is between the calendar and its transcript', () => {
+    const cal = (patch: Partial<Meeting>) => ({ ...meeting('cal:x', at(0, 9)), ends_at: at(0, 10), ...patch });
+    expect(meetingState(cal({ starts_at: at(0, 13), ends_at: at(0, 14) }), now)).toBe('upcoming');
+    expect(meetingState(cal({ ends_at: at(0, 13) }), now)).toBe('live');
+    expect(meetingState(cal({}), now)).toBe('waiting');
+    expect(meetingState(cal({ summary: 'x' }), now)).toBe('done');
+    expect(meetingState(cal({ summary: 'x', transcript: 'waiting' }), now)).toBe('waiting');
+    expect(meetingState(cal({ transcript: 'missing' }), now)).toBe('missing');
+    expect(meetingState(meeting('notes', at(0, 9)), now)).toBe('manual');
   });
 
   it('counts my actions per meeting', () => {
-    const actions = [action('a1', 'm', 'open'), action('a2', 'm', 'done'), action('a3', 'm', 'suggested'), action('a4', 'n', 'open'), { ...action('a5', 'm', 'done'), profile: 'personal' as const }, { ...action('a6', 'm', 'open'), deleted: 1 }];
-    expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1 });
-    expect(actionCount(actions, { profile: 'personal', id: 'm' })).toEqual({ total: 1, done: 1, review: 0 });
+    const actions = [action('a1', 'm', 'open'), action('a2', 'm', 'done'), action('a3', 'm', 'suggested'), action('a7', 'm', 'unassigned'), action('a8', 'm', 'dismissed'), action('a4', 'n', 'open'), { ...action('a5', 'm', 'done'), profile: 'personal' as const }, { ...action('a6', 'm', 'open'), deleted: 1 }];
+    expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1, unassigned: 1, dismissed: 1 });
+    expect(actionCount(actions, { profile: 'personal', id: 'm' })).toEqual({ total: 1, done: 1, review: 0, unassigned: 0, dismissed: 0 });
   });
 });

@@ -2,7 +2,7 @@ import { getState, notice, prompt, queueNext, send } from '../../app/store';
 import { macOrigin } from '../../app/api';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { factTime, listOf, live, sourcesOf, type Fact, type Meeting, type Page } from './wiki';
+import { factTime, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
@@ -10,12 +10,22 @@ const line = (r: ItemRow) => {
   return `- [${r.profile}] ${r.title ?? '(untitled)'}${bits.length ? ` (${bits.join(', ')})` : ''}`;
 };
 
-export function askText(question: string, items: ItemRow[], about?: ItemRow) {
+const day = (t: number) => new Date(t).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+
+// What other people said they would do in the last two weeks of meetings, so "what did Kim take on" can be answered.
+const othersText = (meetings: Meeting[], now = Date.now()) => live(meetings)
+  .filter((m) => m.starts_at && m.starts_at > now - 14 * 86400_000 && m.starts_at < now)
+  .flatMap((m) => othersOf(m).map((o) => `- ${day(m.starts_at!)} "${m.title}": ${o.who}: ${o.what}`))
+  .slice(0, 80);
+
+export function askText(question: string, items: ItemRow[], about?: ItemRow, meetings: Meeting[] = []) {
   const open = items.filter((r) => !r.deleted && r.status === 'open').slice(0, 60);
+  const others = othersText(meetings);
   return [
     question,
     about && `\nAbout this item:\n${line(about)}${about.text ? `\n${about.text}` : ''}`,
     open.length ? `\nMy open items in Codex:\n${open.map(line).join('\n')}` : '',
+    others.length ? `\nWhat others took on in recent meetings:\n${others.join('\n')}` : '',
     '\nUse my Slack, Calendar, Gmail and Linear connectors when the question needs them.',
   ].filter(Boolean).join('\n');
 }
@@ -101,7 +111,8 @@ export function meetingAskText(question: string, m: Meeting, actions: ItemRow[])
     m.notes && `\nMy notes:\n${m.notes}`,
     m.summary && `\nSummary:\n${m.summary}`,
     listOf(m.decisions).length ? `\nDecisions:\n${listOf(m.decisions).map((d) => `- ${d}`).join('\n')}` : '',
-    actions.length ? `\nMy actions from it:\n${actions.map((a) => `- [${a.status}] ${a.title}`).join('\n')}` : '',
+    actions.length ? `\nActions from it (open and done are mine, suggested probably mine, unassigned nobody took, dismissed not mine):\n${actions.map((a) => `- [${a.status}] ${a.title}`).join('\n')}` : '',
+    othersOf(m).length ? `\nWhat others took on:\n${othersOf(m).map((o) => `- ${o.who}: ${o.what}`).join('\n')}` : '',
     '\nUse my Calendar, Slack and Linear connectors when the question needs them.',
   ].filter(Boolean).join('\n');
 }

@@ -139,8 +139,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     return Number(data?.saved ?? 0);
   };
 
-  syncCalendar = async () => {
-    const resp = await call('/api/assistant/calendar', { method: 'POST' });
+  syncCalendar = async (fresh = 0) => {
+    const resp = await call(`/api/assistant/calendar${fresh ? `?fresh=${fresh}` : ''}`, { method: 'POST' });
     const data = await resp.json().catch(() => null);
     if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
     await this.syncNow();

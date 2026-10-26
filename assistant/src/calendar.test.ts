@@ -45,13 +45,13 @@ describe('syncCalendar', () => {
 
 describe('importDue', () => {
   const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
-  it('imports once an hour from 08:00 to 14:00 on weekdays', () => {
-    expect(importDue(0, at(26, 7, 59))).toBe(false);
-    expect(importDue(0, at(26, 8))).toBe(true);
-    expect(importDue(at(26, 8, 5), at(26, 8, 50))).toBe(false);
-    expect(importDue(at(26, 8, 5), at(26, 9, 10))).toBe(true);
-    expect(importDue(at(26, 13), at(26, 14, 30))).toBe(true);
-    expect(importDue(0, at(26, 15))).toBe(false);
+  it('imports once per half hour from 07:00 to 19:00 on weekdays', () => {
+    expect(importDue(0, at(26, 6, 59))).toBe(false);
+    expect(importDue(0, at(26, 7))).toBe(true);
+    expect(importDue(at(26, 8, 5), at(26, 8, 25))).toBe(false);
+    expect(importDue(at(26, 8, 5), at(26, 8, 35))).toBe(true);
+    expect(importDue(at(26, 18, 10), at(26, 18, 40))).toBe(true);
+    expect(importDue(0, at(26, 19))).toBe(false);
     expect(importDue(0, at(25, 10))).toBe(false);
   });
 });

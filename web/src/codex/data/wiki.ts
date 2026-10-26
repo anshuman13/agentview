@@ -29,6 +29,11 @@ export type Meeting = Common & {
   notes: string | null;
   summary: string | null;
   decisions: string | null;
+  transcript: string | null;
+  tries: number | null;
+  room: string | null;
+  room_me: number | null;
+  others: string | null;
 };
 
 export type Action = Common & {
@@ -147,17 +152,14 @@ export function approveChanges(fact: Fact, pages: Page[], facts: Fact[]) {
 
 const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
 
-// Today, then upcoming soonest first, then past days newest first.
+// Meetings that have started, newest day first and in time order within a day. The future lives in Today and Upcoming.
 export function groupMeetings(meetings: Meeting[], now = Date.now()) {
-  const rows = live(meetings).filter((m) => m.starts_at != null);
+  const rows = live(meetings).filter((m) => m.starts_at != null && m.starts_at <= now);
   const today = dayStart(now);
   const groups: { label: string; rows: Meeting[] }[] = [];
-  const add = (label: string, rs: Meeting[]) => rs.length && groups.push({ label, rows: rs });
-  add('Today', rows.filter((m) => dayStart(m.starts_at!) === today).sort((a, b) => a.starts_at! - b.starts_at!));
-  add('Upcoming', rows.filter((m) => dayStart(m.starts_at!) > today).sort((a, b) => a.starts_at! - b.starts_at!));
-  const past = rows.filter((m) => dayStart(m.starts_at!) < today).sort((a, b) => dayStart(b.starts_at!) - dayStart(a.starts_at!) || a.starts_at! - b.starts_at!);
-  for (const m of past) {
-    const label = new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+  const sorted = rows.sort((a, b) => dayStart(b.starts_at!) - dayStart(a.starts_at!) || a.starts_at! - b.starts_at!);
+  for (const m of sorted) {
+    const label = dayStart(m.starts_at!) === today ? 'Today' : new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
     const last = groups[groups.length - 1];
     if (last?.label === label) last.rows.push(m);
     else groups.push({ label, rows: [m] });
@@ -165,10 +167,29 @@ export function groupMeetings(meetings: Meeting[], now = Date.now()) {
   return groups;
 }
 
-// A meeting's actions are the tasks linked to it: suggested ones wait for me to keep or dismiss them.
+// A meeting's actions are the tasks linked to it: open and done ones are mine, suggested ones wait for me to keep or
+// dismiss them, unassigned ones nobody took, and dismissed ones were not mine.
 export const actionsOf = (items: ItemRow[], m: { profile: Profile; id: string }) => items.filter((r) => !r.deleted && r.meeting_id === m.id && r.profile === m.profile);
 
 export function actionCount(items: ItemRow[], m: { profile: Profile; id: string }) {
   const mine = actionsOf(items, m);
-  return { total: mine.filter((r) => r.status !== 'suggested').length, done: mine.filter((r) => r.status === 'done').length, review: mine.filter((r) => r.status === 'suggested').length };
+  const n = (...s: string[]) => mine.filter((r) => s.includes(r.status ?? '')).length;
+  return { total: n('open', 'done'), done: n('done'), review: n('suggested'), unassigned: n('unassigned'), dismissed: n('dismissed') };
+}
+
+export const othersOf = (m: Meeting) => json<{ who: string; what: string }[]>(m.others, []).filter((o) => o?.who && o?.what);
+
+// The hub tries this many times, 15 minutes apart, before it gives up on a transcript (TRIES in transcripts.ts).
+export const TRANSCRIPT_TRIES = 8;
+
+export type MeetingState = 'upcoming' | 'live' | 'waiting' | 'done' | 'missing' | 'manual';
+
+// Where a meeting is between the calendar and its transcript.
+export function meetingState(m: Meeting, now = Date.now()): MeetingState {
+  if (!m.id.startsWith('cal:')) return 'manual';
+  if (m.starts_at != null && m.starts_at > now) return 'upcoming';
+  if ((m.ends_at ?? m.starts_at ?? 0) > now) return 'live';
+  if (m.transcript === 'missing') return 'missing';
+  if (m.transcript === 'done' || (!m.transcript && m.summary)) return 'done';
+  return 'waiting';
 }
