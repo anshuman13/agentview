@@ -42,7 +42,7 @@ function rollup(checks: Check[] = []): CheckState {
 const list = async (cwd: string, ...extra: string[]) => JSON.parse(await gh(cwd, 'pr', 'list', '--json', LIST, '--limit', '30', ...extra));
 
 async function fetchList(cwd: string): Promise<PullRequest[]> {
-  const [all, mine, requested] = await Promise.all([list(cwd), list(cwd, '--author', '@me'), list(cwd, '--search', 'review-requested:@me')]);
+  const [all, mine, requested] = await Promise.all([list(cwd), list(cwd, '--author', '@me'), list(cwd, '--search', 'user-review-requested:@me')]);
   const byNumber = new Map<number, PullRequest>();
   for (const p of [...all, ...mine, ...requested]) {
     byNumber.set(p.number, {

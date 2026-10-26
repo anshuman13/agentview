@@ -15,6 +15,7 @@ const EDIT_AGE = 10 * 60_000;
 const NEW_FOR = 24 * 60 * 60_000;
 const STALE_AFTER = 2 * 24 * 60 * 60_000;
 const FORGET = 7 * 24 * 60 * 60_000;
+const LAST = new Set<AttentionKind>(['review', 'stale']);
 
 function promptFor(kind: Exclude<AttentionKind, 'commit' | 'sentry' | 'deploy'>, p: { number: number; title: string; url: string; branch?: string }) {
   const n = p.number;
@@ -145,7 +146,7 @@ export function merge(found: AttentionItem[], now = Date.now()) {
   for (const id of seen.keys()) if (!current.has(id) && now - (seen.get(id) ?? 0) > FORGET) seen.delete(id);
   // A dismissal outlives a missed poll; it goes when the item has been gone for the forget period.
   for (const id of dismissed) if (!current.has(id) && !seen.has(id)) dismissed.delete(id);
-  items = [...current.values()].filter((it) => !dismissed.has(it.id)).sort((a, b) => b.since - a.since);
+  items = [...current.values()].filter((it) => !dismissed.has(it.id)).sort((a, b) => Number(LAST.has(a.kind)) - Number(LAST.has(b.kind)) || b.since - a.since);
   return fresh;
 }
 
