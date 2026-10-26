@@ -6,6 +6,7 @@ import { openDb, currentVersion } from './db.js';
 import { PROFILES, lastImport, startCalendar, syncCalendar, type Profile } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
+import { startTidy } from './tidy.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 
@@ -190,6 +191,7 @@ async function start() {
     startCalendar(getDb);
     startTranscripts(getDb);
     startJobs(getDb);
+    startTidy(getDb);
   }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);

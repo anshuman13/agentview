@@ -49,6 +49,7 @@ Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its d
 
 | Topic | Decision |
 | --- | --- |
+| Capture | The app saves a typed or spoken task at once with its own date reading; the hub then has Sonnet (low effort) clean the title, keep leftover details, and set a due time when the app found none. An edit of mine stops it |
 | Notes | No loose-note type. A composer capture becomes a task (undated if no date) or a question to the daily chat. "My notes" live only on the meeting and feed the extractor |
 | Done | No list. "Done today · N" row on Today with undo; evening wrap-up; "Draft my weekly update" as an Ask preset that reads this week's done tasks and meeting summaries |
 | Room mic | Asked once per meeting, not per action: "Were you on the room mic? [Yes]" converts its actions to mine (sure). Also a toggle on the Next card before the meeting |
