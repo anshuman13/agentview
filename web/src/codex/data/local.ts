@@ -25,6 +25,8 @@ export const tauriInvoke = () => window.__TAURI__?.core?.invoke ?? window.__TAUR
 const HUB = 'http://macmini.netbird.cloud:7790';
 const LOCK_AFTER = 60000;
 const SYNC_EVERY = 60000;
+// Edits to the removed sample meetings and pages were saved as never-synced rows.
+const SAMPLE_GONE = Date.UTC(2026, 9, 26, 11);
 
 const table = (name: string) => `
   CREATE TABLE IF NOT EXISTS ${name} (
@@ -117,6 +119,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
         const have = new Set((await this.query<{ name: string }>(`PRAGMA table_info(${t})`)).map((c) => c.name));
         for (const c of TABLE_FIELDS[t]) if (!have.has(c)) await this.invoke('assistant_batch', { sql: `ALTER TABLE ${t} ADD COLUMN ${c}` });
       }
+      await this.invoke('assistant_batch', { sql: WIKI_TABLES.map((t) => `DELETE FROM ${t} WHERE version = 0 AND updated_at < ${SAMPLE_GONE};`).join('\n') });
       this.set({ phase: 'ready', message: '' });
       await this.refresh();
       this.syncNow();
