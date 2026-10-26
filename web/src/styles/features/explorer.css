@@ -25,6 +25,10 @@
   font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide);
 }
 .ex button.ex-section:hover { background: transparent; }
+.ex-section-row { display: flex; align-items: center; flex: none; padding-right: var(--sp-1); }
+.ex-section-row .icon-btn { width: var(--size-row); height: var(--size-row); flex: none; visibility: hidden; }
+.ex-section-row:hover .icon-btn { visibility: visible; }
+@media (hover: none) { .ex-section-row .icon-btn { visibility: visible; } }
 .ex-editors { flex: none; max-height: 30%; overflow: auto; border-bottom: 1px solid var(--border); padding-bottom: var(--sp-1); }
 .ex-editors .ex-row { padding-left: var(--sp-2); }
 .ex-empty { padding: var(--sp-1) var(--sp-4) var(--sp-2); color: var(--fg-muted); font-size: var(--fs-sm); }

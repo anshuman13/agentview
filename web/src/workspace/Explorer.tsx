@@ -198,10 +198,17 @@ function ExplorerView({ cwd }: { cwd: string }) {
 
   return (
     <div className="explorer ex">
-      <button className="ex-section" onClick={() => setEditorsOpen(!editorsOpen)}>
-        <Icon name={editorsOpen ? 'chevron-down' : 'chevron-right'} small />
-        <span>Open Editors</span>
-      </button>
+      <div className="ex-section-row">
+        <button className="ex-section" onClick={() => setEditorsOpen(!editorsOpen)}>
+          <Icon name={editorsOpen ? 'chevron-down' : 'chevron-right'} small />
+          <span>Open Editors</span>
+        </button>
+        {opened.length > 0 && (
+          <button className="icon-btn" title="Close All Editors" onClick={() => { setOpened([]); setUi({ openFile: null, follow: false }); }}>
+            <Icon name="close-all" small />
+          </button>
+        )}
+      </div>
       {editorsOpen && (
         <div className="ex-editors">
           {opened.length === 0 && <div className="ex-empty">Files you open or Claude edits show here</div>}

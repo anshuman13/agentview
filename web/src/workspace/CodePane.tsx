@@ -180,7 +180,7 @@ export function CodePane() {
   const file = useFile(openFile, recent[0] === openFile ? recent : null);
 
   useEffect(() => {
-    const files = getOpenedChat() === chat ? getOpened() : [...recent].reverse();
+    const files = getOpenedChat() === chat ? getOpened() : recent.slice(0, 5).reverse();
     setOpenedChat(chat);
     setOpened(openFile && !files.includes(openFile) ? [...files, openFile] : files);
   }, [openFile, chat]);
