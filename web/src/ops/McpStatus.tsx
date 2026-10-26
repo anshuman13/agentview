@@ -224,7 +224,7 @@ export function McpPage() {
 
   const setGroup = (service: string, group: Group | 'hidden' | 'shown') => {
     setGroups((g) => { const { [service]: _, ...rest } = g; return group === 'shown' ? rest : { ...rest, [service]: group }; });
-    post('/api/mcp/groups', { service, group }).then(setGroups, (e) => notice(`Could not save the group: ${e.message}`));
+    post('/api/mcp/groups', { service, group }).then((g) => { setGroups(g); window.dispatchEvent(new Event('agentview:mcp-groups')); }, (e) => notice(`Could not save the group: ${e.message}`));
   };
 
   const rows = useMemo(() => {

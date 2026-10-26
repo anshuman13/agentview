@@ -28,6 +28,7 @@ const Loading = () => <div className="loading">Loading…</div>;
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 import { touch } from './touch';
+import { useShownMcp } from '../ops/mcpShown';
 
 type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
@@ -128,7 +129,7 @@ function Offline() {
 }
 
 function McpItem() {
-  const mcp = useStore((s) => s.session.mcp);
+  const mcp = useShownMcp();
   const ok = mcp.filter((m) => m.status === 'connected').length;
   const bad = mcp.some((m) => MCP_BAD.includes(m.status));
   return (
@@ -199,7 +200,7 @@ export function App() {
   const repoPicker = useStore((s) => s.ui.repoPicker);
   const session = useStore((s) => s.session);
   const status = useStore((s) => s.status);
-  const mcp = useStore((s) => s.session.mcp);
+  const mcp = useShownMcp();
   const [tab, setTab] = useState<Tab>(() => (narrow() && !deepLink.chat && !deepLink.session ? 'assistant' : 'chat'));
   const [editor, setEditor] = useState<'file' | 'browser' | 'agents' | 'assistant' | Page>('file');
   const [seenAssistant, setSeenAssistant] = useState(false);
