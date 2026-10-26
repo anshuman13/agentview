@@ -7,7 +7,7 @@ let listed = [pr(1), pr(2)];
 vi.mock('node:child_process', () => ({
   execFile: (_cmd: string, args: string[], _opts: unknown, cb: (err: null, out: { stdout: string; stderr: string }) => void) => {
     calls.push(args);
-    const out = args[1] === 'list' ? (args.includes('review-requested:@me') ? [listed[0]] : listed) : args[1] === 'view' ? { body: 'b', reviews: [], comments: [], files: [], commits: [], statusCheckRollup: [] } : 'diff --git a/x b/x';
+    const out = args[1] === 'list' ? (args.includes('user-review-requested:@me') ? [listed[0]] : listed) : args[1] === 'view' ? { body: 'b', reviews: [], comments: [], files: [], commits: [], statusCheckRollup: [] } : 'diff --git a/x b/x';
     cb(null, { stdout: typeof out === 'string' ? out : JSON.stringify(out), stderr: '' });
   },
 }));
