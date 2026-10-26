@@ -234,7 +234,7 @@ final class Bar: NSObject, NSApplicationDelegate {
       assertion = 0
     }
     awakeItem.state = on ? .on : .off
-    item.button?.image = NSImage(systemSymbolName: on ? "cup.and.saucer.fill" : "cup.and.saucer", accessibilityDescription: "AgentView")
+    item.button?.image = NSImage(systemSymbolName: on ? "eye.fill" : "eye", accessibilityDescription: "AgentView")
     item.button?.toolTip = on ? "AgentView: keeping Mac awake" : "AgentView"
   }
 
