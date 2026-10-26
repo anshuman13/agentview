@@ -353,6 +353,7 @@ function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usa
         {row.live && row.status !== 'disabled' && <button className="btn" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
         {row.live && row.status === 'connected' && <button className="btn" onClick={() => use(row.name)} title="Ask Claude to use this server in your next message"><Icon name="comment" small /> Add to chat</button>}
         {!row.live && !row.account && <AddToChat name={row.name} />}
+        {row.type === 'claudeai' && row.status !== 'needs-auth' && <a className="btn" href="https://claude.ai/settings/connectors" target="_blank" rel="noreferrer"><Icon name="key" small /> {row.account && !row.live ? 'Log in on claude.ai' : 'Manage on claude.ai'}</a>}
         {url && <a className="btn" href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
       </div>
       <dl className="mcp-kv">
