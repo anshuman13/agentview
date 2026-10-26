@@ -9,7 +9,7 @@ import { agentOf } from '../../session/events.js';
 import { JsonlTail } from './tail.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
-import { configDir, freshAccount, hasAlt, markLimited, otherAccount } from './accounts.js';
+import { configDir, freshAccount, hasAlt, markLimited, otherAccount, overageUntil } from './accounts.js';
 import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, type SubFile } from './history.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
@@ -486,6 +486,14 @@ export class ClaudeDriver implements AgentDriver {
     // Turns the CLI starts by itself (a subagent handing back, a scheduled job) come without a prompt from us.
     if (!this.state.session.running && (msg.type === 'assistant' || msg.type === 'stream_event') && !msg.parent_tool_use_id) host.turnStarted('Claude continued after a background task');
     switch (msg.type) {
+      case 'rate_limit_event': {
+        const until = overageUntil(msg);
+        if (until) {
+          host.overage(until);
+          void this.interrupt();
+        }
+        break;
+      }
       case 'system':
         if (msg.subtype === 'init') {
           const changed = msg.model !== this.state.session.model;

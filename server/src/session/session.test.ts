@@ -131,6 +131,22 @@ describe('AgentSession turns', () => {
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: expect.stringContaining('Continue where you stopped') });
   });
 
+  it('stops a turn that starts on extra usage and goes on under the other account', async () => {
+    const { s } = fakeSession();
+    const limitHit = vi.fn(() => 'alt' as const);
+    const interrupt = vi.fn(async () => {});
+    Object.assign(s.driver, { limitHit, interrupt, accounts: () => ['main', 'alt'] });
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    s.sendPrompt('long task');
+    handle({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', isUsingOverage: false } });
+    expect(interrupt).not.toHaveBeenCalled();
+    handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', isUsingOverage: true, resetsAt: 1_900_000_000 } });
+    expect(interrupt).toHaveBeenCalledOnce();
+    handle({ type: 'result', subtype: 'error_during_execution', uuid: 'r1', errors: [], total_cost_usd: 0, is_error: true });
+    expect(limitHit).toHaveBeenCalledWith(1_900_000_000_000);
+    expect(s.state.session).toMatchObject({ account: 'alt', running: true });
+  });
+
   it('waits for the reset when no other account has usage left', async () => {
     const { s } = fakeSession();
     Object.assign(s.driver, { limitHit: vi.fn(() => null) });

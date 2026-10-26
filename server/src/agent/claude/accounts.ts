@@ -32,6 +32,15 @@ export function markLimited(a: Account, until: number) {
   } catch {}
 }
 
+export const isLimited = (a: Account, now = Date.now()) => (readJson(LIMITS)?.[a] ?? limited[a] ?? 0) > now;
+
+// Extra usage is never used: a rate limit event that reports it counts as hitting the limit, until the window resets.
+export function overageUntil(m: { type: string; rate_limit_info?: { isUsingOverage?: boolean; overageInUse?: boolean; resetsAt?: number } }, now = Date.now()) {
+  const r = m.type === 'rate_limit_event' ? m.rate_limit_info : undefined;
+  if (!r?.isUsingOverage && !r?.overageInUse) return null;
+  return r.resetsAt ? r.resetsAt * 1000 : now + 5 * 3600_000;
+}
+
 // The account to switch to when this one hits its limit, if the other one has usage left.
 export function otherAccount(a: Account, now = Date.now()): Account | null {
   const o: Account = a === 'main' ? 'alt' : 'main';

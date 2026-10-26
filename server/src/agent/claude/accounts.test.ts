@@ -8,7 +8,7 @@ const dir = vi.hoisted(() => {
   return d;
 });
 
-const { freshAccount, hasAlt, markLimited, otherAccount } = await import('./accounts.js');
+const { freshAccount, hasAlt, isLimited, markLimited, otherAccount, overageUntil } = await import('./accounts.js');
 
 describe('accounts', () => {
   it('falls back to the second account only once it is logged in and has usage left', () => {
@@ -25,5 +25,14 @@ describe('accounts', () => {
     markLimited('alt', 5000);
     expect(otherAccount('main', 1000)).toBe(null);
     expect(otherAccount('alt', 6000)).toBe('main');
+    expect(isLimited('alt', 1000)).toBe(true);
+    expect(isLimited('alt', 6000)).toBe(false);
+  });
+
+  it('counts extra usage as hitting the limit', () => {
+    expect(overageUntil({ type: 'rate_limit_event', rate_limit_info: { isUsingOverage: false } })).toBe(null);
+    expect(overageUntil({ type: 'assistant' })).toBe(null);
+    expect(overageUntil({ type: 'rate_limit_event', rate_limit_info: { isUsingOverage: true, resetsAt: 1_900_000_000 } })).toBe(1_900_000_000_000);
+    expect(overageUntil({ type: 'rate_limit_event', rate_limit_info: { overageInUse: true } }, 1000)).toBe(1000 + 5 * 3600_000);
   });
 });

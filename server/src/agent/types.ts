@@ -69,6 +69,7 @@ export interface AgentHost {
   turnEnded(): void;
   turnResult(r: TurnResult): void;
   noteReply(text: string): void;
+  overage(until: number): void;
   startCompacting(): void;
   compacted(pre: number, post: number | null | undefined): void;
   blocked(toolUseId: string, tool: string, reason: string): void;

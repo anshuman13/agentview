@@ -626,6 +626,13 @@ export class AgentSession implements AgentHost {
     this.limitReset = limitReset(text) ?? this.limitReset;
   }
 
+  // The turn was stopped before it ran on extra usage; it ends like one that hit the usage limit.
+  overage(until: number) {
+    if (this.limitReset) return;
+    this.limitReset = until;
+    this.system(`Stopped before using extra usage on the ${accountName(this.driver.account)} account`);
+  }
+
   turnResult(r: TurnResult) {
     if (this.pending.length) {
       this.expectTurn = true;
