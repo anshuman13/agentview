@@ -65,8 +65,8 @@ export const fieldsOf = (a: Action) => json<Record<string, string>>(a.fields, {}
 export const live = <T extends Common & { state?: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted && (r.state ?? 'live') === 'live');
 
 // The claims shown on a page: current claims in heading order, each with the claims it superseded.
-export function pageClaims(facts: Fact[], pageId: string) {
-  const mine = live(facts).filter((f) => f.page_id === pageId);
+export function pageClaims(facts: Fact[], pageId: string | null) {
+  const mine = live(facts).filter((f) => (f.page_id ?? null) === pageId);
   const replaced = new Map<string, Fact[]>();
   for (const f of mine) if (f.superseded_by) replaced.set(f.superseded_by, [...(replaced.get(f.superseded_by) ?? []), f]);
   const groups: { heading: string; claims: { fact: Fact; old: Fact[] }[] }[] = [];
@@ -81,8 +81,8 @@ export function pageClaims(facts: Fact[], pageId: string) {
 
 export const factTime = (f: Fact) => Math.max(f.at ?? 0, contestOf(f)?.at ?? 0, f.updated_at);
 
-export function pageStats(facts: Fact[], pageId: string) {
-  const mine = live(facts).filter((f) => f.page_id === pageId && !f.superseded_by);
+export function pageStats(facts: Fact[], pageId: string | null) {
+  const mine = live(facts).filter((f) => (f.page_id ?? null) === pageId && !f.superseded_by);
   return { claims: mine.length, contested: mine.filter((f) => f.contested).length, updated: Math.max(0, ...mine.map(factTime)) };
 }
 
@@ -105,6 +105,21 @@ export function searchWiki(pages: Page[], facts: Fact[], query: string) {
     pages: live(pages).filter((p) => hit(p.title, p.summary)),
     claims: live(facts).filter((f) => !f.superseded_by && hit(f.text, ...sourcesOf(f).map((s) => s.label))).slice(0, 30),
   };
+}
+
+export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.state === 'proposed').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
+
+export const chatOf = (f: Fact) => (f.added_by?.startsWith('claude:') ? f.added_by.slice(7) : null);
+
+// Approving sets the claim live, its proposed page live, and supersedes the claim it replaces.
+export function approveChanges(fact: Fact, pages: Page[], facts: Fact[]) {
+  const page = pages.find((p) => p.id === fact.page_id && p.profile === fact.profile && p.state === 'proposed');
+  const old = facts.find((f) => f.id === fact.replaces && f.profile === fact.profile && !f.superseded_by);
+  return [
+    { table: 'facts' as const, row: fact, patch: { state: 'live' }, undo: { state: 'proposed' } },
+    ...(page ? [{ table: 'pages' as const, row: page, patch: { state: 'live' }, undo: { state: 'proposed' } }] : []),
+    ...(old ? [{ table: 'facts' as const, row: old, patch: { superseded_by: fact.id }, undo: { superseded_by: null } }] : []),
+  ];
 }
 
 const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);

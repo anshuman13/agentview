@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
-import { contestOf, factTime, live, newPage, pageClaims, pageStats, searchWiki, sourcesOf, type Fact, type Page, type Source } from '../data/wiki';
+import { approveChanges, chatOf, contestOf, factTime, live, newPage, pageClaims, pageStats, proposals, searchWiki, sourcesOf, type Fact, type Page, type Source } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
@@ -9,6 +9,8 @@ import '../../styles/features/wiki.css';
 
 export const SOURCE_ICON: Record<Source['kind'], string> = { meeting: 'calendar', slack: 'comment-discussion', linear: 'issues', pr: 'git-pull-request', doc: 'file' };
 const SECTION_ORDER = ['Teams', 'Projects', 'People', 'Practices'];
+const MEMORY = 'memory';
+const memoryPage = (facts: Fact[]): Page => ({ id: MEMORY, profile: 'work', version: 0, updated_at: Math.max(0, ...live(facts).filter((f) => !f.page_id).map(factTime)), deleted: 0, field_times: '{}', dirty: 0, title: 'Memory', section: null, summary: 'What Claude remembers about you and your work outside the wiki pages.', sort: 0, state: null });
 
 export function shortDate(t: number, now = Date.now()) {
   if (now - t < 24 * 3600_000) return ago(t, ' ago');
@@ -95,8 +97,8 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
           const c = contestOf(fact);
           return (
             <li key={fact.profile + fact.id} className={kind}>
-              <button onClick={() => setView({ open: fact.page_id, anchor: fact.id })}>
-                <span className="wk-feed-top"><span className="wk-feed-kind">{label[kind]}</span><span className="wk-feed-page">{title.get(fact.page_id ?? '')}</span></span>
+              <button onClick={() => setView({ open: fact.page_id ?? MEMORY, anchor: fact.id })}>
+                <span className="wk-feed-top"><span className="wk-feed-kind">{label[kind]}</span><span className="wk-feed-page">{fact.page_id ? title.get(fact.page_id) : 'Memory'}</span></span>
                 <span className="wk-feed-text">{fact.text}</span>
                 <span className="wk-meta">
                   {kind === 'contested' && c ? <span>by {c.by}</span> : src && <span><Icon name={SOURCE_ICON[src.kind]} small /> {src.label}</span>}
@@ -163,8 +165,8 @@ function Results({ pages, facts, query }: { pages: Page[]; facts: Fact[]; query:
           <div className="wk-label">Claims · {r.claims.length}</div>
           <div className="wk-hits">
             {r.claims.map((f) => (
-              <button key={f.profile + f.id} className="wk-hit" onClick={() => setView({ open: f.page_id, anchor: f.id })}>
-                <span className="wk-feed-page">{title.get(f.page_id ?? '')}</span>
+              <button key={f.profile + f.id} className="wk-hit" onClick={() => setView({ open: f.page_id ?? MEMORY, anchor: f.id })}>
+                <span className="wk-feed-page">{f.page_id ? title.get(f.page_id) : 'Memory'}</span>
                 <span className="wk-hit-text">{f.text}</span>
               </button>
             ))}
@@ -172,6 +174,87 @@ function Results({ pages, facts, query }: { pages: Page[]; facts: Fact[]; query:
         </section>
       )}
     </>
+  );
+}
+
+function ReviewCard({ fact }: { fact: Fact }) {
+  const { store, pages, facts } = useCodex();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(fact.text ?? '');
+  const page = pages.find((p) => p.id === fact.page_id && p.profile === fact.profile);
+  const old = facts.find((f) => f.id === fact.replaces && f.profile === fact.profile);
+  const chat = chatOf(fact);
+  const approve = () => {
+    const changes = approveChanges(fact, pages, facts);
+    changes.forEach((c) => void store.editRow(c.table, c.row as never, c.patch as never));
+    showSnack('Approved', () => changes.forEach((c) => void store.editRow(c.table, c.row as never, c.undo as never)));
+  };
+  const reject = () => {
+    void store.editRow('facts', fact, { state: 'rejected' });
+    showSnack('Claim rejected', () => void store.editRow('facts', fact, { state: 'proposed' }));
+  };
+  const save = () => {
+    void store.editRow('facts', fact, { text: text.trim() || fact.text });
+    setEditing(false);
+  };
+  return (
+    <div className="mt-action proposed wk-review">
+      <div className="mt-action-kind">
+        <Icon name={page ? 'book' : 'lightbulb'} small />
+        {page ? <>{page.title}{page.state === 'proposed' && <em> (new page in {page.section})</em>}{fact.heading && <> · {fact.heading}</>}</> : 'Memory'}
+        {fact.profile === 'personal' && <span className="wk-src">Personal</span>}
+      </div>
+      {editing ? (
+        <div className="mt-action-edit"><textarea autoFocus rows={2} value={text} onChange={(e) => setText(e.target.value)} aria-label="Claim" /></div>
+      ) : (
+        <div className="mt-action-title">{fact.text}</div>
+      )}
+      {old && <div className="wk-old"><s>{old.text}</s><span>Replaces</span></div>}
+      <div className="wk-claim-foot">
+        {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
+        {chat && <ClaudeChip chat={chat} />}
+        {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
+      </div>
+      <div className="mt-action-foot">
+        {editing ? (
+          <>
+            <span className="spacer" />
+            <button className="btn" onClick={() => { setEditing(false); setText(fact.text ?? ''); }}>Cancel</button>
+            <button className="btn primary" onClick={save}>Save</button>
+          </>
+        ) : (
+          <>
+            <button className="wk-act" onClick={() => setEditing(true)}><Icon name="edit" small /> Edit</button>
+            <span className="spacer" />
+            <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={reject}><Icon name="close" /></button>
+            <button className="btn primary mt-approve" onClick={approve}><Icon name="check" small /> Approve</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ToReview({ facts }: { facts: Fact[] }) {
+  const list = proposals(facts);
+  if (!list.length) return null;
+  return (
+    <section>
+      <div className="wk-label">To review · {list.length}</div>
+      <div className="wk-reviews">{list.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />)}</div>
+    </section>
+  );
+}
+
+function MemoryCard({ facts }: { facts: Fact[] }) {
+  const st = pageStats(facts, null);
+  if (!st.claims) return null;
+  return (
+    <button className="wk-card" onClick={() => setView({ open: MEMORY, anchor: null })}>
+      <span className="wk-card-title"><Icon name="lightbulb" small /> Memory</span>
+      <span className="wk-card-summary">What Claude remembers outside the pages.</span>
+      <span className="wk-card-foot"><span>{shortDate(st.updated)}</span><span className="spacer" /><span>{st.claims} claims</span></span>
+    </button>
   );
 }
 
@@ -196,12 +279,14 @@ function WikiIndex({ onMenu }: { onMenu: () => void }) {
           <div className="wk-main">
             {query.trim() ? <Results pages={pages} facts={facts} query={query} /> : (
               <>
+                <ToReview facts={facts} />
                 {overview && <Overview page={overview} facts={facts} pages={pages} />}
-                {(sections(pages).length ? sections(pages) : [{ name: 'Pages', pages: [] as Page[] }]).map((s) => (
+                {(sections(pages).length ? sections(pages) : [{ name: 'Pages', pages: [] as Page[] }]).map((s, i) => (
                   <section key={s.name}>
                     <div className="wk-label">{s.name}</div>
                     <div className="wk-cards">
                       {s.pages.map((p) => <PageCard key={p.profile + p.id} page={p} facts={facts} />)}
+                      {i === 0 && <MemoryCard facts={facts} />}
                       <NewPageCard section={s.name} sort={Math.max(0, ...s.pages.map((p) => p.sort ?? 0)) + 1} />
                     </div>
                   </section>
@@ -223,6 +308,10 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 function SourceChip({ s }: { s: Source }) {
   const body = <><Icon name={SOURCE_ICON[s.kind]} small /> {s.label}</>;
   return s.url ? <a className="wk-src" href={s.url} target="_blank" rel="noreferrer">{body}</a> : <span className="wk-src">{body}</span>;
+}
+
+function ClaudeChip({ chat }: { chat: string }) {
+  return <a className="wk-src" href={`/?session=${encodeURIComponent(chat)}`} title="Open the chat that proposed this"><Icon name="sparkle" small /> Claude</a>;
 }
 
 function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: string; flash: boolean }) {
@@ -250,6 +339,7 @@ function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: stri
       <p className="wk-claim-text">{fact.text}</p>
       <div className="wk-claim-foot">
         {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
+        {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
         {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
         <span className="spacer" />
         <span className="wk-claim-acts">
@@ -291,7 +381,8 @@ function WikiPage({ id }: { id: string }) {
   const { pages, facts } = useCodex();
   const { anchor } = useView();
   const [flash, setFlash] = useState<string | null>(null);
-  const page = live(pages).find((p) => p.id === id);
+  const pid = id === MEMORY ? null : id;
+  const page = id === MEMORY ? memoryPage(facts) : live(pages).find((p) => p.id === id);
   useEffect(() => {
     if (!anchor) return;
     document.getElementById(`claim-${anchor}`)?.scrollIntoView({ block: 'center' });
@@ -300,8 +391,8 @@ function WikiPage({ id }: { id: string }) {
     const t = setTimeout(() => setFlash(null), 1600);
     return () => clearTimeout(t);
   }, [anchor]);
-  const groups = useMemo(() => pageClaims(facts, id), [facts, id]);
-  const st = pageStats(facts, id);
+  const groups = useMemo(() => pageClaims(facts, pid), [facts, pid]);
+  const st = pageStats(facts, pid);
   const counts = useMemo(() => {
     const n = new Map<Source['kind'], Set<string>>();
     for (const g of groups) for (const { fact } of g.claims) for (const s of sourcesOf(fact)) n.set(s.kind, (n.get(s.kind) ?? new Set()).add(s.label));
@@ -355,7 +446,7 @@ function WikiPage({ id }: { id: string }) {
           </div>
         )}
       </div>
-      {page && <AskBar placeholder={`Ask about ${page.title}`} onAsk={(q) => ask(wikiAskText(q, pages, facts, id))} />}
+      {page && pid && <AskBar placeholder={`Ask about ${page.title}`} onAsk={(q) => ask(wikiAskText(q, pages, facts, id))} />}
     </div>
   );
 }

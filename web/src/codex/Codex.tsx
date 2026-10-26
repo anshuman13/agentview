@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useAssistant } from './data';
+import { useAssistant, useCodex } from './data';
+import { proposals } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { SNOOZES, atTime, isQuestion, nextNine, parseWhen, split, stripWhen } from './data/engine';
 import type { Patch } from './data/store';
@@ -358,7 +359,8 @@ function useSplit() {
 export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { list } = useView();
   const s = useSplit();
-  const count: Record<List, number> = { today: s.today.length + s.next.length, upcoming: s.later.length, meetings: 0, wiki: 0, notes: s.notes.length, done: 0 };
+  const { facts } = useCodex();
+  const count: Record<List, number> = { today: s.today.length + s.next.length, upcoming: s.later.length, meetings: 0, wiki: proposals(facts).length, notes: s.notes.length, done: 0 };
   return (
     <nav className="as-nav">
       {LISTS.map((l) => (

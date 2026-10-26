@@ -268,3 +268,7 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
   .mt-reject { width: var(--touch-sm); }
   .mt-wait { display: none; }
 }
+
+.wk-reviews { display: grid; gap: var(--sp-4); max-width: 720px; }
+.wk-review .mt-action-kind em { font-style: normal; color: var(--fg-muted); }
+.wk-review .wk-claim-foot { margin-top: var(--sp-3); }
