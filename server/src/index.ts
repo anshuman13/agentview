@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -248,9 +249,11 @@ const server = http.createServer(async (req, res) => {
       return json(r);
     }
     if (url.pathname === '/api/open' && req.method === 'POST') {
-      const target = String(JSON.parse(await readBody(req)).url ?? '');
+      const body = JSON.parse(await readBody(req));
+      const target = String(body.url ?? '');
       if (!/^https?:\/\//.test(target)) return json({ error: 'Only http(s) links open' }, 400);
-      openInChrome(target);
+      if (body.browser === 'firefox' && process.platform === 'darwin') execFile('open', ['-a', 'Firefox', target], (err) => err && console.error('open in firefox:', err.message));
+      else openInChrome(target);
       return json({ ok: true });
     }
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));

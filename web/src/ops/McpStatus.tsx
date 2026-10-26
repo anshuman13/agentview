@@ -353,13 +353,13 @@ function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usa
         {row.live && row.status !== 'disabled' && <button className="btn" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
         {row.live && row.status === 'connected' && <button className="btn" onClick={() => use(row.name)} title="Ask Claude to use this server in your next message"><Icon name="comment" small /> Add to chat</button>}
         {!row.live && !row.account && <AddToChat name={row.name} />}
-        {row.type === 'claudeai' && row.status !== 'needs-auth' && <a className="btn" href="https://claude.ai/settings/connectors" target="_blank" rel="noreferrer"><Icon name="key" small /> {row.account && !row.live ? 'Log in on claude.ai' : 'Manage on claude.ai'}</a>}
+        {row.type === 'claudeai' && row.status !== 'needs-auth' && <button className="btn" onClick={() => openConnectors(row.account)}><Icon name="key" small /> {row.account && !row.live ? 'Log in on claude.ai' : 'Manage on claude.ai'}</button>}
         {url && <a className="btn" href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
       </div>
       <dl className="mcp-kv">
         <dt>Status</dt><dd className={tone}>{label}{row.version ? <span className="muted mono"> · v{row.version}</span> : null}</dd>
         {row.error && (row.live || row.status !== 'needs-auth') && <><dt>Error</dt><dd className="bad mono wrap">{row.error}</dd></>}
-        {row.status === 'needs-auth' && row.type === 'claudeai' && <><dt>Log in</dt><dd><ClaudeAiLogin name={row.name} live={Boolean(row.live)} /></dd></>}
+        {row.status === 'needs-auth' && row.type === 'claudeai' && <><dt>Log in</dt><dd><ClaudeAiLogin name={row.name} live={Boolean(row.live)} account={row.account} /></dd></>}
         {row.status === 'needs-auth' && row.type !== 'claudeai' && row.live && <><dt>Log in</dt><dd><Login name={row.name} /></dd></>}
         {row.status === 'needs-auth' && row.type !== 'claudeai' && !row.live && (
           <><dt>Login</dt><dd>Load it in this chat, then log in here.</dd></>
@@ -508,17 +508,21 @@ function AddToChat({ name }: { name: string }) {
   );
 }
 
+// The work Claude account is signed in to claude.ai in Chrome on the Mac, the personal one in Firefox.
+const openConnectors = (account?: string) =>
+  post('/api/open', { url: 'https://claude.ai/settings/connectors', browser: account === 'alt' ? 'chrome' : 'firefox' }).catch((e) => notice(`Could not open claude.ai: ${e.message}`));
+
 // claude.ai connectors are authorized on claude.ai, for the account this chat runs on; the chat picks them up on reconnect.
-function ClaudeAiLogin({ name, live }: { name: string; live: boolean }) {
+function ClaudeAiLogin({ name, live, account }: { name: string; live: boolean; account?: string }) {
   const [opened, setOpened] = useState(false);
   useEffect(() => setOpened(false), [name]);
   return (
     <div className="mcp-login">
       <div className="mcp-login-acts">
-        <a className="btn" href="https://claude.ai/settings/connectors" target="_blank" rel="noreferrer" onClick={() => setOpened(true)}><Icon name="link-external" small /> Connect on claude.ai</a>
+        <button className="btn" onClick={() => { openConnectors(account); setOpened(true); }}><Icon name="link-external" small /> Connect on claude.ai</button>
         {opened && live && <button className="btn" onClick={() => send({ type: 'mcp_reconnect', name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
       </div>
-      <div className="muted">{opened ? 'Once it says Connected there, reconnect it here.' : 'Sign in with the Claude account this chat uses.'}</div>
+      <div className="muted">{opened ? `Opened in ${account === 'alt' ? 'Chrome' : 'Firefox'} on the Mac. Once it says Connected there, reconnect it here.` : `Opens in ${account === 'alt' ? 'Chrome' : 'Firefox'} on the Mac.`}</div>
     </div>
   );
 }
