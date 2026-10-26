@@ -1,7 +1,7 @@
 import { getState, notice, prompt, send } from '../../app/store';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { listOf, sourcesOf, type Action, type Fact, type Meeting, type Page } from './wiki';
+import { listOf, live, sourcesOf, type Action, type Fact, type Meeting, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
@@ -44,8 +44,8 @@ export function ask(text: string) {
 
 export function wikiAskText(question: string, pages: Page[], facts: Fact[], pageId?: string) {
   const title = new Map(pages.map((p) => [p.id, p.title ?? '']));
-  const claims = facts
-    .filter((f) => !f.deleted && !f.superseded_by && (!pageId || f.page_id === pageId))
+  const claims = live(facts)
+    .filter((f) => !f.superseded_by && (!pageId || f.page_id === pageId))
     .slice(0, 200)
     .map((f) => `- [${title.get(f.page_id ?? '') ?? ''}] ${f.text}${sourcesOf(f).length ? ` (${sourcesOf(f).map((s) => s.label).join(', ')})` : ''}${f.contested ? ' (contested)' : ''}`);
   return [

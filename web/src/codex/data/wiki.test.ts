@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { actionCount, contestOf, groupMeetings, pageClaims, pageStats, searchWiki, type Action, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
-const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0 });
+const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
 const fact = (id: string, pageId: string, heading: string, text: string, extra: Partial<Fact> = {}): Fact => ({
-  ...common(id), text, item_id: null, superseded_by: null, page_id: pageId, heading, sources: null, at: 0, contested: null, ...extra,
+  ...common(id), text, item_id: null, superseded_by: null, page_id: pageId, heading, sources: null, at: 0, contested: null, state: null, replaces: null, added_by: null, ...extra,
 });
 
 const pages = [page('p1', 'First'), page('p2', 'Second')];
@@ -14,6 +14,8 @@ const facts = [
   fact('b0', 'p1', 'Two', 'Old beta claim', { superseded_by: 'b' }),
   fact('c', 'p1', 'One', 'Gamma claim', { contested: JSON.stringify({ by: 'you', at: 1, note: 'wrong' }) }),
   fact('d', 'p2', 'One', 'Delta claim', { sources: JSON.stringify([{ kind: 'linear', label: 'X-1' }]) }),
+  fact('e', 'p1', 'One', 'Epsilon proposal', { state: 'proposed' }),
+  fact('f', 'p1', 'One', 'Zeta rejected', { state: 'rejected' }),
 ];
 
 describe('wiki', () => {
@@ -27,6 +29,12 @@ describe('wiki', () => {
   it('counts claims and contested claims per page', () => {
     expect(pageStats(facts, 'p1')).toMatchObject({ claims: 3, contested: 1 });
     expect(contestOf(facts[3])?.by).toBe('you');
+  });
+
+  it('leaves proposed and rejected claims out of pages and search', () => {
+    expect(pageClaims(facts, 'p1').flatMap((g) => g.claims.map((c) => c.fact.id))).toEqual(['a', 'c', 'b']);
+    expect(searchWiki(pages, facts, 'epsilon').claims).toEqual([]);
+    expect(searchWiki(pages, facts, 'zeta').claims).toEqual([]);
   });
 
   it('matches every word in pages and current claims', () => {

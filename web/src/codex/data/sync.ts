@@ -21,8 +21,8 @@ export const FIELDS = ['title', 'text', 'source', 'source_url', 'people', 'at', 
 // Synced data columns per table, the same as TABLES in assistant/src/db.ts.
 export const TABLE_FIELDS: Record<string, readonly string[]> = {
   items: FIELDS,
-  facts: ['text', 'item_id', 'superseded_by', 'page_id', 'heading', 'sources', 'at', 'contested'],
-  pages: ['title', 'section', 'summary', 'sort'],
+  facts: ['text', 'item_id', 'superseded_by', 'page_id', 'heading', 'sources', 'at', 'contested', 'state', 'replaces', 'added_by'],
+  pages: ['title', 'section', 'summary', 'sort', 'state'],
   meetings: ['title', 'starts_at', 'ends_at', 'people', 'calendar_url', 'recorded_ms', 'notes', 'summary', 'decisions'],
   actions: ['meeting_id', 'kind', 'target', 'title', 'body', 'fields', 'status', 'result_url'],
 };

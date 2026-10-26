@@ -2,7 +2,8 @@ import type { Profile } from './sync';
 
 export type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
 
-export type Page = Common & { title: string | null; section: string | null; summary: string | null; sort: number | null };
+// state is proposed, live or rejected; null means live.
+export type Page = Common & { title: string | null; section: string | null; summary: string | null; sort: number | null; state: string | null };
 
 export type Fact = Common & {
   text: string | null;
@@ -13,6 +14,9 @@ export type Fact = Common & {
   sources: string | null;
   at: number | null;
   contested: string | null;
+  state: string | null;
+  replaces: string | null;
+  added_by: string | null;
 };
 
 export type Meeting = Common & {
@@ -58,7 +62,7 @@ export const contestOf = (f: Fact) => json<Contest | null>(f.contested, null);
 export const listOf = (s: string | null) => json<string[]>(s, []);
 export const fieldsOf = (a: Action) => json<Record<string, string>>(a.fields, {});
 
-export const live = <T extends Common>(rows: T[]) => rows.filter((r) => !r.deleted);
+export const live = <T extends Common & { state?: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted && (r.state ?? 'live') === 'live');
 
 // The claims shown on a page: current claims in heading order, each with the claims it superseded.
 export function pageClaims(facts: Fact[], pageId: string) {
@@ -86,7 +90,7 @@ export function newPage(title: string, section: string, sort: number, profile: P
   return {
     id: crypto.randomUUID(), profile, version: 0, updated_at: now, deleted: 0, dirty: 1,
     field_times: JSON.stringify({ title: now, section: now, summary: now, sort: now }),
-    title, section, summary: null, sort,
+    title, section, summary: null, sort, state: null,
   };
 }
 

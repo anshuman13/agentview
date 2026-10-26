@@ -113,6 +113,10 @@ export class LocalStore extends BaseStore implements AssistantStore {
       await this.closing;
       await this.invoke('assistant_open', { key: await this.getKey() });
       await this.invoke('assistant_batch', { sql: SCHEMA });
+      for (const t of ['items', ...WIKI_TABLES]) {
+        const have = new Set((await this.query<{ name: string }>(`PRAGMA table_info(${t})`)).map((c) => c.name));
+        for (const c of TABLE_FIELDS[t]) if (!have.has(c)) await this.invoke('assistant_batch', { sql: `ALTER TABLE ${t} ADD COLUMN ${c}` });
+      }
       this.set({ phase: 'ready', message: '' });
       await this.refresh();
       this.syncNow();
