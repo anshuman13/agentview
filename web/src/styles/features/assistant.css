@@ -107,6 +107,7 @@
 .as-chips > .as-chip:nth-child(3):not(.on):not(.when):not(.time):not(.work):not(.personal) .codicon.icon { color: var(--c-green); }
 .as-pick { position: relative; flex: none; display: inline-flex; }
 .as-pick input { position: absolute; inset: 0; width: 100%; opacity: 0; pointer-events: none; }
+.as-pick select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
 .as-input { position: relative; }
 .as-card textarea, .as-mirror { font: inherit; font-size: var(--fs-lg); line-height: var(--line-md); padding: var(--sp-6) var(--sp-7) var(--sp-1); white-space: pre-wrap; overflow-wrap: break-word; }
 .as-card textarea { position: relative; display: block; width: 100%; min-height: 44px; background: transparent; border: 0; border-radius: 0; color: var(--fg); resize: none; }

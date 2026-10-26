@@ -1,13 +1,29 @@
 import { useEffect, useRef } from 'react';
-import { SNOOZES } from './data/engine';
 import { Icon } from '../ui/Icon';
+
+// Times are picked as a part of the day, not a minute.
+export const MORNING = 9;
+export const EVENING = 19;
+const slot = (now: Date, days: number, hour: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, hour).getTime();
+
+export function slots(now = new Date()): { label: string; at: number }[] {
+  const h = now.getHours();
+  return [
+    ...(h < MORNING ? [{ label: 'This morning', at: slot(now, 0, MORNING) }] : []),
+    ...(h < EVENING ? [{ label: 'This evening', at: slot(now, 0, EVENING) }] : []),
+    { label: 'Tomorrow morning', at: slot(now, 1, MORNING) },
+    { label: 'Tomorrow evening', at: slot(now, 1, EVENING) },
+    { label: 'Next week', at: slot(now, ((8 - now.getDay()) % 7) || 7, MORNING) },
+  ];
+}
 
 export function when(at: number, now = Date.now()) {
   const d = new Date(at);
   const today = new Date(now);
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86400000);
-  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  if (days === 0) return time;
+  const part = d.getMinutes() === 0 && d.getHours() === MORNING ? 'morning' : d.getMinutes() === 0 && d.getHours() === EVENING ? 'evening' : null;
+  const time = part ?? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  if (days === 0) return part ? `this ${part}` : time;
   if (days === 1) return `tomorrow ${time}`;
   if (days === -1) return `yesterday ${time}`;
   if (days > 1 && days < 7) return `${d.toLocaleDateString([], { weekday: 'short' })} ${time}`;
@@ -15,9 +31,9 @@ export function when(at: number, now = Date.now()) {
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
-const localInput = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const localDate = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 
-// A button that opens the system date and time picker.
+// A menu of morning and evening slots, plus a day picker that lands on that day's morning.
 export function PickTime({ className, value, onPick, label = 'Pick time', title }: { className: string; value?: number | null; onPick: (at: number) => void; label?: React.ReactNode; title?: string }) {
   const input = useRef<HTMLInputElement>(null);
   const pick = useRef(onPick);
@@ -25,20 +41,26 @@ export function PickTime({ className, value, onPick, label = 'Pick time', title 
   // React's onChange fires on every input event; the native change event fires once the picker is confirmed.
   useEffect(() => {
     const el = input.current!;
-    const change = () => { const t = new Date(el.value).getTime(); if (Number.isFinite(t)) pick.current(t); };
+    const change = () => { const [y, m, d] = el.value.split('-').map(Number); if (y && m && d) pick.current(new Date(y, m - 1, d, MORNING).getTime()); };
     el.addEventListener('change', change);
     return () => el.removeEventListener('change', change);
   }, []);
-  const open = () => {
+  const choose = (v: string) => {
+    if (v !== 'day') return v && onPick(Number(v));
     const el = input.current;
     if (!el) return;
-    el.value = localInput(value ?? SNOOZES[0].at(new Date()));
+    el.value = localDate(value ?? slots()[0].at);
     try { el.showPicker(); } catch { el.focus(); el.click(); }
   };
   return (
-    <span className="as-pick">
-      <button className={className} title={title} onClick={(e) => { e.stopPropagation(); open(); }}><Icon name="calendar" small /> {label}</button>
-      <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden />
+    <span className="as-pick" onClick={(e) => e.stopPropagation()}>
+      <button className={className} title={title} tabIndex={-1}><Icon name="calendar" small /> {label}</button>
+      <select value="" title={title} aria-label={title ?? 'Pick time'} onChange={(e) => choose(e.target.value)}>
+        <option value="" disabled>{title ?? 'Pick time'}</option>
+        {slots().map((s) => <option key={s.label} value={s.at}>{s.label}</option>)}
+        <option value="day">Pick a day…</option>
+      </select>
+      <input ref={input} type="date" tabIndex={-1} aria-hidden />
     </span>
   );
 }

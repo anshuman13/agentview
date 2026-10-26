@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { TRIES, actionId, dueMeetings, expireSuggested, markTried, readSaved, saveNotes } from './transcripts.js';
+import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, markTried, readSaved, saveNotes } from './transcripts.js';
 
 const MIN = 60_000;
 const now = Date.parse('2026-10-26T16:00:00Z');
@@ -80,5 +80,13 @@ describe('transcripts', () => {
     expect(readSaved(root, path.join(dir, 'out.txt'), 30_000)).toBe(`${'x'.repeat(10_000)}\n[characters 30000-40000 of 40000]`);
     expect(() => readSaved(root, path.join(root, 'secret.txt'))).toThrow('Only saved tool outputs');
     expect(() => readSaved(root, path.join(dir, '..', '..', '..', '..', 'secret.txt'))).toThrow('Only saved tool outputs');
+  });
+});
+
+describe('dueAt', () => {
+  it('puts a bare day on its local morning and keeps a clock time', () => {
+    expect(dueAt('2026-10-28')).toBe(new Date(2026, 9, 28, 9).getTime());
+    expect(dueAt('2026-10-27T08:00:00')).toBe(new Date(2026, 9, 27, 8).getTime());
+    expect(dueAt(null)).toBeNaN();
   });
 });

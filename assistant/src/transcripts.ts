@@ -26,7 +26,7 @@ const Notes = z.object({
     .array(z.object({
       title: z.string().describe('Short imperative task, e.g. "Send the rollout slides to Kim"'),
       context: z.string().describe('One sentence on why, with who asked'),
-      due: z.string().nullable().describe('ISO date or date-time when a deadline was said, else null'),
+      due: z.string().nullable().describe('ISO date (YYYY-MM-DD) when a deadline day was said, a date-time only when a clock time was said, else null'),
       owner: z.enum(['me', 'maybe', 'nobody']).describe('me: certainly mine; maybe: probably mine; nobody: a follow-up no one took'),
     }))
     .describe('Follow-ups that are mine, probably mine, or that nobody took; empty when there are none'),
@@ -41,6 +41,13 @@ const triesOf = (db: Database, profile: Profile, id: string) => ((db.prepare('SE
 
 // Calendar meetings that ended in the last days and are not processed yet, tried at most TRIES times, RETRY apart.
 // A meeting summarized by hand before it ended is still waiting; one summarized before this state existed is done.
+// A deadline said as a day lands on that day's morning in local time; Date.parse reads a bare date as UTC midnight.
+export function dueAt(due: string | null) {
+  if (!due) return NaN;
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(due.trim());
+  return day ? new Date(+day[1], +day[2] - 1, +day[3], 9).getTime() : Date.parse(due);
+}
+
 export function dueMeetings(db: Database, profile: Profile, now = Date.now()): Pending[] {
   const rows = db.prepare(
     "SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND (transcript = 'waiting' OR (transcript IS NULL AND (summary IS NULL OR summary = ''))) AND ends_at <= ? AND ends_at >= ? ORDER BY ends_at",
@@ -90,7 +97,7 @@ export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[],
         if (a.owner === 'me' && (old.status === 'suggested' || old.status === 'unassigned')) changes.push({ table: 'items', id, profile, updated_at: now, fields: { status: 'open' } });
         continue;
       }
-      const due = a.due ? Date.parse(a.due) : NaN;
+      const due = dueAt(a.due);
       changes.push({
         table: 'items', id, profile, updated_at: now,
         fields: { title: a.title.trim(), text: a.context.trim() || null, source: 'action', source_url: n.doc_url || null, people: m.title, at: Number.isFinite(due) ? due : null, status: STATUS[a.owner] ?? 'suggested', meeting_id: n.id },
