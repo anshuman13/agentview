@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { ROOTS, inside } from '../workspace/worktrees.js';
 import { allowedServers } from '../agent/claude/mcp.js';
-import { callTool, data, listTools, stop, stopAll, text, type McpResult, type McpServerDef } from './mcpClient.js';
+import { callTool, data, listTools, stop, text, type McpResult, type McpServerDef } from './mcpClient.js';
 import type {
   GrafanaDashboards,
   GrafanaLogs,
@@ -14,10 +14,6 @@ import type {
   LogPattern,
   ObserveConfig,
   ObserveInfo,
-  SentryDetails,
-  SentryIssue,
-  SentryIssues,
-  SentryTest,
   SnowflakeConfig,
   SnowflakeInfo,
   SnowflakeObjects,
@@ -31,13 +27,12 @@ const YAML = path.join(DIR, 'snowflake.yaml');
 const CLAUDE = path.join(os.homedir(), '.claude.json');
 const run = promisify(execFile);
 
-type Settings = { sentryToken?: string; snowflake?: Partial<SnowflakeConfig>; repos?: Record<string, ObserveConfig> };
+type Settings = { snowflake?: Partial<SnowflakeConfig>; repos?: Record<string, ObserveConfig> };
 type Servers = Record<string, McpServerDef>;
 
 const EMPTY_SNOWFLAKE: SnowflakeConfig = { account: '', user: '', warehouse: '', database: '', schema: '', role: '', auth: 'pat', secret: '' };
 
 const EXAMPLE: Settings = {
-  sentryToken: '',
   snowflake: EMPTY_SNOWFLAKE,
   repos: {
     example: {
@@ -47,7 +42,6 @@ const EXAMPLE: Settings = {
         dashboards: [{ title: 'Overview', url: 'https://your-org.grafana.net/d/abc123/overview', uid: 'abc123' }],
         lokiSelector: '{app="example"}',
       },
-      sentry: { org: 'your-org', project: 'example', url: 'https://sentry.io' },
     },
   },
 };
@@ -82,7 +76,7 @@ async function repoName(cwd: string) {
 
 async function hints(repo: string) {
   if (!/^[\w.-]+$/.test(repo) || repo.startsWith('.')) return '';
-  const files = ROOTS.flatMap((r) => ['centro.yaml', 'catalog-info.yaml', '.sentryclirc', 'sentry.properties'].map((f) => path.join(r, repo, f)));
+  const files = ROOTS.flatMap((r) => ['centro.yaml', 'catalog-info.yaml'].map((f) => path.join(r, repo, f)));
   return (await Promise.all(files.map((f) => readFile(f, 'utf8').catch(() => '')))).join('\n');
 }
 
@@ -91,18 +85,12 @@ const pick = (re: RegExp, s: string) => s.match(re)?.[1]?.trim();
 async function guess(repo: string, s: Settings): Promise<ObserveConfig> {
   const hint = await hints(repo);
   const others = Object.entries(s.repos ?? {}).filter(([k]) => k !== repo && k !== 'example').map(([, c]) => c);
-  const slug = pick(/sentry\.io\/project-slug:\s*["']?([\w./-]+)/, hint)?.split('/');
   return {
     grafana: {
       url: others.find((c) => c.grafana?.url)?.grafana?.url ?? '',
       query: repo,
       dashboards: [],
       lokiSelector: pick(/grafana\/loki-selector:\s*'?(\{[^\n']*\})/, hint) ?? `{app="${repo}"}`,
-    },
-    sentry: {
-      org: (slug?.length === 2 ? slug[0] : pick(/^\s*(?:defaults\.)?org\s*=\s*(\S+)/m, hint)) ?? others.find((c) => c.sentry?.org)?.sentry?.org ?? '',
-      project: slug?.at(-1) ?? pick(/^\s*(?:defaults\.)?project\s*=\s*(\S+)/m, hint) ?? repo,
-      url: others.find((c) => c.sentry?.url)?.sentry?.url ?? 'https://sentry.io',
     },
   };
 }
@@ -115,17 +103,6 @@ const userServers = (cwd: string): Promise<Servers> => allowedServers(cwd);
 
 // One client per server definition, so a repo's grafana is never reused for another repo's.
 const keyOf = (name: string, def: McpServerDef) => `${name}:${JSON.stringify(def)}`;
-
-const httpsUrl = (u: string) => {
-  if (!u) return u;
-  const parsed = new URL(u);
-  if (parsed.protocol !== 'https:') throw new Error('Sentry URL must use https');
-  return parsed.origin;
-};
-
-const envToken = () => process.env.SENTRY_AUTH_TOKEN || process.env.SENTRY_ACCESS_TOKEN || '';
-const sentryToken = (s: Settings) => envToken() || s.sentryToken || '';
-const tokenSource = (s: Settings): ObserveInfo['sentryTokenSource'] => (envToken() ? 'env' : s.sentryToken ? 'file' : 'none');
 
 const snowflakeInfo = (s: Settings): SnowflakeInfo => {
   const { secret, ...rest } = { ...EMPTY_SNOWFLAKE, ...s.snowflake };
@@ -140,12 +117,9 @@ async function info(repo: string, cwd: string): Promise<ObserveInfo> {
     guess: await guess(repo, s),
     repos: Object.keys(s.repos ?? {}),
     file: FILE,
-    sentryToken: !!sentryToken(s),
-    sentryTokenSource: tokenSource(s),
-    sentryServer: servers.sentry ? 'config' : sentryToken(s) ? 'npx' : 'none',
     grafanaServer: !!servers.grafana,
     snowflake: snowflakeInfo(s),
-    inClaude: { sentry: !!servers.sentry, snowflake: !!servers.snowflake },
+    inClaude: { snowflake: !!servers.snowflake },
   };
 }
 
@@ -259,146 +233,6 @@ async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef): Promi
   }
   const rows = rank([...counts].map(([pattern, count]) => ({ pattern, count })));
   return { patterns: rows, source: `grouped from the last ${lines.length} error lines${notes.length ? ` (${notes.join('; ')})` : ''}`, link };
-}
-
-type SentrySource = { def: McpServerDef; via: 'config' | 'npx' };
-
-function sentrySource(servers: Servers, s: Settings, sentry: ObserveConfig['sentry']): SentrySource | null {
-  if (servers.sentry) return { def: servers.sentry, via: 'config' };
-  const token = sentryToken(s);
-  if (!token) return null;
-  const host = sentry?.url ? new URL(sentry.url).host : '';
-  const args = ['-y', '@sentry/mcp-server@latest'];
-  if (host && host !== 'sentry.io') args.push(`--host=${host}`);
-  return { def: { type: 'stdio', command: 'npx', args, env: { SENTRY_ACCESS_TOKEN: token } }, via: 'npx' };
-}
-
-function sentryTarget(cfg: ObserveConfig) {
-  const sentry = cfg.sentry;
-  if (!sentry?.org || !sentry.project) throw new Error('Set sentry.org and sentry.project in the settings');
-  const base = sentry.url ? new URL(sentry.url).origin : 'https://sentry.io';
-  return { org: sentry.org, project: sentry.project, base };
-}
-
-function field(block: string, ...names: string[]) {
-  for (const n of names) {
-    const m = block.match(new RegExp(`\\*\\*${n}\\*\\*:\\s*(.*)`, 'i'));
-    if (m) return m[1].trim();
-  }
-  return '';
-}
-
-function parseIssues(md: string, base: string, org: string): SentryIssue[] {
-  return md
-    .split(/^##\s+/m)
-    .slice(1)
-    .map((block) => {
-      const shortId = block.split('\n')[0].replace(/[*`#]/g, '').trim();
-      const title = field(block, 'Description', 'Title') || block.split('\n').slice(1).find((l) => l.trim())?.trim() || shortId;
-      return {
-        id: field(block, 'ID', 'Issue ID') || shortId,
-        shortId,
-        title,
-        culprit: field(block, 'Culprit'),
-        count: Number(field(block, 'Occurrences', 'Events', 'Count').replace(/\D/g, '')) || 0,
-        userCount: Number(field(block, 'Users Impacted', 'Users').replace(/\D/g, '')) || 0,
-        lastSeen: field(block, 'Last Seen'),
-        permalink: field(block, 'URL', 'Link') || `${base}/organizations/${org}/issues/?query=${encodeURIComponent(shortId)}`,
-        level: field(block, 'Level').toLowerCase(),
-      };
-    })
-    .filter((i) => i.shortId);
-}
-
-async function sentryGet(token: string, url: string) {
-  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) });
-  if (!res.ok) throw new Error(`Sentry REST ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  return res.json() as Promise<any>;
-}
-
-async function restIssues(token: string, t: ReturnType<typeof sentryTarget>): Promise<SentryIssue[]> {
-  const list: Array<Record<string, any>> = await sentryGet(token, `${t.base}/api/0/projects/${encodeURIComponent(t.org)}/${encodeURIComponent(t.project)}/issues/?query=is:unresolved&sort=date&limit=25`);
-  return list.map((i) => ({
-    id: String(i.id),
-    shortId: i.shortId ?? '',
-    title: i.title ?? '',
-    culprit: i.culprit ?? '',
-    count: Number(i.count) || 0,
-    userCount: Number(i.userCount) || 0,
-    lastSeen: i.lastSeen ?? '',
-    permalink: i.permalink ?? '',
-    level: i.level ?? '',
-  }));
-}
-
-async function restDetails(token: string, t: ReturnType<typeof sentryTarget>, id: string) {
-  const ev: Record<string, any> = await sentryGet(token, `${t.base}/api/0/organizations/${encodeURIComponent(t.org)}/issues/${encodeURIComponent(id)}/events/latest/`);
-  const out = [`${ev.title ?? ''}`, ev.message ? `message: ${ev.message}` : '', `event ${ev.eventID ?? ''} at ${ev.dateCreated ?? ''}`, ''];
-  for (const entry of ev.entries ?? []) {
-    if (entry.type !== 'exception') continue;
-    for (const ex of entry.data?.values ?? []) {
-      out.push(`${ex.type}: ${ex.value}`);
-      for (const f of ex.stacktrace?.frames ?? []) {
-        out.push(`  at ${f.function ?? '?'} (${f.filename ?? f.absPath ?? '?'}:${f.lineNo ?? '?'})${f.inApp ? '' : '  [library]'}`);
-        if (f.context) for (const [n, line] of f.context) if (n === f.lineNo) out.push(`      ${String(line).trim()}`);
-      }
-      out.push('');
-    }
-  }
-  return out.join('\n').trim();
-}
-
-async function withSentry<T>(repo: string, cwd: string, mcp: (src: SentrySource, t: ReturnType<typeof sentryTarget>) => Promise<T>, rest: (token: string, t: ReturnType<typeof sentryTarget>) => Promise<T>) {
-  const [s, servers] = await Promise.all([load(), userServers(cwd)]);
-  const cfg = await configFor(repo, s);
-  const t = sentryTarget(cfg);
-  const src = sentrySource(servers, s, cfg.sentry);
-  const token = sentryToken(s);
-  if (!src) throw new Error(`No Sentry MCP server in ~/.claude.json and no token. Set "sentryToken" in ${FILE} or SENTRY_AUTH_TOKEN`);
-  try {
-    return { via: 'mcp' as const, value: await mcp(src, t), note: undefined as string | undefined };
-  } catch (e) {
-    if (!token) throw e;
-    return { via: 'rest' as const, value: await rest(token, t), note: `Sentry MCP (${src.via}) failed, used the REST API: ${(e as Error).message.split('\n')[0]}` };
-  }
-}
-
-async function sentryIssues(repo: string, cwd: string): Promise<SentryIssues> {
-  const r = await withSentry(
-    repo,
-    cwd,
-    async (src, t) => {
-      const out = text(await callTool(keyOf('sentry', src.def), src.def, 'search_issues', { organizationSlug: t.org, projectSlugOrId: t.project, query: 'is:unresolved', sort: 'date', limit: 25 }, 90_000));
-      const issues = parseIssues(out, t.base, t.org);
-      if (!issues.length && out.trim() && !/no issues|0 issues|no results/i.test(out)) throw new Error(`Could not read the Sentry MCP reply: ${out.slice(0, 300)}`);
-      return issues;
-    },
-    restIssues,
-  );
-  return { via: r.via, issues: r.value, note: r.note };
-}
-
-// Issues for the background inbox: only repos with an explicit Sentry entry, never the guessed config.
-export async function sentryWatch(cwd: string) {
-  const [s, repo] = await Promise.all([load(), repoName(cwd)]);
-  if (repo === 'example' || !s.repos?.[repo]?.sentry?.project) return null;
-  return { repo, issues: (await sentryIssues(repo, cwd)).issues };
-}
-
-async function sentryTest(repo: string, cwd: string): Promise<SentryTest> {
-  const r = await sentryIssues(repo, cwd);
-  return { count: r.issues.length, via: r.via, note: r.note };
-}
-
-async function sentryDetails(repo: string, cwd: string, id: string, shortId: string): Promise<SentryDetails> {
-  if (!id && !shortId) throw new Error('Missing issue id');
-  const r = await withSentry(
-    repo,
-    cwd,
-    async (src, t) => text(await callTool(keyOf('sentry', src.def), src.def, 'get_sentry_resource', { resourceType: 'issue', organizationSlug: t.org, resourceId: shortId || id }, 90_000)),
-    (token, t) => restDetails(token, t, id || shortId),
-  );
-  return { via: r.via, text: r.note ? `${r.note}\n\n${r.value}` : r.value };
 }
 
 const SNOWFLAKE_YAML = `other_services:
@@ -517,40 +351,18 @@ async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string)
   if ('config' in b) {
     const config = b.config ?? null;
     if (config !== null && (typeof config !== 'object' || Array.isArray(config))) throw new Error('Config must be a JSON object');
-    if (config) {
-      const c = config as ObserveConfig;
-      if (c.sentry?.url) c.sentry.url = httpsUrl(String(c.sentry.url));
-      repos[repo] = c;
-    }
+    if (config) repos[repo] = config as ObserveConfig;
     else delete repos[repo];
   }
-  if (b.sentry && typeof b.sentry === 'object') {
-    const inp = b.sentry as Record<string, unknown>;
-    const current = repos[repo] ?? (await guess(repo, s));
-    const sentry = { ...current.sentry };
-    for (const k of ['org', 'project', 'url'] as const) if (typeof inp[k] === 'string') sentry[k] = (inp[k] as string).trim();
-    if (sentry.url) sentry.url = httpsUrl(sentry.url);
-    repos[repo] = { ...current, sentry };
-  }
-  const next: Settings = { ...s, repos };
-  if (typeof b.sentryToken === 'string') {
-    next.sentryToken = b.sentryToken.trim();
-    stopAll('sentry:');
-  }
-  await save(next);
+  await save({ ...s, repos });
   lokiCache.clear();
   return info(repo, cwd);
 }
 
 async function addToClaude(server: string, cwd: string) {
   const [s, servers] = await Promise.all([load(), userServers(cwd)]);
-  let def: McpServerDef;
-  if (server === 'sentry') {
-    const src = sentrySource({}, s, undefined);
-    if (!src) throw new Error(`Set "sentryToken" in ${FILE} first`);
-    def = src.def;
-  } else if (server === 'snowflake') def = await snowflakeDef(s);
-  else throw new Error('server must be sentry or snowflake');
+  if (server !== 'snowflake') throw new Error('server must be snowflake');
+  const def = await snowflakeDef(s);
   if (servers[server]) throw new Error(`${server} is already in your Claude MCP config`);
   // The CLI writes ~/.claude.json the same way running Claude sessions do, so neither overwrites the other.
   await run('claude', ['mcp', 'add-json', '--scope', 'user', server, JSON.stringify(def)], { timeout: 30_000 }).catch((err: { stderr?: string; message: string }) => {
@@ -586,9 +398,6 @@ export async function observe(req: http.IncomingMessage, url: URL, cwd: string) 
   if (p === '/api/observe/snowflake/objects') return snowflakeObjects(q('kind'), q('database'), q('schema'));
   const repo = q('repo') || (await repoName(cwd));
   if (p === '/api/observe') return info(repo, cwd);
-  if (p === '/api/observe/sentry/issues') return sentryIssues(repo, cwd);
-  if (p === '/api/observe/sentry/test') return sentryTest(repo, cwd);
-  if (p === '/api/observe/sentry/issue') return sentryDetails(repo, cwd, q('id'), q('shortId'));
   if (p.startsWith('/api/observe/grafana/')) {
     const [s, servers] = await Promise.all([load(), userServers(cwd)]);
     const def = grafanaDef(servers);

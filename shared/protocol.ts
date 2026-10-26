@@ -174,7 +174,7 @@ export type LiveChat = {
   pr?: number;
 };
 
-export type AttentionKind = 'ci' | 'changes' | 'review' | 'ready' | 'issue' | 'stale' | 'commit' | 'sentry' | 'deploy';
+export type AttentionKind = 'ci' | 'changes' | 'review' | 'ready' | 'issue' | 'stale' | 'commit' | 'deploy';
 
 export type AttentionItem = {
   id: string;
@@ -199,7 +199,6 @@ export const ATTENTION_LABEL: Record<AttentionKind, string> = {
   issue: 'Assigned to you',
   stale: 'No review for days',
   commit: 'Uncommitted changes',
-  sentry: 'Sentry',
   deploy: 'Deploy failed',
 };
 

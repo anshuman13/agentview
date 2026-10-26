@@ -31,14 +31,14 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
   replies, changed files, commands, commits and subagents
 - Steering while Claude works, editable next steps, permission and question cards, rewind and fork
 - Editor with diffs, Source Control, GitHub pull requests with review findings, a terminal, and your Chrome
-- Observe (Grafana, Sentry, Snowflake), Deploy and MCP server pages
+- Observe (Grafana, Snowflake), Deploy and MCP server pages
 - `/loop` and `/goal`, loop mode (plan, build, test), Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 
 ## Docs
 
 - [Features](docs/features.md): layout, timeline, models, workspace, notifications, loops, shortcuts
-- [Integrations](docs/integrations.md): Chrome, MCP servers, Grafana, Sentry and Snowflake
+- [Integrations](docs/integrations.md): Chrome, MCP servers, Grafana and Snowflake
 - [Phone and other Macs](docs/macs.md)
 - [Assistant plan](docs/assistant.md)
 - [Architecture](docs/architecture.md) and [decisions](docs/decisions.md)

@@ -20,7 +20,7 @@ import type { PendingRequest } from '../../../shared/protocol';
 
 const SHOWN_TURNS = 5;
 
-// Items waiting outside this chat: other chats needing you plus the GitHub, Sentry and deploy inbox.
+// Items waiting outside this chat: other chats needing you plus the GitHub and deploy inbox.
 function InboxChip() {
   const n = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
   if (!n) return null;

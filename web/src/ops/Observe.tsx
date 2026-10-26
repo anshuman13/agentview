@@ -4,10 +4,6 @@ import type {
   GrafanaLogs,
   GrafanaPatterns,
   ObserveInfo,
-  SentryDetails,
-  SentryIssue,
-  SentryIssues,
-  SentryTest,
   SnowflakeAuth,
   SnowflakeInfo,
   SnowflakeObjects,
@@ -17,7 +13,7 @@ import type {
 import type { Repo } from '../../../shared/protocol';
 import { api, useStore } from '../app/store';
 import { apiUrl } from '../app/api';
-import { ago, askClaude } from '../ui/util';
+import { askClaude } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import '../styles/features/observe.css';
 
@@ -96,7 +92,7 @@ function Sub({ title, link, ask, children }: { title: string; link?: string; ask
   );
 }
 
-function AddToClaude({ server, added, disabled, title, onDone }: { server: 'sentry' | 'snowflake'; added: boolean; disabled?: boolean; title: string; onDone: (i: ObserveInfo) => void }) {
+function AddToClaude({ server, added, disabled, title, onDone }: { server: 'snowflake'; added: boolean; disabled?: boolean; title: string; onDone: (i: ObserveInfo) => void }) {
   const [msg, setMsg] = useState('');
   if (added) return <span className="chip ok" title={`${server} is in ~/.claude.json`}><Icon name="check" small /> In Claude</span>;
   return (
@@ -106,155 +102,6 @@ function AddToClaude({ server, added, disabled, title, onDone }: { server: 'sent
       </button>
       {msg && <span className="error">{msg}</span>}
     </span>
-  );
-}
-
-function Issue({ issue, repo }: { issue: SentryIssue; repo: string }) {
-  const [open, setOpen] = useState(false);
-  const [details, refresh] = useLoad<SentryDetails>(open ? `/api/observe/sentry/issue?repo=${encodeURIComponent(repo)}&id=${encodeURIComponent(issue.id)}&shortId=${encodeURIComponent(issue.shortId)}` : null);
-  const ask = () =>
-    askClaude(
-      `Investigate Sentry issue ${issue.shortId} (id ${issue.id}) in ${repo}: "${issue.title}" at ${issue.culprit || 'unknown location'}. ${issue.count} events, ${issue.userCount} users, last seen ${issue.lastSeen}. Use the Sentry MCP (get_sentry_resource with resourceType issue and resourceId ${issue.shortId}, or the URL ${issue.permalink}) to read the latest event and stack trace, find the cause in the code and propose a fix.`,
-    );
-  return (
-    <div className={`obs-issue level-${issue.level || 'none'}`}>
-      <div className="row">
-        <span className="dot" title={issue.level || 'unknown level'} />
-        <span className="title" title={issue.title}>{issue.title}</span>
-      </div>
-      {issue.culprit && <div className="culprit" title={issue.culprit}>{issue.culprit}</div>}
-      <div className="meta">
-        <span title="Events">{issue.count} events</span>
-        {issue.userCount > 0 && <span title="Users">{issue.userCount} users</span>}
-        <span title={issue.lastSeen}>{ago(issue.lastSeen, ' ago')}</span>
-        <span className="spacer" />
-        <button className="btn xs" onClick={() => setOpen((v) => !v)}>{open ? 'Hide' : 'Details'}</button>
-        <a className="icon-btn" href={issue.permalink} target="_blank" rel="noreferrer" title="Open in Sentry"><Icon name="link-external" small /></a>
-        <button className="obs-ask" onClick={ask}><Icon name="sparkle" small /> Ask Claude</button>
-      </div>
-      {open && (
-        <div className="obs-details">
-          {details.busy && <Loading />}
-          <Err text={details.error} />
-          {details.error && <button className="btn xs" onClick={refresh}>Retry</button>}
-          {details.data && (
-            <>
-              <div className="obs-hint">via {details.data.via === 'mcp' ? 'Sentry MCP' : 'Sentry REST API'}</div>
-              <pre className="obs-mono">{details.data.text || 'No stack trace in the latest event'}</pre>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const SENTRY_TOKENS = 'https://sentry.io/settings/account/api/auth-tokens/';
-
-function SentrySetup({ info, onInfo, onSaved }: { info: ObserveInfo; onInfo: (i: ObserveInfo) => void; onSaved: () => void }) {
-  const cfg = info.config ?? info.guess;
-  const hasAccess = info.sentryToken || info.inClaude.sentry;
-  const [token, setToken] = useState('');
-  const [org, setOrg] = useState(cfg.sentry?.org ?? '');
-  const [project, setProject] = useState(cfg.sentry?.project ?? '');
-  const [editToken, setEditToken] = useState(!hasAccess);
-  const [msg, setMsg] = useState('');
-  const [test, setTest] = useState<Load<SentryTest>>({ data: null, error: '', busy: false });
-  const dirty = !!token || org !== (cfg.sentry?.org ?? '') || project !== (cfg.sentry?.project ?? '');
-  const tokenLabel = info.sentryTokenSource === 'env' ? 'from environment' : info.sentryTokenSource === 'file' ? 'saved in observe.json' : info.inClaude.sentry ? 'not needed, Sentry MCP comes from your Claude config' : 'missing';
-
-  const save = async () => {
-    setMsg('');
-    const body: Record<string, unknown> = { repo: info.repo, sentry: { org: org.trim(), project: project.trim() } };
-    if (token.trim()) body.sentryToken = token.trim();
-    const next = await post<ObserveInfo>('/api/observe/config', body);
-    onInfo(next);
-    setToken('');
-    setEditToken(false);
-    setMsg('Saved');
-    onSaved();
-  };
-
-  const runTest = () =>
-    track(setTest, async () => {
-      if (dirty) await save();
-      return getJson<SentryTest>(api(`/api/observe/sentry/test?repo=${encodeURIComponent(info.repo)}`));
-    });
-
-  return (
-    <div className="obs-card">
-      {editToken ? (
-        <>
-          <label className="obs-field">
-            <span>User auth token</span>
-            <input type="password" value={token} placeholder={info.sentryToken ? 'leave empty to keep the current token' : 'sntrys_...'} autoComplete="off" spellCheck={false} onChange={(e) => setToken(e.target.value)} />
-          </label>
-          <div className="obs-hint">
-            Create one at <a className="obs-link" href={SENTRY_TOKENS} target="_blank" rel="noreferrer">sentry.io/settings/account/api/auth-tokens</a> with the scopes org:read, project:read and event:read.
-            {hasAccess && <button className="btn xs" onClick={() => setEditToken(false)}>Cancel</button>}
-          </div>
-        </>
-      ) : (
-        <div className="obs-hint">
-          Token: {tokenLabel}
-          <button className="btn xs" onClick={() => setEditToken(true)}>Change</button>
-        </div>
-      )}
-      <div className="obs-form">
-        <label>
-          <span>Organization</span>
-          <input value={org} placeholder="org slug" spellCheck={false} onChange={(e) => setOrg(e.target.value)} />
-        </label>
-        <label>
-          <span>Project</span>
-          <input value={project} placeholder="project slug" spellCheck={false} onChange={(e) => setProject(e.target.value)} />
-        </label>
-      </div>
-      <div className="obs-save">
-        <button className="btn primary" disabled={!dirty} onClick={() => save().catch((e) => setMsg(e.message))}>Save</button>
-        <button className="btn xs" disabled={test.busy || !org.trim() || !project.trim()} onClick={runTest}>{test.busy ? 'Testing' : 'Test'}</button>
-        {msg && <span className={msg === 'Saved' ? 'muted' : 'error'}>{msg}</span>}
-        {test.data && <span className="ok">{test.data.count} unresolved issue{test.data.count === 1 ? '' : 's'} via {test.data.via === 'mcp' ? 'Sentry MCP' : 'REST'}</span>}
-      </div>
-      {test.data?.note && <div className="obs-hint warn">{test.data.note}</div>}
-      <Err text={test.error} />
-    </div>
-  );
-}
-
-function Sentry({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInfo) => void }) {
-  const cfg = info.config ?? info.guess;
-  const ready = (info.sentryToken || info.inClaude.sentry) && !!cfg.sentry?.org && !!cfg.sentry?.project;
-  const [setup, setSetup] = useState(!ready);
-  const [issues, refresh] = useLoad<SentryIssues>(ready ? `/api/observe/sentry/issues?repo=${encodeURIComponent(info.repo)}` : null);
-  const path = info.sentryServer === 'config' ? 'Sentry MCP from your Claude config' : info.sentryServer === 'npx' ? 'Sentry MCP (npx @sentry/mcp-server) with your token' : 'no Sentry MCP server and no token';
-  useEffect(() => {
-    if (!ready) setSetup(true);
-  }, [ready]);
-  return (
-    <Section
-      title="Sentry: unresolved issues"
-      actions={
-        <>
-          <AddToClaude server="sentry" added={info.inClaude.sentry} disabled={!info.sentryToken} title={info.sentryToken ? 'Write the Sentry MCP server into ~/.claude.json' : 'Save a token first'} onDone={onInfo} />
-          <button className="icon-btn" title="Setup" onClick={() => setSetup((v) => !v)}><Icon name="settings-gear" small /></button>
-          <button className="icon-btn" title="Refresh" onClick={refresh}><Icon name="refresh" small /></button>
-        </>
-      }
-    >
-      {setup && <SentrySetup key={`${info.repo}-${info.sentryTokenSource}`} info={info} onInfo={onInfo} onSaved={refresh} />}
-      {!ready && !setup && <div className="obs-hint">Not set up: open the setup card above</div>}
-      {ready && (
-        <div className="obs-hint" title={path}>
-          {issues.data ? `via ${issues.data.via === 'mcp' ? 'Sentry MCP' : 'Sentry REST API'}` : path}
-        </div>
-      )}
-      {issues.data?.note && <div className="obs-hint warn">{issues.data.note}</div>}
-      {issues.busy && <Loading />}
-      <Err text={issues.error} />
-      {issues.data?.issues.length === 0 && <div className="obs-hint">No unresolved issues</div>}
-      {issues.data?.issues.map((i) => <Issue key={i.id} issue={i} repo={info.repo} />)}
-    </Section>
   );
 }
 
@@ -270,15 +117,33 @@ function Grafana({ info }: { info: ObserveInfo }) {
     refreshLogs();
     refreshPats();
   };
+  const [question, setQuestion] = useState('');
   const prompt = (text: string) => () => askClaude(`Use the grafana MCP for ${info.repo} (Loki selector ${selector}): ${text}`);
+  const known = dash.data?.dashboards ?? cfg.grafana?.dashboards ?? [];
+  const ask = () => {
+    const q = question.trim();
+    if (!q) return;
+    const boards = known.length ? `\nDashboards for this service:\n${known.map((d) => `- ${d.title}: ${d.url}`).join('\n')}` : '';
+    askClaude(
+      `Use the grafana MCP to answer a question about ${info.repo}. Its logs are in Loki under the selector ${selector || `{app="${info.repo}"}`}.${boards}\n\nQuestion: ${q}\n\nQuery the dashboards, Loki and Prometheus as needed. In the answer, link every Grafana dashboard you used and an Explore link (generate_deeplink) for each query you ran.`,
+    );
+    setQuestion('');
+  };
   return (
     <Section title="Grafana" actions={<button className="icon-btn" title="Refresh" onClick={refresh}><Icon name="refresh" small /></button>}>
       {!info.grafanaServer && <div className="obs-hint">No grafana MCP server in ~/.claude.json. Add one with: claude mcp add grafana -s user -e GRAFANA_URL=… -e GRAFANA_API_KEY=… -- mcp-grafana</div>}
       {info.grafanaServer && <>
-      <Sub title="Dashboards" link={dash.data?.link} ask={prompt('search the dashboards for this service, open the most relevant one and summarize what its panels show right now')}>
-        {dash.busy && <Loading />}
-        <Err text={dash.error} />
-        {dash.data?.dashboards.length === 0 && <div className="obs-hint">No dashboards match "{cfg.grafana?.query || info.repo}". Set grafana.query or grafana.dashboards in the settings.</div>}
+      <form
+        className="obs-askbar"
+        onSubmit={(e) => {
+          e.preventDefault();
+          ask();
+        }}
+      >
+        <input value={question} placeholder={`Ask about ${info.repo} in Grafana`} spellCheck={false} onChange={(e) => setQuestion(e.target.value)} />
+        <button className="btn primary" disabled={!question.trim()}><Icon name="sparkle" small /> Ask</button>
+      </form>
+      <div className="obs-dashboards">
         {dash.data && dash.data.dashboards.length > 0 && (
           <div className="obs-chips">
             {dash.data.dashboards.map((d) => (
@@ -286,7 +151,15 @@ function Grafana({ info }: { info: ObserveInfo }) {
             ))}
           </div>
         )}
-      </Sub>
+        <div className="obs-subhead">
+          <span className="name">{dash.busy ? 'Looking for dashboards' : `${dash.data?.dashboards.length ?? 0} dashboard${dash.data?.dashboards.length === 1 ? '' : 's'}`}</span>
+          {dash.data?.link && <a className="obs-link" href={dash.data.link} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Search in Grafana</a>}
+          <button className="obs-ask" onClick={prompt('search the dashboards for this service, open the most relevant one and summarize what its panels show right now, with links')}><Icon name="sparkle" small /> Ask Claude</button>
+        </div>
+        {dash.busy && <Loading />}
+        <Err text={dash.error} />
+        {dash.data?.dashboards.length === 0 && <div className="obs-hint">No dashboards match "{cfg.grafana?.query || info.repo}". Set grafana.query or grafana.dashboards in the settings.</div>}
+      </div>
       <Sub title="Error logs, last hour" link={logs.data?.link} ask={prompt('query Loki for error lines in the last hour, group them and explain the top causes with one example line each')}>
         {logs.busy && <Loading />}
         <Err text={logs.error} />
@@ -397,7 +270,7 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
   return (
     <Section
       title="Snowflake"
-      open={connected}
+      open={false}
       actions={<AddToClaude server="snowflake" added={info.inClaude.snowflake} disabled={!connected} title={connected ? 'Write the Snowflake MCP server into ~/.claude.json' : 'Save the connection first'} onDone={onInfo} />}
     >
       <div className="obs-form">
@@ -554,10 +427,9 @@ export function Observe() {
         <div className="obs-scroll">
           {!info.config && (
             <div className="obs-hint setup">
-              No Grafana or Sentry settings for <b>{info.repo}</b> yet. The settings below are a guess: check them and click Save. They live in {info.file}.
+              No Grafana settings for <b>{info.repo}</b> yet. The settings below are a guess: check them and click Save. They live in {info.file}.
             </div>
           )}
-          <Sentry key={`s-${info.repo}`} info={info} onInfo={setInfo} />
           <Grafana key={`g-${info.repo}`} info={info} />
           <Snowflake info={info} onInfo={setInfo} />
           <Section title="Settings" open={!info.config}>
@@ -566,7 +438,6 @@ export function Observe() {
               <button className="btn primary" onClick={saveConfig}>Save</button>
               {saveMsg && <span className={saveMsg === 'Saved' ? 'muted' : 'error'}>{saveMsg}</span>}
             </div>
-            <div className="obs-hint">Sentry token: {info.sentryToken ? 'set' : `missing. Set SENTRY_AUTH_TOKEN or "sentryToken" in ${info.file}`}</div>
             <div className="obs-hint">Grafana MCP: {info.grafanaServer ? 'found in ~/.claude.json' : 'missing from ~/.claude.json'}</div>
           </Section>
         </div>

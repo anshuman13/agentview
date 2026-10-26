@@ -61,7 +61,7 @@
 .sessions .row.live .state { display: inline-flex; width: var(--icon); justify-content: center; color: var(--fg-muted); flex: none; }
 .sessions .row.live .state.running { color: var(--claude); }
 .sessions .row.live .state.waiting { color: var(--warn); }
-.sessions .row.live .state:is(.ci, .changes, .sentry, .deploy) { color: var(--err); }
+.sessions .row.live .state:is(.ci, .changes, .deploy) { color: var(--err); }
 .sessions .row.live .state.ready { color: var(--ok); }
 .sessions .row.live .repo { flex: none; font-weight: 400; color: var(--fg); }
 .sessions .row.live .name { color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; }

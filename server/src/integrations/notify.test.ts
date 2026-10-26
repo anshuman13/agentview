@@ -46,9 +46,9 @@ describe('pushNtfy', () => {
   });
 
   it('sends nothing without a topic', async () => {
-    files.observe = '{"sentryToken":"secret"}';
+    files.observe = '{"repos":{}}';
     expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(false);
-    expect(files.observe).toBe('{"sentryToken":"secret"}');
+    expect(files.observe).toBe('{"repos":{}}');
     expect(sent).not.toHaveBeenCalled();
   });
 

@@ -26,37 +26,33 @@ tool list with descriptions. Servers that log in through OAuth show "OAuth via C
 from then on the page shows the live status from the chat, with reconnect and disable actions, and claude.ai connectors
 and plugin servers appear too. "Check" connects to everything again; results are cached for a minute.
 
-## Grafana, Sentry and Snowflake
+## Grafana and Snowflake
 
-The Observe page (pulse icon) reads Sentry, Grafana and Snowflake through MCP servers, the same ones Claude uses:
+The Observe page (pulse icon) reads Grafana and Snowflake through MCP servers, the same ones Claude uses:
 
-- Grafana uses the `grafana` server from `~/.claude.json`: dashboards matching the repo (`search_dashboards`), error
-  lines from Loki for the last hour (`query_loki_logs`) and error patterns (`query_loki_patterns`, Sift, or grouped
-  locally when neither is available), each with an "Open in Grafana" deep link and an "Ask Claude" button.
-- Sentry uses a `sentry` server from your Claude MCP config if there is one, otherwise AgentView starts
-  `npx -y @sentry/mcp-server@latest` with the token from `sentryToken` (or `SENTRY_AUTH_TOKEN`). Issues list their
-  level, culprit, count and last seen; "Details" shows the latest event and stack frames. If the MCP server cannot
-  start, the REST API is used and the view says so.
-- Snowflake runs the official server with `uvx snowflake-labs-mcp` and a read-only service config written to
-  `~/.agentview/snowflake.yaml` (SELECT, SHOW and DESCRIBE only). The section has a connection form (account, user,
-  warehouse, role, database, schema, access token or password), a database/schema/table picker, a SQL box (Cmd+Enter
-  runs) and a result table capped at 200 rows.
+- Grafana comes first and loads right away, using the `grafana` server from `~/.claude.json`. An "Ask about <repo> in
+  Grafana" box sends your question to Claude with the repo's Loki selector and dashboards, and Claude answers through
+  the grafana MCP with links to the dashboards and Explore queries it used. Below it are the dashboards matching the
+  repo (`search_dashboards` plus any pinned in the settings) as links, error lines from Loki for the last hour
+  (`query_loki_logs`) and error patterns (`query_loki_patterns`, Sift, or grouped locally when neither is available),
+  each with an "Open in Grafana" deep link and an "Ask Claude" button.
+- Snowflake (collapsed by default) runs the official server with `uvx snowflake-labs-mcp` and a read-only service
+  config written to `~/.agentview/snowflake.yaml` (SELECT, SHOW and DESCRIBE only). The section has a connection form
+  (account, user, warehouse, role, database, schema, access token or password), a database/schema/table picker, a SQL
+  box (Cmd+Enter runs) and a result table capped at 200 rows.
 
-"Add to Claude" writes the Sentry or Snowflake server entry into `~/.claude.json` (after a backup copy) so Claude gets
-the same MCP. Settings live in `~/.agentview/observe.json`, created with an example on first use and editable in the
-view:
+"Add to Claude" writes the Snowflake server entry into `~/.claude.json` (after a backup copy) so Claude gets the same
+MCP. Settings live in `~/.agentview/observe.json`, created with an example on first use and editable in the view:
 
 ```json
 {
-  "sentryToken": "",
   "snowflake": { "account": "org-account", "user": "me", "warehouse": "WH", "database": "DB", "schema": "PUBLIC", "role": "", "auth": "pat", "secret": "" },
   "repos": {
-    "comida": {
-      "grafana": { "url": "https://org.grafana.net", "query": "comida", "dashboards": [{ "title": "Overview", "url": "https://..." }], "lokiSelector": "{app=\"comida\"}" },
-      "sentry": { "org": "org", "project": "comida", "url": "https://sentry.io" }
+    "example": {
+      "grafana": { "url": "https://org.grafana.net", "query": "example", "dashboards": [{ "title": "Overview", "url": "https://..." }], "lokiSelector": "{app=\"example\"}" }
     }
   }
 }
 ```
 
-Repos without settings get a guess from `centro.yaml` or `.sentryclirc` and the other repos' org and Grafana URL.
+Repos without settings get a guess from `centro.yaml` or `catalog-info.yaml` and the other repos' Grafana URL.

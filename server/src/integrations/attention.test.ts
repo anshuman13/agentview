@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { commitItem, deployItems, dismissAttention, fixCi, itemsFor, merge, sentryItems } from './attention.js';
+import { commitItem, deployItems, dismissAttention, fixCi, itemsFor, merge } from './attention.js';
 
 vi.mock('node:fs/promises', async (orig) => ({ ...(await orig<typeof import('node:fs/promises')>()), writeFile: vi.fn(async () => {}) }));
 import type { PullRequest } from '../../../shared/protocol.js';
@@ -59,25 +59,6 @@ describe('commitItem', () => {
   it('stays quiet while the chat is recent or the tree is clean', () => {
     expect(commitItem(edited, status(2), 5 * 60_000)).toBeNull();
     expect(commitItem(edited, status(0), 11 * 60_000)).toBeNull();
-  });
-});
-
-describe('sentryItems', () => {
-  const issue = (id: string, count: number) => ({ id, shortId: `APP-${id}`, title: `Boom ${id}`, culprit: '', count, userCount: 1, lastSeen: '', permalink: `https://s/${id}`, level: 'error' });
-
-  it('records the backlog on the first poll without flagging it', () => {
-    const r = sentryItems('/w/r', 'r', [issue('1', 5)], undefined, 1000);
-    expect(r.items).toEqual([]);
-    expect(r.base).toEqual({ '1': { count: 5, at: 0 } });
-  });
-
-  it('flags new issues for a day and spikes that doubled by 20 or more', () => {
-    const base = { '1': { count: 5, at: 0 }, '2': { count: 30, at: 0 } };
-    const r = sentryItems('/w/r', 'r', [issue('1', 9), issue('2', 61), issue('3', 1)], base, 1000);
-    expect(r.items.map((i) => i.id)).toEqual(['sentry:2:spike', 'sentry:3:new']);
-    expect(r.items[1].title).toBe('APP-3 Boom 3 (new, 1 event)');
-    const later = sentryItems('/w/r', 'r', [issue('3', 2)], r.base, 1000 + 25 * 60 * 60_000);
-    expect(later.items).toEqual([]);
   });
 });
 

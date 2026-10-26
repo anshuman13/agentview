@@ -1,6 +1,5 @@
 export type ObserveConfig = {
   grafana?: { url?: string; query?: string; dashboards?: { title: string; url: string; uid?: string }[]; lokiSelector?: string; lokiUid?: string };
-  sentry?: { org?: string; project?: string; url?: string };
 };
 
 export type SnowflakeAuth = 'pat' | 'password';
@@ -24,31 +23,10 @@ export type ObserveInfo = {
   guess: ObserveConfig;
   repos: string[];
   file: string;
-  sentryToken: boolean;
-  sentryTokenSource: 'env' | 'file' | 'none';
-  sentryServer: 'config' | 'npx' | 'none';
   grafanaServer: boolean;
   snowflake: SnowflakeInfo;
-  inClaude: { sentry: boolean; snowflake: boolean };
+  inClaude: { snowflake: boolean };
 };
-
-export type SentryIssue = {
-  id: string;
-  shortId: string;
-  title: string;
-  culprit: string;
-  count: number;
-  userCount: number;
-  lastSeen: string;
-  permalink: string;
-  level: string;
-};
-
-export type SentryIssues = { via: 'mcp' | 'rest'; issues: SentryIssue[]; note?: string };
-
-export type SentryDetails = { via: 'mcp' | 'rest'; text: string };
-
-export type SentryTest = { count: number; via: 'mcp' | 'rest'; note?: string };
 
 export type SnowflakeTest = { row: Record<string, unknown>; ms: number };
 

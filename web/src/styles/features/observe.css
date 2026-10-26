@@ -4,9 +4,9 @@
 .observe .ok { color: var(--ok); }
 .observe .obs-scroll { flex: 1; min-height: 0; overflow: auto; }
 .observe .obs-picker { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-6) var(--sp-4); color: var(--fg-muted); }
-.observe .obs-picker .icon-btn, .observe .obs-head .icon-btn, .observe .obs-issue .meta .icon-btn { width: var(--size-sm); height: var(--size-sm); }
+.observe .obs-picker .icon-btn, .observe .obs-head .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 
-.observe :is(.obs-picker input, .obs-form input, .obs-form select, .obs-pick select, .obs-field input) { min-width: 0; height: var(--size-md); padding: 0 var(--sp-3); font-size: var(--fs-sm); }
+.observe :is(.obs-picker input, .obs-askbar input, .obs-form input, .obs-form select, .obs-pick select) { min-width: 0; height: var(--size-md); padding: 0 var(--sp-3); font-size: var(--fs-sm); }
 .observe .obs-picker input { flex: 1; padding: 0 var(--sp-4); font-size: var(--fs-md); }
 
 .observe .obs-hint { padding: 3px var(--sp-6); font-size: var(--fs-sm); color: var(--fg-muted); word-break: break-word; display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
@@ -38,25 +38,16 @@
 }
 .observe .obs-ask:hover { color: var(--fg); background: var(--hover); }
 
-.observe .obs-issue { padding: 5px var(--sp-6) 5px var(--sp-5); border-left: 2px solid transparent; }
-.observe .obs-issue:hover { background: var(--hover); }
-.observe .obs-issue .row { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
-.observe .obs-issue:is(.level-error, .level-fatal) .dot { background: var(--err); }
-.observe .obs-issue.level-warning .dot { background: var(--warn); }
-.observe .obs-issue.level-info .dot { background: var(--prompt); }
-.observe .obs-issue .title { color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.observe .obs-issue .culprit { padding-left: var(--sp-7); font-size: var(--fs-sm); color: var(--fg-muted); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.observe .obs-issue .meta { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-1); padding-left: var(--sp-7); font-size: var(--fs-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
-.observe .obs-issue .meta .icon-btn { color: var(--fg-muted); }
-.observe :is(.obs-issue .meta, .obs-save) .spacer { flex: 1; }
-.observe .obs-details { margin-top: var(--sp-2); padding-left: var(--sp-7); }
-.observe .obs-details .obs-hint { padding-left: 0; }
-.observe .obs-mono, .observe .obs-logs, .observe .obs-table {
+.observe .obs-save .spacer { flex: 1; }
+.observe .obs-logs, .observe .obs-table {
   overflow: auto; font-family: var(--mono); font-size: var(--fs-xs);
   background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
-.observe .obs-mono { margin: var(--sp-2) 0 0; padding: var(--sp-3) var(--sp-4); max-height: 320px; white-space: pre-wrap; word-break: break-word; line-height: 15px; color: var(--fg); }
 
+.observe .obs-askbar { display: flex; gap: var(--sp-3); padding: var(--sp-2) var(--sp-6) var(--sp-3); }
+.observe .obs-askbar input { flex: 1; }
+.observe .obs-dashboards { padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
+.observe .obs-dashboards .obs-chip { font-weight: 500; }
 .observe .obs-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-2) var(--sp-6); }
 .observe .obs-chip {
   display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--size-row); max-width: 100%; padding: 0 var(--sp-4); font-size: var(--fs-sm);
@@ -78,8 +69,7 @@
 .observe .obs-patterns .count { flex: none; min-width: var(--touch-sm); text-align: right; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 
 .observe .obs-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3) var(--sp-4); padding: var(--sp-2) var(--sp-6); }
-.observe .obs-form label, .observe .obs-field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; font-size: var(--fs-xs); color: var(--fg-muted); }
-.observe .obs-field { padding: 0 var(--sp-5); }
+.observe .obs-form label { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; font-size: var(--fs-xs); color: var(--fg-muted); }
 .observe .obs-pickers { display: flex; gap: var(--sp-3); padding: var(--sp-2) var(--sp-6); }
 .observe .obs-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-2); }
 .observe .obs-pick select { width: 100%; }
@@ -98,22 +88,18 @@
 .observe .obs-table td { padding: var(--sp-1) var(--sp-4); max-width: 320px; overflow: hidden; text-overflow: ellipsis; color: var(--fg); }
 .observe .obs-table tr:last-child td { border-bottom: 0; }
 
-.observe .obs-card { margin: var(--sp-2) var(--sp-6) var(--sp-3); padding: var(--sp-3) 0 var(--sp-1); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
-.observe .obs-card :is(.obs-form, .obs-save, .obs-hint) { padding-left: var(--sp-5); padding-right: var(--sp-5); }
-
 @media (max-width: 900px) {
   .observe .obs-picker { padding-bottom: var(--sp-5); }
-  .observe :is(.obs-picker input, .obs-form input, .obs-field input, .obs-form select, .obs-pick select) { height: var(--touch-md); font-size: var(--fs-2xl); }
+  .observe :is(.obs-picker input, .obs-askbar input, .obs-form input, .obs-form select, .obs-pick select) { height: var(--touch-md); font-size: var(--fs-2xl); }
   .observe .obs-editor { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .observe .obs-head { height: var(--touch); gap: var(--sp-2); }
   .observe .obs-head .acts { gap: var(--sp-1); }
-  .observe :is(.obs-head, .obs-picker, .obs-issue .meta) .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
+  .observe :is(.obs-head, .obs-picker) .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .observe .obs-subhead { min-height: var(--touch-md); flex-wrap: wrap; }
   .observe .obs-ask { height: var(--touch); padding: 0 var(--sp-6); font-size: var(--fs-md); }
   .observe .obs-chip { height: var(--touch-sm); }
   .observe .obs-link { min-height: var(--touch-sm); align-items: center; }
   .observe .obs-pickers { flex-wrap: wrap; }
   .observe .obs-pick { flex: 1 1 100%; }
-  .observe .obs-issue { padding-top: var(--sp-4); padding-bottom: var(--sp-4); }
   .observe :is(.obs-logs .line, .obs-patterns .pattern) { padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
 }
