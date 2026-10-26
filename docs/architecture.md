@@ -42,9 +42,13 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 
 ## Client
 
-React with a small store (`web/src/store.ts`). It listens on one Server-Sent Events stream (`/api/events`) and sends
+React with a small store (`web/src/app/store.ts`). It listens on one Server-Sent Events stream (`/api/events`) and sends
 commands with `POST /api/cmd`. Each broadcast has an id; after a drop the stream resumes from `Last-Event-ID` through a
 ring buffer, or gets a fresh `init` snapshot when the gap is too old.
+
+`web/src` is grouped by feature: `app` (shell, store, API, palette), `ui` (shared widgets and helpers), `chat`,
+`sessions`, `workspace` (files, code, terminal, browser), `ops` (Observe, Deploy, GitHub, MCP), `codex` (with `data`,
+`wiki`, `meetings`) and `styles`.
 
 ## Access
 

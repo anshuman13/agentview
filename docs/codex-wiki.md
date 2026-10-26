@@ -1,6 +1,6 @@
 # Codex Wiki and Meetings
 
-Codex (the Assistant pane, `web/src/panes/Assistant.tsx`) gets a Wiki and Meetings, modelled on Stilla (see
+Codex (the Assistant pane, `web/src/codex/Codex.tsx`) gets a Wiki and Meetings, modelled on Stilla (see
 "Stilla walkthrough" and "Meetings in Codex" in `assistant-design.md`). The wiki is the priority and has to look
 good: calm typography, generous spacing, one accent colour, no boxed clutter.
 
@@ -111,7 +111,7 @@ next restart.
 | meetings | title, starts_at, ends_at, people, calendar_url, recorded_ms, notes, summary, decisions | `notes` are mine, `summary` and `decisions` (JSON list) come from the agent |
 | actions | meeting_id, kind, target, title, body, fields, status, result_url | `kind` slack, linear or task; `status` proposed, approved, rejected, sent |
 
-Client (`web/src/assistant`): the sync engine is generalised from `items` to a table list with per-table fields;
+Client (`web/src/codex/data`): the sync engine is generalised from `items` to a table list with per-table fields;
 the snapshot gains `pages`, `facts`, `meetings`, `actions`; the phone's local SQLite gets the same tables.
 
 No data goes in the code: this repo is public, so there is no sample data or fixture of real content.
