@@ -5,8 +5,7 @@ Codex (the Assistant pane, `web/src/panes/Assistant.tsx`) gets a Wiki and Meetin
 good: calm typography, generous spacing, one accent colour, no boxed clutter.
 
 The scheduler agent that writes summaries, extracts claims and sends Slack and Linear actions does not exist yet.
-This work builds the screens and the data model with sample data and placeholders; the agent fills the same tables
-later.
+This work builds the screens and the data model; the agent fills the tables later. Until then the screens are empty.
 
 ## Navigation
 
@@ -21,7 +20,7 @@ Desktop (main column ≥ 880px wide)
 ┌───────────────────────────────────────────────┬──────────────────────┐
 │ Wiki                              🔍  + New   │ RECENTLY UPDATED  2⚑ │
 │ ┌───────────────────────────────────────────┐ │ ● Platform           │
-│ │ ✦ Engineering                      │ │   Edge service owns  │
+│ │ ✦ Engineering                             │ │   Edge service owns  │
 │ │ What the team runs, who owns what, ...    │ │   auth and budgets   │
 │ │ 6 pages · 48 claims · updated 2h ago      │ │   Meeting · 2h       │
 │ └───────────────────────────────────────────┘ │ ⚑ Pricing            │
@@ -113,14 +112,9 @@ next restart.
 | actions | meeting_id, kind, target, title, body, fields, status, result_url | `kind` slack, linear or task; `status` proposed, approved, rejected, sent |
 
 Client (`web/src/assistant`): the sync engine is generalised from `items` to a table list with per-table fields;
-the snapshot gains `pages`, `facts`, `meetings`, `actions`; the phone's local SQLite gets the same tables. Until the
-hub has rows, `sample.ts` provides sample data and the screens show a small "Sample" tag.
+the snapshot gains `pages`, `facts`, `meetings`, `actions`; the phone's local SQLite gets the same tables.
 
-## Preview and checks
-
-`web/preview.html` renders Codex with an in-memory store of sample data (no server, no hub). Run Vite on port 5188
-and screenshot with headless Chrome at 1280x860 and 390x844: `scripts/codex-shot.sh <list> [open-id]`.
-Each step runs `npx tsc -p web/tsconfig.json --noEmit`, `npm test`, and the screenshots before its commit.
+No data goes in the code: this repo is public, so there is no sample data or fixture of real content.
 
 ## Work plan
 
@@ -129,8 +123,8 @@ ALL DONE
 Progress checklist:
 
 - [x] 1. Write this design doc
-- [x] 2. Preview page with an in-memory sample store and the screenshot script
-- [x] 3. Data model: hub tables and column migration, client types and sample data
+- [x] 2. (removed) Preview page
+- [x] 3. Data model: hub tables and column migration, client types
 - [x] 4. Nav entries for Meetings and Wiki, view state module, routing in Codex
 - [x] 5. Wiki index: overview card, sections of page cards (New page card moved to 9)
 - [x] 6. Wiki index: Recently updated feed with contested filter, Ask the wiki composer

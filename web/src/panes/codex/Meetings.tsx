@@ -53,7 +53,7 @@ function Row({ m, now }: { m: Meeting; now: number }) {
 }
 
 function MeetingsList({ onMenu }: { onMenu: () => void }) {
-  const { meetings, store, sample } = useCodex();
+  const { meetings, store } = useCodex();
   const [query, setQuery] = useState('');
   const now = Date.now();
   const groups = useMemo(() => {
@@ -76,7 +76,6 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
       <header className="wk-head">
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
         <h1>Meetings</h1>
-        {sample && <span className="wk-sample" title="The scheduler fills meetings from Calendar; until then this is sample data">Sample</span>}
         <span className="spacer" />
         <label className="wk-search">
           <Icon name="search" small />
@@ -196,7 +195,7 @@ function Notes({ m }: { m: Meeting }) {
 }
 
 function MeetingPage({ m }: { m: Meeting }) {
-  const { actions, sample } = useCodex();
+  const { actions } = useCodex();
   const mine = live(actions).filter((a) => a.meeting_id === m.id);
   const count = actionCount(actions, m.id);
   const decisions = listOf(m.decisions);
@@ -210,7 +209,6 @@ function MeetingPage({ m }: { m: Meeting }) {
         <button className="icon-btn" title="Back to meetings" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         <nav className="wk-crumbs"><button onClick={back}>Meetings</button></nav>
         <span className="spacer" />
-        {sample && <span className="wk-sample" title="Sample data until the scheduler fills meetings">Sample</span>}
         {m.calendar_url && <a className="btn sm" href={m.calendar_url} target="_blank" rel="noreferrer"><Icon name="calendar" small /> Calendar</a>}
       </header>
       <div className="wk-scroll">

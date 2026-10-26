@@ -80,7 +80,7 @@ Capture (mic and text) and Notes; later notifications with Done and Snooze, a sh
 4. Assistant pane in the web app on one data layer (local copy on the phone, the server on a Mac); remove the separate page (done)
 5. Device list and reset of a lost phone copy
 6. Scheduler on the mini: work Slack, Calendar and Linear feeding Today
-7. Meeting notes and action items, facts and search (screens and data model done with sample data, see
+7. Meeting notes and action items, facts and search (screens and data model done, see
    [codex-wiki.md](codex-wiki.md); the scheduler fills them)
 8. Notifications, share target, widget
 9. Personal profile collection

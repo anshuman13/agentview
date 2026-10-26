@@ -176,7 +176,7 @@ function Results({ pages, facts, query }: { pages: Page[]; facts: Fact[]; query:
 }
 
 function WikiIndex({ onMenu }: { onMenu: () => void }) {
-  const { pages, facts, sample } = useCodex();
+  const { pages, facts } = useCodex();
   const [query, setQuery] = useState('');
   const overview = live(pages).find((p) => p.section === 'overview');
   return (
@@ -184,7 +184,6 @@ function WikiIndex({ onMenu }: { onMenu: () => void }) {
       <header className="wk-head">
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
         <h1>Wiki</h1>
-        {sample && <span className="wk-sample" title="The scheduler fills the wiki from meetings, Slack and Linear; until then this is sample data">Sample</span>}
         <span className="spacer" />
         <label className="wk-search">
           <Icon name="search" small />
@@ -198,7 +197,7 @@ function WikiIndex({ onMenu }: { onMenu: () => void }) {
             {query.trim() ? <Results pages={pages} facts={facts} query={query} /> : (
               <>
                 {overview && <Overview page={overview} facts={facts} pages={pages} />}
-                {sections(pages).map((s) => (
+                {(sections(pages).length ? sections(pages) : [{ name: 'Pages', pages: [] as Page[] }]).map((s) => (
                   <section key={s.name}>
                     <div className="wk-label">{s.name}</div>
                     <div className="wk-cards">
@@ -289,7 +288,7 @@ function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: stri
 }
 
 function WikiPage({ id }: { id: string }) {
-  const { pages, facts, sample } = useCodex();
+  const { pages, facts } = useCodex();
   const { anchor } = useView();
   const [flash, setFlash] = useState<string | null>(null);
   const page = live(pages).find((p) => p.id === id);
@@ -317,7 +316,6 @@ function WikiPage({ id }: { id: string }) {
         <button className="icon-btn" title="Back to the wiki" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         <nav className="wk-crumbs"><button onClick={back}>Wiki</button>{section && <><Icon name="chevron-right" small /><span>{section}</span></>}</nav>
         <span className="spacer" />
-        {sample && <span className="wk-sample" title="Sample data until the scheduler fills the wiki">Sample</span>}
       </header>
       <div className="wk-scroll">
         {!page ? (

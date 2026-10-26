@@ -10,7 +10,7 @@
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
 - **Codex** (top of the activity bar): Today, Upcoming, Meetings, Wiki, Notes and Done. The wiki is built from
   claims with sources, which can be contested; meetings show notes, summary, decisions and actions to approve.
-  Until the scheduler fills them, Meetings and Wiki show sample data (see [codex-wiki.md](codex-wiki.md))
+  The scheduler that fills Meetings and Wiki is not built yet (see [codex-wiki.md](codex-wiki.md))
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
 - **Command palette** (⇧⌘P or F1): every view, tab, page, model and mode as a searchable list
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
