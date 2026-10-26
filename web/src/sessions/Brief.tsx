@@ -9,7 +9,7 @@ import { touch } from '../app/touch';
 import { Row, Transcript } from '../chat/Transcript';
 import { FileIcon } from '../workspace/Explorer';
 import { relPath } from '../chat/steps';
-import { BIG_BRO, buildTurns, type Turn } from '../chat/turns';
+import { BIG_BRO, buildTurns, openFailures, type Turn } from '../chat/turns';
 import { markSeen, readSeen, recap, recapText } from '../chat/recap';
 import { AgentsChip, AgentsPane, openAgent } from './AgentsPane';
 import { agentCounts, agentsOf } from './agents';
@@ -245,7 +245,7 @@ const rewindRequest = (turn: Turn): ConfirmRequest => ({
 function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: string; pending: PendingRequest[]; latest: boolean; settled: boolean }) {
   const [allFiles, setAllFiles] = useState(false);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
-  const failed = turn.commands.filter((c) => c.error);
+  const failed = openFailures(turn.commands);
   const refused = turn.commands.filter((c) => c.denied);
   const files = allFiles ? turn.files : turn.files.slice(0, FILES_SHOWN);
   const add = turn.files.reduce((n, f) => n + f.add, 0);

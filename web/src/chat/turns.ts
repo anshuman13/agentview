@@ -11,6 +11,12 @@ export type AgentFact = { id: string; label: string; type: string; state: 'runni
 export type NoteFact = { id: string; text: string; kind: 'done' | 'important' | 'fable' };
 export type Blocked = Extract<ChatEvent, { kind: 'blocked' }>;
 
+// A failed command stops counting once a later command in the same turn succeeds.
+export function openFailures(commands: CommandFact[]) {
+  const ok = commands.map((c) => !c.error && !c.denied).lastIndexOf(true);
+  return commands.filter((c, i) => c.error && i > ok);
+}
+
 export type Turn = {
   id: string;
   prompt: string;

@@ -1,5 +1,5 @@
 import type { ChatEvent } from '../../../shared/protocol';
-import { buildTurns } from './turns';
+import { buildTurns, openFailures } from './turns';
 import { plural } from '../ui/util';
 
 export type Recap = { turns: number; files: number; failed: number; pending: boolean };
@@ -11,7 +11,7 @@ export function recap(events: ChatEvent[], lastSeen: string | null, pending: boo
   if (i < 0 || i === events.length - 1) return null;
   const { turns } = buildTurns(events.slice(i + 1));
   const files = new Set(turns.flatMap((t) => t.files.map((f) => f.path))).size;
-  const failed = turns.reduce((n, t) => n + t.commands.filter((c) => c.error).length, 0);
+  const failed = turns.reduce((n, t) => n + openFailures(t.commands).length, 0);
   const r = { turns: turns.filter((t) => t.prompt).length, files, failed, pending };
   return r.turns || r.files || r.failed || r.pending ? r : null;
 }
