@@ -7,6 +7,7 @@ import { newId, type ItemRow } from '../data/sync';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, type Meeting } from '../data/wiki';
 import { PickTime, when } from '../time';
 import { Icon } from '../../ui/Icon';
+import { Voice, useDictation } from '../../chat/Voice';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { AskBar } from '../wiki/Wiki';
 import '../../styles/features/wiki.css';
@@ -208,6 +209,7 @@ function Fold({ title, count, children }: { title: string; count: number; childr
 function AddAction({ m }: { m: Meeting }) {
   const { store } = useAssistant();
   const [text, setText] = useState('');
+  const dictate = useDictation(text, setText);
   const add = () => {
     const t = text.trim();
     if (!t) return;
@@ -219,6 +221,7 @@ function AddAction({ m }: { m: Meeting }) {
     <form className="mt-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
       <Icon name="add" small />
       <input value={text} placeholder="Add an action, like “send the slides friday”" aria-label="Add an action" onChange={(e) => setText(e.target.value)} />
+      <Voice onText={dictate} />
     </form>
   );
 }

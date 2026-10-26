@@ -47,7 +47,10 @@ export type Action = Common & {
   result_url: string | null;
 };
 
-export type Tables = { pages: Page; facts: Fact; meetings: Meeting; actions: Action };
+export type Job = Common & { name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null };
+export type Run = Common & { job_id: string | null; started_at: number | null; finished_at: number | null; status: string | null; output: string | null };
+
+export type Tables = { pages: Page; facts: Fact; meetings: Meeting; actions: Action; jobs: Job; runs: Run };
 export type Table = keyof Tables;
 
 export type Source = { kind: 'meeting' | 'slack' | 'linear' | 'pr' | 'doc'; label: string; url?: string };

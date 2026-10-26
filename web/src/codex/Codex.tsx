@@ -12,6 +12,7 @@ import { Voice, useDictation } from '../chat/Voice';
 import { ago, readFlag, saveFlag } from '../ui/util';
 import { hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
+import { Jobs } from './jobs/Jobs';
 import { ActionRow, Meetings, clock, confirmAll, peopleOf } from './meetings/Meetings';
 import { PickTime, when } from './time';
 import '../styles/features/assistant.css';
@@ -21,9 +22,9 @@ type Mode = 'task' | 'ask';
 const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Overview' },
   { id: 'meetings', icon: 'record', label: 'Meetings' },
+  { id: 'jobs', icon: 'history', label: 'Jobs' },
   { id: 'wiki', icon: 'book', label: 'Wiki' },
 ];
-const SOON = [{ icon: 'history', label: 'Jobs' }, { icon: 'device-mobile', label: 'Devices' }];
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
 const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
@@ -37,6 +38,7 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
   action: { icon: 'checklist', label: 'Meeting' },
   github: { icon: 'github', label: 'GitHub' },
   capture: { icon: 'edit', label: 'You' },
+  job: { icon: 'history', label: 'Job' },
 };
 const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 
@@ -441,7 +443,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { store, snap } = useAssistant();
   const s = useSplit();
   const { facts } = useCodex();
-  const count: Record<List, number> = { today: s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < s.endOfDay).length + s.review.length, meetings: 0, wiki: proposals(facts).length };
+  const count: Record<List, number> = { today: s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < s.endOfDay).length + s.review.length, meetings: 0, jobs: 0, wiki: proposals(facts).length };
   const { sync } = snap;
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
   const dot = sync.error ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
@@ -457,8 +459,6 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
         {FILTERS.map((f) => <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'on' : ''} onClick={() => setView({ filter: f })}>{FILTER_LABEL[f]}</button>)}
       </div>
       <button className={`as-nav-sync ${dot}`} title="Sync now" onClick={() => store.syncNow()}><span className="as-dot" /><span>{status}</span></button>
-      <div className="as-nav-label">Coming next</div>
-      {SOON.map((l) => <div key={l.label} className="as-nav-soon"><Icon name={l.icon} /><span>{l.label}</span></div>)}
     </nav>
   );
 }
@@ -552,10 +552,11 @@ export function Assistant() {
     </div>
   );
 
-  if (list === 'wiki' || list === 'meetings') {
+  if (list !== 'today') {
+    const Page = { wiki: Wiki, meetings: Meetings, jobs: Jobs }[list];
     return (
       <div className="assistant wide" ref={root}>
-        {list === 'wiki' ? <Wiki onMenu={() => setDrawer(true)} /> : <Meetings onMenu={() => setDrawer(true)} />}
+        <Page onMenu={() => setDrawer(true)} />
         <SnackBar />
         {drawerSheet}
       </div>

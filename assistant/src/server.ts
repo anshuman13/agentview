@@ -4,6 +4,7 @@ import { allowedPeer, peerName } from '../../server/src/http/access.js';
 import { readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion } from './db.js';
 import { PROFILES, lastImport, startCalendar, syncCalendar, type Profile } from './calendar.js';
+import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
@@ -188,6 +189,7 @@ async function start() {
   if (process.env.ASSISTANT_CALENDAR !== '0') {
     startCalendar(getDb);
     startTranscripts(getDb);
+    startJobs(getDb);
   }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);

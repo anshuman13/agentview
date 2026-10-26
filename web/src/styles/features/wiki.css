@@ -324,3 +324,22 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .mt-add input { flex: 1; min-width: 0; height: var(--touch-sm); border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-lg); outline: 0; }
 .mt-task .as-ctx > .mt-task-why { flex: 1 1 100%; display: block; }
 .mt-task .as-ctx > .mt-task-why::before { display: none; }
+
+/* Jobs */
+.jb-row { cursor: pointer; }
+.jb-row.off .mt-title { color: var(--fg-muted); }
+.jb-last { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; font-size: var(--fs-sm); color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jb-last .codicon.icon { font-size: 12px; flex: none; }
+.jb-switch { flex: none; width: 36px; height: 20px; padding: 2px; border: 0; border-radius: var(--radius-pill); background: var(--border-strong); cursor: pointer; transition: background var(--dur); }
+.jb-switch > span { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--fg-strong); transition: transform var(--dur); }
+.jb-switch.on { background: var(--accent); }
+.jb-switch.on > span { transform: translateX(16px); }
+.jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
+.jb-when { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
+.jb-when select, .jb-when input { flex: none; width: auto; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
+.jb-on { display: inline-flex; align-items: center; gap: var(--sp-4); margin-left: auto; font-size: var(--fs-md); color: var(--fg-muted); }
+.jb-prompt { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-6) var(--sp-7); border-radius: 10px; font-size: 16px; line-height: 1.5; }
+.jb-run { padding: var(--sp-6) 0; border-top: 1px solid var(--border); }
+.jb-run .wk-meta .codicon.icon { font-size: 12px; }
+.jb-output { margin-top: var(--sp-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; color: var(--fg); }
+.jb-row .as-prof, .mt-when .as-prof { font-size: var(--fs-xs); font-weight: 600; }

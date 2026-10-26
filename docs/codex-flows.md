@@ -39,6 +39,7 @@ of four buckets, so "zero for me" is always explained.
 | --- | --- | --- |
 | Today | What needs me? | Overdue, Next card, Is this yours?, Today, then dated tasks by day for 7 days and Later, Done today row |
 | Meetings | What happened? | Past meetings only, newest first, with pipeline state; search covers tasks and meetings |
+| Jobs | What runs on its own? | Prompts on a schedule (hourly, daily, weekdays, weekly) on the profile's account, read-only tools plus add_task; each run's reply is kept and pushed |
 | Wiki | What do I know? | Unchanged |
 
 Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its day, so it never leaves the page.

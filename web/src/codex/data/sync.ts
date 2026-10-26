@@ -25,6 +25,8 @@ export const TABLE_FIELDS: Record<string, readonly string[]> = {
   pages: ['title', 'section', 'summary', 'sort', 'state'],
   meetings: ['title', 'starts_at', 'ends_at', 'people', 'calendar_url', 'recorded_ms', 'notes', 'summary', 'decisions', 'transcript', 'tries', 'room', 'room_me', 'others'],
   actions: ['meeting_id', 'kind', 'target', 'title', 'body', 'fields', 'status', 'result_url'],
+  jobs: ['name', 'schedule', 'prompt', 'enabled', 'next_run_at'],
+  runs: ['job_id', 'started_at', 'finished_at', 'status', 'output'],
 };
 
 export type Field = (typeof FIELDS)[number];
