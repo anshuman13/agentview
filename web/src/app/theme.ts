@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
 
-export type Theme = 'graphite' | 'dark-modern' | 'light';
+export type Theme = 'gradianto' | 'dark-modern' | 'light';
 
 const KEY = 'agentview.theme';
-const ORDER: Theme[] = ['graphite', 'dark-modern', 'light'];
-export const THEME_NAMES: Record<Theme, string> = { graphite: 'Graphite', 'dark-modern': 'Dark Modern', light: 'Light' };
+const ORDER: Theme[] = ['gradianto', 'dark-modern', 'light'];
+export const THEME_NAMES: Record<Theme, string> = { gradianto: 'Gradianto', 'dark-modern': 'Dark Modern', light: 'Light' };
 const isTheme = (t: unknown): t is Theme => ORDER.includes(t as Theme);
 
 export function currentTheme(): Theme {
   const t = document.documentElement.dataset.theme;
-  return isTheme(t) ? t : 'graphite';
+  return isTheme(t) ? t : 'gradianto';
 }
 
 export const isDark = (t: Theme) => t !== 'light';
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isDark(theme) ? '#181818' : '#f8f8f8');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isDark(theme) ? '#1a1a28' : '#f8f8f8');
   window.dispatchEvent(new Event('agentview:theme'));
 }
 
@@ -41,7 +41,7 @@ export function useTheme(): [Theme, () => void] {
       try {
         stored = localStorage.getItem(KEY);
       } catch {}
-      if (!isTheme(stored)) applyTheme(mq.matches ? 'light' : 'graphite');
+      if (!isTheme(stored)) applyTheme(mq.matches ? 'light' : 'gradianto');
     };
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);

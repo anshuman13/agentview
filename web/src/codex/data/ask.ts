@@ -6,7 +6,7 @@ import { factTime, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, t
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
-  const bits = [r.source && r.source !== 'capture' && r.source, at && `due ${new Date(at).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}`, r.source_url].filter(Boolean);
+  const bits = [r.source && r.source !== 'capture' && r.source, at && `due ${new Date(at).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`, r.source_url].filter(Boolean);
   return `- [${r.profile}] ${r.title ?? '(untitled)'}${bits.length ? ` (${bits.join(', ')})` : ''}`;
 };
 
@@ -104,7 +104,7 @@ export function wikiAskText(question: string, pages: Page[], facts: Fact[], page
 }
 
 export function meetingAskText(question: string, m: Meeting, actions: ItemRow[]) {
-  const when = m.starts_at ? new Date(m.starts_at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  const when = m.starts_at ? new Date(m.starts_at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
   return [
     question,
     `\nAbout the meeting "${m.title}" (${when}) with ${(m.people?.startsWith('[') ? listOf(m.people) : [m.people]).filter(Boolean).join(', ') || 'no listed people'}.`,

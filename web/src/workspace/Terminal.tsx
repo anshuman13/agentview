@@ -12,7 +12,7 @@ type Tab = { id: string; name: string };
 type Props = { chat: string; project?: string; open: boolean; onToggle: () => void };
 
 const DARK = {
-  background: '#181818',
+  background: '#151520',
   foreground: '#cccccc',
   cursor: '#cccccc',
   selectionBackground: '#264f78',

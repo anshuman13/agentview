@@ -192,11 +192,11 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .mt-row { display: flex; align-items: center; gap: var(--sp-7); padding: var(--sp-4) var(--sp-5); border: 0; border-radius: 12px; background: transparent; color: var(--fg); text-align: left; font: inherit; cursor: pointer; }
 .mt-row:hover { background: var(--sunken); }
 .mt-time { --c: var(--c-blue, var(--accent)); flex: none; width: 46px; height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--c) 12%, var(--sunken)); font-variant-numeric: tabular-nums; }
-.mt-time b { font-size: var(--fs-md); font-weight: 600; color: color-mix(in srgb, var(--c) 45%, var(--fg-strong)); }
+.mt-time b { font-size: var(--fs-md); font-weight: 600; white-space: nowrap; color: color-mix(in srgb, var(--c) 45%, var(--fg-strong)); }
 .mt-row:nth-child(4n + 2) .mt-time { --c: var(--c-purple, var(--accent)); }
 .mt-row:nth-child(4n + 3) .mt-time { --c: var(--c-green, var(--accent)); }
 .mt-row:nth-child(4n + 4) .mt-time { --c: var(--c-amber, var(--accent)); }
-.mt-time span { font-size: var(--fs-xs); color: var(--fg-faint); }
+.mt-time span { font-size: var(--fs-xs); white-space: nowrap; color: var(--fg-faint); }
 .mt-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-1); }
 .mt-title { display: flex; align-items: center; gap: var(--sp-4); min-width: 0; font-size: var(--fs-lg); font-weight: 500; color: var(--fg-strong); }
 .mt-badge { flex: none; padding: 1px var(--sp-4); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); font-size: var(--fs-xs); font-weight: 600; }

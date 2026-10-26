@@ -7,7 +7,7 @@
 
   1. Scales: spacing (2px unit, --sp-N = N * 2px), type, line height, radius,
      control sizes, elevation, motion, z-index.
-  2. Semantic colours for graphite (default), dark-modern and light.
+  2. Semantic colours for gradianto (default, Gradianto Midnight Blue), dark-modern and light.
   Components use only these names; one-off geometry (tree indents, fixed
   widths) stays local to its feature file.
 */
@@ -119,38 +119,52 @@
 
 :root {
   color-scheme: dark;
-  --bg: #181818;
-  --surface: var(--bg);
-  --raised: #202020;
-  --sunken: #121212;
-  --hover: rgba(255, 255, 255, 0.06);
-  --border: #2a2a2a;
-  --border-strong: #363636;
-  --border-card: #474747;
-  --fg: #e6e6e6;
-  --fg-strong: var(--fg);
-  --fg-muted: #8c8c8c;
-  --fg-faint: #6b6b6b;
-  --accent: #8b7cf6;
-  --accent-hover: #9d90f8;
-  --accent-soft: rgba(139, 124, 246, 0.15);
-  --on-accent: #121212;
+  --bg: #1a1a28;
+  --surface: #20202f;
+  --raised: #2a2a3d;
+  --sunken: #151520;
+  --hover: rgba(135, 135, 193, 0.1);
+  --border: #2c2b42;
+  --border-strong: #3a3955;
+  --border-card: #4a4868;
+  --fg: #d4d4e0;
+  --fg-strong: #f0f0f8;
+  --fg-muted: #a6a7c8;
+  --fg-faint: #7f80a8;
+  --accent: #7a62d6;
+  --accent-hover: #8d77e2;
+  --accent-soft: rgba(109, 85, 189, 0.24);
+  --on-accent: #ffffff;
   --on-color: #ffffff;
-  --link: #a99cf8;
-  --prompt: #5b9cf5;
-  --agent: #a78bfa;
-  --claude: #d97757;
-  --ok: #4ade80;
-  --warn: #e2b453;
-  --err: #f87171;
-  --diff-add: #4ade80;
-  --diff-del: #f87171;
-  --t-read: #5b9cf5;
+  --link: #8fb8f8;
+  --prompt: #589df6;
+  --agent: #9d87e0;
+  --claude: #cc8b60;
+  --ok: #96bf7d;
+  --warn: #ebbf8c;
+  --err: #cc666e;
+  --diff-add: #96bf7d;
+  --diff-del: #cc666e;
+  --t-read: #589df6;
   --t-edit: var(--ok);
-  --t-run: #e2b453;
-  --t-web: #2dd4bf;
-  --t-mcp: #f472b6;
+  --t-run: #ebbf8c;
+  --t-web: #6fb3d2;
+  --t-mcp: #d7539b;
+  --app-gradient: radial-gradient(80% 50% at 0% 0%, rgba(84, 64, 146, 0.45), transparent 70%), linear-gradient(160deg, #262340 0%, #1d1c2e 40%, #1a1a28 100%);
 
+  --syn-keyword: #cc8b60;
+  --syn-string: #96bf7d;
+  --syn-operator: #a6a7c8;
+  --syn-number: #bbb55b;
+  --syn-comment: #5d69bb;
+  --syn-type: #cbbc3a;
+  --syn-property: #836faa;
+  --syn-definition: #ebbf8c;
+  --syn-invalid: #ff6b6b;
+}
+
+:root[data-theme='dark-modern'] {
+  --app-gradient: none;
   --syn-keyword: #c678dd;
   --syn-string: #98c379;
   --syn-operator: #56b6c2;
@@ -159,10 +173,6 @@
   --syn-type: #e5c07b;
   --syn-property: #e06c75;
   --syn-definition: #61afef;
-  --syn-invalid: #ff6b6b;
-}
-
-:root[data-theme='dark-modern'] {
   --bg: #1f1f1f;
   --surface: #181818;
   --raised: #1f1f1f;
@@ -195,6 +205,7 @@
 
 :root[data-theme='light'] {
   color-scheme: light;
+  --app-gradient: none;
   --bg: #ffffff;
   --surface: #f8f8f8;
   --raised: #f8f8f8;

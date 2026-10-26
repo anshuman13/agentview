@@ -16,7 +16,7 @@ const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charC
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 export const peopleOf = (m: Meeting) => (m.people?.startsWith('[') ? listOf(m.people) : (m.people ?? '').split(',')).map((p) => p.trim()).filter(Boolean);
 const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
-export const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+export const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
   if (!people.length) return null;
