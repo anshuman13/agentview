@@ -131,7 +131,7 @@ export function send(m: ClientMessage) {
 
 // Messages carry an id so a retry after a lost reply does not run twice; the server ignores repeats.
 // A lost message goes back in the box only if its chat is still shown, so it never lands in another chat's draft.
-function deliver(msg: { type: 'prompt' | 'steer'; text: string; id: string }, onLost: () => void) {
+function deliver(msg: { type: 'prompt' | 'steer' | 'queue'; text: string; id: string }, onLost: () => void) {
   const chat = state.session.id;
   void post(msg, 2).then((ok) => {
     if (ok) return;
@@ -150,6 +150,11 @@ export function steer(text: string, onLost: () => void) {
 
 export function prompt(text: string, onLost: () => void) {
   deliver({ type: 'prompt', text, id: uid() }, onLost);
+}
+
+// While Claude works, the message reaches it at its next step without stopping it.
+export function queueNext(text: string, onLost: () => void) {
+  deliver({ type: 'queue', text, id: uid() }, onLost);
 }
 
 function handle(m: ServerMessage) {

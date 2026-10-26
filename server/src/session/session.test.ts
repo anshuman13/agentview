@@ -55,6 +55,45 @@ describe('AgentSession turns', () => {
     expect(s.state.session.running).toBe(false);
   });
 
+  it('hands a queued message to Claude at the next step, or starts a turn for it', async () => {
+    const { s, interrupt, result } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send');
+    const handle = (m: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(m);
+    s.sendPrompt('long task');
+    await s.queueNext('also this', 'q1');
+    expect(send).toHaveBeenLastCalledWith('also this', 'q1', 'next');
+    expect(interrupt).not.toHaveBeenCalled();
+    expect(s.state.events.at(-1)).toMatchObject({ id: 'q1', queued: true });
+    s.pushEvent({ id: 't1', kind: 'tool_result', toolUseId: 'x', text: 'ok', isError: false, at: 0 });
+    expect(s.state.events.find((e) => e.id === 'q1')).toMatchObject({ queued: false });
+    await s.queueNext('late one', 'q2');
+    result('r1');
+    expect(s.state.events.find((e) => e.id === 'q2')).toMatchObject({ queued: false });
+    expect(s.state.session.running).toBe(false);
+    const before = s.state.events.length;
+    handle({ type: 'system', subtype: 'session_state_changed', state: 'running' });
+    expect(s.state.session.running).toBe(true);
+    expect(s.state.events.slice(before).some((e) => e.kind === 'system')).toBe(false);
+    result('r2');
+    expect(s.state.session.running).toBe(false);
+  });
+
+  it('Stop cancels queued messages Claude has not read, Send now keeps them', async () => {
+    const { s, interrupt } = fakeSession();
+    s.sendPrompt('long task');
+    await s.queueNext('go now', 'q1');
+    await s.sendNow('q1');
+    expect(interrupt).toHaveBeenLastCalledWith({ cancelQueued: false });
+    expect(s.state.events.some((e) => e.id === 'q1')).toBe(true);
+    const { s: s2, interrupt: i2 } = fakeSession();
+    s2.sendPrompt('long task');
+    Object.assign(s2.driver, { inputQueue: [] });
+    await s2.queueNext('never mind', 'q2');
+    await s2.interrupt();
+    expect(i2).toHaveBeenLastCalledWith({ cancelQueued: true });
+    expect(s2.state.events.some((e) => e.id === 'q2')).toBe(false);
+  });
+
   it('stops the loop and the running state when a step cannot switch model', async () => {
     const { s } = fakeSession();
     Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => { throw new Error('no such model'); }), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });

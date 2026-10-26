@@ -244,6 +244,8 @@ export type Worktree = {
 
 export type ClientMessage =
   | { type: 'prompt'; text: string; id?: string }
+  | { type: 'queue'; text: string; id?: string }
+  | { type: 'send_now'; id: string }
   | { type: 'steer'; text: string; id?: string }
   | { type: 'plan'; next: string[] }
   | { type: 'answer'; id: string; answers: Record<string, string> }

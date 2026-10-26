@@ -350,14 +350,14 @@ export class ClaudeDriver implements AgentDriver {
     }
   }
 
-  send(text: string, id?: string) {
+  send(text: string, id?: string, priority?: 'next') {
     if (id) this.sent.push({ id, text });
-    this.inputQueue.push(userMessage(text));
+    this.inputQueue.push({ ...userMessage(text), ...(priority && { priority }) });
     this.wake?.();
   }
 
   dropInput() {
-    const n = this.inputQueue.length;
+    const n = this.inputQueue.filter((m) => !m.priority).length;
     this.inputQueue = [];
     return n;
   }
@@ -377,8 +377,9 @@ export class ClaudeDriver implements AgentDriver {
     return this.q!.rewindFiles(this.rewindIds.get(id) ?? id.replace(/:\d+$/, ''));
   }
 
-  async interrupt() {
-    await this.q?.interrupt();
+  // The SDK takes cancelQueued at runtime but its types leave the option out.
+  async interrupt(cancelQueued = false) {
+    await (this.q as unknown as { interrupt(o: { cancelQueued: boolean }): Promise<unknown> } | null)?.interrupt({ cancelQueued });
   }
 
   async stopTask(toolUseId: string) {

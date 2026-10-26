@@ -60,6 +60,10 @@ export class AgentSession implements AgentHost {
   private turns = 0;
   private planChange: string | null = null;
   private queued: Extract<ChatEvent, { kind: 'user' }>[] = [];
+  // Sent to Claude mid-turn, shown as waiting until Claude reaches its next step.
+  private pending: Extract<ChatEvent, { kind: 'user' }>[] = [];
+  // A message sent mid-turn missed the turn's last step, so the CLI starts a turn for it.
+  private expectTurn = false;
   private autoCompact = true;
   private lastResult = '';
   private loopPrevModel: string | null = null;
@@ -102,6 +106,44 @@ export class AgentSession implements AgentHost {
     this.state.events.push(ev);
     if (this.state.events.length > MAX_EVENTS + 500) this.state.events = trimHistory(this.state.events);
     this.emit({ type: 'event', event: ev });
+    if (ev.kind === 'tool_result' && !ev.parent) this.release();
+  }
+
+  private release() {
+    for (const ev of this.pending.splice(0)) {
+      ev.queued = false;
+      this.emit({ type: 'event', event: ev });
+    }
+  }
+
+  // The composer's Enter while Claude works: Claude reads it at its next step and keeps going.
+  async queueNext(text: string, id: string = randomUUID()) {
+    if (this.known(id)) return;
+    const s = this.state.session;
+    if (!s.running || s.compacting || s.loop.on || text.trim().startsWith('/') || !this.driver.attached) return this.prompt(text, id);
+    const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), queued: true };
+    this.pending.push(ev);
+    this.pushEvent(ev);
+    this.driver.send(text, id, 'next');
+  }
+
+  // Stops the current step so a waiting message runs now.
+  async sendNow(id: string) {
+    const held = this.queued.find((e) => e.id === id);
+    if (held) {
+      this.queued = this.queued.filter((e) => e !== held);
+      this.state.events = this.state.events.filter((e) => e !== held);
+      this.emit({ type: 'init', state: this.state });
+      return this.steer(held.text);
+    }
+    if (!this.pending.some((e) => e.id === id) || this.state.session.stopping) return;
+    this.setSession({ stopping: true });
+    try {
+      await this.driver.interrupt();
+    } catch (err) {
+      this.setSession({ stopping: false });
+      this.system(`Stop failed: ${String(err)}`);
+    }
   }
 
   system(text: string) {
@@ -284,6 +326,7 @@ export class AgentSession implements AgentHost {
 
   private enqueue(text: string, id?: string) {
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
+    this.expectTurn = false;
     this.start();
     this.turns++;
     this.setSession({ running: true });
@@ -309,6 +352,11 @@ export class AgentSession implements AgentHost {
     }
     this.turns -= this.driver.dropInput();
     this.dropQueue();
+    const dropped = new Set(this.pending.splice(0));
+    if (dropped.size) {
+      this.state.events = this.state.events.filter((e) => !dropped.has(e as Extract<ChatEvent, { kind: 'user' }>));
+      this.emit({ type: 'init', state: this.state });
+    }
     if (this.turns <= 0) {
       this.turns = 0;
       this.setSession({ running: false, compacting: false });
@@ -317,7 +365,7 @@ export class AgentSession implements AgentHost {
     }
     this.setSession({ stopping: true });
     try {
-      await this.driver.interrupt();
+      await this.driver.interrupt(true);
     } catch (err) {
       this.setSession({ stopping: false });
       this.system(`Stop failed: ${String(err)}`);
@@ -505,6 +553,7 @@ export class AgentSession implements AgentHost {
     const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), stopping: running };
     this.pushEvent(ev);
     if (running) {
+      this.release();
       this.approvals.denyAll('The user sent a new message instead of answering.');
       this.turns++;
       await this.driver.interrupt().catch(() => {});
@@ -564,6 +613,10 @@ export class AgentSession implements AgentHost {
     this.wokeAt = Date.now();
     this.turns++;
     this.setSession({ running: true });
+    if (this.expectTurn && !why) {
+      this.expectTurn = false;
+      return;
+    }
     this.setStatus(why ?? 'Woke up for a scheduled or background task');
     const cron = !why && this.crons.length === 1 ? this.crons[0] : null;
     this.system(why ?? (cron ? `Claude woke up: ${cron.prompt.slice(0, 100)}` : 'Claude woke up on its own'));
@@ -574,6 +627,10 @@ export class AgentSession implements AgentHost {
   }
 
   turnResult(r: TurnResult) {
+    if (this.pending.length) {
+      this.expectTurn = true;
+      this.release();
+    }
     this.lastResult = r.ok ? r.text : '';
     this.lastError = !r.ok || Boolean(r.isError);
     if (r.ok) this.noteReply(r.text);
@@ -612,6 +669,8 @@ export class AgentSession implements AgentHost {
 
   // The agent process is gone; its queued input went with it, but the events stay.
   exited() {
+    this.queued.unshift(...this.pending.splice(0));
+    this.expectTurn = false;
     this.turns = 0;
     this.setSession({ running: false, stopping: false, compacting: false });
     this.planChange = null;

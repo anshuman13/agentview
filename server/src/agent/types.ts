@@ -29,9 +29,11 @@ export interface AgentDriver {
   // The account is out of usage until then; returns the account the chat moved to, if any has usage left.
   limitHit(until: number): Account | null;
   start(): void;
-  send(text: string, id?: string): void;
+  // 'next' hands the message to Claude at its next step without stopping the turn.
+  send(text: string, id?: string, priority?: 'next'): void;
   dropInput(): number;
-  interrupt(): Promise<void>;
+  // cancelQueued also drops messages sent with 'next' that Claude has not read yet.
+  interrupt(cancelQueued?: boolean): Promise<void>;
   setModel(model: string): Promise<{ model: string; team: boolean }>;
   setEffort(level: Effort): Promise<void>;
   setPermissionMode(mode: string): Promise<void>;

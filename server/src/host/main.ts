@@ -273,6 +273,12 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
       void chat.prompt(msg.text, id);
       return;
     }
+    case 'queue':
+      if (typeof msg.text === 'string') void chat.queueNext(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
+      return;
+    case 'send_now':
+      if (typeof msg.id === 'string') void chat.sendNow(msg.id);
+      return;
     case 'steer':
       if (typeof msg.text === 'string') void chat.steer(msg.text, typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined);
       return;

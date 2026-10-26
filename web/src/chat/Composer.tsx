@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { api, getState, notice, prompt, send, sinceHeard, steer, useStore } from '../app/store';
+import { api, getState, notice, prompt, queueNext, send, sinceHeard, steer, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
@@ -353,7 +353,7 @@ export function Composer() {
     return () => window.removeEventListener('agentview:focus', focus);
   }, []);
 
-  const submit = () => {
+  const submit = (stop = false) => {
     const t = text.trim();
     if (!t) return;
     if (shell) {
@@ -365,7 +365,8 @@ export function Composer() {
       try { localStorage.setItem(STORED_KEY, JSON.stringify(next)); } catch {}
       const full = withUses(t, uses);
       const lost = () => setText((cur) => (cur.trim() ? cur : t));
-      if (running) steer(full, lost);
+      if (running && (stop || waiting)) steer(full, lost);
+      else if (running) queueNext(full, lost);
       else prompt(full, lost);
       if (full !== t) setUses([]);
     }
@@ -388,12 +389,12 @@ export function Composer() {
     if (ghost && (e.key === 'Tab' || e.key === 'ArrowRight') && el.selectionStart === text.length) { e.preventDefault(); apply(text + ghost); return; }
     if (e.key === 'ArrowUp' && (text === '' || onEntry) && !text.slice(0, el.selectionStart).includes('\n')) { e.preventDefault(); stepHistory(1); return; }
     if (e.key === 'ArrowDown' && onEntry && !text.slice(el.selectionEnd).includes('\n')) { e.preventDefault(); stepHistory(-1); return; }
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e.metaKey || e.ctrlKey); }
   };
 
   const typed = text.trim().length > 0;
   const hint = shell ? 'Runs in the terminal' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? 'Enter stops Claude and sends' : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files';
+  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? (touch() ? 'Claude reads this at its next step · hold Send to stop and send' : 'Claude reads this at its next step · ⌘Enter stops and sends') : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files';
   const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
 
   return (
@@ -455,10 +456,11 @@ export function Composer() {
           ) : (
             <button
               className="cp-send"
-              title={shell ? 'Run in the terminal (Enter)' : compacting ? 'Sends when compacting is done (Enter)' : running ? 'Stop Claude and send (Enter)' : 'Send (Enter)'}
-              aria-label={shell ? 'Run' : running ? 'Stop and send' : 'Send'}
+              title={shell ? 'Run in the terminal (Enter)' : compacting ? 'Sends when compacting is done (Enter)' : running ? 'Send at Claude\'s next step (Enter), stop and send (⌘Enter or hold)' : 'Send (Enter)'}
+              aria-label={shell ? 'Run' : 'Send'}
               disabled={!typed}
-              onClick={() => submit()}
+              onClick={(e) => submit(e.metaKey || e.ctrlKey)}
+              onContextMenu={(e) => { if (!running) return; e.preventDefault(); submit(true); }}
             >
               <Icon name={shell ? 'terminal' : 'arrow-up'} small />
             </button>

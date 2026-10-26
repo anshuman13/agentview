@@ -96,7 +96,8 @@
 }
 .tc-steps-toggle:hover, .steps-toggle:hover { background: transparent; color: var(--fg); }
 
-.tl-state { display: flex; justify-content: flex-end; color: var(--claude); }
+.tl-state { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-3); color: var(--claude); }
+.tl-now { font-size: var(--fs-xs); white-space: nowrap; }
 .tl-empty { padding: var(--sp-4) var(--sp-1) var(--sp-2); font-size: var(--fs-sm); color: var(--fg-muted); }
 .tl-recap {
   display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-4); text-align: left;
