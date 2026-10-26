@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, fieldsOf, initialValues, mcpCalls, merge, toolId } from './McpStatus';
+import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, toolId } from './McpStatus';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -45,5 +45,21 @@ describe('fieldsOf', () => {
     expect(() => argsOf(fields, values)).toThrow('sql is required');
     expect(argsOf(fields, { ...values, sql: 'select 1', verbose: true, filter: '{"a":1}' })).toEqual({ sql: 'select 1', limit: 10, verbose: true, order: 'asc', filter: { a: 1 } });
     expect(() => argsOf(fields, { ...values, sql: 'x', limit: '1.5' })).toThrow('limit must be a whole number');
+  });
+});
+
+describe('services', () => {
+  it('groups variants by name prefix and takes the strongest kind', () => {
+    const rows = [
+      { name: 'billing_local', status: 'connected', command: 'toolbox --prebuilt postgres', tools: [{ name: 'execute_sql' }] },
+      { name: 'billing_se_prod', status: 'needs-auth', type: 'http', command: 'https://example.com/mcp' },
+      { name: 'metrics', status: 'connected', type: 'stdio', tools: [{ name: 'query' }] },
+      { name: 'claude.ai Notes', status: 'connected', type: 'claudeai' },
+    ];
+    expect(services(rows).map((s) => [s.name, s.kind, s.variants.map((v) => v.variant)])).toEqual([
+      ['billing', 'Databases', ['local', 'se_prod']],
+      ['claude.ai Notes', 'Connectors', ['']],
+      ['metrics', 'Tools', ['']],
+    ]);
   });
 });

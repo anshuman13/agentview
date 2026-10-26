@@ -10,7 +10,7 @@ import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerm
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
 import { listSessions } from './agent/claude/sessions.js';
 import { ntfyTopic, post } from './integrations/notify.js';
-import { configDef, inSettings, mcpCall, mcpConfig, mcpProbe } from './agent/claude/mcp.js';
+import { configDef, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
 import { listBin, removeSession, restoreSession } from './agent/claude/bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './workspace/files.js';
@@ -254,6 +254,13 @@ const server = http.createServer(async (req, res) => {
       return json({ ok: true });
     }
     if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
+    if (url.pathname === '/api/mcp/groups' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req));
+      const service = String(body.service ?? '').trim();
+      if (!service) return json({ error: 'service is required' }, 400);
+      return json(await setMcpGroup(service, String(body.group ?? '')));
+    }
+    if (url.pathname === '/api/mcp/groups') return json(await mcpGroups());
     if (url.pathname === '/api/mcp/call' && req.method === 'POST') {
       const body = JSON.parse(await readBody(req));
       const name = String(body.server ?? '');

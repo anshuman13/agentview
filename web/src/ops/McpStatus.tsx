@@ -15,7 +15,7 @@ const STATUS: Record<string, [tone: string, label: string]> = {
 };
 const statusOf = (s: string) => STATUS[s] ?? ['off', s];
 const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
-const stateOf = (r: { status: string; live?: boolean }): [tone: string, label: string] => (r.status === 'needs-auth' && !r.live ? ['off', 'OAuth via Claude'] : statusOf(r.status));
+const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.account && !r.live ? ['off', 'Other account'] : r.status === 'needs-auth' && !r.live ? ['off', 'OAuth via Claude'] : statusOf(r.status));
 
 const SCOPES: [id: string, title: string, where: string][] = [
   ['user', 'Your servers', '~/.claude.json'],
@@ -38,7 +38,8 @@ const use = (server: string, tool?: string) => {
   window.dispatchEvent(new CustomEvent('agentview:use', { detail: { server, tool } }));
 };
 
-export type Row = McpServer & { live?: boolean };
+export type Row = McpServer & { live?: boolean; account?: string };
+export const rowKey = (r: Row) => (r.account ? `${r.account}:${r.name}` : r.name);
 
 export function merge(probed: McpServer[], live: McpServer[]): Row[] {
   const rows: Row[] = probed.map((p) => ({ ...p }));
@@ -138,18 +139,57 @@ export function argsOf(fields: Field[], values: Values): Record<string, unknown>
 
 const runnable = (r: Row) => r.type !== 'claudeai' && r.type !== 'sse' && r.status !== 'needs-auth' && ['user', 'project', 'local'].includes(r.scope ?? '');
 
-function sections(rows: Row[]): [string, Row[]][] {
-  const by = new Map<string, Row[]>();
-  for (const r of rows) by.set(r.scope ?? 'other', [...(by.get(r.scope ?? 'other') ?? []), r]);
-  const order = (k: string) => SCOPES.findIndex((s) => s[0] === k) + 1 || 99;
-  return [...by.entries()].sort((a, b) => order(a[0]) - order(b[0]));
+export type Kind = 'Databases' | 'Tools' | 'Connectors';
+export type Service = { name: string; kind: Kind; variants: { variant: string; row: Row }[] };
+const KINDS: Kind[] = ['Databases', 'Tools', 'Connectors'];
+const SQL_TOOL = /execute_sql|run_query|query_sql|list_tables/;
+const SQL_CMD = /postgres|mysql|sqlite|toolbox/i;
+
+export const splitName = (name: string): [service: string, variant: string] => {
+  const i = name.search(/[_-]/);
+  return i > 0 ? [name.slice(0, i), name.slice(i + 1)] : [name, ''];
+};
+
+export const kindOf = (r: Row): Kind =>
+  r.tools?.some((t) => SQL_TOOL.test(t.name)) || SQL_CMD.test(r.command ?? '') ? 'Databases' : r.type === 'claudeai' ? 'Connectors' : 'Tools';
+
+const rank = (k: Kind) => (k === 'Databases' ? 2 : k === 'Connectors' ? 1 : 0);
+
+export function services(rows: Row[]): Service[] {
+  const by = new Map<string, Service>();
+  for (const row of rows) {
+    const [name, variant] = splitName(row.name);
+    const key = row.account ? `${row.account}:${name}` : name;
+    const s = by.get(key) ?? { name, kind: 'Tools', variants: [] };
+    s.variants.push({ variant, row });
+    if (rank(kindOf(row)) > rank(s.kind)) s.kind = kindOf(row);
+    by.set(key, s);
+  }
+  for (const s of by.values()) s.variants.sort((a, b) => a.variant.localeCompare(b.variant));
+  return [...by.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-const short = (v: string) => v.split('+')[0];
+type Group = 'work' | 'personal';
 
+// claude.ai connectors belong to the chat's Claude account: alt is the work account, main the personal one.
+const accountGroup = (a: string): Group => (a === 'alt' ? 'work' : 'personal');
+const CONNECTORS = 'agentview.mcp.connectors';
+
+// Keeps the last connector list seen per account, so both accounts show whichever one this chat runs on.
+function connectorsByAccount(account: string, live: Row[]): Row[] {
+  let seen: Record<string, Row[]> = {};
+  try { seen = JSON.parse(localStorage.getItem(CONNECTORS) ?? '{}'); } catch {}
+  const mine = live.filter((r) => r.type === 'claudeai');
+  if (mine.length) {
+    seen[account] = mine.map((r) => ({ name: r.name, type: r.type, status: r.status, scope: r.scope, tools: r.tools?.map((t) => ({ name: t.name })) }) as Row);
+    localStorage.setItem(CONNECTORS, JSON.stringify(seen));
+  }
+  return Object.entries(seen).filter(([a]) => a !== account).flatMap(([a, rows]) => rows.map((r) => ({ ...r, account: a, live: false })));
+}
 
 export function McpPage() {
   const mcp = useStore((s) => s.session.mcp);
+  const account = useStore((s) => s.session.account);
   const id = useStore((s) => s.session.id);
   const events = useStore((s) => s.events);
   const [probed, setProbed] = useState<McpServer[] | null>(null);
@@ -157,6 +197,7 @@ export function McpPage() {
   const [at, setAt] = useState(0);
   const [error, setError] = useState('');
   const [sel, setSel] = useState<string | null>(null);
+  const [personal, setPersonal] = useState<string[]>([]);
 
   const load = (refresh = false) => {
     setBusy(true);
@@ -168,28 +209,39 @@ export function McpPage() {
       .finally(() => setBusy(false));
   };
   useEffect(() => load(), [id]);
+  useEffect(() => {
+    fetch(api('/api/mcp/groups')).then((r) => r.json()).then((g) => Array.isArray(g?.personal) && setPersonal(g.personal), () => undefined);
+  }, []);
   useTick(15000);
 
-  const rows = useMemo(() => merge(probed ?? [], mcp), [probed, mcp]);
+  const setGroup = (service: string, group: Group) => {
+    setPersonal((p) => [...p.filter((s) => s !== service), ...(group === 'personal' ? [service] : [])]);
+    post('/api/mcp/groups', { service, group }).then((g) => setPersonal(g.personal), (e) => notice(`Could not save the group: ${e.message}`));
+  };
+
+  const rows = useMemo(() => {
+    const merged: Row[] = merge(probed ?? [], mcp).map((r) => (r.type === 'claudeai' ? { ...r, account } : r));
+    const other = connectorsByAccount(account, merged).filter((o) => !merged.some((r) => r.name === o.name && r.account === o.account));
+    return [...merged, ...other];
+  }, [probed, mcp, account]);
+  const list = useMemo(() => services(rows), [rows]);
   const usage = useMemo(() => mcpCalls(events), [events]);
   const usageOf = (r: Row) => usage.get(slug(r.name));
-  const used = rows.filter((r) => usageOf(r)).sort((a, b) => usageOf(b)!.calls.length - usageOf(a)!.calls.length);
-  const calls = used.reduce((n, r) => n + usageOf(r)!.calls.length, 0);
-  const current = rows.find((r) => r.name === sel) ?? null;
+  const current = rows.find((r) => rowKey(r) === sel) ?? null;
   const ok = rows.filter((r) => r.status === 'connected').length;
-  const tools = rows.reduce((n, r) => n + (r.tools?.length ?? 0), 0);
   const attention = rows.filter(needsYou).length;
   const extra = document.getElementById('page-mcp-extra');
+  const groupOf = (service: string): Group => (personal.includes(service) ? 'personal' : 'work');
+  const groupOfService = (s: Service): Group => (s.kind === 'Connectors' && s.variants[0].row.account ? accountGroup(s.variants[0].row.account) : groupOf(s.name));
+  const pick = (name: string) => setSel((s) => (s === name ? null : name));
 
   return (
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
       <div className="mcp-main">
         {extra && createPortal(
           <div className="mcp-stats">
-            <Stat n={ok} of={rows.length} label="connected" tone={attention ? 'warn' : 'ok'} />
-            <Stat n={tools} label="tools" />
-            {calls > 0 && <Stat n={calls} label="calls in chat" />}
-            {attention > 0 && <Stat n={attention} label="need you" tone="bad" />}
+            {probed !== null && <span className={attention ? 'warn' : ''}><b>{ok}</b> connected of {rows.length}</span>}
+            {attention > 0 && <span className="bad"><b>{attention}</b> need you</span>}
             <button className={`btn mcp-refresh ${busy ? 'busy' : ''}`} onClick={() => load(true)} disabled={busy} title="Connect to every server again">
               <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at, ' ago')}` : 'Check'}
             </button>
@@ -198,7 +250,7 @@ export function McpPage() {
         )}
         {error && <div className="mcp-error"><Icon name="error" small /> {error}</div>}
         {probed === null && !error && (
-          <div className="mcp-grid">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="mcp-card skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
+          <div className="mcp-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="mcp-row skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
         )}
         {probed !== null && rows.length === 0 && (
           <div className="mcp-empty">
@@ -207,62 +259,59 @@ export function McpPage() {
             <div className="muted">Add one with <code>claude mcp add</code> or connect one on claude.ai, then check again.</div>
           </div>
         )}
-        {used.length > 0 && (
-          <section className="mcp-section">
-            <div className="mcp-section-head"><span>Used in this chat</span><span className="muted count">{plural(calls, 'call')}</span></div>
-            <div className="mcp-grid">
-              {used.map((r) => <Card key={r.name} row={r} usage={usageOf(r)} selected={r.name === sel} onClick={() => setSel((s) => (s === r.name ? null : r.name))} />)}
-            </div>
-          </section>
-        )}
-        {sections(rows.filter((r) => !usageOf(r))).map(([scope, list]) => {
-          const [, title, where] = scopeInfo(scope);
+        {(['work', 'personal'] as Group[]).map((g) => {
+          const mine = list.filter((s) => groupOfService(s) === g);
+          if (!mine.length) return null;
           return (
-            <section key={scope} className="mcp-section">
-              <div className="mcp-section-head"><span>{title}</span><span className="mono muted">{where}</span><span className="muted count">{list.filter((r) => r.status === 'connected').length}/{list.length}</span></div>
-              <div className="mcp-grid">
-                {list.map((r) => <Card key={r.name} row={r} selected={r.name === sel} onClick={() => setSel((s) => (s === r.name ? null : r.name))} />)}
-              </div>
+            <section key={g} className="mcp-section">
+              <div className="mcp-group-head">{g === 'work' ? 'Work' : 'Personal'}<span className="muted count">{mine.length}</span></div>
+              {KINDS.map((k) => {
+                const of = mine.filter((s) => s.kind === k);
+                if (!of.length) return null;
+                return (
+                  <div key={k} className="mcp-kind">
+                    <div className="mcp-section-head"><span>{k}</span></div>
+                    <div className="mcp-list">
+                      {of.map((s) => <ServiceRow key={rowKey(s.variants[0].row)} service={s} sel={sel} usageOf={usageOf} onPick={pick} group={g} onGroup={(to) => setGroup(s.name, to)} />)}
+                    </div>
+                  </div>
+                );
+              })}
             </section>
           );
         })}
       </div>
-      {current && <Detail row={current} usage={usageOf(current)} onClose={() => setSel(null)} />}
+      {current && <Detail row={current} usage={usageOf(current)} group={current.account ? accountGroup(current.account) : groupOf(splitName(current.name)[0])} onGroup={(to) => setGroup(splitName(current.name)[0], to)} onClose={() => setSel(null)} />}
     </div>
   );
 }
 
-function Stat({ n, of, label, tone }: { n: number; of?: number; label: string; tone?: string }) {
+function ServiceRow({ service, sel, usageOf, onPick, group, onGroup }: { service: Service; sel: string | null; usageOf: (r: Row) => Usage | undefined; onPick: (name: string) => void; group: Group; onGroup: (g: Group) => void }) {
+  const calls = service.variants.reduce((n, v) => n + (usageOf(v.row)?.calls.length ?? 0), 0);
+  const errors = service.variants.reduce((n, v) => n + (usageOf(v.row)?.errors ?? 0), 0);
+  const other: Group = group === 'work' ? 'personal' : 'work';
   return (
-    <div className={`mcp-stat ${tone ?? ''}`}>
-      <div className="n">{n}{of !== undefined && <span className="of">/{of}</span>}</div>
-      <div className="l">{label}</div>
+    <div className={`mcp-row ${service.variants.some((v) => rowKey(v.row) === sel) ? 'selected' : ''}`}>
+      <button className="mcp-row-name" onClick={() => onPick(rowKey(service.variants[0].row))}>{service.name}</button>
+      <div className="mcp-chips">
+        {service.variants.map(({ variant, row }) => {
+          const [tone, label] = stateOf(row);
+          const u = usageOf(row);
+          const title = `${row.name} · ${label}${row.tools?.length ? ` · ${plural(row.tools.length, 'tool')}` : ''}${u ? ` · ${usageText(u)}` : ''}`;
+          return (
+            <button key={rowKey(row)} className={`mcp-chip ${tone} ${rowKey(row) === sel ? 'selected' : ''}`} title={title} onClick={() => onPick(rowKey(row))}>
+              <span className={`dot ${tone}`} />{variant || label}
+            </button>
+          );
+        })}
+      </div>
+      {calls > 0 && <span className={`mcp-row-use ${errors ? 'bad' : ''}`}>{plural(calls, 'call')}</span>}
+      {!service.variants[0].row.account && <button className="icon-btn mcp-row-move" title={`Move to ${other === 'work' ? 'Work' : 'Personal'}`} onClick={() => onGroup(other)}><Icon name={other === 'work' ? 'briefcase' : 'home'} small /></button>}
     </div>
   );
 }
 
-function Card({ row, usage, selected, onClick }: { row: Row; usage?: Usage; selected: boolean; onClick: () => void }) {
-  const [tone, label] = stateOf(row);
-  const url = row.command?.startsWith('http');
-  return (
-    <button className={`mcp-card ${tone} ${selected ? 'selected' : ''}`} onClick={onClick}>
-      <div className="mcp-card-top">
-        <span className={`dot ${tone}`} />
-        <span className="mcp-card-name">{row.name}</span>
-        {row.type && <span className="chip outline sm mcp-tag">{row.type}</span>}
-        {row.live && <span className="chip outline sm mcp-tag live" title="Loaded in this chat">chat</span>}
-      </div>
-      <div className="mcp-card-cmd mono" title={row.command}>{url ? row.command?.replace(/^https?:\/\//, '') : row.command ?? '—'}</div>
-      <div className="mcp-card-foot">
-        <span className={`s ${tone}`}>{label}</span>
-        {usage ? <span className={`use ${usage.errors ? 'bad' : ''}`}>{usageText(usage)}</span> : row.status === 'connected' && row.tools && <span>{row.tools.length} tools</span>}
-        {row.version && <span className="mono muted" title={row.version}>v{short(row.version)}</span>}
-      </div>
-    </button>
-  );
-}
-
-function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () => void }) {
+function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usage; group: Group; onGroup: (g: Group) => void; onClose: () => void }) {
   const [tone, label] = stateOf(row);
   const [, scope, where] = scopeInfo(row.scope ?? 'other');
   const [q, setQ] = useState('');
@@ -283,7 +332,7 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
         {row.live && row.status === 'disabled' && <button className="btn" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}><Icon name="debug-start" small /> Enable</button>}
         {row.live && row.status !== 'disabled' && <button className="btn" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}><Icon name="circle-slash" small /> Disable for this chat</button>}
         {row.live && row.status === 'connected' && <button className="btn" onClick={() => use(row.name)} title="Ask Claude to use this server in your next message"><Icon name="comment" small /> Add to chat</button>}
-        {!row.live && <AddToChat name={row.name} />}
+        {!row.live && !row.account && <AddToChat name={row.name} />}
         {url && <a className="btn" href={row.command} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open URL</a>}
       </div>
       <dl className="mcp-kv">
@@ -297,6 +346,12 @@ function Detail({ row, usage, onClose }: { row: Row; usage?: Usage; onClose: () 
         {row.env && <><dt>Env</dt><dd className="mono wrap">{row.env.join('  ')}</dd></>}
         <dt>From</dt><dd>{scope}{where ? <span className="muted mono"> · {where}</span> : null}</dd>
         <dt>In chat</dt><dd>{row.live ? 'Loaded' : 'Not loaded'}</dd>
+        <dt>Group</dt>
+        {row.account ? <dd>{group === 'work' ? 'Work' : 'Personal'} Claude account</dd> : (
+          <dd className="mcp-seg">
+            {(['work', 'personal'] as Group[]).map((g) => <button key={g} className={`btn ${g === group ? 'on' : ''}`} onClick={() => g !== group && onGroup(g)}>{g === 'work' ? 'Work' : 'Personal'}</button>)}
+          </dd>
+        )}
       </dl>
       {usage && (
         <>

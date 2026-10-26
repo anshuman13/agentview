@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
 import type { McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
@@ -157,4 +157,21 @@ export async function mcpCall(cwd: string, name: string, def: McpServerDef, tool
   } finally {
     stop(key);
   }
+}
+
+const GROUPS = path.join(os.homedir(), '.agentview', 'mcp-groups.json');
+export type McpGroups = { personal: string[] };
+
+export async function mcpGroups(): Promise<McpGroups> {
+  const g = await readJson(GROUPS);
+  return { personal: Array.isArray(g.personal) ? g.personal.filter((s: unknown) => typeof s === 'string') : [] };
+}
+
+export async function setMcpGroup(service: string, group: string): Promise<McpGroups> {
+  const g = await mcpGroups();
+  const personal = g.personal.filter((s) => s !== service);
+  if (group === 'personal') personal.push(service);
+  await mkdir(path.dirname(GROUPS), { recursive: true });
+  await writeFile(GROUPS, JSON.stringify({ personal }, null, 2));
+  return { personal };
 }
