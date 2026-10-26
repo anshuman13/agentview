@@ -10,7 +10,7 @@ import '../../styles/features/wiki.css';
 const HUES = ['--accent', '--claude', '--prompt', '--ok', '--warn', '--agent'];
 const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length]})`;
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-export const peopleOf = (m: Meeting) => (m.people ?? '').split(',').map((p) => p.trim()).filter(Boolean);
+export const peopleOf = (m: Meeting) => (m.people?.startsWith('[') ? listOf(m.people) : (m.people ?? '').split(',')).map((p) => p.trim()).filter(Boolean);
 export const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
@@ -24,14 +24,14 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
   );
 }
 
-function Row({ m, now }: { m: Meeting; now: number }) {
+export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
   const { actions } = useCodex();
   const count = actionCount(actions, m.id);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
   return (
-    <button className="mt-row" onClick={() => setView({ open: m.id })}>
+    <button className="mt-row" onClick={() => setView({ list: 'meetings', open: m.id })}>
       <span className="mt-time"><b>{clock(m.starts_at!)}</b>{m.ends_at && <span>{clock(m.ends_at)}</span>}</span>
       <span className="mt-body">
         <span className="mt-title">{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
@@ -88,7 +88,7 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
           {groups.map((g) => (
             <section key={g.label}>
               <div className="wk-label">{g.label}</div>
-              <div className="mt-rows">{g.rows.map((m) => <Row key={m.profile + m.id} m={m} now={now} />)}</div>
+              <div className="mt-rows">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
             </section>
           ))}
           {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No meetings yet.'}</div></div>}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useAssistant, useCodex } from './data';
-import { proposals } from './data/wiki';
+import { live, proposals, type Meeting } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { SNOOZES, atTime, isQuestion, nextNine, parseWhen, split, stripWhen } from './data/engine';
 import type { Patch } from './data/store';
@@ -11,7 +11,7 @@ import { Voice, useDictation } from '../chat/Voice';
 import { ago, readFlag, saveFlag } from '../ui/util';
 import { hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
-import { Meetings } from './meetings/Meetings';
+import { MeetingRow, Meetings } from './meetings/Meetings';
 import '../styles/features/assistant.css';
 
 type Mode = 'task' | 'note' | 'ask';
@@ -347,20 +347,26 @@ function SnackBar() {
 
 function useSplit() {
   const { snap } = useAssistant();
+  const { meetings } = useCodex();
   const { filter } = useView();
   const [minute, tick] = useState(0);
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 60000);
     return () => clearInterval(t);
   }, []);
-  return useMemo(() => split(snap.items, filter, Date.now()), [snap.items, filter, minute]);
+  return useMemo(() => {
+    const now = Date.now();
+    const mine = live(meetings).filter((m) => m.starts_at != null && (m.ends_at ?? m.starts_at) > now && (filter === 'all' || m.profile === filter)).sort((a, b) => a.starts_at! - b.starts_at!);
+    const endOfDay = new Date(now).setHours(24, 0, 0, 0);
+    return { ...split(snap.items, filter, now), meetingsToday: mine.filter((m) => m.starts_at! < endOfDay), meetingsLater: mine.filter((m) => m.starts_at! >= endOfDay) };
+  }, [snap.items, meetings, filter, minute]);
 }
 
 export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { list } = useView();
   const s = useSplit();
   const { facts } = useCodex();
-  const count: Record<List, number> = { today: s.today.length + s.next.length, upcoming: s.later.length, meetings: 0, wiki: proposals(facts).length, notes: s.notes.length, done: 0 };
+  const count: Record<List, number> = { today: s.today.length + s.next.length, upcoming: s.later.length + s.meetingsLater.length, meetings: 0, wiki: proposals(facts).length, notes: s.notes.length, done: 0 };
   return (
     <nav className="as-nav">
       {LISTS.map((l) => (
@@ -436,13 +442,18 @@ export function Assistant() {
     );
   }
 
-  const upcoming = s.later.reduce<{ label: string; rows: ItemRow[] }[]>((acc, r) => {
-    const label = dayLabel(atTime(r.at)!);
+  const dated: ({ at: number; row: ItemRow } | { at: number; meeting: Meeting })[] = [
+    ...s.later.map((row) => ({ at: atTime(row.at)!, row })),
+    ...s.meetingsLater.map((meeting) => ({ at: meeting.starts_at!, meeting })),
+  ].sort((a, b) => a.at - b.at);
+  const upcoming = dated.reduce<{ label: string; rows: typeof dated }[]>((acc, e) => {
+    const label = dayLabel(e.at);
     const last = acc[acc.length - 1];
-    if (last?.label === label) last.rows.push(r);
-    else acc.push({ label, rows: [r] });
+    if (last?.label === label) last.rows.push(e);
+    else acc.push({ label, rows: [e] });
     return acc;
   }, []);
+  const now = Date.now();
 
   return (
     <div className="assistant" ref={root}>
@@ -463,6 +474,12 @@ export function Assistant() {
               <section>
                 <div className="as-section">Next</div>
                 <NextCard row={s.next[0]} onOpen={() => setOpen(s.next[0])} onPrep={() => ask(askText(recipes(s.next[0])[0].q, snap.items))} />
+              </section>
+            )}
+            {s.meetingsToday.length > 0 && (
+              <section>
+                <div className="as-section">Meetings · {s.meetingsToday.length}</div>
+                {s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}
               </section>
             )}
             {s.today.length > 0 && (
@@ -487,8 +504,8 @@ export function Assistant() {
           </>
         )}
         {list === 'upcoming' && (upcoming.length ? upcoming.map((g) => (
-          <section key={g.label}><div className="as-section">{g.label}</div>{rows(g.rows)}</section>
-        )) : <div className="as-empty"><Icon name="calendar" /><div>Nothing scheduled.</div><div className="muted small">Snoozed tasks and tasks with a date show here.</div></div>)}
+          <section key={g.label}><div className="as-section">{g.label}</div>{g.rows.map((e) => ('meeting' in e ? <MeetingRow key={e.meeting.profile + e.meeting.id} m={e.meeting} now={now} /> : <Row key={e.row.profile + e.row.id} row={e.row} onOpen={() => setOpen(e.row)} />))}</section>
+        )) : <div className="as-empty"><Icon name="calendar" /><div>Nothing scheduled.</div><div className="muted small">Meetings, snoozed tasks and tasks with a date show here.</div></div>)}
         {list === 'notes' && (s.notes.length ? <section>{rows(s.notes)}</section> : <div className="as-empty"><Icon name="note" /><div>No notes yet.</div><div className="muted small">Type below and tap Task to switch to Note.</div></div>)}
         {list === 'done' && (s.done.length ? <section><div className="as-section">Last 7 days</div>{rows(s.done)}</section> : <div className="as-empty"><Icon name="pass" /><div>Nothing done this week yet.</div></div>)}
       </div>
