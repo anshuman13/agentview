@@ -338,8 +338,9 @@ function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usa
       <dl className="mcp-kv">
         <dt>Status</dt><dd className={tone}>{label}{row.version ? <span className="muted mono"> · v{row.version}</span> : null}</dd>
         {row.error && (row.live || row.status !== 'needs-auth') && <><dt>Error</dt><dd className="bad mono wrap">{row.error}</dd></>}
-        {row.status === 'needs-auth' && row.live && <><dt>Log in</dt><dd><Login name={row.name} /></dd></>}
-        {row.status === 'needs-auth' && !row.live && (
+        {row.status === 'needs-auth' && row.type === 'claudeai' && <><dt>Log in</dt><dd><ClaudeAiLogin name={row.name} /></dd></>}
+        {row.status === 'needs-auth' && row.type !== 'claudeai' && row.live && <><dt>Log in</dt><dd><Login name={row.name} /></dd></>}
+        {row.status === 'needs-auth' && row.type !== 'claudeai' && !row.live && (
           <><dt>Login</dt><dd>Load it in this chat, then log in here.</dd></>
         )}
         {row.command && <><dt>{url ? 'URL' : 'Command'}</dt><dd className="mono wrap">{row.command}</dd></>}
@@ -483,6 +484,21 @@ function AddToChat({ name }: { name: string }) {
       <button className="btn" onClick={add} disabled={busy}><Icon name={busy ? 'loading' : 'add'} small spin={busy} /> Load in this chat</button>
       {error && <span className="mcp-act-error bad">{error}</span>}
     </>
+  );
+}
+
+// claude.ai connectors are authorized on claude.ai, for the account this chat runs on; the chat picks them up on reconnect.
+function ClaudeAiLogin({ name }: { name: string }) {
+  const [opened, setOpened] = useState(false);
+  useEffect(() => setOpened(false), [name]);
+  return (
+    <div className="mcp-login">
+      <div className="mcp-login-acts">
+        <a className="btn" href="https://claude.ai/settings/connectors" target="_blank" rel="noreferrer" onClick={() => setOpened(true)}><Icon name="link-external" small /> Connect on claude.ai</a>
+        {opened && <button className="btn" onClick={() => send({ type: 'mcp_reconnect', name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
+      </div>
+      <div className="muted">{opened ? 'Once it says Connected there, reconnect it here.' : 'Sign in with the Claude account this chat uses.'}</div>
+    </div>
   );
 }
 
