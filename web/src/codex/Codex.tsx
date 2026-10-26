@@ -19,7 +19,7 @@ import '../styles/features/assistant.css';
 type Mode = 'task' | 'ask';
 
 const LISTS: { id: List; icon: string; label: string }[] = [
-  { id: 'today', icon: 'home', label: 'Today' },
+  { id: 'today', icon: 'home', label: 'Overview' },
   { id: 'meetings', icon: 'record', label: 'Meetings' },
   { id: 'wiki', icon: 'book', label: 'Wiki' },
 ];
