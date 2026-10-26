@@ -114,7 +114,16 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
   };
 
   useEffect(() => {
-    const others = (list: Mac[]) => (bundled ? [...list, ...knownMacs().filter((k) => !list.some((m) => m.url === k.url)).map((k) => ({ name: k.name || k.url, url: k.url, running: 0 }))].filter((m) => m.url !== base) : list);
+    // The phone remembers each address it used, so one Mac can be saved under its IP and its NetBird name.
+    const others = (list: Mac[]) => {
+      if (!bundled) return list;
+      const seen = new Set([base, name]);
+      return [...list, ...knownMacs().map((k) => ({ name: k.name || k.url, url: k.url, running: 0 }))].filter((m) => {
+        if (seen.has(m.url) || seen.has(m.name)) return false;
+        seen.add(m.url).add(m.name);
+        return true;
+      });
+    };
     const load = () =>
       fetch(apiUrl(`/api/connect?port=${macPort()}`))
         .then((r) => r.json())
@@ -126,7 +135,7 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
     load();
     const t = setInterval(() => document.visibilityState === 'visible' && load(), 10_000);
     return () => clearInterval(t);
-  }, [base]);
+  }, [base, name]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
