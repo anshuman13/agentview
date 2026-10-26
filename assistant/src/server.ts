@@ -3,7 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { allowedPeer, peerName } from '../../server/src/http/access.js';
 import { readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion } from './db.js';
-import { startCalendar } from './calendar.js';
+import { startCalendar, syncCalendar } from './calendar.js';
 import { startReminders } from './remind.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
@@ -95,6 +95,18 @@ export function createServer(): http.Server {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'internal error' }));
           }
+        }
+        return;
+      }
+
+      if (pathname === '/calendar' && req.method === 'POST') {
+        try {
+          const changed = await syncCalendar(getDb);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ changed }));
+        } catch (err) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
         }
         return;
       }

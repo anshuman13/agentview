@@ -77,20 +77,41 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
   return saveMeetings(db, profile, events, from, to, now);
 }
 
-export function startCalendar(db: () => Database, every = HOUR) {
-  let busy = false;
-  const run = async () => {
-    if (busy) return;
-    busy = true;
+const FIRST = 8;
+const LAST = 14;
+
+// True once per hour from 08:00 to 14:00 on weekdays.
+export function importDue(last: number, now = Date.now()) {
+  const d = new Date(now);
+  const hour = new Date(now).setMinutes(0, 0, 0);
+  return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= FIRST && d.getHours() <= LAST && last < hour;
+}
+
+let running: Promise<number> | null = null;
+
+// Imports both profiles and returns how many meetings changed; a second call while one runs joins it.
+export function syncCalendar(db: () => Database) {
+  return (running ??= (async () => {
+    let n = 0;
     for (const profile of Object.keys(PROFILES) as Profile[]) {
       try {
-        console.log(`calendar ${profile}: ${await importCalendar(db(), profile)} meetings changed`);
+        const changed = await importCalendar(db(), profile);
+        console.log(`calendar ${profile}: ${changed} meetings changed`);
+        n += changed;
       } catch (err) {
         console.error(`calendar ${profile}:`, err instanceof Error ? err.message : err);
       }
     }
-    busy = false;
+    db().prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('calendar:last', ?)").run(String(Date.now()));
+    return n;
+  })().finally(() => (running = null)));
+}
+
+export function startCalendar(db: () => Database, every = 15 * 60_000) {
+  const run = () => {
+    const last = db().prepare("SELECT value FROM meta WHERE key = 'calendar:last'").get() as { value: string } | null;
+    if (importDue(Number(last?.value ?? 0))) void syncCalendar(db);
   };
-  void run();
+  run();
   setInterval(run, every).unref();
 }

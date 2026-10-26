@@ -81,7 +81,7 @@ type Saved = { seen: Record<string, number>; dismissed: string[]; autofix?: stri
 let items: AttentionItem[] = [];
 let seen = new Map<string, number>();
 let dismissed = new Set<string>();
-let autofix: string[] | false = [];
+let autofix: string[] | false = false;
 let fixer: ((item: AttentionItem) => Promise<string>) | null = null;
 let loaded: Promise<void> | null = null;
 let onChange: (items: AttentionItem[]) => void = () => {};
@@ -92,7 +92,7 @@ async function load() {
   seeded = saved !== null;
   seen = new Map(Object.entries(saved?.seen ?? {}));
   dismissed = new Set(saved?.dismissed ?? []);
-  autofix = saved?.autofix ?? [];
+  autofix = saved?.autofix ?? false;
 }
 
 async function save() {
@@ -128,7 +128,7 @@ export function merge(found: AttentionItem[], now = Date.now()) {
 const fixes = new Map<string, string>();
 
 // One fix chat per failing head commit; the chat ids live in memory only. The autofix key in attention.json
-// lists repo names, an empty or missing list means every repo, false turns it off.
+// lists repo names, an empty list means every repo, false or missing turns it off.
 export async function fixCi(list: AttentionItem[], repos: string[] | false, fix: (item: AttentionItem) => Promise<string>, started = fixes) {
   if (repos === false) return;
   for (const it of list) {

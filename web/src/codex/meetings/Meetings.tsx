@@ -55,6 +55,7 @@ export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
 function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const { meetings, store } = useCodex();
   const [query, setQuery] = useState('');
+  const [syncing, setSyncing] = useState(false);
   const now = Date.now();
   const groups = useMemo(() => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -71,6 +72,17 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
     void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
     setView({ open: id });
   };
+  const syncCalendar = async () => {
+    setSyncing(true);
+    try {
+      const n = await store.syncCalendar();
+      showSnack(n ? `${n} meeting${n > 1 ? 's' : ''} updated from the calendar` : 'Calendar is up to date');
+    } catch (err) {
+      showSnack(`Calendar sync failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
   return (
     <div className="wk narrow">
       <header className="wk-head">
@@ -81,6 +93,9 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
           <Icon name="search" small />
           <input value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
         </label>
+        <button className="btn" disabled={syncing} title="Import the next days from Google Calendar (runs on its own every hour from 8 to 14 on weekdays)" onClick={syncCalendar}>
+          <Icon name={syncing ? 'loading' : 'sync'} small spin={syncing} /> <span>{syncing ? 'Syncing' : 'Sync calendar'}</span>
+        </button>
         <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
       </header>
       <div className="wk-scroll">

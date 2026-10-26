@@ -15,6 +15,9 @@ export async function assistantRoute(method: string, url: URL, body: () => Promi
   } else if (route === '/transcripts' && method === 'POST') {
     target = '/transcripts';
     init = { signal: AbortSignal.timeout(300_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
+  } else if (route === '/calendar' && method === 'POST') {
+    target = '/calendar';
+    init = { signal: AbortSignal.timeout(300_000), method: 'POST' };
   } else return { status: 404, body: { error: 'Not found' } };
   try {
     const resp = await fetch(`${HUB}${target}`, init);
