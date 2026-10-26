@@ -15,7 +15,7 @@ const STATUS: Record<string, [tone: string, label: string]> = {
 };
 const statusOf = (s: string) => STATUS[s] ?? ['off', s];
 const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
-const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.account && !r.live ? ['off', 'Other account'] : r.status === 'needs-auth' && !r.live ? ['off', 'OAuth via Claude'] : statusOf(r.status));
+const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.account && !r.live ? [statusOf(r.status)[0], `${statusOf(r.status)[1]} (last seen)`] : r.status === 'needs-auth' && !r.live ? ['off', 'OAuth via Claude'] : statusOf(r.status));
 
 const SCOPES: [id: string, title: string, where: string][] = [
   ['user', 'Your servers', '~/.claude.json'],
