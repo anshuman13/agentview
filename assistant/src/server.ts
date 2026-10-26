@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { allowedPeer, peerName } from '../../server/src/http/access.js';
 import { readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion } from './db.js';
+import { startCalendar } from './calendar.js';
 import { startReminders } from './remind.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 
@@ -145,6 +146,7 @@ async function start() {
   const server = createServer();
 
   startReminders(getDb);
+  if (process.env.ASSISTANT_CALENDAR !== '0') startCalendar(getDb);
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);
   });

@@ -18,7 +18,8 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     if (sent(key)) continue;
     const mins = Math.max(1, Math.round((m.starts_at! - now) / 60_000));
     const open = db.prepare("SELECT title FROM actions WHERE deleted = 0 AND status = 'proposed' AND meeting_id IN (SELECT id FROM meetings WHERE profile = ? AND title = ? AND id != ?)").all(m.profile, m.title, m.id) as { title: string | null }[];
-    const body = [m.people && `With ${m.people}`, open.length > 0 && `Open from last time: ${open.map((a) => a.title).join('; ')}`].filter(Boolean).join('\n');
+    const people = (() => { try { return (JSON.parse(m.people ?? '[]') as string[]).join(', '); } catch { return m.people; } })();
+    const body = [people && `With ${people}`, open.length > 0 && `Open from last time: ${open.map((a) => a.title).join('; ')}`].filter(Boolean).join('\n');
     out.push({ key, title: `${m.title ?? 'Meeting'} in ${mins} min`, body, url: m.calendar_url ?? '' });
   }
   const ended = db.prepare('SELECT * FROM meetings WHERE deleted = 0 AND ends_at > ? AND ends_at <= ?').all(now - DAY, now - AFTER) as Meeting[];
