@@ -41,6 +41,7 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
 const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 
 const SWIPE = 80;
+const QUICK = ['In 1 hour', 'Tonight', 'Tomorrow'];
 
 function when(at: number, now = Date.now()) {
   const d = new Date(at);
@@ -52,6 +53,10 @@ function when(at: number, now = Date.now()) {
   if (days === -1) return `yesterday ${time}`;
   if (days > 1 && days < 7) return `${d.toLocaleDateString([], { weekday: 'short' })} ${time}`;
   return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+}
+
+function greeting(h = new Date().getHours()) {
+  return h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
 
 function dayLabel(at: number) {
@@ -136,7 +141,7 @@ function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
   };
   const body = (
     <div className={`as-row ${row.profile}${checked || isDone ? ' checked' : ''}`} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onOpen()}>
-      <span className="as-src" title={src.label}><Icon name={isNote ? 'note' : src.icon} /></span>
+      <span className={`as-src ${isNote ? 'note' : row.source ?? 'capture'}`} title={src.label}><Icon name={isNote ? 'note' : src.icon} /></span>
       <div className="as-body">
         <div className="as-title">{row.title || '(Untitled)'}</div>
         {isNote && row.text ? (
@@ -218,6 +223,7 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
         {snoozing ? (
           <div className="as-sheet-actions">
             {SNOOZES.map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
+            <PickTime className="btn" value={at} onPick={(t) => { act.snooze(row, t); onClose(); }} />
             <button className="icon-btn" title="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
           </div>
         ) : (
@@ -235,6 +241,38 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
     </div>
   );
 }
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const localInput = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+// A button that opens the system date and time picker.
+function PickTime({ className, value, onPick }: { className: string; value?: number | null; onPick: (at: number) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const open = () => {
+    const el = input.current;
+    if (!el) return;
+    el.value = localInput(value ?? SNOOZES[0].at(new Date()));
+    try { el.showPicker(); } catch { el.focus(); el.click(); }
+  };
+  return (
+    <span className="as-pick">
+      <button className={className} onClick={open}><Icon name="calendar" small /> Pick time</button>
+      <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden onChange={(e) => { const t = new Date(e.target.value).getTime(); if (Number.isFinite(t)) onPick(t); }} />
+    </span>
+  );
+}
+
+const marked = (text: string, spans: [number, number][]) => {
+  const out: React.ReactNode[] = [];
+  let i = 0;
+  for (const [s, e] of spans) {
+    if (s < i) continue;
+    out.push(text.slice(i, s), <mark key={s}>{text.slice(s, e)}</mark>);
+    i = e;
+  }
+  out.push(text.slice(i));
+  return out;
+};
 
 const recipes = (next: ItemRow | undefined) => {
   const h = new Date().getHours();
@@ -254,6 +292,8 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
   const [mode, setMode] = useState<Mode | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [noWhen, setNoWhen] = useState(false);
+  const [pick, setPick] = useState<number | null>(null);
+  const [fresh, setFresh] = useState(false);
   const [voice, setVoice] = useState(0);
   const area = useRef<HTMLTextAreaElement>(null);
   const dictate = useDictation(text, setText);
@@ -276,20 +316,22 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
   const m: Mode = mode ?? (isQuestion(typed) ? 'ask' : 'task');
   const prof: Profile = profile ?? (filter !== 'all' ? filter : readFlag('assistant-personal', false) ? 'personal' : 'work');
   const w = m === 'task' && !noWhen ? parseWhen(text) : null;
+  const due = m === 'task' ? pick ?? w?.at ?? null : null;
+  const dated = pick != null || w != null;
 
-  const reset = () => { setText(''); setMode(null); setNoWhen(false); setProfile(null); };
+  const reset = () => { setText(''); setMode(null); setNoWhen(false); setPick(null); setFresh(false); setProfile(null); };
   const submit = async () => {
     if (!typed) return;
     if (m === 'ask') {
-      if (ask(askText(typed, items))) reset();
+      if (ask(askText(typed, items), fresh)) reset();
       return;
     }
     try {
       const title = m === 'task' ? stripWhen(text, w) || typed : typed;
-      const row = await store.capture(title, m, prof, w?.at ?? null);
+      const row = await store.capture(title, m, prof, due);
       saveFlag('assistant-personal', prof === 'personal');
       reset();
-      showSnack(m === 'note' ? 'Note saved' : w ? `Added for ${when(w.at)}` : 'Added to Today', () => void store.update(row, { deleted: 1 }));
+      showSnack(m === 'note' ? 'Note saved' : due != null ? `Added for ${when(due)}` : 'Added to Today', () => void store.update(row, { deleted: 1 }));
     } catch (err) {
       showSnack(`Not saved: ${(err as Error).message}`);
     }
@@ -303,8 +345,16 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
         {typed ? (
           <>
             <button className="as-chip on" title="Task, note or a question for Claude" onClick={cycle}><Icon name={MODE[m].icon} small /> {MODE[m].label}</button>
+            {m === 'ask' && <button className={`as-chip${fresh ? ' on' : ''}`} title="Ask in today's Codex chat or start a new one" onClick={() => setFresh((f) => !f)}><Icon name={fresh ? 'add' : 'comment-discussion'} small /> {fresh ? 'New chat' : "Today's chat"}</button>}
             {m !== 'ask' && <button className={`as-chip ${prof}`} title="Work or personal" onClick={() => setProfile(prof === 'work' ? 'personal' : 'work')}>{FILTER_LABEL[prof]}</button>}
-            {w && <button className="as-chip when" title="Remove the date" onClick={() => setNoWhen(true)}><Icon name="clock" small /> {when(w.at)} <Icon name="close" small /></button>}
+            {m === 'task' && (dated ? (
+              <button className="as-chip when on" title="Remove the time" onClick={() => { setPick(null); setNoWhen(true); }}><Icon name="clock" small /> {due != null ? when(due) : 'Today'} <Icon name="close" small /></button>
+            ) : (
+              <>
+                {SNOOZES.filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => setPick(s.at(new Date()))}><Icon name="clock" small /> {s.label}</button>)}
+                <PickTime className="as-chip time" onPick={setPick} />
+              </>
+            ))}
           </>
         ) : (
           recipes(next).map((r) => <button key={r.label} className="as-chip" onClick={() => ask(askText(r.q, items))}><Icon name="sparkle" small /> {r.label}</button>)
@@ -312,7 +362,7 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
       </div>
       <div className="cp-card as-card">
         <div className="as-input">
-          {w && <div className="as-mirror" aria-hidden>{text.slice(0, w.start)}<mark>{text.slice(w.start, w.end)}</mark>{text.slice(w.end)}</div>}
+          {w && pick == null && <div className="as-mirror" aria-hidden>{marked(text, w.spans)}</div>}
           <textarea
             ref={area}
             rows={1}
@@ -325,7 +375,7 @@ function Composer({ items, next, filter }: { items: ItemRow[]; next?: ItemRow; f
         <div className="cp-foot">
           <span className="cp-spacer" />
           <Voice onText={dictate} autoStart={voice} />
-          <button className="cp-send" title={m === 'ask' ? 'Ask Claude in a new chat' : 'Save'} aria-label="Send" disabled={!typed} onClick={() => void submit()}>
+          <button className="cp-send" title={m === 'ask' ? (fresh ? 'Ask Claude in a new chat' : "Ask Claude in today's Codex chat") : 'Save'} aria-label="Send" disabled={!typed} onClick={() => void submit()}>
             <Icon name="arrow-up" />
           </button>
         </div>
@@ -410,7 +460,7 @@ export function Assistant() {
   const dot = sync.error ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
   const loading = sync.syncing && !sync.last && !snap.items.length;
   const heading = list === 'today' ? `Today, ${new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric' })}` : LISTS.find((l) => l.id === list)!.label;
-  const rows = (rs: ItemRow[]) => rs.map((r) => <Row key={r.profile + r.id} row={r} onOpen={() => setOpen(r)} />);
+  const rows = (rs: ItemRow[]) => <div className="as-group">{rs.map((r) => <Row key={r.profile + r.id} row={r} onOpen={() => setOpen(r)} />)}</div>;
 
   if (snap.phase !== 'ready') {
     return (
@@ -459,7 +509,10 @@ export function Assistant() {
     <div className="assistant" ref={root}>
       <header className="as-head">
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
-        <h1>{heading}</h1>
+        <div className="as-title-wrap">
+          {list === 'today' && <div className="as-greet">{greeting()}</div>}
+          <h1>{heading}</h1>
+        </div>
         <button className="as-filter" title="Show work, personal or both" onClick={() => setView({ filter: FILTERS[(FILTERS.indexOf(filter) + 1) % FILTERS.length] })}>
           {FILTER_LABEL[filter]} <Icon name="chevron-down" small />
         </button>
@@ -479,7 +532,7 @@ export function Assistant() {
             {s.meetingsToday.length > 0 && (
               <section>
                 <div className="as-section">Meetings · {s.meetingsToday.length}</div>
-                {s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}
+                <div className="as-group">{s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
               </section>
             )}
             {s.today.length > 0 && (
@@ -504,7 +557,7 @@ export function Assistant() {
           </>
         )}
         {list === 'upcoming' && (upcoming.length ? upcoming.map((g) => (
-          <section key={g.label}><div className="as-section">{g.label}</div>{g.rows.map((e) => ('meeting' in e ? <MeetingRow key={e.meeting.profile + e.meeting.id} m={e.meeting} now={now} /> : <Row key={e.row.profile + e.row.id} row={e.row} onOpen={() => setOpen(e.row)} />))}</section>
+          <section key={g.label}><div className="as-section">{g.label}</div><div className="as-group">{g.rows.map((e) => ('meeting' in e ? <MeetingRow key={e.meeting.profile + e.meeting.id} m={e.meeting} now={now} /> : <Row key={e.row.profile + e.row.id} row={e.row} onOpen={() => setOpen(e.row)} />))}</div></section>
         )) : <div className="as-empty"><Icon name="calendar" /><div>Nothing scheduled.</div><div className="muted small">Meetings, snoozed tasks and tasks with a date show here.</div></div>)}
         {list === 'notes' && (s.notes.length ? <section>{rows(s.notes)}</section> : <div className="as-empty"><Icon name="note" /><div>No notes yet.</div><div className="muted small">Type below and tap Task to switch to Note.</div></div>)}
         {list === 'done' && (s.done.length ? <section><div className="as-section">Last 7 days</div>{rows(s.done)}</section> : <div className="as-empty"><Icon name="pass" /><div>Nothing done this week yet.</div></div>)}

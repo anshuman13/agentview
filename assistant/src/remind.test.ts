@@ -15,3 +15,14 @@ it('reminds before a meeting and about its open actions after', () => {
   db.prepare("INSERT INTO meta (key, value) VALUES (?, '1')").run(`remind:${due[1].key}`);
   expect(dueReminders(db, now)).toHaveLength(1);
 });
+
+it('reminds about a task when it comes due', () => {
+  const db = openDb(':memory:');
+  const now = 1_000_000_000;
+  const item = db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at) VALUES (?, 'personal', 1, 0, ?, 'capture', ?, ?)");
+  item.run('a', 'Get burger buns', 'open', now - 60_000);
+  item.run('b', 'Later', 'open', now + 60_000);
+  item.run('c', 'Done already', 'done', now - 60_000);
+  item.run('d', 'Long ago', 'open', now - 3600_000);
+  expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Get burger buns']);
+});

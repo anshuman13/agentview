@@ -55,26 +55,43 @@ export function nextNine(now = new Date()) {
 }
 
 export const SNOOZES: { label: string; at: (now: Date) => number }[] = [
+  { label: 'In 1 hour', at: (now) => Math.ceil((now.getTime() + 3600_000) / 60_000) * 60_000 },
   { label: 'In 3 hours', at: (now) => now.getTime() + 3 * 3600_000 },
   { label: 'Tonight', at: (now) => (now.getHours() < 18 ? at(now, 0, 19) : at(now, 1, 19)) },
   { label: 'Tomorrow', at: (now) => nextNine(now) },
   { label: 'Next week', at: (now) => at(now, ((8 - now.getDay()) % 7) || 7, 9) },
 ];
 
-const DATE_RE = /\b(today|tonight|tomorrow|tmrw|next week|(?:on )?(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?)\b/i;
-const TIME_RE = /\b(?:at |kl\.? )?(\d{1,2})(?::(\d{2}))?\s?(am|pm)?\b/i;
+const DATE_RE = /\b(today|tomorrow|tmrw|next week|(?:on )?(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?)\b/i;
+const PART_RE = /\b(?:this |in the )?(morning|noon|lunch|afternoon|evening|tonight)\b/i;
+const TIME_RE = /\b(?:at |kl\.? )?(\d{1,2})(?:[:.](\d{2}))?\s?(am|pm)?\b(?!\s*(?:min|hour|hr|h\b|day|week|%))/i;
+const REL_RE = /\b(?:in\s+(an?|one|half an?|\d+)\s*(minutes?|mins?|m|hours?|hrs?|h|days?|weeks?)\b(?:\s+from now)?|(an?|one|\d+)\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)\s+(?:from now|later)\b)/i;
+const PARTS: Record<string, number> = { morning: 9, noon: 12, lunch: 12, afternoon: 14, evening: 19, tonight: 19 };
+const UNIT: Record<string, number> = { m: 60_000, h: 3600_000, d: 24 * 3600_000, w: 7 * 24 * 3600_000 };
 
-export type When = { at: number; start: number; end: number };
+export type Span = [number, number];
+export type When = { at: number | null; spans: Span[] };
 
-// Reads one date word and an optional time ("tomorrow 9", "fri at 14:30", "tonight") from the text.
+const span = (m: RegExpExecArray, offset = 0): Span => [offset + m.index, offset + m.index + m[0].length];
+
+// Reads a date and time from the text: "in 1 hour", "2 hours from now", "tomorrow 9", "fri at 14:30", "this evening", "today".
+// "today" without a time gives at = null, which keeps the task in Today.
 export function parseWhen(text: string, now = new Date()): When | null {
+  const r = REL_RE.exec(text);
+  if (r) {
+    const n = r[1] ?? r[3];
+    const unit = (r[2] ?? r[4]).toLowerCase();
+    const amount = /^half/i.test(n) ? 0.5 : /^(an?|one)$/i.test(n) ? 1 : Number(n);
+    const ms = UNIT[unit === 'm' || unit.startsWith('min') ? 'm' : unit[0]];
+    return { at: Math.ceil((now.getTime() + amount * ms) / 60_000) * 60_000, spans: [span(r)] };
+  }
   const d = DATE_RE.exec(text);
+  const p = PART_RE.exec(text);
   let days: number | null = null;
-  let hour = 9;
+  let hour: number | null = p ? PARTS[p[1].toLowerCase()] : null;
   if (d) {
     const w = d[1].toLowerCase().replace(/^on /, '');
     if (w === 'today') days = 0;
-    else if (w === 'tonight') { days = 0; hour = 19; }
     else if (w === 'tomorrow' || w === 'tmrw') days = 1;
     else if (w === 'next week') days = ((8 - now.getDay()) % 7) || 7;
     else {
@@ -82,29 +99,37 @@ export function parseWhen(text: string, now = new Date()): When | null {
       days = ((i - now.getDay() + 7) % 7) || 7;
     }
   }
-  const rest = d ? text.slice(d.index + d[0].length) : text;
+  const anchor = d ?? p;
+  const offset = anchor ? anchor.index + anchor[0].length : 0;
+  const rest = text.slice(offset);
   const t = TIME_RE.exec(rest);
-  const timed = t && (t[2] || t[3] || /^(at|kl)/i.test(t[0]) || (d && rest.slice(0, t.index).trim() === ''));
-  if (!d && !timed) return null;
+  const timed = t && (t[2] || t[3] || /^(at|kl)/i.test(t[0]) || (anchor && rest.slice(0, t.index).trim() === ''));
+  if (!d && !p && !timed) return null;
+  const spans: Span[] = [d, p].filter((m): m is RegExpExecArray => !!m).map((m) => span(m));
   let minute = 0;
   if (timed && t) {
-    hour = Number(t[1]) % 24;
+    let h = Number(t[1]);
     minute = Number(t[2] ?? 0);
-    if (t[3]?.toLowerCase() === 'pm' && hour < 12) hour += 12;
-    if (t[3]?.toLowerCase() === 'am' && hour === 12) hour = 0;
-    if (!t[3] && /tonight/i.test(d?.[1] ?? '') && hour < 12) hour += 12;
-    if (minute > 59) return null;
+    if (h > 23 || minute > 59) return null;
+    const ampm = t[3]?.toLowerCase();
+    if (ampm === 'pm' && h < 12) h += 12;
+    if (ampm === 'am' && h === 12) h = 0;
+    if (!ampm && hour != null && hour >= 12 && h < 12) h += 12;
+    hour = h;
+    spans.push(span(t, offset));
+  }
+  if (hour == null) {
+    if (days === 0) return { at: null, spans };
+    hour = 9;
   }
   if (days === null) days = at(now, 0, hour, minute) > now.getTime() ? 0 : 1;
-  const offset = d ? d.index + d[0].length : 0;
-  const start = d ? d.index : offset + t!.index;
-  const end = timed && t ? offset + t.index + t[0].length : d!.index + d![0].length;
-  return { at: at(now, days, hour, minute), start, end };
+  return { at: at(now, days, hour, minute), spans: spans.sort((a, b) => a[0] - b[0]) };
 }
 
 export function stripWhen(text: string, w: When | null) {
-  if (!w) return text.trim();
-  return (text.slice(0, w.start) + text.slice(w.end)).replace(/\s{2,}/g, ' ').trim();
+  let out = text;
+  for (const [s, e] of [...(w?.spans ?? [])].sort((a, b) => b[0] - a[0])) out = out.slice(0, s) + out.slice(e);
+  return out.replace(/^\s*(?:add a task to|add a task|remind me to|reminder to)\s+/i, '').replace(/[\s,]*(?:and )?(?:set|add) a reminder\s*$/i, '').replace(/\s{2,}/g, ' ').trim();
 }
 
 const ASK_RE = /^(what|when|who|whom|why|how|which|where|did|do|does|is|are|was|were|can|could|should|will|would|summari[sz]e|plan|prep|prepare|find|show|list|tell|explain)\b/i;

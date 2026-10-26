@@ -1,4 +1,5 @@
-import { getState, notice, prompt, send } from '../../app/store';
+import { getState, notice, prompt, queueNext, send } from '../../app/store';
+import { macOrigin } from '../../app/api';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
 import { listOf, live, sourcesOf, type Action, type Fact, type Meeting, type Page } from './wiki';
@@ -19,27 +20,58 @@ export function askText(question: string, items: ItemRow[], about?: ItemRow) {
   ].filter(Boolean).join('\n');
 }
 
-// Opens a new chat on the current Mac and sends the question there once the chat is shown.
-export function ask(text: string) {
-  if (!getState().ui.connected) {
+type Daily = { day: string; mac: string; chat: string; sessionId: string | null };
+const KEY = 'codex-chat';
+const today = () => new Date().toDateString();
+const readDaily = (): Daily | null => { try { return JSON.parse(localStorage.getItem(KEY) ?? 'null'); } catch { return null; } };
+const saveDaily = (d: Daily) => localStorage.setItem(KEY, JSON.stringify(d));
+
+// Sends the question to today's Codex chat on the current Mac. The first question of the day, or fresh, opens a new chat.
+export function ask(text: string, fresh = false) {
+  const s = getState();
+  if (!s.ui.connected) {
     notice('Not connected to a Mac, the question was not sent');
     return false;
   }
-  const from = getState().session.id;
-  send({ type: 'new_session' });
+  const mac = macOrigin();
+  const d = readDaily();
+  const reuse = !fresh && d?.day === today() && d.mac === mac ? d : null;
+  const open = reuse && s.live.find((c) => c.id === reuse.chat || (reuse.sessionId != null && c.sessionId === reuse.sessionId));
+  const from = s.session.id;
+  let ready: (id: string) => boolean;
+  if (open) {
+    if (from !== open.id) send({ type: 'view', id: open.id });
+    ready = (id) => id === open.id;
+  } else {
+    send(reuse?.sessionId ? { type: 'open_session', sessionId: reuse.sessionId } : { type: 'new_session' });
+    ready = (id) => !!id && id !== from;
+  }
   const started = Date.now();
   const t = setInterval(() => {
-    const id = getState().session.id;
-    if (id && id !== from) {
+    const { session } = getState();
+    if (ready(session.id)) {
       clearInterval(t);
-      prompt(text, () => {});
+      (session.running ? queueNext : prompt)(text, () => {});
+      remember(mac, session.id, session.sessionId ?? (open ? open.sessionId : reuse?.sessionId) ?? null);
     } else if (Date.now() - started > 15000) {
       clearInterval(t);
-      notice('The new chat did not open, the question was not sent');
+      notice('The Codex chat did not open, the question was not sent');
     }
   }, 150);
   window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'tab:chat' } }));
   return true;
+}
+
+// A new chat gets its Claude session id after the first prompt; keep it so a closed chat can be reopened.
+function remember(mac: string, chat: string, sessionId: string | null) {
+  saveDaily({ day: today(), mac, chat, sessionId });
+  if (sessionId) return;
+  const started = Date.now();
+  const t = setInterval(() => {
+    const c = getState().live.find((x) => x.id === chat);
+    if (c?.sessionId) saveDaily({ day: today(), mac, chat, sessionId: c.sessionId });
+    if (c?.sessionId || Date.now() - started > 60000) clearInterval(t);
+  }, 1000);
 }
 
 export function wikiAskText(question: string, pages: Page[], facts: Fact[], pageId?: string) {

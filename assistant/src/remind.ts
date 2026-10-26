@@ -30,6 +30,11 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     if (!open.length) continue;
     out.push({ key, title: `${open.length} action${open.length > 1 ? 's' : ''} from ${m.title ?? 'a meeting'} need${open.length > 1 ? '' : 's'} you`, body: open.map((a) => `- ${a.title}`).join('\n'), url: '' });
   }
+  const tasks = db.prepare("SELECT id, profile, title, at FROM items WHERE deleted = 0 AND status = 'open' AND source NOT IN ('calendar', 'meeting') AND CAST(at AS INTEGER) > ? AND CAST(at AS INTEGER) <= ?").all(now - BEFORE, now) as { id: string; profile: string; title: string | null; at: number }[];
+  for (const t of tasks) {
+    const key = `task:${t.profile}:${t.id}:${Number(t.at)}`;
+    if (!sent(key)) out.push({ key, title: t.title ?? 'Task', body: 'Due now', url: '' });
+  }
   return out;
 }
 
