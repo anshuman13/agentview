@@ -394,7 +394,7 @@ export function Composer() {
 
   const typed = text.trim().length > 0;
   const hint = shell ? 'Runs in the terminal' : '';
-  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? (touch() ? 'Claude reads this at its next step · hold Send to stop and send' : 'Claude reads this at its next step · ⌘Enter stops and sends') : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files';
+  const placeholder = waiting ? 'Answer below, or message Claude to stop and send' : compacting ? 'Sends when compacting is done' : running ? (touch() ? 'Claude reads this next · hold Send to stop' : 'Claude reads this at its next step · ⌘Enter stops and sends') : uses.length ? 'What should Claude do with it?' : 'Ask anything · / commands · @ files';
   const level = context === null ? '' : context >= COMPACT_AT ? 'over' : context >= COMPACT_AT * 0.75 ? 'near' : '';
 
   return (

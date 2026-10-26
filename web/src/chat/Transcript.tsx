@@ -70,7 +70,7 @@ export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.se
 function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolean }) {
   switch (it.kind) {
     case 'user':
-      return <div className={`tr-user ${it.stopping ? 'stopping' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title="Waiting for Claude's next step"><Icon name="clock" small /><button className="link tl-now" title="Stop Claude's current step and send this now" onClick={() => send({ type: 'send_now', id: it.id })}>Send now</button></span>}</div>;
+      return <div className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.text}{it.stopping && <span className="tr-stop"><Icon name="loading" small spin /></span>}{it.queued && <span className="tr-stop" title="Waiting for Claude's next step"><Icon name="clock" small /><button className="link tl-send-now" title="Stop Claude's current step and send this now" onClick={() => send({ type: 'send_now', id: it.id })}>Send now</button></span>}</div>;
     case 'phase':
       return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
     case 'assistant':

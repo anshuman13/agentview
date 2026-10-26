@@ -193,7 +193,7 @@ const FILES_SHOWN = 6;
 function TurnCard({ turn, latest, live, cwd, pending }: { turn: Turn; latest: boolean; live: boolean; cwd: string; pending: PendingRequest[] }) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
-  const when = turn.queued ? <span className="tl-state" title="Waiting for Claude's next step"><Icon name="clock" small /><button className="link tl-now" title="Stop Claude's current step and send this now" onClick={(e) => { e.stopPropagation(); send({ type: 'send_now', id: turn.id }); }}>Send now</button></span> : turn.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(turn.at).toLocaleString()}>{time(turn.at)}</span>;
+  const when = turn.queued ? <span className="tl-state" title="Waiting for Claude's next step"><Icon name="clock" small /><button className="link tl-send-now" title="Stop Claude's current step and send this now" onClick={(e) => { e.stopPropagation(); send({ type: 'send_now', id: turn.id }); }}>Send now</button></span> : turn.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(turn.at).toLocaleString()}>{time(turn.at)}</span>;
   return (
     <section className={`tc ${latest ? 'latest' : ''}`}>
       {turn.prompt && (

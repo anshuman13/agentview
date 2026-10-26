@@ -31,7 +31,7 @@
 .tc.latest { padding-bottom: 0; border-bottom: 0; }
 .tc .mark, .tl-now .mark { position: relative; flex: none; width: var(--size-xs); height: var(--size-xs); display: flex; align-items: center; justify-content: center; color: var(--fg-muted); }
 .tc .when, .tl-now .when { text-align: right; font-size: var(--fs-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tc-prompt { display: grid; grid-template-columns: 18px minmax(0, 1fr) 34px; column-gap: var(--sp-4); align-items: start; cursor: pointer; }
+.tc-prompt { display: grid; grid-template-columns: 18px minmax(0, 1fr) minmax(34px, auto); column-gap: var(--sp-4); align-items: start; cursor: pointer; }
 .tc-prompt .mark { border-radius: var(--radius-round); background: var(--prompt); color: var(--on-accent); }
 .tc-prompt .mark .codicon.icon.small { font-size: var(--fs-xs); }
 .tc-prompt .text { min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
@@ -97,7 +97,7 @@
 .tc-steps-toggle:hover, .steps-toggle:hover { background: transparent; color: var(--fg); }
 
 .tl-state { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-3); color: var(--claude); }
-.tl-now { font-size: var(--fs-xs); white-space: nowrap; }
+.tl-send-now { font-size: var(--fs-xs); white-space: nowrap; }
 .tl-empty { padding: var(--sp-4) var(--sp-1) var(--sp-2); font-size: var(--fs-sm); color: var(--fg-muted); }
 .tl-recap {
   display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-4); text-align: left;
