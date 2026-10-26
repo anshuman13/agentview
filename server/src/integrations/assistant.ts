@@ -1,6 +1,8 @@
+import { existsSync } from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 
-export const HUB = process.env.ASSISTANT_HUB ?? (os.hostname().toLowerCase().startsWith('macmini') ? 'http://localhost:7790' : 'http://macmini.netbird.cloud:7790');
+export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : 'http://macmini.netbird.cloud:7790');
 
 export async function assistantRoute(method: string, url: URL, body: () => Promise<string>): Promise<{ status: number; body: unknown }> {
   const route = url.pathname.slice('/api/assistant'.length);
