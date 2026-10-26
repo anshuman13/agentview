@@ -1,4 +1,4 @@
-import type { ItemRow, Profile } from './sync';
+import { newId, type ItemRow, type Profile } from './sync';
 
 export type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
 
@@ -114,7 +114,7 @@ export function pageStats(facts: Fact[], pageId: string | null) {
 
 export function newPage(title: string, section: string, sort: number, profile: Profile = 'work', now = Date.now()): Page {
   return {
-    id: crypto.randomUUID(), profile, version: 0, updated_at: now, deleted: 0, dirty: 1,
+    id: newId(), profile, version: 0, updated_at: now, deleted: 0, dirty: 1,
     field_times: JSON.stringify({ title: now, section: now, summary: now, sort: now }),
     title, section, summary: null, sort, state: null,
   };

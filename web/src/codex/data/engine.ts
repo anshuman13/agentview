@@ -1,4 +1,4 @@
-import { TABLE_FIELDS, parseTimes, rowToChange } from './sync';
+import { TABLE_FIELDS, newId, parseTimes, rowToChange } from './sync';
 import type { Change, ItemRow, Merged, Profile, PulledChange, Reply, SyncRow } from './sync';
 
 export const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
@@ -161,7 +161,7 @@ export const reviewedSince = (r: ItemRow) => statusTime(r);
 export function newCapture(text: string, type: 'task' | 'note', profile: Profile, now: number, at: number | null = null, meeting: { id: string; title: string | null } | null = null): ItemRow {
   const [first, ...rest] = text.split('\n');
   return {
-    id: crypto.randomUUID(),
+    id: newId(),
     profile,
     version: 0,
     updated_at: now,

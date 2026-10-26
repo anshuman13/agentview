@@ -3,7 +3,7 @@ import { useAssistant, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { atTime, parseWhen, stripWhen } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
-import type { ItemRow } from '../data/sync';
+import { newId, type ItemRow } from '../data/sync';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, type Meeting } from '../data/wiki';
 import { PickTime, when } from '../time';
 import { Icon } from '../../ui/Icon';
@@ -93,7 +93,7 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
   }, [meetings, query, filter, now]);
   const takeNotes = () => {
     const t = Date.now();
-    const id = crypto.randomUUID();
+    const id = newId();
     const row: Meeting = {
       id, profile: filter === 'personal' ? 'personal' : 'work', version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}',
       title: 'Notes', starts_at: t, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: '', summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
