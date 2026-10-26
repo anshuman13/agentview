@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Patch } from './store';
+import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch } from './store';
 import { edited, newCapture, runSync, toRow, type Dirty } from './engine';
 import { mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
@@ -129,6 +129,13 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   editRow = async <K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>) => {
     const current = (this.tables[table].get(keyOf(row)) as Tables[K] | undefined) ?? row;
     this.put(table, edited(current, patch, Date.now()));
+  };
+
+  parse = async (text: string, profile: Profile): Promise<Parsed> => {
+    const resp = await call('/api/assistant/parse', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile, text }), signal: AbortSignal.timeout(20000) });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
+    return data;
   };
 
   fetchTranscript = async (m: { profile: Profile; id: string }) => {

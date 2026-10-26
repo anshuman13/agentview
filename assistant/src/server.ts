@@ -6,7 +6,7 @@ import { openDb, currentVersion } from './db.js';
 import { PROFILES, lastImport, startCalendar, syncCalendar, type Profile } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
-import { startTidy } from './tidy.js';
+import { parseTask } from './parse.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 
@@ -116,6 +116,29 @@ export function createServer(): http.Server {
         return;
       }
 
+      if (pathname === '/parse' && req.method === 'POST') {
+        let data: { profile?: unknown; text?: unknown };
+        try {
+          data = JSON.parse(await readBody(req, 20_000));
+        } catch {
+          data = {};
+        }
+        if ((data.profile !== 'work' && data.profile !== 'personal') || typeof data.text !== 'string' || !data.text.trim()) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end('{"error":"Missing profile or text"}');
+          return;
+        }
+        try {
+          const parsed = await parseTask(data.profile, data.text.trim());
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(parsed));
+        } catch (err) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+        }
+        return;
+      }
+
       if (pathname === '/transcripts' && req.method === 'POST') {
         let data: { profile?: unknown; id?: unknown };
         try {
@@ -191,7 +214,6 @@ async function start() {
     startCalendar(getDb);
     startTranscripts(getDb);
     startJobs(getDb);
-    startTidy(getDb);
   }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);

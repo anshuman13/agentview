@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Patch } from './store';
+import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch } from './store';
 import { edited, errorText, newCapture, runSync, toRow, type Dirty } from './engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
@@ -238,6 +238,13 @@ export class LocalStore extends BaseStore implements AssistantStore {
     const sets = keys.map((k) => `${k} = ?`).join(', ');
     const times = keys.map((k) => `'$.${k}', ?`).join(', ');
     return this.edit(row, `${sets}, field_times = json_set(field_times, ${times})`, (now) => [...keys.map((k) => patch[k] ?? null), ...keys.map(() => now)]);
+  };
+
+  parse = async (text: string, profile: Profile): Promise<Parsed> => {
+    const resp = await fetch(`${HUB}/parse`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile, text }), signal: AbortSignal.timeout(20000) });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    return data;
   };
 
   fetchTranscript = async (m: { profile: Profile; id: string }) => {

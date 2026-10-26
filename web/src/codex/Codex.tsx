@@ -201,6 +201,8 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
   const [text, setText] = useState(row.text ?? '');
   const initial = useRef({ title: row.title ?? '', text: row.text ?? '' });
   const [snoozing, setSnoozing] = useState(false);
+  const [tidying, setTidying] = useState(false);
+  const { store } = useAssistant();
   const src = sourceOf(row);
   const fromSource = row.source && row.source !== 'capture' && row.source !== 'action';
   const at = atTime(row.at);
@@ -217,6 +219,20 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
     return () => window.removeEventListener('keydown', k);
   });
   const then = (f: () => void) => () => { save(); f(); onClose(); };
+  // Haiku fixes a quick or dictated task into a clear title and details, and sets the time if the text says one.
+  const tidy = async () => {
+    setTidying(true);
+    try {
+      const p = await store.parse([title, text].filter((s) => s.trim()).join('\n'), row.profile);
+      setTitle(p.title);
+      setText(p.details ?? '');
+      if (p.at != null && row.at == null) act.edit(row, { at: p.at });
+    } catch (err) {
+      showSnack(`Not tidied: ${(err as Error).message}`);
+    } finally {
+      setTidying(false);
+    }
+  };
   return (
     <div className="as-sheet-overlay" onClick={close}>
       <div className="as-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={row.title ?? 'Item'}>
@@ -246,6 +262,7 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
             {row.status === 'done' && <button className="btn" onClick={then(() => act.reopen(row))}>Not done</button>}
             {row.status === 'note' && <button className="btn" onClick={then(() => act.toTask(row))}>Make task</button>}
             {row.status === 'open' && <button className="btn" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
+            {!fromSource && row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
             <button className="btn" onClick={then(() => ask(askText('Help me with this item.', items, row)))}><Icon name="sparkle" small /> Ask</button>
             <span className="spacer" />
             <button className="icon-btn" title="Delete" aria-label="Delete" onClick={then(() => act.remove(row))}><Icon name="trash" /></button>
@@ -296,6 +313,7 @@ function Composer({ items, next, filter, moveOpen, openCount }: { items: ItemRow
   const [pick, setPick] = useState<number | null>(null);
   const [fresh, setFresh] = useState(false);
   const [voice, setVoice] = useState(0);
+  const [asking, setAsking] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
   const dictate = useDictation(text, setText);
 
@@ -320,21 +338,25 @@ function Composer({ items, next, filter, moveOpen, openCount }: { items: ItemRow
   const due = m === 'task' ? pick ?? w?.at ?? null : null;
   const dated = pick != null || w != null;
 
-  const reset = () => { setText(''); setMode(null); setNoWhen(false); setPick(null); setFresh(false); setProfile(null); };
+  const reset = () => { setText(''); setMode(null); setNoWhen(false); setPick(null); setFresh(false); setProfile(null); setAsking(false); };
   const busy = useRef(false);
-  const submit = async () => {
+  const save = async (title: string, at: number | null) => {
+    const row = await store.capture(title, 'task', prof, at);
+    saveFlag('assistant-personal', prof === 'personal');
+    reset();
+    showSnack(at != null ? `Task · ${when(at)}` : 'Task · No time', () => void store.update(row, { deleted: 1 }));
+  };
+  // With no time in the text, the chips ask When? before the task is saved.
+  const submit = async (at = due) => {
     if (!typed || busy.current) return;
     if (m === 'ask') {
       if (ask(askText(typed, items, undefined, meetings), fresh)) reset();
       return;
     }
+    if (at == null && !noWhen && !asking) return setAsking(true);
     busy.current = true;
     try {
-      const title = m === 'task' ? stripWhen(text, w) || typed : typed;
-      const row = await store.capture(title, 'task', prof, due);
-      saveFlag('assistant-personal', prof === 'personal');
-      reset();
-      showSnack(due != null ? `Task · ${when(due)}` : 'Task · Today', () => void store.update(row, { deleted: 1 }));
+      await save(stripWhen(text, w) || typed, at);
     } catch (err) {
       showSnack(`Not saved: ${(err as Error).message}`);
     } finally {
@@ -352,7 +374,14 @@ function Composer({ items, next, filter, moveOpen, openCount }: { items: ItemRow
             <button className="as-chip on" title="A task or a question for Claude" onClick={cycle}><Icon name={MODE[m].icon} small /> {MODE[m].label}</button>
             {m === 'ask' && <button className={`as-chip${fresh ? ' on' : ''}`} title="Ask in today's Codex chat or start a new one" onClick={() => setFresh((f) => !f)}><Icon name={fresh ? 'add' : 'comment-discussion'} small /> {fresh ? 'New chat' : "Today's chat"}</button>}
             {m !== 'ask' && <button className={`as-chip ${prof}`} title="Work or personal" onClick={() => setProfile(prof === 'work' ? 'personal' : 'work')}>{FILTER_LABEL[prof]}</button>}
-            {m === 'task' && (dated ? (
+            {m === 'task' && asking && !dated ? (
+              <>
+                <span className="as-ask">When?</span>
+                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => void submit(s.at(new Date()))}><Icon name="clock" small /> {s.label}</button>)}
+                <button className="as-chip" onClick={() => void submit(null)}>No time</button>
+                <PickTime className="as-chip time" onPick={(t) => void submit(t)} />
+              </>
+            ) : m === 'task' && (dated ? (
               <button className="as-chip when on" title="Remove the time" onClick={() => { setPick(null); setNoWhen(true); }}><Icon name="clock" small /> {due != null ? when(due) : 'Today'} <Icon name="close" small /></button>
             ) : (
               <>
@@ -375,7 +404,7 @@ function Composer({ items, next, filter, moveOpen, openCount }: { items: ItemRow
             rows={1}
             value={text}
             placeholder="Add a task or ask anything"
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => { setText(e.target.value); if (!e.target.value.trim()) setAsking(false); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && (!touch() || e.metaKey || e.ctrlKey)) { e.preventDefault(); void submit(); } }}
           />
         </div>
