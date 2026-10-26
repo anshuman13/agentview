@@ -10,7 +10,7 @@ import type { SentryIssue } from '../../../shared/observe.js';
 import { post } from './notify.js';
 
 const FILE = path.join(os.homedir(), '.agentview/attention.json');
-const EVERY = 5 * 60_000;
+const EVERY = 15 * 60_000;
 const EDIT_AGE = 10 * 60_000;
 const NEW_FOR = 24 * 60 * 60_000;
 const STALE_AFTER = 2 * 24 * 60 * 60_000;
