@@ -136,3 +136,61 @@ Progress checklist:
 - [x] 12. Client sync of pages, facts, meetings and actions (remote and phone local store)
 - [x] 13. Polish: light theme, phone spacing, empty states, keyboard focus
 - [x] 14. Update assistant.md and features.md
+
+## Claude proposes claims
+
+Any chat can propose memory and wiki claims on its own judgement; nothing goes live until I approve it in Codex.
+The data lives only in the hub database, never in this repo.
+
+### Tools
+
+The in-process `agentview` MCP server in `server/src/agent/claude/options.ts` gets wiki tools next to
+`set_status`. They read and write the hub through its `/sync` API (`HUB` in `server/src/integrations/assistant.ts`).
+
+| Tool | Does |
+| --- | --- |
+| `wiki_search(query)` | Pages and claims matching every word, with state (live, proposed, rejected); Claude calls it before proposing |
+| `wiki_page(id)` | One page's live claims by heading |
+| `wiki_propose(text, sources, page?, heading?, replaces?)` | Proposes a one-sentence claim. No page means memory. `replaces` names a live claim it would supersede. `page` can be an existing id or a new title and section |
+
+There is no delete or edit tool; contest, resolve and delete stay with me.
+
+### Rules in the system prompt
+
+Propose facts that stay true: decisions, ownership, how a system works, people and my preferences. One sentence,
+with a source (the chat link, plus Slack, Linear or PR links when known). Search first; do not repeat a live,
+proposed or rejected claim; use `replaces` when a claim contradicts a live one. Never propose secrets, credentials,
+tokens or file contents.
+
+### Profile
+
+Work by default. Personal for personal life (events, family, health, money) and for personal projects: a chat whose
+folder is under `~/workspace_personal` (such as agentview) proposes personal claims. The tool picks the profile from
+the chat's folder; Claude can mark a claim personal when it is about my personal life.
+
+### Data model
+
+| Table | New columns | Notes |
+| --- | --- | --- |
+| facts | state, replaces, added_by | `state` proposed, live or rejected (null means live, so existing rows stay live); `replaces` is the live claim a proposal would supersede; `added_by` is `claude:<chat id>` or `you` |
+| pages | state | A page Claude proposes is `proposed` until a claim on it is approved |
+
+Approving a claim sets it live, makes its proposed page live, and sets `superseded_by` on the claim it replaces.
+Rejecting keeps the row as `rejected` so Claude sees it in `wiki_search` and does not propose it again.
+
+### Review in Codex
+
+- Wiki index: a "To review" section above the sections with a count, one approve card per proposal: the claim,
+  target page and heading (or Memory), what it replaces (struck through), sources, the chat it came from. Buttons
+  Edit, Reject and Approve, as on the meeting action cards. Rejected cards collapse with Undo.
+- The nav shows the review count next to Wiki.
+- A "Memory" card in the index lists live claims without a page.
+- Live claims Claude proposed show a small "Claude" source chip linking to the chat.
+
+### Steps
+
+- [ ] 15. Columns `state`, `replaces`, `added_by` and pages `state`; client types; proposed and rejected rows hidden from pages, feed and search
+- [ ] 16. Server hub helper and `wiki_search`, `wiki_page`
+- [ ] 17. `wiki_propose` with profile from the chat folder, and the prompt rules
+- [ ] 18. To review section with approve cards, nav count, Memory card, Claude chip
+- [ ] 19. Check in Chrome: a chat proposes, I approve on desktop and on the phone
