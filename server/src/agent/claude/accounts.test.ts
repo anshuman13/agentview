@@ -8,7 +8,7 @@ const dir = vi.hoisted(() => {
   return d;
 });
 
-const { freshAccount, hasAlt, isLimited, markLimited, otherAccount, overageUntil } = await import('./accounts.js');
+const { freshAccount, hasAlt, isLimited, markLimited, otherAccount, overageUntil, rememberAccount, reopenAccount } = await import('./accounts.js');
 
 describe('accounts', () => {
   it('falls back to the second account only once it is logged in and has usage left', () => {
@@ -27,6 +27,15 @@ describe('accounts', () => {
     expect(otherAccount('alt', 6000)).toBe('main');
     expect(isLimited('alt', 1000)).toBe(true);
     expect(isLimited('alt', 6000)).toBe(false);
+  });
+
+  it('reopens a chat on the account it was on while that one has usage left', () => {
+    rememberAccount('s1', 'alt');
+    expect(reopenAccount('s1', 6000)).toBe('alt');
+    expect(reopenAccount('s2', 6000)).toBe('main');
+    expect(reopenAccount('s1', 1000)).toBe('main');
+    rememberAccount('s1', 'main');
+    expect(reopenAccount('s1', 6000)).toBe('main');
   });
 
   it('counts extra usage as hitting the limit', () => {

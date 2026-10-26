@@ -9,7 +9,7 @@ import { agentOf } from '../../session/events.js';
 import { JsonlTail } from './tail.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
-import { configDir, freshAccount, hasAlt, markLimited, otherAccount, overageUntil } from './accounts.js';
+import { configDir, hasAlt, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
 import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, type SubFile } from './history.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
@@ -23,7 +23,7 @@ const ENDED: Record<string, AgentStatus> = { completed: 'done', failed: 'failed'
 
 const usageOf = (u: { total_tokens: number; tool_uses: number; duration_ms: number }) => ({ tokens: u.total_tokens, toolUses: u.tool_uses, durationMs: u.duration_ms });
 
-export const claudeSession = (cwd: string, resume?: string, fork = false, account = freshAccount()) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
+export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
 
 // Runs a chat on the Claude Agent SDK: one CLI process at a time, resumed from its transcript when it exits.
 export class ClaudeDriver implements AgentDriver {

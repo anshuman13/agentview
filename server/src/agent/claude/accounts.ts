@@ -5,6 +5,7 @@ import type { Account } from '../../../../shared/protocol.js';
 
 const ALT_DIR = process.env.AGENTVIEW_ALT_CLAUDE || path.join(os.homedir(), '.claude-alt');
 const LIMITS = path.join(process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview'), 'limits.json');
+const CHATS = path.join(path.dirname(LIMITS), 'chat-accounts.json');
 
 const readJson = (file: string) => {
   try {
@@ -24,12 +25,16 @@ export const configDir = (a: Account) => (a === 'alt' ? ALT_DIR : undefined);
 
 const usable = (a: Account, now: number) => (a === 'main' || hasAlt()) && (limited[a] ?? 0) <= now;
 
+const save = (file: string, data: unknown) => {
+  try {
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify(data));
+  } catch {}
+};
+
 export function markLimited(a: Account, until: number) {
   limited[a] = until;
-  try {
-    mkdirSync(path.dirname(LIMITS), { recursive: true });
-    writeFileSync(LIMITS, JSON.stringify(limited));
-  } catch {}
+  save(LIMITS, limited);
 }
 
 export const isLimited = (a: Account, now = Date.now()) => (readJson(LIMITS)?.[a] ?? limited[a] ?? 0) > now;
@@ -47,5 +52,20 @@ export function otherAccount(a: Account, now = Date.now()): Account | null {
   return usable(o, now) ? o : null;
 }
 
-// New and reopened chats start on the main account unless it is out of usage.
+// New chats start on the main account unless it is out of usage.
 export const freshAccount = (now = Date.now()): Account => (usable('main', now) ? 'main' : otherAccount('main', now) ?? 'main');
+
+// Chats on the work account, so a reopened chat goes back to the account it was on.
+const chatAccounts: Record<string, Account> = readJson(CHATS) ?? {};
+
+export function rememberAccount(sessionId: string, a: Account) {
+  if ((chatAccounts[sessionId] ?? 'main') === a) return;
+  if (a === 'main') delete chatAccounts[sessionId];
+  else chatAccounts[sessionId] = a;
+  save(CHATS, chatAccounts);
+}
+
+export const reopenAccount = (sessionId: string | undefined, now = Date.now()): Account => {
+  const a = sessionId ? chatAccounts[sessionId] : undefined;
+  return a && usable(a, now) ? a : freshAccount(now);
+};

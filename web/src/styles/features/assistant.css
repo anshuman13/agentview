@@ -1,36 +1,36 @@
 .as-editor { position: relative; --work: var(--prompt); --personal: var(--claude); }
-/* Stilla's chart colours, used to tell sections, lists and meeting states apart. */
-:is(.as-editor, .as-nav) { --c-blue: #4a7aff; --c-green: #34d399; --c-amber: #f5a524; --c-purple: #b07cf7; --c-pink: #f2557a; --c-sky: #38bdf8; }
-/* Codex uses a warm stone palette with a blue accent and Geist, on the dark themes. */
+/* Gradianto Midnight Blue syntax colours, used to tell sections, lists and meeting states apart. */
+:is(.as-editor, .as-nav) { --c-blue: #589df6; --c-green: #96bf7d; --c-amber: #ebbf8c; --c-purple: #9d87e0; --c-pink: #d7539b; --c-sky: #6fb3d2; }
+/* Codex uses Gradianto Midnight Blue (indigo surfaces, purple accent) and Geist, on the dark themes. */
 :root:not([data-theme='light']) :is(.as-editor, .as-nav) {
-  --bg: #0d0c0b;
-  --surface: #121110;
-  --raised: #1a1917;
-  --sunken: #070706;
-  --popover: #44413c;
-  --hover: rgba(255, 255, 255, 0.05);
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.13);
-  --border-card: rgba(255, 255, 255, 0.18);
-  --fg: #ebe9e2;
-  --fg-strong: #fcfcfa;
-  --fg-muted: #b2afa8;
-  --fg-faint: #7d7a73;
-  --accent: #4a7aff;
-  --accent-hover: #6b93ff;
-  --accent-soft: rgba(74, 122, 255, 0.16);
+  --bg: #1a1a28;
+  --surface: #222233;
+  --raised: #2c2c40;
+  --sunken: #151520;
+  --popover: #38384b;
+  --hover: rgba(135, 135, 193, 0.1);
+  --border: rgba(135, 135, 193, 0.12);
+  --border-strong: rgba(135, 135, 193, 0.22);
+  --border-card: rgba(135, 135, 193, 0.3);
+  --fg: #d4d4e0;
+  --fg-strong: #f0f0f8;
+  --fg-muted: #a6a7c8;
+  --fg-faint: #7f80a8;
+  --accent: #6d55bd;
+  --accent-hover: #8269d4;
+  --accent-soft: rgba(109, 85, 189, 0.24);
   --on-accent: #ffffff;
-  --link: #83abfb;
-  --prompt: #83abfb;
-  --claude: #e08b6a;
-  --ok: #4ade80;
-  --ok-soft: #243424;
-  --warn: #fbbf24;
-  --warn-soft: #362d1e;
-  --err: #de5550;
-  --err-soft: #362422;
+  --link: #8fb8f8;
+  --prompt: #589df6;
+  --claude: #cc8b60;
+  --ok: #96bf7d;
+  --ok-soft: #26332a;
+  --warn: #ebbf8c;
+  --warn-soft: #3a3028;
+  --err: #cc666e;
+  --err-soft: #3a2430;
   --font: 'Geist Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  background: radial-gradient(90% 45% at 15% -8%, rgba(74, 122, 255, 0.16), transparent 70%), radial-gradient(70% 35% at 100% 0%, rgba(176, 124, 247, 0.1), transparent 70%), var(--bg);
+  background: radial-gradient(80% 50% at 0% 0%, rgba(84, 64, 146, 0.45), transparent 70%), linear-gradient(160deg, #262340 0%, #1d1c2e 40%, var(--bg) 100%);
   color: var(--fg);
   font-family: var(--font);
 }

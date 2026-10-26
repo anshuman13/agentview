@@ -6,6 +6,7 @@ import { mkdirSync, unlinkSync, watch, writeFileSync, type FSWatcher } from 'nod
 import { readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { getSessionInfo } from '../agent/claude/sessions.js';
 import { claudeSession } from '../agent/claude/driver.js';
+import { rememberAccount } from '../agent/claude/accounts.js';
 import { configDef } from '../agent/claude/mcp.js';
 import type { AgentSession } from '../session/session.js';
 import type { Cron } from '../agent/types.js';
@@ -121,6 +122,7 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
   chat.onMessage((m) => {
     broadcast(m, chat);
     notifyAway(m, () => (viewers(chat) ? null : summary(chat)));
+    if (m.type === 'session' && chat.state.session.sessionId) rememberAccount(chat.state.session.sessionId, chat.state.session.account);
     if (m.type === 'session' && chat === lastViewed) remember(chat);
     const woke = stalls.seen(chat.id, chat.state.session.running);
     if (woke || m.type !== 'event' || m.event.kind === 'user') broadcastLive();
