@@ -22,6 +22,7 @@ export interface AssistantStore {
   update(row: ItemRow, patch: Patch): Promise<void>;
   editRow<K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>): Promise<void>;
   syncNow(): Promise<void>;
+  fetchTranscript(m: { profile: Profile; id: string }): Promise<number>;
 }
 
 export abstract class BaseStore {

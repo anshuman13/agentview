@@ -130,4 +130,12 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     const current = (this.tables[table].get(keyOf(row)) as Tables[K] | undefined) ?? row;
     this.put(table, edited(current, patch, Date.now()));
   };
+
+  fetchTranscript = async (m: { profile: Profile; id: string }) => {
+    const resp = await call('/api/assistant/transcripts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile: m.profile, id: m.id }) });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
+    await this.syncNow();
+    return Number(data?.saved ?? 0);
+  };
 }

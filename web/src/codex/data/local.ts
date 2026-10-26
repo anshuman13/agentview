@@ -228,4 +228,17 @@ export class LocalStore extends BaseStore implements AssistantStore {
     const times = keys.map((k) => `'$.${k}', ?`).join(', ');
     return this.edit(row, `${sets}, field_times = json_set(field_times, ${times})`, (now) => [...keys.map((k) => patch[k] ?? null), ...keys.map(() => now)]);
   };
+
+  fetchTranscript = async (m: { profile: Profile; id: string }) => {
+    const resp = await fetch(`${HUB}/transcripts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: m.profile, id: m.id }),
+      signal: AbortSignal.timeout(300000),
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    await this.syncNow();
+    return Number(data?.saved ?? 0);
+  };
 }

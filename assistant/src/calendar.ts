@@ -1,14 +1,14 @@
 import type { Database } from 'bun:sqlite';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir } from '../../server/src/agent/claude/accounts.js';
+import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
 import { applyChanges, type Change } from './sync.js';
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
-const PROFILES = { work: 'alt', personal: 'main' } as const;
-type Profile = keyof typeof PROFILES;
+export const PROFILES = { work: 'alt', personal: 'main' } as const;
+export type Profile = keyof typeof PROFILES;
 
 const Event = z.object({
   id: z.string(),
@@ -34,7 +34,7 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
     const old = row.get(profile, c.id) as Record<string, unknown> | null;
     return !old || Object.entries(c.fields).some(([k, v]) => old[k] !== v);
   });
-  const stale = db.prepare("SELECT id FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND starts_at >= ? AND starts_at < ? AND (notes IS NULL OR notes = '')").all(profile, from, to) as { id: string }[];
+  const stale = db.prepare("SELECT id FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND starts_at >= ? AND starts_at < ? AND (notes IS NULL OR notes = '') AND (summary IS NULL OR summary = '')").all(profile, from, to) as { id: string }[];
   if (events.length) for (const { id } of stale) if (!kept.has(id)) changes.push({ table: 'meetings', id, profile, updated_at: now, deleted: true, fields: {} });
   return applyChanges(db, changes).applied;
 }
@@ -47,6 +47,7 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
     events = a.events;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
+  if (isLimited(PROFILES[profile])) throw new Error('The Claude account is at its usage limit');
   const dir = configDir(PROFILES[profile]);
   const prompt = [
     `List my Google Calendar events on my primary calendar from ${new Date(from).toISOString()} to ${new Date(to).toISOString()}.`,
@@ -65,6 +66,11 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
       permissionMode: 'dontAsk',
     },
   })) {
+    const until = overageUntil(m);
+    if (until) {
+      markLimited(PROFILES[profile], until);
+      throw new Error('Stopped before using extra usage');
+    }
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Calendar import ended with ${m.subtype}`);
   }
   if (!events) throw new Error('Claude did not save any meetings');

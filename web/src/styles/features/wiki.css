@@ -225,6 +225,7 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .mt-sec { margin-top: var(--sp-20); }
 .mt-sec h2 { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-6); font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wider); color: var(--fg-faint); }
 .mt-sec h2 .codicon.icon { font-size: 12px; color: var(--accent); }
+.mt-sync { margin-left: auto; text-transform: none; letter-spacing: 0; }
 .mt-of { margin-left: var(--sp-2); padding: 1px var(--sp-4); border-radius: var(--radius-pill); background: var(--hover); color: var(--fg-muted); letter-spacing: 0; text-transform: none; font-weight: 500; }
 .mt-notes { display: block; width: 100%; min-height: 56px; resize: none; overflow: hidden; padding: var(--sp-6) var(--sp-8); margin: 0 calc(-1 * var(--sp-8)); width: calc(100% + 2 * var(--sp-8)); border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--fg); font-family: var(--font-doc); font-size: 16px; line-height: 1.6; outline: 0; transition: background var(--dur), border-color var(--dur); }
 .mt-notes:hover { background: color-mix(in srgb, var(--hover) 60%, transparent); }

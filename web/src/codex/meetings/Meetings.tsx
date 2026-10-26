@@ -194,6 +194,27 @@ function Notes({ m }: { m: Meeting }) {
   );
 }
 
+function TranscriptButton({ m }: { m: Meeting }) {
+  const { store } = useCodex();
+  const [busy, setBusy] = useState(false);
+  if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
+  const run = async () => {
+    setBusy(true);
+    try {
+      showSnack((await store.fetchTranscript(m)) ? 'Summary updated from the transcript' : 'No transcript found yet');
+    } catch (err) {
+      showSnack(`Transcript sync failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button className="btn sm mt-sync" disabled={busy} title="Read the Gemini notes and transcript for this meeting" onClick={run}>
+      <Icon name={busy ? 'loading' : 'sync'} small spin={busy} /> {busy ? 'Syncing' : 'Sync transcript'}
+    </button>
+  );
+}
+
 function MeetingPage({ m }: { m: Meeting }) {
   const { actions } = useCodex();
   const mine = live(actions).filter((a) => a.meeting_id === m.id);
@@ -227,8 +248,8 @@ function MeetingPage({ m }: { m: Meeting }) {
           </section>
 
           <section className="mt-sec">
-            <h2><Icon name="sparkle" small /> Summary</h2>
-            {m.summary ? <p className="mt-summary">{m.summary}</p> : <p className="mt-pending">The summary is written after the recording is transcribed.</p>}
+            <h2><Icon name="sparkle" small /> Summary<TranscriptButton m={m} /></h2>
+            {m.summary ? <p className="mt-summary">{m.summary}</p> : <p className="mt-pending">The summary is written from the Gemini transcript up to 30 minutes after the meeting.</p>}
           </section>
 
           {decisions.length > 0 && (

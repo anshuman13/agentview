@@ -5,6 +5,7 @@ import { readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion } from './db.js';
 import { startCalendar } from './calendar.js';
 import { startReminders } from './remind.js';
+import { startTranscripts, syncTranscript } from './transcripts.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 
 class BadRequest extends Error {
@@ -98,6 +99,29 @@ export function createServer(): http.Server {
         return;
       }
 
+      if (pathname === '/transcripts' && req.method === 'POST') {
+        let data: { profile?: unknown; id?: unknown };
+        try {
+          data = JSON.parse(await readBody(req, 10_000));
+        } catch {
+          data = {};
+        }
+        if ((data.profile !== 'work' && data.profile !== 'personal') || typeof data.id !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end('{"error":"Missing profile or id"}');
+          return;
+        }
+        try {
+          const saved = await syncTranscript(getDb(), data.profile, data.id);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ saved }));
+        } catch (err) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+        }
+        return;
+      }
+
       if (pathname === '/changes' && req.method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? '0');
         if (!Number.isInteger(since) || since < 0) {
@@ -146,7 +170,10 @@ async function start() {
   const server = createServer();
 
   startReminders(getDb);
-  if (process.env.ASSISTANT_CALENDAR !== '0') startCalendar(getDb);
+  if (process.env.ASSISTANT_CALENDAR !== '0') {
+    startCalendar(getDb);
+    startTranscripts(getDb);
+  }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);
   });
