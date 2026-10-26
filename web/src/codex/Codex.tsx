@@ -553,13 +553,13 @@ function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPr
   ].filter((x, i) => i === 0 || x.n > 0);
   const shown = (rs: ItemRow[]) => (
     <button className="ov-list" onClick={tasks}>
-      {rs.slice(0, 5).map((r) => <span key={r.profile + r.id}><Icon name="circle-large-outline" small /> {r.title}</span>)}
+      {rs.slice(0, 5).map((r) => <span key={r.profile + r.id}><Icon name="circle-large-outline" small /><span className="ov-t">{r.title}</span></span>)}
       {rs.length > 5 && <span className="muted">+{rs.length - 5} more</span>}
     </button>
   );
   return (
     <>
-      <div className="ov-stats">
+      <div className="ov-summary">
         {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
       </div>
       {s.next && (
@@ -571,7 +571,7 @@ function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPr
       {s.meetingsToday.length > 0 && (
         <section>
           <div className="as-section">Meetings today · {s.meetingsToday.length}</div>
-          <div className="mt-rows ov-meetings">{s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+          <div className="mt-rows ov-card">{s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
         </section>
       )}
       {dueToday.length > 0 && (
@@ -583,7 +583,7 @@ function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPr
       {(s.meetingsTomorrow.length > 0 || tomorrow.length > 0) && (
         <section>
           <div className="as-section later">Tomorrow</div>
-          {s.meetingsTomorrow.length > 0 && <div className="mt-rows ov-meetings">{s.meetingsTomorrow.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>}
+          {s.meetingsTomorrow.length > 0 && <div className="mt-rows ov-card">{s.meetingsTomorrow.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>}
           {tomorrow.length > 0 && shown(tomorrow)}
         </section>
       )}

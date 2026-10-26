@@ -183,16 +183,30 @@
 .workbench[data-codex='true'] .editor-group > :is(.tabs, .panel) { display: none; }
 
 /* Overview */
-.ov-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: var(--sp-4); }
-.ov-stat { --c: var(--c-blue); display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); padding: var(--sp-6) var(--sp-7); border: 1px solid color-mix(in srgb, var(--c) 25%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--c) 10%, var(--surface)); color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
-.ov-stat b { font-size: var(--fs-5xl); font-weight: 650; line-height: 1.1; color: color-mix(in srgb, var(--c) 45%, var(--fg-strong)); font-variant-numeric: tabular-nums; }
-.ov-stat.late { --c: var(--err); }
-.ov-stat.review { --c: var(--c-amber); }
-.ov-stat.done { --c: var(--c-green); }
-.ov-meetings { margin: 0; }
-.ov-meetings + .ov-list { margin-top: var(--sp-4); }
-.ov-list { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; }
-.ov-list > span { display: flex; align-items: center; gap: var(--sp-4); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-summary { display: flex; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.ov-stat { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: var(--sp-6) var(--sp-7); border: 0; background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
+.ov-stat + .ov-stat { border-left: 1px solid var(--border); }
+.ov-stat:hover { background: var(--sunken); }
+.ov-stat b { font-size: var(--fs-2xl); font-weight: 600; line-height: 1.2; color: var(--fg-strong); font-variant-numeric: tabular-nums; }
+.ov-stat.late b { color: var(--err); }
+.ov-stat.review b { color: var(--warn); }
+.ov-card { margin: 0; gap: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.ov-card .mt-row { gap: var(--sp-7); padding: var(--sp-5) var(--sp-7); border-radius: 0; }
+.ov-card { container-type: inline-size; }
+.ov-card .mt-title { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-card .mt-title .mt-badge { margin-left: var(--sp-4); }
+@container (max-width: 440px) { .ov-card .mt-avatars { display: none; } }
+.ov-card .mt-row + .mt-row { border-top: 1px solid var(--border); }
+.ov-card .mt-time { width: 44px; height: auto; align-items: flex-start; border: 0; background: none; }
+.ov-card .mt-time b { color: var(--fg-strong); }
+.ov-card .mt-row.past .mt-title, .ov-card .mt-row.past .mt-time b { color: var(--fg-muted); }
+.ov-card .mt-count.warn { padding: 0; background: none; color: var(--fg-faint); font-weight: 400; }
+.ov-card + .ov-list { margin-top: var(--sp-4); }
+.ov-list { display: flex; flex-direction: column; width: 100%; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; overflow: hidden; }
+.ov-list:hover { background: var(--sunken); }
+.ov-list > span { display: flex; align-items: center; gap: var(--sp-5); min-width: 0; padding: var(--sp-5) var(--sp-7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-list > span + span { border-top: 1px solid var(--border); }
+.ov-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ov-list .codicon.icon { flex: none; font-size: 12px; color: var(--fg-faint); }
 .ov-report { padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden; }
 .as-ask { flex: none; align-self: center; color: var(--fg); font-size: var(--fs-sm); font-weight: 600; }

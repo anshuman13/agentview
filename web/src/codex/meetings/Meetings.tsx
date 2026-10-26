@@ -54,14 +54,14 @@ export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
   return (
-    <button className="mt-row" onClick={() => setView({ list: 'meetings', open: meetingKey(m) })}>
+    <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => setView({ list: 'meetings', open: meetingKey(m) })}>
       <span className="mt-time"><b>{clock(m.starts_at!)}</b>{m.ends_at && <span>{clock(m.ends_at)}</span>}</span>
       <span className="mt-body">
         <span className="mt-title">{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
         <span className="wk-meta">
           {m.recorded_ms ? <span><Icon name="record" small /> {Math.round(m.recorded_ms / 60000)} min</span> : null}
           {m.starts_at! >= new Date(now).setHours(24, 0, 0, 0) && <span>{new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}</span>}
-          <span>{peopleOf(m).length} people</span>
+          {peopleOf(m).length > 0 && <span>{peopleOf(m).length === 1 ? '1 person' : `${peopleOf(m).length} people`}</span>}
         </span>
       </span>
       <Badge m={m} now={now} />
