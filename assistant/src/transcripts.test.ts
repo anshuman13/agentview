@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { dueMeetings, readSaved, saveNotes } from './transcripts.js';
+import { dueMeetings, markTried, readSaved, saveNotes } from './transcripts.js';
 
 const MIN = 60_000;
 const now = Date.parse('2026-10-26T16:00:00Z');
@@ -14,13 +14,21 @@ const meeting = (id: string, endedAgo: number, fields: Record<string, string> = 
 });
 
 describe('transcripts', () => {
-  it('picks calendar meetings without a summary that ended in the last 30 minutes', () => {
+  it('picks calendar meetings without a summary that ended in the last day, a few times', () => {
     const db = openDb(':memory:');
     applyChanges(db, [
-      meeting('cal:just', 1 * MIN), meeting('cal:edge', 30 * MIN), meeting('cal:old', 31 * MIN),
-      meeting('cal:later', -10 * MIN), meeting('cal:done', 5 * MIN, { summary: 'x' }), meeting('local', 5 * MIN),
+      meeting('cal:just', 1 * MIN), meeting('cal:hours', 5 * 60 * MIN), meeting('cal:old', 25 * 60 * MIN),
+      meeting('cal:later', -200 * MIN), meeting('cal:done', 5 * MIN, { summary: 'x' }), meeting('local', 5 * MIN),
     ]);
-    expect(dueMeetings(db, 'work', now).map((m) => m.id)).toEqual(['cal:edge', 'cal:just']);
+    const due = dueMeetings(db, 'work', now);
+    expect(due.map((m) => m.id)).toEqual(['cal:hours', 'cal:just']);
+    markTried(db, 'work', due, now);
+    expect(dueMeetings(db, 'work', now + 5 * MIN)).toEqual([]);
+    for (let i = 1; i < 4; i++) {
+      expect(dueMeetings(db, 'work', now + i * 20 * MIN)).toHaveLength(2);
+      markTried(db, 'work', due, now + i * 20 * MIN);
+    }
+    expect(dueMeetings(db, 'work', now + 120 * MIN)).toEqual([]);
   });
 
   it('saves summary and decisions and keeps notes I wrote', () => {
@@ -32,6 +40,14 @@ describe('transcripts', () => {
       { id: 'cal:a', summary: 'Done.', decisions: '["Ship it"]', notes: '- from Gemini' },
       { id: 'cal:b', summary: 'Done.', decisions: '["Ship it"]', notes: 'mine' },
     ]);
+  });
+
+  it('lets notes typed on a device that has not synced win over imported notes', () => {
+    const db = openDb(':memory:');
+    applyChanges(db, [meeting('cal:a', MIN)]);
+    saveNotes(db, 'work', [{ id: 'cal:a', summary: 'Done.', decisions: [], notes: '- from Gemini' }], now);
+    applyChanges(db, [{ table: 'meetings', id: 'cal:a', profile: 'work', updated_at: now - MIN, fields: { notes: 'typed' } }]);
+    expect(db.prepare('SELECT summary, notes FROM meetings').get()).toEqual({ summary: 'Done.', notes: 'typed' });
   });
 
   it('reads saved tool outputs in chunks and nothing else', () => {

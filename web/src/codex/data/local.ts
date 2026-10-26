@@ -1,8 +1,9 @@
 import { BaseStore, WIKI_TABLES, type AssistantStore, type Patch } from './store';
 import { edited, errorText, newCapture, runSync, toRow, type Dirty } from './engine';
-import { FIELDS, TABLE_FIELDS, mergeIncoming } from './sync';
+import { TABLE_FIELDS, mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
+import { showSnack } from '../view';
 
 const PATCHABLE = ['title', 'text', 'status', 'at', 'deleted'] as const;
 
@@ -24,7 +25,8 @@ export const tauriInvoke = () => window.__TAURI__?.core?.invoke ?? window.__TAUR
 
 const HUB = 'http://macmini.netbird.cloud:7790';
 const SYNC_EVERY = 60000;
-// Edits to the removed sample meetings and pages were saved on the phone; cleared once.
+// Edits to the removed sample meetings and pages were saved on the phone; cleared once, then everything is pulled again
+// because the clear also removed hub rows.
 const SAMPLE_GONE = Date.UTC(2026, 9, 26, 11);
 
 const table = (name: string) => `
@@ -44,10 +46,20 @@ const SCHEMA = `${['items', ...WIKI_TABLES].map(table).join('\n')}
   CREATE TABLE IF NOT EXISTS sync_state (key TEXT PRIMARY KEY, value TEXT);
 `;
 
-const upsertSQL = (name: string) => {
-  const cols = ['id', 'profile', 'version', 'updated_at', 'deleted', 'field_times', ...TABLE_FIELDS[name], 'dirty'];
-  const sets = cols.slice(2).map((c) => `${c} = excluded.${c}`).join(', ');
-  return { cols, sql: `INSERT INTO ${name} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')}) ON CONFLICT (profile, id) DO UPDATE SET ${sets}` };
+// SQL that writes row only if local is unchanged since it was read; it changes nothing when another write came first.
+const swapSQL = (name: string, row: SyncRow, local: SyncRow | undefined) => {
+  const cols = ['version', 'updated_at', 'deleted', 'field_times', ...TABLE_FIELDS[name], 'dirty'];
+  const r = row as unknown as Record<string, SqlValue>;
+  const values = cols.map((c) => r[c] ?? null);
+  return local
+    ? {
+      sql: `UPDATE ${name} SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE profile = ? AND id = ? AND updated_at = ? AND field_times = ?`,
+      params: [...values, row.profile, row.id, local.updated_at, local.field_times],
+    }
+    : {
+      sql: `INSERT OR IGNORE INTO ${name} (${cols.join(', ')}, profile, id) VALUES (${Array(cols.length + 2).fill('?').join(', ')})`,
+      params: [...values, row.profile, row.id],
+    };
 };
 
 async function post(since: number, changes: Change[]): Promise<Reply> {
@@ -109,6 +121,10 @@ export class LocalStore extends BaseStore implements AssistantStore {
         await this.invoke('assistant_batch', { sql: WIKI_TABLES.map((t) => `DELETE FROM ${t} WHERE updated_at < ${SAMPLE_GONE};`).join('\n') });
         await this.setState('sample_cleared', 1);
       }
+      if (!(await this.getState('sample_repulled'))) {
+        await this.setState('since', 0);
+        await this.setState('sample_repulled', 1);
+      }
       this.set({ phase: 'ready', message: '' });
       await this.refresh();
       this.syncNow();
@@ -131,37 +147,18 @@ export class LocalStore extends BaseStore implements AssistantStore {
     if (this.ready) this.set({ items, pages, facts, meetings, actions });
   }
 
-  private async applyChange(change: PulledChange) {
-    if (change.table !== 'items') return this.applyRow(change);
+  // Merges or edits a row with compare-and-swap, retrying when another write lands between the read and the write.
+  private async swap(name: string, profile: Profile, id: string, next: (local: SyncRow | undefined) => SyncRow) {
     for (let attempt = 0; attempt < 5; attempt++) {
-      const local = (await this.query('SELECT * FROM items WHERE profile = ? AND id = ?', [change.profile, change.id]))[0];
-      const m = toRow(mergeIncoming(local ?? null, change));
-      const values = [m.version, m.updated_at, m.deleted, m.field_times, ...FIELDS.map((f) => m[f]), m.dirty];
-      const changed = local
-        ? await this.exec(
-          `UPDATE items SET version = ?, updated_at = ?, deleted = ?, field_times = ?, ${FIELDS.map((f) => `${f} = ?`).join(', ')}, dirty = ?
-           WHERE profile = ? AND id = ? AND updated_at = ? AND field_times = ?`,
-          [...values, m.profile, m.id, local.updated_at, local.field_times],
-        )
-        : await this.exec(
-          `INSERT OR IGNORE INTO items (version, updated_at, deleted, field_times, ${FIELDS.join(', ')}, dirty, profile, id)
-           VALUES (${Array(values.length + 2).fill('?').join(', ')})`,
-          [...values, m.profile, m.id],
-        );
-      if (changed) return;
+      const local = (await this.query<SyncRow>(`SELECT * FROM ${name} WHERE profile = ? AND id = ?`, [profile, id]))[0];
+      const { sql, params } = swapSQL(name, next(local), local);
+      if (await this.exec(sql, params)) return;
     }
-    throw new Error(`Could not merge item ${change.id}`);
+    throw new Error(`Could not save ${name} row ${id}`);
   }
 
-  private async applyRow(change: PulledChange) {
-    const local = (await this.query<SyncRow>(`SELECT * FROM ${change.table} WHERE profile = ? AND id = ?`, [change.profile, change.id]))[0];
-    await this.write(change.table, toRow(mergeIncoming<SyncRow>(local ?? null, change)));
-  }
-
-  private write(name: string, row: SyncRow) {
-    const { cols, sql } = upsertSQL(name);
-    const values = row as unknown as Record<string, SqlValue>;
-    return this.exec(sql, cols.map((c) => values[c] ?? null));
+  private applyChange(change: PulledChange) {
+    return this.swap(change.table, change.profile, change.id, (local) => toRow(mergeIncoming<SyncRow>(local ?? null, change)));
   }
 
   // Wiki rows are pushed only once the hub has sent some, so a hub without the tables is never asked to store them.
@@ -173,11 +170,14 @@ export class LocalStore extends BaseStore implements AssistantStore {
   }
 
   editRow = async <K extends Table>(name: K, row: Tables[K], patch: Partial<Tables[K]>) => {
-    if (!this.ready) return;
-    const current = (await this.query<Tables[K]>(`SELECT * FROM ${name} WHERE profile = ? AND id = ?`, [row.profile, row.id]))[0] ?? row;
-    await this.write(name, edited(current, patch, Date.now()));
-    await this.refresh();
-    this.syncNow();
+    try {
+      if (!this.ready) throw new Error('Locked');
+      await this.swap(name, row.profile, row.id, (local) => edited((local as Tables[K] | undefined) ?? row, patch, Date.now()));
+      await this.refresh();
+      this.syncNow();
+    } catch (err) {
+      showSnack(`Not saved: ${errorText(err)}`);
+    }
   };
 
   protected syncOnce() {
@@ -217,7 +217,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
       await this.refresh();
       this.syncNow();
     } catch (err) {
-      if (this.ready) console.error('Edit failed', err);
+      showSnack(`Not saved: ${errorText(err)}`);
     }
   }
 

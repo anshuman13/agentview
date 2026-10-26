@@ -21,8 +21,11 @@ const Event = z.object({
 export type CalendarEvent = z.infer<typeof Event>;
 
 // Upserts the events as meetings and removes calendar meetings in the window that are gone, unless they have notes.
+// A meeting removed here comes back when its event reappears; one you deleted stays deleted.
 export function saveMeetings(db: Database, profile: Profile, events: CalendarEvent[], from: number, to: number, now = Date.now()) {
-  const row = db.prepare('SELECT title, starts_at, ends_at, people, calendar_url, deleted FROM meetings WHERE profile = ? AND id = ?');
+  const row = db.prepare('SELECT title, starts_at, ends_at, people, calendar_url, deleted, field_times FROM meetings WHERE profile = ? AND id = ?');
+  const swept = db.prepare('SELECT value FROM meta WHERE key = ?');
+  const sweptKey = (id: string) => `swept:${profile}:${id}`;
   const all: Change[] = events
     .filter((e) => !Number.isNaN(Date.parse(e.start)) && !Number.isNaN(Date.parse(e.end)))
     .map((e) => ({
@@ -30,13 +33,26 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
       fields: { title: e.title, starts_at: Date.parse(e.start), ends_at: Date.parse(e.end), people: JSON.stringify(e.people), calendar_url: e.url ?? null },
     }));
   const kept = new Set(all.map((c) => c.id));
+  const back: string[] = [];
   const changes = all.filter((c) => {
     const old = row.get(profile, c.id) as Record<string, unknown> | null;
+    if (old?.deleted) {
+      const at = (swept.get(sweptKey(c.id)) as { value: string } | null)?.value;
+      if (at && JSON.parse(String(old.field_times)).deleted === Number(at)) {
+        c.deleted = false;
+        back.push(c.id);
+        return true;
+      }
+    }
     return !old || Object.entries(c.fields).some(([k, v]) => old[k] !== v);
   });
   const stale = db.prepare("SELECT id FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND starts_at >= ? AND starts_at < ? AND (notes IS NULL OR notes = '') AND (summary IS NULL OR summary = '')").all(profile, from, to) as { id: string }[];
-  if (events.length) for (const { id } of stale) if (!kept.has(id)) changes.push({ table: 'meetings', id, profile, updated_at: now, deleted: true, fields: {} });
-  return applyChanges(db, changes).applied;
+  const gone = events.length ? stale.filter(({ id }) => !kept.has(id)).map(({ id }) => id) : [];
+  for (const id of gone) changes.push({ table: 'meetings', id, profile, updated_at: now, deleted: true, fields: {} });
+  const applied = applyChanges(db, changes).applied;
+  for (const id of back) db.prepare('DELETE FROM meta WHERE key = ?').run(sweptKey(id));
+  for (const id of gone) db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(sweptKey(id), String(now));
+  return applied;
 }
 
 export async function importCalendar(db: Database, profile: Profile, now = Date.now()) {
@@ -87,30 +103,41 @@ export function importDue(last: number, now = Date.now()) {
   return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= FIRST && d.getHours() <= LAST && last < hour;
 }
 
-let running: Promise<number> | null = null;
+const lastKey = (p: Profile) => `calendar:last:${p}`;
 
-// Imports both profiles and returns how many meetings changed; a second call while one runs joins it.
-export function syncCalendar(db: () => Database) {
+export function lastImport(db: Database, profile: Profile) {
+  const get = db.prepare('SELECT value FROM meta WHERE key = ?');
+  const row = (get.get(lastKey(profile)) ?? get.get('calendar:last')) as { value: string } | null;
+  return Number(row?.value ?? 0);
+}
+
+let running: Promise<{ changed: number; errors: string[] }> | null = null;
+
+// Imports the profiles and returns how many meetings changed and which profiles failed; a second call while one runs joins it.
+export function syncCalendar(db: () => Database, profiles = Object.keys(PROFILES) as Profile[], run = importCalendar) {
   return (running ??= (async () => {
-    let n = 0;
-    for (const profile of Object.keys(PROFILES) as Profile[]) {
+    let changed = 0;
+    const errors: string[] = [];
+    for (const profile of profiles) {
       try {
-        const changed = await importCalendar(db(), profile);
-        console.log(`calendar ${profile}: ${changed} meetings changed`);
-        n += changed;
+        const n = await run(db(), profile);
+        console.log(`calendar ${profile}: ${n} meetings changed`);
+        changed += n;
+        db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(lastKey(profile), String(Date.now()));
       } catch (err) {
-        console.error(`calendar ${profile}:`, err instanceof Error ? err.message : err);
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`calendar ${profile}:`, message);
+        errors.push(`${profile}: ${message}`);
       }
     }
-    db().prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('calendar:last', ?)").run(String(Date.now()));
-    return n;
+    return { changed, errors };
   })().finally(() => (running = null)));
 }
 
 export function startCalendar(db: () => Database, every = 15 * 60_000) {
   const run = () => {
-    const last = db().prepare("SELECT value FROM meta WHERE key = 'calendar:last'").get() as { value: string } | null;
-    if (importDue(Number(last?.value ?? 0))) void syncCalendar(db);
+    const due = (Object.keys(PROFILES) as Profile[]).filter((p) => importDue(lastImport(db(), p)));
+    if (due.length) void syncCalendar(db, due);
   };
   run();
   setInterval(run, every).unref();

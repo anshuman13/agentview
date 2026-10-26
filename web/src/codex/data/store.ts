@@ -29,7 +29,7 @@ export interface AssistantStore {
 export abstract class BaseStore {
   private subs = new Set<() => void>();
   private snap: Snapshot;
-  private syncing = false;
+  private running: Promise<void> | null = null;
   private again = false;
 
   constructor(phase: Snapshot['phase']) {
@@ -67,13 +67,17 @@ export abstract class BaseStore {
   protected abstract syncOnce(): Promise<void>;
   protected abstract refresh(): Promise<void>;
 
-  syncNow = async () => {
-    if (!this.ready) return;
-    if (this.syncing) {
+  // A call while a sync runs resolves after one more full sync, so it sees the changes made before the call.
+  syncNow = (): Promise<void> => {
+    if (!this.ready) return Promise.resolve();
+    if (this.running) {
       this.again = true;
-      return;
+      return this.running;
     }
-    this.syncing = true;
+    return (this.running = this.loop().finally(() => (this.running = null)));
+  };
+
+  private async loop() {
     this.setSync({ syncing: true });
     try {
       do {
@@ -84,11 +88,10 @@ export abstract class BaseStore {
         } catch (err) {
           if (this.ready) this.setSync({ error: errorText(err) });
         }
+        await this.refresh().catch(() => {});
       } while (this.again && this.ready);
     } finally {
-      this.syncing = false;
       this.setSync({ syncing: false });
     }
-    await this.refresh().catch(() => {});
-  };
+  }
 }

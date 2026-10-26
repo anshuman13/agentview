@@ -12,12 +12,14 @@ export type Reminder = { key: string; title: string; body: string; url: string }
 export function dueReminders(db: Database, now = Date.now()): Reminder[] {
   const sent = (key: string) => db.prepare('SELECT 1 FROM meta WHERE key = ?').get(`remind:${key}`);
   const out: Reminder[] = [];
-  const soon = db.prepare('SELECT * FROM meetings WHERE deleted = 0 AND starts_at > ? AND starts_at <= ?').all(now, now + BEFORE) as Meeting[];
+  const soon = db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND starts_at > ? AND starts_at <= ? ORDER BY profile = 'work' DESC").all(now, now + BEFORE) as Meeting[];
+  const seen = new Set<string>();
   for (const m of soon) {
-    const key = `start:${m.profile}:${m.id}:${m.starts_at}`;
-    if (sent(key)) continue;
+    const key = `start:${m.id}:${m.starts_at}`;
+    if (seen.has(key) || sent(key)) continue;
+    seen.add(key);
     const mins = Math.max(1, Math.round((m.starts_at! - now) / 60_000));
-    const open = db.prepare("SELECT title FROM actions WHERE deleted = 0 AND status = 'proposed' AND meeting_id IN (SELECT id FROM meetings WHERE profile = ? AND title = ? AND id != ?)").all(m.profile, m.title, m.id) as { title: string | null }[];
+    const open = db.prepare("SELECT title FROM actions WHERE deleted = 0 AND status = 'proposed' AND profile = ? AND meeting_id IN (SELECT id FROM meetings WHERE profile = ? AND title = ? AND id != ?)").all(m.profile, m.profile, m.title, m.id) as { title: string | null }[];
     const people = (() => { try { return (JSON.parse(m.people ?? '[]') as string[]).join(', '); } catch { return m.people; } })();
     const body = [people && `With ${people}`, open.length > 0 && `Open from last time: ${open.map((a) => a.title).join('; ')}`].filter(Boolean).join('\n');
     out.push({ key, title: `${m.title ?? 'Meeting'} in ${mins} min`, body, url: m.calendar_url ?? '' });

@@ -86,6 +86,7 @@ const header = (s: string) => (/^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffe
 export async function pushNtfy(title: string, subtitle: string, body: string, url: string) {
   const to = await ntfyUrl();
   if (!to) return false;
-  await fetch(to, { method: 'POST', headers: { Title: header(title), ...(url ? { Click: url } : {}) }, body: [subtitle, body].filter(Boolean).join('\n'), signal: AbortSignal.timeout(10_000) }).catch(() => {});
-  return true;
+  return fetch(to, { method: 'POST', headers: { Title: header(title), ...(url ? { Click: url } : {}) }, body: [subtitle, body].filter(Boolean).join('\n'), signal: AbortSignal.timeout(10_000) })
+    .then((r) => r.ok)
+    .catch(() => false);
 }

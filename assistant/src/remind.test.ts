@@ -26,3 +26,16 @@ it('reminds about a task when it comes due', () => {
   item.run('d', 'Long ago', 'open', now - 3600_000);
   expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Get burger buns']);
 });
+
+it('reminds once about a meeting in both calendars and keeps open actions to its profile', () => {
+  const db = openDb(':memory:');
+  const now = 1_000_000_000;
+  const meeting = db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES (?, ?, 1, 0, 'Sync', ?, ?)");
+  meeting.run('cal:e', 'work', now + 5 * 60_000, now + 3600_000);
+  meeting.run('cal:e', 'personal', now + 5 * 60_000, now + 3600_000);
+  meeting.run('cal:old', 'personal', now - 7 * 86400_000, now - 7 * 86400_000 + 3600_000);
+  db.prepare("INSERT INTO actions (id, profile, version, updated_at, meeting_id, title, status) VALUES ('x', 'work', 1, 0, 'cal:old', 'Other profile', 'proposed')").run();
+  const due = dueReminders(db, now);
+  expect(due).toHaveLength(1);
+  expect(due[0].body).toBe('');
+});

@@ -9,7 +9,9 @@ import { PROFILES, type Profile } from './calendar.js';
 import { applyChanges, type Change } from './sync.js';
 
 const MIN = 60_000;
-const AFTER = 30 * MIN;
+const WITHIN = 24 * 60 * MIN;
+const TRIES = 4;
+const RETRY = 20 * MIN;
 const CHUNK = 30_000;
 
 const Notes = z.object({
@@ -22,14 +24,31 @@ export type MeetingNotes = z.infer<typeof Notes>;
 
 type Pending = { id: string; title: string; starts_at: number; ends_at: number };
 
-// Calendar meetings without a summary that ended in the last 30 minutes.
+const tried = (profile: Profile, id: string) => `transcript:${profile}:${id}`;
+
+// Calendar meetings without a summary that ended in the last day, tried at most TRIES times, RETRY apart.
 export function dueMeetings(db: Database, profile: Profile, now = Date.now()): Pending[] {
-  return db.prepare(
+  const get = db.prepare('SELECT value FROM meta WHERE key = ?');
+  const rows = db.prepare(
     "SELECT id, title, starts_at, ends_at FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND (summary IS NULL OR summary = '') AND ends_at <= ? AND ends_at >= ? ORDER BY ends_at",
-  ).all(profile, now, now - AFTER) as Pending[];
+  ).all(profile, now, now - WITHIN) as Pending[];
+  return rows.filter((m) => {
+    const [count, last] = ((get.get(tried(profile, m.id)) as { value: string } | null)?.value ?? '0,0').split(',').map(Number);
+    return count < TRIES && now - last >= RETRY;
+  });
+}
+
+export function markTried(db: Database, profile: Profile, meetings: Pending[], now = Date.now()) {
+  const get = db.prepare('SELECT value FROM meta WHERE key = ?');
+  const set = db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
+  for (const m of meetings) {
+    const count = Number((get.get(tried(profile, m.id)) as { value: string } | null)?.value.split(',')[0] ?? 0);
+    set.run(tried(profile, m.id), `${count + 1},${now}`);
+  }
 }
 
 // Writes summary and decisions; notes only when the meeting has none, so your own notes stay.
+// Notes get the oldest field time so notes typed on a device that has not synced yet still win.
 export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[], now = Date.now()) {
   const row = db.prepare('SELECT notes FROM meetings WHERE profile = ? AND id = ? AND deleted = 0');
   const changes: Change[] = [];
@@ -38,7 +57,7 @@ export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[],
     if (!old || !n.summary.trim()) continue;
     const fields: Change['fields'] = { summary: n.summary.trim(), decisions: JSON.stringify(n.decisions) };
     if (!old.notes?.trim() && n.notes.trim()) fields.notes = n.notes.trim();
-    changes.push({ table: 'meetings', id: n.id, profile, updated_at: now, fields });
+    changes.push({ table: 'meetings', id: n.id, profile, updated_at: now, fields, ...(fields.notes ? { field_times: { notes: 1 } } : {}) });
   }
   return applyChanges(db, changes).applied;
 }
@@ -130,6 +149,7 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
     for (const profile of Object.keys(PROFILES) as Profile[]) {
       try {
         const due = dueMeetings(db(), profile);
+        markTried(db(), profile, due);
         const n = due.length ? await readTranscripts(db(), profile, due, Date.now()) : 0;
         if (n) console.log(`transcripts ${profile}: ${n} meetings summarized`);
       } catch (err) {

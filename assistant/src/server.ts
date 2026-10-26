@@ -101,9 +101,9 @@ export function createServer(): http.Server {
 
       if (pathname === '/calendar' && req.method === 'POST') {
         try {
-          const changed = await syncCalendar(getDb);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ changed }));
+          const { changed, errors } = await syncCalendar(getDb);
+          res.writeHead(errors.length ? 502 : 200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(errors.length ? { error: errors.join('; '), changed } : { changed }));
         } catch (err) {
           res.writeHead(502, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actionCount, contestOf, groupMeetings, pageClaims, pageStats, searchWiki, type Action, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, approveChanges, contestOf, groupMeetings, pageClaims, pageStats, searchWiki, type Action, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -24,6 +24,21 @@ describe('wiki', () => {
     expect(groups.map((g) => g.heading)).toEqual(['One', 'Two']);
     expect(groups[1].claims[0].old.map((f) => f.id)).toEqual(['b0']);
     expect(groups.flatMap((g) => g.claims).some((c) => c.fact.superseded_by)).toBe(false);
+  });
+
+  it('collects a whole superseded chain and keeps claims whose replacement is not live', () => {
+    const chain = [
+      fact('n', 'p1', 'One', 'Newest'),
+      fact('m', 'p1', 'One', 'Middle', { superseded_by: 'n', at: 2 }),
+      fact('o', 'p1', 'One', 'Oldest', { superseded_by: 'm', at: 1 }),
+      fact('k', 'p1', 'One', 'Kept', { superseded_by: 'r' }),
+      fact('r', 'p1', 'One', 'Rejected', { state: 'rejected' }),
+    ];
+    const claims = pageClaims(chain, 'p1')[0].claims;
+    expect(claims.map((c) => [c.fact.id, c.old.map((f) => f.id)])).toEqual([['n', ['m', 'o']], ['k', []]]);
+    expect(pageStats(chain, 'p1').claims).toBe(2);
+    const proposed = fact('x', 'p1', 'One', 'New', { state: 'proposed', replaces: 'k' });
+    expect(approveChanges(proposed, [], chain).map((c) => c.row.id)).toEqual(['x', 'k']);
   });
 
   it('counts claims and contested claims per page', () => {
@@ -62,7 +77,8 @@ describe('meetings', () => {
   });
 
   it('counts handled actions', () => {
-    const actions = [action('a1', 'm', 'proposed'), action('a2', 'm', 'approved'), action('a3', 'n', 'rejected')];
-    expect(actionCount(actions, 'm')).toEqual({ total: 2, handled: 1 });
+    const actions = [action('a1', 'm', 'proposed'), action('a2', 'm', 'approved'), action('a3', 'n', 'rejected'), { ...action('a4', 'm', 'approved'), profile: 'personal' as const }];
+    expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, handled: 1 });
+    expect(actionCount(actions, { profile: 'personal', id: 'm' })).toEqual({ total: 1, handled: 1 });
   });
 });

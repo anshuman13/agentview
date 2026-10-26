@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
-import { approveChanges, chatOf, contestOf, factTime, live, newPage, pageClaims, pageStats, proposals, searchWiki, sourcesOf, type Fact, type Page, type Source } from '../data/wiki';
+import { approveChanges, chatOf, contestOf, currentClaim, factTime, live, newPage, pageClaims, pageStats, proposals, searchWiki, sourcesOf, type Fact, type Page, type Source } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
@@ -29,7 +29,7 @@ function sections(pages: Page[]) {
 }
 
 function Overview({ page, facts, pages }: { page: Page; facts: Fact[]; pages: Page[] }) {
-  const current = live(facts).filter((f) => !f.superseded_by);
+  const current = live(facts).filter(currentClaim(facts));
   const contested = current.filter((f) => f.contested).length;
   const updated = Math.max(page.updated_at, ...current.map(factTime));
   return (
@@ -73,7 +73,7 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
   const entries = useMemo(() => {
     const replaced = new Set(facts.map((f) => f.superseded_by).filter(Boolean));
     return live(facts)
-      .filter((f) => !f.superseded_by)
+      .filter(currentClaim(facts))
       .map((f) => ({ fact: f, kind: (f.contested ? 'contested' : replaced.has(f.id) ? 'updated' : 'added') as FeedKind, at: factTime(f) }))
       .sort((a, b) => b.at - a.at);
   }, [facts]);
@@ -224,7 +224,7 @@ function ReviewCard({ fact }: { fact: Fact }) {
           </>
         ) : (
           <>
-            <button className="wk-act" onClick={() => setEditing(true)}><Icon name="edit" small /> Edit</button>
+            <button className="wk-act" onClick={() => { setText(fact.text ?? ''); setEditing(true); }}><Icon name="edit" small /> Edit</button>
             <span className="spacer" />
             <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={reject}><Icon name="close" /></button>
             <button className="btn primary mt-approve" onClick={approve}><Icon name="check" small /> Approve</button>
@@ -306,7 +306,7 @@ const SOURCE_NAME: Record<Source['kind'], [string, string]> = { meeting: ['meeti
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 function SourceChip({ s }: { s: Source }) {
-  const body = <><Icon name={SOURCE_ICON[s.kind]} small /> {s.label}</>;
+  const body = <><Icon name={SOURCE_ICON[s.kind]} small /> <span className="wk-src-text">{s.label}</span></>;
   return s.url ? <a className="wk-src" href={s.url} target="_blank" rel="noreferrer">{body}</a> : <span className="wk-src">{body}</span>;
 }
 

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
-import { actionCount, fieldsOf, groupMeetings, listOf, live, type Action, type Meeting } from '../data/wiki';
+import { actionCount, actionsOf, fieldsOf, groupMeetings, listOf, live, type Action, type Meeting } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { AskBar } from '../wiki/Wiki';
@@ -11,6 +11,7 @@ const HUES = ['--accent', '--claude', '--prompt', '--ok', '--warn', '--agent'];
 const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length]})`;
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 export const peopleOf = (m: Meeting) => (m.people?.startsWith('[') ? listOf(m.people) : (m.people ?? '').split(',')).map((p) => p.trim()).filter(Boolean);
+const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
 export const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
@@ -26,12 +27,12 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
 
 export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
   const { actions } = useCodex();
-  const count = actionCount(actions, m.id);
+  const count = actionCount(actions, m);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
   return (
-    <button className="mt-row" onClick={() => setView({ list: 'meetings', open: m.id })}>
+    <button className="mt-row" onClick={() => setView({ list: 'meetings', open: meetingKey(m) })}>
       <span className="mt-time"><b>{clock(m.starts_at!)}</b>{m.ends_at && <span>{clock(m.ends_at)}</span>}</span>
       <span className="mt-body">
         <span className="mt-title">{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
@@ -54,23 +55,35 @@ export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
 
 function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const { meetings, store } = useCodex();
+  const { filter } = useView();
   const [query, setQuery] = useState('');
   const [syncing, setSyncing] = useState(false);
-  const now = Date.now();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const shown = () => document.visibilityState === 'visible' && tick();
+    const t = setInterval(tick, 60_000);
+    document.addEventListener('visibilitychange', shown);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', shown);
+    };
+  }, []);
   const groups = useMemo(() => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-    const shown = words.length ? meetings.filter((m) => words.every((w) => `${m.title} ${m.people} ${m.notes} ${m.summary}`.toLowerCase().includes(w))) : meetings;
+    const mine = filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter);
+    const shown = words.length ? mine.filter((m) => words.every((w) => [m.title, m.people, m.notes, m.summary].map((x) => x ?? '').join(' ').toLowerCase().includes(w))) : mine;
     return groupMeetings(shown, now);
-  }, [meetings, query]);
+  }, [meetings, query, filter, now]);
   const takeNotes = () => {
     const t = Date.now();
     const id = crypto.randomUUID();
     const row: Meeting = {
-      id, profile: 'work', version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}',
+      id, profile: filter === 'personal' ? 'personal' : 'work', version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}',
       title: 'Notes', starts_at: t, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: '', summary: null, decisions: null,
     };
     void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
-    setView({ open: id });
+    setView({ open: meetingKey(row) });
   };
   const syncCalendar = async () => {
     setSyncing(true);
@@ -93,7 +106,7 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
           <Icon name="search" small />
           <input value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
         </label>
-        <button className="btn" disabled={syncing} title="Import the next days from Google Calendar (runs on its own every hour from 8 to 14 on weekdays)" onClick={syncCalendar}>
+        <button className="btn mt-cal" disabled={syncing} title="Import the next days from Google Calendar (runs on its own every hour from 8 to 14 on weekdays)" onClick={syncCalendar}>
           <Icon name={syncing ? 'loading' : 'sync'} small spin={syncing} /> <span>{syncing ? 'Syncing' : 'Sync calendar'}</span>
         </button>
         <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
@@ -161,7 +174,7 @@ function ActionCard({ a }: { a: Action }) {
       <div className="mt-action-foot">
         {a.status === 'proposed' && !editing && (
           <>
-            <button className="wk-act" onClick={() => setEditing(true)}><Icon name="edit" small /> Edit</button>
+            <button className="wk-act" onClick={() => { setTitle(a.title ?? ''); setBody(a.body ?? ''); setEditing(true); }}><Icon name="edit" small /> Edit</button>
             <span className="spacer" />
             <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => set('rejected', 'Action rejected')}><Icon name="close" /></button>
             <button className="btn primary mt-approve" onClick={() => set('approved', 'Approved')}><Icon name="check" small /> Approve</button>
@@ -193,19 +206,51 @@ function ActionCard({ a }: { a: Action }) {
   );
 }
 
+const SAVE_AFTER = 800;
+
+// Saves while you type, and before the page hides or the meeting closes; takes synced notes while the field is not focused.
 function Notes({ m }: { m: Meeting }) {
   const { store } = useCodex();
   const [text, setText] = useState(m.notes ?? '');
   const area = useRef<HTMLTextAreaElement>(null);
+  const row = useRef(m);
+  row.current = m;
+  const pending = useRef<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const flush = useCallback(() => {
+    clearTimeout(timer.current);
+    const t = pending.current;
+    pending.current = null;
+    if (t !== null && t !== (row.current.notes ?? '')) void store.editRow('meetings', row.current, { notes: t });
+  }, [store]);
+  useEffect(() => {
+    const hidden = () => document.visibilityState === 'hidden' && flush();
+    document.addEventListener('visibilitychange', hidden);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', hidden);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [flush]);
+  useEffect(() => {
+    if (pending.current === null && document.activeElement !== area.current) setText(m.notes ?? '');
+  }, [m.notes]);
   useEffect(() => {
     const el = area.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }, [text]);
+  const change = (value: string) => {
+    setText(value);
+    pending.current = value;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(flush, SAVE_AFTER);
+  };
   return (
     <textarea ref={area} className="mt-notes" value={text} rows={2} placeholder="Write your notes. They stay yours; the summary is written separately."
-      onChange={(e) => setText(e.target.value)} onBlur={() => text !== (m.notes ?? '') && void store.editRow('meetings', m, { notes: text })} />
+      onChange={(e) => change(e.target.value)} onBlur={flush} />
   );
 }
 
@@ -232,8 +277,8 @@ function TranscriptButton({ m }: { m: Meeting }) {
 
 function MeetingPage({ m }: { m: Meeting }) {
   const { actions } = useCodex();
-  const mine = live(actions).filter((a) => a.meeting_id === m.id);
-  const count = actionCount(actions, m.id);
+  const mine = actionsOf(actions, m);
+  const count = actionCount(actions, m);
   const decisions = listOf(m.decisions);
   const people = peopleOf(m);
   const back = () => setView({ open: null });
@@ -259,7 +304,7 @@ function MeetingPage({ m }: { m: Meeting }) {
 
           <section className="mt-sec">
             <h2>My notes</h2>
-            <Notes key={m.id} m={m} />
+            <Notes key={meetingKey(m)} m={m} />
           </section>
 
           <section className="mt-sec">
@@ -289,7 +334,8 @@ function MeetingPage({ m }: { m: Meeting }) {
 export function Meetings({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
   const { meetings } = useCodex();
-  const m = open ? live(meetings).find((x) => x.id === open) : undefined;
+  const rows = live(meetings);
+  const m = open ? rows.find((x) => meetingKey(x) === open) ?? rows.find((x) => x.id === open) : undefined;
   if (m) return <MeetingPage m={m} />;
   return <MeetingsList onMenu={onMenu} />;
 }
