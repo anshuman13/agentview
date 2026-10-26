@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MCP_BAD, type ChatEvent, type McpSchema, type McpServer, type McpTool } from '../../../shared/protocol';
-import { api, notice, send, useStore } from '../app/store';
+import { api, getState, notice, send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { ago, command, pressable, showChat, useTick } from '../ui/util';
 
@@ -204,6 +204,8 @@ export function McpPage() {
     setBusy(true);
     setError('');
     send({ type: 'mcp_status' });
+    // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
+    for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth') send({ type: 'mcp_reconnect', name: m.name });
     fetch(api(`/api/mcp/probe${refresh ? '?refresh=1' : ''}`))
       .then((r) => r.json())
       .then((p) => { if (Array.isArray(p)) { setProbed(p); setAt(Date.now()); } else setError(p?.error ?? 'Probe failed'); }, (e) => setError(e.message))
