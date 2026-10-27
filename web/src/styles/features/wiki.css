@@ -342,3 +342,8 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .jb-run .wk-meta .codicon.icon { font-size: 12px; }
 .jb-output { margin-top: var(--sp-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; color: var(--fg); }
 .jb-row .as-prof, .mt-when .as-prof { font-size: var(--fs-xs); font-weight: 600; }
+
+.sm-brief { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.sm-chat { text-decoration: none; }
+.sm-chat .mt-body { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.sm-text { color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.45; }

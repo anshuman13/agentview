@@ -41,7 +41,7 @@ const Chat = z.object({
 const Ask = z.object({
   url: z.string().describe('Permalink of the message'),
   from: z.string().describe('Who asked'),
-  chat: z.string().describe('#channel or DM'),
+  chat: z.string().describe('#channel-name, or "DM" for a direct message; never an id'),
   title: z.string().describe('Short imperative task for me'),
   quote: z.string().describe('The key sentence of the message'),
   urgent: z.boolean().describe('True only if someone is blocked on me, there is a deadline today, an incident, or I was pinged more than once'),

@@ -271,4 +271,12 @@ export class LocalStore extends BaseStore implements AssistantStore {
     await this.syncNow();
     return Number(data?.changed ?? 0);
   };
+
+  summarizeSlack = async () => {
+    const resp = await fetch(`${HUB}/slack/summary`, { method: 'POST', signal: AbortSignal.timeout(300000) });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    await this.syncNow();
+    return Number(data?.added ?? 0);
+  };
 }

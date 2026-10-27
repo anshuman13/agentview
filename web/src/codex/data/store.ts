@@ -27,6 +27,7 @@ export interface AssistantStore {
   parse(text: string, profile: Profile): Promise<Parsed>;
   fetchTranscript(m: { profile: Profile; id: string }): Promise<number>;
   syncCalendar(fresh?: number): Promise<number>;
+  summarizeSlack(): Promise<number>;
 }
 
 export abstract class BaseStore {
