@@ -5,8 +5,7 @@ import { FileIcon } from './Explorer';
 import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
 import { Hl } from '../ui/util';
-
-const cache = new Map<string, string[]>();
+import { fileCache as cache } from '../chat/Composer';
 
 export function FileSwitcher() {
   const open = useStore((s) => s.ui.switcherOpen);
@@ -22,6 +21,7 @@ export function FileSwitcher() {
 
   useEffect(() => {
     if (!open) return;
+    let live = true;
     setQ('');
     setIdx(0);
     setFiles(cache.get(cwd) ?? []);
@@ -29,10 +29,11 @@ export function FileSwitcher() {
       .then((r) => r.json())
       .then((f: string[]) => {
         cache.set(cwd, f);
-        setFiles(f);
+        if (live) setFiles(f);
       })
       .catch(() => {});
     if (!touch()) setTimeout(() => input.current?.focus(), 0);
+    return () => void (live = false);
   }, [open, cwd]);
 
   const results = useMemo(() => {

@@ -378,9 +378,11 @@ export function Observe() {
   };
 
   useEffect(() => {
+    let live = true;
     setInfo(null);
     setError('');
-    getJson<ObserveInfo>(api(`/api/observe${picked ? `?repo=${encodeURIComponent(picked)}` : ''}`)).then(show, (e) => setError(e.message));
+    getJson<ObserveInfo>(api(`/api/observe${picked ? `?repo=${encodeURIComponent(picked)}` : ''}`)).then((i) => live && show(i), (e) => live && setError(e.message));
+    return () => void (live = false);
   }, [picked, chat]);
 
   const commit = (v: string) => {

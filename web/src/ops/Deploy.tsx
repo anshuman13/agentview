@@ -47,13 +47,15 @@ export function Deploy() {
   const job = useJob(cwd);
   const root = useRef<HTMLDivElement>(null);
 
+  const seq = useRef(0);
   const load = () => {
+    const n = ++seq.current;
     setLoading(true);
     fetch(api(`/api/deploy/status${app ? `?app=${encodeURIComponent(app)}` : ''}`))
       .then((r) => r.json())
-      .then((r) => (r.error ? (setError(r.error), setStatus(null)) : (setError(''), setStatus(r))))
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
+      .then((r) => n === seq.current && (r.error ? (setError(r.error), setStatus(null)) : (setError(''), setStatus(r))))
+      .catch((e) => n === seq.current && setError(String(e)))
+      .finally(() => n === seq.current && setLoading(false));
   };
 
   useEffect(() => {

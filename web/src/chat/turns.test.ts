@@ -59,7 +59,7 @@ describe('buildTurns', () => {
       fable, result(fable, 'aborted', true),
     ]);
     const t = turns[0];
-    expect(t.commands).toEqual([{ id: push.id, label: 'Push to main', denied: true }]);
+    expect(t.commands).toEqual([{ id: push.id, label: 'Push to main', done: true, denied: true }]);
     expect(t.files).toEqual([]);
     expect(t.agents[0].state).toBe('denied');
     expect(t.steps.filter((s) => s.kind === 'file')).toMatchObject([{ path: '/w/a.ts', error: 'Denied', denied: true }]);

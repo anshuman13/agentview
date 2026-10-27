@@ -5,7 +5,7 @@ export { chatCost };
 import { buildTranscript, denied, firstLine, type Item, type ToolResult, type ToolUse } from './steps';
 
 export type FileFact = { path: string; add: number; del: number };
-export type CommandFact = { id: string; label: string; error?: string; denied?: boolean };
+export type CommandFact = { id: string; label: string; done?: boolean; error?: string; denied?: boolean };
 export type CommitFact = { hash: string; subject: string };
 export type AgentFact = { id: string; label: string; type: string; state: 'running' | 'done' | 'failed' | 'stopped' | 'denied' };
 export type NoteFact = { id: string; text: string; kind: 'done' | 'important' | 'fable' };
@@ -13,7 +13,7 @@ export type Blocked = Extract<ChatEvent, { kind: 'blocked' }>;
 
 // A failed command stops counting once a later command in the same turn succeeds.
 export function openFailures(commands: CommandFact[]) {
-  const ok = commands.map((c) => !c.error && !c.denied).lastIndexOf(true);
+  const ok = commands.map((c) => c.done && !c.error && !c.denied).lastIndexOf(true);
   return commands.filter((c, i) => c.error && i > ok);
 }
 
@@ -116,7 +116,7 @@ export function buildTurns(events: ChatEvent[]) {
     }
     if (e.name === 'Bash') {
       const cmd = str(e.input.command);
-      if (!e.parent) turn.commands.push({ id: e.id, label: str(e.input.description) || firstLine(cmd), ...(denied(result) ? { denied: true } : { error: result?.isError ? errorLine(result.text) : undefined }) });
+      if (!e.parent) turn.commands.push({ id: e.id, label: str(e.input.description) || firstLine(cmd), done: !!result, ...(denied(result) ? { denied: true } : { error: result?.isError ? errorLine(result.text) : undefined }) });
       if (result && !result.isError && /\bgit\b[\s\S]*\bcommit\b/.test(cmd)) {
         for (const m of result.text.matchAll(COMMIT)) turn.commits.push({ hash: m[2], subject: m[3].trim() });
       }

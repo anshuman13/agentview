@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MCP_BAD, type ChatEvent, type McpSchema, type McpServer, type McpTool } from '../../../shared/protocol';
 import { api, getState, notice, send, useStore } from '../app/store';
@@ -194,7 +194,7 @@ export function McpPage() {
   const mcp = useStore((s) => s.session.mcp);
   const account = useStore((s) => s.session.account);
   const id = useStore((s) => s.session.id);
-  const events = useStore((s) => s.events);
+  const toolKey = useStore((s) => `${s.events[0]?.id}:${s.events.reduce((n, e) => n + (e.kind === 'tool_use' || e.kind === 'tool_result' ? 1 : 0), 0)}`);
   const [probed, setProbed] = useState<McpServer[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [at, setAt] = useState(0);
@@ -204,17 +204,22 @@ export function McpPage() {
   const [showHidden, setShowHidden] = useState(false);
   const [accounts, setAccounts] = useState<Record<string, { name: string; status: string }[]>>({});
 
+  const seq = useRef(0);
   const load = (refresh = false) => {
+    const n = ++seq.current;
     setBusy(true);
     setError('');
     send({ type: 'mcp_status' });
     // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
     for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth') send({ type: 'mcp_reconnect', name: m.name });
-    fetch(api(`/api/mcp/connectors${refresh ? '?refresh=1' : ''}`)).then((r) => r.json()).then((a) => a && !a.error && setAccounts(a), () => undefined);
+    fetch(api(`/api/mcp/connectors${refresh ? '?refresh=1' : ''}`)).then((r) => r.json()).then((a) => n === seq.current && a && !a.error && setAccounts(a), () => undefined);
     fetch(api(`/api/mcp/probe${refresh ? '?refresh=1' : ''}`))
       .then((r) => r.json())
-      .then((p) => { if (Array.isArray(p)) { setProbed(p); setAt(Date.now()); } else setError(p?.error ?? 'Probe failed'); }, (e) => setError(e.message))
-      .finally(() => setBusy(false));
+      .then((p) => {
+        if (n !== seq.current) return;
+        if (Array.isArray(p)) { setProbed(p); setAt(Date.now()); } else setError(p?.error ?? 'Probe failed');
+      }, (e) => n === seq.current && setError(e.message))
+      .finally(() => n === seq.current && setBusy(false));
   };
   useEffect(() => load(), [id]);
   useEffect(() => {
@@ -223,8 +228,9 @@ export function McpPage() {
   useTick(15000);
 
   const setGroup = (service: string, group: Group | 'hidden' | 'shown') => {
+    const before = groups;
     setGroups((g) => { const { [service]: _, ...rest } = g; return group === 'shown' ? rest : { ...rest, [service]: group }; });
-    post('/api/mcp/groups', { service, group }).then((g) => { setGroups(g); window.dispatchEvent(new Event('agentview:mcp-groups')); }, (e) => notice(`Could not save the group: ${e.message}`));
+    post('/api/mcp/groups', { service, group }).then((g) => { setGroups(g); window.dispatchEvent(new Event('agentview:mcp-groups')); }, (e) => { setGroups(before); notice(`Could not save the group: ${e.message}`); });
   };
 
   const rows = useMemo(() => {
@@ -241,7 +247,7 @@ export function McpPage() {
     return [...merged, ...other];
   }, [probed, mcp, account, accounts]);
   const list = useMemo(() => services(rows), [rows]);
-  const usage = useMemo(() => mcpCalls(events), [events]);
+  const usage = useMemo(() => mcpCalls(getState().events), [toolKey]);
   const usageOf = (r: Row) => usage.get(slug(r.name));
   const current = rows.find((r) => rowKey(r) === sel) ?? null;
   const groupOf = (r: Row): Group => (r.account ? accountGroup(r.account) : groups[groupKey(r)] === 'personal' ? 'personal' : 'work');

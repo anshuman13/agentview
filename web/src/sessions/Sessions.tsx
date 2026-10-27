@@ -43,9 +43,11 @@ export function useWorkspace(key: unknown) {
   const [trees, setTrees] = useState(cached.trees);
   const [chats, setChats] = useState(cached.chats);
   useEffect(() => {
-    get('/api/repos').then((x) => x && setRepos((cached.repos = x)));
-    get('/api/sessions').then((x) => x && setChats((cached.chats = x)));
-    get('/api/worktrees').then((x) => x && setTrees((cached.trees = x)));
+    let live = true;
+    get('/api/repos').then((x) => live && x && setRepos((cached.repos = x)));
+    get('/api/sessions').then((x) => live && x && setChats((cached.chats = x)));
+    get('/api/worktrees').then((x) => live && x && setTrees((cached.trees = x)));
+    return () => void (live = false);
   }, [key]);
   const folders = useMemo(() => buildFolders(repos, trees, chats), [repos, trees, chats]);
   return { folders, chats, setTrees, setChats };
@@ -188,7 +190,7 @@ export function RepoPicker() {
 export function Sessions() {
   const current = useStore((s) => s.session.sessionId);
   const cwd = useStore((s) => s.session.cwd);
-  const lastEvent = useStore((s) => s.events[s.events.length - 1]);
+  const lastSystem = useStore((s) => { const e = s.events[s.events.length - 1]; return e?.kind === 'system' ? e.id : null; });
   const { folders, setTrees, setChats } = useWorkspace(current + cwd);
   const live = useStore((s) => s.live);
   const [filter, setFilter] = useState('');
@@ -204,8 +206,8 @@ export function Sessions() {
   const [creating, setCreating] = useState<{ repo: string; branch: string } | null>(null);
 
   useEffect(() => {
-    if (lastEvent?.kind === 'system') setOpening(null);
-  }, [lastEvent]);
+    if (lastSystem) setOpening(null);
+  }, [lastSystem]);
 
   useEffect(() => setOpening(null), [current, cwd]);
 

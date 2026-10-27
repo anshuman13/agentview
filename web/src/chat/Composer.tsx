@@ -120,7 +120,7 @@ export const repeatPill = (r: { every: number; until: number | null; round: numb
   r.goal ? `Goal ${r.round}/${MAX_GOAL_ROUNDS}${r.nextAt ? ` · next ${clock(r.nextAt)}` : ''}` : once(r) ? `Continue at ${clock(r.nextAt!)}` : `Loop ${r.round}${r.nextAt ? ` · next ${clock(r.nextAt)}` : ''}${r.until ? ` · until ${clock(r.until)}` : ''}`;
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? `${PHASES[loop.phase] ?? loop.phase}${['plan', 'build', 'test'].includes(loop.phase) && loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 const MAX_HEIGHT = 220;
-const fileCache = new Map<string, string[]>();
+export const fileCache = new Map<string, string[]>();
 
 const draftKey = (chat: string) => `agentview.draft.${chat}`;
 
@@ -228,9 +228,10 @@ export function Composer() {
 
   useEffect(() => {
     if (trigger?.kind !== 'file' || !cwd) return;
-    const cached = fileCache.get(cwd);
-    if (cached) { setFiles(cached); return; }
-    fetch(api('/api/files')).then((r) => r.json()).then((f: string[]) => { fileCache.set(cwd, f); setFiles(f); }).catch(() => {});
+    let live = true;
+    setFiles(fileCache.get(cwd) ?? []);
+    fetch(api('/api/files')).then((r) => r.json()).then((f: string[]) => { fileCache.set(cwd, f); if (live) setFiles(f); }).catch(() => {});
+    return () => void (live = false);
   }, [trigger?.kind, cwd]);
 
   useEffect(() => {

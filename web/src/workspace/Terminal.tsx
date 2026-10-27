@@ -80,6 +80,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
   const clears = useRef(new Map<string, () => void>());
   const inputs = useRef(new Map<string, (d: string) => void>());
   const wasOpen = useRef(open);
+  const starting = useRef(false);
   const url = (q = '') => apiUrl(`/api/terms?chat=${encodeURIComponent(chat)}${q}`);
 
   const load = async () => {
@@ -108,9 +109,10 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
   };
 
   useEffect(() => {
-    if (!open || !chat) return;
-    if (!tabs) load().then((l) => { if (!l.length) void add(); }).catch(() => {});
-    else if (!tabs.length) void add();
+    if (!open || !chat || starting.current) return;
+    if (tabs?.length) return;
+    starting.current = true;
+    (tabs ? add() : load().then((l) => (l.length ? undefined : add()))).catch(() => {}).finally(() => (starting.current = false));
   }, [open, chat]);
 
   useEffect(() => {

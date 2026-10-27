@@ -116,11 +116,11 @@ function ExplorerView({ cwd }: { cwd: string }) {
   const fetchDir = (p: string) => {
     loading.current.add(p);
     fetch(api(`/api/dir?path=${encodeURIComponent(p)}`))
-      .then((r) => (r.ok ? r.json() : []))
-      .catch(() => [])
-      .then((list: Entry[]) => {
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((list: Entry[] | null) => {
         loading.current.delete(p);
-        setDirs((d) => ({ ...d, [p]: list }));
+        if (list) setDirs((d) => ({ ...d, [p]: list }));
       });
   };
   const refresh = (paths = Object.keys(dirsRef.current)) => paths.forEach(fetchDir);

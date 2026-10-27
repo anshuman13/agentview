@@ -85,21 +85,27 @@ export function Brief() {
     window.addEventListener('open-agent', open);
     return () => window.removeEventListener('open-agent', open);
   }, []);
-  useEffect(() => { setShowAgents(false); setAgentSel(null); }, [sessionId]);
+  useEffect(() => { setShowAgents(false); setAgentSel(null); setAll(false); }, [sessionId]);
 
   // On opening a chat, sum what happened after the last event this browser saw; then keep the seen id current while the chat is on screen.
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
+  const lastId = events.at(-1)?.id;
+  const mark = () => { if (document.visibilityState === 'visible' && root.current?.getClientRects().length) markSeen(sessionId, eventsRef.current); };
   useEffect(() => {
-    if (!sessionId || !events.length) return;
+    if (!sessionId || !lastId) return;
     if (recapFor.current !== sessionId) {
       recapFor.current = sessionId;
-      const r = recap(events, readSeen(sessionId), waiting);
+      const r = recap(eventsRef.current, readSeen(sessionId), waiting);
       setSince(r ? { chat: sessionId, text: recapText(r) } : null);
     }
-    const mark = () => { if (document.visibilityState === 'visible' && root.current?.getClientRects().length) markSeen(sessionId, events); };
     mark();
+  }, [sessionId, lastId]);
+  useEffect(() => {
+    if (!sessionId) return;
     document.addEventListener('visibilitychange', mark);
     return () => document.removeEventListener('visibilitychange', mark);
-  }, [sessionId, events]);
+  }, [sessionId]);
   const dismissSince = () => { markSeen(sessionId, events); setSince(null); };
 
   // The end marker sits inside the sticky foot, so scrollIntoView never moves the list; scroll the pane itself.
