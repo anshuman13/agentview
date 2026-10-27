@@ -1,0 +1,55 @@
+import { describe, expect, test } from 'bun:test';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { openDb } from './db.js';
+import { acceptAsk, askId, pushHours, saveScan, scanDue, slackConfig } from './slack.js';
+
+const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
+const ask = (url: string, urgent = false) => ({ url, from: 'Kim', chat: '#ai', title: 'Answer Kim', quote: 'Can you check?', urgent });
+const item = (db: ReturnType<typeof openDb>, url: string) => db.prepare('SELECT status, source, people FROM items WHERE id = ?').get(askId(url)) as { status: string; source: string; people: string } | null;
+
+describe('saveScan', () => {
+  test('saves chats and new asks for review, and returns only new urgent asks', () => {
+    const db = openDb(':memory:');
+    const urgent = saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.' }], asks: [ask('u1', true), ask('u2')], answered: [] }, at(27, 10));
+    expect(urgent.map((a) => a.url)).toEqual(['u1']);
+    expect(item(db, 'u1')).toEqual({ status: 'suggested', source: 'slack', people: 'Kim · #ai' });
+    expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
+    expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual([]);
+  });
+
+  test('closes answered asks I have not taken, and leaves accepted ones', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [], asks: [ask('u1'), ask('u2')], answered: [] }, at(27, 10));
+    acceptAsk(db, askId('u2'));
+    saveScan(db, { chats: [], asks: [], answered: ['u1', 'u2'] }, at(27, 11));
+    expect(item(db, 'u1')!.status).toBe('done');
+    expect(item(db, 'u2')!.status).toBe('open');
+  });
+});
+
+test('reads every quarter hour on weekday working hours', () => {
+  expect(scanDue(0, at(27, 10))).toBe(true);
+  expect(scanDue(at(27, 10, 1), at(27, 10, 14))).toBe(false);
+  expect(scanDue(at(27, 10, 1), at(27, 10, 15))).toBe(true);
+  expect(scanDue(0, at(27, 20))).toBe(false);
+  expect(scanDue(0, at(31, 10))).toBe(false);
+});
+
+test('pushes only inside the configured hours', () => {
+  const c = { me: 'U1', domain: 'x', channels: [], push: { from: 8, to: 17 } };
+  expect(pushHours(c, at(27, 8))).toBe(true);
+  expect(pushHours(c, at(27, 17))).toBe(false);
+  expect(pushHours(c, at(25, 10))).toBe(false);
+});
+
+test('reads the config and ignores a broken one', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slack-'));
+  fs.writeFileSync(path.join(dir, 'ok.json'), '{"me":"U1","domain":"x","channels":["a"]}');
+  fs.writeFileSync(path.join(dir, 'bad.json'), '{"channels":"a"}');
+  expect(slackConfig(path.join(dir, 'ok.json'))?.channels).toEqual(['a']);
+  expect(slackConfig(path.join(dir, 'bad.json'))).toBeNull();
+  expect(slackConfig(path.join(dir, 'missing.json'))).toBeNull();
+  fs.rmSync(dir, { recursive: true });
+});

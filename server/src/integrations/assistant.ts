@@ -18,6 +18,9 @@ export async function assistantRoute(method: string, url: URL, body: () => Promi
   } else if (route === '/transcripts' && method === 'POST') {
     target = '/transcripts';
     init = { signal: AbortSignal.timeout(300_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
+  } else if (route === '/slack/summary' && method === 'POST') {
+    target = '/slack/summary';
+    init = { signal: AbortSignal.timeout(300_000), method: 'POST' };
   } else if (route === '/calendar' && method === 'POST') {
     const fresh = Number(url.searchParams.get('fresh'));
     target = Number.isFinite(fresh) && fresh > 0 ? `/calendar?fresh=${fresh}` : '/calendar';

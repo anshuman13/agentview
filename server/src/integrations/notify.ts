@@ -83,10 +83,10 @@ async function ntfyUrl() {
 // HTTP header values must be ASCII; ntfy accepts RFC 2047 for the rest.
 const header = (s: string) => (/^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.from(s).toString('base64')}?=`);
 
-export async function pushNtfy(title: string, subtitle: string, body: string, url: string) {
+export async function pushNtfy(title: string, subtitle: string, body: string, url: string, actions = '') {
   const to = await ntfyUrl();
   if (!to) return false;
-  return fetch(to, { method: 'POST', headers: { Title: header(title), ...(url ? { Click: url } : {}) }, body: [subtitle, body].filter(Boolean).join('\n'), signal: AbortSignal.timeout(10_000) })
+  return fetch(to, { method: 'POST', headers: { Title: header(title), ...(url ? { Click: url } : {}), ...(actions ? { Actions: header(actions) } : {}) }, body: [subtitle, body].filter(Boolean).join('\n'), signal: AbortSignal.timeout(10_000) })
     .then((r) => r.ok)
     .catch(() => false);
 }

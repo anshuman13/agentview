@@ -8,6 +8,7 @@ import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
 import { parseTask } from './parse.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
+import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 
 class BadRequest extends Error {
@@ -162,6 +163,25 @@ export function createServer(): http.Server {
         return;
       }
 
+      if (pathname === '/slack/summary' && req.method === 'POST') {
+        try {
+          const r = await summarizeSlack(getDb());
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ added: r.added.length }));
+        } catch (err) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+        }
+        return;
+      }
+
+      if (pathname === '/slack/accept' && req.method === 'POST') {
+        const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '');
+        res.writeHead(ok ? 200 : 404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(ok ? { ok } : { error: 'No such Slack task' }));
+        return;
+      }
+
       if (pathname === '/changes' && req.method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? '0');
         if (!Number.isInteger(since) || since < 0) {
@@ -215,6 +235,7 @@ async function start() {
     startCalendar(getDb);
     startTranscripts(getDb);
     startJobs(getDb);
+    startSlack(getDb);
   }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);

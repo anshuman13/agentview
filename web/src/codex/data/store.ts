@@ -2,7 +2,7 @@ import { edited, errorText } from './engine';
 import type { ItemFields, ItemRow, Profile } from './sync';
 import type { Table, Tables } from './wiki';
 
-export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs'];
+export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'];
 
 export type SyncStatus = { syncing: boolean; last: number; error: string };
 export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'rolls' | 'rolled_from'>> & { deleted?: number };
@@ -36,7 +36,7 @@ export abstract class BaseStore {
   private again = false;
 
   constructor(phase: Snapshot['phase']) {
-    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '' }, pages: [], facts: [], meetings: [], actions: [], jobs: [], runs: [] };
+    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '' }, pages: [], facts: [], meetings: [], actions: [], jobs: [], runs: [], chats: [], briefs: [] };
   }
 
   subscribe = (fn: () => void) => {

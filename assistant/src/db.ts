@@ -17,6 +17,8 @@ export const TABLES: Record<string, string[]> = {
   embeddings: ['owner_type', 'owner_id', 'model', 'vector'],
   jobs: ['name', 'schedule', 'prompt', 'enabled', 'next_run_at'],
   runs: ['job_id', 'started_at', 'finished_at', 'status', 'output'],
+  chats: ['name', 'kind', 'url', 'summary', 'last_at'],
+  briefs: ['kind', 'text', 'from_at', 'to_at'],
 };
 
 const COMMON_COLUMNS = `
