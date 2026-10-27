@@ -142,6 +142,8 @@
   .timeline-head { height: var(--touch); }
   .timeline-head .icon-btn, .step .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .timeline-head .mac-here { display: inline-flex; align-items: center; gap: var(--sp-2); max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fg); }
+  .timeline-head .mobile-usage .item { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-2); border: 0; background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .timeline-head .mobile-usage .item.warn { color: var(--warn); }
   .tl-view { min-height: var(--touch-sm); }
   .tc, .tl-now { font-size: var(--fs-md); line-height: var(--line-md); }
   .tc-label, .tc-err, .tc-agent .state { font-size: var(--fs-sm); }

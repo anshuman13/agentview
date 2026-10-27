@@ -175,17 +175,18 @@
 /* Aubergine: dark neutrals tinted toward hue 310. */
 :root[data-theme='aubergine'] {
   color-scheme: dark;
-  --sunken: #0f0715;
-  --bg: #130c19;
-  --surface: #1b1221;
-  --raised: #23192a;
-  --hover: #2b2233;
-  --border: #302737;
-  --border-strong: #3f3745;
-  --border-card: #544c5a;
-  --fg-faint: #7e7784;
-  --fg-muted: #a59fa9;
-  --fg: #d3cfd6;
+  --accent-main: #cf8de4;
+  --sunken: #120217;
+  --bg: #1a0720;
+  --surface: #24102a;
+  --raised: #2c1932;
+  --hover: #36233b;
+  --border: #3a2940;
+  --border-strong: #49394e;
+  --border-card: #5e4f62;
+  --fg-faint: #8d8191;
+  --fg-muted: #b0a7b3;
+  --fg: #d7d2d9;
   --fg-strong: #f3f1f4;
   --hue-violet: #b298f9;
   --hue-amber: #e7963d;
@@ -197,7 +198,7 @@
   --hue-red: #f7857d;
   --hue-sky: #00c0e1;
   --hue-orange: #f28c5c;
-  --on-accent: #130c19;
+  --on-accent: #1a0720;
   --on-color: #ffffff;
   --link: var(--hue-blue);
   --prompt: var(--hue-blue);
@@ -213,7 +214,7 @@
   --t-run: var(--hue-yellow);
   --t-web: var(--hue-sky);
   --t-mcp: var(--hue-magenta);
-  --app-gradient: radial-gradient(80% 50% at 0% 0%, #2e193c, transparent 70%);
+  --app-gradient: radial-gradient(90% 60% at 0% 0%, #3f1d4a, transparent 75%);
   --syn-keyword: #bca9f7;
   --syn-string: #82cb92;
   --syn-operator: #a59fa9;
@@ -228,6 +229,7 @@
 /* Forest: dark neutrals tinted toward hue 170. */
 :root[data-theme='forest'] {
   color-scheme: dark;
+  --accent-main: var(--hue-green);
   --sunken: #010f09;
   --bg: #04130e;
   --surface: #071a14;
@@ -331,8 +333,8 @@
   --syn-invalid: var(--hue-red);
 }
 
-/* Each view keeps its own accent in every theme: chat violet, code blue, Codex amber, wiki teal. */
-:root, .main.pane { --accent: var(--hue-violet); }
+/* Each view keeps its own accent: chat uses the theme's own colour (violet by default), code blue, Codex amber, wiki teal. */
+:root, .main.pane { --accent: var(--accent-main, var(--hue-violet)); }
 .editor-group { --accent: var(--hue-blue); }
 .workbench[data-codex='true'] .editor-group, .as-nav, .as-drawer { --accent: var(--hue-amber); }
 .assistant[data-list='wiki'] { --accent: var(--hue-teal); }

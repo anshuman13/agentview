@@ -17,6 +17,7 @@ import { agentCounts, agentsOf } from './agents';
 import { REVIEW_LOCAL } from '../ops/Findings';
 import { ago, plural, readFlag, saveFlag, useTick } from '../ui/util';
 import { useMacName } from '../app/MacsPopover';
+import { UsageItem } from '../app/StatusItems';
 import { BIG_BRO, type PendingRequest } from '../../../shared/protocol';
 
 const SHOWN_TURNS = 5;
@@ -133,6 +134,7 @@ export function Brief() {
           <span className="spacer" />
           <span className="mobile-only"><AgentsChip /></span>
           <InboxChip />
+          <span className="mobile-only mobile-usage"><UsageItem /></span>
           {macName && <span className="mobile-only mac-here"><Icon name="vm" small /> {macName}</span>}
           {extras && <span className="extras">{extras}</span>}
           {(agents.length > 0 || showAgents) && (
