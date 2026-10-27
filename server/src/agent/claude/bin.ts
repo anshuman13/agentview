@@ -39,6 +39,11 @@ export async function removeSession(id: string, purge: boolean) {
   return { purged: false };
 }
 
+export async function emptyBin() {
+  for (const b of await load()) await deleteSession(b.sessionId, { dir: b.cwd }).catch(() => undefined);
+  await save([]);
+}
+
 export async function restoreSession(id: string) {
   await save((await load()).filter((b) => b.sessionId !== id));
 }

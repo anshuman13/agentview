@@ -13,7 +13,7 @@ import { listSessions } from './agent/claude/sessions.js';
 import { ntfyTopic, post } from './integrations/notify.js';
 import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
-import { listBin, removeSession, restoreSession } from './agent/claude/bin.js';
+import { emptyBin, listBin, removeSession, restoreSession } from './agent/claude/bin.js';
 import { listDir, listFiles, readFileWithOriginal, readImage } from './workspace/files.js';
 import { github } from './integrations/github.js';
 import { assistantRoute } from './integrations/assistant.js';
@@ -215,6 +215,10 @@ const server = http.createServer(async (req, res) => {
       const open = bySession(id);
       if (open) await closeByUser(open);
       return json(await removeSession(id, url.searchParams.has('purge')));
+    }
+    if (url.pathname === '/api/sessions/bin' && req.method === 'DELETE') {
+      await emptyBin();
+      return json({ ok: true });
     }
     if (url.pathname === '/api/sessions/bin') return json(await listBin());
     if (url.pathname === '/api/sessions/restore' && req.method === 'POST') {

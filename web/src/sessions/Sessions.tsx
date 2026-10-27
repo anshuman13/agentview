@@ -512,6 +512,17 @@ function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: 
     setList((l) => l.filter((x) => x.sessionId !== b.sessionId));
     onRestore(b);
   };
+  const empty = () => ask({
+    title: 'Empty the bin?',
+    detail: `${list.length} ${list.length === 1 ? 'chat' : 'chats'}`,
+    warning: 'The transcripts are removed permanently.',
+    action: 'Empty bin',
+    run: async () => {
+      const r = await fetch(apiUrl('/api/sessions/bin'), { method: 'DELETE' });
+      if (!r.ok) return notice('Could not empty the bin');
+      setList([]);
+    },
+  });
   const left = (b: BinnedSession) => `${Math.max(1, Math.round((b.deletedAt + BIN_MS - Date.now()) / 3600000))}h left`;
   return (
     <div className="bin">
@@ -520,6 +531,9 @@ function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: 
         <Icon name="trash" small />
         <span className="name">Bin</span>
         <span className="meta"><span className="count">{list.length}</span></span>
+        <span className="acts">
+          <button className="icon-btn" title="Empty bin" onClick={(e) => { e.stopPropagation(); empty(); }}><Icon name="close" small /></button>
+        </span>
       </div>
       {open && list.map((b) => (
         <div key={b.sessionId} className="row session recent" title={`${b.title}\n${b.cwd}\nDeleted for good after 24 hours`}>
