@@ -3,13 +3,13 @@ import { BaseStore } from './store';
 
 class Fake extends BaseStore {
   runs = 0;
-  release: (() => void)[] = [];
+  release: ((changed: boolean) => void)[] = [];
   constructor() {
     super('ready');
   }
   protected syncOnce() {
     this.runs++;
-    return new Promise<void>((r) => this.release.push(r));
+    return new Promise<boolean>((r) => this.release.push(r));
   }
   protected async refresh() {}
 }
@@ -23,11 +23,11 @@ describe('syncNow', () => {
     await tick();
     let done = false;
     const second = s.syncNow().then(() => (done = true));
-    s.release.shift()!();
+    s.release.shift()!(true);
     await tick();
     expect(done).toBe(false);
     expect(s.runs).toBe(2);
-    s.release.shift()!();
+    s.release.shift()!(true);
     await Promise.all([first, second]);
     expect(done).toBe(true);
     expect(s.runs).toBe(2);

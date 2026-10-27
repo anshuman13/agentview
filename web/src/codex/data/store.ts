@@ -67,7 +67,8 @@ export abstract class BaseStore {
     this.set({ [table]: rows.some(same) ? rows.map((r) => (same(r) ? next : r)) : [...rows, next] } as Partial<Snapshot>);
   };
 
-  protected abstract syncOnce(): Promise<void>;
+  // Resolves true when it pushed or pulled any row.
+  protected abstract syncOnce(): Promise<boolean>;
   protected abstract refresh(): Promise<void>;
 
   // A call while a sync runs resolves after one more full sync, so it sees the changes made before the call.
@@ -85,13 +86,14 @@ export abstract class BaseStore {
     try {
       do {
         this.again = false;
+        let changed = true;
         try {
-          await this.syncOnce();
+          changed = await this.syncOnce();
           if (this.ready) this.setSync({ last: Date.now(), error: '' });
         } catch (err) {
           if (this.ready) this.setSync({ error: errorText(err) });
         }
-        await this.refresh().catch(() => {});
+        if (changed) await this.refresh().catch(() => {});
       } while (this.again && this.ready);
     } finally {
       this.setSync({ syncing: false });

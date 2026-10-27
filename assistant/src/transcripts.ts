@@ -214,24 +214,25 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
   const run = async () => {
     if (busy) return;
     busy = true;
-    for (const profile of Object.keys(PROFILES) as Profile[]) {
-      const due = dueMeetings(db(), profile);
-      if (!due.length) continue;
-      try {
-        const { found } = await readTranscripts(db(), profile, due, Date.now());
-        markTried(db(), profile, due.filter((m) => !found.has(m.id)));
-        if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
-      } catch (err) {
-        markTried(db(), profile, due, Date.now(), true);
-        console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
-      }
-    }
     try {
+      for (const profile of Object.keys(PROFILES) as Profile[]) {
+        const due = dueMeetings(db(), profile);
+        if (!due.length) continue;
+        try {
+          const { found } = await readTranscripts(db(), profile, due, Date.now());
+          markTried(db(), profile, due.filter((m) => !found.has(m.id)));
+          if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
+        } catch (err) {
+          markTried(db(), profile, due, Date.now(), true);
+          console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
+        }
+      }
       expireSuggested(db());
     } catch (err) {
-      console.error('expire suggested:', err instanceof Error ? err.message : err);
+      console.error('transcripts:', err instanceof Error ? err.message : err);
+    } finally {
+      busy = false;
     }
-    busy = false;
   };
   void run();
   setInterval(run, every).unref();

@@ -43,9 +43,20 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
 }
 
 export function startReminders(db: () => Database, every = 60_000) {
+  let busy = false;
   setInterval(async () => {
-    for (const r of dueReminders(db())) {
-      if (await pushNtfy(r.title, '', r.body, r.url)) db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(`remind:${r.key}`, String(Date.now()));
+    if (busy) return;
+    busy = true;
+    try {
+      for (const r of dueReminders(db())) {
+        const key = `remind:${r.key}`;
+        db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(Date.now()));
+        if (!(await pushNtfy(r.title, '', r.body, r.url).catch(() => false))) db().prepare('DELETE FROM meta WHERE key = ?').run(key);
+      }
+    } catch (err) {
+      console.error('reminders:', err instanceof Error ? err.message : err);
+    } finally {
+      busy = false;
     }
   }, every).unref();
 }

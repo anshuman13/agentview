@@ -23,20 +23,24 @@ export async function runSync(io: SyncIO) {
   let since = await io.since();
   let pushed = await io.dirty();
   let more = true;
+  let changed = false;
   while (more && io.active()) {
     const data = await io.post(since, pushed.map((d) => rowToChange(d.row, d.table)));
     if (!Array.isArray(data?.changes) || typeof data.version !== 'number') throw new Error('Unexpected hub response');
     for (const row of pushed) await io.clean(row);
+    changed ||= pushed.length > 0;
     pushed = [];
     for (const change of data.changes) {
       if (!Object.hasOwn(TABLE_FIELDS, change?.table) || typeof change.id !== 'string' || !['work', 'personal'].includes(change.profile)) continue;
       await io.apply(change);
+      changed = true;
     }
     more = data.hasMore === true;
     if (more && data.version <= since) throw new Error('Hub did not advance the sync version');
     since = data.version;
     await io.saveSince(since);
   }
+  return changed;
 }
 
 export function atTime(at: ItemRow['at']) {

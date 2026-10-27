@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAssistant, useCodex } from '../data';
 import type { ItemRow } from '../data/sync';
 import { ask, wikiAskText } from '../data/ask';
-import { approveChanges, chatOf, contestOf, currentClaim, factTime, live, newPage, pageClaims, pageStats, proposals, searchWiki, sourcesOf, type Fact, type Page, type Source } from '../data/wiki';
+import { approveChanges, chatOf, contestOf, currentClaim, factTime, live, newPage, NO_STATS, pageClaims, pageStats, proposals, searchWiki, sourcesOf, statsByPage, type Fact, type Page, type PageStats, type Source } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
@@ -51,8 +51,8 @@ function Overview({ page, facts, pages }: { page: Page; facts: Fact[]; pages: Pa
   );
 }
 
-function PageCard({ page, facts }: { page: Page; facts: Fact[] }) {
-  const st = pageStats(facts, page.id);
+function PageCard({ page, stats }: { page: Page; stats: Map<string | null, PageStats> }) {
+  const st = stats.get(page.id) ?? NO_STATS;
   return (
     <button className="wk-card" onClick={() => setView({ open: page.id, anchor: null })}>
       <span className="wk-card-title">{page.title}</span>
@@ -228,7 +228,7 @@ function NewPageCard({ section, sort }: { section: string; sort: number }) {
   );
 }
 
-function Results({ pages, facts, query }: { pages: Page[]; facts: Fact[]; query: string }) {
+function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[]; stats: Map<string | null, PageStats>; query: string }) {
   const r = useMemo(() => searchWiki(pages, facts, query), [pages, facts, query]);
   const title = new Map(pages.map((p) => [p.id, p.title]));
   if (!r.pages.length && !r.claims.length) return <div className="wk-none">Nothing in the wiki matches “{query}”. Ask the wiki below to search Slack and Linear too.</div>;
@@ -237,7 +237,7 @@ function Results({ pages, facts, query }: { pages: Page[]; facts: Fact[]; query:
       {r.pages.length > 0 && (
         <section>
           <div className="wk-label">Pages</div>
-          <div className="wk-cards">{r.pages.map((p) => <PageCard key={p.profile + p.id} page={p} facts={facts} />)}</div>
+          <div className="wk-cards">{r.pages.map((p) => <PageCard key={p.profile + p.id} page={p} stats={stats} />)}</div>
         </section>
       )}
       {r.claims.length > 0 && (
@@ -326,8 +326,8 @@ function ToReview({ facts }: { facts: Fact[] }) {
   );
 }
 
-function MemoryCard({ facts }: { facts: Fact[] }) {
-  const st = pageStats(facts, null);
+function MemoryCard({ stats }: { stats: Map<string | null, PageStats> }) {
+  const st = stats.get(null) ?? NO_STATS;
   if (!st.claims) return null;
   return (
     <button className="wk-card" onClick={() => setView({ open: MEMORY, anchor: null })}>
@@ -342,6 +342,7 @@ function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const { pages, facts } = useCodex();
   const [query, setQuery] = useState('');
   const overview = live(pages).find((p) => p.section === 'overview');
+  const stats = useMemo(() => statsByPage(facts), [facts]);
   return (
     <div className="wk">
       <header className="wk-head">
@@ -357,7 +358,7 @@ function WikiIndex({ onMenu }: { onMenu: () => void }) {
       <div className="wk-scroll">
         <div className="wk-index">
           <div className="wk-main">
-            {query.trim() ? <><Results pages={pages} facts={facts} query={query} /><Notes query={query} /></> : (
+            {query.trim() ? <><Results pages={pages} facts={facts} stats={stats} query={query} /><Notes query={query} /></> : (
               <>
                 <ToReview facts={facts} />
                 {overview && <Overview page={overview} facts={facts} pages={pages} />}
@@ -365,8 +366,8 @@ function WikiIndex({ onMenu }: { onMenu: () => void }) {
                   <section key={s.name}>
                     <div className="wk-label">{s.name}</div>
                     <div className="wk-cards">
-                      {s.pages.map((p) => <PageCard key={p.profile + p.id} page={p} facts={facts} />)}
-                      {i === 0 && <MemoryCard facts={facts} />}
+                      {s.pages.map((p) => <PageCard key={p.profile + p.id} page={p} stats={stats} />)}
+                      {i === 0 && <MemoryCard stats={stats} />}
                       <NewPageCard section={s.name} sort={Math.max(0, ...s.pages.map((p) => p.sort ?? 0)) + 1} />
                     </div>
                   </section>

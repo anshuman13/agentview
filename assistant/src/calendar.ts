@@ -106,6 +106,7 @@ export function importDue(last: number, now = Date.now()) {
 }
 
 const lastKey = (p: Profile) => `calendar:last:${p}`;
+const triedKey = (p: Profile) => `calendar:tried:${p}`;
 
 export function lastImport(db: Database, profile: Profile) {
   const get = db.prepare('SELECT value FROM meta WHERE key = ?');
@@ -113,32 +114,51 @@ export function lastImport(db: Database, profile: Profile) {
   return Number(row?.value ?? 0);
 }
 
-let running: Promise<{ changed: number; errors: string[] }> | null = null;
+// The last import attempt, failed or not, so a failing profile waits for the next slot.
+export function lastAttempt(db: Database, profile: Profile) {
+  const row = db.prepare('SELECT value FROM meta WHERE key = ?').get(triedKey(profile)) as { value: string } | null;
+  return Math.max(Number(row?.value ?? 0), lastImport(db, profile));
+}
 
-// Imports the profiles and returns how many meetings changed and which profiles failed; a second call while one runs joins it.
-export function syncCalendar(db: () => Database, profiles = Object.keys(PROFILES) as Profile[], run = importCalendar) {
-  return (running ??= (async () => {
-    let changed = 0;
-    const errors: string[] = [];
-    for (const profile of profiles) {
+const running = new Map<Profile, Promise<{ changed: number; error?: string }>>();
+
+function importOne(db: () => Database, profile: Profile, run: typeof importCalendar) {
+  let job = running.get(profile);
+  if (!job) {
+    job = (async () => {
+      const set = db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
+      set.run(triedKey(profile), String(Date.now()));
       try {
         const n = await run(db(), profile);
         console.log(`calendar ${profile}: ${n} meetings changed`);
-        changed += n;
-        db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(lastKey(profile), String(Date.now()));
+        set.run(lastKey(profile), String(Date.now()));
+        return { changed: n };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`calendar ${profile}:`, message);
-        errors.push(`${profile}: ${message}`);
+        return { changed: 0, error: `${profile}: ${message}` };
       }
-    }
-    return { changed, errors };
-  })().finally(() => (running = null)));
+    })().finally(() => running.delete(profile));
+    running.set(profile, job);
+  }
+  return job;
+}
+
+// Imports the profiles and returns how many meetings changed and which profiles failed; a profile already importing is joined.
+export async function syncCalendar(db: () => Database, profiles = Object.keys(PROFILES) as Profile[], run = importCalendar) {
+  let changed = 0;
+  const errors: string[] = [];
+  for (const profile of profiles) {
+    const r = await importOne(db, profile, run);
+    changed += r.changed;
+    if (r.error) errors.push(r.error);
+  }
+  return { changed, errors };
 }
 
 export function startCalendar(db: () => Database, every = 5 * 60_000) {
   const run = () => {
-    const due = (Object.keys(PROFILES) as Profile[]).filter((p) => importDue(lastImport(db(), p)));
+    const due = (Object.keys(PROFILES) as Profile[]).filter((p) => importDue(lastAttempt(db(), p)));
     if (due.length) void syncCalendar(db, due);
   };
   run();

@@ -109,11 +109,25 @@ export function pageClaims(facts: Fact[], pageId: string | null) {
 
 export const factTime = (f: Fact) => Math.max(f.at ?? 0, contestOf(f)?.at ?? 0, f.updated_at);
 
-export function pageStats(facts: Fact[], pageId: string | null) {
+export type PageStats = { claims: number; contested: number; updated: number };
+export const NO_STATS: PageStats = { claims: 0, contested: 0, updated: 0 };
+
+// Current claims per page in one pass; memory claims are under null.
+export function statsByPage(facts: Fact[]) {
   const current = currentClaim(facts);
-  const mine = live(facts).filter((f) => (f.page_id ?? null) === pageId && current(f));
-  return { claims: mine.length, contested: mine.filter((f) => f.contested).length, updated: Math.max(0, ...mine.map(factTime)) };
+  const out = new Map<string | null, PageStats>();
+  for (const f of live(facts)) {
+    if (!current(f)) continue;
+    const s = out.get(f.page_id ?? null) ?? { ...NO_STATS };
+    s.claims++;
+    if (f.contested) s.contested++;
+    s.updated = Math.max(s.updated, factTime(f));
+    out.set(f.page_id ?? null, s);
+  }
+  return out;
 }
+
+export const pageStats = (facts: Fact[], pageId: string | null) => statsByPage(facts).get(pageId) ?? NO_STATS;
 
 export function newPage(title: string, section: string, sort: number, profile: Profile = 'work', now = Date.now()): Page {
   return {
@@ -173,6 +187,25 @@ export function groupMeetings(meetings: Meeting[], now = Date.now()) {
 // A meeting's actions are the tasks linked to it: open and done ones are mine, suggested ones wait for me to keep or
 // dismiss them, unassigned ones nobody took, and dismissed ones were not mine.
 export const actionsOf = (items: ItemRow[], m: { profile: Profile; id: string }) => items.filter((r) => !r.deleted && r.meeting_id === m.id && r.profile === m.profile);
+
+export type ActionCount = ReturnType<typeof actionCount>;
+const counted = new WeakMap<ItemRow[], Map<string, ActionCount>>();
+
+// Action counts for every meeting, built once per items array.
+export function actionCounts(items: ItemRow[]) {
+  let out = counted.get(items);
+  if (!out) {
+    const byMeeting = new Map<string, ItemRow[]>();
+    for (const r of items) {
+      if (r.deleted || !r.meeting_id) continue;
+      const k = `${r.profile}:${r.meeting_id}`;
+      byMeeting.set(k, [...(byMeeting.get(k) ?? []), r]);
+    }
+    out = new Map([...byMeeting].map(([k, rows]) => [k, actionCount(rows, { profile: rows[0].profile, id: rows[0].meeting_id! })]));
+    counted.set(items, out);
+  }
+  return out;
+}
 
 export function actionCount(items: ItemRow[], m: { profile: Profile; id: string }) {
   const mine = actionsOf(items, m);

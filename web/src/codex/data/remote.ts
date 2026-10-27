@@ -87,7 +87,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   protected async syncOnce() {
     await this.loaded;
-    await runSync({
+    const changed = await runSync({
       active: () => true,
       since: async () => this.since,
       saveSince: async (since) => void (this.since = since),
@@ -106,7 +106,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         map.set(keyOf(change), toRow(mergeIncoming<SyncRow>(map.get(keyOf(change)) ?? null, change)));
       },
     });
-    this.save();
+    if (changed) this.save();
+    return changed;
   }
 
   private put(table: string, row: SyncRow) {

@@ -111,10 +111,13 @@ export async function runDue(db: Database, now = Date.now()) {
       output = err instanceof Error ? err.message : String(err);
     }
     const done = Date.now();
-    applyChanges(db, [
-      { table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output } },
-      { table: 'jobs', id: job.id, profile: job.profile, updated_at: done, fields: { next_run_at: job.enabled ? nextRun(job.schedule, done) : null } },
-    ]);
+    const changes: Change[] = [{ table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output } }];
+    // An edit made during the run (Off, a new schedule, Run now) set next_run_at itself, so it is kept.
+    const cur = db.prepare('SELECT schedule, enabled, field_times FROM jobs WHERE id = ? AND profile = ?').get(job.id, job.profile) as { schedule: string | null; enabled: number | null; field_times: string } | null;
+    if (cur && (JSON.parse(cur.field_times).next_run_at ?? 0) < started) {
+      changes.push({ table: 'jobs', id: job.id, profile: job.profile, updated_at: done, fields: { next_run_at: cur.enabled ? nextRun(cur.schedule, done) : null } });
+    }
+    applyChanges(db, changes);
     prune(db, job, done);
     await pushNtfy(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
   }

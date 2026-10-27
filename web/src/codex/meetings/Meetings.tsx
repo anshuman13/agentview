@@ -4,7 +4,7 @@ import { ask, meetingAskText } from '../data/ask';
 import { atTime, parseWhen, stripWhen } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
 import { newId, type ItemRow } from '../data/sync';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, type Meeting } from '../data/wiki';
+import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, type Meeting } from '../data/wiki';
 import { PickTime, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { Voice, useDictation } from '../../chat/Voice';
@@ -33,7 +33,7 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
 // The badge says where the meeting is: coming up, waiting for its transcript, or what it left for me.
 function Badge({ m, now }: { m: Meeting; now: number }) {
   const { snap } = useAssistant();
-  const count = actionCount(snap.items, m);
+  const count = actionCounts(snap.items).get(meetingKey(m)) ?? actionCount([], m);
   const state = meetingState(m, now);
   if (state === 'missing') return <span className="mt-count warn" title="No Gemini notes were found for this meeting">No transcript</span>;
   if (count.review > 0) return <span className="mt-count review" title="Suggested actions to keep or dismiss">{count.review} to review</span>;
@@ -333,6 +333,8 @@ function RoomMic({ m }: { m: Meeting }) {
     await store.editRow('meetings', m, { room_me: 1 });
     await store.syncNow();
     try {
+      const { error } = store.snapshot().sync;
+      if (error) throw new Error(`the room mic answer did not sync: ${error}`);
       await store.fetchTranscript(m);
       showSnack('Read again with the room mic as you');
     } catch (err) {

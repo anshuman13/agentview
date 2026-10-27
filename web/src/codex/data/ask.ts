@@ -2,7 +2,7 @@ import { getState, notice, prompt, queueNext, send } from '../../app/store';
 import { macOrigin } from '../../app/api';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { factTime, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, type Page } from './wiki';
+import { currentClaim, factTime, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
@@ -91,8 +91,9 @@ function remember(mac: string, chat: string, sessionId: string | null) {
 
 export function wikiAskText(question: string, pages: Page[], facts: Fact[], pageId?: string) {
   const title = new Map(pages.map((p) => [p.id, p.title ?? '']));
+  const current = currentClaim(facts);
   const claims = live(facts)
-    .filter((f) => !f.superseded_by && (!pageId || f.page_id === pageId))
+    .filter((f) => current(f) && (!pageId || f.page_id === pageId))
     .sort((a, b) => factTime(b) - factTime(a))
     .slice(0, 200)
     .map((f) => `- [${title.get(f.page_id ?? '') || 'Memory'}] ${f.text}${sourcesOf(f).length ? ` (${sourcesOf(f).map((s) => s.label).join(', ')})` : ''}${f.contested ? ' (contested)' : ''}`);

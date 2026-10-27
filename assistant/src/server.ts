@@ -3,7 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { allowedPeer, peerName } from '../../server/src/http/access.js';
 import { readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion } from './db.js';
-import { PROFILES, lastImport, startCalendar, syncCalendar, type Profile } from './calendar.js';
+import { PROFILES, lastAttempt, startCalendar, syncCalendar, type Profile } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
 import { parseTask } from './parse.js';
@@ -104,7 +104,7 @@ export function createServer(): http.Server {
       if (pathname === '/calendar' && req.method === 'POST') {
         // The app asks with ?fresh=<ms> when it opens; a profile imported within that time is skipped.
         const fresh = Number(url.searchParams.get('fresh') ?? 0);
-        const stale = (Object.keys(PROFILES) as Profile[]).filter((p) => !fresh || Date.now() - lastImport(getDb(), p) > fresh);
+        const stale = (Object.keys(PROFILES) as Profile[]).filter((p) => !fresh || Date.now() - lastAttempt(getDb(), p) > fresh);
         try {
           const { changed, errors } = stale.length ? await syncCalendar(getDb, stale) : { changed: 0, errors: [] };
           res.writeHead(errors.length ? 502 : 200, { 'Content-Type': 'application/json' });
@@ -206,6 +206,7 @@ export function createServer(): http.Server {
 }
 
 async function start() {
+  process.on('unhandledRejection', (err) => console.error('unhandled rejection:', err));
   const port = Number(process.env.ASSISTANT_PORT ?? 7790);
   const server = createServer();
 
