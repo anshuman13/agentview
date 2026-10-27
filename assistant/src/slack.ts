@@ -46,19 +46,21 @@ const Ask = z.object({
   quote: z.string().describe('The key sentence of the message'),
   urgent: z.boolean().describe('True only if someone is blocked on me, there is a deadline today, an incident, or I was pinged more than once'),
 });
-export type ScanResult = { chats: z.infer<typeof Chat>[]; asks: z.infer<typeof Ask>[]; answered: string[] };
+export type ScanResult = { chats: z.infer<typeof Chat>[]; asks: z.infer<typeof Ask>[]; answered: string[]; channels?: { name: string; id: string }[] };
 
 export const askId = (url: string) => `slack:${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
 
-// Saves one scan: chat summaries, asks as items to review, and closes asks I have replied to. Returns the new urgent asks.
+// Saves one scan: chat summaries, asks as items to review, and closes asks I have replied to. Returns how many asks are new and which are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
   const changes: Change[] = r.chats.map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: c.url ?? null, summary: c.summary.trim(), last_at: now } }));
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
+  let added = 0;
   for (const a of r.asks) {
     const id = askId(a.url);
     if (has.get(PROFILE, id)) continue;
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: a.url, people: `${a.from} · ${a.chat}`, at: null, status: 'suggested' } });
+    added++;
     if (a.urgent) urgent.push({ ...a, id });
   }
   for (const url of r.answered) {
@@ -67,7 +69,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     if (old && (old.status === 'suggested' || old.status === 'unassigned')) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done' } });
   }
   applyChanges(db, changes);
-  return urgent;
+  return { added, urgent };
 }
 
 // Reads happen every quarter hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
@@ -89,7 +91,8 @@ function sinceOf(db: Database, now: number) {
 
 type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
 
-async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number) {
+// Stops as soon as done() says the work is saved, so the model does not spend turns repeating itself.
+async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false) {
   const account = PROFILES[PROFILE];
   if (isLimited(account)) throw new Error('The Claude account is at its usage limit');
   const dir = configDir(account);
@@ -102,7 +105,8 @@ async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxT
       maxTurns,
       cwd: os.tmpdir(),
       settingSources: [],
-      env: { ...process.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
+      env: { ...process.env, ENABLE_TOOL_SEARCH: 'false', ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
+      ...(model === 'haiku' && { thinking: { type: 'disabled' as const } }),
       mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools }) },
       allowedTools: [...READ_TOOLS, ...tools.map((t) => `mcp__codex__${t.name}`)],
       permissionMode: 'dontAsk',
@@ -117,33 +121,55 @@ async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxT
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();
     }
+    if (m.type === 'user' && done()) break;
   }
   return result;
 }
 
 const openAsks = (db: Database, since: number) =>
   db.prepare("SELECT title, source_url, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'slack' AND status IN ('suggested', 'open') AND updated_at > ?").all(PROFILE, since) as { title: string; source_url: string; people: string }[];
+const tracked = (db: Database) =>
+  (db.prepare("SELECT title FROM items WHERE profile = ? AND deleted = 0 AND status IN ('open', 'suggested') AND COALESCE(source, '') NOT IN ('slack', 'calendar') ORDER BY updated_at DESC LIMIT 60").all(PROFILE) as { title: string }[]).map((r) => r.title);
+
+const channelIds = (db: Database): Record<string, string> => {
+  try {
+    return JSON.parse((db.prepare("SELECT value FROM meta WHERE key = 'slack:channels'").get() as { value: string } | null)?.value ?? '{}');
+  } catch {
+    return {};
+  }
+};
+
+// Channel ids found in a scan are kept, so later scans read the channels without looking them up.
+function keepChannelIds(db: Database, c: SlackConfig, r: ScanResult) {
+  const ids = channelIds(db);
+  for (const x of r.channels ?? []) {
+    const name = x.name.replace(/^#/, '');
+    if (c.channels.includes(name) && /^C[A-Z0-9]+$/.test(x.id)) ids[name] = x.id;
+  }
+  db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('slack:channels', ?)").run(JSON.stringify(ids));
+}
 
 // One Haiku pass over my DMs, mentions and watched channels since the last pass.
 export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   const since = sinceOf(db, now);
   const chats = db.prepare('SELECT id, name, summary FROM chats WHERE profile = ? AND deleted = 0').all(PROFILE) as { id: string; name: string; summary: string | null }[];
   let saved: ScanResult | null = null;
-  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved') }, async (a) => {
+  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
   const unix = Math.floor(since / 1000);
+  const ids = channelIds(db);
   const prompt = [
     `I am Slack user ${c.me}. Read what is new in Slack since unix time ${unix} (${new Date(since).toISOString()}). Do not send or change anything in Slack.`,
     `1. My DMs and group DMs: slack_search_public_and_private with filters "is:dm", after="${unix}", sort "timestamp", include_context false.`,
-    `2. Mentions of me: slack_search_public_and_private with filters "<@${c.me}>", after="${unix}", sort "timestamp", include_context false.`,
-    `3. These channels, with slack_read_channel oldest="${unix}" limit 40 (find ids with slack_list_user_channels name_prefix): ${c.channels.map((n) => `#${n}`).join(', ')}.`,
-    'Read a thread with slack_read_thread only when a new message there might ask something of me.',
+    `2. Mentions of me: slack_search_public_and_private with keywords ["<@${c.me}>"], after="${unix}", sort "timestamp", include_context false.`,
+    `3. These channels, with slack_read_channel oldest="${unix}" limit 40: ${c.channels.map((n) => `#${n} ${ids[n] ?? '(id unknown, find it with slack_list_user_channels name_prefix)'}`).join(', ')}.`,
+    'Make all of these reads in parallel in one turn. Read a thread with slack_read_thread only when a new message there might ask something of me.',
     '',
     `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
-    'For each DM or channel with new messages, give an updated running summary. The previous summaries are below; keep what still matters and drop what is old.',
-    'Add an ask only when a message clearly asks me to do, answer or decide something, and I have not replied after it. Skip FYIs, chatter and bots.',
+    'Only for DMs and channels with new messages, give an updated running summary, using the channel id. The previous summaries are below; keep what still matters and drop what is old.',
+    'Add an ask only when a message clearly asks me to do, answer or decide something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     '',
     'Previous summaries:',
@@ -152,13 +178,17 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
     'Open asks:',
     ...openAsks(db, now - 7 * DAY).map((a) => `- ${a.source_url} ${a.people}: ${a.title}`),
     '',
-    'Then call save_scan once. Do not use the em dash character.',
+    'Tracked tasks:',
+    ...tracked(db).map((t) => `- ${t}`),
+    '',
+    'Then call save_scan exactly once and stop. Do not use the em dash character.',
   ].join('\n');
-  await run(prompt, 'haiku', [save], 40);
+  await run(prompt, 'haiku', [save], 40, () => saved != null);
   if (!saved) throw new Error('Haiku did not save the scan');
-  const urgent = saveScan(db, saved, now);
+  keepChannelIds(db, c, saved);
+  const { added, urgent } = saveScan(db, saved, now);
   db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('slack:last', ?)").run(String(now));
-  return { chats: (saved as ScanResult).chats.length, asks: (saved as ScanResult).asks.length, urgent };
+  return { chats: (saved as ScanResult).chats.length, asks: added, urgent };
 }
 
 async function pushUrgent(c: SlackConfig, urgent: Awaited<ReturnType<typeof scanSlack>>['urgent'], now = Date.now()) {

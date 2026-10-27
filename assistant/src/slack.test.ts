@@ -12,11 +12,12 @@ const item = (db: ReturnType<typeof openDb>, url: string) => db.prepare('SELECT 
 describe('saveScan', () => {
   test('saves chats and new asks for review, and returns only new urgent asks', () => {
     const db = openDb(':memory:');
-    const urgent = saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.' }], asks: [ask('u1', true), ask('u2')], answered: [] }, at(27, 10));
+    const { added, urgent } = saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.' }], asks: [ask('u1', true), ask('u2')], answered: [] }, at(27, 10));
+    expect(added).toBe(2);
     expect(urgent.map((a) => a.url)).toEqual(['u1']);
     expect(item(db, 'u1')).toEqual({ status: 'suggested', source: 'slack', people: 'Kim · #ai' });
     expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
-    expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual([]);
+    expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ added: 0, urgent: [] });
   });
 
   test('closes answered asks I have not taken, and leaves accepted ones', () => {
