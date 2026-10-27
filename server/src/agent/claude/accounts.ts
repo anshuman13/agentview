@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import type { Account } from '../../../../shared/protocol.js';
 
 const ALT_DIR = process.env.AGENTVIEW_ALT_CLAUDE || path.join(os.homedir(), '.claude-alt');
@@ -18,8 +18,17 @@ const readJson = (file: string) => {
 // Until when each account is out of usage, kept across restarts.
 const limited: Partial<Record<Account, number>> = readJson(LIMITS) ?? {};
 
-// The second account counts once it is logged in.
-export const hasAlt = () => Boolean(readJson(path.join(ALT_DIR, '.claude.json'))?.oauthAccount);
+// The second account counts once it is logged in. The file is large, so it is read again only when it changes.
+let altSeen = { mtime: -1, value: false };
+export function hasAlt() {
+  const file = path.join(ALT_DIR, '.claude.json');
+  let mtime = 0;
+  try {
+    mtime = statSync(file).mtimeMs;
+  } catch {}
+  if (mtime !== altSeen.mtime) altSeen = { mtime, value: Boolean(mtime && readJson(file)?.oauthAccount) };
+  return altSeen.value;
+}
 
 export const configDir = (a: Account) => (a === 'alt' ? ALT_DIR : undefined);
 

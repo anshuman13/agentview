@@ -37,8 +37,16 @@ export type HubChange = { table: string; id: string; profile: 'work' | 'personal
 const rows = new Map<string, Map<string, HubRow>>();
 let since = 0;
 
-// The hub's rows by table, pulled since the last call.
+let syncing: Promise<void> | null = null;
+
+// The hub's rows by table, pulled since the last call. Calls at the same time share one pull.
 export async function hubRows(table: string): Promise<HubRow[]> {
+  syncing ??= pull().finally(() => (syncing = null));
+  await syncing;
+  return [...(rows.get(table)?.values() ?? [])].filter((r) => !r.deleted);
+}
+
+async function pull() {
   for (;;) {
     const resp = await fetch(`${HUB}/changes?since=${since}`, { signal: AbortSignal.timeout(15_000) });
     if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}`);
@@ -50,7 +58,6 @@ export async function hubRows(table: string): Promise<HubRow[]> {
     since = Math.max(since, r.version);
     if (!r.hasMore) break;
   }
-  return [...(rows.get(table)?.values() ?? [])].filter((r) => !r.deleted);
 }
 
 export async function hubPush(changes: HubChange[]) {

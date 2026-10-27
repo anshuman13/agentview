@@ -11,8 +11,15 @@ const save = async (list: BinnedSession[]) => {
   await mkdir(path.dirname(FILE), { recursive: true });
   await writeFile(FILE, JSON.stringify(list, null, 2));
 };
+// Each change reads and rewrites the file, so changes run one at a time.
+let lock: Promise<unknown> = Promise.resolve();
+const serial = <T>(f: () => Promise<T>): Promise<T> => {
+  const run = lock.then(f, f);
+  lock = run.catch(() => undefined);
+  return run;
+};
 
-export async function listBin(now = Date.now()) {
+export const listBin = (now = Date.now()) => serial(async () => {
   const list = await load();
   const expired = list.filter((b) => now - b.deletedAt > BIN_MS);
   if (!expired.length) return list;
@@ -20,9 +27,9 @@ export async function listBin(now = Date.now()) {
   const kept = list.filter((b) => !expired.includes(b));
   await save(kept);
   return kept;
-}
+});
 
-export async function removeSession(id: string, purge: boolean) {
+export const removeSession = (id: string, purge: boolean) => serial(async () => {
   const info = await getSessionInfo(id);
   const list = await load();
   if (!info) {
@@ -37,13 +44,12 @@ export async function removeSession(id: string, purge: boolean) {
   const entry = { sessionId: id, title: info.summary, cwd: info.cwd ?? '', lastModified: info.lastModified, deletedAt: Date.now() };
   await save([...list.filter((b) => b.sessionId !== id), entry]);
   return { purged: false };
-}
+});
 
-export async function emptyBin() {
-  for (const b of await load()) await deleteSession(b.sessionId, { dir: b.cwd }).catch(() => undefined);
-  await save([]);
-}
+export const emptyBin = () => serial(async () => {
+  const failed: BinnedSession[] = [];
+  for (const b of await load()) await deleteSession(b.sessionId, { dir: b.cwd }).catch(() => failed.push(b));
+  await save(failed);
+});
 
-export async function restoreSession(id: string) {
-  await save((await load()).filter((b) => b.sessionId !== id));
-}
+export const restoreSession = (id: string) => serial(async () => save((await load()).filter((b) => b.sessionId !== id)));

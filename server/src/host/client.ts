@@ -26,7 +26,14 @@ export class Host {
   call(req: HostRequest, reply: Reply = () => {}) {
     if (!this.send) return reply('The agent host is restarting, try again in a moment');
     const n = ++this.seq;
-    this.waiting.set(n, reply);
+    // A host that stops answering must not leave the request open for good.
+    const timer = setTimeout(() => {
+      if (this.waiting.delete(n)) reply('The agent host did not answer in time');
+    }, 60_000);
+    this.waiting.set(n, (err, r) => {
+      clearTimeout(timer);
+      reply(err, r);
+    });
     this.send({ n, ...req });
   }
 

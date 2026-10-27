@@ -629,6 +629,14 @@ export class AgentSession implements AgentHost {
   // The turn was stopped before it ran on extra usage; it ends like one that hit the usage limit.
   overage(until: number) {
     if (this.limitReset) return;
+    // A report while idle (a background agent) has no turn to end, so the account changes now.
+    if (!this.state.session.running) {
+      const from = this.driver.account;
+      const to = this.driver.limitHit(until);
+      if (to) this.setSession({ account: to, accounts: this.driver.accounts() });
+      this.system(`Extra usage reported on the ${accountName(from)} account${to ? `, next turn runs on the ${accountName(to)} account` : ''}`);
+      return;
+    }
     this.limitReset = until;
     this.system(`Stopped before using extra usage on the ${accountName(this.driver.account)} account`);
   }

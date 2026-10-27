@@ -490,7 +490,7 @@ export class ClaudeDriver implements AgentDriver {
         const until = overageUntil(msg);
         if (until) {
           host.overage(until);
-          void this.interrupt();
+          this.interrupt().catch(() => undefined);
         }
         break;
       }

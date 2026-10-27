@@ -172,13 +172,19 @@ export async function mcpGroups(): Promise<McpGroups> {
   return out;
 }
 
-export async function setMcpGroup(service: string, group: string): Promise<McpGroups> {
-  const g = await mcpGroups();
-  if (group === 'work' || group === 'personal' || group === 'hidden') g[service] = group;
-  else delete g[service];
-  await mkdir(path.dirname(GROUPS), { recursive: true });
-  await writeFile(GROUPS, JSON.stringify(g, null, 2));
-  return g;
+// Changes run one at a time, so two quick changes do not overwrite each other.
+let groupWrite: Promise<unknown> = Promise.resolve();
+export function setMcpGroup(service: string, group: string): Promise<McpGroups> {
+  const run = groupWrite.then(async () => {
+    const g = await mcpGroups();
+    if (group === 'work' || group === 'personal' || group === 'hidden') g[service] = group;
+    else delete g[service];
+    await mkdir(path.dirname(GROUPS), { recursive: true });
+    await writeFile(GROUPS, JSON.stringify(g, null, 2));
+    return g;
+  });
+  groupWrite = run.catch(() => undefined);
+  return run;
 }
 
 // claude.ai connector status per Claude account, from `claude mcp list`, so the page knows both accounts without a chat on each.
@@ -190,8 +196,9 @@ function listConnectors(account: 'main' | 'alt'): Promise<Connector[]> {
   delete env.CLAUDE_CONFIG_DIR;
   const dir = configDir(account);
   if (dir) env.CLAUDE_CONFIG_DIR = dir;
-  return new Promise((resolve) => {
-    execFile('claude', ['mcp', 'list'], { cwd: os.tmpdir(), env, timeout: 60_000 }, (_err, stdout) => {
+  return new Promise((resolve, reject) => {
+    execFile('claude', ['mcp', 'list'], { cwd: os.tmpdir(), env, timeout: 60_000 }, (err, stdout) => {
+      if (err && !String(stdout ?? '').trim()) return reject(err);
       resolve(String(stdout ?? '').split('\n').flatMap((line) => {
         const m = /^(claude\.ai [^:]+): .* - (.+)$/.exec(line.trim());
         if (!m) return [];
@@ -205,6 +212,8 @@ export function connectorStatus(refresh = false) {
   if (!connectorCache || refresh || Date.now() - connectorCache.at > 5 * 60_000) {
     const value = Promise.all([listConnectors('main'), hasAlt() ? listConnectors('alt') : Promise.resolve([])]).then(([main, alt]) => ({ main, alt }));
     connectorCache = { at: Date.now(), value };
+    // A failed listing is not kept, so the next load tries again.
+    value.catch(() => connectorCache?.value === value && (connectorCache = null));
   }
   return connectorCache.value;
 }
