@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFolders, findHere, groupByRepo, groupByKind, segmentOf } from './Sessions';
+import { buildFolders, findHere, groupByRepo, groupByKind, segmentOf } from './folders';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });

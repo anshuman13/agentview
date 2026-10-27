@@ -4,19 +4,20 @@ import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { BlockedCard, Pending } from '../chat/Pending';
 import { Composer, Markdown } from '../chat/Chat';
-import { clock, loopLabel } from '../chat/Composer';
+import { loopLabel } from '../chat/composerLogic';
+import { clock } from '../../../shared/util';
 import { touch } from '../app/touch';
 import { Row, Transcript } from '../chat/Transcript';
 import { FileIcon } from '../workspace/Explorer';
 import { relPath } from '../chat/steps';
-import { BIG_BRO, buildTurns, openFailures, type Turn } from '../chat/turns';
+import { buildTurns, openFailures, type Turn } from '../chat/turns';
 import { markSeen, readSeen, recap, recapText } from '../chat/recap';
 import { AgentsChip, AgentsPane, openAgent } from './AgentsPane';
 import { agentCounts, agentsOf } from './agents';
 import { REVIEW_LOCAL } from '../ops/Findings';
 import { ago, plural, readFlag, saveFlag, useTick } from '../ui/util';
 import { useMacName } from '../app/MacsPopover';
-import type { PendingRequest } from '../../../shared/protocol';
+import { BIG_BRO, type PendingRequest } from '../../../shared/protocol';
 
 const SHOWN_TURNS = 5;
 

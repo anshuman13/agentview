@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { api, setUi, useStore } from '../app/store';
-import { FolderPicker, findHere, useWorkspace } from '../sessions/Sessions';
+import { FolderPicker } from '../sessions/Sessions';
+import { findHere, useWorkspace } from '../sessions/folders';
 import { setOpened, useOpened } from './opened';
 import { Icon } from '../ui/Icon';
 import { save, stored } from '../ui/util';

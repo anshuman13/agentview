@@ -1,23 +1,21 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import { useAssistant, useCodex } from './data';
-import { live, proposals, type Meeting } from './data/wiki';
+import { proposals } from './data/wiki';
 import { ask, askText } from './data/ask';
-import { SNOOZES, atTime, errorText, isQuestion, nextNine, parseWhen, reviewedSince, split, stripWhen } from './data/engine';
+import { atTime, errorText, nextNine, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
-import type { ItemRow, Profile } from './data/sync';
+import type { ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { touch } from '../app/touch';
-import { Voice, useDictation } from '../chat/Voice';
-import { ago, readFlag, saveFlag } from '../ui/util';
-import { hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
+import { ago } from '../ui/util';
+import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
 import { Jobs } from './jobs/Jobs';
-import { ActionRow, MeetingRow, Meetings, clock, confirmAll, peopleOf } from './meetings/Meetings';
+import { Meetings } from './meetings/Meetings';
 import { PickTime, when } from './time';
+import { Composer, prepText, snoozes } from './AskBar';
+import { Overview, Review, useMinute, useSplit } from './Overview';
 import '../styles/features/assistant.css';
-
-type Mode = 'task' | 'ask';
 
 const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Overview' },
@@ -27,7 +25,6 @@ const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'wiki', icon: 'book', label: 'Wiki' },
 ];
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
-const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
 const SOURCES: Record<string, { icon: string; label: string }> = {
   slack: { icon: 'comment-discussion', label: 'Slack' },
@@ -44,9 +41,7 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
 const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 
 const SWIPE = 80;
-const QUICK = ['In 1 hour', 'Tonight', 'Tomorrow'];
 const DAY = 86400_000;
-const snoozes = (now = new Date()) => SNOOZES.filter((s) => s.label !== 'Tonight' || now.getHours() < 19);
 
 function greeting(h = new Date().getHours()) {
   return h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -162,39 +157,6 @@ function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
   return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, nextNine(new Date(Math.max(at ?? 0, now))))}>{body}</Swipe>;
 }
 
-// The next meeting today: Prep asks Claude, Notes opens the meeting, and the mic toggle tells the transcript reader
-// that the room microphone is me.
-function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; carried: number; onPrep: () => void }) {
-  const { store } = useAssistant();
-  const now = Date.now();
-  const mins = Math.round((m.starts_at! - now) / 60000);
-  const open = () => setView({ list: 'meetings', open: `${m.profile}:${m.id}` });
-  const people = peopleOf(m);
-  return (
-    <div className="as-next" onClick={open} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && open()}>
-      <div className="as-next-head"><Icon name="calendar" small /> {clock(m.starts_at!)} <span className="muted">· {mins <= 0 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`}</span></div>
-      <div className="as-next-title">{m.title}</div>
-      {(people.length > 0 || carried > 0) && (
-        <div className="as-ctx">
-          {people.length > 0 && <span>{people.slice(0, 3).join(', ')}{people.length > 3 ? ` +${people.length - 3}` : ''}</span>}
-          {carried > 0 && <span className="as-due late">{carried} open from last time</span>}
-        </div>
-      )}
-      <div className="as-next-actions">
-        <button className="btn sm" onClick={(e) => { e.stopPropagation(); onPrep(); }}><Icon name="sparkle" small /> Prep</button>
-        <button className="btn sm" onClick={(e) => { e.stopPropagation(); open(); }}><Icon name="edit" small /> Notes</button>
-        {m.id.startsWith('cal:') && (
-          <button className={`btn sm${m.room_me === 1 ? ' on' : ''}`} title="I am on the room microphone in this meeting" aria-pressed={m.room_me === 1}
-            onClick={(e) => { e.stopPropagation(); void store.editRow('meetings', m, { room_me: m.room_me === 1 ? null : 1 }); }}>
-            <Icon name="mic" small /> Room mic is me
-          </button>
-        )}
-      </div>
-      {then && <div className="as-next-then">then {clock(then.starts_at!)} {then.title}</div>}
-    </div>
-  );
-}
-
 function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClose: () => void }) {
   const act = useActions();
   const [title, setTitle] = useState(row.title ?? '');
@@ -273,153 +235,6 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
   );
 }
 
-const marked = (text: string, spans: [number, number][]) => {
-  const out: React.ReactNode[] = [];
-  let i = 0;
-  for (const [s, e] of spans) {
-    if (s < i) continue;
-    out.push(text.slice(i, s), <mark key={s}>{text.slice(s, e)}</mark>);
-    i = e;
-  }
-  out.push(text.slice(i));
-  return out;
-};
-
-type Chip = { label: string; q: string } | { label: string; icon: string; run: () => void };
-
-const recipes = (next: Meeting | undefined, moveOpen: (() => void) | null, count: number): Chip[] => {
-  const now = new Date();
-  const h = now.getHours();
-  const list: Chip[] = [
-    h < 12 ? { label: 'Plan my day', q: 'Plan my day. Use my calendar for today and my open items, suggest an order with times and point out conflicts.' }
-      : h < 17 ? { label: "What's next", q: 'What should I do next? Use my calendar and my open items.' }
-      : { label: 'Wrap up my day', q: 'Wrap up my day: what got done, what is still open, suggested meeting actions I have not confirmed, and my first meeting tomorrow.' },
-  ];
-  if (h >= 17 && moveOpen && count > 0) list.push({ label: `Move ${count} open to tomorrow`, icon: 'clock', run: moveOpen });
-  if (now.getDay() === 4 || now.getDay() === 5) list.push({ label: 'Draft my weekly update', q: 'Draft my weekly update from what I got done this week and the meetings I was in: done, in progress, next. Short bullets.' });
-  if (next) list.unshift({ label: 'Prep next meeting', q: prepText(next) });
-  return list;
-};
-
-const prepText = (m: Meeting) => `Prepare me for "${m.title}" at ${clock(m.starts_at!)}: who is in it, related Slack threads, Linear issues and docs, and what is still open from the last time we met.`;
-
-function Composer({ items, next, filter, moveOpen, openCount }: { items: ItemRow[]; next?: Meeting; filter: Filter; moveOpen: (() => void) | null; openCount: number }) {
-  const { store } = useAssistant();
-  const { meetings } = useCodex();
-  const [text, setText] = useState('');
-  const [mode, setMode] = useState<Mode | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [noWhen, setNoWhen] = useState(false);
-  const [pick, setPick] = useState<number | null>(null);
-  const [fresh, setFresh] = useState(false);
-  const [voice, setVoice] = useState(0);
-  const [asking, setAsking] = useState(false);
-  const area = useRef<HTMLTextAreaElement>(null);
-  const dictate = useDictation(text, setText);
-
-  useEffect(() => {
-    const focus = () => area.current?.focus();
-    const talk = () => setVoice(Date.now());
-    window.addEventListener('assistant:focus', focus);
-    window.addEventListener('assistant:voice', talk);
-    return () => { window.removeEventListener('assistant:focus', focus); window.removeEventListener('assistant:voice', talk); };
-  }, []);
-  useEffect(() => {
-    const el = area.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-  }, [text]);
-
-  const typed = text.trim();
-  const m: Mode = mode ?? (isQuestion(typed) ? 'ask' : 'task');
-  const prof: Profile = profile ?? (filter !== 'all' ? filter : readFlag('assistant-personal', false) ? 'personal' : 'work');
-  const w = m === 'task' && !noWhen ? parseWhen(text) : null;
-  const due = m === 'task' ? pick ?? w?.at ?? null : null;
-  const dated = pick != null || w != null;
-
-  const reset = () => { setText(''); setMode(null); setNoWhen(false); setPick(null); setFresh(false); setProfile(null); setAsking(false); };
-  const busy = useRef(false);
-  const save = async (title: string, at: number | null) => {
-    const row = await store.capture(title, 'task', prof, at);
-    saveFlag('assistant-personal', prof === 'personal');
-    reset();
-    showSnack(at != null ? `Task · ${when(at)}` : 'Task · No time', () => void store.update(row, { deleted: 1 }));
-  };
-  // With no time in the text, the chips ask When? before the task is saved.
-  const submit = async (at = due) => {
-    if (!typed || busy.current) return;
-    if (m === 'ask') {
-      if (ask(askText(typed, items, undefined, meetings), fresh)) reset();
-      return;
-    }
-    if (at == null && !noWhen && !asking) return setAsking(true);
-    busy.current = true;
-    try {
-      await save(stripWhen(text, w) || typed, at);
-    } catch (err) {
-      showSnack(`Not saved: ${(err as Error).message}`);
-    } finally {
-      busy.current = false;
-    }
-  };
-  const cycle = () => setMode((x) => ((x ?? m) === 'task' ? 'ask' : 'task'));
-  const MODE: Record<Mode, { icon: string; label: string }> = { task: { icon: 'pass', label: 'Task' }, ask: { icon: 'sparkle', label: 'Ask Claude' } };
-
-  return (
-    <div className="as-composer">
-      <div className="as-chips" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('button') && document.activeElement === area.current) e.preventDefault(); }}>
-        {typed ? (
-          <>
-            <button className="as-chip on" title="A task or a question for Claude" onClick={cycle}><Icon name={MODE[m].icon} small /> {MODE[m].label}</button>
-            {m === 'ask' && <button className={`as-chip${fresh ? ' on' : ''}`} title="Ask in today's Codex chat or start a new one" onClick={() => setFresh((f) => !f)}><Icon name={fresh ? 'add' : 'comment-discussion'} small /> {fresh ? 'New chat' : "Today's chat"}</button>}
-            {m !== 'ask' && <button className={`as-chip ${prof}`} title="Work or personal" onClick={() => setProfile(prof === 'work' ? 'personal' : 'work')}>{FILTER_LABEL[prof]}</button>}
-            {m === 'task' && asking && !dated ? (
-              <>
-                <span className="as-ask">When?</span>
-                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => void submit(s.at(new Date()))}><Icon name="clock" small /> {s.label}</button>)}
-                <button className="as-chip" onClick={() => void submit(null)}>No time</button>
-                <PickTime className="as-chip time" onPick={(t) => void submit(t)} />
-              </>
-            ) : m === 'task' && (dated ? (
-              <button className="as-chip when on" title="Remove the time" onClick={() => { setPick(null); setNoWhen(true); }}><Icon name="clock" small /> {due != null ? when(due) : 'Today'} <Icon name="close" small /></button>
-            ) : (
-              <>
-                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => setPick(s.at(new Date()))}><Icon name="clock" small /> {s.label}</button>)}
-                <PickTime className="as-chip time" onPick={setPick} />
-              </>
-            ))}
-          </>
-        ) : (
-          recipes(next, moveOpen, openCount).map((r) => 'run' in r
-            ? <button key={r.label} className="as-chip" onClick={r.run}><Icon name={r.icon} small /> {r.label}</button>
-            : <button key={r.label} className="as-chip" onClick={() => ask(askText(r.q, items, undefined, meetings))}><Icon name="sparkle" small /> {r.label}</button>)
-        )}
-      </div>
-      <div className="cp-card as-card">
-        <div className="as-input">
-          {w && pick == null && <div className="as-mirror" aria-hidden>{marked(text, w.spans)}</div>}
-          <textarea
-            ref={area}
-            rows={1}
-            value={text}
-            placeholder="Add a task or ask anything"
-            onChange={(e) => { setText(e.target.value); if (!e.target.value.trim()) setAsking(false); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && (!touch() || e.metaKey || e.ctrlKey)) { e.preventDefault(); void submit(); } }}
-          />
-        </div>
-        <div className="cp-foot">
-          <span className="cp-spacer" />
-          <Voice onText={dictate} autoStart={voice} />
-          <button className="cp-send" onPointerDown={(e) => e.preventDefault()} title={m === 'ask' ? (fresh ? 'Ask Claude in a new chat' : "Ask Claude in today's Codex chat") : 'Save'} aria-label="Send" disabled={!typed} onClick={() => void submit()}>
-            <Icon name="arrow-up" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function SnackBar() {
   const s = useSnack();
   if (!s) return null;
@@ -431,47 +246,7 @@ function SnackBar() {
   );
 }
 
-// Re-renders every minute and when the app comes back to the front, so due tasks move into Today.
-function useMinute() {
-  const [minute, tick] = useState(0);
-  useEffect(() => {
-    const bump = () => tick((n) => n + 1);
-    const t = setInterval(bump, 60000);
-    const shown = () => document.visibilityState === 'visible' && bump();
-    document.addEventListener('visibilitychange', shown);
-    return () => { clearInterval(t); document.removeEventListener('visibilitychange', shown); };
-  }, []);
-  return minute;
-}
-
 const UPCOMING_DAYS = 7;
-
-function useSplit() {
-  const { snap } = useAssistant();
-  const { meetings } = useCodex();
-  const { filter } = useView();
-  const minute = useMinute();
-  return useMemo(() => {
-    const now = Date.now();
-    const all = live(meetings).filter((m) => m.starts_at != null && (filter === 'all' || m.profile === filter));
-    const ahead = all.filter((m) => (m.ends_at ?? m.starts_at!) > now).sort((a, b) => a.starts_at! - b.starts_at!);
-    const endOfDay = new Date(now).setHours(24, 0, 0, 0);
-    const today = ahead.filter((m) => m.starts_at! < endOfDay);
-    const next = today[0];
-    const startOfDay = new Date(now).setHours(0, 0, 0, 0);
-    const endOfTomorrow = new Date(now).setHours(48, 0, 0, 0);
-    const byStart = (a: Meeting, b: Meeting) => a.starts_at! - b.starts_at!;
-    // Open actions from earlier meetings with the same title.
-    const carried = next ? snap.items.filter((r) => !r.deleted && r.status === 'open' && r.meeting_id && r.profile === next.profile && r.meeting_id !== next.id
-      && all.some((m) => m.id === r.meeting_id && m.profile === next.profile && m.title === next.title && m.starts_at! < next.starts_at!)).length : 0;
-    return {
-      ...split(snap.items, filter, now), next, then: today[1], carried, endOfDay, endOfTomorrow,
-      meetingsToday: all.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay).sort(byStart),
-      meetingsTomorrow: all.filter((m) => m.starts_at! >= endOfDay && m.starts_at! < endOfTomorrow).sort(byStart),
-      nextLater: today.find((m) => m !== next && m.starts_at! > now) ?? ahead.find((m) => m.starts_at! >= endOfDay),
-    };
-  }, [snap.items, meetings, filter, minute]);
-}
 
 export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { list, filter } = useView();
@@ -509,93 +284,6 @@ export function useTodayCount() {
 }
 
 const CALENDAR_FRESH = 15 * 60_000;
-
-// Suggested actions grouped by meeting, each group with Confirm all.
-function Review({ rows }: { rows: ItemRow[] }) {
-  const { store } = useAssistant();
-  const groups = rows.reduce<ItemRow[][]>((acc, r) => {
-    const g = acc.find((x) => x[0].profile === r.profile && x[0].meeting_id === r.meeting_id);
-    if (g) g.push(r);
-    else acc.push([r]);
-    return acc;
-  }, []);
-  return groups.map((g) => (
-    <section key={g[0].profile + g[0].meeting_id}>
-      <button className="as-section review as-toggle" onClick={() => setView({ list: 'meetings', open: `${g[0].profile}:${g[0].meeting_id}` })}>Is this yours? · {g[0].people || 'Meeting'}</button>
-      <div className="as-group">
-        {g.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}
-        {g.length > 1 && <button className="as-confirm-all" onClick={() => confirmAll(store, g)}><Icon name="check-all" small /> Confirm all {g.length}</button>}
-      </div>
-    </section>
-  ));
-}
-
-type Split = ReturnType<typeof useSplit>;
-
-// The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
-function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
-  const { snap } = useAssistant();
-  const { filter } = useView();
-  const now = Date.now();
-  const tomorrow = s.later.filter((r) => atTime(r.at)! >= s.endOfDay && atTime(r.at)! < s.endOfTomorrow);
-  const startOfDay = new Date(now).setHours(0, 0, 0, 0);
-  const jobs = snap.jobs.filter((j) => !j.deleted && (filter === 'all' || j.profile === filter));
-  const reports = jobs.flatMap((j) => {
-    const r = snap.runs.filter((x) => !x.deleted && x.profile === j.profile && x.job_id === j.id && x.status === 'ok' && (x.started_at ?? 0) >= startOfDay).sort((a, b) => b.started_at! - a.started_at!)[0];
-    return r?.output ? [{ j, r }] : [];
-  });
-  const tasks = () => setView({ list: 'tasks', open: null });
-  const stats = [
-    { n: dueToday.length, label: 'to do today', cls: '' },
-    { n: s.overdue.length, label: 'overdue', cls: 'late' },
-    { n: s.review.length, label: 'to confirm', cls: 'review' },
-    { n: s.doneToday.length, label: 'done', cls: 'done' },
-  ].filter((x, i) => i === 0 || x.n > 0);
-  const shown = (rs: ItemRow[]) => (
-    <button className="ov-list" onClick={tasks}>
-      {rs.slice(0, 5).map((r) => <span key={r.profile + r.id}><Icon name="circle-large-outline" small /><span className="ov-t">{r.title}</span></span>)}
-      {rs.length > 5 && <span className="muted">+{rs.length - 5} more</span>}
-    </button>
-  );
-  return (
-    <>
-      <div className="ov-summary">
-        {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
-      </div>
-      {s.next && (
-        <section>
-          <div className="as-section next">Next</div>
-          <NextCard m={s.next} then={s.then} carried={s.carried} onPrep={onPrep} />
-        </section>
-      )}
-      {s.meetingsToday.length > 0 && (
-        <section>
-          <div className="as-section">Meetings today · {s.meetingsToday.length}</div>
-          <div className="mt-rows ov-card">{s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
-        </section>
-      )}
-      {dueToday.length > 0 && (
-        <section>
-          <div className="as-section">To do today · {dueToday.length}</div>
-          {shown(dueToday)}
-        </section>
-      )}
-      {(s.meetingsTomorrow.length > 0 || tomorrow.length > 0) && (
-        <section>
-          <div className="as-section later">Tomorrow</div>
-          {s.meetingsTomorrow.length > 0 && <div className="mt-rows ov-card">{s.meetingsTomorrow.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>}
-          {tomorrow.length > 0 && shown(tomorrow)}
-        </section>
-      )}
-      {reports.map(({ j, r }) => (
-        <section key={j.profile + j.id}>
-          <button className="as-section as-toggle" onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })}>{j.name} · {clock(r.started_at!)}</button>
-          <div className="ov-report">{r.output}</div>
-        </section>
-      ))}
-    </>
-  );
-}
 
 export function Assistant() {
   const { store, snap } = useAssistant();

@@ -3,6 +3,7 @@ import type { Profile } from './data/sync';
 
 export type List = 'today' | 'tasks' | 'meetings' | 'jobs' | 'wiki';
 export type Filter = 'all' | Profile;
+export const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
 // The list, filter and open page or meeting are shared by the sidebar on desktop and the drawer on the phone.
 export type View = { list: List; filter: Filter; open: string | null; anchor: string | null };

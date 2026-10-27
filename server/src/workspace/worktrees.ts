@@ -5,10 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { listSessions } from '../agent/claude/sessions.js';
 import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shared/protocol.js';
+import { inside } from '../../../shared/util.js';
 
 const run = promisify(execFile);
 const git = async (cwd: string, ...args: string[]) => (await run('git', ['-C', cwd, ...args])).stdout.trim();
-export const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
 
 const home = os.homedir();
 export const ROOTS = (process.env.AGENTVIEW_ROOTS ?? '~/workspace:~/workspace_personal').split(':').filter(Boolean).map((r) => path.resolve(r.replace(/^~/, home)));

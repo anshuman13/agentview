@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildTranscript, duration, stepLabel, stepTone } from './steps';
 import { editCount, replyLine, sumEdits } from '../../../shared/edits';
-import { chatLine } from '../sessions/Sessions';
+import { chatLine } from '../sessions/folders';
 import type { ChatEvent, LiveChat } from '../../../shared/protocol';
 
 let n = 0;

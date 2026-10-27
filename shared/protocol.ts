@@ -97,6 +97,8 @@ export type Repeat = { prompt: string; every: number; until: number | null; roun
 
 export const MAX_GOAL_ROUNDS = 20;
 
+export const BIG_BRO = 'big-bro';
+
 export type LoopPhase = 'plan' | 'build' | 'test' | 'passed' | 'failed';
 
 export type LoopState = { on: boolean; max: number; round: number; phase: LoopPhase | null };

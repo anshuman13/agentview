@@ -5,7 +5,7 @@ import { atTime, parseWhen, stripWhen } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
 import { newId, type ItemRow } from '../data/sync';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, type Meeting } from '../data/wiki';
-import { PickTime, when } from '../time';
+import { PickTime, clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { Voice, useDictation } from '../../chat/Voice';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
@@ -17,7 +17,6 @@ const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charC
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 export const peopleOf = (m: Meeting) => (m.people?.startsWith('[') ? listOf(m.people) : (m.people ?? '').split(',')).map((p) => p.trim()).filter(Boolean);
 const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
-export const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
   if (!people.length) return null;

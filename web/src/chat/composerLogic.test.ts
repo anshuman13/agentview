@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accept, addUse, buildHistory, contextPercent, filesEdited, ghostFor, rankCommands, rankFiles, remember, triggerAt, withUses } from './Composer';
+import { accept, addUse, buildHistory, contextPercent, filesEdited, ghostFor, rankCommands, rankFiles, remember, triggerAt, withUses } from './composerLogic';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;

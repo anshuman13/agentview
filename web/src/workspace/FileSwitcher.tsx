@@ -5,7 +5,7 @@ import { FileIcon } from './Explorer';
 import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
 import { Hl } from '../ui/util';
-import { fileCache as cache } from '../chat/Composer';
+import { fileCache as cache } from '../chat/composerLogic';
 
 export function FileSwitcher() {
   const open = useStore((s) => s.ui.switcherOpen);

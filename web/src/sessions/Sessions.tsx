@@ -4,132 +4,15 @@ import { api, embedded, notice, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
-import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
-import { replyLine, sumEdits } from '../../../shared/edits';
+import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored } from '../ui/util';
 import { PullState, usePullRequests } from '../ops/GitHub';
+import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, get, groupByKind, groupByRepo, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
 const PAGE = 10;
 
-export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
-
-export const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
-// A failed load resolves to null, so the last list stays on screen.
-const get = (url: string) => fetch(apiUrl(url)).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : null)).catch(() => null);
-
-export function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSession[]) {
-  const m = new Map<string, Folder>();
-  const folder = (cwd: string, repo?: Repo) => {
-    let f = m.get(cwd);
-    if (!f) m.set(cwd, (f = { cwd, name: cwd.split('/').pop() || 'Unknown folder', repo, trees: [], chats: [], last: repo?.lastCommit ?? 0 }));
-    return f;
-  };
-  for (const r of repos) folder(r.cwd, r);
-  for (const w of trees) folder(w.repo || w.cwd).trees.push(w);
-  const dirs = [...m.keys()].sort((a, b) => b.length - a.length);
-  for (const c of chats) {
-    const tree = trees.find((w) => inside(c.cwd, w.cwd));
-    const f = folder(tree ? tree.repo || tree.cwd : dirs.find((d) => inside(c.cwd, d)) ?? c.cwd);
-    f.chats.push(c);
-    f.last = Math.max(f.last, c.lastModified);
-  }
-  return [...m.values()].sort((a, b) => b.last - a.last);
-}
-
-const cached = { repos: [] as Repo[], trees: [] as Worktree[], chats: [] as SavedSession[] };
-
-export function useWorkspace(key: unknown) {
-  const [repos, setRepos] = useState(cached.repos);
-  const [trees, setTrees] = useState(cached.trees);
-  const [chats, setChats] = useState(cached.chats);
-  useEffect(() => {
-    let live = true;
-    get('/api/repos').then((x) => live && x && setRepos((cached.repos = x)));
-    get('/api/sessions').then((x) => live && x && setChats((cached.chats = x)));
-    get('/api/worktrees').then((x) => live && x && setTrees((cached.trees = x)));
-    return () => void (live = false);
-  }, [key]);
-  const folders = useMemo(() => buildFolders(repos, trees, chats), [repos, trees, chats]);
-  return { folders, chats, setTrees, setChats };
-}
-
-export function worktreeRequest(d: Folder, track: (branch: string | null, error?: string) => void): ConfirmRequest {
-  return {
-    title: `New ${d.name} worktree`,
-    detail: `Paseo branches off the default branch and runs the repo's setup. A chat opens in the new folder.`,
-    action: 'Create',
-    icon: 'git-branch-create',
-    input: { value: d.repo?.branch.includes('/') ? `${d.repo.branch.split('/')[0]}/` : '', placeholder: 'Branch name' },
-    run: async (branch) => {
-      track(branch);
-      const r = await fetch(apiUrl('/api/worktrees'), { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) });
-      const body = await r.json().catch(() => null);
-      if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
-      track(null, r.ok && body?.cwd ? undefined : body?.error ?? 'Could not create the worktree');
-    },
-  };
-}
-
-const WEEK = 7 * 864e5;
-export const isDefault = (b?: string) => !b || b === 'main' || b === 'master';
-
 const ROOTS = ['workspace_personal', 'workspace'];
-
-export const KINDS: [RepoKind, string, string][] = [
-  ['new', 'New', 'new-folder'], ['web', 'Web apps', 'globe'], ['service', 'Services', 'server'], ['infra', 'Infra', 'layers'], ['data', 'Data', 'database'],
-  ['app', 'Apps', 'device-mobile'], ['docs', 'Docs', 'book'], ['other', 'Other', 'repo'],
-];
-export const segmentOf = (f: Folder) => (f.repo?.root === 'workspace_personal' || f.cwd.includes('/workspace_personal/') ? 'personal' : 'work');
-
-export const isActive = (f: Folder, live: string[], now = Date.now()) =>
-  Boolean(f.repo?.dirty) || !isDefault(f.repo?.branch) || f.trees.length > 0 || now - f.last < WEEK ||
-  live.some((c) => inside(c, f.cwd) || f.trees.some((w) => inside(c, w.cwd)));
-
-export function groupByKind(folders: Folder[], live: string[], now = Date.now()) {
-  return KINDS.map(([kind, label, icon]) => ({
-    kind, label, icon,
-    items: folders
-      .filter((f) => (f.repo?.kind ?? 'other') === kind)
-      .map((f) => ({ f, active: isActive(f, live, now) }))
-      .sort((x, y) => Number(y.active) - Number(x.active) || x.f.name.localeCompare(y.f.name)),
-  })).filter((g) => g.items.length);
-}
-
-const flip = (set: (f: (prev: Set<string>) => Set<string>) => void, key: string) =>
-  set((prev) => {
-    const next = new Set(prev);
-    next.has(key) ? next.delete(key) : next.add(key);
-    return next;
-  });
-
-const closeChat = (c: LiveChat, ask: (r: ConfirmRequest) => void) =>
-  c.running || c.pending
-    ? ask({ title: 'Close this chat?', detail: c.title, warning: 'Claude is still working on it and will stop. The transcript is kept.', action: 'Close', run: async () => send({ type: 'close', id: c.id }) })
-    : send({ type: 'close', id: c.id });
-
-const refreshBin = () => window.dispatchEvent(new Event('agentview:bin'));
-
-export const deleteChat = (s: { sessionId: string; title: string; lastModified: number }, onDone: () => void, onError: (e: string) => void, purge = false): ConfirmRequest => {
-  const forever = purge || Date.now() - s.lastModified > BIN_MS;
-  return {
-    title: forever ? 'Delete this chat?' : 'Move this chat to the bin?',
-    detail: s.title,
-    warning: forever ? 'The transcript is removed permanently.' : 'You can restore it from the bin for 24 hours.',
-    action: 'Delete',
-    run: async () => {
-      const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(s.sessionId)}${purge ? '&purge' : ''}`), { method: 'DELETE' });
-      if (!r.ok) return onError((await r.json().catch(() => null))?.error ?? 'Could not delete the chat');
-      onDone();
-      refreshBin();
-    },
-  };
-};
-
-export function findHere(folders: Folder[], cwd: string) {
-  const folder = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)));
-  const tree = folder?.trees.find((w) => inside(cwd, w.cwd));
-  return { folder, tree, label: tree ? tree.name : folder?.repo?.branch ?? '' };
-}
 
 export function FolderPicker({ onClose }: { onClose: () => void }) {
   const cwd = useStore((s) => s.session.cwd);
@@ -383,38 +266,6 @@ export function Sessions() {
 
 const RECENT = 5;
 const KEY = 'agentview.chats.collapsed';
-const urgency = (c: LiveChat) => (c.pending ? 0 : c.running ? 1 : 2);
-const byUrgency = (a: LiveChat, b: LiveChat) => urgency(a) - urgency(b) || b.lastActive - a.lastActive;
-
-export type RepoGroup = { key: string; name: string; open: LiveChat[]; recent: SavedSession[]; last: number; running: number; waiting: number };
-
-export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter = '') {
-  const q = filter.trim().toLowerCase();
-  const m = new Map<string, RepoGroup>();
-  const add = (cwd: string, title: string, last: number) => {
-    const key = findHere(folders, cwd).folder?.cwd ?? cwd;
-    const name = key.split('/').pop() || key;
-    if (q && !name.toLowerCase().includes(q) && !title.toLowerCase().includes(q)) return null;
-    let g = m.get(key);
-    if (!g) m.set(key, (g = { key, name, open: [], recent: [], last: 0, running: 0, waiting: 0 }));
-    g.last = Math.max(g.last, last);
-    return g;
-  };
-  for (const c of live) {
-    const g = add(c.cwd, c.title, c.lastActive);
-    if (!g) continue;
-    g.open.push(c);
-    if (c.running) g.running++;
-    if (c.pending) g.waiting++;
-  }
-  const ids = new Set(live.map((c) => c.sessionId));
-  for (const s of chats) if (!ids.has(s.sessionId)) add(s.cwd, s.title, s.lastModified)?.recent.push(s);
-  for (const g of m.values()) {
-    g.open.sort(byUrgency);
-    g.recent.sort((a, b) => b.lastModified - a.lastModified);
-  }
-  return [...m.values()].sort((a, b) => b.last - a.last);
-}
 
 export function OpenChats() {
   const current = useStore((s) => s.session.sessionId);
@@ -550,13 +401,6 @@ function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: 
       ))}
     </div>
   );
-}
-
-export function chatLine(c: LiveChat, events: ChatEvent[] | null) {
-  const done = !c.running && !c.pending;
-  const last = c.last ?? (events ? replyLine(events) : undefined);
-  const edits = c.edits ?? (events ? sumEdits(events) : undefined);
-  return { text: c.pending ? 'Needs you' : c.running ? c.status : last ?? '', edits: done ? edits : undefined, done: done && Boolean(edits) };
 }
 
 function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void; onDelete?: () => void; onBeside?: () => void }) {

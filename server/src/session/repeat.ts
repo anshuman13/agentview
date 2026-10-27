@@ -1,4 +1,5 @@
 import { MAX_GOAL_ROUNDS, type Repeat } from '../../../shared/protocol.js';
+import { clock, span } from '../../../shared/util.js';
 
 const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
@@ -62,8 +63,6 @@ export function nextClock(hours: number, minutes: number, now: number) {
   return d.getTime();
 }
 
-export const clock = (t: number) => new Date(t).toTimeString().slice(0, 5);
-
 // "You've hit your session limit · resets 1:50am (Europe/Oslo)" gives the time a loop may go on, plus a minute.
 export function limitReset(text: string, now = Date.now()): number | null {
   const m = /\blimit\b.*?\bresets?\b(?:\s+at)?\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/is.exec(text);
@@ -72,8 +71,6 @@ export function limitReset(text: string, now = Date.now()): number | null {
   const hours = meridiem ? (Number(m[1]) % 12) + (meridiem === 'pm' ? 12 : 0) : Number(m[1]);
   return nextClock(hours, Number(m[2] ?? 0), now) + 60_000;
 }
-
-const span = (ms: number) => (ms % 3_600_000 === 0 ? `${ms / 3_600_000}h` : `${Math.round(ms / 60_000)}m`);
 
 export const describeLoop = (r: Repeat) =>
   r.goal ? `checked whenever Claude goes idle until "${r.goal}" is met, up to ${MAX_GOAL_ROUNDS} checks` : once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;

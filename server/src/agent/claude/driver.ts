@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { query, getSubagentMessages, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
-import type { Account, AgentEvent, UsageWindow, AgentStatus, ChatEvent, Effort } from '../../../../shared/protocol.js';
+import { BIG_BRO, type Account, type AgentEvent, type UsageWindow, type AgentStatus, type ChatEvent, type Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { agentOf } from '../../session/events.js';
@@ -11,7 +11,7 @@ import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { configDir, hasAlt, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
 import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, type SubFile } from './history.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, BIG_BRO, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 

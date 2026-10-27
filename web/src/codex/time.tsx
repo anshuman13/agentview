@@ -17,6 +17,8 @@ export function slots(now = new Date()): { label: string; at: number }[] {
   ];
 }
 
+export const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
 export function when(at: number, now = Date.now()) {
   const d = new Date(at);
   const today = new Date(now);

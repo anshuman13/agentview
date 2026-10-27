@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { COMPACT_AT, EFFORT_LEVELS, MAX_GOAL_ROUNDS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { clock } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
 import { advance, loopOff, needsApproval, planStep, type LoopStep } from './loop.js';
-import { GOAL_USAGE, USAGE, after, clock, describeLoop, goalMet, limitReset, offCommand, parseGoal, parseLoop, roundWord } from './repeat.js';
+import { GOAL_USAGE, USAGE, after, describeLoop, goalMet, limitReset, offCommand, parseGoal, parseLoop, roundWord } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { agentOf, stopAgents } from './events.js';
 

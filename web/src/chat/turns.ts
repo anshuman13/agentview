@@ -1,5 +1,5 @@
 import { editCount } from '../../../shared/edits';
-import type { ChatEvent } from '../../../shared/protocol';
+import { BIG_BRO, type ChatEvent } from '../../../shared/protocol';
 import { chatCost } from '../../../shared/cost';
 export { chatCost };
 import { buildTranscript, denied, firstLine, type Item, type ToolResult, type ToolUse } from './steps';
@@ -35,7 +35,6 @@ export type Turn = {
   steps: Item[];
 };
 
-export const BIG_BRO = 'big-bro';
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 const PHASE_TEXT: Record<string, string> = { plan: 'Plan · Opus', build: 'Build · Opus', test: 'Test · Sonnet' };
 const COMMIT = /^\[([^\]\n]+) ([0-9a-f]{7,40})\] (.+)$/gm;

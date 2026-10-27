@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAssistant } from '../data';
 import { newId, type Profile } from '../data/sync';
 import type { Job, Run } from '../data/wiki';
-import { clock } from '../meetings/Meetings';
+import { clock } from '../time';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import '../../styles/features/wiki.css';
