@@ -326,7 +326,6 @@ export class AgentSession implements AgentHost {
 
   private enqueue(text: string, id?: string) {
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
-    this.expectTurn = false;
     this.start();
     this.turns++;
     this.setSession({ running: true });
@@ -642,7 +641,8 @@ export class AgentSession implements AgentHost {
   }
 
   turnResult(r: TurnResult) {
-    if (this.pending.length) {
+    // Before a switch to the other account the messages stay held, since the CLI that has them is replaced.
+    if (this.pending.length && !this.limitReset) {
       this.expectTurn = true;
       this.release();
     }
@@ -660,9 +660,14 @@ export class AgentSession implements AgentHost {
     const stopped = this.turns === 0 && this.state.session.stopping;
     const idle = this.turns === 0 && !this.state.session.stopping;
     if (idle && this.limitReset && this.failOver(this.limitReset)) {
+      this.queued.unshift(...this.pending.splice(0));
       this.limitReset = null;
       this.setSession({ compacting: false });
       return;
+    }
+    if (this.pending.length && this.limitReset) {
+      this.expectTurn = true;
+      this.release();
     }
     const loop = idle ? advance(this.state.session.loop, this.lastResult, this.planDenied) : null;
     if (loop) this.setSession({ loop: loop.state });

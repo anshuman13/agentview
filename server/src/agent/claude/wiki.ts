@@ -21,16 +21,22 @@ const matches = (ws: string[], ...texts: unknown[]) => ws.length > 0 && ws.every
 const claim = (f: HubRow) => `- [${f.id}] (${state(f)}${f.superseded_by ? ', superseded' : ''}) ${f.text}`;
 
 export function wikiTools(o: { cwd: string; chat: () => string | null }) {
+  // A chat reads only its own profile's wiki, so work chats never see personal claims and the other way round.
+  const own = async () => {
+    const profile = profileOf(o.cwd);
+    const [pages, facts] = await Promise.all([hubRows('pages'), hubRows('facts')]);
+    return { pages: pages.filter((r) => r.profile === profile), facts: facts.filter((r) => r.profile === profile) };
+  };
   return [
     tool('wiki_search', 'Search the user\'s wiki pages and claims, including proposed and rejected claims. Every word must match.', { query: z.string() }, async ({ query }) => {
       const ws = words(query);
-      const [pages, facts] = await Promise.all([hubRows('pages'), hubRows('facts')]);
+      const { pages, facts } = await own();
       const p = pages.filter((r) => state(r) !== 'rejected' && matches(ws, r.title, r.summary)).map((r) => `- page [${r.id}] ${r.title} (${r.section ?? 'no section'}, ${state(r)})`);
       const f = facts.filter((r) => matches(ws, r.text)).slice(0, 30).map(claim);
       return text([...p, ...f].join('\n') || 'Nothing matches.');
     }),
     tool('wiki_page', 'One wiki page\'s live claims by heading, with claim ids to pass as replaces.', { id: z.string() }, async ({ id }) => {
-      const [pages, facts] = await Promise.all([hubRows('pages'), hubRows('facts')]);
+      const { pages, facts } = await own();
       const page = pages.find((r) => r.id === id);
       if (!page) return text(`No page ${id}.`);
       const byHeading = new Map<string, string[]>();
