@@ -16,7 +16,7 @@ export type PulledChange = Change & {
 
 export type Reply ={ version: number; changes: PulledChange[]; hasMore?: boolean };
 
-export const FIELDS = ['title', 'text', 'source', 'source_url', 'people', 'at', 'status', 'meeting_id', 'rolls', 'rolled_from'] as const;
+export const FIELDS = ['title', 'text', 'source', 'source_url', 'people', 'at', 'status', 'meeting_id', 'rolls', 'rolled_from', 'rank'] as const;
 
 // Synced data columns per table, the same as TABLES in assistant/src/db.ts.
 export const TABLE_FIELDS: Record<string, readonly string[]> = {
@@ -46,6 +46,7 @@ export type ItemFields = {
   meeting_id: string | null;
   rolls: number | null;
   rolled_from: number | null;
+  rank: number | null;
 };
 
 export type ItemRow = ItemFields & {

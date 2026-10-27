@@ -68,7 +68,7 @@ describe('meetings', () => {
     ...common(id), title: id, starts_at, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
   });
   const action = (id: string, meeting_id: string, status: string): ItemRow => ({
-    ...common(id), meeting_id, title: id, text: null, source: 'action', source_url: null, people: null, at: null, status, rolls: null, rolled_from: null,
+    ...common(id), meeting_id, title: id, text: null, source: 'action', source_url: null, people: null, at: null, status, rolls: null, rolled_from: null, rank: null,
   });
 
   it('groups meetings that have started by day, newest day first', () => {

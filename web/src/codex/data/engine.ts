@@ -181,6 +181,7 @@ export function newCapture(text: string, type: 'task' | 'note', profile: Profile
     meeting_id: meeting?.id ?? null,
     rolls: null,
     rolled_from: null,
+    rank: null,
     dirty: 1,
   };
 }

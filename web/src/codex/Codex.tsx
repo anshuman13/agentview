@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import { useAssistant, useCodex } from './data';
 import { proposals } from './data/wiki';
@@ -16,6 +16,7 @@ import { Meetings } from './meetings/Meetings';
 import { PickTime, when } from './time';
 import { Composer, prepText, snoozes } from './AskBar';
 import { Overview, Review, useMinute, useSplit } from './Overview';
+import { useDrag, isDragging, type Drop } from './drag';
 import '../styles/features/assistant.css';
 
 const LISTS: { id: List; icon: string; label: string }[] = [
@@ -92,6 +93,7 @@ function Swipe({ onRight, onLeft, children }: { onRight: () => void; onLeft?: ()
         onPointerDown={(e) => { if (e.pointerType !== 'mouse') from.current = { x: e.clientX, y: e.clientY }; }}
         onPointerMove={(e) => {
           if (!from.current) return;
+          if (isDragging()) return reset();
           const mx = e.clientX - from.current.x;
           if (!moving.current) {
             if (Math.abs(e.clientY - from.current.y) > 10 && Math.abs(e.clientY - from.current.y) > Math.abs(mx)) { from.current = null; return; }
@@ -116,15 +118,15 @@ function Swipe({ onRight, onLeft, children }: { onRight: () => void; onLeft?: ()
   );
 }
 
-function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
+function Row({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen: () => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean }) {
   const act = useActions();
+  const { filter } = useView();
   const [checked, setChecked] = useState(false);
   const src = sourceOf(row);
   const at = atTime(row.at);
   const now = Date.now();
   const isDone = row.status === 'done';
   const isNote = row.status === 'note';
-  const quote = row.source !== 'capture' ? firstLine(row.text) : '';
   const late = at != null ? Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY) : 0;
   const due = at != null && !isNote && !isDone ? (late > 0 ? `${late}d late` : when(at, now)) : null;
   const tick = (e: React.MouseEvent) => {
@@ -134,28 +136,25 @@ function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
     setTimeout(() => act.done(row), 260);
   };
   const body = (
-    <div className={`as-row ${row.profile}${checked || isDone ? ' checked' : ''}`} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && onOpen()}>
-      <span className={`as-src ${isNote ? 'note' : row.source ?? 'capture'}`} title={src.label}><Icon name={isNote ? 'note' : src.icon} /></span>
-      <div className="as-body">
-        <div className="as-title">{row.title || '(Untitled)'}</div>
-        {isNote && row.text ? (
-          <div className="as-ctx"><span className="as-quote">{firstLine(row.text)}</span></div>
-        ) : (
-          <div className="as-ctx">
-            {row.source && row.source !== 'capture' && <span>{src.label}</span>}
-            {row.people && <span className="as-people">{row.people}</span>}
-            {quote && <span className="as-quote">“{quote}”</span>}
-            {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
-            {row.rolled_from != null && !isDone && <span className="as-rolled">from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
-            {!quote && !due && !row.people && <span>{ago(row.updated_at, ' ago')}</span>}
-          </div>
-        )}
-      </div>
-      {!isNote && (
+    <div className={`as-row ${row.profile}${checked || isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}`} data-row={row.profile + row.id} onPointerDown={onGrab} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && onOpen()}>
+      {isNote ? (
+        <span className="as-check note"><Icon name="note" /></span>
+      ) : (
         <button className="as-check" title={isDone ? 'Not done' : 'Done'} aria-label={isDone ? 'Not done' : 'Done'} onClick={tick}>
           <Icon name={checked || isDone ? 'pass-filled' : 'circle-large-outline'} />
         </button>
       )}
+      <div className="as-body">
+        <div className="as-title">{row.title || '(Untitled)'}</div>
+        <div className="as-ctx">
+          {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
+          {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
+          {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`}><Icon name={src.icon} small /> {src.label}</span>}
+          {row.people && <span className="as-people">{row.people}</span>}
+          {isNote && row.text && <span className="as-quote">{firstLine(row.text)}</span>}
+          {filter === 'all' && row.profile === 'personal' && <span className="as-prof personal">Personal</span>}
+        </div>
+      </div>
     </div>
   );
   if (isNote || isDone) return body;
@@ -253,6 +252,18 @@ function SnackBar() {
 
 const UPCOMING_DAYS = 7;
 
+type Day = { key: string; label: string; day: number | null; rows: ItemRow[] };
+const ranked = (rs: ItemRow[]) => [...rs].sort((a, b) => (a.rank ?? 1e15) - (b.rank ?? 1e15));
+const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
+
+// The time on the new day keeps the time of day; a task with no time stays untimed today and gets 09:00 on another day.
+function moveTo(r: ItemRow, day: number, today: number) {
+  const at = atTime(r.at);
+  if (at != null && new Date(at).setHours(0, 0, 0, 0) === day) return undefined;
+  if (at == null) return day === today ? undefined : day + 9 * 3600_000;
+  return day + (at - new Date(at).setHours(0, 0, 0, 0));
+}
+
 export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { list, filter } = useView();
   const { store, snap } = useAssistant();
@@ -300,6 +311,9 @@ export function Assistant() {
   const [olderOpen, setOlderOpen] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
   const [calError, setCalError] = useState('');
+  const scroller = useRef<HTMLDivElement>(null);
+  const act = useActions();
+  const { drag, start } = useDrag<ItemRow>((row, d) => dropRow(row, d), scroller);
 
   useEffect(() => {
     const shown = () => document.visibilityState === 'visible' && root.current?.offsetParent != null;
@@ -325,7 +339,6 @@ export function Assistant() {
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : 'Syncing';
   const loading = sync.syncing && !sync.last && !snap.items.length;
   const heading = list === 'today' ? `${greeting()}, ${new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric' })}` : LISTS.find((l) => l.id === list)!.label;
-  const rows = (rs: ItemRow[]) => <div className="as-group">{rs.map((r) => <Row key={r.profile + r.id} row={r} onOpen={() => setOpen(r)} />)}</div>;
 
   if (!ready) {
     return (
@@ -362,17 +375,63 @@ export function Assistant() {
   // Today holds everything due before midnight; later tasks follow by day, so a dated action never leaves the page.
   const horizon = new Date(now).setHours(24 * (UPCOMING_DAYS + 1), 0, 0, 0);
   const dueToday = [...s.today, ...s.later.filter((r) => atTime(r.at)! < s.endOfDay)];
-  const coming = s.later.filter((r) => atTime(r.at)! >= s.endOfDay).reduce<{ label: string; rows: ItemRow[] }[]>((acc, r) => {
+  const startOfDay = new Date(now).setHours(0, 0, 0, 0);
+  const days: Day[] = [{ key: 'today', label: 'Today', day: startOfDay, rows: ranked(dueToday) }];
+  for (const r of s.later.filter((r) => atTime(r.at)! >= s.endOfDay)) {
     const at = atTime(r.at)!;
-    const label = at >= horizon ? 'Later' : dayLabel(at);
-    const last = acc[acc.length - 1];
-    if (last?.label === label) last.rows.push(r);
-    else acc.push({ label, rows: [r] });
-    return acc;
-  }, []);
+    const later = at >= horizon;
+    const day = later ? null : new Date(at).setHours(0, 0, 0, 0);
+    const key = later ? 'later' : String(day);
+    const g = days.find((d) => d.key === key);
+    if (g) g.rows.push(r);
+    else days.push({ key, label: later ? 'Later' : dayLabel(at), day, rows: [r] });
+  }
+  for (const d of days) d.rows = ranked(d.rows);
+  const tomorrow = new Date(now).setHours(24, 0, 0, 0);
+  if (drag && !days.some((d) => d.day === tomorrow)) days.splice(1, 0, { key: String(tomorrow), label: 'Tomorrow', day: tomorrow, rows: [] });
+  // Dropping sets the order of the day's rows and moves the task to that day.
+  function dropRow(row: ItemRow, d: Drop) {
+    const target = days.find((x) => x.key === d.section);
+    if (!target || target.day == null) return;
+    const order = target.rows.filter((r) => !sameRow(r, row));
+    order.splice(d.index, 0, row);
+    const at = moveTo(row, target.day, startOfDay);
+    order.forEach((r, i) => {
+      const patch: Patch = r.rank === i + 1 ? {} : { rank: i + 1 };
+      if (sameRow(r, row) && at !== undefined) Object.assign(patch, { at }, UNROLL);
+      if (Object.keys(patch).length) act.edit(r, patch);
+    });
+    if (at !== undefined) showSnack(`Moved to ${target.label}`, () => act.edit(row, { at: row.at, rank: row.rank, rolls: row.rolls, rolled_from: row.rolled_from }));
+  }
+  const rows = (rs: ItemRow[], key?: string, droppable = true) => {
+    const over = drag?.over?.section === key && droppable ? drag!.over!.index : -1;
+    const shown = rs.filter((r) => r.profile + r.id !== drag?.key);
+    return (
+      <div className="as-list" data-drop={droppable ? key : undefined}>
+        {rs.map((r) => {
+          const k = r.profile + r.id;
+          const line = over >= 0 && shown[over] && shown[over].profile + shown[over].id === k;
+          return (
+            <Fragment key={k}>
+              {line && <div className="as-drop-line" />}
+              <Row row={r} onOpen={() => setOpen(r)} onGrab={key ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
+            </Fragment>
+          );
+        })}
+        {over >= 0 && over >= shown.length && <div className="as-drop-line" />}
+        {droppable && drag && !rs.length && <div className="as-drop-empty">Drop here</div>}
+      </div>
+    );
+  };
+  const section = (d: Day) => (d.rows.length > 0 || drag) && (
+    <section key={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
+      <div className={`as-section${d.key === 'today' ? '' : ' later'}`}>{d.label} {d.rows.length > 0 && <span>{d.rows.length}</span>}</div>
+      {rows(d.rows, d.key, d.day != null)}
+    </section>
+  );
   const fresh = s.review.filter((r) => now - reviewedSince(r) < DAY);
   const older = s.review.filter((r) => now - reviewedSince(r) >= DAY);
-  const empty = !s.overdue.length && !dueToday.length && !coming.length && !s.review.length;
+  const empty = !s.overdue.length && days.every((d) => !d.rows.length) && !s.review.length;
   const nextLater = s.nextLater;
 
   return (
@@ -387,35 +446,25 @@ export function Assistant() {
       {sync.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> {status}. Your changes are kept on this device.</button>}
       {calError && <button className="as-error" onClick={() => store.syncCalendar().then(() => setCalError(''), (err) => setCalError(errorText(err)))}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 
-      <div className="as-scroll">
+      <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>
         {list === 'today' && <Overview s={s} dueToday={dueToday} onPrep={() => ask(askText(prepText(s.next!), snap.items))} />}
         {list === 'tasks' && (
           <>
             {s.overdue.length > 0 && (
               <section>
-                <div className="as-section late">Overdue · {s.overdue.length}</div>
-                {rows(s.overdue)}
+                <div className="as-section late">Overdue <span>{s.overdue.length}</span></div>
+                {rows(s.overdue, 'overdue', false)}
               </section>
             )}
+            {section(days[0])}
             <Review rows={fresh} />
             {older.length > 0 && (
               <section>
-                <button className="as-section review as-toggle" onClick={() => setOlderOpen((v) => !v)}>{older.length} older to review <Icon name={olderOpen ? 'chevron-up' : 'chevron-down'} small /></button>
+                <button className="as-section review as-toggle" onClick={() => setOlderOpen((v) => !v)}>Older to review <span>{older.length}</span> <Icon name={olderOpen ? 'chevron-up' : 'chevron-down'} small /></button>
                 {olderOpen && <Review rows={older} />}
               </section>
             )}
-            {dueToday.length > 0 && (
-              <section>
-                <div className="as-section">Today · {dueToday.length}</div>
-                {rows(dueToday)}
-              </section>
-            )}
-            {coming.map((g) => (
-              <section key={g.label}>
-                <div className="as-section later">{g.label} · {g.rows.length}</div>
-                {rows(g.rows)}
-              </section>
-            ))}
+            {days.slice(1).map(section)}
             {loading ? <div className="as-end">Loading</div> : empty && (
               <div className="as-empty">
                 <Icon name="pass" />
@@ -425,7 +474,7 @@ export function Assistant() {
             )}
             {s.doneToday.length > 0 && (
               <section>
-                <button className="as-section done as-toggle" onClick={() => setDoneOpen((v) => !v)}>Done today · {s.doneToday.length} <Icon name={doneOpen ? 'chevron-up' : 'chevron-down'} small /></button>
+                <button className="as-section done as-toggle" onClick={() => setDoneOpen((v) => !v)}>Done today <span>{s.doneToday.length}</span> <Icon name={doneOpen ? 'chevron-up' : 'chevron-down'} small /></button>
                 {doneOpen && rows(s.doneToday)}
               </section>
             )}
@@ -433,6 +482,7 @@ export function Assistant() {
         )}
       </div>
 
+      {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || '(Untitled)'}</div>}
       <SnackBar />
       <Composer items={snap.items} next={s.next} filter={filter} />
       {current && <Sheet row={current} items={snap.items} onClose={() => setOpen(null)} />}
