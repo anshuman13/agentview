@@ -73,6 +73,7 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
   for await (const m of query({
     prompt,
     options: {
+      persistSession: false,
       model: 'sonnet',
       maxTurns: 12,
       settingSources: [],

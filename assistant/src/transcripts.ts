@@ -173,6 +173,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
   for await (const m of query({
     prompt,
     options: {
+      persistSession: false,
       model: 'sonnet',
       maxTurns: 10 + meetings.length * 4,
       settingSources: [],

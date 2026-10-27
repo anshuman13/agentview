@@ -50,6 +50,7 @@ async function runJob(db: Database, job: Job) {
   for await (const m of query({
     prompt,
     options: {
+      persistSession: false,
       model: 'sonnet',
       maxTurns: 30,
       cwd: os.tmpdir(),

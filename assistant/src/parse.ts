@@ -43,6 +43,7 @@ export async function parseTask(profile: Profile, text: string, now = Date.now()
   for await (const m of query({
     prompt,
     options: {
+      persistSession: false,
       model: 'haiku',
       systemPrompt: 'You turn quick notes into clear tasks.',
       maxTurns: 3,
