@@ -1,8 +1,8 @@
 .as-editor { position: relative; --work: var(--prompt); --personal: var(--claude); }
-/* Gradianto Midnight Blue syntax colours, used to tell sections, lists and meeting states apart. */
-:is(.as-editor, .as-nav) { --c-blue: #589df6; --c-green: #96bf7d; --c-amber: #ebbf8c; --c-purple: #9d87e0; --c-pink: #d7539b; --c-sky: #6fb3d2; }
+/* Theme hues, used to tell sections, lists and meeting states apart. */
+:is(.as-editor, .as-nav) { --c-blue: var(--hue-blue); --c-green: var(--hue-green); --c-amber: var(--hue-amber); --c-purple: var(--hue-violet); --c-pink: var(--hue-magenta); --c-sky: var(--hue-sky); }
 /* Codex uses the app theme with Geist, on the dark themes. */
-:root:not([data-theme='light'], [data-theme='solarized-light']) :is(.as-editor, .as-nav) {
+:root:not([data-theme='paper']) :is(.as-editor, .as-nav) {
   --font: 'Geist Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   background: var(--app-gradient), var(--bg);
   color: var(--fg);
@@ -59,8 +59,8 @@
 .as-row:hover { background: var(--hover); }
 .as-row:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 .as-src { --c: var(--accent); flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); }
-.as-src.slack { --c: #c06bd8; }
-.as-src.linear { --c: #7b83eb; }
+.as-src.slack { --c: var(--hue-magenta); }
+.as-src.linear { --c: var(--hue-violet); }
 .as-src.gmail, .as-src.mail { --c: var(--err); }
 .as-src.calendar, .as-src.meeting { --c: var(--ok); }
 .as-src.github { --c: var(--fg-muted); }

@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 
-export type Theme = 'gradianto' | 'dark-modern' | 'light' | 'solarized-dark' | 'solarized-light';
+export type Theme = 'midnight' | 'aubergine' | 'forest' | 'paper';
 
 const KEY = 'agentview.theme';
-const ORDER: Theme[] = ['gradianto', 'dark-modern', 'light', 'solarized-dark', 'solarized-light'];
-export const THEME_NAMES: Record<Theme, string> = { gradianto: 'Gradianto', 'dark-modern': 'Dark Modern', light: 'Light', 'solarized-dark': 'Solarized Dark', 'solarized-light': 'Solarized Light' };
+const ORDER: Theme[] = ['midnight', 'aubergine', 'forest', 'paper'];
+export const THEME_NAMES: Record<Theme, string> = { midnight: 'Midnight', aubergine: 'Aubergine', forest: 'Forest', paper: 'Paper' };
 const isTheme = (t: unknown): t is Theme => ORDER.includes(t as Theme);
 
 export function currentTheme(): Theme {
   const t = document.documentElement.dataset.theme;
-  return isTheme(t) ? t : 'gradianto';
+  return isTheme(t) ? t : 'midnight';
 }
 
-export const isDark = (t: Theme) => t !== 'light' && t !== 'solarized-light';
+export const isDark = (t: Theme) => t !== 'paper';
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
@@ -41,7 +41,7 @@ export function useTheme(): [Theme, () => void] {
       try {
         stored = localStorage.getItem(KEY);
       } catch {}
-      if (!isTheme(stored)) applyTheme(mq.matches ? 'light' : 'gradianto');
+      if (!isTheme(stored)) applyTheme(mq.matches ? 'paper' : 'midnight');
     };
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
