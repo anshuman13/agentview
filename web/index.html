@@ -4,22 +4,22 @@
     <meta charset="UTF-8" />
     <script>
       try {
-        var bgs = { midnight: '#06101c', aubergine: '#1a0720', forest: '#04130e', paper: '#fef5ea' };
-        var old = { gradianto: 'midnight', 'dark-modern': 'midnight', 'solarized-dark': 'midnight', light: 'paper', 'solarized-light': 'paper' };
+        var bgs = { dark: '#191919', light: '#ffffff' };
+        var old = { midnight: 'dark', aubergine: 'dark', forest: 'dark', gradianto: 'dark', 'dark-modern': 'dark', 'solarized-dark': 'dark', paper: 'light', 'solarized-light': 'light' };
         var wanted = new URLSearchParams(location.search).get('theme');
         if (bgs[wanted]) localStorage.setItem('agentview.theme', wanted);
         var stored = localStorage.getItem('agentview.theme');
         if (old[stored]) localStorage.setItem('agentview.theme', (stored = old[stored]));
-        var system = matchMedia('(prefers-color-scheme: light)').matches ? 'paper' : 'midnight';
+        var system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
         var theme = bgs[stored] ? stored : system;
         document.documentElement.dataset.theme = theme;
         document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bgs[theme]);
       } catch (e) {
-        document.documentElement.dataset.theme = 'midnight';
+        document.documentElement.dataset.theme = 'dark';
       }
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#06101c" />
+    <meta name="theme-color" content="#191919" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

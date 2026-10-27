@@ -7,8 +7,8 @@
 
   1. Scales: spacing (2px unit, --sp-N = N * 2px), type, line height, radius,
      control sizes, elevation, motion, z-index.
-  2. Semantic colours for midnight (default), aubergine, forest and paper, generated in OKLCH:
-     neutrals tinted toward one hue per theme, and accents at equal lightness so no view looks louder.
+  2. Semantic colours for dark (default) and light, after Notion's palette:
+     its greys and text colours, with one colour per view.
   Components use only these names; one-off geometry (tree indents, fixed
   widths) stays local to its feature file.
 */
@@ -118,193 +118,34 @@
   --file-folder: #dcb67a;
 }
 
-/* Midnight: dark neutrals tinted toward hue 255. */
+/* Dark. */
 :root,
-:root[data-theme='midnight'] {
+:root[data-theme='dark'] {
   color-scheme: dark;
-  --sunken: #040b18;
-  --bg: #06101c;
-  --surface: #0b1725;
-  --raised: #131f2e;
-  --hover: #1b2736;
-  --border: #212c3a;
-  --border-strong: #313b49;
-  --border-card: #47515d;
-  --fg-faint: #727b87;
-  --fg-muted: #9ba2ac;
-  --fg: #ccd1d8;
-  --fg-strong: #f0f2f5;
-  --hue-violet: #b298f9;
-  --hue-amber: #e7963d;
-  --hue-teal: #00c7b6;
-  --hue-blue: #47b5fa;
-  --hue-magenta: #e486c6;
-  --hue-green: #62c37a;
-  --hue-yellow: #d3a329;
-  --hue-red: #f7857d;
-  --hue-sky: #00c0e1;
-  --hue-orange: #f28c5c;
-  --on-accent: #06101c;
-  --on-color: #ffffff;
-  --link: var(--hue-blue);
-  --prompt: var(--hue-blue);
-  --agent: var(--hue-violet);
-  --claude: var(--hue-orange);
-  --ok: var(--hue-green);
-  --warn: var(--hue-yellow);
-  --err: var(--hue-red);
-  --diff-add: var(--hue-green);
-  --diff-del: var(--hue-red);
-  --t-read: var(--hue-blue);
-  --t-edit: var(--hue-green);
-  --t-run: var(--hue-yellow);
-  --t-web: var(--hue-sky);
-  --t-mcp: var(--hue-magenta);
-  --app-gradient: radial-gradient(80% 50% at 0% 0%, #0b2443, transparent 70%);
-  --syn-keyword: #bca9f7;
-  --syn-string: #82cb92;
-  --syn-operator: #9ba2ac;
-  --syn-number: #f2a07c;
-  --syn-comment: #727b87;
-  --syn-type: #d8b260;
-  --syn-property: #e79bce;
-  --syn-definition: #71c1f7;
-  --syn-invalid: var(--hue-red);
-}
-
-/* Aubergine: dark neutrals tinted toward hue 310. */
-:root[data-theme='aubergine'] {
-  color-scheme: dark;
-  --accent-main: #cf8de4;
-  --sunken: #120217;
-  --bg: #1a0720;
-  --surface: #24102a;
-  --raised: #2c1932;
-  --hover: #36233b;
-  --border: #3a2940;
-  --border-strong: #49394e;
-  --border-card: #5e4f62;
-  --fg-faint: #8d8191;
-  --fg-muted: #b0a7b3;
-  --fg: #d7d2d9;
-  --fg-strong: #f3f1f4;
-  --hue-violet: #b298f9;
-  --hue-amber: #e7963d;
-  --hue-teal: #00c7b6;
-  --hue-blue: #47b5fa;
-  --hue-magenta: #e486c6;
-  --hue-green: #62c37a;
-  --hue-yellow: #d3a329;
-  --hue-red: #f7857d;
-  --hue-sky: #00c0e1;
-  --hue-orange: #f28c5c;
-  --on-accent: #1a0720;
-  --on-color: #ffffff;
-  --link: var(--hue-blue);
-  --prompt: var(--hue-blue);
-  --agent: var(--hue-violet);
-  --claude: var(--hue-orange);
-  --ok: var(--hue-green);
-  --warn: var(--hue-yellow);
-  --err: var(--hue-red);
-  --diff-add: var(--hue-green);
-  --diff-del: var(--hue-red);
-  --t-read: var(--hue-blue);
-  --t-edit: var(--hue-green);
-  --t-run: var(--hue-yellow);
-  --t-web: var(--hue-sky);
-  --t-mcp: var(--hue-magenta);
-  --app-gradient: radial-gradient(90% 60% at 0% 0%, #3f1d4a, transparent 75%);
-  --syn-keyword: #bca9f7;
-  --syn-string: #82cb92;
-  --syn-operator: #a59fa9;
-  --syn-number: #f2a07c;
-  --syn-comment: #7e7784;
-  --syn-type: #d8b260;
-  --syn-property: #e79bce;
-  --syn-definition: #71c1f7;
-  --syn-invalid: var(--hue-red);
-}
-
-/* Forest: dark neutrals tinted toward hue 170. */
-:root[data-theme='forest'] {
-  color-scheme: dark;
-  --accent-main: var(--hue-green);
-  --sunken: #010f09;
-  --bg: #04130e;
-  --surface: #071a14;
-  --raised: #0e231c;
-  --hover: #182b24;
-  --border: #1e3029;
-  --border-strong: #2e3f39;
-  --border-card: #45544e;
-  --fg-faint: #707e79;
-  --fg-muted: #99a5a0;
-  --fg: #cbd3d0;
-  --fg-strong: #eff3f1;
-  --hue-violet: #b298f9;
-  --hue-amber: #e7963d;
-  --hue-teal: #00c7b6;
-  --hue-blue: #47b5fa;
-  --hue-magenta: #e486c6;
-  --hue-green: #62c37a;
-  --hue-yellow: #d3a329;
-  --hue-red: #f7857d;
-  --hue-sky: #00c0e1;
-  --hue-orange: #f28c5c;
-  --on-accent: #04130e;
-  --on-color: #ffffff;
-  --link: var(--hue-blue);
-  --prompt: var(--hue-blue);
-  --agent: var(--hue-violet);
-  --claude: var(--hue-orange);
-  --ok: var(--hue-green);
-  --warn: var(--hue-yellow);
-  --err: var(--hue-red);
-  --diff-add: var(--hue-green);
-  --diff-del: var(--hue-red);
-  --t-read: var(--hue-blue);
-  --t-edit: var(--hue-green);
-  --t-run: var(--hue-yellow);
-  --t-web: var(--hue-sky);
-  --t-mcp: var(--hue-magenta);
-  --app-gradient: radial-gradient(80% 50% at 0% 0%, #002d20, transparent 70%);
-  --syn-keyword: #bca9f7;
-  --syn-string: #82cb92;
-  --syn-operator: #99a5a0;
-  --syn-number: #f2a07c;
-  --syn-comment: #707e79;
-  --syn-type: #d8b260;
-  --syn-property: #e79bce;
-  --syn-definition: #71c1f7;
-  --syn-invalid: var(--hue-red);
-}
-
-/* Paper: light neutrals tinted toward hue 75. */
-:root[data-theme='paper'] {
-  color-scheme: light;
-  --sunken: #f5ebde;
-  --bg: #fef5ea;
-  --surface: #faf0e3;
-  --raised: #fffbf5;
-  --hover: #f1e6d8;
-  --border: #e9decf;
-  --border-strong: #dcd1c2;
-  --border-card: #c6bcaf;
-  --fg-faint: #887f72;
-  --fg-muted: #655c50;
-  --fg: #3c342a;
-  --fg-strong: #1d170f;
-  --hue-violet: #795bbf;
-  --hue-amber: #ab5a00;
-  --hue-teal: #008c7d;
-  --hue-blue: #0079bf;
-  --hue-magenta: #a8488d;
-  --hue-green: #05893e;
-  --hue-yellow: #996700;
-  --hue-red: #b94642;
-  --hue-sky: #0085a7;
-  --hue-orange: #b64e10;
+  --sunken: #141414;
+  --bg: #191919;
+  --surface: #202020;
+  --raised: #252525;
+  --hover: #2c2c2c;
+  --border: #2f2f2f;
+  --border-strong: #373737;
+  --border-card: #474747;
+  --fg-faint: #6f6f6f;
+  --fg-muted: #9b9b9b;
+  --fg: #d4d4d4;
+  --fg-strong: #f0f0f0;
+  --hue-violet: #9d68d3;
+  --hue-amber: #c77d48;
+  --hue-teal: #529e72;
+  --hue-blue: #379ad3;
+  --hue-magenta: #d15796;
+  --hue-green: #529e72;
+  --hue-yellow: #ca9849;
+  --hue-red: #df5452;
+  --hue-sky: #379ad3;
+  --hue-orange: #c77d48;
+  --hue-brown: #ba856f;
+  --hue-brand: #2383e2;
   --on-accent: #ffffff;
   --on-color: #ffffff;
   --link: var(--hue-blue);
@@ -322,20 +163,75 @@
   --t-web: var(--hue-sky);
   --t-mcp: var(--hue-magenta);
   --app-gradient: none;
-  --syn-keyword: #6a4fa9;
-  --syn-string: #007834;
-  --syn-operator: #655c50;
-  --syn-number: #a14206;
-  --syn-comment: #887f72;
-  --syn-type: #875a00;
-  --syn-property: #953d7c;
-  --syn-definition: #006aaa;
+  --syn-keyword: var(--hue-violet);
+  --syn-string: var(--hue-green);
+  --syn-operator: var(--fg-muted);
+  --syn-number: var(--hue-orange);
+  --syn-comment: var(--fg-faint);
+  --syn-type: var(--hue-yellow);
+  --syn-property: var(--hue-magenta);
+  --syn-definition: var(--hue-blue);
   --syn-invalid: var(--hue-red);
 }
 
-/* Each view keeps its own accent: chat uses the theme's own colour (violet by default), code blue, Codex amber, wiki teal. */
-:root, .main.pane { --accent: var(--accent-main, var(--hue-violet)); }
-.editor-group { --accent: var(--hue-blue); }
+/* Light. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --sunken: #f7f7f5;
+  --bg: #ffffff;
+  --surface: #fbfbfa;
+  --raised: #ffffff;
+  --hover: #efefee;
+  --border: #e9e9e7;
+  --border-strong: #dfdfde;
+  --border-card: #d3d3d1;
+  --fg-faint: #9b9a97;
+  --fg-muted: #787774;
+  --fg: #37352f;
+  --fg-strong: #191711;
+  --hue-violet: #9065b0;
+  --hue-amber: #d9730d;
+  --hue-teal: #448361;
+  --hue-blue: #337ea9;
+  --hue-magenta: #c14c8a;
+  --hue-green: #448361;
+  --hue-yellow: #cb912f;
+  --hue-red: #d44c47;
+  --hue-sky: #337ea9;
+  --hue-orange: #d9730d;
+  --hue-brown: #9f6b53;
+  --hue-brand: #2383e2;
+  --on-accent: #ffffff;
+  --on-color: #ffffff;
+  --link: var(--hue-blue);
+  --prompt: var(--hue-blue);
+  --agent: var(--hue-violet);
+  --claude: var(--hue-orange);
+  --ok: var(--hue-green);
+  --warn: var(--hue-yellow);
+  --err: var(--hue-red);
+  --diff-add: var(--hue-green);
+  --diff-del: var(--hue-red);
+  --t-read: var(--hue-blue);
+  --t-edit: var(--hue-green);
+  --t-run: var(--hue-yellow);
+  --t-web: var(--hue-sky);
+  --t-mcp: var(--hue-magenta);
+  --app-gradient: none;
+  --syn-keyword: var(--hue-violet);
+  --syn-string: var(--hue-green);
+  --syn-operator: var(--fg-muted);
+  --syn-number: var(--hue-orange);
+  --syn-comment: var(--fg-faint);
+  --syn-type: var(--hue-yellow);
+  --syn-property: var(--hue-magenta);
+  --syn-definition: var(--hue-blue);
+  --syn-invalid: var(--hue-red);
+}
+
+/* Each view keeps its own colour: chat blue, code purple, Codex orange, wiki green. */
+:root, .main.pane { --accent: var(--hue-brand); }
+.editor-group { --accent: var(--hue-violet); }
 .workbench[data-codex='true'] .editor-group, .as-nav, .as-drawer { --accent: var(--hue-amber); }
 .assistant[data-list='wiki'] { --accent: var(--hue-teal); }
 :root, .main.pane, .editor-group, .as-nav, .as-drawer, .assistant {

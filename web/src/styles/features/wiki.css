@@ -2,7 +2,7 @@
 .assistant.wide { max-width: none; }
 
 .wk { flex: 1; min-height: 0; display: flex; flex-direction: column; --wk-max: 1120px; --wk-pad: var(--sp-16); --wk-card: var(--surface); }
-:root[data-theme='paper'] .wk { --wk-card: var(--bg); }
+:root[data-theme='light'] .wk { --wk-card: var(--bg); }
 .wk :is(button, a, [role='button']):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .wk-head { flex: none; display: flex; align-items: center; gap: var(--sp-4); width: 100%; max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-10) var(--wk-pad) var(--sp-6); }
 .wk-head h1 { margin: 0; font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }

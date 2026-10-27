@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 
-export type Theme = 'midnight' | 'aubergine' | 'forest' | 'paper';
+export type Theme = 'dark' | 'light';
 
 const KEY = 'agentview.theme';
-const ORDER: Theme[] = ['midnight', 'aubergine', 'forest', 'paper'];
-export const THEME_NAMES: Record<Theme, string> = { midnight: 'Midnight', aubergine: 'Aubergine', forest: 'Forest', paper: 'Paper' };
+const ORDER: Theme[] = ['dark', 'light'];
+export const THEME_NAMES: Record<Theme, string> = { dark: 'Dark', light: 'Light' };
 const isTheme = (t: unknown): t is Theme => ORDER.includes(t as Theme);
 
 export function currentTheme(): Theme {
   const t = document.documentElement.dataset.theme;
-  return isTheme(t) ? t : 'midnight';
+  return isTheme(t) ? t : 'dark';
 }
 
-export const isDark = (t: Theme) => t !== 'paper';
+export const isDark = (t: Theme) => t === 'dark';
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
@@ -41,7 +41,7 @@ export function useTheme(): [Theme, () => void] {
       try {
         stored = localStorage.getItem(KEY);
       } catch {}
-      if (!isTheme(stored)) applyTheme(mq.matches ? 'paper' : 'midnight');
+      if (!isTheme(stored)) applyTheme(mq.matches ? 'light' : 'dark');
     };
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
