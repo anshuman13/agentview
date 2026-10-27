@@ -96,7 +96,7 @@
 }
 .tc-steps-toggle:hover, .steps-toggle:hover { background: transparent; color: var(--fg); }
 
-.tl-state { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-3); color: var(--claude); }
+.tl-state { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-3); color: var(--accent); }
 .tl-send-now { font-size: var(--fs-xs); white-space: nowrap; }
 .tl-empty { padding: var(--sp-4) var(--sp-1) var(--sp-2); font-size: var(--fs-sm); color: var(--fg-muted); }
 .tl-recap {
@@ -114,7 +114,7 @@
   padding: var(--sp-2) 0; font-size: var(--fs-sm); line-height: var(--line-sm); color: var(--fg);
 }
 .tl-now .text { min-width: 0; }
-.tl-now:is(.running, .stopping) .mark { color: var(--claude); }
+.tl-now:is(.running, .stopping) .mark { color: var(--accent); }
 .tl-now.waiting :is(.mark, .text) { color: var(--warn); }
 .tl-now.idle .text { color: var(--fg-muted); }
 .tl-now .tool { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); }

@@ -7,8 +7,8 @@
 
   1. Scales: spacing (2px unit, --sp-N = N * 2px), type, line height, radius,
      control sizes, elevation, motion, z-index.
-  2. Semantic colours for dark (default) and light, after Notion's palette:
-     its greys and text colours, with one colour per view.
+  2. Semantic colours for dark (default) and light, after Cursor's palette:
+     greys with one accent; other hues only for status, agents and syntax.
   Components use only these names; one-off geometry (tree indents, fixed
   widths) stays local to its feature file.
 */
@@ -123,45 +123,45 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
   --sunken: #141414;
-  --bg: #191919;
-  --surface: #202020;
-  --raised: #252525;
-  --hover: #2c2c2c;
-  --border: #2f2f2f;
-  --border-strong: #373737;
-  --border-card: #474747;
-  --fg-faint: #6f6f6f;
-  --fg-muted: #9b9b9b;
-  --fg: #d4d4d4;
-  --fg-strong: #f0f0f0;
-  --hue-violet: #9d68d3;
-  --hue-amber: #c77d48;
-  --hue-teal: #529e72;
-  --hue-blue: #379ad3;
-  --hue-magenta: #d15796;
-  --hue-green: #529e72;
-  --hue-yellow: #ca9849;
-  --hue-red: #df5452;
-  --hue-sky: #379ad3;
-  --hue-orange: #c77d48;
-  --hue-brown: #ba856f;
-  --hue-brand: #2383e2;
-  --on-accent: #ffffff;
+  --bg: #181818;
+  --surface: #1c1c1c;
+  --raised: #202020;
+  --hover: #262626;
+  --border: #2a2a2a;
+  --border-strong: #343434;
+  --border-card: #3c3c3c;
+  --fg-faint: #6e6e6e;
+  --fg-muted: #8d8d8d;
+  --fg: #e4e4e4;
+  --fg-strong: #f5f5f5;
+  --hue-violet: #aaa0fa;
+  --hue-amber: #efb080;
+  --hue-teal: #88c0d0;
+  --hue-blue: #81a1c1;
+  --hue-magenta: #e394dc;
+  --hue-green: #3fa266;
+  --hue-yellow: #f1b467;
+  --hue-red: #e34671;
+  --hue-sky: #88c0d0;
+  --hue-orange: #efb080;
+  --hue-brown: #c1a78e;
+  --hue-brand: #88c0d0;
+  --on-accent: #141414;
   --on-color: #ffffff;
-  --link: var(--hue-blue);
-  --prompt: var(--hue-blue);
+  --link: var(--accent);
+  --prompt: var(--accent);
   --agent: var(--hue-violet);
-  --claude: var(--hue-orange);
+  --claude: var(--fg-muted);
   --ok: var(--hue-green);
   --warn: var(--hue-yellow);
   --err: var(--hue-red);
   --diff-add: var(--hue-green);
   --diff-del: var(--hue-red);
-  --t-read: var(--hue-blue);
-  --t-edit: var(--hue-green);
-  --t-run: var(--hue-yellow);
-  --t-web: var(--hue-sky);
-  --t-mcp: var(--hue-magenta);
+  --t-read: var(--fg-muted);
+  --t-edit: var(--fg-muted);
+  --t-run: var(--fg-muted);
+  --t-web: var(--fg-muted);
+  --t-mcp: var(--fg-muted);
   --app-gradient: none;
   --syn-keyword: var(--hue-violet);
   --syn-string: var(--hue-green);
@@ -177,46 +177,46 @@
 /* Light. */
 :root[data-theme='light'] {
   color-scheme: light;
-  --sunken: #f7f7f5;
+  --sunken: #f3f3f3;
   --bg: #ffffff;
-  --surface: #fbfbfa;
+  --surface: #f8f8f8;
   --raised: #ffffff;
-  --hover: #efefee;
-  --border: #e9e9e7;
-  --border-strong: #dfdfde;
-  --border-card: #d3d3d1;
-  --fg-faint: #9b9a97;
-  --fg-muted: #787774;
-  --fg: #37352f;
-  --fg-strong: #191711;
-  --hue-violet: #9065b0;
-  --hue-amber: #d9730d;
-  --hue-teal: #448361;
-  --hue-blue: #337ea9;
-  --hue-magenta: #c14c8a;
-  --hue-green: #448361;
-  --hue-yellow: #cb912f;
-  --hue-red: #d44c47;
-  --hue-sky: #337ea9;
-  --hue-orange: #d9730d;
-  --hue-brown: #9f6b53;
-  --hue-brand: #2383e2;
+  --hover: #ececec;
+  --border: #e4e4e4;
+  --border-strong: #d6d6d6;
+  --border-card: #cccccc;
+  --fg-faint: #9a9a9a;
+  --fg-muted: #6b6b6b;
+  --fg: #1f1f1f;
+  --fg-strong: #0a0a0a;
+  --hue-violet: #6f5fd6;
+  --hue-amber: #b5651d;
+  --hue-teal: #2f7a8c;
+  --hue-blue: #4a6f94;
+  --hue-magenta: #a2489b;
+  --hue-green: #1f8a4c;
+  --hue-yellow: #a8710f;
+  --hue-red: #c9264f;
+  --hue-sky: #2f7a8c;
+  --hue-orange: #b5651d;
+  --hue-brown: #8a6a4e;
+  --hue-brand: #2f7a8c;
   --on-accent: #ffffff;
   --on-color: #ffffff;
-  --link: var(--hue-blue);
-  --prompt: var(--hue-blue);
+  --link: var(--accent);
+  --prompt: var(--accent);
   --agent: var(--hue-violet);
-  --claude: var(--hue-orange);
+  --claude: var(--fg-muted);
   --ok: var(--hue-green);
   --warn: var(--hue-yellow);
   --err: var(--hue-red);
   --diff-add: var(--hue-green);
   --diff-del: var(--hue-red);
-  --t-read: var(--hue-blue);
-  --t-edit: var(--hue-green);
-  --t-run: var(--hue-yellow);
-  --t-web: var(--hue-sky);
-  --t-mcp: var(--hue-magenta);
+  --t-read: var(--fg-muted);
+  --t-edit: var(--fg-muted);
+  --t-run: var(--fg-muted);
+  --t-web: var(--fg-muted);
+  --t-mcp: var(--fg-muted);
   --app-gradient: none;
   --syn-keyword: var(--hue-violet);
   --syn-string: var(--hue-green);
@@ -229,12 +229,9 @@
   --syn-invalid: var(--hue-red);
 }
 
-/* Each view keeps its own colour: chat blue, code purple, Codex orange, wiki green. */
-:root, .main.pane { --accent: var(--hue-brand); }
-.editor-group { --accent: var(--hue-violet); }
-.workbench[data-codex='true'] .editor-group, .as-nav, .as-drawer { --accent: var(--hue-amber); }
-.assistant[data-list='wiki'] { --accent: var(--hue-teal); }
-:root, .main.pane, .editor-group, .as-nav, .as-drawer, .assistant {
+/* One accent everywhere; colour beyond it marks status (ok, warn, err) and agents. */
+:root {
+  --accent: var(--hue-brand);
   --accent-hover: color-mix(in oklch, var(--accent) 85%, var(--fg-strong));
   --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
 }

@@ -20,7 +20,7 @@
 .sessions .row { flex-wrap: nowrap; padding-left: var(--sp-4); }
 .sessions .row.project { font-weight: 600; color: var(--fg); }
 .sessions .row.project .name { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
-.sessions .row.project.here .name { color: var(--claude); }
+.sessions .row.project.here .name { color: var(--accent); }
 .sessions .row:is(.session, .more) { padding-left: var(--sp-12); }
 .sessions .row .name { flex: 1; min-width: 0; }
 .sessions .row :is(.count, .when) {
@@ -59,7 +59,7 @@
 .sessions.chats .row.recent { padding-left: 42px; }
 .sessions.chats .row.recent .name { color: var(--fg-muted); }
 .sessions .row.live .state { display: inline-flex; width: var(--icon); justify-content: center; color: var(--fg-muted); flex: none; }
-.sessions .row.live .state.running { color: var(--claude); }
+.sessions .row.live .state.running { color: var(--accent); }
 .sessions .row.live .state.waiting { color: var(--warn); }
 .sessions .row.live .state:is(.ci, .changes, .deploy) { color: var(--err); }
 .sessions .row.live .state.ready { color: var(--ok); }
@@ -107,7 +107,7 @@
 .sessions.workspace .row.repo-row .label { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: var(--sp-1); }
 .sessions.workspace .row.repo-row .name { flex: none; overflow: hidden; text-overflow: ellipsis; }
 .sessions.workspace .row.repo-row.dim .name { color: var(--fg-muted); }
-.sessions.workspace .row.repo-row.here .name { color: var(--claude); }
+.sessions.workspace .row.repo-row.here .name { color: var(--accent); }
 .sessions.workspace .row.repo-row.two { height: auto; min-height: var(--size-row); padding-top: var(--sp-1); padding-bottom: 3px; align-items: flex-start; }
 .sessions.workspace .row.repo-row.two > :is(.twistie, .icon, .badges, .acts) { margin-top: 3px; }
 .sessions.workspace .row.repo-row .branch-chip {

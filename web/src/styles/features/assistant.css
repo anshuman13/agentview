@@ -1,5 +1,5 @@
-.as-editor { position: relative; --work: var(--prompt); --personal: var(--claude); }
-/* Theme hues, used to tell sections, lists and meeting states apart. */
+.as-editor { position: relative; --work: var(--fg-muted); --personal: var(--fg-muted); }
+/* Theme hues for meeting states. */
 :is(.as-editor, .as-nav) { --c-blue: var(--hue-blue); --c-green: var(--hue-green); --c-amber: var(--hue-amber); --c-purple: var(--hue-violet); --c-pink: var(--hue-magenta); --c-sky: var(--hue-sky); }
 /* Codex uses the app theme with Geist, on the dark themes. */
 :root:not([data-theme='light']) :is(.as-editor, .as-nav) {
@@ -10,7 +10,7 @@
 }
 :is(.as-editor, .as-nav) { font-family: var(--font); }
 
-.assistant { --work: var(--prompt); --personal: var(--claude); flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; width: 100%; max-width: 760px; margin: 0 auto; color: var(--fg); font-size: var(--fs-md); }
+.assistant { --work: var(--fg-muted); --personal: var(--fg-muted); flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; width: 100%; max-width: 760px; margin: 0 auto; color: var(--fg); font-size: var(--fs-md); }
 .assistant.locked { align-items: center; justify-content: center; gap: var(--sp-5); text-align: center; padding: var(--sp-12); }
 .assistant.locked > .codicon.icon { font-size: var(--icon-hero); color: var(--fg-faint); }
 .as-lock-title { font-size: var(--fs-3xl); font-weight: 600; }
@@ -70,13 +70,7 @@
 .as-ctx > :is(.as-people, .as-quote) { flex: 0 1 auto; min-width: 0; display: block; overflow: hidden; text-overflow: ellipsis; }
 .as-ctx > .as-due { color: var(--accent); font-weight: 500; }
 .as-ctx > .as-due.late { color: var(--err); }
-.as-ctx .as-src .codicon.icon { color: var(--c, var(--fg-faint)); }
-.as-src.slack { --c: var(--hue-magenta); }
-.as-src.linear { --c: var(--hue-violet); }
-.as-src:is(.gmail, .mail) { --c: var(--hue-red); }
-.as-src:is(.calendar, .meeting, .action) { --c: var(--hue-green); }
 .as-check { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border: 0; background: transparent; color: var(--fg-faint); border-radius: var(--radius-round); }
-.as-check.note { color: var(--warn); }
 button.as-check:hover { color: var(--accent); }
 .as-row.checked .as-check .codicon.icon { animation: as-pop 260ms var(--ease); }
 @keyframes as-pop { 50% { transform: scale(1.3); } }
@@ -107,9 +101,6 @@ button.as-check:hover { color: var(--accent); }
 .as-chip.personal { color: var(--personal); border-color: color-mix(in srgb, var(--personal) 45%, transparent); }
 .as-chip.when, .as-chip.time { color: var(--accent); border-color: transparent; background: var(--accent-soft); }
 .as-chip.when.on { color: var(--bg); background: var(--accent); }
-.as-chips > .as-chip:not(.on):not(.when):not(.time):not(.work):not(.personal) .codicon.icon { color: var(--c-purple); }
-.as-chips > .as-chip:nth-child(2):not(.on):not(.when):not(.time):not(.work):not(.personal) .codicon.icon { color: var(--c-amber); }
-.as-chips > .as-chip:nth-child(3):not(.on):not(.when):not(.time):not(.work):not(.personal) .codicon.icon { color: var(--c-green); }
 .as-pick { position: relative; flex: none; display: inline-flex; }
 .as-pick input { position: absolute; inset: 0; width: 100%; opacity: 0; pointer-events: none; }
 .as-pick select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
@@ -145,10 +136,6 @@ button.as-check:hover { color: var(--accent); }
 .as-nav span:not(.as-count) { flex: 1; }
 .as-count { font-size: var(--fs-xs); color: var(--fg-muted); }
 .as-nav-label { padding: var(--sp-10) var(--sp-6) var(--sp-3); font-size: var(--fs-md); font-weight: 500; color: var(--fg-faint); }
-.as-nav > button > .codicon.icon { color: var(--c-blue); }
-.as-nav > button:nth-of-type(2) > .codicon.icon { color: var(--c-amber); }
-.as-nav > button:nth-of-type(3) > .codicon.icon { color: var(--c-green); }
-.as-nav > button:nth-of-type(4) > .codicon.icon { color: var(--c-purple); }
 .as-seg { display: flex; gap: 2px; margin: 0 var(--sp-4); padding: 2px; border-radius: var(--radius-md); background: var(--sunken); }
 .as-nav .as-seg button { flex: 1; height: var(--size-xl); justify-content: center; padding: 0; border-radius: calc(var(--radius-md) - 2px); color: var(--fg-muted); font-size: var(--fs-sm); }
 .as-nav .as-seg button.on { background: var(--raised); color: var(--fg-strong); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }

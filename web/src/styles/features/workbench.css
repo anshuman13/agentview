@@ -14,16 +14,6 @@
 }
 .activitybar button:hover, .activitybar button.active { color: var(--fg); }
 .activitybar button.active { border-left-color: var(--accent); }
-.activitybar button[data-view] { color: var(--vc); opacity: 0.7; }
-.activitybar button[data-view]:hover, .activitybar button[data-view].active { color: var(--vc); opacity: 1; }
-.activitybar [data-view='explorer'] { --vc: var(--prompt); }
-.activitybar [data-view='changes'] { --vc: var(--warn); }
-.activitybar [data-view='github'] { --vc: var(--link); }
-.activitybar [data-view='chats'] { --vc: var(--claude); }
-.activitybar [data-view='sessions'] { --vc: var(--ok); }
-.activitybar [data-view='observe'] { --vc: var(--err); }
-.activitybar [data-view='deploy'] { --vc: var(--agent); }
-.activitybar [data-view='mcp'] { --vc: var(--accent); }
 .activitybar .codicon.icon { font-size: var(--icon-xl); }
 .activitybar .badge { position: absolute; right: var(--sp-4); bottom: var(--sp-4); }
 .activitybar .divider { width: var(--sp-12); height: 1px; margin: var(--sp-2) auto; background: var(--border-strong); flex: none; }
