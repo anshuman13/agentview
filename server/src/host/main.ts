@@ -84,6 +84,8 @@ function editsOf(chat: AgentSession) {
   return edits;
 }
 
+const agentsRunning = (chat: AgentSession) => chat.state.events.filter((e) => e.kind === 'agent' && e.status === 'running').length;
+
 function summary(chat: AgentSession): LiveChat {
   const s = chat.state;
   const firstPrompt = s.events.find((e) => e.kind === 'user');
@@ -93,6 +95,7 @@ function summary(chat: AgentSession): LiveChat {
     cwd: chat.cwd,
     title: chat.title || (firstPrompt?.kind === 'user' ? firstPrompt.text.split('\n')[0].slice(0, 80) : 'New chat'),
     running: s.session.running,
+    agents: agentsRunning(chat),
     pending: s.pending.length,
     status: s.status,
     lastActive: lastActive(chat),
@@ -228,10 +231,11 @@ function restart(now: boolean, force: boolean) {
   if (restarting) return true;
   broadcast({ type: 'restarting' });
   for (const { chat } of live.values()) chat.holdRepeat();
+  // Background agents live in the Claude process, so they hold the restart too.
   // A turn that never ends (a card nobody answers) must not hold the restart and every loop for good.
   const deadline = Date.now() + 10 * 60_000;
   restarting = setInterval(() => {
-    if (Date.now() > deadline || ![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting)) saveAndExit();
+    if (Date.now() > deadline || ![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting || agentsRunning(chat))) saveAndExit();
   }, 1000);
   return true;
 }

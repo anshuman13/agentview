@@ -28,13 +28,18 @@ export function AppUpdate() {
 
 export function Restarting() {
   const restarting = useStore((s) => s.ui.restarting && s.ui.connected);
-  const busy = useStore((s) => s.live.filter((c) => c.running).length);
+  const busy = useStore((s) => s.live.filter((c) => c.running || c.agents).length);
+  const agents = useStore((s) => s.live.reduce((n, c) => n + (c.agents ?? 0), 0));
   if (!restarting) return null;
   return (
     <div className="app-update">
       <Icon name="debug-restart" small />
       <span>Restarting AgentView when {busy > 1 ? `${busy} chats finish` : 'Claude finishes'}</span>
-      <a href="#" onClick={(e) => { e.preventDefault(); send({ type: 'restart', now: true }); }}>Restart now</a>
+      <a href="#" onClick={(e) => {
+        e.preventDefault();
+        if (busy && !confirm(`Restart now? This stops ${agents ? `${agents} background agent${agents > 1 ? 's' : ''} and ` : ''}any running turn.`)) return;
+        send({ type: 'restart', now: true });
+      }}>Restart now</a>
     </div>
   );
 }

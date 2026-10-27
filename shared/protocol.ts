@@ -165,6 +165,7 @@ export type LiveChat = {
   cwd: string;
   title: string;
   running: boolean;
+  agents?: number;
   pending: number;
   status: string;
   lastActive: number;
