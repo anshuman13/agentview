@@ -6,59 +6,29 @@ import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
 import { apiUrl } from '../app/api';
 import { wsUrl } from '../ui/util';
-import { currentTheme, isDark } from '../app/theme';
 
 type Tab = { id: string; name: string };
 type Props = { chat: string; project?: string; open: boolean; onToggle: () => void };
 
-const DARK = {
-  background: '#151520',
-  foreground: '#cccccc',
-  cursor: '#cccccc',
-  selectionBackground: '#264f78',
-  selectionInactiveBackground: '#3a3d41',
-  black: '#000000',
-  red: '#cd3131',
-  green: '#0dbc79',
-  yellow: '#e5e510',
-  blue: '#2472c8',
-  magenta: '#bc3fbc',
-  cyan: '#11a8cd',
-  white: '#e5e5e5',
-  brightBlack: '#666666',
-  brightRed: '#f14c4c',
-  brightGreen: '#23d18b',
-  brightYellow: '#f5f543',
-  brightBlue: '#3b8eea',
-  brightMagenta: '#d670d6',
-  brightCyan: '#29b8db',
-  brightWhite: '#e5e5e5',
-};
-// VS Code's light terminal colors.
-const LIGHT = {
-  background: '#ffffff',
-  foreground: '#3b3b3b',
-  cursor: '#3b3b3b',
-  selectionBackground: '#add6ff',
-  selectionInactiveBackground: '#e5ebf1',
-  black: '#000000',
-  red: '#cd3131',
-  green: '#107c10',
-  yellow: '#949800',
-  blue: '#0451a5',
-  magenta: '#bc05bc',
-  cyan: '#0598bc',
-  white: '#555555',
-  brightBlack: '#666666',
-  brightRed: '#cd3131',
-  brightGreen: '#14ce14',
-  brightYellow: '#b5ba00',
-  brightBlue: '#0451a5',
-  brightMagenta: '#bc05bc',
-  brightCyan: '#0598bc',
-  brightWhite: '#a5a5a5',
-};
-const termTheme = () => (isDark(currentTheme()) ? DARK : LIGHT);
+// ANSI colours come from the theme tokens, so the terminal matches the app.
+function termTheme() {
+  const css = getComputedStyle(document.documentElement);
+  const v = (name: string) => css.getPropertyValue(`--${name}`).trim();
+  const [red, green, yellow, blue, magenta, cyan] = ['hue-red', 'hue-green', 'hue-yellow', 'hue-blue', 'hue-magenta', 'hue-sky'].map(v);
+  return {
+    background: v('surface'),
+    foreground: v('fg'),
+    cursor: v('fg'),
+    selectionBackground: v('accent-soft'),
+    selectionInactiveBackground: v('hover'),
+    black: v('sunken'),
+    red, green, yellow, blue, magenta, cyan,
+    white: v('fg'),
+    brightBlack: v('fg-faint'),
+    brightRed: red, brightGreen: green, brightYellow: yellow, brightBlue: blue, brightMagenta: magenta, brightCyan: cyan,
+    brightWhite: v('fg-strong'),
+  };
+}
 
 const KEYS: [label: string, seq: string, icon?: string][] = [
   ['Esc', '\x1b'],

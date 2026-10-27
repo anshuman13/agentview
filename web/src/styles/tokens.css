@@ -7,8 +7,18 @@
 
   1. Scales: spacing (2px unit, --sp-N = N * 2px), type, line height, radius,
      control sizes, elevation, motion, z-index.
-  2. Semantic colours for dark (default) and light, after Cursor's palette:
-     greys with one accent; other hues only for status, agents and syntax.
+  2. Semantic colours for dark (default, Spotify) and light. Every colour has
+     one meaning, used the same way everywhere:
+     - Neutral: greys for chrome, icons and text. Icons are grey, white when
+       active; they never get a colour of their own.
+     - Accent: interaction only (selection, focus, links, primary action,
+       live/running). Never decoration.
+     - Status: --err, --warn, --ok, only for state, always with an icon or
+       text. --ok stays apart from the accent so done never reads as a link.
+     - Identity: --agent (subagents), --work and --personal; things you tell
+       apart at a glance.
+     - Content: diffs, syntax and the terminal's ANSI colours read the hues.
+     Add a colour only by giving it one of these roles.
   Components use only these names; one-off geometry (tree indents, fixed
   widths) stays local to its feature file.
 */
@@ -122,38 +132,38 @@
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --sunken: #141414;
-  --bg: #181818;
-  --surface: #1c1c1c;
-  --raised: #202020;
-  --hover: #262626;
+  --sunken: #000000;
+  --bg: #121212;
+  --surface: #181818;
+  --raised: #1f1f1f;
+  --hover: #282828;
   --border: #2a2a2a;
-  --border-strong: #343434;
-  --border-card: #3c3c3c;
-  --fg-faint: #6e6e6e;
-  --fg-muted: #8d8d8d;
-  --fg: #e4e4e4;
-  --fg-strong: #f5f5f5;
-  --hue-violet: #aaa0fa;
-  --hue-amber: #efb080;
-  --hue-teal: #88c0d0;
-  --hue-blue: #81a1c1;
-  --hue-magenta: #e394dc;
-  --hue-green: #3fa266;
-  --hue-yellow: #f1b467;
-  --hue-red: #e34671;
-  --hue-sky: #88c0d0;
-  --hue-orange: #efb080;
-  --hue-brown: #c1a78e;
-  --hue-brand: #88c0d0;
-  --on-accent: #141414;
+  --border-strong: #3e3e3e;
+  --border-card: #4d4d4d;
+  --fg-faint: #6a6a6a;
+  --fg-muted: #b3b3b3;
+  --fg: #ffffff;
+  --fg-strong: #ffffff;
+  --hue-violet: #b49bc8;
+  --hue-amber: #f59b23;
+  --hue-teal: #2dd4bf;
+  --hue-blue: #509bf5;
+  --hue-magenta: #f037a5;
+  --hue-green: #2dd4bf;
+  --hue-yellow: #ffc864;
+  --hue-red: #e91429;
+  --hue-sky: #4cc3ff;
+  --hue-orange: #ff6437;
+  --hue-brown: #d68a4c;
+  --hue-brand: #1ed760;
+  --on-accent: #000000;
   --on-color: #ffffff;
   --link: var(--accent);
   --prompt: var(--accent);
   --agent: var(--hue-violet);
   --claude: var(--fg-muted);
   --ok: var(--hue-green);
-  --warn: var(--hue-yellow);
+  --warn: var(--hue-amber);
   --err: var(--hue-red);
   --diff-add: var(--hue-green);
   --diff-del: var(--hue-red);
@@ -234,4 +244,6 @@
   --accent: var(--hue-brand);
   --accent-hover: color-mix(in oklch, var(--accent) 85%, var(--fg-strong));
   --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
+  --work: var(--hue-blue);
+  --personal: var(--hue-magenta);
 }
