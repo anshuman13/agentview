@@ -181,9 +181,19 @@ const server = http.createServer(async (req, res) => {
       const r = await assistantRoute(req.method ?? 'GET', url, () => readBody(req, 5_000_000));
       return json(r.body, r.status);
     }
+    const liveCwds = [...chats.values()].map((c) => c.cwd);
+    // Lists that need no chat still load while a chat switch leaves none open.
+    if (req.method === 'GET') {
+      if (url.pathname === '/api/sessions') {
+        const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
+        const binned = new Set(bin.map((b) => b.sessionId));
+        return json(list.filter((x) => !binned.has(x.sessionId)).map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
+      }
+      if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
+      if (url.pathname === '/api/repos') return json(await listRepos());
+    }
     const chat = chats.get(url.searchParams.get('chat') ?? '') ?? chats.get(lastViewed);
     if (!chat) return json({ error: 'The agent host is starting' }, 503);
-    const liveCwds = [...chats.values()].map((c) => c.cwd);
     if (url.pathname === '/api/events') {
       const asked = (url.searchParams.has('session') && bySession(url.searchParams.get('session'))) || (chats.has(url.searchParams.get('chat') ?? '') ? url.searchParams.get('chat')! : undefined);
       return openEvents(req, res, url, asked ?? chat.id, Boolean(asked));
@@ -233,8 +243,6 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse(await readBody(req));
       return json({ cwd: await createWorktree(String(body.repo ?? ''), String(body.branch ?? '').trim()) });
     }
-    if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
-    if (url.pathname === '/api/repos') return json(await listRepos());
     if (url.pathname === '/api/paste' && req.method === 'POST') return json({ path: await savePaste(req, url.searchParams.get('name') ?? '') });
     if (url.pathname === '/api/folders' && req.method === 'POST') {
       const body = JSON.parse(await readBody(req));
@@ -277,11 +285,6 @@ const server = http.createServer(async (req, res) => {
       if (!(await inSettings(chat.cwd, name))) return json({ error: `${name} is not approved in Claude Code, so AgentView does not start it` }, 403);
       const r = await mcpCall(chat.cwd, name, def as McpServerDef, String(body.tool ?? ''), body.args ?? {});
       return json(r, 'error' in r ? 400 : 200);
-    }
-    if (url.pathname === '/api/sessions') {
-      const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
-      const binned = new Set(bin.map((b) => b.sessionId));
-      return json(list.filter((x) => !binned.has(x.sessionId)).map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
     }
     if (url.pathname === '/api/state') return json(await host.req({ op: 'state', id: chat.id }));
     if (url.pathname === '/api/restart' && req.method === 'POST') {

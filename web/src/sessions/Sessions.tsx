@@ -14,7 +14,8 @@ const PAGE = 10;
 export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
 
 export const inside = (cwd: string, dir: string) => cwd === dir || cwd.startsWith(dir + '/');
-const get = (url: string) => fetch(apiUrl(url)).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : [])).catch(() => []);
+// A failed load resolves to null, so the last list stays on screen.
+const get = (url: string) => fetch(apiUrl(url)).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : null)).catch(() => null);
 
 export function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSession[]) {
   const m = new Map<string, Folder>();
@@ -42,9 +43,9 @@ export function useWorkspace(key: unknown) {
   const [trees, setTrees] = useState(cached.trees);
   const [chats, setChats] = useState(cached.chats);
   useEffect(() => {
-    get('/api/repos').then((x) => setRepos((cached.repos = x)));
-    get('/api/sessions').then((x) => setChats((cached.chats = x)));
-    get('/api/worktrees').then((x) => setTrees((cached.trees = x)));
+    get('/api/repos').then((x) => x && setRepos((cached.repos = x)));
+    get('/api/sessions').then((x) => x && setChats((cached.chats = x)));
+    get('/api/worktrees').then((x) => x && setTrees((cached.trees = x)));
   }, [key]);
   const folders = useMemo(() => buildFolders(repos, trees, chats), [repos, trees, chats]);
   return { folders, chats, setTrees, setChats };
@@ -500,7 +501,7 @@ function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: 
   const [list, setList] = useState<BinnedSession[]>([]);
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    const load = () => get('/api/sessions/bin').then(setList);
+    const load = () => get('/api/sessions/bin').then((x) => x && setList(x));
     load();
     window.addEventListener('agentview:bin', load);
     return () => window.removeEventListener('agentview:bin', load);
