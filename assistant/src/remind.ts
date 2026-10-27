@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
+import { rollOver } from './rollover.js';
 
 const BEFORE = 10 * 60_000;
 const FRESH = 2 * 3600_000;
@@ -48,6 +49,7 @@ export function startReminders(db: () => Database, every = 60_000) {
     if (busy) return;
     busy = true;
     try {
+      rollOver(db());
       for (const r of dueReminders(db())) {
         const key = `remind:${r.key}`;
         db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(Date.now()));

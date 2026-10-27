@@ -57,7 +57,7 @@ describe('isQuestion', () => {
 describe('split', () => {
   const row = (id: string, status: string, at: number | null, extra: Partial<ItemRow> = {}): ItemRow => ({
     id, profile: 'work', version: 1, updated_at: local(20, 9), deleted: 0, field_times: '{}', dirty: 0,
-    title: id, text: null, source: 'capture', source_url: null, people: null, at, status, meeting_id: null, ...extra,
+    title: id, text: null, source: 'capture', source_url: null, people: null, at, status, meeting_id: null, rolls: null, rolled_from: null, ...extra,
   });
   it('sorts tasks into overdue, today, later, review and done today', () => {
     const s = split([

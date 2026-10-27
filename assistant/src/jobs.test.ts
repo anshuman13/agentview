@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { dueJobs, endInterrupted, nextRun } from './jobs.js';
+import { canRead, dueJobs, endInterrupted, nextRun } from './jobs.js';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 
@@ -46,5 +46,14 @@ describe('dueJobs', () => {
     applyChanges(db, [{ table: 'runs', id: 'r', profile: 'work', updated_at: 1, fields: { job_id: 'a', started_at: 1, status: 'running' } }]);
     endInterrupted(db, 2);
     expect((db.prepare("SELECT status FROM runs WHERE id = 'r'").get() as { status: string }).status).toBe('error');
+  });
+});
+
+describe('canRead', () => {
+  test('allows read tools, also when named after their server', () => {
+    for (const t of ['mcp__claude_ai_Slack__slack_read_channel', 'mcp__claude_ai_Slack__slack_search_public_and_private', 'mcp__claude_ai_Slack__slack_list_user_channels', 'mcp__claude_ai_Gmail__search_threads', 'mcp__linear__list_issues']) expect(canRead(t)).toBe(true);
+  });
+  test('denies writes', () => {
+    for (const t of ['mcp__claude_ai_Slack__slack_send_message', 'mcp__claude_ai_Slack__slack_create_list', 'mcp__claude_ai_Gmail__send_message', 'mcp__linear__create_issue', 'Bash']) expect(canRead(t)).toBe(false);
   });
 });

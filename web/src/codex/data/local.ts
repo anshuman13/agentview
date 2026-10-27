@@ -5,7 +5,7 @@ import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './s
 import type { Table, Tables } from './wiki';
 import { showSnack } from '../view';
 
-const PATCHABLE = ['title', 'text', 'status', 'at', 'deleted'] as const;
+const PATCHABLE = ['title', 'text', 'status', 'at', 'rolls', 'rolled_from', 'deleted'] as const;
 
 type Invoke = <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 type SqlValue = string | number | null;

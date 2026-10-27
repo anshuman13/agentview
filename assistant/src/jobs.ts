@@ -27,7 +27,16 @@ export function nextRun(schedule: string | null, after: number): number | null {
   return null;
 }
 
-const READ = /^mcp__.+__(get|list|search|read|query|fetch|find)/i;
+const READ = /^(get|list|search|read|query|fetch|find)/i;
+
+// Read-only MCP tools, also when the tool repeats its server's name, like mcp__claude_ai_Slack__slack_read_channel.
+export function canRead(name: string) {
+  const m = /^mcp__(.+?)__(.+)$/.exec(name);
+  if (!m) return false;
+  const server = m[1].split('_').pop()!.toLowerCase();
+  const action = m[2].toLowerCase().startsWith(`${server}_`) ? m[2].slice(server.length + 1) : m[2];
+  return READ.test(action);
+}
 
 // Runs one job on its profile's account with read-only tools; it may add tasks to Codex and returns its reply.
 async function runJob(db: Database, job: Job) {
@@ -59,7 +68,7 @@ async function runJob(db: Database, job: Job) {
       env: { ...process.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
       mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [addTask] }) },
       allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task'],
-      canUseTool: async (name, input) => (READ.test(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'Jobs can only read.' }),
+      canUseTool: async (name, input) => (canRead(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'Jobs can only read.' }),
     },
   })) {
     const until = overageUntil(m);

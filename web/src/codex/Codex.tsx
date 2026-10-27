@@ -56,6 +56,8 @@ function dayLabel(at: number) {
 
 const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
 
+const UNROLL = { rolls: null, rolled_from: null };
+
 function useActions() {
   const { store } = useAssistant();
   const change = (r: ItemRow, patch: Patch, text: string) => {
@@ -66,9 +68,9 @@ function useActions() {
   return {
     done: (r: ItemRow) => change(r, { status: 'done' }, 'Done'),
     reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
-    snooze: (r: ItemRow, at = nextNine()) => change(r, { at }, `Snoozed to ${when(at)}`),
+    snooze: (r: ItemRow, at = nextNine()) => change(r, { at, ...UNROLL }, `Snoozed to ${when(at)}`),
     remove: (r: ItemRow) => change(r, { deleted: 1 }, 'Deleted'),
-    toTask: (r: ItemRow) => change(r, { status: 'open' }, 'Moved to Today'),
+    toTask: (r: ItemRow) => change(r, { status: 'open', ...UNROLL }, 'Moved to Today'),
     edit: (r: ItemRow, patch: Patch) => void store.update(r, patch),
   };
 }
@@ -142,6 +144,7 @@ function Row({ row, onOpen }: { row: ItemRow; onOpen: () => void }) {
             {row.people && <span className="as-people">{row.people}</span>}
             {quote && <span className="as-quote">“{quote}”</span>}
             {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
+            {row.rolled_from != null && !isDone && <span className="as-rolled">from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
             {!quote && !due && !row.people && <span>{ago(row.updated_at, ' ago')}</span>}
           </div>
         )}
@@ -367,13 +370,6 @@ export function Assistant() {
   }, []);
   const fresh = s.review.filter((r) => now - reviewedSince(r) < DAY);
   const older = s.review.filter((r) => now - reviewedSince(r) >= DAY);
-  const openToday = s.today.filter((r) => r.source !== 'calendar');
-  const moveOpen = () => {
-    const at = nextNine();
-    const moved = [...s.overdue, ...openToday];
-    for (const r of moved) void store.update(r, { at });
-    showSnack(`Moved ${moved.length} to tomorrow`, () => moved.forEach((r) => void store.update(r, { at: r.at as number | null })));
-  };
   const empty = !s.overdue.length && !dueToday.length && !coming.length && !s.review.length;
   const nextLater = s.nextLater;
 
@@ -436,7 +432,7 @@ export function Assistant() {
       </div>
 
       <SnackBar />
-      <Composer items={snap.items} next={s.next} filter={filter} moveOpen={s.overdue.length + openToday.length ? moveOpen : null} openCount={s.overdue.length + openToday.length} />
+      <Composer items={snap.items} next={s.next} filter={filter} />
       {current && <Sheet row={current} items={snap.items} onClose={() => setOpen(null)} />}
       {drawerSheet}
     </div>

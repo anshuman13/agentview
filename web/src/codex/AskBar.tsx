@@ -28,9 +28,9 @@ const marked = (text: string, spans: [number, number][]) => {
   return out;
 };
 
-type Chip = { label: string; q: string } | { label: string; icon: string; run: () => void };
+type Chip = { label: string; q: string };
 
-const recipes = (next: Meeting | undefined, moveOpen: (() => void) | null, count: number): Chip[] => {
+const recipes = (next: Meeting | undefined): Chip[] => {
   const now = new Date();
   const h = now.getHours();
   const list: Chip[] = [
@@ -38,7 +38,6 @@ const recipes = (next: Meeting | undefined, moveOpen: (() => void) | null, count
       : h < 17 ? { label: "What's next", q: 'What should I do next? Use my calendar and my open items.' }
       : { label: 'Wrap up my day', q: 'Wrap up my day: what got done, what is still open, suggested meeting actions I have not confirmed, and my first meeting tomorrow.' },
   ];
-  if (h >= 17 && moveOpen && count > 0) list.push({ label: `Move ${count} open to tomorrow`, icon: 'clock', run: moveOpen });
   if (now.getDay() === 4 || now.getDay() === 5) list.push({ label: 'Draft my weekly update', q: 'Draft my weekly update from what I got done this week and the meetings I was in: done, in progress, next. Short bullets.' });
   if (next) list.unshift({ label: 'Prep next meeting', q: prepText(next) });
   return list;
@@ -46,7 +45,7 @@ const recipes = (next: Meeting | undefined, moveOpen: (() => void) | null, count
 
 export const prepText = (m: Meeting) => `Prepare me for "${m.title}" at ${clock(m.starts_at!)}: who is in it, related Slack threads, Linear issues and docs, and what is still open from the last time we met.`;
 
-export function Composer({ items, next, filter, moveOpen, openCount }: { items: ItemRow[]; next?: Meeting; filter: Filter; moveOpen: (() => void) | null; openCount: number }) {
+export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Meeting; filter: Filter }) {
   const { store } = useAssistant();
   const { meetings } = useCodex();
   const [text, setText] = useState('');
@@ -134,9 +133,7 @@ export function Composer({ items, next, filter, moveOpen, openCount }: { items: 
             ))}
           </>
         ) : (
-          recipes(next, moveOpen, openCount).map((r) => 'run' in r
-            ? <button key={r.label} className="as-chip" onClick={r.run}><Icon name={r.icon} small /> {r.label}</button>
-            : <button key={r.label} className="as-chip" onClick={() => ask(askText(r.q, items, undefined, meetings))}><Icon name="sparkle" small /> {r.label}</button>)
+          recipes(next).map((r) => <button key={r.label} className="as-chip" onClick={() => ask(askText(r.q, items, undefined, meetings))}><Icon name="sparkle" small /> {r.label}</button>)
         )}
       </div>
       <div className="cp-card as-card">

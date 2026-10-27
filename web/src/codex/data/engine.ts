@@ -179,6 +179,8 @@ export function newCapture(text: string, type: 'task' | 'note', profile: Profile
     at,
     status: type === 'note' ? 'note' : 'open',
     meeting_id: meeting?.id ?? null,
+    rolls: null,
+    rolled_from: null,
     dirty: 1,
   };
 }

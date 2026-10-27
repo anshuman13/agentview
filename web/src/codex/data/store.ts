@@ -5,7 +5,7 @@ import type { Table, Tables } from './wiki';
 export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs'];
 
 export type SyncStatus = { syncing: boolean; last: number; error: string };
-export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at'>> & { deleted?: number };
+export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'rolls' | 'rolled_from'>> & { deleted?: number };
 export type Parsed = { title: string; details: string | null; at: number | null };
 export type MeetingRef = { id: string; title: string | null } | null;
 export type Snapshot = {
