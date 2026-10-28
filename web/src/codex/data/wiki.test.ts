@@ -47,8 +47,9 @@ describe('wiki', () => {
     expect(contestOf(facts[3])?.by).toBe('you');
   });
 
-  it('leaves proposed and rejected claims out of pages and search', () => {
-    expect(pageClaims(facts, 'p1').flatMap((g) => g.claims.map((c) => c.fact.id))).toEqual(['a', 'c', 'b']);
+  it('shows proposed claims on their page, and leaves rejected ones and search out', () => {
+    expect(pageClaims(facts, 'p1').flatMap((g) => g.claims.map((c) => c.fact.id))).toEqual(['a', 'c', 'e', 'b']);
+    expect(pageStats(facts, 'p1').claims).toBe(3);
     expect(searchWiki(pages, facts, 'epsilon').claims).toEqual([]);
     expect(searchWiki(pages, facts, 'zeta').claims).toEqual([]);
   });

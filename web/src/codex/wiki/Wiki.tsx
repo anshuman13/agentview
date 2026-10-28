@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAssistant, useCodex } from '../data';
 import type { ItemRow } from '../data/sync';
 import { ask, wikiAskText } from '../data/ask';
-import { approveChanges, chatOf, contestOf, currentClaim, factTime, live, newPage, NO_STATS, pageClaims, pageStats, proposals, searchWiki, sourcesOf, statsByPage, type Fact, type Page, type PageStats, type Source } from '../data/wiki';
+import { approveAllChanges, approveChanges, chatOf, contestOf, currentClaim, factTime, live, newPage, NO_STATS, pageClaims, pageStats, proposals, searchWiki, sourcesOf, statsByPage, type Fact, type Page, type PageStats, type Source } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
@@ -315,13 +315,67 @@ function ReviewCard({ fact }: { fact: Fact }) {
   );
 }
 
+function useReview() {
+  const { store, pages, facts } = useCodex();
+  const run = (changes: { table: 'facts' | 'pages'; row: unknown; patch: unknown; undo: unknown }[], text: string) => {
+    changes.forEach((c) => void store.editRow(c.table, c.row as never, c.patch as never));
+    showSnack(text, () => changes.forEach((c) => void store.editRow(c.table, c.row as never, c.undo as never)));
+  };
+  return {
+    approve: (list: Fact[]) => run(approveAllChanges(list, pages, facts), `Approved ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`),
+    reject: (list: Fact[]) => {
+      const page = pages.find((p) => list.length && p.id === list[0].page_id && p.profile === list[0].profile && p.state === 'proposed');
+      const rest = page && proposals(facts).every((f) => f.page_id !== page.id || list.includes(f));
+      run([
+        ...list.map((f) => ({ table: 'facts' as const, row: f, patch: { state: 'rejected' }, undo: { state: 'proposed' } })),
+        ...(rest ? [{ table: 'pages' as const, row: page, patch: { state: 'rejected' }, undo: { state: 'proposed' } }] : []),
+      ], `Rejected ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`);
+    },
+  };
+}
+
+// One card per page with its proposed claims, so a new page is reviewed as a page; memory claims are reviewed one by one.
+function PageReview({ page, list }: { page: Page; list: Fact[] }) {
+  const review = useReview();
+  const headings = [...new Set(list.map((f) => f.heading || 'Notes'))];
+  const times = list.map((f) => f.at ?? 0).filter(Boolean);
+  return (
+    <div className="mt-action proposed wk-review">
+      <div className="mt-action-kind"><Icon name="book" small />{page.state === 'proposed' ? `New page in ${page.section}` : 'Additions'}{page.profile === 'personal' && <span className="wk-src">Personal</span>}</div>
+      <div className="mt-action-title"><button className="wk-review-open" onClick={() => setView({ open: page.id, anchor: null })}>{page.title} <Icon name="chevron-right" small /></button></div>
+      {page.summary && <div className="mt-action-body">{page.summary}</div>}
+      <div className="wk-meta">
+        <span>{list.length} {list.length === 1 ? 'claim' : 'claims'}</span>
+        <span>{headings.length} {headings.length === 1 ? 'heading' : 'headings'}</span>
+        {times.length > 0 && <span>{shortDate(Math.min(...times))} to {shortDate(Math.max(...times))}</span>}
+      </div>
+      <div className="mt-action-foot">
+        <button className="wk-act" onClick={() => setView({ open: page.id, anchor: null })}><Icon name="book" small /> Read and edit</button>
+        <span className="spacer" />
+        <button className="icon-btn mt-reject" title="Reject all" aria-label="Reject all" onClick={() => review.reject(list)}><Icon name="close" /></button>
+        <button className="btn primary mt-approve" onClick={() => review.approve(list)}><Icon name="check" small /> Approve all</button>
+      </div>
+    </div>
+  );
+}
+
 function ToReview({ facts }: { facts: Fact[] }) {
+  const { pages } = useCodex();
   const list = proposals(facts);
   if (!list.length) return null;
+  const byPage = new Map<string, Fact[]>();
+  for (const f of list) if (f.page_id) byPage.set(f.page_id, [...(byPage.get(f.page_id) ?? []), f]);
+  const loose = list.filter((f) => !f.page_id || !pages.some((p) => p.id === f.page_id && !p.deleted));
   return (
     <section>
       <div className="wk-label">To review · {list.length}</div>
-      <div className="wk-reviews">{list.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />)}</div>
+      <div className="wk-reviews">
+        {[...byPage].map(([id, fs]) => {
+          const page = pages.find((p) => p.id === id && p.profile === fs[0].profile && !p.deleted);
+          return page && <PageReview key={page.profile + id} page={page} list={fs} />;
+        })}
+        {loose.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />)}
+      </div>
     </section>
   );
 }
@@ -398,6 +452,8 @@ function ClaudeChip({ chat }: { chat: string }) {
 
 function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: string; flash: boolean }) {
   const { store } = useCodex();
+  const review = useReview();
+  const proposed = fact.state === 'proposed';
   const [contesting, setContesting] = useState(false);
   const [note, setNote] = useState('');
   const c = contestOf(fact);
@@ -417,7 +473,7 @@ function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: stri
     navigator.clipboard?.writeText(text).then(() => showSnack('Claim copied'), () => showSnack('Could not copy'));
   };
   return (
-    <div className={`wk-claim${c ? ' contested' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
+    <div className={`wk-claim${c ? ' contested' : ''}${proposed ? ' proposed' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
       <p className="wk-claim-text">{fact.text}</p>
       <div className="wk-claim-foot">
         {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
@@ -425,8 +481,14 @@ function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: stri
         {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
         <span className="spacer" />
         <span className="wk-claim-acts">
-          <button className="icon-btn" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
-          {!c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
+          {proposed ? (
+            <>
+              <span className="wk-proposed">Proposed</span>
+              <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => review.reject([fact])}><Icon name="close" small /></button>
+              <button className="icon-btn" title="Approve" aria-label="Approve" onClick={() => review.approve([fact])}><Icon name="check" small /></button>
+            </>
+          ) : <button className="icon-btn" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>}
+          {!proposed && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
         </span>
       </div>
       {contesting && (
@@ -464,7 +526,9 @@ function WikiPage({ id }: { id: string }) {
   const { anchor } = useView();
   const [flash, setFlash] = useState<string | null>(null);
   const pid = id === MEMORY ? null : id;
-  const page = id === MEMORY ? memoryPage(facts) : live(pages).find((p) => p.id === id);
+  const page = id === MEMORY ? memoryPage(facts) : pages.find((p) => p.id === id && !p.deleted && p.state !== 'rejected');
+  const review = useReview();
+  const pending = proposals(facts).filter((f) => (f.page_id ?? null) === pid);
   useEffect(() => {
     if (!anchor) return;
     document.getElementById(`claim-${anchor}`)?.scrollIntoView({ block: 'center' });
@@ -503,6 +567,14 @@ function WikiPage({ id }: { id: string }) {
                 <span>{st.claims} claims</span>
                 {st.contested > 0 && <span className="wk-warn">{st.contested} contested</span>}
               </div>
+              {pending.length > 0 && (
+                <div className="wk-pending">
+                  <span>{page.state === 'proposed' ? 'New page with ' : ''}{pending.length} proposed {pending.length === 1 ? 'claim' : 'claims'}</span>
+                  <span className="spacer" />
+                  <button className="btn" onClick={() => review.reject(pending)}>Reject all</button>
+                  <button className="btn primary" onClick={() => review.approve(pending)}><Icon name="check" small /> Approve all</button>
+                </div>
+              )}
               {groups.map((g) => (
                 <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
                   <h2>{g.heading}</h2>

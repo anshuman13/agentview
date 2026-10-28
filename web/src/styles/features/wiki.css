@@ -347,3 +347,8 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .sm-chat { text-decoration: none; }
 .sm-chat .mt-body { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
 .sm-text { color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.45; }
+
+.wk-claim.proposed { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.wk-proposed { font-size: var(--fs-xs); color: var(--accent); margin-right: var(--sp-2); }
+.wk-pending { display: flex; align-items: center; gap: var(--sp-4); margin: var(--sp-8) 0; padding: var(--sp-6) var(--sp-8); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border)); border-radius: 12px; font-size: var(--fs-sm); color: var(--fg-muted); }
+.wk-review-open { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: var(--sp-2); }

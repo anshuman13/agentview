@@ -110,6 +110,14 @@ export function pageClaims(facts: Fact[], pageId: string | null) {
     if (!g) groups.push((g = { heading, claims: [] }));
     g.claims.push({ fact: f, old: (replaced.get(factKey(f)) ?? []).sort((a, b) => (b.at ?? 0) - (a.at ?? 0)) });
   }
+  // Proposed claims show in place, so a new page reads as a whole while it waits for review.
+  for (const f of proposals(facts).filter((x) => (x.page_id ?? null) === pageId)) {
+    const heading = f.heading || 'Notes';
+    let g = groups.find((x) => x.heading === heading);
+    if (!g) groups.push((g = { heading, claims: [] }));
+    g.claims.push({ fact: f, old: [] });
+  }
+  for (const g of groups) g.claims.sort((a, b) => (a.fact.at ?? 0) - (b.fact.at ?? 0));
   return groups;
 }
 
@@ -171,6 +179,17 @@ export function approveChanges(fact: Fact, pages: Page[], facts: Fact[]) {
     ...(page ? [{ table: 'pages' as const, row: page, patch: { state: 'live' }, undo: { state: 'proposed' } }] : []),
     ...(old ? [{ table: 'facts' as const, row: old, patch: { superseded_by: fact.id }, undo: { superseded_by: null } }] : []),
   ];
+}
+
+// Approving several claims at once sets their proposed pages live once.
+export function approveAllChanges(list: Fact[], pages: Page[], facts: Fact[]) {
+  const seen = new Set<string>();
+  return list.flatMap((f) => approveChanges(f, pages, facts)).filter((c) => {
+    const k = `${c.table}:${c.row.profile}:${c.row.id}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
