@@ -15,7 +15,10 @@ import '../../styles/features/wiki.css';
 const HUES = ['--accent', '--claude', '--prompt', '--ok', '--warn', '--agent'];
 const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length]})`;
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-export const peopleOf = (m: Meeting) => (m.people?.startsWith('[') ? listOf(m.people) : (m.people ?? '').split(',')).map((p) => p.trim()).filter(Boolean);
+export const peopleOf = (m: Meeting) => {
+  const s = typeof m.people === 'string' ? m.people : '';
+  return (s.startsWith('[') ? listOf(s) : s.split(',')).map((p) => p.trim()).filter(Boolean);
+};
 const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {

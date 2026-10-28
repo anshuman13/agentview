@@ -14,6 +14,7 @@ import { command, pressable } from '../ui/util';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { Assistant, AssistantNav, useTodayCount } from '../codex/Codex';
+import { Guard } from './Guard';
 import { AppUpdate, CacheItem, McpItem, Offline, Restarting, UsageItem } from './StatusItems';
 
 const Terminal = lazy(() => import('../workspace/Terminal').then((m) => ({ default: m.Terminal })));
@@ -348,7 +349,7 @@ export function App() {
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
             </div>
           )}
-          {view === 'assistant' ? <AssistantNav /> : view === 'explorer' ? <Explorer /> : view === 'changes' ? <Changes /> : view === 'github' ? <GitHub /> : view === 'chats' ? <OpenChats /> : <Sessions />}
+          {view === 'assistant' ? <Guard><AssistantNav /></Guard> : view === 'explorer' ? <Explorer /> : view === 'changes' ? <Changes /> : view === 'github' ? <GitHub /> : view === 'chats' ? <OpenChats /> : <Sessions />}
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
@@ -404,7 +405,7 @@ export function App() {
               </div>
             </div>
           )}
-          <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Assistant />}</div>
+          <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Assistant /></Guard>}</div>
           <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable onMacs={() => setMacs(true)} />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <div className="empty-state">

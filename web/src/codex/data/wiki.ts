@@ -70,7 +70,10 @@ const json = <T,>(s: string | null, fallback: T): T => {
 
 export const sourcesOf = (f: Fact) => json<Source[]>(f.sources, []);
 export const contestOf = (f: Fact) => json<Contest | null>(f.contested, null);
-export const listOf = (s: string | null) => json<string[]>(s, []);
+export const listOf = (s: string | null) => {
+  const v = json<unknown>(s, []);
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+};
 export const fieldsOf = (a: Action) => json<Record<string, string>>(a.fields, {});
 
 export const live = <T extends Common & { state?: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted && (r.state ?? 'live') === 'live');
@@ -216,7 +219,10 @@ export function actionCount(items: ItemRow[], m: { profile: Profile; id: string 
   return { total: n('open', 'done'), done: n('done'), review: n('suggested'), unassigned: n('unassigned'), dismissed: n('dismissed') };
 }
 
-export const othersOf = (m: Meeting) => json<{ who: string; what: string }[]>(m.others, []).filter((o) => o?.who && o?.what);
+export const othersOf = (m: Meeting) => {
+  const v = json<unknown>(m.others, []);
+  return (Array.isArray(v) ? v : []).filter((o): o is { who: string; what: string } => typeof o?.who === 'string' && typeof o?.what === 'string');
+};
 
 // The hub tries this many times, 15 minutes apart, before it gives up on a transcript (TRIES in transcripts.ts).
 export const TRANSCRIPT_TRIES = 8;
