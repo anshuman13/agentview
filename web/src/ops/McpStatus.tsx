@@ -378,10 +378,7 @@ function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usa
         <dt>Status</dt><dd className={tone}>{label}{row.version ? <span className="muted mono"> · v{row.version}</span> : null}</dd>
         {row.error && (row.live || row.status !== 'needs-auth') && <><dt>Error</dt><dd className="bad mono wrap">{row.error}</dd></>}
         {row.status === 'needs-auth' && row.type === 'claudeai' && <><dt>Log in</dt><dd><ClaudeAiLogin name={row.name} live={Boolean(row.live)} account={row.account} /></dd></>}
-        {row.status === 'needs-auth' && row.type !== 'claudeai' && row.live && <><dt>Log in</dt><dd><Login name={row.name} /></dd></>}
-        {row.status === 'needs-auth' && row.type !== 'claudeai' && !row.live && (
-          <><dt>Login</dt><dd>Load it in this chat, then log in here.</dd></>
-        )}
+        {row.status === 'needs-auth' && row.type !== 'claudeai' && <><dt>Log in</dt><dd><Login name={row.name} live={Boolean(row.live)} /></dd></>}
         {row.command && <><dt>{url ? 'URL' : 'Command'}</dt><dd className="mono wrap">{row.command}</dd></>}
         {row.env && <><dt>Env</dt><dd className="mono wrap">{row.env.join('  ')}</dd></>}
         <dt>From</dt><dd>{scope}{where ? <span className="muted mono"> · {where}</span> : null}</dd>
@@ -413,7 +410,7 @@ function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usa
           </div>
         ))}
         {row.tools && row.tools.length > 0 && tools.length === 0 && <div className="muted">No tool matches</div>}
-        {!row.tools?.length && <div className="muted">{row.status === 'connected' ? 'No tools reported' : 'Tools appear once it connects'}</div>}
+        {!row.tools?.length && <div className="muted">{row.status === 'connected' ? 'No tools reported' : row.status === 'needs-auth' ? 'Tools appear after you log in' : 'Tools appear once it connects'}</div>}
       </div>
     </aside>
   );
@@ -546,7 +543,7 @@ function ClaudeAiLogin({ name, live, account }: { name: string; live: boolean; a
   );
 }
 
-function Login({ name }: { name: string }) {
+function Login({ name, live }: { name: string; live: boolean }) {
   const [busy, setBusy] = useState(false);
   const [opened, setOpened] = useState(false);
   const [error, setError] = useState('');
@@ -559,7 +556,8 @@ function Login({ name }: { name: string }) {
   const start = () => {
     setBusy(true);
     setError('');
-    post(`/api/mcp/login?name=${encodeURIComponent(name)}`)
+    (live ? Promise.resolve() : post(`/api/mcp/add?name=${encodeURIComponent(name)}`).catch(() => {}))
+      .then(() => post(`/api/mcp/login?name=${encodeURIComponent(name)}`))
       .then((r) => { if (r.authUrl) setOpened(true); else send({ type: 'mcp_status' }); })
       .catch((e) => setError(e.message))
       .finally(() => setBusy(false));
