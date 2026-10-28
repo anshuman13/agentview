@@ -158,8 +158,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
     const n = ++this.refreshes;
     const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND (IFNULL(status, '') != 'done' OR updated_at > ?)`, [Date.now() - 60 * 86400_000]);
     const all = <K extends Table>(t: K) => this.query<Tables[K]>(`SELECT * FROM ${t} WHERE deleted = 0`);
-    const [pages, facts, meetings, actions, jobs, runs] = await Promise.all([all('pages'), all('facts'), all('meetings'), all('actions'), all('jobs'), all('runs')]);
-    if (this.ready && n === this.refreshes) this.set({ items, pages, facts, meetings, actions, jobs, runs });
+    const [pages, facts, meetings, actions, jobs, runs, chats, briefs] = await Promise.all([all('pages'), all('facts'), all('meetings'), all('actions'), all('jobs'), all('runs'), all('chats'), all('briefs')]);
+    if (this.ready && n === this.refreshes) this.set({ items, pages, facts, meetings, actions, jobs, runs, chats, briefs });
   }
 
   // Merges or edits a row with compare-and-swap, retrying when another write lands between the read and the write.

@@ -77,7 +77,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   protected async refresh() {
     const all = <K extends Table>(t: K) => [...this.tables[t].values()] as Tables[K][];
-    this.set({ items: [...this.rows.values()], pages: all('pages'), facts: all('facts'), meetings: all('meetings'), actions: all('actions'), jobs: all('jobs'), runs: all('runs') });
+    this.set({ items: [...this.rows.values()], pages: all('pages'), facts: all('facts'), meetings: all('meetings'), actions: all('actions'), jobs: all('jobs'), runs: all('runs'), chats: all('chats'), briefs: all('briefs') });
   }
 
   // Wiki rows are pushed only once the hub has sent some, so a hub without the tables is never asked to store them.
