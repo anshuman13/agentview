@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAssistant, useCodex } from '../data';
 import type { ItemRow } from '../data/sync';
 import { ask, wikiAskText } from '../data/ask';
-import { approveAllChanges, approveChanges, chatOf, contestOf, currentClaim, factTime, live, newPage, NO_STATS, pageClaims, pageStats, proposals, reviewCount, searchWiki, sourcesOf, statsByPage, type Fact, type Page, type PageStats, type Source } from '../data/wiki';
+import { approveAllChanges, approveChanges, chatOf, olderClaims, contestOf, currentClaim, factTime, live, newPage, NO_STATS, pageClaims, pageStats, proposals, reviewCount, searchWiki, sourcesOf, statsByPage, type Fact, type Page, type PageStats, type Source } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
@@ -499,7 +499,14 @@ function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: stri
               <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => review.reject([fact])}><Icon name="close" small /></button>
               <button className="icon-btn" title="Approve" aria-label="Approve" onClick={() => review.approve([fact])}><Icon name="check" small /></button>
             </>
-          ) : <button className="icon-btn" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>}
+          ) : (
+            <>
+              <button className="icon-btn" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
+              {fact.state === 'retired'
+                ? <button className="wk-act" title="Show this claim with the current ones again" onClick={() => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); }}><Icon name="history" small /> Restore</button>
+                : <button className="wk-act" title="Move this claim to Older; Claude stops using it" onClick={() => { void store.editRow('facts', fact, { state: 'retired' }); showSnack('Claim retired', () => void store.editRow('facts', fact, { state: null })); }}><Icon name="archive" small /> Retire</button>}
+            </>
+          )}
           {!proposed && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
         </span>
       </span>
@@ -550,6 +557,8 @@ function WikiPage({ id }: { id: string }) {
     return () => clearTimeout(t);
   }, [anchor]);
   const groups = useMemo(() => pageClaims(facts, pid), [facts, pid]);
+  const older = useMemo(() => olderClaims(facts, pid), [facts, pid]);
+  const [showOlder, setShowOlder] = useState(false);
   const st = pageStats(facts, pid);
   const counts = useMemo(() => {
     const n = new Map<Source['kind'], Set<string>>();
@@ -597,7 +606,16 @@ function WikiPage({ id }: { id: string }) {
                   </ul>
                 </section>
               ))}
-              {!groups.length && <div className="wk-none">No claims yet. They appear here as meetings, Slack threads and issues mention {page.title}.</div>}
+              {older.length > 0 && (
+                <section className="wk-group wk-older">
+                  <button className="wk-older-head" onClick={() => setShowOlder((v) => !v)} aria-expanded={showOlder}>
+                    <Icon name={showOlder ? 'chevron-down' : 'chevron-right'} small /> Older · {older.length}
+                    <span>Retired or over 90 days old. Claude does not use these.</span>
+                  </button>
+                  {showOlder && <ul className="wk-claims">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={[]} page={page.title ?? ''} flash={flash === f.id} />)}</ul>}
+                </section>
+              )}
+              {!groups.length && !older.length && <div className="wk-none">No claims yet. They appear here as meetings, Slack threads and issues mention {page.title}.</div>}
             </article>
             <aside className="wk-rail">
               {groups.length > 1 && (

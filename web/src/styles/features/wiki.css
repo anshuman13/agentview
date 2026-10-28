@@ -390,3 +390,10 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .wk-tile.rose { --tile: oklch(0.645 0.246 16.44); }
 .wk-tile.sky { --tile: oklch(0.746 0.16 232.7); }
 .wk-article > .wk-tile { margin-bottom: var(--sp-6); }
+
+/* Older: retired and aged claims, folded under a rule, in muted text. */
+.wk-older { margin-top: var(--sp-20); padding-top: var(--sp-8); border-top: 1px dashed var(--border-strong); }
+.wk-older-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); padding: 0; border: 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-xl); font-weight: 600; cursor: pointer; text-align: left; }
+.wk-older-head span { font-size: var(--fs-sm); font-weight: 400; color: var(--fg-faint); }
+.wk-older .wk-claims { margin-top: var(--sp-6); }
+.wk-older .wk-claim { color: var(--fg-muted); }

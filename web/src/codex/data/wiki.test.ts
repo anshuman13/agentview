@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, approveChanges, contestOf, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchWiki, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, approveChanges, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchWiki, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -48,7 +48,7 @@ describe('wiki', () => {
   });
 
   it('shows proposed claims on their page, and leaves rejected ones and search out', () => {
-    expect(pageClaims(facts, 'p1').flatMap((g) => g.claims.map((c) => c.fact.id))).toEqual(['a', 'c', 'e', 'b']);
+    expect(pageClaims(facts, 'p1').flatMap((g) => g.claims.map((c) => c.fact.id)).sort()).toEqual(['a', 'b', 'c', 'e']);
     expect(pageStats(facts, 'p1').claims).toBe(3);
     expect(searchWiki(pages, facts, 'epsilon').claims).toEqual([]);
     expect(searchWiki(pages, facts, 'zeta').claims).toEqual([]);
@@ -57,6 +57,20 @@ describe('wiki', () => {
   it('counts one review per page and one per claim without a page', () => {
     const more = [...facts, fact('g', 'p1', 'Two', 'Eta proposal', { state: 'proposed' }), fact('h', null as unknown as string, 'One', 'Memory proposal', { state: 'proposed' })];
     expect(reviewCount(pages, more)).toBe(2);
+  });
+
+  it('sorts claims newest first and moves retired and aged ones to Older', () => {
+    const now = 10 * RETIRE_AFTER;
+    const dated = [
+      fact('x1', 'p1', 'One', 'Early', { at: now - 1000 }),
+      fact('x2', 'p1', 'One', 'Late', { at: now - 10 }),
+      fact('x3', 'p1', 'Two', 'Latest', { at: now - 1 }),
+      fact('x4', 'p1', 'One', 'Ancient', { at: now - RETIRE_AFTER - 1 }),
+      fact('x5', 'p1', 'One', 'Retired by hand', { at: now - 5, state: 'retired' }),
+    ];
+    const groups = pageClaims(dated, 'p1', now);
+    expect(groups.map((g) => g.claims.map((c) => c.fact.id))).toEqual([['x3'], ['x2', 'x1']]);
+    expect(olderClaims(dated, 'p1', now).map((f) => f.id)).toEqual(['x5', 'x4']);
   });
 
   it('matches every word in pages and current claims', () => {

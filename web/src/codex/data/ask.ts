@@ -2,7 +2,7 @@ import { getState, notice, prompt, queueNext, send } from '../../app/store';
 import { macOrigin } from '../../app/api';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { currentClaim, factTime, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, type Page } from './wiki';
+import { currentClaim, factTime, isOld, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
   const at = atTime(r.at);
@@ -93,10 +93,10 @@ export function wikiAskText(question: string, pages: Page[], facts: Fact[], page
   const title = new Map(pages.map((p) => [p.id, p.title ?? '']));
   const current = currentClaim(facts);
   const claims = live(facts)
-    .filter((f) => current(f) && (!pageId || f.page_id === pageId))
+    .filter((f) => current(f) && !isOld(f) && (!pageId || f.page_id === pageId))
     .sort((a, b) => factTime(b) - factTime(a))
     .slice(0, 200)
-    .map((f) => `- [${title.get(f.page_id ?? '') || 'Memory'}] ${f.text}${sourcesOf(f).length ? ` (${sourcesOf(f).map((s) => s.label).join(', ')})` : ''}${f.contested ? ' (contested)' : ''}`);
+    .map((f) => `- [${title.get(f.page_id ?? '') || 'Memory'}]${f.at ? ` ${new Date(f.at).toISOString().slice(0, 10)}:` : ''} ${f.text}${sourcesOf(f).length ? ` (${sourcesOf(f).map((s) => s.label).join(', ')})` : ''}${f.contested ? ' (contested)' : ''}`);
   return [
     question,
     `\n${pageId ? `Claims on the wiki page "${title.get(pageId)}"` : 'Claims in my team wiki'}:\n${claims.join('\n')}`,

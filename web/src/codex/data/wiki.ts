@@ -2,7 +2,7 @@ import { newId, type ItemRow, type Profile } from './sync';
 
 export type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
 
-// state is proposed, live or rejected; null means live.
+// state is proposed, live, rejected or retired; null means live.
 export type Page = Common & { title: string | null; section: string | null; summary: string | null; sort: number | null; state: string | null };
 
 export type Fact = Common & {
@@ -86,8 +86,13 @@ export function currentClaim(facts: Fact[]) {
   return (f: Fact) => !f.superseded_by || !alive.has(`${f.profile}:${f.superseded_by}`);
 }
 
-// The claims shown on a page: current claims in heading order, each with the claims it superseded, directly or down the chain.
-export function pageClaims(facts: Fact[], pageId: string | null) {
+// A claim older than this, or one retired by hand, moves to the page's Older section and out of what Claude is given.
+export const RETIRE_AFTER = 90 * 86_400_000;
+export const isOld = (f: Fact, now = Date.now()) => f.state === 'retired' || (f.state !== 'proposed' && f.at != null && f.at > 0 && now - f.at > RETIRE_AFTER);
+
+// The claims shown on a page: current claims newest first under each heading, headings with the newest claim first,
+// each claim with the claims it superseded, directly or down the chain. Old claims are left to olderClaims.
+export function pageClaims(facts: Fact[], pageId: string | null, now = Date.now()) {
   const all = live(facts);
   const current = currentClaim(facts);
   const byKey = new Map(all.map((f) => [factKey(f), f]));
@@ -104,7 +109,7 @@ export function pageClaims(facts: Fact[], pageId: string | null) {
     if (current(top)) replaced.set(factKey(top), [...(replaced.get(factKey(top)) ?? []), f]);
   }
   const groups: { heading: string; claims: { fact: Fact; old: Fact[] }[] }[] = [];
-  for (const f of mine.filter(current)) {
+  for (const f of mine.filter((x) => current(x) && !isOld(x, now))) {
     const heading = f.heading || 'Notes';
     let g = groups.find((x) => x.heading === heading);
     if (!g) groups.push((g = { heading, claims: [] }));
@@ -117,8 +122,17 @@ export function pageClaims(facts: Fact[], pageId: string | null) {
     if (!g) groups.push((g = { heading, claims: [] }));
     g.claims.push({ fact: f, old: [] });
   }
-  for (const g of groups) g.claims.sort((a, b) => (a.fact.at ?? 0) - (b.fact.at ?? 0));
-  return groups;
+  const newest = (g: (typeof groups)[number]) => Math.max(...g.claims.map((c) => c.fact.at ?? 0));
+  for (const g of groups) g.claims.sort((a, b) => (b.fact.at ?? 0) - (a.fact.at ?? 0));
+  return groups.sort((a, b) => newest(b) - newest(a));
+}
+
+// Retired claims and current ones past RETIRE_AFTER, newest first.
+export function olderClaims(facts: Fact[], pageId: string | null, now = Date.now()) {
+  const current = currentClaim(facts);
+  return facts
+    .filter((f) => !f.deleted && (f.page_id ?? null) === pageId && (f.state === 'retired' || ((f.state ?? 'live') === 'live' && current(f))) && isOld(f, now))
+    .sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
 }
 
 export const factTime = (f: Fact) => Math.max(f.at ?? 0, contestOf(f)?.at ?? 0, f.updated_at);
