@@ -404,7 +404,7 @@ export function Assistant() {
     if (at !== undefined) showSnack(`Moved to ${target.label}`, () => act.edit(row, { at: row.at, rank: row.rank, rolls: row.rolls, rolled_from: row.rolled_from }));
   }
   const rows = (rs: ItemRow[], key?: string, droppable = true) => {
-    const over = drag?.over?.section === key && droppable ? drag!.over!.index : -1;
+    const over = key && droppable && drag?.over?.section === key ? drag.over.index : -1;
     const shown = rs.filter((r) => r.profile + r.id !== drag?.key);
     return (
       <div className="as-list" data-drop={droppable ? key : undefined}>
