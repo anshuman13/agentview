@@ -40,11 +40,16 @@
     S.open(u.href);
     return true;
   };
+  // Captured, so a stopPropagation in the page cannot hide the click; checked after the page has handled it.
   window.addEventListener('click', (e) => {
     const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
-    if (!(a instanceof HTMLAnchorElement) || e.defaultPrevented || e.button !== 0) return;
-    if (handle(a)) e.preventDefault();
-  });
+    if (!(a instanceof HTMLAnchorElement) || e.button !== 0) return;
+    if (a.hasAttribute('download')) {
+      e.preventDefault();
+      return save(a);
+    }
+    setTimeout(() => { if (!e.defaultPrevented) handle(a); });
+  }, true);
   const anchorClick = HTMLAnchorElement.prototype.click;
   HTMLAnchorElement.prototype.click = function () {
     if (this.isConnected || !handle(this)) anchorClick.call(this);
