@@ -115,12 +115,17 @@ button.as-check:hover { color: var(--accent); }
 .as-snack button { border: 0; background: transparent; color: var(--accent); font-weight: 600; font-size: var(--fs-md); padding: var(--sp-2) var(--sp-4); filter: brightness(0.8); }
 @keyframes as-up { from { opacity: 0; transform: translate(-50%, 8px); } }
 
+.assistant:has(.as-sheet-overlay) .as-snack { z-index: 21; }
 .as-sheet-overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.45); }
 .as-sheet { width: min(560px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto; display: flex; flex-direction: column; gap: var(--sp-6); padding: var(--sp-8) var(--sp-10) var(--sp-10); border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--raised); box-shadow: var(--shadow-lg); }
 .as-grip { display: none; }
 .as-sheet-title { width: 100%; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-3xl); font-weight: 600; }
 .as-sheet-title:focus { outline: none; }
 .as-sheet-meta { flex-wrap: wrap; row-gap: var(--sp-2); }
+.as-meta-btn, .as-meta-btn > button { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: 28px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.as-meta-btn:hover > button, button.as-meta-btn:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+.as-meta-btn.quiet { color: var(--fg-faint); }
+.as-ctx > .as-meta-due { gap: var(--sp-3); }
 .as-prof.work { color: var(--work); }
 .as-prof.personal { color: var(--personal); }
 .as-sheet-quote { margin: 0; padding: var(--sp-5) var(--sp-7); border-left: 2px solid var(--border-card); background: var(--sunken); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); font-size: var(--fs-lg); max-height: 40vh; overflow-y: auto; }
@@ -165,6 +170,7 @@ button.as-check:hover { color: var(--accent); }
   .as-snack { bottom: 140px; }
   .as-nav button { height: var(--touch); font-size: var(--fs-xl); }
   .as-sheet-overlay { align-items: flex-end; }
+  .assistant:has(.as-sheet-overlay) .as-snack { bottom: auto; top: calc(var(--sp-8) + env(safe-area-inset-top)); }
   .as-sheet { width: 100%; max-height: 85%; border-radius: var(--radius) var(--radius) 0 0; border-bottom: 0; padding-bottom: calc(var(--sp-12) + env(safe-area-inset-bottom)); animation: as-sheet var(--dur) var(--ease); }
   .as-grip { display: block; align-self: center; width: 36px; height: 4px; margin-top: calc(-1 * var(--sp-2)); border-radius: 2px; background: var(--border-card); }
   .as-sheet-actions .btn { height: var(--touch-sm); }

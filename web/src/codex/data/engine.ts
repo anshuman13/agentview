@@ -1,4 +1,4 @@
-import { TABLE_FIELDS, newId, parseTimes, rowToChange } from './sync';
+import { FIELDS, TABLE_FIELDS, newId, parseTimes, rowToChange } from './sync';
 import type { Change, ItemRow, Merged, Profile, PulledChange, Reply, SyncRow } from './sync';
 
 export const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
@@ -190,4 +190,10 @@ export function edited<T extends { field_times: string; updated_at: number }>(ro
   const times = parseTimes(row.field_times);
   for (const k of Object.keys(patch)) times[k] = now;
   return { ...row, ...patch, field_times: JSON.stringify(times), updated_at: Math.max(row.updated_at, now), dirty: 1 };
+}
+
+// The item under the other profile keeps its id; every field is timed now, so it replaces a row moved away from there before.
+export function moved(row: ItemRow, there: ItemRow | undefined, profile: Profile, now: number): ItemRow {
+  const fields = Object.fromEntries(FIELDS.map((f) => [f, row[f]])) as Partial<ItemRow>;
+  return edited(there ?? { ...row, profile, version: 0, field_times: '{}' }, { ...fields, deleted: 0 }, now);
 }

@@ -19,7 +19,7 @@ export function slots(now = new Date()): { label: string; at: number }[] {
 
 export const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
-export function when(at: number, now = Date.now()) {
+export function when(at: number, now = Date.now(), withTime = false) {
   const d = new Date(at);
   const today = new Date(now);
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86400000);
@@ -29,7 +29,8 @@ export function when(at: number, now = Date.now()) {
   if (days === 1) return `tomorrow ${time}`;
   if (days === -1) return `yesterday ${time}`;
   if (days > 1 && days < 7) return `${d.toLocaleDateString([], { weekday: 'short' })} ${time}`;
-  return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  const date = d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  return withTime ? `${date} ${time}` : date;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -63,6 +64,35 @@ export function PickTime({ className, value, onPick, label = 'Pick time', title 
         <option value="day">Pick a day…</option>
       </select>
       <input ref={input} type="date" tabIndex={-1} aria-hidden />
+    </span>
+  );
+}
+
+const localDateTime = (t: number) => { const d = new Date(t); return `${localDate(t)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+// Text that opens the device's date and time picker; clearing the picker clears the time.
+export function PickDue({ className, value, onPick, children }: { className?: string; value: number | null; onPick: (at: number | null) => void; children: React.ReactNode }) {
+  const input = useRef<HTMLInputElement>(null);
+  const pick = useRef(onPick);
+  pick.current = onPick;
+  useEffect(() => {
+    const el = input.current!;
+    const change = () => {
+      const t = el.value ? new Date(el.value).getTime() : null;
+      if (t == null || Number.isFinite(t)) pick.current(t);
+    };
+    el.addEventListener('change', change);
+    return () => el.removeEventListener('change', change);
+  }, []);
+  const open = () => {
+    const el = input.current!;
+    el.value = localDateTime(value ?? slots()[0].at);
+    try { el.showPicker(); } catch { el.focus(); el.click(); }
+  };
+  return (
+    <span className={`as-pick ${className ?? ''}`}>
+      <button type="button" onClick={open}>{children}</button>
+      <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden />
     </span>
   );
 }

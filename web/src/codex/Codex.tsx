@@ -5,7 +5,7 @@ import { proposals } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { atTime, errorText, nextNine, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
-import type { ItemRow } from './data/sync';
+import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { ago } from '../ui/util';
 import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
@@ -13,7 +13,7 @@ import { Wiki } from './wiki/Wiki';
 import { Jobs } from './jobs/Jobs';
 import { Summary } from './summary/Summary';
 import { Meetings } from './meetings/Meetings';
-import { PickTime, when } from './time';
+import { PickDue, PickTime, when } from './time';
 import { Composer, prepText, snoozes } from './AskBar';
 import { Overview, Review, useMinute, useSplit } from './Overview';
 import { useDrag, isDragging, type Drop } from './drag';
@@ -74,7 +74,12 @@ function useActions() {
     snooze: (r: ItemRow, at = nextNine()) => change(r, { at, ...UNROLL }, `Snoozed to ${when(at)}`),
     remove: (r: ItemRow) => change(r, { deleted: 1 }, 'Deleted'),
     toTask: (r: ItemRow) => change(r, { status: 'open', ...UNROLL }, 'Moved to Today'),
+    due: (r: ItemRow, at: number | null) => change(r, { at, ...UNROLL }, at == null ? 'Due time cleared' : `Due ${when(at)}`),
     edit: (r: ItemRow, patch: Patch) => void store.update(r, patch),
+    move: (r: ItemRow, to: Profile) => store.move(r, to).then(() => showSnack(`Moved to ${FILTER_LABEL[to]}`, () => {
+      const moved = store.snapshot().items.find((x) => x.profile === to && x.id === r.id);
+      void store.move(moved ?? { ...r, profile: to }, r.profile).catch((err) => showSnack(`Not moved: ${errorText(err)}`));
+    }), (err) => showSnack(`Not moved: ${errorText(err)}`)),
   };
 }
 
@@ -172,12 +177,24 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
   const src = sourceOf(row);
   const fromSource = row.source && row.source !== 'capture' && row.source !== 'action';
   const at = atTime(row.at);
-  const save = () => {
+  const pending = () => {
     const patch: Patch = {};
     if (title.trim() && title !== initial.current.title) patch.title = title.trim();
     if (!fromSource && text !== initial.current.text) patch.text = text || null;
+    return patch;
+  };
+  const save = () => {
+    const patch = pending();
     if (Object.keys(patch).length) act.edit(row, patch);
   };
+  const other: Profile = row.profile === 'work' ? 'personal' : 'work';
+  // Unsaved title and details move with the item.
+  const move = () => {
+    const patch = pending();
+    initial.current = { title, text };
+    void act.move({ ...row, ...patch }, other);
+  };
+  const timed = row.status === 'open' || row.status === 'suggested' || at != null;
   const close = () => { save(); onClose(); };
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && close();
@@ -207,8 +224,15 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
         <div className="as-ctx as-sheet-meta">
           <span><Icon name={src.icon} small /> {src.label}</span>
           {row.people && <span>{row.people}</span>}
-          <span className={`as-prof ${row.profile}`}>{FILTER_LABEL[row.profile]}</span>
-          {at != null && <span>{row.status === 'open' ? 'due ' : ''}{when(at)}</span>}
+          <span><button className={`as-meta-btn as-prof ${row.profile}`} title={`Move to ${FILTER_LABEL[other]}`} onClick={move}>{FILTER_LABEL[row.profile]}</button></span>
+          {timed && (
+            <span className="as-meta-due">
+              <PickDue className={at == null ? 'as-meta-btn quiet' : 'as-meta-btn'} value={at} onPick={(t) => t !== at && act.due(row, t)}>
+                {at == null ? <><Icon name="calendar" small /> Add due</> : `${row.status === 'open' ? 'due ' : ''}${when(at, Date.now(), true)}`}
+              </PickDue>
+              {at != null && <button className="as-meta-btn" title="Clear due time" aria-label="Clear due time" onClick={() => act.due(row, null)}><Icon name="close" small /></button>}
+            </span>
+          )}
           <span>{ago(row.updated_at, ' ago')}</span>
         </div>
         {fromSource ? (row.text && <blockquote className="as-sheet-quote">{row.text}</blockquote>) : (
@@ -334,7 +358,8 @@ export function Assistant() {
     return () => document.removeEventListener('visibilitychange', run);
   }, [store, ready]);
 
-  const current = open && snap.items.find((r) => r.profile === open.profile && r.id === open.id && !r.deleted);
+  // An item moved to the other profile keeps its id, so the open sheet follows it.
+  const current = open && (snap.items.find((r) => r.profile === open.profile && r.id === open.id && !r.deleted) ?? snap.items.find((r) => r.id === open.id && !r.deleted));
   const { sync } = snap;
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : 'Syncing';
   const loading = sync.syncing && !sync.last && !snap.items.length;

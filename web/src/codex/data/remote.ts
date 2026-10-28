@@ -1,5 +1,5 @@
 import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch } from './store';
-import { edited, newCapture, runSync, toRow, type Dirty } from './engine';
+import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
@@ -125,6 +125,13 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   async update(row: ItemRow, patch: Patch) {
     this.put('items', edited(this.rows.get(keyOf(row)) ?? row, patch, Date.now()));
+  }
+
+  async move(row: ItemRow, profile: Profile) {
+    const now = Date.now();
+    const key = keyOf({ profile, id: row.id });
+    this.rows.set(key, moved(row, this.rows.get(key), profile, now));
+    this.put('items', edited(this.rows.get(keyOf(row)) ?? row, { deleted: 1 }, now));
   }
 
   editRow = async <K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>) => {

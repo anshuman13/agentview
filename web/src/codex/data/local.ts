@@ -1,5 +1,5 @@
 import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch } from './store';
-import { edited, errorText, newCapture, runSync, toRow, type Dirty } from './engine';
+import { edited, errorText, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
@@ -242,6 +242,12 @@ export class LocalStore extends BaseStore implements AssistantStore {
     const sets = keys.map((k) => `${k} = ?`).join(', ');
     const times = keys.map((k) => `'$.${k}', ?`).join(', ');
     return this.edit(row, `${sets}, field_times = json_set(field_times, ${times})`, (now) => [...keys.map((k) => patch[k] ?? null), ...keys.map(() => now)]);
+  };
+
+  move = async (row: ItemRow, profile: Profile) => {
+    const now = Date.now();
+    await this.swap('items', profile, row.id, (there) => moved(row, there as ItemRow | undefined, profile, now));
+    await this.update(row, { deleted: 1 });
   };
 
   parse = async (text: string, profile: Profile): Promise<Parsed> => {

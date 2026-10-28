@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isQuestion, parseWhen, split, stripWhen } from './engine';
-import type { ItemRow } from './sync';
+import { edited, isQuestion, moved, newCapture, parseWhen, split, stripWhen } from './engine';
+import { rowToChange, type ItemRow } from './sync';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
 const local = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
@@ -72,5 +72,24 @@ describe('split', () => {
     expect(ids(s.later)).toEqual(['soon']);
     expect(ids(s.review)).toEqual(['yours?']);
     expect(ids(s.doneToday)).toEqual(['done now']);
+  });
+});
+
+describe('moved', () => {
+  const row = { ...newCapture('Call the bank\nAbout the loan', 'task', 'work', 1000, 5000), people: 'Ola', rank: 2, version: 7 };
+
+  it('keeps every field under the other profile and sends them all', () => {
+    const m = moved(row, undefined, 'personal', 2000);
+    expect(m).toMatchObject({ id: row.id, profile: 'personal', version: 0, deleted: 0, dirty: 1, title: 'Call the bank', text: 'About the loan', at: 5000, people: 'Ola', rank: 2, status: 'open' });
+    const change = rowToChange(m);
+    expect(change).toMatchObject({ profile: 'personal', deleted: false, updated_at: 2000 });
+    expect(change.fields).toMatchObject({ title: 'Call the bank', at: 5000, people: 'Ola', rank: 2, source_url: null });
+  });
+
+  it('brings back a row moved away before', () => {
+    const gone = edited({ ...row, profile: 'personal' as const, title: 'Old' }, { deleted: 1 }, 1500);
+    const m = moved(row, gone, 'personal', 2000);
+    expect(m).toMatchObject({ profile: 'personal', version: 7, deleted: 0, title: 'Call the bank' });
+    expect(JSON.parse(m.field_times).deleted).toBe(2000);
   });
 });
