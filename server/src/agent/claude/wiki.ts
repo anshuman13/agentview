@@ -6,14 +6,19 @@ import { hubPush, hubRows, type HubChange, type HubRow } from '../../integration
 
 export const WIKI_RULES = [
   'You can add to the user\'s wiki and memory with mcp__agentview__wiki_propose. Nothing goes live until the user approves it.',
-  'Propose facts that stay true: decisions, ownership, how a system works, people and the user\'s preferences. One sentence, with sources (Slack, Linear or PR links when known).',
-  'Call wiki_search first. Do not repeat a live, proposed or rejected claim; pass replaces when a claim contradicts a live one.',
+  'Propose decisions, ownership, how a system works, who works on what, status and the user\'s preferences.',
+  'Put each claim on a topic page under a heading: find the page with wiki_search, read it with wiki_page, or name a new page with its section. Memory without a page is only for the user\'s own preferences.',
+  'Write claims the way a good internal wiki does: one or two specific sentences that lead with the subject and carry the detail a colleague needs, such as names, numbers, limits, ticket and PR ids and absolute dates.',
+  'Bad: "The team uses a gateway for APIs." Good: "As of 3 Mar 2026 the API gateway runs in prod, deploys on merge to main and limits each user to 60 requests a minute (PLAT-412)."',
+  'Date anything that can change ("As of 28 Oct 2026, ..."). Prefer several specific claims over one summary. Give each claim its sources (Slack, Linear or PR links).',
+  'Call wiki_search first. Do not repeat a live, proposed or rejected claim; pass replaces when a claim updates or contradicts a live one.',
   'Never propose secrets, credentials, tokens or file contents.',
 ].join(' ');
 
 const PERSONAL = path.join(os.homedir(), 'workspace_personal');
 export const profileOf = (cwd: string) => (cwd === PERSONAL || cwd.startsWith(PERSONAL + path.sep) ? 'personal' : 'work') as HubRow['profile'];
 
+const PROFILE = z.enum(['work', 'personal']).optional().describe('Which wiki: work or personal. Defaults to the profile of the chat\'s folder');
 const text = (t: string) => ({ content: [{ type: 'text' as const, text: t }] });
 const state = (r: HubRow) => (r.state as string | null) ?? 'live';
 const words = (q: string) => q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -22,21 +27,20 @@ const claim = (f: HubRow) => `- [${f.id}] (${state(f)}${f.superseded_by ? ', sup
 
 export function wikiTools(o: { cwd: string; chat: () => string | null }) {
   // A chat reads only its own profile's wiki, so work chats never see personal claims and the other way round.
-  const own = async () => {
-    const profile = profileOf(o.cwd);
+  const own = async (profile = profileOf(o.cwd)) => {
     const [pages, facts] = await Promise.all([hubRows('pages'), hubRows('facts')]);
     return { pages: pages.filter((r) => r.profile === profile), facts: facts.filter((r) => r.profile === profile) };
   };
   return [
-    tool('wiki_search', 'Search the user\'s wiki pages and claims, including proposed and rejected claims. Every word must match.', { query: z.string() }, async ({ query }) => {
+    tool('wiki_search', 'Search the user\'s wiki pages and claims, including proposed and rejected claims. Every word must match.', { query: z.string(), profile: PROFILE }, async ({ query, profile }) => {
       const ws = words(query);
-      const { pages, facts } = await own();
+      const { pages, facts } = await own(profile);
       const p = pages.filter((r) => state(r) !== 'rejected' && matches(ws, r.title, r.summary)).map((r) => `- page [${r.id}] ${r.title} (${r.section ?? 'no section'}, ${state(r)})`);
       const f = facts.filter((r) => matches(ws, r.text)).slice(0, 30).map(claim);
       return text([...p, ...f].join('\n') || 'Nothing matches.');
     }),
-    tool('wiki_page', 'One wiki page\'s live claims by heading, with claim ids to pass as replaces.', { id: z.string() }, async ({ id }) => {
-      const { pages, facts } = await own();
+    tool('wiki_page', 'One wiki page\'s live claims by heading, with claim ids to pass as replaces.', { id: z.string(), profile: PROFILE }, async ({ id, profile }) => {
+      const { pages, facts } = await own(profile);
       const page = pages.find((r) => r.id === id);
       if (!page) return text(`No page ${id}.`);
       const byHeading = new Map<string, string[]>();
@@ -48,7 +52,7 @@ export function wikiTools(o: { cwd: string; chat: () => string | null }) {
     }),
     tool(
       'wiki_propose',
-      'Propose a one-sentence claim for the user to approve. Without page it goes to memory. page is an existing page id, or a new page title together with section.',
+      'Propose a claim of one or two specific sentences for the user to approve. Without page it goes to memory. page is an existing page id, or a new page title together with section.',
       {
         text: z.string().max(400),
         sources: z.array(z.object({ kind: z.enum(['slack', 'linear', 'pr', 'doc', 'meeting']), label: z.string(), url: z.string().optional() })).default([]),
@@ -56,10 +60,10 @@ export function wikiTools(o: { cwd: string; chat: () => string | null }) {
         section: z.string().optional().describe('Section for a new page'),
         heading: z.string().optional(),
         replaces: z.string().optional().describe('Id of the live claim this one supersedes'),
-        personal: z.boolean().optional().describe("True when the claim is about the user's personal life"),
+        profile: PROFILE,
       },
       async (a) => {
-        const profile = a.personal ? 'personal' : profileOf(o.cwd);
+        const profile = a.profile ?? profileOf(o.cwd);
         const now = Date.now();
         const pages = await hubRows('pages');
         const changes: HubChange[] = [];
