@@ -37,6 +37,7 @@ const Chat = z.object({
   kind: z.enum(['dm', 'channel', 'mention']),
   url: z.string().optional().describe('Permalink to the newest message'),
   summary: z.string().describe('The updated running summary: what is going on, who waits on me, what was decided. At most 3 short sentences.'),
+  new_messages: z.number().describe('How many new messages you read in this chat since the last pass'),
 });
 const Ask = z.object({
   url: z.string().describe('Permalink of the message'),
@@ -52,14 +53,15 @@ const Detail = z.object({
   from: z.string().describe('Who said it'),
   url: z.string().describe('Permalink of the message'),
 });
-export type ScanResult = { chats: z.infer<typeof Chat>[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; channels?: { name: string; id: string }[] };
+export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; channels?: { name: string; id: string }[] };
 
 export const askId = (url: string) => `slack:${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
 
 // Saves one scan: chat summaries, asks as items to review, and closes asks I have replied to. Returns how many asks are new and which are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
-  const changes: Change[] = r.chats.map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: c.url ?? null, summary: c.summary.trim(), last_at: now } }));
+  // A chat with nothing new keeps its running summary.
+  const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: c.url ?? null, summary: c.summary.trim(), last_at: now } }));
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
   let added = 0;
   for (const a of r.asks) {
@@ -185,7 +187,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
     'Make all of these reads in parallel in one turn. Read a thread with slack_read_thread only when a new message there might ask something of me.',
     '',
     `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
-    'Only for DMs and channels with new messages, give an updated running summary, using the channel id. The previous summaries are below; keep what still matters and drop what is old.',
+    'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old.',
     'Add an ask only when a message clearly asks me to do, answer or decide something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     'In details, add a note when a new message gives more detail on one of the open asks or tracked tasks below: a date, a requirement, a link, a change of scope or who owns it. Use the id in brackets. Skip messages that only repeat the task.',

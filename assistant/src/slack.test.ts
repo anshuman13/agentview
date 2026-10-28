@@ -20,6 +20,13 @@ describe('saveScan', () => {
     expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ added: 0, urgent: [] });
   });
 
+  test('keeps the summary of a chat with no new messages', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.', new_messages: 3 }], asks: [], answered: [] }, at(27, 10));
+    saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'No new messages.', new_messages: 0 }], asks: [], answered: [] }, at(27, 11));
+    expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
+  });
+
   test('closes answered asks I have not taken, and leaves accepted ones', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('u1'), ask('u2')], answered: [] }, at(27, 10));
