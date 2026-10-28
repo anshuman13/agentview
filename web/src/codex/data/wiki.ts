@@ -167,6 +167,13 @@ export function searchWiki(pages: Page[], facts: Fact[], query: string) {
 
 export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.state === 'proposed').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
 
+// What the review list shows: one card per page with proposals, and one per claim without a page.
+export function reviewCount(pages: Page[], facts: Fact[]) {
+  const list = proposals(facts);
+  const hasPage = (f: Fact) => !!f.page_id && pages.some((p) => p.id === f.page_id && p.profile === f.profile && !p.deleted);
+  return new Set(list.filter(hasPage).map((f) => `${f.profile}:${f.page_id}`)).size + list.filter((f) => !hasPage(f)).length;
+}
+
 export const chatOf = (f: Fact) => (f.added_by?.startsWith('claude:') ? f.added_by.slice(7) : null);
 
 // Approving sets the claim live, its proposed page live, and supersedes the claim it replaces.

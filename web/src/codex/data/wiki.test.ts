@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, approveChanges, contestOf, groupMeetings, meetingState, pageClaims, pageStats, searchWiki, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, approveChanges, contestOf, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchWiki, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -52,6 +52,11 @@ describe('wiki', () => {
     expect(pageStats(facts, 'p1').claims).toBe(3);
     expect(searchWiki(pages, facts, 'epsilon').claims).toEqual([]);
     expect(searchWiki(pages, facts, 'zeta').claims).toEqual([]);
+  });
+
+  it('counts one review per page and one per claim without a page', () => {
+    const more = [...facts, fact('g', 'p1', 'Two', 'Eta proposal', { state: 'proposed' }), fact('h', null as unknown as string, 'One', 'Memory proposal', { state: 'proposed' })];
+    expect(reviewCount(pages, more)).toBe(2);
   });
 
   it('matches every word in pages and current claims', () => {

@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import { useAssistant, useCodex } from './data';
-import { proposals } from './data/wiki';
+import { reviewCount } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { atTime, errorText, nextNine, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
@@ -292,8 +292,8 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { list, filter } = useView();
   const { store, snap } = useAssistant();
   const s = useSplit();
-  const { facts } = useCodex();
-  const count: Record<List, number> = { today: 0, tasks: s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < s.endOfDay).length + s.review.length, summary: 0, meetings: 0, jobs: 0, wiki: proposals(facts).length };
+  const { facts, pages } = useCodex();
+  const count: Record<List, number> = { today: 0, tasks: s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < s.endOfDay).length + s.review.length, summary: 0, meetings: 0, jobs: 0, wiki: reviewCount(pages, facts) };
   const { sync } = snap;
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
   const dot = sync.error ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';

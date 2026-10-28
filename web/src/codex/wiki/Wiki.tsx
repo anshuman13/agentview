@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAssistant, useCodex } from '../data';
 import type { ItemRow } from '../data/sync';
 import { ask, wikiAskText } from '../data/ask';
-import { approveAllChanges, approveChanges, chatOf, contestOf, currentClaim, factTime, live, newPage, NO_STATS, pageClaims, pageStats, proposals, searchWiki, sourcesOf, statsByPage, type Fact, type Page, type PageStats, type Source } from '../data/wiki';
+import { approveAllChanges, approveChanges, chatOf, contestOf, currentClaim, factTime, live, newPage, NO_STATS, pageClaims, pageStats, proposals, reviewCount, searchWiki, sourcesOf, statsByPage, type Fact, type Page, type PageStats, type Source } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
@@ -368,7 +368,7 @@ function ToReview({ facts }: { facts: Fact[] }) {
   const loose = list.filter((f) => !f.page_id || !pages.some((p) => p.id === f.page_id && !p.deleted));
   return (
     <section>
-      <div className="wk-label">To review · {list.length}</div>
+      <div className="wk-label">To review · {reviewCount(pages, facts)}</div>
       <div className="wk-reviews">
         {[...byPage].map(([id, fs]) => {
           const page = pages.find((p) => p.id === id && p.profile === fs[0].profile && !p.deleted);
