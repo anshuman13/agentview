@@ -549,6 +549,8 @@ export class ClaudeDriver implements AgentDriver {
           this.tasks.delete(msg.task_id);
           const toolUseId = msg.tool_use_id ? this.agentToolUse(msg.tool_use_id) : this.taskToolUse(msg.task_id);
           if (toolUseId) {
+            // The CLI writes the report to the transcript before it streams; without this the watcher takes it for another process and restarts the CLI.
+            if (!this.state.session.running) host.turnStarted('Claude continued after a background task');
             const usage = msg.usage && usageOf(msg.usage);
             this.patchAgent(toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
             this.taskDone(toolUseId, msg.task_id, msg.status, msg.summary);

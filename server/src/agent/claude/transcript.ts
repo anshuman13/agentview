@@ -6,6 +6,7 @@ const COMPACT_SUMMARY = 'This session is being continued from a previous convers
 export const ASYNC_LAUNCH = 'Async agent launched';
 export const AGENT_TOOLS = new Set(['Agent', 'Task']);
 const TRAILER = /\s*agentId: \w+[^\n]*\n<usage>[\s\S]*<\/usage>\s*$/;
+const HANDBACK = /^Another Claude session sent a message:\n<agent-message from="(\w+)">\n\[Subagent hand-back\][^\n]*\n([\s\S]*?)\n<\/agent-message>/;
 
 export type AgentIds = Map<string, string>;
 
@@ -24,6 +25,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   const agents: AgentIds = new Map();
   const agentUses = new Set<string>();
   const usages = new Map<string, AgentUsage>();
+  const handedBack = new Set<string>();
   let prev = '';
   const endTurn = () => {
     if (inTurn) events.push({ id: `${prev}:result`, kind: 'result', text: lastText, costUsd: 0, isError: false, at: lastAt });
@@ -41,8 +43,17 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
         const usage = usageFrom(b.text);
         for (const e of notificationResults(b.text, at, agents, id)) {
           if (e.kind !== 'tool_result') continue;
+          // A CLI restart reports an agent that already handed back as stopped.
+          if (e.stopped && handedBack.has(e.toolUseId)) continue;
           if (usage) usages.set(e.toolUseId, usage);
           events.push(subagents[e.toolUseId] ? { ...e, text: agentReport(e.text, subagents[e.toolUseId]) } : e);
+        }
+      } else if (m.type === 'user' && b.type === 'text' && HANDBACK.test(b.text)) {
+        const [, agentId, report] = b.text.match(HANDBACK)!;
+        const toolUseId = agents.get(agentId);
+        if (toolUseId) {
+          handedBack.add(toolUseId);
+          events.push({ id, kind: 'tool_result', toolUseId, text: report.replace(/^  /gm, '').trim(), isError: false, at });
         }
       } else if (m.type === 'user' && b.type === 'text' && b.text.includes('<local-command-stdout>Compacted')) {
         context = null;

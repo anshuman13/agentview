@@ -556,6 +556,20 @@ describe('subagents', () => {
     expect(events.find((e) => e.kind === 'agent')).toMatchObject({ toolUseId: 'ag', status: 'done', endedAt: Date.parse('2026-10-15T10:05:00Z') });
   });
 
+  it('shows a peer hand-back as the agent report and ignores the stopped notice after a restart', () => {
+    const msg = (type: string, content: unknown, ts: string) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: ts, message: { content } }) as never;
+    const { events } = historyFrom([
+      msg('user', 'survey', '2026-10-15T10:00:00Z'),
+      msg('assistant', [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey', prompt: 'Find docs', run_in_background: true } }], '2026-10-15T10:00:01Z'),
+      msg('user', [{ type: 'tool_result', tool_use_id: 'ag', content: 'Async agent launched successfully.\nagentId: a1 (use SendMessage)' }], '2026-10-15T10:00:02Z'),
+      msg('user', 'Another Claude session sent a message:\n<agent-message from="a1">\n[Subagent hand-back] The report follows:\n  Found 3 docs\n  \n  Done\n</agent-message>\n\nThat "other Claude session" is a subagent.', '2026-10-15T10:01:00Z'),
+      msg('user', '<task-notification>\n<task-id>a1</task-id>\n<status>stopped</status>\n<summary>did not finish</summary>\n</task-notification>', '2026-10-15T10:02:00Z'),
+    ]);
+    expect(events.filter((e) => e.kind === 'user')).toHaveLength(1);
+    expect(events.find((e) => e.kind === 'tool_result' && e.toolUseId === 'ag')).toMatchObject({ text: 'Found 3 docs\n\nDone' });
+    expect(events.find((e) => e.kind === 'agent')).toMatchObject({ status: 'done', endedAt: Date.parse('2026-10-15T10:01:00Z') });
+  });
+
   it('forwards subagent text live and from history', () => {
     const { s } = fakeSession();
     const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
@@ -711,6 +725,16 @@ describe('turns the CLI starts by itself', () => {
     handle({ type: 'stream_event', parent_tool_use_id: 'sub', event: { type: 'message_start', message: { id: 'm2' } } });
     result('r1');
     expect(s.state.session.running).toBe(false);
+  });
+
+  it('marks the session running when a background agent reports while idle', () => {
+    const { s, result } = fakeSession();
+    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey', run_in_background: true } }] } });
+    result('r1');
+    expect(s.state.session.running).toBe(false);
+    handle({ type: 'system', subtype: 'task_notification', task_id: 'a1', tool_use_id: 'ag', status: 'completed', summary: 'Agent finished' });
+    expect(s.state.session.running).toBe(true);
   });
 
   it('drops a dead query so the next prompt starts a fresh one', async () => {
