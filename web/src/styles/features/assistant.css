@@ -51,6 +51,8 @@
 .as-swipe-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--sp-6); font-size: var(--fs-sm); font-weight: 600; opacity: 0; }
 .as-swipe.right .as-swipe-bg { opacity: 1; background: color-mix(in srgb, var(--ok) 22%, var(--bg)); color: var(--ok); }
 .as-swipe.left .as-swipe-bg { opacity: 1; background: color-mix(in srgb, var(--warn) 22%, var(--bg)); color: var(--warn); }
+.as-swipe.left.delete .as-swipe-bg { background: color-mix(in srgb, var(--err) 26%, var(--bg)); color: var(--err); }
+.as-delete { color: var(--err); }
 .as-swipe.right .as-swipe-bg span:last-child, .as-swipe.left .as-swipe-bg span:first-child { visibility: hidden; }
 .as-swipe-row { position: relative; touch-action: pan-y; transition: transform var(--dur) var(--ease); }
 .as-swipe:is(.right, .left) .as-swipe-row { background: var(--bg); }

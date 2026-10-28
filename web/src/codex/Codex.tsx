@@ -45,6 +45,8 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
 const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 
 const SWIPE = 80;
+// A left swipe past this share of the row deletes instead of snoozing.
+const SWIPE_DELETE = 0.55;
 const DAY = 86400_000;
 
 function greeting(h = new Date().getHours()) {
@@ -84,19 +86,21 @@ function useActions() {
   };
 }
 
-function Swipe({ onRight, onLeft, children }: { onRight: () => void; onLeft?: () => void; children: React.ReactNode }) {
+function Swipe({ onRight, onLeft, onDelete, children }: { onRight?: () => void; onLeft?: () => void; onDelete: () => void; children: React.ReactNode }) {
   const [dx, setDx] = useState(0);
+  const width = useRef(1);
+  const deleting = dx < 0 && (!onLeft || -dx > width.current * SWIPE_DELETE);
   const from = useRef<{ x: number; y: number } | null>(null);
   const moving = useRef(false);
   const swiped = useRef(false);
   const reset = () => { from.current = null; moving.current = false; setDx(0); };
   return (
-    <div className={`as-swipe${dx > 0 ? ' right' : dx < 0 ? ' left' : ''}`}>
-      <div className="as-swipe-bg"><span><Icon name="check" /> Done</span><span>Tomorrow <Icon name="clock" /></span></div>
+    <div className={`as-swipe${dx > 0 ? ' right' : dx < 0 ? (deleting ? ' left delete' : ' left') : ''}`}>
+      <div className="as-swipe-bg"><span><Icon name="check" /> Done</span>{deleting ? <span>Delete <Icon name="trash" /></span> : <span>Tomorrow <Icon name="clock" /></span>}</div>
       <div
         className="as-swipe-row"
         style={{ transform: dx ? `translateX(${dx}px)` : undefined, transition: moving.current ? 'none' : undefined }}
-        onPointerDown={(e) => { if (e.pointerType !== 'mouse') from.current = { x: e.clientX, y: e.clientY }; }}
+        onPointerDown={(e) => { if (e.pointerType !== 'mouse') { from.current = { x: e.clientX, y: e.clientY }; width.current = e.currentTarget.offsetWidth || 1; } }}
         onPointerMove={(e) => {
           if (!from.current) return;
           if (isDragging()) return reset();
@@ -107,11 +111,12 @@ function Swipe({ onRight, onLeft, children }: { onRight: () => void; onLeft?: ()
             moving.current = true;
             e.currentTarget.setPointerCapture(e.pointerId);
           }
-          setDx(onLeft || mx > 0 ? mx : 0);
+          setDx(mx > 0 ? (onRight ? mx : 0) : mx);
         }}
         onPointerUp={() => {
           if (moving.current) { swiped.current = true; setTimeout(() => { swiped.current = false; }, 0); }
-          if (moving.current && dx > SWIPE) onRight();
+          if (moving.current && dx > SWIPE) onRight?.();
+          else if (moving.current && deleting && -dx > SWIPE) onDelete();
           else if (moving.current && dx < -SWIPE) onLeft?.();
           reset();
         }}
@@ -163,8 +168,8 @@ function Row({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen: () => void
       </div>
     </div>
   );
-  if (isNote || isDone) return body;
-  return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, nextNine(new Date(Math.max(at ?? 0, now))))}>{body}</Swipe>;
+  if (isNote || isDone) return <Swipe onDelete={() => act.remove(row)}>{body}</Swipe>;
+  return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, nextNine(new Date(Math.max(at ?? 0, now))))} onDelete={() => act.remove(row)}>{body}</Swipe>;
 }
 
 function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClose: () => void }) {
@@ -256,7 +261,7 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
             {!fromSource && row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
             <button className="btn" onClick={then(() => ask(askText('Help me with this item.', items, row)))}><Icon name="sparkle" small /> Ask</button>
             <span className="spacer" />
-            <button className="icon-btn" title="Delete" aria-label="Delete" onClick={then(() => act.remove(row))}><Icon name="trash" /></button>
+            <button className="btn as-delete" onClick={then(() => act.remove(row))}><Icon name="trash" small /> Delete</button>
           </div>
         )}
       </div>
