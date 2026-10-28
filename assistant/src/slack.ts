@@ -46,7 +46,13 @@ const Ask = z.object({
   quote: z.string().describe('The key sentence of the message'),
   urgent: z.boolean().describe('True only if someone is blocked on me, there is a deadline today, an incident, or I was pinged more than once'),
 });
-export type ScanResult = { chats: z.infer<typeof Chat>[]; asks: z.infer<typeof Ask>[]; answered: string[]; channels?: { name: string; id: string }[] };
+const Detail = z.object({
+  id: z.string().describe('The id in brackets of the open ask or tracked task'),
+  note: z.string().describe('The new detail in one sentence: a date, a requirement, a link, a change of scope or who owns it'),
+  from: z.string().describe('Who said it'),
+  url: z.string().describe('Permalink of the message'),
+});
+export type ScanResult = { chats: z.infer<typeof Chat>[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; channels?: { name: string; id: string }[] };
 
 export const askId = (url: string) => `slack:${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
 
@@ -68,6 +74,17 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     const old = has.get(PROFILE, id) as { status: string } | null;
     if (old && (old.status === 'suggested' || old.status === 'unassigned')) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done' } });
   }
+  // New details from Slack go at the end of the task's notes, once per message.
+  const task = db.prepare("SELECT text FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND status IN ('open', 'suggested')");
+  const texts = new Map<string, string>();
+  for (const d of r.details ?? []) {
+    const row = task.get(PROFILE, d.id) as { text: string | null } | null;
+    if (!row) continue;
+    const text = texts.get(d.id) ?? row.text ?? '';
+    if (text.includes(d.url)) continue;
+    texts.set(d.id, `${text ? `${text}\n\n` : ''}${d.from} on Slack: ${d.note.trim()} ${d.url}`);
+  }
+  for (const [id, text] of texts) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { text } });
   applyChanges(db, changes);
   return { added, urgent };
 }
@@ -127,9 +144,9 @@ async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxT
 }
 
 const openAsks = (db: Database, since: number) =>
-  db.prepare("SELECT title, source_url, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'slack' AND status IN ('suggested', 'open') AND updated_at > ?").all(PROFILE, since) as { title: string; source_url: string; people: string }[];
+  db.prepare("SELECT id, title, source_url, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'slack' AND status IN ('suggested', 'open') AND updated_at > ?").all(PROFILE, since) as { id: string; title: string; source_url: string; people: string }[];
 const tracked = (db: Database) =>
-  (db.prepare("SELECT title FROM items WHERE profile = ? AND deleted = 0 AND status IN ('open', 'suggested') AND COALESCE(source, '') NOT IN ('slack', 'calendar') ORDER BY updated_at DESC LIMIT 60").all(PROFILE) as { title: string }[]).map((r) => r.title);
+  db.prepare("SELECT id, title FROM items WHERE profile = ? AND deleted = 0 AND status IN ('open', 'suggested') AND COALESCE(source, '') NOT IN ('slack', 'calendar') ORDER BY updated_at DESC LIMIT 60").all(PROFILE) as { id: string; title: string }[];
 
 const channelIds = (db: Database): Record<string, string> => {
   try {
@@ -154,7 +171,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
   const since = sinceOf(db, now);
   const chats = db.prepare('SELECT id, name, summary FROM chats WHERE profile = ? AND deleted = 0').all(PROFILE) as { id: string; name: string; summary: string | null }[];
   let saved: ScanResult | null = null;
-  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
+  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
@@ -171,15 +188,16 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
     'Only for DMs and channels with new messages, give an updated running summary, using the channel id. The previous summaries are below; keep what still matters and drop what is old.',
     'Add an ask only when a message clearly asks me to do, answer or decide something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
+    'In details, add a note when a new message gives more detail on one of the open asks or tracked tasks below: a date, a requirement, a link, a change of scope or who owns it. Use the id in brackets. Skip messages that only repeat the task.',
     '',
     'Previous summaries:',
     ...(chats.length ? chats.map((x) => `- ${x.id} ${x.name}: ${x.summary ?? ''}`) : ['(none)']),
     '',
     'Open asks:',
-    ...openAsks(db, now - 7 * DAY).map((a) => `- ${a.source_url} ${a.people}: ${a.title}`),
+    ...openAsks(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.source_url} ${a.people}: ${a.title}`),
     '',
     'Tracked tasks:',
-    ...tracked(db).map((t) => `- ${t}`),
+    ...tracked(db).map((t) => `- [${t.id}] ${t.title}`),
     '',
     'Then call save_scan exactly once and stop. Do not use the em dash character.',
   ].join('\n');

@@ -28,6 +28,18 @@ describe('saveScan', () => {
     expect(item(db, 'u1')!.status).toBe('done');
     expect(item(db, 'u2')!.status).toBe('open');
   });
+
+  test('adds new Slack details to open tasks once, and skips closed ones', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [], asks: [ask('u1'), ask('u2')], answered: [] }, at(27, 9));
+    saveScan(db, { chats: [], asks: [], answered: ['u2'] }, at(27, 10));
+    const detail = (id: string, url: string) => ({ id, note: 'Due Friday.', from: 'Ola', url });
+    saveScan(db, { chats: [], asks: [], answered: [], details: [detail(askId('u1'), 'm1'), detail(askId('u1'), 'm1'), detail(askId('u2'), 'm2'), detail('nope', 'm3')] }, at(27, 11));
+    saveScan(db, { chats: [], asks: [], answered: [], details: [detail(askId('u1'), 'm1')] }, at(27, 12));
+    const text = (url: string) => (db.prepare('SELECT text FROM items WHERE id = ?').get(askId(url)) as { text: string }).text;
+    expect(text('u1')).toBe('Can you check?\n\nOla on Slack: Due Friday. m1');
+    expect(text('u2')).toBe('Can you check?');
+  });
 });
 
 test('reads every quarter hour on weekday working hours', () => {
