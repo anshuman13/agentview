@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
 import { useAssistant, useCodex } from './data';
 import { reviewCount } from './data/wiki';
 import { ask, askText } from './data/ask';

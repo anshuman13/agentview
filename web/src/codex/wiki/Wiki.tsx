@@ -51,10 +51,20 @@ function Overview({ page, facts, pages }: { page: Page; facts: Fact[]; pages: Pa
   );
 }
 
+// Each page gets a coloured tile, picked from its id so it stays put; the section picks the icon.
+const TILES = ['emerald', 'violet', 'blue', 'amber', 'rose', 'sky'];
+const SECTION_ICON: Record<string, string> = { Company: 'organization', Directory: 'person', Domain: 'symbol-namespace' };
+export function PageTile({ page }: { page: Page }) {
+  let h = 0;
+  for (const ch of page.id) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return <span className={`wk-tile ${TILES[Math.abs(h) % TILES.length]}`}><Icon name={SECTION_ICON[page.section ?? ''] ?? 'file'} /></span>;
+}
+
 function PageCard({ page, stats }: { page: Page; stats: Map<string | null, PageStats> }) {
   const st = stats.get(page.id) ?? NO_STATS;
   return (
     <button className="wk-card" onClick={() => setView({ open: page.id, anchor: null })}>
+      <PageTile page={page} />
       <span className="wk-card-title">{page.title}</span>
       <span className="wk-card-summary">{page.summary}</span>
       <span className="wk-card-foot">
@@ -342,6 +352,7 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
   return (
     <div className="mt-action proposed wk-review">
       <div className="mt-action-kind"><Icon name="book" small />{page.state === 'proposed' ? `New page in ${page.section}` : 'Additions'}{page.profile === 'personal' && <span className="wk-src">Personal</span>}</div>
+      <PageTile page={page} />
       <div className="mt-action-title"><button className="wk-review-open" onClick={() => setView({ open: page.id, anchor: null })}>{page.title} <Icon name="chevron-right" small /></button></div>
       {page.summary && <div className="mt-action-body">{page.summary}</div>}
       <div className="wk-meta">
@@ -385,7 +396,8 @@ function MemoryCard({ stats }: { stats: Map<string | null, PageStats> }) {
   if (!st.claims) return null;
   return (
     <button className="wk-card" onClick={() => setView({ open: MEMORY, anchor: null })}>
-      <span className="wk-card-title"><Icon name="lightbulb" small /> Memory</span>
+      <span className="wk-tile amber"><Icon name="lightbulb" /></span>
+      <span className="wk-card-title">Memory</span>
       <span className="wk-card-summary">What Claude remembers outside the pages.</span>
       <span className="wk-card-foot"><span>{shortDate(st.updated)}</span><span className="spacer" /><span>{st.claims} claims</span></span>
     </button>
@@ -473,9 +485,9 @@ function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: stri
     navigator.clipboard?.writeText(text).then(() => showSnack('Claim copied'), () => showSnack('Could not copy'));
   };
   return (
-    <div className={`wk-claim${c ? ' contested' : ''}${proposed ? ' proposed' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
-      <p className="wk-claim-text">{fact.text}</p>
-      <div className="wk-claim-foot">
+    <li className={`wk-claim${c ? ' contested' : ''}${proposed ? ' proposed' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
+      <span className="wk-claim-text">{fact.text}</span>
+      <span className="wk-claim-foot">
         {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
         {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
         {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
@@ -490,7 +502,7 @@ function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: stri
           ) : <button className="icon-btn" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>}
           {!proposed && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
         </span>
-      </div>
+      </span>
       {contesting && (
         <div className="wk-contest-form">
           <textarea autoFocus rows={2} value={note} placeholder="What is wrong or out of date? Link a source if you have one." onChange={(e) => setNote(e.target.value)}
@@ -517,7 +529,7 @@ function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: stri
           <span>Replaced {o.at != null ? shortDate(o.at) : ''}</span>
         </div>
       ))}
-    </div>
+    </li>
   );
 }
 
@@ -560,11 +572,13 @@ function WikiPage({ id }: { id: string }) {
         ) : (
           <div className="wk-doc">
             <article className="wk-article">
+              {pid && <PageTile page={page} />}
               <h1 className="wk-title">{page.title}</h1>
               {page.summary && <p className="wk-lede">{page.summary}</p>}
               <div className="wk-meta wk-page-meta">
+                <span className="wk-kind">Wiki</span>
+                <span>{st.claims + pending.length} claims</span>
                 <span>Updated {shortDate(Math.max(page.updated_at, st.updated))}</span>
-                <span>{st.claims} claims</span>
                 {st.contested > 0 && <span className="wk-warn">{st.contested} contested</span>}
               </div>
               {pending.length > 0 && (
@@ -578,7 +592,9 @@ function WikiPage({ id }: { id: string }) {
               {groups.map((g) => (
                 <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
                   <h2>{g.heading}</h2>
-                  {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page.title ?? ''} flash={flash === fact.id} />)}
+                  <ul className="wk-claims">
+                    {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page.title ?? ''} flash={flash === fact.id} />)}
+                  </ul>
                 </section>
               ))}
               {!groups.length && <div className="wk-none">No claims yet. They appear here as meetings, Slack threads and issues mention {page.title}.</div>}

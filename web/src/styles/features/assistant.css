@@ -1,13 +1,14 @@
 .as-editor { position: relative; }
 /* Theme hues for meeting states. */
 :is(.as-editor, .as-nav) { --c-blue: var(--hue-blue); --c-green: var(--hue-green); --c-amber: var(--hue-amber); --c-purple: var(--hue-violet); --c-pink: var(--hue-magenta); --c-sky: var(--hue-sky); }
-/* Codex uses the app theme with Geist, on the dark themes. */
+/* Codex uses Geist on the dark themes. */
 :root:not([data-theme='light']) :is(.as-editor, .as-nav) {
   --font: 'Geist Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  background: var(--app-gradient), var(--bg);
+  --mono: 'Geist Mono Variable', 'SF Mono', Menlo, monospace;
   color: var(--fg);
   font-family: var(--font);
 }
+:root:not([data-theme='light']) .as-editor { background: var(--app-gradient), var(--bg); }
 :is(.as-editor, .as-nav) { font-family: var(--font); }
 
 .assistant { flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; width: 100%; max-width: 760px; margin: 0 auto; color: var(--fg); font-size: var(--fs-md); }
@@ -137,7 +138,7 @@ button.as-check:hover { color: var(--accent); }
 .as-nav { display: flex; flex-direction: column; padding: var(--sp-4) var(--sp-4); gap: 1px; }
 .as-nav button { height: var(--size-2xl); padding: 0 var(--sp-6); display: flex; align-items: center; gap: var(--sp-6); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg); font-size: var(--fs-md); text-align: left; }
 .as-nav button:hover { background: var(--hover); }
-.as-nav button.active { background: var(--accent-soft); }
+.as-nav button.active { background: var(--raised); }
 .as-nav span:not(.as-count) { flex: 1; }
 .as-count { font-size: var(--fs-xs); color: var(--fg-muted); }
 .as-nav-label { padding: var(--sp-10) var(--sp-6) var(--sp-3); font-size: var(--fs-md); font-weight: 500; color: var(--fg-faint); }

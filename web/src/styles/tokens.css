@@ -128,22 +128,22 @@
   --file-folder: #dcb67a;
 }
 
-/* Dark. */
+/* Dark: warm near-black, modelled on Stilla. Chrome is the darkest layer, content sits one step up. */
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --sunken: #000000;
-  --bg: #121212;
-  --surface: #181818;
-  --raised: #1f1f1f;
-  --hover: #282828;
-  --border: #2a2a2a;
-  --border-strong: #3e3e3e;
-  --border-card: #4d4d4d;
-  --fg-faint: #6a6a6a;
-  --fg-muted: #b3b3b3;
-  --fg: #ffffff;
-  --fg-strong: #ffffff;
+  --sunken: #080706;
+  --bg: #1c1a17;
+  --surface: #0c0b09;
+  --raised: #292724;
+  --hover: #292724;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-card: rgba(255, 255, 255, 0.24);
+  --fg-faint: #7a7772;
+  --fg-muted: #b2afa8;
+  --fg: #f7f6f2;
+  --fg-strong: #fcfcfa;
   --hue-violet: #b49bc8;
   --hue-amber: #f59b23;
   --hue-teal: #2dd4bf;
@@ -155,8 +155,8 @@
   --hue-sky: #4cc3ff;
   --hue-orange: #ff6437;
   --hue-brown: #d68a4c;
-  --hue-brand: #1ed760;
-  --on-accent: #000000;
+  --hue-brand: #4a7aff;
+  --on-accent: #ffffff;
   --on-color: #ffffff;
   --link: var(--accent);
   --prompt: var(--accent);
