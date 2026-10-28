@@ -210,9 +210,13 @@ export function McpPage() {
     setBusy(true);
     setError('');
     send({ type: 'mcp_status' });
-    // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
-    for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth') send({ type: 'mcp_reconnect', name: m.name });
-    fetch(api(`/api/mcp/connectors${refresh ? '?refresh=1' : ''}`)).then((r) => r.json()).then((a) => n === seq.current && a && !a.error && setAccounts(a), () => undefined);
+    fetch(api(`/api/mcp/connectors${refresh ? '?refresh=1' : ''}`)).then((r) => r.json()).then((a) => {
+      if (n !== seq.current || !a || a.error) return;
+      setAccounts(a);
+      // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
+      const loggedIn = new Set((a[account] ?? []).filter((c: { status: string }) => c.status === 'connected').map((c: { name: string }) => c.name));
+      for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth' && loggedIn.has(m.name)) send({ type: 'mcp_reconnect', name: m.name });
+    }, () => undefined);
     fetch(api(`/api/mcp/probe${refresh ? '?refresh=1' : ''}`))
       .then((r) => r.json())
       .then((p) => {
