@@ -188,7 +188,7 @@ button.as-check:hover { color: var(--accent); }
 .ov-stat b { font-size: var(--fs-2xl); font-weight: 600; line-height: 1.2; color: var(--fg-strong); font-variant-numeric: tabular-nums; }
 .ov-stat.late b { color: var(--err); }
 .ov-stat.review b { color: var(--warn); }
-.ov-card .mt-row.past .mt-title, .ov-card .mt-row.past .mt-time b { color: var(--fg-muted); }
+.ov-card .mt-row.past .mt-title { color: var(--fg-muted); }
 .ov-card + .ov-list { margin-top: var(--sp-4); }
 .ov-list { display: flex; flex-direction: column; width: 100%; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; overflow: hidden; }
 .ov-list:hover { background: var(--sunken); }

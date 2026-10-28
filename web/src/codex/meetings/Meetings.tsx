@@ -57,18 +57,58 @@ export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
   const mins = Math.round((m.starts_at! - now) / 60000);
   return (
     <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => setView({ list: 'meetings', open: meetingKey(m) })}>
-      <span className="mt-time"><b>{clock(m.starts_at!)}</b>{m.ends_at && <span>{clock(m.ends_at)}</span>}</span>
+      <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
       <span className="mt-body">
         <span className="mt-title">{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
-        <span className="wk-meta">
-          {m.recorded_ms ? <span><Icon name="record" small /> {Math.round(m.recorded_ms / 60000)} min</span> : null}
-          {m.starts_at! >= new Date(now).setHours(24, 0, 0, 0) && <span>{new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}</span>}
-          {peopleOf(m).length > 0 && <span>{peopleOf(m).length === 1 ? '1 person' : `${peopleOf(m).length} people`}</span>}
+        <span className="mt-span">
+          {m.starts_at! >= new Date(now).setHours(24, 0, 0, 0) && `${new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, `}
+          {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
+          {m.recorded_ms ? ` · ${Math.round(m.recorded_ms / 60000)} min recorded` : ''}
         </span>
       </span>
       <Badge m={m} now={now} />
       <Avatars people={peopleOf(m)} />
     </button>
+  );
+}
+
+const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
+
+// Today, then each later day with meetings, one at a time, like a desk calendar.
+function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
+  const [at, setAt] = useState(0);
+  const days = useMemo(() => {
+    const today = dayStart(now);
+    const out = new Map<number, Meeting[]>([[today, []]]);
+    for (const m of live(meetings).filter((x) => x.starts_at != null && (x.ends_at ?? x.starts_at) > now).sort((a, b) => a.starts_at! - b.starts_at!)) {
+      const d = Math.max(today, dayStart(m.starts_at!));
+      out.set(d, [...(out.get(d) ?? []), m]);
+    }
+    return [...out];
+  }, [meetings, now]);
+  const i = Math.min(at, days.length - 1);
+  const [day, rows] = days[i];
+  const isToday = day === dayStart(now);
+  return (
+    <section className="mt-upcoming">
+      <div className="mt-up-head">
+        <span>Upcoming</span>
+        <span className="spacer" />
+        <button className="icon-btn" title="Earlier day" aria-label="Earlier day" disabled={i === 0} onClick={() => setAt(i - 1)}><Icon name="chevron-left" small /></button>
+        <button className="icon-btn" title="Next day with meetings" aria-label="Next day" disabled={i === days.length - 1} onClick={() => setAt(i + 1)}><Icon name="chevron-right" small /></button>
+      </div>
+      <div className="mt-up-card">
+        <div className="mt-up-date">
+          <b>{new Date(day).getDate()}</b>
+          <span>{isToday ? 'Today' : new Date(day).toLocaleDateString([], { weekday: 'short', month: 'short' })}</span>
+          {isToday && <i className="mt-up-dot" />}
+        </div>
+        <div className="mt-up-rows">
+          {rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}
+          {!rows.length && <div className="mt-up-none">{days.length > 1 ? 'Nothing else today.' : 'Nothing on the calendar.'}</div>}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -132,10 +172,11 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
       </header>
       <div className="wk-scroll">
         <div className="mt-list">
+          {!query && <Upcoming meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} />}
           {groups.map((g) => (
             <section key={g.label}>
-              <div className="wk-label">{g.label}</div>
-              <div className="mt-rows">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+              <div className="mt-day">{g.label}</div>
+              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
             </section>
           ))}
           {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes and summaries.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
