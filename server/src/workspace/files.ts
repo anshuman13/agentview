@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, readdir, realpath, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 const exec = promisify(execFile);
@@ -31,7 +31,7 @@ async function walk(root: string, rel: string): Promise<string[]> {
 }
 
 export async function listDir(cwd: string, rel: string) {
-  const abs = await realResolve(cwd, rel);
+  const abs = safeResolve(cwd, rel);
   const entries = await readdir(abs, { withFileTypes: true });
   const items = await Promise.all(
     entries.map(async (e) => ({
@@ -58,13 +58,8 @@ export function safeResolve(cwd: string, rel: string): string {
   return abs;
 }
 
-// Like safeResolve, and also refuses symlinks that lead out of the project.
-async function realResolve(cwd: string, rel: string) {
-  const abs = safeResolve(cwd, rel);
-  const [real, root] = await Promise.all([realpath(abs).catch(() => abs), realpath(cwd).catch(() => path.resolve(cwd))]);
-  if (!within(real, root)) throw new Error('path outside project');
-  return abs;
-}
+// Files the viewer shows: project-relative paths, or absolute paths anywhere.
+const viewPath = (cwd: string, p: string) => (path.isAbsolute(p) ? p : safeResolve(cwd, p));
 
 const MAX_FILE = 5_000_000;
 
@@ -73,16 +68,16 @@ const IMAGES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jp
 export async function readImage(cwd: string, rel: string) {
   const type = IMAGES[path.extname(rel).slice(1).toLowerCase()];
   if (!type) throw new Error('not an image');
-  const abs = await realResolve(cwd, rel);
+  const abs = viewPath(cwd, rel);
   if ((await stat(abs)).size > 50_000_000) throw new Error('image too large');
   return { type, body: await readFile(abs) };
 }
 
 export async function readFileWithOriginal(cwd: string, rel: string) {
-  const abs = await realResolve(cwd, rel);
+  const abs = viewPath(cwd, rel);
   const size = await stat(abs).then((s) => s.size).catch(() => 0);
   if (size > MAX_FILE) throw new Error(`File is ${Math.round(size / 1e6)} MB, too large to show`);
   const content = await readFile(abs, 'utf8').catch(() => '');
-  const original = await exec('git', ['show', `HEAD:./${rel}`], { cwd, maxBuffer: MAX_FILE }).then((r) => r.stdout, () => '');
+  const original = await exec('git', ['show', `HEAD:./${path.basename(abs)}`], { cwd: path.dirname(abs), maxBuffer: MAX_FILE }).then((r) => r.stdout, () => '');
   return { path: rel, content, original };
 }
