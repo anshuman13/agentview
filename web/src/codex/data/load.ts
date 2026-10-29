@@ -5,6 +5,9 @@ const MAX_HOURS = 8;
 
 export type LoadWeek = { start: number; hours: number; recorded: number; unrecorded: number };
 
+// Calendar attendees without a display name come through as emails, so fold first.last@x into First Last.
+const nameOf = (p: string) => (p.includes('@') ? p.split('@')[0].split(/[._]/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(' ') : p);
+
 const mondayOf = (now: number, back: number) => {
   const d = new Date(now);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7) - 7 * back).getTime();
@@ -24,7 +27,7 @@ export function meetingLoad(meetings: Meeting[], now: number, weeks = 4) {
     week.hours += hours;
     if ((m.recorded_ms ?? 0) > 0) week.recorded++;
     else week.unrecorded++;
-    for (const p of new Set(peopleOf(m))) shared.set(p, (shared.get(p) ?? 0) + hours);
+    for (const p of new Set(peopleOf(m).map(nameOf))) shared.set(p, (shared.get(p) ?? 0) + hours);
   }
   const people = [...shared].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([name, hours]) => ({ name, hours }));
   return { weeks: out, people };

@@ -11,7 +11,7 @@ it('sums hours per local week across the October clock change, caps one meeting 
   const now = new Date(2026, 9, 29, 12).getTime();
   const { weeks, people } = meetingLoad([
     meeting('sun', new Date(2026, 9, 25, 10), 1, { recorded_ms: 60000 }),
-    meeting('mon', new Date(2026, 9, 26, 0, 30), 2),
+    meeting('mon', new Date(2026, 9, 26, 0, 30), 2, { people: 'ann@example.com, Bo' }),
     meeting('long', new Date(2026, 9, 27, 9), 12),
     meeting('next', new Date(2026, 9, 30, 9), 1),
     meeting('gone', new Date(2026, 9, 28, 9), 1, { deleted: 1 }),
