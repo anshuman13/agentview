@@ -5,16 +5,43 @@ import { readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion } from './db.js';
 import { PROFILES, lastAttempt, startCalendar, syncCalendar, type Profile } from './calendar.js';
 import { startJobs } from './jobs.js';
+import { once } from './once.js';
 import { startReminders } from './remind.js';
 import { parseTask } from './parse.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
 import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 
-class BadRequest extends Error {
+export class BadRequest extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'BadRequest';
+  }
+}
+
+export async function readJson(req: http.IncomingMessage, max: number): Promise<Record<string, unknown>> {
+  const body = await readBody(req, max);
+  let data: unknown;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    throw new BadRequest('Invalid JSON');
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new BadRequest('Body must be a JSON object');
+  return data as Record<string, unknown>;
+}
+
+function fail(res: http.ServerResponse, err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  if (message === 'Request body too large') {
+    res.writeHead(413, { 'Content-Type': 'application/json', 'Connection': 'close' });
+    res.end(JSON.stringify({ error: 'Request body too large' }));
+  } else if (err instanceof BadRequest || err instanceof SyncError) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: message }));
+  } else {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'internal error' }));
   }
 }
 
@@ -120,9 +147,10 @@ export function createServer(): http.Server {
       if (pathname === '/parse' && req.method === 'POST') {
         let data: { profile?: unknown; text?: unknown };
         try {
-          data = JSON.parse(await readBody(req, 20_000));
-        } catch {
-          data = {};
+          data = await readJson(req, 20_000);
+        } catch (err) {
+          fail(res, err);
+          return;
         }
         if ((data.profile !== 'work' && data.profile !== 'personal') || typeof data.text !== 'string' || !data.text.trim()) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -143,9 +171,10 @@ export function createServer(): http.Server {
       if (pathname === '/transcripts' && req.method === 'POST') {
         let data: { profile?: unknown; id?: unknown; instructions?: unknown };
         try {
-          data = JSON.parse(await readBody(req, 10_000));
-        } catch {
-          data = {};
+          data = await readJson(req, 10_000);
+        } catch (err) {
+          fail(res, err);
+          return;
         }
         if ((data.profile !== 'work' && data.profile !== 'personal') || typeof data.id !== 'string') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -165,7 +194,7 @@ export function createServer(): http.Server {
 
       if (pathname === '/slack/summary' && req.method === 'POST') {
         try {
-          const r = await summarizeSlack(getDb());
+          const r = await once('slack', () => summarizeSlack(getDb()));
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ added: r.added.length }));
         } catch (err) {

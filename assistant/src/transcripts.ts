@@ -7,6 +7,7 @@ import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod';
 import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
 import { PROFILES, type Profile } from './calendar.js';
+import { once } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 
 const MIN = 60_000;
@@ -209,7 +210,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
 export async function syncTranscript(db: Database, profile: Profile, id: string, now = Date.now(), instructions = '') {
   const m = db.prepare("SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND id = ? AND deleted = 0 AND id LIKE 'cal:%'").get(profile, id) as Pending | null;
   if (!m) throw new Error('No calendar meeting with that id');
-  return (await readTranscripts(db, profile, [m], now, instructions)).saved;
+  return once(`${profile}:${id}`, async () => (await readTranscripts(db, profile, [m], now, instructions)).saved);
 }
 
 export function startTranscripts(db: () => Database, every = 5 * MIN) {
