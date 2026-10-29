@@ -272,5 +272,4 @@
 @media (pointer: coarse) {
   :root { --fs-2xs: 12px; --fs-xs: 12px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 15px; --fs-xl: 16px; }
   input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), textarea, select { font-size: var(--fs-2xl) !important; }
-  .gh-avatar, .mt-avatars > span { font-size: 12px; }
 }
