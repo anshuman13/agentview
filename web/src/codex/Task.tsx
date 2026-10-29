@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAssistant } from './data';
-import { atTime, errorText, nextNine } from './data/engine';
+import { atTime, errorText, nextNine, parseWhen, stripWhen } from './data/engine';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago } from '../ui/util';
-import { FILTER_LABEL, setView, showSnack } from './view';
+import { ago, readFlag } from '../ui/util';
+import { FILTER_LABEL, setView, showSnack, type Filter } from './view';
 import { PickDue, PickTime, when } from './time';
 import { snoozes } from './AskBar';
 import { isDragging } from './drag';
@@ -33,6 +33,11 @@ const SWIPE_DELETE = 0.55;
 const DAY = 86400_000;
 
 const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
+// Checklist lines in the notes, like "- [ ] call" and "- [x] done".
+const checklist = (s: string | null) => {
+  const all = s?.match(/^\s*[-*] \[[ xX]\]/gm) ?? [];
+  return { done: all.filter((l) => /x/i.test(l)).length, total: all.length };
+};
 
 export const UNROLL = { rolls: null, rolled_from: null };
 
@@ -141,6 +146,8 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
   const textRef = useRef<HTMLTextAreaElement>(null);
   const src = sourceOf(row);
   const at = atTime(row.at);
+  // The phone keyboard covers the lower half, so the field moves into view once it is up.
+  const reveal = (e: React.FocusEvent<HTMLTextAreaElement>) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
   const pending = () => {
     const patch: Patch = {};
     if (title.trim() && title.trim() !== saved.current.title) patch.title = title.trim();
@@ -209,10 +216,11 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
           enterKeyHint="next"
           onChange={(e) => setTitle(e.target.value)}
           onBlur={save}
+          onFocus={reveal}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); textRef.current?.focus(); } }}
         />
       </div>
-      <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Notes" aria-label="Notes" onChange={(e) => setText(e.target.value)} onBlur={save} />
+      <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Notes" aria-label="Notes" onChange={(e) => setText(e.target.value)} onBlur={save} onFocus={reveal} />
       <div className="as-edit-meta">
         {timed && (
           <span className="as-edit-due">
@@ -260,6 +268,8 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
   const isNote = row.status === 'note';
   const late = at != null ? Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY) : 0;
   const due = at != null && !isNote && !isDone ? (late > 0 ? `${late}d late` : when(at, now)) : null;
+  const list = checklist(row.text);
+  const preview = firstLine(row.text);
   const body = (
     <div className={`as-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}`} data-row={row.profile + row.id} onPointerDown={onGrab} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && onOpen()}>
       <Check row={row} />
@@ -268,13 +278,56 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
         <div className="as-ctx">
           {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
           {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
-          {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`}><Icon name={src.icon} small /> {src.label}</span>}
+          {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`} title={src.label}><Icon name={src.icon} small /></span>}
+          {list.total > 0 && <span className={list.done === list.total ? 'as-list-done' : undefined}><Icon name="checklist" small /> {list.done}/{list.total}</span>}
           {row.people && <span className="as-people">{row.people}</span>}
-          {row.text && <span className="as-quote">{firstLine(row.text)}</span>}
+          {!list.total && !row.people && preview && !/^https?:\/\/\S+$/.test(preview) && <span className="as-quote">{preview}</span>}
         </div>
       </div>
     </div>
   );
   if (isNote || isDone) return <Swipe onDelete={() => act.remove(row)}>{body}</Swipe>;
   return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, nextNine(new Date(Math.max(at ?? 0, now))))} onDelete={() => act.remove(row)}>{body}</Swipe>;
+}
+
+// A quick add at the end of a day: Enter saves and keeps the field open for the next task.
+export function AddTask({ day, today, filter }: { day: number; today: number; filter: Filter }) {
+  const { store } = useAssistant();
+  const [on, setOn] = useState(false);
+  const [text, setText] = useState('');
+  const busy = useRef(false);
+  const profile: Profile = filter !== 'all' ? filter : readFlag('assistant-personal', false) ? 'personal' : 'work';
+  const add = async () => {
+    const typed = text.trim();
+    if (!typed || busy.current) return;
+    busy.current = true;
+    const w = parseWhen(typed);
+    const at = w?.at ?? (day === today ? null : day + 9 * 3600_000);
+    try {
+      const row = await store.capture(stripWhen(typed, w) || typed, 'task', profile, at);
+      setText('');
+      haptic('tap');
+      showSnack(at != null ? `Task · ${when(at)}` : 'Task · No time', () => void store.update(row, { deleted: 1 }));
+    } catch (err) {
+      showSnack(`Not saved: ${errorText(err)}`);
+    } finally {
+      busy.current = false;
+    }
+  };
+  if (!on) return <button className="as-add" onClick={() => setOn(true)}><Icon name="add" /> Add task</button>;
+  return (
+    <div className="as-add on" data-no-swipe>
+      <Icon name="add" />
+      <input
+        autoFocus
+        value={text}
+        placeholder="New task"
+        aria-label="New task"
+        enterKeyHint="done"
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') void add(); else if (e.key === 'Escape') { setText(''); setOn(false); } }}
+        onBlur={() => { if (!text.trim()) setOn(false); }}
+      />
+    </div>
+  );
 }

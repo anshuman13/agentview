@@ -16,7 +16,7 @@ import { Summary } from './summary/Summary';
 import { Meetings } from './meetings/Meetings';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
-import { TaskRow, UNROLL, useActions } from './Task';
+import { AddTask, TaskRow, UNROLL, useActions } from './Task';
 import { Overview, Review } from './Overview';
 import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
@@ -196,10 +196,11 @@ export function Assistant() {
       </div>
     );
   };
-  const section = (d: Day) => (d.rows.length > 0 || drag) && (
+  const section = (d: Day) => (d.rows.length > 0 || drag || d.key === 'today') && (
     <section key={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
       <div className={`as-section${d.key === 'today' ? '' : ' later'}`}>{d.label} {d.rows.length > 0 && <span>{d.rows.length}</span>}</div>
       {rows(d.rows, d.key, d.day != null)}
+      {d.day != null && !drag && <AddTask day={d.day} today={startOfDay} filter={filter} />}
     </section>
   );
   const fresh = s.review.filter((r) => now - reviewedSince(r) < DAY);
