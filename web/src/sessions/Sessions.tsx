@@ -6,7 +6,7 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
 import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
-import { ago, pressable, save, stored } from '../ui/util';
+import { ago, pressable, save, stored, plural } from '../ui/util';
 import { PullState, usePullRequests } from '../ops/pulls';
 import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, get, groupByKind, groupByRepo, invalidateWorkspace, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
@@ -168,7 +168,7 @@ export function Sessions() {
           </span>
           <span className="badges">
             <span className="dirty" title={d.repo?.dirty ? `${d.repo.dirty} uncommitted` : undefined}>{d.repo?.dirty ? 'M' : ''}</span>
-            <span className="count" title={d.chats.length ? `${d.chats.length} chats` : undefined}>{d.chats.length || ''}</span>
+            <span className="count" title={d.chats.length ? plural(d.chats.length, 'chat') : undefined}>{d.chats.length || ''}</span>
             <span className="when">{d.last ? ago(d.last) : ''}</span>
           </span>
           <span className="acts">

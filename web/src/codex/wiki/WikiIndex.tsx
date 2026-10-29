@@ -35,7 +35,7 @@ function Overview({ page, facts, pages }: { page: Page; facts: Fact[]; pages: Pa
         <span className="wk-overview-title">{page.title}</span>
         <span className="wk-overview-summary">{page.summary}</span>
         <span className="wk-meta">
-          <span>{live(pages).length} pages</span>
+          <span>{plural(live(pages).length, 'page')}</span>
           <span>{plural(current.length, 'claim')}</span>
           {contested > 0 && <span className="wk-warn">{contested} contested</span>}
           <span>updated {shortDate(updated)}</span>

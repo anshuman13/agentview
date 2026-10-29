@@ -5,6 +5,7 @@ import { weekReview } from '../data/load';
 import type { Fact, Meeting } from '../data/wiki';
 import { when } from '../time';
 import { setView, showSnack, useView } from '../view';
+import { plural } from '../../ui/util';
 
 const MAX = 8;
 const hoursText = (h: number) => `${h.toFixed(1)} h`;
@@ -34,7 +35,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
     return [
       `# Week of ${dayText(r.start)}`,
       '',
-      `${r.meetings} meetings, ${hoursText(r.hours)} in meetings`,
+      `${plural(r.meetings, 'meeting')}, ${hoursText(r.hours)} in meetings`,
       '',
       ...list('Decisions', r.decisions.map((d) => `${d.text} (${d.meeting.title || 'Meeting'})`)),
       ...list('New claims', r.claims.map((f) => text(f.text))),

@@ -7,7 +7,7 @@ import { FileIcon } from '../workspace/FileIcon';
 import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
 import { apiUrl } from '../app/api';
-import { Hl, wsUrl } from '../ui/util';
+import { Hl, wsUrl, plural } from '../ui/util';
 import { ACCOUNT_LABEL, COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import { accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, remember, repeatLabel, repeatPill, loopLabel, terminalId, triggerAt, useLabel, withUses, type Use } from './composerLogic';
 
@@ -488,7 +488,7 @@ export function Composer() {
         <QuickPick
           anchor={pick.at}
           title="Use an MCP server"
-          items={servers.map((m) => ({ value: m.name, label: m.name, detail: `${m.tools?.length ?? 0} tools` }))}
+          items={servers.map((m) => ({ value: m.name, label: m.name, detail: plural(m.tools?.length ?? 0, 'tool') }))}
           onPick={(v) => setPick({ kind: 'mcpTools', at: pick.at, server: v })}
           onClose={() => setPick(null)}
         />
