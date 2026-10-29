@@ -65,6 +65,10 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .wk-ask-box > .codicon.icon { color: var(--accent-text); }
 .wk-ask-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-xl); }
 .wk-ask-box input::placeholder { color: var(--fg-faint); }
+.wk-ask { position: relative; }
+.wk-recipes { position: absolute; left: var(--wk-pad); right: var(--wk-pad); bottom: calc(100% - var(--sp-4)); margin: 0; padding: var(--sp-2); list-style: none; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--raised); box-shadow: var(--shadow-md); z-index: 5; }
+.wk-recipes li { padding: var(--sp-4) var(--sp-6); border-radius: var(--radius-sm); color: var(--fg); font-size: var(--fs-md); cursor: pointer; }
+.wk-recipes li.on { background: var(--hover); }
 
 @container (max-width: 880px) {
   .wk-index { grid-template-columns: minmax(0, 1fr); gap: var(--sp-20); }
