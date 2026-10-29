@@ -1,4 +1,5 @@
 import type { ChatEvent, McpSchema, McpServer } from '../../../shared/protocol';
+import { plural } from '../ui/util';
 
 export const STATUS: Record<string, [tone: string, label: string]> = {
   connected: ['ok', 'Connected'],
@@ -59,7 +60,7 @@ export function mcpCalls(events: ChatEvent[]): Map<string, Usage> {
   return by;
 }
 
-export const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
+export { plural };
 export const usageText = (u: Usage) => `${plural(u.calls.length, 'call')}${u.errors ? ` · ${plural(u.errors, 'error')}` : ''}`;
 export const brief = (input: Record<string, unknown>) =>
   Object.entries(input).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join(', ').replace(/\s+/g, ' ').slice(0, 160);
