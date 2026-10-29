@@ -423,3 +423,19 @@ export function searchMeetings<M extends Meeting>(meetings: M[], query: string) 
 
 export const trackedTopics = (m: Meeting, topics: string[]) =>
   topics.filter((t) => rowMatcher<Meeting>(queryWords(t), 'topic', (r) => [r.title, r.notes, r.summary, r.decisions, r.transcript])(m));
+
+export type TopicEntry = { kind: 'meeting' | 'decision' | 'claim'; text: string; at: number; meeting?: Meeting; fact?: Fact };
+
+// Meetings, decisions and current claims matching the topic, newest first, plus how many are newer than `since`.
+export function topicTimeline(topic: string, meetings: Meeting[], facts: Fact[], since = 0, max = 20) {
+  const words = queryWords(topic);
+  const hitMeeting = rowMatcher<Meeting>(words, 'topic-line', (m) => [m.title, m.summary]);
+  const hit = matcher(words);
+  const hitFact = rowMatcher<Fact>(words, 'text', (f) => [f.text]);
+  const entries: TopicEntry[] = [
+    ...live(meetings).filter(hitMeeting).map((meeting) => ({ kind: 'meeting' as const, text: meeting.title || 'Meeting', at: meeting.starts_at ?? meeting.updated_at, meeting })),
+    ...decisionLog(meetings).filter((d) => hit(d.text)).map((d) => ({ kind: 'decision' as const, text: d.text, at: d.at, meeting: d.meeting })),
+    ...live(facts).filter((f) => !f.superseded_by && hitFact(f)).map((fact) => ({ kind: 'claim' as const, text: fact.text ?? '', at: factTime(fact), fact })),
+  ].sort((a, b) => b.at - a.at);
+  return { entries: entries.slice(0, max), fresh: entries.filter((e) => e.at > since).length };
+}

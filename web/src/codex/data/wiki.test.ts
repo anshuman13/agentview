@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, briefFor, decisionLog, followThrough, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, briefFor, decisionLog, followThrough, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, topicTimeline, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -250,5 +250,13 @@ describe('briefFor', () => {
     const items = [act('a', 'old'), act('b', 'old'), act('c', 'new'), act('d', 'older'), act('e', 'old', 'done')];
     const out = followThrough(items, [mt('old', 8), mt('new', 6), mt('older', 20)], ['workb'], now);
     expect(out.map((x) => x.r.id)).toEqual(['a', 'd']);
+  });
+
+  it('lists topic matches newest first across kinds and counts those newer than since', () => {
+    const m = { ...common('m'), title: 'Billing sync', starts_at: 20, summary: null, decisions: '["Drop billing retries"]' } as unknown as Meeting;
+    const f = fact('f', 'p1', 'H', 'Billing runs monthly', { at: 30 });
+    const out = topicTimeline('billing', [m], [f, fact('g', 'p1', 'H', 'Other', { at: 40 })], 25);
+    expect(out.entries.map((e) => e.kind)).toEqual(['claim', 'meeting', 'decision']);
+    expect(out.fresh).toBe(1);
   });
 });

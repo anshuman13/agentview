@@ -1,8 +1,8 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { newId } from '../data/sync';
-import { actionCount, actionCounts, dayStart, groupMeetings, live, meetingState, peopleOf, searchMeetings, trackedTopics, type Meeting } from '../data/wiki';
-import { clock } from '../time';
+import { actionCount, actionCounts, dayStart, groupMeetings, live, meetingState, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Fact, type Meeting } from '../data/wiki';
+import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { setView, showSnack, useView } from '../view';
@@ -13,6 +13,7 @@ import '../../styles/features/wiki.css';
 
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const TOPICS_KEY = 'agentview.meetingTopics';
+const SEEN_KEY = 'agentview.meetingTopicsSeen';
 export const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
@@ -114,13 +115,13 @@ function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number;
   );
 }
 
-function TopicBar({ topics, active, onToggle, onAdd, onRemove }: { topics: string[]; active: string[]; onToggle: (t: string) => void; onAdd: (t: string) => void; onRemove: (t: string) => void }) {
+function TopicBar({ topics, active, fresh, onToggle, onAdd, onRemove }: { topics: string[]; active: string[]; fresh: Record<string, number>; onToggle: (t: string) => void; onAdd: (t: string) => void; onRemove: (t: string) => void }) {
   const [text, setText] = useState('');
   return (
     <div className="mt-topics">
       {topics.map((t) => (
         <span key={t} className="mt-topic">
-          <button className={`chip pill${active.includes(t) ? '' : ' outline'}`} aria-pressed={active.includes(t)} title="Show only meetings on this topic" onClick={() => onToggle(t)}>{t}</button>
+          <button className={`chip pill${active.includes(t) ? '' : ' outline'}`} aria-pressed={active.includes(t)} title="Show only meetings on this topic" onClick={() => onToggle(t)}>{t}{fresh[t] > 0 && <span className="mt-topic-new" title={`${fresh[t]} new since your last visit`}>{fresh[t]}</span>}</button>
           <button className="icon-btn" title={`Stop tracking ${t}`} aria-label={`Stop tracking ${t}`} onClick={() => onRemove(t)}><Icon name="close" small /></button>
         </span>
       ))}
@@ -131,18 +132,50 @@ function TopicBar({ topics, active, onToggle, onAdd, onRemove }: { topics: strin
   );
 }
 
+function TopicTimeline({ topic, meetings, facts }: { topic: string; meetings: Meeting[]; facts: Fact[] }) {
+  const { entries } = useMemo(() => topicTimeline(topic, meetings, facts), [topic, meetings, facts]);
+  if (!entries.length) return null;
+  return (
+    <section className="mt-tl">
+      {entries.map((e, i) => (
+        <button key={i} className="mt-log-item mt-tl-item" onClick={() => (e.meeting ? setView({ list: 'meetings', open: meetingKey(e.meeting), person: null }) : setView({ list: 'wiki', open: e.fact?.page_id ?? null, anchor: null }))}>
+          <Icon name={e.kind === 'claim' ? 'book' : e.kind === 'decision' ? 'check' : 'calendar'} small />
+          <span className="mt-log-text">{e.text}</span>
+          <span className="mt-log-from">{when(e.at)}</span>
+        </button>
+      ))}
+    </section>
+  );
+}
+
 export function MeetingsList({ onMenu }: { onMenu: () => void }) {
-  const { meetings, store } = useCodex();
+  const { meetings, facts, store } = useCodex();
   const { filter } = useView();
   const [query, setQuery] = useState('');
   const [topics, setTopics] = useState(() => stored<string[]>(TOPICS_KEY, []).filter((t) => typeof t === 'string'));
   const [active, setActive] = useState<string[]>([]);
+  const [seen, setSeen] = useState(() => stored<Record<string, number>>(SEEN_KEY, {}));
   const [log, setLog] = useState(false);
   const [load, setLoad] = useState(false);
   const changeTopics = (next: string[]) => {
     setTopics(next);
     setActive((a) => a.filter((t) => next.includes(t)));
     save(TOPICS_KEY, next);
+  };
+  const fresh = useMemo(() => Object.fromEntries(topics.map((t) => [t, topicTimeline(t, meetings, facts, seen[t] ?? 0).fresh])), [topics, meetings, facts, seen]);
+  const markSeen = (t: string) => {
+    const next = { ...seen, [t]: Date.now() };
+    setSeen(next);
+    save(SEEN_KEY, next);
+  };
+  const addTopic = (t: string) => {
+    if (!t || topics.includes(t)) return;
+    markSeen(t);
+    changeTopics([...topics, t]);
+  };
+  const toggle = (t: string) => {
+    if (!active.includes(t)) markSeen(t);
+    setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
   };
   const [syncing, setSyncing] = useState(false);
   const [now, setNow] = useState(Date.now);
@@ -201,8 +234,9 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       </header>
       <div className="wk-scroll">
         {log ? <Decisions meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} /> : load ? <Load meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} /> : <div className="mt-list">
-          <TopicBar topics={topics} active={active} onToggle={(t) => setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]))}
-            onAdd={(t) => t && !topics.includes(t) && changeTopics([...topics, t])} onRemove={(t) => changeTopics(topics.filter((x) => x !== t))} />
+          <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
+            onAdd={addTopic} onRemove={(t) => changeTopics(topics.filter((x) => x !== t))} />
+          {active.length === 1 && <TopicTimeline topic={active[0]} meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} facts={filter === 'all' ? facts : facts.filter((f) => f.profile === filter)} />}
           {!query && <Upcoming meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} topics={topics} />}
           {groups.map((g) => (
             <section key={g.label}>
