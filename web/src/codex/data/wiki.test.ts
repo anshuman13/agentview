@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -104,6 +104,12 @@ describe('meetings', () => {
     expect(searchMeetings([a, b, c], 'pricing').map((m) => m.id)).toEqual(['Planning', 'Sync']);
     expect(searchMeetings([a, b, c], 'pricing budget').map((m) => m.id)).toEqual(['Sync']);
     expect(searchMeetings([a, b, c], '  ')).toHaveLength(3);
+  });
+
+  it('lists the tracked topics a meeting mentions', () => {
+    const m = { ...meeting('Sync', at(0, 10)), summary: 'Agreed the Q4 Budget', transcript: 'hiring plan' };
+    expect(trackedTopics(m, ['budget', 'hiring', 'launch', 'q4 budget', ' '])).toEqual(['budget', 'hiring', 'q4 budget']);
+    expect(trackedTopics(m, [])).toEqual([]);
   });
 
   it('tells where a meeting is between the calendar and its transcript', () => {

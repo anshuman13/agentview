@@ -228,6 +228,10 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .mt-up-rows .mt-tile { background: var(--bg); }
 .mt-up-none { padding: var(--sp-5) 0; font-size: var(--fs-md); color: var(--fg-muted); }
 @container (max-width: 440px) { .mt-avatars { display: none; } }
+.mt-topics { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.mt-topic { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.mt-topics input { width: 120px; height: 26px; padding: 0 var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg); font: inherit; font-size: var(--fs-xs); outline: 0; }
+.mt-topics input:focus { border-color: var(--border-strong); }
 .mt-badge { flex: none; padding: 1px var(--sp-4); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-text); font-size: var(--fs-xs); font-weight: 600; }
 .mt-badge.live { background: color-mix(in srgb, var(--err) 16%, transparent); color: var(--err); }
 .mt-count { flex: none; display: inline-flex; align-items: center; gap: var(--sp-3); padding: 2px var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg); font-size: var(--fs-xs); font-weight: 500; font-variant-numeric: tabular-nums; }

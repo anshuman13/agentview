@@ -310,3 +310,6 @@ export function searchMeetings<M extends Meeting>(meetings: M[], query: string) 
   const hit = matcher(words);
   return meetings.filter((m) => hit(m.title, m.people, m.notes, m.summary, m.decisions, m.transcript));
 }
+
+export const trackedTopics = (m: Meeting, topics: string[]) =>
+  topics.filter((t) => matcher(queryWords(t))(m.title, m.notes, m.summary, m.decisions, m.transcript));

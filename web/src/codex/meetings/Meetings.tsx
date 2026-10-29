@@ -4,9 +4,10 @@ import { ask, meetingAskText } from '../data/ask';
 import { atTime, parseWhen, stripWhen } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
 import { newId, type ItemRow } from '../data/sync';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, peopleOf, searchMeetings, type Meeting } from '../data/wiki';
+import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, peopleOf, searchMeetings, trackedTopics, type Meeting } from '../data/wiki';
 import { PickTime, clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
+import { save, stored } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { AskBar } from '../wiki/Wiki';
@@ -17,6 +18,7 @@ const HUES = ['--accent', '--claude', '--prompt', '--ok', '--warn', '--agent'];
 const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length]})`;
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 export { peopleOf };
+const TOPICS_KEY = 'agentview.meetingTopics';
 const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
@@ -49,7 +51,8 @@ function Badge({ m, now }: { m: Meeting; now: number }) {
   return null;
 }
 
-export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
+export function MeetingRow({ m, now, topics = [] }: { m: Meeting; now: number; topics?: string[] }) {
+  const tracked = trackedTopics(m, topics);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
@@ -64,6 +67,7 @@ export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
           {m.recorded_ms ? ` · ${Math.round(m.recorded_ms / 60000)} min recorded` : ''}
         </span>
       </span>
+      {tracked.map((t) => <span key={t} className="chip pill sm" title="Tracked topic">{t}</span>)}
       <Badge m={m} now={now} />
       <Avatars people={peopleOf(m)} />
     </button>
@@ -73,7 +77,7 @@ export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
 const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
 
 // Today, then each later day with meetings, one at a time, like a desk calendar.
-function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
+function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number; topics: string[] }) {
   const [at, setAt] = useState(0);
   const days = useMemo(() => {
     const today = dayStart(now);
@@ -102,7 +106,7 @@ function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
           {isToday && <i className="mt-up-dot" />}
         </div>
         <div className="mt-up-rows">
-          {rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}
+          {rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} />)}
           {!rows.length && <div className="mt-up-none">{days.length > 1 ? 'Nothing else today.' : 'Nothing on the calendar.'}</div>}
         </div>
       </div>
@@ -110,10 +114,34 @@ function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
   );
 }
 
+function TopicBar({ topics, active, onToggle, onAdd, onRemove }: { topics: string[]; active: string[]; onToggle: (t: string) => void; onAdd: (t: string) => void; onRemove: (t: string) => void }) {
+  const [text, setText] = useState('');
+  return (
+    <div className="mt-topics">
+      {topics.map((t) => (
+        <span key={t} className="mt-topic">
+          <button className={`chip pill${active.includes(t) ? '' : ' outline'}`} aria-pressed={active.includes(t)} title="Show only meetings on this topic" onClick={() => onToggle(t)}>{t}</button>
+          <button className="icon-btn" title={`Stop tracking ${t}`} aria-label={`Stop tracking ${t}`} onClick={() => onRemove(t)}><Icon name="close" small /></button>
+        </span>
+      ))}
+      <form onSubmit={(e) => { e.preventDefault(); onAdd(text.trim().toLowerCase()); setText(''); }}>
+        <input value={text} placeholder="Track a topic" aria-label="Track a topic" onChange={(e) => setText(e.target.value)} />
+      </form>
+    </div>
+  );
+}
+
 function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const { meetings, store } = useCodex();
   const { filter } = useView();
   const [query, setQuery] = useState('');
+  const [topics, setTopics] = useState(() => stored<string[]>(TOPICS_KEY, []).filter((t) => typeof t === 'string'));
+  const [active, setActive] = useState<string[]>([]);
+  const changeTopics = (next: string[]) => {
+    setTopics(next);
+    setActive((a) => a.filter((t) => next.includes(t)));
+    save(TOPICS_KEY, next);
+  };
   const [syncing, setSyncing] = useState(false);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -128,8 +156,9 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
   }, []);
   const groups = useMemo(() => {
     const mine = filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter);
-    return groupMeetings(searchMeetings(mine, query), now);
-  }, [meetings, query, filter, now]);
+    const tracked = active.length ? mine.filter((m) => trackedTopics(m, active).length) : mine;
+    return groupMeetings(searchMeetings(tracked, query), now);
+  }, [meetings, query, filter, now, active]);
   const takeNotes = () => {
     const t = Date.now();
     const id = newId();
@@ -168,11 +197,13 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
       </header>
       <div className="wk-scroll">
         <div className="mt-list">
-          {!query && <Upcoming meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} />}
+          <TopicBar topics={topics} active={active} onToggle={(t) => setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]))}
+            onAdd={(t) => t && !topics.includes(t) && changeTopics([...topics, t])} onRemove={(t) => changeTopics(topics.filter((x) => x !== t))} />
+          {!query && <Upcoming meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} topics={topics} />}
           {groups.map((g) => (
             <section key={g.label}>
               <div className="mt-day">{g.label}</div>
-              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} />)}</div>
             </section>
           ))}
           {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
