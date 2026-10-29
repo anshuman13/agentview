@@ -162,6 +162,11 @@ export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
 export const reviewedSince = (r: ItemRow) => statusTime(r);
 
 // A task added from a meeting is an action of that meeting, labelled with its title.
+export const DIGEST_TITLE = 'Weekly digest';
+
+export const latestDigest = (items: ItemRow[], profile: 'all' | Profile) =>
+  items.filter((r) => !r.deleted && r.status === 'note' && r.title?.startsWith(DIGEST_TITLE) && (profile === 'all' || r.profile === profile)).sort((a, b) => b.updated_at - a.updated_at)[0];
+
 export function newCapture(text: string, type: 'task' | 'note', profile: Profile, now: number, at: number | null = null, meeting: { id: string; title: string | null } | null = null): ItemRow {
   const [first, ...rest] = text.split('\n');
   return {

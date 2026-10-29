@@ -353,6 +353,7 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 
 /* Jobs */
 .jb-row { cursor: pointer; }
+.jb-presets { display: flex; gap: var(--sp-4); margin-top: var(--sp-6); }
 .jb-row.off .mt-title { color: var(--fg-muted); }
 .jb-last { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; font-size: var(--fs-sm); color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jb-last .codicon.icon { font-size: 12px; flex: none; }

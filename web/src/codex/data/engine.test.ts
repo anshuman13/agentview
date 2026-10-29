@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { edited, isQuestion, moved, newCapture, parseWhen, split, stripWhen } from './engine';
+import { edited, isQuestion, latestDigest, moved, newCapture, parseWhen, split, stripWhen } from './engine';
 import { rowToChange, type ItemRow } from './sync';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
@@ -91,5 +91,16 @@ describe('moved', () => {
     const m = moved(row, gone, 'personal', 2000);
     expect(m).toMatchObject({ profile: 'personal', version: 7, deleted: 0, title: 'Call the bank' });
     expect(JSON.parse(m.field_times).deleted).toBe(2000);
+  });
+});
+
+describe('latestDigest', () => {
+  const note = (id: string, title: string, updated_at: number, extra: Partial<ItemRow> = {}): ItemRow => ({ ...newCapture(title, 'note', 'work', updated_at), id, title, updated_at, ...extra });
+  const items = [note('a', 'Weekly digest', 100), note('b', 'Weekly digest, week 43', 300), note('c', 'Shopping', 400), note('d', 'Weekly digest', 500, { deleted: 1 }), note('e', 'Weekly digest', 200, { profile: 'personal' })];
+
+  it('picks the newest live digest note', () => {
+    expect(latestDigest(items, 'all')?.id).toBe('b');
+    expect(latestDigest(items, 'personal')?.id).toBe('e');
+    expect(latestDigest([items[2]], 'all')).toBeUndefined();
   });
 });

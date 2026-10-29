@@ -1,6 +1,6 @@
 import { useAssistant } from './data';
 import type { Meeting } from './data/wiki';
-import { atTime } from './data/engine';
+import { atTime, latestDigest } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { setView, useView } from './view';
@@ -75,6 +75,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     const r = snap.runs.filter((x) => !x.deleted && x.profile === j.profile && x.job_id === j.id && x.status === 'ok' && (x.started_at ?? 0) >= startOfDay).sort((a, b) => b.started_at! - a.started_at!)[0];
     return r?.output ? [{ j, r }] : [];
   });
+  const digest = latestDigest(snap.items, filter);
   const tasks = () => setView({ list: 'tasks', open: null });
   const stats = [
     { n: dueToday.length, label: 'to do today', cls: '' },
@@ -93,6 +94,12 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <div className="ov-summary">
         {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
       </div>
+      {digest && (
+        <section>
+          <div className="as-section">{digest.title} · {new Date(digest.updated_at).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+          <div className="ov-report">{digest.text}</div>
+        </section>
+      )}
       {s.next && (
         <section>
           <div className="as-section next">Next</div>
