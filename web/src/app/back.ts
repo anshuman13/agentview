@@ -10,9 +10,12 @@ let settle: ReturnType<typeof setTimeout> | undefined;
 function init() {
   if (ready) return;
   ready = true;
-  if (depth()) history.replaceState({ ...history.state, av: 0 }, '');
+  // After a reload with layers open, drop their stale entries so the next back press is not lost.
+  if (depth()) history.go(-depth());
   window.addEventListener('popstate', () => {
-    while (stack.length > depth()) stack.pop()!();
+    while (stack.length > depth()) {
+      try { stack.pop()!(); } catch (err) { console.error(err); }
+    }
   });
 }
 

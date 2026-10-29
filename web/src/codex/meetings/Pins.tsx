@@ -32,9 +32,13 @@ export function PinnableSummary({ m }: { m: Meeting }) {
     if (!sel) return;
     const text = sel.text;
     clear();
-    const row = await store.capture(text, 'note', m.profile, null, { id: m.id, title: m.title });
-    await store.update(row, { title: text.slice(0, 120), text });
-    showSnack('Pinned');
+    try {
+      const row = await store.capture(text, 'note', m.profile, null, { id: m.id, title: m.title });
+      await store.update(row, { title: text.slice(0, 120), text });
+      showSnack('Pinned');
+    } catch {
+      showSnack('Not pinned');
+    }
   };
   return (
     <>

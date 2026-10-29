@@ -190,6 +190,7 @@ const clients = new Map<string, Transport>();
 function client(key: string, def: McpServerDef, timeout: number, cwd?: string) {
   let c = clients.get(key);
   if (!c || c.dead) {
+    c?.stop();
     const kind = def.type ?? (def.url ? 'http' : 'stdio');
     if (kind === 'sse') throw new Error(`MCP server ${key} uses SSE, which AgentView does not speak; use it from Claude`);
     const d = expandDef(def);

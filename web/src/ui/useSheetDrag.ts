@@ -24,10 +24,13 @@ export function useSheetDrag(open: boolean, onClose: () => void) {
     o.style.setProperty('--sheet-fade', String(Math.max(0, 1 - y / (s.offsetHeight || 1))));
   };
 
+  const closing = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(closing.current), []);
   const close = () => {
+    if (closing.current) return;
     if (!sheet.current) return onClose();
     move(sheet.current.offsetHeight + 48, true);
-    setTimeout(onClose, reduced() ? 0 : SETTLE_MS);
+    closing.current = setTimeout(onClose, reduced() ? 0 : SETTLE_MS);
   };
 
   const handle = {
