@@ -10,6 +10,8 @@ export function pressable(onClick: (e: MouseEvent<HTMLElement>) => void) {
   return { role: 'button' as const, tabIndex: 0, onClick, onKeyDown };
 }
 
+export const escapeHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));

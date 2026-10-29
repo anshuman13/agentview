@@ -1,5 +1,6 @@
 import { useMemo, type MouseEvent } from 'react';
 import { Marked } from 'marked';
+import { escapeHtml } from '../ui/util';
 
 export { Composer } from './Composer';
 
@@ -15,10 +16,6 @@ const md = new Marked({
     },
   },
 });
-
-function escapeHtml(t: string) {
-  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 function copyText(text: string) {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);

@@ -3,6 +3,7 @@ import { Marked } from 'marked';
 import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
 import { api, setUi } from '../app/store';
+import { escapeHtml } from '../ui/util';
 import '../styles/features/doc.css';
 
 type Heading = { id: string; text: string; depth: number };
@@ -11,7 +12,6 @@ const ALERTS: Record<string, string> = { note: 'info', tip: 'lightbulb', importa
 const TAGS = new Set('a abbr b blockquote br button code dd del details div dl dt em figcaption figure h1 h2 h3 h4 h5 h6 hr i img input kbd li mark ol p pre s small span strong sub summary sup table tbody td tfoot th thead tr u ul'.split(' '));
 const ATTRS = new Set('id class href src alt title width height align open colspan rowspan start type checked disabled data-lang data-copy aria-hidden'.split(' '));
 
-const escapeHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const external = (u: string) => /^[a-z][a-z0-9+.-]*:/i.test(u) || u.startsWith('//');
 
 function resolve(base: string, href: string) {

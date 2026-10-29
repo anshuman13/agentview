@@ -63,6 +63,7 @@ async function runInTerminal(cmd: string) {
   const term = list.at(-1) ?? (await fetch(api('/api/terms'), { method: 'POST' }).then((r) => r.json()));
   window.dispatchEvent(new CustomEvent('agentview:terminal', { detail: term.id }));
   const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(term.id)}`));
+  ws.onerror = () => notice('Terminal unavailable');
   ws.onopen = () => {
     ws.send(JSON.stringify({ t: 'i', d: `${cmd}\r` }));
     ws.close();

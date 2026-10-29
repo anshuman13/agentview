@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ago, weekPace } from './util';
+import { ago, escapeHtml, weekPace } from './util';
 
 describe('ago', () => {
   afterEach(() => vi.useRealTimers());
@@ -26,5 +26,11 @@ describe('weekPace', () => {
     expect(weekPace(reset, reset - 6 * 24 * h - 30 * 60_000)).toBe(14);
     expect(weekPace(reset, reset - 84 * h)).toBe(50);
     expect(weekPace(reset, reset)).toBe(100);
+  });
+});
+
+describe('escapeHtml', () => {
+  it('escapes markup and quotes', () => {
+    expect(escapeHtml('<a href="x">&</a>')).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;');
   });
 });
