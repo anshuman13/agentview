@@ -84,4 +84,5 @@ it('counts meetings, decisions, claims and open questions after the last visit',
   const fact = (id: string, time: number, extra: Partial<Fact> = {}) => ({ id, profile: 'work', deleted: 0, state: 'live', at: time, updated_at: time, superseded_by: null, ...extra }) as Fact;
   const facts = [fact('new', at(28)), fact('old', at(26)), fact('sup', at(28), { superseded_by: 'new' }), fact('gone', at(28), { deleted: 1 })];
   expect(sinceLastVisit({ meetings, facts }, since, now)).toEqual({ meetings: 1, decisions: 2, claims: 1, questions: 1 });
+  expect(sinceLastVisit({ meetings, facts }, since, now, ['work:who owns launch?']).questions).toBe(0);
 });

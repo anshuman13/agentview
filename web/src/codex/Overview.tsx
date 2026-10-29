@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { followThrough, type Meeting } from './data/wiki';
 import { sinceLastVisit } from './data/load';
+import { resolvedQuestions } from './meetings/OpenQuestions';
 import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { save, stored } from '../ui/util';
@@ -124,7 +125,7 @@ function SinceLastVisit() {
   const minute = Math.floor(Date.now() / 60000);
   const counts = useMemo(() => {
     const pick = <T extends { profile: string }>(rows: T[]) => rows.filter((r) => filter === 'all' || r.profile === filter);
-    return since == null ? null : sinceLastVisit({ meetings: pick(snap.meetings), facts: pick(snap.facts) }, since, minute * 60000);
+    return since == null ? null : sinceLastVisit({ meetings: pick(snap.meetings), facts: pick(snap.facts) }, since, minute * 60000, resolvedQuestions());
   }, [snap.meetings, snap.facts, filter, since, minute]);
   if (!counts) return null;
   const parts = [

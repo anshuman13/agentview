@@ -1,4 +1,4 @@
-import { decisionLog, factTime, live, openQuestions, peopleOf, seriesTitle, type Fact, type Meeting } from './wiki';
+import { decisionLog, factTime, live, openQuestions, peopleOf, questionKey, seriesTitle, type Fact, type Meeting } from './wiki';
 import { statusTime } from './engine';
 import type { ItemRow } from './sync';
 
@@ -99,12 +99,12 @@ export function weekReview({ meetings, facts, items }: { meetings: Meeting[]; fa
 }
 
 // Counts of what arrived after `since`: past meetings (not all-day), their decisions and open questions, and new current claims.
-export function sinceLastVisit({ meetings, facts }: { meetings: Meeting[]; facts: Fact[] }, since: number, now: number) {
+export function sinceLastVisit({ meetings, facts }: { meetings: Meeting[]; facts: Fact[] }, since: number, now: number, resolved: string[] = []) {
   const recent = live(meetings).filter((m) => m.starts_at != null && m.starts_at > since && m.starts_at <= now && !isAllDay(m));
   return {
     meetings: recent.length,
     decisions: decisionLog(recent).length,
     claims: live(facts).filter((f) => !f.superseded_by && factTime(f) > since && factTime(f) <= now).length,
-    questions: openQuestions(recent, now).length,
+    questions: openQuestions(recent, now).filter((q) => !resolved.includes(questionKey(q))).length,
   };
 }
