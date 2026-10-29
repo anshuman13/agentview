@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { newId } from '../data/sync';
-import { actionCount, actionCounts, dayStart, groupMeetings, live, meetingState, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Fact, type Meeting } from '../data/wiki';
+import { actionCount, actionCounts, dayStart, groupMeetings, live, meetingState, openQuestions, peopleOf, searchMeetings, queryWords, rowMatcher, topicTimeline, trackedTopics, type Fact, type Meeting, type Question } from '../data/wiki';
 import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
@@ -10,6 +10,7 @@ import { setView, showSnack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
+import { OpenQuestions } from './OpenQuestions';
 import { Week } from './Week';
 import '../../styles/features/wiki.css';
 
@@ -136,17 +137,21 @@ function TopicBar({ topics, active, fresh, onToggle, onAdd, onRemove }: { topics
 
 function TopicTimeline({ topic, meetings, facts }: { topic: string; meetings: Meeting[]; facts: Fact[] }) {
   const { entries } = useMemo(() => topicTimeline(topic, meetings, facts), [topic, meetings, facts]);
-  if (!entries.length) return null;
+  const questions = useMemo(() => openQuestions(meetings).filter(rowMatcher<Question>(queryWords(topic), 'question', (q) => [q.text, q.meeting.title])), [topic, meetings]);
+  if (!entries.length && !questions.length) return null;
   return (
-    <section className="mt-tl">
-      {entries.map((e, i) => (
-        <button key={i} className="mt-log-item mt-tl-item" onClick={() => (e.meeting ? setView({ list: 'meetings', open: meetingKey(e.meeting), person: null }) : setView({ list: 'wiki', open: e.fact?.page_id ?? null, anchor: null }))}>
-          <Icon name={e.kind === 'claim' ? 'book' : e.kind === 'decision' ? 'check' : 'calendar'} small />
-          <span className="mt-log-text">{e.text}</span>
-          <span className="mt-log-from">{when(e.at)}</span>
-        </button>
-      ))}
-    </section>
+    <>
+      <OpenQuestions questions={questions} />
+      <section className="mt-tl">
+        {entries.map((e, i) => (
+          <button key={i} className="mt-log-item mt-tl-item" onClick={() => (e.meeting ? setView({ list: 'meetings', open: meetingKey(e.meeting), person: null }) : setView({ list: 'wiki', open: e.fact?.page_id ?? null, anchor: null }))}>
+            <Icon name={e.kind === 'claim' ? 'book' : e.kind === 'decision' ? 'check' : 'calendar'} small />
+            <span className="mt-log-text">{e.text}</span>
+            <span className="mt-log-from">{when(e.at)}</span>
+          </button>
+        ))}
+      </section>
+    </>
   );
 }
 

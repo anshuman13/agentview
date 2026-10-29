@@ -432,6 +432,34 @@ export function searchMeetings<M extends Meeting>(meetings: M[], query: string) 
 export const trackedTopics = (m: Meeting, topics: string[]) =>
   topics.filter((t) => rowMatcher<Meeting>(queryWords(t), 'topic', (r) => [r.title, r.notes, r.summary, r.decisions, r.transcript])(m));
 
+export type Question = { text: string; meeting: Meeting; at: number; profile: Profile };
+
+export const questionKey = (q: Question) => `${q.profile}:${q.text.toLowerCase()}`;
+
+// Unanswered questions from summaries and notes: sentences ending in "?" and bullets under a "Questions" heading. Identical text keeps the newest meeting.
+export function openQuestions(meetings: Meeting[], now = Date.now()): Question[] {
+  const found = new Map<string, Question>();
+  for (const meeting of live(meetings)) {
+    const at = meeting.starts_at ?? meeting.updated_at;
+    if (at > now) continue;
+    let under = false;
+    for (const raw of [meeting.summary, meeting.notes].flatMap((t) => (t ?? '').split('\n'))) {
+      const line = raw.trim();
+      const bullet = /^([-*\u2022]|\d+[.)])\s+/.test(line);
+      const plain = line.replace(/^([-*\u2022]|\d+[.)]|#+)\s+/, '').replace(/\*+/g, '').replace(/\S+:\/\/\S+/g, '').trim();
+      if (!line) continue;
+      if (!bullet) under = /^(open )?questions:?$/i.test(plain);
+      const texts = under && bullet ? [plain] : plain.match(/[^.!?]+\?/g) ?? [];
+      for (const t of texts.map((x) => x.trim()).filter((x) => x.length > 1)) {
+        const q = { text: t, meeting, at, profile: meeting.profile };
+        const key = questionKey(q);
+        if (!found.has(key) || found.get(key)!.at < at) found.set(key, q);
+      }
+    }
+  }
+  return [...found.values()].sort((a, b) => b.at - a.at);
+}
+
 export type TopicEntry = { kind: 'meeting' | 'decision' | 'claim'; text: string; at: number; meeting?: Meeting; fact?: Fact };
 
 // Past meetings, decisions and current claims matching the topic, newest first, plus how many are newer than `since`.

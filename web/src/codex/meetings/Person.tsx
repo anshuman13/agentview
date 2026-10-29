@@ -1,9 +1,10 @@
 import { useAssistantData, useCodex } from '../data';
-import { claimsMentioning, commitmentsOf, meetingsOf, pinsOf } from '../data/wiki';
+import { claimsMentioning, commitmentsOf, meetingsOf, openQuestions, pinsOf } from '../data/wiki';
 import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
 import { setView, useEscapeBack } from '../view';
 import { Avatars, MeetingRow } from './Meetings';
+import { OpenQuestions } from './OpenQuestions';
 import '../../styles/features/wiki.css';
 
 export function Person({ name }: { name: string }) {
@@ -15,6 +16,7 @@ export function Person({ name }: { name: string }) {
   const pins = pinsOf(snap.items, mine);
   const commitments = commitmentsOf(meetings, name);
   const claims = claimsMentioning(facts, name);
+  const questions = openQuestions(mine);
   const title = new Map(pages.map((p) => [p.id, p.title]));
   const now = Date.now();
   const open = (key: string) => setView({ person: null, list: 'meetings', open: key });
@@ -42,6 +44,8 @@ export function Person({ name }: { name: string }) {
               </ul>
             ) : <p className="mt-pending">Nothing recorded for {name}.</p>}
           </section>
+
+          <OpenQuestions questions={questions} />
 
           {pins.length > 0 && (
             <section className="mt-sec">
