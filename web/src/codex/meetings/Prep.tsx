@@ -11,7 +11,10 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
   const prior = useMemo(() => priorWith(m, meetings, snap.items), [m, meetings, snap.items]);
   const brief = useMemo(() => briefFor(m, snap.items, snap.facts), [m, snap.items, snap.facts]);
   const questions = useMemo(
-    () => openQuestions(meetings).filter((q) => !resolvedQuestions().includes(questionKey(q)) && prior.some((p) => p.meeting.id === q.meeting.id && p.meeting.profile === q.profile)).slice(0, 3),
+    () => {
+      const resolved = new Set(resolvedQuestions());
+      return openQuestions(meetings).filter((q) => !resolved.has(questionKey(q)) && prior.some((p) => p.meeting.id === q.meeting.id && p.meeting.profile === q.profile)).slice(0, 3);
+    },
     [meetings, prior],
   );
   if (!prior.length && !questions.length && !brief.tasks.length && !brief.claims.length) return null;

@@ -504,11 +504,20 @@ export type Question = { text: string; meeting: Meeting; at: number; profile: Pr
 export const questionKey = (q: Question) => `${q.profile}:${q.text.toLowerCase()}`;
 
 // Unanswered questions from summaries and notes: sentences ending in "?" and bullets under a "Questions" heading. Identical text keeps the newest meeting.
+const questionCache = new WeakMap<Meeting[], { from: number; until: number; list: Question[] }>();
+
+// Cached per meetings array until the next meeting starts, since only that changes the answer.
 export function openQuestions(meetings: Meeting[], now = Date.now()): Question[] {
+  const hit = questionCache.get(meetings);
+  if (hit && now >= hit.from && now < hit.until) return hit.list;
   const found = new Map<string, Question>();
+  let until = Infinity;
   for (const meeting of live(meetings)) {
     const at = meeting.starts_at ?? meeting.updated_at;
-    if (at > now) continue;
+    if (at > now) {
+      until = Math.min(until, at);
+      continue;
+    }
     for (const text of [meeting.summary, meeting.notes]) {
       let under = false;
       for (const raw of (text ?? '').split('\n')) {
@@ -526,7 +535,9 @@ export function openQuestions(meetings: Meeting[], now = Date.now()): Question[]
       }
     }
   }
-  return [...found.values()].sort((a, b) => b.at - a.at);
+  const list = [...found.values()].sort((a, b) => b.at - a.at);
+  questionCache.set(meetings, { from: now, until, list });
+  return list;
 }
 
 export type TopicEntry = { kind: 'meeting' | 'decision' | 'claim'; text: string; at: number; meeting?: Meeting; fact?: Fact };
