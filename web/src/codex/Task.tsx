@@ -173,7 +173,11 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
   }, []);
   useEffect(() => { setTimeout(() => box.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 190); }, []);
   useEffect(() => {
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' && !(e.key === 'Enter' && (e.metaKey || e.ctrlKey))) return;
+      onClose();
+      requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus());
+    };
     // A tap outside closes the task; a tap on another task opens that one instead.
     const down = (e: PointerEvent) => {
       const t = e.target as Element;
@@ -182,7 +186,7 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
     window.addEventListener('keydown', key);
     document.addEventListener('pointerdown', down);
     return () => { window.removeEventListener('keydown', key); document.removeEventListener('pointerdown', down); };
-  }, [onClose]);
+  }, [onClose, row.profile, row.id]);
 
   const other: Profile = row.profile === 'work' ? 'personal' : 'work';
   const move = () => {
@@ -264,6 +268,41 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
   );
 }
 
+// Keys on a focused task: j/k or arrows move, Enter opens, x done, s snooze to the next morning, Delete removes.
+function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen: () => void, act: ReturnType<typeof useActions>) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
+  const open = row.status === 'open' || row.status === 'suggested';
+  if (step) {
+    const rows = [...document.querySelectorAll<HTMLElement>('.tasks [data-row]')];
+    rows[rows.indexOf(e.currentTarget) + step]?.focus();
+  } else if (e.key === 'Enter') onOpen();
+  else if (e.key === 'x' && open) act.done(row);
+  else if (e.key === 's' && open) act.snooze(row, nextNine(new Date(Math.max(atTime(row.at) ?? 0, Date.now()))));
+  else if (e.key === 'Delete' || e.key === 'Backspace') act.remove(row);
+  else return;
+  e.preventDefault();
+  // The row goes away after done, snooze or delete, so focus moves to its neighbour.
+  if (!step && e.key !== 'Enter') {
+    const rows = [...document.querySelectorAll<HTMLElement>('.tasks [data-row]')];
+    const i = rows.indexOf(e.currentTarget);
+    const next = rows[i + 1] ?? rows[i - 1];
+    const key = next?.dataset.row;
+    requestAnimationFrame(() => key && document.querySelector<HTMLElement>(`[data-row="${key}"]`)?.focus());
+  }
+}
+
+// With nothing focused, j or k on Tasks focuses the first task.
+document.addEventListener('keydown', (e) => {
+  if ((e.key !== 'j' && e.key !== 'k') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const at = document.activeElement;
+  if (at && at !== document.body) return;
+  const first = document.querySelector<HTMLElement>('.tasks [data-row]');
+  if (first?.offsetParent == null) return;
+  e.preventDefault();
+  first.focus();
+});
+
 export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: { row: ItemRow; open: boolean; onOpen: () => void; onClose: () => void; onAsk: (r: ItemRow) => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean }) {
   const act = useActions();
   if (open) return <Editor row={row} onClose={onClose} onAsk={onAsk} />;
@@ -277,7 +316,7 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
   const list = checklist(row.text);
   const preview = firstLine(row.text);
   const body = (
-    <div className={`as-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}`} data-row={row.profile + row.id} onPointerDown={onGrab} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && onOpen()}>
+    <div className={`as-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}`} data-row={row.profile + row.id} onPointerDown={onGrab} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && rowKey(e, row, onOpen, act)}>
       <Check row={row} />
       <div className="as-body">
         <div className="as-title"><ProfileDot profile={row.profile} />{row.title || '(Untitled)'}</div>

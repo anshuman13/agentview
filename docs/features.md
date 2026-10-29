@@ -171,3 +171,4 @@ palette), so they get the full width instead of the sidebar. One page is open at
 | y / n / a | Allow, deny or always allow the top permission card |
 | 1-9 | Pick an answer on the top question card |
 | ⌘Enter | Commit in Source Control; run the query in Observe |
+| j / k | Move between tasks in Tasks; Enter opens, Esc closes, x done, s snooze, Delete removes |
