@@ -30,6 +30,7 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
           </button>
         )}
       </div>
+      {!shown.length && <p className="mt-pending">No claims yet.</p>}
       <ol className="wk-feed-list">
         {shown.map(({ fact, kind, at }) => {
           const src = sourcesOf(fact)[0];

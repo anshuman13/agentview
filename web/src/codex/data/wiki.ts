@@ -239,7 +239,7 @@ export function approveAllChanges(list: Fact[], pages: Page[], facts: Fact[]) {
   });
 }
 
-const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
+export const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
 
 // Meetings that have started, newest day first and in time order within a day. The future lives in Today and Upcoming.
 export function groupMeetings(meetings: Meeting[], now = Date.now()) {

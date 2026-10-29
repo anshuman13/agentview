@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useAssistant, useCodex } from '../data';
 import { newId } from '../data/sync';
-import { actionCount, actionCounts, groupMeetings, live, meetingState, peopleOf, searchMeetings, trackedTopics, type Meeting } from '../data/wiki';
+import { actionCount, actionCounts, dayStart, groupMeetings, live, meetingState, peopleOf, searchMeetings, trackedTopics, type Meeting } from '../data/wiki';
 import { clock } from '../time';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
@@ -74,7 +74,6 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, to
   );
 });
 
-const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
 
 // Today, then each later day with meetings, one at a time, like a desk calendar.
 function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number; topics: string[] }) {
