@@ -123,10 +123,10 @@ function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
   const [busy, setBusy] = useState(false);
   if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
   const choose = async (key: SummaryTemplate) => {
-    rememberTemplate(m, key);
     setBusy(true);
     try {
       await store.fetchTranscript(m, summaryInstructions(key));
+      rememberTemplate(m, key);
       showSnack(`Summary rewritten as ${SUMMARY_TEMPLATES[key].label}`);
     } catch (err) {
       showSnack(`Summary failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -306,7 +306,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           {decisions.length > 0 && (
             <section className="mt-sec">
               <h2>Decisions</h2>
-              <ul className="mt-decisions">{decisions.map((d) => <li key={d}>{d}</li>)}</ul>
+              <ul className="mt-decisions">{decisions.map((d, i) => <li key={i}>{d}</li>)}</ul>
             </section>
           )}
 

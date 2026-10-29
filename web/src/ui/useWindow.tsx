@@ -5,6 +5,7 @@ const STEP = 50;
 // Show the first rows of a long list; a new key (search, filter, page) starts the window over.
 export function useWindow(key: string): [number, () => void] {
   const [w, setW] = useState({ key, n: STEP });
+  if (w.key !== key) setW({ key, n: STEP });
   const n = w.key === key ? w.n : STEP;
   return [n, () => setW({ key, n: n + STEP })];
 }

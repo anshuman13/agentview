@@ -26,7 +26,7 @@ export type SummaryTemplate = keyof typeof SUMMARY_TEMPLATES;
 export const summaryInstructions = (key: SummaryTemplate) => SUMMARY_TEMPLATES[key].instructions;
 
 const PICKS_KEY = 'codex.summaryPicks';
-const seriesKey = (m: Meeting) => `${m.profile}:${seriesTitle(m.title)}`;
+const seriesKey = (m: Meeting) => `${m.profile}:${seriesTitle(m.title) || m.id}`;
 const readPicks = () => stored<Record<string, SummaryTemplate>>(PICKS_KEY, {});
 
 export const rememberTemplate = (m: Meeting, key: SummaryTemplate) => save(PICKS_KEY, { ...readPicks(), [seriesKey(m)]: key });
