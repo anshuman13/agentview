@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
@@ -6,25 +6,41 @@ import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
 import { buildTranscript, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { plural } from '../ui/util';
+import { ROW_WINDOW, revealMore, windowStart } from './window';
 import type { ChatEvent } from '../../../shared/protocol';
 
 export function Transcript() {
   const events = useStore((s) => s.events);
   const cwd = useStore((s) => s.session.cwd);
   const running = useStore((s) => s.session.running);
-  return <TranscriptView events={events} cwd={cwd} running={running} />;
+  const chat = useStore((s) => s.session.id);
+  return <TranscriptView key={chat} events={events} cwd={cwd} running={running} />;
 }
 
 export function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: string; running: boolean }) {
   const items = useMemo(() => buildTranscript(events), [events]);
   const box = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
+  const [shown, setShown] = useState(ROW_WINDOW);
+  const grew = useRef(0);
+  const start = windowStart(items.length, shown);
   const last = events[events.length - 1];
 
   useEffect(() => {
     const el = box.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [items.length, last, running]);
+
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (el && grew.current) el.scrollTop += el.scrollHeight - grew.current;
+    grew.current = 0;
+  }, [shown]);
+
+  const showEarlier = () => {
+    grew.current = box.current?.scrollHeight ?? 0;
+    setShown(revealMore(shown, items.length));
+  };
 
   const onScroll = () => {
     const el = box.current;
@@ -34,7 +50,8 @@ export function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; 
   return (
     <div ref={box} className="tr" onScroll={onScroll}>
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
-      {items.map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
+      {start > 0 && <div className="tr-more" onClick={showEarlier}>Show earlier ({start} hidden)</div>}
+      {items.slice(start).map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
     </div>
   );
 }
