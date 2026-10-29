@@ -1,7 +1,9 @@
 import { useAssistantStore } from '../data';
 import { atTime } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
+import { draftFor } from '../data/meetingMarkdown';
 import type { ItemRow } from '../data/sync';
+import type { Meeting } from '../data/wiki';
 import { PickTime, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
@@ -16,7 +18,7 @@ export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
 
 // An action from a meeting. Suggested ones are kept (Today) or dismissed (Not mine, on the meeting); unassigned ones
 // can be taken; dismissed ones restored. Each open one has a date chip.
-export function ActionRow({ row, showMeeting = false }: { row: ItemRow; showMeeting?: boolean }) {
+export function ActionRow({ row, showMeeting = false, meeting }: { row: ItemRow; showMeeting?: boolean; meeting?: Meeting }) {
   const store = useAssistantStore();
   const change = (patch: Patch, text: string) => {
     const before = Object.fromEntries(Object.keys(patch).map((k) => [k, row[k as keyof ItemRow]])) as Patch;
@@ -45,6 +47,7 @@ export function ActionRow({ row, showMeeting = false }: { row: ItemRow; showMeet
           {row.text && <span className="mt-task-why">{row.text}</span>}
         </div>
       </div>
+      {meeting && <button className="icon-btn" title="Copy as message" aria-label="Copy as message" onClick={() => void navigator.clipboard.writeText(draftFor(row, meeting)).then(() => showSnack('Copied'), () => showSnack('Copy failed'))}><Icon name="copy" small /></button>}
       {status === 'suggested' && (
         <div className="mt-task-pick">
           <button className="mt-no" title="Not mine" aria-label="Not mine" onClick={() => change({ status: 'dismissed' }, 'Moved to Not mine')}><Icon name="close" small /></button>

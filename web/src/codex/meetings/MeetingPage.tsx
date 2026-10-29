@@ -274,7 +274,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           <section className="mt-sec">
             <h2>My actions{count.total > 0 && <span className="mt-of">{count.done} of {count.total} done</span>}</h2>
-            {mine.length > 0 && <div className="mt-tasks">{mine.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>}
+            {mine.length > 0 && <div className="mt-tasks">{mine.map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>}
             {!mine.length && !review.length && (
               <p className="mt-pending">{state === 'missing' ? 'No transcript. Add actions below.' : state === 'done' ? 'Nothing for you in the transcript.' : 'Your actions from the transcript land here and in Today.'}</p>
             )}
@@ -284,7 +284,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           {review.length > 0 && (
             <section className="mt-sec">
               <h2>To review<span className="mt-of">{review.length}</span>{review.length > 1 && <button className="btn sm mt-sync" onClick={() => confirmAll(store, review)}><Icon name="check-all" small /> Confirm all</button>}</h2>
-              <div className="mt-tasks">{review.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>
+              <div className="mt-tasks">{review.map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
             </section>
           )}
 
@@ -315,13 +315,13 @@ export function MeetingPage({ m }: { m: Meeting }) {
           </section>
 
           <Fold title="Unassigned" count={count.unassigned}>
-            <div className="mt-tasks">{by('unassigned').map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>
+            <div className="mt-tasks">{by('unassigned').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
           </Fold>
           <Fold title="Others took" count={others.length}>
             <ul className="mt-others">{others.map((o, i) => <li key={i}><b>{o.who}</b> {o.what}</li>)}</ul>
           </Fold>
           <Fold title="Not mine" count={count.dismissed}>
-            <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>
+            <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
           </Fold>
         </article>
       </div>

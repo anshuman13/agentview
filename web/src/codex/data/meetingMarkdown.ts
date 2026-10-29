@@ -1,8 +1,13 @@
+import { atTime } from './engine';
 import type { ItemRow } from './sync';
 import { listOf, othersOf, peopleOf, type Meeting } from './wiki';
 
 const mine = (actions: ItemRow[]) => actions.filter((a) => a.status === 'open' || a.status === 'done');
-const dateOf = (m: Meeting) => (m.starts_at ? new Date(m.starts_at).toISOString().slice(0, 10) : '');
+const ymd = (t: number) => {
+  const d = new Date(t);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const dateOf = (m: Meeting) => (m.starts_at ? ymd(m.starts_at) : '');
 const first = (name: string) => name.split(/\s+/)[0] ?? name;
 
 export const hasContent = (m: Meeting, actions: ItemRow[]) =>
@@ -33,4 +38,13 @@ export function followUpText(m: Meeting, actions: ItemRow[]) {
   if (who.length) out.push(`Who does what:\n${who.join('\n')}`);
   out.push('Let me know if I missed anything.', 'Best,');
   return out.join('\n\n') + '\n';
+}
+
+export function draftFor(a: ItemRow, m: Meeting) {
+  const due = atTime(a.at);
+  const out = [a.title ?? ''];
+  if (a.people?.trim()) out.push(`Owner: ${a.people.trim()}`);
+  out.push(`From: ${m.title ?? 'Meeting'}${dateOf(m) ? ` (${dateOf(m)})` : ''}`);
+  if (due != null) out.push(`Due: ${ymd(due)}`);
+  return out.join('\n');
 }

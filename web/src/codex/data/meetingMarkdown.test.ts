@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { followUpText, toMarkdown } from './meetingMarkdown';
+import { draftFor, followUpText, toMarkdown } from './meetingMarkdown';
 import type { ItemRow } from './sync';
 import type { Meeting } from './wiki';
 
@@ -33,5 +33,12 @@ describe('followUpText', () => {
     expect(t).toContain('- Ship in November');
     expect(t).toContain('- Grace: draft the spec');
     expect(t).toContain('- I will send notes');
+  });
+});
+
+describe('draftFor', () => {
+  it('names the action, owner, meeting and due date', () => {
+    const a = { id: 'a', title: 'Send notes', status: 'open', people: 'Ada Lovelace', at: Date.UTC(2026, 10, 2, 9) } as unknown as ItemRow;
+    expect(draftFor(a, meeting())).toBe('Send notes\nOwner: Ada Lovelace\nFrom: Planning (2026-10-29)\nDue: 2026-11-02');
   });
 });
