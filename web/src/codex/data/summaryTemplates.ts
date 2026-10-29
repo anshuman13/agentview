@@ -38,7 +38,7 @@ export function templateFor(m: Meeting, series: Meeting[], picks = readPicks()):
   if (picked && picked in SUMMARY_TEMPLATES) return picked;
   const title = (m.title ?? '').toLowerCase();
   const people = peopleOf(m).length || (series[0] ? peopleOf(series[0]).length : 0);
-  if (/\b1[:-]?1\b|\bone[- ]on[- ]one\b/.test(title) || /\S\s*\/\s*\S/.test(title) && people === 2) return 'one_on_one';
+  if (/\b1[:-]1\b|\b1on1\b|\bone[- ]on[- ]one\b/.test(title) || /\S\s*\/\s*\S/.test(title) && people === 2) return 'one_on_one';
   if (/stand-?up|\bdaily\b/.test(title)) return 'standup';
   if (/interview/.test(title)) return 'interview';
   if (/planning|\bplan\b/.test(title)) return 'planning';

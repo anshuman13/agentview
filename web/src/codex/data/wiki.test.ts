@@ -271,4 +271,9 @@ describe('openQuestions', () => {
     };
     expect(openQuestions([m], 50).map((q) => q.text)).toEqual(['Who owns the rollout?', 'Budget for Q3', 'When is the review?']);
   });
+
+  it('keeps a Questions list to its own text and sentences whole', () => {
+    const m = { ...common('q2'), title: 'x', starts_at: 10, summary: 'Did v1.2 ship?\n## Open questions\n- Ask Sam', notes: '- call Bob' } as unknown as Meeting;
+    expect(openQuestions([m], 50).map((q) => q.text)).toEqual(['Did v1.2 ship?', 'Ask Sam']);
+  });
 });

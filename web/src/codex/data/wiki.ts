@@ -460,18 +460,20 @@ export function openQuestions(meetings: Meeting[], now = Date.now()): Question[]
   for (const meeting of live(meetings)) {
     const at = meeting.starts_at ?? meeting.updated_at;
     if (at > now) continue;
-    let under = false;
-    for (const raw of [meeting.summary, meeting.notes].flatMap((t) => (t ?? '').split('\n'))) {
-      const line = raw.trim();
-      const bullet = /^([-*\u2022]|\d+[.)])\s+/.test(line);
-      const plain = line.replace(/^([-*\u2022]|\d+[.)]|#+)\s+/, '').replace(/\*+/g, '').replace(/\S+:\/\/\S+/g, '').trim();
-      if (!line) continue;
-      if (!bullet) under = /^(open )?questions:?$/i.test(plain);
-      const texts = under && bullet ? [plain] : plain.match(/[^.!?]+\?/g) ?? [];
-      for (const t of texts.map((x) => x.trim()).filter((x) => x.length > 1)) {
-        const q = { text: t, meeting, at, profile: meeting.profile };
-        const key = questionKey(q);
-        if (!found.has(key) || found.get(key)!.at < at) found.set(key, q);
+    for (const text of [meeting.summary, meeting.notes]) {
+      let under = false;
+      for (const raw of (text ?? '').split('\n')) {
+        const line = raw.trim();
+        const bullet = /^([-*\u2022]|\d+[.)])\s+/.test(line);
+        const plain = line.replace(/^([-*\u2022]|\d+[.)]|#+)\s+/, '').replace(/\*+/g, '').replace(/\S+:\/\/\S+/g, '').trim();
+        if (!line) continue;
+        if (!bullet) under = /^(open )?questions:?$/i.test(plain);
+        const texts = under && bullet ? [plain] : plain.split(/(?<=[.!?])\s+(?=[A-Z])/).filter((x) => x.endsWith('?'));
+        for (const t of texts.map((x) => x.trim()).filter((x) => x.length > 1)) {
+          const q = { text: t, meeting, at, profile: meeting.profile };
+          const key = questionKey(q);
+          if (!found.has(key) || found.get(key)!.at < at) found.set(key, q);
+        }
       }
     }
   }
