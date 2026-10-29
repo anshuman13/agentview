@@ -49,8 +49,11 @@ export async function hubRows(table: string): Promise<HubRow[]> {
   return [...(rows.get(table)?.values() ?? [])].filter((r) => !r.deleted);
 }
 
+const KEPT = new Set(['items', 'meetings', 'actions', 'jobs', 'pages', 'facts']);
+
 export function applyHubChanges(into: Map<string, Map<string, HubRow>>, changes: { table: string; id: string; profile: HubRow['profile']; deleted: boolean; updated_at: number; fields: Record<string, unknown> }[]) {
   for (const c of changes) {
+    if (!KEPT.has(c.table)) continue;
     const key = `${c.profile}:${c.id}`;
     if (c.deleted) into.get(c.table)?.delete(key);
     else {

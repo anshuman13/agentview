@@ -203,7 +203,7 @@ const normalize = (line: string) => line.replace(/\b[0-9a-f]{8,}\b/gi, '<id>').r
 async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<GrafanaPatterns> {
   const selector = selectorOf(cfg);
   const uid = await lokiUid(def, cfg);
-  const tools = new Set((await listTools('grafana', def)).map((t) => t.name));
+  const tools = new Set((await listTools(keyOf('grafana', def), def)).map((t) => t.name));
   const link = await exploreLink(def, uid, `${selector} ${ERRORS}`);
   const notes: string[] = [];
   const rank = (rows: LogPattern[]) => rows.sort((a, b) => b.count - a.count).slice(0, 20);
