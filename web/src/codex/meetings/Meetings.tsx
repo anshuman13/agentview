@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistant, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
+import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { atTime, parseWhen, stripWhen } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
 import { SUMMARY_TEMPLATES, summaryInstructions, type SummaryTemplate } from '../data/summaryTemplates';
@@ -447,6 +448,17 @@ function RoomMic({ m }: { m: Meeting }) {
   );
 }
 
+function CopyButtons({ m, actions }: { m: Meeting; actions: ItemRow[] }) {
+  if (!hasContent(m, actions)) return null;
+  const copy = (text: string, done: string) => void navigator.clipboard.writeText(text).then(() => showSnack(done), () => showSnack('Copy failed'));
+  return (
+    <>
+      <button className="icon-btn" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={() => copy(toMarkdown(m, actions), 'Copied')}><Icon name="copy" /></button>
+      <button className="icon-btn" title="Copy a follow-up draft" aria-label="Copy a follow-up draft" onClick={() => copy(followUpText(m, actions), 'Follow-up copied')}><Icon name="mail" /></button>
+    </>
+  );
+}
+
 function MeetingPage({ m }: { m: Meeting }) {
   const { snap, store } = useAssistant();
   const all = actionsOf(snap.items, m);
@@ -468,6 +480,7 @@ function MeetingPage({ m }: { m: Meeting }) {
         <button className="icon-btn" title="Back to meetings" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         <nav className="wk-crumbs"><button onClick={back}>Meetings</button></nav>
         <span className="spacer" />
+        <CopyButtons m={m} actions={all} />
         {state === 'done' && <TranscriptButton m={m} label="Read again" />}
         {m.calendar_url && <a className="btn sm" href={m.calendar_url} target="_blank" rel="noreferrer"><Icon name="calendar" small /> Calendar</a>}
       </header>
