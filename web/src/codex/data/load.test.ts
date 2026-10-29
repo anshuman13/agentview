@@ -26,6 +26,20 @@ it('sums hours per local week across the October clock change, caps one meeting 
   expect(people[0]).toEqual({ name: 'Ann', hours: 11 });
 });
 
+it('totals minutes per series over four weeks against the four before, skipping all-day events', () => {
+  const now = new Date(2026, 9, 29, 12).getTime();
+  const { series } = meetingLoad([
+    meeting('s1', new Date(2026, 9, 27, 9), 1, { title: 'Standup #12' }),
+    meeting('s2', new Date(2026, 9, 20, 9), 1, { title: 'Standup #11' }),
+    meeting('s3', new Date(2026, 8, 20, 9), 1, { title: 'Standup #7' }),
+    meeting('p1', new Date(2026, 9, 22, 9), 2, { title: 'Planning' }),
+    meeting('n1', new Date(2026, 9, 21, 9), 0.5, { title: 'Retro' }),
+    meeting('r1', new Date(2026, 9, 15, 9), 0.5, { title: 'Retro' }),
+    meeting('off', new Date(2026, 9, 26), 24, { title: 'Offsite' }),
+  ], now);
+  expect(series.map((s) => [s.title, s.minutes, s.change])).toEqual([['Standup #12', 120, 60], ['Retro', 60, null]]);
+});
+
 it('reviews the local week with decisions, claims, finished tasks and open meeting actions', () => {
   const now = new Date(2026, 9, 29, 12).getTime();
   const at = (d: number) => new Date(2026, 9, d, 9).getTime();

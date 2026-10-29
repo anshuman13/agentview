@@ -1,8 +1,10 @@
-import { decisionLog, factTime, live, peopleOf, type Fact, type Meeting } from './wiki';
+import { decisionLog, factTime, live, peopleOf, seriesTitle, type Fact, type Meeting } from './wiki';
 import { parseTimes, type ItemRow } from './sync';
 
 const HOUR = 3600_000;
 const MAX_HOURS = 8;
+const DAY = 24 * HOUR;
+const SERIES_LIMIT = 8;
 
 export type LoadWeek = { start: number; hours: number; recorded: number; unrecorded: number };
 
@@ -13,6 +15,36 @@ const mondayOf = (now: number, back: number) => {
   const d = new Date(now);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7) - 7 * back).getTime();
 };
+
+// All-day calendar events start at local midnight and last whole days.
+const isAllDay = (m: Meeting) => {
+  const d = new Date(m.starts_at!);
+  return (m.ends_at! - m.starts_at!) % DAY === 0 && d.getHours() === 0 && d.getMinutes() === 0;
+};
+
+// Minutes per recurring series (a title seen at least twice) over the last `weeks` weeks and the change against the `weeks` before (null when the series is new), most minutes first.
+function timeBySeries(meetings: Meeting[], now: number, weeks: number) {
+  const span = weeks * 7 * DAY;
+  const sums = new Map<string, { title: string; at: number; minutes: number; before: number; count: number }>();
+  for (const m of live(meetings)) {
+    if (m.starts_at == null || m.ends_at == null || m.ends_at <= m.starts_at || m.starts_at > now || m.starts_at < now - 2 * span || isAllDay(m)) continue;
+    const title = seriesTitle(m.title);
+    if (!title) continue;
+    const key = `${m.profile}:${title}`;
+    const row = sums.get(key) ?? { title: '', at: 0, minutes: 0, before: 0, count: 0 };
+    row.count++;
+    if (m.starts_at > row.at) Object.assign(row, { title: m.title ?? title, at: m.starts_at });
+    const minutes = (m.ends_at - m.starts_at) / 60_000;
+    if (m.starts_at >= now - span) row.minutes += minutes;
+    else row.before += minutes;
+    sums.set(key, row);
+  }
+  return [...sums]
+    .filter(([, r]) => r.minutes > 0 && r.count > 1)
+    .sort((a, b) => b[1].minutes - a[1].minutes || a[1].title.localeCompare(b[1].title))
+    .slice(0, SERIES_LIMIT)
+    .map(([key, r]) => ({ key, title: r.title, minutes: Math.round(r.minutes), change: r.before > 0 ? Math.round(r.minutes - r.before) : null }));
+}
 
 // Hours in meetings per week (Monday to Sunday, local time, oldest first, current week last) and who I shared the most hours with.
 export function meetingLoad(meetings: Meeting[], now: number, weeks = 4) {
@@ -31,7 +63,7 @@ export function meetingLoad(meetings: Meeting[], now: number, weeks = 4) {
     for (const p of new Set(peopleOf(m).map(nameOf))) shared.set(p, (shared.get(p) ?? 0) + hours);
   }
   const people = [...shared].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([name, hours]) => ({ name, hours }));
-  return { weeks: out, people };
+  return { weeks: out, people, series: timeBySeries(meetings, now, weeks) };
 }
 
 // What happened since Monday 00:00 local time: decisions, new current claims, finished tasks, still-open meeting actions and hours in meetings.
