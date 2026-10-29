@@ -63,7 +63,7 @@ export function PinList({ pins, onOpen }: { pins: ItemRow[]; onOpen?: (r: ItemRo
         <li key={r.profile + r.id} className="wk-claim">
           <span className="wk-claim-text">{r.text || r.title}</span>
           <span className="wk-claim-foot">
-            {onOpen && <button className="mt-person" onClick={() => onOpen(r)}>{r.people}</button>}
+            {onOpen && r.people && <button className="mt-person" onClick={() => onOpen(r)}>{r.people}</button>}
             <button className="wk-act" title="Remove this pin" onClick={() => unpin(r)}><Icon name="close" small /> Unpin</button>
           </span>
         </li>

@@ -162,7 +162,9 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     setActive((a) => a.filter((t) => next.includes(t)));
     save(TOPICS_KEY, next);
   };
-  const fresh = useMemo(() => Object.fromEntries(topics.map((t) => [t, topicTimeline(t, meetings, facts, seen[t] ?? 0).fresh])), [topics, meetings, facts, seen]);
+  const mine = useMemo(() => (filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)), [meetings, filter]);
+  const myFacts = useMemo(() => (filter === 'all' ? facts : facts.filter((f) => f.profile === filter)), [facts, filter]);
+  const fresh = useMemo(() => Object.fromEntries(topics.map((t) => [t, topicTimeline(t, mine, myFacts, seen[t] ?? 0).fresh])), [topics, mine, myFacts, seen]);
   const markSeen = (t: string) => {
     const next = { ...seen, [t]: Date.now() };
     setSeen(next);
@@ -172,6 +174,12 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     if (!t || topics.includes(t)) return;
     markSeen(t);
     changeTopics([...topics, t]);
+  };
+  const removeTopic = (t: string) => {
+    const { [t]: _gone, ...rest } = seen;
+    setSeen(rest);
+    save(SEEN_KEY, rest);
+    changeTopics(topics.filter((x) => x !== t));
   };
   const toggle = (t: string) => {
     if (!active.includes(t)) markSeen(t);
@@ -189,8 +197,6 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       document.removeEventListener('visibilitychange', shown);
     };
   }, []);
-  const mine = useMemo(() => (filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)), [meetings, filter]);
-  const myFacts = useMemo(() => (filter === 'all' ? facts : facts.filter((f) => f.profile === filter)), [facts, filter]);
   const found = useMemo(() => {
     const tracked = active.length ? mine.filter((m) => trackedTopics(m, active).length) : mine;
     return searchMeetings(tracked, query);
@@ -237,7 +243,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       <div className="wk-scroll">
         {log ? <Decisions meetings={mine} /> : load ? <Load meetings={mine} now={now} /> : <div className="mt-list">
           <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
-            onAdd={addTopic} onRemove={(t) => changeTopics(topics.filter((x) => x !== t))} />
+            onAdd={addTopic} onRemove={removeTopic} />
           {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
           {!query && <Upcoming meetings={mine} now={now} topics={topics} />}
           {groups.map((g) => (

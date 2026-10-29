@@ -109,7 +109,8 @@ function FollowThrough() {
   );
   if (!rows.length) return null;
   const dismiss = (r: ItemRow) => {
-    const next = [...dismissed, r.profile + r.id];
+    const live = new Set(snap.items.filter((x) => !x.deleted && x.meeting_id).map((x) => x.profile + x.id));
+    const next = [...new Set([...dismissed, r.profile + r.id])].filter((k) => live.has(k));
     setDismissed(next);
     save(DISMISSED, next);
   };
@@ -123,8 +124,8 @@ function FollowThrough() {
               <span className="ov-t">{r.title}</span>
               <span className="muted small">{m.title} · {new Date(m.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
             </button>
-            <button className="btn sm" onClick={() => void store.update(r, { meeting_id: null })}>Task</button>
-            <button className="btn sm" onClick={() => dismiss(r)}>Dismiss</button>
+            <button className="btn sm" aria-label={`Make ${r.title} a plain task`} onClick={() => void store.update(r, { meeting_id: null })}>Task</button>
+            <button className="btn sm" aria-label={`Dismiss ${r.title}`} onClick={() => dismiss(r)}>Dismiss</button>
           </div>
         ))}
         {rows.length > 5 && <div className="ov-follow-row muted">+{rows.length - 5} more</div>}
