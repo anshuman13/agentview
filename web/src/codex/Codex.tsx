@@ -424,7 +424,7 @@ export function Assistant() {
   const nextLater = s.nextLater;
 
   return (
-    <div className="assistant" ref={root}>
+    <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
       <header className="as-head">
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
         <div className="as-title-wrap">
