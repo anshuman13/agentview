@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { Icon } from '../../ui/Icon';
+import { useAssistantData } from '../data';
 import { meetingLoad } from '../data/load';
 import type { Meeting } from '../data/wiki';
 
 const hoursText = (h: number) => `${h.toFixed(1)} h`;
 
 export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
-  const { weeks, people, series } = useMemo(() => meetingLoad(meetings, now), [meetings, now]);
+  const { items } = useAssistantData();
+  const { weeks, people, series } = useMemo(() => meetingLoad(meetings, now, 4, items), [meetings, now, items]);
   const max = Math.max(...weeks.map((w) => w.hours), 1);
   const recorded = weeks.reduce((n, w) => n + w.recorded, 0);
   const total = recorded + weeks.reduce((n, w) => n + w.unrecorded, 0);
@@ -35,7 +37,7 @@ export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
       {series.length > 0 && (
         <div className="mt-load-people">
           <div className="mt-load-head">Time by series</div>
-          {series.map((s) => <div key={s.key} className="mt-load-person"><span>{s.title}</span><span className="mt-load-num">{s.minutes} min ({s.change == null ? 'new' : `${s.change > 0 ? '+' : ''}${s.change}`})</span></div>)}
+          {series.map((s) => <div key={s.key} className="mt-load-person"><span>{s.title}{s.total > 0 && <span className="mt-load-num"> · done {s.done} of {s.total}{s.oldestOpen != null && `, oldest open ${Math.max(Math.floor((now - s.oldestOpen) / 86_400_000), 0)}d`}</span>}</span><span className="mt-load-num">{s.minutes} min ({s.change == null ? 'new' : `${s.change > 0 ? '+' : ''}${s.change}`})</span></div>)}
         </div>
       )}
     </div>

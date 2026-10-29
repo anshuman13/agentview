@@ -23,17 +23,30 @@ const midnight = (t: number) => {
 };
 const isAllDay = (m: Meeting) => m.ends_at! > m.starts_at! && midnight(m.starts_at!) && midnight(m.ends_at!);
 
-// Minutes per recurring series (a title seen at least twice) over the last `weeks` weeks and the change against the `weeks` before (null when the series is new), most minutes first.
-function timeBySeries(meetings: Meeting[], now: number, weeks: number) {
+// Minutes per recurring series (a title seen at least twice) over the last `weeks` weeks and the change against the `weeks` before (null when the series is new), most minutes first, with done and total meeting actions and the oldest open one's time.
+function timeBySeries(meetings: Meeting[], items: ItemRow[], now: number, weeks: number) {
+  const actions = new Map<string, ItemRow[]>();
+  for (const r of items) {
+    if (r.deleted || r.meeting_id == null || (r.status !== 'done' && r.status !== 'open')) continue;
+    const k = `${r.profile}:${r.meeting_id}`;
+    const list = actions.get(k);
+    if (list) list.push(r);
+    else actions.set(k, [r]);
+  }
   const span = weeks * 7 * DAY;
-  const sums = new Map<string, { title: string; at: number; minutes: number; before: number; count: number }>();
+  const sums = new Map<string, { title: string; at: number; minutes: number; before: number; count: number; done: number; total: number; oldestOpen: number | null }>();
   for (const m of live(meetings)) {
     if (m.starts_at == null || m.ends_at == null || m.ends_at <= m.starts_at || m.starts_at > now || m.starts_at < now - 2 * span || isAllDay(m)) continue;
     const title = seriesTitle(m.title);
     if (!title) continue;
     const key = `${m.profile}:${title}`;
-    const row = sums.get(key) ?? { title: '', at: 0, minutes: 0, before: 0, count: 0 };
+    const row = sums.get(key) ?? { title: '', at: 0, minutes: 0, before: 0, count: 0, done: 0, total: 0, oldestOpen: null };
     row.count++;
+    for (const a of actions.get(`${m.profile}:${m.id}`) ?? []) {
+      row.total++;
+      if (a.status === 'done') row.done++;
+      else row.oldestOpen = Math.min(row.oldestOpen ?? a.updated_at, a.updated_at);
+    }
     if (m.starts_at > row.at) Object.assign(row, { title: m.title ?? title, at: m.starts_at });
     const minutes = Math.min(m.ends_at - m.starts_at, MAX_HOURS * HOUR) / 60_000;
     if (m.starts_at >= now - span) row.minutes += minutes;
@@ -44,11 +57,11 @@ function timeBySeries(meetings: Meeting[], now: number, weeks: number) {
     .filter(([, r]) => r.minutes > 0 && r.count > 1)
     .sort((a, b) => b[1].minutes - a[1].minutes || a[1].title.localeCompare(b[1].title))
     .slice(0, SERIES_LIMIT)
-    .map(([key, r]) => ({ key, title: r.title, minutes: Math.round(r.minutes), change: r.before > 0 ? Math.round(r.minutes - r.before) : null }));
+    .map(([key, r]) => ({ key, title: r.title, minutes: Math.round(r.minutes), change: r.before > 0 ? Math.round(r.minutes - r.before) : null, done: r.done, total: r.total, oldestOpen: r.oldestOpen }));
 }
 
 // Hours in meetings per week (Monday to Sunday, local time, oldest first, current week last) and who I shared the most hours with.
-export function meetingLoad(meetings: Meeting[], now: number, weeks = 4) {
+export function meetingLoad(meetings: Meeting[], now: number, weeks = 4, items: ItemRow[] = []) {
   const starts = Array.from({ length: weeks }, (_, i) => mondayOf(now, weeks - 1 - i));
   const out: LoadWeek[] = starts.map((start) => ({ start, hours: 0, recorded: 0, unrecorded: 0 }));
   const shared = new Map<string, number>();
@@ -64,7 +77,7 @@ export function meetingLoad(meetings: Meeting[], now: number, weeks = 4) {
     for (const p of new Set(peopleOf(m).map(nameOf))) shared.set(p, (shared.get(p) ?? 0) + hours);
   }
   const people = [...shared].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([name, hours]) => ({ name, hours }));
-  return { weeks: out, people, series: timeBySeries(meetings, now, weeks) };
+  return { weeks: out, people, series: timeBySeries(meetings, items, now, weeks) };
 }
 
 // What happened since Monday 00:00 local time: decisions, new current claims, finished tasks, still-open meeting actions and hours in meetings.

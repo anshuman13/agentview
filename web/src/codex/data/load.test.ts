@@ -29,6 +29,13 @@ it('sums hours per local week across the October clock change, caps one meeting 
 
 it('totals minutes per series over four weeks against the four before, skipping all-day events', () => {
   const now = new Date(2026, 9, 29, 12).getTime();
+  const item = (id: string, extra: Partial<ItemRow>) => ({ id, profile: 'work', deleted: 0, meeting_id: 's1', status: 'open', updated_at: now, ...extra }) as ItemRow;
+  const items = [
+    item('a1', { status: 'done' }),
+    item('a2', { updated_at: now - 3 * 86_400_000 }),
+    item('a3', { updated_at: now - 9 * 86_400_000, deleted: 1 }),
+    item('a4', { meeting_id: 's2', updated_at: now - 5 * 86_400_000 }),
+  ];
   const { series } = meetingLoad([
     meeting('s1', new Date(2026, 9, 27, 9), 1, { title: 'Standup #12' }),
     meeting('s2', new Date(2026, 9, 20, 9), 1, { title: 'Standup #11' }),
@@ -39,8 +46,9 @@ it('totals minutes per series over four weeks against the four before, skipping 
     meeting('off', new Date(2026, 9, 26), 24, { title: 'Offsite' }),
     meeting('dst1', new Date(2026, 9, 24), 49, { title: 'Away' }),
     meeting('dst2', new Date(2026, 9, 17, 9), 1, { title: 'Away' }),
-  ], now);
+  ], now, 4, items);
   expect(series.map((s) => [s.title, s.minutes, s.change])).toEqual([['Standup #12', 120, 60], ['Retro', 60, null]]);
+  expect(series.map((s) => [s.done, s.total, s.oldestOpen])).toEqual([[1, 3, now - 5 * 86_400_000], [0, 0, null]]);
 });
 
 it('reviews the local week with decisions, claims, finished tasks and open meeting actions', () => {
