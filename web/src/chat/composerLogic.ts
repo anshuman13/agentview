@@ -1,6 +1,6 @@
 import { match } from '../workspace/FileSwitcher';
 import { toolId } from '../ops/mcpHelpers';
-import { COMPACT_AT, MAX_GOAL_ROUNDS, type Account, type ChatEvent } from '../../../shared/protocol';
+import { COMPACT_AT, MAX_GOAL_ROUNDS, type ChatEvent } from '../../../shared/protocol';
 import { clock, span } from '../../../shared/util';
 
 export type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
@@ -11,7 +11,6 @@ export type Use = { server: string; tool?: string };
 
 export const MAX_ROWS = 8;
 export const MAX_STORED = 50;
-export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Personal', alt: 'Work' };
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
 
 export function triggerAt(text: string, caret: number): Trigger {

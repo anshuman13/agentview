@@ -2,24 +2,29 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Back } from './back';
 import { connect, embedded, getState, presetChat, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../../shared/protocol';
-import { Brief } from '../sessions/Brief';
-import { AgentsBadge, AgentsPane, openAgent } from '../sessions/AgentsPane';
-import { FileSwitcher } from '../workspace/FileSwitcher';
-import { Palette } from './Palette';
+import { AgentsBadge } from '../sessions/AgentsBadge';
+import { openAgent } from '../sessions/agents';
 import { FileIcon } from '../workspace/FileIcon';
 import { ChangesBadge } from '../workspace/gitStatus';
 import { GitHubBadge } from '../ops/pulls';
-import { OpenChats, RepoPicker, Sessions } from '../sessions/Sessions';
 import { Icon } from '../ui/Icon';
 import { command, pressable } from '../ui/util';
 import { haptic } from '../ui/haptic';
 import { useSheetDrag } from '../ui/useSheetDrag';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
-import { AssistantNav, useTodayCount } from '../codex/nav';
 import { Guard } from './Guard';
 import { AppUpdate, CacheItem, McpItem, Offline, Restarting, UsageItem } from './StatusItems';
 
+const Brief = lazy(() => import('../sessions/Brief').then((m) => ({ default: m.Brief })));
+const AgentsPane = lazy(() => import('../sessions/AgentsPane').then((m) => ({ default: m.AgentsPane })));
+const FileSwitcher = lazy(() => import('../workspace/FileSwitcher').then((m) => ({ default: m.FileSwitcher })));
+const Palette = lazy(() => import('./Palette').then((m) => ({ default: m.Palette })));
+const OpenChats = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.OpenChats })));
+const RepoPicker = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.RepoPicker })));
+const Sessions = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.Sessions })));
+const AssistantNav = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantNav })));
+const AssistantBadge = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantBadge })));
 const Assistant = lazy(() => import('../codex/Codex').then((m) => ({ default: m.Assistant })));
 const Explorer = lazy(() => import('../workspace/Explorer').then((m) => ({ default: m.Explorer })));
 const Changes = lazy(() => import('../workspace/Changes').then((m) => ({ default: m.Changes })));
@@ -61,10 +66,6 @@ const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
 const narrow = () => window.innerWidth <= 900;
 const LONG_PRESS = 450;
 
-function AssistantBadge() {
-  const n = useTodayCount();
-  return n > 0 ? <span className="badge">{n}</span> : null;
-}
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 function stored(key: string, fallback: number) {
@@ -317,7 +318,7 @@ export function App() {
         <SwitchedBanner />
         <Restarting />
         <Offline />
-        <div className="body"><section className="main pane center"><Brief /></section></div>
+        <div className="body"><section className="main pane center"><Suspense fallback={<Loading />}><Brief /></Suspense></section></div>
       </div>
     );
   }
@@ -358,7 +359,7 @@ export function App() {
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
             </div>
           )}
-          {view === 'assistant' ? <Guard><AssistantNav /></Guard> : view === 'explorer' ? <Suspense fallback={null}><Explorer /></Suspense> : view === 'changes' ? <Suspense fallback={null}><Changes /></Suspense> : view === 'github' ? <Suspense fallback={null}><GitHub /></Suspense> : view === 'chats' ? <OpenChats /> : <Sessions />}
+          {view === 'assistant' ? <Guard><Suspense fallback={null}><AssistantNav /></Suspense></Guard> : view === 'explorer' ? <Suspense fallback={null}><Explorer /></Suspense> : view === 'changes' ? <Suspense fallback={null}><Changes /></Suspense> : view === 'github' ? <Suspense fallback={null}><GitHub /></Suspense> : view === 'chats' ? <Suspense fallback={null}><OpenChats /></Suspense> : <Suspense fallback={null}><Sessions /></Suspense>}
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
@@ -397,7 +398,7 @@ export function App() {
             </button>
           </div>
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><Suspense fallback={<Loading />}><CodePane /></Suspense></div>
-          <div className={`editor ${active === 'agents' ? 'shown' : ''}`}>{active === 'agents' && <AgentsPane selected={agentSel} onSelect={setAgentSel} />}</div>
+          <div className={`editor ${active === 'agents' ? 'shown' : ''}`}>{active === 'agents' && <Suspense fallback={<Loading />}><AgentsPane selected={agentSel} onSelect={setAgentSel} /></Suspense>}</div>
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <Suspense fallback={<Loading />}><BrowserPane onEmpty={() => setEditor('file')} /></Suspense>}</div>
           {page && (
             <div key={page} className={`editor ${active === page ? 'shown' : ''}`}>
@@ -432,7 +433,7 @@ export function App() {
         <div className="sash desktop-only" onPointerDown={startResize} />
 
         <section className="main pane center">
-          <Brief />
+          <Suspense fallback={<Loading />}><Brief /></Suspense>
         </section>
         {beside && (
           <section className="main pane center beside desktop-only">
@@ -473,7 +474,7 @@ export function App() {
         <button className={tab === 'assistant' && !more ? 'active' : ''} title="Codex. Hold to talk" {...assistantPress}>
           <Icon name="sparkle" />
           <span>Codex</span>
-          <AssistantBadge />
+          <Suspense fallback={null}><AssistantBadge /></Suspense>
         </button>
         <button className={tab === 'chat' && !more ? 'active' : ''} onClick={() => goTab('chat')}>
           <Icon name="comment" />
@@ -545,9 +546,11 @@ export function App() {
         </div>
       )}
 
-      <FileSwitcher />
-      <Palette />
-      {repoPicker && <RepoPicker />}
+      <Suspense fallback={null}>
+        <FileSwitcher />
+        <Palette />
+      </Suspense>
+      {repoPicker && <Suspense fallback={null}><RepoPicker /></Suspense>}
       {phone && <Suspense fallback={null}><ConnectPopover onClose={() => setPhone(false)} /></Suspense>}
       {macs && <MacsPopover onClose={() => setMacs(false)} />}
     </div>

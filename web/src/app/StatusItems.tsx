@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { apiUrl, bundled, useApiBase } from './api';
 import { send, useStore } from './store';
-import { MCP_BAD } from '../../../shared/protocol';
+import { ACCOUNT_LABEL, MCP_BAD } from '../../../shared/protocol';
 import { Icon } from '../ui/Icon';
-import { ACCOUNT_LABEL } from '../chat/composerLogic';
 import { command, weekPace } from '../ui/util';
 import { useShownMcp } from '../ops/mcpShown';
 

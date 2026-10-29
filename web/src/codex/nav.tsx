@@ -55,3 +55,8 @@ export function useTodayCount() {
     return s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
   }, [ready, snap.items, minute]);
 }
+
+export function AssistantBadge() {
+  const n = useTodayCount();
+  return n > 0 ? <span className="badge">{n}</span> : null;
+}

@@ -2,13 +2,11 @@ import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Markdown } from '../chat/Chat';
 import { Row } from '../chat/Transcript';
-import { agentCounts, agentsOf, elapsed, tokens, type Agent } from './agents';
+import { agentCounts, agentsOf, elapsed, openAgent, tokens, type Agent } from './agents';
 import { plural, useTick } from '../ui/util';
 import type { AgentStatus } from '../../../shared/protocol';
 
 const useAgents = () => useStore((s) => agentsOf(s.events));
-
-export const openAgent = (id: string | null = null) => window.dispatchEvent(new CustomEvent('open-agent', { detail: id }));
 
 const STATUS_ICON: Record<AgentStatus, string> = { running: 'loading', done: 'check', failed: 'error', stopped: 'debug-stop' };
 
@@ -25,11 +23,6 @@ export function AgentsChip() {
       <Icon name={running ? 'loading' : 'hubot'} small spin={running > 0} /> <span className="chip-full">{text}</span><span className="chip-short">{short}</span>
     </button>
   );
-}
-
-export function AgentsBadge() {
-  const running = agentCounts(useAgents()).running;
-  return running > 0 ? <span className="badge running">{running}</span> : null;
 }
 
 export function AgentsPane({ selected, onSelect, stack }: { selected: string | null; onSelect: (id: string | null) => void; stack?: boolean }) {

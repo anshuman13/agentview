@@ -8,8 +8,8 @@ import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
 import { apiUrl } from '../app/api';
 import { Hl, wsUrl } from '../ui/util';
-import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
-import { ACCOUNT_LABEL, accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, remember, repeatLabel, repeatPill, loopLabel, terminalId, triggerAt, useLabel, withUses, type Use } from './composerLogic';
+import { ACCOUNT_LABEL, COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
+import { accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, remember, repeatLabel, repeatPill, loopLabel, terminalId, triggerAt, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;

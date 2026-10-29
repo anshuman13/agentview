@@ -91,3 +91,5 @@ export function elapsed(ms: number) {
 }
 
 export const tokens = (n: number) => (n < 1000 ? `${n} tokens` : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k tokens`);
+
+export const openAgent = (id: string | null = null) => window.dispatchEvent(new CustomEvent('open-agent', { detail: id }));
