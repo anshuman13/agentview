@@ -110,10 +110,12 @@ export function UsageItem() {
 export function CacheItem() {
   const cache = useStore((s) => s.session.cache);
   const [now, setNow] = useState(Date.now());
+  const live = Boolean(cache) && cache!.at + cache!.ttlMs > now;
   useEffect(() => {
+    if (!live) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [live]);
   if (!cache) return null;
   const expires = cache.at + cache.ttlMs;
   const left = Math.max(0, Math.round((expires - now) / 1000));
