@@ -1,22 +1,25 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../ui/Icon';
+import { decisionsMarkdown } from '../data/meetingMarkdown';
 import { decisionLog, decisionsWith, peopleOf, type Meeting } from '../data/wiki';
 import { when } from '../time';
-import { setView } from '../view';
+import { setView, showSnack } from '../view';
 
 export function Decisions({ meetings }: { meetings: Meeting[] }) {
   const [person, setPerson] = useState('');
   const log = useMemo(() => decisionLog(meetings), [meetings]);
   const people = useMemo(() => [...new Set(log.flatMap((d) => peopleOf(d.meeting)))].sort((a, b) => a.localeCompare(b)), [log]);
   const rows = decisionsWith(log, person);
+  const copy = () => void navigator.clipboard.writeText(decisionsMarkdown(rows)).then(() => showSnack('Copied'), () => showSnack('Copy failed'));
   return (
     <div className="mt-log">
-      {people.length > 0 && (
+      {(people.length > 0 || rows.length > 0) && (
         <div className="mt-log-bar">
-          <select value={person} aria-label="Filter by person" onChange={(e) => setPerson(e.target.value)}>
+          {people.length > 0 && <select value={person} aria-label="Filter by person" onChange={(e) => setPerson(e.target.value)}>
             <option value="">Everyone</option>
             {people.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
+          </select>}
+          {rows.length > 0 && <button className="icon-btn" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={copy}><Icon name="copy" /></button>}
         </div>
       )}
       {rows.map((d, i) => (

@@ -1,10 +1,11 @@
 import { useAssistantData, useCodex } from '../data';
-import { claimsMentioning, commitmentsOf, meetingsOf, openQuestions, pinsOf } from '../data/wiki';
+import { personMarkdown } from '../data/meetingMarkdown';
+import { claimsMentioning, commitmentsOf, meetingsOf, openQuestions, pinsOf, questionKey } from '../data/wiki';
 import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
-import { setView, useEscapeBack } from '../view';
+import { setView, showSnack, useEscapeBack } from '../view';
 import { Avatars, MeetingRow } from './Meetings';
-import { OpenQuestions } from './OpenQuestions';
+import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
 import '../../styles/features/wiki.css';
 
 export function Person({ name }: { name: string }) {
@@ -20,11 +21,17 @@ export function Person({ name }: { name: string }) {
   const title = new Map(pages.map((p) => [p.id, p.title]));
   const now = Date.now();
   const open = (key: string) => setView({ person: null, list: 'meetings', open: key });
+  const copy = () => {
+    const resolved = resolvedQuestions();
+    const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), pins, meetings: mine, claims });
+    void navigator.clipboard.writeText(text).then(() => showSnack('Copied'), () => showSnack('Copy failed'));
+  };
   return (
     <div className="wk narrow">
       <header className="wk-head">
         <button className="icon-btn" title="Back" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         <nav className="wk-crumbs"><button onClick={back}>Back</button></nav>
+        <button className="icon-btn" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={copy}><Icon name="copy" /></button>
       </header>
       <div className="wk-scroll">
         <article className="mt-page">

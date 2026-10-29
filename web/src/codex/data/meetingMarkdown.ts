@@ -1,6 +1,6 @@
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { listOf, othersOf, peopleOf, type Meeting } from './wiki';
+import { listOf, othersOf, peopleOf, type Decision, type Meeting, type Question } from './wiki';
 
 const mine = (actions: ItemRow[]) => actions.filter((a) => a.status === 'open' || a.status === 'done');
 const ymd = (t: number) => {
@@ -23,6 +23,33 @@ export function toMarkdown(m: Meeting, actions: ItemRow[]) {
   if (m.summary?.trim()) out.push(`## Summary\n\n${m.summary.trim()}`);
   if (decisions.length) out.push(`## Decisions\n\n${decisions.map((d) => `- ${d}`).join('\n')}`);
   if (todo.length) out.push(`## Actions\n\n${todo.map((a) => `- [${a.status === 'done' ? 'x' : ' '}] ${a.title ?? ''}`).join('\n')}`);
+  return out.join('\n\n') + '\n';
+}
+
+export function decisionsMarkdown(rows: Decision[]) {
+  const groups = new Map<Meeting, string[]>();
+  for (const d of rows) groups.set(d.meeting, [...(groups.get(d.meeting) ?? []), d.text]);
+  return [...groups].map(([m, texts]) => `## ${m.title ?? 'Meeting'}${dateOf(m) ? `, ${dateOf(m)}` : ''}\n\n${texts.map((t) => `- ${t}`).join('\n')}`).join('\n\n') + '\n';
+}
+
+export type PersonParts = {
+  commitments: { what: string; meeting: Meeting }[];
+  questions: Question[];
+  pins: ItemRow[];
+  meetings: Meeting[];
+  claims: { text?: string | null }[];
+};
+
+export function personMarkdown(name: string, parts: PersonParts) {
+  const sections: [string, string[]][] = [
+    ['Commitments', parts.commitments.map((c) => `${c.what} (${c.meeting.title ?? 'Meeting'})`)],
+    ['Open questions', parts.questions.map((q) => q.text)],
+    ['Pinned', parts.pins.map((p) => p.text?.trim() || p.title || '')],
+    ['Meetings', parts.meetings.map((m) => `${m.title ?? 'Meeting'}${dateOf(m) ? ` (${dateOf(m)})` : ''}`)],
+    ['In the wiki', parts.claims.map((c) => c.text ?? '')],
+  ];
+  const out = [`# ${name}`];
+  for (const [head, lines] of sections) if (lines.length) out.push(`## ${head}\n\n${lines.map((l) => `- ${l}`).join('\n')}`);
   return out.join('\n\n') + '\n';
 }
 
