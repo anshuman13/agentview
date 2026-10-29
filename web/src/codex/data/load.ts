@@ -16,11 +16,12 @@ const mondayOf = (now: number, back: number) => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7) - 7 * back).getTime();
 };
 
-// All-day calendar events start at local midnight and last whole days.
-const isAllDay = (m: Meeting) => {
-  const d = new Date(m.starts_at!);
-  return (m.ends_at! - m.starts_at!) % DAY === 0 && d.getHours() === 0 && d.getMinutes() === 0;
+// All-day calendar events start and end at local midnight (a day across a clock change is 23 or 25 hours).
+const midnight = (t: number) => {
+  const d = new Date(t);
+  return d.getHours() === 0 && d.getMinutes() === 0;
 };
+const isAllDay = (m: Meeting) => m.ends_at! > m.starts_at! && midnight(m.starts_at!) && midnight(m.ends_at!);
 
 // Minutes per recurring series (a title seen at least twice) over the last `weeks` weeks and the change against the `weeks` before (null when the series is new), most minutes first.
 function timeBySeries(meetings: Meeting[], now: number, weeks: number) {
@@ -34,7 +35,7 @@ function timeBySeries(meetings: Meeting[], now: number, weeks: number) {
     const row = sums.get(key) ?? { title: '', at: 0, minutes: 0, before: 0, count: 0 };
     row.count++;
     if (m.starts_at > row.at) Object.assign(row, { title: m.title ?? title, at: m.starts_at });
-    const minutes = (m.ends_at - m.starts_at) / 60_000;
+    const minutes = Math.min(m.ends_at - m.starts_at, MAX_HOURS * HOUR) / 60_000;
     if (m.starts_at >= now - span) row.minutes += minutes;
     else row.before += minutes;
     sums.set(key, row);
@@ -52,7 +53,7 @@ export function meetingLoad(meetings: Meeting[], now: number, weeks = 4) {
   const out: LoadWeek[] = starts.map((start) => ({ start, hours: 0, recorded: 0, unrecorded: 0 }));
   const shared = new Map<string, number>();
   for (const m of live(meetings)) {
-    if (m.starts_at == null || m.ends_at == null || m.starts_at > now || m.starts_at < starts[0]) continue;
+    if (m.starts_at == null || m.ends_at == null || m.starts_at > now || m.starts_at < starts[0] || isAllDay(m)) continue;
     const at = m.starts_at;
     const week = [...out].reverse().find((w) => w.start <= at);
     if (!week) continue;

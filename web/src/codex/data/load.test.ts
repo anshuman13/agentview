@@ -18,6 +18,7 @@ it('sums hours per local week across the October clock change, caps one meeting 
     meeting('gone', new Date(2026, 9, 28, 9), 1, { deleted: 1 }),
     meeting('open', new Date(2026, 9, 28, 9), 1, { ends_at: null }),
     meeting('old', new Date(2026, 8, 20, 9), 1),
+    meeting('ooo', new Date(2026, 9, 27), 24),
   ], now);
   expect(weeks.map((w) => new Date(w.start).getDate())).toEqual([5, 12, 19, 26]);
   expect(weeks.map((w) => w.hours)).toEqual([0, 0, 1, 10]);
@@ -36,6 +37,8 @@ it('totals minutes per series over four weeks against the four before, skipping 
     meeting('n1', new Date(2026, 9, 21, 9), 0.5, { title: 'Retro' }),
     meeting('r1', new Date(2026, 9, 15, 9), 0.5, { title: 'Retro' }),
     meeting('off', new Date(2026, 9, 26), 24, { title: 'Offsite' }),
+    meeting('dst1', new Date(2026, 9, 24), 49, { title: 'Away' }),
+    meeting('dst2', new Date(2026, 9, 17, 9), 1, { title: 'Away' }),
   ], now);
   expect(series.map((s) => [s.title, s.minutes, s.change])).toEqual([['Standup #12', 120, 60], ['Retro', 60, null]]);
 });
