@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, briefFor, decisionLog, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, briefFor, decisionLog, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -190,6 +190,34 @@ describe('priorWith', () => {
     expect(p.open.map((r) => r.id)).toEqual(['a', 'd']);
   });
 
+});
+
+describe('seriesOf', () => {
+  const mtg = (id: string, title: string, startsAt: number, extra: Partial<Meeting> = {}): Meeting => ({
+    ...common(id), title, starts_at: startsAt, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null, ...extra,
+  });
+  const ids = (m: Meeting, all: Meeting[]) => seriesOf([...all, m], m).map((x) => x.id);
+  const four = 'Ola, Kari, Per, Eva';
+  const cur = mtg('cur', 'Team stand-up #12', 1000, { people: four });
+
+  it('matches titles with dates and numbers stripped, newest first, prior only', () => {
+    const all = [
+      mtg('a', 'Team Stand-up (Oct 22)', 100, { people: four }), mtg('b', 'team stand-up 2026-10-15', 300, { people: four }),
+      mtg('c', 'Team stand-up Oct 8', 200, { people: four }), mtg('x', 'Retro', 400, { people: four }),
+      mtg('later', 'Team stand-up #13', 2000, { people: four }), mtg('gone', 'Team stand-up', 500, { people: four, deleted: 1 }),
+    ];
+    expect(ids(cur, all)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('needs half of the smaller guest list in common', () => {
+    const all = [mtg('half', 'Team stand-up', 100, { people: 'ola, Kari' }), mtg('few', 'Team stand-up', 200, { people: 'Ola, Zed, Max' }), mtg('none', 'Team stand-up', 300)];
+    expect(ids(cur, all)).toEqual(['half']);
+    expect(ids(mtg('bare', 'Weekly', 1000), [mtg('p', 'Weekly #3', 100), mtg('q', 'Weekly', 200, { people: 'Ola' })])).toEqual(['p']);
+  });
+
+  it('excludes the other profile', () => {
+    expect(ids(cur, [mtg('w', 'Team stand-up', 100, { people: four, profile: 'personal' })])).toEqual([]);
+  });
 });
 
 describe('briefFor', () => {

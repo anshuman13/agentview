@@ -285,6 +285,8 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .mt-notes::placeholder { color: var(--fg-faint); }
 .mt-summary { margin: 0; font-family: var(--font-doc); font-size: 16px; line-height: 1.7; color: var(--fg-muted); }
 .mt-pending { margin: 0; font-size: var(--fs-lg); color: var(--fg-faint); font-style: italic; }
+.mt-series { margin: 0 0 var(--sp-4); font-size: var(--fs-md); color: var(--fg-muted); }
+.mt-series-list { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-4); }
 .mt-decisions { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sp-5); }
 .mt-decisions li { position: relative; padding-left: var(--sp-12); font-size: 16px; line-height: 1.5; }
 .mt-decisions li::before { content: ''; position: absolute; left: 2px; top: 0.45em; width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 60%, transparent); }

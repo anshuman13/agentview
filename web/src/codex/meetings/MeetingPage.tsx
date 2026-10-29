@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistant, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
 import { SUMMARY_TEMPLATES, summaryInstructions, type SummaryTemplate } from '../data/summaryTemplates';
 import type { ItemRow } from '../data/sync';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, pinsOf, type Meeting } from '../data/wiki';
+import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, pinsOf, seriesOf, type Meeting } from '../data/wiki';
 import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { Voice, useDictation } from '../../chat/Voice';
@@ -14,6 +14,29 @@ import { AskBar } from '../wiki/Wiki';
 import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars, meetingKey } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
+
+function Series({ m }: { m: Meeting }) {
+  const { snap } = useAssistant();
+  const { meetings } = useCodex();
+  const prior = useMemo(() => seriesOf(meetings, m), [meetings, m]);
+  if (!prior.length) return null;
+  const date = (x: Meeting) => new Date(x.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' });
+  const open = (x: Meeting) => setView({ list: 'meetings', open: meetingKey(x), person: null });
+  const decisions = prior.slice(0, 3).flatMap((x) => listOf(x.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ x, text })));
+  const undone = prior.flatMap((x) => actionsOf(snap.items, x).filter((r) => r.status === 'open').map((r) => ({ x, r })));
+  return (
+    <section className="mt-sec">
+      <h2>Series</h2>
+      <p className="mt-series">{prior.length} earlier, last on {date(prior[0])}</p>
+      {decisions.length > 0 && <div className="mt-series-list">{decisions.map(({ x, text }, i) => (
+        <button key={i} className="mt-log-item" onClick={() => open(x)}><span className="mt-log-text">{text}</span><span className="mt-log-from">Decided {date(x)}</span></button>
+      ))}</div>}
+      {undone.length > 0 && <div className="mt-series-list">{undone.map(({ x, r }) => (
+        <button key={r.profile + r.id} className="mt-log-item" onClick={() => open(x)}><span className="mt-log-text">{r.title || r.text}</span><span className="mt-log-from">Still open from {date(x)}</span></button>
+      ))}</div>}
+    </section>
+  );
+}
 
 const ORDER: Record<string, number> = { open: 0, done: 1 };
 
@@ -281,6 +304,8 @@ export function MeetingPage({ m }: { m: Meeting }) {
               <ul className="mt-decisions">{decisions.map((d) => <li key={d}>{d}</li>)}</ul>
             </section>
           )}
+
+          <Series m={m} />
 
           <section className="mt-sec">
             <h2>My notes</h2>
