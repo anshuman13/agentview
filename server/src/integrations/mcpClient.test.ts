@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { callTool, data, expandDef, listTools, pidOf, stopAll, text } from './mcpClient.js';
 
 const FAKE = `
@@ -67,5 +67,46 @@ describe('expandDef', () => {
     expect(expandDef(def, { HOME: '/h', TOKEN: 't', HOST: 'y.io' })).toEqual({
       command: 'npx', args: ['--db', '/h/db', '${NOPE}'], env: { DB: '/h/db', T: 't' }, url: 'https://y.io/mcp', headers: { auth: 'Bearer t' },
     });
+  });
+});
+
+describe('http transport', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    stopAll('web');
+  });
+
+  const reply = (body: unknown, init: ResponseInit = {}) => new Response(typeof body === 'string' ? body : JSON.stringify(body), init);
+
+  it('starts a new session after the server answers 404 to an expired one', async () => {
+    let inits = 0;
+    let expired = false;
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const m = JSON.parse(init.body as string);
+      if (m.method === 'initialize') {
+        inits++;
+        return reply({ jsonrpc: '2.0', id: m.id, result: { serverInfo: { name: 'web' } } }, { headers: { 'mcp-session-id': `s${inits}`, 'content-type': 'application/json' } });
+      }
+      if (!m.id) return reply('', { status: 202 });
+      if (!expired) {
+        expired = true;
+        return reply('gone', { status: 404 });
+      }
+      return reply({ jsonrpc: '2.0', id: m.id, result: { tools: [{ name: 'a' }] } });
+    });
+    const def = { url: 'http://x.test/mcp' };
+    await expect(listTools('web', def)).rejects.toThrow(/session expired/);
+    expect(await listTools('web', def)).toEqual([{ name: 'a' }]);
+    expect(inits).toBe(2);
+  });
+
+  it('skips SSE data lines that are not JSON', async () => {
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const m = JSON.parse(init.body as string);
+      if (!m.id) return reply('', { status: 202 });
+      const result = m.method === 'initialize' ? {} : { tools: [{ name: 'b' }] };
+      return reply(`data: not json\ndata: ${JSON.stringify({ jsonrpc: '2.0', id: m.id, result })}\n`, { headers: { 'content-type': 'text/event-stream' } });
+    });
+    expect(await listTools('web', { url: 'http://x.test/mcp' })).toEqual([{ name: 'b' }]);
   });
 });

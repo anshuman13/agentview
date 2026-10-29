@@ -45,6 +45,7 @@ class Stdio implements Transport {
     this.proc = spawn(def.command, def.args ?? [], { cwd, env: { ...process.env, ...def.env }, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
     this.proc.stdout!.setEncoding('utf8').on('data', (c: string) => this.onData(c));
     this.proc.stderr!.setEncoding('utf8').on('data', (c: string) => (this.stderr = (this.stderr + c).slice(-4000)));
+    this.proc.stdin!.on('error', (err) => this.die(`${key} stdin failed: ${err.message}`));
     this.proc.on('error', (err) => this.die(`${key} failed to start: ${err.message}`));
     this.proc.on('exit', (code, signal) => this.die(`${key} exited (${code ?? signal})`));
     this.ready = this.request('initialize', INIT, timeout).then((r) => {
@@ -104,7 +105,12 @@ class Stdio implements Transport {
         reject(new Error(`${this.key} ${method} timed out after ${timeout}ms${this.stderr.trim() ? `: ${this.stderr.trim().split('\n').at(-1)}` : ''}`));
       }, timeout);
       this.pending.set(id, { resolve, reject, timer });
-      this.proc.stdin!.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n', (err) => err && reject(err));
+      this.proc.stdin!.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n', (err) => {
+        if (!err) return;
+        clearTimeout(timer);
+        this.pending.delete(id);
+        reject(err);
+      });
     });
   }
 
@@ -138,6 +144,10 @@ class Http implements Transport {
     if (this.session) headers['mcp-session-id'] = this.session;
     try {
       const res = await fetch(this.def.url!, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeout) });
+      if (res.status === 404 && this.session) {
+        this.dead = true;
+        throw new Error(`${this.key} session expired (HTTP 404)`);
+      }
       if (res.status === 401 || res.status === 403) throw new Error(`${this.key} needs login (HTTP ${res.status})`);
       if (!res.ok) throw new Error(`${this.key} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const sid = res.headers.get('mcp-session-id');
@@ -157,8 +167,13 @@ class Http implements Transport {
       : [text];
     for (const p of payloads) {
       if (!p) continue;
-      const msg = JSON.parse(p);
-      if (msg.id !== id) continue;
+      let msg: any;
+      try {
+        msg = JSON.parse(p);
+      } catch {
+        continue;
+      }
+      if (msg?.id !== id) continue;
       if (msg.error) throw new Error(msg.error.message ?? JSON.stringify(msg.error));
       return msg.result;
     }

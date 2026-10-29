@@ -14,6 +14,22 @@ export async function readBody(req: http.IncomingMessage, max = 1_000_000) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+export class BadRequest extends Error {
+  status = 400;
+}
+
+export function parseObject(raw: string): Record<string, any> {
+  if (!raw.trim()) return {};
+  let v: unknown;
+  try {
+    v = JSON.parse(raw);
+  } catch {
+    throw new BadRequest('Request body is not valid JSON');
+  }
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new BadRequest('Request body must be a JSON object');
+  return v as Record<string, any>;
+}
+
 // A frame that is not a JSON object is ignored, so null or a bare number cannot throw in a handler.
 export function parseFrame<T extends object>(raw: unknown): T | null {
   try {

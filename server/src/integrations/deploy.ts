@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { parseObject } from '../http/body.js';
 import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../../shared/protocol.js';
 
 const exec = promisify(execFile);
@@ -204,7 +205,7 @@ export async function deployRoute(cwd: string, method: string, url: URL, body: (
     return job;
   }
   if (method !== 'POST') throw new Error(`Unknown deploy route: ${route}`);
-  const data = JSON.parse(await body());
+  const data = parseObject(await body());
   if (route === 'run') return runDeploy(cwd, data);
   if (route === 'rollback') return rollback(cwd, data);
   throw new Error(`Unknown deploy route: ${route}`);

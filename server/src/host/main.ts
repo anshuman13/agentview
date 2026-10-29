@@ -17,6 +17,7 @@ import { MCP_BAD, type ClientMessage, type LiveChat, type Repeat, type ServerMes
 import { chatCost } from '../../../shared/cost.js';
 import { replyLine, sumEdits } from '../../../shared/edits.js';
 import { sendWhenChanged } from './changed.js';
+import { parseSaved, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
 
@@ -206,7 +207,6 @@ function remember(chat: AgentSession) {
   writeFile(LAST, JSON.stringify({ sessionId, cwd: chat.cwd })).catch(() => {});
 }
 
-type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; queued?: { id: string; text: string }[] };
 // Saved chats not reopened yet; an exit during the restore keeps them for the next one.
 let unrestored: Saved[] = [];
 
@@ -246,7 +246,7 @@ process.on('SIGTERM', saveAndExit);
 process.on('SIGINT', saveAndExit);
 
 async function restore() {
-  const saved: { view?: string; chats: Saved[] } | null = await readFile(RESTORE, 'utf8').then(JSON.parse).catch(() => null);
+  const saved = await readFile(RESTORE, 'utf8').then(parseSaved).catch(() => null);
   if (!saved) return null;
   unrestored = saved.chats.slice();
   await Promise.all(saved.chats.map(async (s) => {
@@ -421,5 +421,8 @@ await new Promise<void>((ok) => {
 console.log(`agent host on ${SOCK} for ${PROJECT}`);
 
 const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
-lastViewed = (await restore()) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
+lastViewed = (await restore().catch((err) => {
+  console.error(`could not restore chats: ${err instanceof Error ? err.message : String(err)}`);
+  return null;
+})) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
 markReady();

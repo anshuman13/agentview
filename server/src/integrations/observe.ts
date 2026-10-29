@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { parseObject } from '../http/body.js';
 import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { ROOTS } from '../workspace/worktrees.js';
 import { inside } from '../../../shared/util.js';
@@ -378,7 +379,7 @@ async function body(req: http.IncomingMessage) {
     raw += chunk;
     if (raw.length > 1_000_000) throw new Error('Request body too large');
   }
-  return raw ? JSON.parse(raw) : {};
+  return parseObject(raw);
 }
 
 export async function observe(req: http.IncomingMessage, url: URL, cwd: string) {

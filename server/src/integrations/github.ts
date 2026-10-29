@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { parseObject } from '../http/body.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
 
 const run = promisify(execFile);
@@ -144,7 +145,7 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     return pr ? detail(cwd, pr) : prDetail(cwd, n);
   }
   if (method !== 'POST') throw new Error(`Unknown GitHub route ${pathname}`);
-  const body = JSON.parse((await readBody()) || '{}');
+  const body = parseObject(await readBody());
   if (action === 'review') {
     const flag = REVIEW[body.event];
     const text = String(body.body ?? '').trim();
