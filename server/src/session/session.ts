@@ -1,17 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { COMPACT_AT, EFFORT_LEVELS, MAX_GOAL_ROUNDS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type LoopState, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
 import { advance, loopOff, needsApproval, planStep, type LoopStep } from './loop.js';
-import { GOAL_USAGE, USAGE, after, describeLoop, goalMet, limitReset, offCommand, parseGoal, parseLoop, roundWord } from './repeat.js';
+import { RepeatController, after, goalMet, limitReset } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { EventIndex, stopAgents } from './events.js';
 
-// A loop goes on after Stop or a CLI exit, with time to type /loop off first.
-const REPEAT_GRACE_MS = 2 * 60_000;
-const MIN_ROUND_MS = 60_000;
 const MAX_EVENTS = 3000;
 // A chat keeps its last few thousand events; the CLI transcript still has everything.
 function trimHistory(events: ChatEvent[]) {
@@ -69,14 +66,18 @@ export class AgentSession implements AgentHost {
   private lastResult = '';
   private loopPrevModel: string | null = null;
   private planDenied = false;
-  private repeatTimer: NodeJS.Timeout | undefined;
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
   private reviewTarget: string | null = null;
-  private repeatDue = false;
-  private roundAt = 0;
   private limitReset: number | null = null;
   private lastError = false;
-  private repeatHeld = false;
+  private repeater = new RepeatController({
+    repeat: () => this.state.session.repeat,
+    running: () => this.state.session.running,
+    closed: () => this.closed,
+    setSession: (patch) => this.setSession(patch),
+    system: (text) => this.system(text),
+    sendPrompt: (text) => this.sendPrompt(text),
+  });
   private orphans = new Set<string>();
   private index = new EventIndex(() => this.state.events);
 
@@ -186,7 +187,7 @@ export class AgentSession implements AgentHost {
 
   close() {
     this.closed = true;
-    clearTimeout(this.repeatTimer);
+    this.repeater.stop();
     this.listeners.clear();
     this.approvals.denyAll();
     this.driver.close();
@@ -371,7 +372,7 @@ export class AgentSession implements AgentHost {
     if (this.turns <= 0) {
       this.turns = 0;
       this.setSession({ running: false, compacting: false });
-      this.deferRepeat();
+      this.repeater.defer();
       return;
     }
     this.setSession({ stopping: true });
@@ -439,67 +440,19 @@ export class AgentSession implements AgentHost {
   }
 
   private loopCommand(text: string, id: string) {
-    const goal = text.trim().startsWith('/goal');
-    const parsed = goal ? parseGoal(text) : parseLoop(text);
-    if (!parsed) return false;
-    this.pushEvent({ id, kind: 'user', text, at: Date.now() });
-    const word = goal ? 'Goal' : 'Loop';
-    if (parsed === 'usage') this.system(goal ? GOAL_USAGE : USAGE);
-    else if (parsed === 'off') this.setRepeat(null, this.state.session.repeat ? `${word} off` : `No ${word.toLowerCase()} is running`);
-    else this.setRepeat(parsed);
-    return true;
+    return this.repeater.command(text, () => this.pushEvent({ id, kind: 'user', text, at: Date.now() }));
   }
 
   setRepeat(r: Repeat | null, note?: string) {
-    clearTimeout(this.repeatTimer);
-    this.repeatDue = false;
-    this.setSession({ repeat: r });
-    if (!r) return this.system(note ?? 'Loop off');
-    this.system(`${r.goal ? 'Goal' : 'Loop'} on, ${describeLoop(r)}`);
-    if (r.nextAt && r.nextAt > Date.now()) this.armRepeat();
-    else this.fireRepeat();
+    this.repeater.set(r, note);
   }
 
-  // A back to back loop never goes idle, so a pending restart holds it; the restarted server resumes it.
   holdRepeat() {
-    this.repeatHeld = true;
-    clearTimeout(this.repeatTimer);
+    this.repeater.hold();
   }
 
   resumeRepeat(r: Repeat) {
-    this.setSession({ repeat: r });
-    this.system(`AgentView restarted, the ${r.goal ? 'goal' : 'loop'} continues ${describeLoop(r)}`);
-    if (!r.nextAt || r.nextAt <= Date.now()) this.fireRepeat();
-    else this.armRepeat();
-  }
-
-  private fireRepeat() {
-    const r = this.state.session.repeat;
-    if (!r || this.repeatHeld) return;
-    if (r.until && Date.now() >= r.until) return this.setRepeat(null, `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`);
-    if (r.goal && r.round >= MAX_GOAL_ROUNDS) return this.setRepeat(null, `Goal not met after ${r.round} checks: ${r.goal}`);
-    if (this.state.session.running) {
-      this.repeatDue = true;
-      return;
-    }
-    // A round that ended within a minute of starting did no work; wait before the next one instead of spinning.
-    if (Date.now() - this.roundAt < MIN_ROUND_MS) return this.deferRepeat(this.roundAt + REPEAT_GRACE_MS);
-    this.repeatDue = false;
-    this.roundAt = Date.now();
-    const round = r.round + 1;
-    this.setSession({ repeat: { ...r, round, nextAt: r.every ? Date.now() + r.every : null } });
-    this.armRepeat();
-    this.system(`${roundWord(r)} ${round}`);
-    this.sendPrompt(r.prompt);
-  }
-
-  private armRepeat() {
-    clearTimeout(this.repeatTimer);
-    const r = this.state.session.repeat;
-    const at = Math.min(r?.nextAt ?? Infinity, r?.until ?? Infinity);
-    // The driver reports its exit after close(); a closed chat must not wake up again.
-    if (!r || at === Infinity || this.closed) return;
-    this.repeatTimer = after(at, () => this.fireRepeat());
+    this.repeater.resume(r);
   }
 
   setLoop(on: boolean, max?: number) {
@@ -663,7 +616,7 @@ export class AgentSession implements AgentHost {
     if (r.ok) this.noteReply(r.text);
     this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now() });
     const goal = this.state.session.repeat;
-    if (goal?.goal && goalMet(this.lastResult)) this.setRepeat(null, `Goal met after ${goal.round} ${goal.round === 1 ? 'check' : 'checks'}: ${goal.goal}`);
+    if (goal?.goal && goalMet(this.lastResult)) this.repeater.set(null, `Goal met after ${goal.round} ${goal.round === 1 ? 'check' : 'checks'}: ${goal.goal}`);
     this.turnEnded();
   }
 
@@ -691,11 +644,11 @@ export class AgentSession implements AgentHost {
     else if (stopped) {
       // Messages typed while the stop was in flight go on in a fresh turn.
       this.dequeue();
-      this.deferRepeat();
-    } else if (idle && this.limitReset && this.state.session.repeat) this.deferRepeat(this.limitReset, 'Usage limit reached, loop round');
+      this.repeater.defer();
+    } else if (idle && this.limitReset && this.state.session.repeat) this.repeater.defer(this.limitReset, 'Usage limit reached, loop round');
     else if (idle && this.limitReset) this.system(`Usage limit reached, resets at ${clock(this.limitReset)}`);
-    else if (idle && this.lastError) this.deferRepeat();
-    else if (idle && (this.repeatDue || this.state.session.repeat?.every === 0)) this.fireRepeat();
+    else if (idle && this.lastError) this.repeater.defer();
+    else if (idle && (this.repeater.due || this.state.session.repeat?.every === 0)) this.repeater.fire();
     this.limitReset = null;
   }
 
@@ -708,19 +661,8 @@ export class AgentSession implements AgentHost {
     this.planChange = null;
     this.approvals.denyAll('Claude exited before this was answered.');
     // Queued messages are not lost with the process; the first one starts a fresh CLI.
-    if (!this.dequeue()) this.deferRepeat();
+    if (!this.dequeue()) this.repeater.defer();
     this.orphan(this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : [])));
-  }
-
-  // A round that failed waits before the next one, so a loop never spins on an error.
-  private deferRepeat(until = Date.now() + REPEAT_GRACE_MS, why?: string) {
-    const r = this.state.session.repeat;
-    if (!r) return;
-    this.repeatDue = false;
-    const nextAt = Math.max(r.nextAt ?? 0, until);
-    this.setSession({ repeat: { ...r, nextAt } });
-    this.armRepeat();
-    this.system(`${why ?? roundWord(r)} ${r.round + 1} at ${clock(nextAt)}, ${offCommand(r)} to end it`);
   }
 
   private followUp() {
