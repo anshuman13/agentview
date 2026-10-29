@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { WebSocket } from 'ws';
+import { parseFrame } from '../http/body.js';
 
 const MAX = 200_000;
 type Term = { id: string; chat: string; name: string; proc: Bun.Subprocess; buf: string; socks: Set<WebSocket> };
@@ -61,12 +62,8 @@ export function attachTerminal(ws: WebSocket, id: string) {
   if (t.buf) ws.send(t.buf);
   t.socks.add(ws);
   ws.on('message', (raw) => {
-    let m: { t: string; d?: string; c?: number; r?: number };
-    try {
-      m = JSON.parse(String(raw));
-    } catch {
-      return;
-    }
+    const m = parseFrame<{ t: string; d?: string; c?: number; r?: number }>(raw);
+    if (!m) return;
     if (m.t === 'i' && typeof m.d === 'string') t.proc.terminal?.write(m.d);
     if (m.t === 'r') {
       const dim = (v: unknown) => Math.min(1000, Math.max(2, Math.floor(Number(v)) || 0));

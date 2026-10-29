@@ -14,6 +14,16 @@ export async function readBody(req: http.IncomingMessage, max = 1_000_000) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+// A frame that is not a JSON object is ignored, so null or a bare number cannot throw in a handler.
+export function parseFrame<T extends object>(raw: unknown): T | null {
+  try {
+    const m: unknown = JSON.parse(String(raw));
+    return m && typeof m === 'object' && !Array.isArray(m) ? (m as T) : null;
+  } catch {
+    return null;
+  }
+}
+
 const PASTES = path.join(os.homedir(), '.agentview', 'pastes');
 export async function savePaste(req: http.IncomingMessage, name: string) {
   const chunks: Buffer[] = [];

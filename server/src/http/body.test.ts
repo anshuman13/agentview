@@ -1,7 +1,7 @@
 import type http from 'node:http';
 import { Readable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
-import { readBody } from './body.js';
+import { parseFrame, readBody } from './body.js';
 
 const req = (chunks: Buffer[]) => Readable.from(chunks) as unknown as http.IncomingMessage;
 
@@ -13,5 +13,12 @@ describe('readBody', () => {
 
   it('refuses a body over the limit', async () => {
     await expect(readBody(req([Buffer.alloc(6)]), 5)).rejects.toThrow('too large');
+  });
+});
+
+describe('parseFrame', () => {
+  it('returns objects and ignores anything else', () => {
+    expect(parseFrame('{"t":"i","d":"ls"}')).toEqual({ t: 'i', d: 'ls' });
+    for (const raw of ['null', '5', '"x"', '[1]', '{bad']) expect(parseFrame(raw)).toBeNull();
   });
 });
