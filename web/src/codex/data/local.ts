@@ -1,14 +1,12 @@
 import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch } from './store';
 import { edited, errorText, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
+import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
 import { showSnack } from '../view';
 
-const PATCHABLE = ['title', 'text', 'status', 'at', 'rolls', 'rolled_from', 'rank', 'deleted'] as const;
-
 type Invoke = <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
-type SqlValue = string | number | null;
 
 declare global {
   interface Window {
@@ -45,22 +43,6 @@ const table = (name: string) => `
 const SCHEMA = `${['items', ...WIKI_TABLES].map(table).join('\n')}
   CREATE TABLE IF NOT EXISTS sync_state (key TEXT PRIMARY KEY, value TEXT);
 `;
-
-// SQL that writes row only if local is unchanged since it was read; it changes nothing when another write came first.
-const swapSQL = (name: string, row: SyncRow, local: SyncRow | undefined) => {
-  const cols = ['version', 'updated_at', 'deleted', 'field_times', ...TABLE_FIELDS[name], 'dirty'];
-  const r = row as unknown as Record<string, SqlValue>;
-  const values = cols.map((c) => r[c] ?? null);
-  return local
-    ? {
-      sql: `UPDATE ${name} SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE profile = ? AND id = ? AND updated_at = ? AND field_times = ?`,
-      params: [...values, row.profile, row.id, local.updated_at, local.field_times],
-    }
-    : {
-      sql: `INSERT OR IGNORE INTO ${name} (${cols.join(', ')}, profile, id) VALUES (${Array(cols.length + 2).fill('?').join(', ')})`,
-      params: [...values, row.profile, row.id],
-    };
-};
 
 async function post(since: number, changes: Change[]): Promise<Reply> {
   const resp = await fetch(`${HUB}/sync`, {
@@ -156,7 +138,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
   protected async refresh() {
     if (!this.ready) return;
     const n = ++this.refreshes;
-    const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND (IFNULL(status, '') != 'done' OR updated_at > ?)`, [Date.now() - 60 * 86400_000]);
+    const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND (IFNULL(status, '') != 'done' OR updated_at > ?)`, [doneCutoff(Date.now())]);
     const all = <K extends Table>(t: K) => this.query<Tables[K]>(`SELECT * FROM ${t} WHERE deleted = 0`);
     const [pages, facts, meetings, actions, jobs, runs, chats, briefs] = await Promise.all([all('pages'), all('facts'), all('meetings'), all('actions'), all('jobs'), all('runs'), all('chats'), all('briefs')]);
     if (this.ready && n === this.refreshes) this.set({ items, pages, facts, meetings, actions, jobs, runs, chats, briefs });
@@ -215,7 +197,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
     await this.exec(
       `INSERT INTO items (id, profile, version, updated_at, deleted, field_times, title, text, source, people, at, status, meeting_id, dirty)
        VALUES (?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [r.id, r.profile, r.updated_at, r.field_times, r.title, r.text, r.source, r.people, r.at, r.status, r.meeting_id],
+      captureParams(r),
     );
     await this.refresh();
     this.syncNow();
@@ -237,11 +219,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
   }
 
   update = (row: ItemRow, patch: Patch) => {
-    const keys = PATCHABLE.filter((k) => k in patch);
-    if (!keys.length) return Promise.resolve();
-    const sets = keys.map((k) => `${k} = ?`).join(', ');
-    const times = keys.map((k) => `'$.${k}', ?`).join(', ');
-    return this.edit(row, `${sets}, field_times = json_set(field_times, ${times})`, (now) => [...keys.map((k) => patch[k] ?? null), ...keys.map(() => now)]);
+    const p = patchSQL(patch);
+    return p ? this.edit(row, p.sql, p.params) : Promise.resolve();
   };
 
   move = async (row: ItemRow, profile: Profile) => {
