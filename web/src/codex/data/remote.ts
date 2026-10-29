@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch } from './store';
+import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot } from './store';
 import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
@@ -19,6 +19,10 @@ async function hub<T = Reply>(path: string, body?: unknown, init?: RequestInit):
 const keyOf = (row: Pick<SyncRow, 'profile' | 'id'>) => `${row.profile}:${row.id}`;
 
 type Cached = { since: number; tables: Record<string, SyncRow[]> };
+
+const META_KEY = 'meta';
+const LEGACY_KEY = 'snapshot';
+const tableKey = (table: string) => `table:${table}`;
 
 // The browser keeps the rows and the hub version in IndexedDB, so a reload pulls only rows changed since.
 let dbOpen: Promise<IDBDatabase> | undefined;
@@ -53,7 +57,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   private since = 0;
   private loaded = this.load();
   private saving: Promise<void> = Promise.resolve();
-  private savePending = false;
+  private unsaved = new Set<string>();
+  private syncTouched = new Set<string>();
   private timer: ReturnType<typeof setInterval>;
   private onVisible = () => document.visibilityState === 'visible' && this.syncNow();
 
@@ -75,23 +80,40 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   private async load() {
-    const cached = await cacheOp<Cached | undefined>('readonly', (s) => s.get('snapshot')).catch(() => undefined);
+    const read = <T>(key: string) => cacheOp<T | undefined>('readonly', (s) => s.get(key)).catch(() => undefined);
+    const meta = await read<{ since: number }>(META_KEY);
+    let cached: Cached | undefined;
+    if (meta) {
+      cached = { since: meta.since, tables: {} };
+      for (const table of Object.keys(this.tables)) cached.tables[table] = (await read<SyncRow[]>(tableKey(table))) ?? [];
+    } else {
+      cached = await read<Cached>(LEGACY_KEY);
+    }
     if (!cached) return;
     for (const [table, rows] of Object.entries(cached.tables)) {
       const map = this.tables[table];
       if (map) for (const row of rows) if (!map.has(keyOf(row))) map.set(keyOf(row), row);
     }
     this.since = cached.since;
-    await this.refresh();
+    if (!meta) {
+      this.save(Object.keys(this.tables));
+      this.saving = this.saving.then(() => cacheOp('readwrite', (s) => s.delete(LEGACY_KEY)).then(() => {}, () => {}));
+    }
+    await this.refresh(Object.keys(this.tables));
   }
 
-  private save() {
-    if (this.savePending) return;
-    this.savePending = true;
-    this.saving = this.saving.then(() => {
-      this.savePending = false;
-      const cached: Cached = { since: this.since, tables: Object.fromEntries(Object.entries(this.tables).map(([t, m]) => [t, [...m.values()]])) };
-      return cacheOp('readwrite', (s) => s.put(cached, 'snapshot')).then(() => {}, () => {});
+  private save(tables: string[]) {
+    const pending = this.unsaved.size > 0;
+    tables.forEach((t) => this.unsaved.add(t));
+    if (pending) return;
+    this.saving = this.saving.then(async () => {
+      const names = [...this.unsaved];
+      this.unsaved.clear();
+      const write = (key: string, value: unknown) => cacheOp('readwrite', (s) => s.put(value, key));
+      try {
+        for (const table of names) await write(tableKey(table), [...this.tables[table].values()]);
+        await write(META_KEY, { since: this.since });
+      } catch {}
     });
   }
 
@@ -99,9 +121,10 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     await this.syncNow();
   }
 
-  protected async refresh() {
-    const all = <K extends Table>(t: K) => [...this.tables[t].values()] as Tables[K][];
-    this.set({ items: [...this.rows.values()], pages: all('pages'), facts: all('facts'), meetings: all('meetings'), actions: all('actions'), jobs: all('jobs'), runs: all('runs'), chats: all('chats'), briefs: all('briefs') });
+  protected async refresh(tables?: string[]) {
+    const names = tables ?? [...this.syncTouched];
+    this.syncTouched.clear();
+    if (names.length) this.set(Object.fromEntries(names.map((t) => [t, [...this.tables[t].values()]])) as Partial<Snapshot>);
   }
 
   // Wiki rows are pushed only once the hub has sent some, so a hub without the tables is never asked to store them.
@@ -123,21 +146,25 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       clean: async ({ table, row }) => {
         const map = this.tables[table];
         const now = map.get(keyOf(row));
-        if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) map.set(keyOf(row), { ...now, dirty: 0 });
+        if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) {
+          map.set(keyOf(row), { ...now, dirty: 0 });
+          this.syncTouched.add(table);
+        }
       },
       apply: async (change: PulledChange) => {
         const map = this.tables[change.table];
         map.set(keyOf(change), toRow(mergeIncoming<SyncRow>(map.get(keyOf(change)) ?? null, change)));
+        this.syncTouched.add(change.table);
       },
     });
-    if (changed) this.save();
+    if (changed) this.save([...this.syncTouched]);
     return changed;
   }
 
   private put(table: string, row: SyncRow) {
     this.tables[table].set(keyOf(row), row);
-    this.save();
-    this.refresh();
+    this.save([table]);
+    this.refresh([table]);
     this.syncNow();
   }
 

@@ -64,9 +64,9 @@ export abstract class BaseStore {
   // Wiki and meeting rows stay in memory until their sync lands; an edit to a row not held yet adds it.
   editRow = async <K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>) => {
     const rows = this.snap[table] as Tables[K][];
-    const same = (r: Tables[K]) => r.profile === row.profile && r.id === row.id;
-    const next = edited(rows.find(same) ?? row, patch, Date.now());
-    this.set({ [table]: rows.some(same) ? rows.map((r) => (same(r) ? next : r)) : [...rows, next] } as Partial<Snapshot>);
+    const at = rows.findIndex((r) => r.profile === row.profile && r.id === row.id);
+    const next = edited(at < 0 ? row : rows[at], patch, Date.now());
+    this.set({ [table]: at < 0 ? [...rows, next] : rows.map((r, i) => (i === at ? next : r)) } as Partial<Snapshot>);
   };
 
   // Resolves true when it pushed or pulled any row.

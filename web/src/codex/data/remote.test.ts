@@ -19,7 +19,8 @@ function fakeIndexedDb(delays: number[]) {
   const stored = new Map<string, unknown>();
   const objectStore = {
     get: (key: string) => request(() => stored.get(key), 0),
-    put: (value: unknown, key: string) => request(() => void stored.set(key, value), delays.shift() ?? 0),
+    put: (value: unknown, key: string) => request(() => void stored.set(key, structuredClone(value)), delays.shift() ?? 0),
+    delete: (key: string) => request(() => void stored.delete(key), 0),
   };
   const db = { transaction: () => ({ objectStore: () => objectStore }) };
   vi.stubGlobal('indexedDB', {
@@ -61,19 +62,95 @@ describe('RemoteStore.dispose', () => {
   });
 });
 
+type Internal = { since: number; save(tables: string[]): void; saving: Promise<void>; tables: Record<string, Map<string, any>> };
+
+const taskRow = (id: string) => ({ profile: 'work', id, version: 1, dirty: 0, updated_at: 1, field_times: '{}', title: id, status: 'open', deleted: 0 });
+
 describe('RemoteStore save', () => {
-  it('keeps the latest snapshot when an earlier write is slower', async () => {
+  it('keeps the latest since when an earlier write is slower', async () => {
     const stored = fakeIndexedDb([30, 0]);
     fakeDom();
     const store = await freshStore();
-    const internal = store as unknown as { since: number; save(): void; saving: Promise<void> };
+    const internal = store as unknown as Internal;
     internal.since = 1;
-    internal.save();
+    internal.save([]);
     await new Promise((r) => setTimeout(r, 5));
     internal.since = 2;
-    internal.save();
+    internal.save([]);
     await internal.saving;
-    expect((stored.get('snapshot') as { since: number }).since).toBe(2);
+    expect((stored.get('meta') as { since: number }).since).toBe(2);
+    store.dispose();
+  });
+
+  it('writes only the changed table', async () => {
+    const stored = fakeIndexedDb([]);
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal;
+    await internal.saving;
+    stored.clear();
+    await store.capture('one', 'task', 'work');
+    await internal.saving;
+    expect([...stored.keys()].sort()).toEqual(['meta', 'table:items']);
+    store.dispose();
+  });
+
+  it('reads the old single-key layout once and migrates it', async () => {
+    const stored = fakeIndexedDb([]);
+    stored.set('snapshot', { since: 7, tables: { items: [taskRow('a')], meetings: [{ ...taskRow('m'), title: 'x' }] } });
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void> };
+    await internal.loaded;
+    await internal.saving;
+    expect(store.snapshot().items.map((r) => r.id)).toEqual(['a']);
+    expect(store.snapshot().meetings).toHaveLength(1);
+    expect(stored.has('snapshot')).toBe(false);
+    expect((stored.get('meta') as { since: number }).since).toBe(7);
+    expect(stored.get('table:items')).toHaveLength(1);
+    store.dispose();
+  });
+});
+
+describe('RemoteStore refresh', () => {
+  it('keeps the identity of unchanged tables after a task edit', async () => {
+    fakeIndexedDb([]);
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void> };
+    await internal.loaded;
+    internal.tables.meetings.set('work:m', { ...taskRow('m'), transcript: 'x' });
+    internal.tables.facts.set('work:f', taskRow('f'));
+    await (store as any).refresh(['meetings', 'facts']);
+    const before = store.snapshot();
+    const row = await store.capture('one', 'task', 'work');
+    await store.update(row, { title: 'two' });
+    const after = store.snapshot();
+    expect(after.items).not.toBe(before.items);
+    expect(after.items[0].title).toBe('two');
+    expect(after.meetings).toBe(before.meetings);
+    expect(after.facts).toBe(before.facts);
+    store.dispose();
+  });
+});
+
+describe('RemoteStore timing', () => {
+  it.skipIf(!process.env.TIME_PUT)('put() with 500 large meetings and 2000 items', async () => {
+    fakeIndexedDb([]);
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void> };
+    await internal.loaded;
+    const text = 'x'.repeat(30000);
+    for (let i = 0; i < 500; i++) internal.tables.meetings.set(`work:m${i}`, { ...taskRow(`m${i}`), transcript: text });
+    for (let i = 0; i < 2000; i++) internal.tables.items.set(`work:i${i}`, taskRow(`i${i}`));
+    const row = internal.tables.items.get('work:i0');
+    const t0 = performance.now();
+    for (let i = 0; i < 50; i++) {
+      await store.update(row, { title: `t${i}` });
+      await internal.saving;
+    }
+    console.log(`put+save avg ms: ${((performance.now() - t0) / 50).toFixed(2)}`);
     store.dispose();
   });
 });
