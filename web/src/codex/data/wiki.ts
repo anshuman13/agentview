@@ -316,9 +316,17 @@ export const othersOf = (m: Meeting) => {
   return (Array.isArray(v) ? v : []).filter((o): o is { who: string; what: string } => typeof o?.who === 'string' && typeof o?.what === 'string');
 };
 
+const attendees = new WeakMap<Meeting, string[]>();
+
+// Cached per meeting row; callers must not mutate the result.
 export const peopleOf = (m: Meeting) => {
-  const s = typeof m.people === 'string' ? m.people : '';
-  return (s.startsWith('[') ? listOf(s) : s.split(',')).map((p) => p.trim()).filter(Boolean);
+  let people = attendees.get(m);
+  if (!people) {
+    const s = typeof m.people === 'string' ? m.people : '';
+    people = (s.startsWith('[') ? listOf(s) : s.split(',')).map((p) => p.trim()).filter(Boolean);
+    attendees.set(m, people);
+  }
+  return people;
 };
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -367,14 +375,24 @@ const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.
 const SERIES_NOISE = new RegExp(`\\([^)]*\\d[^)]*\\)|\\d{4}-\\d{2}-\\d{2}|\\b${MONTH}\\s*\\d{1,2}\\b|\\b\\d{1,2}\\s*${MONTH}|#\\s*\\d+|\\b\\d+\\b`, 'g');
 export const seriesTitle = (t: string | null) => (t ?? '').toLowerCase().replace(SERIES_NOISE, ' ').replace(/\s+/g, ' ').trim();
 
+const seriesTitles = new WeakMap<Meeting, string>();
+const seriesTitleOf = (m: Meeting) => {
+  let title = seriesTitles.get(m);
+  if (title === undefined) {
+    title = seriesTitle(m.title);
+    seriesTitles.set(m, title);
+  }
+  return title;
+};
+
 // Earlier meetings of the same recurring series: equal title once dates and numbers are stripped, and at least half of the smaller guest list in common. Newest first.
 export function seriesOf(meetings: Meeting[], m: Meeting) {
-  const title = seriesTitle(m.title);
+  const title = seriesTitleOf(m);
   const people = peopleOf(m);
   if (!title || m.starts_at == null) return [];
   return live(meetings)
     .filter((x) => {
-      if (x.profile !== m.profile || x.id === m.id || x.starts_at == null || x.starts_at >= m.starts_at! || seriesTitle(x.title) !== title) return false;
+      if (x.profile !== m.profile || x.id === m.id || x.starts_at == null || x.starts_at >= m.starts_at! || seriesTitleOf(x) !== title) return false;
       const other = peopleOf(x);
       if (!people.length || !other.length) return people.length === other.length;
       return people.filter((p) => other.some((q) => sameName(p, q))).length * 2 >= Math.min(people.length, other.length);

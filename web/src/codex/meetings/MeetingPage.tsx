@@ -15,10 +15,8 @@ import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars, meetingKey } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
 
-function Series({ m }: { m: Meeting }) {
+function Series({ prior }: { prior: Meeting[] }) {
   const snap = useAssistantData();
-  const { meetings } = useCodex();
-  const prior = useMemo(() => seriesOf(meetings, m), [meetings, m]);
   if (!prior.length) return null;
   const date = (x: Meeting) => new Date(x.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' });
   const open = (x: Meeting) => setView({ list: 'meetings', open: meetingKey(x), person: null });
@@ -119,8 +117,8 @@ function Notes({ m }: { m: Meeting }) {
   );
 }
 
-function SummaryFormat({ m }: { m: Meeting }) {
-  const { store, meetings } = useCodex();
+function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
+  const { store } = useCodex();
   const [busy, setBusy] = useState(false);
   if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
   const choose = async (key: SummaryTemplate) => {
@@ -135,7 +133,7 @@ function SummaryFormat({ m }: { m: Meeting }) {
       setBusy(false);
     }
   };
-  const suggested = templateFor(m, seriesOf(meetings, m));
+  const suggested = templateFor(m, series);
   return (
     <select className="mt-sync" value="" disabled={busy} aria-label="Summary format" title="Summary format" onChange={(e) => void choose(e.target.value as SummaryTemplate)}>
       <option value="" disabled>{busy ? 'Rewriting' : 'Summary format'}</option>
@@ -238,6 +236,8 @@ function CopyButtons({ m, actions }: { m: Meeting; actions: ItemRow[] }) {
 export function MeetingPage({ m }: { m: Meeting }) {
   const store = useAssistantStore();
   const snap = useAssistantData();
+  const { meetings } = useCodex();
+  const prior = useMemo(() => seriesOf(meetings, m), [meetings, m]);
   const all = actionsOf(snap.items, m);
   const by = (st: string) => all.filter((r) => r.status === st);
   const mine = all.filter((r) => r.status === 'open' || r.status === 'done').sort((a, b) => (ORDER[a.status ?? ''] ?? 2) - (ORDER[b.status ?? ''] ?? 2) || a.updated_at - b.updated_at);
@@ -291,7 +291,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           )}
 
           <section className="mt-sec">
-            <h2><Icon name="sparkle" small /> Summary{m.summary && <SummaryFormat m={m} />}</h2>
+            <h2><Icon name="sparkle" small /> Summary{m.summary && <SummaryFormat m={m} series={prior} />}</h2>
             {m.summary ? <PinnableSummary m={m} /> : <p className="mt-pending">{state === 'missing' ? 'No summary without a transcript.' : 'Written from the transcript after the meeting.'}</p>}
           </section>
 
@@ -309,7 +309,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
             </section>
           )}
 
-          <Series m={m} />
+          <Series prior={prior} />
 
           <section className="mt-sec">
             <h2>My notes</h2>
