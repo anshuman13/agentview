@@ -148,7 +148,7 @@ export const isQuestion = (text: string) => /\?\s*$/.test(text) || ASK_RE.test(t
 // Calendar rows were tasks before meetings had their own table; they stay hidden.
 const isCalendar = (r: ItemRow) => r.source === 'calendar';
 const statusTimes = new WeakMap<ItemRow, number>();
-const statusTime = (r: ItemRow) => {
+export const statusTime = (r: ItemRow) => {
   let t = statusTimes.get(r);
   if (t === undefined) statusTimes.set(r, t = parseTimes(r.field_times).status ?? r.updated_at);
   return t;
