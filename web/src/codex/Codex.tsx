@@ -54,7 +54,9 @@ function SnackBar() {
 const UPCOMING_DAYS = 7;
 
 type Day = { key: string; label: string; day: number | null; rows: ItemRow[] };
-const ranked = (rs: ItemRow[]) => [...rs].sort((a, b) => (a.rank ?? 1e15) - (b.rank ?? 1e15));
+// Rows keep the order they were dragged into; the rest follow by due time.
+const ranked = (rs: ItemRow[]) => [...rs].sort((a, b) => (a.rank ?? 1e15) - (b.rank ?? 1e15) || (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0));
+const matches = (r: ItemRow, q: string) => [r.title, r.text, r.people].some((x) => x?.toLowerCase().includes(q));
 const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
 
 // The time on the new day keeps the time of day; a task with no time stays untimed today and gets 09:00 on another day.
@@ -77,6 +79,19 @@ export function Assistant() {
   const [olderOpen, setOlderOpen] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
   const [calError, setCalError] = useState('');
+  const [query, setQuery] = useState<string | null>(null);
+  // / on Tasks opens the search when nothing else has focus.
+  useEffect(() => {
+    if (list !== 'tasks') return setQuery(null);
+    const key = (e: KeyboardEvent) => {
+      const at = document.activeElement;
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || (at && at !== document.body && !at.matches('[data-row]'))) return;
+      e.preventDefault();
+      setQuery((q) => q ?? '');
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [list]);
   const scroller = useRef<HTMLDivElement>(null);
   const act = useActions();
   const { drag, start } = useDrag<ItemRow>((row, d) => dropRow(row, d), scroller);
@@ -207,6 +222,12 @@ export function Assistant() {
   const older = s.review.filter((r) => now - reviewedSince(r) >= DAY);
   const empty = !s.overdue.length && days.every((d) => !d.rows.length) && !s.review.length;
   const nextLater = s.nextLater;
+  // Overdue tasks move to today at the same time of day, with one undo for all of them.
+  const moveOverdue = () => {
+    const moved = s.overdue.map((r) => ({ r, before: { at: r.at, rolls: r.rolls, rolled_from: r.rolled_from } as Patch, at: moveTo(r, startOfDay, startOfDay) }));
+    for (const m of moved) if (m.at !== undefined) act.edit(m.r, { at: m.at, ...UNROLL });
+    showSnack(`Moved ${moved.length} to Today`, () => moved.forEach((m) => act.edit(m.r, m.before)));
+  };
 
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
@@ -215,6 +236,7 @@ export function Assistant() {
         <div className="as-title-wrap">
           <h1>{heading}</h1>
         </div>
+        {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
         {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}
       </header>
       {sync.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> {status}. Your changes are kept on this device.</button>}
@@ -223,11 +245,29 @@ export function Assistant() {
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>
         {list === 'today' && <Overview s={s} dueToday={dueToday} onPrep={() => ask(askText(prepText(s.next!), snap.items))} />}
-        {list === 'tasks' && (
+        {list === 'tasks' && query != null && (
+          <div className="as-search">
+            <Icon name="search" />
+            <input autoFocus value={query} placeholder="Search tasks" aria-label="Search tasks" enterKeyHint="search" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery(null)} />
+            <button className="icon-btn" title="Close search" aria-label="Close search" onClick={() => setQuery(null)}><Icon name="close" /></button>
+          </div>
+        )}
+        {list === 'tasks' && query?.trim() && (() => {
+          const q = query.trim().toLowerCase();
+          const seen = new Set<string>();
+          const found = [...s.overdue, ...days.flatMap((d) => d.rows), ...s.review, ...s.doneToday].filter((r) => matches(r, q) && !seen.has(r.profile + r.id) && seen.add(r.profile + r.id));
+          return (
+            <section>
+              <div className="as-section">Results <span>{found.length}</span></div>
+              {found.length ? rows(found, undefined, false) : <div className="as-empty muted small">No task matches.</div>}
+            </section>
+          );
+        })()}
+        {list === 'tasks' && !query?.trim() && (
           <>
             {s.overdue.length > 0 && (
               <section>
-                <div className="as-section late">Overdue <span>{s.overdue.length}</span></div>
+                <div className="as-section late">Overdue <span>{s.overdue.length}</span><button className="as-section-btn" onClick={moveOverdue}>Move to today</button></div>
                 {rows(s.overdue, 'overdue', false)}
               </section>
             )}

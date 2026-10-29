@@ -254,6 +254,11 @@ a.as-chip { text-decoration: none; }
 .tasks .as-drop-line { margin-left: 52px; }
 .tasks .as-list > .as-edit { margin: 0; border: 0; border-radius: 0; box-shadow: none; background: var(--hover); padding: var(--sp-5) var(--sp-5) var(--sp-6) var(--sp-4); }
 .tasks .as-list > .as-edit:not(:last-child) { border-bottom: 1px solid var(--border); }
+.as-search { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-4); padding: 0 var(--sp-2) 0 var(--sp-5); min-height: 44px; border: 1px solid var(--border-card); border-radius: 12px; background: var(--surface); color: var(--fg-muted); }
+.as-search input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); box-shadow: none; }
+.as-search input:focus { outline: none; box-shadow: none; }
+.as-section-btn { margin-left: auto; padding: var(--sp-2) var(--sp-3); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--accent-text); font: inherit; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+@media (hover: hover) { .as-section-btn:hover { background: var(--hover); } }
 .as-add { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 44px; margin-top: var(--sp-2); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); font: inherit; font-size: var(--fs-md); cursor: pointer; text-align: left; }
 @media (hover: hover) { button.as-add:hover { color: var(--accent-text); } }
 .as-add.on { color: var(--accent-text); background: var(--surface); border: 1px solid var(--border-card); cursor: text; }
