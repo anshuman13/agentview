@@ -1,5 +1,5 @@
 import { match } from '../workspace/FileSwitcher';
-import { toolId } from '../ops/McpStatus';
+import { toolId } from '../ops/mcpHelpers';
 import { COMPACT_AT, MAX_GOAL_ROUNDS, type Account, type ChatEvent } from '../../../shared/protocol';
 import { clock, span } from '../../../shared/util';
 

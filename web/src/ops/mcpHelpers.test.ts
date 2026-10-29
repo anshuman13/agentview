@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, toolId } from './McpStatus';
+import { accountGroup, argsOf, brief, fieldsOf, initialValues, kindOf, mcpCalls, merge, needsYou, plural, services, shortName, splitName, stateOf, toolId, usageText } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -61,5 +61,46 @@ describe('services', () => {
       ['claude.ai Notes', 'Connectors', ['']],
       ['metrics', 'Tools', ['']],
     ]);
+  });
+});
+
+describe('status helpers', () => {
+  it('flags failed servers and live logins as needing you', () => {
+    expect(needsYou({ status: 'failed' })).toBe(true);
+    expect(needsYou({ status: 'needs-auth', live: true })).toBe(true);
+    expect(needsYou({ status: 'needs-auth' })).toBe(false);
+  });
+
+  it('labels an unloaded connector without an account as OAuth via Claude', () => {
+    expect(stateOf({ status: 'needs-auth' })).toEqual(['off', 'OAuth via Claude']);
+    expect(stateOf({ status: 'connected' })).toEqual(['ok', 'Connected']);
+    expect(stateOf({ status: 'odd' })).toEqual(['off', 'odd']);
+  });
+});
+
+describe('name helpers', () => {
+  it('splits a server name into service and variant', () => {
+    expect(splitName('billing_se-prod')).toEqual(['billing', 'se-prod']);
+    expect(splitName('metrics')).toEqual(['metrics', '']);
+  });
+
+  it('classifies servers by tools, command and type', () => {
+    expect(kindOf({ name: 'a', status: 'connected', tools: [{ name: 'run_query' }] })).toBe('Databases');
+    expect(kindOf({ name: 'a', status: 'connected', type: 'claudeai' })).toBe('Connectors');
+    expect(kindOf({ name: 'a', status: 'connected' })).toBe('Tools');
+  });
+
+  it('maps accounts to groups and shortens connector names', () => {
+    expect(accountGroup('alt')).toBe('work');
+    expect(accountGroup('main')).toBe('personal');
+    expect(shortName('claude.ai Notes')).toBe('Notes');
+  });
+});
+
+describe('usage text', () => {
+  it('pluralizes counts and summarizes inputs', () => {
+    expect(plural(1, 'call')).toBe('1 call');
+    expect(usageText({ calls: [{}, {}] as never, errors: 1 })).toBe('2 calls · 1 error');
+    expect(brief({ q: 'a\nb', n: 2 })).toBe('q: a b, n: 2');
   });
 });

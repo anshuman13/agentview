@@ -4,7 +4,7 @@ import { Icon } from '../ui/Icon';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
 import { FileIcon } from '../workspace/FileIcon';
-import { toolId } from '../ops/McpStatus';
+import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
 import { apiUrl } from '../app/api';
 import { Hl, wsUrl } from '../ui/util';
