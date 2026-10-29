@@ -9,7 +9,7 @@
 - **Side chat**: the split icon on a chat row in the Sessions view opens that chat in a second column with its
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
 - **Codex** (top of the activity bar): Overview, Tasks, Meetings, Jobs and Wiki, filtered by work or
-  personal profile. Overview lists the meetings still ahead today, overdue and due tasks with a check to mark them done, what the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it), job reports and a follow-through card for meeting actions still open
+  personal profile. Overview lists meetings that ended in the last two hours with their actions, a follow-up draft to copy and the notes, the meetings still ahead today, overdue and due tasks with a check to mark them done, what the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it), job reports and a follow-through card for meeting actions still open
   after a week, and a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed. Meetings imports the calendar every half hour and shows notes, summary, decisions, actions, pinned
   text and earlier meetings of the same series, with decisions made and questions asked again; the page copies as Markdown or as a follow-up draft, an action copies as a message, and the summary format suggests the
   template last used for the series. The page of an upcoming meeting has a prep card. The header has a decision log filtered by person, a Load view (hours per week, share

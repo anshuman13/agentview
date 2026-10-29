@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
-import { followThrough, type Meeting } from './data/wiki';
+import { actionsOf, followThrough, type Meeting } from './data/wiki';
+import { followUpText } from './data/meetingMarkdown';
 import { sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';
 import { resolvedQuestions } from './meetings/OpenQuestions';
@@ -120,6 +121,30 @@ function FollowThrough() {
   );
 }
 
+const JUST_ENDED_MS = 2 * 3600_000;
+
+// Meetings that ended in the last two hours, with their actions, a follow-up draft to copy and the notes.
+function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
+  const snap = useAssistantData();
+  const ended = meetings.filter((m) => m.ends_at != null && m.ends_at <= now && now - m.ends_at < JUST_ENDED_MS);
+  if (!ended.length) return null;
+  return ended.map((m) => {
+    const actions = actionsOf(snap.items, m).filter((r) => r.status === 'open' || r.status === 'suggested');
+    const copy = () => void navigator.clipboard.writeText(followUpText(m, actions)).then(() => showSnack('Follow-up copied'), () => showSnack('Copy failed'));
+    return (
+      <section key={m.profile + m.id}>
+        <div className="as-section">Just ended · {m.title}</div>
+        {actions.length > 0 && <div className="as-group">{actions.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>}
+        <div className="as-next-actions">
+          {!actions.length && <span className="muted small ov-follow-text">No actions yet. Open the notes to read the transcript.</span>}
+          <button className="btn sm" onClick={copy}><Icon name="mail" small /> Copy follow-up</button>
+          <button className="btn sm" onClick={() => setView({ list: 'meetings', open: meetingKey(m), person: null })}><Icon name="edit" small /> Notes</button>
+        </div>
+      </section>
+    );
+  });
+}
+
 const LAST_VISIT = 'codex.lastVisit';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -215,6 +240,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
         </div>
       )}
+      <JustEnded meetings={s.meetingsToday} now={now} />
       <SinceLastVisit />
       <SlackCard />
       {digest && (
