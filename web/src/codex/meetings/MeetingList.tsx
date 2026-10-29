@@ -189,11 +189,13 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       document.removeEventListener('visibilitychange', shown);
     };
   }, []);
-  const groups = useMemo(() => {
-    const mine = filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter);
+  const mine = useMemo(() => (filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)), [meetings, filter]);
+  const myFacts = useMemo(() => (filter === 'all' ? facts : facts.filter((f) => f.profile === filter)), [facts, filter]);
+  const found = useMemo(() => {
     const tracked = active.length ? mine.filter((m) => trackedTopics(m, active).length) : mine;
-    return groupMeetings(searchMeetings(tracked, query), now);
-  }, [meetings, query, filter, now, active]);
+    return searchMeetings(tracked, query);
+  }, [mine, query, active]);
+  const groups = useMemo(() => groupMeetings(found, now), [found, now]);
   const takeNotes = () => {
     const t = Date.now();
     const id = newId();
@@ -233,11 +235,11 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
         <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
       </header>
       <div className="wk-scroll">
-        {log ? <Decisions meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} /> : load ? <Load meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} /> : <div className="mt-list">
+        {log ? <Decisions meetings={mine} /> : load ? <Load meetings={mine} now={now} /> : <div className="mt-list">
           <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
             onAdd={addTopic} onRemove={(t) => changeTopics(topics.filter((x) => x !== t))} />
-          {active.length === 1 && <TopicTimeline topic={active[0]} meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} facts={filter === 'all' ? facts : facts.filter((f) => f.profile === filter)} />}
-          {!query && <Upcoming meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} topics={topics} />}
+          {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
+          {!query && <Upcoming meetings={mine} now={now} topics={topics} />}
           {groups.map((g) => (
             <section key={g.label}>
               <div className="mt-day">{g.label}</div>

@@ -329,11 +329,19 @@ export const meetingsOf = (meetings: Meeting[], person: string) =>
 
 export type Decision = { meeting: Meeting; text: string; at: number };
 
-// Every decision line from the meetings, newest meeting first.
-export const decisionLog = (meetings: Meeting[]): Decision[] =>
-  live(meetings)
-    .flatMap((meeting) => listOf(meeting.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ meeting, text, at: meeting.starts_at ?? meeting.updated_at })))
-    .sort((a, b) => b.at - a.at);
+const decisionLogs = new WeakMap<Meeting[], Decision[]>();
+
+// Every decision line from the meetings, newest meeting first, computed once per meetings array.
+export const decisionLog = (meetings: Meeting[]): Decision[] => {
+  let log = decisionLogs.get(meetings);
+  if (!log) {
+    log = live(meetings)
+      .flatMap((meeting) => listOf(meeting.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ meeting, text, at: meeting.starts_at ?? meeting.updated_at })))
+      .sort((a, b) => b.at - a.at);
+    decisionLogs.set(meetings, log);
+  }
+  return log;
+};
 
 export const decisionsWith = (log: Decision[], person: string) => (person ? log.filter((d) => peopleOf(d.meeting).some((p) => sameName(p, person))) : log);
 
