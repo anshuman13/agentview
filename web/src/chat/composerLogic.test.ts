@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { accept, addUse, buildHistory, contextPercent, filesEdited, ghostFor, rankCommands, rankFiles, remember, triggerAt, withUses } from './composerLogic';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { accept, addUse, buildHistory, contextPercent, filesEdited, ghostFor, rankCommands, rankFiles, remember, terminalId, triggerAt, withUses } from './composerLogic';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;
@@ -141,5 +141,32 @@ describe('withUses', () => {
       'go\n\nUse the mcp__claude_ai_Claude_Docs__read tool, the chrome MCP server and the mcp__chrome__navigate tool for this.',
     );
     expect(withUses('/compact', [{ server: 'chrome' }])).toBe('/compact');
+  });
+});
+
+describe('terminalId', () => {
+  const res = (ok: boolean, body: unknown) => ({ ok, json: async () => body });
+  const url = (p: string) => p;
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('reuses the latest terminal', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res(true, [{ id: 'a' }, { id: 'b' }])));
+    expect(await terminalId(url)).toBe('b');
+  });
+
+  it('creates a terminal when none exist', async () => {
+    const f = vi.fn().mockResolvedValueOnce(res(true, [])).mockResolvedValueOnce(res(true, { id: 'n' }));
+    vi.stubGlobal('fetch', f);
+    expect(await terminalId(url)).toBe('n');
+    expect(f.mock.calls[1][1]).toEqual({ method: 'POST' });
+  });
+
+  it('returns null on a failed response, a missing id or a rejected fetch', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res(false, {})));
+    expect(await terminalId(url)).toBeNull();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(res(true, [])).mockResolvedValueOnce(res(true, {})));
+    expect(await terminalId(url)).toBeNull();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+    expect(await terminalId(url)).toBeNull();
   });
 });

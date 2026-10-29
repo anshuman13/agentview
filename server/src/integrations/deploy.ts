@@ -133,24 +133,28 @@ export async function deployWatch(cwd: string) {
 
 const jobs = new Map<string, DeployJob>();
 
-async function follow(cwd: string, repo: string, id: number, job: DeployJob) {
+export async function follow(cwd: string, repo: string, id: number, job: DeployJob) {
   const seen = new Set<number>();
   const until = Date.now() + 60 * 60_000;
-  while (!job.done && Date.now() < until) {
-    await new Promise((r) => setTimeout(r, 5000));
-    const statuses: Status[] = await run('gh', ['api', `repos/${repo}/deployments/${id}/statuses?per_page=100`], cwd)
-      .then(JSON.parse)
-      .catch((err: Error) => (job.lines.push(err.message), []));
-    for (const s of statuses.reverse()) {
-      if (seen.has(s.id)) continue;
-      seen.add(s.id);
-      job.lines.push(`${new Date(s.created_at).toLocaleTimeString()} ${s.state}${s.description ? `: ${s.description}` : ''}`);
-      if (s.log_url) job.url = s.log_url;
-      if (FINAL.includes(s.state)) Object.assign(job, { done: true, ok: s.state === 'success' });
+  try {
+    while (!job.done && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const statuses: unknown = await run('gh', ['api', `repos/${repo}/deployments/${id}/statuses?per_page=100`], cwd)
+        .then(JSON.parse)
+        .catch((err: Error) => (job.lines.push(err.message), []));
+      if (!Array.isArray(statuses)) throw new Error('GitHub returned an unexpected deployment status');
+      for (const s of (statuses as Status[]).reverse()) {
+        if (seen.has(s.id)) continue;
+        seen.add(s.id);
+        job.lines.push(`${new Date(s.created_at).toLocaleTimeString()} ${s.state}${s.description ? `: ${s.description}` : ''}`);
+        if (s.log_url) job.url = s.log_url;
+        if (FINAL.includes(s.state)) Object.assign(job, { done: true, ok: s.state === 'success' });
+      }
     }
+    if (!job.done) Object.assign(job, { done: true, lines: [...job.lines, 'Stopped following after an hour, see Velodrome'] });
+  } finally {
+    setTimeout(() => jobs.delete(job.id), 60 * 60_000);
   }
-  if (!job.done) Object.assign(job, { done: true, lines: [...job.lines, 'Stopped following after an hour, see Velodrome'] });
-  setTimeout(() => jobs.delete(job.id), 60 * 60_000);
 }
 
 async function start(cwd: string, repo: string, project: string, env: string, sha: string, label: string) {
@@ -165,7 +169,9 @@ async function start(cwd: string, repo: string, project: string, env: string, sh
     url: deploymentUrl(repo, project, created.id),
   };
   jobs.set(job.id, job);
-  void follow(cwd, repo, created.id, job);
+  follow(cwd, repo, created.id, job).catch((err: Error) => {
+    Object.assign(job, { done: true, ok: false, lines: [...job.lines, err.message] });
+  });
   return job;
 }
 

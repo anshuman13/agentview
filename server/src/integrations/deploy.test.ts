@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { parseApp, summarize } from './deploy.js';
-import type { DeployRecord } from '../../../shared/protocol.js';
+import { describe, expect, it, vi } from 'vitest';
+import { follow, parseApp, summarize } from './deploy.js';
+import type { DeployJob, DeployRecord } from '../../../shared/protocol.js';
+
+const execFileMock = vi.hoisted(() => vi.fn());
+vi.mock('node:child_process', () => ({
+  execFile: Object.assign(vi.fn(), { [Symbol.for('nodejs.util.promisify.custom')]: (...args: unknown[]) => execFileMock(...args) }),
+}));
 
 describe('parseApp', () => {
   it('reads the project and environments', () => {
@@ -33,5 +38,17 @@ describe('summarize', () => {
   it('has no rollback without an earlier success', () => {
     const env = summarize('staging:no', 'tienda', false, [d(2, 'b', 'success'), d(1, 'a', 'failure')]);
     expect(env.rollbackTo).toBeNull();
+  });
+});
+
+describe('follow', () => {
+  it('rejects when the status payload is not an array', async () => {
+    vi.useFakeTimers();
+    execFileMock.mockReturnValue(Object.assign(Promise.resolve({ stdout: '{"message":"Not Found"}' }), { child: { stdin: { end() {} } } }));
+    const job: DeployJob = { id: 'j', lines: [], done: false, ok: false, url: '' };
+    const settled = expect(follow('/tmp', 'o/r', 1, job)).rejects.toThrow('unexpected deployment status');
+    await vi.advanceTimersByTimeAsync(5000);
+    await settled;
+    vi.useRealTimers();
   });
 });

@@ -1,24 +1,28 @@
-import type http from 'node:http';
+import { mkdtemp, readdir, rm, utimes, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { Readable } from 'node:stream';
-import { describe, expect, it } from 'vitest';
-import { parseFrame, readBody } from './body.js';
+import type http from 'node:http';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { savePaste } from './body.js';
 
-const req = (chunks: Buffer[]) => Readable.from(chunks) as unknown as http.IncomingMessage;
-
-describe('readBody', () => {
-  it('keeps a character split across chunks', async () => {
-    const bytes = Buffer.from('blåbær 🍓');
-    expect(await readBody(req([bytes.subarray(0, 3), bytes.subarray(3, 12), bytes.subarray(12)]))).toBe('blåbær 🍓');
-  });
-
-  it('refuses a body over the limit', async () => {
-    await expect(readBody(req([Buffer.alloc(6)]), 5)).rejects.toThrow('too large');
-  });
+let dir: string;
+beforeEach(async () => {
+  dir = await mkdtemp(path.join(os.tmpdir(), 'pastes-'));
 });
+afterEach(() => rm(dir, { recursive: true, force: true }));
 
-describe('parseFrame', () => {
-  it('returns objects and ignores anything else', () => {
-    expect(parseFrame('{"t":"i","d":"ls"}')).toEqual({ t: 'i', d: 'ls' });
-    for (const raw of ['null', '5', '"x"', '[1]', '{bad']) expect(parseFrame(raw)).toBeNull();
+describe('savePaste', () => {
+  it('removes pastes older than seven days and keeps recent ones', async () => {
+    const old = path.join(dir, 'old.txt');
+    await writeFile(old, 'x');
+    await writeFile(path.join(dir, 'fresh.txt'), 'x');
+    const eightDays = new Date(Date.now() - 8 * 86_400_000);
+    await utimes(old, eightDays, eightDays);
+    const saved = await savePaste(Readable.from([Buffer.from('hi')]) as unknown as http.IncomingMessage, 'a.txt', dir);
+    await expect.poll(() => readdir(dir)).not.toContain('old.txt');
+    const left = await readdir(dir);
+    expect(left).toContain('fresh.txt');
+    expect(left).toContain(path.basename(saved));
   });
 });

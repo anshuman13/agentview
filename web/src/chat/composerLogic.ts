@@ -91,3 +91,20 @@ export const repeatPill = (r: { every: number; until: number | null; round: numb
   r.goal ? `Goal ${r.round}/${MAX_GOAL_ROUNDS}${r.nextAt ? ` · next ${clock(r.nextAt)}` : ''}` : once(r) ? `Continue at ${clock(r.nextAt!)}` : `Loop ${r.round}${r.nextAt ? ` · next ${clock(r.nextAt)}` : ''}${r.until ? ` · until ${clock(r.until)}` : ''}`;
 export const loopLabel = (loop: { phase: string | null; round: number; max: number }) => (loop.phase ? `${PHASES[loop.phase] ?? loop.phase}${['plan', 'build', 'test'].includes(loop.phase) && loop.max > 1 ? ` · round ${loop.round}/${loop.max}` : ''}` : '');
 export const fileCache = new Map<string, string[]>();
+
+export async function terminalId(url: (path: string) => string): Promise<string | null> {
+  try {
+    const listed = await fetch(url('/api/terms'));
+    if (!listed.ok) return null;
+    const list: Array<{ id: string }> = await listed.json();
+    let term = list.at(-1);
+    if (!term) {
+      const created = await fetch(url('/api/terms'), { method: 'POST' });
+      if (!created.ok) return null;
+      term = await created.json();
+    }
+    return term?.id ?? null;
+  } catch {
+    return null;
+  }
+}

@@ -9,7 +9,7 @@ import { touch } from '../app/touch';
 import { apiUrl } from '../app/api';
 import { Hl, wsUrl } from '../ui/util';
 import { COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
-import { ACCOUNT_LABEL, accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, remember, repeatLabel, repeatPill, loopLabel, triggerAt, useLabel, withUses, type Use } from './composerLogic';
+import { ACCOUNT_LABEL, accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, remember, repeatLabel, repeatPill, loopLabel, terminalId, triggerAt, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -59,10 +59,10 @@ function readStored(): string[] {
 }
 
 async function runInTerminal(cmd: string) {
-  const list: Array<{ id: string }> = await fetch(api('/api/terms')).then((r) => r.json());
-  const term = list.at(-1) ?? (await fetch(api('/api/terms'), { method: 'POST' }).then((r) => r.json()));
-  window.dispatchEvent(new CustomEvent('agentview:terminal', { detail: term.id }));
-  const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(term.id)}`));
+  const id = await terminalId(api);
+  if (!id) return notice('Terminal unavailable');
+  window.dispatchEvent(new CustomEvent('agentview:terminal', { detail: id }));
+  const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(id)}`));
   ws.onerror = () => notice('Terminal unavailable');
   ws.onopen = () => {
     ws.send(JSON.stringify({ t: 'i', d: `${cmd}\r` }));

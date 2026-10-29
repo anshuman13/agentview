@@ -2,7 +2,7 @@ import type http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises';
 
 export async function readBody(req: http.IncomingMessage, max = 1_000_000) {
   const chunks: Buffer[] = [];
@@ -25,7 +25,17 @@ export function parseFrame<T extends object>(raw: unknown): T | null {
 }
 
 const PASTES = path.join(os.homedir(), '.agentview', 'pastes');
-export async function savePaste(req: http.IncomingMessage, name: string) {
+const PASTE_TTL = 7 * 24 * 60 * 60_000;
+
+async function prunePastes(dir: string) {
+  const cutoff = Date.now() - PASTE_TTL;
+  for (const f of await readdir(dir)) {
+    const file = path.join(dir, f);
+    if ((await stat(file)).mtimeMs < cutoff) await unlink(file);
+  }
+}
+
+export async function savePaste(req: http.IncomingMessage, name: string, dir = PASTES) {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req) {
@@ -33,9 +43,10 @@ export async function savePaste(req: http.IncomingMessage, name: string) {
     if (size > 50_000_000) throw new Error('Files over 50 MB cannot be attached');
     chunks.push(chunk);
   }
-  await mkdir(PASTES, { recursive: true });
+  await mkdir(dir, { recursive: true });
   const safe = path.basename(name).replace(/[^\w.-]+/g, '-').slice(-80) || 'file';
-  const file = path.join(PASTES, `${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}-${randomUUID().slice(0, 6)}-${safe}`);
+  const file = path.join(dir, `${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}-${randomUUID().slice(0, 6)}-${safe}`);
   await writeFile(file, Buffer.concat(chunks));
+  void prunePastes(dir).catch(() => {});
   return file;
 }
