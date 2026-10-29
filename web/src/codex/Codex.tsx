@@ -1,51 +1,32 @@
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
 import { useAssistant, useCodex } from './data';
 import { reviewCount } from './data/wiki';
 import { ask, askText } from './data/ask';
-import { atTime, errorText, nextNine, reviewedSince, split } from './data/engine';
+import { atTime, errorText, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
-import type { ItemRow, Profile } from './data/sync';
+import type { ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { ago } from '../ui/util';
-import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useView, type Filter, type List } from './view';
+import { FILTER_LABEL, hideSnack, showSnack, useSnack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
 import { Jobs } from './jobs/Jobs';
 import { Summary } from './summary/Summary';
 import { Meetings } from './meetings/Meetings';
-import { PickDue, PickTime, when } from './time';
-import { Composer, prepText, snoozes } from './AskBar';
+import { when } from './time';
+import { Composer, prepText } from './AskBar';
+import { TaskRow, UNROLL, useActions } from './Task';
 import { Overview, Review } from './Overview';
 import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
-import { useDrag, isDragging, type Drop } from './drag';
+import { useDrag, type Drop } from './drag';
 import { Back } from '../app/back';
-import { ProfileDot } from './ProfileDot';
 import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
-import { useSheetDrag } from '../ui/useSheetDrag';
-import { haptic } from '../ui/haptic';
 import { Skeleton } from '../ui/Skeleton';
 import '../styles/features/assistant.css';
 
 
-const SOURCES: Record<string, { icon: string; label: string }> = {
-  slack: { icon: 'comment-discussion', label: 'Slack' },
-  linear: { icon: 'issues', label: 'Linear' },
-  gmail: { icon: 'mail', label: 'Gmail' },
-  mail: { icon: 'mail', label: 'Mail' },
-  calendar: { icon: 'calendar', label: 'Calendar' },
-  meeting: { icon: 'record', label: 'Meeting' },
-  action: { icon: 'checklist', label: 'Meeting' },
-  github: { icon: 'github', label: 'GitHub' },
-  capture: { icon: 'edit', label: 'You' },
-  job: { icon: 'history', label: 'Job' },
-};
-const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
-
-const SWIPE = 80;
-// A left swipe past this share of the row deletes instead of snoozing.
-const SWIPE_DELETE = 0.55;
 const DAY = 86400_000;
 
 function greeting(h = new Date().getHours()) {
@@ -57,218 +38,6 @@ function dayLabel(at: number) {
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
   if (days === 1) return 'Tomorrow';
   return d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' });
-}
-
-const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
-
-const UNROLL = { rolls: null, rolled_from: null };
-
-function useActions() {
-  const { store } = useAssistant();
-  const change = (r: ItemRow, patch: Patch, text: string) => {
-    const before = Object.fromEntries(Object.keys(patch).map((k) => [k, r[k as keyof ItemRow]])) as Patch;
-    void store.update(r, patch);
-    showSnack(text, () => void store.update(r, before));
-  };
-  return {
-    done: (r: ItemRow) => change(r, { status: 'done' }, 'Done'),
-    reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
-    snooze: (r: ItemRow, at = nextNine()) => change(r, { at, ...UNROLL }, `Snoozed to ${when(at)}`),
-    remove: (r: ItemRow) => change(r, { deleted: 1 }, 'Deleted'),
-    toTask: (r: ItemRow) => change(r, { status: 'open', ...UNROLL }, 'Moved to Today'),
-    due: (r: ItemRow, at: number | null) => change(r, { at, ...UNROLL }, at == null ? 'Due time cleared' : `Due ${when(at)}`),
-    edit: (r: ItemRow, patch: Patch) => void store.update(r, patch),
-    move: (r: ItemRow, to: Profile) => store.move(r, to).then(() => showSnack(`Moved to ${FILTER_LABEL[to]}`, () => {
-      const moved = store.snapshot().items.find((x) => x.profile === to && x.id === r.id);
-      void store.move(moved ?? { ...r, profile: to }, r.profile).catch((err) => showSnack(`Not moved: ${errorText(err)}`));
-    }), (err) => showSnack(`Not moved: ${errorText(err)}`)),
-  };
-}
-
-function Swipe({ onRight, onLeft, onDelete, children }: { onRight?: () => void; onLeft?: () => void; onDelete: () => void; children: React.ReactNode }) {
-  const [dx, setDx] = useState(0);
-  const width = useRef(1);
-  const deleting = dx < 0 && (!onLeft || -dx > width.current * SWIPE_DELETE);
-  const from = useRef<{ x: number; y: number } | null>(null);
-  const moving = useRef(false);
-  const swiped = useRef(false);
-  const reset = () => { from.current = null; moving.current = false; setDx(0); };
-  return (
-    <div className={`as-swipe${dx > 0 ? ' right' : dx < 0 ? (deleting ? ' left delete' : ' left') : ''}`}>
-      <div className="as-swipe-bg"><span><Icon name="check" /> Done</span>{deleting ? <span>Delete <Icon name="trash" /></span> : <span>Tomorrow <Icon name="clock" /></span>}</div>
-      <div
-        className="as-swipe-row"
-        style={{ transform: dx ? `translateX(${dx}px)` : undefined, transition: moving.current ? 'none' : undefined }}
-        onPointerDown={(e) => { if (e.pointerType !== 'mouse') { from.current = { x: e.clientX, y: e.clientY }; width.current = e.currentTarget.offsetWidth || 1; } }}
-        onPointerMove={(e) => {
-          if (!from.current) return;
-          if (isDragging()) return reset();
-          const mx = e.clientX - from.current.x;
-          if (!moving.current) {
-            if (Math.abs(e.clientY - from.current.y) > 10 && Math.abs(e.clientY - from.current.y) > Math.abs(mx)) { from.current = null; return; }
-            if (Math.abs(mx) < 10) return;
-            moving.current = true;
-            e.currentTarget.setPointerCapture(e.pointerId);
-          }
-          setDx(mx > 0 ? (onRight ? mx : 0) : mx);
-        }}
-        onPointerUp={() => {
-          if (moving.current) { swiped.current = true; setTimeout(() => { swiped.current = false; }, 0); }
-          const fire = (f?: () => void) => { haptic('tap'); f?.(); };
-          if (moving.current && dx > SWIPE) fire(onRight);
-          else if (moving.current && deleting && -dx > SWIPE) fire(onDelete);
-          else if (moving.current && dx < -SWIPE) fire(onLeft);
-          reset();
-        }}
-        onPointerCancel={reset}
-        onClickCapture={(e) => { if (swiped.current) e.stopPropagation(); }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Row({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen: () => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean }) {
-  const act = useActions();
-  const { filter } = useView();
-  const [checked, setChecked] = useState(false);
-  const src = sourceOf(row);
-  const at = atTime(row.at);
-  const now = Date.now();
-  const isDone = row.status === 'done';
-  const isNote = row.status === 'note';
-  const late = at != null ? Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY) : 0;
-  const due = at != null && !isNote && !isDone ? (late > 0 ? `${late}d late` : when(at, now)) : null;
-  const tick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isDone) return act.reopen(row);
-    haptic('success');
-    setChecked(true);
-    setTimeout(() => act.done(row), 260);
-  };
-  const body = (
-    <div className={`as-row ${row.profile}${checked || isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}`} data-row={row.profile + row.id} onPointerDown={onGrab} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && onOpen()}>
-      {isNote ? (
-        <span className="as-check note"><Icon name="note" /></span>
-      ) : (
-        <button className="as-check" title={isDone ? 'Not done' : 'Done'} aria-label={isDone ? 'Not done' : 'Done'} onClick={tick}>
-          <Icon name={checked || isDone ? 'pass-filled' : 'circle-large-outline'} />
-        </button>
-      )}
-      <div className="as-body">
-        <div className="as-title"><ProfileDot profile={row.profile} />{row.title || '(Untitled)'}</div>
-        <div className="as-ctx">
-          {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
-          {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
-          {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`}><Icon name={src.icon} small /> {src.label}</span>}
-          {row.people && <span className="as-people">{row.people}</span>}
-          {isNote && row.text && <span className="as-quote">{firstLine(row.text)}</span>}
-        </div>
-      </div>
-    </div>
-  );
-  if (isNote || isDone) return <Swipe onDelete={() => act.remove(row)}>{body}</Swipe>;
-  return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, nextNine(new Date(Math.max(at ?? 0, now))))} onDelete={() => act.remove(row)}>{body}</Swipe>;
-}
-
-function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClose: () => void }) {
-  const act = useActions();
-  const [title, setTitle] = useState(row.title ?? '');
-  const [text, setText] = useState(row.text ?? '');
-  const initial = useRef({ title: row.title ?? '', text: row.text ?? '' });
-  const [snoozing, setSnoozing] = useState(false);
-  const [tidying, setTidying] = useState(false);
-  const { store } = useAssistant();
-  const src = sourceOf(row);
-  const fromSource = row.source && row.source !== 'capture' && row.source !== 'action';
-  const at = atTime(row.at);
-  const pending = () => {
-    const patch: Patch = {};
-    if (title.trim() && title !== initial.current.title) patch.title = title.trim();
-    if (!fromSource && text !== initial.current.text) patch.text = text || null;
-    return patch;
-  };
-  const save = () => {
-    const patch = pending();
-    if (Object.keys(patch).length) act.edit(row, patch);
-  };
-  const other: Profile = row.profile === 'work' ? 'personal' : 'work';
-  // Unsaved title and details move with the item.
-  const move = () => {
-    const patch = pending();
-    initial.current = { title, text };
-    void act.move({ ...row, ...patch }, other);
-  };
-  const timed = row.status === 'open' || row.status === 'suggested' || at != null;
-  const close = () => { save(); onClose(); };
-  const drag = useSheetDrag(true, close);
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && close();
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  });
-  const then = (f: () => void) => () => { save(); f(); onClose(); };
-  // Haiku fixes a quick or dictated task into a clear title and details, and sets the time if the text says one.
-  const tidy = async () => {
-    setTidying(true);
-    try {
-      const p = await store.parse([title, text].filter((s) => s.trim()).join('\n'), row.profile);
-      setTitle(p.title);
-      setText(p.details ?? '');
-      if (p.at != null && row.at == null) act.edit(row, { at: p.at });
-    } catch (err) {
-      showSnack(`Not tidied: ${(err as Error).message}`);
-    } finally {
-      setTidying(false);
-    }
-  };
-  return (
-    <div className="as-sheet-overlay" ref={drag.overlay} onClick={close}>
-      <Back close={close} />
-      <div className="as-sheet" ref={drag.sheet} onClick={(e) => e.stopPropagation()} role="dialog" aria-label={row.title ?? 'Item'}>
-        <div className="sheet-handle as-grip" {...drag.handle} />
-        <input className="as-sheet-title" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Title" />
-        <div className="as-ctx as-sheet-meta">
-          <span><Icon name={src.icon} small /> {src.label}</span>
-          {row.people && <span>{row.people}</span>}
-          <span><button className={`as-meta-btn as-prof ${row.profile}`} title={`Move to ${FILTER_LABEL[other]}`} onClick={move}>{FILTER_LABEL[row.profile]}</button></span>
-          {timed && (
-            <span className="as-meta-due">
-              <PickDue className={at == null ? 'as-meta-btn quiet' : 'as-meta-btn'} value={at} onPick={(t) => t !== at && act.due(row, t)}>
-                {at == null ? <><Icon name="calendar" small /> Add due</> : `${row.status === 'open' ? 'due ' : ''}${when(at, Date.now(), true)}`}
-              </PickDue>
-              {at != null && <button className="as-meta-btn" title="Clear due time" aria-label="Clear due time" onClick={() => act.due(row, null)}><Icon name="close" small /></button>}
-            </span>
-          )}
-          <span>{ago(row.updated_at, ' ago')}</span>
-        </div>
-        {fromSource ? (row.text && <blockquote className="as-sheet-quote">{row.text}</blockquote>) : (
-          <textarea className="as-sheet-text" value={text} placeholder="Add details" onChange={(e) => setText(e.target.value)} />
-        )}
-        {row.meeting_id && <button className="as-sheet-link" onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))}>Open the meeting <Icon name="arrow-right" small /></button>}
-        {row.source_url && <a className="as-sheet-link" href={row.source_url} target="_blank" rel="noreferrer">{row.meeting_id ? 'Open the transcript' : `Open in ${src.label}`} <Icon name="link-external" small /></a>}
-        {snoozing ? (
-          <div className="as-sheet-actions">
-            {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
-            <PickTime className="btn" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
-            <button className="icon-btn" title="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
-          </div>
-        ) : (
-          <div className="as-sheet-actions">
-            {row.status === 'open' && <button className="btn primary" onClick={then(() => act.done(row))}><Icon name="check" small /> Done</button>}
-            {row.status === 'done' && <button className="btn" onClick={then(() => act.reopen(row))}>Not done</button>}
-            {row.status === 'note' && <button className="btn" onClick={then(() => act.toTask(row))}>Make task</button>}
-            {row.status === 'open' && <button className="btn" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
-            {!fromSource && row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
-            <button className="btn" onClick={then(() => ask(askText('Help me with this item.', items, row)))}><Icon name="sparkle" small /> Ask</button>
-            <span className="spacer" />
-            <button className="btn as-delete" onClick={then(() => act.remove(row))}><Icon name="trash" small /> Delete</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 }
 
 function SnackBar() {
@@ -334,8 +103,10 @@ export function Assistant() {
     return () => document.removeEventListener('visibilitychange', run);
   }, [store, ready]);
 
-  // An item moved to the other profile keeps its id, so the open sheet follows it.
+  // An item moved to the other profile keeps its id, so the open task follows it.
   const current = open && (snap.items.find((r) => r.profile === open.profile && r.id === open.id && !r.deleted) ?? snap.items.find((r) => r.id === open.id && !r.deleted));
+  const close = useCallback(() => setOpen(null), []);
+  const askAbout = (r: ItemRow) => ask(askText('Help me with this item.', snap.items, r));
   const { sync } = snap;
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : 'Syncing';
   const loading = sync.syncing && !sync.last && !snap.items.length;
@@ -416,7 +187,7 @@ export function Assistant() {
           return (
             <Fragment key={k}>
               {line && <div className="as-drop-line" />}
-              <Row row={r} onOpen={() => setOpen(r)} onGrab={key ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
+              <TaskRow row={r} open={!!current && sameRow(current, r)} onOpen={() => setOpen(r)} onClose={close} onAsk={askAbout} onGrab={key && !(current && sameRow(current, r)) ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
             </Fragment>
           );
         })}
@@ -488,7 +259,6 @@ export function Assistant() {
       {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || '(Untitled)'}</div>}
       <SnackBar />
       <Composer items={snap.items} next={s.next} filter={filter} />
-      {current && <Sheet row={current} items={snap.items} onClose={() => setOpen(null)} />}
       {drawerSheet}
     </div>
   );
