@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 const exec = promisify(execFile);
@@ -58,8 +58,19 @@ export function safeResolve(cwd: string, rel: string): string {
   return abs;
 }
 
-// Files the viewer shows: project-relative paths, or absolute paths anywhere.
-const viewPath = (cwd: string, p: string) => (path.isAbsolute(p) ? p : safeResolve(cwd, p));
+const DENIED = ['.ssh', '.gnupg', '.aws', '.netrc', '.config/gcloud'];
+
+const real = (p: string) => realpath(p).catch(() => path.resolve(p));
+
+// Files the viewer shows: project-relative paths, or absolute paths anywhere. The path is resolved through
+// symlinks first and refused if the resolved path passes through a credential folder, so a link into one fails too.
+async function viewPath(cwd: string, p: string): Promise<string> {
+  if (!path.isAbsolute(p)) safeResolve(cwd, p);
+  const abs = await real(path.resolve(cwd, p));
+  const joined = `/${abs.split(path.sep).join('/')}/`;
+  if (DENIED.some((d) => joined.includes(`/${d}/`))) throw new Error('path is not viewable');
+  return abs;
+}
 
 const MAX_FILE = 5_000_000;
 
@@ -68,13 +79,13 @@ const IMAGES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jp
 export async function readImage(cwd: string, rel: string) {
   const type = IMAGES[path.extname(rel).slice(1).toLowerCase()];
   if (!type) throw new Error('not an image');
-  const abs = viewPath(cwd, rel);
+  const abs = await viewPath(cwd, rel);
   if ((await stat(abs)).size > 50_000_000) throw new Error('image too large');
   return { type, body: await readFile(abs) };
 }
 
 export async function readFileWithOriginal(cwd: string, rel: string) {
-  const abs = viewPath(cwd, rel);
+  const abs = await viewPath(cwd, rel);
   const size = await stat(abs).then((s) => s.size).catch(() => 0);
   if (size > MAX_FILE) throw new Error(`File is ${Math.round(size / 1e6)} MB, too large to show`);
   const content = await readFile(abs, 'utf8').catch(() => '');
