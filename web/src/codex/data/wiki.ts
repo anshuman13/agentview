@@ -68,7 +68,12 @@ const json = <T,>(s: string | null, fallback: T): T => {
   }
 };
 
-export const sourcesOf = (f: Fact) => json<Source[]>(f.sources, []);
+const parsedSources = new WeakMap<Fact, Source[]>();
+export const sourcesOf = (f: Fact) => {
+  let v = parsedSources.get(f);
+  if (!v) parsedSources.set(f, (v = json<Source[]>(f.sources, [])));
+  return v;
+};
 export const contestOf = (f: Fact) => json<Contest | null>(f.contested, null);
 export const listOf = (s: string | null) => {
   const v = json<unknown>(s, []);
@@ -171,13 +176,27 @@ export const matcher = (words: string[]) => (...texts: (string | null | undefine
   return words.length > 0 && words.every((w) => hay.includes(w));
 };
 
+const haystacks = new WeakMap<object, Map<string, string>>();
+
+// Like matcher, but lowercases each row's text once per row object and field set.
+export const rowMatcher = <R extends object>(words: string[], fields: string, texts: (r: R) => (string | null | undefined)[]) => (r: R) => {
+  if (!words.length) return false;
+  let byFields = haystacks.get(r);
+  if (!byFields) haystacks.set(r, (byFields = new Map()));
+  let hay = byFields.get(fields);
+  if (hay === undefined) byFields.set(fields, (hay = texts(r).join(' ').toLowerCase()));
+  return words.every((w) => hay.includes(w));
+};
+
 // Pages whose title or summary match every word, then current claims that do.
 export function searchWiki(pages: Page[], facts: Fact[], query: string) {
-  const hit = matcher(queryWords(query));
+  const words = queryWords(query);
+  const hitPage = rowMatcher<Page>(words, 'page', (p) => [p.title, p.summary]);
+  const hitFact = rowMatcher<Fact>(words, 'fact', (f) => [f.text, ...sourcesOf(f).map((s) => s.label)]);
   const current = currentClaim(facts);
   return {
-    pages: live(pages).filter((p) => hit(p.title, p.summary)),
-    claims: live(facts).filter((f) => current(f) && hit(f.text, ...sourcesOf(f).map((s) => s.label))).slice(0, 30),
+    pages: live(pages).filter(hitPage),
+    claims: live(facts).filter((f) => current(f) && hitFact(f)).slice(0, 30),
   };
 }
 
@@ -321,9 +340,8 @@ export function meetingState(m: Meeting, now = Date.now()): MeetingState {
 export function searchMeetings<M extends Meeting>(meetings: M[], query: string) {
   const words = queryWords(query);
   if (!words.length) return meetings;
-  const hit = matcher(words);
-  return meetings.filter((m) => hit(m.title, m.people, m.notes, m.summary, m.decisions, m.transcript));
+  return meetings.filter(rowMatcher<Meeting>(words, 'meeting', (m) => [m.title, m.people, m.notes, m.summary, m.decisions, m.transcript]));
 }
 
 export const trackedTopics = (m: Meeting, topics: string[]) =>
-  topics.filter((t) => matcher(queryWords(t))(m.title, m.notes, m.summary, m.decisions, m.transcript));
+  topics.filter((t) => rowMatcher<Meeting>(queryWords(t), 'topic', (r) => [r.title, r.notes, r.summary, r.decisions, r.transcript])(m));
