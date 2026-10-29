@@ -1,4 +1,5 @@
-import { live, peopleOf, type Meeting } from './wiki';
+import { decisionLog, factTime, live, peopleOf, type Fact, type Meeting } from './wiki';
+import { parseTimes, type ItemRow } from './sync';
 
 const HOUR = 3600_000;
 const MAX_HOURS = 8;
@@ -31,4 +32,22 @@ export function meetingLoad(meetings: Meeting[], now: number, weeks = 4) {
   }
   const people = [...shared].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([name, hours]) => ({ name, hours }));
   return { weeks: out, people };
+}
+
+// What happened since Monday 00:00 local time: decisions, new current claims, finished tasks, still-open meeting actions and hours in meetings.
+export function weekReview({ meetings, facts, items }: { meetings: Meeting[]; facts: Fact[]; items: ItemRow[] }, now: number) {
+  const start = mondayOf(now, 0);
+  const inWeek = (t: number) => t >= start && t <= now;
+  const thisWeek = live(meetings).filter((m) => m.starts_at != null && inWeek(m.starts_at));
+  const keys = new Set(thisWeek.map((m) => `${m.profile}:${m.id}`));
+  const doneAt = (r: ItemRow) => parseTimes(r.field_times).status ?? r.updated_at;
+  return {
+    start,
+    meetings: thisWeek.length,
+    hours: meetingLoad(meetings, now, 1).weeks[0].hours,
+    decisions: decisionLog(meetings).filter((d) => inWeek(d.at)),
+    claims: live(facts).filter((f) => !f.superseded_by && inWeek(factTime(f))).sort((a, b) => factTime(b) - factTime(a)),
+    done: items.filter((r) => !r.deleted && r.status === 'done' && inWeek(doneAt(r))).sort((a, b) => doneAt(b) - doneAt(a)),
+    open: items.filter((r) => !r.deleted && r.status === 'open' && r.source !== 'calendar' && r.meeting_id != null && keys.has(`${r.profile}:${r.meeting_id}`)),
+  };
 }

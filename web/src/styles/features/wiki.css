@@ -276,6 +276,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .mt-load-track i { display: block; height: 100%; min-width: 2px; border-radius: var(--radius-pill); background: var(--c-meeting); }
 .mt-load-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg-strong); }
 .mt-load-share { font-size: var(--fs-sm); color: var(--fg-muted); }
+.mt-wk-sec { display: flex; flex-direction: column; gap: var(--sp-4); }
 .mt-load-person { display: flex; justify-content: space-between; gap: var(--sp-4); font-size: var(--fs-md); }
 
 /* Meeting page */

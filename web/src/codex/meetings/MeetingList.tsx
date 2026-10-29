@@ -9,6 +9,7 @@ import { setView, showSnack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
+import { Week } from './Week';
 import '../../styles/features/wiki.css';
 
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -157,6 +158,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const [seen, setSeen] = useState(() => stored<Record<string, number>>(SEEN_KEY, {}));
   const [log, setLog] = useState(false);
   const [load, setLoad] = useState(false);
+  const [week, setWeek] = useState(false);
   const changeTopics = (next: string[]) => {
     setTopics(next);
     setActive((a) => a.filter((t) => next.includes(t)));
@@ -233,15 +235,16 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           <Icon name="search" small />
           <input value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
         </label>
-        <button className={`btn mt-dec${log ? ' on' : ''}`} aria-pressed={log} title="Decisions from all meetings" onClick={() => { setLog((v) => !v); setLoad(false); }}><Icon name="check" small /> <span>Decisions</span></button>
-        <button className={`btn mt-dec${load ? ' on' : ''}`} aria-pressed={load} title="Hours in meetings per week" onClick={() => { setLoad((v) => !v); setLog(false); }}><Icon name="graph" small /> <span>Load</span></button>
+        <button className={`btn mt-dec${log ? ' on' : ''}`} aria-pressed={log} title="Decisions from all meetings" onClick={() => { setLog((v) => !v); setLoad(false); setWeek(false); }}><Icon name="check" small /> <span>Decisions</span></button>
+        <button className={`btn mt-dec${load ? ' on' : ''}`} aria-pressed={load} title="Hours in meetings per week" onClick={() => { setLoad((v) => !v); setLog(false); setWeek(false); }}><Icon name="graph" small /> <span>Load</span></button>
+        <button className={`btn mt-dec${week ? ' on' : ''}`} aria-pressed={week} title="This week in review" onClick={() => { setWeek((v) => !v); setLog(false); setLoad(false); }}><Icon name="calendar" small /> <span>Week</span></button>
         <button className="btn mt-cal" disabled={syncing} title="Import the next days from Google Calendar (runs on its own every half hour from 7 to 19 on weekdays, and when the app opens)" onClick={syncCalendar}>
           <Icon name={syncing ? 'loading' : 'sync'} small spin={syncing} /> <span>{syncing ? 'Syncing' : 'Sync calendar'}</span>
         </button>
         <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
       </header>
       <div className="wk-scroll">
-        {log ? <Decisions meetings={mine} /> : load ? <Load meetings={mine} now={now} /> : <div className="mt-list">
+        {log ? <Decisions meetings={mine} /> : load ? <Load meetings={mine} now={now} /> : week ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-list">
           <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
             onAdd={addTopic} onRemove={removeTopic} />
           {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
