@@ -434,10 +434,7 @@ export function briefFor(meeting: Meeting, items: ItemRow[], facts: Fact[]): Mee
   const people = peopleOf(meeting);
   const open = items.filter((r) => !r.deleted && r.status === 'open' && r.source !== 'calendar' && !(r.meeting_id === meeting.id && r.profile === meeting.profile));
   const tasks = people
-    .map((person) => {
-      const name = person.toLowerCase();
-      return { person, items: open.filter((r) => [r.title, r.text, r.people].join(' ').toLowerCase().includes(name)) };
-    })
+    .map((person) => ({ person, items: open.filter(rowMatcher<ItemRow>([person.toLowerCase()], 'brief-item', (r) => [r.title, r.text, r.people])) }))
     .filter((t) => t.items.length > 0);
   const hits = [...people.map((p) => queryWords(p)), queryWords(meeting.title ?? '')].map((words) =>
     rowMatcher<Fact>(words, 'brief', (f) => [f.text]));
