@@ -14,6 +14,7 @@ import { AskBar } from '../wiki/Wiki';
 import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars, meetingKey } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
+import { Prep } from './Prep';
 
 function Series({ prior }: { prior: Meeting[] }) {
   const snap = useAssistantData();
@@ -308,6 +309,8 @@ export function MeetingPage({ m }: { m: Meeting }) {
               <ul className="mt-decisions">{decisions.map((d) => <li key={d}>{d}</li>)}</ul>
             </section>
           )}
+
+          {state === 'upcoming' && <Prep m={m} section />}
 
           <Series prior={prior} />
 

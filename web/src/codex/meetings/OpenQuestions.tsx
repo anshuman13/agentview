@@ -7,11 +7,12 @@ import { setView } from '../view';
 import { meetingKey } from './MeetingList';
 
 const RESOLVED = 'agentview.questionsResolved';
+export const resolvedQuestions = () => stored<string[]>(RESOLVED, []);
 
 // Questions the meetings left open; Resolve hides one for good and forgets keys whose question is gone.
 export function OpenQuestions({ questions }: { questions: Question[] }) {
   const { meetings } = useCodex();
-  const [resolved, setResolved] = useState(() => stored<string[]>(RESOLVED, []));
+  const [resolved, setResolved] = useState(resolvedQuestions);
   const rows = useMemo(() => questions.filter((q) => !resolved.includes(questionKey(q))), [questions, resolved]);
   if (!rows.length) return null;
   const resolve = (q: Question) => {

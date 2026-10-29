@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
-import { briefFor, followThrough, priorWith, type Meeting } from './data/wiki';
+import { followThrough, type Meeting } from './data/wiki';
 import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { save, stored } from '../ui/util';
 import { meetingKey } from './meetings/MeetingList';
+import { Prep } from './meetings/Prep';
 import { Icon } from '../ui/Icon';
 import { setView, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
@@ -15,10 +16,6 @@ import type { useSplit } from './split';
 // that the room microphone is me.
 function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; carried: number; onPrep: () => void }) {
   const store = useAssistantStore();
-  const snap = useAssistantData();
-  const { meetings } = useCodex();
-  const prior = useMemo(() => priorWith(m, meetings, snap.items), [m, meetings, snap.items]);
-  const brief = useMemo(() => briefFor(m, snap.items, snap.facts), [m, snap.items, snap.facts]);
   const now = Date.now();
   const mins = Math.round((m.starts_at! - now) / 60000);
   const open = () => setView({ list: 'meetings', open: `${m.profile}:${m.id}` });
@@ -33,31 +30,7 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
           {carried > 0 && <span className="as-due late">{carried} open from last time</span>}
         </div>
       )}
-      {prior.length > 0 && (
-        <div className="as-ctx-list">
-          <div className="muted small">Last time</div>
-          {prior.map(({ meeting, decisions, open: openActions }) => (
-            <div key={meeting.profile + meeting.id} className="as-ctx">
-              <span>{meeting.title}</span>
-              <span>{new Date(meeting.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
-              {decisions[0] && <span className="as-quote">{decisions[0].split('\n')[0]}</span>}
-              {openActions.length > 0 && <span className="as-due late">{openActions.length} open</span>}
-            </div>
-          ))}
-        </div>
-      )}
-      {(brief.tasks.length > 0 || brief.claims.length > 0) && (
-        <div className="as-ctx-list">
-          {brief.tasks.map(({ person, items }) => (
-            <div key={person} className="as-ctx">
-              <span>{person}</span>
-              <span className="as-due late">{items.length} open</span>
-              <span className="as-quote">{items[0].title}</span>
-            </div>
-          ))}
-          {brief.claims.map((f) => <div key={f.profile + f.id} className="as-ctx"><span className="as-quote">{f.text}</span></div>)}
-        </div>
-      )}
+      <Prep m={m} />
       <div className="as-next-actions">
         <button className="btn sm" onClick={(e) => { e.stopPropagation(); onPrep(); }}><Icon name="sparkle" small /> Prep</button>
         <button className="btn sm" onClick={(e) => { e.stopPropagation(); open(); }}><Icon name="edit" small /> Notes</button>
