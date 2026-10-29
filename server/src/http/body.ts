@@ -5,13 +5,13 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 export async function readBody(req: http.IncomingMessage, max = 1_000_000) {
-  let body = '';
+  const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req) {
     if ((size += chunk.length) > max) throw new Error('Request body too large');
-    body += chunk;
+    chunks.push(chunk);
   }
-  return body;
+  return Buffer.concat(chunks).toString('utf8');
 }
 
 const PASTES = path.join(os.homedir(), '.agentview', 'pastes');
