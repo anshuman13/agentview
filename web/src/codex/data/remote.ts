@@ -165,8 +165,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   parse = async (text: string, profile: Profile): Promise<Parsed> => hub<Parsed>('/api/assistant/parse', { profile, text }, { signal: AbortSignal.timeout(20000) });
 
-  fetchTranscript = async (m: { profile: Profile; id: string }) => {
-    const data = await hub<{ saved?: number }>('/api/assistant/transcripts', { profile: m.profile, id: m.id });
+  fetchTranscript = async (m: { profile: Profile; id: string }, instructions?: string) => {
+    const data = await hub<{ saved?: number }>('/api/assistant/transcripts', { profile: m.profile, id: m.id, instructions });
     await this.syncNow();
     return Number(data?.saved ?? 0);
   };

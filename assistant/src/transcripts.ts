@@ -129,7 +129,9 @@ export function readSaved(root: string, file: string, offset = 0) {
 }
 
 // Asks Claude to read the transcript in the Gemini doc attached to each meeting's event and saves what it finds.
-async function readTranscripts(db: Database, profile: Profile, meetings: Pending[], now: number) {
+export const formatLines = (instructions: string) => (instructions.trim() ? [`Write the summary to this brief: ${instructions.trim().slice(0, 1000)}`] : []);
+
+async function readTranscripts(db: Database, profile: Profile, meetings: Pending[], now: number, instructions = '') {
   const found: MeetingNotes[] = [];
   const save = tool('save_meeting_notes', 'Save the summary and my actions for one meeting.', Notes.shape, async (a) => {
     found.push(a);
@@ -162,6 +164,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     'Work from the transcript only. Ignore the summary, notes, details and next steps Gemini wrote at the top of the doc; do not copy or rely on them.',
     'I am the calendar owner: the attendee marked as self on the event. Find my name in the transcript.',
     'Call save_meeting_notes once per meeting that has a transcript, in English: a short summary for me, my follow-ups as actions, and what others took on.',
+    ...formatLines(instructions),
     'Set room to the speaker named after a meeting room, if there is one.',
     'An action is owner "me" when I said I would do it, someone asked me by name and I agreed, I was named as the owner, or the room microphone said it and I was on it.',
     'An action is owner "maybe" when it is probably mine: the room microphone took it on and I do not speak under my own name, so I was likely in that room.',
@@ -203,10 +206,10 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
 }
 
 // The manual sync for one meeting, at any time after it started, replacing an earlier summary.
-export async function syncTranscript(db: Database, profile: Profile, id: string, now = Date.now()) {
+export async function syncTranscript(db: Database, profile: Profile, id: string, now = Date.now(), instructions = '') {
   const m = db.prepare("SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND id = ? AND deleted = 0 AND id LIKE 'cal:%'").get(profile, id) as Pending | null;
   if (!m) throw new Error('No calendar meeting with that id');
-  return (await readTranscripts(db, profile, [m], now)).saved;
+  return (await readTranscripts(db, profile, [m], now, instructions)).saved;
 }
 
 export function startTranscripts(db: () => Database, every = 5 * MIN) {

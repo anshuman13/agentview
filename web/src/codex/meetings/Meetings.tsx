@@ -3,6 +3,7 @@ import { useAssistant, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { atTime, parseWhen, stripWhen } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
+import { SUMMARY_TEMPLATES, summaryInstructions, type SummaryTemplate } from '../data/summaryTemplates';
 import { newId, type ItemRow } from '../data/sync';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, peopleOf, searchMeetings, trackedTopics, type Meeting } from '../data/wiki';
 import { PickTime, clock, when } from '../time';
@@ -344,6 +345,29 @@ function Notes({ m }: { m: Meeting }) {
   );
 }
 
+function SummaryFormat({ m }: { m: Meeting }) {
+  const { store } = useCodex();
+  const [busy, setBusy] = useState(false);
+  if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
+  const choose = async (key: SummaryTemplate) => {
+    setBusy(true);
+    try {
+      await store.fetchTranscript(m, summaryInstructions(key));
+      showSnack(`Summary rewritten as ${SUMMARY_TEMPLATES[key].label}`);
+    } catch (err) {
+      showSnack(`Summary failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <select className="mt-sync" value="" disabled={busy} aria-label="Summary format" title="Summary format" onChange={(e) => void choose(e.target.value as SummaryTemplate)}>
+      <option value="" disabled>{busy ? 'Rewriting' : 'Summary format'}</option>
+      {(Object.keys(SUMMARY_TEMPLATES) as SummaryTemplate[]).map((k) => <option key={k} value={k}>{SUMMARY_TEMPLATES[k].label}</option>)}
+    </select>
+  );
+}
+
 function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
   const { store } = useCodex();
   const [busy, setBusy] = useState(false);
@@ -476,7 +500,7 @@ function MeetingPage({ m }: { m: Meeting }) {
           )}
 
           <section className="mt-sec">
-            <h2><Icon name="sparkle" small /> Summary</h2>
+            <h2><Icon name="sparkle" small /> Summary{m.summary && <SummaryFormat m={m} />}</h2>
             {m.summary ? <p className="mt-summary">{m.summary}</p> : <p className="mt-pending">{state === 'missing' ? 'No summary without a transcript.' : 'Written from the transcript after the meeting.'}</p>}
           </section>
 

@@ -26,7 +26,7 @@ export interface AssistantStore {
   editRow<K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>): Promise<void>;
   syncNow(): Promise<void>;
   parse(text: string, profile: Profile): Promise<Parsed>;
-  fetchTranscript(m: { profile: Profile; id: string }): Promise<number>;
+  fetchTranscript(m: { profile: Profile; id: string }, instructions?: string): Promise<number>;
   syncCalendar(fresh?: number): Promise<number>;
   summarizeSlack(): Promise<number>;
 }

@@ -257,11 +257,11 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return data;
   };
 
-  fetchTranscript = async (m: { profile: Profile; id: string }) => {
+  fetchTranscript = async (m: { profile: Profile; id: string }, instructions?: string) => {
     const resp = await fetch(`${HUB}/transcripts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile: m.profile, id: m.id }),
+      body: JSON.stringify({ profile: m.profile, id: m.id, instructions }),
       signal: AbortSignal.timeout(300000),
     });
     const data = await resp.json().catch(() => null);

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, markTried, readSaved, saveNotes } from './transcripts.js';
+import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, formatLines, markTried, readSaved, saveNotes } from './transcripts.js';
 
 const MIN = 60_000;
 const now = Date.parse('2026-10-26T16:00:00Z');
@@ -88,5 +88,13 @@ describe('dueAt', () => {
     expect(dueAt('2026-10-28')).toBe(new Date(2026, 9, 28, 9).getTime());
     expect(dueAt('2026-10-27T08:00:00')).toBe(new Date(2026, 9, 27, 8).getTime());
     expect(dueAt(null)).toBeNaN();
+  });
+});
+
+describe('summary format', () => {
+  it('adds a line only when instructions are given', () => {
+    expect(formatLines('')).toEqual([]);
+    expect(formatLines('  ')).toEqual([]);
+    expect(formatLines(' Per person. ')).toEqual(['Write the summary to this brief: Per person.']);
   });
 });

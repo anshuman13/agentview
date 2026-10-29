@@ -141,7 +141,7 @@ export function createServer(): http.Server {
       }
 
       if (pathname === '/transcripts' && req.method === 'POST') {
-        let data: { profile?: unknown; id?: unknown };
+        let data: { profile?: unknown; id?: unknown; instructions?: unknown };
         try {
           data = JSON.parse(await readBody(req, 10_000));
         } catch {
@@ -153,7 +153,7 @@ export function createServer(): http.Server {
           return;
         }
         try {
-          const saved = await syncTranscript(getDb(), data.profile, data.id);
+          const saved = await syncTranscript(getDb(), data.profile, data.id, Date.now(), typeof data.instructions === 'string' ? data.instructions : '');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ saved }));
         } catch (err) {
