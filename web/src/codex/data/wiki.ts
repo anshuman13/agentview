@@ -165,13 +165,15 @@ export function newPage(title: string, section: string, sort: number, profile: P
   };
 }
 
+export const queryWords = (query: string) => query.toLowerCase().split(/\s+/).filter(Boolean);
+const matcher = (words: string[]) => (...texts: (string | null | undefined)[]) => {
+  const hay = texts.join(' ').toLowerCase();
+  return words.length > 0 && words.every((w) => hay.includes(w));
+};
+
 // Pages whose title or summary match every word, then current claims that do.
 export function searchWiki(pages: Page[], facts: Fact[], query: string) {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const hit = (...texts: (string | null)[]) => {
-    const hay = texts.join(' ').toLowerCase();
-    return words.length > 0 && words.every((w) => hay.includes(w));
-  };
+  const hit = matcher(queryWords(query));
   const current = currentClaim(facts);
   return {
     pages: live(pages).filter((p) => hit(p.title, p.summary)),
@@ -277,4 +279,12 @@ export function meetingState(m: Meeting, now = Date.now()): MeetingState {
   if (m.transcript === 'missing') return 'missing';
   if (m.transcript === 'done' || (!m.transcript && m.summary)) return 'done';
   return 'waiting';
+}
+
+// Meetings whose title, people, notes, summary, decisions or transcript hold every word.
+export function searchMeetings<M extends Meeting>(meetings: M[], query: string) {
+  const words = queryWords(query);
+  if (!words.length) return meetings;
+  const hit = matcher(words);
+  return meetings.filter((m) => hit(m.title, m.people, m.notes, m.summary, m.decisions, m.transcript));
 }

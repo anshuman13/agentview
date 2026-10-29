@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, approveChanges, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchWiki, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, approveChanges, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -95,6 +95,15 @@ describe('meetings', () => {
     const g = groupMeetings([meeting('later', at(2, 9)), meeting('soon', at(0, 14)), meeting('today', at(0, 10)), meeting('past2', at(-1, 14)), meeting('past1', at(-1, 9)), meeting('old', at(-3, 9))], now);
     expect(g[0].label).toBe('Today');
     expect(g.map((x) => x.rows.map((m) => m.id))).toEqual([['today'], ['past1', 'past2'], ['old']]);
+  });
+
+  it('searches decisions and transcripts as well as titles', () => {
+    const a = { ...meeting('Planning', at(0, 9)), decisions: 'Ship the Pricing page' };
+    const b = { ...meeting('Sync', at(0, 10)), transcript: 'we talked about pricing and budget' };
+    const c = meeting('Other', at(0, 11));
+    expect(searchMeetings([a, b, c], 'pricing').map((m) => m.id)).toEqual(['Planning', 'Sync']);
+    expect(searchMeetings([a, b, c], 'pricing budget').map((m) => m.id)).toEqual(['Sync']);
+    expect(searchMeetings([a, b, c], '  ')).toHaveLength(3);
   });
 
   it('tells where a meeting is between the calendar and its transcript', () => {

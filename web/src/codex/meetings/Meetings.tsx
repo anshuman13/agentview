@@ -4,7 +4,7 @@ import { ask, meetingAskText } from '../data/ask';
 import { atTime, parseWhen, stripWhen } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
 import { newId, type ItemRow } from '../data/sync';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, type Meeting } from '../data/wiki';
+import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, searchMeetings, type Meeting } from '../data/wiki';
 import { PickTime, clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { Voice, useDictation } from '../../chat/Voice';
@@ -129,10 +129,8 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
     };
   }, []);
   const groups = useMemo(() => {
-    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     const mine = filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter);
-    const shown = words.length ? mine.filter((m) => words.every((w) => [m.title, m.people, m.notes, m.summary].map((x) => x ?? '').join(' ').toLowerCase().includes(w))) : mine;
-    return groupMeetings(shown, now);
+    return groupMeetings(searchMeetings(mine, query), now);
   }, [meetings, query, filter, now]);
   const takeNotes = () => {
     const t = Date.now();
@@ -179,7 +177,7 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
               <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
             </section>
           ))}
-          {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes and summaries.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
+          {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
         </div>
       </div>
     </div>
