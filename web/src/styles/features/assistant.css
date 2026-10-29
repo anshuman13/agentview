@@ -262,6 +262,8 @@ a.as-chip { text-decoration: none; }
 .as-add { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 44px; margin-top: var(--sp-2); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); font: inherit; font-size: var(--fs-md); cursor: pointer; text-align: left; }
 @media (hover: hover) { button.as-add:hover { color: var(--accent-text); } }
 .as-add.on { color: var(--accent-text); background: var(--surface); border: 1px solid var(--border-card); cursor: text; }
+.as-add-prof { display: grid; place-items: center; width: 28px; height: 28px; margin-left: -6px; padding: 0; border: 0; border-radius: var(--radius-round); background: transparent; cursor: pointer; }
+.as-add-prof .prof-dot { width: 10px; height: 10px; margin: 0; }
 .as-add input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; box-shadow: none; }
 .as-add input:focus { outline: none; box-shadow: none; }
 .as-ctx > .as-list-done { color: var(--ok); }

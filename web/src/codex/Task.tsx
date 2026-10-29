@@ -4,7 +4,7 @@ import { atTime, errorText, hasDay, nextNine, parseWhen, stripWhen } from './dat
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago, readFlag } from '../ui/util';
+import { ago, readFlag, saveFlag } from '../ui/util';
 import { FILTER_LABEL, setView, showSnack, type Filter } from './view';
 import { PickDue, PickTime, when } from './time';
 import { snoozes } from './AskBar';
@@ -315,10 +315,16 @@ function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen: () =>
   }
 }
 
-// With nothing focused, j or k on Tasks focuses the first task.
+// With nothing focused, j or k on Tasks focuses the first task; n, from anywhere outside a field, starts a task for today.
 document.addEventListener('keydown', (e) => {
-  if ((e.key !== 'j' && e.key !== 'k') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if ((e.key !== 'j' && e.key !== 'k' && e.key !== 'n') || e.metaKey || e.ctrlKey || e.altKey) return;
   const at = document.activeElement;
+  if (e.key === 'n') {
+    if ((at && at !== document.body && !at.matches('[data-row]')) || document.querySelector<HTMLElement>('.tasks')?.offsetParent == null) return;
+    e.preventDefault();
+    window.dispatchEvent(new Event('tasks:add'));
+    return;
+  }
   if (at && at !== document.body) return;
   const first = document.querySelector<HTMLElement>('.tasks [data-row]');
   if (first?.offsetParent == null) return;
@@ -365,7 +371,14 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
   const [on, setOn] = useState(false);
   const [text, setText] = useState('');
   const busy = useRef(false);
-  const profile: Profile = filter !== 'all' ? filter : readFlag('assistant-personal', false) ? 'personal' : 'work';
+  const [picked, setPicked] = useState<Profile | null>(null);
+  const profile: Profile = filter !== 'all' ? filter : picked ?? (readFlag('assistant-personal', false) ? 'personal' : 'work');
+  useEffect(() => {
+    if (day !== today) return;
+    const open = () => setOn(true);
+    window.addEventListener('tasks:add', open);
+    return () => window.removeEventListener('tasks:add', open);
+  }, [day, today]);
   const add = async () => {
     const typed = text.trim();
     if (!typed || busy.current) return;
@@ -376,6 +389,7 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
     try {
       const row = await store.capture(stripWhen(typed, w) || typed, 'task', profile, at);
       setText('');
+      saveFlag('assistant-personal', profile === 'personal');
       haptic('tap');
       showSnack(at != null ? `Task · ${when(at)}` : 'Task · No time', () => void store.update(row, { deleted: 1 }));
     } catch (err) {
@@ -387,7 +401,9 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
   if (!on) return <button className="as-add" onClick={() => setOn(true)}><Icon name="add" /> Add task</button>;
   return (
     <div className="as-add on" data-no-swipe>
-      <Icon name="add" />
+      {filter === 'all' ? (
+        <button className="as-add-prof" title={`${FILTER_LABEL[profile]}, tap for ${FILTER_LABEL[profile === 'work' ? 'personal' : 'work']}`} aria-label={`Profile: ${FILTER_LABEL[profile]}`} onMouseDown={(e) => e.preventDefault()} onClick={() => setPicked(profile === 'work' ? 'personal' : 'work')}><ProfileDot profile={profile} /></button>
+      ) : <Icon name="add" />}
       <input
         autoFocus
         value={text}
