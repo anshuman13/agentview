@@ -9,6 +9,9 @@ import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
 import { setView, showSnack } from '../view';
 
+// Opens Linear's new-issue form filled in; nothing is created until you submit it there.
+const linearIssue = (r: ItemRow, m: Meeting) => `https://linear.app/new?${new URLSearchParams({ title: r.title ?? '', description: draftFor(r, m).split('\n').slice(1).join('\n') })}`;
+
 const openMeeting = (r: ItemRow) => setView({ list: 'meetings', open: `${r.profile}:${r.meeting_id}` });
 
 export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
@@ -47,6 +50,7 @@ export function ActionRow({ row, showMeeting = false, meeting }: { row: ItemRow;
           {row.text && <span className="mt-task-why">{row.text}</span>}
         </div>
       </div>
+      {meeting && mine && !done && <a className="icon-btn" title="New Linear issue" aria-label="New Linear issue" href={linearIssue(row, meeting)} target="_blank" rel="noreferrer"><Icon name="issues" small /></a>}
       {meeting && <button className="icon-btn" title="Copy as message" aria-label="Copy as message" onClick={() => void navigator.clipboard.writeText(draftFor(row, meeting)).then(() => showSnack('Copied'), () => showSnack('Copy failed'))}><Icon name="copy" small /></button>}
       {status === 'suggested' && (
         <div className="mt-task-pick">
