@@ -12,6 +12,8 @@ import { GitHubBadge } from '../ops/pulls';
 import { OpenChats, RepoPicker, Sessions } from '../sessions/Sessions';
 import { Icon } from '../ui/Icon';
 import { command, pressable } from '../ui/util';
+import { haptic } from '../ui/haptic';
+import { useSheetDrag } from '../ui/useSheetDrag';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { AssistantNav, useTodayCount } from '../codex/nav';
@@ -99,6 +101,7 @@ export function App() {
   const [agentSel, setAgentSel] = useState<string | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [more, setMore] = useState(false);
+  const moreSheet = useSheetDrag(more, () => setMore(false));
   const [browse, setBrowse] = useState(false);
   const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (narrow() ? 'code' : t)); };
   const reveal = (el: HTMLElement | null) => el?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
@@ -279,6 +282,7 @@ export function App() {
   const inMore = tab === 'term' || tab === 'browser' || tab === 'code' || (tab === 'repos' && !chatsView);
   const mcpOk = mcp.filter((m) => m.status === 'connected').length;
   const goTab = (t: Tab) => {
+    haptic();
     setMore(false);
     if (t === 'code' && tab === 'code' && !isPage(editor) && openFile) setBrowse((v) => !v);
     if (t === 'agents' && tab === 'agents') setAgentSel(null);
@@ -299,7 +303,7 @@ export function App() {
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
     onClick: () => { if (!pressed.current) goTab('assistant'); pressed.current = false; },
   };
-  const goSide = (v: View) => { setMore(false); setView(v); setTab('repos'); };
+  const goSide = (v: View) => { haptic(); setMore(false); setView(v); setTab('repos'); };
   const act = (f: () => void) => () => { setMore(false); f(); };
   const reopen = (e: React.MouseEvent) => {
     const el = e.target as HTMLElement;
@@ -492,9 +496,10 @@ export function App() {
         </button>
       </nav>
       {more && (
-        <div className="more-sheet-overlay mobile-only" onClick={() => setMore(false)}>
+        <div className="more-sheet-overlay mobile-only" ref={moreSheet.overlay} onClick={moreSheet.close}>
           <Back close={() => setMore(false)} />
-          <div className="more-sheet" onClick={(e) => e.stopPropagation()}>
+          <div className="more-sheet" ref={moreSheet.sheet} onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-handle" {...moreSheet.handle} />
             <div className="more-status">
               <button className="more-project" title={`${session.cwd}\nStart a chat in another repo`} onClick={act(() => setUi({ repoPicker: true }))}>
                 <Icon name="folder" small /><span>{project}</span>

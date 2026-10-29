@@ -2,6 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1a17" media="(prefers-color-scheme: dark)" />
     <script>
       try {
         var bgs = { dark: '#1c1a17', light: '#ffffff' };
@@ -13,13 +15,12 @@
         var system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
         var theme = bgs[stored] ? stored : system;
         document.documentElement.dataset.theme = theme;
-        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bgs[theme]);
+        if (theme !== system) document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.removeAttribute('media'); m.setAttribute('content', bgs[theme]); });
       } catch (e) {
         document.documentElement.dataset.theme = 'dark';
       }
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#1c1a17" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

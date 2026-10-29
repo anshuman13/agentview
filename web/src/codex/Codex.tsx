@@ -21,6 +21,7 @@ import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
 import { useDrag, isDragging, type Drop } from './drag';
 import { Back } from '../app/back';
+import { ProfileDot } from './ProfileDot';
 import '../styles/features/assistant.css';
 
 
@@ -150,14 +151,13 @@ function Row({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen: () => void
         </button>
       )}
       <div className="as-body">
-        <div className="as-title">{row.title || '(Untitled)'}</div>
+        <div className="as-title"><ProfileDot profile={row.profile} />{row.title || '(Untitled)'}</div>
         <div className="as-ctx">
           {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
           {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
           {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`}><Icon name={src.icon} small /> {src.label}</span>}
           {row.people && <span className="as-people">{row.people}</span>}
           {isNote && row.text && <span className="as-quote">{firstLine(row.text)}</span>}
-          {filter === 'all' && row.profile === 'personal' && <span className="as-prof personal">Personal</span>}
         </div>
       </div>
     </div>

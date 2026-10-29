@@ -93,8 +93,14 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
 
   .more-sheet-overlay {
     position: fixed; inset: 0; bottom: calc(var(--tabbar-h) + var(--safe-bottom)); z-index: var(--z-sheet);
-    display: flex; align-items: flex-end; justify-content: flex-end; padding: var(--sp-4); background: var(--scrim);
+    display: flex; align-items: flex-end; justify-content: flex-end; padding: var(--sp-4); background: color-mix(in srgb, var(--scrim) calc(var(--sheet-fade, 1) * 100%), transparent);
   }
+  @media (prefers-reduced-motion: no-preference) {
+    .more-sheet-overlay { animation: sheet-fade var(--dur) var(--ease); }
+    .more-sheet { animation: sheet-up 180ms ease-out; }
+  }
+  @keyframes sheet-fade { from { background-color: transparent; } }
+  @keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
   .more-sheet {
     width: min(300px, 100%); max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; padding: var(--sp-2);
     background: var(--raised); border: 1px solid var(--border-strong); border-radius: var(--radius);

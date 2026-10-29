@@ -75,3 +75,6 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 @media (pointer: coarse) and (prefers-reduced-motion: no-preference) {
   :is(.wk-card, .wk-overview, .as-card, .ov-card, .cp-card, .reply-card, .deploy-card, .mt-tile, .wk-tile, .chip, .as-chip, .cp-chip, .mcp-chip, .ag-chip, .wk-pill, .cp-pill, .obs-chip, .tabbar button, .more-sheet > button, button.primary, .btn):is(button, a, [role='button'], [tabindex], [href], .click):not(:disabled):active { transform: scale(.98); transition: background-color 80ms, transform 80ms; }
 }
+
+.sheet-handle { flex: none; align-self: stretch; height: 24px; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
+.sheet-handle::before { content: ''; width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); }
