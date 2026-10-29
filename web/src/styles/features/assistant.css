@@ -91,6 +91,7 @@ button.as-check:hover { color: var(--accent-text); }
 .as-next { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-7) var(--sp-8); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--raised)), var(--raised)); cursor: pointer; }
 .as-next-head { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); color: var(--accent-text); font-weight: 600; }
 .as-next-title { font-size: var(--fs-2xl); font-weight: 600; }
+.as-ctx-list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .as-next-actions { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-2); }
 .as-next-actions .btn.on { color: var(--on-accent); background: var(--accent-fill); border-color: transparent; }
 .as-next-then { margin-top: var(--sp-2); padding-top: var(--sp-4); border-top: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); font-size: var(--fs-sm); color: var(--fg-muted); }

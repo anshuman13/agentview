@@ -1,6 +1,6 @@
-import { useAssistant } from './data';
-import type { Meeting } from './data/wiki';
-import { atTime, latestDigest } from './data/engine';
+import { useAssistant, useCodex } from './data';
+import { priorWith, type Meeting } from './data/wiki';
+import { atTime, latestDigest, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { setView, useView } from './view';
@@ -11,7 +11,9 @@ import type { useSplit } from './split';
 // The next meeting today: Prep asks Claude, Notes opens the meeting, and the mic toggle tells the transcript reader
 // that the room microphone is me.
 function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; carried: number; onPrep: () => void }) {
-  const { store } = useAssistant();
+  const { store, snap } = useAssistant();
+  const { meetings } = useCodex();
+  const prior = priorWith(m, meetings, snap.items);
   const now = Date.now();
   const mins = Math.round((m.starts_at! - now) / 60000);
   const open = () => setView({ list: 'meetings', open: `${m.profile}:${m.id}` });
@@ -24,6 +26,19 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
         <div className="as-ctx">
           {people.length > 0 && <span>{people.slice(0, 3).join(', ')}{people.length > 3 ? ` +${people.length - 3}` : ''}</span>}
           {carried > 0 && <span className="as-due late">{carried} open from last time</span>}
+        </div>
+      )}
+      {prior.length > 0 && (
+        <div className="as-ctx-list">
+          <div className="muted small">Last time</div>
+          {prior.map(({ meeting, decisions, open: openActions }) => (
+            <div key={meeting.profile + meeting.id} className="as-ctx">
+              <span>{meeting.title}</span>
+              <span>{new Date(meeting.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+              {decisions[0] && <span className="as-quote">{decisions[0].split('\n')[0]}</span>}
+              {openActions.length > 0 && <span className="as-due late">{openActions.length} open</span>}
+            </div>
+          ))}
         </div>
       )}
       <div className="as-next-actions">
@@ -77,11 +92,13 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   });
   const digest = latestDigest(snap.items, filter);
   const tasks = () => setView({ list: 'tasks', open: null });
+  const stale = staleTasks(snap.items.filter((r) => filter === 'all' || r.profile === filter), now);
   const stats = [
     { n: dueToday.length, label: 'to do today', cls: '' },
     { n: s.overdue.length, label: 'overdue', cls: 'late' },
     { n: s.review.length, label: 'to confirm', cls: 'review' },
     { n: s.doneToday.length, label: 'done', cls: 'done' },
+    { n: stale.length, label: 'stale', cls: '' },
   ].filter((x, i) => i === 0 || x.n > 0);
   const shown = (rs: ItemRow[]) => (
     <button className="ov-list" onClick={tasks}>

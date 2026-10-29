@@ -281,6 +281,20 @@ export const meetingsOf = (meetings: Meeting[], person: string) =>
 export const commitmentsOf = (meetings: Meeting[], person: string) =>
   meetingsOf(meetings, person).flatMap((m) => othersOf(m).filter((o) => sameName(o.who, person)).map((o) => ({ meeting: m, what: o.what })));
 
+// The last two earlier meetings that share an attendee or the title, newest first, with their decisions and open actions.
+export function priorWith(meeting: Meeting, meetings: Meeting[], items: ItemRow[]) {
+  const people = peopleOf(meeting);
+  const title = meeting.title?.trim().toLowerCase();
+  const start = meeting.starts_at;
+  if (start == null) return [];
+  return live(meetings)
+    .filter((m) => m.starts_at != null && m.starts_at < start && !(m.id === meeting.id && m.profile === meeting.profile)
+      && ((!!title && m.title?.trim().toLowerCase() === title) || peopleOf(m).some((p) => people.some((q) => sameName(p, q)))))
+    .sort((a, b) => b.starts_at! - a.starts_at!)
+    .slice(0, 2)
+    .map((m) => ({ meeting: m, decisions: listOf(m.decisions), open: actionsOf(items, m).filter((r) => r.status === 'open') }));
+}
+
 // Current claims whose text names the person.
 export const claimsMentioning = (facts: Fact[], person: string) => {
   const name = person.trim().toLowerCase();

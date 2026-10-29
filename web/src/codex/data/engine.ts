@@ -173,6 +173,14 @@ export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
   };
 }
 
+export const STALE_DAYS = 14;
+
+export function staleTasks(items: ItemRow[], now: number) {
+  const cutoff = now - STALE_DAYS * 86400000;
+  const changed = (r: ItemRow) => Math.max(r.updated_at, statusTime(r));
+  return items.filter((r) => !r.deleted && r.status === 'open' && !isCalendar(r) && changed(r) < cutoff).sort((a, b) => changed(a) - changed(b));
+}
+
 export const reviewedSince = (r: ItemRow) => statusTime(r);
 
 export const DIGEST_TITLE = 'Weekly digest';

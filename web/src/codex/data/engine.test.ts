@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { edited, isQuestion, latestDigest, moved, newCapture, parseWhen, split, stripWhen } from './engine';
+import { edited, isQuestion, latestDigest, moved, newCapture, parseWhen, split, staleTasks, stripWhen } from './engine';
 import { rowToChange, type ItemRow } from './sync';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
@@ -102,5 +102,28 @@ describe('latestDigest', () => {
     expect(latestDigest(items, 'all')?.id).toBe('b');
     expect(latestDigest(items, 'personal')?.id).toBe('e');
     expect(latestDigest([items[2]], 'all')).toBeUndefined();
+  });
+});
+
+describe('staleTasks', () => {
+  const day = 86400000;
+  const t = now.getTime();
+  const row = (id: string, extra: Partial<ItemRow> = {}): ItemRow => ({
+    id, profile: 'work', version: 1, updated_at: t - 20 * day, deleted: 0, field_times: '{}', dirty: 0,
+    title: id, text: null, source: 'capture', source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...extra,
+  });
+  it('lists open tasks untouched for more than 14 days, oldest first', () => {
+    const rows = [
+      row('b', { updated_at: t - 15 * day }), row('a', { updated_at: t - 30 * day }), row('edge', { updated_at: t - 14 * day }), row('fresh', { updated_at: t - 2 * day }),
+    ];
+    expect(staleTasks(rows, t).map((r) => r.id)).toEqual(['a', 'b']);
+  });
+  it('skips calendar rows, deleted rows and other statuses', () => {
+    const rows = [row('cal', { source: 'calendar' }), row('gone', { deleted: 1 }), row('done', { status: 'done' }), row('note', { status: 'note' }), row('sug', { status: 'suggested' }), row('ok')];
+    expect(staleTasks(rows, t).map((r) => r.id)).toEqual(['ok']);
+  });
+  it('counts a recent status change as activity', () => {
+    const rows = [row('reopened', { field_times: JSON.stringify({ status: t - day }), updated_at: t - 20 * day })];
+    expect(staleTasks(rows, t)).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -152,5 +152,40 @@ describe('people', () => {
   it('finds live claims that name the person', () => {
     const fs = [fact('x', 'p1', 'H', 'Ada Lovelace owns it'), fact('y', 'p1', 'H', 'Nobody'), fact('z', 'p1', 'H', 'ada lovelace old', { superseded_by: 'x' })];
     expect(claimsMentioning(fs, 'Ada Lovelace').map((f) => f.id)).toEqual(['x']);
+  });
+});
+
+describe('priorWith', () => {
+  const mtg = (id: string, title: string, startsAt: number, extra: Partial<Meeting> = {}): Meeting => ({
+    ...common(id), title, starts_at: startsAt, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null, ...extra,
+  });
+  const task = (id: string, meetingId: string, status: string): ItemRow => ({
+    ...common(id), title: id, text: null, source: 'meeting', source_url: null, people: null, at: null, status, meeting_id: meetingId, rolls: null, rolled_from: null, rank: null,
+  });
+  const next = mtg('next', 'Planning', 1000, { people: JSON.stringify(['Ola', 'Kari']) });
+
+  it('returns the last two earlier meetings sharing an attendee or title, newest first', () => {
+    const meetings = [
+      mtg('m1', 'Other', 100, { people: 'ola' }), mtg('m2', 'Planning', 200), mtg('m3', 'Sync', 300, { people: 'Kari, Per' }),
+      mtg('m4', 'Unrelated', 400, { people: 'Per' }), mtg('later', 'Planning', 2000), next,
+    ];
+    expect(priorWith(next, meetings, []).map((p) => p.meeting.id)).toEqual(['m3', 'm2']);
+  });
+
+  it('skips deleted meetings and the meeting itself', () => {
+    const meetings = [mtg('gone', 'Planning', 500, { deleted: 1 }), mtg('m1', 'Planning', 100), next];
+    expect(priorWith(next, meetings, []).map((p) => p.meeting.id)).toEqual(['m1']);
+  });
+
+  it('carries decisions and only open actions', () => {
+    const m = mtg('m1', 'Planning', 100, { decisions: JSON.stringify(['Ship it', 'Cut scope']) });
+    const items = [task('a', 'm1', 'open'), task('b', 'm1', 'done'), task('c', 'm1', 'suggested'), task('d', 'm1', 'open'), task('e', 'other', 'open')];
+    const [p] = priorWith(next, [m, next], items);
+    expect(p.decisions).toEqual(['Ship it', 'Cut scope']);
+    expect(p.open.map((r) => r.id)).toEqual(['a', 'd']);
+  });
+
+  it('returns nothing when the meeting has no start time', () => {
+    expect(priorWith({ ...next, starts_at: null }, [mtg('m1', 'Planning', 100)], [])).toEqual([]);
   });
 });
