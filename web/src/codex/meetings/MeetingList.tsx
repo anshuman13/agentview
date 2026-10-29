@@ -1,0 +1,217 @@
+import { memo, useEffect, useMemo, useState } from 'react';
+import { useAssistant, useCodex } from '../data';
+import { newId } from '../data/sync';
+import { actionCount, actionCounts, groupMeetings, live, meetingState, peopleOf, searchMeetings, trackedTopics, type Meeting } from '../data/wiki';
+import { clock } from '../time';
+import { Icon } from '../../ui/Icon';
+import { save, stored } from '../../ui/util';
+import { setView, showSnack, useView } from '../view';
+import { Decisions } from './Decisions';
+import '../../styles/features/wiki.css';
+
+const HUES = ['--accent', '--claude', '--prompt', '--ok', '--warn', '--agent'];
+const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length]})`;
+const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+const TOPICS_KEY = 'agentview.meetingTopics';
+export const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
+
+export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
+  if (!people.length) return null;
+  const more = people.length - max;
+  return (
+    <span className="mt-avatars" title={people.join(', ')}>
+      {people.slice(0, more > 0 ? max : people.length).map((p) => <span key={p} style={{ '--hue': hue(p) } as React.CSSProperties}>{initials(p)}</span>)}
+      {more > 0 && <span className="more">+{more}</span>}
+    </span>
+  );
+}
+
+// The badge says where the meeting is: coming up, waiting for its transcript, or what it left for me.
+const Badge = memo(function Badge({ m, now, review, total, done }: { m: Meeting; now: number; review: number; total: number; done: number }) {
+  const state = meetingState(m, now);
+  if (state === 'missing') return <span className="mt-count warn" title="No Gemini notes were found for this meeting">No transcript</span>;
+  if (review > 0) return <span className="mt-count review" title="Suggested actions to keep or dismiss">{review} to review</span>;
+  if (total > 0) {
+    return (
+      <span className={`mt-count${done === total ? ' done' : ''}`} title="My actions done">
+        <Icon name={done === total ? 'pass' : 'circle-large-outline'} small /> {done} of {total}
+      </span>
+    );
+  }
+  if (state === 'waiting') return <span className="mt-count muted" title="The transcript is read a few minutes after the meeting">Waiting</span>;
+  if (state === 'done') return <span className="mt-count muted">Nothing for you</span>;
+  return null;
+});
+
+const NO_TOPICS: string[] = [];
+
+export const MeetingRow = memo(function MeetingRow({ m, now, topics = NO_TOPICS }: { m: Meeting; now: number; topics?: string[] }) {
+  const { snap } = useAssistant();
+  const count = actionCounts(snap.items).get(meetingKey(m)) ?? actionCount([], m);
+  return <MeetingRowView m={m} now={now} topics={topics} review={count.review} total={count.total} done={count.done} />;
+});
+
+const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, total, done }: { m: Meeting; now: number; topics: string[]; review: number; total: number; done: number }) {
+  const tracked = useMemo(() => trackedTopics(m, topics), [m, topics]);
+  const people = useMemo(() => peopleOf(m), [m]);
+  const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
+  const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
+  const mins = Math.round((m.starts_at! - now) / 60000);
+  return (
+    <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => setView({ list: 'meetings', open: meetingKey(m), person: null })}>
+      <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
+      <span className="mt-body">
+        <span className="mt-title">{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
+        <span className="mt-span">
+          {m.starts_at! >= new Date(now).setHours(24, 0, 0, 0) && `${new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, `}
+          {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
+          {m.recorded_ms ? ` · ${Math.round(m.recorded_ms / 60000)} min recorded` : ''}
+        </span>
+      </span>
+      {tracked.map((t) => <span key={t} className="chip pill sm" title="Tracked topic">{t}</span>)}
+      <Badge m={m} now={now} review={review} total={total} done={done} />
+      <Avatars people={people} />
+    </button>
+  );
+});
+
+const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
+
+// Today, then each later day with meetings, one at a time, like a desk calendar.
+function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number; topics: string[] }) {
+  const [at, setAt] = useState(0);
+  const days = useMemo(() => {
+    const today = dayStart(now);
+    const out = new Map<number, Meeting[]>([[today, []]]);
+    for (const m of live(meetings).filter((x) => x.starts_at != null && (x.ends_at ?? x.starts_at) > now).sort((a, b) => a.starts_at! - b.starts_at!)) {
+      const d = Math.max(today, dayStart(m.starts_at!));
+      out.set(d, [...(out.get(d) ?? []), m]);
+    }
+    return [...out];
+  }, [meetings, now]);
+  const i = Math.min(at, days.length - 1);
+  const [day, rows] = days[i];
+  const isToday = day === dayStart(now);
+  return (
+    <section className="mt-upcoming">
+      <div className="mt-up-head">
+        <span>Upcoming</span>
+        <span className="spacer" />
+        <button className="icon-btn" title="Earlier day" aria-label="Earlier day" disabled={i === 0} onClick={() => setAt(i - 1)}><Icon name="chevron-left" small /></button>
+        <button className="icon-btn" title="Next day with meetings" aria-label="Next day" disabled={i === days.length - 1} onClick={() => setAt(i + 1)}><Icon name="chevron-right" small /></button>
+      </div>
+      <div className="mt-up-card">
+        <div className="mt-up-date">
+          <b>{new Date(day).getDate()}</b>
+          <span>{isToday ? 'Today' : new Date(day).toLocaleDateString([], { weekday: 'short', month: 'short' })}</span>
+          {isToday && <i className="mt-up-dot" />}
+        </div>
+        <div className="mt-up-rows">
+          {rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} />)}
+          {!rows.length && <div className="mt-up-none">{days.length > 1 ? 'Nothing else today.' : 'Nothing on the calendar.'}</div>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TopicBar({ topics, active, onToggle, onAdd, onRemove }: { topics: string[]; active: string[]; onToggle: (t: string) => void; onAdd: (t: string) => void; onRemove: (t: string) => void }) {
+  const [text, setText] = useState('');
+  return (
+    <div className="mt-topics">
+      {topics.map((t) => (
+        <span key={t} className="mt-topic">
+          <button className={`chip pill${active.includes(t) ? '' : ' outline'}`} aria-pressed={active.includes(t)} title="Show only meetings on this topic" onClick={() => onToggle(t)}>{t}</button>
+          <button className="icon-btn" title={`Stop tracking ${t}`} aria-label={`Stop tracking ${t}`} onClick={() => onRemove(t)}><Icon name="close" small /></button>
+        </span>
+      ))}
+      <form onSubmit={(e) => { e.preventDefault(); onAdd(text.trim().toLowerCase()); setText(''); }}>
+        <input value={text} placeholder="Track a topic" aria-label="Track a topic" onChange={(e) => setText(e.target.value)} />
+      </form>
+    </div>
+  );
+}
+
+export function MeetingsList({ onMenu }: { onMenu: () => void }) {
+  const { meetings, store } = useCodex();
+  const { filter } = useView();
+  const [query, setQuery] = useState('');
+  const [topics, setTopics] = useState(() => stored<string[]>(TOPICS_KEY, []).filter((t) => typeof t === 'string'));
+  const [active, setActive] = useState<string[]>([]);
+  const [log, setLog] = useState(false);
+  const changeTopics = (next: string[]) => {
+    setTopics(next);
+    setActive((a) => a.filter((t) => next.includes(t)));
+    save(TOPICS_KEY, next);
+  };
+  const [syncing, setSyncing] = useState(false);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const shown = () => document.visibilityState === 'visible' && tick();
+    const t = setInterval(tick, 60_000);
+    document.addEventListener('visibilitychange', shown);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', shown);
+    };
+  }, []);
+  const groups = useMemo(() => {
+    const mine = filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter);
+    const tracked = active.length ? mine.filter((m) => trackedTopics(m, active).length) : mine;
+    return groupMeetings(searchMeetings(tracked, query), now);
+  }, [meetings, query, filter, now, active]);
+  const takeNotes = () => {
+    const t = Date.now();
+    const id = newId();
+    const row: Meeting = {
+      id, profile: filter === 'personal' ? 'personal' : 'work', version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}',
+      title: 'Notes', starts_at: t, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: '', summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
+    };
+    void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
+    setView({ open: meetingKey(row) });
+  };
+  const syncCalendar = async () => {
+    setSyncing(true);
+    try {
+      const n = await store.syncCalendar();
+      showSnack(n ? `${n} meeting${n > 1 ? 's' : ''} updated from the calendar` : 'Calendar is up to date');
+    } catch (err) {
+      showSnack(`Calendar sync failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+  return (
+    <div className="wk narrow">
+      <header className="wk-head">
+        <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
+        <h1>Meetings</h1>
+        <span className="spacer" />
+        <label className="wk-search">
+          <Icon name="search" small />
+          <input value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
+        </label>
+        <button className={`btn mt-dec${log ? ' on' : ''}`} aria-pressed={log} title="Decisions from all meetings" onClick={() => setLog((v) => !v)}><Icon name="check" small /> <span>Decisions</span></button>
+        <button className="btn mt-cal" disabled={syncing} title="Import the next days from Google Calendar (runs on its own every half hour from 7 to 19 on weekdays, and when the app opens)" onClick={syncCalendar}>
+          <Icon name={syncing ? 'loading' : 'sync'} small spin={syncing} /> <span>{syncing ? 'Syncing' : 'Sync calendar'}</span>
+        </button>
+        <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
+      </header>
+      <div className="wk-scroll">
+        {log ? <Decisions meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} /> : <div className="mt-list">
+          <TopicBar topics={topics} active={active} onToggle={(t) => setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]))}
+            onAdd={(t) => t && !topics.includes(t) && changeTopics([...topics, t])} onRemove={(t) => changeTopics(topics.filter((x) => x !== t))} />
+          {!query && <Upcoming meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} topics={topics} />}
+          {groups.map((g) => (
+            <section key={g.label}>
+              <div className="mt-day">{g.label}</div>
+              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} />)}</div>
+            </section>
+          ))}
+          {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
+        </div>}
+      </div>
+    </div>
+  );
+}
