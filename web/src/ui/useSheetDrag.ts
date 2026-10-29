@@ -30,7 +30,10 @@ export function useSheetDrag(open: boolean, onClose: () => void) {
     if (closing.current) return;
     if (!sheet.current) return onClose();
     move(sheet.current.offsetHeight + 48, true);
-    closing.current = setTimeout(onClose, reduced() ? 0 : SETTLE_MS);
+    closing.current = setTimeout(() => {
+      closing.current = undefined;
+      onClose();
+    }, reduced() ? 0 : SETTLE_MS);
   };
 
   const handle = {
