@@ -268,6 +268,16 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .mt-log-text { font-size: var(--fs-md); color: var(--fg-strong); overflow-wrap: anywhere; }
 .mt-log-from { font-size: var(--fs-xs); color: var(--fg-muted); overflow-wrap: anywhere; }
 
+.mt-load { display: flex; flex-direction: column; gap: var(--sp-8); }
+.mt-load-weeks, .mt-load-people { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-5); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--wk-card); }
+.mt-load-row { display: grid; grid-template-columns: 76px 1fr 56px; align-items: center; gap: var(--sp-4); font-size: var(--fs-sm); }
+.mt-load-label, .mt-load-head { color: var(--fg-muted); font-size: var(--fs-sm); }
+.mt-load-track { height: 12px; border-radius: var(--radius-pill); background: var(--hover); overflow: hidden; }
+.mt-load-track i { display: block; height: 100%; min-width: 2px; border-radius: var(--radius-pill); background: var(--c-meeting); }
+.mt-load-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg-strong); }
+.mt-load-share { font-size: var(--fs-sm); color: var(--fg-muted); }
+.mt-load-person { display: flex; justify-content: space-between; gap: var(--sp-4); font-size: var(--fs-md); }
+
 /* Meeting page */
 .mt-page { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }
 .mt-when { margin-top: var(--sp-6); font-size: var(--fs-md); }
