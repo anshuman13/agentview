@@ -5,6 +5,7 @@ import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './s
 import type { Table, Tables } from './wiki';
 
 const SYNC_EVERY = 30000;
+const SAVE_DELAY = 500;
 
 const call = (path: string, init?: RequestInit) => fetch(path, init);
 
@@ -58,21 +59,30 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   private loaded = this.load();
   private saving: Promise<void> = Promise.resolve();
   private unsaved = new Set<string>();
+  private saveDue = false;
+  private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private syncTouched = new Set<string>();
   private timer: ReturnType<typeof setInterval>;
   private onVisible = () => document.visibilityState === 'visible' && this.syncNow();
+  private onHide = () => document.visibilityState === 'hidden' && this.flush();
+  private onPageHide = () => this.flush();
 
   constructor() {
     super('ready');
     this.timer = setInterval(this.onVisible, SYNC_EVERY);
     window.addEventListener('online', this.syncNow);
     document.addEventListener('visibilitychange', this.onVisible);
+    document.addEventListener('visibilitychange', this.onHide);
+    window.addEventListener('pagehide', this.onPageHide);
   }
 
   dispose() {
     clearInterval(this.timer);
     window.removeEventListener('online', this.syncNow);
     document.removeEventListener('visibilitychange', this.onVisible);
+    document.removeEventListener('visibilitychange', this.onHide);
+    window.removeEventListener('pagehide', this.onPageHide);
+    this.flush();
   }
 
   private get rows() {
@@ -102,15 +112,24 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.since = cached.since;
     if (!meta) {
       this.save(Object.keys(this.tables));
+      this.flush();
       this.saving = this.saving.then(() => cacheOp('readwrite', (s) => s.delete(LEGACY_KEY)).then(() => {}, () => {}));
     }
     await this.refresh(Object.keys(this.tables));
   }
 
+  // Saves are coalesced: tables touched within SAVE_DELAY are written once, from the rows as they are at flush time.
   private save(tables: string[]) {
-    const pending = this.unsaved.size > 0;
     tables.forEach((t) => this.unsaved.add(t));
-    if (pending) return;
+    this.saveDue = true;
+    this.saveTimer ??= setTimeout(() => this.flush(), SAVE_DELAY);
+  }
+
+  private flush() {
+    clearTimeout(this.saveTimer);
+    this.saveTimer = undefined;
+    if (!this.saveDue) return;
+    this.saveDue = false;
     this.saving = this.saving.then(async () => {
       const names = [...this.unsaved];
       this.unsaved.clear();

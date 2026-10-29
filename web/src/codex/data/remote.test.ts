@@ -52,7 +52,7 @@ describe('RemoteStore.dispose', () => {
     fakeIndexedDb([]);
     const listeners = fakeDom();
     const store = await freshStore();
-    expect(listeners.window.size + listeners.document.size).toBe(2);
+    expect(listeners.window.size + listeners.document.size).toBe(4);
     const running = vi.getTimerCount();
     store.dispose();
     expect(listeners.window.size + listeners.document.size).toBe(0);
@@ -62,7 +62,7 @@ describe('RemoteStore.dispose', () => {
   });
 });
 
-type Internal = { since: number; save(tables: string[]): void; saving: Promise<void>; tables: Record<string, Map<string, any>> };
+type Internal = { since: number; save(tables: string[]): void; flush(): void; saving: Promise<void>; tables: Record<string, Map<string, any>> };
 
 const taskRow = (id: string) => ({ profile: 'work', id, version: 1, dirty: 0, updated_at: 1, field_times: '{}', title: id, status: 'open', deleted: 0 });
 
@@ -74,9 +74,11 @@ describe('RemoteStore save', () => {
     const internal = store as unknown as Internal;
     internal.since = 1;
     internal.save([]);
+    internal.flush();
     await new Promise((r) => setTimeout(r, 5));
     internal.since = 2;
     internal.save([]);
+    internal.flush();
     await internal.saving;
     expect((stored.get('meta') as { since: number }).since).toBe(2);
     store.dispose();
@@ -90,8 +92,35 @@ describe('RemoteStore save', () => {
     await internal.saving;
     stored.clear();
     await store.capture('one', 'task', 'work');
+    internal.flush();
     await internal.saving;
     expect([...stored.keys()].sort()).toEqual(['meta', 'table:items']);
+    store.dispose();
+  });
+
+  it('writes a table once for rapid edits and flushes when the page hides', async () => {
+    const stored = fakeIndexedDb([]);
+    const puts: string[] = [];
+    const set = stored.set.bind(stored);
+    stored.set = (k, v) => (puts.push(k), set(k, v));
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void> };
+    await internal.loaded;
+    await internal.saving;
+    puts.length = 0;
+    const row = await store.capture('one', 'task', 'work');
+    for (let i = 0; i < 9; i++) await store.update(row, { title: `t${i}` });
+    expect(puts).toEqual([]);
+    await new Promise((r) => setTimeout(r, 600));
+    await internal.saving;
+    expect(puts.filter((k) => k === 'table:items')).toHaveLength(1);
+    expect((stored.get('table:items') as { title: string }[])[0].title).toBe('t8');
+    await store.update(row, { title: 'last' });
+    vi.stubGlobal('document', { addEventListener() {}, removeEventListener() {}, visibilityState: 'hidden' });
+    (internal as unknown as { onHide(): void }).onHide();
+    await internal.saving;
+    expect((stored.get('table:items') as { title: string }[])[0].title).toBe('last');
     store.dispose();
   });
 

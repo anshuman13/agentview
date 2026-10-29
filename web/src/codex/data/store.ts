@@ -71,7 +71,7 @@ export abstract class BaseStore {
 
   // Resolves true when it pushed or pulled any row.
   protected abstract syncOnce(): Promise<boolean>;
-  protected abstract refresh(): Promise<void>;
+  protected abstract refresh(tables?: string[]): Promise<void>;
 
   // A call while a sync runs resolves after one more full sync, so it sees the changes made before the call.
   syncNow = (): Promise<void> => {

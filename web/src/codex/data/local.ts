@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch } from './store';
+import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot } from './store';
 import { edited, errorText, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
 import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
@@ -119,7 +119,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
         await this.setState('sample_repulled', 1);
       }
       this.set({ phase: 'ready', message: '' });
-      await this.refresh();
+      await this.refresh(LocalStore.ALL);
       this.syncNow();
     } catch (err) {
       this.set({ phase: 'locked', message: errorText(err) });
@@ -132,16 +132,35 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return this.unlocking;
   }
 
-  private refreshes = 0;
+  private seqs: Record<string, number> = {};
+  private syncTouched = new Set<string>();
+  private static ALL = ['items', ...WIKI_TABLES];
 
-  // A refresh that finishes after a later one started is dropped, so older rows never replace newer ones.
-  protected async refresh() {
+  // Re-reads only the named tables (every table when none are given). A read that finishes after a later read of the
+  // same table started is dropped, so older rows never replace newer ones. Rows with the same version and times keep
+  // their object, and a table whose rows are all unchanged keeps its array.
+  protected async refresh(given?: string[]) {
     if (!this.ready) return;
-    const n = ++this.refreshes;
-    const items = await this.query(`SELECT * FROM items WHERE deleted = 0 AND (IFNULL(status, '') != 'done' OR updated_at > ?)`, [doneCutoff(Date.now())]);
-    const all = <K extends Table>(t: K) => this.query<Tables[K]>(`SELECT * FROM ${t} WHERE deleted = 0`);
-    const [pages, facts, meetings, actions, jobs, runs, chats, briefs] = await Promise.all([all('pages'), all('facts'), all('meetings'), all('actions'), all('jobs'), all('runs'), all('chats'), all('briefs')]);
-    if (this.ready && n === this.refreshes) this.set({ items, pages, facts, meetings, actions, jobs, runs, chats, briefs });
+    const tables = given ?? (this.syncTouched.size ? [...this.syncTouched] : LocalStore.ALL);
+    if (!given) this.syncTouched.clear();
+    const seq = tables.map((t) => [t, (this.seqs[t] = (this.seqs[t] ?? 0) + 1)] as const);
+    const read = (t: string) => t === 'items'
+      ? this.query<SyncRow>(`SELECT * FROM items WHERE deleted = 0 AND (IFNULL(status, '') != 'done' OR updated_at > ?)`, [doneCutoff(Date.now())])
+      : this.query<SyncRow>(`SELECT * FROM ${t} WHERE deleted = 0`);
+    const rows = await Promise.all(tables.map(read));
+    if (!this.ready) return;
+    const snap = this.snapshot() as unknown as Record<string, SyncRow[]>;
+    const next: Record<string, SyncRow[]> = {};
+    seq.forEach(([t, n], i) => {
+      if (this.seqs[t] !== n) return;
+      const prev = new Map(snap[t].map((r) => [`${r.profile}:${r.id}`, r]));
+      const merged = rows[i].map((r) => {
+        const old = prev.get(`${r.profile}:${r.id}`);
+        return old && old.version === r.version && old.updated_at === r.updated_at && old.field_times === r.field_times ? old : r;
+      });
+      if (merged.length !== snap[t].length || merged.some((r, j) => r !== snap[t][j])) next[t] = merged;
+    });
+    if (Object.keys(next).length) this.set(next as Partial<Snapshot>);
   }
 
   // Merges or edits a row with compare-and-swap, retrying when another write lands between the read and the write.
@@ -170,7 +189,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
     try {
       if (!this.ready) throw new Error('Locked');
       await this.swap(name, row.profile, row.id, (local) => edited((local as Tables[K] | undefined) ?? row, patch, Date.now()));
-      await this.refresh();
+      await this.refresh([name]);
       this.syncNow();
     } catch (err) {
       showSnack(`Not saved: ${errorText(err)}`);
@@ -187,8 +206,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
       clean: ({ table: name, row }) => this.exec(
         `UPDATE ${name} SET dirty = 0 WHERE profile = ? AND id = ? AND updated_at = ? AND field_times = ?`,
         [row.profile, row.id, row.updated_at, row.field_times],
-      ).then(() => {}),
-      apply: (change) => this.applyChange(change),
+      ).then(() => void this.syncTouched.add(name)),
+      apply: (change) => this.applyChange(change).then(() => void this.syncTouched.add(change.table)),
     });
   }
 
@@ -199,7 +218,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
        VALUES (?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       captureParams(r),
     );
-    await this.refresh();
+    await this.refresh(['items']);
     this.syncNow();
     return r;
   }
@@ -211,7 +230,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
         `UPDATE items SET ${sql}, updated_at = max(updated_at, ?), dirty = 1 WHERE profile = ? AND id = ?`,
         [...params(now), now, row.profile, row.id],
       );
-      await this.refresh();
+      await this.refresh(['items']);
       this.syncNow();
     } catch (err) {
       showSnack(`Not saved: ${errorText(err)}`);
