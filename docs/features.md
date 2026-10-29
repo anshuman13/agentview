@@ -8,9 +8,13 @@
 - **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Sessions (open and recent chats) and Workspace (repos, chats, Paseo worktrees)
 - **Side chat**: the split icon on a chat row in the Sessions view opens that chat in a second column with its
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
-- **Codex** (top of the activity bar): Today, Upcoming, Meetings, Wiki, Notes and Done. The wiki is built from
-  claims with sources, which can be contested; meetings show notes, summary, decisions and actions to approve.
-  The scheduler that fills Meetings and Wiki is not built yet (see [codex-wiki.md](codex-wiki.md))
+- **Codex** (top of the activity bar): Overview, Tasks, Summary, Meetings, Jobs and Wiki, filtered by work or
+  personal profile. Overview lists the day, job reports and a follow-through card for meeting actions still open
+  after a week. Meetings imports the calendar every half hour and shows notes, summary, decisions, actions, pinned
+  text and earlier meetings of the same series; the header has a decision log and a Load view (hours per week,
+  share recorded, who you meet most). Saved topics filter the list, show a timeline of matching meetings, decisions
+  and claims, and count what is new since you last looked. The wiki is built from claims with sources, which can be
+  contested and go through Review (see [codex-wiki.md](codex-wiki.md))
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
 - **Command palette** (⇧⌘P or F1): every view, tab, page, model and mode as a searchable list
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
