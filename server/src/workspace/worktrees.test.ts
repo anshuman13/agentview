@@ -1,6 +1,10 @@
 import os from 'node:os';
 import path from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+
+vi.mock('node:child_process', () => ({
+  execFile: (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error) => void) => cb(Object.assign(new Error('Executable not found in $PATH: "paseo"'), { code: 'ENOENT' })),
+}));
 
 const home = os.homedir();
 let mod: typeof import('./worktrees.js');
@@ -55,5 +59,15 @@ describe('createFolder', () => {
     await expect(mod.createFolder('work', '../evil')).rejects.toThrow('Use letters');
     await expect(mod.createFolder('work', 'a/b')).rejects.toThrow('Use letters');
     await expect(mod.createFolder('work', '.hidden')).rejects.toThrow('Use letters');
+  });
+});
+
+describe('paseo missing', () => {
+  it('lists no worktrees', async () => {
+    await expect(mod.listWorktrees([])).resolves.toEqual([]);
+  });
+
+  it('fails creating a worktree with a clear message', async () => {
+    await expect(mod.createWorktree('/repo', 'main')).rejects.toThrow('paseo is not installed');
   });
 });

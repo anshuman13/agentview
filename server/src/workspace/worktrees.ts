@@ -8,6 +8,9 @@ import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shar
 import { inside } from '../../../shared/util.js';
 
 const run = promisify(execFile);
+const paseoMissing = (err: unknown) => (err as { code?: string }).code === 'ENOENT' || /Executable not found|paseo is not installed/.test((err as Error)?.message ?? '');
+const notInstalled = (err: unknown): never => { throw paseoMissing(err) ? new Error('paseo is not installed') : err; };
+const paseo = (args: string[], timeout: number) => run('paseo', args, { timeout });
 const git = async (cwd: string, ...args: string[]) => (await run('git', ['-C', cwd, ...args])).stdout.trim();
 
 const home = os.homedir();
@@ -73,7 +76,9 @@ export async function createFolder(root: string, name: string) {
 }
 
 export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
-  const [{ stdout }, projects] = await Promise.all([run('paseo', ['workspace', 'ls', '--json'], { timeout: 30_000 }), paseoProjects()]);
+  const listed = await Promise.all([paseo(['workspace', 'ls', '--json'], 30_000), paseoProjects()]).catch((err) => { if (paseoMissing(err)) return null; throw err; });
+  if (!listed) return [];
+  const [{ stdout }, projects] = listed;
   const spaces = (JSON.parse(stdout) as Array<{ workspaceId: string; project: string; name: string; isolation: string; cwd: string }>)
     .filter((w) => w.isolation === 'worktree');
   const chats = await listSessions({ limit: 1000 });
@@ -94,11 +99,11 @@ export async function removeWorktree(id: string, openCwds: string[]) {
   const w = (await listWorktrees(openCwds)).find((x) => x.id === id);
   if (!w) throw new Error('Worktree not found');
   if (!w.removable) throw new Error('This worktree was used in the last 12 hours or is open');
-  await run('paseo', ['workspace', 'archive', id], { timeout: 60_000 });
+  await paseo(['workspace', 'archive', id], 60_000).catch(notInstalled);
 }
 
 async function paseoProjects() {
-  const { stdout } = await run('paseo', ['project', 'ls', '--json'], { timeout: 30_000 });
+  const { stdout } = await paseo(['project', 'ls', '--json'], 30_000).catch(notInstalled);
   return JSON.parse(stdout) as Array<{ projectId: string; name: string; path: string }>;
 }
 
@@ -107,12 +112,12 @@ export async function createWorktree(repo: string, branch: string) {
   if (branch.startsWith('-') || !/^[\w./-]+$/.test(branch)) throw new Error('Invalid branch name');
   await git(repo, 'check-ref-format', '--branch', branch).catch(() => { throw new Error(`Invalid branch name: ${branch}`); });
   const base = (await git(repo, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD').catch(() => 'origin/main')).replace(/^origin\//, '');
-  const { stdout } = await run('paseo', ['workspace', 'create', '--isolation', 'worktree', '--path', repo, '--mode', 'branch-off', '--new-branch', branch, '--base', base, '--json'], { timeout: 300_000 });
+  const { stdout } = await paseo(['workspace', 'create', '--isolation', 'worktree', '--path', repo, '--mode', 'branch-off', '--new-branch', branch, '--base', base, '--json'], 300_000).catch(notInstalled);
   const out = JSON.parse(stdout);
   const cwd: string | undefined = out.cwd ?? out.workspace?.cwd;
   if (cwd) return cwd;
   const id = out.workspaceId ?? out.workspace?.workspaceId;
-  const spaces = JSON.parse((await run('paseo', ['workspace', 'ls', '--json'], { timeout: 30_000 })).stdout) as Array<{ workspaceId: string; cwd: string }>;
+  const spaces = JSON.parse((await paseo(['workspace', 'ls', '--json'], 30_000)).stdout) as Array<{ workspaceId: string; cwd: string }>;
   const made = spaces.find((w) => w.workspaceId === id);
   if (!made) throw new Error('Paseo created the worktree but did not report its folder');
   return made.cwd;
