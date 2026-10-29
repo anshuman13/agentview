@@ -49,15 +49,23 @@ export async function hubRows(table: string): Promise<HubRow[]> {
   return [...(rows.get(table)?.values() ?? [])].filter((r) => !r.deleted);
 }
 
+export function applyHubChanges(into: Map<string, Map<string, HubRow>>, changes: { table: string; id: string; profile: HubRow['profile']; deleted: boolean; updated_at: number; fields: Record<string, unknown> }[]) {
+  for (const c of changes) {
+    const key = `${c.profile}:${c.id}`;
+    if (c.deleted) into.get(c.table)?.delete(key);
+    else {
+      if (!into.has(c.table)) into.set(c.table, new Map());
+      into.get(c.table)!.set(key, { ...c.fields, id: c.id, profile: c.profile, deleted: false, updated_at: c.updated_at });
+    }
+  }
+}
+
 async function pull() {
   for (;;) {
     const resp = await fetch(`${HUB}/changes?since=${since}`, { signal: AbortSignal.timeout(15_000) });
     if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}`);
     const r = (await resp.json()) as { version: number; hasMore: boolean; changes: { table: string; id: string; profile: HubRow['profile']; deleted: boolean; updated_at: number; fields: Record<string, unknown> }[] };
-    for (const c of r.changes) {
-      if (!rows.has(c.table)) rows.set(c.table, new Map());
-      rows.get(c.table)!.set(`${c.profile}:${c.id}`, { ...c.fields, id: c.id, profile: c.profile, deleted: c.deleted, updated_at: c.updated_at });
-    }
+    applyHubChanges(rows, r.changes);
     since = Math.max(since, r.version);
     if (!r.hasMore) break;
   }
