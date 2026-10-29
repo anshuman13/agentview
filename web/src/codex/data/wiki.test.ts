@@ -252,10 +252,11 @@ describe('briefFor', () => {
     expect(out.map((x) => x.r.id)).toEqual(['a', 'd']);
   });
 
-  it('lists topic matches newest first across kinds and counts those newer than since', () => {
+  it('lists past topic matches newest first across kinds and counts those newer than since', () => {
     const m = { ...common('m'), title: 'Billing sync', starts_at: 20, summary: null, decisions: '["Drop billing retries"]' } as unknown as Meeting;
     const f = fact('f', 'p1', 'H', 'Billing runs monthly', { at: 30 });
-    const out = topicTimeline('billing', [m], [f, fact('g', 'p1', 'H', 'Other', { at: 40 })], 25);
+    const next = { ...m, id: 'n', starts_at: 90 } as Meeting;
+    const out = topicTimeline('billing', [m, next], [f, fact('g', 'p1', 'H', 'Other', { at: 40 })], 25, 20, 50);
     expect(out.entries.map((e) => e.kind)).toEqual(['claim', 'meeting', 'decision']);
     expect(out.fresh).toBe(1);
   });
