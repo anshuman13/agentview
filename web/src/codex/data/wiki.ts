@@ -308,6 +308,16 @@ const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().t
 export const meetingsOf = (meetings: Meeting[], person: string) =>
   live(meetings).filter((m) => peopleOf(m).some((p) => sameName(p, person))).sort((a, b) => (b.starts_at ?? 0) - (a.starts_at ?? 0));
 
+export type Decision = { meeting: Meeting; text: string; at: number };
+
+// Every decision line from the meetings, newest meeting first.
+export const decisionLog = (meetings: Meeting[]): Decision[] =>
+  live(meetings)
+    .flatMap((meeting) => listOf(meeting.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ meeting, text, at: meeting.starts_at ?? meeting.updated_at })))
+    .sort((a, b) => b.at - a.at);
+
+export const decisionsWith = (log: Decision[], person: string) => (person ? log.filter((d) => peopleOf(d.meeting).some((p) => sameName(p, person))) : log);
+
 // What the person took on in meetings, newest meeting first.
 export const commitmentsOf = (meetings: Meeting[], person: string) =>
   meetingsOf(meetings, person).flatMap((m) => othersOf(m).filter((o) => sameName(o.who, person)).map((o) => ({ meeting: m, what: o.what })));

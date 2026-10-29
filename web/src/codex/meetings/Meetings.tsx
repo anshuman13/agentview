@@ -13,6 +13,7 @@ import { save, stored } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { AskBar } from '../wiki/Wiki';
+import { Decisions } from './Decisions';
 import { Person } from './Person';
 import '../../styles/features/wiki.css';
 
@@ -146,6 +147,7 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const [query, setQuery] = useState('');
   const [topics, setTopics] = useState(() => stored<string[]>(TOPICS_KEY, []).filter((t) => typeof t === 'string'));
   const [active, setActive] = useState<string[]>([]);
+  const [log, setLog] = useState(false);
   const changeTopics = (next: string[]) => {
     setTopics(next);
     setActive((a) => a.filter((t) => next.includes(t)));
@@ -199,13 +201,14 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
           <Icon name="search" small />
           <input value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
         </label>
+        <button className={`btn mt-dec${log ? ' on' : ''}`} aria-pressed={log} title="Decisions from all meetings" onClick={() => setLog((v) => !v)}><Icon name="check" small /> <span>Decisions</span></button>
         <button className="btn mt-cal" disabled={syncing} title="Import the next days from Google Calendar (runs on its own every half hour from 7 to 19 on weekdays, and when the app opens)" onClick={syncCalendar}>
           <Icon name={syncing ? 'loading' : 'sync'} small spin={syncing} /> <span>{syncing ? 'Syncing' : 'Sync calendar'}</span>
         </button>
         <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
       </header>
       <div className="wk-scroll">
-        <div className="mt-list">
+        {log ? <Decisions meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} /> : <div className="mt-list">
           <TopicBar topics={topics} active={active} onToggle={(t) => setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]))}
             onAdd={(t) => t && !topics.includes(t) && changeTopics([...topics, t])} onRemove={(t) => changeTopics(topics.filter((x) => x !== t))} />
           {!query && <Upcoming meetings={filter === 'all' ? meetings : meetings.filter((m) => m.profile === filter)} now={now} topics={topics} />}
@@ -216,7 +219,7 @@ function MeetingsList({ onMenu }: { onMenu: () => void }) {
             </section>
           ))}
           {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
-        </div>
+        </div>}
       </div>
     </div>
   );

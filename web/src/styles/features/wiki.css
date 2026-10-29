@@ -248,13 +248,21 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .mt-avatars > span { width: 22px; height: 22px; display: grid; place-items: center; margin-left: -7px; border-radius: 50%; border: 2px solid var(--bg); background: color-mix(in srgb, var(--hue) 30%, var(--raised)); color: color-mix(in srgb, var(--hue) 70%, var(--fg-strong)); font-size: 9px; font-weight: 600; }
 .mt-avatars > span:first-child { margin-left: 0; }
 .mt-avatars > .more { background: var(--hover); color: var(--fg-muted); }
-.mt-take, .mt-cal { height: 34px; border-radius: var(--radius-pill); padding: 0 var(--sp-8); }
+.mt-take, .mt-cal, .mt-dec { height: 34px; border-radius: var(--radius-pill); padding: 0 var(--sp-8); }
 
 @container wk (max-width: 900px) {
   .mt-avatars { display: none; }
-  .mt-take, .mt-cal { width: 40px; padding: 0; justify-content: center; }
-  .mt-take > span, .mt-cal > span { display: none; }
+  .mt-take, .mt-cal, .mt-dec { width: 40px; padding: 0; justify-content: center; }
+  .mt-take > span, .mt-cal > span, .mt-dec > span { display: none; }
 }
+.mt-dec.on { background: var(--hover); border-color: var(--border-strong); color: var(--fg-strong); }
+.mt-log { display: flex; flex-direction: column; gap: var(--sp-4); }
+.mt-log-bar { display: flex; align-items: center; gap: var(--sp-4); }
+.mt-log-bar select { min-width: 0; max-width: 100%; height: 30px; padding: 0 var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg); font: inherit; font-size: var(--fs-sm); }
+.mt-log-item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); width: 100%; padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--wk-card); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.mt-log-item:hover { background: var(--hover); }
+.mt-log-text { font-size: var(--fs-md); color: var(--fg-strong); overflow-wrap: anywhere; }
+.mt-log-from { font-size: var(--fs-xs); color: var(--fg-muted); overflow-wrap: anywhere; }
 
 /* Meeting page */
 .mt-page { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }

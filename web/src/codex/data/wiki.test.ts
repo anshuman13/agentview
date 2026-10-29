@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, decisionLog, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -147,6 +147,20 @@ describe('people', () => {
 
   it('lists only that person commitments', () => {
     expect(commitmentsOf(ms, 'Ada Lovelace').map((c) => [c.meeting.id, c.what])).toEqual([['new', 'Review the plan'], ['old', 'Send the draft']]);
+  });
+
+  it('logs decision lines newest first and filters by person', () => {
+    const withDecisions = [
+      { ...ms[0], decisions: JSON.stringify(['Ship on Friday', ' ']) },
+      { ...ms[1], decisions: JSON.stringify(['Drop the beta']) },
+      { ...ms[2], decisions: JSON.stringify(['Hire one more']), deleted: 1 },
+      ms[2],
+    ];
+    const log = decisionLog(withDecisions);
+    expect(log.map((d) => d.text)).toEqual(['Drop the beta', 'Ship on Friday']);
+    expect(decisionsWith(log, 'Bob Ray').map((d) => d.text)).toEqual(['Ship on Friday']);
+    expect(decisionsWith(log, '')).toHaveLength(2);
+    expect(decisionLog([])).toEqual([]);
   });
 
   it('finds live claims that name the person', () => {
