@@ -1,6 +1,4 @@
 .as-editor { position: relative; }
-/* Theme hues for meeting states. */
-:is(.as-editor, .as-nav) { --c-blue: var(--hue-blue); --c-green: var(--hue-green); --c-amber: var(--hue-amber); --c-purple: var(--hue-violet); --c-pink: var(--hue-magenta); --c-sky: var(--hue-sky); }
 /* Codex uses Geist on the dark themes. */
 :root:not([data-theme='light']) :is(.as-editor, .as-nav) {
   --font: 'Geist Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;

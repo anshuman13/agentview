@@ -21,6 +21,7 @@
        behind white text, so both reach 4.5:1.
      - Identity: --agent (subagents), --work and --personal; things you tell
        apart at a glance.
+     - Kind: --c-meeting (meetings) and --c-knowledge (notes, wiki claims).
      - Content: diffs, syntax and the terminal's ANSI colours read the hues.
      Add a colour only by giving it one of these roles.
   Components use only these names; one-off geometry (tree indents, fixed
@@ -155,7 +156,7 @@
   --hue-teal: #2dd4bf;
   --hue-blue: #509bf5;
   --hue-magenta: #ff5fb8;
-  --hue-green: #2dd4bf;
+  --hue-green: #3fcf6e;
   --hue-yellow: #ffc864;
   --hue-red: #ff4d5e;
   --hue-sky: #4cc3ff;
@@ -169,6 +170,8 @@
   --link: var(--accent-text);
   --prompt: var(--accent-text);
   --agent: var(--hue-violet);
+  --c-meeting: var(--hue-sky);
+  --c-knowledge: var(--hue-brown);
   --claude: var(--fg-muted);
   --ok: var(--hue-green);
   --warn: var(--hue-amber);
@@ -227,6 +230,8 @@
   --link: var(--accent-text);
   --prompt: var(--accent-text);
   --agent: var(--hue-violet);
+  --c-meeting: var(--hue-sky);
+  --c-knowledge: var(--hue-brown);
   --claude: var(--fg-muted);
   --ok: var(--hue-green);
   --warn: var(--hue-yellow);
@@ -259,4 +264,6 @@
   --work: var(--hue-blue);
   --personal: var(--hue-magenta);
   --warn-soft: color-mix(in srgb, var(--warn) 14%, transparent);
+  --c-meeting-soft: color-mix(in srgb, var(--c-meeting) 14%, transparent);
+  --c-knowledge-soft: color-mix(in srgb, var(--c-knowledge) 14%, transparent);
 }
