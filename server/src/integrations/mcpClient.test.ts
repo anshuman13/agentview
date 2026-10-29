@@ -56,6 +56,12 @@ describe('mcpClient', () => {
     expect(pidOf('fake')).not.toBe(pid);
   });
 
+  it('stops a server that floods stdout without a newline', async () => {
+    const flood = { command: process.execPath, args: ['-e', "process.stdin.once('data', () => { const c = 'x'.repeat(1 << 20); for (let i = 0; i < 10; i++) process.stdout.write(c); }); setInterval(() => {}, 1000)"] };
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(listTools('flood', flood, 5000)).rejects.toThrow(/stopped/);
+  });
+
   it('fails clearly when the command does not exist', async () => {
     await expect(listTools('missing', { command: '/nonexistent/mcp-server' }, 2000)).rejects.toThrow(/failed to start|exited/);
   });

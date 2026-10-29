@@ -20,6 +20,8 @@ export function expandDef(def: McpServerDef, base: Env = process.env): McpServer
 const PROTOCOL = '2025-06-18';
 const INIT = { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'agentview', version: '1' } };
 
+const MAX_BUF = 8 * 1024 * 1024;
+
 type Pending = { resolve: (v: any) => void; reject: (e: Error) => void; timer: NodeJS.Timeout };
 
 interface Transport {
@@ -89,6 +91,11 @@ class Stdio implements Transport {
       clearTimeout(p.timer);
       if (msg.error) p.reject(new Error(msg.error.message ?? JSON.stringify(msg.error)));
       else p.resolve(msg.result);
+    }
+    if (this.buf.length > MAX_BUF) {
+      this.buf = '';
+      console.warn(`[mcp] ${this.key} sent over ${MAX_BUF} bytes without a newline, stopping it`);
+      this.stop();
     }
   }
 
