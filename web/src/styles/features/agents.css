@@ -4,7 +4,7 @@
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: var(--sp-4); align-items: center;
   padding: var(--sp-3) var(--sp-6); font-size: var(--fs-md); color: var(--fg); cursor: pointer;
 }
-.ag-row:hover { background: var(--hover); }
+@media (hover: hover) { .ag-row:hover { background: var(--hover); } }
 .ag-row.active { background: var(--accent-soft); }
 .ag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ag-time { font-size: var(--fs-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums; }

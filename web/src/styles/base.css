@@ -10,7 +10,7 @@ body {
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border: 3px solid transparent; border-radius: var(--radius-md); background-clip: padding-box; }
-::-webkit-scrollbar-thumb:hover { background: var(--fg-faint); border: 3px solid transparent; background-clip: padding-box; }
+@media (hover: hover) { ::-webkit-scrollbar-thumb:hover { background: var(--fg-faint); border: 3px solid transparent; background-clip: padding-box; } }
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 pre { margin: 0; font-family: var(--mono); font-size: var(--fs-sm); }
@@ -52,11 +52,12 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 .md-code { position: relative; margin: 0 0 var(--sp-4); }
 .md-code pre { margin: 0; }
 .md-copy { position: absolute; top: var(--sp-2); right: var(--sp-2); height: var(--size-row); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-sm); background: var(--raised); color: var(--fg-muted); font-family: inherit; font-size: var(--fs-xs); cursor: pointer; opacity: 0; }
-.md-code:hover .md-copy, .md-copy:focus-visible { opacity: 1; }
-.md-copy:hover { background: var(--hover); color: var(--fg); }
+.md-copy:focus-visible { opacity: 1; }
+@media (hover: hover) { .md-code:hover .md-copy { opacity: 1; } }
+@media (hover: hover) { .md-copy:hover { background: var(--hover); color: var(--fg); } }
 @media (hover: none) { .md-copy { opacity: 1; } }
 .md a { color: var(--link); text-decoration: none; }
-.md a:hover { text-decoration: underline; }
+@media (hover: hover) { .md a:hover { text-decoration: underline; } }
 .md table { border-collapse: collapse; }
 .md :is(th, td) { border: 1px solid var(--border-strong); padding: 3px var(--sp-4); text-align: left; }
 .md blockquote { border-left: 3px solid var(--border-strong); padding-left: var(--sp-5); color: var(--fg-muted); }
@@ -64,4 +65,13 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 @media (max-width: 900px) {
   .md { overflow-wrap: anywhere; }
   .md table { display: block; max-width: 100%; overflow-x: auto; }
+}
+
+@media (pointer: coarse) {
+  a, button, [role='button'], summary, label, select, [tabindex] { -webkit-tap-highlight-color: transparent; }
+  :is(button, [role='button'], .tabbar, .activitybar, .statusbar, .sidebar-title, .ag-head, .as-head, .beside-head, .browser-bar, .cd-bar, .connect-head, .deploy-head, .ex-head, .gh-bar, .gh-head, .mcp-detail-head, .mcp-section-head, .mt-up-head, .pane-bar, .panel-head, .pd-head, .section-head, .sessions-bar, .term-bar, .timeline-head, .wk-head, .wk-feed-head) { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+  :is(.ag-row, .as-row, .ex-row, .gh-item, .gh-pr, .jb-row, .mcp-row, .mcp-tool, .mt-row, .mt-log-item, .scm-row, .wk-hit, .tree .row, .section-head, .sessions .row, .palette li, .switcher li, .cp-pop li, .tc-agent, .tl-recap, .wk-feed-list button, .ov-stat, .ov-list, .pd-option, .tab, .term-tab, .statusbar .item, .tabbar button, .more-sheet > button, .more-project, .icon-btn, .btn.quiet):not(:disabled):active { background: var(--hover); transition: background-color 80ms, transform 80ms; }
+}
+@media (pointer: coarse) and (prefers-reduced-motion: no-preference) {
+  :is(.wk-card, .wk-overview, .as-card, .ov-card, .cp-card, .reply-card, .deploy-card, .mt-tile, .wk-tile, .chip, .as-chip, .cp-chip, .mcp-chip, .ag-chip, .wk-pill, .cp-pill, .obs-chip, .tabbar button, .more-sheet > button, button.primary, .btn):is(button, a, [role='button'], [tabindex], [href], .click):not(:disabled):active { transform: scale(.98); transition: background-color 80ms, transform 80ms; }
 }

@@ -14,7 +14,7 @@
 
 .doc p { margin: 0 0 var(--sp-8); }
 .doc a { color: var(--link); text-decoration: none; }
-.doc a:hover { text-decoration: underline; text-underline-offset: 3px; }
+@media (hover: hover) { .doc a:hover { text-decoration: underline; text-underline-offset: 3px; } }
 .doc strong { color: var(--fg-strong); font-weight: 650; }
 .doc :is(ul, ol) { margin: 0 0 var(--sp-8); padding-left: var(--sp-12); }
 .doc li + li, .doc li > :is(ul, ol) { margin-top: var(--sp-2); }
@@ -32,7 +32,7 @@
 .doc-code-bar { display: flex; align-items: center; justify-content: space-between; height: 30px; padding: 0 var(--sp-3) 0 var(--sp-7); border-bottom: 1px solid var(--border); color: var(--fg-faint); font: var(--fs-xs) var(--mono); }
 .doc-copy { height: var(--size-row); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg-muted); font-family: inherit; font-size: var(--fs-xs); cursor: pointer; opacity: 0; }
 .doc-code:hover .doc-copy, .doc-copy:focus-visible { opacity: 1; }
-.doc-copy:hover { background: var(--hover); color: var(--fg); }
+@media (hover: hover) { .doc-copy:hover { background: var(--hover); color: var(--fg); } }
 .doc pre { margin: 0; padding: var(--sp-7) var(--sp-8); overflow: auto; font: var(--fs-md)/var(--lh-relaxed) var(--mono); }
 .doc pre code { padding: 0; border-radius: 0; background: none; font-size: inherit; }
 
@@ -66,7 +66,7 @@
 .doc-outline-title { margin-bottom: var(--sp-5); color: var(--fg-faint); font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .doc-outline-link { display: block; padding: 3px 0 3px var(--sp-6); border-left: 1px solid var(--border); color: var(--fg-muted); line-height: var(--lh-snug); text-decoration: none; }
 .doc-outline-link.d3 { padding-left: var(--sp-12); }
-.doc-outline-link:hover { color: var(--fg); }
+@media (hover: hover) { .doc-outline-link:hover { color: var(--fg); } }
 .doc-outline-link.on { border-left-color: var(--accent); color: var(--fg); }
 
 .doc .tok-keyword { color: var(--syn-keyword); }

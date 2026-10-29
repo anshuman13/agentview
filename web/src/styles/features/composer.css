@@ -47,7 +47,7 @@
   border: 0; border-radius: var(--radius-sm); background: transparent;
   color: var(--fg-muted); font-size: var(--fs-sm); line-height: var(--size-md); white-space: nowrap;
 }
-.cp-pill:hover { background: var(--hover); color: var(--fg); }
+@media (hover: hover) { .cp-pill:hover { background: var(--hover); color: var(--fg); } }
 .cp-pill > span { overflow: hidden; text-overflow: ellipsis; }
 .cp-pill .codicon.icon.small { font-size: var(--fs-md); }
 .cp[data-mode='plan'] .cp-chip .codicon:first-child { color: var(--accent-text); }
@@ -57,7 +57,7 @@
   width: var(--size-xl); height: var(--size-xl); padding: 0; flex: none; border: 1px solid transparent; border-radius: var(--radius-round);
   display: inline-flex; align-items: center; justify-content: center; background: var(--fg); color: var(--sunken);
 }
-.cp-send:hover:not(:disabled), .cp-stop:hover:not(:disabled) { background: var(--fg-strong); }
+@media (hover: hover) { .cp-send:hover:not(:disabled), .cp-stop:hover:not(:disabled) { background: var(--fg-strong); } }
 .cp-send:disabled, .cp-stop:disabled { background: var(--hover); color: var(--fg-faint); cursor: default; }
 .cp-foot .icon-btn:is(.voice, .attach, .mcp) { width: var(--size-xl); height: var(--size-xl); border-radius: var(--radius-round); }
 .cp-foot .icon-btn.mcp.on { color: var(--fg); }
@@ -84,7 +84,7 @@
   height: var(--size-lg); padding: 0 var(--sp-4); display: flex; align-items: center; gap: var(--sp-4); border-radius: var(--radius-sm);
   cursor: pointer; font-size: var(--fs-md); color: var(--fg); white-space: nowrap;
 }
-.cp-pop li:hover { background: var(--hover); }
+@media (hover: hover) { .cp-pop li:hover { background: var(--hover); } }
 .cp-pop li.active { background: var(--accent-soft); }
 .cp-pop li .codicon { color: var(--fg-muted); }
 .cp-pop b { color: var(--link); font-weight: 600; }
@@ -92,7 +92,7 @@
 .cp-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-faint); font-size: var(--fs-sm); }
 
 .voice.on { color: var(--err); animation: voice-pulse var(--pulse-fast) var(--ease) infinite; }
-.voice.on:hover:not(:disabled) { color: var(--err); }
+@media (hover: hover) { .voice.on:hover:not(:disabled) { color: var(--err); } }
 .voice.error { color: var(--err); }
 @keyframes voice-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--err) 45%, transparent); }

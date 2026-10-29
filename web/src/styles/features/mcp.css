@@ -23,7 +23,7 @@
 
 .mcp-list { display: flex; flex-direction: column; }
 .mcp-row { display: flex; align-items: center; gap: var(--sp-5); min-width: 0; min-height: var(--size-xl); padding: var(--sp-1) var(--sp-4); border-radius: var(--radius-sm); }
-.mcp-row:hover { background: var(--hover); }
+@media (hover: hover) { .mcp-row:hover { background: var(--hover); } }
 .mcp-row.selected { background: var(--accent-soft); }
 .mcp-row.skeleton { height: var(--size-xl); margin-bottom: var(--sp-1); background: var(--hover); animation: shimmer var(--pulse) var(--ease) infinite; }
 .mcp-row-name { flex: none; width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding: 0; font-weight: 600; color: var(--fg); background: none; border: 0; }
@@ -32,7 +32,7 @@
   display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--size-sm); padding: 0 var(--sp-4); font-family: var(--mono); font-size: var(--fs-xs);
   color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-round);
 }
-.mcp-chip:hover { border-color: var(--border-strong); }
+@media (hover: hover) { .mcp-chip:hover { border-color: var(--border-strong); } }
 .mcp-chip.bad { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, var(--border)); }
 .mcp-chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
 .mcp-chip.off { color: var(--fg-muted); }
@@ -40,7 +40,8 @@
 .mcp-row-use { flex: none; font-size: var(--fs-xs); color: var(--link); }
 .mcp-row-use.bad { color: var(--err); }
 .mcp-row-move { flex: none; width: var(--size-sm); height: var(--size-sm); opacity: 0; }
-.mcp-row:hover .mcp-row-move, .mcp-row-move:focus-visible { opacity: 1; }
+.mcp-row-move:focus-visible { opacity: 1; }
+@media (hover: hover) { .mcp-row:hover .mcp-row-move { opacity: 1; } }
 @media (hover: none) { .mcp-row-move { opacity: 1; } }
 .mcp-seg { display: flex; gap: var(--sp-2); }
 .mcp-seg .btn.on { border-color: var(--accent); background: var(--accent-soft); }
@@ -70,16 +71,17 @@
 .mcp-tools, .mcp-calls { display: flex; flex-direction: column; gap: var(--sp-1); }
 .mcp-tools { margin-top: var(--sp-2); }
 .mcp-tool { padding: var(--sp-3) var(--sp-4); border-radius: var(--radius-sm); }
-.mcp-tool:hover { background: var(--hover); }
+@media (hover: hover) { .mcp-tool:hover { background: var(--hover); } }
 .mcp-tool .t { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font-size: var(--fs-sm); }
 .mcp-tool .t .codicon, .mcp-call .t > .codicon { color: var(--fg-muted); }
 .mcp-tool .d { margin: var(--sp-1) 0 0 var(--sp-10); font-size: var(--fs-xs); color: var(--fg-muted); line-height: var(--lh-snug); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.mcp-tool.open, .mcp-tool.open:hover { background: transparent; box-shadow: inset 0 0 0 1px var(--border); }
+.mcp-tool.open { background: transparent; box-shadow: inset 0 0 0 1px var(--border); }
+@media (hover: hover) { .mcp-tool.open:hover { background: transparent; box-shadow: inset 0 0 0 1px var(--border); } }
 .mcp-tool.open .d { -webkit-line-clamp: unset; }
 .mcp-calls { margin: var(--sp-2) 0 var(--sp-7); }
 .mcp-call { border-radius: var(--radius-sm); }
 .mcp-call .t { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); border-radius: var(--radius-sm); cursor: pointer; }
-.mcp-call .t:hover { background: var(--hover); }
+@media (hover: hover) { .mcp-call .t:hover { background: var(--hover); } }
 .mcp-call .name { flex: none; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mcp-call .in { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); color: var(--fg-muted); }
 .mcp-call .s { flex: none; font-size: var(--fs-xs); color: var(--fg-muted); }
@@ -91,9 +93,10 @@
 }
 .mcp-call pre { max-height: 240px; }
 .mcp-call pre.bad { color: var(--err); }
-.mcp-insert:hover .codicon { color: var(--fg) !important; }
+@media (hover: hover) { .mcp-insert:hover .codicon { color: var(--fg) !important; } }
 :is(.mcp-tool, .mcp-call) .mcp-insert { width: var(--size-sm); height: var(--size-sm); opacity: 0; }
-:is(.mcp-tool, .mcp-call):hover .mcp-insert, .mcp-insert:focus-visible, .mcp-tool .mcp-insert.on { opacity: 1; }
+.mcp-insert:focus-visible, .mcp-tool .mcp-insert.on { opacity: 1; }
+@media (hover: hover) { :is(.mcp-tool, .mcp-call):hover .mcp-insert { opacity: 1; } }
 @media (hover: none) { .mcp-insert { opacity: 1 !important; } }
 
 .mcp-run { margin: var(--sp-5) 0 var(--sp-2) var(--sp-10); display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; }

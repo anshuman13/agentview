@@ -14,7 +14,7 @@
 .gh-error { margin: var(--sp-2) var(--sp-6); display: flex; gap: var(--sp-3); align-items: flex-start; font-size: var(--fs-sm); color: var(--err); overflow-wrap: anywhere; }
 
 .gh-pr { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-6) 5px var(--sp-4); cursor: pointer; }
-.gh-pr:hover { background: var(--hover); }
+@media (hover: hover) { .gh-pr:hover { background: var(--hover); } }
 .gh-pr .gh-check { grid-row: 1; }
 .gh-pr .gh-title { grid-column: 2; display: flex; align-items: baseline; gap: 5px; min-width: 0; white-space: nowrap; color: var(--fg); }
 .gh-pr .gh-meta { grid-column: 2; }
@@ -51,7 +51,7 @@ button.gh-open-chat { color: var(--fg); }
 
 .gh-item { height: var(--size-row); display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-6) 0 var(--sp-5); color: var(--fg); text-decoration: none; cursor: default; white-space: nowrap; }
 .gh-item:is([href], .click) { cursor: pointer; }
-.gh-item:is([href], .click):hover { background: var(--hover); }
+@media (hover: hover) { .gh-item:is([href], .click):hover { background: var(--hover); } }
 .gh-item > .icon { color: var(--fg-muted); }
 .gh-fname { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .gh-msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }

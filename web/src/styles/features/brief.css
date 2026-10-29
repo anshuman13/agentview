@@ -20,9 +20,10 @@
   font: inherit; font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg);
 }
 .tl-view .codicon { color: var(--fg-muted); }
-.tl-view:hover .codicon { color: var(--fg); }
+@media (hover: hover) { .tl-view:hover .codicon { color: var(--fg); } }
 .tl-tab { opacity: 0.55; }
-.tl-tab.active, .tl-tab:hover { opacity: 1; }
+.tl-tab.active { opacity: 1; }
+@media (hover: hover) { .tl-tab:hover { opacity: 1; } }
 .tl-tab .count { font-weight: 400; color: var(--fg-muted); }
 
 .turns { display: flex; flex-direction: column; gap: var(--sp-6); padding: var(--sp-3) 0 0; }
@@ -57,7 +58,7 @@
   display: flex; align-items: center; gap: var(--sp-4); min-height: var(--size-lg); padding: 0 var(--sp-4); text-align: left;
   border: 1px solid var(--border-card); border-left: 3px solid var(--t-edit); border-radius: var(--radius-sm); background: var(--bg); font-size: var(--fs-sm); color: var(--fg);
 }
-.tc-file:hover { background: var(--bg); border-color: var(--fg-faint); border-left-color: var(--t-edit); }
+@media (hover: hover) { .tc-file:hover { background: var(--bg); border-color: var(--fg-faint); border-left-color: var(--t-edit); } }
 .tc-file > .codicon, .tc-commit .codicon { color: var(--fg-muted); }
 .tc-commit { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
 .tc-commit code { font-family: var(--mono); font-size: var(--fs-xs); color: var(--link); }
@@ -74,7 +75,7 @@
   display: inline-flex; align-items: center; gap: var(--sp-3); max-width: 100%; min-height: var(--size-md); padding: 0 var(--sp-5);
   border: 1px solid var(--border-card); border-radius: var(--radius-pill); background: var(--bg); font-size: var(--fs-sm); color: var(--fg);
 }
-.tc-agent:hover { background: var(--hover); }
+@media (hover: hover) { .tc-agent:hover { background: var(--hover); } }
 .tc-agent .tr-ring { flex: none; color: var(--agent); }
 .tc-agent.running .tr-ring { animation: pulse var(--pulse) var(--ease) infinite; }
 .tc-agent.failed .tr-ring, .tc-agent.failed .state { color: var(--err); }
@@ -94,7 +95,7 @@
   align-self: flex-start; display: inline-flex; align-items: center; gap: var(--sp-2); margin-left: 22px; padding: 0 var(--sp-2);
   background: transparent; border: 0; font-size: var(--fs-xs); color: var(--fg-muted);
 }
-.tc-steps-toggle:hover, .steps-toggle:hover { background: transparent; color: var(--fg); }
+@media (hover: hover) { .tc-steps-toggle:hover, .steps-toggle:hover { background: transparent; color: var(--fg); } }
 
 .tl-state { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-3); color: var(--accent-text); }
 .tl-send-now { font-size: var(--fs-xs); white-space: nowrap; }
@@ -103,7 +104,7 @@
   display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-4); text-align: left;
   border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg); font-size: var(--fs-sm); color: var(--fg);
 }
-.tl-recap:hover { background: var(--hover); }
+@media (hover: hover) { .tl-recap:hover { background: var(--hover); } }
 .tl-recap .codicon { color: var(--fg-muted); }
 .tl-foot {
   position: sticky; bottom: 0; z-index: var(--z-raised); flex: none; margin-top: var(--sp-4); padding: var(--sp-2) var(--sp-4) var(--sp-3);
@@ -127,12 +128,12 @@
 .step { display: flex; align-items: center; gap: var(--sp-3); min-height: var(--size-row); font-size: var(--fs-sm); color: var(--fg-muted); cursor: text; }
 .step::before { content: ''; flex: none; width: 10px; height: 10px; border: 1px solid var(--fg-muted); border-radius: var(--radius-xs); }
 .step .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
-.step .text:hover { color: var(--fg); }
+@media (hover: hover) { .step .text:hover { color: var(--fg); } }
 .step .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 .step input { flex: 1; min-width: 0; height: var(--size-row); font-size: var(--fs-sm); }
 .step.add::before { display: none; }
 .step.add .link { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); }
-.step.add .link:hover { color: var(--link); }
+@media (hover: hover) { .step.add .link:hover { color: var(--link); } }
 
 @media (max-width: 900px) {
   .brief { display: contents; --brief-bg: var(--bg); }

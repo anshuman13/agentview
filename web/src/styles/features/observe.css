@@ -36,7 +36,7 @@
   height: var(--size-sm); padding: 0 var(--sp-3); display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); border: 0;
   color: var(--fg-muted); background: transparent; border-radius: var(--radius-sm);
 }
-.observe .obs-ask:hover { color: var(--fg); background: var(--hover); }
+@media (hover: hover) { .observe .obs-ask:hover { color: var(--fg); background: var(--hover); } }
 
 .observe .obs-save .spacer { flex: 1; }
 .observe .obs-logs, .observe .obs-table {
@@ -53,9 +53,9 @@
   display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--size-row); max-width: 100%; padding: 0 var(--sp-4); font-size: var(--fs-sm);
   color: var(--fg); text-decoration: none; background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
-.observe .obs-chip:hover { border-color: var(--border-strong); background: var(--hover); }
+@media (hover: hover) { .observe .obs-chip:hover { border-color: var(--border-strong); background: var(--hover); } }
 .observe .obs-link { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--link); text-decoration: none; white-space: nowrap; }
-.observe .obs-link:hover { text-decoration: underline; }
+@media (hover: hover) { .observe .obs-link:hover { text-decoration: underline; } }
 
 .observe .obs-logs { margin: var(--sp-1) var(--sp-6); max-height: 260px; line-height: var(--line-xs); }
 .observe .obs-logs .line { display: flex; gap: var(--sp-4); padding: 1px var(--sp-4); border-left: 2px solid transparent; }

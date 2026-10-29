@@ -1,6 +1,6 @@
 .tree { overflow: auto; flex: 1; font-size: var(--fs-md); }
 .tree .row { height: var(--size-row); display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; white-space: nowrap; color: var(--fg); }
-.tree .row:hover { background: var(--hover); }
+@media (hover: hover) { .tree .row:hover { background: var(--hover); } }
 .tree .row.selected { background: var(--accent-soft); color: var(--fg); }
 .tree .twistie { width: var(--icon); display: inline-flex; justify-content: center; color: var(--fg-muted); flex: none; }
 .tree .name { overflow: hidden; text-overflow: ellipsis; }
@@ -10,7 +10,7 @@
   height: var(--size-row); display: flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-6) 0 var(--sp-2); cursor: pointer; user-select: none;
   font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; color: var(--fg);
 }
-.section-head:hover { background: var(--hover); }
+@media (hover: hover) { .section-head:hover { background: var(--hover); } }
 .section-head .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .section-head .badge { margin-left: var(--sp-3); }
 @media (max-width: 900px) { .section-head { height: var(--touch-md); } }

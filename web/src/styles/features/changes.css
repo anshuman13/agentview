@@ -21,7 +21,7 @@
 .scm-tree { flex: 1; min-height: 0; overflow: auto; padding-bottom: var(--sp-4); }
 .scm-tree .gh-block { margin-top: var(--sp-4); }
 .scm-row { height: var(--size-row); display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-6) 0 22px; cursor: pointer; white-space: nowrap; color: var(--fg); }
-.scm-row:hover { background: var(--hover); }
+@media (hover: hover) { .scm-row:hover { background: var(--hover); } }
 .scm-row.selected { background: var(--accent-soft); }
 .scm-row > .icon { color: var(--fg-muted); }
 .scm-name { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -29,7 +29,7 @@
 .scm-letter { flex: none; width: var(--icon-sm); margin-left: var(--sp-2); text-align: center; font-size: var(--fs-sm); }
 .scm-acts { display: none; flex: none; margin-left: auto; }
 .scm-acts .icon-btn { width: var(--size-sm); height: var(--size-sm); }
-.scm-row:hover .scm-acts, .section-head:hover .scm-acts { display: inline-flex; }
+@media (hover: hover) { .scm-row:hover .scm-acts, .section-head:hover .scm-acts { display: inline-flex; } }
 @media (hover: none) { .scm-acts { display: inline-flex; } }
 .scm-row { --tone: var(--fg); }
 .scm-row.s-M { --tone: var(--modified); }

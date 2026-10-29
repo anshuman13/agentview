@@ -6,7 +6,7 @@
   width: 100%; height: var(--size-lg); flex: none; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-5) 0 var(--sp-6);
   background: transparent; border: 0; border-radius: 0; text-align: left; font-size: var(--fs-sm); font-weight: 600; color: var(--fg);
 }
-.folder-switch:hover { background: var(--hover); }
+@media (hover: hover) { .folder-switch:hover { background: var(--hover); } }
 .folder-switch .folder-name { flex: none; }
 .folder-switch .folder-branch { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; color: var(--fg-muted); }
 
@@ -14,7 +14,8 @@
 .ex-head { display: flex; align-items: center; flex: none; }
 .ex-head .folder-switch { flex: 1; width: auto; min-width: 0; }
 .ex-actions { display: inline-flex; gap: 1px; padding-right: var(--sp-3); visibility: hidden; }
-.ex:hover .ex-actions, .ex-actions:focus-within { visibility: visible; }
+.ex-actions:focus-within { visibility: visible; }
+@media (hover: hover) { .ex:hover .ex-actions { visibility: visible; } }
 .ex-actions .icon-btn { width: var(--size-row); height: var(--size-row); }
 .ex-actions .icon-btn.on { color: var(--fg); }
 @media (hover: none) { .ex-actions { visibility: visible; } }
@@ -24,16 +25,16 @@
   background: transparent; border: 0; border-radius: 0; color: var(--fg); text-align: left;
   font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide);
 }
-.ex button.ex-section:hover { background: transparent; }
+@media (hover: hover) { .ex button.ex-section:hover { background: transparent; } }
 .ex-section-row { display: flex; align-items: center; flex: none; padding-right: var(--sp-1); }
 .ex-section-row .icon-btn { width: var(--size-row); height: var(--size-row); flex: none; visibility: hidden; }
-.ex-section-row:hover .icon-btn { visibility: visible; }
+@media (hover: hover) { .ex-section-row:hover .icon-btn { visibility: visible; } }
 @media (hover: none) { .ex-section-row .icon-btn { visibility: visible; } }
 .ex-editors { flex: none; max-height: 30%; overflow: auto; border-bottom: 1px solid var(--border); padding-bottom: var(--sp-1); }
 .ex-editors .ex-row { padding-left: var(--sp-2); }
 .ex-empty { padding: var(--sp-1) var(--sp-4) var(--sp-2); color: var(--fg-muted); font-size: var(--fs-sm); }
 .ex-close { width: var(--icon); height: var(--icon); display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); visibility: hidden; color: var(--fg-muted); }
-.ex-close:hover { background: var(--hover); color: var(--fg); }
+@media (hover: hover) { .ex-close:hover { background: var(--hover); color: var(--fg); } }
 .ex-row:hover .ex-close, .ex-row.selected .ex-close { visibility: visible; }
 .ex-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-muted); font-size: var(--fs-sm); }
 
@@ -42,14 +43,15 @@
   position: relative; height: var(--size-row); display: flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-4);
   cursor: pointer; white-space: nowrap; color: var(--fg); user-select: none;
 }
-.ex-row:hover, .ex-row.selected { background: var(--hover); }
+.ex-row.selected { background: var(--hover); }
+@media (hover: hover) { .ex-row:hover { background: var(--hover); } }
 .ex-tree:focus .ex-row.selected { background: var(--accent-soft); color: var(--fg); outline: 1px solid var(--accent); outline-offset: -1px; }
 .ex-row .icon { color: var(--fg-muted); }
 .ex-row.ignored { color: var(--fg-muted); }
 .ex-row.ignored .icon { opacity: 0.7; }
 .ex-guides { position: absolute; left: var(--sp-8); top: 0; bottom: 0; display: flex; pointer-events: none; }
 .ex-guides > span { width: var(--sp-4); border-left: 1px solid transparent; }
-.ex-tree:is(:hover, :focus) .ex-guides > span { border-color: var(--border-strong); }
+@media (hover: hover) { .ex-tree:is(:hover, :focus) .ex-guides > span { border-color: var(--border-strong); } }
 .ex-twistie { width: var(--icon); flex: none; display: inline-flex; justify-content: center; color: var(--fg-muted); }
 .ex-twistie .icon { color: inherit; }
 .ex-name { overflow: hidden; text-overflow: ellipsis; flex: none; max-width: 100%; }

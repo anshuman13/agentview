@@ -4,20 +4,21 @@
   height: var(--size-bar); padding: 0 var(--sp-6); background: transparent; color: var(--fg-muted); border: 0; border-radius: 0;
   border-right: 1px solid var(--border); display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-md); white-space: nowrap;
 }
-.tab:hover { background: var(--hover); color: var(--fg); }
-.tab.active, .tab.active:hover { background: var(--raised); color: var(--fg); border-bottom: 1px solid var(--raised); margin-bottom: -1px; }
+@media (hover: hover) { .tab:hover { background: var(--hover); color: var(--fg); } }
+.tab.active { background: var(--raised); color: var(--fg); border-bottom: 1px solid var(--raised); margin-bottom: -1px; }
+@media (hover: hover) { .tab.active:hover { background: var(--raised); color: var(--fg); border-bottom: 1px solid var(--raised); margin-bottom: -1px; } }
 .tab.browser > .codicon:first-child { color: var(--file-blue); }
 .tab .close {
   margin-left: var(--sp-2); padding: 0; background: none; border: 0; color: var(--fg-muted); width: var(--size-sm); height: var(--size-sm);
   display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm);
 }
-.tab .close:hover { background: var(--hover); color: var(--fg); }
+@media (hover: hover) { .tab .close:hover { background: var(--hover); color: var(--fg); } }
 .tabs-spacer { flex: 1; }
 .tab-tool {
   position: relative; flex: none; width: var(--size-2xl); height: var(--size-bar); padding: 0; display: inline-flex; align-items: center; justify-content: center;
   background: var(--surface); color: var(--fg-muted); border: 0; border-radius: 0;
 }
-.tab-tool:hover { color: var(--fg); background: var(--hover); }
+@media (hover: hover) { .tab-tool:hover { color: var(--fg); background: var(--hover); } }
 .tab-tool .badge { position: absolute; top: var(--sp-2); right: var(--sp-1); }
 @media (max-width: 900px) {
   .tabs, .tab { height: var(--touch); }

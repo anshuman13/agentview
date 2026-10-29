@@ -10,7 +10,7 @@
   width: var(--size-row); height: var(--size-row); padding: 0; flex: none; border: 0; border-radius: var(--radius-sm);
   background: transparent; color: var(--fg-muted); display: inline-flex; align-items: center; justify-content: center;
 }
-.cd-btn:hover { background: var(--hover); color: var(--fg); }
+@media (hover: hover) { .cd-btn:hover { background: var(--hover); color: var(--fg); } }
 .cd-btn.on { background: var(--accent-soft); color: var(--fg); }
 
 .cd-editor { flex: 1; min-height: 0; overflow: hidden; }
@@ -38,7 +38,7 @@
   margin: 0; padding: var(--sp-1) 0 var(--sp-1) var(--sp-6); cursor: pointer; font-size: var(--fs-sm);
   color: var(--fg-faint); background: var(--sunken); border-block: 1px solid var(--border);
 }
-.cd-editor .cm-editor .cm-collapsedLines:hover { color: var(--fg-muted); }
+@media (hover: hover) { .cd-editor .cm-editor .cm-collapsedLines:hover { color: var(--fg-muted); } }
 .cd-editor .cm-editor .cm-collapsedLines::before, .cd-editor .cm-editor .cm-collapsedLines::after { content: none; }
 
 @media (max-width: 900px) {

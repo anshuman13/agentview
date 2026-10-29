@@ -6,7 +6,7 @@
   font-size: var(--fs-sm); color: var(--fg); border-radius: var(--radius-sm);
 }
 .sessions.chats .sessions-bar .new-chat { height: 30px; font-size: var(--fs-md); font-weight: 600; color: var(--on-accent); background: var(--accent-fill); border: 0; }
-.sessions.chats .sessions-bar .new-chat:hover { background: var(--accent-hover); }
+@media (hover: hover) { .sessions.chats .sessions-bar .new-chat:hover { background: var(--accent-hover); } }
 .sessions .hint { padding: 0 var(--sp-6) var(--sp-3) var(--sp-4); font-size: var(--fs-xs); color: var(--fg-muted); }
 .sessions .hint.error { color: var(--err); display: flex; gap: var(--sp-2); align-items: center; cursor: pointer; }
 .sessions .tree .hint { padding: var(--sp-3) var(--sp-6) var(--sp-3) var(--sp-12); }
@@ -32,7 +32,7 @@
 .sessions .row.worktree { gap: var(--sp-3); }
 .sessions .row .acts { display: none; flex: none; gap: var(--sp-1); margin: 0 var(--sp-3) 0 auto; }
 .sessions .row .acts .icon-btn { width: var(--size-sm); height: var(--size-sm); }
-.sessions .row:hover .acts { display: inline-flex; }
+@media (hover: hover) { .sessions .row:hover .acts { display: inline-flex; } }
 .sessions .row:has(.acts):hover :is(.when, .count) { display: none; }
 @media (hover: none) { .sessions .row .acts { display: inline-flex; margin-left: 0; } }
 .sessions .row.removing { color: var(--fg-muted); pointer-events: none; }
@@ -44,7 +44,7 @@
 .sessions .row .badges .count { width: var(--size-md); margin: 0; padding: 0; }
 .sessions .row.project:hover .badges { display: none; }
 .sessions .row.more { font-size: var(--fs-sm); color: var(--fg-muted); }
-.sessions .row.more:hover { color: var(--fg); text-decoration: underline; }
+@media (hover: hover) { .sessions .row.more:hover { color: var(--fg); text-decoration: underline; } }
 .sessions .group, .sessions .row.group-row {
   font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-muted);
 }

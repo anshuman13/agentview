@@ -14,7 +14,7 @@
 .macs { list-style: none; margin: 0; padding: var(--sp-2); }
 .macs li { display: flex; align-items: center; gap: var(--sp-4); height: 30px; padding: 0 var(--sp-4); border-radius: var(--radius-sm); }
 .macs li.clickable { cursor: pointer; }
-.macs li.clickable:hover { background: var(--accent-soft); }
+@media (hover: hover) { .macs li.clickable:hover { background: var(--accent-soft); } }
 .macs li.current .mac-name { color: var(--fg-strong); }
 .macs .mac-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .macs .detail { color: var(--fg-muted); font-size: var(--fs-xs); }

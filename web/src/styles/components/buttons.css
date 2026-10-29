@@ -8,21 +8,21 @@ button {
   font: inherit;
   line-height: var(--line-sm);
 }
-button:hover { background: var(--border-strong); }
+@media (hover: hover) { button:hover { background: var(--border-strong); } }
 button.primary { background: var(--accent-fill); color: var(--on-accent); }
-button.primary:hover { background: var(--accent-hover); }
+@media (hover: hover) { button.primary:hover { background: var(--accent-hover); } }
 button.primary:disabled { opacity: 0.5; cursor: default; }
 button.active { color: var(--fg); }
 button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
-button.destructive:hover { background: color-mix(in srgb, var(--err) 28%, transparent); }
+@media (hover: hover) { button.destructive:hover { background: color-mix(in srgb, var(--err) 28%, transparent); } }
 button.link { background: transparent; border: 0; padding: 0; color: var(--link); text-align: left; line-height: var(--line-sm); }
-button.link:hover { background: transparent; text-decoration: underline; }
+@media (hover: hover) { button.link:hover { background: transparent; text-decoration: underline; } }
 
 .icon-btn {
   width: var(--size-md); height: var(--size-md); padding: 0; flex: none; border: 0; border-radius: var(--radius-sm);
   background: transparent; color: var(--fg-muted); display: inline-flex; align-items: center; justify-content: center;
 }
-.icon-btn:hover:not(:disabled) { background: var(--hover); color: var(--fg); }
+@media (hover: hover) { .icon-btn:hover:not(:disabled) { background: var(--hover); color: var(--fg); } }
 .icon-btn:disabled { opacity: 0.4; cursor: default; }
 
 .btn {
@@ -30,14 +30,17 @@ button.link:hover { background: transparent; text-decoration: underline; }
   font: inherit; font-size: var(--fs-sm); white-space: nowrap; text-decoration: none; cursor: pointer;
   color: var(--fg); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
 }
-.btn, .btn:hover { background: transparent; }
-.btn:hover:not(:disabled) { background: var(--hover); }
+.btn { background: transparent; }
+@media (hover: hover) { .btn:hover { background: transparent; } }
+@media (hover: hover) { .btn:hover:not(:disabled) { background: var(--hover); } }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn.quiet { color: var(--fg-muted); }
-.btn.quiet:hover:not(:disabled) { color: var(--fg); }
-.btn.primary, .btn.primary:hover { color: var(--on-accent); background: var(--accent-fill); border-color: var(--accent-fill); }
-.btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
-.btn.danger, .btn.danger:hover { color: var(--bg); background: var(--err); border-color: var(--err); }
+@media (hover: hover) { .btn.quiet:hover:not(:disabled) { color: var(--fg); } }
+.btn.primary { color: var(--on-accent); background: var(--accent-fill); border-color: var(--accent-fill); }
+@media (hover: hover) { .btn.primary:hover { color: var(--on-accent); background: var(--accent-fill); border-color: var(--accent-fill); } }
+@media (hover: hover) { .btn.primary:hover:not(:disabled) { background: var(--accent-hover); } }
+.btn.danger { color: var(--bg); background: var(--err); border-color: var(--err); }
+@media (hover: hover) { .btn.danger:hover { color: var(--bg); background: var(--err); border-color: var(--err); } }
 .btn.xs { height: var(--size-xs); padding: 0 var(--sp-3); gap: 3px; font-size: var(--fs-xs); }
 .btn.sm { height: var(--size-md); padding: 0 var(--sp-4); }
 .btn.lg { height: var(--size-xl); padding: 0 var(--sp-6); gap: var(--sp-4); font-size: var(--fs-md); }

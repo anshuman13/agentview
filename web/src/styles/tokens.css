@@ -267,3 +267,10 @@
   --c-meeting-soft: color-mix(in srgb, var(--c-meeting) 14%, transparent);
   --c-knowledge-soft: color-mix(in srgb, var(--c-knowledge) 14%, transparent);
 }
+
+/* Touch: raise the small type steps so nothing renders under 12px; inputs stay at 16px to stop iOS zoom. */
+@media (pointer: coarse) {
+  :root { --fs-2xs: 12px; --fs-xs: 12px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 15px; --fs-xl: 16px; }
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), textarea, select { font-size: var(--fs-2xl) !important; }
+  .gh-avatar, .mt-avatars > span { font-size: 12px; }
+}
