@@ -145,28 +145,38 @@ const isCalendar = (r: ItemRow) => r.source === 'calendar';
 const statusTime = (r: ItemRow) => parseTimes(r.field_times).status ?? r.updated_at;
 
 export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
-  const mine = items.filter((r) => !r.deleted && (profile === 'all' || r.profile === profile));
-  const open = mine.filter((r) => r.status === 'open' && !isCalendar(r)).sort((a, b) => (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0) || a.updated_at - b.updated_at);
   const today = new Date(now).setHours(0, 0, 0, 0);
-  const at = (r: ItemRow) => atTime(r.at);
+  const due = new Map<ItemRow, number | null>();
+  const changed = new Map<ItemRow, number>();
+  const open: ItemRow[] = [], review: ItemRow[] = [], notes: ItemRow[] = [], doneToday: ItemRow[] = [];
+  for (const r of items) {
+    if (r.deleted || (profile !== 'all' && r.profile !== profile)) continue;
+    if (r.status === 'open' && !isCalendar(r)) { open.push(r); due.set(r, atTime(r.at)); }
+    else if (r.status === 'suggested') { review.push(r); changed.set(r, statusTime(r)); }
+    else if (r.status === 'note') notes.push(r);
+    else if (r.status === 'done') { const t = statusTime(r); if (t >= today) { doneToday.push(r); changed.set(r, t); } }
+  }
+  const at = (r: ItemRow) => due.get(r)!;
+  const newest = (a: ItemRow, b: ItemRow) => changed.get(b)! - changed.get(a)!;
+  open.sort((a, b) => (at(a) ?? 0) - (at(b) ?? 0) || a.updated_at - b.updated_at);
   return {
     overdue: open.filter((r) => at(r) != null && at(r)! < today),
     today: open.filter((r) => at(r) == null || (at(r)! >= today && at(r)! <= now)),
     later: open.filter((r) => (at(r) ?? 0) > now),
-    review: mine.filter((r) => r.status === 'suggested').sort((a, b) => statusTime(b) - statusTime(a)),
-    notes: mine.filter((r) => r.status === 'note').sort((a, b) => b.updated_at - a.updated_at),
-    doneToday: mine.filter((r) => r.status === 'done' && statusTime(r) >= today).sort((a, b) => statusTime(b) - statusTime(a)),
+    review: review.sort(newest),
+    notes: notes.sort((a, b) => b.updated_at - a.updated_at),
+    doneToday: doneToday.sort(newest),
   };
 }
 
 export const reviewedSince = (r: ItemRow) => statusTime(r);
 
-// A task added from a meeting is an action of that meeting, labelled with its title.
 export const DIGEST_TITLE = 'Weekly digest';
 
 export const latestDigest = (items: ItemRow[], profile: 'all' | Profile) =>
   items.filter((r) => !r.deleted && r.status === 'note' && r.title?.startsWith(DIGEST_TITLE) && (profile === 'all' || r.profile === profile)).sort((a, b) => b.updated_at - a.updated_at)[0];
 
+// A task added from a meeting is an action of that meeting, labelled with its title.
 export function newCapture(text: string, type: 'task' | 'note', profile: Profile, now: number, at: number | null = null, meeting: { id: string; title: string | null } | null = null): ItemRow {
   const [first, ...rest] = text.split('\n');
   return {

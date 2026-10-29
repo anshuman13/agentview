@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useAssistant, useCodex } from './data';
 import { reviewCount } from './data/wiki';
 import { atTime, split } from './data/engine';
@@ -43,10 +44,13 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
 
 export function useTodayCount() {
   const { snap } = useAssistant();
-  useMinute();
-  if (snap.phase !== 'ready') return 0;
-  const now = Date.now();
-  const s = split(snap.items, 'all', now);
-  const endOfDay = new Date(now).setHours(24, 0, 0, 0);
-  return s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
+  const minute = useMinute();
+  const ready = snap.phase === 'ready';
+  return useMemo(() => {
+    if (!ready) return 0;
+    const now = Date.now();
+    const s = split(snap.items, 'all', now);
+    const endOfDay = new Date(now).setHours(24, 0, 0, 0);
+    return s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
+  }, [ready, snap.items, minute]);
 }
