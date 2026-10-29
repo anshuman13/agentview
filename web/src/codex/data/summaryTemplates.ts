@@ -1,4 +1,5 @@
 import { peopleOf, seriesTitle, type Meeting } from './wiki';
+import { save, stored } from '../../ui/util';
 
 export const SUMMARY_TEMPLATES = {
   default: { label: 'Default', instructions: '' },
@@ -26,11 +27,9 @@ export const summaryInstructions = (key: SummaryTemplate) => SUMMARY_TEMPLATES[k
 
 const PICKS_KEY = 'codex.summaryPicks';
 const seriesKey = (m: Meeting) => `${m.profile}:${seriesTitle(m.title)}`;
-const readPicks = (): Record<string, SummaryTemplate> => { try { return JSON.parse(localStorage.getItem(PICKS_KEY) ?? '{}'); } catch { return {}; } };
+const readPicks = () => stored<Record<string, SummaryTemplate>>(PICKS_KEY, {});
 
-export const rememberTemplate = (m: Meeting, key: SummaryTemplate) => {
-  try { localStorage.setItem(PICKS_KEY, JSON.stringify({ ...readPicks(), [seriesKey(m)]: key })); } catch {}
-};
+export const rememberTemplate = (m: Meeting, key: SummaryTemplate) => save(PICKS_KEY, { ...readPicks(), [seriesKey(m)]: key });
 
 // The template picked before for this series, else a guess from the title and guest count. Series is newest first.
 export function templateFor(m: Meeting, series: Meeting[], picks = readPicks()): SummaryTemplate {

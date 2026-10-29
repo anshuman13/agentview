@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { McpServer } from '../../../shared/protocol';
 import { getState, send, notice, api, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
-import { ago, useTick } from '../ui/util';
+import { ago, save, stored, useTick } from '../ui/util';
 import { post } from './mcpActions';
 import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, merge, needsYou, rowKey, services, slug, splitName, type Group, type Row, type Service } from './mcpHelpers';
 import { Detail } from './McpDetail';
@@ -13,12 +13,11 @@ const CONNECTORS = 'agentview.mcp.connectors';
 
 // Keeps the last connector list seen per account, so both accounts show whichever one this chat runs on.
 function connectorsByAccount(account: string, live: Row[]): Row[] {
-  let seen: Record<string, Row[]> = {};
-  try { seen = JSON.parse(localStorage.getItem(CONNECTORS) ?? '{}'); } catch {}
+  const seen = stored<Record<string, Row[]>>(CONNECTORS, {});
   const mine = live.filter((r) => r.type === 'claudeai');
   if (mine.length) {
     seen[account] = mine.map((r) => ({ name: r.name, type: r.type, status: r.status, scope: r.scope, tools: r.tools?.map((t) => ({ name: t.name })) }) as Row);
-    localStorage.setItem(CONNECTORS, JSON.stringify(seen));
+    save(CONNECTORS, seen);
   }
   return Object.entries(seen).filter(([a]) => a !== account).flatMap(([a, rows]) => rows.map((r) => ({ ...r, account: a, live: false })));
 }
