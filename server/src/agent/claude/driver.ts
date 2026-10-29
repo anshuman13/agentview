@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { query, getSubagentMessages, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
-import { BIG_BRO, type Account, type AgentEvent, type UsageWindow, type AgentStatus, type ChatEvent, type Effort } from '../../../../shared/protocol.js';
+import type { Account, AgentEvent, ChatEvent, Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { JsonlTail } from './tail.js';
@@ -10,18 +10,16 @@ import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { configDir, hasAlt, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
 import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, type SubFile } from './history.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, usageFrom, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { bigBroRequest, bigBroVerdict } from './approval.js';
+import { ENDED, agentResultPatch, replayText, unchanged, usageOf } from './tasks.js';
+import { sessionUsage } from './usage.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
 const STREAM_FLUSH_MS = 80;
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
-
-const ENDED: Record<string, AgentStatus> = { completed: 'done', failed: 'failed', stopped: 'stopped', killed: 'stopped' };
-
-const same = (a: unknown, b: unknown) => a === b || (typeof a === 'object' && typeof b === 'object' && JSON.stringify(a) === JSON.stringify(b));
-const usageOf = (u: { total_tokens: number; tool_uses: number; duration_ms: number }) => ({ tokens: u.total_tokens, toolUses: u.tool_uses, durationMs: u.duration_ms });
 
 export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
 
@@ -249,12 +247,9 @@ export class ClaudeDriver implements AgentDriver {
   private async loadUsage() {
     const q = this.q;
     if (!q) return;
-    const window = (w?: { utilization: number | null; resets_at: string | null } | null): UsageWindow | null =>
-      w && w.utilization !== null ? { pct: Math.round(w.utilization), resetsAt: w.resets_at ? Date.parse(w.resets_at) : null } : null;
     try {
       const u = await q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true });
-      const r = u.rate_limits_available ? u.rate_limits : null;
-      if (q === this.q) this.host.setSession({ usage: r ? { fiveHour: window(r.five_hour), week: window(r.seven_day) } : null });
+      if (q === this.q) this.host.setSession({ usage: sessionUsage(u) });
     } catch (err) {
       process.stderr.write(`loadUsage failed: ${String(err)}\n`);
     }
@@ -315,17 +310,10 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   private async confirmBigBro(input: HookInput, signal: AbortSignal): Promise<HookJSONOutput> {
-    if (input.hook_event_name !== 'PreToolUse') return {};
-    const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
-    if (toolInput.subagent_type !== BIG_BRO) return {};
-    const r = await this.host.ask(input.tool_name, toolInput, { signal, title: `Ask Fable: ${String(toolInput.description ?? 'a hard problem')}` });
-    return {
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: r.behavior === 'allow' ? 'allow' : 'deny',
-        permissionDecisionReason: r.behavior === 'allow' ? undefined : 'The user declined to ask Fable. Continue without it.',
-      },
-    };
+    const req = bigBroRequest(input);
+    if (!req) return {};
+    const r = await this.host.ask(req.toolName, req.toolInput, { signal, title: req.title });
+    return bigBroVerdict(r.behavior);
   }
 
   afterTool(input: HookInput): HookJSONOutput {
@@ -365,8 +353,7 @@ export class ClaudeDriver implements AgentDriver {
 
   // The CLI echoes each prompt with the uuid it saved it under; that uuid is what a file rewind points at.
   private noteReplay(msg: { uuid?: string; message: { content: unknown } }) {
-    const c = msg.message.content;
-    const text = typeof c === 'string' ? c : Array.isArray(c) ? (c.find((b) => b?.type === 'text') as { text?: string } | undefined)?.text : undefined;
+    const text = replayText(msg.message.content);
     const at = this.sent.findIndex((s) => s.text === text);
     if (at < 0 || !msg.uuid) return;
     this.rewindIds.set(this.sent[at].id, msg.uuid);
@@ -444,16 +431,13 @@ export class ClaudeDriver implements AgentDriver {
     const a = this.host.agentOf(toolUseId);
     if (!a) return;
     const next = patch(a);
-    if (Object.entries(next).every(([k, v]) => same(a[k as keyof AgentEvent], v))) return;
+    if (unchanged(a, next)) return;
     Object.assign(a, next);
     this.host.emit({ type: 'event', event: a });
   }
 
   private agentResult(toolUseId: string, text: string, isError: boolean, output: any) {
-    const model = typeof output?.resolvedModel === 'string' ? { model: output.resolvedModel as string } : {};
-    if (text.startsWith(ASYNC_LAUNCH)) return this.patchAgent(toolUseId, () => ({ background: true, ...model }));
-    const usage = typeof output?.totalTokens === 'number' ? { tokens: output.totalTokens, toolUses: output.totalToolUseCount ?? 0, durationMs: output.totalDurationMs ?? 0 } : usageFrom(text);
-    this.patchAgent(toolUseId, (a) => ({ status: isError ? 'failed' : 'done', endedAt: Date.now(), ...model, ...(usage ? { usage } : { usage: a.usage }) }));
+    this.patchAgent(toolUseId, agentResultPatch(text, isError, output, Date.now()));
   }
 
   private isAgent(toolUseId: string) {
