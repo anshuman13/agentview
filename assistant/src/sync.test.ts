@@ -567,4 +567,9 @@ describe('openDb', () => {
     migrated.close();
     fs.rmSync(file, { force: true });
   });
+
+  it('looks up items by meeting through the index', () => {
+    const plan = db.prepare("EXPLAIN QUERY PLAN SELECT title FROM items WHERE deleted = 0 AND profile = ? AND meeting_id = ?").all('work', 'm1') as { detail: string }[];
+    expect(plan.map((p) => p.detail).join(' ')).toContain('items_meeting_idx');
+  });
 });

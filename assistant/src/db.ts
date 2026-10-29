@@ -1,4 +1,4 @@
-import { Database } from 'bun:sqlite';
+import { Database, type Statement } from 'bun:sqlite';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -63,6 +63,10 @@ export function openDb(file: string = DB_PATH): Database {
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));
     db.exec(createIndexSQL(tableName));
+    if (tableName === 'items') {
+      db.exec('CREATE INDEX IF NOT EXISTS items_meeting_idx ON items(profile, meeting_id)');
+      db.exec('CREATE INDEX IF NOT EXISTS items_status_idx ON items(profile, status)');
+    }
     const existing = new Set((db.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[]).map((c) => c.name));
     for (const col of dataColumns) {
       if (!existing.has(col)) db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${col}`);
@@ -77,9 +81,18 @@ export function openDb(file: string = DB_PATH): Database {
   return db;
 }
 
+const statements = new WeakMap<Database, Map<string, Statement>>();
+
+export function stmt(db: Database, sql: string): Statement {
+  let cache = statements.get(db);
+  if (!cache) statements.set(db, (cache = new Map()));
+  let st = cache.get(sql);
+  if (!st) cache.set(sql, (st = db.prepare(sql)));
+  return st;
+}
+
 export function nextVersion(db: Database): number {
-  const result = db
-    .prepare('UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ? RETURNING CAST(value AS INTEGER) AS value')
+  const result = stmt(db, 'UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ? RETURNING CAST(value AS INTEGER) AS value')
     .get('version') as { value: number } | undefined;
 
   if (result) {

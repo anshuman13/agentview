@@ -1,5 +1,5 @@
 import { Database } from 'bun:sqlite';
-import { TABLES, nextVersion } from './db.js';
+import { TABLES, nextVersion, stmt } from './db.js';
 
 export class SyncError extends Error {}
 
@@ -75,7 +75,8 @@ export function applyChanges(
     for (const change of changes) {
       const { table, id, profile, deleted, updated_at, fields, field_times } = change;
 
-      const selectStmt = db.prepare(
+      const selectStmt = stmt(
+        db,
         `SELECT version, updated_at, field_times, deleted FROM ${table} WHERE id = ? AND profile = ?`
       );
       const row = selectStmt.get(id, profile) as any;
@@ -127,7 +128,7 @@ export function applyChanges(
         sql += allColumns.join(', ');
         sql += `) VALUES (${allColumns.map(() => '?').join(', ')})`;
 
-        const insertStmt = db.prepare(sql);
+        const insertStmt = stmt(db, sql);
         insertStmt.run(...vals);
       } else {
         const setClauses = [];
@@ -151,7 +152,7 @@ export function applyChanges(
         vals.push(profile);
 
         let sql = `UPDATE ${table} SET ${setClauses.join(', ')} WHERE id = ? AND profile = ?`;
-        const updateStmt = db.prepare(sql);
+        const updateStmt = stmt(db, sql);
         updateStmt.run(...vals);
       }
 
