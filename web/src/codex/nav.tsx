@@ -10,7 +10,6 @@ import { sharedSplit, useMinute, useSplit } from './split';
 export const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Overview' },
   { id: 'tasks', icon: 'checklist', label: 'Tasks' },
-  { id: 'summary', icon: 'comment-discussion', label: 'Summary' },
   { id: 'meetings', icon: 'record', label: 'Meetings' },
   { id: 'jobs', icon: 'history', label: 'Jobs' },
   { id: 'wiki', icon: 'book', label: 'Wiki' },

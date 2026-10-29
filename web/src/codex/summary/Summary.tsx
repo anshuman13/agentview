@@ -61,3 +61,62 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
     </div>
   );
 }
+
+// Top-level bullets under the brief's "Needs you" heading: the linked or bold title and the first sentence after it.
+export function needsYou(text: string) {
+  const out: { title: string; url: string | null; why: string }[] = [];
+  let inside = false;
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    const bullet = line.match(/^[-*]\s+(.*)$/);
+    if (!bullet) {
+      if (/^\s/.test(line)) continue;
+      inside = /needs you/i.test(line);
+      continue;
+    }
+    if (!inside) continue;
+    const m = bullet[1].match(/^(?:\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*)\s*:?\s*(.*)$/);
+    const title = m ? (m[1] ?? m[3]) : bullet[1].split(':')[0];
+    const rest = m ? m[4] : bullet[1].slice(title.length + 1);
+    out.push({ title: title.trim(), url: m?.[2] ?? null, why: rest.trim().split(/(?<=[.!?])\s/)[0] });
+  }
+  return out;
+}
+
+// The latest Slack brief on Overview: only what needs me, one line each, and the asks waiting in Tasks.
+export function SlackCard() {
+  const store = useAssistantStore();
+  const snap = useAssistantData();
+  const [busy, setBusy] = useState(false);
+  const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
+  const asks = snap.items.filter((r) => !r.deleted && r.source === 'slack' && r.status === 'suggested').length;
+  const items = brief?.text ? needsYou(brief.text) : [];
+  if (!brief && !asks) return null;
+  const summarize = () => {
+    setBusy(true);
+    store.summarizeSlack().then(
+      (n) => showSnack(n ? `Summary ready, ${n} suggested ${n === 1 ? 'task' : 'tasks'}` : 'Summary ready'),
+      (err) => showSnack(`Summary failed: ${errorText(err)}`),
+    ).finally(() => setBusy(false));
+  };
+  return (
+    <section>
+      <div className="as-section">Slack{brief?.to_at ? ` · ${ago(brief.to_at, ' ago')}` : ''}</div>
+      <div className="ov-follow">
+        {items.slice(0, 5).map((x, i) => (
+          <div key={i} className="ov-follow-row">
+            <a className="ov-follow-text" href={x.url ?? undefined} target="_blank" rel="noreferrer">
+              <span className="ov-t">{x.title}</span>
+              {x.why && <span className="muted small">{x.why}</span>}
+            </a>
+          </div>
+        ))}
+        {brief && !items.length && <div className="ov-follow-row muted small">Nothing needs you.</div>}
+        <div className="ov-follow-row">
+          {asks > 0 ? <button className="ov-follow-text" onClick={() => setView({ list: 'tasks' })}><span className="ov-t">{asks} from Slack to review</span></button> : <span className="ov-follow-text" />}
+          <button className="btn sm" disabled={busy} onClick={summarize}><Icon name={busy ? 'loading' : 'sparkle'} small /> {busy ? 'Summarizing' : 'Summarize'}</button>
+        </div>
+      </div>
+    </section>
+  );
+}

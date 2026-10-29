@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { followThrough, type Meeting } from './data/wiki';
 import { sinceLastVisit } from './data/load';
+import { SlackCard } from './summary/Summary';
 import { resolvedQuestions } from './meetings/OpenQuestions';
 import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
@@ -191,6 +192,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
       </div>
       <SinceLastVisit />
+      <SlackCard />
       {digest && (
         <section>
           <div className="as-section">{digest.title} · {new Date(digest.updated_at).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}</div>
