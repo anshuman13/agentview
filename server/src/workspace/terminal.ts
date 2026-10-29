@@ -1,9 +1,10 @@
 import path from 'node:path';
 import { WebSocket } from 'ws';
 import { parseFrame } from '../http/body.js';
+import { OutputBuffer } from './outputBuffer.js';
 
 const MAX = 200_000;
-type Term = { id: string; chat: string; name: string; proc: Bun.Subprocess; buf: string; socks: Set<WebSocket> };
+type Term = { id: string; chat: string; name: string; proc: Bun.Subprocess; out: OutputBuffer; socks: Set<WebSocket> };
 const terms = new Map<string, Term>();
 let seq = 0;
 
@@ -16,7 +17,8 @@ export function createTerminal(chat: string, cwd: string) {
   let n = 1;
   while (used.has(label(n))) n++;
   const utf8 = new TextDecoder();
-  const t: Term = { id: String(++seq), chat, name: label(n), proc: null!, buf: '', socks: new Set() };
+  const t: Term = { id: String(++seq), chat, name: label(n), proc: null!, out: null!, socks: new Set() };
+  t.out = new OutputBuffer(MAX, 10, (d) => t.socks.forEach((ws) => ws.readyState === WebSocket.OPEN && ws.send(d)));
   t.proc = Bun.spawn([shell, '-l'], {
     cwd,
     env: { ...process.env, TERM: 'xterm-256color' },
@@ -24,17 +26,12 @@ export function createTerminal(chat: string, cwd: string) {
       cols: 80,
       rows: 24,
       data(_term, bytes) {
-        const d = utf8.decode(bytes, { stream: true });
-        t.buf += d;
-        if (t.buf.length > MAX) {
-          const nl = t.buf.indexOf('\n', t.buf.length - MAX);
-          t.buf = t.buf.slice(nl < 0 ? t.buf.length - MAX : nl + 1);
-        }
-        t.socks.forEach((ws) => ws.readyState === WebSocket.OPEN && ws.send(d));
+        t.out.push(utf8.decode(bytes, { stream: true }));
       },
     },
   });
   void t.proc.exited.then(() => {
+    t.out.dispose();
     terms.delete(t.id);
     t.socks.forEach((ws) => ws.close());
   });
@@ -59,7 +56,8 @@ export const closeTerminals = (chat: string) => listTerminals(chat).forEach((t) 
 export function attachTerminal(ws: WebSocket, id: string) {
   const t = terms.get(id);
   if (!t) return ws.close();
-  if (t.buf) ws.send(t.buf);
+  const snap = t.out.snapshot();
+  if (snap) ws.send(snap);
   t.socks.add(ws);
   ws.on('message', (raw) => {
     const m = parseFrame<{ t: string; d?: string; c?: number; r?: number }>(raw);
@@ -69,7 +67,7 @@ export function attachTerminal(ws: WebSocket, id: string) {
       const dim = (v: unknown) => Math.min(1000, Math.max(2, Math.floor(Number(v)) || 0));
       if (dim(m.c) > 2 || dim(m.r) > 2) t.proc.terminal?.resize(dim(m.c), dim(m.r));
     }
-    if (m.t === 'c') t.buf = t.buf.slice(t.buf.lastIndexOf('\n') + 1);
+    if (m.t === 'c') t.out.clearLine();
   });
   ws.on('close', () => t.socks.delete(ws));
 }
