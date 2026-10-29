@@ -3,6 +3,10 @@ import { useEffect, useRef } from 'react';
 // Places where a sideways drag belongs to the content: row swipes, text, code, sheets, and anything that scrolls sideways.
 const OWN = '.as-swipe-row, input, textarea, pre, code, .xterm, .chrome-frame, .monaco-editor, .tabs, .as-sheet, .more-sheet, .as-drawer, [data-no-swipe]';
 const EDGE = 24;
+let forced: 1 | -1 | null = null;
+
+// Opening a chat from Sessions is a push, so the chat comes in from the right even though its tab sits to the left.
+export const slideFrom = (side: 1 | -1) => { forced = side; };
 
 function scrollsSideways(el: Element | null) {
   for (; el && el !== document.body; el = el.parentElement) {
@@ -20,9 +24,11 @@ export function useTabSwipe(index: number, count: number, go: (i: number) => voi
   useEffect(() => {
     const from = prev.current;
     prev.current = index;
+    const side = forced ?? (index > from ? 1 : -1);
+    forced = null;
     if (from === index || index < 0 || from < 0 || matchMedia('(min-width: 901px), (prefers-reduced-motion: reduce)').matches) return;
     const pane = [...document.querySelectorAll<HTMLElement>('.workbench > .body > .pane')].find((p) => p.offsetParent !== null);
-    pane?.animate([{ opacity: 0.4, transform: `translateX(${index > from ? 32 : -32}px)` }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(0.2, 0, 0, 1)' });
+    pane?.animate([{ opacity: 0.4, transform: `translateX(${side * 32}px)` }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(0.2, 0, 0, 1)' });
   }, [index]);
 
   useEffect(() => {

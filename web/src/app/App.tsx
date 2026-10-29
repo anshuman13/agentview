@@ -10,7 +10,7 @@ import { GitHubBadge } from '../ops/pulls';
 import { Icon } from '../ui/Icon';
 import { command, pressable } from '../ui/util';
 import { haptic } from '../ui/haptic';
-import { useTabSwipe } from './tabSwipe';
+import { slideFrom, useTabSwipe } from './tabSwipe';
 import { useSheetDrag } from '../ui/useSheetDrag';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
@@ -179,7 +179,11 @@ export function App() {
     const from = prevId.current;
     prevId.current = session.id;
     if (deepLink.view && from === deepLink.chat) return;
-    setTab((t) => (t === 'repos' ? 'chat' : t));
+    setTab((t) => {
+      if (t !== 'repos') return t;
+      slideFrom(1);
+      return 'chat';
+    });
   }, [session.id]);
 
   useEffect(() => {
