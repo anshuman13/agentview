@@ -44,6 +44,7 @@ export function Brief() {
   const repeat = useStore((s) => s.session.repeat);
   const cwd = useStore((s) => s.session.cwd);
   const sessionId = useStore((s) => s.session.id);
+  const chatTitle = useStore((s) => s.live.find((c) => c.id === s.session.id)?.title);
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;
   const { turns, next, lastTool, advisor, fable } = useMemo(() => buildTurns(events), [events]);
@@ -128,8 +129,9 @@ export function Brief() {
     <div className="brief" ref={root}>
       <div className="brief-status">
         <div className="timeline-head">
+          <span className="mobile-only tl-name"><b>{chatTitle || turns[0]?.prompt || 'New chat'}</b>{cwd && <small>{cwd.split('/').pop()}</small>}</span>
           <button className={`tl-view tl-tab ${showAgents ? '' : 'active'}`} title={showAgents ? 'Show the chat' : full ? 'Show the timeline' : 'Show the full transcript'} onClick={() => (showAgents ? setShowAgents(false) : pick(!full))}>
-            {full ? 'Transcript' : 'Timeline'}{!showAgents && <Icon name="arrow-swap" small />}
+            <span className="tl-view-label">{full ? 'Transcript' : 'Timeline'}</span>{!showAgents && <Icon name="arrow-swap" small />}
           </button>
           <span className="spacer" />
           <span className="mobile-only"><AgentsChip /></span>
