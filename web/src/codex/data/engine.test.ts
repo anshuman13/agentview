@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { edited, isQuestion, latestDigest, moved, newCapture, parseWhen, split, staleTasks, stripWhen } from './engine';
+import { edited, isQuestion, latestDigest, latestRunByJob, moved, newCapture, parseWhen, split, staleTasks, stripWhen } from './engine';
 import { rowToChange, type ItemRow } from './sync';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
@@ -125,5 +125,14 @@ describe('staleTasks', () => {
   it('counts a recent status change as activity', () => {
     const rows = [row('reopened', { field_times: JSON.stringify({ status: t - day }), updated_at: t - 20 * day })];
     expect(staleTasks(rows, t)).toEqual([]);
+  });
+});
+
+describe('latestRunByJob', () => {
+  const run = (id: string, job: string, at: number, extra: Record<string, unknown> = {}) =>
+    ({ id, profile: 'work', job_id: job, started_at: at, status: 'ok', output: 'out', deleted: 0, ...extra }) as never;
+  it('keeps the newest finished run with output per job since the cutoff', () => {
+    const best = latestRunByJob([run('a', 'j1', 10), run('b', 'j1', 30), run('c', 'j1', 40, { status: 'failed' }), run('d', 'j2', 5), run('e', 'j3', 50, { output: null }), run('f', 'j4', 60, { deleted: 1 })], 10);
+    expect([...best.entries()].map(([k, r]) => [k, (r as { id: string }).id])).toEqual([['workj1', 'b']]);
   });
 });

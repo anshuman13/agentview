@@ -343,6 +343,24 @@ export const claimsMentioning = (facts: Fact[], person: string) => {
   return live(facts).filter((f) => !f.superseded_by && f.text?.toLowerCase().includes(name)).sort((a, b) => factTime(b) - factTime(a));
 };
 
+export type MeetingBrief = { tasks: { person: string; items: ItemRow[] }[]; claims: Fact[] };
+
+// Open tasks that mention each attendee and up to three current claims that name an attendee or match the title.
+export function briefFor(meeting: Meeting, items: ItemRow[], facts: Fact[]): MeetingBrief {
+  const people = peopleOf(meeting);
+  const open = items.filter((r) => !r.deleted && r.status === 'open' && r.source !== 'calendar' && !(r.meeting_id === meeting.id && r.profile === meeting.profile));
+  const tasks = people
+    .map((person) => {
+      const name = person.toLowerCase();
+      return { person, items: open.filter((r) => [r.title, r.text, r.people].join(' ').toLowerCase().includes(name)) };
+    })
+    .filter((t) => t.items.length > 0);
+  const hits = [...people.map((p) => queryWords(p)), queryWords(meeting.title ?? '')].map((words) =>
+    rowMatcher<Fact>(words, 'brief', (f) => [f.text]));
+  const claims = live(facts).filter((f) => !f.superseded_by && hits.some((hit) => hit(f))).sort((a, b) => factTime(b) - factTime(a)).slice(0, 3);
+  return { tasks, claims };
+}
+
 // The hub tries this many times, 15 minutes apart, before it gives up on a transcript (TRIES in transcripts.ts).
 export const TRANSCRIPT_TRIES = 8;
 

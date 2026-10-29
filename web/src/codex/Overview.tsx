@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { useAssistant, useCodex } from './data';
-import { priorWith, type Meeting } from './data/wiki';
-import { atTime, latestDigest, staleTasks } from './data/engine';
+import { briefFor, priorWith, type Meeting } from './data/wiki';
+import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { setView, useView } from './view';
@@ -13,7 +14,8 @@ import type { useSplit } from './split';
 function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; carried: number; onPrep: () => void }) {
   const { store, snap } = useAssistant();
   const { meetings } = useCodex();
-  const prior = priorWith(m, meetings, snap.items);
+  const prior = useMemo(() => priorWith(m, meetings, snap.items), [m, meetings, snap.items]);
+  const brief = useMemo(() => briefFor(m, snap.items, snap.facts), [m, snap.items, snap.facts]);
   const now = Date.now();
   const mins = Math.round((m.starts_at! - now) / 60000);
   const open = () => setView({ list: 'meetings', open: `${m.profile}:${m.id}` });
@@ -39,6 +41,18 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
               {openActions.length > 0 && <span className="as-due late">{openActions.length} open</span>}
             </div>
           ))}
+        </div>
+      )}
+      {(brief.tasks.length > 0 || brief.claims.length > 0) && (
+        <div className="as-ctx-list">
+          {brief.tasks.map(({ person, items }) => (
+            <div key={person} className="as-ctx">
+              <span>{person}</span>
+              <span className="as-due late">{items.length} open</span>
+              <span className="as-quote">{items[0].title}</span>
+            </div>
+          ))}
+          {brief.claims.map((f) => <div key={f.profile + f.id} className="as-ctx"><span className="as-quote">{f.text}</span></div>)}
         </div>
       )}
       <div className="as-next-actions">
@@ -83,16 +97,19 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const { snap } = useAssistant();
   const { filter } = useView();
   const now = Date.now();
-  const tomorrow = s.later.filter((r) => atTime(r.at)! >= s.endOfDay && atTime(r.at)! < s.endOfTomorrow);
+  const minute = Math.floor(now / 60000);
   const startOfDay = new Date(now).setHours(0, 0, 0, 0);
-  const jobs = snap.jobs.filter((j) => !j.deleted && (filter === 'all' || j.profile === filter));
-  const reports = jobs.flatMap((j) => {
-    const r = snap.runs.filter((x) => !x.deleted && x.profile === j.profile && x.job_id === j.id && x.status === 'ok' && (x.started_at ?? 0) >= startOfDay).sort((a, b) => b.started_at! - a.started_at!)[0];
-    return r?.output ? [{ j, r }] : [];
-  });
-  const digest = latestDigest(snap.items, filter);
+  const tomorrow = s.later.filter((r) => atTime(r.at)! >= s.endOfDay && atTime(r.at)! < s.endOfTomorrow);
+  const reports = useMemo(() => {
+    const latest = latestRunByJob(snap.runs, startOfDay);
+    return snap.jobs.flatMap((j) => {
+      const r = !j.deleted && (filter === 'all' || j.profile === filter) ? latest.get(j.profile + j.id) : undefined;
+      return r ? [{ j, r }] : [];
+    });
+  }, [snap.jobs, snap.runs, filter, startOfDay]);
+  const digest = useMemo(() => latestDigest(snap.items, filter), [snap.items, filter]);
   const tasks = () => setView({ list: 'tasks', open: null });
-  const stale = staleTasks(snap.items.filter((r) => filter === 'all' || r.profile === filter), now);
+  const stale = useMemo(() => staleTasks(snap.items.filter((r) => filter === 'all' || r.profile === filter), minute * 60000), [snap.items, filter, minute]);
   const stats = [
     { n: dueToday.length, label: 'to do today', cls: '' },
     { n: s.overdue.length, label: 'overdue', cls: 'late' },

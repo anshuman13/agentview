@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, decisionLog, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, briefFor, decisionLog, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -201,5 +201,33 @@ describe('priorWith', () => {
 
   it('returns nothing when the meeting has no start time', () => {
     expect(priorWith({ ...next, starts_at: null }, [mtg('m1', 'Planning', 100)], [])).toEqual([]);
+  });
+});
+
+describe('briefFor', () => {
+  const mtg = (people: string | null, title = 'Planning'): Meeting => ({
+    ...common('next'), title, starts_at: 1000, ends_at: null, people, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
+  });
+  const task = (id: string, title: string, extra: Partial<ItemRow> = {}): ItemRow => ({
+    ...common(id), title, text: null, source: 'manual', source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...extra,
+  });
+
+  it('lists open tasks that mention an attendee', () => {
+    const items = [task('a', 'Send Ola the budget'), task('b', 'Other', { people: 'Kari' }), task('c', 'Ask Ola', { status: 'done' }), task('d', 'Ola call', { deleted: 1 }), task('e', 'Nothing')];
+    const { tasks } = briefFor(mtg('Ola, Kari'), items, []);
+    expect(tasks.map((t) => [t.person, t.items.map((r) => r.id)])).toEqual([['Ola', ['a']], ['Kari', ['b']]]);
+  });
+
+  it('returns up to three current claims naming an attendee or matching the title', () => {
+    const fs = [
+      fact('1', 'p1', 'H', 'Ola owns billing', { at: 1 }), fact('2', 'p1', 'H', 'Planning happens monthly', { at: 2 }), fact('3', 'p1', 'H', 'Ola likes tea', { at: 3 }),
+      fact('4', 'p1', 'H', 'Ola old', { at: 4, superseded_by: '3' }), fact('5', 'p1', 'H', 'Ola proposed', { state: 'proposed' }), fact('6', 'p1', 'H', 'Ola again', { at: 5 }), fact('7', 'p1', 'H', 'Unrelated'),
+    ];
+    expect(briefFor(mtg('Ola'), [], fs).claims.map((f) => f.id)).toEqual(['6', '3', '2']);
+  });
+
+  it('is empty when nothing matches', () => {
+    const b = briefFor(mtg(null, 'Sync'), [task('a', 'Buy milk')], [fact('1', 'p1', 'H', 'Alpha')]);
+    expect(b).toEqual({ tasks: [], claims: [] });
   });
 });
