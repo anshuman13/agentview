@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFolders, findHere, groupByRepo, groupByKind, segmentOf } from './folders';
+import { buildFolders, findHere, groupByRepo, groupByKind, segmentOf, staleKeys } from './folders';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
@@ -74,5 +74,32 @@ describe('groupByRepo', () => {
     const chats = [chat('/w/comida', 2, 'fix login'), chat('/w/tienda', 3, 'other')];
     expect(groupByRepo([], chats, f, 'tien').map((x) => x.name)).toEqual(['tienda']);
     expect(groupByRepo([], chats, f, 'LOGIN')[0].recent.map((c) => c.title)).toEqual(['fix login']);
+  });
+});
+
+describe('staleKeys', () => {
+  const at = (n: number) => ({ repos: n, chats: n, trees: n });
+
+  it('fetches everything when nothing is cached', () => {
+    expect(staleKeys(at(0), 1_000_000)).toEqual(['repos', 'chats', 'trees']);
+  });
+
+  it('skips data younger than the minimum age', () => {
+    expect(staleKeys(at(1_000_000), 1_029_999)).toEqual([]);
+    expect(staleKeys(at(1_000_000), 1_030_000)).toHaveLength(3);
+  });
+
+  it('checks each resource on its own age', () => {
+    expect(staleKeys({ repos: 1_000_000, chats: 960_000, trees: 1_000_000 }, 1_010_000)).toEqual(['chats']);
+  });
+
+  it('cuts fetches over 10 chat switches from 30 to 3', () => {
+    const stamps = at(0);
+    let fetches = 0;
+    for (let i = 0; i < 10; i++) {
+      const now = 1_000_000 + i * 2_000;
+      for (const k of staleKeys(stamps, now)) { stamps[k] = now; fetches++; }
+    }
+    expect(fetches).toBe(3);
   });
 });

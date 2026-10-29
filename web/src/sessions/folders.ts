@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiUrl } from '../app/api';
 import { send } from '../app/store';
 import type { ConfirmRequest } from '../ui/Confirm';
@@ -30,21 +30,48 @@ export function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSessi
   return [...m.values()].sort((a, b) => b.last - a.last);
 }
 
+export const WORKSPACE_MIN_AGE = 30_000;
+export type WorkspaceKey = 'repos' | 'chats' | 'trees';
+const WORKSPACE_URL: Record<WorkspaceKey, string> = { repos: '/api/repos', chats: '/api/sessions', trees: '/api/worktrees' };
+
 const cached = { repos: [] as Repo[], trees: [] as Worktree[], chats: [] as SavedSession[] };
+const fetchedAt: Record<WorkspaceKey, number> = { repos: 0, chats: 0, trees: 0 };
+
+export const staleKeys = (at: Record<WorkspaceKey, number>, now: number, minAge = WORKSPACE_MIN_AGE) =>
+  (Object.keys(at) as WorkspaceKey[]).filter((k) => now - at[k] >= minAge);
+
+export const invalidateWorkspace = () => {
+  fetchedAt.repos = fetchedAt.chats = fetchedAt.trees = 0;
+};
 
 export function useWorkspace(key: unknown) {
   const [repos, setRepos] = useState(cached.repos);
   const [trees, setTrees] = useState(cached.trees);
   const [chats, setChats] = useState(cached.chats);
+  const mounted = useRef(true);
   useEffect(() => {
-    let live = true;
-    get('/api/repos').then((x) => live && x && setRepos((cached.repos = x)));
-    get('/api/sessions').then((x) => live && x && setChats((cached.chats = x)));
-    get('/api/worktrees').then((x) => live && x && setTrees((cached.trees = x)));
-    return () => void (live = false);
+    mounted.current = true;
+    return () => void (mounted.current = false);
+  }, []);
+  useEffect(() => {
+    const apply = { repos: setRepos, chats: setChats, trees: setTrees } as Record<WorkspaceKey, (x: never) => void>;
+    const now = Date.now();
+    setRepos(cached.repos);
+    setChats(cached.chats);
+    setTrees(cached.trees);
+    for (const k of staleKeys(fetchedAt, now)) {
+      fetchedAt[k] = now;
+      get(WORKSPACE_URL[k]).then((x) => {
+        if (!x) return void (fetchedAt[k] = 0);
+        (cached as Record<WorkspaceKey, unknown>)[k] = x;
+        if (mounted.current) apply[k](x as never);
+      });
+    }
   }, [key]);
   const folders = useMemo(() => buildFolders(repos, trees, chats), [repos, trees, chats]);
-  return { folders, chats, setTrees, setChats };
+  const edit = <T,>(k: 'trees' | 'chats', set: (f: (l: T[]) => T[]) => void) => (f: (l: T[]) => T[]) =>
+    set((l) => ((cached as Record<string, unknown>)[k] = f(l)) as T[]);
+  return { folders, chats, setTrees: edit<Worktree>('trees', setTrees), setChats: edit<SavedSession>('chats', setChats) };
 }
 
 export function worktreeRequest(d: Folder, track: (branch: string | null, error?: string) => void): ConfirmRequest {
@@ -58,6 +85,7 @@ export function worktreeRequest(d: Folder, track: (branch: string | null, error?
       track(branch);
       const r = await fetch(apiUrl('/api/worktrees'), { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) });
       const body = await r.json().catch(() => null);
+      invalidateWorkspace();
       if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
       track(null, r.ok && body?.cwd ? undefined : body?.error ?? 'Could not create the worktree');
     },
@@ -111,6 +139,7 @@ export const deleteChat = (s: { sessionId: string; title: string; lastModified: 
     run: async () => {
       const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(s.sessionId)}${purge ? '&purge' : ''}`), { method: 'DELETE' });
       if (!r.ok) return onError((await r.json().catch(() => null))?.error ?? 'Could not delete the chat');
+      invalidateWorkspace();
       onDone();
       refreshBin();
     },

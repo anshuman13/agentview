@@ -8,7 +8,7 @@ import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type L
 import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored } from '../ui/util';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, get, groupByKind, groupByRepo, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
+import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, get, groupByKind, groupByRepo, invalidateWorkspace, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
 const PAGE = 10;
 
@@ -75,7 +75,8 @@ export function Sessions() {
   const cwd = useStore((s) => s.session.cwd);
   const lastSystem = useStore((s) => { const e = s.events[s.events.length - 1]; return e?.kind === 'system' ? e.id : null; });
   const { folders, setTrees, setChats } = useWorkspace(current + cwd);
-  const live = useStore((s) => s.live);
+  const liveKey = useStore((s) => s.live.map((c) => c.cwd).join('\n'));
+  const waitingCount = useStore((s) => s.live.reduce((n, c) => n + (c.pending ? 1 : 0), 0));
   const [filter, setFilter] = useState('');
   const viewing = useStore((s) => s.session.id);
   const [segment, setSegment] = useState(() => stored('agentview.workspace.segment', 'work'));
@@ -115,6 +116,7 @@ export function Sessions() {
 
   const start = (dir: string) => {
     setError(null);
+    invalidateWorkspace();
     send({ type: 'new_session', cwd: dir });
   };
 
@@ -145,10 +147,9 @@ export function Sessions() {
       setCreating(branch ? { repo: d.cwd, branch } : null);
     }));
 
-  const liveCwds = useMemo(() => live.map((c) => c.cwd), [live]);
+  const liveCwds = useMemo(() => (liveKey ? liveKey.split('\n') : []), [liveKey]);
   const counts = { work: shown.filter((f) => segmentOf(f) === 'work').length, personal: shown.filter((f) => segmentOf(f) === 'personal').length };
   const groups = useMemo(() => groupByKind(shown.filter((f) => segmentOf(f) === segment), liveCwds), [shown, segment, liveCwds]);
-  const waiting = live.filter((c) => c.pending);
   const pick = (v: string) => { setSegment(v); save('agentview.workspace.segment', v); };
   const flipKind = (k: string) => { const next = shut.includes(k) ? shut.filter((x) => x !== k) : [...shut, k]; setShut(next); save('agentview.workspace.kinds', next); };
   const isOpen = (d: Folder) => Boolean(d.hit) || (d.cwd === here || liveCwds.some((c) => inside(c, d.cwd))) !== toggled.has(d.cwd);
@@ -238,8 +239,8 @@ export function Sessions() {
         <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
-      <NeedsYou n={waiting.length}>
-        {waiting.map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} onClose={() => closeChat(c, setAsk)} />)}
+      <NeedsYou n={waitingCount}>
+        <WaitingRows viewing={viewing} ask={setAsk} />
       </NeedsYou>
       <div className="side-switch">
         {(['work', 'personal'] as const).map((k) => (
@@ -401,6 +402,11 @@ function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: 
       ))}
     </div>
   );
+}
+
+function WaitingRows({ viewing, ask }: { viewing: string; ask: (r: ConfirmRequest) => void }) {
+  const live = useStore((s) => s.live);
+  return <>{live.filter((c) => c.pending).map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} onClose={() => closeChat(c, ask)} />)}</>;
 }
 
 function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void; onDelete?: () => void; onBeside?: () => void }) {
