@@ -3,6 +3,7 @@ import { useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { olderClaims, pageClaims, pageStats, proposals, sourcesOf, type Source } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { setView, useEscapeBack, useView } from '../view';
 import { AskBar } from './AskBar';
 import { Claim } from './Claim';
@@ -17,19 +18,25 @@ export function WikiPage({ id }: { id: string }) {
   const { pages, facts } = useCodex();
   const { anchor } = useView();
   const [flash, setFlash] = useState<string | null>(null);
+  // A cited claim may sit past the window, so a page opened at an anchor shows every claim.
+  const [allFor, setAllFor] = useState<string | null>(null);
   const pid = id === MEMORY ? null : id;
   const page = id === MEMORY ? memoryPage(facts) : pages.find((p) => p.id === id && !p.deleted && p.state !== 'rejected');
   const review = useReview();
   useEffect(() => {
     if (!anchor) return;
+    setAllFor(id);
     document.getElementById(`claim-${anchor}`)?.scrollIntoView({ block: 'center' });
     setFlash(anchor);
     setView({ anchor: null });
     const t = setTimeout(() => setFlash(null), 1600);
     return () => clearTimeout(t);
-  }, [anchor]);
+  }, [anchor, id]);
   const groups = useMemo(() => pageClaims(facts, pid), [facts, pid]);
   const older = useMemo(() => olderClaims(facts, pid), [facts, pid]);
+  const total = useMemo(() => groups.reduce((n, g) => n + g.claims.length, 0), [groups]);
+  const [shown, more] = useWindow(String(pid));
+  const visible = useMemo(() => capGroups(groups, anchor || allFor === id ? Infinity : shown, 'claims'), [groups, shown, anchor, allFor, id]);
   const [showOlder, setShowOlder] = useState(false);
   const pending = useMemo(() => proposals(facts).filter((f) => (f.page_id ?? null) === pid), [facts, pid]);
   const st = useMemo(() => pageStats(facts, pid), [facts, pid]);
@@ -71,7 +78,7 @@ export function WikiPage({ id }: { id: string }) {
                   <button className="btn primary" onClick={() => review.approve(pending)}><Icon name="check" small /> Approve all</button>
                 </div>
               )}
-              {groups.map((g) => (
+              {visible.map((g) => (
                 <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
                   <h2>{g.heading}</h2>
                   <ul className="wk-claims">
@@ -79,6 +86,7 @@ export function WikiPage({ id }: { id: string }) {
                   </ul>
                 </section>
               ))}
+              <ShowMore shown={shown} total={total} onMore={more} />
               {older.length > 0 && (
                 <section className="wk-group wk-older">
                   <button className="wk-older-head" onClick={() => setShowOlder((v) => !v)} aria-expanded={showOlder}>

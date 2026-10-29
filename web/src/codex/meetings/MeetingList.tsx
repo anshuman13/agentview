@@ -5,6 +5,7 @@ import { actionCount, actionCounts, dayStart, groupMeetings, live, meetingState,
 import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
+import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { setView, showSnack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
@@ -204,6 +205,9 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     return searchMeetings(tracked, query);
   }, [mine, query, active]);
   const groups = useMemo(() => groupMeetings(found, now), [found, now]);
+  const total = useMemo(() => groups.reduce((n, g) => n + g.rows.length, 0), [groups]);
+  const [shown, more] = useWindow(`${filter}|${query}|${active.join(',')}`);
+  const visible = useMemo(() => capGroups(groups, shown, 'rows'), [groups, shown]);
   const takeNotes = () => {
     const t = Date.now();
     const id = newId();
@@ -249,12 +253,13 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
             onAdd={addTopic} onRemove={removeTopic} />
           {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
           {!query && <Upcoming meetings={mine} now={now} topics={topics} />}
-          {groups.map((g) => (
+          {visible.map((g) => (
             <section key={g.label}>
               <div className="mt-day">{g.label}</div>
               <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} />)}</div>
             </section>
           ))}
+          <ShowMore shown={shown} total={total} onMore={more} />
           {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
         </div>}
       </div>

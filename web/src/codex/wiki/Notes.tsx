@@ -4,6 +4,7 @@ import type { ItemRow } from '../data/sync';
 import { queryWords, rowMatcher } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
+import { ShowMore, useWindow } from '../../ui/useWindow';
 import { showSnack, useView } from '../view';
 
 // A loose note: a capture that is not a task. Tap to edit; the first line is its title.
@@ -74,14 +75,16 @@ export function Notes({ query }: { query: string }) {
     .filter((r) => !r.deleted && r.status === 'note' && (filter === 'all' || r.profile === filter))
     .filter((r) => !words.length || hit(r))
     .sort((a, b) => b.updated_at - a.updated_at);
+  const [shown, more] = useWindow(`${filter}|${query}`);
   if (words.length && !notes.length) return null;
   return (
     <section>
       <div className="wk-label">Notes</div>
       <div className="wk-cards">
-        {notes.map((r) => <NoteCard key={r.profile + r.id} row={r} />)}
+        {notes.slice(0, shown).map((r) => <NoteCard key={r.profile + r.id} row={r} />)}
         {!words.length && <NewNoteCard />}
       </div>
+      <ShowMore shown={shown} total={notes.length} onMore={more} />
     </section>
   );
 }
