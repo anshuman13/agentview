@@ -166,6 +166,9 @@ function equal(a: unknown, b: unknown): boolean {
   return keys.every((k) => equal((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
 }
 
+// The first attention list after load is not news; later ones notify per new item.
+let attentionSeen = false;
+
 function handle(m: ServerMessage) {
   switch (m.type) {
     case 'init':
@@ -235,8 +238,9 @@ function handle(m: ServerMessage) {
       break;
     case 'attention':
       for (const it of m.items) {
-        if (state.attention.length && !state.attention.some((x) => x.id === it.id)) notify(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, `${it.number ? `#${it.number} ` : ''}${it.title}`, () => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank')));
+        if (attentionSeen && !state.attention.some((x) => x.id === it.id)) notify(`${ATTENTION_LABEL[it.kind]} in ${it.repo}`, `${it.number ? `#${it.number} ` : ''}${it.title}`, () => (it.chatId ? send({ type: 'view', id: it.chatId }) : window.open(it.url, '_blank')));
       }
+      attentionSeen = true;
       set({ attention: m.items });
       break;
   }
