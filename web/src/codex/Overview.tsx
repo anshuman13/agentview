@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
-import { briefFor, priorWith, type Meeting } from './data/wiki';
+import { briefFor, followThrough, priorWith, type Meeting } from './data/wiki';
 import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
+import { save, stored } from '../ui/util';
+import { meetingKey } from './meetings/MeetingList';
 import { Icon } from '../ui/Icon';
 import { setView, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
@@ -91,6 +93,46 @@ export function Review({ rows }: { rows: ItemRow[] }) {
   ));
 }
 
+const DISMISSED = 'agentview:followThrough';
+
+// Open actions from meetings over a week old: Task unlinks one from its meeting so it is a plain task, Dismiss hides it here.
+function FollowThrough() {
+  const store = useAssistantStore();
+  const snap = useAssistantData();
+  const { meetings } = useCodex();
+  const { filter } = useView();
+  const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(DISMISSED, []));
+  const minute = Math.floor(Date.now() / 60000);
+  const rows = useMemo(
+    () => followThrough(snap.items, meetings.filter((m) => filter === 'all' || m.profile === filter), dismissed, minute * 60000),
+    [snap.items, meetings, filter, dismissed, minute],
+  );
+  if (!rows.length) return null;
+  const dismiss = (r: ItemRow) => {
+    const next = [...dismissed, r.profile + r.id];
+    setDismissed(next);
+    save(DISMISSED, next);
+  };
+  return (
+    <section>
+      <div className="as-section">Follow-through · {rows.length}</div>
+      <div className="ov-follow">
+        {rows.slice(0, 5).map(({ r, m }) => (
+          <div key={r.profile + r.id} className="ov-follow-row">
+            <button className="ov-follow-text" onClick={() => setView({ list: 'meetings', open: meetingKey(m), person: null })}>
+              <span className="ov-t">{r.title}</span>
+              <span className="muted small">{m.title} · {new Date(m.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+            </button>
+            <button className="btn sm" onClick={() => void store.update(r, { meeting_id: null })}>Task</button>
+            <button className="btn sm" onClick={() => dismiss(r)}>Dismiss</button>
+          </div>
+        ))}
+        {rows.length > 5 && <div className="ov-follow-row muted">+{rows.length - 5} more</div>}
+      </div>
+    </section>
+  );
+}
+
 type Split = ReturnType<typeof useSplit>;
 
 // The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
@@ -160,6 +202,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           {tomorrow.length > 0 && shown(tomorrow)}
         </section>
       )}
+      <FollowThrough />
       {reports.map(({ j, r }) => (
         <section key={j.profile + j.id}>
           <button className="as-section as-toggle" onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })}>{j.name} · {clock(r.started_at!)}</button>

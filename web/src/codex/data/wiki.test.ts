@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, briefFor, decisionLog, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, briefFor, decisionLog, followThrough, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -242,4 +242,13 @@ describe('briefFor', () => {
     expect(briefFor(mtg('Ola'), [], fs).claims.map((f) => f.id)).toEqual(['6', '3', '2']);
   });
 
+
+  it('follows through on open actions from meetings older than 7 days, skipping dismissed ones', () => {
+    const now = 100 * 86400000;
+    const mt = (id: string, days: number) => ({ ...common(id), title: id, starts_at: now - days * 86400000 }) as unknown as Meeting;
+    const act = (id: string, meeting_id: string, status = 'open') => ({ ...common(id), meeting_id, status }) as unknown as ItemRow;
+    const items = [act('a', 'old'), act('b', 'old'), act('c', 'new'), act('d', 'older'), act('e', 'old', 'done')];
+    const out = followThrough(items, [mt('old', 8), mt('new', 6), mt('older', 20)], ['workb'], now);
+    expect(out.map((x) => x.r.id)).toEqual(['a', 'd']);
+  });
 });

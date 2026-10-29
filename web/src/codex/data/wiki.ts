@@ -261,6 +261,19 @@ export function groupMeetings(meetings: Meeting[], now = Date.now()) {
 // dismiss them, unassigned ones nobody took, and dismissed ones were not mine.
 export const actionsOf = (items: ItemRow[], m: { profile: Profile; id: string }) => items.filter((r) => !r.deleted && r.meeting_id === m.id && r.profile === m.profile);
 
+// Open actions from meetings that started more than 7 days ago, newest meeting first, minus the dismissed ids.
+export function followThrough(items: ItemRow[], meetings: Meeting[], dismissed: string[], now = Date.now()) {
+  const skip = new Set(dismissed);
+  const cutoff = now - 7 * 86400000;
+  const old = new Map(live(meetings).filter((m) => m.starts_at != null && m.starts_at < cutoff).map((m) => [`${m.profile}:${m.id}`, m]));
+  return items
+    .flatMap((r) => {
+      const m = !r.deleted && r.status === 'open' && r.meeting_id && !skip.has(r.profile + r.id) && old.get(`${r.profile}:${r.meeting_id}`);
+      return m ? [{ r, m }] : [];
+    })
+    .sort((a, b) => b.m.starts_at! - a.m.starts_at!);
+}
+
 export type ActionCount = ReturnType<typeof actionCount>;
 const counted = new WeakMap<ItemRow[], Map<string, ActionCount>>();
 
