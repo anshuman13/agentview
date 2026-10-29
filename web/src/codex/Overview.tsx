@@ -10,6 +10,7 @@ import { save, stored } from '../ui/util';
 import { meetingKey } from './meetings/MeetingList';
 import { Prep } from './meetings/Prep';
 import { Icon } from '../ui/Icon';
+import { haptic } from '../ui/haptic';
 import { setView, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
 import { clock, when } from './time';
@@ -190,6 +191,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     { n: stale.length, label: 'stale', cls: '' },
   ].filter((x) => x.n > 0);
   const snooze = (r: ItemRow) => {
+    haptic('tap');
     const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)));
     void store.update(r, { at, rolls: null, rolled_from: null }).then(() => showSnack(`Snoozed to ${when(at)}`));
   };
@@ -198,7 +200,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     <div className="ov-follow">
       {rs.slice(0, 5).map((r) => (
         <div key={r.profile + r.id} className="ov-follow-row">
-          <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => void store.update(r, { status: 'done' })}><Icon name="circle-large-outline" small /></button>
+          <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); void store.update(r, { status: 'done' }); }}><Icon name="circle-large-outline" small /></button>
           <button className="ov-follow-text" onClick={tasks}><span className="ov-t">{r.title}</span></button>
           <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
         </div>

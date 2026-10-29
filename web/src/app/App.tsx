@@ -10,6 +10,7 @@ import { GitHubBadge } from '../ops/pulls';
 import { Icon } from '../ui/Icon';
 import { command, pressable } from '../ui/util';
 import { haptic } from '../ui/haptic';
+import { useTabSwipe } from './tabSwipe';
 import { useSheetDrag } from '../ui/useSheetDrag';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
@@ -305,6 +306,8 @@ export function App() {
     onClick: () => { if (!pressed.current) goTab('assistant'); pressed.current = false; },
   };
   const goSide = (v: View) => { haptic(); setMore(false); setView(v); setTab('repos'); };
+  const swipeTabs = [() => goTab('assistant'), () => goTab('chat'), () => goSide('chats'), () => goTab('agents')];
+  useTabSwipe(more ? -1 : tab === 'assistant' ? 0 : tab === 'chat' ? 1 : inChats ? 2 : tab === 'agents' ? 3 : -1, swipeTabs.length, (i) => swipeTabs[i]());
   const act = (f: () => void) => () => { setMore(false); f(); };
   const reopen = (e: React.MouseEvent) => {
     const el = e.target as HTMLElement;

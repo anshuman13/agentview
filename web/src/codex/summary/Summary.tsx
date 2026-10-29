@@ -3,6 +3,7 @@ import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
+import { haptic } from '../../ui/haptic';
 import { ago, save, stored } from '../../ui/util';
 import { clock } from '../time';
 import { setView, showSnack } from '../view';
@@ -106,6 +107,7 @@ export function SlackCard() {
     save(HANDLED, next);
   };
   const task = (x: { title: string; url: string | null; why: string }) => {
+    haptic('tap');
     void store.capture(x.why ? `${x.title}: ${x.why}` : x.title, 'task', brief!.profile)
       .then((r) => x.url ? store.update(r, { text: x.url }) : undefined)
       .then(() => { hide(x); showSnack('Added to Tasks'); }, (err) => showSnack(`Could not add: ${errorText(err)}`));
