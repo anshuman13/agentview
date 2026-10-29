@@ -22,6 +22,10 @@ import { AssistantNav, LISTS } from './nav';
 import { useDrag, isDragging, type Drop } from './drag';
 import { Back } from '../app/back';
 import { ProfileDot } from './ProfileDot';
+import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
+import { useSheetDrag } from '../ui/useSheetDrag';
+import { haptic } from '../ui/haptic';
+import { Skeleton } from '../ui/Skeleton';
 import '../styles/features/assistant.css';
 
 
@@ -110,9 +114,10 @@ function Swipe({ onRight, onLeft, onDelete, children }: { onRight?: () => void; 
         }}
         onPointerUp={() => {
           if (moving.current) { swiped.current = true; setTimeout(() => { swiped.current = false; }, 0); }
-          if (moving.current && dx > SWIPE) onRight?.();
-          else if (moving.current && deleting && -dx > SWIPE) onDelete();
-          else if (moving.current && dx < -SWIPE) onLeft?.();
+          const fire = (f?: () => void) => { haptic('tap'); f?.(); };
+          if (moving.current && dx > SWIPE) fire(onRight);
+          else if (moving.current && deleting && -dx > SWIPE) fire(onDelete);
+          else if (moving.current && dx < -SWIPE) fire(onLeft);
           reset();
         }}
         onPointerCancel={reset}
@@ -138,6 +143,7 @@ function Row({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen: () => void
   const tick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isDone) return act.reopen(row);
+    haptic('success');
     setChecked(true);
     setTimeout(() => act.done(row), 260);
   };
@@ -196,6 +202,7 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
   };
   const timed = row.status === 'open' || row.status === 'suggested' || at != null;
   const close = () => { save(); onClose(); };
+  const drag = useSheetDrag(true, close);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && close();
     window.addEventListener('keydown', k);
@@ -217,10 +224,10 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
     }
   };
   return (
-    <div className="as-sheet-overlay" onClick={close}>
+    <div className="as-sheet-overlay" ref={drag.overlay} onClick={close}>
       <Back close={close} />
-      <div className="as-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={row.title ?? 'Item'}>
-        <div className="as-grip" />
+      <div className="as-sheet" ref={drag.sheet} onClick={(e) => e.stopPropagation()} role="dialog" aria-label={row.title ?? 'Item'}>
+        <div className="sheet-handle as-grip" {...drag.handle} />
         <input className="as-sheet-title" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Title" />
         <div className="as-ctx as-sheet-meta">
           <span><Icon name={src.icon} small /> {src.label}</span>
@@ -304,6 +311,9 @@ export function Assistant() {
   const scroller = useRef<HTMLDivElement>(null);
   const act = useActions();
   const { drag, start } = useDrag<ItemRow>((row, d) => dropRow(row, d), scroller);
+  const view = list === 'today' || list === 'tasks';
+  const ptr = usePullRefresh(scroller, () => store.syncNow(), view);
+  useScrolledHeader(scroller, view);
 
   useEffect(() => {
     const shown = () => document.visibilityState === 'visible' && root.current?.offsetParent != null;
@@ -438,6 +448,7 @@ export function Assistant() {
       {sync.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> {status}. Your changes are kept on this device.</button>}
       {calError && <button className="as-error" onClick={() => store.syncCalendar().then(() => setCalError(''), (err) => setCalError(errorText(err)))}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 
+      <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>
         {list === 'today' && <Overview s={s} dueToday={dueToday} onPrep={() => ask(askText(prepText(s.next!), snap.items))} />}
         {list === 'tasks' && (
@@ -457,7 +468,7 @@ export function Assistant() {
               </section>
             )}
             {days.slice(1).map(section)}
-            {loading ? <div className="as-end">Loading</div> : empty && (
+            {loading ? <Skeleton /> : empty && (
               <div className="as-empty">
                 <Icon name="pass" />
                 <div>All clear.</div>

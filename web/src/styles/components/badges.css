@@ -37,3 +37,6 @@ button.chip { cursor: pointer; }
 @keyframes pulse { 50% { opacity: 0.35; } }
 @keyframes pulse-shrink { 50% { opacity: 0.35; transform: scale(0.8); } }
 @keyframes shimmer { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+
+.skeleton-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.skeleton { height: var(--size-xl); border-radius: var(--radius-sm); background: var(--hover); animation: shimmer var(--pulse) var(--ease) infinite; }

@@ -8,6 +8,7 @@ import { CheckIcon, Counts, StateChip, call, load, message, setViewOpen, useList
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { ago, askClaude, pressable } from '../ui/util';
+import { Skeleton } from '../ui/Skeleton';
 
 const initials = (login: string) => (login.replace(/^app\//, '').match(/[A-Za-z0-9]+/g) ?? ['?']).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
@@ -70,7 +71,7 @@ function PrList({ onOpen }: { onOpen: (n: number) => void }) {
   return (
     <>
       <div className="gh-bar">
-        <span className="muted small">{loading && !prs.length ? 'Loading…' : `${prs.length} open`}</span>
+        <span className="muted small">{loading && !prs.length ? '' : `${prs.length} open`}</span>
         <span className="spacer" />
         <button className="icon-btn" title="Refresh" disabled={loading} onClick={() => load(cwd, true)}><Icon name="refresh" small spin={loading} /></button>
       </div>
@@ -252,7 +253,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
         {error && <div className="gh-error"><Icon name="error" small /> {error}</div>}
 
         {!d ? (
-          !error && <div className="muted small gh-pad">Loading…</div>
+          !error && <div className="gh-pad"><Skeleton /></div>
         ) : (
           <>
             <Findings target={String(pr.number)} />

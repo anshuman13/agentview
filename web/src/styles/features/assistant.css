@@ -174,7 +174,6 @@
   .as-sheet-overlay { align-items: flex-end; }
   .assistant:has(.as-sheet-overlay) .as-snack { bottom: auto; top: calc(var(--sp-8) + env(safe-area-inset-top)); }
   .as-sheet { width: 100%; max-height: 85%; border-radius: var(--radius) var(--radius) 0 0; border-bottom: 0; padding-bottom: calc(var(--sp-12) + env(safe-area-inset-bottom)); animation: as-sheet var(--dur) var(--ease); }
-  .as-grip { display: block; align-self: center; width: 36px; height: 4px; margin-top: calc(-1 * var(--sp-2)); border-radius: 2px; background: var(--border-card); }
   .as-sheet-actions .btn { height: var(--touch-sm); }
   @keyframes as-sheet { from { transform: translateY(40px); opacity: 0; } }
 }
@@ -259,4 +258,22 @@
   @keyframes nav-fade { from { opacity: 0; } }
   @keyframes nav-push { from { opacity: 0; transform: translateX(16px); } }
   @keyframes nav-pop { from { opacity: 0; transform: translateX(-16px); } }
+}
+
+.as-ptr { display: none; }
+.as-scroll { overscroll-behavior-y: contain; }
+.sheet-handle.as-grip { display: none; }
+@keyframes as-spin { to { rotate: 360deg; } }
+@media (max-width: 900px) {
+  .as-ptr { position: absolute; top: 56px; left: 50%; z-index: 5; width: 32px; height: 32px; margin-left: -16px; display: grid; place-items: center; border-radius: var(--radius-round); background: var(--raised); border: 1px solid var(--border-card); box-shadow: var(--shadow-lg); color: var(--fg-muted); opacity: 0; pointer-events: none; }
+  .as-ptr.spin .codicon { animation: as-spin 0.8s linear infinite; }
+  .assistant { position: relative; }
+  .sheet-handle.as-grip { display: flex; margin-top: calc(-1 * var(--sp-2)); }
+  .as-sheet-overlay { background: color-mix(in srgb, var(--scrim) calc(var(--sheet-fade, 1) * 100%), transparent); }
+  .as-head { border-bottom: 1px solid transparent; }
+  .as-head.scrolled { border-bottom-color: var(--border-card); }
+  .as-head.scrolled h1, .tasks .as-head.scrolled h1 { font-size: var(--fs-lg); }
+}
+@media (max-width: 900px) and (prefers-reduced-motion: no-preference) {
+  .as-head, .as-head h1 { transition: border-color 160ms var(--ease), font-size 160ms var(--ease); }
 }
