@@ -90,6 +90,7 @@ export class ClaudeDriver implements AgentDriver {
     this.q = null;
     this.gen++;
     this.wake?.();
+    this.endLive();
     q.close();
   }
 
@@ -414,7 +415,7 @@ export class ClaudeDriver implements AgentDriver {
         this.sent = [];
         this.wake?.();
         this.tasks.clear();
-        this.endLive();
+        if (!this.closed) this.endLive();
         this.host.exited();
       }
     }

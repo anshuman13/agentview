@@ -71,7 +71,8 @@ export function needsYou(text: string) {
     const bullet = line.match(/^[-*]\s+(.*)$/);
     if (!bullet) {
       if (/^\s/.test(line)) continue;
-      inside = /needs you/i.test(line);
+      if (/needs you/i.test(line)) inside = true;
+      else if (/^#{1,6}\s|^\*\*[^*]+\*\*:?\s*$/.test(line)) inside = false;
       continue;
     }
     if (!inside) continue;
@@ -105,10 +106,9 @@ export function SlackCard() {
     save(HANDLED, next);
   };
   const task = (x: { title: string; url: string | null; why: string }) => {
-    hide(x);
     void store.capture(x.why ? `${x.title}: ${x.why}` : x.title, 'task', brief!.profile)
       .then((r) => x.url ? store.update(r, { text: x.url }) : undefined)
-      .then(() => showSnack('Added to Tasks'), (err) => showSnack(`Could not add: ${errorText(err)}`));
+      .then(() => { hide(x); showSnack('Added to Tasks'); }, (err) => showSnack(`Could not add: ${errorText(err)}`));
   };
   const summarize = () => {
     setBusy(true);
