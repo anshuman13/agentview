@@ -205,6 +205,27 @@ export function searchWiki(pages: Page[], facts: Fact[], query: string) {
   };
 }
 
+const STOP = new Set(['about', 'after', 'also', 'from', 'have', 'into', 'just', 'more', 'next', 'only', 'over', 'should', 'some', 'than', 'that', 'their', 'them', 'then', 'there', 'they', 'this', 'until', 'week', 'when', 'will', 'with', 'would']);
+const keyWords = (t: string) => new Set(t.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu)?.filter((w) => !STOP.has(w)) ?? []);
+
+// Current claims that a later decision (last `days` days) may change: the decision names the claim's page and shares at least two key words with the claim. Newest decision first, one per claim.
+export function driftFacts(facts: Fact[], pages: Page[], meetings: Meeting[], now = Date.now(), days = 90) {
+  const cutoff = now - days * 86_400_000;
+  const decisions = decisionLog(meetings).filter((d) => d.at > cutoff && d.at <= now).map((d) => ({ d, words: keyWords(d.text), hay: `${d.meeting.title ?? ''} ${d.text}`.toLowerCase() }));
+  const pageWords = new Map(live(pages).map((p) => [`${p.profile}:${p.id}`, queryWords(p.title ?? '')]));
+  const current = currentClaim(facts);
+  const out: { fact: Fact; decision: Decision }[] = [];
+  for (const f of live(facts)) {
+    if (!current(f) || !f.page_id) continue;
+    const title = pageWords.get(`${f.profile}:${f.page_id}`);
+    if (!title?.length) continue;
+    const words = keyWords(f.text ?? '');
+    const hit = decisions.find(({ d, words: dw, hay }) => d.meeting.profile === f.profile && d.at > factTime(f) && title.every((w) => hay.includes(w)) && [...dw].filter((w) => words.has(w)).length >= 2);
+    if (hit) out.push({ fact: f, decision: hit.d });
+  }
+  return out.sort((a, b) => b.decision.at - a.decision.at);
+}
+
 // Current claims on a page whose own time is older than days and which no recent meeting about the page's title touches; oldest first.
 export function staleFacts(facts: Fact[], pages: Page[], meetings: Meeting[], now = Date.now(), days = 90) {
   const cutoff = now - days * 86_400_000;

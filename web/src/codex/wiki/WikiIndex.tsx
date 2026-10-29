@@ -8,7 +8,7 @@ import { AskBar } from './AskBar';
 import { Feed } from './Feed';
 import { Notes } from './Notes';
 import { PageTile } from './PageTile';
-import { Stale, ToReview } from './Review';
+import { Drift, Stale, ToReview } from './Review';
 import { MEMORY, shortDate } from './shared';
 
 const SECTION_ORDER = ['Teams', 'Projects', 'People', 'Practices'];
@@ -148,6 +148,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
               <>
                 <ToReview facts={facts} />
                 <Stale />
+                <Drift />
                 {overview && <Overview page={overview} facts={facts} pages={pages} />}
                 {(sections(pages).length ? sections(pages) : [{ name: 'Pages', pages: [] as Page[] }]).map((s, i) => (
                   <section key={s.name}>

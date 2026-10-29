@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, briefFor, decisionLog, followThrough, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, seriesRepeats, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, openQuestions, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, staleFacts, topicTimeline, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, briefFor, decisionLog, followThrough, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, seriesRepeats, driftFacts, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, openQuestions, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, staleFacts, topicTimeline, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -284,6 +284,20 @@ describe('openQuestions', () => {
   it('keeps a Questions list to its own text and sentences whole', () => {
     const m = { ...common('q2'), title: 'x', starts_at: 10, summary: 'Did v1.2 ship?\n## Open questions\n- Ask Sam', notes: '- call Bob' } as unknown as Meeting;
     expect(openQuestions([m], 50).map((q) => q.text)).toEqual(['Did v1.2 ship?', 'Ask Sam']);
+  });
+});
+
+describe('driftFacts', () => {
+  it('flags a claim when a later decision names its page and shares key words', () => {
+    const day = 86_400_000;
+    const ps = [page('p1', 'Pricing'), page('p2', 'Hiring')];
+    const fs = [
+      fact('price', 'p1', 'One', 'Basic plan costs 10 euros monthly', { at: day }),
+      fact('later', 'p1', 'Two', 'Annual plan costs 100 euros', { at: 50 * day }),
+      fact('hire', 'p2', 'One', 'Hiring two engineers this quarter', { at: day }),
+    ];
+    const meeting = { ...common('m'), title: 'Pricing review', starts_at: 40 * day, summary: null, decisions: '["Basic plan now costs 12 euros","Hire engineers in Q3"]' } as unknown as Meeting;
+    expect(driftFacts(fs, ps, [meeting], 60 * day).map((d) => [d.fact.id, d.decision.text])).toEqual([['price', 'Basic plan now costs 12 euros']]);
   });
 });
 
