@@ -118,8 +118,7 @@
 .as-snack button { border: 0; background: transparent; color: var(--accent-text); font-weight: 600; font-size: var(--fs-md); padding: var(--sp-2) var(--sp-4); filter: brightness(0.8); }
 @keyframes as-up { from { opacity: 0; transform: translate(-50%, 8px); } }
 
-.as-edit { display: flex; flex-direction: column; gap: var(--sp-4); margin: var(--sp-3) 0; padding: var(--sp-4) var(--sp-6) var(--sp-6) var(--sp-2); border: 1px solid var(--border-card); border-radius: 12px; background: var(--raised); box-shadow: var(--shadow-lg); animation: as-open 160ms var(--ease); }
-@keyframes as-open { from { opacity: 0.4; transform: scale(0.98); } }
+.as-edit { display: flex; flex-direction: column; gap: var(--sp-4); margin: var(--sp-3) 0; padding: var(--sp-4) var(--sp-6) var(--sp-6) var(--sp-2); border: 1px solid var(--border-card); border-radius: 12px; background: var(--raised); box-shadow: var(--shadow-lg); }
 .as-edit-top { display: flex; align-items: flex-start; gap: var(--sp-3); }
 .as-edit textarea { width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--fg); font: inherit; resize: none; overflow: hidden; box-shadow: none; }
 .as-edit textarea:focus { outline: none; box-shadow: none; }
@@ -179,6 +178,8 @@ a.as-chip { text-decoration: none; }
   .as-card textarea, .as-mirror { font-size: var(--fs-2xl); }
   .as-snack { bottom: 140px; }
   .as-edit-actions .btn { height: var(--touch-sm); }
+  /* While a task field has the keyboard, the composer gives its room to the task. */
+  .assistant:has(.as-edit :focus, .as-add.on :focus) .as-composer { display: none; }
   .as-edit-title { font-size: var(--fs-xl) !important; line-height: 24px; padding-top: 10px !important; }
   .as-edit-text { font-size: var(--fs-lg) !important; }
   .as-nav button { height: var(--touch); font-size: var(--fs-xl); }

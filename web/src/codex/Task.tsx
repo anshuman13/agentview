@@ -165,7 +165,13 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
   useEffect(() => () => latest.current(), []);
 
   useLayoutEffect(() => { grow(titleRef.current); grow(textRef.current); }, [title, text]);
-  useEffect(() => { box.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, []);
+  // The task grows out of its row instead of popping in.
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    el.animate([{ height: '56px', overflow: 'hidden' }, { height: `${el.offsetHeight}px`, overflow: 'hidden' }], { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' });
+  }, []);
+  useEffect(() => { setTimeout(() => box.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 190); }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     // A tap outside closes the task; a tap on another task opens that one instead.
