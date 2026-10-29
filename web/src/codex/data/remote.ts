@@ -8,8 +8,9 @@ const SYNC_EVERY = 30000;
 
 const call = (path: string, init?: RequestInit) => fetch(path, init);
 
-async function hub(path: string, body?: unknown): Promise<Reply> {
-  const resp = await call(path, body === undefined ? undefined : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+async function hub<T = Reply>(path: string, body?: unknown, init?: RequestInit): Promise<T> {
+  const post = body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
+  const resp = await call(path, { ...post, ...init });
   const data = await resp.json().catch(() => null);
   if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
   return data;
@@ -20,13 +21,21 @@ const keyOf = (row: Pick<SyncRow, 'profile' | 'id'>) => `${row.profile}:${row.id
 type Cached = { since: number; tables: Record<string, SyncRow[]> };
 
 // The browser keeps the rows and the hub version in IndexedDB, so a reload pulls only rows changed since.
+let dbOpen: Promise<IDBDatabase> | undefined;
+
 function cacheDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  return (dbOpen ??= new Promise<IDBDatabase>((resolve, reject) => {
     const req = indexedDB.open('agentview-codex', 1);
     req.onupgradeneeded = () => req.result.createObjectStore('cache');
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      req.result.onclose = req.result.onversionchange = () => (dbOpen = undefined);
+      resolve(req.result);
+    };
     req.onerror = () => reject(req.error);
-  });
+  }).catch((e) => {
+    dbOpen = undefined;
+    throw e;
+  }));
 }
 
 async function cacheOp<T>(mode: IDBTransactionMode, op: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
@@ -35,7 +44,7 @@ async function cacheOp<T>(mode: IDBTransactionMode, op: (s: IDBObjectStore) => I
     const req = op(db.transaction('cache', mode).objectStore('cache'));
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
-  }).finally(() => db.close()) as Promise<T>;
+  });
 }
 
 export class RemoteStore extends BaseStore implements AssistantStore {
@@ -43,12 +52,22 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   private tables: Record<string, Map<string, SyncRow>> = Object.fromEntries(['items', ...WIKI_TABLES].map((t) => [t, new Map()]));
   private since = 0;
   private loaded = this.load();
+  private saving: Promise<void> = Promise.resolve();
+  private savePending = false;
+  private timer: ReturnType<typeof setInterval>;
+  private onVisible = () => document.visibilityState === 'visible' && this.syncNow();
 
   constructor() {
     super('ready');
-    setInterval(() => document.visibilityState === 'visible' && this.syncNow(), SYNC_EVERY);
+    this.timer = setInterval(this.onVisible, SYNC_EVERY);
     window.addEventListener('online', this.syncNow);
-    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && this.syncNow());
+    document.addEventListener('visibilitychange', this.onVisible);
+  }
+
+  dispose() {
+    clearInterval(this.timer);
+    window.removeEventListener('online', this.syncNow);
+    document.removeEventListener('visibilitychange', this.onVisible);
   }
 
   private get rows() {
@@ -67,8 +86,13 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   private save() {
-    const cached: Cached = { since: this.since, tables: Object.fromEntries(Object.entries(this.tables).map(([t, m]) => [t, [...m.values()]])) };
-    cacheOp('readwrite', (s) => s.put(cached, 'snapshot')).catch(() => {});
+    if (this.savePending) return;
+    this.savePending = true;
+    this.saving = this.saving.then(() => {
+      this.savePending = false;
+      const cached: Cached = { since: this.since, tables: Object.fromEntries(Object.entries(this.tables).map(([t, m]) => [t, [...m.values()]])) };
+      return cacheOp('readwrite', (s) => s.put(cached, 'snapshot')).then(() => {}, () => {});
+    });
   }
 
   async unlock() {
@@ -139,33 +163,22 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.put(table, edited(current, patch, Date.now()));
   };
 
-  parse = async (text: string, profile: Profile): Promise<Parsed> => {
-    const resp = await call('/api/assistant/parse', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile, text }), signal: AbortSignal.timeout(20000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
-    return data;
-  };
+  parse = async (text: string, profile: Profile): Promise<Parsed> => hub<Parsed>('/api/assistant/parse', { profile, text }, { signal: AbortSignal.timeout(20000) });
 
   fetchTranscript = async (m: { profile: Profile; id: string }) => {
-    const resp = await call('/api/assistant/transcripts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile: m.profile, id: m.id }) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
+    const data = await hub<{ saved?: number }>('/api/assistant/transcripts', { profile: m.profile, id: m.id });
     await this.syncNow();
     return Number(data?.saved ?? 0);
   };
 
   syncCalendar = async (fresh = 0) => {
-    const resp = await call(`/api/assistant/calendar${fresh ? `?fresh=${fresh}` : ''}`, { method: 'POST' });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
+    const data = await hub<{ changed?: number }>(`/api/assistant/calendar${fresh ? `?fresh=${fresh}` : ''}`, undefined, { method: 'POST' });
     await this.syncNow();
     return Number(data?.changed ?? 0);
   };
 
   summarizeSlack = async () => {
-    const resp = await call('/api/assistant/slack/summary', { method: 'POST' });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
+    const data = await hub<{ added?: number }>('/api/assistant/slack/summary', undefined, { method: 'POST' });
     await this.syncNow();
     return Number(data?.added ?? 0);
   };

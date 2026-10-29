@@ -12,6 +12,13 @@ export function assistantStore(): AssistantStore {
   return (store ??= invoke ? new LocalStore(invoke) : new RemoteStore());
 }
 
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (store instanceof RemoteStore) store.dispose();
+    store = undefined;
+  });
+}
+
 export function useAssistant() {
   const s = assistantStore();
   return { store: s, snap: useSyncExternalStore(s.subscribe, s.snapshot) };
