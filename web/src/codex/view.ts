@@ -6,9 +6,9 @@ export type Filter = 'all' | Profile;
 export const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
 // The list, filter and open page or meeting are shared by the sidebar on desktop and the drawer on the phone.
-export type View = { list: List; filter: Filter; open: string | null; anchor: string | null };
+export type View = { list: List; filter: Filter; open: string | null; anchor: string | null; person: string | null };
 
-let view: View = { list: 'today', filter: 'all', open: null, anchor: null };
+let view: View = { list: 'today', filter: 'all', open: null, anchor: null, person: null };
 const subs = new Set<() => void>();
 
 export const setView = (patch: Partial<View>) => {

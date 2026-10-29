@@ -4,21 +4,19 @@ import { ask, meetingAskText } from '../data/ask';
 import { atTime, parseWhen, stripWhen } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
 import { newId, type ItemRow } from '../data/sync';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, searchMeetings, type Meeting } from '../data/wiki';
+import { TRANSCRIPT_TRIES as TRIES, actionCount, actionCounts, actionsOf, groupMeetings, listOf, live, meetingState, othersOf, peopleOf, searchMeetings, type Meeting } from '../data/wiki';
 import { PickTime, clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { Voice, useDictation } from '../../chat/Voice';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { AskBar } from '../wiki/Wiki';
+import { Person } from './Person';
 import '../../styles/features/wiki.css';
 
 const HUES = ['--accent', '--claude', '--prompt', '--ok', '--warn', '--agent'];
 const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length]})`;
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-export const peopleOf = (m: Meeting) => {
-  const s = typeof m.people === 'string' ? m.people : '';
-  return (s.startsWith('[') ? listOf(s) : s.split(',')).map((p) => p.trim()).filter(Boolean);
-};
+export { peopleOf };
 const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
@@ -56,7 +54,7 @@ export function MeetingRow({ m, now }: { m: Meeting; now: number }) {
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
   return (
-    <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => setView({ list: 'meetings', open: meetingKey(m) })}>
+    <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => setView({ list: 'meetings', open: meetingKey(m), person: null })}>
       <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
       <span className="mt-body">
         <span className="mt-title">{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
@@ -426,7 +424,7 @@ function MeetingPage({ m }: { m: Meeting }) {
             {m.starts_at && <span>{clock(m.starts_at)}{m.ends_at ? `–${clock(m.ends_at)}` : ''}</span>}
             {m.recorded_ms ? <span><Icon name="record" small /> Recorded {Math.round(m.recorded_ms / 60000)} min</span> : null}
           </div>
-          {people.length > 0 && <div className="mt-people"><Avatars people={people} max={5} /><span>{people.slice(0, 3).join(', ')}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
+          {people.length > 0 && <div className="mt-people"><Avatars people={people} max={5} /><span>{people.slice(0, 3).map((p, i) => <span key={p}>{i > 0 && ', '}<button className="mt-person" onClick={() => setView({ person: p })}>{p}</button></span>)}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
           <StateLine m={m} now={now} />
           <RoomMic m={m} />
 
@@ -480,10 +478,11 @@ function MeetingPage({ m }: { m: Meeting }) {
 }
 
 export function Meetings({ onMenu }: { onMenu: () => void }) {
-  const { open } = useView();
+  const { open, person } = useView();
   const { meetings } = useCodex();
   const rows = live(meetings);
   const m = open ? rows.find((x) => meetingKey(x) === open) ?? rows.find((x) => x.id === open) : undefined;
+  if (person) return <Person name={person} />;
   if (m) return <MeetingPage m={m} />;
   return <MeetingsList onMenu={onMenu} />;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, approveChanges, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -121,5 +121,30 @@ describe('meetings', () => {
     const actions = [action('a1', 'm', 'open'), action('a2', 'm', 'done'), action('a3', 'm', 'suggested'), action('a7', 'm', 'unassigned'), action('a8', 'm', 'dismissed'), action('a4', 'n', 'open'), { ...action('a5', 'm', 'done'), profile: 'personal' as const }, { ...action('a6', 'm', 'open'), deleted: 1 }];
     expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1, unassigned: 1, dismissed: 1 });
     expect(actionCount(actions, { profile: 'personal', id: 'm' })).toEqual({ total: 1, done: 1, review: 0, unassigned: 0, dismissed: 0 });
+  });
+});
+
+describe('people', () => {
+  const meeting = (id: string, startsAt: number, people: string, others: unknown[] = []): Meeting => ({
+    ...common(id), title: id, starts_at: startsAt, ends_at: null, people, calendar_url: null, recorded_ms: null, notes: null, summary: null,
+    decisions: null, transcript: null, tries: null, room: null, room_me: null, others: JSON.stringify(others),
+  });
+  const ms = [
+    meeting('old', 1, 'Ada Lovelace, Bob Ray', [{ who: 'Ada Lovelace', what: 'Send the draft' }, { who: 'Bob Ray', what: 'Book a room' }]),
+    meeting('new', 5, JSON.stringify(['ada lovelace']), [{ who: 'ada lovelace', what: 'Review the plan' }]),
+    meeting('none', 9, 'Bob Ray'),
+  ];
+
+  it('lists meetings newest first, ignoring case', () => {
+    expect(meetingsOf(ms, 'Ada Lovelace').map((m) => m.id)).toEqual(['new', 'old']);
+  });
+
+  it('lists only that person commitments', () => {
+    expect(commitmentsOf(ms, 'Ada Lovelace').map((c) => [c.meeting.id, c.what])).toEqual([['new', 'Review the plan'], ['old', 'Send the draft']]);
+  });
+
+  it('finds live claims that name the person', () => {
+    const fs = [fact('x', 'p1', 'H', 'Ada Lovelace owns it'), fact('y', 'p1', 'H', 'Nobody'), fact('z', 'p1', 'H', 'ada lovelace old', { superseded_by: 'x' })];
+    expect(claimsMentioning(fs, 'Ada Lovelace').map((f) => f.id)).toEqual(['x']);
   });
 });

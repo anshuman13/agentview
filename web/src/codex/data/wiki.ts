@@ -266,6 +266,28 @@ export const othersOf = (m: Meeting) => {
   return (Array.isArray(v) ? v : []).filter((o): o is { who: string; what: string } => typeof o?.who === 'string' && typeof o?.what === 'string');
 };
 
+export const peopleOf = (m: Meeting) => {
+  const s = typeof m.people === 'string' ? m.people : '';
+  return (s.startsWith('[') ? listOf(s) : s.split(',')).map((p) => p.trim()).filter(Boolean);
+};
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+// Meetings the person attended, newest first.
+export const meetingsOf = (meetings: Meeting[], person: string) =>
+  live(meetings).filter((m) => peopleOf(m).some((p) => sameName(p, person))).sort((a, b) => (b.starts_at ?? 0) - (a.starts_at ?? 0));
+
+// What the person took on in meetings, newest meeting first.
+export const commitmentsOf = (meetings: Meeting[], person: string) =>
+  meetingsOf(meetings, person).flatMap((m) => othersOf(m).filter((o) => sameName(o.who, person)).map((o) => ({ meeting: m, what: o.what })));
+
+// Current claims whose text names the person.
+export const claimsMentioning = (facts: Fact[], person: string) => {
+  const name = person.trim().toLowerCase();
+  if (!name) return [];
+  return live(facts).filter((f) => !f.superseded_by && f.text?.toLowerCase().includes(name)).sort((a, b) => factTime(b) - factTime(a));
+};
+
 // The hub tries this many times, 15 minutes apart, before it gives up on a transcript (TRIES in transcripts.ts).
 export const TRANSCRIPT_TRIES = 8;
 

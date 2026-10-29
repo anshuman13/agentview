@@ -398,3 +398,9 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .wk-older-head span { font-size: var(--fs-sm); font-weight: 400; color: var(--fg-faint); }
 .wk-older .wk-claims { margin-top: var(--sp-6); }
 .wk-older .wk-claim { color: var(--fg-muted); }
+
+/* Person view */
+.mt-person { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.mt-person:hover { color: var(--fg); text-decoration: underline; }
+.mt-person-head { display: flex; align-items: center; gap: var(--sp-6); }
+.mt-person-head .mt-avatars > span { width: 36px; height: 36px; font-size: 13px; }
