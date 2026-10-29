@@ -22,5 +22,5 @@ select.deploy-app { background: var(--sunken); border: 1px solid var(--border); 
   .deploy-head .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   select.deploy-app { height: var(--touch-md); font-size: var(--fs-2xl); }
   .deploy-link, .deploy-meta a { min-height: var(--touch-sm); display: inline-flex; align-items: center; }
-  .deploy-log pre { max-height: 40vh; }
+  .deploy-log pre { max-height: 40vh; max-height: 40dvh; }
 }

@@ -88,7 +88,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
   .wk-card { min-height: 0; padding: var(--sp-7) var(--sp-8); }
   .wk-card-summary { font-size: var(--fs-lg); }
   .wk-feed-text { font-size: var(--fs-lg); }
-  .wk-ask { padding: var(--sp-3) var(--sp-6) calc(var(--sp-6) + env(safe-area-inset-bottom)); }
+  .wk-ask { padding: var(--sp-3) var(--sp-6) calc(var(--sp-6) + var(--safe-bottom)); }
   .wk-ask-box input { font-size: var(--fs-2xl); }
 }
 

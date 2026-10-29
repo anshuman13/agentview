@@ -24,7 +24,7 @@
 .pd-diff .add { background: color-mix(in srgb, var(--diff-add) 14%, transparent); }
 .pd-diff .del { background: color-mix(in srgb, var(--diff-del) 14%, transparent); }
 .pd-diff .pd-cut { color: var(--fg-faint); }
-.pd-plan { max-height: 50vh; padding: var(--sp-5) var(--sp-6); }
+.pd-plan { max-height: 50vh; max-height: 50dvh; padding: var(--sp-5) var(--sp-6); }
 .pd-path { font: var(--fs-sm)/var(--line-sm) var(--mono); color: var(--fg); word-break: break-all; }
 a.pd-path { text-decoration: underline; text-decoration-color: var(--fg-faint); }
 a.pd-path:hover { text-decoration-color: currentColor; }

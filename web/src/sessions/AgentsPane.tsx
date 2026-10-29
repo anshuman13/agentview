@@ -19,9 +19,10 @@ export function AgentsChip() {
   if (!agents.length) return null;
   const { running, done } = agentCounts(agents);
   const text = [running && `${running} running`, done && `${done} done`].filter(Boolean).join(', ');
+  const short = [running, done].filter(Boolean).join(' / ');
   return (
-    <button className={`chip outline pill ag-chip ${running ? 'agent' : ''}`} title="Show the agents" onClick={() => openAgent()}>
-      <Icon name={running ? 'loading' : 'hubot'} small spin={running > 0} /> {text}
+    <button className={`chip outline pill ag-chip ${running ? 'agent' : ''}`} title={`Show the agents: ${text}`} aria-label={text} onClick={() => openAgent()}>
+      <Icon name={running ? 'loading' : 'hubot'} small spin={running > 0} /> <span className="chip-full">{text}</span><span className="chip-short">{short}</span>
     </button>
   );
 }

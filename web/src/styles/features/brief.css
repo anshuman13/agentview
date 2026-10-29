@@ -144,7 +144,9 @@
   .timeline-head .mac-here { display: inline-flex; align-items: center; gap: var(--sp-2); max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fg); }
   .timeline-head .mobile-usage .item { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-2); border: 0; background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .timeline-head .mobile-usage .item.warn { color: var(--warn); }
-  .tl-view { min-height: var(--touch-sm); }
+  .tl-view { min-height: var(--touch-sm); min-width: 0; white-space: nowrap; }
+  .timeline-head > .spacer { flex: 1 1 0; min-width: 0; }
+  .timeline-head .mac-here { flex: 0 1 auto; min-width: 0; }
   .tc, .tl-now { font-size: var(--fs-md); line-height: var(--line-md); }
   .tc-label, .tc-err, .tc-agent .state { font-size: var(--fs-sm); }
   .tc-file, .tc-agent { min-height: var(--touch-md); font-size: var(--fs-md); }

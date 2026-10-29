@@ -103,5 +103,5 @@ button.gh-open-chat { color: var(--fg); }
   .gh-block { height: var(--touch-sm); }
   .gh-text { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .gh-merge select { height: var(--touch); font-size: var(--fs-md); }
-  .gh-diff { max-height: 50vh; }
+  .gh-diff { max-height: 50vh; max-height: 50dvh; }
 }

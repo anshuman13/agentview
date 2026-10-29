@@ -1,7 +1,7 @@
 .overlay { position: fixed; inset: 0; display: flex; justify-content: center; align-items: flex-start; padding-top: var(--sp-3); z-index: var(--z-overlay); }
 
 .switcher {
-  width: min(600px, 92vw); max-height: 60vh; background: var(--raised); border: 1px solid var(--border-strong);
+  width: min(600px, 92vw); max-height: 60vh; max-height: 60dvh; background: var(--raised); border: 1px solid var(--border-strong);
   border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-md);
 }
 .switcher input { margin: var(--sp-3); width: auto; }

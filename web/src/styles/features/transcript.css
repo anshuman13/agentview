@@ -57,7 +57,7 @@
 }
 .tr-detail pre { max-height: 320px; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
 .tr-detail pre.err { color: var(--err); }
-.tr-report { max-height: 50vh; font-size: var(--fs-sm); }
+.tr-report { max-height: 50vh; max-height: 50dvh; font-size: var(--fs-sm); }
 
 .tr-file {
   display: flex; align-items: center; gap: var(--sp-4); min-height: 30px; padding: 0 var(--sp-5) 0 9px; cursor: pointer;
@@ -95,5 +95,5 @@
   .tr-mark { height: var(--touch-sm); }
   .tr-file { min-height: var(--touch); font-size: var(--fs-md); }
   .tr-user { padding: var(--sp-6) var(--sp-7); }
-  .tr-detail pre, .tr-report { font-size: var(--fs-sm); max-height: 40vh; }
+  .tr-detail pre, .tr-report { font-size: var(--fs-sm); max-height: 40vh; max-height: 40dvh; }
 }

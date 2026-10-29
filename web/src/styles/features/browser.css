@@ -24,7 +24,7 @@
   body.browser-full :is(.tabbar, .browser-bar, .editor-group > .tabs) { display: none !important; }
   body.browser-full .body { height: 100%; }
   .browser-exit {
-    position: absolute; bottom: calc(var(--sp-6) + env(safe-area-inset-bottom)); right: var(--sp-6); z-index: var(--z-float);
+    position: absolute; bottom: calc(var(--sp-6) + var(--safe-bottom)); right: var(--sp-6); z-index: var(--z-float);
     width: var(--touch-sm); height: var(--touch-sm); border-radius: var(--radius-pill); background: var(--scrim-strong); color: var(--white);
   }
 }

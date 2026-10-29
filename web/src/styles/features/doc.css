@@ -62,7 +62,7 @@
 .doc summary { cursor: pointer; font-weight: 600; }
 .doc details[open] summary { margin-bottom: var(--sp-4); }
 
-.doc-outline { flex: 0 0 200px; position: sticky; top: var(--sp-12); align-self: flex-start; max-height: calc(100vh - 140px); overflow: auto; padding-top: var(--sp-3); font-size: var(--fs-sm); }
+.doc-outline { flex: 0 0 200px; position: sticky; top: var(--sp-12); align-self: flex-start; max-height: calc(100vh - 140px); max-height: calc(100dvh - 140px); overflow: auto; padding-top: var(--sp-3); font-size: var(--fs-sm); }
 .doc-outline-title { margin-bottom: var(--sp-5); color: var(--fg-faint); font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .doc-outline-link { display: block; padding: 3px 0 3px var(--sp-6); border-left: 1px solid var(--border); color: var(--fg-muted); line-height: var(--lh-snug); text-decoration: none; }
 .doc-outline-link.d3 { padding-left: var(--sp-12); }

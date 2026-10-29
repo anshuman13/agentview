@@ -66,8 +66,8 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
 
 .tabbar { display: none; }
 @media (max-width: 900px) {
-  .workbench { padding-top: env(safe-area-inset-top); }
-  .body { display: block; height: calc(100% - var(--tabbar-h) - env(safe-area-inset-bottom)); overflow: hidden; }
+  .workbench { padding-top: var(--safe-top); }
+  .body { display: block; height: calc(100% - var(--tabbar-h) - var(--safe-bottom)); overflow: hidden; }
   .statusbar { display: none; }
   .app-update.offline { color: var(--warn); }
   .pane { display: none; height: 100%; width: 100%; border: 0; }
@@ -79,8 +79,8 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
   .workbench:is([data-tab='agents'], [data-tab='assistant']) .editor-group > .tabs { display: none; }
 
   .tabbar {
-    display: flex; flex: none; height: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface);
-    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display: flex; flex: none; height: calc(var(--tabbar-h) + var(--safe-bottom)); border-top: 1px solid var(--border); background: var(--surface);
+    padding: 0 env(safe-area-inset-right) var(--safe-bottom) env(safe-area-inset-left);
   }
   .tabbar button {
     flex: 1; border: 0; border-radius: 0; background: transparent; color: var(--fg-muted); position: relative;
@@ -91,7 +91,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
   .tabbar .badge { position: absolute; top: var(--sp-2); right: 20%; }
 
   .more-sheet-overlay {
-    position: fixed; inset: 0; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); z-index: var(--z-sheet);
+    position: fixed; inset: 0; bottom: calc(var(--tabbar-h) + var(--safe-bottom)); z-index: var(--z-sheet);
     display: flex; align-items: flex-end; justify-content: flex-end; padding: var(--sp-4); background: var(--scrim);
   }
   .more-sheet {
