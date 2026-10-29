@@ -6,6 +6,7 @@ import type { Job, Run } from '../data/wiki';
 import { clock } from '../time';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
+import { usePullSync } from '../pullSync';
 import '../../styles/features/wiki.css';
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -60,6 +61,7 @@ function useJobs() {
 }
 
 function JobsList({ onMenu }: { onMenu: () => void }) {
+  const pull = usePullSync();
   const { jobs, runs, store, filter, enable } = useJobs();
   const hasDigest = jobs.some((j) => j.name === WEEKLY_DIGEST.name);
   const add = (preset?: JobPreset) => {
@@ -77,7 +79,8 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
         <span className="spacer" />
         <button className="btn primary mt-take" onClick={() => add()}><Icon name="add" small /> <span>New job</span></button>
       </header>
-      <div className="wk-scroll">
+      {pull.indicator}
+      <div className="wk-scroll" ref={pull.ref}>
         <div className="mt-list">
           {jobs.length > 0 && (
             <div className="mt-rows">

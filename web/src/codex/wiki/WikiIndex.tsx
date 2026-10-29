@@ -9,6 +9,7 @@ import { Feed } from './Feed';
 import { Notes } from './Notes';
 import { PageTile } from './PageTile';
 import { Drift, Stale, ToReview } from './Review';
+import { usePullSync } from '../pullSync';
 import { MEMORY, shortDate } from './shared';
 
 const SECTION_ORDER = ['Teams', 'Projects', 'People', 'Practices'];
@@ -125,6 +126,7 @@ function MemoryCard({ stats }: { stats: Map<string | null, PageStats> }) {
 }
 
 export function WikiIndex({ onMenu }: { onMenu: () => void }) {
+  const pull = usePullSync();
   const { pages, facts } = useCodex();
   const [query, setQuery] = useState('');
   const overview = live(pages).find((p) => p.section === 'overview');
@@ -141,7 +143,8 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
           {query && <button className="icon-btn" aria-label="Clear" onClick={() => setQuery('')}><Icon name="close" small /></button>}
         </label>
       </header>
-      <div className="wk-scroll">
+      {pull.indicator}
+      <div className="wk-scroll" ref={pull.ref}>
         <div className="wk-index">
           <div className="wk-main">
             {query.trim() ? <><Results pages={pages} facts={facts} stats={stats} query={query} /><Notes query={query} /></> : (

@@ -12,6 +12,7 @@ import { Decisions } from './Decisions';
 import { Load } from './Load';
 import { OpenQuestions } from './OpenQuestions';
 import { Week } from './Week';
+import { usePullSync } from '../pullSync';
 import '../../styles/features/wiki.css';
 
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -156,6 +157,7 @@ function TopicTimeline({ topic, meetings, facts }: { topic: string; meetings: Me
 }
 
 export function MeetingsList({ onMenu }: { onMenu: () => void }) {
+  const pull = usePullSync();
   const { meetings, facts, store } = useCodex();
   const { filter } = useView();
   const [query, setQuery] = useState('');
@@ -252,7 +254,8 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
         </button>
         <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
       </header>
-      <div className="wk-scroll">
+      {pull.indicator}
+      <div className="wk-scroll" ref={pull.ref}>
         {log ? <Decisions meetings={mine} /> : load ? <Load meetings={mine} now={now} /> : week ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-list">
           <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
             onAdd={addTopic} onRemove={removeTopic} />

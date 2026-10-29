@@ -18,7 +18,7 @@
   questions the meetings left open until you resolve them. Long lists show 50 rows at a time. The wiki is built from claims with sources, which can be
   contested and go through Review; the wiki start page lists claims untouched for 90 days as Stale and claims a later meeting decision may have changed as Maybe changed (see [codex-wiki.md](codex-wiki.md))
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
-- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side
+- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs
 - **Command palette** (⇧⌘P or F1): every view, tab, page, model and mode as a searchable list
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
   follows the system setting; `?theme=light` in the URL picks one
