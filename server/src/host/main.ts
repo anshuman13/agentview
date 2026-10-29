@@ -16,6 +16,7 @@ import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../../shared/protocol.js';
 import { chatCost } from '../../../shared/cost.js';
 import { replyLine, sumEdits } from '../../../shared/edits.js';
+import { sendWhenChanged } from './changed.js';
 import { codeHash } from './hash.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
 
@@ -110,11 +111,12 @@ function summary(chat: AgentSession): LiveChat {
 
 const liveList = () => [...live.values()].map((l) => summary(l.chat)).sort((a, b) => b.lastActive - a.lastActive);
 let liveTimer: NodeJS.Timeout | null = null;
+const sendLive = sendWhenChanged((chats: LiveChat[]) => broadcast({ type: 'live', chats }));
 function broadcastLive() {
   liveTimer ??= setTimeout(() => {
     liveTimer = null;
     for (const { chat } of live.values()) chat.watchHistory(viewers(chat) > 0);
-    broadcast({ type: 'live', chats: liveList() });
+    sendLive(liveList());
   }, 100);
 }
 
