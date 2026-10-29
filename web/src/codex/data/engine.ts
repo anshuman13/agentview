@@ -68,6 +68,8 @@ export const SNOOZES: { label: string; at: (now: Date) => number }[] = [
 ];
 
 const DATE_RE = /\b(today|tomorrow|tmrw|next week|(?:on )?(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?)\b/i;
+// True when the text names a day or a relative time, not only a time of day.
+export const hasDay = (text: string) => DATE_RE.test(text) || REL_RE.test(text);
 const PART_RE = /\b(?:this |in the )?(morning|noon|lunch|afternoon|evening|tonight)\b/i;
 const TIME_RE = /\b(?:at |kl\.? )?(\d{1,2})(?:[:.](\d{2}))?\s?(am|pm)?\b(?!\s*(?:min|hour|hr|h\b|day|week|%))/i;
 const REL_RE = /\b(?:in\s+(an?|one|half an?|\d+)\s*(minutes?|mins?|m|hours?|hrs?|h|days?|weeks?)\b(?:\s+from now)?|(an?|one|\d+)\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)\s+(?:from now|later)\b)/i;

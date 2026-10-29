@@ -125,6 +125,12 @@
 .as-edit-title { flex: 1; min-width: 0; padding-top: 6px !important; font-size: var(--fs-lg) !important; font-weight: 600 !important; line-height: 20px; }
 .as-edit-text { min-height: 40px; margin-left: 38px; width: calc(100% - 38px) !important; font-size: var(--fs-md) !important; line-height: var(--lh-normal, 1.5); color: var(--fg-muted) !important; white-space: pre-wrap; overflow-wrap: anywhere; }
 .as-edit-text:focus { color: var(--fg) !important; }
+.as-edit-checks { display: flex; flex-direction: column; margin: calc(-1 * var(--sp-2)) 0 0 30px; }
+.as-edit-checks button { display: flex; align-items: center; gap: var(--sp-3); min-height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; }
+.as-edit-checks button .codicon { color: var(--fg-faint); }
+.as-edit-checks button.on { color: var(--fg-faint); text-decoration: line-through; }
+.as-edit-checks button.on .codicon { color: var(--ok); }
+@media (hover: hover) { .as-edit-checks button:hover { background: var(--hover); } }
 .as-edit-meta, .as-edit-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); margin-left: 38px; }
 .as-edit-meta .as-pick > button { display: inline-flex; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .as-edit-due { display: inline-flex; align-items: center; }

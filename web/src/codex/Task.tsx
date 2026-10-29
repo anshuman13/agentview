@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAssistant } from './data';
-import { atTime, errorText, nextNine, parseWhen, stripWhen } from './data/engine';
+import { atTime, errorText, hasDay, nextNine, parseWhen, stripWhen } from './data/engine';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
@@ -33,6 +33,7 @@ const SWIPE_DELETE = 0.55;
 const DAY = 86400_000;
 
 const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
+const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
 // Checklist lines in the notes, like "- [ ] call" and "- [x] done".
 const checklist = (s: string | null) => {
   const all = s?.match(/^\s*[-*] \[[ xX]\]/gm) ?? [];
@@ -63,7 +64,7 @@ export function useActions() {
   };
 }
 
-function Swipe({ onRight, onLeft, onDelete, children }: { onRight?: () => void; onLeft?: () => void; onDelete: () => void; children: React.ReactNode }) {
+function Swipe({ onRight, onLeft, leftLabel = 'Tomorrow', onDelete, children }: { onRight?: () => void; onLeft?: () => void; leftLabel?: string; onDelete: () => void; children: React.ReactNode }) {
   const [dx, setDx] = useState(0);
   const width = useRef(1);
   const deleting = dx < 0 && (!onLeft || -dx > width.current * SWIPE_DELETE);
@@ -73,7 +74,7 @@ function Swipe({ onRight, onLeft, onDelete, children }: { onRight?: () => void; 
   const reset = () => { from.current = null; moving.current = false; setDx(0); };
   return (
     <div className={`as-swipe${dx > 0 ? ' right' : dx < 0 ? (deleting ? ' left delete' : ' left') : ''}`}>
-      <div className="as-swipe-bg"><span><Icon name="check" /> Done</span>{deleting ? <span>Delete <Icon name="trash" /></span> : <span>Tomorrow <Icon name="clock" /></span>}</div>
+      <div className="as-swipe-bg"><span><Icon name="check" /> Done</span>{deleting ? <span>Delete <Icon name="trash" /></span> : <span>{leftLabel} <Icon name="clock" /></span>}</div>
       <div
         className="as-swipe-row"
         style={{ transform: dx ? `translateX(${dx}px)` : undefined, transition: moving.current ? 'none' : undefined }}
@@ -115,6 +116,7 @@ function Check({ row, onDone }: { row: ItemRow; onDone?: () => void }) {
   const tick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isDone) return act.reopen(row);
+    if (checked) return;
     haptic('success');
     setChecked(true);
     setTimeout(() => { act.done(row); onDone?.(); }, 260);
@@ -148,6 +150,15 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
   const at = atTime(row.at);
   // The phone keyboard covers the lower half, so the field moves into view once it is up.
   const reveal = (e: React.FocusEvent<HTMLTextAreaElement>) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
+  const checks = [...text.matchAll(CHECK_RE)].map((m) => ({ done: /x/i.test(m[1]), label: m[2].trim() }));
+  // Ticking a checklist line flips its box in the notes and saves at once.
+  const toggle = (n: number) => {
+    let i = 0;
+    const next = text.replace(CHECK_RE, (line, box: string) => (i++ === n ? line.replace(`[${box}]`, /x/i.test(box) ? '[ ]' : '[x]') : line));
+    setText(next);
+    haptic('tap');
+    if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; act.edit(row, { text: next }); }
+  };
   const pending = () => {
     const patch: Patch = {};
     if (title.trim() && title.trim() !== saved.current.title) patch.title = title.trim();
@@ -175,6 +186,8 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' && !(e.key === 'Enter' && (e.metaKey || e.ctrlKey))) return;
+      const at = document.activeElement;
+      if (at && at !== document.body && !box.current?.contains(at)) return;
       onClose();
       requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus());
     };
@@ -227,10 +240,19 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
           onChange={(e) => setTitle(e.target.value)}
           onBlur={save}
           onFocus={reveal}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); textRef.current?.focus(); } }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); textRef.current?.focus(); } }}
         />
       </div>
       <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Notes" aria-label="Notes" onChange={(e) => setText(e.target.value)} onBlur={save} onFocus={reveal} />
+      {checks.length > 0 && (
+        <div className="as-edit-checks">
+          {checks.map((c, i) => (
+            <button key={i} className={c.done ? 'on' : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => toggle(i)}>
+              <Icon name={c.done ? 'pass-filled' : 'circle-large-outline'} small /> <span>{c.label || '(empty)'}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="as-edit-meta">
         {timed && (
           <span className="as-edit-due">
@@ -250,6 +272,7 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
       </div>
       {snoozing ? (
         <div className="as-edit-actions">
+          {at != null && at >= new Date().setHours(24, 0, 0, 0) && <button className="btn" onClick={then(() => act.due(row, null))}>Today</button>}
           {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
           <PickTime className="btn" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
           <button className="icon-btn" title="Back" aria-label="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
@@ -332,7 +355,8 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
     </div>
   );
   if (isNote || isDone) return <Swipe onDelete={() => act.remove(row)}>{body}</Swipe>;
-  return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, nextNine(new Date(Math.max(at ?? 0, now))))} onDelete={() => act.remove(row)}>{body}</Swipe>;
+  const later = nextNine(new Date(Math.max(at ?? 0, now)));
+  return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, later)} leftLabel={when(later, now)} onDelete={() => act.remove(row)}>{body}</Swipe>;
 }
 
 // A quick add at the end of a day: Enter saves and keeps the field open for the next task.
@@ -347,7 +371,8 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
     if (!typed || busy.current) return;
     busy.current = true;
     const w = parseWhen(typed);
-    const at = w?.at ?? (day === today ? null : day + 9 * 3600_000);
+    // A bare time like "3pm" in a later day's section means that day.
+    const at = w?.at != null && day !== today && !hasDay(typed) ? day + (w.at - new Date(w.at).setHours(0, 0, 0, 0)) : w?.at ?? (day === today ? null : day + 9 * 3600_000);
     try {
       const row = await store.capture(stripWhen(typed, w) || typed, 'task', profile, at);
       setText('');
@@ -370,7 +395,7 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
         aria-label="New task"
         enterKeyHint="done"
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') void add(); else if (e.key === 'Escape') { setText(''); setOn(false); } }}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void add(); else if (e.key === 'Escape') { setText(''); setOn(false); } }}
         onBlur={() => { if (!text.trim()) setOn(false); }}
       />
     </div>
