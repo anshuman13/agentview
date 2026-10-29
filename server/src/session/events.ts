@@ -2,6 +2,49 @@ import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 
 export const agentOf = (events: ChatEvent[], toolUseId: string) => events.find((e): e is AgentEvent => e.kind === 'agent' && e.toolUseId === toolUseId);
 
+// Id lookups over an events array. pushEvent adds to it; a replaced array or a changed length (trim, filter, reorder) rebuilds it on the next read.
+export class EventIndex {
+  private arr: ChatEvent[] | null = null;
+  private n = 0;
+  private byId = new Map<string, ChatEvent>();
+  private agents = new Map<string, AgentEvent>();
+
+  constructor(private source: () => ChatEvent[]) {}
+
+  private sync() {
+    const events = this.source();
+    if (events === this.arr && events.length === this.n) return;
+    this.byId.clear();
+    this.agents.clear();
+    for (const e of events) this.add(e);
+    this.arr = events;
+    this.n = events.length;
+  }
+
+  private add(e: ChatEvent) {
+    if (!this.byId.has(e.id)) this.byId.set(e.id, e);
+    if (e.kind === 'agent' && !this.agents.has(e.toolUseId)) this.agents.set(e.toolUseId, e);
+  }
+
+  pushed(e: ChatEvent) {
+    const events = this.source();
+    if (events === this.arr && events.length === this.n + 1) {
+      this.add(e);
+      this.n++;
+    }
+  }
+
+  get(id: string) {
+    this.sync();
+    return this.byId.get(id);
+  }
+
+  agent(toolUseId: string) {
+    this.sync();
+    return this.agents.get(toolUseId);
+  }
+}
+
 export const ORPHANED = 'Stopped: this agent was no longer running, so it could not report back.';
 
 // Agents whose task is gone (process ended, server restarted) never get a completion: end them as stopped.

@@ -7,7 +7,7 @@ import { Approvals } from './approvals.js';
 import { advance, loopOff, needsApproval, planStep, type LoopStep } from './loop.js';
 import { GOAL_USAGE, USAGE, after, describeLoop, goalMet, limitReset, offCommand, parseGoal, parseLoop, roundWord } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
-import { agentOf, stopAgents } from './events.js';
+import { EventIndex, stopAgents } from './events.js';
 
 // A loop goes on after Stop or a CLI exit, with time to type /loop off first.
 const REPEAT_GRACE_MS = 2 * 60_000;
@@ -78,6 +78,7 @@ export class AgentSession implements AgentHost {
   private lastError = false;
   private repeatHeld = false;
   private orphans = new Set<string>();
+  private index = new EventIndex(() => this.state.events);
 
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
@@ -105,6 +106,7 @@ export class AgentSession implements AgentHost {
 
   pushEvent(ev: ChatEvent) {
     this.state.events.push(ev);
+    this.index.pushed(ev);
     if (this.state.events.length > MAX_EVENTS + 500) this.state.events = trimHistory(this.state.events);
     this.emit({ type: 'event', event: ev });
     if (ev.kind === 'tool_result' && !ev.parent) this.release();
@@ -285,8 +287,16 @@ export class AgentSession implements AgentHost {
     this.approvals.answerPermission(id, allow, always);
   }
 
+  eventById(id: string) {
+    return this.index.get(id);
+  }
+
+  agentOf(toolUseId: string) {
+    return this.index.agent(toolUseId);
+  }
+
   blocked(toolUseId: string, tool: string, reason: string) {
-    const use = this.state.events.find((e) => e.id === toolUseId);
+    const use = this.index.get(toolUseId);
     const command = use?.kind === 'tool_use' && typeof use.input.command === 'string' ? use.input.command : '';
     if (tool === 'Bash' && !command) return;
     const rule = tool === 'Bash' && command ? `Bash(${command.replace(/[\\()]/g, '\\$&')})` : tool;
@@ -294,7 +304,7 @@ export class AgentSession implements AgentHost {
   }
 
   async allowBlocked(id: string) {
-    const ev = this.state.events.find((e) => e.id === id);
+    const ev = this.index.get(id);
     if (ev?.kind !== 'blocked' || ev.allowed) return;
     const added = await this.driver.allow(ev.rule);
     for (const e of this.state.events) {
@@ -312,7 +322,8 @@ export class AgentSession implements AgentHost {
 
   notePr(toolUseId: string, text: string) {
     const pr = PR_URL.exec(text)?.[1];
-    if (pr && this.state.events.some((e) => e.id === toolUseId && createsPr(e))) this.setSession({ pr: Number(pr) });
+    const use = pr ? this.index.get(toolUseId) : undefined;
+    if (pr && use && createsPr(use)) this.setSession({ pr: Number(pr) });
   }
 
   sendPrompt(text: string, id: string = randomUUID()) {
@@ -322,7 +333,7 @@ export class AgentSession implements AgentHost {
 
   // A client resends a message it got no echo for; the id tells a repeat from a new message.
   private known(id: string) {
-    return this.state.events.some((e) => e.id === id);
+    return this.index.get(id) !== undefined;
   }
 
   private enqueue(text: string, id?: string) {
@@ -374,7 +385,7 @@ export class AgentSession implements AgentHost {
 
   async stopTask(toolUseId: string) {
     if (await this.driver.stopTask(toolUseId)) return;
-    const a = agentOf(this.state.events, toolUseId);
+    const a = this.index.agent(toolUseId);
     if (!a || a.status !== 'running') return;
     if (this.driver.attached && this.state.session.running && !a.background) return this.interrupt();
     this.orphan([toolUseId]);
@@ -383,7 +394,7 @@ export class AgentSession implements AgentHost {
   private orphan(ids: string[]) {
     for (const id of ids) this.orphans.add(id);
     for (const ev of stopAgents(this.state.events, ids, Date.now())) {
-      this.emit({ type: 'event', event: agentOf(this.state.events, (ev as { toolUseId: string }).toolUseId)! });
+      this.emit({ type: 'event', event: this.index.agent((ev as { toolUseId: string }).toolUseId)! });
       this.pushEvent(ev);
     }
   }

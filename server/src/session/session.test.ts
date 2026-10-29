@@ -807,3 +807,33 @@ describe('pull request link', () => {
     expect(prFrom([{ id: 'x', kind: 'tool_result', toolUseId: 'other', text: made.content, isError: false, at: 2 }])).toBeNull();
   });
 });
+
+describe('event index', () => {
+  const handle = (s: ReturnType<typeof fakeSession>['s'], msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+  const use = (s: ReturnType<typeof fakeSession>['s'], id: string, name = 'Read') => handle(s, { type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id, name, input: {} }] } });
+
+  it('finds events pushed, after a trim, and agents patched in place', () => {
+    const { s } = fakeSession();
+    use(s, 'ag', 'Agent');
+    expect(s.eventById('ag')).toMatchObject({ kind: 'tool_use' });
+    expect(s.agentOf('ag')).toMatchObject({ status: 'running' });
+    handle(s, { type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: 'ok' }] } });
+    expect(s.agentOf('ag')).toMatchObject({ status: 'done' });
+    expect(s.agentOf('ag')).toBe(s.state.events.find((e) => e.kind === 'agent'));
+    for (let i = 0; i < 3600; i++) use(s, `t${i}`);
+    expect(s.state.events.length).toBeLessThan(3600);
+    expect(s.eventById('ag')).toBeUndefined();
+    expect(s.agentOf('ag')).toBeUndefined();
+    expect(s.eventById('t0')).toBeUndefined();
+    expect(s.eventById('t3599')).toBe(s.state.events.at(-1));
+    use(s, 't-new');
+    expect(s.eventById('t-new')).toBe(s.state.events.at(-1));
+  });
+
+  it('follows a replaced events array', () => {
+    const { s } = fakeSession();
+    use(s, 'a');
+    s.state.events = s.state.events.filter((e) => e.id !== 'a');
+    expect(s.eventById('a')).toBeUndefined();
+  });
+});

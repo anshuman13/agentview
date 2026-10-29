@@ -5,7 +5,6 @@ import { query, getSubagentMessages, type McpServerConfig, type Query, type SDKM
 import { BIG_BRO, type Account, type AgentEvent, type UsageWindow, type AgentStatus, type ChatEvent, type Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
-import { agentOf } from '../../session/events.js';
 import { JsonlTail } from './tail.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
@@ -21,6 +20,7 @@ const STATUS_EVERY = 8;
 
 const ENDED: Record<string, AgentStatus> = { completed: 'done', failed: 'failed', stopped: 'stopped', killed: 'stopped' };
 
+const same = (a: unknown, b: unknown) => a === b || (typeof a === 'object' && typeof b === 'object' && JSON.stringify(a) === JSON.stringify(b));
 const usageOf = (u: { total_tokens: number; tool_uses: number; duration_ms: number }) => ({ tokens: u.total_tokens, toolUses: u.tool_uses, durationMs: u.duration_ms });
 
 export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
@@ -393,7 +393,7 @@ export class ClaudeDriver implements AgentDriver {
 
   // A SendMessage that resumes an agent carries its own tool id; follow the link back to the Agent call.
   private agentToolUse(toolUseId: string) {
-    const link = this.state.events.find((e) => e.kind === 'tool_use' && e.id === toolUseId);
+    const link = this.host.eventById(toolUseId);
     return link?.kind === 'tool_use' && link.agent ? link.agent : toolUseId;
   }
 
@@ -441,10 +441,10 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   private patchAgent(toolUseId: string, patch: (a: AgentEvent) => Partial<AgentEvent>) {
-    const a = agentOf(this.state.events, toolUseId);
+    const a = this.host.agentOf(toolUseId);
     if (!a) return;
     const next = patch(a);
-    if (Object.entries(next).every(([k, v]) => JSON.stringify(a[k as keyof AgentEvent]) === JSON.stringify(v))) return;
+    if (Object.entries(next).every(([k, v]) => same(a[k as keyof AgentEvent], v))) return;
     Object.assign(a, next);
     this.host.emit({ type: 'event', event: a });
   }
@@ -457,7 +457,7 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   private isAgent(toolUseId: string) {
-    const use = this.state.events.find((e) => e.id === toolUseId);
+    const use = this.host.eventById(toolUseId);
     return use?.kind === 'tool_use' && AGENT_TOOLS.has(use.name);
   }
 

@@ -1,4 +1,4 @@
-import type { Account, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
+import type { Account, AgentEvent, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
@@ -58,6 +58,8 @@ export interface AgentHost {
   crons: Cron[];
   emit(m: ServerMessage): void;
   pushEvent(ev: ChatEvent): void;
+  eventById(id: string): ChatEvent | undefined;
+  agentOf(toolUseId: string): AgentEvent | undefined;
   system(text: string): void;
   setStatus(text: string): void;
   setSession(patch: Partial<SessionInfo>): void;
