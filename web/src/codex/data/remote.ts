@@ -135,8 +135,16 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       const names = [...this.unsaved];
       this.unsaved.clear();
       const write = (key: string, value: unknown) => cacheOp('readwrite', (s) => s.put(value, key));
+      // A table that failed stays queued and the version is not saved, so a reload never skips its rows.
       try {
-        for (const table of names) await write(tableKey(table), [...this.tables[table].values()]);
+        for (const [i, table] of names.entries()) {
+          try {
+            await write(tableKey(table), [...this.tables[table].values()]);
+          } catch (e) {
+            names.slice(i).forEach((t) => this.unsaved.add(t));
+            throw e;
+          }
+        }
         await write(META_KEY, { since: this.since });
       } catch {}
     };

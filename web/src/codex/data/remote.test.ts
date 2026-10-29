@@ -9,7 +9,12 @@ async function freshStore() {
 function request(run: () => unknown, delay: number) {
   const req: Record<string, any> = {};
   setTimeout(() => {
-    req.result = run();
+    try {
+      req.result = run();
+    } catch (e) {
+      req.error = e;
+      return req.onerror?.();
+    }
     req.onsuccess?.();
   }, delay);
   return req;
@@ -92,6 +97,31 @@ describe('RemoteStore save', () => {
     await internal.saving;
     stored.clear();
     await store.capture('one', 'task', 'work');
+    internal.flush();
+    await internal.saving;
+    expect([...stored.keys()].sort()).toEqual(['meta', 'table:items']);
+    store.dispose();
+  });
+
+  it('keeps a table queued and the old since when its write fails', async () => {
+    const stored = fakeIndexedDb([]);
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal;
+    await internal.saving;
+    stored.clear();
+    const set = stored.set.bind(stored);
+    let fail = true;
+    stored.set = (k, v) => {
+      if (k === 'table:items' && fail) { fail = false; throw new Error('quota'); }
+      return set(k, v);
+    };
+    internal.since = 5;
+    await store.capture('one', 'task', 'work');
+    internal.flush();
+    await internal.saving;
+    expect(stored.has('meta')).toBe(false);
+    internal.save([]);
     internal.flush();
     await internal.saving;
     expect([...stored.keys()].sort()).toEqual(['meta', 'table:items']);
