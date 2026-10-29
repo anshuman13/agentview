@@ -8,7 +8,7 @@ import { loopLabel } from '../chat/composerLogic';
 import { clock } from '../../../shared/util';
 import { touch } from '../app/touch';
 import { Row, Transcript } from '../chat/Transcript';
-import { FileIcon } from '../workspace/Explorer';
+import { FileIcon } from '../workspace/FileIcon';
 import { relPath } from '../chat/steps';
 import { buildTurns, openFailures, type Turn } from '../chat/turns';
 import { markSeen, readSeen, recap, recapText } from '../chat/recap';

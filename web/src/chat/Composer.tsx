@@ -3,7 +3,7 @@ import { api, getState, notice, prompt, queueNext, send, sinceHeard, steer, useS
 import { Icon } from '../ui/Icon';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
-import { FileIcon } from '../workspace/Explorer';
+import { FileIcon } from '../workspace/FileIcon';
 import { toolId } from '../ops/McpStatus';
 import { touch } from '../app/touch';
 import { apiUrl } from '../app/api';

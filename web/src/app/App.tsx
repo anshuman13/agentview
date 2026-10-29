@@ -5,18 +5,22 @@ import { Brief } from '../sessions/Brief';
 import { AgentsBadge, AgentsPane, openAgent } from '../sessions/AgentsPane';
 import { FileSwitcher } from '../workspace/FileSwitcher';
 import { Palette } from './Palette';
-import { Explorer, FileIcon } from '../workspace/Explorer';
-import { Changes, ChangesBadge } from '../workspace/Changes';
-import { GitHub, GitHubBadge } from '../ops/GitHub';
+import { FileIcon } from '../workspace/FileIcon';
+import { ChangesBadge } from '../workspace/gitStatus';
+import { GitHubBadge } from '../ops/pulls';
 import { OpenChats, RepoPicker, Sessions } from '../sessions/Sessions';
 import { Icon } from '../ui/Icon';
 import { command, pressable } from '../ui/util';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
-import { Assistant, AssistantNav, useTodayCount } from '../codex/Codex';
+import { AssistantNav, useTodayCount } from '../codex/nav';
 import { Guard } from './Guard';
 import { AppUpdate, CacheItem, McpItem, Offline, Restarting, UsageItem } from './StatusItems';
 
+const Assistant = lazy(() => import('../codex/Codex').then((m) => ({ default: m.Assistant })));
+const Explorer = lazy(() => import('../workspace/Explorer').then((m) => ({ default: m.Explorer })));
+const Changes = lazy(() => import('../workspace/Changes').then((m) => ({ default: m.Changes })));
+const GitHub = lazy(() => import('../ops/GitHub').then((m) => ({ default: m.GitHub })));
 const Terminal = lazy(() => import('../workspace/Terminal').then((m) => ({ default: m.Terminal })));
 const CodePane = lazy(() => import('../workspace/CodePane').then((m) => ({ default: m.CodePane })));
 const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m) => ({ default: m.BrowserPane })));
@@ -349,11 +353,11 @@ export function App() {
               <button className={view === 'sessions' ? 'active' : ''} onClick={() => setView('sessions')}>Repos</button>
             </div>
           )}
-          {view === 'assistant' ? <Guard><AssistantNav /></Guard> : view === 'explorer' ? <Explorer /> : view === 'changes' ? <Changes /> : view === 'github' ? <GitHub /> : view === 'chats' ? <OpenChats /> : <Sessions />}
+          {view === 'assistant' ? <Guard><AssistantNav /></Guard> : view === 'explorer' ? <Suspense fallback={null}><Explorer /></Suspense> : view === 'changes' ? <Suspense fallback={null}><Changes /></Suspense> : view === 'github' ? <Suspense fallback={null}><GitHub /></Suspense> : view === 'chats' ? <OpenChats /> : <Sessions />}
         </section>
 
         <section className={`editor-group pane code ${mobileExplorer ? 'mobile-explorer' : ''}`}>
-          {mobileExplorer && <div className="mobile-only mobile-explorer-host" onClick={reopen}><Explorer /></div>}
+          {mobileExplorer && <div className="mobile-only mobile-explorer-host" onClick={reopen}><Suspense fallback={null}><Explorer /></Suspense></div>}
           <div className="tabs">
             <button className={`tab ex-tab mobile-only ${mobileExplorer ? 'active' : ''}`} title="Explorer" onClick={() => { setTab('code'); setEditor('file'); setBrowse(true); }}>
               <Icon name="files" small />
@@ -405,7 +409,7 @@ export function App() {
               </div>
             </div>
           )}
-          <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Assistant /></Guard>}</div>
+          <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Suspense fallback={<Loading />}><Assistant /></Suspense></Guard>}</div>
           <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable onMacs={() => setMacs(true)} />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <div className="empty-state">

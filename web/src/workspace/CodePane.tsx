@@ -6,7 +6,7 @@ import { unifiedMergeView } from '@codemirror/merge';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { api, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
-import { FileIcon } from './Explorer';
+import { FileIcon } from './FileIcon';
 import { MarkdownDoc } from './MarkdownDoc';
 import { getOpened, getOpenedChat, setOpened, setOpenedChat } from './opened';
 import { showChat } from '../ui/util';

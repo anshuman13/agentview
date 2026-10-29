@@ -1,92 +1,23 @@
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Block, Findings } from './Findings';
 import { Markdown } from '../chat/Chat';
-import { FileIcon } from '../workspace/Explorer';
+import { FileIcon } from '../workspace/FileIcon';
+import { CheckIcon, Counts, StateChip, call, load, message, setViewOpen, useList } from './pulls';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { ago, askClaude, pressable } from '../ui/util';
 
-type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
-let list: List = { cwd: '', prs: [], error: '', loading: false };
-const subs = new Set<() => void>();
-const setList = (p: Partial<List>) => {
-  list = { ...list, ...p };
-  subs.forEach((f) => f());
-};
-const subscribe = (f: () => void) => (subs.add(f), () => void subs.delete(f));
-const useList = () => useSyncExternalStore(subscribe, () => list);
-
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
-async function call<T>(path: string, body?: object): Promise<T> {
-  const r = await fetch(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
-  const data = await r.json().catch(() => ({ error: `Request failed (${r.status})` }));
-  if (!r.ok || data?.error) throw new Error(data?.error ?? `Request failed (${r.status})`);
-  return data;
-}
-
-let inflight = '';
-let latest = 0;
-async function load(cwd: string, fresh = false) {
-  if (!cwd || (inflight === cwd && !fresh)) return;
-  inflight = cwd;
-  const req = ++latest;
-  setList(list.cwd === cwd ? { loading: true } : { cwd, prs: [], error: '', loading: true });
-  try {
-    const prs = await call<PullRequest[]>(`/api/gh/prs${fresh ? '?fresh=1' : ''}`);
-    if (req === latest) setList({ prs, error: '', loading: false });
-  } catch (e) {
-    if (req === latest) setList({ prs: [], error: message(e), loading: false });
-  } finally {
-    if (req === latest) inflight = '';
-  }
-}
-
 const initials = (login: string) => (login.replace(/^app\//, '').match(/[A-Za-z0-9]+/g) ?? ['?']).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
-const CHECKS: Record<CheckState, [string, string]> = {
-  success: ['pass', 'Checks passed'],
-  failure: ['error', 'Checks failed'],
-  pending: ['circle-filled', 'Checks running'],
-  none: ['circle-outline', 'No checks'],
-};
-const REVIEW: Record<string, [string, string]> = {
-  APPROVED: ['Approved', 'ok'],
-  CHANGES_REQUESTED: ['Changes requested', 'bad'],
-  REVIEW_REQUIRED: ['Review required', ''],
-  COMMENTED: ['Commented', ''],
-  DISMISSED: ['Dismissed', ''],
-  PENDING: ['Pending', ''],
-};
 const SETUP: Array<{ test: RegExp; icon: string; title: string; text: string; cmd?: string }> = [
   { test: /not installed/i, icon: 'terminal', title: 'GitHub CLI not installed', text: 'Install it, then refresh.', cmd: 'brew install gh' },
   { test: /not logged in/i, icon: 'account', title: 'Not signed in to GitHub', text: 'Sign in with the GitHub CLI, then refresh.', cmd: 'gh auth login' },
   { test: /no GitHub remote/i, icon: 'github', title: 'No GitHub remote', text: 'Open a chat in a folder whose repository lives on GitHub.' },
 ];
 
-const CheckIcon = ({ state }: { state: CheckState }) => (
-  <span className={`gh-check ${state}`} title={CHECKS[state][1]}><Icon name={CHECKS[state][0]} small /></span>
-);
 const Avatar = ({ login }: { login: string }) => <span className="gh-avatar" title={login}>{initials(login)}</span>;
-const Counts = ({ a, d }: { a: number; d: number }) => <span className="gh-counts"><span className="add">+{a}</span> <span className="del">-{d}</span></span>;
-const StateChip = ({ state }: { state: string }) => {
-  const r = REVIEW[state];
-  return r ? <span className={`chip outline pill sm ${r[1]}`}>{r[0]}</span> : null;
-};
-
-// The cached PR list of a repo, loaded once per cwd, for rows outside this pane.
-export function usePullRequests(cwd: string) {
-  const l = useList();
-  useEffect(() => { if (cwd && l.cwd !== cwd) void load(cwd); }, [cwd]);
-  return l.cwd === cwd ? l.prs : [];
-}
-
-export const PullState = ({ pr }: { pr: PullRequest }) => (
-  <span className="gh-state"><CheckIcon state={pr.checks} />{pr.draft ? <span className="chip outline pill sm">Draft</span> : <StateChip state={pr.review} />}<Counts a={pr.additions} d={pr.deletions} /></span>
-);
-
 function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
   const chat = useStore((s) => s.live.find((c) => c.pr === pr.number));
   return (
@@ -156,20 +87,6 @@ function PrList({ onOpen }: { onOpen: (n: number) => void }) {
   );
 }
 
-let viewOpen = false;
-
-export function GitHubBadge() {
-  const cwd = useStore((s) => s.session.cwd);
-  const { prs } = useList();
-  useEffect(() => {
-    void load(cwd);
-    const t = setInterval(() => !document.hidden && load(cwd, viewOpen), 5 * 60_000);
-    return () => clearInterval(t);
-  }, [cwd]);
-  const n = prs.filter((p) => p.reviewRequested).length;
-  return n > 0 ? <span className="badge">{n}</span> : null;
-}
-
 export function GitHub() {
   const cwd = useStore((s) => s.session.cwd);
   const { prs } = useList();
@@ -179,8 +96,8 @@ export function GitHub() {
     void load(cwd).then(() => load(cwd, true));
   }, [cwd]);
   useEffect(() => {
-    viewOpen = true;
-    return () => { viewOpen = false; };
+    setViewOpen(true);
+    return () => setViewOpen(false);
   }, []);
   const pr = prs.find((p) => p.number === open);
 

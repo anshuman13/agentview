@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, setUi, useStore } from '../app/store';
 import { useOpened } from './opened';
-import { FileIcon } from './Explorer';
+import { FileIcon } from './FileIcon';
 import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
 import { Hl } from '../ui/util';

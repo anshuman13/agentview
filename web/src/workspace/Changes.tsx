@@ -1,38 +1,12 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { GitFile, GitStatus } from '../../../shared/protocol';
 import { api, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
-import { FileIcon } from './Explorer';
+import { FileIcon } from './FileIcon';
+import { refresh, useGit } from './gitStatus';
 import { Findings, REVIEW_LOCAL } from '../ops/Findings';
 import { askClaude, pressable, usePoll } from '../ui/util';
-
-let git: { status: GitStatus | null; error: string } = { status: null, error: '' };
-const subs = new Set<() => void>();
-const subscribe = (l: () => void) => (subs.add(l), () => void subs.delete(l));
-const useGit = () => useSyncExternalStore(subscribe, () => git);
-
-let seq = 0;
-async function refresh() {
-  const n = ++seq;
-  try {
-    const r = await fetch(api('/api/git/status'));
-    const d = await r.json();
-    if (n !== seq) return;
-    git = r.ok ? { status: d, error: '' } : { status: null, error: d.error };
-  } catch {
-    return;
-  }
-  subs.forEach((l) => l());
-}
-
-export function ChangesBadge() {
-  const n = useGit().status?.files.length ?? 0;
-  const id = useStore((s) => s.session.id);
-  const recent = useStore((s) => s.recentFiles);
-  useEffect(() => void refresh(), [id, recent]);
-  return n > 0 ? <span className="badge">{n}</span> : null;
-}
 
 type Run = (action: string, body: object) => Promise<boolean>;
 const paths = (list: GitFile[]) => ({ paths: list.map((f) => f.path) });

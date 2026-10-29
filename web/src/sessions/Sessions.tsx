@@ -7,7 +7,7 @@ import { QuickPick } from '../ui/QuickPick';
 import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored } from '../ui/util';
-import { PullState, usePullRequests } from '../ops/GitHub';
+import { PullState, usePullRequests } from '../ops/pulls';
 import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, get, groupByKind, groupByRepo, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
 const PAGE = 10;

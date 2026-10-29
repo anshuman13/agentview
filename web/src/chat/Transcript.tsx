@@ -3,7 +3,7 @@ import { send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
-import { FileIcon } from '../workspace/Explorer';
+import { FileIcon } from '../workspace/FileIcon';
 import { buildTranscript, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { plural } from '../ui/util';
 import type { ChatEvent } from '../../../shared/protocol';
