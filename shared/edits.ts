@@ -25,12 +25,20 @@ export function failedTools(events: ChatEvent[]) {
   return failed;
 }
 
+// Tool inputs never change after the event is stored, so count each tool_use once.
+const counts = new WeakMap<object, EditCount | null>();
+const countOf = (e: { name: string; input: Record<string, unknown> }) => {
+  let c = counts.get(e);
+  if (c === undefined) counts.set(e, (c = editCount(e.name, e.input)));
+  return c;
+};
+
 export function sumEdits(events: ChatEvent[]): EditCount | undefined {
   const failed = failedTools(events);
   let total: EditCount | undefined;
   for (const e of events) {
     if (e.kind !== 'tool_use' || failed.has(e.id)) continue;
-    const c = editCount(e.name, e.input);
+    const c = countOf(e);
     if (c) total = { add: (total?.add ?? 0) + c.add, del: (total?.del ?? 0) + c.del };
   }
   return total;
