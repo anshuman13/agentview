@@ -1,10 +1,10 @@
-import { useMemo, type MouseEvent } from 'react';
-import { Marked } from 'marked';
+import { memo, useMemo, type MouseEvent } from 'react';
+import { Marked, type Token } from 'marked';
 import { escapeHtml } from '../ui/util';
 
 export { Composer } from './Composer';
 
-const md = new Marked({
+export const md = new Marked({
   gfm: true,
   renderer: {
     html: ({ text }) => escapeHtml(text),
@@ -38,7 +38,28 @@ function onCopy(e: MouseEvent<HTMLDivElement>) {
   }, () => {});
 }
 
+export function splitBlocks(text: string): Token[] | null {
+  const tokens = md.lexer(text);
+  if (Object.keys(tokens.links).length) return null;
+  return tokens.filter(t => t.type !== 'space');
+}
+
+export function renderBlocks(blocks: Token[]) {
+  return blocks.map(t => md.parser([t])).join('');
+}
+
+const Block = memo(
+  function Block({ token }: { token: Token }) {
+    const html = md.parser([token]);
+    return <div className="md-b" dangerouslySetInnerHTML={{ __html: html }} />;
+  },
+  (a, b) => a.token.raw === b.token.raw,
+);
+
 export function Markdown({ text }: { text: string }) {
-  const html = useMemo(() => md.parse(text, { async: false }) as string, [text]);
-  return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: html }} />;
+  const blocks = useMemo(() => splitBlocks(text), [text]);
+  if (!blocks) {
+    return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: md.parse(text, { async: false }) as string }} />;
+  }
+  return <div className="md" onClick={onCopy}>{blocks.map((t, i) => <Block key={i} token={t} />)}</div>;
 }

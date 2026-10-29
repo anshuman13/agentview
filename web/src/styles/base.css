@@ -37,8 +37,9 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 }
 
 .md { word-break: break-word; }
-.md > :first-child { margin-top: 0; }
-.md > :last-child { margin-bottom: 0; }
+.md > :first-child, .md > .md-b:first-child > :first-child { margin-top: 0; }
+.md > :last-child, .md > .md-b:last-child > :last-child { margin-bottom: 0; }
+.md-b { display: contents; }
 .md :is(p, ul, ol, pre, table, blockquote) { margin: 0 0 var(--sp-4); }
 .md :is(ul, ol) { padding-left: var(--sp-10); }
 .md li { margin: var(--sp-1) 0; }

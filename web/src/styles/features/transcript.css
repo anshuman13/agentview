@@ -15,7 +15,7 @@
 .tr-assistant { padding: 0 var(--sp-1) 0 var(--sp-5); border-left: 2px solid color-mix(in srgb, var(--claude) 70%, transparent); }
 .tr-assistant .md { color: var(--fg); line-height: var(--lh-relaxed); }
 .tr-assistant .md :is(p, ul, ol, pre) { margin-bottom: var(--sp-5); }
-.tr-assistant .md > :last-child { margin-bottom: 0; }
+.tr-assistant .md > :last-child, .tr-assistant .md > .md-b:last-child > :last-child { margin-bottom: 0; }
 .tr-system { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-faint); }
 .tr-phase { display: flex; align-items: center; gap: var(--sp-4); margin: var(--sp-7) 0 var(--sp-2); color: var(--agent); font-size: var(--fs-sm); font-weight: 600; letter-spacing: var(--tracking); }
 .tr-phase::after { content: ''; flex: 1; height: 1px; background: var(--border); }
