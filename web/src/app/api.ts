@@ -14,6 +14,9 @@ export const bundled = typeof location !== 'undefined' && (location.hostname ===
 
 export const trusted = (url: string) => TRUSTED.test(url);
 
+// A Mac cannot reach its own NetBird address, so the Mac the user sits at (self) opens on localhost.
+export const macUrl = (m: { url: string; self?: boolean }, port: string) => (m.self ? `http://localhost${port ? `:${port}` : ''}` : m.url);
+
 export function knownMacs(): Known[] {
   try {
     return (JSON.parse(shell()?.macs?.() ?? '[]') as Known[]).filter((m) => trusted(m.url));

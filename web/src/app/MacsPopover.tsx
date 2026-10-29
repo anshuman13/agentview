@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
-import { apiBase, apiUrl, bundled, knownMacs, macOrigin, macPort, setApiBase, shell, trusted, useApiBase } from './api';
+import { apiBase, apiUrl, bundled, knownMacs, macOrigin, macPort, macUrl, setApiBase, shell, trusted, useApiBase } from './api';
 import { switchedMac } from './store';
 
 type Mac = { name: string; url: string; running: number; self?: boolean };
@@ -46,15 +46,13 @@ export async function reachable(url: string) {
   }
 }
 
-// A Mac cannot reach its own NetBird address, so the Mac the page is viewed from (self) opens on localhost.
 async function switchMac(m: Mac) {
+  const url = macUrl(m, bundled ? macPort() : location.port);
+  if (!m.self && !(await reachable(url))) return false;
   if (bundled) {
-    if (!(await reachable(m.url))) return false;
-    chooseMac(m.url);
+    chooseMac(url);
     return true;
   }
-  const url = m.self ? `${location.protocol}//localhost${location.port ? `:${location.port}` : ''}` : (await reachable(m.url)) ? m.url : null;
-  if (!url) return false;
   const q = new URLSearchParams({ switched: '1' });
   const shell = localStorage.getItem('agentview.shell');
   if (shell) q.set('shell', shell);
