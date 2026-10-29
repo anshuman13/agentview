@@ -17,6 +17,18 @@ export function useMinute() {
   return minute;
 }
 
+// useSplit and useTodayCount share one result per items array, filter and minute.
+type Split = ReturnType<typeof split>;
+const splits = new WeakMap<object, { minute: number; byFilter: Map<string, Split> }>();
+export function sharedSplit(items: Parameters<typeof split>[0], filter: Parameters<typeof split>[1], now: number): Split {
+  const minute = Math.floor(now / 60000);
+  let hit = splits.get(items);
+  if (!hit || hit.minute !== minute) splits.set(items, hit = { minute, byFilter: new Map() });
+  let result = hit.byFilter.get(filter);
+  if (!result) hit.byFilter.set(filter, result = split(items, filter, now));
+  return result;
+}
+
 export function useSplit() {
   const snap = useAssistantData();
   const { meetings } = useCodex();
@@ -33,10 +45,10 @@ export function useSplit() {
     const endOfTomorrow = new Date(now).setHours(48, 0, 0, 0);
     const byStart = (a: Meeting, b: Meeting) => a.starts_at! - b.starts_at!;
     // Open actions from earlier meetings with the same title.
-    const carried = next ? snap.items.filter((r) => !r.deleted && r.status === 'open' && r.meeting_id && r.profile === next.profile && r.meeting_id !== next.id
-      && all.some((m) => m.id === r.meeting_id && m.profile === next.profile && m.title === next.title && m.starts_at! < next.starts_at!)).length : 0;
+    const earlier = next ? new Set(all.filter((m) => m.profile === next.profile && m.title === next.title && m.starts_at! < next.starts_at!).map((m) => m.id)) : null;
+    const carried = earlier ? snap.items.filter((r) => !r.deleted && r.status === 'open' && r.meeting_id && r.profile === next!.profile && r.meeting_id !== next!.id && earlier.has(r.meeting_id)).length : 0;
     return {
-      ...split(snap.items, filter, now), next, then: today[1], carried, endOfDay, endOfTomorrow,
+      ...sharedSplit(snap.items, filter, now), next, then: today[1], carried, endOfDay, endOfTomorrow,
       meetingsToday: all.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay).sort(byStart),
       meetingsTomorrow: all.filter((m) => m.starts_at! >= endOfDay && m.starts_at! < endOfTomorrow).sort(byStart),
       nextLater: today.find((m) => m !== next && m.starts_at! > now) ?? ahead.find((m) => m.starts_at! >= endOfDay),

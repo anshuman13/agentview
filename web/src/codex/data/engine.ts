@@ -147,7 +147,12 @@ export const isQuestion = (text: string) => /\?\s*$/.test(text) || ASK_RE.test(t
 
 // Calendar rows were tasks before meetings had their own table; they stay hidden.
 const isCalendar = (r: ItemRow) => r.source === 'calendar';
-const statusTime = (r: ItemRow) => parseTimes(r.field_times).status ?? r.updated_at;
+const statusTimes = new WeakMap<ItemRow, number>();
+const statusTime = (r: ItemRow) => {
+  let t = statusTimes.get(r);
+  if (t === undefined) statusTimes.set(r, t = parseTimes(r.field_times).status ?? r.updated_at);
+  return t;
+};
 
 export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
   const today = new Date(now).setHours(0, 0, 0, 0);

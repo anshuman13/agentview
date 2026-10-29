@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { useAssistantStore, useAssistantData, useCodex, useSyncStatus } from './data';
 import { reviewCount } from './data/wiki';
-import { atTime, split } from './data/engine';
+import { atTime } from './data/engine';
 import { Icon } from '../ui/Icon';
 import { ago } from '../ui/util';
 import { FILTER_LABEL, setView, useView, type Filter, type List } from './view';
-import { useMinute, useSplit } from './split';
+import { sharedSplit, useMinute, useSplit } from './split';
 
 export const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Overview' },
@@ -50,7 +50,7 @@ export function useTodayCount() {
   return useMemo(() => {
     if (!ready) return 0;
     const now = Date.now();
-    const s = split(snap.items, 'all', now);
+    const s = sharedSplit(snap.items, 'all', now);
     const endOfDay = new Date(now).setHours(24, 0, 0, 0);
     return s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
   }, [ready, snap.items, minute]);
