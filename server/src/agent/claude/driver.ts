@@ -414,6 +414,7 @@ export class ClaudeDriver implements AgentDriver {
         this.sent = [];
         this.wake?.();
         this.tasks.clear();
+        this.endLive();
         this.host.exited();
       }
     }
@@ -463,6 +464,17 @@ export class ClaudeDriver implements AgentDriver {
 
   private resumed(toolUseId: string, since: number) {
     return this.state.events.some((e) => e.kind === 'tool_use' && e.agent === toolUseId && e.at > since);
+  }
+
+  // A turn can end before content_block_stop; send the partial text once more as finished so it stops streaming.
+  private endLive() {
+    for (const t of this.liveFlush.values()) clearTimeout(t);
+    this.liveFlush.clear();
+    for (const live of this.live.values()) {
+      live.streaming = false;
+      this.host.emit({ type: 'event', event: live });
+    }
+    this.live.clear();
   }
 
   private handle(msg: SDKMessage) {
@@ -627,9 +639,7 @@ export class ClaudeDriver implements AgentDriver {
       }
 
       case 'result': {
-        for (const t of this.liveFlush.values()) clearTimeout(t);
-        this.liveFlush.clear();
-        this.live.clear();
+        this.endLive();
         const ok = msg.subtype === 'success';
         host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}`, costUsd: msg.total_cost_usd, isError: msg.is_error });
         return;
