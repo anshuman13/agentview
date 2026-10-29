@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Back } from './back';
 import { connect, embedded, getState, presetChat, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../../shared/protocol';
 import { Brief } from '../sessions/Brief';
@@ -492,6 +493,7 @@ export function App() {
       </nav>
       {more && (
         <div className="more-sheet-overlay mobile-only" onClick={() => setMore(false)}>
+          <Back close={() => setMore(false)} />
           <div className="more-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="more-status">
               <button className="more-project" title={`${session.cwd}\nStart a chat in another repo`} onClick={act(() => setUi({ repoPicker: true }))}>

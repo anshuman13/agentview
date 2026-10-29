@@ -249,3 +249,14 @@
   .tasks .as-title { font-size: var(--fs-lg); }
   .tasks .as-composer { padding: var(--sp-3) var(--tk-pad) var(--sp-6); }
 }
+
+/* Phone transitions: pages slide in from the right on push and from the left on pop; sheets and the drawer scrim fade. */
+@media (max-width: 900px) and (prefers-reduced-motion: no-preference) {
+  .assistant.wide > .wk { animation: nav-fade 160ms var(--ease); }
+  :root[data-nav='push'] .assistant.wide > .wk { animation: nav-push 180ms ease-out; }
+  :root[data-nav='pop'] .assistant.wide > .wk { animation: nav-pop 180ms ease-out; }
+  .as-drawer-overlay, .as-sheet-overlay, .more-sheet-overlay { animation: nav-fade 150ms var(--ease); }
+  @keyframes nav-fade { from { opacity: 0; } }
+  @keyframes nav-push { from { opacity: 0; transform: translateX(16px); } }
+  @keyframes nav-pop { from { opacity: 0; transform: translateX(-16px); } }
+}

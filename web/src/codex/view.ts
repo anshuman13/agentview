@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
+import { useBack } from '../app/back';
 import type { Profile } from './data/sync';
 
 export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki';
@@ -11,8 +12,13 @@ export type View = { list: List; filter: Filter; open: string | null; anchor: st
 let view: View = { list: 'today', filter: 'all', open: null, anchor: null, person: null };
 const subs = new Set<() => void>();
 
+const depth = (v: View) => (v.open ? 1 : 0) + (v.person ? 1 : 0);
+
+// The direction of the last change drives the page transition in CSS.
 export const setView = (patch: Partial<View>) => {
-  view = { ...view, ...patch };
+  const next = { ...view, ...patch };
+  document.documentElement.dataset.nav = depth(next) > depth(view) ? 'push' : depth(next) < depth(view) ? 'pop' : 'switch';
+  view = next;
   subs.forEach((f) => f());
 };
 export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => view);
@@ -35,8 +41,9 @@ export function hideSnack() {
   snackSubs.forEach((f) => f());
 }
 
-// Escape goes back from a wiki page or meeting unless a field has focus.
+// Escape (unless a field has focus) and the phone back button go back from a wiki page or meeting.
 export function useEscapeBack(back: () => void) {
+  useBack(back);
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;

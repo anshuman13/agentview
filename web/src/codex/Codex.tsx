@@ -20,6 +20,7 @@ import { Overview, Review } from './Overview';
 import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
 import { useDrag, isDragging, type Drop } from './drag';
+import { Back } from '../app/back';
 import '../styles/features/assistant.css';
 
 
@@ -217,6 +218,7 @@ function Sheet({ row, items, onClose }: { row: ItemRow; items: ItemRow[]; onClos
   };
   return (
     <div className="as-sheet-overlay" onClick={close}>
+      <Back close={close} />
       <div className="as-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={row.title ?? 'Item'}>
         <div className="as-grip" />
         <input className="as-sheet-title" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Title" />
@@ -342,6 +344,7 @@ export function Assistant() {
 
   const drawerSheet = drawer && (
     <div className="as-drawer-overlay" onClick={() => setDrawer(false)}>
+      <Back close={() => setDrawer(false)} />
       <div className="as-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="as-drawer-title">Codex</div>
         <AssistantNav onPick={() => setDrawer(false)} />
