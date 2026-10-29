@@ -111,7 +111,12 @@ export function pageClaims(facts: Fact[], pageId: string | null, now = Date.now(
       seen.add(factKey(top));
       top = byKey.get(`${top.profile}:${top.superseded_by}`)!;
     }
-    if (current(top)) replaced.set(factKey(top), [...(replaced.get(factKey(top)) ?? []), f]);
+    if (current(top)) {
+      const k = factKey(top);
+      const list = replaced.get(k);
+      if (list) list.push(f);
+      else replaced.set(k, [f]);
+    }
   }
   const groups: { heading: string; claims: { fact: Fact; old: Fact[] }[] }[] = [];
   for (const f of mine.filter((x) => current(x) && !isOld(x, now))) {
@@ -262,13 +267,20 @@ const counted = new WeakMap<ItemRow[], Map<string, ActionCount>>();
 export function actionCounts(items: ItemRow[]) {
   let out = counted.get(items);
   if (!out) {
-    const byMeeting = new Map<string, ItemRow[]>();
+    out = new Map();
     for (const r of items) {
       if (r.deleted || !r.meeting_id) continue;
       const k = `${r.profile}:${r.meeting_id}`;
-      byMeeting.set(k, [...(byMeeting.get(k) ?? []), r]);
+      let c = out.get(k);
+      if (!c) out.set(k, (c = { total: 0, done: 0, review: 0, unassigned: 0, dismissed: 0 }));
+      if (r.status === 'open') c.total++;
+      else if (r.status === 'done') {
+        c.total++;
+        c.done++;
+      } else if (r.status === 'suggested') c.review++;
+      else if (r.status === 'unassigned') c.unassigned++;
+      else if (r.status === 'dismissed') c.dismissed++;
     }
-    out = new Map([...byMeeting].map(([k, rows]) => [k, actionCount(rows, { profile: rows[0].profile, id: rows[0].meeting_id! })]));
     counted.set(items, out);
   }
   return out;

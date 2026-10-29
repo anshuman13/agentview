@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistant, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
@@ -35,26 +35,33 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
 }
 
 // The badge says where the meeting is: coming up, waiting for its transcript, or what it left for me.
-function Badge({ m, now }: { m: Meeting; now: number }) {
-  const { snap } = useAssistant();
-  const count = actionCounts(snap.items).get(meetingKey(m)) ?? actionCount([], m);
+const Badge = memo(function Badge({ m, now, review, total, done }: { m: Meeting; now: number; review: number; total: number; done: number }) {
   const state = meetingState(m, now);
   if (state === 'missing') return <span className="mt-count warn" title="No Gemini notes were found for this meeting">No transcript</span>;
-  if (count.review > 0) return <span className="mt-count review" title="Suggested actions to keep or dismiss">{count.review} to review</span>;
-  if (count.total > 0) {
+  if (review > 0) return <span className="mt-count review" title="Suggested actions to keep or dismiss">{review} to review</span>;
+  if (total > 0) {
     return (
-      <span className={`mt-count${count.done === count.total ? ' done' : ''}`} title="My actions done">
-        <Icon name={count.done === count.total ? 'pass' : 'circle-large-outline'} small /> {count.done} of {count.total}
+      <span className={`mt-count${done === total ? ' done' : ''}`} title="My actions done">
+        <Icon name={done === total ? 'pass' : 'circle-large-outline'} small /> {done} of {total}
       </span>
     );
   }
   if (state === 'waiting') return <span className="mt-count muted" title="The transcript is read a few minutes after the meeting">Waiting</span>;
   if (state === 'done') return <span className="mt-count muted">Nothing for you</span>;
   return null;
-}
+});
 
-export function MeetingRow({ m, now, topics = [] }: { m: Meeting; now: number; topics?: string[] }) {
-  const tracked = trackedTopics(m, topics);
+const NO_TOPICS: string[] = [];
+
+export const MeetingRow = memo(function MeetingRow({ m, now, topics = NO_TOPICS }: { m: Meeting; now: number; topics?: string[] }) {
+  const { snap } = useAssistant();
+  const count = actionCounts(snap.items).get(meetingKey(m)) ?? actionCount([], m);
+  return <MeetingRowView m={m} now={now} topics={topics} review={count.review} total={count.total} done={count.done} />;
+});
+
+const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, total, done }: { m: Meeting; now: number; topics: string[]; review: number; total: number; done: number }) {
+  const tracked = useMemo(() => trackedTopics(m, topics), [m, topics]);
+  const people = useMemo(() => peopleOf(m), [m]);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
@@ -70,11 +77,11 @@ export function MeetingRow({ m, now, topics = [] }: { m: Meeting; now: number; t
         </span>
       </span>
       {tracked.map((t) => <span key={t} className="chip pill sm" title="Tracked topic">{t}</span>)}
-      <Badge m={m} now={now} />
-      <Avatars people={peopleOf(m)} />
+      <Badge m={m} now={now} review={review} total={total} done={done} />
+      <Avatars people={people} />
     </button>
   );
-}
+});
 
 const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
 

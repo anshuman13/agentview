@@ -20,7 +20,6 @@ export function WikiPage({ id }: { id: string }) {
   const pid = id === MEMORY ? null : id;
   const page = id === MEMORY ? memoryPage(facts) : pages.find((p) => p.id === id && !p.deleted && p.state !== 'rejected');
   const review = useReview();
-  const pending = proposals(facts).filter((f) => (f.page_id ?? null) === pid);
   useEffect(() => {
     if (!anchor) return;
     document.getElementById(`claim-${anchor}`)?.scrollIntoView({ block: 'center' });
@@ -32,7 +31,8 @@ export function WikiPage({ id }: { id: string }) {
   const groups = useMemo(() => pageClaims(facts, pid), [facts, pid]);
   const older = useMemo(() => olderClaims(facts, pid), [facts, pid]);
   const [showOlder, setShowOlder] = useState(false);
-  const st = pageStats(facts, pid);
+  const pending = useMemo(() => proposals(facts).filter((f) => (f.page_id ?? null) === pid), [facts, pid]);
+  const st = useMemo(() => pageStats(facts, pid), [facts, pid]);
   const counts = useMemo(() => {
     const n = new Map<Source['kind'], Set<string>>();
     for (const g of groups) for (const { fact } of g.claims) for (const s of sourcesOf(fact)) n.set(s.kind, (n.get(s.kind) ?? new Set()).add(s.label));
