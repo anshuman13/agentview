@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useCodex } from '../data';
-import { approveAllChanges, approveChanges, chatOf, proposals, reviewCount, sourcesOf, type Fact, type Page } from '../data/wiki';
+import { approveAllChanges, approveChanges, chatOf, factTime, proposals, reviewCount, sourcesOf, staleFacts, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack } from '../view';
 import { ClaudeChip, SourceChip } from './Chips';
@@ -132,6 +132,32 @@ export function ToReview({ facts }: { facts: Fact[] }) {
         })}
         {loose.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />)}
       </div>
+    </section>
+  );
+}
+
+export function Stale() {
+  const { pages, facts, meetings } = useCodex();
+  const list = useMemo(() => staleFacts(facts, pages, meetings), [pages, facts, meetings]);
+  if (!list.length) return null;
+  const title = new Map(pages.map((p) => [`${p.profile}:${p.id}`, p.title]));
+  return (
+    <section>
+      <div className="wk-label">Stale · {list.length}</div>
+      <ol className="wk-feed-list">
+        {list.slice(0, 10).map((f) => {
+          const months = Math.floor((Date.now() - factTime(f)) / (30 * 86_400_000));
+          return (
+            <li key={f.profile + f.id}>
+              <button onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}>
+                <span className="wk-feed-top"><span className="wk-feed-page">{title.get(`${f.profile}:${f.page_id}`)}</span></span>
+                <span className="wk-feed-text">{f.text}</span>
+                <span className="wk-meta"><span>{months} {months === 1 ? 'month' : 'months'}</span></span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }

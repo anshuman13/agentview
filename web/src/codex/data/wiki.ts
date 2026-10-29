@@ -205,6 +205,26 @@ export function searchWiki(pages: Page[], facts: Fact[], query: string) {
   };
 }
 
+// Current claims on a page whose own time is older than days and which no recent meeting about the page's title touches; oldest first.
+export function staleFacts(facts: Fact[], pages: Page[], meetings: Meeting[], now = Date.now(), days = 90) {
+  const cutoff = now - days * 86_400_000;
+  const current = currentClaim(facts);
+  const title = new Map(live(pages).map((p) => [`${p.profile}:${p.id}`, p.title]));
+  const recent = live(meetings).filter((m) => (m.starts_at ?? 0) > cutoff);
+  const touched = new Map<string, boolean>();
+  const mentioned = (key: string) => {
+    let v = touched.get(key);
+    if (v === undefined) {
+      const hit = rowMatcher<Meeting>(queryWords(title.get(key) ?? ''), 'stale', (m) => [m.title, m.summary, m.decisions]);
+      touched.set(key, (v = recent.some(hit)));
+    }
+    return v;
+  };
+  return live(facts)
+    .filter((f) => f.page_id && title.has(`${f.profile}:${f.page_id}`) && current(f) && factTime(f) < cutoff && !mentioned(`${f.profile}:${f.page_id}`))
+    .sort((a, b) => factTime(a) - factTime(b));
+}
+
 export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.state === 'proposed').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
 
 // What the review list shows: one card per page with proposals, and one per claim without a page.
