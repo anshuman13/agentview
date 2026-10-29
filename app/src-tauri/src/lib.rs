@@ -64,6 +64,19 @@ pub fn run() {
         .manage(Store::new())
         .invoke_handler(tauri::generate_handler![assistant_open, assistant_close, assistant_dev_key, assistant_batch, assistant_exec, assistant_query])
         .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(|_, url| trusted(url)).build())
+        .setup(|app| {
+            let builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &app.config().app.windows[0])?;
+            // Links that open a new window (window.open, target="_blank") go to the default browser.
+            #[cfg(desktop)]
+            let builder = builder.on_new_window(|url, _| {
+                if matches!(url.scheme(), "http" | "https") {
+                    let _ = std::process::Command::new("open").arg(url.as_str()).spawn();
+                }
+                tauri::webview::NewWindowResponse::Deny
+            });
+            builder.build()?;
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running AgentView");
 }
