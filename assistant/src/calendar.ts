@@ -57,7 +57,8 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
 
 export async function importCalendar(db: Database, profile: Profile, now = Date.now()) {
   const from = new Date(now - DAY).setHours(0, 0, 0, 0);
-  const to = from + 9 * DAY;
+  const start = new Date(from);
+  const to = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 9).getTime();
   let events: CalendarEvent[] | null = null;
   const save = tool('save_meetings', 'Save the meetings you found.', { events: z.array(Event) }, async (a) => {
     events = a.events;

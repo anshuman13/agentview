@@ -21,9 +21,11 @@ export function nextRun(schedule: string | null, after: number): number | null {
   const m = /^(daily|weekdays|weekly (sun|mon|tue|wed|thu|fri|sat)) (\d{1,2}):(\d{2})$/.exec(s);
   if (!m || +m[3] > 23 || +m[4] > 59) return null;
   const ok = (d: Date) => (m[1] === 'daily' ? true : m[1] === 'weekdays' ? d.getDay() % 6 !== 0 : d.getDay() === DAYS.indexOf(m[2]));
-  const d = new Date(after);
-  d.setHours(+m[3], +m[4], 0, 0);
-  for (let i = 0; i < 8; i++, d.setDate(d.getDate() + 1)) if (d.getTime() > after && ok(d)) return d.getTime();
+  const base = new Date(after);
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i, +m[3], +m[4]);
+    if (d.getTime() > after && ok(d)) return d.getTime();
+  }
   return null;
 }
 

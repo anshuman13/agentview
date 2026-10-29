@@ -71,7 +71,8 @@ const PART_RE = /\b(?:this |in the )?(morning|noon|lunch|afternoon|evening|tonig
 const TIME_RE = /\b(?:at |kl\.? )?(\d{1,2})(?:[:.](\d{2}))?\s?(am|pm)?\b(?!\s*(?:min|hour|hr|h\b|day|week|%))/i;
 const REL_RE = /\b(?:in\s+(an?|one|half an?|\d+)\s*(minutes?|mins?|m|hours?|hrs?|h|days?|weeks?)\b(?:\s+from now)?|(an?|one|\d+)\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)\s+(?:from now|later)\b)/i;
 const PARTS: Record<string, number> = { morning: 9, noon: 12, lunch: 12, afternoon: 14, evening: 19, tonight: 19 };
-const UNIT: Record<string, number> = { m: 60_000, h: 3600_000, d: 24 * 3600_000, w: 7 * 24 * 3600_000 };
+const UNIT: Record<string, number> = { m: 60_000, h: 3600_000 };
+const DAY_UNIT: Record<string, number> = { d: 1, w: 7 };
 
 export type Span = [number, number];
 export type When = { at: number | null; spans: Span[] };
@@ -86,8 +87,11 @@ export function parseWhen(text: string, now = new Date()): When | null {
     const n = r[1] ?? r[3];
     const unit = (r[2] ?? r[4]).toLowerCase();
     const amount = /^half/i.test(n) ? 0.5 : /^(an?|one)$/i.test(n) ? 1 : Number(n);
-    const ms = UNIT[unit === 'm' || unit.startsWith('min') ? 'm' : unit[0]];
-    return { at: Math.ceil((now.getTime() + amount * ms) / 60_000) * 60_000, spans: [span(r)] };
+    const key = unit === 'm' || unit.startsWith('min') ? 'm' : unit[0];
+    const target = new Date(now);
+    if (key in DAY_UNIT) target.setDate(target.getDate() + amount * DAY_UNIT[key]);
+    else target.setTime(now.getTime() + amount * UNIT[key]);
+    return { at: Math.ceil(target.getTime() / 60_000) * 60_000, spans: [span(r)] };
   }
   const d = DATE_RE.exec(text);
   const p = PART_RE.exec(text);

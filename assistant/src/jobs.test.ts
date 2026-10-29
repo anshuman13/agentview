@@ -12,6 +12,15 @@ describe('nextRun', () => {
     expect(nextRun('daily 16:00', now)).toBe(at(2026, 10, 26, 16));
     expect(nextRun('daily 07:30', now)).toBe(at(2026, 10, 27, 7, 30));
   });
+  test('daily keeps its hour across the spring-forward change', () => {
+    const tz = process.env.TZ;
+    process.env.TZ = 'Europe/Oslo';
+    try {
+      expect(nextRun('daily 02:30', at(2026, 3, 29, 3, 40))).toBe(at(2026, 3, 30, 2, 30));
+    } finally {
+      process.env.TZ = tz;
+    }
+  });
   test('weekdays skip the weekend', () => {
     expect(nextRun('weekdays 07:30', at(2026, 10, 30, 9))).toBe(at(2026, 11, 2, 7, 30));
   });
