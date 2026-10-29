@@ -59,6 +59,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   private loaded = this.load();
   private saving: Promise<void> = Promise.resolve();
   private unsaved = new Set<string>();
+  private writes = 0;
   private saveDue = false;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private syncTouched = new Set<string>();
@@ -130,7 +131,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.saveTimer = undefined;
     if (!this.saveDue) return;
     this.saveDue = false;
-    this.saving = this.saving.then(async () => {
+    const run = async () => {
       const names = [...this.unsaved];
       this.unsaved.clear();
       const write = (key: string, value: unknown) => cacheOp('readwrite', (s) => s.put(value, key));
@@ -138,7 +139,10 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         for (const table of names) await write(tableKey(table), [...this.tables[table].values()]);
         await write(META_KEY, { since: this.since });
       } catch {}
-    });
+    };
+    const done = () => void this.writes--;
+    const next = this.writes++ ? this.saving.then(run) : run();
+    this.saving = next.then(done, done);
   }
 
   async unlock() {
@@ -158,30 +162,34 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   protected async syncOnce() {
     await this.loaded;
-    const changed = await runSync({
-      active: () => true,
-      since: async () => this.since,
-      saveSince: async (since) => void (this.since = since),
-      dirty: async () => {
-        const tables = this.hubHasWiki() ? Object.keys(this.tables) : ['items'];
-        return tables.flatMap((table) => [...this.tables[table].values()].filter((r) => r.dirty).map((row): Dirty => ({ table, row })));
-      },
-      post: (since, changes: Change[]) => (changes.length ? hub('/api/assistant/sync', { since, changes }) : hub(`/api/assistant/changes?since=${since}`)),
-      clean: async ({ table, row }) => {
-        const map = this.tables[table];
-        const now = map.get(keyOf(row));
-        if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) {
-          map.set(keyOf(row), { ...now, dirty: 0 });
-          this.syncTouched.add(table);
-        }
-      },
-      apply: async (change: PulledChange) => {
-        const map = this.tables[change.table];
-        map.set(keyOf(change), toRow(mergeIncoming<SyncRow>(map.get(keyOf(change)) ?? null, change)));
-        this.syncTouched.add(change.table);
-      },
-    });
-    if (changed) this.save([...this.syncTouched]);
+    let changed = false;
+    try {
+      changed = await runSync({
+        active: () => true,
+        since: async () => this.since,
+        saveSince: async (since) => void (this.since = since),
+        dirty: async () => {
+          const tables = this.hubHasWiki() ? Object.keys(this.tables) : ['items'];
+          return tables.flatMap((table) => [...this.tables[table].values()].filter((r) => r.dirty).map((row): Dirty => ({ table, row })));
+        },
+        post: (since, changes: Change[]) => (changes.length ? hub('/api/assistant/sync', { since, changes }) : hub(`/api/assistant/changes?since=${since}`)),
+        clean: async ({ table, row }) => {
+          const map = this.tables[table];
+          const now = map.get(keyOf(row));
+          if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) {
+            map.set(keyOf(row), { ...now, dirty: 0 });
+            this.syncTouched.add(table);
+          }
+        },
+        apply: async (change: PulledChange) => {
+          const map = this.tables[change.table];
+          map.set(keyOf(change), toRow(mergeIncoming<SyncRow>(map.get(keyOf(change)) ?? null, change)));
+          this.syncTouched.add(change.table);
+        },
+      });
+    } finally {
+      if (this.syncTouched.size) this.save([...this.syncTouched]);
+    }
     return changed;
   }
 

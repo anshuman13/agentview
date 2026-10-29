@@ -124,6 +124,23 @@ describe('RemoteStore save', () => {
     store.dispose();
   });
 
+  it('saves rows applied before a pull fails', async () => {
+    const stored = fakeIndexedDb([]);
+    fakeDom();
+    const pages = [{ version: 2, hasMore: true, changes: [{ table: 'items', ...taskRow('a') }] }, { nope: true }];
+    vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => pages.shift() }));
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void>; syncOnce(): Promise<boolean> };
+    await internal.loaded;
+    await internal.saving;
+    stored.clear();
+    await expect(internal.syncOnce()).rejects.toThrow('Unexpected hub response');
+    internal.flush();
+    await internal.saving;
+    expect((stored.get('table:items') as { id: string }[]).map((r) => r.id)).toEqual(['a']);
+    store.dispose();
+  });
+
   it('reads the old single-key layout once and migrates it', async () => {
     const stored = fakeIndexedDb([]);
     stored.set('snapshot', { since: 7, tables: { items: [taskRow('a')], meetings: [{ ...taskRow('m'), title: 'x' }] } });
