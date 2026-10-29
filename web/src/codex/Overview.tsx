@@ -4,15 +4,15 @@ import { followThrough, type Meeting } from './data/wiki';
 import { sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';
 import { resolvedQuestions } from './meetings/OpenQuestions';
-import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
+import { atTime, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { save, stored } from '../ui/util';
 import { meetingKey } from './meetings/MeetingList';
 import { Prep } from './meetings/Prep';
 import { Icon } from '../ui/Icon';
-import { setView, useView } from './view';
+import { setView, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
-import { clock } from './time';
+import { clock, when } from './time';
 import type { useSplit } from './split';
 
 // The next meeting today: Prep asks Claude, Notes opens the meeting, and the mic toggle tells the transcript reader
@@ -23,6 +23,13 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
   const mins = Math.round((m.starts_at! - now) / 60000);
   const open = () => setView({ list: 'meetings', open: `${m.profile}:${m.id}` });
   const people = peopleOf(m);
+  const [jot, setJot] = useState('');
+  const addNote = () => {
+    const line = `${clock(Date.now())} ${jot.trim()}`;
+    if (!jot.trim()) return;
+    setJot('');
+    void store.editRow('meetings', m, { notes: m.notes ? `${m.notes.trimEnd()}\n${line}` : line }).then(() => showSnack('Added to the notes'));
+  };
   return (
     <div className="as-next" onClick={open} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && open()}>
       <div className="as-next-head"><Icon name="calendar" small /> {clock(m.starts_at!)} <span className="muted">· {mins <= 0 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`}</span></div>
@@ -34,6 +41,8 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
         </div>
       )}
       <Prep m={m} />
+      <input className="as-next-jot" value={jot} placeholder="Jot a note" enterKeyHint="done" aria-label={`Note for ${m.title}`}
+        onClick={(e) => e.stopPropagation()} onChange={(e) => setJot(e.target.value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') addNote(); }} onBlur={addNote} />
       <div className="as-next-actions">
         <button className="btn sm" onClick={(e) => { e.stopPropagation(); onPrep(); }}><Icon name="sparkle" small /> Prep</button>
         <button className="btn sm" onClick={(e) => { e.stopPropagation(); open(); }}><Icon name="edit" small /> Notes</button>
@@ -180,13 +189,18 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     { n: s.review.length, label: 'to confirm', cls: 'review' },
     { n: stale.length, label: 'stale', cls: '' },
   ].filter((x) => x.n > 0);
-  const upcoming = s.meetingsToday.filter((m) => (m.ends_at ?? m.starts_at!) > now);
+  const snooze = (r: ItemRow) => {
+    const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)));
+    void store.update(r, { at, rolls: null, rolled_from: null }).then(() => showSnack(`Snoozed to ${when(at)}`));
+  };
+  const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
   const shown = (rs: ItemRow[]) => (
     <div className="ov-follow">
       {rs.slice(0, 5).map((r) => (
         <div key={r.profile + r.id} className="ov-follow-row">
           <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => void store.update(r, { status: 'done' })}><Icon name="circle-large-outline" small /></button>
           <button className="ov-follow-text" onClick={tasks}><span className="ov-t">{r.title}</span></button>
+          <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
         </div>
       ))}
       {rs.length > 5 && <button className="ov-follow-row ov-follow-text muted" onClick={tasks}>+{rs.length - 5} more</button>}

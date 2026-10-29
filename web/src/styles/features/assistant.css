@@ -90,6 +90,7 @@
 .as-next-head { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); color: var(--accent-text); font-weight: 600; }
 .as-next-title { font-size: var(--fs-2xl); font-weight: 600; }
 .as-ctx-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.as-next-jot { width: 100%; margin-top: var(--sp-4); padding: var(--sp-3) var(--sp-5); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; font-size: var(--fs-md); }
 .as-next-actions { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-2); }
 .as-next-actions .btn.on { color: var(--on-accent); background: var(--accent-fill); border-color: transparent; }
 .as-next-then { margin-top: var(--sp-2); padding-top: var(--sp-4); border-top: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); font-size: var(--fs-sm); color: var(--fg-muted); }
@@ -200,7 +201,8 @@
 .ov-follow-row { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-5) var(--sp-7); }
 .ov-follow-row + .ov-follow-row { border-top: 1px solid var(--border); }
 .ov-follow-text { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; text-decoration: none; }
-.ov-check { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: -4px 0 -4px -6px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--fg-faint); cursor: pointer; }
+.ov-check { flex: none; display: grid; place-items: center; width: 32px; height: 32px; margin: -6px 0 -6px -8px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--fg-faint); cursor: pointer; }
+.ov-check:last-child { margin: -6px -8px -6px 0; }
 @media (hover: hover) { .ov-check:hover { color: var(--ok, var(--fg)); background: var(--sunken); } }
 .ov-follow-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) { .ov-follow-text:hover .ov-t { text-decoration: underline; } }
