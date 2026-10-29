@@ -10,7 +10,7 @@
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
 - **Codex** (top of the activity bar): Overview, Tasks, Summary, Meetings, Jobs and Wiki, filtered by work or
   personal profile. Overview lists the day, job reports and a follow-through card for meeting actions still open
-  after a week. Meetings imports the calendar every half hour and shows notes, summary, decisions, actions, pinned
+  after a week, and a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed. Meetings imports the calendar every half hour and shows notes, summary, decisions, actions, pinned
   text and earlier meetings of the same series; an action copies as a message, and the summary format suggests the
   template last used for the series. The page of an upcoming meeting has a prep card. The header has a decision log, a Load view (hours per week, share
   recorded, who you meet most, time per recurring series) and a Week view to copy as Markdown. Saved topics filter the list, show a timeline of matching

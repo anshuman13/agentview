@@ -1,7 +1,7 @@
 process.env.TZ = 'Europe/Oslo';
 
 import { expect, it } from 'vitest';
-import { meetingLoad, weekReview } from './load';
+import { meetingLoad, sinceLastVisit, weekReview } from './load';
 import type { ItemRow } from './sync';
 import type { Fact, Meeting } from './wiki';
 
@@ -61,4 +61,19 @@ it('reviews the local week with decisions, claims, finished tasks and open meeti
   ];
   const r = weekReview({ meetings, facts, items }, now);
   expect([r.meetings, r.hours, r.decisions.length, r.claims.length, r.done.length, r.open.map((i) => i.id)]).toEqual([1, 1, 2, 1, 1, ['o1']]);
+});
+
+it('counts meetings, decisions, claims and open questions after the last visit', () => {
+  const now = new Date(2026, 9, 29, 12).getTime();
+  const since = new Date(2026, 9, 27, 12).getTime();
+  const at = (d: number) => new Date(2026, 9, d, 9).getTime();
+  const meetings = [
+    meeting('a', new Date(2026, 9, 28, 9), 1, { decisions: '["Ship it","Cut scope"]', summary: 'Who owns launch?' }),
+    meeting('before', new Date(2026, 9, 26, 9), 1, { decisions: '["Old"]', summary: 'Why now?' }),
+    meeting('future', new Date(2026, 9, 30, 9), 1, { decisions: '["Later"]' }),
+    meeting('ooo', new Date(2026, 9, 28), 24),
+  ];
+  const fact = (id: string, time: number, extra: Partial<Fact> = {}) => ({ id, profile: 'work', deleted: 0, state: 'live', at: time, updated_at: time, superseded_by: null, ...extra }) as Fact;
+  const facts = [fact('new', at(28)), fact('old', at(26)), fact('sup', at(28), { superseded_by: 'new' }), fact('gone', at(28), { deleted: 1 })];
+  expect(sinceLastVisit({ meetings, facts }, since, now)).toEqual({ meetings: 1, decisions: 2, claims: 1, questions: 1 });
 });

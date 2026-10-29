@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { followThrough, type Meeting } from './data/wiki';
+import { sinceLastVisit } from './data/load';
 import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { save, stored } from '../ui/util';
@@ -107,6 +108,49 @@ function FollowThrough() {
   );
 }
 
+const LAST_VISIT = 'codex.lastVisit';
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+// Meetings, decisions, new claims and open questions since the last dismissal; the first visit only records the time.
+function SinceLastVisit() {
+  const snap = useAssistantData();
+  const { filter } = useView();
+  const [since, setSince] = useState<number | null>(() => {
+    const t = stored<number | null>(LAST_VISIT, null);
+    if (t == null) save(LAST_VISIT, Date.now());
+    return t;
+  });
+  const minute = Math.floor(Date.now() / 60000);
+  const counts = useMemo(() => {
+    const pick = <T extends { profile: string }>(rows: T[]) => rows.filter((r) => filter === 'all' || r.profile === filter);
+    return since == null ? null : sinceLastVisit({ meetings: pick(snap.meetings), facts: pick(snap.facts) }, since, minute * 60000);
+  }, [snap.meetings, snap.facts, filter, since, minute]);
+  if (!counts) return null;
+  const parts = [
+    counts.meetings && plural(counts.meetings, 'meeting'),
+    counts.decisions && plural(counts.decisions, 'decision'),
+    counts.claims && plural(counts.claims, 'new claim'),
+    counts.questions && plural(counts.questions, 'open question'),
+  ].filter(Boolean);
+  if (!parts.length) return null;
+  const dismiss = () => {
+    const now = Date.now();
+    save(LAST_VISIT, now);
+    setSince(now);
+  };
+  return (
+    <section>
+      <div className="ov-follow">
+        <div className="ov-follow-row">
+          <span className="ov-follow-text">Since you were last here: {parts.join(', ')}</span>
+          <button className="btn sm" onClick={dismiss}>Dismiss</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 type Split = ReturnType<typeof useSplit>;
 
 // The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
@@ -145,6 +189,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <div className="ov-summary">
         {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
       </div>
+      <SinceLastVisit />
       {digest && (
         <section>
           <div className="as-section">{digest.title} · {new Date(digest.updated_at).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}</div>
