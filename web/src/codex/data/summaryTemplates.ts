@@ -1,3 +1,5 @@
+import { peopleOf, seriesTitle, type Meeting } from './wiki';
+
 export const SUMMARY_TEMPLATES = {
   default: { label: 'Default', instructions: '' },
   one_on_one: {
@@ -21,3 +23,24 @@ export const SUMMARY_TEMPLATES = {
 export type SummaryTemplate = keyof typeof SUMMARY_TEMPLATES;
 
 export const summaryInstructions = (key: SummaryTemplate) => SUMMARY_TEMPLATES[key].instructions;
+
+const PICKS_KEY = 'codex.summaryPicks';
+const seriesKey = (m: Meeting) => `${m.profile}:${seriesTitle(m.title)}`;
+const readPicks = (): Record<string, SummaryTemplate> => { try { return JSON.parse(localStorage.getItem(PICKS_KEY) ?? '{}'); } catch { return {}; } };
+
+export const rememberTemplate = (m: Meeting, key: SummaryTemplate) => {
+  try { localStorage.setItem(PICKS_KEY, JSON.stringify({ ...readPicks(), [seriesKey(m)]: key })); } catch {}
+};
+
+// The template picked before for this series, else a guess from the title and guest count. Series is newest first.
+export function templateFor(m: Meeting, series: Meeting[], picks = readPicks()): SummaryTemplate {
+  const picked = picks[seriesKey(m)];
+  if (picked && picked in SUMMARY_TEMPLATES) return picked;
+  const title = (m.title ?? '').toLowerCase();
+  const people = peopleOf(m).length || (series[0] ? peopleOf(series[0]).length : 0);
+  if (/\b1[:-]?1\b|\bone[- ]on[- ]one\b/.test(title) || /\S\s*\/\s*\S/.test(title) && people === 2) return 'one_on_one';
+  if (/stand-?up|\bdaily\b/.test(title)) return 'standup';
+  if (/interview/.test(title)) return 'interview';
+  if (/planning|\bplan\b/.test(title)) return 'planning';
+  return people === 2 ? 'one_on_one' : 'default';
+}

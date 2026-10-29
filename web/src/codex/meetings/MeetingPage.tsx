@@ -3,7 +3,7 @@ import { useAssistantStore, useAssistantData, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
-import { SUMMARY_TEMPLATES, summaryInstructions, type SummaryTemplate } from '../data/summaryTemplates';
+import { SUMMARY_TEMPLATES, rememberTemplate, summaryInstructions, templateFor, type SummaryTemplate } from '../data/summaryTemplates';
 import type { ItemRow } from '../data/sync';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, pinsOf, seriesOf, type Meeting } from '../data/wiki';
 import { clock, when } from '../time';
@@ -120,10 +120,11 @@ function Notes({ m }: { m: Meeting }) {
 }
 
 function SummaryFormat({ m }: { m: Meeting }) {
-  const { store } = useCodex();
+  const { store, meetings } = useCodex();
   const [busy, setBusy] = useState(false);
   if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
   const choose = async (key: SummaryTemplate) => {
+    rememberTemplate(m, key);
     setBusy(true);
     try {
       await store.fetchTranscript(m, summaryInstructions(key));
@@ -134,10 +135,11 @@ function SummaryFormat({ m }: { m: Meeting }) {
       setBusy(false);
     }
   };
+  const suggested = templateFor(m, seriesOf(meetings, m));
   return (
     <select className="mt-sync" value="" disabled={busy} aria-label="Summary format" title="Summary format" onChange={(e) => void choose(e.target.value as SummaryTemplate)}>
       <option value="" disabled>{busy ? 'Rewriting' : 'Summary format'}</option>
-      {(Object.keys(SUMMARY_TEMPLATES) as SummaryTemplate[]).map((k) => <option key={k} value={k}>{SUMMARY_TEMPLATES[k].label}</option>)}
+      {(Object.keys(SUMMARY_TEMPLATES) as SummaryTemplate[]).map((k) => <option key={k} value={k}>{SUMMARY_TEMPLATES[k].label}{k === suggested ? ' (suggested)' : ''}</option>)}
     </select>
   );
 }

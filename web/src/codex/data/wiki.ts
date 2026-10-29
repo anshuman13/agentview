@@ -365,7 +365,7 @@ export function priorWith(meeting: Meeting, meetings: Meeting[], items: ItemRow[
 
 const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?';
 const SERIES_NOISE = new RegExp(`\\([^)]*\\d[^)]*\\)|\\d{4}-\\d{2}-\\d{2}|\\b${MONTH}\\s*\\d{1,2}\\b|\\b\\d{1,2}\\s*${MONTH}|#\\s*\\d+|\\b\\d+\\b`, 'g');
-const seriesTitle = (t: string | null) => (t ?? '').toLowerCase().replace(SERIES_NOISE, ' ').replace(/\s+/g, ' ').trim();
+export const seriesTitle = (t: string | null) => (t ?? '').toLowerCase().replace(SERIES_NOISE, ' ').replace(/\s+/g, ' ').trim();
 
 // Earlier meetings of the same recurring series: equal title once dates and numbers are stripped, and at least half of the smaller guest list in common. Newest first.
 export function seriesOf(meetings: Meeting[], m: Meeting) {
