@@ -111,6 +111,7 @@ function Swipe({ onRight, onLeft, leftLabel = 'Tomorrow', onDelete, children }: 
 function Check({ row, onDone }: { row: ItemRow; onDone?: () => void }) {
   const act = useActions();
   const [checked, setChecked] = useState(false);
+  useEffect(() => setChecked(false), [row.status]);
   const isDone = row.status === 'done';
   if (row.status === 'note') return <span className="as-check note"><Icon name="note" /></span>;
   const tick = (e: React.MouseEvent) => {
@@ -176,6 +177,8 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
   useEffect(() => () => latest.current(), []);
 
   useLayoutEffect(() => { grow(titleRef.current); grow(textRef.current); }, [title, text]);
+  // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
+  useEffect(() => { if (matchMedia('(hover: hover)').matches) titleRef.current?.focus({ preventScroll: true }); }, []);
   // The task grows out of its row instead of popping in.
   useLayoutEffect(() => {
     const el = box.current;
@@ -305,13 +308,20 @@ function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen: () =>
   else if (e.key === 'Delete' || e.key === 'Backspace') act.remove(row);
   else return;
   e.preventDefault();
-  // The row goes away after done, snooze or delete, so focus moves to its neighbour.
+  // When done, snooze or delete takes the row away, focus moves to its neighbour.
   if (!step && e.key !== 'Enter') {
     const rows = [...document.querySelectorAll<HTMLElement>('.tasks [data-row]')];
     const i = rows.indexOf(e.currentTarget);
-    const next = rows[i + 1] ?? rows[i - 1];
-    const key = next?.dataset.row;
-    requestAnimationFrame(() => key && document.querySelector<HTMLElement>(`[data-row="${key}"]`)?.focus());
+    const own = e.currentTarget.dataset.row;
+    const key = (rows[i + 1] ?? rows[i - 1])?.dataset.row;
+    // The store applies the change a moment later; a row that stays (as in search results) keeps focus.
+    let tries = 0;
+    const move = () => {
+      if (!key) return;
+      if (!document.querySelector(`[data-row="${own}"]`)) document.querySelector<HTMLElement>(`[data-row="${key}"]`)?.focus();
+      else if (++tries < 20) requestAnimationFrame(move);
+    };
+    requestAnimationFrame(move);
   }
 }
 
@@ -385,7 +395,7 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
     busy.current = true;
     const w = parseWhen(typed);
     // A bare time like "3pm" in a later day's section means that day.
-    const at = w?.at != null && day !== today && !hasDay(typed) ? day + (w.at - new Date(w.at).setHours(0, 0, 0, 0)) : w?.at ?? (day === today ? null : day + 9 * 3600_000);
+    const at = w?.at != null && day !== today && !hasDay(typed) ? new Date(day).setHours(new Date(w.at).getHours(), new Date(w.at).getMinutes(), 0, 0) : w?.at ?? (day === today ? null : new Date(day).setHours(9, 0, 0, 0));
     try {
       const row = await store.capture(stripWhen(typed, w) || typed, 'task', profile, at);
       setText('');

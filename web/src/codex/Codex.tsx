@@ -63,8 +63,9 @@ const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === 
 function moveTo(r: ItemRow, day: number, today: number) {
   const at = atTime(r.at);
   if (at != null && new Date(at).setHours(0, 0, 0, 0) === day) return undefined;
-  if (at == null) return day === today ? undefined : day + 9 * 3600_000;
-  return day + (at - new Date(at).setHours(0, 0, 0, 0));
+  if (at == null) return day === today ? undefined : new Date(day).setHours(9, 0, 0, 0);
+  const t = new Date(at);
+  return new Date(day).setHours(t.getHours(), t.getMinutes(), 0, 0);
 }
 
 const CALENDAR_FRESH = 15 * 60_000;
@@ -85,7 +86,7 @@ export function Assistant() {
     if (list !== 'tasks') return setQuery(null);
     const key = (e: KeyboardEvent) => {
       const at = document.activeElement;
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || (at && at !== document.body && !at.matches('[data-row]'))) return;
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || root.current?.offsetParent == null || (at && at !== document.body && !at.matches('[data-row]'))) return;
       e.preventDefault();
       setQuery((q) => q ?? '');
     };
