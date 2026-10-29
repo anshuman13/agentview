@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useCodex } from '../data';
 import { approveAllChanges, approveChanges, chatOf, proposals, reviewCount, sourcesOf, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
@@ -11,8 +11,8 @@ function ReviewCard({ fact }: { fact: Fact }) {
   const { store, pages, facts } = useCodex();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(fact.text ?? '');
-  const page = pages.find((p) => p.id === fact.page_id && p.profile === fact.profile);
-  const old = facts.find((f) => f.id === fact.replaces && f.profile === fact.profile);
+  const page = fact.page_id ? pages.find((p) => p.id === fact.page_id && p.profile === fact.profile) : undefined;
+  const old = fact.replaces ? facts.find((f) => f.id === fact.replaces && f.profile === fact.profile) : undefined;
   const chat = chatOf(fact);
   const approve = () => {
     const changes = approveChanges(fact, pages, facts);
@@ -112,17 +112,22 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
 
 export function ToReview({ facts }: { facts: Fact[] }) {
   const { pages } = useCodex();
-  const list = proposals(facts);
+  const { list, byPage, loose, livePages } = useMemo(() => {
+    const list = proposals(facts);
+    const byPage = new Map<string, Fact[]>();
+    for (const f of list) if (f.page_id) { const fs = byPage.get(f.page_id); if (fs) fs.push(f); else byPage.set(f.page_id, [f]); }
+    const livePages = new Map(pages.filter((p) => !p.deleted).map((p) => [`${p.profile}:${p.id}`, p]));
+    const liveIds = new Set(pages.filter((p) => !p.deleted).map((p) => p.id));
+    const loose = list.filter((f) => !f.page_id || !liveIds.has(f.page_id));
+    return { list, byPage, loose, livePages };
+  }, [pages, facts]);
   if (!list.length) return null;
-  const byPage = new Map<string, Fact[]>();
-  for (const f of list) if (f.page_id) byPage.set(f.page_id, [...(byPage.get(f.page_id) ?? []), f]);
-  const loose = list.filter((f) => !f.page_id || !pages.some((p) => p.id === f.page_id && !p.deleted));
   return (
     <section>
       <div className="wk-label">To review · {reviewCount(pages, facts)}</div>
       <div className="wk-reviews">
         {[...byPage].map(([id, fs]) => {
-          const page = pages.find((p) => p.id === id && p.profile === fs[0].profile && !p.deleted);
+          const page = livePages.get(`${fs[0].profile}:${id}`);
           return page && <PageReview key={page.profile + id} page={page} list={fs} />;
         })}
         {loose.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />)}

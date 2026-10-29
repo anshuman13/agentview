@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAssistant } from '../data';
 import type { ItemRow } from '../data/sync';
+import { queryWords, rowMatcher } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { showSnack, useView } from '../view';
@@ -67,10 +68,11 @@ function NewNoteCard() {
 export function Notes({ query }: { query: string }) {
   const { snap } = useAssistant();
   const { filter } = useView();
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = queryWords(query);
+  const hit = rowMatcher<ItemRow>(words, 'note', (r) => [r.title, r.text]);
   const notes = snap.items
     .filter((r) => !r.deleted && r.status === 'note' && (filter === 'all' || r.profile === filter))
-    .filter((r) => words.every((w) => `${r.title ?? ''} ${r.text ?? ''}`.toLowerCase().includes(w)))
+    .filter((r) => !words.length || hit(r))
     .sort((a, b) => b.updated_at - a.updated_at);
   if (words.length && !notes.length) return null;
   return (

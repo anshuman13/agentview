@@ -210,7 +210,8 @@ export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.
 // What the review list shows: one card per page with proposals, and one per claim without a page.
 export function reviewCount(pages: Page[], facts: Fact[]) {
   const list = proposals(facts);
-  const hasPage = (f: Fact) => !!f.page_id && pages.some((p) => p.id === f.page_id && p.profile === f.profile && !p.deleted);
+  const alive = new Set(pages.filter((p) => !p.deleted).map((p) => `${p.profile}:${p.id}`));
+  const hasPage = (f: Fact) => !!f.page_id && alive.has(`${f.profile}:${f.page_id}`);
   return new Set(list.filter(hasPage).map((f) => `${f.profile}:${f.page_id}`)).size + list.filter((f) => !hasPage(f)).length;
 }
 
