@@ -292,6 +292,11 @@ export function actionCount(items: ItemRow[], m: { profile: Profile; id: string 
   return { total: n('open', 'done'), done: n('done'), review: n('suggested'), unassigned: n('unassigned'), dismissed: n('dismissed') };
 }
 
+export const pinsOf = (items: ItemRow[], meetings: Meeting[]) => {
+  const ids = new Set(meetings.map((m) => m.profile + m.id));
+  return items.filter((r) => !r.deleted && r.status === 'note' && r.meeting_id && ids.has(r.profile + r.meeting_id)).sort((a, b) => b.updated_at - a.updated_at);
+};
+
 export const othersOf = (m: Meeting) => {
   const v = json<unknown>(m.others, []);
   return (Array.isArray(v) ? v : []).filter((o): o is { who: string; what: string } => typeof o?.who === 'string' && typeof o?.what === 'string');

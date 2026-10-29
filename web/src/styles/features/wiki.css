@@ -420,5 +420,8 @@ li.contested .wk-feed-kind { color: var(--warn); }
 /* Person view */
 .mt-person { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 @media (hover: hover) { .mt-person:hover { color: var(--fg); text-decoration: underline; } }
+.mt-pin-btn { position: fixed; z-index: 50; transform: translateX(-50%); box-shadow: 0 2px 8px rgb(0 0 0 / 0.25); }
+.mt-pins .wk-claim::marker { color: var(--c-knowledge); }
+.mt-pins .wk-claim-text { white-space: pre-wrap; }
 .mt-person-head { display: flex; align-items: center; gap: var(--sp-6); }
 .mt-person-head .mt-avatars > span { width: 36px; height: 36px; font-size: 13px; }

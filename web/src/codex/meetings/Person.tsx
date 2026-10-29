@@ -1,5 +1,6 @@
-import { useCodex } from '../data';
-import { claimsMentioning, commitmentsOf, meetingsOf } from '../data/wiki';
+import { useAssistant, useCodex } from '../data';
+import { claimsMentioning, commitmentsOf, meetingsOf, pinsOf } from '../data/wiki';
+import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
 import { setView, useEscapeBack } from '../view';
 import { Avatars, MeetingRow } from './Meetings';
@@ -7,9 +8,11 @@ import '../../styles/features/wiki.css';
 
 export function Person({ name }: { name: string }) {
   const { meetings, facts, pages } = useCodex();
+  const { snap } = useAssistant();
   const back = () => setView({ person: null });
   useEscapeBack(back);
   const mine = meetingsOf(meetings, name);
+  const pins = pinsOf(snap.items, mine);
   const commitments = commitmentsOf(meetings, name);
   const claims = claimsMentioning(facts, name);
   const title = new Map(pages.map((p) => [p.id, p.title]));
@@ -39,6 +42,13 @@ export function Person({ name }: { name: string }) {
               </ul>
             ) : <p className="mt-pending">Nothing recorded for {name}.</p>}
           </section>
+
+          {pins.length > 0 && (
+            <section className="mt-sec">
+              <h2>Pinned<span className="mt-of">{pins.length}</span></h2>
+              <PinList pins={pins} onOpen={(r) => open(`${r.profile}:${r.meeting_id}`)} />
+            </section>
+          )}
 
           <section className="mt-sec">
             <h2>Meetings</h2>

@@ -5,7 +5,7 @@ import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
 import { SUMMARY_TEMPLATES, summaryInstructions, type SummaryTemplate } from '../data/summaryTemplates';
 import type { ItemRow } from '../data/sync';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, type Meeting } from '../data/wiki';
+import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, pinsOf, type Meeting } from '../data/wiki';
 import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { Voice, useDictation } from '../../chat/Voice';
@@ -13,6 +13,7 @@ import { setView, showSnack, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
 import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars, meetingKey } from './MeetingList';
+import { PinList, PinnableSummary } from './Pins';
 
 const ORDER: Record<string, number> = { open: 0, done: 1 };
 
@@ -214,6 +215,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const by = (st: string) => all.filter((r) => r.status === st);
   const mine = all.filter((r) => r.status === 'open' || r.status === 'done').sort((a, b) => (ORDER[a.status ?? ''] ?? 2) - (ORDER[b.status ?? ''] ?? 2) || a.updated_at - b.updated_at);
   const review = by('suggested');
+  const pins = pinsOf(all, [m]);
   const count = actionCount(snap.items, m);
   const others = othersOf(m);
   const decisions = listOf(m.decisions);
@@ -263,8 +265,15 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           <section className="mt-sec">
             <h2><Icon name="sparkle" small /> Summary{m.summary && <SummaryFormat m={m} />}</h2>
-            {m.summary ? <p className="mt-summary">{m.summary}</p> : <p className="mt-pending">{state === 'missing' ? 'No summary without a transcript.' : 'Written from the transcript after the meeting.'}</p>}
+            {m.summary ? <PinnableSummary m={m} /> : <p className="mt-pending">{state === 'missing' ? 'No summary without a transcript.' : 'Written from the transcript after the meeting.'}</p>}
           </section>
+
+          {pins.length > 0 && (
+            <section className="mt-sec">
+              <h2>Pinned<span className="mt-of">{pins.length}</span></h2>
+              <PinList pins={pins} />
+            </section>
+          )}
 
           {decisions.length > 0 && (
             <section className="mt-sec">
