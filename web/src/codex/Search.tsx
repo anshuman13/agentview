@@ -42,7 +42,7 @@ export function Search({ onMenu }: { onMenu: () => void }) {
       </header>
       <div className="wk-scroll">
         <div className="mt-list">
-          <input autoFocus type="search" value={query} placeholder="Search tasks, meetings, wiki and jobs" aria-label="Search" onChange={(e) => setQuery(e.target.value)} />
+          <input autoFocus type="search" enterKeyHint="search" value={query} placeholder="Search tasks, meetings, wiki and jobs" aria-label="Search" onChange={(e) => setQuery(e.target.value)} />
           <Hits label="Tasks and notes" group={r.tasks} open={(h) => setView(h.page ? { list: 'meetings', open: `${h.profile}:${h.page}`, person: null } : { list: 'tasks', open: null })} />
           <Hits label="Meetings" group={r.meetings} open={(h) => setView({ list: 'meetings', open: key(h), person: null })} />
           <Hits label="Wiki" group={r.wiki} open={(h) => setView({ list: 'wiki', open: h.page ?? null, anchor: null })} />

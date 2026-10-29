@@ -242,7 +242,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
         <span className="spacer" />
         <label className="wk-search">
           <Icon name="search" small />
-          <input value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
+          <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
         </label>
         <button className={`btn mt-dec${log ? ' on' : ''}`} aria-pressed={log} title="Decisions from all meetings" onClick={() => { setLog((v) => !v); setLoad(false); setWeek(false); }}><Icon name="check" small /> <span>Decisions</span></button>
         <button className={`btn mt-dec${load ? ' on' : ''}`} aria-pressed={load} title="Hours in meetings per week" onClick={() => { setLoad((v) => !v); setLog(false); setWeek(false); }}><Icon name="graph" small /> <span>Load</span></button>

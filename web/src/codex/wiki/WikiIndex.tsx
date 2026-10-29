@@ -75,7 +75,7 @@ function NewPageCard({ section, sort }: { section: string; sort: number }) {
   if (title === null) return <button className="wk-card wk-new" onClick={() => setTitle('')}><Icon name="add" /> New page</button>;
   return (
     <div className="wk-card wk-new editing">
-      <input autoFocus value={title} placeholder="Page title" onChange={(e) => setTitle(e.target.value)} onBlur={create}
+      <input autoFocus enterKeyHint="done" value={title} placeholder="Page title" onChange={(e) => setTitle(e.target.value)} onBlur={create}
         onKeyDown={(e) => { if (e.key === 'Enter') create(); if (e.key === 'Escape') setTitle(null); }} />
       <span className="wk-card-summary">Claims about it are added as meetings, Slack and Linear mention it.</span>
     </div>
@@ -137,7 +137,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
         <span className="spacer" />
         <label className="wk-search">
           <Icon name="search" small />
-          <input value={query} placeholder="Search" aria-label="Search the wiki" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
+          <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search the wiki" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
           {query && <button className="icon-btn" aria-label="Clear" onClick={() => setQuery('')}><Icon name="close" small /></button>}
         </label>
       </header>
