@@ -166,7 +166,7 @@ export function newPage(title: string, section: string, sort: number, profile: P
 }
 
 export const queryWords = (query: string) => query.toLowerCase().split(/\s+/).filter(Boolean);
-const matcher = (words: string[]) => (...texts: (string | null | undefined)[]) => {
+export const matcher = (words: string[]) => (...texts: (string | null | undefined)[]) => {
   const hay = texts.join(' ').toLowerCase();
   return words.length > 0 && words.every((w) => hay.includes(w));
 };
