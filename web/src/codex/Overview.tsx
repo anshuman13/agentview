@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { actionsOf, followThrough, type Meeting } from './data/wiki';
 import { followUpText } from './data/meetingMarkdown';
@@ -26,11 +26,15 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
   const open = () => setView({ list: 'meetings', open: `${m.profile}:${m.id}` });
   const people = peopleOf(m);
   const [jot, setJot] = useState('');
+  const saved = useRef('');
   const addNote = () => {
-    const line = `${clock(Date.now())} ${jot.trim()}`;
-    if (!jot.trim()) return;
+    const text = jot.trim();
+    if (!text || saved.current === jot) return;
+    saved.current = jot;
     setJot('');
-    void store.editRow('meetings', m, { notes: m.notes ? `${m.notes.trimEnd()}\n${line}` : line }).then(() => showSnack('Added to the notes'));
+    const line = `${clock(Date.now())} ${text}`;
+    const cur = store.snapshot().meetings.find((x) => x.profile === m.profile && x.id === m.id) ?? m;
+    void store.editRow('meetings', cur, { notes: cur.notes ? `${cur.notes.trimEnd()}\n${line}` : line }).then(() => showSnack('Added to the notes'));
   };
   return (
     <div className="as-next" onClick={open} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && open()}>
@@ -44,7 +48,7 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
       )}
       <Prep m={m} />
       <input className="as-next-jot" value={jot} placeholder="Jot a note" enterKeyHint="done" aria-label={`Note for ${m.title}`}
-        onClick={(e) => e.stopPropagation()} onChange={(e) => setJot(e.target.value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') addNote(); }} onBlur={addNote} />
+        onClick={(e) => e.stopPropagation()} onChange={(e) => { saved.current = ''; setJot(e.target.value); }} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') addNote(); }} onBlur={addNote} />
       <div className="as-next-actions">
         <button className="btn sm" onClick={(e) => { e.stopPropagation(); onPrep(); }}><Icon name="sparkle" small /> Prep</button>
         <button className="btn sm" onClick={(e) => { e.stopPropagation(); open(); }}><Icon name="edit" small /> Notes</button>

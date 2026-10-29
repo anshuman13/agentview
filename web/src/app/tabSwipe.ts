@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 // Places where a sideways drag belongs to the content: row swipes, text, code, sheets, and anything that scrolls sideways.
-const OWN = '.as-swipe-row, input, textarea, pre, code, .xterm, .chrome-frame, .monaco-editor, .tabs, .as-sheet, .more-sheet, .as-drawer, [data-no-swipe]';
+const OWN = '.as-swipe-row, input, textarea, pre, code, .xterm, .chrome-frame, .monaco-editor, .tabs, .as-sheet, .more-sheet, .as-drawer, .palette, [role="dialog"], [data-no-swipe]';
 const EDGE = 24;
 let forced: 1 | -1 | null = null;
 
