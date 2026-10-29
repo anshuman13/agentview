@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { actionCount, briefFor, decisionLog, followThrough, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, openQuestions, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, staleFacts, topicTimeline, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
+import { actionCount, briefFor, decisionLog, followThrough, decisionsWith, approveChanges, claimsMentioning, commitmentsOf, meetingsOf, priorWith, seriesOf, seriesRepeats, contestOf, olderClaims, RETIRE_AFTER, groupMeetings, meetingState, openQuestions, pageClaims, pageStats, reviewCount, searchMeetings, searchWiki, staleFacts, topicTimeline, trackedTopics, type Fact, type Meeting, type Page } from './wiki';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -259,6 +259,15 @@ describe('briefFor', () => {
     const out = topicTimeline('billing', [m, next], [f, fact('g', 'p1', 'H', 'Other', { at: 40 })], 25, 20, 50);
     expect(out.entries.map((e) => e.kind)).toEqual(['claim', 'meeting', 'decision']);
     expect(out.fresh).toBe(1);
+  });
+});
+
+describe('seriesRepeats', () => {
+  it('lists decisions made again and questions asked again since the previous meeting', () => {
+    const base = { title: 'Planning', ends_at: null, people: null, calendar_url: null, recorded_ms: null, transcript: null, tries: null, room: null, room_me: null, others: null, notes: null };
+    const prev: Meeting = { ...common('p'), ...base, starts_at: 10, decisions: '["Ship Friday","Hire one"]', summary: 'Who owns QA? Budget is fine.' };
+    const m: Meeting = { ...common('m'), ...base, starts_at: 20, decisions: '["ship friday ","Cut scope"]', summary: 'Still: who owns QA? What about docs?' };
+    expect(seriesRepeats(m, prev)).toEqual({ decisions: ['ship friday '], questions: ['Still: who owns QA?'] });
   });
 });
 

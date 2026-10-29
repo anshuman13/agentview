@@ -5,7 +5,7 @@ import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
 import { SUMMARY_TEMPLATES, rememberTemplate, summaryInstructions, templateFor, type SummaryTemplate } from '../data/summaryTemplates';
 import type { ItemRow } from '../data/sync';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, pinsOf, seriesOf, type Meeting } from '../data/wiki';
+import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, pinsOf, seriesOf, seriesRepeats, type Meeting } from '../data/wiki';
 import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { Voice, useDictation } from '../../chat/Voice';
@@ -16,9 +16,10 @@ import { Avatars, meetingKey } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
 
-function Series({ prior }: { prior: Meeting[] }) {
+function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
   const snap = useAssistantData();
   if (!prior.length) return null;
+  const repeats = seriesRepeats(m, prior[0]);
   const date = (x: Meeting) => new Date(x.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' });
   const open = (x: Meeting) => setView({ list: 'meetings', open: meetingKey(x), person: null });
   const decisions = prior.slice(0, 3).flatMap((x) => listOf(x.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ x, text })));
@@ -27,6 +28,10 @@ function Series({ prior }: { prior: Meeting[] }) {
     <section className="mt-sec">
       <h2>Series</h2>
       <p className="mt-series">{prior.length} earlier, last on {date(prior[0])}</p>
+      {repeats.decisions.length + repeats.questions.length > 0 && <div className="mt-series-list">
+        {repeats.decisions.map((text, i) => <button key={`d${i}`} className="mt-log-item" onClick={() => open(prior[0])}><span className="mt-log-text">{text}</span><span className="mt-log-from">Decided again, also on {date(prior[0])}</span></button>)}
+        {repeats.questions.map((text, i) => <button key={`q${i}`} className="mt-log-item" onClick={() => open(prior[0])}><span className="mt-log-text">{text}</span><span className="mt-log-from">Asked again, also on {date(prior[0])}</span></button>)}
+      </div>}
       {decisions.length > 0 && <div className="mt-series-list">{decisions.map(({ x, text }, i) => (
         <button key={i} className="mt-log-item" onClick={() => open(x)}><span className="mt-log-text">{text}</span><span className="mt-log-from">Decided {date(x)}</span></button>
       ))}</div>}
@@ -312,7 +317,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           {state === 'upcoming' && <Prep m={m} section />}
 
-          <Series prior={prior} />
+          <Series m={m} prior={prior} />
 
           <section className="mt-sec">
             <h2>My notes</h2>

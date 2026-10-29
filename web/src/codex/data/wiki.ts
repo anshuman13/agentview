@@ -420,6 +420,17 @@ export function seriesOf(meetings: Meeting[], m: Meeting) {
     .sort((a, b) => b.starts_at! - a.starts_at!);
 }
 
+// What this meeting repeats from the previous one in its series: decisions made again and questions still being asked.
+export function seriesRepeats(m: Meeting, prev: Meeting) {
+  const norm = (t: string) => t.trim().toLowerCase();
+  const before = new Set(listOf(prev.decisions).map(norm));
+  const asked = openQuestions([prev]).map((q) => q.text.toLowerCase());
+  return {
+    decisions: listOf(m.decisions).filter((t) => t.trim() && before.has(norm(t))),
+    questions: openQuestions([m]).map((q) => q.text).filter((t) => asked.some((a) => t.toLowerCase().includes(a) || a.includes(t.toLowerCase()))),
+  };
+}
+
 // Current claims whose text names the person.
 export const claimsMentioning = (facts: Fact[], person: string) => {
   const name = person.trim().toLowerCase();
