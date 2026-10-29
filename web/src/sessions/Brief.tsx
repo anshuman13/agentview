@@ -27,7 +27,7 @@ function InboxChip() {
   const n = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
   if (!n) return null;
   return (
-    <button className="chip outline pill warn ag-chip" title={`Show what needs you: ${n} waiting`} aria-label={`${n} waiting`} onClick={() => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'view:chats' } }))}>
+    <button className="chip pill st-warn ag-chip" title={`Show what needs you: ${n} waiting`} aria-label={`${n} waiting`} onClick={() => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'view:chats' } }))}>
       <Icon name="inbox" small /> {n}<span className="chip-full"> waiting</span>
     </button>
   );

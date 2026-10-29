@@ -239,10 +239,8 @@ a.wk-src:hover { color: var(--fg); background: var(--border-strong); }
 .mt-badge { flex: none; padding: 1px var(--sp-4); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-text); font-size: var(--fs-xs); font-weight: 600; }
 .mt-badge.live { background: color-mix(in srgb, var(--err) 16%, transparent); color: var(--err); }
 .mt-count { flex: none; display: inline-flex; align-items: center; gap: var(--sp-3); padding: 2px var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg); font-size: var(--fs-xs); font-weight: 500; font-variant-numeric: tabular-nums; }
-.mt-count.done { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
-.mt-count.review { border-color: transparent; background: var(--warn-soft); color: var(--warn); }
 .mt-count .codicon.icon { font-size: 12px; }
-.mt-count.warn { padding: 0; border-color: transparent; color: var(--fg-faint); font-weight: 400; }
+.mt-count:is(.st-err, .st-warn, .st-ok, .st-run) { border-color: transparent; }
 .mt-count.muted { border-color: transparent; color: var(--fg-faint); font-weight: 400; }
 .mt-avatars { flex: none; display: flex; }
 .mt-avatars > span { width: 22px; height: 22px; display: grid; place-items: center; margin-left: -7px; border-radius: 50%; border: 2px solid var(--bg); background: color-mix(in srgb, var(--hue) 30%, var(--raised)); color: color-mix(in srgb, var(--hue) 70%, var(--fg-strong)); font-size: 9px; font-weight: 600; }

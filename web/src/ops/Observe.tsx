@@ -94,7 +94,7 @@ function Sub({ title, link, ask, children }: { title: string; link?: string; ask
 
 function AddToClaude({ server, added, disabled, title, onDone }: { server: 'snowflake'; added: boolean; disabled?: boolean; title: string; onDone: (i: ObserveInfo) => void }) {
   const [msg, setMsg] = useState('');
-  if (added) return <span className="chip ok" title={`${server} is in ~/.claude.json`}><Icon name="check" small /> In Claude</span>;
+  if (added) return <span className="chip st-ok" title={`${server} is in ~/.claude.json`}><Icon name="check" small /> In Claude</span>;
   return (
     <span className="obs-add">
       <button className="btn xs" disabled={disabled} title={title} onClick={() => post<{ info: ObserveInfo }>('/api/observe/mcp/add', { server }).then((r) => onDone(r.info), (e) => setMsg(e.message))}>

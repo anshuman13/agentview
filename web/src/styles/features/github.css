@@ -32,7 +32,7 @@
 .gh-check { flex: none; display: inline-flex; color: var(--fg-faint); }
 .gh-check.success { color: var(--ok); }
 .gh-check.failure { color: var(--err); }
-.gh-check.pending { color: var(--warn); }
+.gh-check.pending { color: var(--accent); }
 .gh-check .codicon.icon.small { font-size: var(--fs-md); }
 .gh-avatar {
   flex: none; width: var(--icon); height: var(--icon); border-radius: var(--radius-round); display: inline-flex; align-items: center; justify-content: center;

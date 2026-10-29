@@ -46,12 +46,12 @@ const CHECKS: Record<CheckState, [string, string]> = {
   none: ['circle-outline', 'No checks'],
 };
 const REVIEW: Record<string, [string, string]> = {
-  APPROVED: ['Approved', 'ok'],
-  CHANGES_REQUESTED: ['Changes requested', 'bad'],
-  REVIEW_REQUIRED: ['Review required', ''],
+  APPROVED: ['Approved', 'st-ok'],
+  CHANGES_REQUESTED: ['Changes requested', 'st-warn'],
+  REVIEW_REQUIRED: ['Review required', 'st-warn'],
   COMMENTED: ['Commented', ''],
   DISMISSED: ['Dismissed', ''],
-  PENDING: ['Pending', ''],
+  PENDING: ['Pending', 'st-warn'],
 };
 export const CheckIcon = ({ state }: { state: CheckState }) => (
   <span className={`gh-check ${state}`} title={CHECKS[state][1]}><Icon name={CHECKS[state][0]} small /></span>
@@ -59,7 +59,7 @@ export const CheckIcon = ({ state }: { state: CheckState }) => (
 export const Counts = ({ a, d }: { a: number; d: number }) => <span className="gh-counts"><span className="add">+{a}</span> <span className="del">-{d}</span></span>;
 export const StateChip = ({ state }: { state: string }) => {
   const r = REVIEW[state];
-  return r ? <span className={`chip outline pill sm ${r[1]}`}>{r[0]}</span> : null;
+  return r ? <span className={`chip pill sm ${r[1] || 'outline'}`}>{r[0]}</span> : null;
 };
 
 // The cached PR list of a repo, loaded once per cwd, for rows outside this pane.

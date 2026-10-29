@@ -15,11 +15,12 @@
 .chip.outline { background: transparent; border: 1px solid var(--border-strong); }
 .chip.pill { border-radius: var(--radius-pill); }
 .chip.sm { font-size: var(--fs-2xs); line-height: 15px; }
-.chip.ok { --tone: var(--ok); }
-.chip.bad { --tone: var(--err); }
-.chip.warn { --tone: var(--warn); }
-.chip.agent { --tone: var(--agent); }
-.chip:is(.ok, .bad, .warn, .agent) { color: var(--tone); border-color: color-mix(in srgb, var(--tone) 50%, transparent); }
+.chip.agent { --tone: var(--agent); color: var(--tone); border-color: color-mix(in srgb, var(--tone) 50%, transparent); }
+:is(.chip, .mt-count).st-err { --tone: var(--err); }
+:is(.chip, .mt-count).st-warn { --tone: var(--warn); }
+:is(.chip, .mt-count).st-ok { --tone: var(--ok); }
+:is(.chip, .mt-count).st-run { --tone: var(--accent); }
+:is(.chip, .mt-count):is(.st-err, .st-warn, .st-ok, .st-run) { color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }
 button.chip { cursor: pointer; }
 button.chip:hover { color: var(--fg); background: var(--hover); }
 
@@ -27,7 +28,7 @@ button.chip:hover { color: var(--fg); background: var(--hover); }
 .dot.ok { background: var(--ok); }
 .dot.bad { background: var(--err); }
 .dot:is(.warn, .waiting) { background: var(--warn); }
-.dot.busy { background: var(--warn); animation: pulse var(--pulse-fast) var(--ease) infinite; }
+.dot.busy { background: var(--accent); animation: pulse var(--pulse-fast) var(--ease) infinite; }
 .dot.wait { background: var(--fg-muted); animation: shimmer var(--pulse-fast) var(--ease) infinite; }
 .dot.running { background: var(--accent); animation: pulse-shrink var(--pulse) var(--ease) infinite; }
 .dot.stalled { background: var(--warn); animation: pulse-shrink var(--pulse-slow) var(--ease) infinite; }

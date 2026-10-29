@@ -8,6 +8,7 @@ import '../styles/features/deploy.css';
 
 const short = (sha: string) => sha.slice(0, 7);
 const tone = (state?: string) => (state === 'success' ? 'ok' : state === 'failure' || state === 'error' ? 'bad' : !state || state === 'inactive' ? 'off' : 'busy');
+const ST: Record<string, string> = { ok: 'st-ok', bad: 'st-err', busy: 'st-run' };
 
 let jobs: Record<string, DeployJob | null> = {};
 const subs = new Set<() => void>();
@@ -111,7 +112,7 @@ export function Deploy() {
             <span className={`dot ${tone(env.latest?.state)}`} title={env.latest?.state ?? 'Never deployed'} />
             <span className="deploy-env">{env.label}</span>
             <span className="spacer" />
-            {env.latest && env.latest.id !== env.deployed?.id && <a className="chip" href={env.latest.url} target="_blank" rel="noreferrer">{env.latest.state}</a>}
+            {env.latest && env.latest.id !== env.deployed?.id && <a className={`chip ${ST[tone(env.latest.state)] ?? ''}`} href={env.latest.url} target="_blank" rel="noreferrer">{env.latest.state}</a>}
           </div>
           {env.deployed ? (
             <div className="deploy-meta">

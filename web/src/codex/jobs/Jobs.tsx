@@ -42,7 +42,7 @@ const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && r.profi
 const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
 
 function RunStatus({ r }: { r: Run }) {
-  if (r.status === 'running') return <Icon name="loading" small spin />;
+  if (r.status === 'running') return <Icon name="loading" small spin color="var(--accent)" />;
   return <Icon name={r.status === 'ok' ? 'check' : 'error'} small color={r.status === 'ok' ? 'var(--ok)' : 'var(--err)'} />;
 }
 
