@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useAssistant, useCodex } from './data';
+import { useAssistantData, useCodex } from './data';
 import { live, type Meeting } from './data/wiki';
 import { split } from './data/engine';
 import { useView } from './view';
@@ -18,7 +18,7 @@ export function useMinute() {
 }
 
 export function useSplit() {
-  const { snap } = useAssistant();
+  const snap = useAssistantData();
   const { meetings } = useCodex();
   const { filter } = useView();
   const minute = useMinute();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAssistant } from '../data';
+import { useAssistantStore, useAssistantData } from '../data';
 import type { ItemRow } from '../data/sync';
 import { queryWords, rowMatcher } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
@@ -8,7 +8,7 @@ import { showSnack, useView } from '../view';
 
 // A loose note: a capture that is not a task. Tap to edit; the first line is its title.
 function NoteCard({ row }: { row: ItemRow }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const full = [row.title ?? '', row.text ?? ''].filter(Boolean).join('\n');
   const [text, setText] = useState<string | null>(null);
   const save = () => {
@@ -49,7 +49,7 @@ function NoteCard({ row }: { row: ItemRow }) {
 }
 
 function NewNoteCard() {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const { filter } = useView();
   const [text, setText] = useState<string | null>(null);
   const create = () => {
@@ -66,7 +66,7 @@ function NewNoteCard() {
 }
 
 export function Notes({ query }: { query: string }) {
-  const { snap } = useAssistant();
+  const snap = useAssistantData();
   const { filter } = useView();
   const words = queryWords(query);
   const hit = rowMatcher<ItemRow>(words, 'note', (r) => [r.title, r.text]);

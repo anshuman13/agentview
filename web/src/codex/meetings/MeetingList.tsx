@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { useAssistant, useCodex } from '../data';
+import { useAssistantData, useCodex } from '../data';
 import { newId } from '../data/sync';
 import { actionCount, actionCounts, dayStart, groupMeetings, live, meetingState, peopleOf, searchMeetings, trackedTopics, type Meeting } from '../data/wiki';
 import { clock } from '../time';
@@ -46,7 +46,7 @@ const Badge = memo(function Badge({ m, now, review, total, done }: { m: Meeting;
 const NO_TOPICS: string[] = [];
 
 export const MeetingRow = memo(function MeetingRow({ m, now, topics = NO_TOPICS }: { m: Meeting; now: number; topics?: string[] }) {
-  const { snap } = useAssistant();
+  const snap = useAssistantData();
   const count = actionCounts(snap.items).get(meetingKey(m)) ?? actionCount([], m);
   return <MeetingRowView m={m} now={now} topics={topics} review={count.review} total={count.total} done={count.done} />;
 });

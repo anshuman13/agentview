@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useAssistant } from './data';
+import { useAssistantData } from './data';
 import { searchAll, type Group, type Hit } from './data/search';
 import { Icon } from '../ui/Icon';
 import { setView, useView } from './view';
@@ -26,7 +26,7 @@ function Hits({ label, group, open }: { label: string; group: Group; open: (h: H
 }
 
 export function Search({ onMenu }: { onMenu: () => void }) {
-  const { snap } = useAssistant();
+  const snap = useAssistantData();
   const { filter } = useView();
   const [query, setQuery] = useState('');
   const r = useMemo(() => {

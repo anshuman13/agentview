@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAssistant } from '../data';
+import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
@@ -12,7 +12,8 @@ const day = (t: number) => new Date(t).toLocaleDateString([], { weekday: 'short'
 
 // Slack in one place: the running summary of each chat from the quarter-hourly Haiku read, and a Sonnet summary on demand.
 export function Summary({ onMenu }: { onMenu: () => void }) {
-  const { store, snap } = useAssistant();
+  const store = useAssistantStore();
+  const snap = useAssistantData();
   const [busy, setBusy] = useState(false);
   const chats = snap.chats.filter((c) => !c.deleted).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
   const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];

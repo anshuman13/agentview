@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAssistant } from '../data';
+import { useAssistantStore, useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, type Profile } from '../data/sync';
 import type { Job, Run } from '../data/wiki';
@@ -51,7 +51,8 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) 
 }
 
 function useJobs() {
-  const { snap, store } = useAssistant();
+  const store = useAssistantStore();
+  const snap = useAssistantData();
   const { filter } = useView();
   const jobs = snap.jobs.filter((j) => !j.deleted && (filter === 'all' || j.profile === filter)).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   const enable = (j: Job, on: boolean) => void store.editRow('jobs', j, { enabled: on ? 1 : 0, next_run_at: null });
@@ -188,7 +189,7 @@ function JobPage({ j }: { j: Job }) {
 
 export function Jobs({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
-  const { snap } = useAssistant();
+  const snap = useAssistantData();
   const j = open ? snap.jobs.find((x) => !x.deleted && jobKey(x) === open) : undefined;
   if (j) return <JobPage j={j} />;
   return <JobsList onMenu={onMenu} />;

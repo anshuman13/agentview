@@ -1,4 +1,4 @@
-import { useAssistant, useCodex } from '../data';
+import { useAssistantData, useCodex } from '../data';
 import { claimsMentioning, commitmentsOf, meetingsOf, pinsOf } from '../data/wiki';
 import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
@@ -8,7 +8,7 @@ import '../../styles/features/wiki.css';
 
 export function Person({ name }: { name: string }) {
   const { meetings, facts, pages } = useCodex();
-  const { snap } = useAssistant();
+  const snap = useAssistantData();
   const back = () => setView({ person: null });
   useEscapeBack(back);
   const mine = meetingsOf(meetings, name);

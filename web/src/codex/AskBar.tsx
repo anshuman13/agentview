@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAssistant, useCodex } from './data';
+import { useAssistantStore, useCodex } from './data';
 import type { Meeting } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { SNOOZES, isQuestion, parseWhen, stripWhen } from './data/engine';
@@ -46,7 +46,7 @@ const recipes = (next: Meeting | undefined): Chip[] => {
 export const prepText = (m: Meeting) => `Prepare me for "${m.title}" at ${clock(m.starts_at!)}: who is in it, related Slack threads, Linear issues and docs, and what is still open from the last time we met.`;
 
 export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Meeting; filter: Filter }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const { meetings } = useCodex();
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode | null>(null);

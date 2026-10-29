@@ -1,4 +1,4 @@
-import { useAssistant } from '../data';
+import { useAssistantStore } from '../data';
 import { atTime } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
 import type { ItemRow } from '../data/sync';
@@ -17,7 +17,7 @@ export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
 // An action from a meeting. Suggested ones are kept (Today) or dismissed (Not mine, on the meeting); unassigned ones
 // can be taken; dismissed ones restored. Each open one has a date chip.
 export function ActionRow({ row, showMeeting = false }: { row: ItemRow; showMeeting?: boolean }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const change = (patch: Patch, text: string) => {
     const before = Object.fromEntries(Object.keys(patch).map((k) => [k, row[k as keyof ItemRow]])) as Patch;
     void store.update(row, patch);

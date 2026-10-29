@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAssistant, useCodex } from './data';
+import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { briefFor, priorWith, type Meeting } from './data/wiki';
 import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
@@ -12,7 +12,8 @@ import type { useSplit } from './split';
 // The next meeting today: Prep asks Claude, Notes opens the meeting, and the mic toggle tells the transcript reader
 // that the room microphone is me.
 function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; carried: number; onPrep: () => void }) {
-  const { store, snap } = useAssistant();
+  const store = useAssistantStore();
+  const snap = useAssistantData();
   const { meetings } = useCodex();
   const prior = useMemo(() => priorWith(m, meetings, snap.items), [m, meetings, snap.items]);
   const brief = useMemo(() => briefFor(m, snap.items, snap.facts), [m, snap.items, snap.facts]);
@@ -72,7 +73,7 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
 
 // Suggested actions grouped by meeting, each group with Confirm all.
 export function Review({ rows }: { rows: ItemRow[] }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const groups = rows.reduce<ItemRow[][]>((acc, r) => {
     const g = acc.find((x) => x[0].profile === r.profile && x[0].meeting_id === r.meeting_id);
     if (g) g.push(r);
@@ -94,7 +95,7 @@ type Split = ReturnType<typeof useSplit>;
 
 // The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
 export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
-  const { snap } = useAssistant();
+  const snap = useAssistantData();
   const { filter } = useView();
   const now = Date.now();
   const minute = Math.floor(now / 60000);

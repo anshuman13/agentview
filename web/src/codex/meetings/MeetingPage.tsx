@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useAssistant, useCodex } from '../data';
+import { useAssistantStore, useAssistantData, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
@@ -16,7 +16,7 @@ import { Avatars, meetingKey } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
 
 function Series({ m }: { m: Meeting }) {
-  const { snap } = useAssistant();
+  const snap = useAssistantData();
   const { meetings } = useCodex();
   const prior = useMemo(() => seriesOf(meetings, m), [meetings, m]);
   if (!prior.length) return null;
@@ -52,7 +52,7 @@ function Fold({ title, count, children }: { title: string; count: number; childr
 }
 
 function AddAction({ m }: { m: Meeting }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const [text, setText] = useState('');
   const dictate = useDictation(text, setText);
   const add = () => {
@@ -165,7 +165,8 @@ function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
 
 // One line on where the meeting is, so an empty action list always has a reason.
 function StateLine({ m, now }: { m: Meeting; now: number }) {
-  const { store, snap } = useAssistant();
+  const store = useAssistantStore();
+  const snap = useAssistantData();
   const c = actionCount(snap.items, m);
   const others = othersOf(m).length;
   const state = meetingState(m, now);
@@ -233,7 +234,8 @@ function CopyButtons({ m, actions }: { m: Meeting; actions: ItemRow[] }) {
 }
 
 export function MeetingPage({ m }: { m: Meeting }) {
-  const { snap, store } = useAssistant();
+  const store = useAssistantStore();
+  const snap = useAssistantData();
   const all = actionsOf(snap.items, m);
   const by = (st: string) => all.filter((r) => r.status === st);
   const mine = all.filter((r) => r.status === 'open' || r.status === 'done').sort((a, b) => (ORDER[a.status ?? ''] ?? 2) - (ORDER[b.status ?? ''] ?? 2) || a.updated_at - b.updated_at);

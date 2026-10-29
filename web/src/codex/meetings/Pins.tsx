@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAssistant } from '../data';
+import { useAssistantStore } from '../data';
 import type { ItemRow } from '../data/sync';
 import type { Meeting } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
@@ -25,7 +25,7 @@ function useSelectionIn(el: React.RefObject<HTMLElement | null>) {
 }
 
 export function PinnableSummary({ m }: { m: Meeting }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const ref = useRef<HTMLParagraphElement>(null);
   const [sel, clear] = useSelectionIn(ref);
   const pin = async () => {
@@ -52,7 +52,7 @@ export function PinnableSummary({ m }: { m: Meeting }) {
 }
 
 export function PinList({ pins, onOpen }: { pins: ItemRow[]; onOpen?: (r: ItemRow) => void }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const unpin = (r: ItemRow) => {
     void store.update(r, { deleted: 1 });
     showSnack('Unpinned', () => void store.update(r, { deleted: 0 }));
