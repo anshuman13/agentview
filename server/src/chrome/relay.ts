@@ -70,6 +70,7 @@ function attach(ws: WebSocket) {
   client?.close(1000, 'replaced');
   release();
   client = ws;
+  ws.on('error', () => {});
   ws.on('message', (data: RawData, binary: boolean) => {
     const s = String(data);
     if (s.includes('"Target.attachToTarget"')) {
