@@ -6,11 +6,10 @@ import { clock } from '../time';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { setView, showSnack, useView } from '../view';
+import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import '../../styles/features/wiki.css';
 
-const HUES = ['--accent', '--claude', '--prompt', '--ok', '--warn', '--agent'];
-const hue = (name: string) => `var(${HUES[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % HUES.length]})`;
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const TOPICS_KEY = 'agentview.meetingTopics';
 export const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
@@ -20,7 +19,7 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
   const more = people.length - max;
   return (
     <span className="mt-avatars" title={people.join(', ')}>
-      {people.slice(0, more > 0 ? max : people.length).map((p) => <span key={p} style={{ '--hue': hue(p) } as React.CSSProperties}>{initials(p)}</span>)}
+      {people.slice(0, more > 0 ? max : people.length).map((p) => <span key={p}>{initials(p)}</span>)}
       {more > 0 && <span className="more">+{more}</span>}
     </span>
   );
@@ -61,7 +60,7 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, to
     <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => setView({ list: 'meetings', open: meetingKey(m), person: null })}>
       <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
       <span className="mt-body">
-        <span className="mt-title">{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
+        <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
         <span className="mt-span">
           {m.starts_at! >= new Date(now).setHours(24, 0, 0, 0) && `${new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, `}
           {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
