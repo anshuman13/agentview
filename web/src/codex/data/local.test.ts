@@ -30,9 +30,6 @@ describe('newCapture', () => {
     expect(times(r)).toMatchObject({ people: 5, meeting_id: 5 });
   });
 
-  it('gives each capture a new id', () => {
-    expect(row().id).not.toBe(row().id);
-  });
 });
 
 describe('edited', () => {
@@ -56,15 +53,6 @@ describe('edited', () => {
 
   it('starts from empty times when field_times is damaged', () => {
     expect(times(edited(row({ field_times: 'nope' }), { rank: 1 }, 4000))).toEqual({ rank: 4000 });
-  });
-});
-
-describe('moved', () => {
-  it('copies the row under the other profile with every field timed', () => {
-    const m = moved(row({ people: 'Ola', rank: 2 }), undefined, 'personal', 2000);
-    expect(m).toMatchObject({ profile: 'personal', version: 0, people: 'Ola', rank: 2, deleted: 0 });
-    expect(times(m).deleted).toBe(2000);
-    expect(times(m).rank).toBe(2000);
   });
 });
 

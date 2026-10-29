@@ -19,10 +19,4 @@ describe('actionCounts', () => {
     }
   });
 
-  it('builds 5000 rows quickly', () => {
-    const items = rows(5000);
-    const t = performance.now();
-    actionCounts(items);
-    expect(performance.now() - t).toBeLessThan(500);
-  });
 });

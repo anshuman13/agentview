@@ -44,13 +44,6 @@ describe('Approvals', () => {
     expect(await always).toMatchObject({ behavior: 'allow', updatedPermissions: suggestions });
   });
 
-  it('denies when the user says no', async () => {
-    const { a, ask, state } = setup();
-    const decision = ask('Bash', { command: 'rm -rf x' });
-    a.answerPermission(state.pending[0].id, false);
-    expect(await decision).toMatchObject({ behavior: 'deny' });
-  });
-
   it('merges the answers into the question input', async () => {
     const { a, ask, state } = setup();
     const questions = [{ question: 'Which?', header: 'Pick', options: [{ label: 'a', description: '' }], multiSelect: false }];

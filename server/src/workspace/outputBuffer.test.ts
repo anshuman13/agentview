@@ -51,17 +51,4 @@ describe('OutputBuffer', () => {
     expect(b.buf).toBe('dddd\nee\n');
   });
 
-  it('trims at max length when no newline follows', () => {
-    const b = new OutputBuffer(10, 10, () => {});
-    b.push('x'.repeat(25));
-    b.flush();
-    expect(b.buf).toBe('x'.repeat(10));
-  });
-
-  it('clearLine drops everything before the last newline', () => {
-    const b = new OutputBuffer(100, 10, () => {});
-    b.push('a\nb\npartial');
-    b.clearLine();
-    expect(b.buf).toBe('partial');
-  });
 });

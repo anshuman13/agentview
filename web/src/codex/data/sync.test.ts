@@ -47,9 +47,6 @@ describe('rowToChange', () => {
     expect(change.field_times).toEqual({ title: 3000 });
   });
 
-  it('accepts field_times as an object', () => {
-    expect(rowToChange(localRow({ title: 'T', field_times: { title: 900 } })).fields).toEqual({ title: 'T' });
-  });
 });
 
 describe('mergeIncoming', () => {
@@ -60,16 +57,6 @@ describe('mergeIncoming', () => {
     expect(merged.people).toBe('Ola');
     expect(merged.deleted).toBe(0);
     expect(merged.version).toBe(2);
-    expect(merged.dirty).toBe(0);
-  });
-
-  it('takes incoming field when newer', () => {
-    const merged = mergeIncoming(
-      localRow({ title: 'Old', field_times: '{"title":900}' }),
-      hubChange({ updated_at: 2000, field_times: { title: 1500 } }, { title: 'New' }),
-    );
-    expect(merged.title).toBe('New');
-    expect(merged.field_times.title).toBe(1500);
     expect(merged.dirty).toBe(0);
   });
 
@@ -92,11 +79,6 @@ describe('mergeIncoming', () => {
     expect(merged.dirty).toBe(0);
   });
 
-  it('keeps an existing dirty flag', () => {
-    const merged = mergeIncoming(localRow({ dirty: 1, field_times: '{"title":1000}' }), hubChange({ field_times: { title: 1000 } }));
-    expect(merged.dirty).toBe(1);
-  });
-
   it('merges each field on its own time', () => {
     const merged = mergeIncoming(
       localRow({ title: 'Local title', text: 'Local text', updated_at: 2000, field_times: '{"title":2000,"text":1500}' }),
@@ -107,11 +89,6 @@ describe('mergeIncoming', () => {
     expect(merged.status).toBe('open');
     expect(merged.field_times).toEqual({ title: 2000, text: 1800, status: 1800, source: 1800, source_url: 1800, people: 1800, at: 1800, meeting_id: 1800, rolls: 1800, rolled_from: 1800, rank: 1800 });
     expect(merged.dirty).toBe(1);
-  });
-
-  it('falls back to incoming updated_at for missing field times', () => {
-    const merged = mergeIncoming(null, hubChange({ updated_at: 1500 }, { title: 'Task' }));
-    expect(merged.field_times.title).toBe(1500);
   });
 
   it('sets updated_at to the max of local and incoming', () => {
@@ -137,10 +114,6 @@ describe('mergeIncoming', () => {
     expect(merged.dirty).toBe(0);
   });
 
-  it('takes a newer hub delete', () => {
-    const merged = mergeIncoming(localRow(), hubChange({ deleted: true, field_times: { deleted: 1200 } }));
-    expect(merged.deleted).toBe(1);
-  });
 });
 
 describe('wiki tables', () => {

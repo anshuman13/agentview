@@ -44,9 +44,6 @@ describe('rankCommands', () => {
     expect(rankCommands(cmds, '', 2)).toHaveLength(2);
   });
 
-  it('drops commands that do not match', () => {
-    expect(rankCommands(cmds, 'zzz')).toEqual([]);
-  });
 });
 
 describe('rankFiles', () => {

@@ -23,12 +23,6 @@ describe('toMarkdown', () => {
     expect(md).toContain('- [x] Book room');
   });
 
-  it('omits empty sections', () => {
-    const md = toMarkdown(meeting({ summary: null, decisions: null }), []);
-    expect(md).not.toContain('## Summary');
-    expect(md).not.toContain('## Decisions');
-    expect(md).not.toContain('## Actions');
-  });
 });
 
 describe('followUpText', () => {

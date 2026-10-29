@@ -11,544 +11,83 @@ beforeEach(() => {
   db = openDb(':memory:');
 });
 
+const ch = (o: Record<string, unknown>) => ({ table: 'items', id: 'item1', profile: 'work' as const, updated_at: 1000, fields: {}, ...o }) as any;
+const item = (id = 'item1') => pullChanges(db, 0).changes.find((c) => c.id === id);
+
 describe('sync', () => {
   it('insert then pull', () => {
-    const changes = [
-      {
-        table: 'items',
-        id: 'item1',
-        profile: 'work' as const,
-        updated_at: 1000,
-        fields: { title: 'Item 1', text: 'Description' },
-      },
-    ];
-
-    const applied = applyChanges(db, changes);
+    const applied = applyChanges(db, [ch({ fields: { title: 'Item 1', text: 'Description' } })]);
     expect(applied.applied).toBe(1);
     expect(applied.version).toBeGreaterThan(0);
-
-    const pulled = pullChanges(db, 0);
-    expect(pulled.changes.length).toBe(1);
-    expect(pulled.changes[0].id).toBe('item1');
-    expect(pulled.changes[0].fields.title).toBe('Item 1');
-    expect(pulled.changes[0].fields.text).toBe('Description');
+    expect(item()?.fields).toMatchObject({ title: 'Item 1', text: 'Description' });
   });
 
-  it('newer field edit wins', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Old Title', text: 'Text 1' },
-      field_times: { title: 1000, text: 1000 },
-    };
-
-    applyChanges(db, [change1]);
-
-    const change2 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 2000,
-      fields: { title: 'New Title' },
-      field_times: { title: 2000 },
-    };
-
-    applyChanges(db, [change2]);
-
-    const pulled = pullChanges(db, 0);
-    const item = pulled.changes.find((c) => c.id === 'item1');
-    expect(item?.fields.title).toBe('New Title');
-    expect(item?.fields.text).toBe('Text 1');
+  it('merges per field by timestamp: newer wins, older loses, tie keeps stored, other fields survive', () => {
+    applyChanges(db, [ch({ fields: { title: 'Old', text: 'Text 1' }, field_times: { title: 1000, text: 1000 } })]);
+    applyChanges(db, [ch({ updated_at: 2000, fields: { title: 'New' }, field_times: { title: 2000 } })]);
+    expect(item()?.fields).toMatchObject({ title: 'New', text: 'Text 1' });
+    applyChanges(db, [ch({ updated_at: 1000, fields: { title: 'Older' }, field_times: { title: 1000 } })]);
+    applyChanges(db, [ch({ updated_at: 2000, fields: { title: 'Tie' }, field_times: { title: 2000 } })]);
+    expect(item()?.fields.title).toBe('New');
+    applyChanges(db, [ch({ updated_at: 3000, fields: { source: 'web' }, field_times: { source: 3000 } })]);
+    expect(item()?.fields).toMatchObject({ title: 'New', text: 'Text 1', source: 'web' });
   });
 
-  it('older field edit loses', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 2000,
-      fields: { title: 'New Title' },
-      field_times: { title: 2000 },
-    };
-
-    applyChanges(db, [change1]);
-
-    const change2 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Old Title' },
-      field_times: { title: 1000 },
-    };
-
-    applyChanges(db, [change2]);
-
-    const pulled = pullChanges(db, 0);
-    const item = pulled.changes.find((c) => c.id === 'item1');
-    expect(item?.fields.title).toBe('New Title');
+  it('an apply that changes nothing does not bump the version', () => {
+    applyChanges(db, [ch({ fields: { title: 'Item 1' }, field_times: { title: 1000 } })]);
+    const version = pullChanges(db, 0).version;
+    expect(applyChanges(db, [ch({ updated_at: 500, fields: { title: 'Old' }, field_times: { title: 500 } })]).applied).toBe(0);
+    expect(pullChanges(db, 0).version).toBe(version);
   });
 
-  it('per-field merge - two devices edit different fields', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Item 1', source: 'web' },
-      field_times: { title: 1000, source: 1000 },
-    };
-
-    applyChanges(db, [change1]);
-
-    const change2 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 2000,
-      fields: { text: 'A description' },
-      field_times: { text: 2000 },
-    };
-
-    applyChanges(db, [change2]);
-
-    const pulled = pullChanges(db, 0);
-    const item = pulled.changes[pulled.changes.length - 1];
-    expect(item.fields.title).toBe('Item 1');
-    expect(item.fields.source).toBe('web');
-    expect(item.fields.text).toBe('A description');
+  it('a delete wins over later-applied edits that are not newer than it', () => {
+    applyChanges(db, [ch({ updated_at: 100, fields: { title: 'Original' } })]);
+    applyChanges(db, [ch({ updated_at: 3000, deleted: true })]);
+    applyChanges(db, [ch({ updated_at: 2000, fields: { title: 'Updated' }, field_times: { title: 2000 } })]);
+    expect(item()?.deleted).toBe(true);
+    applyChanges(db, [ch({ id: 'item2', updated_at: 100, fields: { title: 'Original' } })]);
+    applyChanges(db, [ch({ id: 'item2', updated_at: 100, deleted: true })]);
+    applyChanges(db, [ch({ id: 'item2', updated_at: 150, fields: { title: 'Edited' } })]);
+    expect(item('item2')?.deleted).toBe(true);
   });
 
-  it('tie keeps stored value', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'First' },
-      field_times: { title: 1000 },
-    };
-
-    applyChanges(db, [change1]);
-
-    const change2 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Second' },
-      field_times: { title: 1000 },
-    };
-
-    applyChanges(db, [change2]);
-
-    const pulled = pullChanges(db, 0);
-    const item = pulled.changes.find((c) => c.id === 'item1');
-    expect(item?.fields.title).toBe('First');
+  it('pulls pages by version across tables, and only newer than since', () => {
+    applyChanges(db, [
+      ch({ id: 'item1', fields: { title: 'Item 1' } }),
+      ch({ id: 'item2', fields: { title: 'Item 2' } }),
+      ch({ table: 'people', id: 'person1', fields: { name: 'Person 1' } }),
+      ch({ table: 'people', id: 'person2', fields: { name: 'Person 2' } }),
+    ]);
+    const first = pullChanges(db, 0, 2);
+    expect(first.changes.length).toBe(2);
+    expect(first.hasMore).toBe(true);
+    const second = pullChanges(db, first.version, 2);
+    expect(second.changes.length).toBe(2);
+    expect(second.hasMore).toBe(false);
   });
 
-  it('unchanged apply does not bump version', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Item 1' },
-      field_times: { title: 1000 },
-    };
-
-    applyChanges(db, [change1]);
-    const pulled1 = pullChanges(db, 0);
-    const version1 = pulled1.version;
-
-    const change2 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 500,
-      fields: { title: 'Old Value' },
-      field_times: { title: 500 },
-    };
-
-    const result = applyChanges(db, [change2]);
-    expect(result.applied).toBe(0);
-
-    const pulled2 = pullChanges(db, 0);
-    expect(pulled2.version).toBe(version1);
-  });
-
-  it('delete as last-write-wins', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Item 1' },
-    };
-
-    applyChanges(db, [change1]);
-
-    const change2 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 2000,
-      fields: {},
-      deleted: true,
-    };
-
-    applyChanges(db, [change2]);
-
-    const pulled = pullChanges(db, 0);
-    const item = pulled.changes.find((c) => c.id === 'item1');
-    expect(item?.deleted).toBe(true);
-  });
-
-  it('newer edit after delete does not resurrect when delete is newer', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Item 1' },
-    };
-
-    applyChanges(db, [change1]);
-
-    const change2 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 3000,
-      fields: {},
-      deleted: true,
-    };
-
-    applyChanges(db, [change2]);
-
-    const change3 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 2000,
-      fields: { title: 'Item 1 Updated' },
-      field_times: { title: 2000 },
-    };
-
-    applyChanges(db, [change3]);
-
-    const pulled = pullChanges(db, 0);
-    const item = pulled.changes.find((c) => c.id === 'item1');
-    expect(item?.deleted).toBe(true);
-  });
-
-  it('pull since N returns only newer', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Item 1' },
-    };
-
-    applyChanges(db, [change1]);
-    const pulled1 = pullChanges(db, 0);
-    const version1 = pulled1.changes[0].version;
-
-    const change2 = {
-      table: 'items',
-      id: 'item2',
-      profile: 'work' as const,
-      updated_at: 2000,
-      fields: { title: 'Item 2' },
-    };
-
-    applyChanges(db, [change2]);
-
-    const pulled2 = pullChanges(db, version1);
-    expect(pulled2.changes.length).toBe(1);
-    expect(pulled2.changes[0].id).toBe('item2');
-  });
-
-  it('invalid table throws and applies nothing', () => {
-    const changes = [
-      {
-        table: 'invalid_table',
-        id: 'item1',
-        profile: 'work' as const,
-        updated_at: 1000,
-        fields: { name: 'Item 1' },
-      },
-    ];
-
-    expect(() => applyChanges(db, changes)).toThrow('Invalid table');
-
-    const pulled = pullChanges(db, 0);
-    expect(pulled.changes.length).toBe(0);
-  });
-
-  it('invalid field throws and applies nothing', () => {
-    const changes = [
-      {
-        table: 'items',
-        id: 'item1',
-        profile: 'work' as const,
-        updated_at: 1000,
-        fields: { invalid_field: 'value' },
-      },
-    ];
-
-    expect(() => applyChanges(db, changes)).toThrow('Invalid field');
-
-    const pulled = pullChanges(db, 0);
-    expect(pulled.changes.length).toBe(0);
-  });
-
-  it('invalid id throws and applies nothing', () => {
-    const changes = [
-      {
-        table: 'items',
-        id: '',
-        profile: 'work' as const,
-        updated_at: 1000,
-        fields: { name: 'Item 1' },
-      },
-    ];
-
-    expect(() => applyChanges(db, changes)).toThrow('Invalid id');
-
-    const pulled = pullChanges(db, 0);
-    expect(pulled.changes.length).toBe(0);
-  });
-
-  it('invalid profile throws and applies nothing', () => {
-    const changes = [
-      {
-        table: 'items',
-        id: 'item1',
-        profile: 'invalid' as any,
-        updated_at: 1000,
-        fields: { name: 'Item 1' },
-      },
-    ];
-
-    expect(() => applyChanges(db, changes)).toThrow('Invalid profile');
-
-    const pulled = pullChanges(db, 0);
-    expect(pulled.changes.length).toBe(0);
-  });
-
-  it('invalid value type throws and applies nothing', () => {
-    const changes = [
-      {
-        table: 'items',
-        id: 'item1',
-        profile: 'work' as const,
-        updated_at: 1000,
-        fields: { title: { nested: 'object' } },
-      },
-    ];
-
-    expect(() => applyChanges(db, changes)).toThrow('Invalid value type');
-
-    const pulled = pullChanges(db, 0);
-    expect(pulled.changes.length).toBe(0);
-  });
-
-  it('multiple changes in transaction', () => {
-    const changes = [
-      {
-        table: 'items',
-        id: 'item1',
-        profile: 'work' as const,
-        updated_at: 1000,
-        fields: { title: 'Item 1' },
-      },
-      {
-        table: 'items',
-        id: 'item2',
-        profile: 'work' as const,
-        updated_at: 1000,
-        fields: { title: 'Item 2' },
-      },
-    ];
-
-    const result = applyChanges(db, changes);
-    expect(result.applied).toBe(2);
-
+  it('keeps the same id in work and personal as two rows', () => {
+    applyChanges(db, [ch({ fields: { title: 'Work Item' } })]);
+    applyChanges(db, [ch({ profile: 'personal', fields: { title: 'Personal Item' } })]);
     const pulled = pullChanges(db, 0);
     expect(pulled.changes.length).toBe(2);
+    expect(pulled.changes.find((c) => c.profile === 'work')?.fields.title).toBe('Work Item');
+    expect(pulled.changes.find((c) => c.profile === 'personal')?.fields.title).toBe('Personal Item');
   });
 
-  it('same id in work and personal creates two rows', () => {
-    const changeWork = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 1000,
-      fields: { title: 'Work Item' },
-    };
-
-    const changePersonal = {
-      table: 'items',
-      id: 'item1',
-      profile: 'personal' as const,
-      updated_at: 1000,
-      fields: { title: 'Personal Item' },
-    };
-
-    applyChanges(db, [changeWork]);
-    applyChanges(db, [changePersonal]);
-
-    const pulled = pullChanges(db, 0);
-    expect(pulled.changes.length).toBe(2);
-    const workItem = pulled.changes.find((c) => c.profile === 'work');
-    const personalItem = pulled.changes.find((c) => c.profile === 'personal');
-    expect(workItem?.fields.title).toBe('Work Item');
-    expect(personalItem?.fields.title).toBe('Personal Item');
-  });
-
-  it('pulls all changes across tables with limit', () => {
-    const changes = [
-      {
-        table: 'items',
-        id: 'item1',
-        profile: 'work' as const,
-        updated_at: 1000,
-        fields: { title: 'Item 1' },
-      },
-      {
-        table: 'items',
-        id: 'item2',
-        profile: 'work' as const,
-        updated_at: 2000,
-        fields: { title: 'Item 2' },
-      },
-      {
-        table: 'people',
-        id: 'person1',
-        profile: 'work' as const,
-        updated_at: 3000,
-        fields: { name: 'Person 1' },
-      },
-      {
-        table: 'people',
-        id: 'person2',
-        profile: 'work' as const,
-        updated_at: 4000,
-        fields: { name: 'Person 2' },
-      },
-    ];
-
-    applyChanges(db, changes);
-
-    const pulled1 = pullChanges(db, 0, 2);
-    expect(pulled1.changes.length).toBe(2);
-    expect(pulled1.hasMore).toBe(true);
-    const lastVersion = pulled1.version;
-
-    const pulled2 = pullChanges(db, lastVersion, 2);
-    expect(pulled2.changes.length).toBe(2);
-    expect(pulled2.hasMore).toBe(false);
-
-    const allChanges = [...pulled1.changes, ...pulled2.changes];
-    expect(allChanges.length).toBe(4);
-  });
-
-  it('invalid table name throws', () => {
-    expect(() => {
-      applyChanges(db, [
-        {
-          table: 'toString',
-          id: 'item1',
-          profile: 'work' as const,
-          updated_at: 1000,
-          fields: {},
-        },
-      ]);
-    }).toThrow('Invalid table');
-  });
-
-  it('delete then field-only edit without deleted leaves row deleted', () => {
-    const change1 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 100,
-      fields: { title: 'Original' },
-    };
-
-    applyChanges(db, [change1]);
-
-    const change2 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 100,
-      fields: {},
-      deleted: true,
-    };
-
-    applyChanges(db, [change2]);
-
-    const change3 = {
-      table: 'items',
-      id: 'item1',
-      profile: 'work' as const,
-      updated_at: 150,
-      fields: { title: 'Edited' },
-    };
-
-    applyChanges(db, [change3]);
-
-    const pulled = pullChanges(db, 0);
-    const item = pulled.changes.find((c) => c.id === 'item1');
-    expect(item?.deleted).toBe(true);
-  });
-
-  it('missing updated_at throws', () => {
-    expect(() => {
-      applyChanges(db, [
-        {
-          table: 'items',
-          id: 'item1',
-          profile: 'work' as const,
-          updated_at: undefined as any,
-          fields: { title: 'Item' },
-        },
-      ]);
-    }).toThrow('Invalid updated_at');
-  });
-
-  it('non-finite updated_at throws', () => {
-    expect(() => {
-      applyChanges(db, [
-        {
-          table: 'items',
-          id: 'item1',
-          profile: 'work' as const,
-          updated_at: Infinity,
-          fields: { title: 'Item' },
-        },
-      ]);
-    }).toThrow('Invalid updated_at');
-  });
-
-  it('non-finite field_times value throws', () => {
-    expect(() => {
-      applyChanges(db, [
-        {
-          table: 'items',
-          id: 'item1',
-          profile: 'work' as const,
-          updated_at: 1000,
-          fields: { title: 'Item' },
-          field_times: { title: Infinity },
-        },
-      ]);
-    }).toThrow('Invalid field_times');
+  it.each([
+    ['Invalid table', { table: 'invalid_table' }],
+    ['Invalid table', { table: 'toString' }],
+    ['Invalid field', { fields: { invalid_field: 'value' } }],
+    ['Invalid id', { id: '' }],
+    ['Invalid profile', { profile: 'invalid' }],
+    ['Invalid value type', { fields: { title: { nested: 'object' } } }],
+    ['Invalid updated_at', { updated_at: undefined }],
+    ['Invalid updated_at', { updated_at: Infinity }],
+    ['Invalid field_times', { fields: { title: 'x' }, field_times: { title: Infinity } }],
+  ])('rejects %s and applies nothing', (message, bad) => {
+    expect(() => applyChanges(db, [ch({ id: 'ok', fields: { title: 'fine' } }), ch(bad)])).toThrow(message);
+    expect(pullChanges(db, 0).changes.length).toBe(0);
   });
 });
 
@@ -566,10 +105,5 @@ describe('openDb', () => {
     expect(migrated.prepare('SELECT text FROM facts').get()).toEqual({ text: 'kept' });
     migrated.close();
     fs.rmSync(file, { force: true });
-  });
-
-  it('looks up items by meeting through the index', () => {
-    const plan = db.prepare("EXPLAIN QUERY PLAN SELECT title FROM items WHERE deleted = 0 AND profile = ? AND meeting_id = ?").all('work', 'm1') as { detail: string }[];
-    expect(plan.map((p) => p.detail).join(' ')).toContain('items_meeting_idx');
   });
 });

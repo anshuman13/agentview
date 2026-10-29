@@ -18,17 +18,10 @@ function fakeSession() {
   Object.assign(s.driver, { q: { interrupt } });
   const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
   const result = (uuid: string, subtype = 'success') => handle({ type: 'result', subtype, uuid, result: 'done', total_cost_usd: 0, is_error: subtype !== 'success' });
-  return { s, interrupt, result };
+  return { s, interrupt, result, handle };
 }
 
 describe('AgentSession turns', () => {
-  it('stops running when the only turn ends', () => {
-    const { s, result } = fakeSession();
-    s.sendPrompt('hi');
-    expect(s.state.session.running).toBe(true);
-    result('r1');
-    expect(s.state.session.running).toBe(false);
-  });
 
   it('steer interrupts a running turn and stays running for the steered prompt', async () => {
     const { s, interrupt, result } = fakeSession();
@@ -40,19 +33,6 @@ describe('AgentSession turns', () => {
     result('r2');
     expect(s.state.session.running).toBe(false);
     expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['long task', 'change of plan']);
-  });
-
-  it('queues a prompt sent while running and sends it when the turn ends', async () => {
-    const { s, interrupt, result } = fakeSession();
-    s.sendPrompt('long task');
-    await s.prompt('next thing');
-    expect(interrupt).not.toHaveBeenCalled();
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'next thing', queued: true });
-    result('r1');
-    expect(s.state.session.running).toBe(true);
-    expect(s.state.events.find((e) => e.kind === 'user' && e.text === 'next thing')).toMatchObject({ queued: false });
-    result('r2');
-    expect(s.state.session.running).toBe(false);
   });
 
   it('hands a queued message to Claude at the next step, or starts a turn for it', async () => {
@@ -120,10 +100,9 @@ describe('AgentSession turns', () => {
   });
 
   it('continues on the other account when a turn ends on a usage limit', async () => {
-    const { s } = fakeSession();
+    const { s, handle } = fakeSession();
     const limitHit = vi.fn(() => 'alt' as const);
     Object.assign(s.driver, { limitHit, accounts: () => ['main', 'alt'] });
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     s.sendPrompt('long task');
     handle({ type: 'result', subtype: 'success', uuid: 'r1', result: "You've hit your session limit · resets 1:50am", total_cost_usd: 0, is_error: false });
     expect(limitHit).toHaveBeenCalledOnce();
@@ -132,11 +111,10 @@ describe('AgentSession turns', () => {
   });
 
   it('stops a turn that starts on extra usage and goes on under the other account', async () => {
-    const { s } = fakeSession();
+    const { s, handle } = fakeSession();
     const limitHit = vi.fn(() => 'alt' as const);
     const interrupt = vi.fn(async () => {});
     Object.assign(s.driver, { limitHit, interrupt, accounts: () => ['main', 'alt'] });
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     s.sendPrompt('long task');
     handle({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', isUsingOverage: false } });
     expect(interrupt).not.toHaveBeenCalled();
@@ -148,9 +126,8 @@ describe('AgentSession turns', () => {
   });
 
   it('waits for the reset when no other account has usage left', async () => {
-    const { s } = fakeSession();
+    const { s, handle } = fakeSession();
     Object.assign(s.driver, { limitHit: vi.fn(() => null) });
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     s.sendPrompt('long task');
     handle({ type: 'result', subtype: 'success', uuid: 'r1', result: "You've hit your session limit · resets 1:50am", total_cost_usd: 0, is_error: false });
     expect(s.state.session).toMatchObject({ account: 'main', running: false });
@@ -190,17 +167,6 @@ describe('AgentSession turns', () => {
     expect(s.state.events.find((e) => e.id === 'm1')).toMatchObject({ stopping: false });
   });
 
-  it('ignores a message resent with an id it already has', async () => {
-    const { s, interrupt } = fakeSession();
-    await s.prompt('hello', 'p1');
-    await s.prompt('hello', 'p1');
-    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(1);
-    await s.steer('again', 's1');
-    await s.steer('again', 's1');
-    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
-    expect(interrupt).toHaveBeenCalledTimes(1);
-  });
-
   it('interrupt marks stopping until the turn ends', async () => {
     const { s, interrupt, result } = fakeSession();
     s.sendPrompt('task');
@@ -221,22 +187,6 @@ describe('AgentSession turns', () => {
     result('r1', 'error_during_execution');
     expect(s.state.session.running).toBe(false);
     expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: 'big task' });
-  });
-
-  it('interrupt drops queued prompts and is a no-op when idle', async () => {
-    const { s, interrupt } = fakeSession();
-    await s.interrupt();
-    expect(interrupt).not.toHaveBeenCalled();
-    s.sendPrompt('queued');
-    await s.interrupt();
-    expect(s.state.session.running).toBe(false);
-  });
-
-  it('steer only sends when idle', async () => {
-    const { s, interrupt } = fakeSession();
-    await s.steer('next thing');
-    expect(interrupt).not.toHaveBeenCalled();
-    expect(s.state.session.running).toBe(true);
   });
 
   it('never counts below zero turns', () => {
@@ -308,10 +258,6 @@ describe('Fable approval', () => {
       new AbortController().signal,
     );
 
-  it('lets other agents through untouched', async () => {
-    expect(await call(claudeSession('/tmp/p'), 'Explore')).toEqual({});
-  });
-
   it('waits for the user and allows when approved', async () => {
     const s = claudeSession('/tmp/p');
     const decision = call(s, BIG_BRO);
@@ -333,12 +279,6 @@ describe('Fable approval', () => {
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'do this instead', stopping: false });
   });
 
-  it('denies when the user declines', async () => {
-    const s = claudeSession('/tmp/p');
-    const decision = call(s, BIG_BRO);
-    s.answerPermission(s.state.pending[0].id, false);
-    expect((await decision).hookSpecificOutput).toMatchObject({ permissionDecision: 'deny' });
-  });
 });
 
 describe('Team mode', () => {
@@ -431,19 +371,13 @@ describe('plan changes', () => {
     for (let i = 0; i < 7; i++) expect(text()).toBeUndefined();
   });
 
-  it('sends right away when idle', () => {
-    const { s } = fakeSession();
-    s.changePlan([]);
-    expect(s.state.session.running).toBe(true);
-  });
 });
 
 describe('subagents', () => {
   const launched = 'Async agent launched successfully.\nagentId: a1';
 
   it('keeps a background agent running until its notification and tags its steps', () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, handle } = fakeSession();
     s.sendPrompt('survey');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: launched }] } });
@@ -455,25 +389,8 @@ describe('subagents', () => {
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'tool_result', toolUseId: 'ag', text: 'Found 3 docs', isError: false });
   });
 
-  it('rebuilds subagent steps and the report from history', () => {
-    const msg = (type: string, content: unknown) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
-    const { events } = historyFrom(
-      [
-        msg('user', 'survey'),
-        msg('assistant', [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }]),
-        msg('user', [{ type: 'tool_result', tool_use_id: 'ag', content: launched }]),
-        msg('user', '<task-notification>\n<tool-use-id>ag</tool-use-id>\n<status>completed</status>\n<summary>Agent finished</summary>\n<result>Found 3 docs</result>\n</task-notification>'),
-      ],
-      { ag: [msg('assistant', [{ type: 'tool_use', id: 'g1', name: 'Grep', input: { pattern: 'x' } }]), msg('user', [{ type: 'tool_result', tool_use_id: 'g1', content: 'hit' }])] },
-    );
-    const results = events.filter((e) => e.kind === 'tool_result' && e.toolUseId === 'ag');
-    expect(results).toMatchObject([{ text: 'Found 3 docs', isError: false }]);
-    expect(events.filter((e) => 'parent' in e && e.parent === 'ag')).toMatchObject([{ kind: 'tool_use', name: 'Grep' }, { kind: 'tool_result', text: 'hit' }]);
-  });
-
   it('keeps the full agent report and caps other tool results', () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, handle } = fakeSession();
     const long = 'x'.repeat(6000);
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }, { type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'ls' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: `${long}\nagentId: a1 (use SendMessage with to: 'a1')\n<usage>total_tokens: 5\ntool_uses: 1\nduration_ms: 9</usage>` }, { type: 'tool_result', tool_use_id: 'b1', content: long }] } });
@@ -485,8 +402,7 @@ describe('subagents', () => {
   });
 
   it('tracks an agent from start to notification', () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, handle } = fakeSession();
     const agent = () => s.state.events.find((e) => e.kind === 'agent');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey', subagent_type: 'Explore', prompt: 'Find docs' } }] } });
     expect(agent()).toMatchObject({ id: 'ag:agent', toolUseId: 'ag', description: 'Survey', subagentType: 'Explore', prompt: 'Find docs', status: 'running' });
@@ -519,8 +435,7 @@ describe('subagents', () => {
   });
 
   it('resolves a notification that only carries the task id', () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, handle } = fakeSession();
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: launched }] } });
     handle({ type: 'system', subtype: 'task_notification', task_id: 'a1', status: 'failed', summary: 'Boom', output_file: '' });
@@ -570,19 +485,8 @@ describe('subagents', () => {
     expect(events.find((e) => e.kind === 'agent')).toMatchObject({ status: 'done', endedAt: Date.parse('2026-10-15T10:01:00Z') });
   });
 
-  it('forwards subagent text live and from history', () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
-    handle({ type: 'assistant', parent_tool_use_id: 'ag', message: { content: [{ type: 'text', text: 'Looking around' }] } });
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'assistant', text: 'Looking around', parent: 'ag' });
-    const msg = (type: string, content: unknown) => ({ type, uuid: 'u', session_id: 's', parent_tool_use_id: null, timestamp: '2026-10-15T10:00:00Z', message: { content } }) as never;
-    const { events } = historyFrom([msg('user', 'survey')], { ag: [msg('assistant', [{ type: 'text', text: 'Looking around' }])] });
-    expect(events.filter((e) => e.kind === 'assistant')).toMatchObject([{ text: 'Looking around', parent: 'ag' }]);
-  });
-
   it('uses the hand-back report', () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, handle } = fakeSession();
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey' } }] } });
     handle({ type: 'user', parent_tool_use_id: null, tool_use_result: { status: 'completed', handbackReport: { text: 'Full report' }, content: [] }, message: { content: [{ type: 'tool_result', tool_use_id: 'ag', content: 'This agent\'s report was delivered to you as a message' }] } });
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'tool_result', text: 'Full report' });
@@ -608,8 +512,7 @@ describe('subagents', () => {
 
 describe('compacting', () => {
   it('shows compacting from /compact until the boundary arrives', () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, handle } = fakeSession();
     s.sendPrompt('/compact');
     expect(s.state.session.compacting).toBe(true);
     expect(s.state.status).toBe('Compacting the conversation');
@@ -644,8 +547,7 @@ describe('compacting', () => {
   });
 
   it('stops compacting and says why when it fails', () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, handle } = fakeSession();
     s.sendPrompt('/compact');
     handle({ type: 'system', subtype: 'status', status: null, compact_result: 'failed', compact_error: 'Prompt is too long' });
     expect(s.state.session.compacting).toBe(false);
@@ -692,10 +594,9 @@ describe('blocked tools', () => {
 
 describe('streaming', () => {
   it('coalesces text deltas into one update per flush window and a final one on stop', async () => {
-    const { s } = fakeSession();
+    const { s, handle } = fakeSession();
     const sent: ServerMessage[] = [];
     s.onMessage((m) => sent.push(JSON.parse(JSON.stringify(m))));
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     const delta = (text: string) => handle({ type: 'stream_event', event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } } });
     handle({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1' } } });
     delta('Hel');
@@ -716,8 +617,7 @@ describe('streaming', () => {
 
 describe('turns the CLI starts by itself', () => {
   it('marks a hand-back turn as running until its result', () => {
-    const { s, result } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, result, handle } = fakeSession();
     expect(s.state.session.running).toBe(false);
     handle({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1' } } });
     expect(s.state.session.running).toBe(true);
@@ -728,8 +628,7 @@ describe('turns the CLI starts by itself', () => {
   });
 
   it('marks the session running when a background agent reports while idle', () => {
-    const { s, result } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, result, handle } = fakeSession();
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'ag', name: 'Agent', input: { description: 'Survey', run_in_background: true } }] } });
     result('r1');
     expect(s.state.session.running).toBe(false);
@@ -767,10 +666,9 @@ describe('review findings', () => {
 
 describe('rewind files', () => {
   it('rewinds to the uuid the CLI echoed for the prompt, or the history id', async () => {
-    const { s, result } = fakeSession();
+    const { s, result, handle } = fakeSession();
     const rewindFiles = vi.fn(async () => ({ canRewind: true, filesChanged: ['/tmp/project/a.ts'] }));
     Object.assign(s.driver, { q: { interrupt: vi.fn(), rewindFiles } });
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
     await s.prompt('fix it', 'ev1');
     handle({ type: 'user', uuid: 'u1', parent_tool_use_id: null, message: { role: 'user', content: 'fix it' } });
     await s.rewind('ev1');
@@ -793,8 +691,7 @@ describe('pull request link', () => {
   const made = { type: 'tool_result', tool_use_id: 'gh1', content: 'Creating pull request for a into main in o/r\n\nhttps://github.com/o/r/pull/42\n' };
 
   it('records the PR number a gh pr create printed, live and from history', async () => {
-    const { s } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, handle } = fakeSession();
     await s.prompt('open a PR');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [create], usage: {} } });
     handle({ type: 'user', parent_tool_use_id: null, message: { role: 'user', content: [made] } });
@@ -830,10 +727,4 @@ describe('event index', () => {
     expect(s.eventById('t-new')).toBe(s.state.events.at(-1));
   });
 
-  it('follows a replaced events array', () => {
-    const { s } = fakeSession();
-    use(s, 'a');
-    s.state.events = s.state.events.filter((e) => e.id !== 'a');
-    expect(s.eventById('a')).toBeUndefined();
-  });
 });

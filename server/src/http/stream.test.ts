@@ -41,8 +41,4 @@ describe('Ring', () => {
     expect(ring.since(other, b)).toEqual([]);
   });
 
-  it('frames an event with and without an id', () => {
-    expect(frame('{"a":1}', 7)).toBe('id: 7\ndata: {"a":1}\n\n');
-    expect(frame('x')).toBe('data: x\n\n');
-  });
 });

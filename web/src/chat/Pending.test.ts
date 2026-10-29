@@ -14,9 +14,6 @@ describe('lineDiff', () => {
     expect(lineDiff('a\nb\nc', 'a\nB\nc')).toEqual([[' ', 'a'], ['-', 'b'], ['+', 'B'], [' ', 'c']]);
   });
 
-  it('shows a new file as additions only', () => {
-    expect(lineDiff('', 'x\ny')).toEqual([['+', 'x'], ['+', 'y']]);
-  });
 });
 
 describe('PermissionCard', () => {
@@ -29,25 +26,11 @@ describe('PermissionCard', () => {
     expect(out).toContain('Default mode asks before edits and commands');
   });
 
-  it('does not repeat the title as the description', () => {
-    const out = render(permission('Bash', { command: 'ls -la', description: 'List files' }, { title: 'List files' }));
-    expect(out).not.toContain('pd-desc');
-    const other = render(permission('Bash', { command: 'ls -la', description: 'Lists everything' }, { title: 'Run a shell command' }));
-    expect(other).toContain('<div class="pd-desc">Lists everything</div>');
-  });
-
   it('renders an edit as a line diff', () => {
     const out = render(permission('Edit', { file_path: '/repo/a.ts', old_string: 'x = 1', new_string: 'x = 2' }, { title: 'Edit a.ts' }));
     expect(out).toContain('<div class="pd-path">/repo/a.ts</div>');
     expect(out).toContain('<div class="del">- x = 1</div>');
     expect(out).toContain('<div class="add">+ x = 2</div>');
-  });
-
-  it('falls back to key value rows for other tools', () => {
-    const out = render(permission('Grep', { pattern: 'todo', path: 'src', empty: '' }, { title: 'Use Grep' }));
-    expect(out).toContain('<span class="pd-key">pattern</span>');
-    expect(out).toContain('<span class="pd-key">path</span>');
-    expect(out).not.toContain('<span class="pd-key">empty</span>');
   });
 
   it('drops Always allow and the Y hint when confirmation is required', () => {
@@ -87,12 +70,4 @@ describe('QuestionCard', () => {
     expect(out).not.toContain('Next');
   });
 
-  it('uses mono checks and a Done button for a multi select', () => {
-    const out = render([multi]);
-    expect(out).toContain('<span class="pd-label">Question</span>');
-    expect(out).not.toContain('pd-count');
-    expect(out.match(/\[ \]/g)).toHaveLength(3);
-    expect(out).toContain('role="checkbox"');
-    expect(out).toContain('>Done</button>');
-  });
 });

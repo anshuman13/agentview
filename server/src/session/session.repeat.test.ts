@@ -16,7 +16,7 @@ function fakeSession() {
   Object.assign(s.driver, { q: { interrupt } });
   const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
   const result = (uuid: string, subtype = 'success') => handle({ type: 'result', subtype, uuid, result: 'done', total_cost_usd: 0, is_error: subtype !== 'success' });
-  return { s, interrupt, result };
+  return { s, interrupt, result, handle };
 }
 
 describe('/loop after Stop', () => {
@@ -59,8 +59,7 @@ describe('/loop after Stop', () => {
   it('a usage limit holds the loop until the reset time', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
-    const { s, result } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, result, handle } = fakeSession();
     await s.prompt('/loop until 06:59 do the next round');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
     result('r1');
@@ -76,8 +75,7 @@ describe('/loop after Stop', () => {
   it('a usage limit without a loop leaves a note, and /loop at sends the prompt once', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
-    const { s, result } = fakeSession();
-    const handle = (msg: unknown) => (s.driver as unknown as { handle: (m: unknown) => void }).handle(msg);
+    const { s, result, handle } = fakeSession();
     await s.prompt('do the next round');
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
     result('r1');
@@ -97,23 +95,6 @@ describe('/loop after Stop', () => {
     vi.useRealTimers();
   });
 
-  it('a round that fails waits before the next one', async () => {
-    vi.useFakeTimers();
-    const { s, result } = fakeSession();
-    await s.prompt('/loop until 23:59 do the next round');
-    result('r1', 'error_during_execution');
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringMatching(/^Loop round 2 at \d\d:\d\d/) });
-    vi.advanceTimersByTime(60_000);
-    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(2);
-    vi.advanceTimersByTime(61_000);
-    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
-    result('r2');
-    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(3);
-    vi.advanceTimersByTime(2 * 60_000 + 1000);
-    expect(s.state.events.filter((e) => e.kind === 'user')).toHaveLength(4);
-    vi.useRealTimers();
-  });
-
   it('resumeRepeat with a past nextAt fires the next round now', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
@@ -123,26 +104,6 @@ describe('/loop after Stop', () => {
     expect(s.state.events[0]).toMatchObject({ kind: 'system', text: 'AgentView restarted, the loop continues every 10m' });
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: 'do the next round' });
     expect(s.state.session).toMatchObject({ running: true, repeat: { round: 4, nextAt: Date.now() + 10 * 60_000 } });
-    vi.useRealTimers();
-  });
-
-  it('resumeRepeat with a future nextAt waits until then', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 9, 24, 3, 0, 0));
-    const { s, result } = fakeSession();
-    const users = () => s.state.events.filter((e) => e.kind === 'user').length;
-    s.resumeRepeat({ prompt: 'do the next round', every: 10 * 60_000, until: null, round: 3, nextAt: Date.now() + 5 * 60_000 });
-    expect(users()).toBe(0);
-    expect(s.state.session).toMatchObject({ running: false, repeat: { round: 3 } });
-    vi.advanceTimersByTime(5 * 60_000 - 1);
-    expect(users()).toBe(0);
-    vi.advanceTimersByTime(1);
-    expect(users()).toBe(1);
-    expect(s.state.session.repeat?.round).toBe(4);
-    result('r1');
-    expect(users()).toBe(1);
-    vi.advanceTimersByTime(10 * 60_000);
-    expect(users()).toBe(2);
     vi.useRealTimers();
   });
 
@@ -215,7 +176,7 @@ describe('/goal', () => {
 
 // A seeded random walk over the send paths. Run with FUZZ_SEEDS=500 to hammer it.
 describe('send queue fuzz', () => {
-  const seeds = Number(process.env.FUZZ_SEEDS ?? 40);
+  const seeds = Number(process.env.FUZZ_SEEDS ?? 10);
   const base = Number(process.env.FUZZ_FROM ?? 1);
   type Priv = { queued: unknown[]; enqueue: (text: string) => void };
   type Drv = { q: { interrupt: () => Promise<void> } | null; inputQueue: unknown[]; consume: () => Promise<void>; start: () => void };

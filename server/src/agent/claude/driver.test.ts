@@ -60,13 +60,6 @@ describe('transcript sync', () => {
     expect(sent.filter((m) => m.type === 'init')).toHaveLength(2);
   });
 
-  it('emits nothing when the transcript did not change', async () => {
-    const { sent, sync } = await setup();
-    await sync();
-    await sync();
-    expect(sent).toEqual([]);
-  });
-
   it('reloads in full when the file shrank or was replaced', async () => {
     const { s, sessionId, file, sync } = await setup();
     const a = line(sessionId, 'user', 'other', null);

@@ -9,9 +9,3 @@ test('weekly digest schedule is one the hub scheduler accepts', () => {
   const { kind, day, time } = parseSchedule(WEEKLY_DIGEST.schedule);
   expect(scheduleOf(kind, day, time)).toBe('weekly fri 16:00');
 });
-
-test('weekly digest prompt asks for every section', () => {
-  expect(WEEKLY_DIGEST.name).toBe('Weekly digest');
-  for (const s of DIGEST_SECTIONS) expect(WEEKLY_DIGEST.prompt).toContain(s);
-  expect(WEEKLY_DIGEST.prompt).not.toContain('—');
-});

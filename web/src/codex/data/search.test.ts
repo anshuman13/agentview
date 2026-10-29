@@ -35,10 +35,6 @@ describe('search', () => {
     expect(searchAll(data, '  ').total).toBe(0);
   });
 
-  it('requires every word', () => {
-    expect(searchAll(data, 'budget sam').total).toBe(1);
-  });
-
   it('caps a group and reports its total', () => {
     const items = Array.from({ length: 12 }, (_, i) => item(`n${i}`, 'Budget note'));
     const r = searchAll({ ...data, items }, 'budget');

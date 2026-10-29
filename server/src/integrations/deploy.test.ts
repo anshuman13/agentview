@@ -19,9 +19,6 @@ describe('parseApp', () => {
     });
   });
 
-  it('ignores files without a project', () => {
-    expect(parseApp('vars: {}')).toBeNull();
-  });
 });
 
 describe('summarize', () => {

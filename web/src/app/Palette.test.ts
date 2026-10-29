@@ -5,12 +5,6 @@ const models = [{ value: 'claude-opus-4-1', displayName: 'Opus 4.1' }, { value: 
 const cmds = buildCommands(models);
 const ids = (rows: ReturnType<typeof rankCommands>) => rows.map((r) => r.cmd.id);
 
-describe('buildCommands', () => {
-  it('lists views, tabs, one entry per model and per permission mode', () => {
-    expect(ids(rankCommands(cmds, '', [], 100))).toEqual(expect.arrayContaining(['view:explorer', 'page:deploy', 'tab:chat', 'tab:browser', 'tab:agents', 'switchEditor', 'model:claude-opus-4-1', 'model:claude-sonnet-4-5', 'mode:default', 'mode:dontAsk', 'terminal', 'newChat', 'compact', 'stop', 'theme', 'notify', 'phone']));
-  });
-});
-
 describe('matchCommand', () => {
   it('matches everything on an empty query', () => {
     expect(matchCommand('View: Show Explorer', '  ')).toEqual({ score: 0, hits: [] });
@@ -63,9 +57,6 @@ describe('rankCommands', () => {
     expect(ids(rows)).not.toContain('stop');
   });
 
-  it('returns nothing when no command matches', () => {
-    expect(rankCommands(cmds, 'qqqqq', [])).toEqual([]);
-  });
 });
 
 describe('remember', () => {

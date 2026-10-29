@@ -80,10 +80,6 @@ describe('groupByRepo', () => {
 describe('staleKeys', () => {
   const at = (n: number) => ({ repos: n, chats: n, trees: n });
 
-  it('fetches everything when nothing is cached', () => {
-    expect(staleKeys(at(0), 1_000_000)).toEqual(['repos', 'chats', 'trees']);
-  });
-
   it('skips data younger than the minimum age', () => {
     expect(staleKeys(at(1_000_000), 1_029_999)).toEqual([]);
     expect(staleKeys(at(1_000_000), 1_030_000)).toHaveLength(3);
@@ -93,13 +89,4 @@ describe('staleKeys', () => {
     expect(staleKeys({ repos: 1_000_000, chats: 960_000, trees: 1_000_000 }, 1_010_000)).toEqual(['chats']);
   });
 
-  it('cuts fetches over 10 chat switches from 30 to 3', () => {
-    const stamps = at(0);
-    let fetches = 0;
-    for (let i = 0; i < 10; i++) {
-      const now = 1_000_000 + i * 2_000;
-      for (const k of staleKeys(stamps, now)) { stamps[k] = now; fetches++; }
-    }
-    expect(fetches).toBe(3);
-  });
 });

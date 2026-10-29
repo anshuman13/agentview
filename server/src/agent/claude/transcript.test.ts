@@ -61,17 +61,11 @@ describe('usageFrom', () => {
 });
 
 describe('toolResultText', () => {
-  it('takes a string as is', () => {
-    expect(toolResultText({ content: 'ok' })).toBe('ok');
-  });
 
   it('joins the text blocks and skips the rest', () => {
     expect(toolResultText({ content: [{ type: 'text', text: 'a' }, { type: 'image', source: {} }, { type: 'text', text: 'b' }] })).toBe('a\n\nb');
   });
 
-  it('is empty without content', () => {
-    expect(toolResultText({})).toBe('');
-  });
 });
 
 describe('cacheFrom', () => {

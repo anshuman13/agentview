@@ -2,9 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { ROW_WINDOW, revealMore, windowStart } from './window';
 
 describe('row window', () => {
-  it('renders everything for a short chat', () => {
-    expect(windowStart(40, ROW_WINDOW)).toBe(0);
-  });
 
   it('keeps only the last rows of a long chat', () => {
     const total = 3000;

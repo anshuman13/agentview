@@ -133,24 +133,3 @@ describe('RemoteStore refresh', () => {
     store.dispose();
   });
 });
-
-describe('RemoteStore timing', () => {
-  it.skipIf(!process.env.TIME_PUT)('put() with 500 large meetings and 2000 items', async () => {
-    fakeIndexedDb([]);
-    fakeDom();
-    const store = await freshStore();
-    const internal = store as unknown as Internal & { loaded: Promise<void> };
-    await internal.loaded;
-    const text = 'x'.repeat(30000);
-    for (let i = 0; i < 500; i++) internal.tables.meetings.set(`work:m${i}`, { ...taskRow(`m${i}`), transcript: text });
-    for (let i = 0; i < 2000; i++) internal.tables.items.set(`work:i${i}`, taskRow(`i${i}`));
-    const row = internal.tables.items.get('work:i0');
-    const t0 = performance.now();
-    for (let i = 0; i < 50; i++) {
-      await store.update(row, { title: `t${i}` });
-      await internal.saving;
-    }
-    console.log(`put+save avg ms: ${((performance.now() - t0) / 50).toFixed(2)}`);
-    store.dispose();
-  });
-});

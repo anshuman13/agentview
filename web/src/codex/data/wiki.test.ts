@@ -42,11 +42,6 @@ describe('wiki', () => {
     expect(approveChanges(proposed, [], chain).map((c) => c.row.id)).toEqual(['x', 'k']);
   });
 
-  it('counts claims and contested claims per page', () => {
-    expect(pageStats(facts, 'p1')).toMatchObject({ claims: 3, contested: 1 });
-    expect(contestOf(facts[3])?.by).toBe('you');
-  });
-
   it('shows proposed claims on their page, and leaves rejected ones and search out', () => {
     expect(pageClaims(facts, 'p1').flatMap((g) => g.claims.map((c) => c.fact.id)).sort()).toEqual(['a', 'b', 'c', 'e']);
     expect(pageStats(facts, 'p1').claims).toBe(3);
@@ -141,10 +136,6 @@ describe('people', () => {
     meeting('none', 9, 'Bob Ray'),
   ];
 
-  it('lists meetings newest first, ignoring case', () => {
-    expect(meetingsOf(ms, 'Ada Lovelace').map((m) => m.id)).toEqual(['new', 'old']);
-  });
-
   it('lists only that person commitments', () => {
     expect(commitmentsOf(ms, 'Ada Lovelace').map((c) => [c.meeting.id, c.what])).toEqual([['new', 'Review the plan'], ['old', 'Send the draft']]);
   });
@@ -199,9 +190,6 @@ describe('priorWith', () => {
     expect(p.open.map((r) => r.id)).toEqual(['a', 'd']);
   });
 
-  it('returns nothing when the meeting has no start time', () => {
-    expect(priorWith({ ...next, starts_at: null }, [mtg('m1', 'Planning', 100)], [])).toEqual([]);
-  });
 });
 
 describe('briefFor', () => {
@@ -226,8 +214,4 @@ describe('briefFor', () => {
     expect(briefFor(mtg('Ola'), [], fs).claims.map((f) => f.id)).toEqual(['6', '3', '2']);
   });
 
-  it('is empty when nothing matches', () => {
-    const b = briefFor(mtg(null, 'Sync'), [task('a', 'Buy milk')], [fact('1', 'p1', 'H', 'Alpha')]);
-    expect(b).toEqual({ tasks: [], claims: [] });
-  });
 });

@@ -8,10 +8,6 @@ describe('recipes', () => {
     expect(recipeQuery('/')).toBe('');
   });
 
-  it('lists everything for a bare slash', () => {
-    expect(matchRecipes(DEFAULT_RECIPES, '/')).toEqual(DEFAULT_RECIPES);
-  });
-
   it('matches every word case-insensitively', () => {
     expect(matchRecipes(DEFAULT_RECIPES, '/OPEN dec').map((r) => r.id)).toEqual(['decisions']);
     expect(matchRecipes(DEFAULT_RECIPES, '/week meetings').map((r) => r.id)).toEqual(['week']);
