@@ -3,7 +3,7 @@ import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
-import { ago } from '../../ui/util';
+import { ago, save, stored } from '../../ui/util';
 import { clock } from '../time';
 import { setView, showSnack } from '../view';
 import '../../styles/features/wiki.css';
@@ -84,14 +84,32 @@ export function needsYou(text: string) {
 }
 
 // The latest Slack brief on Overview: only what needs me, one line each, and the asks waiting in Tasks.
+const HANDLED = 'codex.slackHandled';
+
+// Needs you items from the latest summary: Task makes one a task with its link, Done hides it.
 export function SlackCard() {
   const store = useAssistantStore();
   const snap = useAssistantData();
   const [busy, setBusy] = useState(false);
+  const [handled, setHandled] = useState<string[]>(() => stored<string[]>(HANDLED, []));
   const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
   const asks = snap.items.filter((r) => !r.deleted && r.source === 'slack' && r.status === 'suggested').length;
-  const items = brief?.text ? needsYou(brief.text) : [];
+  const all = brief?.text ? needsYou(brief.text) : [];
+  const keyOf = (x: { title: string; url: string | null }) => x.url ?? x.title;
+  const items = all.filter((x) => !handled.includes(keyOf(x)));
   if (!brief && !asks) return null;
+  const hide = (x: { title: string; url: string | null }) => {
+    const live = new Set(all.map(keyOf));
+    const next = [...handled.filter((k) => live.has(k)), keyOf(x)];
+    setHandled(next);
+    save(HANDLED, next);
+  };
+  const task = (x: { title: string; url: string | null; why: string }) => {
+    hide(x);
+    void store.capture(x.why ? `${x.title}: ${x.why}` : x.title, 'task', brief!.profile)
+      .then((r) => x.url ? store.update(r, { text: x.url }) : undefined)
+      .then(() => showSnack('Added to Tasks'), (err) => showSnack(`Could not add: ${errorText(err)}`));
+  };
   const summarize = () => {
     setBusy(true);
     store.summarizeSlack().then(
@@ -109,6 +127,8 @@ export function SlackCard() {
               <span className="ov-t">{x.title}</span>
               {x.why && <span className="muted small">{x.why}</span>}
             </a>
+            <button className="btn sm" aria-label={`Make ${x.title} a task`} onClick={() => task(x)}>Task</button>
+            <button className="btn sm" aria-label={`Mark ${x.title} handled`} onClick={() => hide(x)}>Done</button>
           </div>
         ))}
         {brief && !items.length && <div className="ov-follow-row muted small">Nothing needs you.</div>}

@@ -200,6 +200,8 @@
 .ov-follow-row { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-5) var(--sp-7); }
 .ov-follow-row + .ov-follow-row { border-top: 1px solid var(--border); }
 .ov-follow-text { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; text-decoration: none; }
+.ov-check { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: -4px 0 -4px -6px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--fg-faint); cursor: pointer; }
+@media (hover: hover) { .ov-check:hover { color: var(--ok, var(--fg)); background: var(--sunken); } }
 .ov-follow-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) { .ov-follow-text:hover .ov-t { text-decoration: underline; } }
 .ov-report { padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden; }

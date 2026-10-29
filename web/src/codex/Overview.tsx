@@ -157,6 +157,7 @@ type Split = ReturnType<typeof useSplit>;
 
 // The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
 export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
+  const store = useAssistantStore();
   const snap = useAssistantData();
   const { filter } = useView();
   const now = Date.now();
@@ -177,20 +178,27 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     { n: dueToday.length, label: 'to do today', cls: '' },
     { n: s.overdue.length, label: 'overdue', cls: 'late' },
     { n: s.review.length, label: 'to confirm', cls: 'review' },
-    { n: s.doneToday.length, label: 'done', cls: 'done' },
     { n: stale.length, label: 'stale', cls: '' },
-  ].filter((x, i) => i === 0 || x.n > 0);
+  ].filter((x) => x.n > 0);
+  const upcoming = s.meetingsToday.filter((m) => (m.ends_at ?? m.starts_at!) > now);
   const shown = (rs: ItemRow[]) => (
-    <button className="ov-list" onClick={tasks}>
-      {rs.slice(0, 5).map((r) => <span key={r.profile + r.id}><Icon name="circle-large-outline" small /><span className="ov-t">{r.title}</span></span>)}
-      {rs.length > 5 && <span className="muted">+{rs.length - 5} more</span>}
-    </button>
+    <div className="ov-follow">
+      {rs.slice(0, 5).map((r) => (
+        <div key={r.profile + r.id} className="ov-follow-row">
+          <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => void store.update(r, { status: 'done' })}><Icon name="circle-large-outline" small /></button>
+          <button className="ov-follow-text" onClick={tasks}><span className="ov-t">{r.title}</span></button>
+        </div>
+      ))}
+      {rs.length > 5 && <button className="ov-follow-row ov-follow-text muted" onClick={tasks}>+{rs.length - 5} more</button>}
+    </div>
   );
   return (
     <>
-      <div className="ov-summary">
-        {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
-      </div>
+      {stats.length > 0 && (
+        <div className="ov-summary">
+          {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
+        </div>
+      )}
       <SinceLastVisit />
       <SlackCard />
       {digest && (
@@ -205,10 +213,16 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           <NextCard m={s.next} then={s.then} carried={s.carried} onPrep={onPrep} />
         </section>
       )}
-      {s.meetingsToday.length > 0 && (
+      {upcoming.length > 0 && (
         <section>
-          <div className="as-section">Meetings today · {s.meetingsToday.length}</div>
-          <div className="mt-rows ov-card">{s.meetingsToday.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+          <div className="as-section">Meetings today · {upcoming.length}</div>
+          <div className="mt-rows ov-card">{upcoming.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+        </section>
+      )}
+      {s.overdue.length > 0 && (
+        <section>
+          <div className="as-section late">Overdue · {s.overdue.length}</div>
+          {shown(s.overdue)}
         </section>
       )}
       {dueToday.length > 0 && (
