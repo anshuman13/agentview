@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
+import { stored } from '../ui/util';
 import { apiBase, apiUrl, bundled, knownMacs, macOrigin, macPort, macUrl, setApiBase, shell, trusted, useApiBase } from './api';
 import { switchedMac } from './store';
 
@@ -54,8 +55,8 @@ async function switchMac(m: Mac) {
     return true;
   }
   const q = new URLSearchParams({ switched: '1' });
-  const shell = localStorage.getItem('agentview.shell');
-  if (shell) q.set('shell', shell);
+  const shell = stored('agentview.shell', 0);
+  if (shell) q.set('shell', String(shell));
   location.href = `${url}/?${q}`;
   return true;
 }
