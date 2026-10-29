@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAssistant } from '../data';
-import { DIGEST_TITLE } from '../data/engine';
+import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, type Profile } from '../data/sync';
 import type { Job, Run } from '../data/wiki';
 import { clock } from '../time';
@@ -13,8 +13,6 @@ const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 
 const KINDS = [['hourly', 'Every hour'], ['daily', 'Every day'], ['weekdays', 'Weekdays'], ['weekly', 'Once a week']] as const;
 type Kind = (typeof KINDS)[number][0];
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
-
-const DIGEST_PROMPT = `Use mcp__agentview__data_find to read this past week: meetings (with their summary and decisions) and items that are done. Write a short digest with three parts: Meetings, Decisions, Done. Keep it under 150 words. Save it with mcp__agentview__data_write as a new item with status note and the title "${DIGEST_TITLE}".`;
 
 const jobKey = (j: Job) => `${j.profile}:${j.id}`;
 
@@ -62,7 +60,8 @@ function useJobs() {
 
 function JobsList({ onMenu }: { onMenu: () => void }) {
   const { jobs, runs, store, filter, enable } = useJobs();
-  const add = (preset?: { name: string; schedule: string; prompt: string }) => {
+  const hasDigest = jobs.some((j) => j.name === WEEKLY_DIGEST.name);
+  const add = (preset?: JobPreset) => {
     const t = Date.now();
     const profile: Profile = filter === 'personal' ? 'personal' : 'work';
     const row: Job = { id: newId(), profile, version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}', name: 'New job', schedule: 'weekdays 08:00', prompt: '', enabled: 1, next_run_at: null, ...preset };
@@ -102,7 +101,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
           )}
           {!jobs.length && <div className="as-empty"><Icon name="history" /><div>No jobs yet.</div><div className="muted small">A job runs a prompt on a schedule, can add tasks, and sends you the result.</div></div>}
           <div className="jb-presets">
-            <button className="btn sm" onClick={() => add({ name: DIGEST_TITLE, schedule: 'weekly fri 16:00', prompt: DIGEST_PROMPT })}><Icon name="sparkle" small /> Weekly digest</button>
+            {!hasDigest && <button className="btn sm" onClick={() => add(WEEKLY_DIGEST)}><Icon name="sparkle" small /> Weekly digest</button>}
             <button className="btn sm" onClick={() => add({ name: 'Linear changes', schedule: 'weekdays 08:00', prompt: EXAMPLE })}><Icon name="add" small /> Example</button>
           </div>
         </div>
