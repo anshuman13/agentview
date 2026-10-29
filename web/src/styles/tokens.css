@@ -15,6 +15,10 @@
        live/running). Never decoration.
      - Status: --err, --warn, --ok, only for state, always with an icon or
        text. --ok stays apart from the accent so done never reads as a link.
+       --err is failed, late or blocked; --warn is waiting, needs review or
+       pending; --ok is done; running is the accent.
+     - Accent text and fills: --accent-text for links and text, --accent-fill
+       behind white text, so both reach 4.5:1.
      - Identity: --agent (subagents), --work and --personal; things you tell
        apart at a glance.
      - Content: diffs, syntax and the terminal's ANSI colours read the hues.
@@ -140,7 +144,7 @@
   --border: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.16);
   --border-card: rgba(255, 255, 255, 0.24);
-  --fg-faint: #7a7772;
+  --fg-faint: #938f89;
   --fg-muted: #b2afa8;
   --fg: #f7f6f2;
   --fg-strong: #fcfcfa;
@@ -148,23 +152,26 @@
   --hue-amber: #f59b23;
   --hue-teal: #2dd4bf;
   --hue-blue: #509bf5;
-  --hue-magenta: #f037a5;
+  --hue-magenta: #ff5fb8;
   --hue-green: #2dd4bf;
   --hue-yellow: #ffc864;
-  --hue-red: #e91429;
+  --hue-red: #ff4d5e;
   --hue-sky: #4cc3ff;
   --hue-orange: #ff6437;
   --hue-brown: #d68a4c;
   --hue-brand: #4a7aff;
   --on-accent: #ffffff;
   --on-color: #ffffff;
-  --link: var(--accent);
-  --prompt: var(--accent);
+  --accent-fill: #3b69e8;
+  --accent-text: #6a92ff;
+  --link: var(--accent-text);
+  --prompt: var(--accent-text);
   --agent: var(--hue-violet);
   --claude: var(--fg-muted);
   --ok: var(--hue-green);
   --warn: var(--hue-amber);
   --err: var(--hue-red);
+  --modified: var(--hue-amber);
   --diff-add: var(--hue-green);
   --diff-del: var(--hue-red);
   --t-read: var(--fg-muted);
@@ -195,31 +202,34 @@
   --border: #e4e4e4;
   --border-strong: #d6d6d6;
   --border-card: #cccccc;
-  --fg-faint: #9a9a9a;
+  --fg-faint: #767676;
   --fg-muted: #6b6b6b;
   --fg: #1f1f1f;
   --fg-strong: #0a0a0a;
   --hue-violet: #6f5fd6;
   --hue-amber: #b5651d;
-  --hue-teal: #2f7a8c;
+  --hue-teal: #2a6f80;
   --hue-blue: #4a6f94;
   --hue-magenta: #a2489b;
-  --hue-green: #1f8a4c;
-  --hue-yellow: #a8710f;
+  --hue-green: #1a7a42;
+  --hue-yellow: #8a5a00;
   --hue-red: #c9264f;
-  --hue-sky: #2f7a8c;
+  --hue-sky: #2676ab;
   --hue-orange: #b5651d;
   --hue-brown: #8a6a4e;
-  --hue-brand: #2f7a8c;
+  --hue-brand: #2a6f80;
   --on-accent: #ffffff;
   --on-color: #ffffff;
-  --link: var(--accent);
-  --prompt: var(--accent);
+  --accent-fill: var(--accent);
+  --accent-text: var(--accent);
+  --link: var(--accent-text);
+  --prompt: var(--accent-text);
   --agent: var(--hue-violet);
   --claude: var(--fg-muted);
   --ok: var(--hue-green);
   --warn: var(--hue-yellow);
   --err: var(--hue-red);
+  --modified: var(--hue-yellow);
   --diff-add: var(--hue-green);
   --diff-del: var(--hue-red);
   --t-read: var(--fg-muted);
@@ -246,4 +256,5 @@
   --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
   --work: var(--hue-blue);
   --personal: var(--hue-magenta);
+  --warn-soft: color-mix(in srgb, var(--warn) 14%, transparent);
 }

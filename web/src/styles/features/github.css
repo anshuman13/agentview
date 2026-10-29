@@ -68,7 +68,7 @@ button.gh-open-chat { color: var(--fg); }
 .gh-diff > div { padding: 0 var(--sp-4); white-space: pre; min-width: max-content; }
 .gh-diff .add { background: color-mix(in srgb, var(--diff-add) 10%, transparent); }
 .gh-diff .del { background: color-mix(in srgb, var(--diff-del) 10%, transparent); }
-.gh-diff .hunk { color: var(--accent); }
+.gh-diff .hunk { color: var(--accent-text); }
 
 .gh-actionbar { flex: none; display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-6); border-top: 1px solid var(--border); background: var(--sunken); }
 .gh-text {

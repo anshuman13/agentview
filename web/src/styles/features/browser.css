@@ -5,7 +5,7 @@
 .browser-pane { display: flex; flex-direction: column; height: 100%; }
 .browser-bar { height: var(--size-bar); gap: var(--sp-2); padding: 0 var(--sp-3); border-bottom: 1px solid var(--border); background: var(--raised); }
 .browser-bar select { height: var(--size-md); border-radius: var(--radius-sm); }
-.browser-bar .icon-btn.on { color: var(--accent); }
+.browser-bar .icon-btn.on { color: var(--accent-text); }
 .browser-bar .tab-pick { max-width: 180px; }
 .frame-host { position: relative; flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: center; overflow: hidden; background: var(--sunken); }
 .chrome-frame { max-width: 100%; max-height: 100%; touch-action: none; user-select: none; cursor: default; }

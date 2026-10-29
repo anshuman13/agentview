@@ -32,7 +32,7 @@
 .scm-row:hover .scm-acts, .section-head:hover .scm-acts { display: inline-flex; }
 @media (hover: none) { .scm-acts { display: inline-flex; } }
 .scm-row { --tone: var(--fg); }
-.scm-row.s-M { --tone: var(--warn); }
+.scm-row.s-M { --tone: var(--modified); }
 .scm-row:is(.s-A, .s-U) { --tone: var(--ok); }
 .scm-row.s-D { --tone: var(--err); }
 .scm-row.s-R { --tone: var(--accent); }

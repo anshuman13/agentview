@@ -54,8 +54,8 @@
 .ex-twistie .icon { color: inherit; }
 .ex-name { overflow: hidden; text-overflow: ellipsis; flex: none; max-width: 100%; }
 .ex-tree .ex-name { flex: 1; min-width: 0; }
-.ex-name.changed { color: var(--warn); }
-.ex-m { color: var(--warn); font-size: var(--fs-xs); flex: none; padding-left: var(--sp-2); }
+.ex-name.changed { color: var(--modified); }
+.ex-m { color: var(--modified); font-size: var(--fs-xs); flex: none; padding-left: var(--sp-2); }
 
 @media (max-width: 900px) {
   .folder-switch { height: var(--touch); }

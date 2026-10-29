@@ -5,7 +5,7 @@
 }
 .badge.quiet { background: var(--hover); color: var(--fg-muted); }
 .badge.waiting, .tabbar .badge, .activitybar [data-view='chats'] .badge { background: var(--warn); color: var(--bg); }
-.badge.running { background: var(--accent); color: var(--on-accent); }
+.badge.running { background: var(--accent-fill); color: var(--on-accent); }
 .badge.running::before { content: ''; width: 6px; height: 6px; margin-right: 3px; border-radius: var(--radius-round); background: currentColor; }
 
 .chip {

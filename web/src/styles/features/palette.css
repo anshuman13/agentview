@@ -18,7 +18,7 @@
 .palette li:hover { background: var(--hover); }
 .palette li.active { background: var(--accent-soft); }
 .palette-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.palette-label b { color: var(--accent); font-weight: 600; }
+.palette-label b { color: var(--accent-text); font-weight: 600; }
 .palette-key, .palette-group { flex: none; color: var(--fg-faint); font-size: var(--fs-xs); }
 .palette-key { font-family: var(--mono); }
 .palette-empty { padding: 0 var(--sp-8) var(--sp-5); color: var(--fg-muted); font-size: var(--fs-sm); }

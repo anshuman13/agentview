@@ -9,7 +9,7 @@ button {
   line-height: var(--line-sm);
 }
 button:hover { background: var(--border-strong); }
-button.primary { background: var(--accent); color: var(--on-accent); }
+button.primary { background: var(--accent-fill); color: var(--on-accent); }
 button.primary:hover { background: var(--accent-hover); }
 button.primary:disabled { opacity: 0.5; cursor: default; }
 button.active { color: var(--fg); }
@@ -35,9 +35,9 @@ button.link:hover { background: transparent; text-decoration: underline; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn.quiet { color: var(--fg-muted); }
 .btn.quiet:hover:not(:disabled) { color: var(--fg); }
-.btn.primary, .btn.primary:hover { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.btn.primary, .btn.primary:hover { color: var(--on-accent); background: var(--accent-fill); border-color: var(--accent-fill); }
 .btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
-.btn.danger, .btn.danger:hover { color: var(--on-color); background: var(--err); border-color: var(--err); }
+.btn.danger, .btn.danger:hover { color: var(--bg); background: var(--err); border-color: var(--err); }
 .btn.xs { height: var(--size-xs); padding: 0 var(--sp-3); gap: 3px; font-size: var(--fs-xs); }
 .btn.sm { height: var(--size-md); padding: 0 var(--sp-4); }
 .btn.lg { height: var(--size-xl); padding: 0 var(--sp-6); gap: var(--sp-4); font-size: var(--fs-md); }

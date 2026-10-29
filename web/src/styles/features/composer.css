@@ -50,7 +50,7 @@
 .cp-pill:hover { background: var(--hover); color: var(--fg); }
 .cp-pill > span { overflow: hidden; text-overflow: ellipsis; }
 .cp-pill .codicon.icon.small { font-size: var(--fs-md); }
-.cp[data-mode='plan'] .cp-chip .codicon:first-child { color: var(--accent); }
+.cp[data-mode='plan'] .cp-chip .codicon:first-child { color: var(--accent-text); }
 .cp-chip.loop .codicon:nth-of-type(2) { color: var(--agent); }
 .cp-spacer { flex: 1; }
 .cp-send, .cp-stop {
@@ -93,7 +93,7 @@
 
 .voice.on { color: var(--err); animation: voice-pulse var(--pulse-fast) var(--ease) infinite; }
 .voice.on:hover:not(:disabled) { color: var(--err); }
-.voice.error { color: var(--warn); }
+.voice.error { color: var(--err); }
 @keyframes voice-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--err) 45%, transparent); }
   50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--err) 0%, transparent); }
