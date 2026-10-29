@@ -7,7 +7,7 @@ import { SlackCard } from './summary/Summary';
 import { resolvedQuestions } from './meetings/OpenQuestions';
 import { atTime, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
-import { save, stored } from '../ui/util';
+import { save, stored, plural } from '../ui/util';
 import { meetingKey } from './meetings/MeetingList';
 import { Prep } from './meetings/Prep';
 import { Icon } from '../ui/Icon';
@@ -151,7 +151,6 @@ function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
 
 const LAST_VISIT = 'codex.lastVisit';
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // Meetings, decisions, new claims and open questions since the last dismissal; the first visit only records the time.
 function SinceLastVisit() {

@@ -10,6 +10,7 @@ import { Claim } from './Claim';
 import { PageTile } from './PageTile';
 import { useReview } from './Review';
 import { MEMORY, SOURCE_ICON, memoryPage, shortDate } from './shared';
+import { plural } from '../../ui/util';
 
 const SOURCE_NAME: Record<Source['kind'], [string, string]> = { meeting: ['meeting', 'meetings'], slack: ['Slack thread', 'Slack threads'], linear: ['Linear issue', 'Linear issues'], pr: ['pull request', 'pull requests'], doc: ['doc', 'docs'] };
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -66,7 +67,7 @@ export function WikiPage({ id }: { id: string }) {
               {page.summary && <p className="wk-lede">{page.summary}</p>}
               <div className="wk-meta wk-page-meta">
                 <span className="wk-kind">Wiki</span>
-                <span>{st.claims + pending.length} claims</span>
+                <span>{plural(st.claims + pending.length, 'claim')}</span>
                 <span>Updated {shortDate(Math.max(page.updated_at, st.updated))}</span>
                 {st.contested > 0 && <span className="wk-warn">{st.contested} contested</span>}
               </div>

@@ -11,6 +11,7 @@ import { PageTile } from './PageTile';
 import { Drift, Stale, ToReview } from './Review';
 import { usePullSync } from '../pullSync';
 import { MEMORY, shortDate } from './shared';
+import { plural } from '../../ui/util';
 
 const SECTION_ORDER = ['Teams', 'Projects', 'People', 'Practices'];
 
@@ -35,7 +36,7 @@ function Overview({ page, facts, pages }: { page: Page; facts: Fact[]; pages: Pa
         <span className="wk-overview-summary">{page.summary}</span>
         <span className="wk-meta">
           <span>{live(pages).length} pages</span>
-          <span>{current.length} claims</span>
+          <span>{plural(current.length, 'claim')}</span>
           {contested > 0 && <span className="wk-warn">{contested} contested</span>}
           <span>updated {shortDate(updated)}</span>
         </span>
@@ -56,7 +57,7 @@ function PageCard({ page, stats }: { page: Page; stats: Map<string | null, PageS
         <span>{shortDate(Math.max(page.updated_at, st.updated))}</span>
         <span className="spacer" />
         {st.contested > 0 && <span className="wk-flag" title={`${st.contested} contested`}><Icon name="warning" small /> {st.contested}</span>}
-        <span title="Claims">{st.claims} claims</span>
+        <span title="Claims">{plural(st.claims, 'claim')}</span>
       </span>
     </button>
   );
@@ -120,7 +121,7 @@ function MemoryCard({ stats }: { stats: Map<string | null, PageStats> }) {
       <span className="wk-tile amber"><Icon name="lightbulb" /></span>
       <span className="wk-card-title">Memory</span>
       <span className="wk-card-summary">What Claude remembers outside the pages.</span>
-      <span className="wk-card-foot"><span>{shortDate(st.updated)}</span><span className="spacer" /><span>{st.claims} claims</span></span>
+      <span className="wk-card-foot"><span>{shortDate(st.updated)}</span><span className="spacer" /><span>{plural(st.claims, 'claim')}</span></span>
     </button>
   );
 }
