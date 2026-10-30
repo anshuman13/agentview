@@ -113,7 +113,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
     'Add an ask only when a message clearly asks me to do, answer or decide something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     DRAFT_STEP,
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
-    `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
+    `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip messages that report something already done ("added now", "invited") or only give an opinion, promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
     'In decisions, add each decision the new messages in the watched channels settle: a plan, owner, date, number or status the people there agreed on. Skip proposals, questions and chatter.',
     'In details, add a note when a new message gives more detail on one of the open asks or tracked tasks below: a date, a requirement, a link, a change of scope or who owns it. Use the id in brackets. Skip messages that only repeat the task.',
     '',
