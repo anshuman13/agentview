@@ -1,12 +1,13 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { api, setUi, useStore } from '../app/store';
-import { FolderPicker } from '../sessions/Sessions';
 import { findHere, useWorkspace } from '../sessions/folders';
 import { setOpened, useOpened } from './opened';
 import { Icon } from '../ui/Icon';
 import { pressable, save, stored } from '../ui/util';
 import { touch } from '../app/touch';
 import { FileIcon } from './FileIcon';
+
+const FolderPicker = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.FolderPicker })));
 
 type Entry = { name: string; dir: boolean; hidden: boolean };
 type Row = Entry & { path: string; depth: number };
@@ -180,7 +181,7 @@ function ExplorerView({ cwd }: { cwd: string }) {
           </button>
         </span>
       </div>
-      {picking && <FolderPicker onClose={() => setPicking(false)} />}
+      {picking && <Suspense fallback={null}><FolderPicker onClose={() => setPicking(false)} /></Suspense>}
       <div className="ex-tree" ref={tree} tabIndex={0} role="tree" aria-label="Files" aria-activedescendant={selAt >= 0 ? `${treeId}-${selAt}` : undefined} onKeyDown={onKey}>
         {rows.map((r, i) => {
           const open = r.dir && expanded.has(r.path);
