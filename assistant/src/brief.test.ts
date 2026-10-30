@@ -66,7 +66,7 @@ it('stores and pushes once per profile and weekday morning', async () => {
   expect(await runBriefs(db, at(MON, 8, 1), push)).toEqual([]);
   expect(pushed).toEqual(['Today: 2 meetings, 2 tasks']);
   expect(db.prepare('SELECT profile, kind FROM briefs WHERE id = ?').all(briefId(at(MON, 8)))).toEqual([{ profile: 'work', kind: 'morning' }]);
-  expect(await runBriefs(seed(), at(MON + 1, 11), push)).toEqual([]);
+  expect(await runBriefs(seed(), at(MON + 1, 17), push)).toEqual([]);
   expect(await runBriefs(seed(), at(MON - 2, 8), push)).toEqual([]);
 });
 
@@ -82,4 +82,16 @@ it('sends a brief that was empty at 08:00 once the calendar lands', async () => 
   expect(await runBriefs(db, at(MON, 8), async () => true)).toEqual(['work']);
   db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES ('p', 'personal', 1, 0, 'Dentist', ?, ?)").run(at(MON, 16), at(MON, 17));
   expect(await runBriefs(db, at(MON, 9), async () => true)).toEqual(['personal']);
+});
+
+it('tags tasks rolled over from earlier days and counts them in the header', () => {
+  const db = seed();
+  db.prepare("UPDATE items SET rolls = 3 WHERE id = 't2'").run();
+  const lines = buildBrief(db, 'work', at(MON, 8)).text.split('\n');
+  expect(lines).toContain('Tasks · 2 due today, 1 overdue, 1 rolled');
+  expect(lines).toContain('- Call bank (rolled 3x)');
+});
+
+it('sends a brief at 13:00 when the hub was down all morning', async () => {
+  expect(await runBriefs(seed(), at(MON, 13), async () => true)).toEqual(['work']);
 });

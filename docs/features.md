@@ -28,7 +28,7 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
 ### Overview
 
 - One line per weekly goal with done/total of the tasks linked to it
-- The morning brief the hub writes at 08:00 on weekdays: today's meetings and free time, tasks due and overdue, how
+- The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
   the last workday. It folds and hides until tomorrow
 - Meetings that ended in the last two hours with their actions, a follow-up draft to copy and the notes

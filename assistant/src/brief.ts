@@ -35,8 +35,9 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const meetings = busy.filter((m) => !isBlock(m.id));
   const timed = busy.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), start);
-  const tasks = db.prepare("SELECT title, at FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND at IS NOT NULL AND CAST(at AS INTEGER) < ? ORDER BY CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number })[];
+  const tasks = db.prepare("SELECT title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND at IS NOT NULL AND CAST(at AS INTEGER) < ? ORDER BY CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number; rolls: number | null })[];
   const late = tasks.filter((t) => Number(t.at) < now).length;
+  const rolled = tasks.filter((t) => (t.rolls ?? 0) > 0).length;
   const slack = db.prepare("SELECT id, title FROM items WHERE deleted = 0 AND profile = ? AND source = 'slack' AND status = 'suggested' ORDER BY updated_at DESC").all(profile) as (Row & { id: string })[];
   const said = slack.filter((r) => r.id.startsWith('said:'));
   const asks = slack.filter((r) => !said.includes(r));
@@ -49,7 +50,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   }
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
   lines.push(gaps.length ? `Free ${minutesText(Math.round(free / 60_000))}: ${gaps.map(([a, b]) => `${clock(a)}-${clock(b)}`).join(', ')}` : 'No free time 08:00-17:00');
-  if (tasks.length) lines.push('', `Tasks · ${tasks.length} due today${late ? `, ${late} overdue` : ''}`, ...top(tasks, (t) => (Number(t.at) < now ? ' (overdue)' : '')));
+  if (tasks.length) lines.push('', `Tasks · ${tasks.length} due today${late ? `, ${late} overdue` : ''}${rolled ? `, ${rolled} rolled` : ''}`, ...top(tasks, (t) => `${Number(t.at) < now ? ' (overdue)' : ''}${t.rolls ? ` (rolled ${t.rolls}x)` : ''}`));
   const risk = riskCount(db, profile, now);
   if (risk) lines.push('', `At risk: ${plural(risk, 'task')}`);
   if (asks.length) lines.push('', `Slack asks to review · ${asks.length}`, ...top(asks));
@@ -68,10 +69,10 @@ function pruneBriefs(db: Database, now = Date.now()) {
   applyChanges(db, old.map((b) => ({ table: 'briefs', id: b.id, profile: b.profile, deleted: true, updated_at: now, fields: { text: null } })));
 }
 
-// Weekdays from 08:00 until 11:00 each profile with something on gets one brief stored for the phone and one push; a failed
-// push or an empty brief retries, so a calendar imported later that morning still gets one.
+// Weekdays from 08:00 until 17:00 each profile with something on gets one brief stored for the phone and one push; a failed
+// push or an empty brief retries, so a calendar imported later that day still gets one.
 export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy) {
-  if (!inWeekHours(now, 8, 11)) return [];
+  if (!inWeekHours(now, 8, 17)) return [];
   pruneMeta(db, 'brief:', now - 2 * DAY);
   pruneBriefs(db, now);
   const sent: Profile[] = [];
