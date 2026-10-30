@@ -251,6 +251,7 @@ const avlog = (ev: string) => (window as { avlog?: (e: string) => void }).avlog?
 
 let es: EventSource | null = null;
 let streamChat = '';
+let streamSession: string | null = null;
 let lastId = '';
 let retry: ReturnType<typeof setTimeout> | undefined;
 let hiddenAt = 0;
@@ -264,6 +265,7 @@ export function connect() {
   es?.close();
   const { id, sessionId } = getState().session;
   streamChat = id;
+  streamSession = sessionId;
   const q = new URLSearchParams({ cid });
   if (id) q.set('chat', id);
   if (sessionId) q.set('session', sessionId);
@@ -280,8 +282,9 @@ export function connect() {
     if (es !== src) return;
     setUi({ connected: false });
     avlog('stream closed');
-    // The browser retries the URL it was given; after a chat switch that is the wrong chat, so reopen by hand.
-    if (streamChat !== getState().session.id) src.close();
+    // The browser retries the URL it was given; after a chat switch, or a new session in this chat, it asks for the wrong one, so reopen by hand.
+    const now = getState().session;
+    if (streamChat !== now.id || streamSession !== now.sessionId) src.close();
     if (src.readyState === EventSource.CLOSED) retry = setTimeout(connect, 2_000);
   };
   src.onmessage = (e) => {
