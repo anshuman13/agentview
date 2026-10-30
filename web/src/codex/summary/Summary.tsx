@@ -9,6 +9,9 @@ import { dayLabel } from '../data/dates';
 import { setView, showSnack } from '../view';
 import '../../styles/features/wiki.css';
 
+const CHATS = 8;
+const BRIEF_LINES = 8;
+
 // Slack in one place: the running summary of each chat from the quarter-hourly Haiku read, and a Sonnet summary on demand.
 // The latest Slack brief, the Slack asks waiting for review, and a Sonnet summary on demand.
 function useSlack() {
@@ -30,7 +33,11 @@ function useSlack() {
 export function Summary({ onMenu }: { onMenu: () => void }) {
   const snap = useAssistantData();
   const { brief, asks, busy, summarize } = useSlack();
-  const chats = snap.chats.filter((c) => !c.deleted).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
+  const [allChats, setAllChats] = useState(false);
+  const [allBrief, setAllBrief] = useState(false);
+  const chats = snap.chats.filter((c) => !c.deleted && c.summary?.trim()).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
+  const briefLines = brief?.text?.split('\n') ?? [];
+  const longBrief = briefLines.length > BRIEF_LINES;
   return (
     <div className="wk narrow">
       <header className="wk-head">
@@ -45,12 +52,13 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
           {brief?.text && (
             <section className="sm-brief">
               <div className="wk-meta"><span>Sonnet summary</span><span>{dayLabel(brief.from_at ?? 0, true)} {clock(brief.from_at ?? 0)} to {clock(brief.to_at ?? 0)}</span></div>
-              <Markdown text={brief.text} />
+              <Markdown text={allBrief || !longBrief ? brief.text : briefLines.slice(0, BRIEF_LINES).join('\n')} />
+              {longBrief && <button className="as-chip quiet ov-more" onClick={() => setAllBrief(!allBrief)}>{allBrief ? 'Show less' : 'Show all'}</button>}
             </section>
           )}
           {chats.length > 0 && (
             <div className="mt-rows">
-              {chats.map((c) => (
+              {(allChats ? chats : chats.slice(0, CHATS)).map((c) => (
                 <a key={c.profile + c.id} className="mt-row sm-chat" href={safeHref(c.url)} target="_blank" rel="noreferrer">
                   <span className="mt-body">
                     <span className="mt-title">{c.name}</span>
@@ -59,6 +67,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
                   </span>
                 </a>
               ))}
+              {chats.length > CHATS && <button className="as-chip quiet ov-more" onClick={() => setAllChats(!allChats)}>{allChats ? 'Show less' : `Show ${chats.length - CHATS} more`}</button>}
             </div>
           )}
           {!chats.length && <div className="as-empty"><Icon name="comment-discussion" /><div>Nothing read yet.</div><div className="muted small">Slack is read every 15 minutes on weekdays from 07 to 19.</div></div>}

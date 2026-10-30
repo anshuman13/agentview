@@ -29,7 +29,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 
 ### Overview
 
-- One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening on Tasks; more than 3 goals show +N more
+- One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening on Tasks; goals with all linked tasks done drop off; more than 3 goals show +N more
 - For each profile with no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week, or Not now to hide the row for the week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
@@ -54,7 +54,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
 - Tasks due today (tomorrow under Later) with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
-- Context (folded like Later): a Slack summary line that opens the Summary page (each chat and Summarize), one line per job report that opens the job, and the digest. Follow-through is meeting actions still open after a week (Task, Done, Dismiss)
+- Context (folded like Later): a Slack summary line that opens the Summary page (the 8 latest chats with a summary, Show N more, the Sonnet summary folded to 8 lines, and Summarize), one line per job report that opens the job, and the digest. Follow-through is meeting actions still open after a week (Task, Done, Dismiss)
 - Before 11:00, a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person

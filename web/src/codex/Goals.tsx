@@ -88,7 +88,7 @@ export function GoalLines({ now }: { now: number }) {
   const { items } = useAssistantData();
   const { filter } = useView();
   const scope = filter === 'all' ? undefined : filter;
-  const goals = goalsOf(items, now, scope);
+  const goals = goalsOf(items, now, scope).filter((g) => { const p = goalProgress(items, g); return !p.total || p.done < p.total; });
   const carry = carryOver(items, now, scope);
   const busy = useRef(false);
   const week = String(weekStart(now));

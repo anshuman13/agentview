@@ -301,7 +301,7 @@ export function OpenChats() {
                 <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); send({ type: 'new_session', cwd: g.key }); }}><Icon name="add" small /></button>
               </span>
             </div>
-            {isOpen(g) && g.open.map((c) => row(c))}
+            {isOpen(g) && g.open.filter((c) => !c.pending).map((c) => row(c))}
             {isOpen(g) && (full.has(g.key) || filter ? g.recent : g.recent.slice(0, RECENT)).map((s) => (
               <div key={s.sessionId} className="row session recent" title={`${s.title}\n${s.cwd}`} {...pressable(() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); })}>
                 <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
