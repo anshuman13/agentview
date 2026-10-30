@@ -1,3 +1,5 @@
+import { TABLES } from '../../../../shared/tables';
+
 export type Change = {
   table: string;
   id: string;
@@ -16,20 +18,10 @@ export type PulledChange = Change & {
 
 export type Reply ={ version: number; changes: PulledChange[]; hasMore?: boolean };
 
-export const FIELDS = ['title', 'text', 'source', 'source_url', 'people', 'at', 'status', 'meeting_id', 'rolls', 'rolled_from', 'rank'] as const;
+export const FIELDS = TABLES.items as (keyof ItemFields)[];
 
-// Synced data columns per table, the same as TABLES in assistant/src/db.ts.
-export const TABLE_FIELDS: Record<string, readonly string[]> = {
-  items: FIELDS,
-  facts: ['text', 'item_id', 'superseded_by', 'page_id', 'heading', 'sources', 'at', 'contested', 'state', 'replaces', 'added_by'],
-  pages: ['title', 'section', 'summary', 'sort', 'state'],
-  meetings: ['title', 'starts_at', 'ends_at', 'people', 'calendar_url', 'recorded_ms', 'notes', 'summary', 'decisions', 'transcript', 'tries', 'room', 'room_me', 'others'],
-  actions: ['meeting_id', 'kind', 'target', 'title', 'body', 'fields', 'status', 'result_url'],
-  jobs: ['name', 'schedule', 'prompt', 'enabled', 'next_run_at'],
-  runs: ['job_id', 'started_at', 'finished_at', 'status', 'output'],
-  chats: ['name', 'kind', 'url', 'summary', 'last_at'],
-  briefs: ['kind', 'text', 'from_at', 'to_at'],
-};
+// Synced data columns per table, the hub's TABLES without the tables only the hub holds.
+export const TABLE_FIELDS: Record<string, readonly string[]> = Object.fromEntries(['items', 'facts', 'pages', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'].map((t) => [t, TABLES[t]]));
 
 export type Field = (typeof FIELDS)[number];
 export type FieldTimes = Record<string, number>;
