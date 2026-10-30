@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex, useSyncStatus } from './data';
 import { live, type Chat, type Meeting } from './data/wiki';
-import { actionsOf, displayName, followThrough } from './data/meetings';
+import { actionsOf, displayName, followThrough, meetingState } from './data/meetings';
 import { followUpText } from './data/meetingMarkdown';
 import { meetingTimeLeft, sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';
@@ -276,7 +276,7 @@ function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
         <div className="as-section">Just ended · {m.title}</div>
         {actions.length > 0 && <div className="as-group">{actions.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>}
         <div className="as-next-actions">
-          {!actions.length && <span className="muted small ov-follow-text">No actions yet. Open the notes to read the transcript.</span>}
+          {!actions.length && meetingState(m, now) === 'waiting' && <span className="muted small ov-follow-text">Waiting for the transcript</span>}
           <button className="btn sm" onClick={copy}><Icon name="mail" small /> Copy follow-up</button>
           <button className="btn sm" onClick={() => openMeeting(m)}><Icon name="edit" small /> Notes</button>
         </div>

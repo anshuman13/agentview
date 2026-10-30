@@ -18,6 +18,20 @@ const meeting = (id: string, endedAgo: number, fields: Record<string, string> = 
 });
 
 describe('transcripts', () => {
+  it('gives a meeting two tries when the previous one had no transcript', () => {
+    const db = openDb(':memory:');
+    const day = 24 * 60 * MIN;
+    applyChanges(db, [
+      { ...meeting('cal:old', 7 * day), fields: { title: 'Standup', starts_at: now - 7 * day, ends_at: now - 7 * day + 15 * MIN, transcript: 'done' } },
+      { ...meeting('cal:new', 5 * MIN), fields: { title: 'Standup', starts_at: now - 20 * MIN, ends_at: now - 5 * MIN } },
+      { ...meeting('cal:other', 5 * MIN), fields: { title: 'Planning', starts_at: now - 20 * MIN, ends_at: now - 5 * MIN } },
+    ]);
+    const due = dueMeetings(db, 'work', now);
+    expect(due.map((m) => m.id).sort()).toEqual(['cal:new', 'cal:other']);
+    for (let i = 1; i <= 2; i++) markTried(db, 'work', due, now + i * 15 * MIN);
+    expect(db.prepare("SELECT id, transcript FROM meetings WHERE id IN ('cal:new', 'cal:other') ORDER BY id").all()).toEqual([{ id: 'cal:new', transcript: 'missing' }, { id: 'cal:other', transcript: 'waiting' }]);
+  });
+
   it('picks unprocessed calendar meetings that ended in the last days, a few times', () => {
     const db = openDb(':memory:');
     applyChanges(db, [

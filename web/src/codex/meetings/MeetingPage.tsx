@@ -5,7 +5,7 @@ import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
 import { rowKey, type ItemRow } from '../data/sync';
 import { listOf, othersOf, type Meeting } from '../data/wiki';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, displayName, meetingState, peopleOf, pinsOf, seriesOf } from '../data/meetings';
+import { actionCount, actionsOf, displayName, meetingState, peopleOf, pinsOf, seriesOf } from '../data/meetings';
 import { clock, when } from '../time';
 import { useMinute } from '../split';
 import { Icon } from '../../ui/Icon';
@@ -66,8 +66,8 @@ function StateLine({ m, now }: { m: Meeting; now: number }) {
   const parts: string[] = [];
   if (state === 'upcoming') parts.push(`Starts ${when(m.starts_at!, now)}`);
   if (state === 'live') parts.push('In progress');
-  if (state === 'waiting') parts.push(m.tries ? `Waiting for the transcript · try ${m.tries} of ${TRIES}` : 'Waiting for the transcript');
-  if (state === 'missing') parts.push('No Gemini notes found for this meeting');
+  if (state === 'waiting') parts.push('Waiting for the transcript');
+  if (state === 'missing') parts.push('No transcript for this meeting');
   if (state === 'done') {
     parts.push(c.total ? `${c.total} for you` : 'Nothing for you');
     if (c.review) parts.push(`${c.review} to review`);

@@ -208,9 +208,6 @@ export function briefFor(meeting: Meeting, items: ItemRow[], facts: Fact[]): Mee
   return { tasks, claims };
 }
 
-// The hub tries this many times, 15 minutes apart, before it gives up on a transcript (TRIES in transcripts.ts).
-export const TRANSCRIPT_TRIES = 8;
-
 type MeetingState = 'upcoming' | 'live' | 'waiting' | 'done' | 'missing' | 'manual';
 
 // Where a meeting is between the calendar and its transcript.

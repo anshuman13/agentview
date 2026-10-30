@@ -18,6 +18,8 @@ import { proposeWikiUpdates } from './wikiUpdates.js';
 
 const WITHIN = 3 * DAY;
 export const TRIES = 8;
+const REPEAT_TRIES = 2;
+const REPEAT_WITHIN = 60 * DAY;
 const RETRY = 15 * MIN;
 const EXPIRE = 7 * DAY;
 
@@ -51,7 +53,15 @@ export function dueAt(due: string | null) {
   return day ? new Date(+day[1], +day[2] - 1, +day[3], 9).getTime() : Date.parse(due);
 }
 
-// Calendar meetings that ended in the last days and are not processed yet, tried at most TRIES times, RETRY apart.
+// A meeting whose previous occurrence ended without a transcript (missing, or dismissed with no summary) gets fewer tries.
+function triesFor(db: Database, profile: Profile, m: Pending) {
+  const prev = db.prepare(
+    "SELECT transcript, summary FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND title = ? AND starts_at < ? AND starts_at >= ? ORDER BY starts_at DESC LIMIT 1",
+  ).get(profile, m.title, m.starts_at, m.starts_at - REPEAT_WITHIN) as { transcript: string | null; summary: string | null } | null;
+  return prev && (prev.transcript === 'missing' || (prev.transcript === 'done' && !prev.summary)) ? REPEAT_TRIES : TRIES;
+}
+
+// Calendar meetings that ended in the last days and are not processed yet, tried at most TRIES times (REPEAT_TRIES after a previous occurrence without one), RETRY apart.
 // A meeting summarized by hand before it ended is still waiting; one summarized before this state existed is done.
 export function dueMeetings(db: Database, profile: Profile, now = Date.now()): Pending[] {
   const rows = db.prepare(
@@ -59,7 +69,7 @@ export function dueMeetings(db: Database, profile: Profile, now = Date.now()): P
   ).all(profile, now, now - WITHIN) as Pending[];
   return rows.filter((m) => {
     const [count, last] = triesOf(db, profile, m.id);
-    return count < TRIES && now - last >= RETRY;
+    return count < triesFor(db, profile, m) && now - last >= RETRY;
   });
 }
 
@@ -71,7 +81,7 @@ export function markTried(db: Database, profile: Profile, meetings: Pending[], n
     for (const m of meetings) {
       const count = triesOf(db, profile, m.id)[0] + (failed ? 0 : 1);
       setMeta(db, tried(profile, m.id), `${count},${now}`);
-      if (!failed) changes.push({ table: 'meetings', id: m.id, profile, updated_at: now, fields: { transcript: count >= TRIES ? 'missing' : 'waiting', tries: count } });
+      if (!failed) changes.push({ table: 'meetings', id: m.id, profile, updated_at: now, fields: { transcript: count >= triesFor(db, profile, m) ? 'missing' : 'waiting', tries: count } });
     }
     applyChanges(db, changes);
   })();

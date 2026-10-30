@@ -98,7 +98,7 @@ being written, most shared words first. A claim or meeting opens in Codex, a Sla
 Meetings imports the calendar every half hour and shows notes, summary, decisions, actions, pinned text and earlier
 meetings of the same series, with decisions made and questions asked again; the page copies as Markdown or as a
 follow-up draft, an action copies as a message or opens a prefilled Linear issue, and the summary format suggests the
-template last used for the series.
+template last used for the series. A meeting without a transcript is a quiet, muted "No transcript" (Retry and Dismiss on its page); the hub tries 8 times, or 2 when the previous meeting of the same title had none.
 
 The page of an upcoming meeting has a prep card: points to raise with its attendees (each with a Raised tick), what
 they took on last time (earlier meetings of the same profile with the same title or a shared attendee, up to 8 people), my open actions, open questions, and Copy agenda, which copies all of it as a Markdown
