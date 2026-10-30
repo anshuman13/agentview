@@ -74,6 +74,7 @@ export class ClaudeDriver implements AgentDriver {
     // Started again at once so the new account's usage shows before the next prompt.
     this.restart();
     this.start();
+    this.host.restarted('Claude restarted on another account');
   }
 
   limitHit(until: number) {

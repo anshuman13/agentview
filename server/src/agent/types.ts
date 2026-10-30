@@ -79,6 +79,8 @@ export interface AgentHost {
   notePr(toolUseId: string, text: string): void;
   adopt(toolUseId: string): void;
   exited(): void;
+  // The driver replaced its agent process; what lived only in the old one (scheduled jobs) has to be set up again.
+  restarted(why: string): void;
   replaceHistory(h: History): void;
 }
 

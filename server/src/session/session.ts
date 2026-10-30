@@ -425,10 +425,17 @@ export class AgentSession implements AgentHost {
     return this.queued.map(({ id, text }) => ({ id, text }));
   }
 
-  restoreCrons(crons: Cron[]) {
+  // Scheduled jobs live in the CLI process, so a new process has to create them again. The loop does not take this prompt as a task.
+  restoreCrons(crons: Cron[], why = 'AgentView restarted') {
     this.crons = crons;
-    this.system(`AgentView restarted, so Claude is recreating ${crons.length} scheduled ${crons.length === 1 ? 'job' : 'jobs'}`);
-    void this.prompt(restorePrompt(crons));
+    this.system(`${why}, so Claude is recreating ${crons.length} scheduled ${crons.length === 1 ? 'job' : 'jobs'}`);
+    const text = restorePrompt(crons, why);
+    if (this.state.session.running) this.queue(text);
+    else this.sendPrompt(text);
+  }
+
+  restarted(why: string) {
+    if (this.crons.length) this.restoreCrons(this.crons, why);
   }
 
   async prompt(text: string, id: string = randomUUID()) {
