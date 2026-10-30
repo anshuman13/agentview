@@ -6,7 +6,7 @@ import { mkdirSync, unlinkSync, watch, type FSWatcher } from 'node:fs';
 import { readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { getSessionInfo } from '../agent/claude/sessions.js';
 import { claudeSession } from '../agent/claude/driver.js';
-import { rememberAccount } from '../agent/claude/accounts.js';
+import { rememberAccount, verifyLimit } from '../agent/claude/accounts.js';
 import { configDef } from '../agent/claude/mcp.js';
 import type { AgentSession } from '../session/session.js';
 import { notifyAway, notifyStall, stallWatch } from '../integrations/notify.js';
@@ -123,6 +123,8 @@ function broadcastLive() {
 }
 
 async function createChat(cwd: string, resume?: string, title = '', fork = false) {
+  // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
+  await Promise.all([verifyLimit('main'), verifyLimit('alt')]);
   const chat = claudeSession(cwd, resume, fork);
   chat.title = title;
   await chat.loadHistory();

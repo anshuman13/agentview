@@ -1,6 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { statSync } from 'node:fs';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Account } from '../../../../shared/protocol.js';
 import { readJsonSync, writeJsonSync } from '../../json.js';
 
@@ -43,6 +44,58 @@ export function markLimited(a: Account, until: number) {
 }
 
 export const isLimited = (a: Account, now = Date.now()) => limitedUntil(a) > now;
+
+function clearLimit(a: Account) {
+  delete limited[a];
+  const { [a]: _, ...rest } = limits();
+  save(LIMITS, rest);
+}
+
+type Window = { utilization: number | null } | null | undefined;
+export type LiveUsage = { rate_limits?: { five_hour?: Window; seven_day?: Window } | null };
+
+const under = (w: Window) => w?.utilization != null && w.utilization < 100;
+
+// The account's live usage, read from a CLI that gets no prompt, so the check itself uses none.
+export async function liveUsage(a: Account): Promise<LiveUsage> {
+  const dir = configDir(a);
+  let stop = () => {};
+  const stopped = new Promise<void>((r) => (stop = r));
+  async function* noPrompt() {
+    await stopped;
+  }
+  const q = query({ prompt: noPrompt(), options: { persistSession: false, settingSources: [], env: { ...process.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) } } });
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    const timeout = new Promise<never>((_, reject) => (timer = setTimeout(() => reject(new Error('Usage check timed out')), 20_000)));
+    return await Promise.race([q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }), timeout]);
+  } finally {
+    clearTimeout(timer);
+    stop();
+    q.close();
+  }
+}
+
+const checked = new Map<Account, number>();
+const checking = new Map<Account, Promise<boolean>>();
+
+// A limit mark can be wrong, so live usage confirms it at most every 5 minutes; a mark with both windows under 100% is cleared. A failed check keeps the mark.
+export function verifyLimit(a: Account, check = liveUsage): Promise<boolean> {
+  if (!isLimited(a)) return Promise.resolve(false);
+  const now = Date.now();
+  if (now - (checked.get(a) ?? -Infinity) < 5 * 60_000) return checking.get(a) ?? Promise.resolve(isLimited(a));
+  checked.set(a, now);
+  const until = limitedUntil(a);
+  const run = check(a)
+    .then((u) => {
+      if (under(u.rate_limits?.five_hour) && under(u.rate_limits?.seven_day) && limitedUntil(a) === until) clearLimit(a);
+    })
+    .catch(() => {})
+    .then(() => isLimited(a))
+    .finally(() => checking.delete(a));
+  checking.set(a, run);
+  return run;
+}
 
 // Extra usage is never used: a rate limit event that reports it counts as hitting the limit, until the window resets.
 export function overageUntil(m: { type: string; rate_limit_info?: { isUsingOverage?: boolean; overageInUse?: boolean; resetsAt?: number } }, now = Date.now()) {
