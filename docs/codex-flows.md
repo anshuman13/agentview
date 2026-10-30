@@ -216,7 +216,7 @@ Badge priority: no notes / waiting > "N review" (amber) > "x of y" (outline) > "
 
 ## Lookups through Ask
 
-"What did Kim say she would do" is answered by Ask over "Others took" across meetings. No person view for now.
+"What did Kim say she would do" is answered by Ask over "Others took" across meetings. A person page shows their commitments, what they asked you and what you promised them.
 
 ## Missing states to build
 
