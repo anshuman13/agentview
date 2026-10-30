@@ -2,13 +2,13 @@ import { spawn, type ChildProcess } from 'node:child_process';
 
 export type McpServerDef = { type?: string; command?: string; args?: string[]; env?: Record<string, string>; url?: string; headers?: Record<string, string> };
 export type McpTool = { name: string; description?: string; inputSchema?: unknown; annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean } };
-type McpInfo = { name?: string; version?: string };
-type McpContent = { type: string; text?: string; [k: string]: unknown };
+export type McpInfo = { name?: string; version?: string };
+export type McpContent = { type: string; text?: string; [k: string]: unknown };
 export type McpResult = { content?: McpContent[]; structuredContent?: unknown; isError?: boolean };
 
 type Env = Record<string, string | undefined>;
 
-const expand = (s: string, env: Env) => s.replace(/\$\{([^}:]+)(?::-([^}]*))?\}/g, (m, k: string, d?: string) => env[k] ?? d ?? m);
+export const expand = (s: string, env: Env) => s.replace(/\$\{([^}:]+)(?::-([^}]*))?\}/g, (m, k: string, d?: string) => env[k] ?? d ?? m);
 const expandAll = (o: Record<string, string> | undefined, env: Env) => o && Object.fromEntries(Object.entries(o).map(([k, v]) => [k, expand(v, env)]));
 
 export function expandDef(def: McpServerDef, base: Env = process.env): McpServerDef {

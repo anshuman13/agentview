@@ -46,7 +46,7 @@ export class EventIndex {
   }
 }
 
-const ORPHANED = 'Stopped: this agent was no longer running, so it could not report back.';
+export const ORPHANED = 'Stopped: this agent was no longer running, so it could not report back.';
 
 // Agents whose task is gone (process ended, server restarted) never get a completion: end them as stopped.
 export function stopAgents(events: ChatEvent[], ids: Iterable<string>, at: number, text = ORPHANED): ChatEvent[] {

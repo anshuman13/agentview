@@ -4,14 +4,14 @@ import type { Cron } from '../agent/types.js';
 
 const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
-const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
+export const USAGE = 'Usage: /loop 10m <prompt>, /loop until 07:00 <prompt>, /loop 30m until 07:00 <prompt>, /loop at 01:50 <prompt> (once), /loop off';
 
-const GOAL_USAGE = 'Usage: /goal <condition>, /goal off';
+export const GOAL_USAGE = 'Usage: /goal <condition>, /goal off';
 
-const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it.`;
+export const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it.`;
 
 // /goal <condition> checks the condition whenever Claude goes idle, until it reports GOAL MET or the rounds run out.
-function parseGoal(text: string): Repeat | 'off' | 'usage' | null {
+export function parseGoal(text: string): Repeat | 'off' | 'usage' | null {
   const m = /^\/goal\b([\s\S]*)$/.exec(text.trim());
   if (!m) return null;
   const goal = m[1].trim();
@@ -22,9 +22,9 @@ function parseGoal(text: string): Repeat | 'off' | 'usage' | null {
 
 export const goalMet = (text: string) => /\bGOAL MET\b/.test(text);
 
-const roundWord = (r: Repeat) => (r.goal ? 'Goal check' : 'Loop round');
+export const roundWord = (r: Repeat) => (r.goal ? 'Goal check' : 'Loop round');
 
-const offCommand = (r: Repeat) => (r.goal ? '/goal off' : '/loop off');
+export const offCommand = (r: Repeat) => (r.goal ? '/goal off' : '/loop off');
 
 // /loop <prompt> alone is refused: a loop needs an interval or an end time.
 export function parseLoop(text: string, now = Date.now()): Repeat | 'off' | 'usage' | null {
@@ -85,14 +85,14 @@ export function limitReset(text: string, now = Date.now()): number | null {
   return nextClock(hours, Number(m[2] ?? 0), now) + 60_000;
 }
 
-const describeLoop = (r: Repeat) =>
+export const describeLoop = (r: Repeat) =>
   r.goal ? `checked whenever Claude goes idle until "${r.goal}" is met, up to ${MAX_GOAL_ROUNDS} checks` : once(r) ? `once at ${clock(r.nextAt!)}` : `${r.every ? `every ${span(r.every)}` : 'back to back'}${r.until ? ` until ${clock(r.until)}` : ''}`;
 
 // A loop goes on after Stop or a CLI exit, with time to type /loop off first.
 const REPEAT_GRACE_MS = 2 * 60_000;
 const MIN_ROUND_MS = 60_000;
 
-interface RepeatHost {
+export interface RepeatHost {
   repeat(): Repeat | null;
   running(): boolean;
   closed(): boolean;

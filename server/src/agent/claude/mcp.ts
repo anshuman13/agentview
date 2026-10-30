@@ -20,7 +20,7 @@ type Status = {
   tools?: { name: string; description?: string; annotations?: { readOnly?: boolean; destructive?: boolean } }[];
 };
 
-const transportName = (c: Config) => (c?.type === 'claudeai-proxy' ? 'claudeai' : c?.type ?? (c?.url ? 'http' : c?.command ? 'stdio' : undefined));
+export const transportName = (c: Config) => (c?.type === 'claudeai-proxy' ? 'claudeai' : c?.type ?? (c?.url ? 'http' : c?.command ? 'stdio' : undefined));
 const commandOf = (c: Config) => c?.url ?? (c?.command ? [c.command, ...(c.args ?? [])].join(' ') : undefined);
 const envOf = (c: Config) => (c?.env && Object.keys(c.env).length ? Object.keys(c.env) : undefined);
 
@@ -48,7 +48,7 @@ export function mcpFrom(list: Status[], toolNames: string[] = []): McpServer[] {
 }
 
 // ~/.claude.json and the repo's .mcp.json
-const readConfigs = (cwd: string) => Promise.all([readJson<any>(path.join(os.homedir(), '.claude.json'), {}), readJson<any>(path.join(cwd, '.mcp.json'), {})]);
+export const readConfigs = (cwd: string) => Promise.all([readJson<any>(path.join(os.homedir(), '.claude.json'), {}), readJson<any>(path.join(cwd, '.mcp.json'), {})]);
 
 export function configEntries(servers: Record<string, Config> | undefined, scope: McpConfigEntry['scope']): McpConfigEntry[] {
   return Object.entries(servers ?? {}).map(([name, s]) => ({ name, scope, type: transportName(s) ?? 'stdio', command: commandOf(s), env: envOf(s) }));
@@ -161,7 +161,7 @@ export async function mcpCall(cwd: string, name: string, def: McpServerDef, tool
 }
 
 const GROUPS = path.join(os.homedir(), '.agentview', 'mcp-groups.json');
-type McpGroups = Record<string, 'work' | 'personal' | 'hidden'>;
+export type McpGroups = Record<string, 'work' | 'personal' | 'hidden'>;
 
 export async function mcpGroups(): Promise<McpGroups> {
   const g = await readJson<any>(GROUPS, {});

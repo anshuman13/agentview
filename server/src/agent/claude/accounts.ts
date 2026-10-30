@@ -14,7 +14,7 @@ type Limits = Partial<Record<Account, number>>;
 // Until when each account is out of usage, kept across restarts. The hub marks limits in the same file, so it is read each time.
 const limited: Limits = {};
 const limits = (): Limits => readJsonSync<Limits | null>(LIMITS, null) ?? {};
-const limitedUntil = (a: Account) => Math.max(limits()[a] ?? 0, limited[a] ?? 0);
+export const limitedUntil = (a: Account) => Math.max(limits()[a] ?? 0, limited[a] ?? 0);
 
 // The second account counts once it is logged in. The file is large, so it is read again only when it changes.
 let altSeen = { mtime: -1, value: false };
@@ -53,7 +53,7 @@ function clearLimit(a: Account) {
 
 type Window = { utilization: number | null } | null | undefined;
 type Windows = { five_hour?: Window; seven_day?: Window; seven_day_opus?: Window; seven_day_sonnet?: Window; seven_day_oauth_apps?: Window; model_scoped?: Window[] };
-type LiveUsage = { rate_limits?: Windows | null };
+export type LiveUsage = { rate_limits?: Windows | null };
 
 const under = (w: Window) => w?.utilization != null && w.utilization < 100;
 
@@ -62,7 +62,7 @@ const free = (r: Windows | null | undefined) =>
   !!r && under(r.five_hour) && under(r.seven_day) && ![r.seven_day_opus, r.seven_day_sonnet, r.seven_day_oauth_apps, ...(r.model_scoped ?? [])].some((w) => (w?.utilization ?? 0) >= 100);
 
 // The account's live usage, read from a CLI that gets no prompt, so the check itself uses none.
-async function liveUsage(a: Account): Promise<LiveUsage> {
+export async function liveUsage(a: Account): Promise<LiveUsage> {
   const dir = configDir(a);
   let stop = () => {};
   const stopped = new Promise<void>((r) => (stop = r));
@@ -107,6 +107,17 @@ export function overageUntil(m: { type: string; rate_limit_info?: { isUsingOvera
   const r = m.type === 'rate_limit_event' ? m.rate_limit_info : undefined;
   if (!r?.isUsingOverage && !r?.overageInUse) return null;
   return r.resetsAt ? r.resetsAt * 1000 : now + 5 * 3600_000;
+}
+
+export function guardLimit(a: Account) {
+  if (isLimited(a)) throw new Error('The Claude account is at its usage limit');
+}
+
+export function stopOnOverage(a: Account, m: Parameters<typeof overageUntil>[0]) {
+  const until = overageUntil(m);
+  if (!until) return;
+  markLimited(a, until);
+  throw new Error('Stopped before using extra usage');
 }
 
 // The account to switch to when this one hits its limit, if the other one has usage left.
