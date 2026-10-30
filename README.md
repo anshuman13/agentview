@@ -46,6 +46,8 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
   without an estimate get one suggested from similar done tasks
 - Up to 3 weekly goals set on Meetings > Week; a task links to one, Overview shows done/total per goal and
   Plan my day places goal tasks first
+- Related while writing: typing in a task, a note or a meeting's My notes shows up to 3 matching wiki claims, past
+  meetings and Slack chats under the field
 - `/loop` and `/goal`, loop mode (plan, build, test), Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 

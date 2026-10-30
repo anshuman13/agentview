@@ -6,12 +6,14 @@ import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { ShowMore, useWindow } from '../../ui/useWindow';
 import { showSnack, useFocusBack, useView } from '../view';
+import { caretLine, RelatedStrip } from '../Related';
 
 // A loose note: a capture that is not a task. Tap to edit; the first line is its title.
 function NoteCard({ row }: { row: ItemRow }) {
   const store = useAssistantStore();
   const full = [row.title ?? '', row.text ?? ''].filter(Boolean).join('\n');
   const [text, setText] = useState<string | null>(null);
+  const [line, setLine] = useState('');
   const card = useFocusBack<HTMLButtonElement>(text !== null);
   const edits = (t: string) => {
     const [first, ...rest] = t.split('\n');
@@ -37,7 +39,8 @@ function NoteCard({ row }: { row: ItemRow }) {
   if (text !== null) {
     return (
       <div className="wk-card wk-note editing">
-        <textarea autoFocus value={text} aria-label="Note" onChange={(e) => setText(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === 'Escape' && setText(null)} />
+        <textarea autoFocus value={text} aria-label="Note" onChange={(e) => { setText(e.target.value); setLine(caretLine(e.target)); }} onBlur={save} onKeyDown={(e) => e.key === 'Escape' && setText(null)} />
+        <RelatedStrip text={line} profile={row.profile} skip={row.id} />
         <span className="wk-card-foot">
           <button className="btn sm" onMouseDown={(e) => e.preventDefault()} onClick={toTask}>Make task</button>
           <span className="spacer" />

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAssistantStore } from '../data';
 import type { Meeting } from '../data/wiki';
 import { fitHeight } from '../../ui/util';
+import { caretLine, RelatedStrip } from '../Related';
 
 const SAVE_AFTER = 800;
 
@@ -9,6 +10,7 @@ const SAVE_AFTER = 800;
 export function MeetingNotes({ m }: { m: Meeting }) {
   const store = useAssistantStore();
   const [text, setText] = useState(m.notes ?? '');
+  const [line, setLine] = useState('');
   const area = useRef<HTMLTextAreaElement>(null);
   const row = useRef(m);
   row.current = m;
@@ -34,14 +36,19 @@ export function MeetingNotes({ m }: { m: Meeting }) {
     if (pending.current === null && document.activeElement !== area.current) setText(m.notes ?? '');
   }, [m.notes]);
   useEffect(() => fitHeight(area.current), [text]);
-  const change = (value: string) => {
+  const change = (el: HTMLTextAreaElement) => {
+    const value = el.value;
     setText(value);
+    setLine(caretLine(el));
     pending.current = value;
     clearTimeout(timer.current);
     timer.current = setTimeout(flush, SAVE_AFTER);
   };
   return (
-    <textarea ref={area} className="mt-notes" value={text} rows={2} aria-label="Your notes" placeholder="Write your notes. They stay yours; the summary is written separately."
-      onChange={(e) => change(e.target.value)} onBlur={() => { const typed = pending.current !== null; flush(); if (!typed) setText(row.current.notes ?? ''); }} />
+    <>
+      <textarea ref={area} className="mt-notes" value={text} rows={2} aria-label="Your notes" placeholder="Write your notes. They stay yours; the summary is written separately."
+        onChange={(e) => change(e.target)} onBlur={() => { const typed = pending.current !== null; flush(); if (!typed) setText(row.current.notes ?? ''); }} />
+      <RelatedStrip text={line} profile={m.profile} skip={m.id} />
+    </>
   );
 }

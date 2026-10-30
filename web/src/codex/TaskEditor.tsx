@@ -19,6 +19,7 @@ import { Check } from './TaskCheck';
 import { estimateMin, minutesText, suggestEstimate } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 import { GoalPick } from './Goals';
+import { caretLine, RelatedStrip } from './Related';
 
 const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
 
@@ -29,6 +30,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const [title, setTitle] = useState(row.title ?? '');
   const [text, setText] = useState(row.text ?? '');
   const saved = useRef({ title: row.title ?? '', text: row.text ?? '' });
+  const [typed, setTyped] = useState<string | null>(null);
   const [snoozing, setSnoozing] = useState(false);
   const [tidying, setTidying] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -149,13 +151,14 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
           placeholder="Title"
           aria-label="Title"
           enterKeyHint="next"
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => { setTitle(e.target.value); setTyped((t) => t ?? ''); }}
           onBlur={save}
           onFocus={reveal}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); textRef.current?.focus(); } }}
         />
       </div>
-      <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Notes" aria-label="Notes" onChange={(e) => setText(e.target.value)} onBlur={save} onFocus={reveal} />
+      <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Notes" aria-label="Notes" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onBlur={save} onFocus={reveal} />
+      {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
       {checks.length > 0 && (
         <div className="as-edit-checks">
           {checks.map((c, i) => (
