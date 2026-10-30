@@ -6,7 +6,7 @@ const MORE = /\n… (\d+) more lines$/;
 const lines = (v: unknown) => {
   if (typeof v !== 'string' || !v.length) return 0;
   const m = v.match(MORE);
-  return v.split('\n').length + (m ? Number(m[1]) - 1 : 0);
+  return v.split('\n').length - (v.endsWith('\n') ? 1 : 0) + (m ? Number(m[1]) - 1 : 0);
 };
 
 export function editCount(name: string, input: Record<string, unknown>): EditCount | null {

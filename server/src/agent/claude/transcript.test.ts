@@ -34,6 +34,8 @@ describe('clipInput', () => {
     expect(editCount('Write', e.input)).toEqual(full);
     const edit = toolUseEvent('t', 'Edit', { file_path: 'a.ts', old_string: file, new_string: `${file}\nmore` }, 0) as typeof e;
     expect(editCount('Edit', edit.input)).toEqual(editCount('Edit', { old_string: file, new_string: `${file}\nmore` }));
+    const ended = toolUseEvent('t', 'Write', { file_path: 'a.ts', content: `${file}\n` }, 0) as typeof e;
+    expect(editCount('Write', ended.input)).toEqual({ add: 500, del: 0 });
   });
 
   it('marks a long single line without adding a line', () => {

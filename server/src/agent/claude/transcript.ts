@@ -100,7 +100,7 @@ export function clipInput(v: unknown): unknown {
   if (typeof v === 'string') {
     if (v.length <= CLIP) return v;
     const head = v.slice(0, CLIP);
-    const more = v.split('\n').length - head.split('\n').length;
+    const more = v.replace(/\n$/, '').split('\n').length - head.split('\n').length;
     return more > 0 ? `${head}\n… ${more} more lines` : `${head} …`;
   }
   if (Array.isArray(v)) return v.map(clipInput);
