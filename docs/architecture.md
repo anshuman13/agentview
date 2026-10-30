@@ -61,6 +61,10 @@ block. The client adds an append only when the offset fits the text it has; the 
 `sessions`, `workspace` (files, code, terminal, browser), `ops` (Observe, Deploy, GitHub, MCP), `codex` (with `data`, `jobs`,
 `meetings`, `summary`, `wiki`) and `styles`.
 
+Views, panes, pages and popovers load as their own chunks (`web/src/app/lazy.tsx`), and so does the markdown
+parser, off the chat's startup path. Views that render chat markdown wait for it, so replies never show as plain text
+first.
+
 ## Access
 
 Only this Mac and NetBird peers may connect, and requests from other origins are refused (`server/src/http/access.ts`).
