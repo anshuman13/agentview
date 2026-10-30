@@ -10,6 +10,9 @@ import type { ItemRow } from './data/sync';
 import { save, stored, plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
+import { Shutdown } from './Shutdown';
+import { useActions } from './Task';
+import { DayPlan } from './DayPlan';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
 import { copyText, openMeeting, setView, showSnack, useView } from './view';
@@ -196,6 +199,7 @@ type Split = ReturnType<typeof useSplit>;
 // The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
 export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
   const store = useAssistantStore();
+  const act = useActions();
   const snap = useAssistantData();
   const { filter } = useView();
   const now = Date.now();
@@ -230,7 +234,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     <div className="ov-follow">
       {rs.slice(0, 5).map((r) => (
         <div key={r.profile + r.id} className="ov-follow-row">
-          <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); void store.update(r, { status: 'done' }); }}><Icon name="circle-large-outline" small /></button>
+          <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
           <button className="ov-follow-text" onClick={tasks}><span className="ov-t">{r.title}</span></button>
           <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
         </div>
@@ -246,6 +250,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         </div>
       )}
       <JustEnded meetings={s.meetingsToday} now={now} />
+      <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
+      <DayPlan meetings={s.meetingsToday} open={dueToday} now={now} />
       <SinceLastVisit />
       <SlackCard />
       {digest && (
