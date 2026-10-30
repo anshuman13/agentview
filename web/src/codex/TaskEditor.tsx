@@ -42,8 +42,11 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     const next = text.replace(CHECK_RE, (line, box: string) => (i++ === n ? line.replace(`[${box}]`, /x/i.test(box) ? '[ ]' : '[x]') : line));
     setText(next);
     haptic('tap');
-    if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; act.edit(row, { text: next }); }
+    if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; write({ text: next }); }
   };
+  // The move waits for the last save, so the phone's store copies the saved title and notes to the other profile.
+  const saving = useRef<Promise<void>>(Promise.resolve());
+  const write = (patch: Patch) => { saving.current = store.update(row, patch); };
   const pending = () => {
     const patch: Patch = {};
     if (title.trim() && title.trim() !== saved.current.title) patch.title = title.trim();
@@ -54,7 +57,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     const patch = pending();
     if (!Object.keys(patch).length) return;
     saved.current = { title: patch.title ?? saved.current.title, text };
-    act.edit(row, patch);
+    write(patch);
   };
   const latest = useRef(save);
   latest.current = save;
@@ -104,9 +107,8 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
 
   const other: Profile = row.profile === 'work' ? 'personal' : 'work';
   const move = () => {
-    const patch = pending();
-    saved.current = { title, text };
-    void act.move({ ...row, ...patch }, other);
+    save();
+    void saving.current.then(() => act.move(row, other));
   };
   const then = (f: () => void) => () => { save(); f(); onClose(); };
   const timed = row.status === 'open' || row.status === 'suggested' || at != null;
