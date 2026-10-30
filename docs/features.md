@@ -35,6 +35,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
   the last workday. It shows as its title folded by default; opened it shows 3 lines with Show all, and it hides until tomorrow
 - Meetings that ended in the last two hours with their first 3 open actions (suggested ones wait in Needs you) (Open notes for N more), a follow-up draft to copy and the notes
+- Tasks at risk show only in Needs you, not again in To do today
 - A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
   length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
   meetings. The strip shows once a block exists today, otherwise a Plan my day button; Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this

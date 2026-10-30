@@ -340,6 +340,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
     void store.update(r, { at, rolls: null, rolled_from: null }).then(() => showSnack(`Snoozed to ${when(at)}`));
   };
+  const risky = new Set(needs.rows.flatMap((n) => (n.kind === 'risk' ? [n.row.profile + n.row.id] : [])));
+  const todo = dueToday.filter((r) => !risky.has(r.profile + r.id));
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + s.meetingsTomorrow.length + tomorrow.length;
   const fit = (x: { profile: string; deleted?: unknown }) => !x.deleted && (filter === 'all' || x.profile === filter);
@@ -398,10 +400,10 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           {upcoming.length > 3 && <button className="as-chip quiet ov-more" onClick={() => setView({ list: 'meetings', open: null })}>+{upcoming.length - 3} more</button>}
         </section>
       )}
-      {dueToday.length > 0 && (
+      {todo.length > 0 && (
         <section>
-          <div className="as-section">To do today · {dueToday.length}</div>
-          {shown(dueToday, true)}
+          <div className="as-section">To do today · {todo.length}</div>
+          {shown(todo, true)}
         </section>
       )}
       <Fold id="later" title="Later" count={laterCount}>
