@@ -3,7 +3,8 @@ import { Back } from '../app/back';
 import { Icon } from '../ui/Icon';
 import { Markdown } from '../chat/Chat';
 import { Row } from '../chat/Transcript';
-import { agentCounts, agentsOf, elapsed, openAgent, tokens, type Agent } from './agents';
+import { copyText } from '../codex/view';
+import { agentCounts, agentsOf, elapsed, openAgent, reportText, tokens, type Agent } from './agents';
 import { plural, useTick } from '../ui/util';
 import type { AgentStatus } from '../../../shared/protocol';
 
@@ -87,7 +88,7 @@ function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; no
         {running && <div className="muted small" title={new Date(a.lastAt).toLocaleString()}>Last activity {elapsed(now - a.lastAt)} ago{a.lastStep && ` · ${a.lastStep}`}</div>}
       </header>
       <section className="ag-report">
-        {running ? <div className="muted small">The report shows here when the agent finishes.</div> : <Markdown text={a.result?.text || '(no report)'} />}
+        {running ? <div className="muted small">The report shows here when the agent finishes.</div> : <><Markdown text={reportText(a)} /><button className="btn sm" onClick={() => copyText(reportText(a), 'Report copied')}><Icon name="copy" small /> Copy report</button></>}
       </section>
       {a.prompt && (
         <details className="ag-prompt">

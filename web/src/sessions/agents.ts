@@ -53,6 +53,12 @@ function agentOf(it: Extract<Item, { kind: 'agent' }>, info: AgentEvent | undefi
   };
 }
 
+export function reportText(a: Agent): string {
+  if (a.result?.text) return a.result.text;
+  if (a.status === 'failed' || a.status === 'stopped') return a.info?.progress || `Agent ${a.status}`;
+  return '(no report)';
+}
+
 export function buildAgents(events: ChatEvent[]): Agent[] {
   const info = new Map<string, AgentEvent>();
   const lastAt = new Map<string, number>();

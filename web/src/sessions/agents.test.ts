@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentCounts, buildAgents } from './agents';
+import { agentCounts, buildAgents, reportText } from './agents';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol';
 
 const use = (id: string, input: Record<string, unknown>, at: number, parent?: string): ChatEvent => ({ id, kind: 'tool_use', name: 'Agent', input, summary: '', at, ...(parent && { parent }) });
@@ -36,5 +36,12 @@ describe('buildAgents', () => {
     const agents = buildAgents(events);
     expect(agents.map((a) => [a.id, a.status, a.endedAt])).toEqual([['a1', 'stopped', 5], ['a2', 'running', null]]);
     expect(agents[1].lastAt).toBe(7);
+  });
+});
+
+describe('reportText', () => {
+  it('shows the status for a failed agent with no report', () => {
+    const [a] = buildAgents([use('a1', { description: 'Broken' }, 1), info('a1', { status: 'failed', endedAt: 5 })]);
+    expect(reportText(a)).toBe('Agent failed');
   });
 });
