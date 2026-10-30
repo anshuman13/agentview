@@ -27,7 +27,8 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
 
 ### Overview
 
-- One line per weekly goal with done/total of the tasks linked to it
+- One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening on Tasks
+- With no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
   the last workday. It folds and hides until tomorrow
@@ -110,7 +111,7 @@ The header has a decision log filtered by person, a Load view and a Week view:
   value audit: meetings, hours, decisions and my actions per series over 8 weeks, with series that brought no decision
   or action of mine in 4 weeks flagged first as Nothing for you lately with the hours they cost; a tap opens the
   latest meeting
-- Week: Goals this week, where up to 3 goals per profile are set and renamed, then the week's decisions, new claims,
+- Week: Goals this week, where up to 3 goals per profile are set and renamed (under All, a Work/Personal choice picks the profile), then the week's decisions, new claims,
   tasks done and open meeting actions. Its Review lists done, slipped and stuck tasks and Waiting on by person: waiting
   tasks and sent mail with no reply after 3 workdays, with Copy nudge and Open. The decision log, Week (with Waiting
   on) and person pages copy as Markdown

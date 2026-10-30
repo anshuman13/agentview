@@ -16,10 +16,21 @@ export function goalsOf(items: ItemRow[], now: number, profile?: Profile) {
     .sort((a, b) => madeAt(a) - madeAt(b));
 }
 
-const linkedTo = (items: ItemRow[], goal: ItemRow) =>
+export const linkedTo = (items: ItemRow[], goal: ItemRow) =>
   items.filter((r) => !r.deleted && r.profile === goal.profile && r.goal === goal.id && (r.status === 'open' || r.status === 'done'));
 
 export function goalProgress(items: ItemRow[], goal: ItemRow) {
   const tasks = linkedTo(items, goal);
   return { done: tasks.filter((r) => r.status === 'done').length, total: tasks.length };
+}
+
+// Last week's goals not fully done, when this week has none yet.
+export function carryOver(items: ItemRow[], now: number, profile?: Profile) {
+  if (goalsOf(items, now, profile).length) return [];
+  const d = new Date(weekStart(now));
+  const prev = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7, 12).getTime();
+  return goalsOf(items, prev, profile).filter((g) => {
+    const p = goalProgress(items, g);
+    return !p.total || p.done < p.total;
+  });
 }

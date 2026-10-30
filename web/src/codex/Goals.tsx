@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import { useAssistantData, useAssistantStore } from './data';
-import { GOAL, MAX_GOALS, goalProgress, goalsOf } from './data/goals';
+import { GOAL, MAX_GOALS, carryOver, goalProgress, goalsOf, linkedTo } from './data/goals';
 import { weekStart } from './data/dates';
-import type { ItemRow } from './data/sync';
-import { showSnack, useView } from './view';
+import type { ItemRow, Profile } from './data/sync';
+import { openTask, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
 
 function GoalInput({ row }: { row: ItemRow }) {
@@ -27,7 +27,8 @@ export function WeekGoals({ now }: { now: number }) {
   const store = useAssistantStore();
   const { items } = useAssistantData();
   const { filter } = useView();
-  const profile = filter === 'all' ? 'work' : filter;
+  const [pick, setPick] = useState<Profile>('work');
+  const profile = filter === 'all' ? pick : filter;
   const goals = goalsOf(items, now, profile);
   const [text, setText] = useState('');
   const adding = useRef(false);
@@ -46,6 +47,12 @@ export function WeekGoals({ now }: { now: number }) {
     <section className="mt-wk-sec">
       <div className="mt-load-head">Goals this week ({goals.length}/{MAX_GOALS})</div>
       {goals.length > 0 && <div role="list" aria-label="Goals">{goals.map((g) => <GoalInput key={g.profile + g.id} row={g} />)}</div>}
+      {filter === 'all' && (
+        <select className="as-chip quiet" value={pick} aria-label="Goal profile" onChange={(e) => setPick(e.target.value as Profile)}>
+          <option value="work">Work</option>
+          <option value="personal">Personal</option>
+        </select>
+      )}
       {goals.length < MAX_GOALS && (
         <input className="gl-input" value={text} placeholder="Add a goal" aria-label="New goal" enterKeyHint="done" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void add(); else if (e.key === 'Escape') setText(''); }} />
       )}
@@ -53,18 +60,50 @@ export function WeekGoals({ now }: { now: number }) {
   );
 }
 
-// One slim line per goal of this week with done of total linked tasks.
+// One slim line per goal of this week with done of total linked tasks; a line expands to its open tasks.
+function GoalLine({ goal, items }: { goal: ItemRow; items: ItemRow[] }) {
+  const [open, setOpen] = useState(false);
+  const p = goalProgress(items, goal);
+  const tasks = linkedTo(items, goal).filter((r) => r.status === 'open');
+  return (
+    <div role="listitem">
+      <button className="gl-line" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name={open ? 'chevron-down' : 'chevron-right'} small /> <span className="muted small">This week</span> <span className="ov-t">{goal.title}</span> <span className="muted small">{p.done}/{p.total}<span className="sr-only"> tasks done</span></span>
+      </button>
+      {open && (tasks.length
+        ? <ul className="gl-tasks">{tasks.map((t) => <li key={t.id}><button className="ov-follow-text" onClick={() => openTask(t)}>{t.title}</button></li>)}</ul>
+        : <div className="muted small gl-tasks">No open tasks</div>)}
+    </div>
+  );
+}
+
 export function GoalLines({ now }: { now: number }) {
+  const store = useAssistantStore();
   const { items } = useAssistantData();
   const { filter } = useView();
-  const goals = goalsOf(items, now, filter === 'all' ? undefined : filter);
-  if (!goals.length) return null;
+  const scope = filter === 'all' ? undefined : filter;
+  const goals = goalsOf(items, now, scope);
+  const carry = carryOver(items, now, scope);
+  const busy = useRef(false);
+  const carryAll = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      for (const g of carry) await store.capture(g.title ?? '', GOAL, g.profile, weekStart(now));
+    } finally {
+      busy.current = false;
+    }
+  };
+  if (!goals.length && !carry.length) return null;
   return (
     <section className="gl-lines" role="list" aria-label="Goals this week">
-      {goals.map((g) => {
-        const p = goalProgress(items, g);
-        return <div key={g.profile + g.id} className="gl-line" role="listitem"><span className="muted small">This week</span> <span className="ov-t">{g.title}</span> <span className="muted small">{p.done}/{p.total}<span className="sr-only"> tasks done</span></span></div>;
-      })}
+      {goals.map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} />)}
+      {!goals.length && (
+        <div className="gl-line" role="listitem">
+          <span className="muted small">Carry over {carry.length} {carry.length === 1 ? 'goal' : 'goals'} from last week</span>
+          <button className="as-chip" onClick={() => void carryAll()}>Carry over</button>
+        </div>
+      )}
     </section>
   );
 }
