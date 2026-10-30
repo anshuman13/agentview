@@ -35,7 +35,7 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
   const body = (
     <>
       {points.length > 0 && (
-        <div className="as-ctx-list">
+        <div className="as-ctx-list" onClick={(e) => e.stopPropagation()}>
           <div className="muted small">To raise</div>
           <PointList points={points} meeting={false} />
         </div>
