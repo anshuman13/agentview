@@ -12,6 +12,7 @@ import { DAY } from './time.js';
 
 const WITHIN = 14 * DAY;
 const MAX_CLAIMS = 20;
+const MAX_TRIES = 3;
 
 type Meeting = { id: string; title: string | null; starts_at: number; calendar_url: string | null; decisions: string };
 type SlackDecision = { id: string; text: string; channel: string; url: string; at: number };
@@ -57,6 +58,13 @@ export function pendingOrigins(db: Database, profile: Profile, now = Date.now())
 
 export const markDone = (db: Database, profile: Profile, id: string, now = Date.now()) =>
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(doneKey(profile, id), String(now));
+
+function failed(db: Database, profile: Profile, id: string) {
+  const key = `wikiupdate-tries:${profile}:${id}`;
+  const n = Number((db.prepare('SELECT value FROM meta WHERE key = ?').get(key) as { value: string } | null)?.value ?? 0) + 1;
+  db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(n));
+  return n;
+}
 
 // Current claims on live pages from before the decision, with no proposed replacement yet, that it may change, with the decisions that touch each.
 export function candidates(db: Database, profile: Profile, o: Origin): Candidate[] {
@@ -143,7 +151,8 @@ async function decide(profile: Profile, o: Origin, found: Candidate[]) {
   return updates;
 }
 
-// Proposes wiki updates from the decisions of each recent meeting and Slack message, once each. One stopped by the usage limit waits for the next run.
+// Proposes wiki updates from the decisions of each recent meeting and Slack message, once each. One stopped by the usage limit waits for the next run;
+// one that fails otherwise is tried again on the next runs, up to MAX_TRIES in all.
 export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = decide) {
   let saved = 0;
   for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
@@ -154,6 +163,7 @@ export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = d
       } catch (err) {
         console.error(`wiki updates ${profile}:`, err instanceof Error ? err.message : err);
         if (isLimited(ACCOUNT_OF[profile])) break;
+        if (failed(db, profile, o.id) < MAX_TRIES) continue;
       }
       markDone(db, profile, o.id, now);
     }

@@ -200,7 +200,8 @@ names the page (the "Maybe changed" rule, in `shared/claimMatch.ts`). For a meet
 the profile's account, with only a save tool, writes a replacement ("As of <date>, ...") for each claim the decisions
 change. Each is saved as a proposed claim with `replaces`, a meeting source and `added_by` `meeting:<id>`, unless the
 same text already replaces that claim. Its review card says "From <meeting title>". A meeting stopped by the usage
-limit is tried again on the next run.
+limit is tried again on the next run; one that fails for another reason gets up to 3 tries in all (meta key
+`wikiupdate-tries:<profile>:<id>`).
 
 Slack decisions go the same way. The Slack scan also returns decisions settled in the watched channels (a short line,
 the channel, the permalink and the time), kept once per permalink and line in the hub-only `slack_decisions` table for

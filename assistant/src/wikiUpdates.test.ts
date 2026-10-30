@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, setSystemTime } from 'bun:test';
 import { openDb } from './db.js';
 import { saveScan } from './slack.js';
 import { applyChanges } from './sync.js';
@@ -43,6 +43,23 @@ describe('wiki updates', () => {
     db.prepare("DELETE FROM meta WHERE key LIKE 'wikiupdate:%'").run();
     expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
     expect(asked).toHaveLength(1);
+  });
+
+  it('tries a failing origin three times before skipping it', async () => {
+    const db = setup();
+    let asked = 0;
+    const ask = async () => {
+      asked++;
+      throw new Error('network down');
+    };
+    // Past any usage limit this machine has marked, so the error does not read as one.
+    setSystemTime(new Date('2100-01-01'));
+    try {
+      for (let i = 0; i < 4; i++) expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
+    } finally {
+      setSystemTime();
+    }
+    expect(asked).toBe(3);
   });
 
   it('proposes updates from Slack channel decisions once each, with a Slack source', async () => {
