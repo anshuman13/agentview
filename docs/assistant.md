@@ -46,7 +46,7 @@ sides run on the personal account.
 | meetings | Calendar meetings with my notes, the summary and decisions |
 | slack_decisions | Decisions the Slack scan saw in watched channels, with channel, permalink and time; hub only, kept 14 days, read by the wiki update pass |
 | transcripts | The Gemini transcript text of each summarized meeting, kept on the hub only (not synced; the apps search it and read it through the hub) |
-| actions | Proposed Slack messages, Linear issues and tasks from a meeting, approved or rejected in Codex |
+| actions | Proposed Slack messages and Linear issues from a meeting; synced but unused, since meeting actions are items with `meeting_id` |
 | jobs, runs | Scheduled jobs and their run history |
 | chats | Slack channels and DMs the scan read, each with a running summary |
 | briefs | Morning briefs (kind `morning`), Slack summaries (`slack`) and the unanswered sent mail list (`waiting`) |
@@ -98,18 +98,17 @@ resets the copy and downloads it again from the hub.
 The web UI is bundled into the phone app, so it opens without a Mac. The Assistant is an activity bar entry next to
 Chats and Code. The editor connects to the Mac picked in the Macs switcher and shows offline when none is reachable;
 the Assistant is the same everywhere: on the phone it reads the encrypted local copy and syncs with the hub, on a Mac
-it goes through the AgentView server to the hub. Today (tasks and the next meeting, swipe to finish or snooze),
-Capture (mic and text) and Notes; later notifications with Done and Snooze, a share target and a widget.
+it goes through the AgentView server to the hub. Its lists are Overview, Tasks, Meetings, Jobs and Wiki (see
+[features.md](features.md)); a share target and a widget come later.
 
 ## Build order
 
 1. Mini hub: database schema, sync API, launchd services, nightly backup (done)
-2. NetBird identity instead of device keys
-3. Web UI bundled into the phone app; AgentView accepts the app's requests from NetBird peers
+2. NetBird identity instead of device keys (done)
+3. Web UI bundled into the phone app; AgentView accepts the app's requests from NetBird peers (done)
 4. Assistant pane in the web app on one data layer (local copy on the phone, the server on a Mac); remove the separate page (done)
 5. Device list and reset of a lost phone copy
-6. Scheduler on the mini: work Slack, Calendar and Linear feeding Today
-7. Meeting notes and action items, facts and search (screens and data model done, see
-   [codex-wiki.md](codex-wiki.md); the scheduler fills them)
-8. Notifications, share target, widget
+6. Scheduler on the mini: work Slack, Gmail and Calendar feeding Tasks (done); Linear not yet
+7. Meeting notes and action items, facts and search (done, see [codex-wiki.md](codex-wiki.md))
+8. Share target and widget (pushes with Done and Snooze are done)
 9. Personal profile collection
