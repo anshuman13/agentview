@@ -208,7 +208,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.syncNow();
   }
 
-  async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null, meeting: MeetingRef = null) {
+  async capture(text: string, type: 'task' | 'note' | 'goal', profile: Profile, at: number | null = null, meeting: MeetingRef = null) {
     const row = newCapture(text, type, profile, Date.now(), at, meeting);
     this.put('items', row);
     return row;

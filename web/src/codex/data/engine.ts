@@ -212,7 +212,7 @@ export const latestDigest = (items: ItemRow[], profile: 'all' | Profile) =>
   items.filter((r) => !r.deleted && r.status === 'note' && r.title?.startsWith(DIGEST_TITLE) && (profile === 'all' || r.profile === profile)).sort((a, b) => b.updated_at - a.updated_at)[0];
 
 // A task added from a meeting is an action of that meeting, labelled with its title.
-export function newCapture(text: string, type: 'task' | 'note', profile: Profile, now: number, at: number | null = null, meeting: { id: string; title: string | null } | null = null): ItemRow {
+export function newCapture(text: string, type: 'task' | 'note' | 'goal', profile: Profile, now: number, at: number | null = null, meeting: { id: string; title: string | null } | null = null): ItemRow {
   const [first, ...rest] = text.split('\n');
   return {
     id: newId(),
@@ -223,11 +223,11 @@ export function newCapture(text: string, type: 'task' | 'note', profile: Profile
     field_times: JSON.stringify({ title: now, text: now, source: now, status: now, ...(at != null && { at: now }), ...(meeting && { people: now, meeting_id: now }) }),
     title: first.slice(0, 120),
     text: rest.join('\n').trim() || null,
-    source: meeting ? 'action' : 'capture',
+    source: meeting ? 'action' : type === 'goal' ? 'goal' : 'capture',
     source_url: null,
     people: meeting?.title ?? null,
     at,
-    status: type === 'note' ? 'note' : 'open',
+    status: type === 'task' ? 'open' : type,
     meeting_id: meeting?.id ?? null,
     rolls: null,
     rolled_from: null,

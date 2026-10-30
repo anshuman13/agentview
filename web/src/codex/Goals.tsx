@@ -32,8 +32,7 @@ export function WeekGoals({ now }: { now: number }) {
     const t = text.trim();
     if (!t || goals.length >= MAX_GOALS) return;
     setText('');
-    const row = await store.capture(t, 'note', profile, weekStart(now));
-    await store.update(row, { status: GOAL, source: 'goal' });
+    await store.capture(t, GOAL, profile, weekStart(now));
   };
   return (
     <section className="mt-wk-sec">

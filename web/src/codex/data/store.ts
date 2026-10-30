@@ -21,7 +21,7 @@ export interface AssistantStore {
   subscribe(fn: () => void): () => void;
   snapshot(): Snapshot;
   unlock(): Promise<void>;
-  capture(text: string, type: 'task' | 'note', profile: Profile, at?: number | null, meeting?: MeetingRef): Promise<ItemRow>;
+  capture(text: string, type: 'task' | 'note' | 'goal', profile: Profile, at?: number | null, meeting?: MeetingRef): Promise<ItemRow>;
   update(row: ItemRow, patch: Patch): Promise<void>;
   move(row: ItemRow, profile: Profile): Promise<void>;
   editRow<K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>): Promise<void>;

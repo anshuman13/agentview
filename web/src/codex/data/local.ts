@@ -225,7 +225,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
     });
   }
 
-  async capture(text: string, type: 'task' | 'note', profile: Profile, at: number | null = null, meeting: MeetingRef = null) {
+  async capture(text: string, type: 'task' | 'note' | 'goal', profile: Profile, at: number | null = null, meeting: MeetingRef = null) {
     const r = newCapture(text, type, profile, Date.now(), at, meeting);
     await this.exec(
       `INSERT INTO items (id, profile, version, updated_at, deleted, field_times, title, text, source, people, at, status, meeting_id, dirty)
