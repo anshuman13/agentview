@@ -12,8 +12,7 @@ const call = (path: string, init?: RequestInit) => fetch(path, init);
 
 async function hub<T = Reply>(path: string, body?: unknown, init?: RequestInit): Promise<T> {
   const post = body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
-  const signal = init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(HUB_TIMEOUT)]) : AbortSignal.timeout(HUB_TIMEOUT);
-  const resp = await call(path, { ...post, ...init, signal });
+  const resp = await call(path, { ...post, ...init });
   const data = await resp.json().catch(() => null);
   if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
   return data;
@@ -194,7 +193,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         const tables = this.hubHasWiki() ? Object.keys(this.tables) : ['items'];
         return tables.flatMap((table) => [...this.tables[table].values()].filter((r) => r.dirty).map((row): Dirty => ({ table, row })));
       },
-      post: (since, changes: Change[]) => (changes.length ? hub('/api/assistant/sync', { since, changes }) : hub(`/api/assistant/changes?since=${since}`)),
+      post: (since, changes: Change[]) => (changes.length ? hub('/api/assistant/sync', { since, changes }, { signal: AbortSignal.timeout(HUB_TIMEOUT) }) : hub(`/api/assistant/changes?since=${since}`, undefined, { signal: AbortSignal.timeout(HUB_TIMEOUT) })),
       clean: async ({ table, row }) => {
         const map = this.tables[table];
         const now = map.get(rowKey(row));
