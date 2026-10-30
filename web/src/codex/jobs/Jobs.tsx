@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, type Profile } from '../data/sync';
@@ -128,6 +128,14 @@ function JobPage({ j }: { j: Job }) {
   const [prompt, setPrompt] = useState(j.prompt ?? '');
   useEffect(() => setName(j.name ?? ''), [j.name]);
   useEffect(() => setPrompt(j.prompt ?? ''), [j.prompt]);
+  const typed = useRef({ j, name, prompt });
+  typed.current = { j, name, prompt };
+  const save = () => {
+    const { j, name, prompt } = typed.current;
+    if (name !== (j.name ?? '')) void store.editRow('jobs', j, { name: name.trim() || 'Untitled job' });
+    if (prompt !== (j.prompt ?? '')) void store.editRow('jobs', j, { prompt });
+  };
+  useEffect(() => save, []);
   const back = () => setView({ open: null });
   useEscapeBack(back);
   const sched = parseSchedule(j.schedule);
@@ -157,7 +165,7 @@ function JobPage({ j }: { j: Job }) {
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          <input className="wk-title jb-name" value={name} placeholder="Job name" aria-label="Job name" onChange={(e) => setName(e.target.value)} onBlur={() => name !== (j.name ?? '') && void store.editRow('jobs', j, { name: name.trim() || 'Untitled job' })} />
+          <input className="wk-title jb-name" value={name} placeholder="Job name" aria-label="Job name" onChange={(e) => setName(e.target.value)} onBlur={save} />
           <div className="wk-meta mt-when">
             <span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work account' : 'Personal account'}</span>
             {j.enabled && j.next_run_at ? <span>Next {at(j.next_run_at)}</span> : null}
@@ -179,7 +187,7 @@ function JobPage({ j }: { j: Job }) {
           </section>
           <section className="mt-sec">
             <h2>Prompt</h2>
-            <textarea className="jb-prompt" rows={4} value={prompt} placeholder={EXAMPLE} aria-label="Prompt" onChange={(e) => setPrompt(e.target.value)} onBlur={() => prompt !== (j.prompt ?? '') && void store.editRow('jobs', j, { prompt })} />
+            <textarea className="jb-prompt" rows={4} value={prompt} placeholder={EXAMPLE} aria-label="Prompt" onChange={(e) => setPrompt(e.target.value)} onBlur={save} />
             <div className="muted small">Runs on the {j.profile} Claude account. It can only read, add tasks to Codex, and send you its reply.</div>
           </section>
           <section className="mt-sec">
