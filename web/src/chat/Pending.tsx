@@ -261,6 +261,7 @@ export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean 
             className="pd-other-input"
             value={other}
             placeholder="Type your answer, Enter to send"
+            aria-label="Your answer"
             onChange={(e) => setOther(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && result && !e.nativeEvent.isComposing) answer(result);
