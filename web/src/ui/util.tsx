@@ -50,12 +50,36 @@ export const save = (key: string, v: unknown) => {
   try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
 };
 
+export const storedStrings = (key: string): string[] => {
+  const v = stored<unknown>(key, []);
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+};
+
 export const readFlag = (key: string, fallback: boolean) => {
   try { const v = localStorage.getItem(key); return v === null ? fallback : v === '1'; } catch { return fallback; }
 };
 export const saveFlag = (key: string, on: boolean) => {
   try { localStorage.setItem(key, on ? '1' : '0'); } catch {}
 };
+
+export function listKeys({ count, idx, setIdx, onEnter, onEscape }: { count: number; idx: number; setIdx: (i: number) => void; onEnter: () => void; onEscape: () => void }) {
+  return (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') onEscape();
+    else if (e.key === 'ArrowDown') setIdx(Math.max(0, Math.min(idx + 1, count - 1)));
+    else if (e.key === 'ArrowUp') setIdx(Math.max(0, Math.min(idx - 1, count - 1)));
+    else if (e.key === 'Enter' && !e.nativeEvent.isComposing) onEnter();
+    else return;
+    e.preventDefault();
+  };
+}
+
+export function useEscape(onClose: () => void) {
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+}
 
 export function Hl({ text, hits, from = 0 }: { text: string; hits: number[]; from?: number }) {
   return <>{[...text].map((c, i) => (hits.includes(from + i) ? <b key={i}>{c}</b> : c))}</>;

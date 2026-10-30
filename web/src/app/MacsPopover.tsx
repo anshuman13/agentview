@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
-import { stored } from '../ui/util';
+import { stored, useEscape } from '../ui/util';
 import { apiBase, apiUrl, bundled, knownMacs, macOrigin, macPort, macUrl, setApiBase, shell, trusted, useApiBase } from './api';
 import { switchedMac } from './store';
 
@@ -136,11 +136,7 @@ export function MacsPopover({ onClose }: { onClose: () => void }) {
     return () => clearInterval(t);
   }, [base, name]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  useEscape(onClose);
 
   return (
     <div className="overlay connect-overlay" onClick={onClose}>

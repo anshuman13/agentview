@@ -14,6 +14,10 @@ const PAGE = 10;
 
 const ROOTS = ['workspace_personal', 'workspace'];
 
+function FilterInput({ value, set }: { value: string; set: (v: string) => void }) {
+  return <input placeholder="Filter repos and sessions" value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && set('')} />;
+}
+
 export function FolderPicker({ onClose }: { onClose: () => void }) {
   const cwd = useStore((s) => s.session.cwd);
   const viewing = useStore((s) => s.session.id);
@@ -234,7 +238,7 @@ export function Sessions() {
   return (
     <div className="sessions workspace">
       <div className="sessions-bar">
-        <input placeholder="Filter repos and sessions" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
+        <FilterInput value={filter} set={setFilter} />
         <button className="icon-btn" title="Start a chat in a folder or new project (⌘O)" onClick={() => setUi({ repoPicker: true })}><Icon name="folder-opened" /></button>
         <button className="icon-btn" title="New chat in this folder" onClick={() => start(cwd)}><Icon name="add" /></button>
       </div>
@@ -306,7 +310,7 @@ export function OpenChats() {
         <button className="new-chat" onClick={() => setUi({ repoPicker: true })}><Icon name="add" small /> New session in a repo</button>
       </div>
       <div className="sessions-bar">
-        <input placeholder="Filter repos and sessions" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setFilter('')} />
+        <FilterInput value={filter} set={setFilter} />
       </div>
       <NeedsYou n={waiting.length}>
         {waiting.map((c) => row(c, c.cwd.split('/').pop()))}

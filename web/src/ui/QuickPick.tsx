@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { touch } from '../app/touch';
+import { listKeys } from './util';
 
 export type PickItem = { value: string; label: string; detail?: string };
 
@@ -33,12 +34,7 @@ export function QuickPick({ title, items, current, anchor, extra, onPick, onClos
           value={q}
           placeholder={title}
           onChange={(e) => { setQ(e.target.value); setIdx(0); }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') onClose();
-            if (e.key === 'ArrowDown') setIdx((i) => Math.min(i + 1, results.length - 1));
-            if (e.key === 'ArrowUp') setIdx((i) => Math.max(i - 1, 0));
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing && results[idx]) onPick(results[idx].value);
-          }}
+          onKeyDown={listKeys({ count: results.length, idx, setIdx, onEnter: () => results[idx] && onPick(results[idx].value), onEscape: onClose })}
         />
         <ul>
           {results.map((i, n) => (

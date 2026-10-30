@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getState, send, setUi, useStore } from './store';
 import { toggleNotify } from './notify';
 import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
-import { Hl } from '../ui/util';
+import { Hl, listKeys, save, storedStrings } from '../ui/util';
 
 export type Command = { id: string; label: string; key?: string };
 export type Match = { score: number; hits: number[] };
@@ -101,15 +101,6 @@ export function remember(recent: string[], id: string, max = MAX_ROWS): string[]
   return [id, ...recent.filter((x) => x !== id)].slice(0, max);
 }
 
-function loadRecent(): string[] {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '[]');
-    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
 function perform(id: string) {
   const [kind, ...rest] = id.split(':');
   const arg = rest.join(':');
@@ -136,7 +127,7 @@ export function Palette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
-  const [recent, setRecent] = useState(loadRecent);
+  const [recent, setRecent] = useState(() => storedStrings(KEY));
   const list = useRef<HTMLUListElement>(null);
   const commands = useMemo(() => buildCommands(models), [models]);
   const rows = useMemo(() => rankCommands(commands, q, recent), [commands, q, recent]);
@@ -171,9 +162,7 @@ export function Palette() {
   const run = (cmd: Command) => {
     const next = remember(recent, cmd.id);
     setRecent(next);
-    try {
-      localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {}
+    save(KEY, next);
     close();
     perform(cmd.id);
   };
@@ -189,14 +178,7 @@ export function Palette() {
             placeholder="Type a command"
             spellCheck={false}
             onChange={(e) => { setQ(e.target.value); setIdx(0); }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') close();
-              else if (e.key === 'ArrowDown') setIdx((i) => Math.min(i + 1, Math.max(rows.length - 1, 0)));
-              else if (e.key === 'ArrowUp') setIdx((i) => Math.max(i - 1, 0));
-              else if (e.key === 'Enter' && !e.nativeEvent.isComposing && rows[idx]) run(rows[idx].cmd);
-              else return;
-              e.preventDefault();
-            }}
+            onKeyDown={listKeys({ count: rows.length, idx, setIdx, onEnter: () => rows[idx] && run(rows[idx].cmd), onEscape: close })}
           />
         </div>
         <ul ref={list} role="listbox">

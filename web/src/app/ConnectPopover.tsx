@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import QRCode from 'qrcode';
+import { useEscape } from '../ui/util';
 import { apiUrl, macPort } from './api';
 
 export function ConnectPopover({ onClose }: { onClose: () => void }) {
@@ -21,11 +22,7 @@ export function ConnectPopover({ onClose }: { onClose: () => void }) {
     QRCode.toDataURL(apk ? `${urls[0]}/api/app.apk` : urls[0], { margin: 2, width: 180, color: { dark: '#000000', light: '#ffffff' } }).then(setQr);
   }, [urls, apk]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  useEscape(onClose);
 
   return (
     <div className="overlay connect-overlay" onClick={onClose}>

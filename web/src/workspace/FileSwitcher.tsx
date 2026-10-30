@@ -4,7 +4,7 @@ import { useOpened } from './opened';
 import { FileIcon } from './FileIcon';
 import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
-import { Hl } from '../ui/util';
+import { Hl, listKeys } from '../ui/util';
 import { fileCache as cache } from '../chat/composerLogic';
 
 export function FileSwitcher() {
@@ -65,14 +65,7 @@ export function FileSwitcher() {
           value={q}
           placeholder="Search files by name"
           onChange={(e) => { setQ(e.target.value); setIdx(0); }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setUi({ switcherOpen: false });
-            else if (e.key === 'ArrowDown') setIdx((i) => Math.min(i + 1, results.length - 1));
-            else if (e.key === 'ArrowUp') setIdx((i) => Math.max(i - 1, 0));
-            else if (e.key === 'Enter' && !e.nativeEvent.isComposing && results[idx]) pick(results[idx].f);
-            else return;
-            e.preventDefault();
-          }}
+          onKeyDown={listKeys({ count: results.length, idx, setIdx, onEnter: () => results[idx] && pick(results[idx].f), onEscape: () => setUi({ switcherOpen: false }) })}
         />
         <ul ref={list}>
           {results.map(({ f, m, recent }, i) => {

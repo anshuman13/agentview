@@ -8,7 +8,7 @@ import { FileIcon } from '../workspace/FileIcon';
 import { ChangesBadge } from '../workspace/gitStatus';
 import { GitHubBadge } from '../ops/pulls';
 import { Icon } from '../ui/Icon';
-import { command, pressable } from '../ui/util';
+import { command, pressable, save, stored } from '../ui/util';
 import { haptic } from '../ui/haptic';
 import { slideFrom, useTabSwipe } from './tabSwipe';
 import { useSheetDrag } from '../ui/useSheetDrag';
@@ -69,14 +69,6 @@ const LONG_PRESS = 450;
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
-function stored(key: string, fallback: number) {
-  try {
-    return Number(localStorage.getItem(key)) || fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 const params = new URLSearchParams(location.search);
 const shellParam = params.get('shell');
 if (shellParam) try { localStorage.setItem('agentview.shell', shellParam); } catch {}
@@ -114,8 +106,8 @@ export function App() {
   const [phone, setPhone] = useState(false);
   const [macs, setMacs] = useState(false);
   const macName = useMacName();
-  const [chatW, setChatW] = useState(() => stored('agentview.chatW', 480));
-  const [termH, setTermH] = useState(() => stored('agentview.termH', 240));
+  const [chatW, setChatW] = useState(() => stored<number>('agentview.chatW', 480) || 480);
+  const [termH, setTermH] = useState(() => stored<number>('agentview.termH', 240) || 240);
   const [terminal, setTerminal] = useState(false);
   const notifying = useNotify();
   const [theme, toggleTheme] = useTheme();
@@ -189,10 +181,8 @@ export function App() {
   }, [session.id]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('agentview.chatW', String(chatW));
-      localStorage.setItem('agentview.termH', String(termH));
-    } catch {}
+    save('agentview.chatW', chatW);
+    save('agentview.termH', termH);
   }, [chatW, termH]);
 
   useEffect(() => {

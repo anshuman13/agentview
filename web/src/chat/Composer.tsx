@@ -7,7 +7,7 @@ import { FileIcon } from '../workspace/FileIcon';
 import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
 import { apiUrl, fetchJson } from '../app/api';
-import { Hl, wsUrl, plural } from '../ui/util';
+import { Hl, wsUrl, plural, save, storedStrings } from '../ui/util';
 import { ACCOUNT_LABEL, COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import { accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, remember, repeatLabel, repeatPill, loopLabel, terminalId, triggerAt, useLabel, withUses, type Use } from './composerLogic';
 
@@ -47,15 +47,6 @@ function saveDraft(chat: string, text: string) {
     if (text) localStorage.setItem(draftKey(chat), text);
     else localStorage.removeItem(draftKey(chat));
   } catch {}
-}
-
-function readStored(): string[] {
-  try {
-    const v = JSON.parse(localStorage.getItem(STORED_KEY) ?? '[]');
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-  } catch {
-    return [];
-  }
 }
 
 async function runInTerminal(cmd: string) {
@@ -110,7 +101,7 @@ export function Composer() {
   const [sel, setSel] = useState(0);
   const [dismissed, setDismissed] = useState('');
   const [files, setFiles] = useState<string[]>([]);
-  const [stored, setStored] = useState(readStored);
+  const [sentHistory, setSentHistory] = useState(() => storedStrings(STORED_KEY));
   const [hist, setHist] = useState<Hist | null>(null);
   const dictate = useDictation(text, setText);
   const ta = useRef<HTMLTextAreaElement>(null);
@@ -128,7 +119,7 @@ export function Composer() {
     return trigger.kind === 'command' ? rankCommands(commands, trigger.query) : rankFiles(files, trigger.query);
   }, [trigger, popKey, dismissed, commands, files]);
   const open = items.length > 0;
-  const history = useMemo(() => buildHistory(getState().events, stored), [chat, userCount, stored]);
+  const history = useMemo(() => buildHistory(getState().events, sentHistory), [chat, userCount, sentHistory]);
   const ghost = !open && !shell && at === text.length ? ghostFor(text, history) : '';
   const pct = contextPercent(context);
   const modelName = team ? 'Team' : models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
@@ -270,9 +261,9 @@ export function Composer() {
       const cmd = t.slice(1).trim();
       if (cmd) runInTerminal(cmd).catch(() => notice('Terminal unavailable'));
     } else {
-      const next = remember(t, stored);
-      setStored(next);
-      try { localStorage.setItem(STORED_KEY, JSON.stringify(next)); } catch {}
+      const next = remember(t, sentHistory);
+      setSentHistory(next);
+      save(STORED_KEY, next);
       const full = withUses(t, uses);
       const lost = () => setText((cur) => (cur.trim() ? cur : t));
       if (running && (stop || waiting)) steer(full, lost);
@@ -423,7 +414,7 @@ export function Composer() {
             { value: 'effort', label: 'Effort', detail: effortName },
             ...(accounts.length > 1 || account !== 'main' ? [{ value: 'account', label: 'Claude account', detail: ACCOUNT_LABEL[account] }] : []),
             { value: 'loop', label: 'Plan, build, test loop', detail: loop.on ? `Up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : 'Off' },
-            { value: 'saved', label: 'Saved prompts', detail: `${stored.length}` },
+            { value: 'saved', label: 'Saved prompts', detail: `${sentHistory.length}` },
             ...(sessionId ? [{ value: 'fork', label: 'Fork chat', detail: 'Continue this conversation in a new chat' }] : []),
           ]}
           onPick={(v) => {
@@ -477,8 +468,8 @@ export function Composer() {
         <QuickPick
           anchor={pick.at}
           title="Saved prompts"
-          items={[...stored].reverse().map((t, i) => ({ value: String(i), label: t.replace(/\s+/g, ' ').slice(0, 200) }))}
-          onPick={(v) => { apply([...stored].reverse()[Number(v)]); setPick(null); ta.current?.focus(); }}
+          items={[...sentHistory].reverse().map((t, i) => ({ value: String(i), label: t.replace(/\s+/g, ' ').slice(0, 200) }))}
+          onPick={(v) => { apply([...sentHistory].reverse()[Number(v)]); setPick(null); ta.current?.focus(); }}
           onClose={() => setPick(null)}
         />
       )}
