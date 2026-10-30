@@ -152,6 +152,7 @@
   .tl-name b { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-md); font-weight: 600; color: var(--fg-strong); }
   .tl-name small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-xs); color: var(--fg-muted); }
   .timeline-head .mac-here { flex: 0 1 auto; min-width: 0; }
+  .timeline-head .mac-name { overflow: hidden; text-overflow: ellipsis; }
   .tc, .tl-now { font-size: var(--fs-md); line-height: var(--line-md); }
   .tc-label, .tc-err, .tc-agent .state { font-size: var(--fs-sm); }
   .tc-file, .tc-agent { min-height: var(--touch-md); font-size: var(--fs-md); }
@@ -164,6 +165,11 @@
   .step { min-height: var(--touch-sm); font-size: var(--fs-md); }
   .step input { height: var(--touch-sm); font-size: var(--fs-2xl); }
   .step.add .link { min-height: var(--touch-sm); }
+}
+
+/* Narrow phones: the Mac shows as an icon (name in its tooltip and in More) so the chat title has room. */
+@media (max-width: 430px) {
+  .timeline-head .mac-name { display: none; }
 }
 @media (max-width: 900px) and (max-height: 500px) {
   .timeline-head { height: var(--touch-sm); }

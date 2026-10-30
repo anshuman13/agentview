@@ -137,7 +137,7 @@ export function Brief() {
           <span className="mobile-only"><AgentsChip /></span>
           <InboxChip />
           <span className="mobile-only mobile-usage"><UsageItem /></span>
-          {macName && <span className="mobile-only mac-here"><Icon name="vm" small /> {macName}</span>}
+          {macName && <span className="mobile-only mac-here" title={macName}><Icon name="vm" small /><span className="mac-name">{macName}</span></span>}
           {extras && <span className="extras">{extras}</span>}
           {(agents.length > 0 || showAgents) && (
             <button className={`tl-view tl-tab desktop-only ${showAgents ? 'active' : ''}`} title="Show the agents" onClick={() => { setShowAgents(true); if (showAgents) setAgentSel(null); }}>
