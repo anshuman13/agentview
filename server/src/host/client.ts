@@ -77,15 +77,22 @@ export class Host {
   }
 
   // Its own process group, so stopping or restarting the API server leaves the host and its Claude processes running.
+  // A failed spawn must not throw out of the close handler, or the reconnect after it is never scheduled.
   private spawn() {
     this.spawned = Date.now();
-    const logs = path.join(os.homedir(), '.agentview', 'logs');
-    mkdirSync(logs, { recursive: true });
-    const log = openSync(path.join(logs, 'host.log'), 'a');
     try {
-      spawn(process.execPath, [MAIN, this.project], { detached: true, stdio: ['ignore', log, log], env: { ...process.env, PORT: String(this.port) } }).unref();
-    } finally {
-      closeSync(log);
+      const logs = path.join(os.homedir(), '.agentview', 'logs');
+      mkdirSync(logs, { recursive: true });
+      const log = openSync(path.join(logs, 'host.log'), 'a');
+      try {
+        spawn(process.execPath, [MAIN, this.project], { detached: true, stdio: ['ignore', log, log], env: { ...process.env, PORT: String(this.port) } })
+          .on('error', (err) => console.error(`agent host: ${err.message}`))
+          .unref();
+      } finally {
+        closeSync(log);
+      }
+    } catch (err) {
+      console.error(`agent host: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }
