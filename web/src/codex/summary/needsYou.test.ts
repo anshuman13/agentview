@@ -8,3 +8,7 @@ it('keeps reading bullets after an intro line and stops at the next heading', ()
     { title: 'Budget', url: null, why: 'due Friday' },
   ]);
 });
+
+it('drops links that are not http or mailto', () => {
+  expect(needsYou('## Needs you\n- [Fix](javascript:alert(1)): now')[0].url).toBeNull();
+});

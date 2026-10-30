@@ -80,7 +80,8 @@ export function needsYou(text: string) {
     const m = bullet[1].match(/^(?:\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*)\s*:?\s*(.*)$/);
     const title = m ? (m[1] ?? m[3]) : bullet[1].split(':')[0];
     const rest = m ? m[4] : bullet[1].slice(title.length + 1);
-    out.push({ title: title.trim(), url: m?.[2] ?? null, why: rest.trim().split(/(?<=[.!?])\s/)[0] });
+    const url = m?.[2] && /^(https?:|mailto:)/i.test(m[2]) ? m[2] : null;
+    out.push({ title: title.trim(), url, why: rest.trim().split(/(?<=[.!?])\s/)[0] });
   }
   return out;
 }
@@ -102,9 +103,11 @@ export function SlackCard() {
   if (!brief && !asks) return null;
   const hide = (x: { title: string; url: string | null }) => {
     const live = new Set(all.map(keyOf));
-    const next = [...handled.filter((k) => live.has(k)), keyOf(x)];
-    setHandled(next);
-    save(HANDLED, next);
+    setHandled((h) => {
+      const next = [...h.filter((k) => live.has(k)), keyOf(x)];
+      save(HANDLED, next);
+      return next;
+    });
   };
   const task = (x: { title: string; url: string | null; why: string }) => {
     haptic('tap');
