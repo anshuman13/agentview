@@ -5,6 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
 import { apiUrl } from '../app/api';
+import { notice } from '../app/store';
 import { wsUrl } from '../ui/util';
 
 type Tab = { id: string; name: string };
@@ -121,10 +122,10 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
               <span key={t.id} className={`term-tab${t.id === active ? ' on' : ''}`} onClick={() => pick(t.id)} title={t.name}>
                 <Icon name="terminal" small />
                 <span>{t.name}</span>
-                <button className="icon-btn" title="Kill terminal" onClick={(e) => { e.stopPropagation(); void close(t.id); }}><Icon name="close" small /></button>
+                <button className="icon-btn" title="Kill terminal" onClick={(e) => { e.stopPropagation(); close(t.id).catch(() => notice('Could not close the terminal')); }}><Icon name="close" small /></button>
               </span>
             ))}
-            <button className="icon-btn" title="New terminal" onClick={() => void add()}><Icon name="add" small /></button>
+            <button className="icon-btn" title="New terminal" onClick={() => add().catch(() => notice('Terminal unavailable'))}><Icon name="add" small /></button>
             <button className="icon-btn" title="Clear (⌘K)" onClick={() => clears.current.get(active)?.()}><Icon name="clear-all" small /></button>
             <button className="icon-btn" title={max ? 'Restore panel size' : 'Maximize panel size'} onClick={() => setMax((m) => !m)}><Icon name={max ? 'screen-normal' : 'screen-full'} small /></button>
           </span>
