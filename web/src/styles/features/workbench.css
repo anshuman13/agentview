@@ -70,6 +70,8 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
   .workbench { padding-top: var(--safe-top); }
   .body { display: block; height: calc(100% - var(--tabbar-h) - var(--safe-bottom)); overflow: hidden; }
   .statusbar { display: none; }
+  .workbench[data-kbd] .tabbar { display: none; }
+  .workbench[data-kbd] .body { height: 100%; }
   .app-update.offline { color: var(--warn); }
   .pane { display: none; height: 100%; width: 100%; border: 0; }
   .pane.side, .pane.center { flex-direction: column; min-height: 0; }

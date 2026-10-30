@@ -238,6 +238,15 @@ export function App() {
     if (t === 'assistant') { setEditor('assistant'); window.dispatchEvent(new Event('assistant:shown')); }
   };
   useEffect(() => { if (showing === 'assistant') setSeenAssistant(true); }, [showing]);
+  useEffect(() => {
+    if (!touch()) return;
+    const text = (el: Element | null) => !!el && (el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && /^(text|search|url|email|tel|password|number)$/.test(el.type)) || (el as HTMLElement).isContentEditable);
+    const sync = () => document.querySelector('.workbench')?.toggleAttribute('data-kbd', text(document.activeElement));
+    document.addEventListener('focusin', sync);
+    const out = () => { setTimeout(sync); };
+    document.addEventListener('focusout', out);
+    return () => { document.removeEventListener('focusin', sync); document.removeEventListener('focusout', out); };
+  }, []);
   const goSide = (v: View) => { haptic(); setMore(false); setView(v); setTab('repos'); };
   const swipeTabs = [() => goTab('assistant'), () => goTab('chat'), () => goSide('chats'), () => goTab('agents')];
   useTabSwipe(more ? -1 : tab === 'assistant' ? 0 : tab === 'chat' ? 1 : inChats ? 2 : tab === 'agents' ? 3 : -1, swipeTabs.length, (i) => swipeTabs[i]());

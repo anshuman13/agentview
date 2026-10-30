@@ -112,6 +112,7 @@
   .cp-pop li { height: var(--touch); }
   .cp-pop { max-height: min(300px, 45vh); max-height: min(300px, 45dvh); }
   .cp-under { font-size: var(--fs-sm); line-height: var(--line-sm); }
+  [data-kbd] .cp-under { display: none; }
   .cp-stats { display: flex; align-items: center; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; }
   .cp-stats::-webkit-scrollbar { display: none; }
   .cp-stats > :first-child { margin-left: auto; }
