@@ -222,7 +222,7 @@ export function Composer() {
 
   const submit = (stop = false) => {
     const t = text.trim();
-    if (!t) return;
+    if (!t) { sendAfter.current = null; return; }
     if (uploading > 0) { sendAfter.current = stop; return; }
     sendAfter.current = null;
     if (shell) {

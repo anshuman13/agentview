@@ -24,8 +24,9 @@ export function goalProgress(items: ItemRow[], goal: ItemRow) {
   return { done: tasks.filter((r) => r.status === 'done').length, total: tasks.length };
 }
 
-// Last week's goals not fully done, when this week has none yet.
-export function carryOver(items: ItemRow[], now: number, profile?: Profile) {
+// Last week's goals not fully done, for each profile that has none this week yet.
+export function carryOver(items: ItemRow[], now: number, profile?: Profile): ItemRow[] {
+  if (!profile) return (['work', 'personal'] as const).flatMap((p) => carryOver(items, now, p));
   if (goalsOf(items, now, profile).length) return [];
   const d = new Date(weekStart(now));
   const prev = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7, 12).getTime();

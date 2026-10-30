@@ -100,11 +100,12 @@ export function GoalLines({ now }: { now: number }) {
       busy.current = false;
     }
   };
-  if (!goals.length && (!carry.length || skipped)) return null;
+  const offer = carry.length > 0 && !skipped;
+  if (!goals.length && !offer) return null;
   return (
     <section className="gl-lines" role="list" aria-label="Goals this week">
       {goals.map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} />)}
-      {!goals.length && (
+      {offer && (
         <div className="gl-line" role="listitem">
           <span className="muted small">Carry over {carry.length} {carry.length === 1 ? 'goal' : 'goals'} from last week</span>
           <button className="as-chip" onClick={() => void carryAll()}>Carry over</button>

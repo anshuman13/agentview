@@ -19,8 +19,9 @@ describe('carryOver', () => {
     expect(carryOver([...goals, ...tasks], now, 'personal').map((g) => g.id)).toEqual(['g3']);
   });
 
-  it('returns nothing once this week has goals', () => {
+  it('skips a profile once it has goals this week', () => {
     const cur = row({ id: 'g4', status: 'goal', at: new Date(2026, 9, 26).getTime() });
-    expect(carryOver([...goals, ...tasks, cur], now)).toEqual([]);
+    expect(carryOver([...goals, ...tasks, cur], now, 'work')).toEqual([]);
+    expect(carryOver([...goals, ...tasks, cur], now).map((g) => g.id)).toEqual(['g3']);
   });
 });
