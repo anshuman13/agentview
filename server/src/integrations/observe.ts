@@ -155,7 +155,7 @@ async function exploreLink(def: McpServerDef, uid: string, expr: string) {
 
 function selectorOf(cfg: ObserveConfig['grafana']) {
   const sel = cfg?.lokiSelector?.trim();
-  if (!sel || !/^\{.*\}$/.test(sel)) throw new Error('Set grafana.lokiSelector (for example {app="comida"}) in the settings');
+  if (!sel || !/^\{.*\}$/.test(sel)) throw new Error('Set grafana.lokiSelector (for example {app="cafe"}) in the settings');
   return sel;
 }
 

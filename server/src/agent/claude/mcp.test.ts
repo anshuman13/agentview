@@ -13,7 +13,7 @@ describe('mcpFrom', () => {
   it('keeps the details from mcpServerStatus and drops secrets', () => {
     const [s] = mcpFrom([
       {
-        name: 'tienda',
+        name: 'shop',
         status: 'connected',
         scope: 'user',
         serverInfo: { name: 'toolbox', version: '0.9.0' },
@@ -22,7 +22,7 @@ describe('mcpFrom', () => {
       },
     ]);
     expect(s).toEqual({
-      name: 'tienda',
+      name: 'shop',
       status: 'connected',
       scope: 'user',
       type: 'stdio',

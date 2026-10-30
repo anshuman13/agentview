@@ -18,7 +18,7 @@ beforeAll(async () => {
 
 describe('allowedFolder', () => {
   it('accepts folders inside a root or a Paseo worktree', () => {
-    expect(files.allowedFolder(path.join(home, 'work/tienda'))).toBe(true);
+    expect(files.allowedFolder(path.join(home, 'work/shop'))).toBe(true);
     expect(files.allowedFolder('/srv/code/app/sub')).toBe(true);
     expect(files.allowedFolder(path.join(home, '.paseo/worktrees/abc123'))).toBe(true);
   });

@@ -33,7 +33,7 @@ describe('summarize', () => {
   });
 
   it('has no rollback without an earlier success', () => {
-    const env = summarize('staging:no', 'tienda', false, [d(2, 'b', 'success'), d(1, 'a', 'failure')]);
+    const env = summarize('staging:no', 'shop', false, [d(2, 'b', 'success'), d(1, 'a', 'failure')]);
     expect(env.rollbackTo).toBeNull();
   });
 });
