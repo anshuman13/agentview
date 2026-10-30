@@ -165,7 +165,7 @@ export function App() {
       else if (k === 'b') { e.preventDefault(); setSidebar((v) => !v); }
       if (k === 'j') { e.preventDefault(); setTerminal((v) => !v); }
       if (k === 'e') { e.preventDefault(); setEditor((v) => (v === 'file' ? 'browser' : 'file')); }
-      if (k === 'i') { e.preventDefault(); window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'assistant' } })); setTimeout(() => window.dispatchEvent(new Event('assistant:focus')), 50); }
+      if (k === 'i') { e.preventDefault(); command('assistant'); setTimeout(() => window.dispatchEvent(new Event('assistant:focus')), 50); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -228,7 +228,7 @@ export function App() {
     if (!session.id || linked.current) return;
     linked.current = true;
     const id = deepLink.page && isPage(deepLink.page) ? `page:${deepLink.page}` : VIEWS.some((v) => v.id === deepLink.view) ? `view:${deepLink.view}` : null;
-    if (id) window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
+    if (id) command(id);
   }, [session.id]);
 
   const fileName = openFile ? openFile.split('/').pop() : null;
