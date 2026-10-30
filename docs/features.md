@@ -69,7 +69,8 @@ A focused "Is this yours?" row takes y or Enter for Mine, n or Delete for Not mi
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
 seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message, and it closes that person's suggested DM asks when I sent the last message; an ask answered in the same scan is not saved. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
 
-- Each day ends with Add task (its dot switches between work and personal when both are shown), which takes times like
+- Closed task rows show the due label and the source icon, plus the repeat icon, checklist count and Replied when they apply; the estimate, the "from" day and the notes preview show only in the editor (notes keep their preview)
+- Today ends with an Add task button and later days with a small + (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
 - Rows with "- [ ]" checklist lines in the notes show how many are ticked, and the open task lists them to tick with a
   tap

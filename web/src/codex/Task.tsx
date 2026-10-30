@@ -12,7 +12,6 @@ import { Swipe } from './Swipe';
 import { rowKey } from './taskKeys';
 import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
-import { estimateMin, minutesText } from './data/plan';
 import { sourceOf } from './taskSource';
 import { Check } from './TaskCheck';
 import { TaskEditor } from './TaskEditor';
@@ -45,7 +44,6 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
   const isNote = row.status === 'note';
   const late = at != null ? Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY) : 0;
   const due = at != null && !isNote && !isDone ? (late > 0 ? `${late}d late` : when(at, now)) : null;
-  const est = estimateMin(row.title);
   const list = checklist(row.text);
   const preview = isRepeat(row.text) ? '' : firstLine(row.text);
   const body = (
@@ -55,14 +53,12 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
         <div className="as-title"><ProfileDot profile={row.profile} />{row.title || '(Untitled)'}</div>
         <div className="as-ctx">
           {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}{at! < now && late <= 0 && <span className="sr-only"> overdue</span>}</span>}
-          {est != null && !isDone && <span className="as-chip" title="Estimate">{minutesText(est)}</span>}
           {isRepeat(row.text) && <span title="Repeats" role="img" aria-label="Repeats"><Icon name="sync" small /></span>}
-          {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
           {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`} title={src.label} role="img" aria-label={src.label}><Icon name={src.icon} small /></span>}
           {!isDone && row.text?.split('\n').includes('Replied in Slack') && <span className="as-quote" title="Replied in Slack"><Icon name="reply" small /> Replied</span>}
           {list.total > 0 && <span className={list.done === list.total ? 'as-list-done' : undefined}><button className="as-list-btn" aria-expanded={showList} aria-label="Checklist" onClick={(e) => { e.stopPropagation(); setShowList(!showList); }}><Icon name="checklist" small /> {list.done}/{list.total}</button></span>}
           {row.people && <span className="as-people">{row.people}</span>}
-          {!list.total && !row.people && preview && !/^https?:\/\/\S+$/.test(preview) && <span className="as-quote">{preview}</span>}
+          {isNote && !list.total && !row.people && preview && !/^https?:\/\/\S+$/.test(preview) && <span className="as-quote">{preview}</span>}
         </div>
         {showList && list.total > 0 && (
           <div className="as-list" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
@@ -116,6 +112,7 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
       busy.current = false;
     }
   };
+  if (!on && day !== today) return <button ref={addButton} className="as-add-quiet" aria-label="Add task" title="Add task" onClick={() => setOn(true)}><Icon name="add" small /></button>;
   if (!on) return <button ref={addButton} className="as-add" onClick={() => setOn(true)}><Icon name="add" /> Add task</button>;
   return (
     <div className="as-add on" data-no-swipe>

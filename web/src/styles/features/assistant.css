@@ -299,6 +299,8 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 @media (hover: hover) { .as-section-btn:hover { background: var(--hover); } }
 .as-add { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 44px; margin-top: var(--sp-2); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); font: inherit; font-size: var(--fs-md); cursor: pointer; text-align: left; }
 @media (hover: hover) { button.as-add:hover { color: var(--accent-text); } }
+.as-add-quiet { display: flex; align-items: center; justify-content: center; width: 32px; min-height: 32px; margin: var(--sp-1) 0 0 var(--sp-4); padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); opacity: 0.6; cursor: pointer; }
+@media (hover: hover) { button.as-add-quiet:hover { color: var(--accent-text); opacity: 1; } }
 .as-add.on { color: var(--accent-text); background: var(--surface); border: 1px solid var(--border-card); cursor: text; }
 .as-add-prof { display: grid; place-items: center; width: 28px; height: 28px; margin-left: -6px; padding: 0; border: 0; border-radius: var(--radius-round); background: transparent; cursor: pointer; }
 .as-add-prof .prof-dot { width: 10px; height: 10px; margin: 0; }
