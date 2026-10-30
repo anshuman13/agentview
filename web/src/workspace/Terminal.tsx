@@ -126,6 +126,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
                 {icon ? <Icon name={icon} small /> : label}
               </button>
             ))}
+            <button title="Paste" onPointerDown={(e) => e.preventDefault()} onClick={() => navigator.clipboard.readText().then((t) => t && inputs.current.get(active)?.(t)).catch(() => notice('Could not read the clipboard'))}>Paste</button>
           </div>
         </div>
       )}
