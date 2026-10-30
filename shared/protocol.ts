@@ -56,6 +56,13 @@ export type ChatEvent =
   | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number }
   | AgentEvent;
 
+// The event with an append applied, or null when the event is not one it fits (a gap waits for the full event).
+export function appendTo(ev: ChatEvent, offset: number, text: string): ChatEvent | null {
+  if (ev.kind !== 'assistant' || offset > ev.text.length) return null;
+  const add = text.slice(ev.text.length - offset);
+  return add ? { ...ev, text: ev.text + add } : null;
+}
+
 // The Claude login a chat runs on: the main one, or a second one to fall back to.
 export type Account = 'main' | 'alt';
 export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Personal', alt: 'Work' };
@@ -150,6 +157,8 @@ export type ServerMessage =
   | { type: 'init'; state: ServerState; boot?: number }
   | { type: 'findings'; review: ReviewFindings }
   | { type: 'event'; event: ChatEvent }
+  // Text added to a streaming assistant event that starts at `offset` of its text; the finished event follows in full.
+  | { type: 'append'; id: string; offset: number; text: string }
   | { type: 'status'; text: string }
   | { type: 'pending'; request: PendingRequest }
   | { type: 'resolved'; id: string }

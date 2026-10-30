@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { ATTENTION_LABEL, type AttentionItem, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
+import { appendTo, ATTENTION_LABEL, type AttentionItem, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
 import { notify } from './notify';
 import { apiUrl } from './api';
 
@@ -212,6 +212,16 @@ function handle(m: ServerMessage) {
         return { events };
       });
       break;
+    case 'append': {
+      let i = state.events.length - 1;
+      while (i >= 0 && state.events[i].id !== m.id) i--;
+      const ev = i < 0 ? null : appendTo(state.events[i], m.offset, m.text);
+      if (!ev) break;
+      const events = state.events.slice();
+      events[i] = ev;
+      set({ events });
+      break;
+    }
     case 'status':
       set({ status: m.text });
       break;

@@ -6,9 +6,11 @@ const STREAM_FLUSH_MS = 80;
 
 type StreamEvent = Extract<SDKMessage, { type: 'stream_event' }>['event'];
 
-// Assistant text as it streams in, sent to the client at most every STREAM_FLUSH_MS per block.
+// Assistant text as it streams in: only the new text, sent at most every STREAM_FLUSH_MS per block.
+// The event in the session state holds the full text, so an init or a finished event carries all of it.
 export class LiveText {
   private live = new Map<string, Extract<ChatEvent, { kind: 'assistant' }>>();
+  private sent = new Map<string, number>();
   private flush = new Map<string, ReturnType<typeof setTimeout>>();
   private msgId = '';
 
@@ -22,13 +24,16 @@ export class LiveText {
       if (!live) {
         const e = { id: key, kind: 'assistant' as const, text: ev.delta.text, streaming: true, at: Date.now() };
         this.live.set(key, e);
+        this.sent.set(key, e.text.length);
         this.host.pushEvent(e);
       } else {
         live.text += ev.delta.text;
         if (!this.flush.has(key)) {
           this.flush.set(key, setTimeout(() => {
             this.flush.delete(key);
-            this.host.emit({ type: 'event', event: live });
+            const offset = this.sent.get(key) ?? 0;
+            this.sent.set(key, live.text.length);
+            this.host.emit({ type: 'append', id: key, offset, text: live.text.slice(offset) });
           }, STREAM_FLUSH_MS));
         }
       }
@@ -46,6 +51,7 @@ export class LiveText {
     this.flush.delete(key);
     const live = this.live.get(key);
     this.live.delete(key);
+    this.sent.delete(key);
     if (!live) return;
     live.streaming = false;
     this.host.emit({ type: 'event', event: live });

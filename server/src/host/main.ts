@@ -132,7 +132,7 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
     if (m.type === 'session' && chat.state.session.sessionId) rememberAccount(chat.state.session.sessionId, chat.state.session.account);
     if (m.type === 'session' && chat === lastViewed) remember(chat);
     const woke = stalls.seen(chat.id, chat.state.session.running);
-    if (woke || m.type !== 'event' || m.event.kind === 'user') broadcastLive();
+    if (woke || (m.type === 'event' ? m.event.kind === 'user' : m.type !== 'append')) broadcastLive();
   });
   if (!resume || fork) chat.start();
   live.set(chat.id, { chat, watcher: watchFiles(cwd, (rel) => chat.fileChangedExternally(rel)) });

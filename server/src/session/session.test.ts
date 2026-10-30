@@ -5,7 +5,7 @@ import { fireTime } from './repeat.js';
 import { claudeSession, type ClaudeDriver } from '../agent/claude/driver.js';
 import { historyFrom } from '../agent/claude/transcript.js';
 import type { History } from '../agent/types.js';
-import { BIG_BRO, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
+import { appendTo, BIG_BRO, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
 
 function fakeSession() {
   const s = claudeSession('/tmp/project');
@@ -661,7 +661,7 @@ describe('blocked tools', () => {
 });
 
 describe('streaming', () => {
-  it('coalesces text deltas into one update per flush window and a final one on stop', async () => {
+  it('sends only the text added per flush window, a client rebuilds it, and the full event on stop', async () => {
     const { s, handle } = fakeSession();
     const sent: ServerMessage[] = [];
     s.onMessage((m) => sent.push(JSON.parse(JSON.stringify(m))));
@@ -670,15 +670,23 @@ describe('streaming', () => {
     delta('Hel');
     delta('lo ');
     delta('wor');
-    const texts = () => sent.filter((m) => m.type === 'event' && m.event.kind === 'assistant').map((m) => m.type === 'event' && m.event.kind === 'assistant' && [m.event.text, m.event.streaming]);
-    expect(texts()).toEqual([['Hel', true]]);
+    const events = () => sent.flatMap((m) => (m.type === 'event' && m.event.kind === 'assistant' ? [[m.event.text, m.event.streaming]] : []));
+    const appends = () => sent.flatMap((m) => (m.type === 'append' ? [[m.offset, m.text]] : []));
+    expect(events()).toEqual([['Hel', true]]);
     await new Promise((r) => setTimeout(r, 120));
-    expect(texts()).toEqual([['Hel', true], ['Hello wor', true]]);
+    expect(appends()).toEqual([[3, 'lo wor']]);
     delta('ld');
-    handle({ type: 'stream_event', event: { type: 'content_block_stop', index: 0 } });
-    expect(texts()).toEqual([['Hel', true], ['Hello wor', true], ['Hello world', false]]);
     await new Promise((r) => setTimeout(r, 120));
-    expect(texts()).toHaveLength(3);
+    expect(appends()).toEqual([[3, 'lo wor'], [9, 'ld']]);
+    const first = sent.find((m) => m.type === 'event' && m.event.kind === 'assistant')!;
+    let client = first.type === 'event' ? first.event : null!;
+    for (const m of sent) if (m.type === 'append') client = appendTo(client, m.offset, m.text) ?? client;
+    expect(client).toMatchObject({ text: 'Hello world', streaming: true });
+    // A replayed append adds nothing; one past a gap is refused until the full event arrives.
+    expect(appendTo(client, 3, 'lo wor')).toBeNull();
+    expect(appendTo(client, 20, 'x')).toBeNull();
+    handle({ type: 'stream_event', event: { type: 'content_block_stop', index: 0 } });
+    expect(events()).toEqual([['Hel', true], ['Hello world', false]]);
     expect(s.state.events.filter((e) => e.kind === 'assistant')).toHaveLength(1);
   });
 });
