@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAssistant } from './data';
 import { atTime, errorText, hasDay, nextNine, parseWhen, stripWhen } from './data/engine';
+import { isRepeat, nextRepeat, parseRepeat } from './data/recur';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
@@ -12,6 +13,7 @@ import { isDragging } from './drag';
 import { Back } from '../app/back';
 import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
+import { estimateMin, minutesText } from './data/plan';
 
 const SOURCES: Record<string, { icon: string; label: string }> = {
   slack: { icon: 'comment-discussion', label: 'Slack' },
@@ -50,7 +52,16 @@ export function useActions() {
     showSnack(text, () => void store.update(r, before));
   };
   return {
-    done: (r: ItemRow) => change(r, { status: 'done' }, 'Done'),
+    done: (r: ItemRow) => {
+      const next = nextRepeat(r, Date.now(), store.snapshot().items);
+      if (!next) return change(r, { status: 'done' }, 'Done');
+      const made = store.capture(`${next.title}\n${next.text}`, 'task', r.profile, next.at).catch(() => null);
+      void store.update(r, { status: 'done' });
+      showSnack(`Done · next ${when(next.at)}`, () => {
+        void store.update(r, { status: r.status });
+        void made.then((n) => n && store.update(n, { deleted: 1 }));
+      });
+    },
     reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
     snooze: (r: ItemRow, at = nextNine()) => change(r, { at, ...UNROLL }, `Snoozed to ${when(at)}`),
     remove: (r: ItemRow) => change(r, { deleted: 1 }, 'Deleted'),
@@ -352,8 +363,9 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
   const isNote = row.status === 'note';
   const late = at != null ? Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY) : 0;
   const due = at != null && !isNote && !isDone ? (late > 0 ? `${late}d late` : when(at, now)) : null;
+  const est = estimateMin(row.title);
   const list = checklist(row.text);
-  const preview = firstLine(row.text);
+  const preview = isRepeat(row.text) ? '' : firstLine(row.text);
   const body = (
     <div className={`as-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}`} data-row={row.profile + row.id} onPointerDown={onGrab} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && rowKey(e, row, onOpen, act)}>
       <Check row={row} />
@@ -361,6 +373,8 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
         <div className="as-title"><ProfileDot profile={row.profile} />{row.title || '(Untitled)'}</div>
         <div className="as-ctx">
           {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
+          {est != null && !isDone && <span className="as-chip" title="Estimate">{minutesText(est)}</span>}
+          {isRepeat(row.text) && <span title="Repeats"><Icon name="sync" small /></span>}
           {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
           {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`} title={src.label}><Icon name={src.icon} small /></span>}
           {list.total > 0 && <span className={list.done === list.total ? 'as-list-done' : undefined}><Icon name="checklist" small /> {list.done}/{list.total}</span>}
@@ -393,11 +407,12 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
     const typed = text.trim();
     if (!typed || busy.current) return;
     busy.current = true;
-    const w = parseWhen(typed);
+    const rep = parseRepeat(typed);
+    const w = rep ? null : parseWhen(typed);
     // A bare time like "3pm" in a later day's section means that day.
-    const at = w?.at != null && day !== today && !hasDay(typed) ? new Date(day).setHours(new Date(w.at).getHours(), new Date(w.at).getMinutes(), 0, 0) : w?.at ?? (day === today ? null : new Date(day).setHours(9, 0, 0, 0));
+    const at = w?.at != null && day !== today && !hasDay(typed) ? new Date(day).setHours(new Date(w.at).getHours(), new Date(w.at).getMinutes(), 0, 0) : rep?.at ?? w?.at ?? (day === today ? null : new Date(day).setHours(9, 0, 0, 0));
     try {
-      const row = await store.capture(stripWhen(typed, w) || typed, 'task', profile, at);
+      const row = await store.capture(rep ? `${rep.title}\n${rep.text}` : stripWhen(typed, w) || typed, 'task', profile, at);
       setText('');
       saveFlag('assistant-personal', profile === 'personal');
       haptic('tap');
