@@ -556,6 +556,8 @@ export class AgentSession implements AgentHost {
       if (at === null) continue;
       after(at + 5000, () => {
         if (this.closed || this.wokeAt > since || this.crons.some((x) => !x.recurring && x.prompt === c.prompt && x.schedule !== c.schedule)) return;
+        // Each compaction arms its own check; the first to send counts as the wakeup for the rest.
+        this.wokeAt = Date.now();
         this.system('Compacting dropped the scheduled wakeup, so AgentView sent it');
         void this.prompt(c.prompt);
       });
