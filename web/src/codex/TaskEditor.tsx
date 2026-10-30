@@ -4,7 +4,7 @@ import { atTime } from './data/engine';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago, fitHeight, safeHref, useOnUnmount } from '../ui/util';
+import { ago, fitHeight, reveal, safeHref, useOnUnmount } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
 import { PickDue, PickTime, when } from './time';
@@ -40,8 +40,6 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const at = atTime(row.at);
   const focused = isFocused(useFocus(), row);
   const suggested = useMemo(() => (row.status === 'open' && estimateMin(title) == null ? suggestEstimate(title, snap.items.filter((r) => !r.deleted && r.profile === row.profile)) : null), [row.status, row.profile, title, snap.items]);
-  // The phone keyboard covers the lower half, so the field moves into view once it is up.
-  const reveal = (e: React.FocusEvent<HTMLTextAreaElement>) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
   const checks = checkItems(text);
   // Ticking a checklist line flips its box in the notes and saves at once.
   const toggle = (n: number) => {

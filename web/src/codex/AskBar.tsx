@@ -7,7 +7,7 @@ import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
 import { Voice, useDictation } from '../chat/Voice';
-import { readFlag, saveFlag } from '../ui/util';
+import { readFlag, reveal, saveFlag } from '../ui/util';
 import { FILTER_LABEL, showSnack, type Filter } from './view';
 import { EVENING, PickTime, clock, when } from './time';
 
@@ -145,6 +145,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
             value={text}
             placeholder="Add a task or ask anything"
             aria-label="Add a task or ask anything"
+            onFocus={reveal}
             onChange={(e) => { setText(e.target.value); if (!e.target.value.trim()) { setAsking(false); setNoWhen(false); setPick(null); } }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && (!touch() || e.metaKey || e.ctrlKey)) { e.preventDefault(); void submit(); } }}
           />

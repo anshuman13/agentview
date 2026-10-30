@@ -139,3 +139,6 @@ export function weekPace(resetsAt: number, now = Date.now()) {
   const left = Math.min(WEEK_HOURS, Math.max(0, Math.ceil((resetsAt - now) / 3_600_000)));
   return Math.round(((WEEK_HOURS - left) / WEEK_HOURS) * 100);
 }
+
+// The phone keyboard covers the lower half, so a focused field moves into view once it is up.
+export const reveal = (e: { currentTarget: HTMLElement }) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
