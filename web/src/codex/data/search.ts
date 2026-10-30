@@ -2,6 +2,7 @@ import type { ItemRow } from './sync';
 import { snippet } from '../../../../shared/snippet';
 import { POINT, RAISED } from './points';
 import { keyWords } from '../../../../shared/claimMatch';
+import { GOAL } from './goals';
 import { currentClaim, isOld, live, rowMatcher, queryWords, searchWiki, type Fact, type Job, type Meeting, type Page } from './wiki';
 import { searchMeetings } from './meetings';
 
@@ -23,7 +24,7 @@ export function searchAll(data: SearchData, query: string): Results {
   if (!words.length) return { tasks: none, meetings: none, wiki: none, jobs: none, total: 0 };
   const hitItem = rowMatcher<SearchData['items'][number]>(words, 'item', (r) => [r.title, r.text, r.people, r.source]);
   const hitJob = rowMatcher<Job>(words, 'job', (j) => [j.name, j.prompt]);
-  const tasks = data.items.filter((r) => !r.deleted && !['dismissed', POINT, RAISED].includes(r.status ?? '') && hitItem(r));
+  const tasks = data.items.filter((r) => !r.deleted && !['dismissed', POINT, RAISED, GOAL].includes(r.status ?? '') && hitItem(r));
   const meetings = searchMeetings(live(data.meetings), query).sort((a, b) => (b.starts_at ?? 0) - (a.starts_at ?? 0));
   const found = searchWiki(data.pages, data.facts, query);
   const wiki = [
