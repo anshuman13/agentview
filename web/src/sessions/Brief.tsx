@@ -16,7 +16,7 @@ import { AgentsChip, AgentsPane } from './AgentsPane';
 import { agentCounts, agentsOf, openAgent } from './agents';
 import { REVIEW_LOCAL } from '../ops/Findings';
 import { ago, plural, readFlag, saveFlag, useTick } from '../ui/util';
-import { useMacName } from '../app/MacsPopover';
+import { useMacName } from '../app/macName';
 import { UsageItem } from '../app/StatusItems';
 import { BIG_BRO, type PendingRequest } from '../../../shared/protocol';
 

@@ -9,11 +9,11 @@ import { command, pressable, save, stored } from '../ui/util';
 import { haptic } from '../ui/haptic';
 import { slideFrom, useTabSwipe } from './tabSwipe';
 import { Unreachable, useUnreachable } from './Unreachable';
-import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
+import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
 import { deepLink } from './deepLinks';
 import { isPage, pageOf, PageView, PAGES, type Page } from './pages';
-import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, Assistant, FocusBar, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, Loading } from './lazy';
+import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, Assistant, FocusBar, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from './lazy';
 import { AppUpdate, Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { useTheme } from './theme';
@@ -381,7 +381,7 @@ export function App() {
       </Suspense>
       {repoPicker && <Suspense fallback={null}><RepoPicker /></Suspense>}
       {phone && <Suspense fallback={null}><ConnectPopover onClose={() => setPhone(false)} /></Suspense>}
-      {macs && <MacsPopover onClose={() => setMacs(false)} />}
+      {macs && <Suspense fallback={null}><MacsPopover onClose={() => setMacs(false)} /></Suspense>}
     </div>
   );
 }

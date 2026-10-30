@@ -21,4 +21,5 @@ export const Observe = lazy(() => import('../ops/Observe').then((m) => ({ defaul
 export const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default: m.Deploy })));
 export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ default: m.McpPage })));
 export const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
-export const Loading = () => <div className="loading">Loading…</div>;
+export const MacsPopover = lazy(() => import('./MacsPopover').then((m) => ({ default: m.MacsPopover })));
+export const Loading =() => <div className="loading">Loading…</div>;

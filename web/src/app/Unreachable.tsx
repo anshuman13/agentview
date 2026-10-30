@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiBase, bundled } from './api';
 import { Icon } from '../ui/Icon';
-import { useMacName } from './MacsPopover';
+import { useMacName } from './macName';
 import { connect, useStore } from './store';
 
 export function useUnreachable() {
