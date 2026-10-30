@@ -51,7 +51,7 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
 - Tasks due today (tomorrow under Later) with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
-- Context (folded like Later): one line per job report that opens the job, and the digest. Follow-through is meeting actions still open after a week (Task, Done, Dismiss)
+- Context (folded like Later): a Slack summary line that opens the Summary page (each chat and Summarize), one line per job report that opens the job, and the digest. Follow-through is meeting actions still open after a week (Task, Done, Dismiss)
 - Before 11:00, a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person

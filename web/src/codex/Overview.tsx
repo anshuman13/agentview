@@ -339,7 +339,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   };
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + s.meetingsTomorrow.length + tomorrow.length;
-  const contextCount = reports.length + (digest ? 1 : 0);
+  const slack = snap.chats.some((c) => !c.deleted) || snap.briefs.some((b) => !b.deleted && b.kind === 'slack');
+  const contextCount = reports.length + (digest ? 1 : 0) + (slack ? 1 : 0);
   const left = meetingTimeLeft(s.meetingsToday, now, s.endOfDay);
   const leftText = left >= 60 ? `${Math.floor(left / 60)}h${left % 60 ? String(left % 60).padStart(2, '0') : ''}` : `${left} min`;
   const drag = !touch();
@@ -412,6 +413,15 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         )}
       </Fold>
       <Fold id="context" title="Context" count={contextCount}>
+        {slack && (
+          <div className="ov-follow">
+            <div className="ov-follow-row">
+              <button className="ov-follow-text" onClick={() => setView({ list: 'summary', open: null })}>
+                <span className="ov-t">Slack summary <span className="muted small">Each chat and a summary on demand</span></span>
+              </button>
+            </div>
+          </div>
+        )}
         {reports.length > 0 && (
           <div className="ov-follow">
             {reports.map(({ j, r }) => (
