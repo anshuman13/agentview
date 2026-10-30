@@ -280,6 +280,19 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return Number(data?.changed ?? 0);
   };
 
+  blockTime = async (row: ItemRow, start: number, end: number, title: string) => {
+    await this.syncNow();
+    const resp = await fetch(`${HUB}/calendar/block`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: row.profile, id: row.id, start, end, title }),
+      signal: AbortSignal.timeout(120000),
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    await this.syncNow();
+  };
+
   summarizeSlack = async () => {
     const resp = await fetch(`${HUB}/slack/summary`, { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data = await resp.json().catch(() => null);

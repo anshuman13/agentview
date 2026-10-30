@@ -247,6 +247,12 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     return Number(data?.changed ?? 0);
   };
 
+  blockTime = async (row: ItemRow, start: number, end: number, title: string) => {
+    await this.syncNow();
+    await hub('/api/assistant/calendar/block', { profile: row.profile, id: row.id, start, end, title }, { signal: AbortSignal.timeout(120000) });
+    await this.syncNow();
+  };
+
   summarizeSlack = async () => {
     const data = await hub<{ added?: number }>('/api/assistant/slack/summary', undefined, { method: 'POST' });
     await this.syncNow();

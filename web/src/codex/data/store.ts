@@ -29,6 +29,7 @@ export interface AssistantStore {
   parse(text: string, profile: Profile): Promise<Parsed>;
   fetchTranscript(m: { profile: Profile; id: string }, instructions?: string): Promise<number>;
   syncCalendar(fresh?: number): Promise<number>;
+  blockTime(row: ItemRow, start: number, end: number, title: string): Promise<void>;
   summarizeSlack(): Promise<number>;
   searchTranscripts(query: string): Promise<TranscriptHit[]>;
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
