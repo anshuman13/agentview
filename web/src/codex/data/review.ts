@@ -5,7 +5,7 @@ import { goalsOf } from './goals';
 import { packDay, workGaps, type Span } from './plan';
 import { parseTimes, type ItemRow } from './sync';
 import { isAllDay } from './load';
-import { peopleOf, sameName } from './meetings';
+import { displayName, peopleOf, sameName } from './meetings';
 import { listOf, live as liveRows, type Brief, type Chat, type Meeting } from './wiki';
 
 const DAY = 86400000;
@@ -118,8 +118,9 @@ export function keepInTouch(meetings: Meeting[], chats: Chat[], items: ItemRow[]
   const days = new Map<string, { name: string; days: Set<number> }>();
   const add = (name: string, t: number | null) => {
     if (!name || t == null || t < from || t > now) return;
-    const k = name.toLowerCase();
+    const k = name.includes('@') ? displayName(name).toLowerCase() : name.toLowerCase();
     const p = days.get(k) ?? { name, days: new Set<number>() };
+    if (p.name.includes('@') && !name.includes('@')) p.name = name;
     p.days.add(dayStart(t));
     days.set(k, p);
   };
@@ -144,7 +145,7 @@ export function keepInTouch(meetings: Meeting[], chats: Chat[], items: ItemRow[]
   return out.sort((a, b) => b.since / b.gap - a.since / a.gap || a.name.localeCompare(b.name));
 }
 
-export const touchText = (name: string) => `Hi ${name.split(' ')[0]}, it has been a while! Up for a quick catch-up this week?`;
+export const touchText = (name: string) => `Hi ${displayName(name).split(' ')[0]}, it has been a while! Up for a quick catch-up this week?`;
 // The Monday to Friday day before now's day, as [start, end).
 function prevWorkday(now: number): Span {
   const d = new Date(dayStart(now));

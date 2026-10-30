@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { live, type Chat, type Meeting } from './data/wiki';
-import { actionsOf, followThrough } from './data/meetings';
+import { actionsOf, displayName, followThrough } from './data/meetings';
 import { followUpText } from './data/meetingMarkdown';
 import { meetingTimeLeft, sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';
@@ -180,7 +180,7 @@ function KeepInTouch() {
         {shown.slice(0, 5).map((x, i) => (
           <div key={x.key} className="ov-follow-row wrap" role="listitem">
             <button className="ov-follow-text" onClick={() => setView({ person: x.name })}>
-              <span className="ov-t">{x.name}</span>
+              <span className="ov-t">{displayName(x.name)}</span>
               <span className="muted small">last {dayLabel(x.last)} · usually every {plural(Math.max(1, Math.round(x.gap / 86400000)), 'day')}</span>
             </button>
             <button className="btn sm" aria-label={`Copy a nudge to ${x.name}`} onClick={() => copyText(touchText(x.name), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { personMarkdown } from '../data/meetingMarkdown';
 import { claimsMentioning } from '../data/wiki';
-import { commitmentsOf, meetingsOf, openQuestions, pinsOf, questionKey } from '../data/meetings';
+import { commitmentsOf, meetingsOf, nameOf, openQuestions, peopleOf, pinsOf, questionKey, sameName } from '../data/meetings';
 import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
 import { copyText, openMeeting, setView, useEscapeBack } from '../view';
@@ -42,6 +42,8 @@ export function Person({ name }: { name: string }) {
   useEscapeBack(back);
   useMarkRaised();
   const mine = useMemo(() => meetingsOf(meetings, name), [meetings, name]);
+  const shown = useMemo(() => nameOf(meetings, name), [meetings, name]);
+  const email = name.includes('@') ? name.trim() : mine.flatMap(peopleOf).find((p) => p.includes('@') && sameName(p, name));
   const points = useMemo(() => pointsOf(snap.items, name), [snap.items, name]);
   const pins = useMemo(() => pinsOf(snap.items, mine), [snap.items, mine]);
   const commitments = useMemo(() => commitmentsOf(meetings, name), [meetings, name]);
@@ -64,7 +66,7 @@ export function Person({ name }: { name: string }) {
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          <div className="mt-person-head"><Avatars people={[name]} /><h1 className="wk-title">{name}</h1></div>
+          <div className="mt-person-head"><Avatars people={[shown]} /><div><h1 className="wk-title">{shown}</h1>{email && <div className="muted small">{email}</div>}</div></div>
           <div className="wk-meta mt-when"><span>{plural(mine.length, 'meeting')}</span></div>
 
           {inbox.dm && (
@@ -77,7 +79,7 @@ export function Person({ name }: { name: string }) {
               </div>
             </section>
           )}
-          <Asks title={`${firstName(name)} asked you`} rows={inbox.asks} />
+          <Asks title={`${firstName(shown)} asked you`} rows={inbox.asks} />
           <Asks title="You promised" rows={inbox.promises} />
           {inbox.mail.length > 0 && (
             <section className="mt-sec">
@@ -104,11 +106,11 @@ export function Person({ name }: { name: string }) {
                   </li>
                 ))}
               </ul>
-            ) : <p className="mt-pending">Nothing recorded for {name}.</p>}
+            ) : <p className="mt-pending">Nothing recorded for {shown}.</p>}
           </section>
 
           <section className="mt-sec">
-            <h2>Raise with {firstName(name)}{points.length > 0 && <span className="mt-of">{points.length}</span>}</h2>
+            <h2>Raise with {firstName(shown)}{points.length > 0 && <span className="mt-of">{points.length}</span>}</h2>
             {points.length > 0 && <PointList points={points} person={false} />}
             <AddPoint person={name} profile={mine[0]?.profile ?? 'work'} />
           </section>

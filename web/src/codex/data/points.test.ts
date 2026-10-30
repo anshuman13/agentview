@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { endedPoints, pointMeeting, pointsFor } from './points';
 import type { ItemRow } from './sync';
 import type { Meeting } from './wiki';
+import { displayName, nameOf, sameName } from './meetings';
 
 const H = 3600_000;
 const meeting = (id: string, start: number, people: string[], profile = 'work') =>
@@ -33,5 +34,13 @@ describe('points', () => {
     const items = [point('Kim Berg', 2 * H), point('Ola Dahl', 6 * H)];
     expect(endedPoints(items, all, 11 * H).map((p) => p.people)).toEqual(['Kim Berg']);
     expect(endedPoints(items, all, 10.5 * H)).toEqual([]);
+  });
+});
+
+describe('person names', () => {
+  it('derive a name from an email and match either form', () => {
+    expect(displayName('kim.berg@example.com')).toBe('Kim Berg');
+    expect(sameName('kim.berg@example.com', 'Kim Berg')).toBe(true);
+    expect(nameOf([meeting('m', 0, ['Kim Berg', 'ola@example.com'])], 'kim.berg@example.com')).toBe('Kim Berg');
   });
 });

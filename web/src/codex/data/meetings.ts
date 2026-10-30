@@ -86,7 +86,20 @@ export const peopleOf = (m: Meeting) => {
   return people;
 };
 
-export const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const words = (s: string) => {
+  const t = s.trim();
+  return (t.includes('@') ? t.slice(0, t.indexOf('@')).replace(/[._+-]+/g, ' ') : t).split(/\s+/).filter(Boolean);
+};
+
+// A person's name, or "First Last" derived from an email like first.last@host.
+export const displayName = (s: string) => (s.includes('@') ? words(s).map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(' ') || s.trim() : s.trim());
+
+// The same person by name or email, ignoring case.
+export const sameName = (a: string, b: string) => words(a).join(' ').toLowerCase() === words(b).join(' ').toLowerCase();
+
+// The best name for a person: a non-email form some meeting lists for them, else one derived from the email.
+export const nameOf = (meetings: Meeting[], person: string) =>
+  person.includes('@') ? live(meetings).flatMap(peopleOf).find((p) => !p.includes('@') && sameName(p, person)) ?? displayName(person) : person.trim();
 
 // Meetings the person attended, newest first.
 export const meetingsOf = (meetings: Meeting[], person: string) =>

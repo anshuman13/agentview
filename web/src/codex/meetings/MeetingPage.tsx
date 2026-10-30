@@ -5,7 +5,7 @@ import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
 import { rowKey, type ItemRow } from '../data/sync';
 import { listOf, othersOf, type Meeting } from '../data/wiki';
-import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, meetingState, peopleOf, pinsOf, seriesOf } from '../data/meetings';
+import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, displayName, meetingState, peopleOf, pinsOf, seriesOf } from '../data/meetings';
 import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
@@ -132,7 +132,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
             {m.starts_at && <span>{clock(m.starts_at)}{m.ends_at ? `–${clock(m.ends_at)}` : ''}</span>}
             {m.recorded_ms ? <span><Icon name="record" small /> Recorded {Math.round(m.recorded_ms / 60000)} min</span> : null}
           </div>
-          {people.length > 0 && <div className="mt-people"><Avatars people={people} max={5} /><span>{people.slice(0, 3).map((p, i) => <span key={p}>{i > 0 && ', '}<button className="mt-person" onClick={() => setView({ person: p })}>{p}</button></span>)}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
+          {people.length > 0 && <div className="mt-people"><Avatars people={people} max={5} /><span>{people.slice(0, 3).map((p, i) => <span key={p}>{i > 0 && ', '}<button className="mt-person" onClick={() => setView({ person: p })}>{displayName(p)}</button></span>)}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
           <StateLine m={m} now={now} />
           <RoomMic m={m} />
 
