@@ -36,24 +36,19 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
 - Editor with diffs, Source Control, GitHub pull requests with review findings, a terminal, and your Chrome
 - Observe (Grafana, Snowflake), Deploy and MCP server pages
 - Codex: Overview, Tasks, Meetings, Jobs and Wiki, synced with an assistant hub that scans Slack, Gmail, the calendar
-  and meeting transcripts. A person page adds their Slack DM summary, open asks, your promises and unanswered mail;
-  Overview's Keep in touch card lists people gone quiet for over 1.5x their usual gap, with a nudge to copy;
-  Copy standup on Overview copies yesterday's done tasks and decisions, today's plan and
-  waiting-on items older than two days;
-  after a meeting, Overview lists the asks and DMs that came in while it ran, and urgent
-  pushes during a meeting wait and arrive as one push when it ends
-- Focus timer on a task: Start shows a bar over Codex until Stop, which adds the minutes to the task's time spent; tasks
-  without an estimate get one suggested from similar done tasks
-- Up to 3 weekly goals set on Meetings > Week; a task links to one, Overview shows done/total per goal and
-  Plan my day places goal tasks first
-- Related while writing: typing in a task, a note or a meeting's My notes shows up to 3 matching wiki claims, past
-  meetings and Slack chats under the field
+  and meeting transcripts ([details](docs/features.md#codex)):
+  - Overview with the morning brief, a Plan strip and Plan my day, Copy standup, a card for what came in during the
+    last meeting, and Keep in touch
+  - Tasks with a focus timer, estimates suggested from similar done tasks, and up to 3 weekly goals
+  - Person pages with their Slack DM summary, open asks, your promises and unanswered mail
+  - Related wiki claims, meetings and Slack tasks shown while you write
+  - Urgent pushes held during a meeting and sent as one when it ends
 - `/loop` and `/goal`, loop mode (plan, build, test), Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 
 ## Docs
 
-- [Features](docs/features.md): layout, timeline, models, workspace, notifications, loops, shortcuts
+- [Features](docs/features.md): layout, Codex, timeline, models, workspace, notifications, loops, shortcuts, keyboard
 - [Integrations](docs/integrations.md): Chrome, MCP servers, Grafana and Snowflake
 - [Phone and other Macs](docs/macs.md)
 - [Assistant plan](docs/assistant.md), [Codex flows](docs/codex-flows.md) and [Codex wiki and meetings](docs/codex-wiki.md)
