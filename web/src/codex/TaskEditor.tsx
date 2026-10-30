@@ -70,13 +70,27 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     el.animate([{ height: '56px', overflow: 'hidden' }, { height: `${el.offsetHeight}px`, overflow: 'hidden' }], { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' });
   }, []);
   useEffect(() => { setTimeout(() => box.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 190); }, []);
+  // Closing by key or button puts focus back on the task's row.
+  useEffect(() => () => {
+    requestAnimationFrame(() => {
+      const at = document.activeElement;
+      if (!at || at === document.body) document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus({ preventScroll: true });
+    });
+  }, [row.profile, row.id]);
+  // Opening or leaving the snooze choices keeps focus in the actions.
+  const actions = useRef<HTMLDivElement>(null);
+  const shown = useRef(snoozing);
+  useEffect(() => {
+    if (shown.current === snoozing) return;
+    shown.current = snoozing;
+    if (!box.current?.contains(document.activeElement)) actions.current?.querySelector<HTMLElement>('button, select')?.focus();
+  }, [snoozing]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' && !(e.key === 'Enter' && (e.metaKey || e.ctrlKey))) return;
       const at = document.activeElement;
       if (at && at !== document.body && !box.current?.contains(at)) return;
       onClose();
-      requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus());
     };
     // A tap outside closes the task; a tap on another task opens that one instead.
     const down = (e: PointerEvent) => {
@@ -158,14 +172,14 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         <span className="as-edit-ago">{ago(row.updated_at, ' ago')}</span>
       </div>
       {snoozing ? (
-        <div className="as-edit-actions">
+        <div className="as-edit-actions" ref={actions}>
           {at != null && at >= new Date().setHours(24, 0, 0, 0) && <button className="btn" onClick={then(() => act.due(row, null))}>Today</button>}
           {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
           <PickTime className="btn" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
           <button className="icon-btn" title="Back" aria-label="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
         </div>
       ) : (
-        <div className="as-edit-actions">
+        <div className="as-edit-actions" ref={actions}>
           {row.status === 'note' && <button className="btn" onClick={then(() => act.toTask(row))}>Make task</button>}
           {row.status === 'open' && <button className="btn" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
           {row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
