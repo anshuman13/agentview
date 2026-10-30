@@ -9,6 +9,7 @@ import { when } from '../time';
 import { copyText, openMeeting, setView, useView } from '../view';
 import { plural } from '../../ui/util';
 import { Review } from './Review';
+import { WeekGoals } from '../Goals';
 
 const MAX = 8;
 const text = (t: string | null) => t?.trim() || 'Untitled';
@@ -57,6 +58,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
         <button className="btn" title="Copy the week as Markdown" onClick={copy}><Icon name="copy" small /> <span>Copy</span></button>
       </div>
       {review ? <Review now={now} /> : <>
+      <WeekGoals now={now} />
       <Section title="Decisions" rows={r.decisions.map((d, i) => (
         <button key={i} className="mt-log-item" onClick={() => openMeeting(d.meeting)}>
           <span className="mt-log-text">{d.text}</span>

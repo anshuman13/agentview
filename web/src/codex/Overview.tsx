@@ -17,6 +17,7 @@ import { sourceOf } from './taskSource';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { standupText } from './data/review';
+import { GoalLines } from './Goals';
 import { atRisk, minutesText, type Span } from './data/plan';
 import { keepInTouch, touchText, type Lapsed } from './data/review';
 import { blockId, isBlock } from '../../../shared/util';
@@ -343,6 +344,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
         </div>
       )}
+      <GoalLines now={now} />
       <MorningBrief now={now} />
       <JustEnded meetings={s.meetingsToday} now={now} />
       <SinceMeeting now={now} />

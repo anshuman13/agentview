@@ -18,6 +18,7 @@ import { sourceOf } from './taskSource';
 import { Check } from './TaskCheck';
 import { estimateMin, minutesText, suggestEstimate } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
+import { GoalPick } from './Goals';
 
 const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
 
@@ -181,6 +182,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         {row.people && <span className="as-chip static">{row.people}</span>}
         {suggested != null && <button className="as-chip quiet" title="Add this estimate, from similar done tasks" onClick={() => addEstimate(suggested)}><Icon name="add" small /> ~{minutesText(suggested)}</button>}
         {Number(row.spent) > 0 && <span className="as-chip static" title="Time spent"><Icon name="watch" small /> {minutesText(Number(row.spent))}</span>}
+        {(row.status === 'open' || row.status === 'done') && <GoalPick row={row} onPick={(goal) => act.edit(row, { goal })} />}
         <span className="as-edit-ago">{ago(row.updated_at, ' ago')}</span>
       </div>
       {snoozing ? (

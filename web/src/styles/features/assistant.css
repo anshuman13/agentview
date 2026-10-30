@@ -231,6 +231,11 @@ a.as-chip { text-decoration: none; }
 .ov-list > span { display: flex; align-items: center; gap: var(--sp-5); min-width: 0; padding: var(--sp-5) var(--sp-7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-list > span + span { border-top: 1px solid var(--border); }
 .ov-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.gl-lines { display: flex; flex-direction: column; gap: var(--sp-2); }
+.gl-line { display: flex; align-items: baseline; gap: var(--sp-3); white-space: nowrap; }
+.gl-row { display: flex; align-items: center; gap: var(--sp-3); }
+.gl-input { flex: 1; min-width: 0; padding: var(--sp-3) var(--sp-5); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; font-size: var(--fs-md); }
+select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-size: var(--fs-sm); }
 .ov-list .codicon.icon { flex: none; font-size: 12px; color: var(--fg-faint); }
 .ov-follow { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: var(--fs-md); overflow: hidden; }
 .ov-follow-row { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-5) var(--sp-7); }

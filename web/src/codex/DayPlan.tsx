@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { blockId, isBlock } from '../../../shared/util';
 import { rowKey, type ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
-import { useAssistantStore } from './data';
+import { useAssistantData, useAssistantStore } from './data';
+import { goalsOf } from './data/goals';
 import { atTime, errorText } from './data/engine';
 import { defaultBlock, estimateMin, fitBlock, focusTitle, minutesText, packDay, workGaps, type Span } from './data/plan';
 import { clock } from './time';
-import { showSnack } from './view';
+import { showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
 
 const hhmm = (n: number) => minutesText(Math.round(n / 60_000));
@@ -41,6 +42,12 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   const [pick, setPick] = useState<Pick | null>(null);
   const [plan, setPlan] = useState<Planned[] | null>(null);
   const [saving, setSaving] = useState(false);
+  const { items } = useAssistantData();
+  const { filter } = useView();
+  const goals = new Set(goalsOf(items, now, filter === 'all' ? undefined : filter).map(rowKey));
+  const forGoal = (r: ItemRow) => !!r.goal && goals.has(`${r.profile}:${r.goal}`);
+  const listed = new Set([...late, ...open].map(rowKey));
+  const goalTasks = items.filter((r) => !r.deleted && r.status === 'open' && r.source !== 'calendar' && forGoal(r) && !listed.has(rowKey(r)));
   const timed = meetings.filter((m) => m.starts_at != null && m.ends_at != null && m.ends_at > m.starts_at && new Date(m.ends_at).getTime() - m.starts_at < 20 * 3600_000);
   const busy = timed.map((m) => [m.starts_at!, m.ends_at!] as Span);
   const blocks = timed.filter((m) => isBlock(m.id) && m.ends_at! > now);
@@ -60,10 +67,11 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
     e.preventDefault();
     choose(gap, r);
   };
-  // Packs the open tasks without a block, or only those in keep, into the free time left from this moment.
+  // Packs the open tasks without a block, or only those in keep, into the free time left from this moment; tasks for this week's
+  // goals, due or not, go first.
   const pack = (keep?: Set<string>): Planned[] => {
     const blocked = new Set(blocks.map((m) => `${m.profile}:${m.id}`));
-    const tasks = [...late, ...open].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`) && (!keep || keep.has(rowKey(r)))).map((r) => ({ title: r.title, due: atTime(r.at), r }));
+    const tasks = [...late, ...open, ...goalTasks].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`) && (!keep || keep.has(rowKey(r)))).map((r) => ({ title: r.title, due: atTime(r.at), goal: forGoal(r), r }));
     return packDay(tasks, workGaps(busy, Date.now())).map((p) => ({ task: p.task.r, span: p.span }));
   };
   const planDay = () => {
@@ -124,7 +132,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
       <div className="as-chips">
         {chips.map((c) => c.el)}
         {!gaps.length && <span className="as-ctx">No free time left in work hours</span>}
-        {gaps.length > 0 && (late.length > 0 || open.length > 0) && <button className={`as-chip${plan ? ' on' : ''}`} onClick={() => (plan ? setPlan(null) : planDay())}>Plan my day</button>}
+        {gaps.length > 0 && (late.length > 0 || open.length > 0 || goalTasks.length > 0) && <button className={`as-chip${plan ? ' on' : ''}`} onClick={() => (plan ? setPlan(null) : planDay())}>Plan my day</button>}
       </div>
       {plan && (
         <div className="ov-card dp-block">
