@@ -59,7 +59,9 @@ Raw Slack and mail text is kept for 90 days; tasks, notes and facts stay.
 There are no keys to copy. NetBird is the identity: each device has its own WireGuard key enrolled through SSO, and a
 device cannot send traffic as another one's address. The hub answers only NetBird peers, names each request by its
 peer (`pixel-9`, `macbook`, `macmini`) and records which device changed an item. Removing a device in the NetBird
-dashboard cuts it off. AgentView and the hub share this check (`server/src/http/access.ts`).
+dashboard cuts it off. AgentView and the hub share this check (`server/src/http/access.ts`). The hub also refuses
+requests from web pages other than the phone app (an Origin or cross-site Sec-Fetch-Site header), so a page open in a
+browser on a peer cannot write to it.
 
 The phone's copy is encrypted with an Android Keystore key behind fingerprint unlock. If that key is lost, the app
 resets the copy and downloads it again from the hub.
