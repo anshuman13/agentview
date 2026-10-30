@@ -33,10 +33,14 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.util.Locale
@@ -99,7 +103,7 @@ class MainActivity : TauriActivity() {
   override fun onWebViewCreate(webView: WebView) {
     this.webView = webView
     WebView.setWebContentsDebuggingEnabled((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0)
-    webView.setDownloadListener { url, _, _, _, _ -> openExternal(url) }
+    webView.setDownloadListener { url, _, _, mime, _ -> if (isUpdate(url, mime)) installUpdate(url) else openExternal(url) }
     webView.addJavascriptInterface(Shell(), "AgentViewShell")
     if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
       val script = resources.openRawResource(R.raw.shell).bufferedReader().use { it.readText() }
@@ -226,6 +230,36 @@ class MainActivity : TauriActivity() {
     } catch (_: Exception) {
       toast("No app can open $url")
     }
+  }
+
+  private fun isUpdate(url: String, mime: String?): Boolean {
+    val u = Uri.parse(url)
+    val origin = "${u.scheme}://${u.host}${if (u.port > 0) ":${u.port}" else ""}"
+    return MAC_URL.matches(origin) && (u.path == "/api/app.apk" || mime == "application/vnd.android.package-archive")
+  }
+
+  // Downloads the new build from the Mac and opens Android's installer, which updates the app in place.
+  private fun installUpdate(url: String) {
+    toast("Downloading the update")
+    Thread {
+      try {
+        val file = File(cacheDir, "update.apk")
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.connectTimeout = 15_000
+        conn.readTimeout = 60_000
+        try {
+          if (conn.responseCode != 200) error("HTTP ${conn.responseCode}")
+          conn.inputStream.use { input -> file.outputStream().use { input.copyTo(it) } }
+        } finally {
+          conn.disconnect()
+        }
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        runOnUiThread { startActivity(intent) }
+      } catch (e: Exception) {
+        toast("Could not download the update: ${e.message}")
+      }
+    }.start()
   }
 
   private fun granted(permission: String) =
