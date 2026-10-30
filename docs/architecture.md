@@ -53,6 +53,10 @@ React with a small store (`web/src/app/store.ts`). It listens on one Server-Sent
 commands with `POST /api/cmd`. Each broadcast has an id; after a drop the stream resumes from `Last-Event-ID` through a
 ring buffer, or gets a fresh `init` snapshot when the gap is too old.
 
+Claude's reply streams as `append` messages that carry only the new text and its offset, at most every 80 ms per text
+block. The client adds an append only when the offset fits the text it has; the finished event follows in full, and
+`init` snapshots hold the whole text so far.
+
 `web/src` is grouped by feature: `app` (shell, store, API, palette), `ui` (shared widgets and helpers), `chat`,
 `sessions`, `workspace` (files, code, terminal, browser), `ops` (Observe, Deploy, GitHub, MCP), `codex` (with `data`, `jobs`,
 `meetings`, `summary`, `wiki`) and `styles`.
