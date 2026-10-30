@@ -442,12 +442,12 @@ li.contested .wk-feed-kind { color: var(--warn); }
 /* Page tiles: a hue on an 18% wash of itself. */
 .wk-tile { flex: none; width: 40px; height: 40px; display: grid; place-items: center; margin-bottom: var(--sp-4); border-radius: var(--radius); color: var(--tile); background: color-mix(in oklch, var(--tile) 18%, transparent); }
 .wk-tile .codicon.icon { font-size: var(--icon-lg); }
-.wk-tile.emerald { --tile: oklch(0.696 0.17 162.48); }
-.wk-tile.violet { --tile: oklch(0.627 0.265 303.9); }
-.wk-tile.blue { --tile: oklch(0.623 0.214 259.8); }
-.wk-tile.amber { --tile: oklch(0.769 0.188 70.08); }
-.wk-tile.rose { --tile: oklch(0.645 0.246 16.44); }
-.wk-tile.sky { --tile: oklch(0.746 0.16 232.7); }
+.wk-tile.emerald { --tile: var(--hue-teal); }
+.wk-tile.violet { --tile: var(--hue-violet); }
+.wk-tile.blue { --tile: var(--hue-blue); }
+.wk-tile.amber { --tile: var(--hue-amber); }
+.wk-tile.rose { --tile: var(--hue-magenta); }
+.wk-tile.sky { --tile: var(--hue-sky); }
 .wk-article > .wk-tile { margin-bottom: var(--sp-6); }
 
 /* Older: retired and aged claims, folded under a rule, in muted text. */
@@ -460,7 +460,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 /* Person view */
 .mt-person { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 @media (hover: hover) { .mt-person:hover { color: var(--fg); text-decoration: underline; } }
-.mt-pin-btn { position: fixed; z-index: 50; transform: translateX(-50%); box-shadow: 0 2px 8px rgb(0 0 0 / 0.25); }
+.mt-pin-btn { position: fixed; z-index: 50; transform: translateX(-50%); box-shadow: var(--shadow-sm); }
 .mt-pins .wk-claim::marker { color: var(--c-knowledge); }
 .mt-pins .wk-claim-text { white-space: pre-wrap; }
 .mt-person-head { display: flex; align-items: center; gap: var(--sp-6); }
