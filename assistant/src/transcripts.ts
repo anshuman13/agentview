@@ -287,13 +287,15 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
   return { saved: saveNotes(db, profile, mine, now), found: new Set(mine.map((n) => n.id)) };
 }
 
+export class NotFound extends Error {}
+
 // The manual sync and the background run of a profile take turns, so a meeting is never read twice at once.
 const lock = (profile: Profile) => `transcripts:${profile}`;
 
 // The manual sync for one meeting, at any time after it started, replacing an earlier summary.
 export async function syncTranscript(db: Database, profile: Profile, id: string, now = Date.now(), instructions = '') {
   const m = db.prepare("SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND id = ? AND deleted = 0 AND id LIKE 'cal:%'").get(profile, id) as Pending | null;
-  if (!m) throw new Error('No calendar meeting with that id');
+  if (!m) throw new NotFound('No calendar meeting with that id');
   return once(`${profile}:${id}`, () => serial(lock(profile), async () => (await readTranscripts(db, profile, [m], now, instructions)).saved));
 }
 

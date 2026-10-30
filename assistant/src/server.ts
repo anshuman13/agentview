@@ -10,7 +10,7 @@ import { once } from './once.js';
 import { finishTask, snoozeTask, startReminders } from './remind.js';
 import { startBrief } from './brief.js';
 import { parseTask } from './parse.js';
-import { searchTranscripts, startTranscripts, syncTranscript, transcriptText } from './transcripts.js';
+import { NotFound, searchTranscripts, startTranscripts, syncTranscript, transcriptText } from './transcripts.js';
 import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
 import { startGmail } from './gmail.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
@@ -180,7 +180,7 @@ export function createServer(): http.Server {
           const saved = await syncTranscript(getDb(), data.profile, data.id, Date.now(), typeof data.instructions === 'string' ? data.instructions : '');
           send(res, 200, { saved });
         } catch (err) {
-          send(res, 502, { error: err instanceof Error ? err.message : String(err) });
+          send(res, err instanceof NotFound ? 404 : 502, { error: err instanceof Error ? err.message : String(err) });
         }
         return;
       }
