@@ -35,7 +35,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const busy = db.prepare('SELECT id, title, starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = ? AND starts_at >= ? AND starts_at < ? ORDER BY starts_at').all(profile, start, end) as (Row & { id: string; starts_at: number; ends_at: number | null })[];
   const meetings = busy.filter((m) => !isBlock(m.id) && (m.ends_at ?? m.starts_at) >= now);
   const timed = busy.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
-  const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), start);
+  const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), now);
   const tasks = db.prepare("SELECT title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND (at IS NULL OR at = '' OR CAST(at AS INTEGER) < ?) ORDER BY at IS NULL OR at = '', CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number | null; rolls: number | null })[];
   const late = tasks.filter((t) => dated(t) && Number(t.at) < now).length;
   const due = tasks.filter(dated).length;

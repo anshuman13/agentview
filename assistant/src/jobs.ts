@@ -114,7 +114,7 @@ export async function runDue(db: Database, now = Date.now(), run = runJob, notif
     let output = '';
     try {
       const { result, added } = await run(db, job);
-      output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n');
+      output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';
     } catch (err) {
       status = 'error';
       output = errText(err);

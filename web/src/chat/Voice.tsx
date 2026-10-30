@@ -64,9 +64,14 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
       rec.current = null;
       setListening(false);
     };
+    try {
+      r.start();
+    } catch {
+      setError('Voice input failed to start');
+      return;
+    }
     setError('');
     rec.current = r;
-    r.start();
     setListening(true);
   };
   begin.current = start;

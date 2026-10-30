@@ -107,3 +107,7 @@ it('tags tasks rolled over from earlier days and counts them in the header', () 
 it('sends a brief at 13:00 when the hub was down all morning', async () => {
   expect(await runBriefs(seed(), at(MON, 13), async () => true)).toEqual(['work']);
 });
+
+it('lists only free time still ahead in a brief sent later in the day', () => {
+  expect(buildBrief(seed(), 'work', at(MON, 13, 30)).text).toContain('Free 3h: 14:00-17:00');
+});
