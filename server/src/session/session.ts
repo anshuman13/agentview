@@ -580,7 +580,7 @@ export class AgentSession implements AgentHost {
     this.system(why ?? (cron ? `Claude woke up: ${cron.prompt.slice(0, 100)}` : 'Claude woke up on its own'));
   }
 
-  noteReply(text: string) {
+  noteLimit(text: string) {
     this.limitReset = limitReset(text) ?? this.limitReset;
   }
 
@@ -606,7 +606,6 @@ export class AgentSession implements AgentHost {
     }
     this.lastResult = r.ok ? r.text : '';
     this.lastError = !r.ok || Boolean(r.isError);
-    if (r.ok) this.noteReply(r.text);
     this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now() });
     const goal = this.state.session.repeat;
     if (goal?.goal && goalMet(this.lastResult)) this.repeater.set(null, `Goal met after ${goal.round} ${goal.round === 1 ? 'check' : 'checks'}: ${goal.goal}`);

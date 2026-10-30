@@ -536,7 +536,8 @@ export class ClaudeDriver implements AgentDriver {
         for (const block of msg.message.content) {
           if (block.type === 'server_tool_use' && block.name === 'advisor') host.pushEvent(advisorEvent(block.id, Date.now()));
           if (block.type === 'tool_use') this.toolUse(block);
-          if (block.type === 'text') host.noteReply(block.text);
+          // The CLI marks its own usage-limit notice with error 'rate_limit'; Claude's replies never carry it.
+          if (block.type === 'text' && msg.error === 'rate_limit') host.noteLimit(block.text);
         }
         return;
       }

@@ -54,7 +54,7 @@ describe('/loop after Stop', () => {
     vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
     const { s, result, handle } = fakeSession();
     await s.prompt('/loop until 06:59 do the next round');
-    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
+    handle({ type: 'assistant', parent_tool_use_id: null, error: 'rate_limit', message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
     result('r1');
     expect(s.state.session.running).toBe(false);
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Usage limit reached, loop round 2 at 01:51, /loop off to end it' });
@@ -70,7 +70,7 @@ describe('/loop after Stop', () => {
     vi.setSystemTime(new Date(2026, 9, 24, 0, 0, 0));
     const { s, result, handle } = fakeSession();
     await s.prompt('do the next round');
-    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
+    handle({ type: 'assistant', parent_tool_use_id: null, error: 'rate_limit', message: { content: [{ type: 'text', text: "You've hit your session limit · resets 1:50am (Europe/Oslo)" }], usage: {} } });
     result('r1');
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Usage limit reached, resets at 01:51' });
     expect(s.state.session.repeat).toBeNull();

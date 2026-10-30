@@ -16,6 +16,12 @@ function fakeSession() {
   return { s, interrupt, result, handle };
 }
 
+// The CLI sends its usage-limit notice as an assistant message with error 'rate_limit', then the result.
+function limitNotice(handle: (m: unknown) => void, text = "You've hit your session limit · resets 1:50am", error: string | null = 'rate_limit') {
+  handle({ type: 'assistant', parent_tool_use_id: null, ...(error && { error }), message: { content: [{ type: 'text', text }], usage: {} } });
+  handle({ type: 'result', subtype: 'success', uuid: 'r1', result: text, total_cost_usd: 0, is_error: Boolean(error) });
+}
+
 describe('AgentSession turns', () => {
 
   it('steer interrupts a running turn and stays running for the steered prompt', async () => {
@@ -111,7 +117,7 @@ describe('AgentSession turns', () => {
     const limitHit = vi.fn(() => 'alt' as const);
     Object.assign(s.driver, { limitHit, accounts: () => ['main', 'alt'] });
     s.sendPrompt('long task');
-    handle({ type: 'result', subtype: 'success', uuid: 'r1', result: "You've hit your session limit · resets 1:50am", total_cost_usd: 0, is_error: false });
+    limitNotice(handle);
     expect(limitHit).toHaveBeenCalledOnce();
     expect(s.state.session).toMatchObject({ account: 'alt', running: true });
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'user', text: expect.stringContaining('Continue where you stopped') });
@@ -148,11 +154,21 @@ describe('AgentSession turns', () => {
     expect(s.state.session).toMatchObject({ account: 'alt', running: true });
   });
 
+  it('takes no usage limit from a normal reply that mentions one', async () => {
+    const { s, handle } = fakeSession();
+    const limitHit = vi.fn(() => 'alt' as const);
+    Object.assign(s.driver, { limitHit, accounts: () => ['main', 'alt'] });
+    s.sendPrompt('check the API');
+    limitNotice(handle, 'Your GitHub API rate limit resets at 14:30.', null);
+    expect(limitHit).not.toHaveBeenCalled();
+    expect(s.state.session).toMatchObject({ account: 'main', running: false });
+  });
+
   it('waits for the reset when no other account has usage left', async () => {
     const { s, handle } = fakeSession();
     Object.assign(s.driver, { limitHit: vi.fn(() => null) });
     s.sendPrompt('long task');
-    handle({ type: 'result', subtype: 'success', uuid: 'r1', result: "You've hit your session limit · resets 1:50am", total_cost_usd: 0, is_error: false });
+    limitNotice(handle);
     expect(s.state.session).toMatchObject({ account: 'main', running: false });
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('Usage limit reached') });
   });

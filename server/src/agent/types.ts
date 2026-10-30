@@ -70,7 +70,7 @@ export interface AgentHost {
   turnStarted(why?: string): void;
   turnEnded(): void;
   turnResult(r: TurnResult): void;
-  noteReply(text: string): void;
+  noteLimit(text: string): void;
   overage(until: number): void;
   startCompacting(): void;
   compacted(pre: number, post: number | null | undefined): void;
