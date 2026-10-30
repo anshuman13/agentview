@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { olderClaims, pageClaims, pageStats, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
+import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { setView, useEscapeBack, useView } from '../view';
@@ -20,6 +21,7 @@ export function WikiPage({ id }: { id: string }) {
   const { pages, facts } = useCodex();
   const { anchor } = useView();
   const [flash, setFlash] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   // A cited claim may sit past the window, so a page opened at an anchor shows every claim.
   const [allFor, setAllFor] = useState<string | null>(null);
   const pid = id === MEMORY ? null : id;
@@ -84,7 +86,7 @@ export function WikiPage({ id }: { id: string }) {
                 <div className="wk-pending">
                   <span>{page.state === 'proposed' ? 'New page with ' : ''}{pending.length} proposed {pending.length === 1 ? 'claim' : 'claims'}</span>
                   <span className="spacer" />
-                  <button className="btn" onClick={() => review.reject(pending)}>Reject all</button>
+                  <button className="btn" onClick={() => setConfirm({ title: `Reject ${plural(pending.length, 'claim')}?`, detail: page.title ?? '', action: 'Reject all', run: async () => review.reject(pending) })}>Reject all</button>
                   <button className="btn primary" onClick={() => review.approve(pending)}><Icon name="check" small /> Approve all</button>
                 </div>
               )}
@@ -125,6 +127,7 @@ export function WikiPage({ id }: { id: string }) {
           </div>
         )}
       </div>
+      {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
       {page && pid && <AskBar placeholder={`Ask about ${page.title}`} onAsk={(q) => ask(wikiAskText(q, pages, facts, id))} />}
     </div>
   );
