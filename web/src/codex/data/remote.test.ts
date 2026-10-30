@@ -213,6 +213,18 @@ describe('RemoteStore save', () => {
     store.dispose();
   });
 
+  it('pulls everything again when the cache was written with other columns', async () => {
+    const stored = fakeIndexedDb([]);
+    stored.set('meta', { since: 7 });
+    for (const t of ['items', 'facts', 'pages', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs']) stored.set(`table:${t}`, []);
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void> };
+    await internal.loaded;
+    expect(internal.since).toBe(0);
+    store.dispose();
+  });
+
   it('reads the old single-key layout once and migrates it', async () => {
     const stored = fakeIndexedDb([]);
     stored.set('snapshot', { since: 7, tables: { items: [taskRow('a')], meetings: [{ ...taskRow('m'), title: 'x' }] } });

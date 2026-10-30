@@ -1,6 +1,6 @@
 import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
-import { mergeIncoming, rowKey } from './sync';
+import { TABLE_FIELDS, mergeIncoming, rowKey } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
 
@@ -23,6 +23,8 @@ type Cached = { since: number; tables: Record<string, SyncRow[]> };
 const META_KEY = 'meta';
 const LEGACY_KEY = 'snapshot';
 const tableKey = (table: string) => `table:${table}`;
+// Rows cached before a column existed never get its value unless everything is pulled again.
+const COLUMNS = JSON.stringify(TABLE_FIELDS);
 
 // The browser keeps the rows and the hub version in IndexedDB, so a reload pulls only rows changed since.
 let dbOpen: Promise<IDBDatabase> | undefined;
@@ -93,10 +95,10 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   private async load() {
     const read = <T>(key: string) => cacheOp<T | undefined>('readonly', (s) => s.get(key)).catch(() => undefined);
-    const meta = await read<{ since: number }>(META_KEY);
+    const meta = await read<{ since: number; columns?: string }>(META_KEY);
     let cached: Cached | undefined;
     if (meta) {
-      cached = { since: meta.since, tables: {} };
+      cached = { since: meta.columns === COLUMNS ? meta.since : 0, tables: {} };
       // A table missing from the cache would never be fetched again, so start over with a full sync, keeping the rows held.
       for (const table of Object.keys(this.tables)) {
         const rows = await read<SyncRow[]>(tableKey(table));
@@ -148,7 +150,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
             throw e;
           }
         }
-        await write(META_KEY, { since });
+        await write(META_KEY, { since, columns: COLUMNS });
       } catch {}
     };
     const done = () => void this.writes--;
