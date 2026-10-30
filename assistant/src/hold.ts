@@ -35,10 +35,14 @@ export function heldDue(db: Database, now = Date.now()) {
   const list = heldPushes(db);
   if (!list.length || meetingAt(db, now)) return null;
   const meeting = list[list.length - 1].meeting;
-  return { title: `${list.length} urgent while you were in ${meeting}`, body: list.map((h) => `- ${h.title}${h.chat ? ` (${h.chat})` : ''}`).join('\n') };
+  return { count: list.length, title: `${list.length} urgent while you were in ${meeting}`, body: list.map((h) => `- ${h.title}${h.chat ? ` (${h.chat})` : ''}`).join('\n') };
 }
 
+// Clears only the pushes it sent, so one held while the push was on its way stays for the next.
 export async function flushHeld(db: Database, now = Date.now()) {
   const due = heldDue(db, now);
-  if (due && (await pushNtfy(due.title, '', due.body, '').catch(() => false))) db.prepare('DELETE FROM meta WHERE key = ?').run(KEY);
+  if (!due || !(await pushNtfy(due.title, '', due.body, '').catch(() => false))) return;
+  const left = heldPushes(db).slice(due.count);
+  if (left.length) db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(KEY, JSON.stringify(left));
+  else db.prepare('DELETE FROM meta WHERE key = ?').run(KEY);
 }
