@@ -91,10 +91,10 @@ export function dueJobs(db: Database, now = Date.now()): Job[] {
   return jobs.filter((j) => j.next_run_at != null && j.next_run_at <= now && j.prompt?.trim());
 }
 
-// Keeps the last runs of each job.
+// Keeps the last runs of each job; the output of older ones is dropped, since their rows stay behind for sync.
 function prune(db: Database, job: Job, now: number) {
   const old = db.prepare('SELECT id FROM runs WHERE deleted = 0 AND profile = ? AND job_id = ? ORDER BY started_at DESC LIMIT -1 OFFSET ?').all(job.profile, job.id, KEEP) as { id: string }[];
-  applyChanges(db, old.map((r) => ({ table: 'runs', id: r.id, profile: job.profile, deleted: true, updated_at: now, fields: {} })));
+  applyChanges(db, old.map((r) => ({ table: 'runs', id: r.id, profile: job.profile, deleted: true, updated_at: now, fields: { output: null } })));
 }
 
 export async function runDue(db: Database, now = Date.now()) {
