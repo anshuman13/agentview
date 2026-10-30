@@ -295,7 +295,7 @@ export function OpenChats() {
               <span className="meta">
                 {g.running > 0 && <span className="badge running" title={`${g.running} running`}>{g.running}</span>}
                 {g.waiting > 0 && <span className="badge waiting" title={`${g.waiting} need you`}>{g.waiting}</span>}
-                <span className="count">{g.open.length + g.recent.length}</span>
+                <span className="count">{g.open.filter((c) => !c.pending).length + g.recent.length}</span>
               </span>
               <span className="acts">
                 <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); send({ type: 'new_session', cwd: g.key }); }}><Icon name="add" small /></button>

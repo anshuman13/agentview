@@ -12,6 +12,13 @@ import '../../styles/features/wiki.css';
 const CHATS = 8;
 const BRIEF_LINES = 8;
 
+// The first lines of a markdown text, cut at a blank line when there is one and with an open code fence closed.
+const head = (lines: string[]) => {
+  const blank = lines.slice(0, BRIEF_LINES + 1).map((l) => !l.trim()).lastIndexOf(true);
+  const cut = lines.slice(0, blank > 0 ? blank : BRIEF_LINES);
+  return [...cut, ...(cut.filter((l) => l.trimStart().startsWith('```')).length % 2 ? ['```'] : [])].join('\n');
+};
+
 // Slack in one place: the running summary of each chat from the quarter-hourly Haiku read, and a Sonnet summary on demand.
 // The latest Slack brief, the Slack asks waiting for review, and a Sonnet summary on demand.
 function useSlack() {
@@ -52,7 +59,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
           {brief?.text && (
             <section className="sm-brief">
               <div className="wk-meta"><span>Sonnet summary</span><span>{dayLabel(brief.from_at ?? 0, true)} {clock(brief.from_at ?? 0)} to {clock(brief.to_at ?? 0)}</span></div>
-              <Markdown text={allBrief || !longBrief ? brief.text : briefLines.slice(0, BRIEF_LINES).join('\n')} />
+              <Markdown text={allBrief || !longBrief ? brief.text : head(briefLines)} />
               {longBrief && <button className="as-chip quiet ov-more" onClick={() => setAllBrief(!allBrief)}>{allBrief ? 'Show less' : 'Show all'}</button>}
             </section>
           )}
@@ -70,7 +77,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
               {chats.length > CHATS && <button className="as-chip quiet ov-more" onClick={() => setAllChats(!allChats)}>{allChats ? 'Show less' : `Show ${chats.length - CHATS} more`}</button>}
             </div>
           )}
-          {!chats.length && <div className="as-empty"><Icon name="comment-discussion" /><div>Nothing read yet.</div><div className="muted small">Slack is read every 15 minutes on weekdays from 07 to 19.</div></div>}
+          {!chats.length && !brief?.text && <div className="as-empty"><Icon name="comment-discussion" /><div>Nothing read yet.</div><div className="muted small">Slack is read every 15 minutes on weekdays from 07 to 19.</div></div>}
         </div>
       </div>
     </div>

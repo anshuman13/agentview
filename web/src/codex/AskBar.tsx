@@ -41,7 +41,7 @@ type Chip = { label: string; q: string };
 const recipes = (next: Meeting | undefined): Chip[] => {
   const now = new Date();
   const h = now.getHours();
-  if (next && next.starts_at! - now.getTime() < 3600_000) return [{ label: 'Prep next meeting', q: prepText(next) }];
+  if (next && next.starts_at! > now.getTime() && next.starts_at! - now.getTime() < 3600_000) return [{ label: 'Prep next meeting', q: prepText(next) }];
   if ((now.getDay() === 4 || now.getDay() === 5) && h >= 12) return [{ label: 'Draft my weekly update', q: 'Draft my weekly update from what I got done this week and the meetings I was in: done, in progress, next. Short bullets.' }];
   return [
     h < 12 ? { label: 'Plan my day', q: 'Plan my day. Use my calendar for today and my open items, suggest an order with times and point out conflicts.' }
