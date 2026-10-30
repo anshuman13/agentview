@@ -28,7 +28,8 @@ it('reminds about a task when it comes due', () => {
   item.run('b', 'Later', 'open', now + 60_000);
   item.run('c', 'Done already', 'done', now - 60_000);
   item.run('d', 'Long ago', 'open', now - 3600_000);
-  expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Get burger buns']);
+  db.prepare("INSERT INTO items (id, profile, version, updated_at, title, status, at) VALUES ('e', 'work', 1, 0, 'No source', 'open', ?)").run(now - 60_000);
+  expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Get burger buns', 'No source']);
 });
 
 it('reminds once about a meeting in both calendars and keeps open actions to its profile', () => {
