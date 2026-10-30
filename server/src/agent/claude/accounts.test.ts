@@ -1,12 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-const dir = vi.hoisted(() => {
-  const d = `${process.env.TMPDIR ?? '/tmp'}/agentview-accounts-${process.pid}`;
-  process.env.AGENTVIEW_ALT_CLAUDE = `${d}/alt`;
-  process.env.AGENTVIEW_LIMITS_DIR = d;
-  return d;
-});
+const dir = process.env.AGENTVIEW_LIMITS_DIR!;
 
 const { freshAccount, hasAlt, isLimited, markLimited, otherAccount, overageUntil, rememberAccount, reopenAccount } = await import('./accounts.js');
 

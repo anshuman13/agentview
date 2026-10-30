@@ -1,7 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { dismissFinding, findingKey, getFindings, parseFindings, reviewTarget, saveFindings } from './findings.js';
-
-vi.hoisted(() => (process.env.AGENTVIEW_FINDINGS_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-findings-${process.pid}`));
 
 describe('review findings', () => {
   it('knows what a /code-review prompt targets', () => {

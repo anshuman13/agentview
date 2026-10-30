@@ -1,5 +1,5 @@
-import { afterAll, describe, expect, it, vi } from 'vitest';
-import { appendFileSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { describe, expect, it, vi } from 'vitest';
+import { appendFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AgentSession } from '../../session/session.js';
 import { claudeSession } from './driver.js';
@@ -7,7 +7,7 @@ import { JsonlTail } from './tail.js';
 import { contextFrom, historyFrom } from './transcript.js';
 import type { ServerMessage } from '../../../../shared/protocol.js';
 
-const CLAUDE_DIR = vi.hoisted(() => (process.env.CLAUDE_CONFIG_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`));
+const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR!;
 
 describe('context tokens', () => {
   it('adds fresh, cached and newly cached input tokens', () => {
@@ -26,7 +26,6 @@ describe('transcript sync', () => {
     const message = type === 'user' ? { role: 'user', content: text } : { role: 'assistant', content: [{ type: 'text', text }] };
     return { uuid, text: JSON.stringify({ type, uuid, parentUuid: parent, sessionId, cwd, isSidechain: false, timestamp: new Date(1_800_000_000_000 + n * 1000).toISOString(), message }) + '\n' };
   };
-  afterAll(() => rmSync(CLAUDE_DIR, { recursive: true, force: true }));
   const texts = (s: AgentSession) => s.state.events.flatMap((e) => (e.kind === 'user' || e.kind === 'assistant' ? [e.text] : []));
   async function setup() {
     mkdirSync(dir, { recursive: true });

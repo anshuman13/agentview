@@ -3,7 +3,6 @@ import { applyChanges, pullChanges } from './sync.js';
 import { openDb, TABLES } from './db.js';
 import { Database } from 'bun:sqlite';
 import fs from 'fs';
-import os from 'os';
 
 let db: ReturnType<typeof openDb>;
 
@@ -94,7 +93,8 @@ describe('sync', () => {
 
 describe('openDb', () => {
   it('adds new columns to an existing table', () => {
-    const file = `${os.tmpdir()}/assistant-migrate-${Date.now()}.db`;
+    fs.mkdirSync(process.env.AGENTVIEW_LIMITS_DIR!, { recursive: true });
+    const file = `${process.env.AGENTVIEW_LIMITS_DIR}/migrate.db`;
     const old = new Database(file);
     old.exec(`CREATE TABLE facts (id TEXT NOT NULL, profile TEXT NOT NULL, version INTEGER NOT NULL, updated_at INTEGER NOT NULL,
       deleted INTEGER NOT NULL DEFAULT 0, field_times TEXT NOT NULL DEFAULT '{}', text, item_id, superseded_by, PRIMARY KEY (profile, id))`);
@@ -105,6 +105,5 @@ describe('openDb', () => {
     expect(cols).toEqual(expect.arrayContaining(TABLES.facts));
     expect(migrated.prepare('SELECT text FROM facts').get()).toEqual({ text: 'kept' });
     migrated.close();
-    fs.rmSync(file, { force: true });
   });
 });

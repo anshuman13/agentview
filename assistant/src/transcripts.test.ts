@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
@@ -8,6 +7,10 @@ import { docReader, readSaved } from './transcriptDocs.js';
 import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, formatLines, markTried, saveNotes, saveTranscripts, searchTranscripts, transcriptText } from './transcripts.js';
 
 const MIN = 60_000;
+const tempRoot = () => {
+  fs.mkdirSync(process.env.AGENTVIEW_LIMITS_DIR!, { recursive: true });
+  return fs.mkdtempSync(path.join(process.env.AGENTVIEW_LIMITS_DIR!, 'tx-'));
+};
 const now = Date.parse('2026-10-26T16:00:00Z');
 const meeting = (id: string, endedAgo: number, fields: Record<string, string> = {}) => ({
   table: 'meetings', id, profile: 'work' as const, updated_at: 1,
@@ -73,7 +76,7 @@ describe('transcripts', () => {
   });
 
   it('reads saved tool outputs in chunks and nothing else', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tx-'));
+    const root = tempRoot();
     const dir = path.join(root, 'projects', 'p', 's', 'tool-results');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'out.txt'), JSON.stringify({ fileContent: 'x'.repeat(40_000) }));
@@ -84,7 +87,7 @@ describe('transcripts', () => {
   });
 
   it('takes each doc read from the stream, and a saved output whole', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tx-'));
+    const root = tempRoot();
     const dir = path.join(root, 'projects', 'p', 's', 'tool-results');
     fs.mkdirSync(dir, { recursive: true });
     const file = path.join(dir, 'mcp-out.txt');

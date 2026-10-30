@@ -3,8 +3,6 @@ import type { AgentSession } from './session.js';
 import { claudeSession } from '../agent/claude/driver.js';
 import { BIG_BRO, type ChatEvent } from '../../../shared/protocol.js';
 
-vi.hoisted(() => (process.env.CLAUDE_CONFIG_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`));
-
 function fakeSession() {
   const s = claudeSession('/tmp/project');
   const interrupt = vi.fn(async () => {});
