@@ -31,6 +31,7 @@
 .scm-acts .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 @media (hover: hover) { .scm-row:hover .scm-acts, .section-head:hover .scm-acts { display: inline-flex; } }
 @media (hover: none) { .scm-acts { display: inline-flex; } }
+:is(.scm-row, .section-head):focus-within .scm-acts { display: inline-flex; }
 .scm-row { --tone: var(--fg); }
 .scm-row.s-M { --tone: var(--modified); }
 .scm-row:is(.s-A, .s-U) { --tone: var(--ok); }

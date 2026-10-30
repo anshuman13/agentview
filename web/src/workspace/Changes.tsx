@@ -7,7 +7,7 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
 import { refresh, useGit } from './gitStatus';
 import { Findings, REVIEW_LOCAL } from '../ops/Findings';
-import { askClaude, pressable, usePoll } from '../ui/util';
+import { askClaude, clickOnKey, usePoll } from '../ui/util';
 
 type Run = (action: string, body: object) => Promise<boolean>;
 const paths = (list: GitFile[]) => ({ paths: list.map((f) => f.path) });
@@ -45,6 +45,7 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
       <textarea
         value={message}
         rows={Math.min(6, message.split('\n').length)}
+        aria-label="Commit message"
         placeholder={`Message (⌘Enter to commit${branch ? ` on ${branch}` : ''})`}
         spellCheck={false}
         onChange={(e) => setMessage(e.target.value)}
@@ -67,9 +68,9 @@ function FileRow({ file, selected, actions }: { file: GitFile; selected: boolean
   const dir = file.path.slice(0, -name.length - 1);
   const letter = letterOf(file);
   return (
-    <div className={`scm-row s-${letter}${selected ? ' selected' : ''}`} title={file.path} {...pressable(() => setUi({ openFile: file.path, follow: false }))}>
+    <div className={`scm-row s-${letter}${selected ? ' selected' : ''}`} title={file.path} onClick={() => setUi({ openFile: file.path, follow: false })}>
       <FileIcon name={name} />
-      <span className="scm-name">{name}</span>
+      <span className="scm-name" role="button" tabIndex={0} aria-label={`${file.path}, ${STATUS[letter] ?? letter}`} onKeyDown={clickOnKey}>{name}</span>
       {dir && <span className="scm-dir">{dir}</span>}
       <span className="scm-acts">{actions}</span>
       <span className="scm-letter" title={STATUS[letter]}>{letter}</span>
@@ -82,9 +83,9 @@ function Section({ label, files, selected, actions, rowActions }: { label: strin
   if (!files.length) return null;
   return (
     <>
-      <div className="section-head" {...pressable(() => setOpen(!open))}>
+      <div className="section-head" onClick={() => setOpen(!open)}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
-        <span className="label">{label}</span>
+        <span className="label" role="button" tabIndex={0} aria-expanded={open} onKeyDown={clickOnKey}>{label}</span>
         <span className="scm-acts">{actions}</span>
         <span className="badge quiet">{files.length}</span>
       </div>
@@ -142,7 +143,7 @@ export function Changes() {
           <Icon name="search" small /> Review changes with Claude
         </button>
       </div>
-      {(failed || error) && <div className="scm-error">{failed || error}</div>}
+      {(failed || error) && <div className="scm-error" role="alert">{failed || error}</div>}
       <div className="scm-tree">
         <Section
           label="Staged Changes"
