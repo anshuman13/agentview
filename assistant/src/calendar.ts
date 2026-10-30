@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ask, scanPaused } from './claude.js';
 import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
-import { inWeekHours, slotStart } from './time.js';
+import { MIN, workSlotDue } from './time.js';
 import { loop, once } from './once.js';
 import { errText } from '../../shared/util.js';
 
@@ -90,13 +90,11 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
   return saveMeetings(db, profile, events, from, to, now);
 }
 
-const FIRST = 7;
-const LAST = 19;
-const EVERY = 30 * 60_000;
+const EVERY = 30 * MIN;
 
 // True once per half hour from 07:00 to 19:00 on weekdays.
 export function importDue(last: number, now = Date.now()) {
-  return inWeekHours(now, FIRST, LAST) && last < slotStart(now, EVERY);
+  return workSlotDue(last, EVERY, now);
 }
 
 const lastKey = (p: Profile) => `calendar:last:${p}`;

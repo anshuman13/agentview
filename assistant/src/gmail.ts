@@ -8,11 +8,11 @@ import { pushOrHold } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
-import { HUB_URL, run } from './slack.js';
+import { HUB_URL, pushHours, run } from './slack.js';
 import { saidId, webUrl } from './slackSave.js';
 import { loop } from './once.js';
 import { applyChanges, type Change } from './sync.js';
-import { DAY, MIN, addWorkdays, inWeekHours, localDate, parseWhen, slotStart, ymd } from './time.js';
+import { DAY, MIN, addWorkdays, localDate, parseWhen, workSlotDue, ymd } from './time.js';
 
 const EVERY = 30 * MIN;
 const GMAIL = 'mcp__claude_ai_Gmail__';
@@ -121,16 +121,6 @@ export function saveWaiting(db: Database, found: z.infer<typeof Sent>[], replied
   return keep;
 }
 
-// Reads every half hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
-export function mailDue(last: number, now = Date.now()) {
-  return inWeekHours(now, 7, 19) && last < slotStart(now, EVERY);
-}
-
-export function mailPushHours(c: GmailConfig, now = Date.now()) {
-  const { from, to } = c.push ?? { from: 8, to: 17 };
-  return inWeekHours(now, from, to);
-}
-
 // One Haiku pass over the inbox since the last pass. Read only: the prompt and the allowed tools never send or change mail.
 export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
   const row = db.prepare("SELECT value FROM meta WHERE key = 'gmail:last'").get() as { value: string } | null;
@@ -183,18 +173,19 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
 }
 
 async function pushUrgent(db: Database, c: GmailConfig, urgent: Awaited<ReturnType<typeof scanGmail>>['urgent'], now = Date.now()) {
-  if (!mailPushHours(c, now)) return;
+  if (!pushHours(c, now)) return;
   for (const a of urgent) {
     const accept = `http, Make task, ${HUB_URL}/gmail/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
     await pushOrHold(db, `${a.from}: ${a.title}`, 'Gmail', a.quote, a.link, `view, Open, ${a.link}; ${accept}`, now).catch(() => false);
   }
 }
 
+// Reads every half hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
 export function startGmail(db: () => Database, every = MIN) {
   let tried = 0;
   loop('gmail', every, async () => {
     const c = gmailConfig();
-    if (!c || !mailDue(tried) || (await scanPaused(db(), ACCOUNT_OF[PROFILE], 'gmail'))) return;
+    if (!c || !workSlotDue(tried, EVERY, Date.now()) || (await scanPaused(db(), ACCOUNT_OF[PROFILE], 'gmail'))) return;
     tried = Date.now();
     const r = await scanGmail(db(), c);
     console.log(`gmail: ${r.added} asks, ${r.said} promises, ${r.waiting} waiting, ${r.urgent.length} urgent`);

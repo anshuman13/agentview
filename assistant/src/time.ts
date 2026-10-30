@@ -7,6 +7,11 @@ export function inWeekHours(now: number, from: number, to: number) {
   return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= from && d.getHours() < to;
 }
 
+// True once per slot of `every` ms from 07:00 to 19:00 on weekdays, when the last try came before the current slot.
+export function workSlotDue(last: number, every: number, now: number) {
+  return inWeekHours(now, 7, 19) && last < slotStart(now, every);
+}
+
 // The start of the slot of `every` ms (a divisor of an hour) that holds t, on the local clock, so half hours start at :00 and :30 in any time zone.
 export function slotStart(t: number, every: number) {
   const d = new Date(t);
