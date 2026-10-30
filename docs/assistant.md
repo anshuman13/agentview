@@ -61,7 +61,7 @@ usage the same way chats do (see [features.md](features.md#personal-and-work-cla
 
 On weekdays from 07 to 19 the hub reads the work account with Haiku and read-only connector tools. Slack is read
 every 15 minutes (DMs, mentions and the watched channels), Gmail every 30 minutes (the inbox, without promotions,
-social, updates and forums). Messages and mail that ask me to act become suggested tasks in Tasks under "Is this
+social, updates and forums). Slack reads page through to the last result, so a long gap misses nothing. Messages and mail that ask me to act become suggested tasks in Tasks under "Is this
 yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
 reply before taking it. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default); during a calendar meeting
 they are held and sent as one push when it ends.
@@ -76,7 +76,8 @@ returns up to 3 current wiki claims and 3 meeting decisions of the last 30 days 
 with the ask. Nothing is sent: the ask row has Copy draft next to the source link. My own promises get no draft.
 
 Both scans also pick up my own promises ("I'll send it tomorrow") from what I wrote, as suggested tasks labelled
-"You said" with the link and a due date when I named one. Once a day the Gmail scan also looks at mail I sent in the
+"You said" with the link and a due date when I named one. The Slack scan skips messages that only report something
+already done or give an opinion. Once a day the Gmail scan also looks at mail I sent in the
 last 14 days and keeps the threads where I asked something and nobody replied for 3 workdays, in one `briefs` row of
 kind `waiting`. An entry drops when a reply arrives or after 14 days. The weekly review lists them under Waiting on.
 The Slack scan also notes decisions settled in the watched channels, kept on the hub for 14 days; the wiki update
