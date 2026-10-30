@@ -36,6 +36,7 @@ function scanText(h: ScanHealth) {
   const name = SCAN_NAME[h.scan] ?? h.scan;
   if (h.missing) return { text: `${name} not set up`, bad: false };
   if (h.error && (h.failed ?? 0) >= (h.ok ?? 0)) return { text: `${name} ${when(h.failed!)} failed: ${h.error}`, bad: true };
+  if (h.stalled && h.stalled > (h.ok ?? 0)) return { text: `${name} stalled since ${when(h.stalled)}`, bad: true };
   if (!h.ok) return { text: `${name} not run yet`, bad: false };
   const counts = Object.entries(h.counts ?? {}).map(([k, n]) => `${n} ${n === 1 ? k.replace(/s$/, '') : k}`).join(', ');
   return { text: `${name} ${when(h.ok)}${counts ? ` · ${counts}` : ''}`, bad: false };

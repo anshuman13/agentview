@@ -8,7 +8,7 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 
 export type Counts = Record<string, number>;
 export type Scanner = { setUp(): boolean; paused(db: Database): Promise<boolean>; run(db: Database): Promise<Counts> };
-export type ScanHealth = { scan: string; ok?: number; counts?: Counts; error?: string; failed?: number; missing?: boolean };
+export type ScanHealth = { scan: string; ok?: number; counts?: Counts; error?: string; failed?: number; stalled?: number; missing?: boolean };
 
 const key = (name: string) => `scan:${name}`;
 
@@ -84,6 +84,7 @@ export async function checkStalls(db: Database, sources: Record<string, () => bo
     const h = health.find((x) => x.scan === name);
     const ok = h?.ok ?? 0;
     if (now - Math.max(ok, dayStart, since) < STALL || getMeta(db, `stall:${name}`) === String(ok)) continue;
+    note(db, name, { stalled: Math.max(ok, dayStart, since) });
     const p = paused.find((x) => x.scan === name.split(':')[0]);
     const reason = p ? `paused: usage limit until ${hm(p.until)}` : h?.error && (h.failed ?? 0) > ok ? h.error : `no success since ${ok ? hm(ok) : 'the hub started'}`;
     if (await push(`${name} scan stalled`, '', reason, '')) setMeta(db, `stall:${name}`, String(ok));

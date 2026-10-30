@@ -65,6 +65,7 @@ test('a stalled scan pushes once until it succeeds again', async () => {
   await check(at(9, 50));
   await check(at(10, 30));
   expect(sent).toEqual(['slack scan stalled: token expired']);
+  expect(scanHealth(db).find((h) => h.scan === 'slack')?.stalled).toBe(at(9));
   db.prepare('UPDATE meta SET value = ? WHERE key = ?').run(JSON.stringify({ scan: 'slack', ok: at(10, 35) }), 'scan:slack');
   await check(at(11, 25));
   expect(sent).toHaveLength(2);

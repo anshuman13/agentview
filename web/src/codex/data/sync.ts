@@ -17,7 +17,7 @@ export type PulledChange = Change & {
 };
 
 export type Paused = { scan: string; reason: string; until: number };
-export type ScanHealth = { scan: string; ok?: number; counts?: Record<string, number>; error?: string; failed?: number; missing?: boolean };
+export type ScanHealth = { scan: string; ok?: number; counts?: Record<string, number>; error?: string; failed?: number; stalled?: number; missing?: boolean };
 export type Reply ={ version: number; changes: PulledChange[]; hasMore?: boolean; rejected?: { table: string; id: string; reason: string }[]; paused?: Paused[]; scans?: ScanHealth[] };
 
 export const FIELDS = TABLES.items as (keyof ItemFields)[];
