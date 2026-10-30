@@ -55,7 +55,7 @@ const Detail = z.object({
 export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; channels?: { name: string; id: string }[] };
 
 // Permalinks come from the model, so only web links are stored or pushed; no comma or semicolon, which split ntfy actions.
-const webUrl = (u: string | null | undefined) => (u && /^https?:\/\/[^\s,;]+$/i.test(u) ? u : null);
+export const webUrl = (u: string | null | undefined) => (u && /^https?:\/\/[^\s,;]+$/i.test(u) ? u : null);
 
 export const askId = (url: string) => `slack:${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
 
@@ -108,10 +108,10 @@ function sinceOf(db: Database, now: number) {
   return Math.max(Number(row?.value ?? 0), now - 3 * DAY);
 }
 
-type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
+export type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
 
 // Stops as soon as done() says the work is saved, so the model does not spend turns repeating itself.
-async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false) {
+export async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false, read = READ_TOOLS) {
   const account = ACCOUNT_OF[PROFILE];
   guardLimit(account);
   const dir = configDir(account);
@@ -127,7 +127,7 @@ async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxT
       env: { ...process.env, ENABLE_TOOL_SEARCH: 'false', ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
       ...(model === 'haiku' && { thinking: { type: 'disabled' as const } }),
       mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools }) },
-      allowedTools: [...READ_TOOLS, ...tools.map((t) => `mcp__codex__${t.name}`)],
+      allowedTools: [...read, ...tools.map((t) => `mcp__codex__${t.name}`)],
       permissionMode: 'dontAsk',
     },
   })) {
@@ -250,8 +250,8 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
   return { text, added };
 }
 
-export function acceptAsk(db: Database, id: string, now = Date.now()) {
-  const row = db.prepare("SELECT 1 FROM items WHERE profile = ? AND id = ? AND source = 'slack' AND deleted = 0").get(PROFILE, id);
+export function acceptAsk(db: Database, id: string, source: 'slack' | 'gmail' = 'slack', now = Date.now()) {
+  const row = db.prepare('SELECT 1 FROM items WHERE profile = ? AND id = ? AND source = ? AND deleted = 0').get(PROFILE, id, source);
   if (!row) return false;
   applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'open' } }]);
   return true;
