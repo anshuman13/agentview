@@ -23,7 +23,7 @@ function taskSince(now: number) {
 }
 
 type Meeting = { id: string; profile: string; title: string | null; starts_at: number | null; ends_at: number | null; people: string | null; calendar_url: string | null };
-type Reminder = { key: string; title: string; body: string; url: string; actions?: string };
+type Reminder = { key: string; title: string; body: string; url: string; actions?: string; keys?: string[] };
 
 const clip = (s: string, n = 90) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
@@ -98,12 +98,19 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     out.push({ key, title: `${open.length} for you from ${m.title ?? 'a meeting'}${review ? ` · ${review} to confirm` : ''}`, body: open.map((a) => `- ${a.title}${a.status === 'suggested' ? ' (yours?)' : ''}`).join('\n'), url: '' });
   }
   const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND ((CAST(at AS INTEGER) > ?1 AND CAST(at AS INTEGER) <= ?2) OR (rolled_from IS NOT NULL AND CAST(at AS INTEGER) - ?3 > ?1 AND CAST(at AS INTEGER) - ?3 <= ?2))").all(taskSince(now), now, DAY) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
+  const byProfile = new Map<string, Reminder[]>();
   for (const t of tasks) {
     const key = `task:${t.profile}:${t.id}:${Number(t.at)}`;
     if (sent(key)) continue;
     const first = (t.text ?? '').split('\n').map((l) => l.trim()).find(Boolean);
-    const due = new Date(Number(t.at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    out.push({ key, title: t.title ?? 'Task', body: [`Due ${due}`, first && clip(first, 120)].filter(Boolean).join('\n'), url: '', actions: [!repeats(t.text) && hubAction('Done', '/task/done', t.profile, t.id), hubAction('Snooze 1h', '/task/snooze', t.profile, t.id)].filter(Boolean).join('; ') });
+    const time = new Date(Number(t.at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    byProfile.set(t.profile, [...(byProfile.get(t.profile) ?? []), { key, title: t.title ?? 'Task', body: [`Due ${time}`, first && clip(first, 120)].filter(Boolean).join('\n'), url: '', actions: [!repeats(t.text) && hubAction('Done', '/task/done', t.profile, t.id), hubAction('Snooze 1h', '/task/snooze', t.profile, t.id)].filter(Boolean).join('; ') }]);
+  }
+  for (const group of byProfile.values()) {
+    if (group.length < 2) { out.push(...group); continue; }
+    const lines = group.slice(0, 5).map((r) => `- ${r.title}`);
+    if (group.length > 5) lines.push(`+${group.length - 5} more`);
+    out.push({ key: group[0].key, keys: group.map((r) => r.key), title: `${group.length} tasks due`, body: lines.join('\n'), url: '' });
   }
   return out;
 }
@@ -115,9 +122,9 @@ export function startReminders(db: () => Database, every = 60_000) {
     if (quiet(Date.now())) return;
     await flushHeld(db());
     for (const r of dueReminders(db())) {
-      const key = `remind:${r.key}`;
-      setMeta(db(), key, String(Date.now()));
-      if (!(await pushNtfy(r.title, '', r.body, r.url, r.actions).catch(() => false))) deleteMeta(db(), key);
+      const keys = (r.keys ?? [r.key]).map((k) => `remind:${k}`);
+      for (const key of keys) setMeta(db(), key, String(Date.now()));
+      if (!(await pushNtfy(r.title, '', r.body, r.url, r.actions).catch(() => false))) for (const key of keys) deleteMeta(db(), key);
     }
   });
 }
