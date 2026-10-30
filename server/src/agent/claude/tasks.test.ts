@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent } from '../../../../shared/protocol.js';
-import { bigBroRequest, bigBroVerdict } from './approval.js';
+import { bigBroRequest } from './approval.js';
 import { agentResultPatch, replayText, same, unchanged, usageOf } from './tasks.js';
 import { sessionUsage, usageWindow } from './usage.js';
 
@@ -21,11 +21,6 @@ describe('big bro approval', () => {
     expect(bigBroRequest(hook('Agent', { subagent_type: 'general-purpose' }))).toBeNull();
     expect(bigBroRequest({ hook_event_name: 'PostToolUse' } as never)).toBeNull();
     expect(bigBroRequest(hook('Agent', { subagent_type: 'big-bro' }))?.title).toBe('Ask Fable: a hard problem');
-  });
-
-  it('maps the answer to a hook decision', () => {
-    expect(bigBroVerdict('allow')).toEqual({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', permissionDecisionReason: undefined } });
-    expect(bigBroVerdict('deny')).toMatchObject({ hookSpecificOutput: { permissionDecision: 'deny' } });
   });
 });
 

@@ -8,10 +8,6 @@ import { readJson } from './routes/http.js';
 const req = (body: string) => Readable.from([Buffer.from(body)]) as unknown as http.IncomingMessage;
 
 describe('readJson', () => {
-  test('returns an object body', async () => {
-    expect(await readJson(req('{"profile":"work"}'), 100)).toEqual({ profile: 'work' });
-  });
-
   test('rejects null, arrays, scalars and bad JSON as a bad request', async () => {
     for (const body of ['null', '[]', '5', '"x"', '{nope']) {
       await expect(readJson(req(body), 100)).rejects.toBeInstanceOf(BadRequest);

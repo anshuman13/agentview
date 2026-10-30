@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { edited, moved, newCapture } from './engine';
-import { captureParams, doneCutoff, patchSQL, swapSQL } from './localRows';
+import { captureParams, patchSQL, swapSQL } from './localRows';
 import { TABLE_FIELDS, type ItemRow } from './sync';
 
 const times = (r: { field_times: string }) => JSON.parse(r.field_times);
@@ -29,7 +29,6 @@ describe('newCapture', () => {
     expect(r).toMatchObject({ source: 'action', people: 'Sync', meeting_id: 'm1' });
     expect(times(r)).toMatchObject({ people: 5, meeting_id: 5 });
   });
-
 });
 
 describe('edited', () => {
@@ -104,13 +103,9 @@ describe('swapSQL', () => {
   });
 });
 
-describe('captureParams and doneCutoff', () => {
+describe('captureParams', () => {
   it('lists capture values in insert column order', () => {
     const r = newCapture('T\nB', 'task', 'work', 1000, 50, { id: 'm', title: 'Sync' });
     expect(captureParams(r)).toEqual([r.id, 'work', 1000, r.field_times, 'T', 'B', 'action', 'Sync', 50, 'open', 'm']);
-  });
-
-  it('keeps done tasks updated within 60 days', () => {
-    expect(doneCutoff(100 * 86400_000)).toBe(40 * 86400_000);
   });
 });

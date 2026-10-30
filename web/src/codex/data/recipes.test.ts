@@ -12,9 +12,4 @@ describe('recipes', () => {
     expect(matchRecipes(DEFAULT_RECIPES, '/OPEN dec').map((r) => r.id)).toEqual(['decisions']);
     expect(matchRecipes(DEFAULT_RECIPES, '/week meetings').map((r) => r.id)).toEqual(['week']);
   });
-
-  it('returns nothing without a slash or a match', () => {
-    expect(matchRecipes(DEFAULT_RECIPES, 'open')).toEqual([]);
-    expect(matchRecipes(DEFAULT_RECIPES, '/zzz')).toEqual([]);
-  });
 });

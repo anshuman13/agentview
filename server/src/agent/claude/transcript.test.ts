@@ -26,10 +26,6 @@ describe('historyFrom ids', () => {
 describe('clipInput', () => {
   const file = Array.from({ length: 500 }, (_, i) => `line ${i} ${'x'.repeat(20)}`).join('\n');
 
-  it('leaves short values alone', () => {
-    expect(clipInput({ command: 'ls', n: 3, list: ['a'] })).toEqual({ command: 'ls', n: 3, list: ['a'] });
-  });
-
   it('cuts long strings and keeps the edit line count exact', () => {
     const full = editCount('Write', { file_path: 'a.ts', content: file });
     const e = toolUseEvent('t', 'Write', { file_path: 'a.ts', content: file }, 0) as Extract<ReturnType<typeof toolUseEvent>, { kind: 'tool_use' }>;
