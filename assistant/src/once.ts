@@ -8,3 +8,16 @@ export function once<T>(key: string, fn: () => Promise<T>): Promise<T> {
   }
   return job;
 }
+
+const queues = new Map<string, Promise<unknown>>();
+
+// Runs calls with the same key one after another.
+export function serial<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const job = (queues.get(key) ?? Promise.resolve()).then(fn);
+  const tail = job.catch(() => {});
+  queues.set(key, tail);
+  void tail.then(() => {
+    if (queues.get(key) === tail) queues.delete(key);
+  });
+  return job;
+}

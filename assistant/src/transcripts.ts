@@ -9,7 +9,7 @@ import { snippet } from '../../shared/snippet.js';
 import { configDir, guardLimit, isLimited, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import type { Profile } from './db.js';
-import { once } from './once.js';
+import { once, serial } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN } from './time.js';
 import { proposeWikiUpdates } from './wikiUpdates.js';
@@ -287,11 +287,14 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
   return { saved: saveNotes(db, profile, mine, now), found: new Set(mine.map((n) => n.id)) };
 }
 
+// The manual sync and the background run of a profile take turns, so a meeting is never read twice at once.
+const lock = (profile: Profile) => `transcripts:${profile}`;
+
 // The manual sync for one meeting, at any time after it started, replacing an earlier summary.
 export async function syncTranscript(db: Database, profile: Profile, id: string, now = Date.now(), instructions = '') {
   const m = db.prepare("SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND id = ? AND deleted = 0 AND id LIKE 'cal:%'").get(profile, id) as Pending | null;
   if (!m) throw new Error('No calendar meeting with that id');
-  return once(`${profile}:${id}`, async () => (await readTranscripts(db, profile, [m], now, instructions)).saved);
+  return once(`${profile}:${id}`, () => serial(lock(profile), async () => (await readTranscripts(db, profile, [m], now, instructions)).saved));
 }
 
 export function startTranscripts(db: () => Database, every = 5 * MIN) {
@@ -301,17 +304,19 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
     busy = true;
     try {
       for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
-        // A few at a time, so a backlog after a weekend never runs past the turn limit on every try.
-        const due = dueMeetings(db(), profile).slice(0, 5);
-        if (!due.length) continue;
-        try {
-          const { found } = await readTranscripts(db(), profile, due, Date.now());
-          markTried(db(), profile, due.filter((m) => !found.has(m.id)));
-          if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
-        } catch (err) {
-          markTried(db(), profile, due, Date.now(), isLimited(ACCOUNT_OF[profile]));
-          console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
-        }
+        await serial(lock(profile), async () => {
+          // A few at a time, so a backlog after a weekend never runs past the turn limit on every try.
+          const due = dueMeetings(db(), profile).slice(0, 5);
+          if (!due.length) return;
+          try {
+            const { found } = await readTranscripts(db(), profile, due, Date.now());
+            markTried(db(), profile, due.filter((m) => !found.has(m.id)));
+            if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
+          } catch (err) {
+            markTried(db(), profile, due, Date.now(), isLimited(ACCOUNT_OF[profile]));
+            console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
+          }
+        });
       }
       expireSuggested(db());
       await proposeWikiUpdates(db());
