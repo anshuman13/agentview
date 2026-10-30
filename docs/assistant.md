@@ -54,6 +54,23 @@ sides run on the personal account.
 
 Raw Slack and mail text is kept for 90 days; tasks, notes and facts stay.
 
+## Slack and Gmail scans
+
+On weekdays from 07 to 19 the hub reads the work account with Haiku and read-only connector tools. Slack is read
+every 15 minutes (DMs, mentions and the watched channels), Gmail every 30 minutes (the inbox, without promotions,
+social, updates and forums). Messages and mail that ask me to act become suggested tasks in Tasks under "Is this
+yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
+reply before taking it. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default).
+
+Each scan is off until its config file exists in `~/.agentview/assistant`:
+
+```json
+// slack.json
+{ "me": "<my Slack user id>", "domain": "<workspace>.slack.com", "channels": ["<channel>"], "push": { "from": 8, "to": 17 } }
+// gmail.json
+{ "me": "<my work address>", "push": { "from": 8, "to": 17 } }
+```
+
 ## Devices and access
 
 There are no keys to copy. NetBird is the identity: each device has its own WireGuard key enrolled through SSO, and a
