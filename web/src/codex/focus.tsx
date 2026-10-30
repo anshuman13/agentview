@@ -45,6 +45,8 @@ export function stopFocus() {
   showSnack(`Logged ${minutesText(min)}`, () => void store.update(row, { spent: before }));
 }
 
+export const stopFocusFor = (r: ItemRow) => { if (isFocused(read(), r)) stopFocus(); };
+
 export function startFocus(r: ItemRow) {
   stopFocus();
   write({ profile: r.profile, id: r.id, title: r.title, start: Date.now() });

@@ -3,6 +3,7 @@ import { errorText, nextNine } from './data/engine';
 import { nextRepeat } from './data/recur';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
+import { stopFocusFor } from './focus';
 import { FILTER_LABEL, showSnack } from './view';
 import { when } from './time';
 
@@ -17,6 +18,7 @@ export function useActions() {
   };
   return {
     done: (r: ItemRow) => {
+      stopFocusFor(r);
       const next = nextRepeat(r, Date.now(), store.snapshot().items);
       if (!next) return change(r, { status: 'done' }, 'Done');
       const made = store.capture(`${next.title}\n${next.text}`, 'task', r.profile, next.at).catch(() => null);
@@ -28,7 +30,10 @@ export function useActions() {
     },
     reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
     snooze: (r: ItemRow, at = nextNine()) => change(r, { at, ...UNROLL }, `Snoozed to ${when(at)}`),
-    remove: (r: ItemRow) => change(r, { deleted: 1 }, 'Deleted'),
+    remove: (r: ItemRow) => {
+      stopFocusFor(r);
+      change(r, { deleted: 1 }, 'Deleted');
+    },
     toTask: (r: ItemRow) => change(r, { status: 'open', ...UNROLL }, 'Moved to Today'),
     due: (r: ItemRow, at: number | null) => change(r, { at, ...UNROLL }, at == null ? 'Due time cleared' : `Due ${when(at)}`),
     edit: (r: ItemRow, patch: Patch) => void store.update(r, patch),

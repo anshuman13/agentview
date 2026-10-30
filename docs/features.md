@@ -72,7 +72,8 @@ asks under "Is this yours?", where an ask has Copy draft for the reply the scan 
 - Search (or /) filters tasks by title, notes and people, Overdue has Move to today with one undo, and tasks not
   dragged into an order sort by due time
 - Focus timer: Start on an open task shows a bar over Codex with the task, the time so far against its estimate, and
-  Stop. Stop adds the whole minutes to the task's time spent, shown as a chip on the task, with an undo. One timer
+  Stop. Stop adds the whole minutes to the task's time spent, shown as a chip on the task, with an undo. Marking the
+  focused task done or deleting it stops the timer and logs the time the same way. One timer
   runs at a time and survives a reload
 - An open task without a "~30m" estimate in its title gets one suggested as a chip: the average time spent on at least
   two done tasks whose titles share half their words, rounded to 5 minutes. A tap adds it to the title
