@@ -35,7 +35,12 @@ export function isAgent(host: AgentHost, toolUseId: string) {
 const resumed = (host: AgentHost, toolUseId: string, since: number) => host.state.events.some((e) => e.kind === 'tool_use' && e.agent === toolUseId && e.at > since);
 
 export function taskDone(host: AgentHost, agents: AgentIds, toolUseId: string, taskId: string, status: 'completed' | 'failed' | 'stopped', summary: string) {
-  const last = [...host.state.events].reverse().find((e) => e.kind === 'tool_result' && e.toolUseId === toolUseId);
+  const events = host.state.events;
+  let last: ChatEvent | undefined;
+  for (let i = events.length - 1; i >= 0 && !last; i--) {
+    const e = events[i];
+    if (e.kind === 'tool_result' && e.toolUseId === toolUseId) last = e;
+  }
   if (last && !resumed(host, toolUseId, last.at)) return;
   const ev: Extract<ChatEvent, { kind: 'tool_result' }> = { id: randomUUID(), kind: 'tool_result', toolUseId, text: summary, isError: status === 'failed', at: Date.now(), ...(status === 'stopped' && { stopped: true }) };
   host.pushEvent(ev);
