@@ -1,16 +1,18 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { api, getState, notice, prompt, queueNext, send, sinceHeard, steer, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
+import { Confirm } from '../ui/Confirm';
+import { assistantStore } from '../codex/data';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
 import { FileIcon } from '../workspace/FileIcon';
 import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
-import { Hl, wsUrl, plural, save, storedStrings } from '../ui/util';
+import { Hl, readFlag, wsUrl, plural, save, storedStrings } from '../ui/util';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
-import { accept, addUse, append, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, append, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, sharedTask, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -172,14 +174,29 @@ export function Composer() {
     ta.current?.focus();
   };
 
+  const sharedAdded = useRef(false);
+  const [shared, setShared] = useState<string | null>(null);
+  const addShared = async (raw: string) => {
+    const { title, at } = sharedTask(raw);
+    try {
+      await assistantStore().capture(title, 'task', readFlag('assistant-personal', false) ? 'personal' : 'work', at);
+      notice('Added to Tasks');
+    } catch (err) {
+      notice(`Not saved: ${errText(err)}`);
+      setText((t) => append(t, `${raw} `));
+    }
+  };
+
   useEffect(() => {
     const shell = (window as { AgentViewShell?: { takeShared?: () => string } }).AgentViewShell;
     if (!shell?.takeShared) return;
     const take = () => {
       try {
         const items = JSON.parse(shell.takeShared!() || '[]') as { name: string; type: string; data: string; text?: string }[];
+        const texts = items.filter((it) => it.text).map((it) => it.text);
+        if (texts.length) setShared(texts.join('\n'));
         for (const it of items) {
-          if (it.text) setText((t) => append(t, `${it.text} `));
+          if (it.text) continue;
           else void attach([new File([Uint8Array.from(atob(it.data), (c) => c.charCodeAt(0))], it.name, { type: it.type })]);
         }
       } catch {
@@ -272,6 +289,22 @@ export function Composer() {
 
   return (
     <div className="cp" data-mode={mode}>
+      {shared !== null && (
+        <Confirm
+          title="Shared text"
+          detail={shared}
+          icon="add"
+          neutral
+          action="Add as task"
+          cancel="Send to chat"
+          run={() => { sharedAdded.current = true; return addShared(shared); }}
+          onClose={() => {
+            if (!sharedAdded.current) setText((t) => append(t, `${shared} `));
+            sharedAdded.current = false;
+            setShared(null);
+          }}
+        />
+      )}
       <div
         ref={card}
         className={`cp-card${shell ? ' shell' : ''}`}

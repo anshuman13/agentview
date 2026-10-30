@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { accept, addUse, buildHistory, filesEdited, ghostFor, rankCommands, rankFiles, remember, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
+import { accept, addUse, buildHistory, filesEdited, ghostFor, rankCommands, rankFiles, remember, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;
@@ -160,5 +160,15 @@ describe('terminalId', () => {
     expect(await terminalId(url)).toBeNull();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
     expect(await terminalId(url)).toBeNull();
+  });
+});
+
+describe('sharedTask', () => {
+  it('keeps the link in the title and reads a time', () => {
+    const now = new Date(2026, 9, 30, 8, 0);
+    expect(sharedTask(' Read https://example.com/a?b=1 ', now)).toEqual({ title: 'Read https://example.com/a?b=1', at: null });
+    const r = sharedTask('Call back tomorrow at 3pm https://example.com', now);
+    expect(r.at).toBe(new Date(2026, 9, 31, 15, 0).getTime());
+    expect(r.title).toBe('Call back https://example.com');
   });
 });

@@ -11,6 +11,7 @@
 - **Codex** (top of the activity bar): Overview, Tasks, Meetings, Jobs and Wiki, filtered by work or personal
   profile; see [Codex](#codex)
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
+- **Share to the app (Android)**: text or a link shared into AgentView asks "Add as task" (saved to Tasks, with a time read from the text) or "Send to chat" (appended to the composer).
 - **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs.
   The done and snooze buttons on Overview rows, Related chips and Remove goal have full-size tap targets
 - **Command palette** (⇧⌘P or F1): every view, tab, page, model and mode as a searchable list

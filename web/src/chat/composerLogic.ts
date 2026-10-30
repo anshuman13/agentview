@@ -1,3 +1,4 @@
+import { parseWhen, stripWhen } from '../codex/data/engine';
 import { match } from '../workspace/FileSwitcher';
 import { toolId } from '../ops/mcpHelpers';
 import { COMPACT_AT, MAX_GOAL_ROUNDS, type ChatEvent } from '../../../shared/protocol';
@@ -40,7 +41,13 @@ export function accept(text: string, start: number, caret: number, insert: strin
   return { text: next, caret: start + insert.length + 1 };
 }
 
-export const append = (text: string, add: string) => `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;
+export function sharedTask(text: string, now = new Date()) {
+  const typed = text.trim();
+  const w = parseWhen(typed, now);
+  return { title: stripWhen(typed, w) || typed, at: w?.at ?? null };
+}
+
+export const append =(text: string, add: string) => `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;
 
 export function addUse(uses: Use[], u: Use): Use[] {
   const keep = (x: Use) => x.server !== u.server || (!!u.tool && !!x.tool && x.tool !== u.tool);
