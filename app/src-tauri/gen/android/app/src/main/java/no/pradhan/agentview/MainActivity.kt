@@ -67,7 +67,8 @@ class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
-    collectShare(intent)
+    // Reopening from recents replays the intent that started the task, which would attach a past share again.
+    if ((intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) collectShare(intent)
   }
 
   @Suppress("DEPRECATION")
