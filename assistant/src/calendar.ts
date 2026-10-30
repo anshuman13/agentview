@@ -64,8 +64,9 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
   const start = new Date(from);
   const to = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 9).getTime();
   let events: CalendarEvent[] | null = null;
+  // A second call adds to the first, so meetings saved earlier are not swept as gone.
   const save = tool('save_meetings', 'Save the meetings you found.', { events: z.array(Event) }, async (a) => {
-    events = a.events;
+    events = [...(events ?? []).filter((e) => !a.events.some((n) => n.id === e.id)), ...a.events];
     return { content: [{ type: 'text', text: 'saved' }] };
   });
   const prompt = [
