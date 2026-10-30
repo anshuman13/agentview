@@ -490,6 +490,11 @@ export class AgentSession implements AgentHost {
     } finally {
       this.turns--;
     }
+    // Stop pressed while the model or mode was switching: send nothing.
+    if (!looping(this.state.session.loop)) {
+      if (this.turns === 0) this.setSession({ running: false, stopping: false });
+      return;
+    }
     if (marker) this.pushEvent({ id: randomUUID(), kind: 'user', text: step.label, at: Date.now(), phase: step.phase });
     this.enqueue(step.prompt);
   }
