@@ -14,6 +14,11 @@ export const md = new Marked({
       const safe = /^(https?:|mailto:)/i.test(href) ? href : '#';
       return `<a href="${escapeHtml(safe)}" target="_blank" rel="noreferrer">${this.parser.parseInline(tokens)}</a>`;
     },
+    // A model-written image would load its URL on render and could leak text in the query, so it shows as a link.
+    image({ href, text }) {
+      const safe = /^https?:/i.test(href) ? href : '#';
+      return `<a href="${escapeHtml(safe)}" target="_blank" rel="noreferrer">${escapeHtml(text || href)}</a>`;
+    },
   },
 });
 

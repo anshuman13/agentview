@@ -22,4 +22,10 @@ describe('Markdown blocks', () => {
   it('falls back to full parse for reference links', () => {
     expect(splitBlocks('See [ref][a].\n\n[a]: https://x.test')).toBeNull();
   });
+
+  it('shows images as links so their URL is not fetched', () => {
+    const html = full('![chart](https://x.test/a.png?q=secret)');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('<a href="https://x.test/a.png?q=secret"');
+  });
 });
