@@ -54,7 +54,7 @@ const NO_TOPICS: string[] = [];
 const NO_HITS = new Map<string, string>();
 
 // What the hub finds in the transcripts for the query, by profile:id with a snippet; empty until it answers.
-function useTranscriptHits(query: string) {
+export function useTranscriptHits(query: string) {
   const { store } = useCodex();
   const [found, setFound] = useState({ q: '', hits: NO_HITS });
   const q = query.trim();

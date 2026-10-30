@@ -6,7 +6,7 @@ export { snippet };
 
 export const GROUP_CAP = 8;
 
-export type Hit = { id: string; profile: string; title: string; snippet: string; page?: string | null };
+export type Hit = { id: string; profile: string; title: string; snippet: string; page?: string | null; when?: string };
 export type Group = { hits: Hit[]; total: number };
 export type Results = { tasks: Group; meetings: Group; wiki: Group; jobs: Group; total: number };
 export type SearchData = { items: ItemRow[]; meetings: Meeting[]; facts: Fact[]; pages: Page[]; jobs: Job[] };
