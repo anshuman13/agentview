@@ -9,7 +9,7 @@ import { errText } from '../../shared/util.js';
 import { configDir, isLimited } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
-import type { Profile } from './db.js';
+import { getMeta, setMeta, type Profile } from './db.js';
 import { loop, once, serial } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN } from './time.js';
@@ -42,7 +42,7 @@ export type MeetingNotes = z.infer<typeof Notes>;
 type Pending = { id: string; title: string; starts_at: number; ends_at: number; room_me: number | null };
 
 const tried = (profile: Profile, id: string) => `transcript:${profile}:${id}`;
-const triesOf = (db: Database, profile: Profile, id: string) => ((db.prepare('SELECT value FROM meta WHERE key = ?').get(tried(profile, id)) as { value: string } | null)?.value ?? '0,0').split(',').map(Number);
+const triesOf = (db: Database, profile: Profile, id: string) => (getMeta(db, tried(profile, id)) ?? '0,0').split(',').map(Number);
 
 // A deadline said as a day lands on that day's morning in local time; Date.parse reads a bare date as UTC midnight.
 export function dueAt(due: string | null) {
@@ -66,12 +66,11 @@ export function dueMeetings(db: Database, profile: Profile, now = Date.now()): P
 // Counts a try for each meeting with no transcript yet and shows it on the meeting; after the last try it is missing.
 // An import stopped by the usage limit only delays the next try and does not count.
 export function markTried(db: Database, profile: Profile, meetings: Pending[], now = Date.now(), failed = false) {
-  const set = db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
   db.transaction(() => {
     const changes: Change[] = [];
     for (const m of meetings) {
       const count = triesOf(db, profile, m.id)[0] + (failed ? 0 : 1);
-      set.run(tried(profile, m.id), `${count},${now}`);
+      setMeta(db, tried(profile, m.id), `${count},${now}`);
       if (!failed) changes.push({ table: 'meetings', id: m.id, profile, updated_at: now, fields: { transcript: count >= TRIES ? 'missing' : 'waiting', tries: count } });
     }
     applyChanges(db, changes);

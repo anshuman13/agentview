@@ -6,7 +6,7 @@ import { ACCOUNT_OF } from './calendar.js';
 import { scanPaused } from './claude.js';
 import { pushOrHold } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
-import { DB_DIR } from './db.js';
+import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, pushHours, run } from './slack.js';
 import { saidId, webUrl } from './slackSave.js';
@@ -123,12 +123,10 @@ export function saveWaiting(db: Database, found: z.infer<typeof Sent>[], replied
 
 // One Haiku pass over the inbox since the last pass. Read only: the prompt and the allowed tools never send or change mail.
 export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
-  const row = db.prepare("SELECT value FROM meta WHERE key = 'gmail:last'").get() as { value: string } | null;
-  const since = Math.max(Number(row?.value ?? 0), now - 3 * DAY);
+  const since = Math.max(Number(getMeta(db, 'gmail:last') ?? 0), now - 3 * DAY);
   const open = db.prepare("SELECT id, title, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'gmail' AND id NOT LIKE 'said:%' AND status = 'suggested' AND updated_at > ?").all(PROFILE, now - 7 * DAY) as { id: string; title: string; people: string }[];
   const waiting = unanswered(db);
-  const checked = (db.prepare("SELECT value FROM meta WHERE key = 'gmail:waiting'").get() as { value: string } | null)?.value;
-  const daily = checked !== ymd(now, '/');
+  const daily = getMeta(db, 'gmail:waiting') !== ymd(now, '/');
   const unix = Math.floor(since / 1000);
   let saved: MailScan | null = null;
   const save = tool('save_mail', 'Save what you found. Call once at the end.', {
@@ -167,8 +165,8 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
   if (!saved) throw new Error('Haiku did not save the mail scan');
   const r = saveMail(db, saved, now);
   const left = saveWaiting(db, (saved as MailScan).waiting ?? [], (saved as MailScan).replied ?? [], now);
-  db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('gmail:last', ?)").run(String(now));
-  if (daily) db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('gmail:waiting', ?)").run(ymd(now, '/'));
+  setMeta(db, 'gmail:last', String(now));
+  if (daily) setMeta(db, 'gmail:waiting', ymd(now, '/'));
   return { ...r, waiting: left.length };
 }
 

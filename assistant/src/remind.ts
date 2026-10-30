@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { isBlock } from '../../shared/util.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
-import { pruneMeta, textList, type Profile } from './db.js';
+import { deleteMeta, getMeta, pruneMeta, setMeta, textList, type Profile } from './db.js';
 import { rollOver } from './rollover.js';
 import { flushHeld } from './hold.js';
 import { HUB_URL } from './slack.js';
@@ -58,7 +58,7 @@ export function snoozeTask(db: Database, profile: Profile, id: string, now = Dat
 // A heads-up before each meeting with what is still open from the last one, and a nudge once its transcript is read and
 // has left me actions. A meeting with nothing for me gets no nudge.
 export function dueReminders(db: Database, now = Date.now()): Reminder[] {
-  const sent = (key: string) => db.prepare('SELECT 1 FROM meta WHERE key = ?').get(`remind:${key}`);
+  const sent = (key: string) => getMeta(db, `remind:${key}`) != null;
   const out: Reminder[] = [];
   const soon = (db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND starts_at > ? AND starts_at <= ? ORDER BY profile = 'work' DESC").all(now, now + BEFORE) as Meeting[]).filter((m) => !isBlock(m.id));
   const seen = new Set<string>();
@@ -106,8 +106,8 @@ export function startReminders(db: () => Database, every = 60_000) {
     await flushHeld(db());
     for (const r of dueReminders(db())) {
       const key = `remind:${r.key}`;
-      db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(Date.now()));
-      if (!(await pushNtfy(r.title, '', r.body, r.url, r.actions).catch(() => false))) db().prepare('DELETE FROM meta WHERE key = ?').run(key);
+      setMeta(db(), key, String(Date.now()));
+      if (!(await pushNtfy(r.title, '', r.body, r.url, r.actions).catch(() => false))) deleteMeta(db(), key);
     }
   });
 }

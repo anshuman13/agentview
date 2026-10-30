@@ -5,7 +5,7 @@ import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { pushOrHold } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
-import { DB_DIR } from './db.js';
+import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
@@ -38,8 +38,7 @@ export function pushHours(c: { push?: { from: number; to: number } }, now = Date
 }
 
 function sinceOf(db: Database, now: number) {
-  const row = db.prepare("SELECT value FROM meta WHERE key = 'slack:last'").get() as { value: string } | null;
-  return Math.max(Number(row?.value ?? 0), now - 3 * DAY);
+  return Math.max(Number(getMeta(db, 'slack:last') ?? 0), now - 3 * DAY);
 }
 
 export type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
@@ -74,7 +73,7 @@ const tracked = (db: Database) =>
 
 const channelIds = (db: Database): Record<string, string> => {
   try {
-    return JSON.parse((db.prepare("SELECT value FROM meta WHERE key = 'slack:channels'").get() as { value: string } | null)?.value ?? '{}');
+    return JSON.parse(getMeta(db, 'slack:channels') ?? '{}');
   } catch {
     return {};
   }
@@ -87,7 +86,7 @@ function keepChannelIds(db: Database, c: SlackConfig, r: ScanResult) {
     const name = x.name.replace(/^#/, '');
     if (c.channels.includes(name) && /^C[A-Z0-9]+$/.test(x.id)) ids[name] = x.id;
   }
-  db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('slack:channels', ?)").run(JSON.stringify(ids));
+  setMeta(db, 'slack:channels', JSON.stringify(ids));
 }
 
 // One Haiku pass over my DMs, mentions and watched channels since the last pass.
@@ -132,7 +131,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
   if (!saved) throw new Error('Haiku did not save the scan');
   keepChannelIds(db, c, saved);
   const { added, urgent, said } = saveScan(db, saved, now);
-  db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('slack:last', ?)").run(String(now));
+  setMeta(db, 'slack:last', String(now));
   return { chats: (saved as ScanResult).chats.length, asks: added, said, urgent };
 }
 

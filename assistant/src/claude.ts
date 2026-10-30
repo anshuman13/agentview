@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { query, type Options } from '@anthropic-ai/claude-agent-sdk';
 import type { Account } from '../../shared/protocol.js';
+import { setMeta } from './db.js';
 import { configDir, guardLimit, limitedUntil, stopOnOverage, verifyLimit } from '../../server/src/agent/claude/accounts.js';
 
 // One run on the account, with no saved session or settings. It refuses at the usage limit and stops before extra usage.
@@ -28,7 +29,7 @@ export async function scanPaused(db: Database, account: Account, scan: string, n
     noted.set(key, until);
     console.log(`${scan}: paused, the ${account} Claude account is at its usage limit until ${new Date(until).toLocaleString()}`);
     const value: Paused = { scan, reason: 'Claude usage limit', until };
-    db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, JSON.stringify(value));
+    setMeta(db, key, JSON.stringify(value));
   }
   return true;
 }

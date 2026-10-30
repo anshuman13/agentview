@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { ask, scanPaused } from './claude.js';
-import { type Profile } from './db.js';
+import { deleteMeta, getMeta, setMeta, type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { MIN, workSlotDue } from './time.js';
 import { loop, once } from './once.js';
@@ -25,7 +25,6 @@ export type CalendarEvent = z.infer<typeof Event>;
 // A meeting removed here comes back when its event reappears; one you deleted stays deleted.
 export function saveMeetings(db: Database, profile: Profile, events: CalendarEvent[], from: number, to: number, now = Date.now()) {
   const row = db.prepare('SELECT title, starts_at, ends_at, people, calendar_url, deleted, field_times FROM meetings WHERE profile = ? AND id = ?');
-  const swept = db.prepare('SELECT value FROM meta WHERE key = ?');
   const sweptKey = (id: string) => `swept:${profile}:${id}`;
   const all: Change[] = events
     .filter((e) => !Number.isNaN(Date.parse(e.start)) && !Number.isNaN(Date.parse(e.end)))
@@ -38,7 +37,7 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
   const changes = all.filter((c) => {
     const old = row.get(profile, c.id) as Record<string, unknown> | null;
     if (old?.deleted) {
-      const at = (swept.get(sweptKey(c.id)) as { value: string } | null)?.value;
+      const at = getMeta(db, sweptKey(c.id));
       if (at && JSON.parse(String(old.field_times)).deleted === Number(at)) {
         c.deleted = false;
         back.push(c.id);
@@ -50,12 +49,10 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
   const stale = db.prepare("SELECT id FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND starts_at >= ? AND starts_at < ? AND (notes IS NULL OR notes = '') AND (summary IS NULL OR summary = '')").all(profile, from, to) as { id: string }[];
   const gone = events.length ? stale.filter(({ id }) => !kept.has(id)).map(({ id }) => id) : [];
   for (const id of gone) changes.push({ table: 'meetings', id, profile, updated_at: now, deleted: true, fields: {} });
-  const unswept = db.prepare('DELETE FROM meta WHERE key = ?');
-  const sweep = db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
   return db.transaction(() => {
     const applied = applyChanges(db, changes).applied;
-    for (const id of back) unswept.run(sweptKey(id));
-    for (const id of gone) sweep.run(sweptKey(id), String(now));
+    for (const id of back) deleteMeta(db, sweptKey(id));
+    for (const id of gone) setMeta(db, sweptKey(id), String(now));
     return applied;
   })();
 }
@@ -101,26 +98,22 @@ const lastKey = (p: Profile) => `calendar:last:${p}`;
 const triedKey = (p: Profile) => `calendar:tried:${p}`;
 
 export function lastImport(db: Database, profile: Profile) {
-  const get = db.prepare('SELECT value FROM meta WHERE key = ?');
-  const row = (get.get(lastKey(profile)) ?? get.get('calendar:last')) as { value: string } | null;
-  return Number(row?.value ?? 0);
+  return Number(getMeta(db, lastKey(profile)) ?? getMeta(db, 'calendar:last') ?? 0);
 }
 
 // The last import attempt, failed or not, so a failing profile waits for the next slot.
 export function lastAttempt(db: Database, profile: Profile) {
-  const row = db.prepare('SELECT value FROM meta WHERE key = ?').get(triedKey(profile)) as { value: string } | null;
-  return Math.max(Number(row?.value ?? 0), lastImport(db, profile));
+  return Math.max(Number(getMeta(db, triedKey(profile)) ?? 0), lastImport(db, profile));
 }
 
 // A failed import, even one that could not record its attempt, comes back as an error and never rejects.
 function importOne(db: () => Database, profile: Profile, run: typeof importCalendar) {
   return once<{ changed: number; error?: string }>(`calendar:${profile}`, async () => {
     try {
-      const set = db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
-      set.run(triedKey(profile), String(Date.now()));
+      setMeta(db(), triedKey(profile), String(Date.now()));
       const n = await run(db(), profile);
       console.log(`calendar ${profile}: ${n} meetings changed`);
-      set.run(lastKey(profile), String(Date.now()));
+      setMeta(db(), lastKey(profile), String(Date.now()));
       return { changed: n };
     } catch (err) {
       const message = errText(err);

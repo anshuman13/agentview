@@ -8,7 +8,7 @@ import { errText } from '../../shared/util.js';
 import { isLimited } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
-import { pruneMeta, textList, type Profile } from './db.js';
+import { deleteMeta, getMeta, pruneMeta, setMeta, textList, type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY } from './time.js';
 
@@ -46,21 +46,20 @@ export function pendingOrigins(db: Database, profile: Profile, now = Date.now())
     "SELECT id, title, starts_at, calendar_url, decisions FROM meetings WHERE profile = ? AND deleted = 0 AND starts_at >= ? AND COALESCE(ends_at, starts_at) <= ? AND decisions IS NOT NULL AND decisions NOT IN ('', '[]') ORDER BY starts_at",
   ).all(profile, now - WITHIN, now) as Meeting[];
   const slack = db.prepare('SELECT id, text, channel, url, at FROM slack_decisions WHERE profile = ? AND at >= ? AND at <= ?').all(profile, now - WITHIN, now) as SlackDecision[];
-  const done = db.prepare('SELECT 1 FROM meta WHERE key = ?');
-  return [...meetings.map(fromMeeting), ...slack.map(fromSlack)].filter((o) => !done.get(doneKey(profile, o.id))).sort((a, b) => a.at - b.at);
+  return [...meetings.map(fromMeeting), ...slack.map(fromSlack)].filter((o) => getMeta(db, doneKey(profile, o.id)) == null).sort((a, b) => a.at - b.at);
 }
 
 const triesKey = (profile: Profile, id: string) => `wikiupdate-tries:${profile}:${id}`;
 
 export function markDone(db: Database, profile: Profile, id: string, now = Date.now()) {
-  db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(doneKey(profile, id), String(now));
-  db.prepare('DELETE FROM meta WHERE key = ?').run(triesKey(profile, id));
+  setMeta(db, doneKey(profile, id), String(now));
+  deleteMeta(db, triesKey(profile, id));
 }
 
 function failed(db: Database, profile: Profile, id: string) {
   const key = triesKey(profile, id);
-  const n = Number((db.prepare('SELECT value FROM meta WHERE key = ?').get(key) as { value: string } | null)?.value ?? 0) + 1;
-  db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(n));
+  const n = Number(getMeta(db, key) ?? 0) + 1;
+  setMeta(db, key, String(n));
   return n;
 }
 

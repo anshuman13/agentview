@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { atRisk, minutesText, workGaps, type Span } from '../../shared/plan.js';
 import { blockId, clock, isBlock } from '../../shared/util.js';
-import { pruneMeta, type Profile } from './db.js';
+import { deleteMeta, getMeta, pruneMeta, setMeta, type Profile } from './db.js';
 import { loop } from './once.js';
 import { applyChanges } from './sync.js';
 import { DAY, addWorkdays, inWeekHours, ymd } from './time.js';
@@ -77,16 +77,16 @@ export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy)
   const sent: Profile[] = [];
   for (const profile of PROFILES) {
     const key = `brief:${profile}:${ymd(now)}`;
-    if (db.prepare('SELECT 1 FROM meta WHERE key = ?').get(key)) continue;
+    if (getMeta(db, key) != null) continue;
     const id = briefId(now);
     const b = buildBrief(db, profile, now);
     if (b.empty) continue;
-    db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(now));
+    setMeta(db, key, String(now));
     if (!db.prepare('SELECT 1 FROM briefs WHERE profile = ? AND id = ?').get(profile, id)) {
       applyChanges(db, [{ table: 'briefs', id, profile, updated_at: now, fields: { kind: 'morning', text: `${b.title}\n${b.text}`, from_at: new Date(now).setHours(0, 0, 0, 0), to_at: now } }]);
     }
     if (await push(b.title, profile === 'work' ? 'Work' : 'Personal', b.text, '').catch(() => false)) sent.push(profile);
-    else db.prepare('DELETE FROM meta WHERE key = ?').run(key);
+    else deleteMeta(db, key);
   }
   return sent;
 }

@@ -129,6 +129,10 @@ export function nextVersion(db: Database): number {
   throw new Error('Failed to update version');
 }
 
+export const getMeta = (db: Database, key: string) => (stmt(db, 'SELECT value FROM meta WHERE key = ?').get(key) as { value: string } | null)?.value ?? null;
+export const setMeta = (db: Database, key: string, value: string) => stmt(db, 'INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, value);
+export const deleteMeta = (db: Database, key: string) => stmt(db, 'DELETE FROM meta WHERE key = ?').run(key);
+
 // Drops the meta keys under prefix whose value, a time in ms, is older than before.
 export function pruneMeta(db: Database, prefix: string, before: number) {
   stmt(db, "DELETE FROM meta WHERE substr(key, 1, length(?)) = ? AND CAST(value AS INTEGER) < ?").run(prefix, prefix, before);
