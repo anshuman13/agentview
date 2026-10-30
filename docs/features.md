@@ -23,7 +23,7 @@
 Codex shows Overview, Tasks, Meetings, Jobs and Wiki for the work profile, the personal profile or both. Under the
 nav, the sync line says when the app last synced with the hub, how many changes still wait for the hub, and "Not saved on this device" when the local copy cannot be written. While the hub skips its Slack, Gmail or calendar scan because
 that Claude account is at its usage limit, a line below it names the paused scans and the time the limit ends.
-When everything is healthy that one line is all the nav shows. Only when a scan failed, stalled or is paused, one small
+When everything is healthy that one line is all the nav shows; clicking it syncs and shows the scan lines. When a scan failed, stalled or is paused, one small
 line per source appears below it with the last Slack, Gmail and calendar run, its counts, the error in the warning color,
 or "not set up"; Slack and Gmail have a "Scan now" button.
 

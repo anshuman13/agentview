@@ -42,7 +42,7 @@ function scanText(h: ScanHealth) {
   return { text: `${name} ${when(h.ok)}${counts ? ` · ${counts}` : ''}`, bad: false };
 }
 
-function ScanLines({ scans, paused }: { scans: ScanHealth[]; paused: boolean }) {
+function ScanLines({ scans, show }: { scans: ScanHealth[]; show: boolean }) {
   const store = useAssistantStore();
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -54,7 +54,7 @@ function ScanLines({ scans, paused }: { scans: ScanHealth[]; paused: boolean }) 
   };
   const sorted = Object.keys(SCAN_NAME).flatMap((k) => scans.filter((h) => h.scan === k));
   const rows = sorted.map((h) => ({ h, ...(failed[h.scan] ? { text: `${SCAN_NAME[h.scan]}: ${failed[h.scan]}`, bad: true } : scanText(h)) }));
-  if (!paused && !rows.some((r) => r.bad)) return null;
+  if (!show && !rows.some((r) => r.bad)) return null;
   return rows.map(({ h, text, bad }) => {
     return (
       <div key={h.scan} className={`as-nav-scan${bad ? ' bad' : ''}`}>
@@ -79,6 +79,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const base = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
   const status = base + waiting + (sync.saveError ? ' · Not saved on this device' : '');
   const paused = pausedText(sync.paused);
+  const [scans, setScans] = useState(false);
   const dot = sync.error || sync.saveError ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
   return (
     <nav className="as-nav">
@@ -91,9 +92,9 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
       <div className="as-seg" role="radiogroup" aria-label="Show work, personal or both">
         {FILTERS.map((f) => <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'on' : ''} onClick={() => setView({ filter: f })}>{FILTER_LABEL[f]}</button>)}
       </div>
-      <button className={`as-nav-sync ${dot}`} title="Sync now" onClick={() => store.syncNow()}><span className="as-dot" /><span>{status}</span></button>
+      <button className={`as-nav-sync ${dot}`} title="Sync now and show each scan" onClick={() => { setScans(true); void store.syncNow(); }}><span className="as-dot" /><span>{status}</span></button>
       {paused && <div className="as-nav-paused">{paused}</div>}
-      <ScanLines scans={sync.scans} paused={!!paused} />
+      <ScanLines scans={sync.scans} show={scans || !!paused} />
     </nav>
   );
 }
