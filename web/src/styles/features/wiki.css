@@ -341,7 +341,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
   .mt-approve, .mt-reject { height: var(--touch-sm); }
   .mt-reject { width: var(--touch-sm); }
   .mt-wait { display: none; }
-  .mt-raise > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
+  :is(.mt-raise, .wk-head) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .mt-fold-head { min-height: var(--size-2xl); }
   .wk-act, .wk-claims .wk-claim-foot > .wk-act { height: var(--size-2xl); }
   .wk-claims .wk-claim-foot > .wk-act { margin-block: -5px; }

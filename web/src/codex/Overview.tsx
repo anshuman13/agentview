@@ -174,7 +174,7 @@ function KeepInTouch() {
       <div className="as-section">Keep in touch · {shown.length}</div>
       <div className="ov-follow" role="list" aria-label="Keep in touch" ref={list}>
         {shown.slice(0, 5).map((x, i) => (
-          <div key={x.key} className="ov-follow-row" role="listitem">
+          <div key={x.key} className="ov-follow-row wrap" role="listitem">
             <button className="ov-follow-text" onClick={() => setView({ person: x.name })}>
               <span className="ov-t">{x.name}</span>
               <span className="muted small">last {dayLabel(x.last)} · usually every {plural(Math.max(1, Math.round(x.gap / 86400000)), 'day')}</span>
