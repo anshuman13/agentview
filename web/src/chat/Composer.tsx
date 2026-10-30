@@ -9,7 +9,7 @@ import { touch } from '../app/touch';
 import { Hl, wsUrl, plural, save, storedStrings } from '../ui/util';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
-import { accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, append, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -155,7 +155,7 @@ export function Composer() {
     for (const f of list) {
       try {
         const body = await uploadPaste(f);
-        setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `);
+        setText((t) => append(t, `[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `));
       } catch (err) {
         notice(`Could not attach ${f.name || 'the file'}: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -170,7 +170,7 @@ export function Composer() {
       try {
         const items = JSON.parse(shell.takeShared!() || '[]') as { name: string; type: string; data: string; text?: string }[];
         for (const it of items) {
-          if (it.text) setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}${it.text} `);
+          if (it.text) setText((t) => append(t, `${it.text} `));
           else void attach([new File([Uint8Array.from(atob(it.data), (c) => c.charCodeAt(0))], it.name, { type: it.type })]);
         }
       } catch {
@@ -186,7 +186,7 @@ export function Composer() {
     const insert = (e: Event) => {
       const add = (e as CustomEvent<{ text: string }>).detail.text;
       setText((t) => {
-        const next = `${t}${t && !/\s$/.test(t) ? ' ' : ''}${add}`;
+        const next = append(t, add);
         wantCaret.current = next.length;
         return next;
       });

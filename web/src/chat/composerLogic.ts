@@ -40,6 +40,8 @@ export function accept(text: string, start: number, caret: number, insert: strin
   return { text: next, caret: start + insert.length + 1 };
 }
 
+export const append = (text: string, add: string) => `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;
+
 export function addUse(uses: Use[], u: Use): Use[] {
   const keep = (x: Use) => x.server !== u.server || (!!u.tool && !!x.tool && x.tool !== u.tool);
   return [...uses.filter(keep), u];
