@@ -207,15 +207,16 @@ export function searchWiki(pages: Page[], facts: Fact[], query: string) {
   };
 }
 
-// Current claims that a later decision (last `days` days) may change: the decision names the claim's page and shares at least two key words with the claim. Newest decision first, one per claim.
+// Current claims that a later decision (last `days` days) may change: the decision names the claim's page and shares at least two key words with the claim. Claims with a proposed replacement are left to Review. Newest decision first, one per claim.
 export function driftFacts(facts: Fact[], pages: Page[], meetings: Meeting[], now = Date.now(), days = 90) {
   const cutoff = now - days * 86_400_000;
   const decisions = decisionLog(meetings).filter((d) => d.at > cutoff && d.at <= now).map((d) => ({ d, key: decisionKey(d.text, d.meeting.title) }));
   const pageWords = new Map(live(pages).map((p) => [`${p.profile}:${p.id}`, titleWords(p.title ?? '')]));
   const current = currentClaim(facts);
+  const pending = new Set(proposals(facts).filter((f) => f.replaces).map((f) => `${f.profile}:${f.replaces}`));
   const out: { fact: Fact; decision: Decision }[] = [];
   for (const f of live(facts)) {
-    if (!current(f) || !f.page_id) continue;
+    if (!current(f) || !f.page_id || pending.has(`${f.profile}:${f.id}`)) continue;
     const title = pageWords.get(`${f.profile}:${f.page_id}`);
     if (!title?.length) continue;
     const words = keyWords(f.text ?? '');

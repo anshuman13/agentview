@@ -301,6 +301,8 @@ describe('driftFacts', () => {
     ];
     const meeting = { ...common('m'), title: 'Pricing review', starts_at: 40 * day, summary: null, decisions: '["Basic plan now costs 12 euros","Hire engineers in Q3"]' } as unknown as Meeting;
     expect(driftFacts(fs, ps, [meeting], 60 * day).map((d) => [d.fact.id, d.decision.text])).toEqual([['price', 'Basic plan now costs 12 euros']]);
+    const proposed = fact('new', 'p1', 'One', 'Basic plan costs 12 euros monthly', { at: 40 * day, state: 'proposed', replaces: 'price' });
+    expect(driftFacts([...fs, proposed], ps, [meeting], 60 * day)).toEqual([]);
   });
 });
 
