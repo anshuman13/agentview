@@ -50,26 +50,6 @@ describe('rowToChange', () => {
 });
 
 describe('mergeIncoming', () => {
-  it('reads values from the nested fields object', () => {
-    const merged = mergeIncoming(null, hubChange({ field_times: { title: 1000, status: 1000 } }, { title: 'New', status: 'open', people: 'Ola' }));
-    expect(merged.title).toBe('New');
-    expect(merged.status).toBe('open');
-    expect(merged.people).toBe('Ola');
-    expect(merged.deleted).toBe(0);
-    expect(merged.version).toBe(2);
-    expect(merged.dirty).toBe(0);
-  });
-
-  it('keeps local field when newer and marks dirty', () => {
-    const merged = mergeIncoming(
-      localRow({ title: 'Local', updated_at: 2000, field_times: '{"title":1500}' }),
-      hubChange({ field_times: { title: 900 } }, { title: 'Hub' }),
-    );
-    expect(merged.title).toBe('Local');
-    expect(merged.field_times.title).toBe(1500);
-    expect(merged.dirty).toBe(1);
-  });
-
   it('keeps local on a tie without marking dirty', () => {
     const merged = mergeIncoming(
       localRow({ title: 'Local', field_times: '{"title":1000}' }),

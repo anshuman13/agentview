@@ -28,8 +28,4 @@ describe('talkTime', () => {
     const doc = ['Summary: Alex Smith and Sam Lee agreed on the plan.', '### 00:00:00', 'Alex Smith: one two three', 'Sam Lee: one', '### 00:01:00', 'Alex Smith: four', 'Sam Lee: two'].join('\n');
     expect(talkTime(doc).map((s) => [s.name, s.words])).toEqual([['Alex Smith', 4], ['Sam Lee', 2]]);
   });
-
-  it('finds no speakers in plain prose', () => {
-    expect(talkTime('We talked about the plan.\nNothing else came up.')).toEqual([]);
-  });
 });

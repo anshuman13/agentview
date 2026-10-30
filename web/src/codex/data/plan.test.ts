@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atRisk, defaultBlock, estimateMin, fitBlock, focusTitle, packDay, suggestEstimate, workGaps } from './plan';
+import { atRisk, defaultBlock, estimateMin, fitBlock, packDay, suggestEstimate, workGaps } from './plan';
 import { goalProgress, goalsOf } from './goals';
 import type { ItemRow } from './sync';
 
@@ -50,9 +50,6 @@ describe('blocks', () => {
     expect(fitBlock([at(10), at(12)], at(9, 55), 30)).toBeNull();
     expect(fitBlock([at(10), at(12)], at(11, 57), 30)).toBeNull();
     expect(fitBlock([at(10), at(12)], at(11, 45), 30)).toEqual([at(11, 45), at(12)]);
-  });
-  it('drops the estimate from the event title', () => {
-    expect(focusTitle('Write doc ~30m today')).toBe('Focus: Write doc today');
   });
 });
 

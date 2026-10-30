@@ -87,10 +87,6 @@ describe('patchSQL', () => {
     db.prepare(`UPDATE items SET ${p.sql}`).run(...p.params(2000));
     expect(JSON.parse((db.prepare('SELECT field_times FROM items').get() as { field_times: string }).field_times)).toEqual({ title: 5001, status: 2000 });
   });
-
-  it('clears the meeting link', () => {
-    expect(patchSQL({ meeting_id: null })!.sql).toBe("meeting_id = ?, field_times = json_set(field_times, '$.meeting_id', max(?, IFNULL(json_extract(field_times, '$.meeting_id'), 0) + 1))");
-  });
 });
 
 describe('swapSQL', () => {

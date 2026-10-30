@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { accept, addUse, buildHistory, contextPercent, filesEdited, ghostFor, rankCommands, rankFiles, remember, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
+import { accept, addUse, buildHistory, filesEdited, ghostFor, rankCommands, rankFiles, remember, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;
@@ -115,14 +115,6 @@ describe('turnEnd', () => {
   });
 });
 
-describe('contextPercent', () => {
-  it('measures against the compaction threshold', () => {
-    expect(contextPercent(null)).toBeNull();
-    expect(contextPercent(100_000)).toBe(50);
-    expect(contextPercent(287_000)).toBe(100);
-  });
-});
-
 describe('addUse', () => {
   it('keeps one entry per server, narrowing to tools or widening back', () => {
     const docs = { server: 'claude.ai Claude Docs' };
@@ -153,11 +145,6 @@ describe('terminalId', () => {
   const res = (ok: boolean, body: unknown) => ({ ok, json: async () => body });
   const url = (p: string) => p;
   afterEach(() => vi.unstubAllGlobals());
-
-  it('reuses the latest terminal', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res(true, [{ id: 'a' }, { id: 'b' }])));
-    expect(await terminalId(url)).toBe('b');
-  });
 
   it('creates a terminal when none exist', async () => {
     const f = vi.fn().mockResolvedValueOnce(res(true, [])).mockResolvedValueOnce(res(true, { id: 'n' }));

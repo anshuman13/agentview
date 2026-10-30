@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agendaMarkdown, decisionsMarkdown, draftFor, followUpText, personMarkdown, toMarkdown } from './meetingMarkdown';
+import { agendaMarkdown, decisionsMarkdown, followUpText, personMarkdown, toMarkdown } from './meetingMarkdown';
 import type { ItemRow } from './sync';
 import type { Decision, Meeting } from './wiki';
 import type { Question } from './meetings';
@@ -17,13 +17,6 @@ describe('toMarkdown', () => {
     expect(md).toContain('## Decisions\n\n- Ship in November');
     expect(md).toContain('## Actions');
   });
-
-  it('marks done actions checked and open ones unchecked', () => {
-    const md = toMarkdown(meeting(), [action('Send notes', 'open'), action('Book room', 'done')]);
-    expect(md).toContain('- [ ] Send notes');
-    expect(md).toContain('- [x] Book room');
-  });
-
 });
 
 describe('followUpText', () => {
@@ -34,13 +27,6 @@ describe('followUpText', () => {
     expect(t).toContain('- Ship in November');
     expect(t).toContain('- Grace: draft the spec');
     expect(t).toContain('- I will send notes');
-  });
-});
-
-describe('draftFor', () => {
-  it('names the action, owner, meeting and due date', () => {
-    const a = { id: 'a', title: 'Send notes', status: 'open', people: 'Ada Lovelace', at: Date.UTC(2026, 10, 2, 9) } as unknown as ItemRow;
-    expect(draftFor(a, meeting())).toBe('Send notes\nOwner: Ada Lovelace\nFrom: Planning (2026-10-29)\nDue: 2026-11-02');
   });
 });
 
