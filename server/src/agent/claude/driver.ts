@@ -503,7 +503,7 @@ export class ClaudeDriver implements AgentDriver {
           if (changed) host.system(`Session started with ${msg.model}`);
           if (this.resume && msg.permissionMode !== 'auto' && !this.resumedAuto) {
             this.resumedAuto = true;
-            void this.q?.setPermissionMode('auto').then(() => host.setSession({ permissionMode: 'auto' }));
+            void this.q?.setPermissionMode('auto').then(() => host.setSession({ permissionMode: 'auto' }), () => {});
           }
           if (this.state.session.commands.length === 0) void this.loadMeta();
         } else if (msg.subtype === 'session_state_changed') {

@@ -157,14 +157,15 @@ async function closeByUser(chat: AgentSession) {
   return next.id;
 }
 
-const idle = (chat: AgentSession) => !chat.state.session.running && chat.crons.length === 0 && !chat.state.session.repeat && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
+const busy = (chat: AgentSession) => chat.state.session.running || chat.state.session.compacting || agentsRunning(chat) > 0;
+const idle = (chat: AgentSession) => !busy(chat) && chat.crons.length === 0 && !chat.state.session.repeat && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
 
 let orphaned = 0;
 setInterval(() => {
   for (const { chat } of live.values()) if (idle(chat) && Date.now() - lastActive(chat) > IDLE_MS) closeChat(chat);
   // With no API server for a while (AgentView quit) and nothing running, save the chats and leave.
   orphaned = apis.size ? 0 : orphaned || Date.now();
-  if (orphaned && Date.now() - orphaned > ORPHAN_MS && ![...live.values()].some(({ chat }) => chat.state.session.running)) saveAndExit();
+  if (orphaned && Date.now() - orphaned > ORPHAN_MS && ![...live.values()].some(({ chat }) => busy(chat))) saveAndExit();
 }, 60_000);
 
 function watchFiles(cwd: string, onChange: (rel: string) => void) {
@@ -181,9 +182,17 @@ function watchFiles(cwd: string, onChange: (rel: string) => void) {
 
 const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
 
-async function openSaved(sessionId: string) {
+// Two opens of one session at once (phone and desktop) share one chat.
+const opening = new Map<string, Promise<AgentSession>>();
+function openSaved(sessionId: string) {
   const open = bySession(sessionId);
-  if (open) return open;
+  if (open) return Promise.resolve(open);
+  const pending = opening.get(sessionId) ?? resumeSaved(sessionId).finally(() => opening.delete(sessionId));
+  opening.set(sessionId, pending);
+  return pending;
+}
+
+async function resumeSaved(sessionId: string) {
   const info = await getSessionInfo(sessionId);
   if (!info) throw new Error('Session not found');
   if (!info.cwd) throw new Error('This session has no folder recorded, so it cannot be resumed');
@@ -237,7 +246,7 @@ function restart(now: boolean, force: boolean) {
   // A turn that never ends (a card nobody answers) must not hold the restart and every loop for good.
   const deadline = Date.now() + 10 * 60_000;
   restarting = setInterval(() => {
-    if (Date.now() > deadline || ![...live.values()].some(({ chat }) => chat.state.session.running || chat.state.session.compacting || agentsRunning(chat))) saveAndExit();
+    if (Date.now() > deadline || ![...live.values()].some(({ chat }) => busy(chat))) saveAndExit();
   }, 1000);
   return true;
 }
