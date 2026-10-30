@@ -40,10 +40,10 @@ export function pendingMeetings(db: Database, profile: Profile, now = Date.now()
 export const markDone = (db: Database, profile: Profile, id: string, now = Date.now()) =>
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(doneKey(profile, id), String(now));
 
-// Current claims on live pages from before the meeting that a decision may change, with the decisions that touch each.
+// Current claims on live pages from before the meeting, with no proposed replacement yet, that a decision may change, with the decisions that touch each.
 export function candidates(db: Database, profile: Profile, m: Meeting): Candidate[] {
   const claims = db.prepare(
-    "SELECT f.id, f.text, f.page_id, f.heading, f.at, f.updated_at, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND f.text IS NOT NULL AND p.title IS NOT NULL",
+    "SELECT f.id, f.text, f.page_id, f.heading, f.at, f.updated_at, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND NOT EXISTS (SELECT 1 FROM facts r WHERE r.profile = f.profile AND r.replaces = f.id AND r.deleted = 0 AND r.state = 'proposed') AND f.text IS NOT NULL AND p.title IS NOT NULL",
   ).all(profile) as Claim[];
   const decisions = list(m.decisions).map((text) => ({ text, key: decisionKey(text, m.title) }));
   const out: Candidate[] = [];

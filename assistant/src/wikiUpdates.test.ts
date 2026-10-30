@@ -41,5 +41,6 @@ describe('wiki updates', () => {
     expect(asked).toHaveLength(1);
     db.prepare("DELETE FROM meta WHERE key LIKE 'wikiupdate:%'").run();
     expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
+    expect(asked).toHaveLength(1);
   });
 });
