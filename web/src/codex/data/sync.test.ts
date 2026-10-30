@@ -149,4 +149,26 @@ describe('wiki tables', () => {
     expect(saved).toEqual([1, 2]);
     expect(applied).toEqual(['a', 'b']);
   });
+
+  it('pushes 250 dirty rows in batches of at most 100', async () => {
+    const rows = Array.from({ length: 250 }, (_, i) => ({ table: 'items', row: localRow({ id: `r${i}`, dirty: 1, title: 'T', field_times: '{"title":900}' }) }));
+    const sizes: number[] = [];
+    const cleaned: string[] = [];
+    const applied: string[] = [];
+    const saved: number[] = [];
+    const base = { table: 'items', profile: 'work' as const, deleted: false, updated_at: 1, fields: {}, field_times: {} };
+    await runSync({
+      active: () => true,
+      since: async () => 0,
+      saveSince: async (s) => void saved.push(s),
+      dirty: async () => rows,
+      post: async (_since, changes) => (sizes.push(changes.length), { version: sizes.length, changes: [{ ...base, id: `in${sizes.length}`, version: sizes.length }] }),
+      clean: async (d) => void cleaned.push(d.row.id),
+      apply: async (c) => void applied.push(c.id),
+    });
+    expect(sizes).toEqual([100, 100, 50]);
+    expect(cleaned).toHaveLength(250);
+    expect(applied).toEqual(['in3']);
+    expect(saved).toEqual([3]);
+  });
 });

@@ -23,22 +23,40 @@ type SyncIO = {
   scans?(s: ScanHealth[]): void;
 };
 
+const BATCH_ROWS = 100;
+const BATCH_BYTES = 1_000_000;
+
+function takeBatch(rows: Dirty[]) {
+  const batch: { row: Dirty; change: Change }[] = [];
+  let bytes = 0;
+  for (const row of rows.slice(0, BATCH_ROWS)) {
+    const change = rowToChange(row.row, row.table);
+    const size = JSON.stringify(change).length;
+    if (batch.length && bytes + size > BATCH_BYTES) break;
+    batch.push({ row, change });
+    bytes += size;
+  }
+  return batch;
+}
+
 export async function runSync(io: SyncIO) {
   let since = await io.since();
-  let pushed = await io.dirty();
+  let queue = await io.dirty();
   let more = true;
   let changed = false;
   const rejected: { table: string; id: string; reason: string }[] = [];
   while (more && io.active()) {
-    const data = await io.post(since, pushed.map((d) => rowToChange(d.row, d.table)));
+    const batch = takeBatch(queue);
+    queue = queue.slice(batch.length);
+    const data = await io.post(since, batch.map((b) => b.change));
     if (!Array.isArray(data?.changes) || typeof data.version !== 'number') throw new Error('Unexpected hub response');
     io.paused?.(Array.isArray(data.paused) ? data.paused : []);
     io.scans?.(Array.isArray(data.scans) ? data.scans : []);
     const refused = Array.isArray(data.rejected) ? data.rejected : [];
     rejected.push(...refused);
-    for (const row of pushed) if (!refused.some((r) => r.table === row.table && r.id === row.row.id)) await io.clean(row);
-    changed ||= pushed.length > 0;
-    pushed = [];
+    for (const { row } of batch) if (!refused.some((r) => r.table === row.table && r.id === row.row.id)) await io.clean(row);
+    changed ||= batch.length > 0;
+    if (queue.length) continue;
     for (const change of data.changes) {
       if (!Object.hasOwn(TABLE_FIELDS, change?.table) || typeof change.id !== 'string' || !['work', 'personal'].includes(change.profile)) continue;
       await io.apply(change);
