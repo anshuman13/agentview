@@ -4,10 +4,11 @@ import { personMarkdown } from '../data/meetingMarkdown';
 import { claimsMentioning } from '../data/wiki';
 import { commitmentsOf, meetingsOf, nameOf, openQuestions, peopleOf, pinsOf, questionKey, sameName } from '../data/meetings';
 import { PinList } from './Pins';
+import { useActions } from '../useActions';
 import { Icon } from '../../ui/Icon';
-import { copyText, openMeeting, setView, useEscapeBack } from '../view';
+import { copyText, openMeeting, openTask, setView, useEscapeBack } from '../view';
 import { ago, plural, safeHref } from '../../ui/util';
-import { personInbox, unanswered } from '../data/review';
+import { openTasksOf, personInbox, unanswered } from '../data/review';
 import type { ItemRow } from '../data/sync';
 import { Avatars, MeetingRow } from './Meetings';
 import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
@@ -35,6 +36,24 @@ function Asks({ title, rows }: { title: string; rows: ItemRow[] }) {
   );
 }
 
+function OpenTasks({ rows }: { rows: ItemRow[] }) {
+  const act = useActions();
+  if (!rows.length) return null;
+  return (
+    <section className="mt-sec">
+      <h2>Open tasks<span className="mt-of">{rows.length}</span></h2>
+      <ul className="wk-claims">
+        {rows.map((r) => (
+          <li key={r.profile + r.id} className="wk-claim">
+            <span className="wk-claim-text"><button className="mt-person" onClick={() => openTask(r)}>{r.title || '(Untitled)'}</button></span>
+            <span className="wk-claim-foot"><button className="wk-act" title="Done" onClick={() => act.done(r)}><Icon name="check" small /> Done</button></span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function Person({ name }: { name: string }) {
   const { meetings, facts, pages } = useCodex();
   const snap = useAssistantData();
@@ -49,12 +68,13 @@ export function Person({ name }: { name: string }) {
   const commitments = useMemo(() => commitmentsOf(meetings, name), [meetings, name]);
   const claims = useMemo(() => claimsMentioning(facts, name), [facts, name]);
   const inbox = useMemo(() => personInbox(name, snap.items, snap.chats, unanswered(snap.briefs)), [name, snap.items, snap.chats, snap.briefs]);
+  const tasks = useMemo(() => openTasksOf(name, snap.items), [name, snap.items]);
   const questions = openQuestions(mine);
   const title = useMemo(() => new Map(pages.map((p) => [p.id, p.title])), [pages]);
   const now = Date.now();
   const copy = () => {
     const resolved = resolvedQuestions();
-    const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), points, pins, meetings: mine, claims });
+    const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), points, tasks, pins, meetings: mine, claims });
     copyText(text);
   };
   return (
@@ -94,6 +114,8 @@ export function Person({ name }: { name: string }) {
               </ul>
             </section>
           )}
+
+          <OpenTasks rows={tasks} />
 
           <section className="mt-sec">
             <h2>Commitments<span className="mt-of">{commitments.length}</span></h2>

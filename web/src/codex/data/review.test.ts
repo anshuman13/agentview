@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
 import type { Meeting } from './wiki';
-import { keepInTouch, nextMonday, nudgeText, standupText, waitingByPerson, weeklyReview } from './review';
+import { keepInTouch, openTasksOf, nextMonday, nudgeText, standupText, waitingByPerson, weeklyReview } from './review';
 import { weekStart } from './dates';
 
 const row = (o: Partial<ItemRow>): ItemRow => ({ id: 'x', profile: 'work', version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0, title: 't', text: null, source: null, source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...o });
@@ -87,5 +87,15 @@ describe('standupText', () => {
       'Blocked\n- Ana: contract (5 days)',
     ].join('\n\n'));
     expect(standupText([], [], [], now)).toBe('Yesterday\nNothing\n\nToday\nNothing\n\nBlocked\nNothing');
+  });
+});
+
+describe('openTasksOf', () => {
+  it('keeps open tasks naming the person and drops asks, done and other people', () => {
+    const mine = row({ id: 'a', people: 'Ada Lovelace' });
+    const ask = row({ id: 'b', people: 'Ada Lovelace · DM', source: 'slack' });
+    const done = row({ id: 'c', people: 'Ada Lovelace', status: 'done' });
+    const other = row({ id: 'd', people: 'Grace Hopper' });
+    expect(openTasksOf('Ada Lovelace', [mine, ask, done, other]).map((x) => x.id)).toEqual(['a']);
   });
 });

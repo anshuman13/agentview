@@ -100,7 +100,7 @@ the next meeting with that person (picked from the meeting's attendees and recen
 meeting with them after it was raised and counts as raised once that meeting ends. Points stay out of Search.
 
 A person page starts with what waits outside meetings: the summary of their Slack DM with Open in Slack, what they
-asked you and what you promised them in Slack or Gmail, and your sent mail to them with no reply. Below come their
+asked you and what you promised them in Slack or Gmail, and your sent mail to them with no reply, then their open tasks (with a Done check, included when the page is copied as Markdown). Below come their
 commitments, the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
 wiki claims that name them.
 

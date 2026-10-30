@@ -95,6 +95,9 @@ export function nudgeText(g: Waiting) {
 const personOf = (people: string | null) => (people ?? '').split(' · ')[0].replace(/<[^>]*>/, '').trim();
 const isAsk = (r: ItemRow) => live(r) && (r.source === 'slack' || r.source === 'gmail') && (r.status === 'open' || r.status === 'suggested');
 
+// Open tasks that name the person and are not already shown as their asks.
+export const openTasksOf = (name: string, items: ItemRow[]) => items.filter((r) => isOpen(r) && !isAsk(r) && sameName(personOf(r.people), name));
+
 // What waits between me and a person outside meetings: their DM summary, their asks to me, my promises to them and my unanswered mail.
 export function personInbox(name: string, items: ItemRow[], chats: Chat[], mail: Unanswered[]) {
   const theirs = items.filter((r) => isAsk(r) && sameName(personOf(r.people), name));
