@@ -34,11 +34,12 @@ export function followThrough(items: ItemRow[], meetings: Meeting[], dismissed: 
     .sort((a, b) => b.m.starts_at! - a.m.starts_at!);
 }
 
-export type ActionCount = ReturnType<typeof actionCount>;
+export type ActionCount = { total: number; done: number; review: number; unassigned: number; dismissed: number };
+const NO_ACTIONS: ActionCount = { total: 0, done: 0, review: 0, unassigned: 0, dismissed: 0 };
 const counted = new WeakMap<ItemRow[], Map<string, ActionCount>>();
 
 // Action counts for every meeting, built once per items array.
-export function actionCounts(items: ItemRow[]) {
+function actionCounts(items: ItemRow[]) {
   let out = counted.get(items);
   if (!out) {
     out = new Map();
@@ -46,7 +47,7 @@ export function actionCounts(items: ItemRow[]) {
       if (r.deleted || !r.meeting_id) continue;
       const k = `${r.profile}:${r.meeting_id}`;
       let c = out.get(k);
-      if (!c) out.set(k, (c = { total: 0, done: 0, review: 0, unassigned: 0, dismissed: 0 }));
+      if (!c) out.set(k, (c = { ...NO_ACTIONS }));
       if (r.status === 'open') c.total++;
       else if (r.status === 'done') {
         c.total++;
@@ -60,11 +61,7 @@ export function actionCounts(items: ItemRow[]) {
   return out;
 }
 
-export function actionCount(items: ItemRow[], m: { profile: Profile; id: string }) {
-  const mine = actionsOf(items, m);
-  const n = (...s: string[]) => mine.filter((r) => s.includes(r.status ?? '')).length;
-  return { total: n('open', 'done'), done: n('done'), review: n('suggested'), unassigned: n('unassigned'), dismissed: n('dismissed') };
-}
+export const actionCount = (items: ItemRow[], m: { profile: Profile; id: string }) => actionCounts(items).get(`${m.profile}:${m.id}`) ?? NO_ACTIONS;
 
 export const pinsOf = (items: ItemRow[], meetings: Meeting[]) => {
   const ids = new Set(meetings.map((m) => m.profile + m.id));

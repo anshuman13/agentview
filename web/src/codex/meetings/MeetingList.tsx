@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { newId } from '../data/sync';
 import { live, queryWords, rowMatcher, type Fact, type Meeting } from '../data/wiki';
-import { actionCount, actionCounts, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
+import { actionCount, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
 import { clock, when } from '../time';
 import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
@@ -78,7 +78,7 @@ export function useTranscriptHits(query: string) {
 
 export const MeetingRow = memo(function MeetingRow({ m, now, topics = NO_TOPICS, said }: { m: Meeting; now: number; topics?: string[]; said?: string }) {
   const snap = useAssistantData();
-  const count = actionCounts(snap.items).get(meetingKey(m)) ?? actionCount([], m);
+  const count = actionCount(snap.items, m);
   return <MeetingRowView m={m} now={now} topics={topics} said={said} review={count.review} total={count.total} done={count.done} />;
 });
 
