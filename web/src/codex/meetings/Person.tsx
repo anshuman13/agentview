@@ -17,6 +17,7 @@ import { firstName, pointsOf } from '../data/points';
 import '../../styles/features/wiki.css';
 
 function Asks({ title, rows }: { title: string; rows: ItemRow[] }) {
+  const act = useActions();
   if (!rows.length) return null;
   return (
     <section className="mt-sec">
@@ -26,8 +27,9 @@ function Asks({ title, rows }: { title: string; rows: ItemRow[] }) {
           <li key={r.profile + r.id} className="wk-claim">
             <span className="wk-claim-text">{r.title}</span>
             <span className="wk-claim-foot">
-              {r.source === 'gmail' ? 'Gmail' : 'Slack'}{r.status === 'suggested' ? ' · to review' : ''}
+              {r.source === 'gmail' ? 'Gmail' : 'Slack'}{r.status === 'suggested' ? ' · to review' : ''} · {ago(r.updated_at, ' ago')}
               {safeHref(r.source_url) && <> · <a className="mt-person" href={safeHref(r.source_url)} target="_blank" rel="noreferrer">Open</a></>}
+              <button className="wk-act" title="Done" onClick={() => act.done(r)}><Icon name="check" small /> Done</button>
             </span>
           </li>
         ))}
