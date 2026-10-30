@@ -5,7 +5,7 @@ import { goalsOf } from './goals';
 import { packDay, workGaps, type Span } from './plan';
 import { isSaid, parseTimes, type ItemRow } from './sync';
 import { isAllDay } from './load';
-import { displayName, peopleOf, sameName } from './meetings';
+import { displayName, MAX_PEOPLE, peopleOf, sameName } from './meetings';
 import { listOf, live as liveRows, type Brief, type Chat, type Meeting } from './wiki';
 
 const DAY = 86400000;
@@ -110,7 +110,6 @@ export function personInbox(name: string, items: ItemRow[], chats: Chat[], mail:
 }
 
 const WINDOW = 56 * DAY;
-export const MAX_PEOPLE = 8;
 
 export type Lapsed = { name: string; key: string; last: number; gap: number; since: number };
 
