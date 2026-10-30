@@ -484,8 +484,8 @@ export class ClaudeDriver implements AgentDriver {
         } else if (msg.subtype === 'status') {
           if (msg.permissionMode) host.setSession({ permissionMode: msg.permissionMode });
           if (msg.status === 'compacting') host.startCompacting();
-          if (msg.compact_result) host.setSession({ compacting: false });
-          if (msg.compact_result === 'failed') host.system(`Compact failed: ${msg.compact_error || 'no reason given'}`);
+          if (msg.compact_result === 'failed') host.compactFailed(msg.compact_error || 'no reason given');
+          else if (msg.compact_result) host.setSession({ compacting: false });
         } else if (msg.subtype === 'compact_boundary') {
           const { pre_tokens, post_tokens } = msg.compact_metadata;
           host.compacted(pre_tokens, post_tokens);

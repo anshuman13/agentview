@@ -167,7 +167,7 @@ while that chat is open.
 ## Context
 
 The meter shows the tokens in context and turns red past 200k. AgentView then runs `/compact` when the turn ends.
-A failed compact is not retried.
+A failed compact is retried once the context has grown by another 20k tokens.
 
 ## Models
 

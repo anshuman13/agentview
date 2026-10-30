@@ -610,6 +610,23 @@ describe('compacting', () => {
     expect(s.state.session.compacting).toBe(false);
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Compact failed: Prompt is too long' });
   });
+
+  it('retries a failed auto-compact once the context grows 20k', () => {
+    const { s, handle, result } = fakeSession();
+    s.sendPrompt('big task');
+    s.state.session.context = 210_000;
+    result('r1');
+    handle({ type: 'system', subtype: 'status', status: null, compact_result: 'failed', compact_error: 'Prompt is too long' });
+    result('rc');
+    s.sendPrompt('more');
+    s.state.session.context = 225_000;
+    result('r2');
+    expect(s.state.session.compacting).toBe(false);
+    s.sendPrompt('more');
+    s.state.session.context = 231_000;
+    result('r3');
+    expect(s.state.session.compacting).toBe(true);
+  });
 });
 
 describe('fireTime', () => {

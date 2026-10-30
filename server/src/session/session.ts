@@ -15,6 +15,8 @@ type UserEvent = Extract<ChatEvent, { kind: 'user' }>;
 const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
 
+const RETRY_COMPACT_GROWTH = 20_000;
+
 export class AgentSession implements AgentHost {
   readonly driver: AgentDriver;
   private closed = false;
@@ -36,6 +38,7 @@ export class AgentSession implements AgentHost {
   // A message sent mid-turn missed the turn's last step, so the CLI starts a turn for it.
   private expectTurn = false;
   private autoCompact = true;
+  private compactFailedAt: number | null = null;
   private lastResult = '';
   private loopPrevModel: string | null = null;
   private planDenied = false;
@@ -558,8 +561,15 @@ export class AgentSession implements AgentHost {
     this.setSession({ context: post ?? null, compacting: false });
     this.setStatus('Compacted');
     this.autoCompact = true;
+    this.compactFailedAt = null;
     this.system(`Compacted from ${Math.round(pre / 1000)}k${post ? ` to ${Math.round(post / 1000)}k` : ''} tokens`);
     this.rearmWakeups();
+  }
+
+  compactFailed(error: string) {
+    this.setSession({ compacting: false });
+    this.compactFailedAt = this.state.session.context ?? 0;
+    this.system(`Compact failed: ${error}`);
   }
 
   private rearmWakeups() {
@@ -683,7 +693,12 @@ export class AgentSession implements AgentHost {
   private followUp() {
     const plan = this.takePlanChange();
     if (plan) return plan;
-    if (this.autoCompact && (this.state.session.context ?? 0) >= COMPACT_AT) {
+    const context = this.state.session.context ?? 0;
+    if (!this.autoCompact && this.compactFailedAt !== null && context >= this.compactFailedAt + RETRY_COMPACT_GROWTH) {
+      this.autoCompact = true;
+      this.compactFailedAt = null;
+    }
+    if (this.autoCompact && context >= COMPACT_AT) {
       this.autoCompact = false;
       return '/compact';
     }

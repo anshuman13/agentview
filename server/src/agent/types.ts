@@ -74,6 +74,7 @@ export interface AgentHost {
   overage(until: number): void;
   startCompacting(): void;
   compacted(pre: number, post: number | null | undefined): void;
+  compactFailed(error: string): void;
   blocked(toolUseId: string, tool: string, reason: string): void;
   reportFindings(input: unknown): void;
   notePr(toolUseId: string, text: string): void;
