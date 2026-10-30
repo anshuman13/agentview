@@ -6,10 +6,9 @@ import { QuickPick } from '../ui/QuickPick';
 import { FileIcon } from '../workspace/FileIcon';
 import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
-import { apiUrl, fetchJson } from '../app/api';
 import { Hl, wsUrl, plural, save, storedStrings } from '../ui/util';
 import { ACCOUNT_LABEL, COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
-import { accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, remember, repeatLabel, repeatPill, loopLabel, terminalId, triggerAt, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -23,31 +22,12 @@ const MODES: Record<string, { label: string; detail: string; icon: string }> = {
   dontAsk: { label: "Don't ask", detail: 'Deny anything not pre-approved', icon: 'circle-slash' },
 };
 
-const STORED_KEY = 'agentview.prompts';
-
 const LOOP_ITEMS = [
   { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
   ...[1, 2, 3, 5].map((n) => ({ value: String(n), label: `Up to ${n} ${n === 1 ? 'round' : 'rounds'}`, detail: 'Opus plans and builds, Sonnet tests and reports, Opus fixes what fails' })),
 ];
 
 const MAX_HEIGHT = 220;
-
-const draftKey = (chat: string) => `agentview.draft.${chat}`;
-
-function readDraft(chat: string) {
-  try {
-    return localStorage.getItem(draftKey(chat)) ?? '';
-  } catch {
-    return '';
-  }
-}
-
-function saveDraft(chat: string, text: string) {
-  try {
-    if (text) localStorage.setItem(draftKey(chat), text);
-    else localStorage.removeItem(draftKey(chat));
-  } catch {}
-}
 
 async function runInTerminal(cmd: string) {
   const id = await terminalId(api);
@@ -197,7 +177,7 @@ export function Composer() {
   const attach = async (list: File[]) => {
     for (const f of list) {
       try {
-        const body = await fetchJson<{ path: string }>(apiUrl(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`), { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });
+        const body = await uploadPaste(f);
         setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `);
       } catch (err) {
         notice(`Could not attach ${f.name || 'the file'}: ${err instanceof Error ? err.message : String(err)}`);

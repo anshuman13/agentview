@@ -4,15 +4,14 @@ import { api, embedded, notice, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
-import { ATTENTION_LABEL, BIN_MS, type AttentionItem, type BinnedSession, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
+import { ATTENTION_LABEL, type AttentionItem, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored, plural } from '../ui/util';
+import { Bin } from './Bin';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, get, groupByKind, groupByRepo, invalidateWorkspace, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
+import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
 const PAGE = 10;
-
-const ROOTS = ['workspace_personal', 'workspace'];
 
 function FilterInput({ value, set }: { value: string; set: (v: string) => void }) {
   return <input placeholder="Filter repos and sessions" value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && set('')} />;
@@ -44,34 +43,6 @@ export function FolderPicker({ onClose }: { onClose: () => void }) {
     onClose();
   };
   return <QuickPick title="Switch worktree or chat" items={items} current={`live:${viewing}`} onPick={pick} onClose={onClose} />;
-}
-
-export function RepoPicker() {
-  const cwd = useStore((s) => s.session.cwd);
-  const { folders } = useWorkspace(null);
-  const close = () => setUi({ repoPicker: false });
-  const items = folders.flatMap((f) => [
-    ...(f.repo ? [{ value: f.cwd, label: f.name, detail: `${f.repo.root} · ${f.repo.kind === 'new' ? 'empty' : f.repo.branch || 'no git'}` }] : []),
-    ...f.trees.map((w) => ({ value: w.cwd, label: w.name.split('/').pop()!, detail: `${w.project} worktree` })),
-  ]);
-  return (
-    <QuickPick
-      title="Start a chat in a folder, or type a name for a new project"
-      items={items}
-      current={folders.find((f) => f.cwd === cwd || f.trees.some((w) => w.cwd === cwd))?.cwd}
-      extra={(q) => (/^[A-Za-z0-9][\w.-]*$/.test(q) && !folders.some((f) => f.name === q) ? ROOTS.map((root) => ({ value: `create:${root}:${q}`, label: `Create ${q}`, detail: `new project in ~/${root}` })) : [])}
-      onPick={async (v) => {
-        close();
-        if (!v.startsWith('create:')) return send({ type: 'new_session', cwd: v });
-        const [, root, name] = v.split(':');
-        const r = await fetch(apiUrl('/api/folders'), { method: 'POST', body: JSON.stringify({ root, name }) });
-        const body = await r.json().catch(() => null);
-        if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
-        else notice(body?.error ?? 'Could not create the folder');
-      }}
-      onClose={close}
-    />
-  );
 }
 
 export function Sessions() {
@@ -351,59 +322,6 @@ export function OpenChats() {
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
-    </div>
-  );
-}
-
-function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: (b: BinnedSession) => void }) {
-  const [list, setList] = useState<BinnedSession[]>([]);
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const load = () => get('/api/sessions/bin').then((x) => x && setList(x));
-    load();
-    window.addEventListener('agentview:bin', load);
-    return () => window.removeEventListener('agentview:bin', load);
-  }, []);
-  if (!list.length) return null;
-  const restore = async (b: BinnedSession) => {
-    const r = await fetch(apiUrl(`/api/sessions/restore?id=${encodeURIComponent(b.sessionId)}`), { method: 'POST' });
-    if (!r.ok) return notice('Could not restore the chat');
-    setList((l) => l.filter((x) => x.sessionId !== b.sessionId));
-    onRestore(b);
-  };
-  const empty = () => ask({
-    title: 'Empty the bin?',
-    detail: `${list.length} ${list.length === 1 ? 'chat' : 'chats'}`,
-    warning: 'The transcripts are removed permanently.',
-    action: 'Empty bin',
-    run: async () => {
-      const r = await fetch(apiUrl('/api/sessions/bin'), { method: 'DELETE' });
-      if (!r.ok) return notice('Could not empty the bin');
-      setList([]);
-    },
-  });
-  const left = (b: BinnedSession) => `${Math.max(1, Math.round((b.deletedAt + BIN_MS - Date.now()) / 3600000))}h left`;
-  return (
-    <div className="bin">
-      <div className="row project" {...pressable(() => setOpen((v) => !v))}>
-        <span className="twistie"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>
-        <Icon name="trash" small />
-        <span className="name">Bin</span>
-        <span className="meta"><span className="count">{list.length}</span></span>
-        <span className="acts">
-          <button className="icon-btn" title="Empty bin" onClick={(e) => { e.stopPropagation(); empty(); }}><Icon name="close" small /></button>
-        </span>
-      </div>
-      {open && list.map((b) => (
-        <div key={b.sessionId} className="row session recent" title={`${b.title}\n${b.cwd}\nDeleted for good after 24 hours`}>
-          <span className="name">{b.title}</span>
-          <span className="when">{left(b)}</span>
-          <span className="acts">
-            <button className="icon-btn" title="Restore chat" onClick={() => restore(b)}><Icon name="discard" small /></button>
-            <button className="icon-btn" title="Delete for good" onClick={() => ask(deleteChat(b, () => setList((l) => l.filter((x) => x.sessionId !== b.sessionId)), notice, true))}><Icon name="close" small /></button>
-          </span>
-        </div>
-      ))}
     </div>
   );
 }

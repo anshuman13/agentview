@@ -1,6 +1,7 @@
 import { match } from '../workspace/FileSwitcher';
 import { toolId } from '../ops/mcpHelpers';
 import { COMPACT_AT, MAX_GOAL_ROUNDS, type ChatEvent } from '../../../shared/protocol';
+import { apiUrl, fetchJson } from '../app/api';
 import { clock, span } from '../../../shared/util';
 
 export type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
@@ -107,3 +108,24 @@ export async function terminalId(url: (path: string) => string): Promise<string 
     return null;
   }
 }
+
+export const STORED_KEY = 'agentview.prompts';
+
+const draftKey = (chat: string) => `agentview.draft.${chat}`;
+
+export function readDraft(chat: string) {
+  try {
+    return localStorage.getItem(draftKey(chat)) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveDraft(chat: string, text: string) {
+  try {
+    if (text) localStorage.setItem(draftKey(chat), text);
+    else localStorage.removeItem(draftKey(chat));
+  } catch {}
+}
+
+export const uploadPaste = (f: File) => fetchJson<{ path: string }>(apiUrl(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`), { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });

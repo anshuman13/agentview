@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Back } from './back';
-import { connect, embedded, getState, presetChat, send, setUi, useStore } from './store';
+import { connect, embedded, getState, send, setUi, useStore } from './store';
 import { MCP_BAD } from '../../../shared/protocol';
 import { AgentsBadge } from '../sessions/AgentsBadge';
 import { openAgent } from '../sessions/agents';
@@ -15,29 +15,10 @@ import { useSheetDrag } from '../ui/useSheetDrag';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { Guard } from './Guard';
+import { deepLink } from './deepLinks';
+import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, AssistantBadge, Assistant, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, Observe, Deploy, McpPage, ConnectPopover, Loading } from './lazy';
 import { AppUpdate, CacheItem, McpItem, Offline, Restarting, UsageItem } from './StatusItems';
 
-const Brief = lazy(() => import('../sessions/Brief').then((m) => ({ default: m.Brief })));
-const AgentsPane = lazy(() => import('../sessions/AgentsPane').then((m) => ({ default: m.AgentsPane })));
-const FileSwitcher = lazy(() => import('../workspace/FileSwitcher').then((m) => ({ default: m.FileSwitcher })));
-const Palette = lazy(() => import('./Palette').then((m) => ({ default: m.Palette })));
-const OpenChats = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.OpenChats })));
-const RepoPicker = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.RepoPicker })));
-const Sessions = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.Sessions })));
-const AssistantNav = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantNav })));
-const AssistantBadge = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantBadge })));
-const Assistant = lazy(() => import('../codex/Codex').then((m) => ({ default: m.Assistant })));
-const Explorer = lazy(() => import('../workspace/Explorer').then((m) => ({ default: m.Explorer })));
-const Changes = lazy(() => import('../workspace/Changes').then((m) => ({ default: m.Changes })));
-const GitHub = lazy(() => import('../ops/GitHub').then((m) => ({ default: m.GitHub })));
-const Terminal = lazy(() => import('../workspace/Terminal').then((m) => ({ default: m.Terminal })));
-const CodePane = lazy(() => import('../workspace/CodePane').then((m) => ({ default: m.CodePane })));
-const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m) => ({ default: m.BrowserPane })));
-const Observe = lazy(() => import('../ops/Observe').then((m) => ({ default: m.Observe })));
-const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default: m.Deploy })));
-const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ default: m.McpPage })));
-const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
-const Loading = () => <div className="loading">Loading…</div>;
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
 import { touch } from './touch';
@@ -69,14 +50,6 @@ const LONG_PRESS = 450;
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
-const params = new URLSearchParams(location.search);
-const shellParam = params.get('shell');
-if (shellParam) try { localStorage.setItem('agentview.shell', shellParam); } catch {}
-// Deep links: ?view=github, ?page=observe, ?chat=<live id>, ?session=<saved id> or ?beside=<live id>. Consumed once, then dropped from the URL.
-const deepLink = { view: params.get('view'), page: params.get('page'), chat: params.get('chat'), session: params.get('session') };
-if (deepLink.chat || deepLink.session) presetChat(deepLink.chat, deepLink.session);
-if (params.get('beside') && !embedded) setUi({ beside: params.get('beside') });
-if (params.size) history.replaceState(null, '', location.pathname);
 
 export function App() {
   const connected = useStore((s) => s.ui.connected);
