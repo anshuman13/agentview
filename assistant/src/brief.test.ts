@@ -16,12 +16,13 @@ function seed() {
   item.run('t2', 'Call bank', 'capture', 'open', at(MON, 15), null);
   item.run('t3', 'Tomorrow', 'capture', 'open', at(MON + 1, 9), null);
   item.run('s1', 'Check the numbers', 'slack', 'suggested', null, null);
+  item.run('said:s2', 'Send the slides', 'slack', 'suggested', null, null);
   item.run('x1', 'Share the plan', 'action', 'open', null, 'fri');
   item.run('x2', 'Done already', 'action', 'done', null, 'fri');
   return db;
 }
 
-it('lists meetings, free time, tasks, Slack asks and actions left from Friday', () => {
+it('lists meetings, free time, tasks, Slack asks, my promises and actions left from Friday', () => {
   const b = buildBrief(seed(), 'work', at(MON, 8));
   expect(b.title).toBe('Today: 2 meetings, 2 tasks');
   expect(b.text.split('\n')).toEqual([
@@ -36,6 +37,9 @@ it('lists meetings, free time, tasks, Slack asks and actions left from Friday', 
     '',
     'Slack asks to review · 1',
     '- Check the numbers',
+    '',
+    'You said · 1',
+    '- Send the slides',
     '',
     'Still open from last workday · 1',
     '- Share the plan (Planning)',

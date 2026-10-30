@@ -37,7 +37,7 @@ function riskCount(db: Database, profile: Profile, now: number) {
   return atRisk(tasks, busy.map((m) => [m.starts_at, m.ends_at] as Span), now).length;
 }
 
-// Today's meetings and free time, tasks due or overdue, tasks at risk this week, Slack asks to review and meeting actions left from the last workday.
+// Today's meetings and free time, tasks due or overdue, tasks at risk this week, Slack asks to review, Slack promises of mine and meeting actions left from the last workday.
 export function buildBrief(db: Database, profile: Profile, now = Date.now()): Brief {
   const start = new Date(now).setHours(0, 0, 0, 0);
   const end = new Date(now).setHours(24, 0, 0, 0);
@@ -47,7 +47,9 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), start);
   const tasks = db.prepare("SELECT title, at FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND at IS NOT NULL AND CAST(at AS INTEGER) < ? ORDER BY CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number })[];
   const late = tasks.filter((t) => Number(t.at) < now).length;
-  const asks = db.prepare("SELECT title FROM items WHERE deleted = 0 AND profile = ? AND source = 'slack' AND status = 'suggested' ORDER BY updated_at DESC").all(profile) as Row[];
+  const slack = db.prepare("SELECT id, title FROM items WHERE deleted = 0 AND profile = ? AND source = 'slack' AND status = 'suggested' ORDER BY updated_at DESC").all(profile) as (Row & { id: string })[];
+  const said = slack.filter((r) => r.id.startsWith('said:'));
+  const asks = slack.filter((r) => !said.includes(r));
   const left = db.prepare("SELECT i.title, i.status, m.title AS meeting FROM items i JOIN meetings m ON m.profile = i.profile AND m.id = i.meeting_id WHERE i.deleted = 0 AND i.profile = ? AND i.status IN ('open', 'suggested') AND m.deleted = 0 AND m.starts_at >= ? AND m.starts_at < ? ORDER BY m.starts_at").all(profile, lastWorkday(start), start) as (Row & { status: string; meeting: string | null })[];
 
   const lines: string[] = [];
@@ -61,11 +63,12 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const risk = riskCount(db, profile, now);
   if (risk) lines.push('', `At risk: ${plural(risk, 'task')}`);
   if (asks.length) lines.push('', `Slack asks to review · ${asks.length}`, ...top(asks));
+  if (said.length) lines.push('', `You said · ${said.length}`, ...top(said));
   if (left.length) lines.push('', `Still open from last workday · ${left.length}`, ...top(left, (a) => `${a.meeting ? ` (${a.meeting})` : ''}${a.status === 'suggested' ? ' (yours?)' : ''}`));
   return {
     title: `Today: ${plural(meetings.length, 'meeting')}, ${plural(tasks.length, 'task')}`,
     text: lines.join('\n'),
-    empty: !meetings.length && !tasks.length && !risk && !asks.length && !left.length,
+    empty: !meetings.length && !tasks.length && !risk && !slack.length && !left.length,
   };
 }
 
