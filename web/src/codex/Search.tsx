@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useAssistantData } from './data';
 import { searchAll, type Group, type Hit } from './data/search';
 import { Icon } from '../ui/Icon';
-import { setView, useView } from './view';
+import { openMeeting, setView, useView } from './view';
 import '../styles/features/wiki.css';
 
 function Hits({ label, group, open }: { label: string; group: Group; open: (h: Hit) => void }) {
@@ -43,8 +43,8 @@ export function Search({ onMenu }: { onMenu: () => void }) {
       <div className="wk-scroll">
         <div className="mt-list">
           <input autoFocus type="search" enterKeyHint="search" value={query} placeholder="Search tasks, meetings, wiki and jobs" aria-label="Search" onChange={(e) => setQuery(e.target.value)} />
-          <Hits label="Tasks and notes" group={r.tasks} open={(h) => setView(h.page ? { list: 'meetings', open: `${h.profile}:${h.page}`, person: null } : { list: 'tasks', open: null })} />
-          <Hits label="Meetings" group={r.meetings} open={(h) => setView({ list: 'meetings', open: key(h), person: null })} />
+          <Hits label="Tasks and notes" group={r.tasks} open={(h) => (h.page ? openMeeting({ profile: h.profile, id: h.page }) : setView({ list: 'tasks', open: null }))} />
+          <Hits label="Meetings" group={r.meetings} open={openMeeting} />
           <Hits label="Wiki" group={r.wiki} open={(h) => setView({ list: 'wiki', open: h.page ?? null, anchor: null })} />
           <Hits label="Jobs" group={r.jobs} open={(h) => setView({ list: 'jobs', open: key(h) })} />
           {query.trim() && !r.total && <div className="as-empty"><Icon name="search" /><div>No matches.</div></div>}

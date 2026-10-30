@@ -3,7 +3,7 @@ import { personMarkdown } from '../data/meetingMarkdown';
 import { claimsMentioning, commitmentsOf, meetingsOf, openQuestions, pinsOf, questionKey } from '../data/wiki';
 import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
-import { copyText, setView, useEscapeBack } from '../view';
+import { copyText, openMeeting, setView, useEscapeBack } from '../view';
 import { plural } from '../../ui/util';
 import { Avatars, MeetingRow } from './Meetings';
 import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
@@ -21,7 +21,6 @@ export function Person({ name }: { name: string }) {
   const questions = openQuestions(mine);
   const title = new Map(pages.map((p) => [p.id, p.title]));
   const now = Date.now();
-  const open = (key: string) => setView({ person: null, list: 'meetings', open: key });
   const copy = () => {
     const resolved = resolvedQuestions();
     const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), pins, meetings: mine, claims });
@@ -46,7 +45,7 @@ export function Person({ name }: { name: string }) {
                 {commitments.map((c, i) => (
                   <li key={i} className="wk-claim">
                     <span className="wk-claim-text">{c.what}</span>
-                    <span className="wk-claim-foot"><button className="mt-person" onClick={() => open(`${c.meeting.profile}:${c.meeting.id}`)}>{c.meeting.title}</button></span>
+                    <span className="wk-claim-foot"><button className="mt-person" onClick={() => openMeeting(c.meeting)}>{c.meeting.title}</button></span>
                   </li>
                 ))}
               </ul>
@@ -58,7 +57,7 @@ export function Person({ name }: { name: string }) {
           {pins.length > 0 && (
             <section className="mt-sec">
               <h2>Pinned<span className="mt-of">{pins.length}</span></h2>
-              <PinList pins={pins} onOpen={(r) => open(`${r.profile}:${r.meeting_id}`)} />
+              <PinList pins={pins} onOpen={(r) => openMeeting({ profile: r.profile, id: r.meeting_id! })} />
             </section>
           )}
 
