@@ -59,20 +59,23 @@ export function FileSwitcher() {
 
   return (
     <div className="overlay" onClick={() => setUi({ switcherOpen: false })}>
-      <div className="switcher" onClick={(e) => e.stopPropagation()}>
+      <div className="switcher" role="dialog" aria-modal="true" aria-label="Go to file" onClick={(e) => e.stopPropagation()}>
         <input
           ref={input}
           value={q}
           placeholder="Search files by name"
+          aria-label="Search files by name"
+          aria-controls="fs-list"
+          aria-activedescendant={results[idx] ? `fs-${idx}` : undefined}
           onChange={(e) => { setQ(e.target.value); setIdx(0); }}
           onKeyDown={listKeys({ count: results.length, idx, setIdx, onEnter: () => results[idx] && pick(results[idx].f), onEscape: () => setUi({ switcherOpen: false }) })}
         />
-        <ul ref={list}>
+        <ul ref={list} id="fs-list" role="listbox" aria-label="Files">
           {results.map(({ f, m, recent }, i) => {
             const base = f.lastIndexOf('/') + 1;
             const label = i === 0 && recent ? 'recently opened' : !recent && results[i - 1]?.recent ? 'file results' : '';
             return (
-              <li key={f} className={i === idx ? 'active' : ''} onClick={() => pick(f)} title={f}>
+              <li key={f} id={`fs-${i}`} role="option" aria-selected={i === idx} className={i === idx ? 'active' : ''} onClick={() => pick(f)} title={f}>
                 <FileIcon name={f} />
                 <span className="fs-name"><Hl text={f.slice(base)} from={base} hits={m.hits} /></span>
                 <span className="fs-dir"><Hl text={f.slice(0, Math.max(base - 1, 0))} hits={m.hits} /></span>
@@ -81,7 +84,7 @@ export function FileSwitcher() {
             );
           })}
         </ul>
-        {!results.length && <div className="fs-empty">No matching results</div>}
+        {!results.length && <div className="fs-empty" role="status">No matching results</div>}
       </div>
     </div>
   );
