@@ -1,10 +1,10 @@
 import type { Database } from 'bun:sqlite';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { rollOver } from './rollover.js';
+import { DAY } from './time.js';
 
 const BEFORE = 10 * 60_000;
 const FRESH = 2 * 3600_000;
-const DAY = 24 * 60 * 60_000;
 
 type Meeting = { id: string; profile: string; title: string | null; starts_at: number | null; ends_at: number | null; people: string | null; calendar_url: string | null };
 export type Reminder = { key: string; title: string; body: string; url: string };

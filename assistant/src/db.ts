@@ -6,6 +6,9 @@ import fs from 'fs';
 export const DB_DIR = path.join(os.homedir(), '.agentview', 'assistant');
 export const DB_PATH = path.join(DB_DIR, 'assistant.db');
 
+export type Profile = 'work' | 'personal';
+export const isProfile = (v: unknown): v is Profile => v === 'work' || v === 'personal';
+
 export const TABLES: Record<string, string[]> = {
   items: ['title', 'text', 'source', 'source_url', 'people', 'at', 'status', 'meeting_id', 'rolls', 'rolled_from', 'rank'],
   facts: ['text', 'item_id', 'superseded_by', 'page_id', 'heading', 'sources', 'at', 'contested', 'state', 'replaces', 'added_by'],

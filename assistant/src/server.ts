@@ -2,8 +2,8 @@ import http from 'node:http';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { allowedPeer, peerName } from '../../server/src/http/access.js';
 import { readBody } from '../../server/src/http/body.js';
-import { openDb, currentVersion } from './db.js';
-import { PROFILES, lastAttempt, startCalendar, syncCalendar, type Profile } from './calendar.js';
+import { openDb, currentVersion, isProfile, type Profile } from './db.js';
+import { ACCOUNT_OF, lastAttempt, startCalendar, syncCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { once } from './once.js';
 import { startReminders } from './remind.js';
@@ -31,19 +31,19 @@ export async function readJson(req: http.IncomingMessage, max: number): Promise<
   return data as Record<string, unknown>;
 }
 
+function send(res: http.ServerResponse, status: number, obj: unknown, headers: http.OutgoingHttpHeaders = {}) {
+  res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
+  res.end(JSON.stringify(obj));
+}
+
 function fail(res: http.ServerResponse, err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
-  if (message === 'Request body too large') {
-    res.writeHead(413, { 'Content-Type': 'application/json', 'Connection': 'close' });
-    res.end(JSON.stringify({ error: 'Request body too large' }));
-  } else if (err instanceof BadRequest || err instanceof SyncError) {
-    res.writeHead(400, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: message }));
-  } else {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'internal error' }));
-  }
+  if (message === 'Request body too large') send(res, 413, { error: message }, { 'Connection': 'close' });
+  else if (err instanceof BadRequest || err instanceof SyncError) send(res, 400, { error: message });
+  else send(res, 500, { error: 'internal error' });
 }
+
+const isApp = (origin: string) => origin === 'http://tauri.localhost' || origin === 'tauri://localhost';
 
 let db: ReturnType<typeof openDb> | null = null;
 
@@ -57,7 +57,7 @@ function getDb() {
 // Only the phone app calls from a browser context; any other page (Origin or Sec-Fetch-Site set) could forge writes.
 export function fromAllowedPage(h: http.IncomingHttpHeaders) {
   const origin = h.origin ?? '';
-  if (origin === 'http://tauri.localhost' || origin === 'tauri://localhost') return true;
+  if (isApp(origin)) return true;
   const site = h['sec-fetch-site'];
   return !origin && (!site || site === 'none' || site === 'same-origin');
 }
@@ -68,16 +68,14 @@ export function createServer(): http.Server {
       const addr = req.socket.remoteAddress ?? '';
       const device = allowedPeer(addr) ? peerName(addr) : undefined;
       if (!device) {
-        res.writeHead(403, { 'Content-Type': 'application/json' });
-        res.end('{"error":"Forbidden"}');
+        send(res, 403, { error: 'Forbidden' });
         return;
       }
 
       const origin = req.headers.origin ?? '';
-      const app = origin === 'http://tauri.localhost' || origin === 'tauri://localhost';
+      const app = isApp(origin);
       if (!fromAllowedPage(req.headers)) {
-        res.writeHead(403, { 'Content-Type': 'application/json' });
-        res.end('{"error":"Forbidden"}');
+        send(res, 403, { error: 'Forbidden' });
         return;
       }
       if (app) {
@@ -97,8 +95,7 @@ export function createServer(): http.Server {
 
       if (pathname === '/health' && req.method === 'GET') {
         const version = currentVersion(getDb());
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, version }));
+        send(res, 200, { ok: true, version });
         return;
       }
 
@@ -120,25 +117,14 @@ export function createServer(): http.Server {
           }
           const applied = applyChanges(getDb(), data.changes ?? []);
           const pulled = pullChanges(getDb(), data.since);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({
+          send(res, 200, {
             version: pulled.version,
             changes: pulled.changes,
             hasMore: pulled.hasMore,
             device,
-          }));
+          });
         } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          if (message === 'Request body too large') {
-            res.writeHead(413, { 'Content-Type': 'application/json', 'Connection': 'close' });
-            res.end(JSON.stringify({ error: 'Request body too large' }));
-          } else if (err instanceof BadRequest || err instanceof SyncError) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: message }));
-          } else {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'internal error' }));
-          }
+          fail(res, err);
         }
         return;
       }
@@ -146,14 +132,12 @@ export function createServer(): http.Server {
       if (pathname === '/calendar' && req.method === 'POST') {
         // The app asks with ?fresh=<ms> when it opens; a profile imported within that time is skipped.
         const fresh = Number(url.searchParams.get('fresh') ?? 0);
-        const stale = (Object.keys(PROFILES) as Profile[]).filter((p) => !fresh || Date.now() - lastAttempt(getDb(), p) > fresh);
+        const stale = (Object.keys(ACCOUNT_OF) as Profile[]).filter((p) => !fresh || Date.now() - lastAttempt(getDb(), p) > fresh);
         try {
           const { changed, errors } = stale.length ? await syncCalendar(getDb, stale) : { changed: 0, errors: [] };
-          res.writeHead(errors.length ? 502 : 200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(errors.length ? { error: errors.join('; '), changed } : { changed }));
+          send(res, errors.length ? 502 : 200, errors.length ? { error: errors.join('; '), changed } : { changed });
         } catch (err) {
-          res.writeHead(502, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+          send(res, 502, { error: err instanceof Error ? err.message : String(err) });
         }
         return;
       }
@@ -166,18 +150,15 @@ export function createServer(): http.Server {
           fail(res, err);
           return;
         }
-        if ((data.profile !== 'work' && data.profile !== 'personal') || typeof data.text !== 'string' || !data.text.trim()) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end('{"error":"Missing profile or text"}');
+        if (!isProfile(data.profile) || typeof data.text !== 'string' || !data.text.trim()) {
+          send(res, 400, { error: 'Missing profile or text' });
           return;
         }
         try {
           const parsed = await parseTask(data.profile, data.text.trim());
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(parsed));
+          send(res, 200, parsed);
         } catch (err) {
-          res.writeHead(502, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+          send(res, 502, { error: err instanceof Error ? err.message : String(err) });
         }
         return;
       }
@@ -190,18 +171,15 @@ export function createServer(): http.Server {
           fail(res, err);
           return;
         }
-        if ((data.profile !== 'work' && data.profile !== 'personal') || typeof data.id !== 'string') {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end('{"error":"Missing profile or id"}');
+        if (!isProfile(data.profile) || typeof data.id !== 'string') {
+          send(res, 400, { error: 'Missing profile or id' });
           return;
         }
         try {
           const saved = await syncTranscript(getDb(), data.profile, data.id, Date.now(), typeof data.instructions === 'string' ? data.instructions : '');
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ saved }));
+          send(res, 200, { saved });
         } catch (err) {
-          res.writeHead(502, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+          send(res, 502, { error: err instanceof Error ? err.message : String(err) });
         }
         return;
       }
@@ -209,58 +187,44 @@ export function createServer(): http.Server {
       if (pathname === '/slack/summary' && req.method === 'POST') {
         try {
           const r = await once('slack', () => summarizeSlack(getDb()));
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ added: r.added.length }));
+          send(res, 200, { added: r.added.length });
         } catch (err) {
-          res.writeHead(502, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+          send(res, 502, { error: err instanceof Error ? err.message : String(err) });
         }
         return;
       }
 
       if (pathname === '/slack/accept' && req.method === 'POST') {
         const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '');
-        res.writeHead(ok ? 200 : 404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(ok ? { ok } : { error: 'No such Slack task' }));
+        send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Slack task' });
         return;
       }
 
       if (pathname === '/changes' && req.method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? '0');
         if (!Number.isInteger(since) || since < 0) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end('{"error":"Invalid since parameter"}');
+          send(res, 400, { error: 'Invalid since parameter' });
           return;
         }
 
         try {
           const pulled = pullChanges(getDb(), since);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({
+          send(res, 200, {
             version: pulled.version,
             changes: pulled.changes,
             hasMore: pulled.hasMore,
             device,
-          }));
+          });
         } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          if (err instanceof BadRequest || err instanceof SyncError) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: message }));
-          } else {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'internal error' }));
-          }
+          fail(res, err);
         }
         return;
       }
 
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end('{"error":"Not found"}');
+      send(res, 404, { error: 'Not found' });
     } catch (err) {
       if (!res.headersSent) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'internal error' }));
+        send(res, 500, { error: 'internal error' });
       }
     }
   });

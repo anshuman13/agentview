@@ -82,6 +82,7 @@ describe('sync', () => {
     ['Invalid id', { id: '' }],
     ['Invalid profile', { profile: 'invalid' }],
     ['Invalid value type', { fields: { title: { nested: 'object' } } }],
+    ['Invalid fields', { fields: ['title'] }],
     ['Invalid updated_at', { updated_at: undefined }],
     ['Invalid updated_at', { updated_at: Infinity }],
     ['Invalid field_times', { fields: { title: 'x' }, field_times: { title: Infinity } }],

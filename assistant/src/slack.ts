@@ -8,11 +8,10 @@ import { z } from 'zod';
 import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { DB_DIR } from './db.js';
-import { PROFILES } from './calendar.js';
+import { ACCOUNT_OF } from './calendar.js';
 import { applyChanges, type Change } from './sync.js';
+import { DAY, MIN, inWeekHours } from './time.js';
 
-const MIN = 60_000;
-const DAY = 24 * 60 * MIN;
 const EVERY = 15 * MIN;
 const SLACK = 'mcp__claude_ai_Slack__';
 const READ_TOOLS = ['slack_search_public_and_private', 'slack_read_channel', 'slack_read_thread', 'slack_list_user_channels', 'slack_read_user_profile'].map((t) => SLACK + t);
@@ -96,14 +95,12 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
 
 // Reads happen every quarter hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
 export function scanDue(last: number, now = Date.now()) {
-  const d = new Date(now);
-  return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= 7 && d.getHours() < 19 && last < Math.floor(now / EVERY) * EVERY;
+  return inWeekHours(now, 7, 19) && last < Math.floor(now / EVERY) * EVERY;
 }
 
 export function pushHours(c: SlackConfig, now = Date.now()) {
-  const d = new Date(now);
   const { from, to } = c.push ?? { from: 8, to: 17 };
-  return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= from && d.getHours() < to;
+  return inWeekHours(now, from, to);
 }
 
 function sinceOf(db: Database, now: number) {
@@ -115,7 +112,7 @@ type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
 
 // Stops as soon as done() says the work is saved, so the model does not spend turns repeating itself.
 async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false) {
-  const account = PROFILES[PROFILE];
+  const account = ACCOUNT_OF[PROFILE];
   if (isLimited(account)) throw new Error('The Claude account is at its usage limit');
   const dir = configDir(account);
   let result = '';

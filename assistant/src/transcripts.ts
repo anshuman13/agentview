@@ -6,12 +6,12 @@ import path from 'node:path';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
-import { PROFILES, type Profile } from './calendar.js';
+import { ACCOUNT_OF } from './calendar.js';
+import type { Profile } from './db.js';
 import { once } from './once.js';
 import { applyChanges, type Change } from './sync.js';
+import { DAY, MIN } from './time.js';
 
-const MIN = 60_000;
-const DAY = 24 * 60 * MIN;
 const WITHIN = 3 * DAY;
 export const TRIES = 8;
 const RETRY = 15 * MIN;
@@ -40,8 +40,6 @@ type Pending = { id: string; title: string; starts_at: number; ends_at: number; 
 const tried = (profile: Profile, id: string) => `transcript:${profile}:${id}`;
 const triesOf = (db: Database, profile: Profile, id: string) => ((db.prepare('SELECT value FROM meta WHERE key = ?').get(tried(profile, id)) as { value: string } | null)?.value ?? '0,0').split(',').map(Number);
 
-// Calendar meetings that ended in the last days and are not processed yet, tried at most TRIES times, RETRY apart.
-// A meeting summarized by hand before it ended is still waiting; one summarized before this state existed is done.
 // A deadline said as a day lands on that day's morning in local time; Date.parse reads a bare date as UTC midnight.
 export function dueAt(due: string | null) {
   if (!due) return NaN;
@@ -49,6 +47,8 @@ export function dueAt(due: string | null) {
   return day ? new Date(+day[1], +day[2] - 1, +day[3], 9).getTime() : Date.parse(due);
 }
 
+// Calendar meetings that ended in the last days and are not processed yet, tried at most TRIES times, RETRY apart.
+// A meeting summarized by hand before it ended is still waiting; one summarized before this state existed is done.
 export function dueMeetings(db: Database, profile: Profile, now = Date.now()): Pending[] {
   const rows = db.prepare(
     "SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND (transcript = 'waiting' OR (transcript IS NULL AND (summary IS NULL OR summary = ''))) AND ends_at <= ? AND ends_at >= ? ORDER BY ends_at",
@@ -138,8 +138,8 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     found.push(a);
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  if (isLimited(PROFILES[profile])) throw new Error('The Claude account is at its usage limit');
-  const dir = configDir(PROFILES[profile]);
+  if (isLimited(ACCOUNT_OF[profile])) throw new Error('The Claude account is at its usage limit');
+  const dir = configDir(ACCOUNT_OF[profile]);
   const saved = tool('read_saved_output', 'Read a tool output that was too large and was saved to a file, 30000 characters at a time.', { path: z.string(), offset: z.number().int().min(0).optional() }, async (a) => {
     try {
       return { content: [{ type: 'text', text: readSaved(dir ?? path.join(os.homedir(), '.claude'), a.path, a.offset) }] };
@@ -196,7 +196,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
   })) {
     const until = overageUntil(m);
     if (until) {
-      markLimited(PROFILES[profile], until);
+      markLimited(ACCOUNT_OF[profile], until);
       throw new Error('Stopped before using extra usage');
     }
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Transcript import ended with ${m.subtype}`);
@@ -219,7 +219,7 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
     if (busy) return;
     busy = true;
     try {
-      for (const profile of Object.keys(PROFILES) as Profile[]) {
+      for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
         // A few at a time, so a backlog after a weekend never runs past the turn limit on every try.
         const due = dueMeetings(db(), profile).slice(0, 5);
         if (!due.length) continue;
@@ -228,7 +228,7 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
           markTried(db(), profile, due.filter((m) => !found.has(m.id)));
           if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
         } catch (err) {
-          markTried(db(), profile, due, Date.now(), isLimited(PROFILES[profile]));
+          markTried(db(), profile, due, Date.now(), isLimited(ACCOUNT_OF[profile]));
           console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
         }
       }

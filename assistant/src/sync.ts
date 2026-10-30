@@ -1,12 +1,12 @@
 import { Database } from 'bun:sqlite';
-import { TABLES, nextVersion, stmt } from './db.js';
+import { TABLES, isProfile, nextVersion, stmt, type Profile } from './db.js';
 
 export class SyncError extends Error {}
 
 export type Change = {
   table: string;
   id: string;
-  profile: 'work' | 'personal';
+  profile: Profile;
   deleted?: boolean;
   updated_at: number;
   fields: Record<string, unknown>;
@@ -30,19 +30,20 @@ export function applyChanges(
   changes: Change[]
 ): { version: number; applied: number } {
   for (const change of changes) {
+    if (!change || typeof change !== 'object') throw new SyncError('Invalid change');
     if (!Object.hasOwn(TABLES, change.table)) {
       throw new SyncError(`Invalid table: ${change.table}`);
     }
     if (typeof change.id !== 'string' || !change.id) {
       throw new SyncError(`Invalid id: must be non-empty string`);
     }
-    if (change.profile !== 'work' && change.profile !== 'personal') {
+    if (!isProfile(change.profile)) {
       throw new SyncError(`Invalid profile: ${change.profile}`);
     }
     if (typeof change.updated_at !== 'number' || !Number.isFinite(change.updated_at)) {
       throw new SyncError(`Invalid updated_at: must be a finite number`);
     }
-    if (!change.fields || typeof change.fields !== 'object') {
+    if (!change.fields || typeof change.fields !== 'object' || Array.isArray(change.fields)) {
       throw new SyncError('Invalid fields: must be an object');
     }
     const validColumns = TABLES[change.table];

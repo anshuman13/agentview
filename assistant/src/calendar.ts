@@ -2,13 +2,12 @@ import type { Database } from 'bun:sqlite';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
+import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
+import { DAY, inWeekHours } from './time.js';
 
-const HOUR = 3600_000;
-const DAY = 24 * HOUR;
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
-export const PROFILES = { work: 'alt', personal: 'main' } as const;
-export type Profile = keyof typeof PROFILES;
+export const ACCOUNT_OF = { work: 'alt', personal: 'main' } as const;
 
 const Event = z.object({
   id: z.string(),
@@ -64,8 +63,8 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
     events = a.events;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  if (isLimited(PROFILES[profile])) throw new Error('The Claude account is at its usage limit');
-  const dir = configDir(PROFILES[profile]);
+  if (isLimited(ACCOUNT_OF[profile])) throw new Error('The Claude account is at its usage limit');
+  const dir = configDir(ACCOUNT_OF[profile]);
   const prompt = [
     `List my Google Calendar events on my primary calendar from ${new Date(from).toISOString()} to ${new Date(to).toISOString()}.`,
     'Leave out all-day events, events I declined, and events with no other attendees.',
@@ -86,7 +85,7 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
   })) {
     const until = overageUntil(m);
     if (until) {
-      markLimited(PROFILES[profile], until);
+      markLimited(ACCOUNT_OF[profile], until);
       throw new Error('Stopped before using extra usage');
     }
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Calendar import ended with ${m.subtype}`);
@@ -101,9 +100,8 @@ const EVERY = 30 * 60_000;
 
 // True once per half hour from 07:00 to 19:00 on weekdays.
 export function importDue(last: number, now = Date.now()) {
-  const d = new Date(now);
   const slot = Math.floor(now / EVERY) * EVERY;
-  return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= FIRST && d.getHours() < LAST && last < slot;
+  return inWeekHours(now, FIRST, LAST) && last < slot;
 }
 
 const lastKey = (p: Profile) => `calendar:last:${p}`;
@@ -146,7 +144,7 @@ function importOne(db: () => Database, profile: Profile, run: typeof importCalen
 }
 
 // Imports the profiles and returns how many meetings changed and which profiles failed; a profile already importing is joined.
-export async function syncCalendar(db: () => Database, profiles = Object.keys(PROFILES) as Profile[], run = importCalendar) {
+export async function syncCalendar(db: () => Database, profiles = Object.keys(ACCOUNT_OF) as Profile[], run = importCalendar) {
   let changed = 0;
   const errors: string[] = [];
   for (const profile of profiles) {
@@ -160,7 +158,7 @@ export async function syncCalendar(db: () => Database, profiles = Object.keys(PR
 export function startCalendar(db: () => Database, every = 5 * 60_000) {
   const run = () => {
     try {
-      const due = (Object.keys(PROFILES) as Profile[]).filter((p) => importDue(lastAttempt(db(), p)));
+      const due = (Object.keys(ACCOUNT_OF) as Profile[]).filter((p) => importDue(lastAttempt(db(), p)));
       if (due.length) void syncCalendar(db, due);
     } catch (err) {
       console.error('calendar:', err instanceof Error ? err.message : err);

@@ -5,10 +5,11 @@ import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod';
 import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
-import { PROFILES, type Profile } from './calendar.js';
+import { ACCOUNT_OF } from './calendar.js';
+import type { Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
+import { MIN } from './time.js';
 
-const MIN = 60_000;
 const KEEP = 20;
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
@@ -43,7 +44,7 @@ export function canRead(name: string) {
 
 // Runs one job on its profile's account with read-only tools; it may add tasks to Codex and returns its reply.
 async function runJob(db: Database, job: Job) {
-  const account = PROFILES[job.profile];
+  const account = ACCOUNT_OF[job.profile];
   const dir = configDir(account);
   const added: string[] = [];
   const addTask = tool('add_task', 'Add a task for me to Codex.', { title: z.string().describe('Short imperative task'), context: z.string().optional().describe('One sentence on why, with a link if there is one') }, async (a) => {
@@ -113,7 +114,7 @@ export async function runDue(db: Database, now = Date.now()) {
     const live = db.prepare('SELECT prompt, next_run_at FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; next_run_at: number | null } | null;
     if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) continue;
     const job = { ...due, prompt: live.prompt };
-    if (isLimited(PROFILES[job.profile])) continue;
+    if (isLimited(ACCOUNT_OF[job.profile])) continue;
     const id = randomUUID();
     const started = Date.now();
     applyChanges(db, [{ table: 'runs', id, profile: job.profile, updated_at: started, fields: { job_id: job.id, started_at: started, status: 'running' } }]);
