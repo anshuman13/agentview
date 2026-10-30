@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useCodex } from '../data';
-import { approveAllChanges, approveChanges, chatOf, factTime, proposals, reviewCount, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki';
+import { approveAllChanges, approveChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack } from '../view';
 import { ClaudeChip, SourceChip } from './Chips';
@@ -8,12 +8,14 @@ import { PageTile } from './PageTile';
 import { shortDate } from './shared';
 
 function ReviewCard({ fact }: { fact: Fact }) {
-  const { store, pages, facts } = useCodex();
+  const { store, pages, facts, meetings } = useCodex();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(fact.text ?? '');
   const page = fact.page_id ? pages.find((p) => p.id === fact.page_id && p.profile === fact.profile) : undefined;
   const old = fact.replaces ? facts.find((f) => f.id === fact.replaces && f.profile === fact.profile) : undefined;
   const chat = chatOf(fact);
+  const from = meetingOf(fact);
+  const meeting = from ? meetings.find((m) => m.id === from && m.profile === fact.profile) : undefined;
   const approve = () => {
     const changes = approveChanges(fact, pages, facts);
     changes.forEach((c) => void store.editRow(c.table, c.row as never, c.patch as never));
@@ -34,6 +36,7 @@ function ReviewCard({ fact }: { fact: Fact }) {
         {page ? <>{page.title}{page.state === 'proposed' && <em> (new page in {page.section})</em>}{fact.heading && <> · {fact.heading}</>}</> : 'Memory'}
         {fact.profile === 'personal' && <span className="wk-src">Personal</span>}
       </div>
+      {from && <div className="wk-meta"><span>From {meeting?.title ?? sourcesOf(fact).find((s) => s.kind === 'meeting')?.label ?? 'a meeting'}</span></div>}
       {editing ? (
         <div className="mt-action-edit"><textarea autoFocus rows={2} value={text} onChange={(e) => setText(e.target.value)} aria-label="Claim" /></div>
       ) : (
@@ -112,24 +115,13 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
 
 export function ToReview({ facts }: { facts: Fact[] }) {
   const { pages } = useCodex();
-  const { list, byPage, loose, livePages } = useMemo(() => {
-    const list = proposals(facts);
-    const byPage = new Map<string, Fact[]>();
-    for (const f of list) if (f.page_id) { const fs = byPage.get(f.page_id); if (fs) fs.push(f); else byPage.set(f.page_id, [f]); }
-    const livePages = new Map(pages.filter((p) => !p.deleted).map((p) => [`${p.profile}:${p.id}`, p]));
-    const liveIds = new Set(pages.filter((p) => !p.deleted).map((p) => p.id));
-    const loose = list.filter((f) => !f.page_id || !liveIds.has(f.page_id));
-    return { list, byPage, loose, livePages };
-  }, [pages, facts]);
-  if (!list.length) return null;
+  const { byPage, loose } = useMemo(() => reviewGroups(pages, facts), [pages, facts]);
+  if (!byPage.length && !loose.length) return null;
   return (
     <section>
       <div className="wk-label">To review · {reviewCount(pages, facts)}</div>
       <div className="wk-reviews">
-        {[...byPage].map(([id, fs]) => {
-          const page = livePages.get(`${fs[0].profile}:${id}`);
-          return page && <PageReview key={page.profile + id} page={page} list={fs} />;
-        })}
+        {byPage.map(({ page, list }) => <PageReview key={page.profile + page.id} page={page} list={list} />)}
         {loose.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />)}
       </div>
     </section>

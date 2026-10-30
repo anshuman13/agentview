@@ -1,3 +1,4 @@
+import { decisionKey, keyWords, mayChange, titleWords } from '../../../../shared/claimMatch';
 import { dayStart, dayLabel } from './dates';
 import { newId, type ItemRow, type Profile } from './sync';
 
@@ -206,14 +207,11 @@ export function searchWiki(pages: Page[], facts: Fact[], query: string) {
   };
 }
 
-const STOP = new Set(['about', 'after', 'also', 'from', 'have', 'into', 'just', 'more', 'next', 'only', 'over', 'should', 'some', 'than', 'that', 'their', 'them', 'then', 'there', 'they', 'this', 'until', 'week', 'when', 'will', 'with', 'would']);
-const keyWords = (t: string) => new Set(t.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu)?.filter((w) => !STOP.has(w)) ?? []);
-
 // Current claims that a later decision (last `days` days) may change: the decision names the claim's page and shares at least two key words with the claim. Newest decision first, one per claim.
 export function driftFacts(facts: Fact[], pages: Page[], meetings: Meeting[], now = Date.now(), days = 90) {
   const cutoff = now - days * 86_400_000;
-  const decisions = decisionLog(meetings).filter((d) => d.at > cutoff && d.at <= now).map((d) => ({ d, words: keyWords(d.text), hay: `${d.meeting.title ?? ''} ${d.text}`.toLowerCase() }));
-  const pageWords = new Map(live(pages).map((p) => [`${p.profile}:${p.id}`, queryWords(p.title ?? '')]));
+  const decisions = decisionLog(meetings).filter((d) => d.at > cutoff && d.at <= now).map((d) => ({ d, key: decisionKey(d.text, d.meeting.title) }));
+  const pageWords = new Map(live(pages).map((p) => [`${p.profile}:${p.id}`, titleWords(p.title ?? '')]));
   const current = currentClaim(facts);
   const out: { fact: Fact; decision: Decision }[] = [];
   for (const f of live(facts)) {
@@ -221,7 +219,7 @@ export function driftFacts(facts: Fact[], pages: Page[], meetings: Meeting[], no
     const title = pageWords.get(`${f.profile}:${f.page_id}`);
     if (!title?.length) continue;
     const words = keyWords(f.text ?? '');
-    const hit = decisions.find(({ d, words: dw, hay }) => d.meeting.profile === f.profile && d.at > factTime(f) && title.every((w) => hay.includes(w)) && [...dw].filter((w) => words.has(w)).length >= 2);
+    const hit = decisions.find(({ d, key }) => d.meeting.profile === f.profile && d.at > factTime(f) && mayChange(key, words, title));
     if (hit) out.push({ fact: f, decision: hit.d });
   }
   return out.sort((a, b) => b.decision.at - a.decision.at);
@@ -249,15 +247,33 @@ export function staleFacts(facts: Fact[], pages: Page[], meetings: Meeting[], no
 
 export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.state === 'proposed').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
 
-// What the review list shows: one card per page with proposals, and one per claim without a page.
-export function reviewCount(pages: Page[], facts: Fact[]) {
+// What the review list shows: one card per page with proposals, and one per claim that has no page or replaces a claim on a live page.
+export function reviewGroups(pages: Page[], facts: Fact[]) {
   const list = proposals(facts);
-  const alive = new Set(pages.filter((p) => !p.deleted).map((p) => `${p.profile}:${p.id}`));
-  const hasPage = (f: Fact) => !!f.page_id && alive.has(`${f.profile}:${f.page_id}`);
-  return new Set(list.filter(hasPage).map((f) => `${f.profile}:${f.page_id}`)).size + list.filter((f) => !hasPage(f)).length;
+  const alive = new Map(pages.filter((p) => !p.deleted).map((p) => [`${p.profile}:${p.id}`, p]));
+  const byPage = new Map<string, { page: Page; list: Fact[] }>();
+  const loose: Fact[] = [];
+  for (const f of list) {
+    const page = f.page_id ? alive.get(`${f.profile}:${f.page_id}`) : undefined;
+    if (!page || (f.replaces && page.state !== 'proposed')) {
+      loose.push(f);
+      continue;
+    }
+    const k = `${f.profile}:${page.id}`;
+    const g = byPage.get(k);
+    if (g) g.list.push(f);
+    else byPage.set(k, { page, list: [f] });
+  }
+  return { byPage: [...byPage.values()], loose };
+}
+
+export function reviewCount(pages: Page[], facts: Fact[]) {
+  const { byPage, loose } = reviewGroups(pages, facts);
+  return byPage.length + loose.length;
 }
 
 export const chatOf = (f: Fact) => (f.added_by?.startsWith('claude:') ? f.added_by.slice(7) : null);
+export const meetingOf = (f: Fact) => (f.added_by?.startsWith('meeting:') ? f.added_by.slice(8) : null);
 
 // Approving sets the claim live, its proposed page live, and supersedes the claim it replaces.
 export function approveChanges(fact: Fact, pages: Page[], facts: Fact[]) {
