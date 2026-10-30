@@ -1,7 +1,6 @@
 import { Suspense, useRef } from 'react';
 import { Back } from './back';
 import { setUi, useStore } from './store';
-import { MCP_BAD } from '../../../shared/protocol';
 import { AgentsBadge } from '../sessions/AgentsBadge';
 import { ChangesBadge } from '../workspace/gitStatus';
 import { GitHubBadge } from '../ops/pulls';
@@ -11,7 +10,7 @@ import { AssistantBadge } from './lazy';
 import { PAGES, type Page } from './pages';
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, type Theme } from './theme';
-import { useShownMcp } from '../ops/mcpShown';
+import { useMcpHealth } from '../ops/mcpShown';
 
 export type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 export type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
@@ -84,10 +83,9 @@ type MoreProps = {
 export function MoreSheet({ open, onClose, tab, view, showing, project, theme, toggleTheme, macName, goTab, goSide, openPage, onMacs }: MoreProps) {
   const cwd = useStore((s) => s.session.cwd);
   const notifying = useNotify();
-  const mcp = useShownMcp();
+  const mcp = useMcpHealth();
   const sheet = useSheetDrag(open, onClose);
   if (!open) return null;
-  const mcpOk = mcp.filter((m) => m.status === 'connected').length;
   const act = (f: () => void) => () => { onClose(); f(); };
   return (
     <div className="more-sheet-overlay mobile-only" ref={sheet.overlay} onClick={sheet.close}>
@@ -125,7 +123,7 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
           <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
             <Icon name={p.icon} />
             <span>{p.title}</span>
-            {p.id === 'mcp' && mcp.length > 0 && <span className="more-meta"><span className={`dot ${mcp.some((m) => MCP_BAD.includes(m.status)) ? 'bad' : mcpOk ? 'ok' : 'off'}`} /> {mcpOk}/{mcp.length}</span>}
+            {p.id === 'mcp' && mcp.total > 0 && <span className="more-meta"><span className={`dot ${mcp.dot}`} /> {mcp.ok}/{mcp.total}</span>}
           </button>
         ))}
         <span className="more-divider" />

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { apiUrl, bundled, useApiBase } from './api';
 import { send, useStore } from './store';
-import { ACCOUNT_LABEL, MCP_BAD } from '../../../shared/protocol';
+import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { Icon } from '../ui/Icon';
 import { command, save, stored, weekPace } from '../ui/util';
-import { useShownMcp } from '../ops/mcpShown';
+import { useMcpHealth } from '../ops/mcpShown';
 
 export function AppUpdate() {
   const [ready, setReady] = useState(0);
@@ -63,12 +63,10 @@ export function Offline() {
 }
 
 export function McpItem() {
-  const mcp = useShownMcp();
-  const ok = mcp.filter((m) => m.status === 'connected').length;
-  const bad = mcp.some((m) => MCP_BAD.includes(m.status));
+  const { total, ok, dot } = useMcpHealth();
   return (
     <button className="item clickable" title="MCP servers" onClick={() => command('page:mcp')}>
-      <span className={`dot ${bad ? 'bad' : ok ? 'ok' : 'off'}`} /> MCP {mcp.length ? `${ok}/${mcp.length}` : ''}
+      <span className={`dot ${dot}`} /> MCP {total ? `${ok}/${total}` : ''}
     </button>
   );
 }
