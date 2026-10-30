@@ -15,7 +15,7 @@ export function assistantStore(): AssistantStore {
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    if (store instanceof RemoteStore) store.dispose();
+    if (store instanceof RemoteStore || store instanceof LocalStore) store.dispose();
     store = undefined;
   });
 }

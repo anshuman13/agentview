@@ -58,13 +58,21 @@ async function post(since: number, changes: Change[]): Promise<Reply> {
 export class LocalStore extends BaseStore implements AssistantStore {
   readonly kind = 'local';
   private unlocking: Promise<void> | null = null;
+  private timer: ReturnType<typeof setInterval>;
+  private onVisible = () => document.visibilityState === 'visible' && this.syncNow();
 
   constructor(private invoke: Invoke) {
     super('locked');
     this.set({ message: 'Locked' });
-    setInterval(this.syncNow, SYNC_EVERY);
+    this.timer = setInterval(this.syncNow, SYNC_EVERY);
     window.addEventListener('online', this.syncNow);
-    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && this.syncNow());
+    document.addEventListener('visibilitychange', this.onVisible);
+  }
+
+  dispose() {
+    clearInterval(this.timer);
+    window.removeEventListener('online', this.syncNow);
+    document.removeEventListener('visibilitychange', this.onVisible);
   }
 
   private query = async <T = ItemRow>(sql: string, params: SqlValue[] = []) => (await this.invoke<T[] | null>('assistant_query', { sql, params })) || [];

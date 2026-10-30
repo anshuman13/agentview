@@ -129,8 +129,25 @@ describe('captureParams', () => {
   });
 });
 
-describe('LocalStore.unlock', () => {
-  afterEach(() => vi.unstubAllGlobals());
+describe('LocalStore', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('dispose clears the sync interval and removes the global listeners', async () => {
+    vi.useFakeTimers();
+    const listeners = new Set<unknown>();
+    const target = { addEventListener: (_: string, fn: unknown) => listeners.add(fn), removeEventListener: (_: string, fn: unknown) => listeners.delete(fn) };
+    vi.stubGlobal('window', target);
+    vi.stubGlobal('document', { ...target, visibilityState: 'visible' });
+    const { LocalStore } = await import('./local');
+    const store = new LocalStore((async () => null) as never);
+    expect(listeners.size).toBe(2);
+    store.dispose();
+    expect(listeners.size).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
 
   it('pulls everything again when a synced table is new', async () => {
     const { DatabaseSync } = await import('node:sqlite');
