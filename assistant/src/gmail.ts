@@ -2,6 +2,8 @@ import type { Database } from 'bun:sqlite';
 import path from 'node:path';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
+import { ACCOUNT_OF } from './calendar.js';
+import { scanPaused } from './claude.js';
 import { pushOrHold } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR } from './db.js';
@@ -192,7 +194,7 @@ export function startGmail(db: () => Database, every = MIN) {
   let tried = 0;
   loop('gmail', every, async () => {
     const c = gmailConfig();
-    if (!c || !mailDue(tried)) return;
+    if (!c || !mailDue(tried) || (await scanPaused(db(), ACCOUNT_OF[PROFILE], 'gmail'))) return;
     tried = Date.now();
     const r = await scanGmail(db(), c);
     console.log(`gmail: ${r.added} asks, ${r.said} promises, ${r.waiting} waiting, ${r.urgent.length} urgent`);
