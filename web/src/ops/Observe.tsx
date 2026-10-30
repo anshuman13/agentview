@@ -64,7 +64,7 @@ function useLoad<T>(url: string | null): [Load<T>, () => void] {
 }
 
 const Loading = () => <div className="obs-hint"><Icon name="loading" small spin /> Loading</div>;
-const Err = ({ text }: { text: string }) => (text ? <div className="obs-hint error">{text}</div> : null);
+const Err = ({ text }: { text: string }) => (text ? <div className="obs-hint error" role="alert">{text}</div> : null);
 
 function Section({ title, children, actions, open: initial = true }: { title: string; children: ReactNode; actions?: ReactNode; open?: boolean }) {
   const [open, setOpen] = useState(initial);
@@ -101,7 +101,7 @@ function AddToClaude({ server, added, disabled, title, onDone }: { server: 'snow
       <button className="btn xs" disabled={disabled} title={title} onClick={() => post<{ info: ObserveInfo }>('/api/observe/mcp/add', { server }).then((r) => onDone(r.info), (e) => setMsg(e.message))}>
         <Icon name="add" small /> Add to Claude
       </button>
-      {msg && <span className="error">{msg}</span>}
+      {msg && <span className="error" role="alert">{msg}</span>}
     </span>
   );
 }

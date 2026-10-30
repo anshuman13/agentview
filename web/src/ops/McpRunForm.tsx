@@ -55,8 +55,8 @@ export function RunForm({ server, tool }: { server: string; tool: McpTool }) {
         <button type="submit" className={armed ? 'btn danger' : 'btn primary'} disabled={busy}>
           <Icon name={busy ? 'loading' : armed ? 'warning' : 'play'} small spin={busy} /> {busy ? 'Running' : armed ? 'Confirm run' : 'Run'}
         </button>
-        {armed && <span className="bad">This tool can change or delete data. Click again to run it.</span>}
-        {error && <span className="bad">{error}</span>}
+        {armed && <span className="bad" role="alert">This tool can change or delete data. Click again to run it.</span>}
+        {error && <span className="bad" role="alert">{error}</span>}
       </div>
       {out && (
         <div className="mcp-run-out">

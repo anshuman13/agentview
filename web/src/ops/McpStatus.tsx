@@ -109,7 +109,7 @@ export function McpPage() {
           </div>,
           extra,
         )}
-        {error && <div className="mcp-error"><Icon name="error" small /> {error}</div>}
+        {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
         {probed === null && !error && (
           <div className="mcp-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="mcp-row skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
         )}

@@ -109,7 +109,7 @@ export function Deploy() {
       {s && <a className="deploy-link" href={s.velodrome} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open in Velodrome</a>}
       {error && (error.includes('no Velo app')
         ? <div className="deploy-hint">No Velo app in this repo (no .deploy/app.yaml), so there is nothing to deploy from here.</div>
-        : <div className="deploy-error"><Icon name="error" small /> {error}</div>)}
+        : <div className="deploy-error" role="alert"><Icon name="error" small /> {error}</div>)}
       {s?.envs.map((env) => (
         <div key={env.name} className="deploy-card">
           <div className="deploy-card-head">
@@ -139,7 +139,7 @@ export function Deploy() {
         <div className={`deploy-log ${job.done ? (job.ok ? 'ok' : 'bad') : ''}`}>
           <div className="deploy-log-head">
             <Icon name={job.done ? (job.ok ? 'check' : 'error') : 'loading'} small spin={!job.done} />
-            <span>{job.done ? (job.ok ? 'Deployed' : 'Deploy did not succeed') : 'Deploying'}</span>
+            <span role="status">{job.done ? (job.ok ? 'Deployed' : 'Deploy did not succeed') : 'Deploying'}</span>
             <span className="spacer" />
             {job.url && <a href={job.url} target="_blank" rel="noreferrer">Velodrome</a>}
             {job.done && <button className="icon-btn" title="Close" onClick={() => setJob(cwd, null)}><Icon name="close" small /></button>}

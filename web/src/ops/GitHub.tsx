@@ -54,7 +54,7 @@ function Section({ title, prs, onOpen }: { title: string; prs: PullRequest[]; on
 
 function Problem({ error }: { error: string }) {
   const setup = SETUP.find((s) => s.test.test(error));
-  if (!setup) return <div className="gh-error"><Icon name="error" small /> {error}</div>;
+  if (!setup) return <div className="gh-error" role="alert"><Icon name="error" small /> {error}</div>;
   return (
     <div className="empty-state">
       <Icon name={setup.icon} />
@@ -249,8 +249,8 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
           </div>
           <div className="gh-line"><Icon name="git-branch" small /><span className="gh-branch">{pr.branch}</span><span className="gh-when">{ago(pr.updatedAt)}</span></div>
         </div>
-        {busy && <div className="muted small gh-pad"><Icon name="loading" small spin /> Running {busy.replace('_', ' ')}…</div>}
-        {error && <div className="gh-error"><Icon name="error" small /> {error}</div>}
+        {busy && <div className="muted small gh-pad" role="status"><Icon name="loading" small spin /> Running {busy.replace('_', ' ')}…</div>}
+        {error && <div className="gh-error" role="alert"><Icon name="error" small /> {error}</div>}
 
         {!d ? (
           !error && <div className="gh-pad"><Skeleton /></div>

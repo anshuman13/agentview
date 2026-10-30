@@ -16,7 +16,7 @@ export function AddToChat({ name }: { name: string }) {
   return (
     <>
       <button className="btn" onClick={add} disabled={busy}><Icon name={busy ? 'loading' : 'add'} small spin={busy} /> Load in this chat</button>
-      {error && <span className="mcp-act-error bad">{error}</span>}
+      {error && <span className="mcp-act-error bad" role="alert">{error}</span>}
     </>
   );
 }
@@ -62,7 +62,7 @@ export function Login({ name, live }: { name: string; live: boolean }) {
         {opened && <button className="btn" onClick={() => command('tab:browser')}><Icon name="globe" small /> Show browser</button>}
       </div>
       {opened && <div className="muted">The login page is open in Chrome on the Mac. This updates once you finish there.</div>}
-      {error && <div className="bad">{error}</div>}
+      {error && <div className="bad" role="alert">{error}</div>}
     </div>
   );
 }
