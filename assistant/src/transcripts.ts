@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
+import { configDir, guardLimit, isLimited, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import type { Profile } from './db.js';
 import { once } from './once.js';
@@ -138,7 +138,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     found.push(a);
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  if (isLimited(ACCOUNT_OF[profile])) throw new Error('The Claude account is at its usage limit');
+  guardLimit(ACCOUNT_OF[profile]);
   const dir = configDir(ACCOUNT_OF[profile]);
   const saved = tool('read_saved_output', 'Read a tool output that was too large and was saved to a file, 30000 characters at a time.', { path: z.string(), offset: z.number().int().min(0).optional() }, async (a) => {
     try {
@@ -194,11 +194,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
       permissionMode: 'dontAsk',
     },
   })) {
-    const until = overageUntil(m);
-    if (until) {
-      markLimited(ACCOUNT_OF[profile], until);
-      throw new Error('Stopped before using extra usage');
-    }
+    stopOnOverage(ACCOUNT_OF[profile], m);
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Transcript import ended with ${m.subtype}`);
   }
   const ids = new Set(meetings.map((m) => m.id));

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
+import { configDir, isLimited, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { ACCOUNT_OF } from './calendar.js';
 import type { Profile } from './db.js';
@@ -75,11 +75,7 @@ async function runJob(db: Database, job: Job) {
       canUseTool: async (name, input) => (canRead(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'Jobs can only read.' }),
     },
   })) {
-    const until = overageUntil(m);
-    if (until) {
-      markLimited(account, until);
-      throw new Error('Stopped before using extra usage');
-    }
+    stopOnOverage(account, m);
     if (m.type === 'result') {
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();

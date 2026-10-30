@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
+import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { DB_DIR } from './db.js';
 import { ACCOUNT_OF } from './calendar.js';
@@ -113,7 +113,7 @@ type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
 // Stops as soon as done() says the work is saved, so the model does not spend turns repeating itself.
 async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false) {
   const account = ACCOUNT_OF[PROFILE];
-  if (isLimited(account)) throw new Error('The Claude account is at its usage limit');
+  guardLimit(account);
   const dir = configDir(account);
   let result = '';
   for await (const m of query({
@@ -131,11 +131,7 @@ async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxT
       permissionMode: 'dontAsk',
     },
   })) {
-    const until = overageUntil(m);
-    if (until) {
-      markLimited(account, until);
-      throw new Error('Stopped before using extra usage');
-    }
+    stopOnOverage(account, m);
     if (m.type === 'result') {
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();

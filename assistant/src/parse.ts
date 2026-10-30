@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
+import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import type { Profile } from './db.js';
 import { dueAt } from './transcripts.js';
@@ -26,7 +26,7 @@ export function toParsed(text: string, f: Found | undefined, now = Date.now()): 
 
 // One Haiku call while I add a task: a clear title, the leftover detail, and when it is due if I said so.
 export async function parseTask(profile: Profile, text: string, now = Date.now()): Promise<Parsed> {
-  if (isLimited(ACCOUNT_OF[profile])) throw new Error('The Claude account is at its usage limit');
+  guardLimit(ACCOUNT_OF[profile]);
   let found: Found | undefined;
   const save = tool('save_task', 'Save the task.', Found.shape, async (a) => {
     found = a;
@@ -57,11 +57,7 @@ export async function parseTask(profile: Profile, text: string, now = Date.now()
       permissionMode: 'dontAsk',
     },
   })) {
-    const until = overageUntil(m);
-    if (until) {
-      markLimited(ACCOUNT_OF[profile], until);
-      throw new Error('Stopped before using extra usage');
-    }
+    stopOnOverage(ACCOUNT_OF[profile], m);
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Parse ended with ${m.subtype}`);
   }
   return toParsed(text, found, now);

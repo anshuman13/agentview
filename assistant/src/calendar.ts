@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, isLimited, markLimited, overageUntil } from '../../server/src/agent/claude/accounts.js';
+import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, inWeekHours } from './time.js';
@@ -63,7 +63,7 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
     events = a.events;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  if (isLimited(ACCOUNT_OF[profile])) throw new Error('The Claude account is at its usage limit');
+  guardLimit(ACCOUNT_OF[profile]);
   const dir = configDir(ACCOUNT_OF[profile]);
   const prompt = [
     `List my Google Calendar events on my primary calendar from ${new Date(from).toISOString()} to ${new Date(to).toISOString()}.`,
@@ -83,11 +83,7 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
       permissionMode: 'dontAsk',
     },
   })) {
-    const until = overageUntil(m);
-    if (until) {
-      markLimited(ACCOUNT_OF[profile], until);
-      throw new Error('Stopped before using extra usage');
-    }
+    stopOnOverage(ACCOUNT_OF[profile], m);
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Calendar import ended with ${m.subtype}`);
   }
   if (!events) throw new Error('Claude did not save any meetings');
