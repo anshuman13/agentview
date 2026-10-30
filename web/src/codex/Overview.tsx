@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { useAssistantStore, useAssistantData, useCodex } from './data';
+import { useAssistantStore, useAssistantData, useCodex, useSyncStatus } from './data';
 import { live, type Chat, type Meeting } from './data/wiki';
 import { actionsOf, displayName, followThrough } from './data/meetings';
 import { followUpText } from './data/meetingMarkdown';
@@ -22,6 +22,7 @@ import { keepInTouch, standupText, touchText, type Lapsed } from './data/review'
 import { blockId, isBlock } from '../../../shared/util';
 import { MorningBrief } from './Brief';
 import { Icon } from '../ui/Icon';
+import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
 import { copyText, focusPast, openMeeting, setView, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
@@ -410,8 +411,19 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       {rs.length > 5 && <button className="ov-follow-row ov-follow-text muted" onClick={tasks}>+{rs.length - 5} more</button>}
     </div>
   );
+  const sync = useSyncStatus();
+  const loading = sync.syncing && !sync.last && !snap.items.length;
+  const waiting = live(snap.chats).some((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter) && !stored<string[]>(WAIT_HANDLED, []).includes(waitKey(c)));
+  const empty = !loading && !waiting && !s.overdue.length && !dueToday.length && !s.review.length && !s.meetingsToday.length && !s.meetingsTomorrow.length && !tomorrow.length;
+  if (loading) return <Skeleton />;
   return (
     <>
+      {empty && (
+        <div className="muted small">
+          <div>Nothing today</div>
+          {s.nextLater && <div>Next: {when(s.nextLater.starts_at!)} {s.nextLater.title}</div>}
+        </div>
+      )}
       {stats.length > 0 && (
         <div className="ov-summary">
           {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
