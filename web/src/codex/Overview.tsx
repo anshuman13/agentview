@@ -24,7 +24,7 @@ import { MorningBrief } from './Brief';
 import { Icon } from '../ui/Icon';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
-import { copyText, focusPast, openMeeting, setView, showSnack, useView } from './view';
+import { copyText, focusPast, openMeeting, setView, setViewAt, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
 import { clock, when } from './time';
 import { touch } from '../app/touch';
@@ -378,10 +378,10 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const tasks = () => setView({ list: 'tasks', open: null });
   const stale = useMemo(() => staleTasks(snap.items.filter((r) => filter === 'all' || r.profile === filter), minute * 60000), [snap.items, filter, minute]);
   const stats = [
-    { n: dueToday.length, label: 'to do today', cls: '' },
-    { n: s.overdue.length, label: 'overdue', cls: 'late' },
-    { n: s.review.length, label: 'to confirm', cls: 'review' },
-    { n: stale.length, label: 'stale', cls: '' },
+    { n: dueToday.length, label: 'to do today', sel: '.as-section:not(.late):not(.review):not(.later):not(.done)', cls: '' },
+    { n: s.overdue.length, label: 'overdue', sel: '.as-section.late', cls: 'late' },
+    { n: s.review.length, label: 'to confirm', sel: '.as-section.review', cls: 'review' },
+    { n: stale.length, label: 'stale', sel: undefined, cls: '' },
   ].filter((x) => x.n > 0);
   const snooze = (r: ItemRow) => {
     haptic('tap');
@@ -426,7 +426,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       )}
       {stats.length > 0 && (
         <div className="ov-summary">
-          {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
+          {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={() => x.sel ? setViewAt({ list: 'tasks', open: null }, x.sel) : tasks()}><b>{x.n}</b><span>{x.label}</span></button>)}
         </div>
       )}
       <GoalLines now={now} />

@@ -62,6 +62,18 @@ export const setView = (patch: Partial<View>) => {
   view = next;
   subs.forEach((f) => f());
 };
+// Switch to a list, then scroll the first new element matching the selector to the top once it renders.
+export function setViewAt(patch: Partial<View>, selector: string) {
+  const before = new Set(document.querySelectorAll(selector));
+  setView(patch);
+  const end = Date.now() + 1000;
+  const find = () => {
+    const el = [...document.querySelectorAll(selector)].find((e) => !before.has(e) && e.isConnected);
+    if (el) el.scrollIntoView({ block: 'start' });
+    else if (Date.now() < end) requestAnimationFrame(find);
+  };
+  requestAnimationFrame(find);
+}
 type MeetingRef = { profile: string; id: string };
 export const openMeeting = (m: MeetingRef) => setView({ list: 'meetings', open: rowKey(m), person: null });
 export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => view);
