@@ -4,7 +4,7 @@ import { FolderPicker } from '../sessions/Sessions';
 import { findHere, useWorkspace } from '../sessions/folders';
 import { setOpened, useOpened } from './opened';
 import { Icon } from '../ui/Icon';
-import { save, stored } from '../ui/util';
+import { pressable, save, stored } from '../ui/util';
 import { touch } from '../app/touch';
 import { FileIcon } from './FileIcon';
 
@@ -140,10 +140,15 @@ function ExplorerView({ cwd }: { cwd: string }) {
         <div className="ex-editors">
           {opened.length === 0 && <div className="ex-empty">Files you open or Claude edits show here</div>}
           {opened.map((f) => (
-            <div key={f} className={`ex-row${f === openFile ? ' selected' : ''}`} title={f} onClick={() => setUi({ openFile: f, follow: false })}>
-              <span className="ex-close" title="Close" onClick={(e) => { e.stopPropagation(); close(f); }}>
+            <div key={f} className={`ex-row${f === openFile ? ' selected' : ''}`} title={f} aria-current={f === openFile || undefined} {...pressable(() => setUi({ openFile: f, follow: false }))}>
+              <button className="ex-close" title="Close" aria-label={`Close ${f.split('/').pop()}`} onClick={(e) => {
+                e.stopPropagation();
+                const row = e.currentTarget.parentElement;
+                ((row?.nextElementSibling ?? row?.previousElementSibling) as HTMLElement | null | undefined)?.focus();
+                close(f);
+              }}>
                 <Icon name="close" small />
-              </span>
+              </button>
               <FileIcon name={f} />
               <span className={`ex-name${recent.includes(f) ? ' changed' : ''}`}>{f.split('/').pop()}</span>
               <span className="ex-dir">{parentOf(f)}</span>

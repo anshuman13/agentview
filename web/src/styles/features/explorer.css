@@ -33,9 +33,9 @@
 .ex-editors { flex: none; max-height: 30%; overflow: auto; border-bottom: 1px solid var(--border); padding-bottom: var(--sp-1); }
 .ex-editors .ex-row { padding-left: var(--sp-2); }
 .ex-empty { padding: var(--sp-1) var(--sp-4) var(--sp-2); color: var(--fg-muted); font-size: var(--fs-sm); }
-.ex-close { width: var(--icon); height: var(--icon); display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); visibility: hidden; color: var(--fg-muted); }
+.ex-close { width: var(--icon); height: var(--icon); padding: 0; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); visibility: hidden; color: var(--fg-muted); }
 @media (hover: hover) { .ex-close:hover { background: var(--hover); color: var(--fg); } }
-.ex-row:hover .ex-close, .ex-row.selected .ex-close { visibility: visible; }
+.ex-row:hover .ex-close, .ex-row.selected .ex-close, .ex-row:focus-within .ex-close { visibility: visible; }
 .ex-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-muted); font-size: var(--fs-sm); }
 
 .ex-tree { flex: 1; overflow: auto; outline: none; padding-bottom: var(--sp-4); }
