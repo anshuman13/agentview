@@ -54,6 +54,20 @@ describe('saveScan', () => {
     expect(saveScan(db, { chats: [chat], asks: [dm('u4', 'Review the budget')], answered: [] }, at(27, 12)).added).toBe(0);
   });
 
+  test('skips an ask answered in the same scan', () => {
+    const db = openDb(':memory:');
+    expect(saveScan(db, { chats: [], asks: [ask('u1'), ask('u2')], answered: ['u1'] }, at(27, 10)).added).toBe(1);
+    expect(item(db, 'u1')).toBeNull();
+  });
+
+  test('a reply in a DM closes that person\'s suggested DM asks, not channel asks', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [], asks: [{ ...ask('u1'), chat: 'DM', title: 'Review the doc' }, ask('u2')], answered: [] }, at(27, 10));
+    saveScan(db, { chats: [{ id: 'D1', name: 'kim', kind: 'dm', summary: 'I answered.', waiting: false }], asks: [], answered: [] }, at(27, 11));
+    expect(item(db, 'u1')!.status).toBe('done');
+    expect(item(db, 'u2')!.status).toBe('suggested');
+  });
+
   test('keeps different short asks apart, and an ask apart from my promise on it', () => {
     const db = openDb(':memory:');
     const dm = (url: string, title: string) => ({ url, from: 'Kim', chat: 'DM', title, quote: 'Can you?', urgent: false });

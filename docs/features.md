@@ -68,7 +68,7 @@ below; a tap outside closes it and saves. A first line over 120 characters is cu
 asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source.
 A group of more than one shows Confirm all and Dismiss all, which act on the rows listed in it and offer Undo.
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
-seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
+seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message, and it closes that person's suggested DM asks when I sent the last message; an ask answered in the same scan is not saved. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
 
 - Each day ends with Add task (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day

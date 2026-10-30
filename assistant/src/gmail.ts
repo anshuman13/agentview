@@ -66,9 +66,10 @@ export function saveMail(db: Database, r: MailScan, now = Date.now()) {
   const changes: Change[] = expireSuggested(db, 'gmail', now);
   const urgent: (MailScan['asks'][number] & { id: string; link: string })[] = [];
   const seen = seenItems(db, 'gmail', now);
+  const answered = new Set(r.answered);
   let added = 0;
   for (const a of r.asks) {
-    if (!threadOk(a.thread_id)) continue;
+    if (!threadOk(a.thread_id) || answered.has(a.thread_id)) continue;
     const id = mailId(a.thread_id);
     const people = a.from.trim();
     if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people)) continue;

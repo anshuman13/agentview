@@ -97,11 +97,12 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const seen = seenItems(db, 'slack', now);
   // A DM where I sent the last message has nothing waiting on me.
   const replied = (a: ScanResult['asks'][number]) => a.chat === 'DM' && r.chats.some((c) => c.kind === 'dm' && c.waiting === false && c.name.trim().toLowerCase() === a.from.trim().toLowerCase());
+  const answeredIds = new Set(r.answered.map(askId));
   let added = 0;
   for (const a of r.asks) {
     const id = askId(a.url);
     const people = `${a.from} · ${a.chat}`;
-    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
+    if (answeredIds.has(id) || has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
     seen.add(id, a.title, people);
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
     added++;
@@ -123,6 +124,11 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     const old = has.get(PROFILE, id) as { status: string } | null;
     if (old && (old.status === 'suggested' || old.status === 'unassigned')) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done' } });
     else if (old?.status === 'open') answeredOpen.push(id);
+  }
+  const repliedDms = new Set(r.chats.filter((c) => c.kind === 'dm' && c.waiting === false).map((c) => `${c.name.trim()} · DM`.toLowerCase()));
+  if (repliedDms.size) {
+    const stored = db.prepare("SELECT id, people FROM items WHERE profile = ? AND source = 'slack' AND status = 'suggested' AND deleted = 0 AND id NOT LIKE 'said:%'").all(PROFILE) as { id: string; people: string | null }[];
+    for (const o of stored) if (repliedDms.has((o.people ?? '').trim().toLowerCase()) && !changes.some((c) => c.id === o.id)) changes.push({ table: 'items', id: o.id, profile: PROFILE, updated_at: now, fields: { status: 'done' } });
   }
   for (const url of r.fulfilled ?? []) {
     const id = saidId(askId(webUrl(url) ?? url));
