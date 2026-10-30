@@ -10,13 +10,12 @@ import { dayLabel } from '../data/dates';
 import { setView, showSnack } from '../view';
 import '../../styles/features/wiki.css';
 
-
 // Slack in one place: the running summary of each chat from the quarter-hourly Haiku read, and a Sonnet summary on demand.
-export function Summary({ onMenu }: { onMenu: () => void }) {
+// The latest Slack brief, the Slack asks waiting for review, and a Sonnet summary on demand.
+function useSlack() {
   const store = useAssistantStore();
   const snap = useAssistantData();
   const [busy, setBusy] = useState(false);
-  const chats = snap.chats.filter((c) => !c.deleted).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
   const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
   const asks = snap.items.filter((r) => !r.deleted && r.source === 'slack' && r.status === 'suggested').length;
   const summarize = () => {
@@ -26,6 +25,13 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
       (err) => showSnack(`Summary failed: ${errorText(err)}`),
     ).finally(() => setBusy(false));
   };
+  return { brief, asks, busy, summarize };
+}
+
+export function Summary({ onMenu }: { onMenu: () => void }) {
+  const snap = useAssistantData();
+  const { brief, asks, busy, summarize } = useSlack();
+  const chats = snap.chats.filter((c) => !c.deleted).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
   return (
     <div className="wk narrow">
       <header className="wk-head">
@@ -92,11 +98,8 @@ const HANDLED = 'codex.slackHandled';
 // Needs you items from the latest summary: Task makes one a task with its link, Done hides it.
 export function SlackCard() {
   const store = useAssistantStore();
-  const snap = useAssistantData();
-  const [busy, setBusy] = useState(false);
+  const { brief, asks, busy, summarize } = useSlack();
   const [handled, setHandled] = useState<string[]>(() => stored<string[]>(HANDLED, []));
-  const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
-  const asks = snap.items.filter((r) => !r.deleted && r.source === 'slack' && r.status === 'suggested').length;
   const all = brief?.text ? needsYou(brief.text) : [];
   const keyOf = (x: { title: string; url: string | null }) => x.url ?? x.title;
   const items = all.filter((x) => !handled.includes(keyOf(x)));
@@ -114,13 +117,6 @@ export function SlackCard() {
     void store.capture(x.why ? `${x.title}: ${x.why}` : x.title, 'task', brief!.profile)
       .then((r) => x.url ? store.update(r, { text: x.url }) : undefined)
       .then(() => { hide(x); showSnack('Added to Tasks'); }, (err) => showSnack(`Could not add: ${errorText(err)}`));
-  };
-  const summarize = () => {
-    setBusy(true);
-    store.summarizeSlack().then(
-      (n) => showSnack(n ? `Summary ready, ${n} suggested ${n === 1 ? 'task' : 'tasks'}` : 'Summary ready'),
-      (err) => showSnack(`Summary failed: ${errorText(err)}`),
-    ).finally(() => setBusy(false));
   };
   return (
     <section>
