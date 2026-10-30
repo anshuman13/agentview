@@ -64,6 +64,11 @@ social, updates and forums). Messages and mail that ask me to act become suggest
 yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
 reply before taking it. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default).
 
+The same scan call writes a reply draft for each new ask, in my voice, 2 to 4 sentences in the language of the ask,
+kept in the item's `draft` column. For it the model reads the ask's thread and calls a local `ask_context` tool, which
+returns up to 3 current wiki claims and 3 meeting decisions of the last 30 days that share at least two key words
+with the ask. Nothing is sent: the ask row has Copy draft next to the source link. My own promises get no draft.
+
 Both scans also pick up my own promises ("I'll send it tomorrow") from what I wrote, as suggested tasks labelled
 "You said" with the link and a due date when I named one. Once a day the Gmail scan also looks at mail I sent in the
 last 14 days and keeps the threads where I asked something and nobody replied for 3 workdays, in one `briefs` row of

@@ -5,6 +5,7 @@ import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { DB_DIR } from './db.js';
+import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, run, saidId, webUrl } from './slack.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN, addWorkdays, inWeekHours, localDate, parseWhen } from './time.js';
@@ -37,6 +38,7 @@ const Ask = z.object({
   title: z.string().describe('Short imperative task for me'),
   quote: z.string().describe('The key sentence of the mail'),
   urgent: z.boolean().describe('True only if someone is blocked on me, there is a deadline today, or I was asked more than once'),
+  draft: z.string().optional().describe(DRAFT_DESC),
 });
 const Said = z.object({
   thread_id: z.string().describe('The Gmail thread id'),
@@ -72,7 +74,7 @@ export function saveMail(db: Database, r: MailScan, now = Date.now()) {
     const id = mailId(a.thread_id);
     if (has.get(PROFILE, id) || changes.some((c) => c.id === id)) continue;
     const link = threadUrl(a.thread_id, a.url);
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'gmail', source_url: link, people: a.from.trim(), at: null, status: 'suggested' } });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'gmail', source_url: link, people: a.from.trim(), at: null, status: 'suggested', draft: a.draft?.trim() || null } });
     added++;
     if (a.urgent) urgent.push({ ...a, id, link });
   }
@@ -161,6 +163,7 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
     'Add an ask only when a person wrote to me and clearly asks me to do, answer, review or decide something, and the newest message in the thread is not from me.',
     'Skip newsletters, notifications, receipts, calendar invites and replies, mailing lists, and anything sent by a system or a no-reply address. Skip mail older than the time above and anything already in my open asks.',
     'Use the thread id, and the thread viewUrl when the tool returns one.',
+    DRAFT_STEP,
     ...(open.length ? ['In answered, list thread ids of the open asks below that appear in my sent search.'] : []),
     `In said, add each new mail of mine that commits me to do something ("I'll send it tomorrow", "will get back to you"). Skip promises I kept later in the same thread. Today is ${localDate(now)}; set due only when I named a time.`,
     ...(daily ? ['In waiting, add threads from the unanswered search where the newest message is mine, it asks a person a question or for something, and nobody has replied since. Skip mail to systems, mailing lists and calendar replies.'] : []),
@@ -172,7 +175,7 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
     ...(waiting.length ? ['My waiting list:', ...waiting.map((w) => `- ${w.thread} ${w.to}: ${w.subject}`), ''] : []),
     'Then call save_mail exactly once and stop. Do not use the em dash character.',
   ].join('\n');
-  await run(prompt, 'haiku', [save], 30, () => saved != null, READ_TOOLS);
+  await run(prompt, 'haiku', [save, contextTool(db, now)], 30, () => saved != null, READ_TOOLS);
   if (!saved) throw new Error('Haiku did not save the mail scan');
   const r = saveMail(db, saved, now);
   const left = saveWaiting(db, (saved as MailScan).waiting ?? [], (saved as MailScan).replied ?? [], now);

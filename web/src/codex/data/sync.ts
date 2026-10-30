@@ -39,6 +39,7 @@ export type ItemFields = {
   rolls: number | null;
   rolled_from: number | null;
   rank: number | null;
+  draft?: string | null;
 };
 
 export type ItemRow = ItemFields & {

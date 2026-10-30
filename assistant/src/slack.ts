@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { DB_DIR } from './db.js';
+import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, parseWhen } from './time.js';
@@ -45,6 +46,7 @@ const Ask = z.object({
   title: z.string().describe('Short imperative task for me'),
   quote: z.string().describe('The key sentence of the message'),
   urgent: z.boolean().describe('True only if someone is blocked on me, there is a deadline today, an incident, or I was pinged more than once'),
+  draft: z.string().optional().describe(DRAFT_DESC),
 });
 // A commitment I made myself, like "I'll send it tomorrow".
 export const Said = z.object({
@@ -86,7 +88,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   for (const a of r.asks) {
     const id = askId(a.url);
     if (has.get(PROFILE, id)) continue;
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'suggested' } });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
     added++;
     if (a.urgent) urgent.push({ ...a, id });
   }
@@ -223,6 +225,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
     `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
     'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old.',
     'Add an ask only when a message clearly asks me to do, answer or decide something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
+    DRAFT_STEP,
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
     'In decisions, add each decision the new messages in the watched channels settle: a plan, owner, date, number or status the people there agreed on. Skip proposals, questions and chatter.',
@@ -239,7 +242,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
     '',
     'Then call save_scan exactly once and stop. Do not use the em dash character.',
   ].join('\n');
-  await run(prompt, 'haiku', [save], 40, () => saved != null);
+  await run(prompt, 'haiku', [save, contextTool(db, now)], 40, () => saved != null);
   if (!saved) throw new Error('Haiku did not save the scan');
   keepChannelIds(db, c, saved);
   const { added, urgent, said } = saveScan(db, saved, now);
