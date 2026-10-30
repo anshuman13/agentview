@@ -21,7 +21,7 @@ export function useActions() {
       stopFocusFor(r);
       const next = nextRepeat(r, Date.now(), store.snapshot().items);
       if (!next) return change(r, { status: 'done' }, 'Done');
-      const made = store.capture(`${next.title}\n${next.text}`, 'task', r.profile, next.at).catch(() => null);
+      const made = store.capture(`${next.title}\n${next.text}`, 'task', r.profile, next.at).catch((err) => (showSnack(`Next repeat not created: ${errorText(err)}`), null));
       void store.update(r, { status: 'done' });
       showSnack(`Done · next ${when(next.at)}`, () => {
         void store.update(r, { status: r.status });
