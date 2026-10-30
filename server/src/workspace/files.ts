@@ -90,8 +90,7 @@ export async function readFileWithOriginal(cwd: string, rel: string) {
   if (size > MAX_FILE) throw new Error(`File is ${Math.round(size / 1e6)} MB, too large to show`);
   if (IMAGES[path.extname(rel).slice(1).toLowerCase()]) return { path: rel, content: '', original: '', image: true };
   const head = Buffer.alloc(8192);
-  const handle = await open(abs);
-  const { bytesRead } = await handle.read(head, 0, head.length, 0).finally(() => handle.close());
+  const bytesRead = await open(abs).then((h) => h.read(head, 0, head.length, 0).finally(() => h.close())).then((r) => r.bytesRead, () => 0);
   if (head.subarray(0, bytesRead).includes(0)) return { path: rel, content: '', original: '', binary: true };
   const content = await readFile(abs, 'utf8').catch(() => '');
   const original = await git(path.dirname(abs), ['show', `HEAD:./${path.basename(abs)}`]).catch(() => '');
