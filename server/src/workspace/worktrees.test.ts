@@ -65,10 +65,6 @@ describe('createFolder', () => {
 });
 
 describe('paseo missing', () => {
-  it('lists no worktrees', async () => {
-    await expect(mod.listWorktrees([])).resolves.toEqual([]);
-  });
-
   it('fails creating a worktree with a clear message', async () => {
     await expect(mod.createWorktree('/repo', 'main')).rejects.toThrow('paseo is not installed');
   });

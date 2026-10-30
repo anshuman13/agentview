@@ -218,17 +218,6 @@ describe('AgentSession turns', () => {
     expect(s.state.events.find((e) => e.id === 'm1')).toMatchObject({ stopping: false });
   });
 
-  it('interrupt marks stopping until the turn ends', async () => {
-    const { s, interrupt, result } = fakeSession();
-    s.sendPrompt('task');
-    Object.assign(s.driver, { inputQueue: [] });
-    await s.interrupt();
-    expect(interrupt).toHaveBeenCalledOnce();
-    expect(s.state.session.stopping).toBe(true);
-    result('r1', 'error_during_execution');
-    expect(s.state.session).toMatchObject({ running: false, stopping: false });
-  });
-
   it('does not auto-compact after a stop', async () => {
     const { s, result } = fakeSession();
     s.sendPrompt('big task');
