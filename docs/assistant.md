@@ -59,6 +59,7 @@ every 15 minutes (DMs, mentions and the watched channels), Gmail every 30 minute
 social, updates and forums). Messages and mail that ask me to act become suggested tasks in Tasks under "Is this
 yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
 reply before taking it. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default).
+Scan slots follow the hub's local clock, so half hours start at :00 and :30 in any time zone.
 
 The same scan call writes a reply draft for each new ask, in my voice, 2 to 4 sentences in the language of the ask,
 kept in the item's `draft` column. For it the model reads the ask's thread and calls a local `ask_context` tool, which
@@ -88,7 +89,7 @@ device cannot send traffic as another one's address. The hub answers only NetBir
 peer (`pixel-9`, `macbook`, `macmini`) and records which device changed an item. Removing a device in the NetBird
 dashboard cuts it off. AgentView and the hub share this check (`server/src/http/access.ts`). The hub also refuses
 requests from web pages other than the phone app (an Origin or cross-site Sec-Fetch-Site header), so a page open in a
-browser on a peer cannot write to it.
+browser on a peer cannot write to it. A Host header that names neither this Mac nor a NetBird peer is refused too.
 
 The phone's copy is encrypted with an Android Keystore key behind fingerprint unlock. If that key is lost, the app
 resets the copy and downloads it again from the hub.
