@@ -98,8 +98,8 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
             {tabs.map((t) => (
               <span key={t.id} className={`term-tab${t.id === active ? ' on' : ''}`} onClick={() => pick(t.id)} title={t.name}>
                 <Icon name="terminal" small />
-                <span>{t.name}</span>
-                <button className="icon-btn" title="Kill terminal" onClick={(e) => { e.stopPropagation(); close(t.id).catch(() => notice('Could not close the terminal')); }}><Icon name="close" small /></button>
+                <button className="term-tab-name" aria-pressed={t.id === active}>{t.name}</button>
+                <button className="icon-btn" title="Kill terminal" aria-label={`Kill ${t.name}`} onClick={(e) => { e.stopPropagation(); close(t.id).catch(() => notice('Could not close the terminal')); }}><Icon name="close" small /></button>
               </span>
             ))}
             <button className="icon-btn" title="New terminal" onClick={() => add().catch(() => notice('Terminal unavailable'))}><Icon name="add" small /></button>
@@ -107,7 +107,9 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
             <button className="icon-btn" title={max ? 'Restore panel size' : 'Maximize panel size'} onClick={() => setMax((m) => !m)}><Icon name={max ? 'screen-normal' : 'screen-full'} small /></button>
           </span>
         )}
-        <Icon name={open ? 'chevron-down' : 'chevron-up'} small />
+        <button className="icon-btn term-toggle" aria-label="Terminal" aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+          <Icon name={open ? 'chevron-down' : 'chevron-up'} small />
+        </button>
       </div>
       {chat && tabs && (
         <div className="panel-body" hidden={!open}>

@@ -23,13 +23,14 @@
 @media (hover: hover) { .term-tab:hover { background: var(--hover); color: var(--fg); } }
 .term-tab.on { background: var(--accent-soft); color: var(--fg); }
 .term-tab .icon-btn { width: var(--size-xs); height: var(--size-xs); visibility: hidden; }
-.term-tab:hover .icon-btn, .term-tab.on .icon-btn { visibility: visible; }
+.term-tab:hover .icon-btn, .term-tab.on .icon-btn, .term-tab:focus-within .icon-btn { visibility: visible; }
+.term-tab .term-tab-name { padding: 0; border: 0; background: none; color: inherit; }
 .term-keys { display: none; }
 
 @media (max-width: 900px) {
   .workbench[data-tab='term'] .editor-group > :not(.panel) { display: none !important; }
   .workbench[data-tab='term'] .panel { flex: 1; height: auto !important; border-top: 0; }
-  .workbench[data-tab='term'] :is(.panel-sash, .panel-head > .codicon:last-child) { display: none; }
+  .workbench[data-tab='term'] :is(.panel-sash, .term-toggle) { display: none; }
   .workbench:not([data-tab='term']) .panel { display: none; }
   .panel-head { height: var(--touch); }
   .panel-body { flex-direction: column; padding: var(--sp-2) 0 0 var(--sp-4); }
