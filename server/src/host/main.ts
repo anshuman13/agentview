@@ -11,7 +11,7 @@ import { configDef } from '../agent/claude/mcp.js';
 import type { AgentSession } from '../session/session.js';
 import type { Cron } from '../agent/types.js';
 import { notifyAway, notifyStall, stallWatch } from '../integrations/notify.js';
-import { allowedFolder } from '../workspace/worktrees.js';
+import { allowedFolder } from '../workspace/files.js';
 import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ClientMessage, type LiveChat, type Repeat, type ServerMessage } from '../../../shared/protocol.js';
 import { chatCost } from '../../../shared/cost.js';

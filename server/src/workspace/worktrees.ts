@@ -1,23 +1,17 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import { listSessions } from '../agent/claude/sessions.js';
 import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
+import { ROOTS } from './files.js';
 
 const run = promisify(execFile);
 const paseoMissing = (err: unknown) => (err as { code?: string }).code === 'ENOENT' || /Executable not found|paseo is not installed/.test((err as Error)?.message ?? '');
 const notInstalled = (err: unknown): never => { throw paseoMissing(err) ? new Error('paseo is not installed') : err; };
 const paseo = (args: string[], timeout: number) => run('paseo', args, { timeout });
 const git = async (cwd: string, ...args: string[]) => (await run('git', ['-C', cwd, ...args])).stdout.trim();
-
-const home = os.homedir();
-export const ROOTS = (process.env.AGENTVIEW_ROOTS ?? '~/workspace:~/workspace_personal').split(':').filter(Boolean).map((r) => path.resolve(r.replace(/^~/, home)));
-const PASEO_TREES = path.join(home, '.paseo/worktrees');
-
-export const allowedFolder = (dir: string) => [...ROOTS, PASEO_TREES].some((r) => inside(dir, r) && dir !== r);
 
 export const parseBranch = (head: string) => head.replace(/^## (No commits yet on )?/, '').split('...')[0];
 

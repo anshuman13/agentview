@@ -1,11 +1,19 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
+import { inside } from '../../../shared/util.js';
 import { git } from './git.js';
 
 const exec = promisify(execFile);
 const HIDDEN = new Set(['node_modules', '.git', 'dist']);
+
+const home = os.homedir();
+export const ROOTS = (process.env.AGENTVIEW_ROOTS ?? '~/workspace:~/workspace_personal').split(':').filter(Boolean).map((r) => path.resolve(r.replace(/^~/, home)));
+const PASEO_TREES = path.join(home, '.paseo/worktrees');
+
+export const allowedFolder = (dir: string) => [...ROOTS, PASEO_TREES].some((r) => inside(dir, r) && dir !== r);
 
 export async function listFiles(cwd: string): Promise<string[]> {
   try {

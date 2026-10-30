@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parseObject } from '../http/body.js';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { ROOTS } from '../workspace/worktrees.js';
+import { ROOTS } from '../workspace/files.js';
 import { inside } from '../../../shared/util.js';
 import { allowedServers } from '../agent/claude/mcp.js';
 import { callTool, data, listTools, stop, text, type McpResult, type McpServerDef } from './mcpClient.js';

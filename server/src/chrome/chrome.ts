@@ -1,7 +1,6 @@
-import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
-import { chromeRunning, endpoint, failure, launchProfile, ownProfile } from './launch.js';
+import { chromeRunning, endpoint, failure, launchProfile, openMac, ownProfile } from './launch.js';
 
 export { chromeRunning, endpoint, ownProfile };
 
@@ -52,7 +51,7 @@ export function openInChrome(url: string) {
     return;
   }
   if (ownProfile()) return launchProfile(url);
-  execFile('open', process.platform === 'darwin' ? ['-a', 'Google Chrome', url] : [url], (err) => err && console.error('open in chrome:', err.message));
+  openMac('open in chrome', process.platform === 'darwin' ? ['-a', 'Google Chrome', url] : [url]);
 }
 
 const SETUP_PAGE = 'chrome://inspect/#remote-debugging';
@@ -60,7 +59,7 @@ const SETUP_PAGE = 'chrome://inspect/#remote-debugging';
 function setup() {
   fastUntil = Date.now() + 3 * 60_000;
   retryDelay = 1500;
-  const run = (...args: string[]) => execFile('open', args, (err) => err && console.error('chrome setup:', err.message));
+  const run = (...args: string[]) => openMac('chrome setup', args);
   if (ownProfile()) void chromeRunning().then((up) => up || launchProfile());
   else if (process.platform === 'darwin' && reason === 'nofda') {
     run('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles');

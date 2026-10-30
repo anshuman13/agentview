@@ -19,7 +19,7 @@ type Status = {
   tools?: { name: string; description?: string; annotations?: { readOnly?: boolean; destructive?: boolean } }[];
 };
 
-export const transport = (c: Config) => (c?.type === 'claudeai-proxy' ? 'claudeai' : c?.type ?? (c?.url ? 'http' : c?.command ? 'stdio' : undefined));
+export const transportName = (c: Config) => (c?.type === 'claudeai-proxy' ? 'claudeai' : c?.type ?? (c?.url ? 'http' : c?.command ? 'stdio' : undefined));
 const commandOf = (c: Config) => c?.url ?? (c?.command ? [c.command, ...(c.args ?? [])].join(' ') : undefined);
 const envOf = (c: Config) => (c?.env && Object.keys(c.env).length ? Object.keys(c.env) : undefined);
 
@@ -37,7 +37,7 @@ export function mcpFrom(list: Status[], toolNames: string[] = []): McpServer[] {
       name: s.name,
       status: s.status,
       scope: s.source ?? s.scope,
-      type: transport(s.config) ?? (s.scope === 'claudeai' ? 'claudeai' : undefined),
+      type: transportName(s.config) ?? (s.scope === 'claudeai' ? 'claudeai' : undefined),
       command: commandOf(s.config),
       env: envOf(s.config),
       version: s.serverInfo?.version,
@@ -50,7 +50,7 @@ export function mcpFrom(list: Status[], toolNames: string[] = []): McpServer[] {
 export const readConfigs = (cwd: string) => Promise.all([readJson<any>(path.join(os.homedir(), '.claude.json'), {}), readJson<any>(path.join(cwd, '.mcp.json'), {})]);
 
 export function configEntries(servers: Record<string, Config> | undefined, scope: McpConfigEntry['scope']): McpConfigEntry[] {
-  return Object.entries(servers ?? {}).map(([name, s]) => ({ name, scope, type: transport(s) ?? 'stdio', command: commandOf(s), env: envOf(s) }));
+  return Object.entries(servers ?? {}).map(([name, s]) => ({ name, scope, type: transportName(s) ?? 'stdio', command: commandOf(s), env: envOf(s) }));
 }
 
 export async function mcpConfig(cwd: string): Promise<McpConfigEntry[]> {
@@ -106,7 +106,7 @@ export async function inSettings(cwd: string, name: string) {
 
 export const authError = (msg: string) => /needs auth|HTTP 401|HTTP 403|unauthori[sz]ed/i.test(msg);
 
-const rowOf = (name: string, scope: string, def: McpServerDef) => ({ name, scope, type: transport(def), command: commandOf(def), env: envOf(def) });
+const rowOf = (name: string, scope: string, def: McpServerDef) => ({ name, scope, type: transportName(def), command: commandOf(def), env: envOf(def) });
 
 export async function probeOne(name: string, scope: string, def: McpServerDef, cwd?: string, run = probe): Promise<McpServer> {
   const base = rowOf(name, scope, def);
@@ -145,7 +145,7 @@ export async function mcpProbe(cwd: string, refresh = false): Promise<McpServer[
 }
 
 export async function mcpCall(cwd: string, name: string, def: McpServerDef, tool: string, args: Record<string, unknown>, run = callTool): Promise<{ text: string; isError: boolean } | { error: string }> {
-  const type = transport(def);
+  const type = transportName(def);
   if (type === 'claudeai' || type === 'sse') return { error: `${name} is ${type === 'sse' ? 'an SSE server' : 'a claude.ai connector'}, so the MCP tab cannot run its tools. Ask Claude to use it in the chat.` };
   const key = `call:${cwd}:${name}:${JSON.stringify(def)}`;
   try {

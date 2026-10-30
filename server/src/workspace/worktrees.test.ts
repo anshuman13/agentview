@@ -8,28 +8,30 @@ vi.mock('node:child_process', () => ({
 
 const home = os.homedir();
 let mod: typeof import('./worktrees.js');
+let files: typeof import('./files.js');
 
 beforeAll(async () => {
   process.env.AGENTVIEW_ROOTS = '~/work:/srv/code';
   mod = await import('./worktrees.js');
+  files = await import('./files.js');
 });
 
 describe('allowedFolder', () => {
   it('accepts folders inside a root or a Paseo worktree', () => {
-    expect(mod.allowedFolder(path.join(home, 'work/tienda'))).toBe(true);
-    expect(mod.allowedFolder('/srv/code/app/sub')).toBe(true);
-    expect(mod.allowedFolder(path.join(home, '.paseo/worktrees/abc123'))).toBe(true);
+    expect(files.allowedFolder(path.join(home, 'work/tienda'))).toBe(true);
+    expect(files.allowedFolder('/srv/code/app/sub')).toBe(true);
+    expect(files.allowedFolder(path.join(home, '.paseo/worktrees/abc123'))).toBe(true);
   });
 
   it('rejects the roots themselves and anything outside', () => {
-    expect(mod.allowedFolder(path.join(home, 'work'))).toBe(false);
-    expect(mod.allowedFolder('/etc')).toBe(false);
-    expect(mod.allowedFolder(home)).toBe(false);
+    expect(files.allowedFolder(path.join(home, 'work'))).toBe(false);
+    expect(files.allowedFolder('/etc')).toBe(false);
+    expect(files.allowedFolder(home)).toBe(false);
   });
 
   it('does not match a sibling folder that shares the prefix', () => {
-    expect(mod.allowedFolder(path.join(home, 'work-evil/repo'))).toBe(false);
-    expect(mod.allowedFolder('/srv/codex/repo')).toBe(false);
+    expect(files.allowedFolder(path.join(home, 'work-evil/repo'))).toBe(false);
+    expect(files.allowedFolder('/srv/codex/repo')).toBe(false);
   });
 });
 

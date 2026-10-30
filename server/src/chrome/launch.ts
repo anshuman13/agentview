@@ -42,6 +42,8 @@ export function chromeRunning() {
   return new Promise<boolean>((resolve) => execFile('pgrep', args, (err) => resolve(!err)));
 }
 
+export const openMac = (label: string, args: string[]) => execFile('open', args, (err) => err && console.error(`${label}:`, err.message));
+
 export function launchProfile(...urls: string[]) {
   const args = [
     '-na', 'Google Chrome', '--args', `--user-data-dir=${PROFILE}`, `--remote-debugging-port=${PROFILE_PORT}`,
@@ -49,7 +51,7 @@ export function launchProfile(...urls: string[]) {
     '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding',
     ...urls,
   ];
-  execFile('open', args, (err) => err && console.error('chrome profile:', err.message));
+  openMac('chrome profile', args);
 }
 
 export async function failure(err: NodeJS.ErrnoException) {
