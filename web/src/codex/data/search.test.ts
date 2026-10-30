@@ -17,7 +17,7 @@ const fact = (id: string, pageId: string | null, text: string, extra: Partial<Fa
 const job = (id: string, name: string, prompt: string): Job => ({ ...common(id), name, schedule: 'hourly', prompt, enabled: 1, next_run_at: null });
 
 const data = {
-  items: [item('i1', 'Send budget'), item('i2', 'Budget gone', { status: 'dismissed' }), item('i3', 'Other')],
+  items: [item('i1', 'Send budget'), item('i2', 'Budget gone', { status: 'dismissed' }), item('i4', 'Budget point', { status: 'point' }), item('i3', 'Other')],
   meetings: [meeting('m1', 'Planning', { summary: 'We agreed the budget is fixed' })],
   facts: [fact('f1', 'p1', 'Budget owner is Sam'), fact('f2', 'p1', 'Budget old', { superseded_by: 'f1' })],
   pages: [page('p1', 'Budget page')],
@@ -25,7 +25,7 @@ const data = {
 };
 
 describe('search', () => {
-  it('groups hits and skips dismissed, superseded and empty queries', () => {
+  it('groups hits and skips dismissed, points, superseded and empty queries', () => {
     const r = searchAll(data, 'budget');
     expect(r.tasks.hits.map((h) => h.id)).toEqual(['i1']);
     expect(r.meetings.hits.map((h) => h.id)).toEqual(['m1']);

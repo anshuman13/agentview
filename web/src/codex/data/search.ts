@@ -1,5 +1,6 @@
 import type { ItemRow } from './sync';
 import { snippet } from '../../../../shared/snippet';
+import { POINT, RAISED } from './points';
 import { live, rowMatcher, queryWords, searchMeetings, searchWiki, type Fact, type Job, type Meeting, type Page } from './wiki';
 
 export { snippet };
@@ -20,7 +21,7 @@ export function searchAll(data: SearchData, query: string): Results {
   const hitItem = rowMatcher<SearchData['items'][number]>(words, 'item', (r) => [r.title, r.text, r.people, r.source]);
   const hitJob = rowMatcher<Job>(words, 'job', (j) => [j.name, j.prompt]);
   const tasks = data.items
-    .filter((r) => !r.deleted && r.status !== 'dismissed' && hitItem(r))
+    .filter((r) => !r.deleted && !['dismissed', POINT, RAISED].includes(r.status ?? '') && hitItem(r))
     .map((r): Hit => ({ id: r.id, profile: r.profile, title: r.title || r.text || 'Untitled', snippet: snippet(words, r.text, r.people, r.source), page: r.meeting_id }));
   const meetings = searchMeetings(live(data.meetings), query)
     .sort((a, b) => (b.starts_at ?? 0) - (a.starts_at ?? 0))
