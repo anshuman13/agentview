@@ -18,6 +18,8 @@ const day = (t: number) => {
   const d = new Date(t);
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
 };
+// Local midnight of the day of t, or of a later day, in epoch seconds: Gmail reads after:/before: dates as midnight Pacific.
+const dayStart = (t: number, days = 0) => Math.floor(new Date(t).setHours(24 * days, 0, 0, 0) / 1000);
 
 // Kept outside the repo in ~/.agentview/assistant/gmail.json: my address, and the hours pushes may go out.
 export type GmailConfig = { me: string; push?: { from: number; to: number } };
@@ -157,7 +159,7 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
     `I am ${c.me}. Read what is new in my Gmail inbox since ${new Date(since).toISOString()}. Only read: never send, reply, draft, label, archive or trash anything.`,
     `1. search_threads with query "in:inbox after:${unix} -category:promotions -category:social -category:updates -category:forums", view THREAD_VIEW_SUMMARY, pageSize 30.`,
     `2. search_threads with query "from:me after:${unix}", view THREAD_VIEW_SUMMARY, pageSize 30, to see what I wrote and which threads I replied to.`,
-    ...(daily ? [`3. search_threads with query "from:me after:${day(now - 14 * DAY)} before:${day(addWorkdays(now, -WAIT_WORKDAYS) + DAY)}", view THREAD_VIEW_SUMMARY, pageSize 50, for unanswered mail.`] : []),
+    ...(daily ? [`3. search_threads with query "from:me after:${dayStart(now - 14 * DAY)} before:${dayStart(addWorkdays(now, -WAIT_WORKDAYS), 1)}", view THREAD_VIEW_SUMMARY, pageSize 50, for unanswered mail.`] : []),
     'Make these searches in parallel in one turn. Read a thread with get_thread, messageFormat PLAIN_TEXT, only when the summary is not enough to tell whether it asks something of me or what I promised.',
     '',
     'Add an ask only when a person wrote to me and clearly asks me to do, answer, review or decide something, and the newest message in the thread is not from me.',
