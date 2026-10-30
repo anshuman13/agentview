@@ -28,7 +28,7 @@ export function Person({ name }: { name: string }) {
   const now = Date.now();
   const copy = () => {
     const resolved = resolvedQuestions();
-    const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), pins, meetings: mine, claims });
+    const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), points, pins, meetings: mine, claims });
     copyText(text);
   };
   return (

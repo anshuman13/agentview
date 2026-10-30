@@ -58,11 +58,12 @@ describe('personMarkdown', () => {
     const md = personMarkdown('Ada Lovelace', {
       commitments: [{ what: 'draft the spec', meeting: m }],
       questions: [{ text: 'Who owns billing?' } as Question],
+      points: [action('Ask about the offsite', 'point')],
       pins: [],
       meetings: [m],
       claims: [],
     });
-    expect(md).toBe('# Ada Lovelace\n\n## Commitments\n\n- draft the spec (Planning)\n\n## Open questions\n\n- Who owns billing?\n\n## Meetings\n\n- Planning (2026-10-29)\n');
+    expect(md).toBe('# Ada Lovelace\n\n## Commitments\n\n- draft the spec (Planning)\n\n## Open questions\n\n- Who owns billing?\n\n## To raise\n\n- Ask about the offsite\n\n## Meetings\n\n- Planning (2026-10-29)\n');
   });
 });
 

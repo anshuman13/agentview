@@ -35,6 +35,7 @@ export function decisionsMarkdown(rows: Decision[]) {
 export type PersonParts = {
   commitments: { what: string; meeting: Meeting }[];
   questions: Question[];
+  points: ItemRow[];
   pins: ItemRow[];
   meetings: Meeting[];
   claims: { text?: string | null }[];
@@ -44,6 +45,7 @@ export function personMarkdown(name: string, parts: PersonParts) {
   const sections: [string, string[]][] = [
     ['Commitments', parts.commitments.map((c) => `${c.what} (${c.meeting.title ?? 'Meeting'})`)],
     ['Open questions', parts.questions.map((q) => q.text)],
+    ['To raise', parts.points.map((p) => p.title ?? '')],
     ['Pinned', parts.pins.map((p) => p.text?.trim() || p.title || '')],
     ['Meetings', parts.meetings.map((m) => `${m.title ?? 'Meeting'}${dateOf(m) ? ` (${dateOf(m)})` : ''}`)],
     ['In the wiki', parts.claims.map((c) => c.text ?? '')],
