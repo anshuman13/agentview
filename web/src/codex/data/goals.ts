@@ -1,7 +1,7 @@
 import { atTime } from './engine';
 import { parseTimes, type ItemRow, type Profile } from './sync';
 
-// A weekly goal is an item with status 'goal' whose at is the Monday 00:00 of its week; a task links to one by its goal field.
+// A weekly goal is an item with status 'goal' whose at is a time in its week, stored as that week's Monday 00:00; a task links to one by its goal field.
 export const GOAL = 'goal';
 export const MAX_GOALS = 3;
 
@@ -12,10 +12,15 @@ export function weekStart(now: number) {
 
 const madeAt = (r: ItemRow) => parseTimes(r.field_times).source ?? r.updated_at;
 
-export const goalsOf = (items: ItemRow[], now: number, profile?: Profile) =>
-  items
-    .filter((r) => !r.deleted && r.status === GOAL && atTime(r.at) === weekStart(now) && (!profile || r.profile === profile))
+export function goalsOf(items: ItemRow[], now: number, profile?: Profile) {
+  const start = weekStart(now);
+  const d = new Date(start);
+  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7).getTime();
+  const inWeek = (at: number | null) => at != null && at >= start && at < end;
+  return items
+    .filter((r) => !r.deleted && r.status === GOAL && inWeek(atTime(r.at)) && (!profile || r.profile === profile))
     .sort((a, b) => madeAt(a) - madeAt(b));
+}
 
 export const linkedTo = (items: ItemRow[], goal: ItemRow) =>
   items.filter((r) => !r.deleted && r.profile === goal.profile && r.goal === goal.id && (r.status === 'open' || r.status === 'done'));

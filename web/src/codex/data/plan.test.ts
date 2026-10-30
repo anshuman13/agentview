@@ -79,6 +79,9 @@ describe('weekly goals', () => {
     const goal = item('Ship beta', { status: 'goal', at: new Date(2026, 9, 26).getTime() });
     const items = [goal, item('Write tests', { goal: goal.id, status: 'done' }), item('Fix login', { goal: goal.id }), item('Tidy inbox', {})];
     expect(goalsOf(items, at(10))).toEqual([goal]);
+    const shifted = item('Other zone', { status: 'goal', at: new Date(2026, 9, 26, 9).getTime() });
+    const nextWeek = item('Next week', { status: 'goal', at: new Date(2026, 10, 2).getTime() });
+    expect(goalsOf([goal, shifted, nextWeek], at(10))).toEqual([goal, shifted]);
     expect(goalProgress(items, goal)).toEqual({ done: 1, total: 2 });
     const tasks = [{ title: 'Tidy inbox', due: at(11) }, { title: 'Fix login', due: null, goal: true }];
     expect(packDay(tasks, [[at(10), at(10, 30)]]).map((p) => p.task.title)).toEqual(['Fix login']);
