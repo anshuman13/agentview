@@ -35,12 +35,21 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 type Load<T> = { data: T | null; error: string; busy: boolean };
 
+// The latest request per Load state; an older answer that lands later is dropped.
+const latest = new WeakMap<object, number>();
+const bump = (set: object) => {
+  const n = (latest.get(set) ?? 0) + 1;
+  latest.set(set, n);
+  return n;
+};
+
 // Mirrors a request into a Load state: busy while it runs, then data or error.
 function track<T>(set: (l: Load<T>) => void, request: () => Promise<T>) {
+  const n = bump(set);
   set({ data: null, error: '', busy: true });
   request().then(
-    (data) => set({ data, error: '', busy: false }),
-    (e) => set({ data: null, error: message(e), busy: false }),
+    (data) => latest.get(set) === n && set({ data, error: '', busy: false }),
+    (e) => latest.get(set) === n && set({ data: null, error: message(e), busy: false }),
   );
 }
 
@@ -210,6 +219,7 @@ function Picker({ kind, parent, value, onPick, enabled }: { kind: 'database' | '
   const [list, setList] = useState<Load<SnowflakeObjects>>({ data: null, error: '', busy: false });
   const load = () => track(setList, () => getJson<SnowflakeObjects>(api(`/api/observe/snowflake/objects?kind=${kind}&${parent}`)));
   useEffect(() => {
+    bump(setList);
     setList({ data: null, error: '', busy: false });
   }, [parent]);
   return (
