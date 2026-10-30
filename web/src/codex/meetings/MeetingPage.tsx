@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
@@ -10,7 +10,7 @@ import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, meetingState, people
 import { clock, when } from '../time';
 import { errorText } from '../data/engine';
 import { Icon } from '../../ui/Icon';
-import { fitHeight, plural, safeHref } from '../../ui/util';
+import { plural, safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
 import { copyText, meetingKey, setView, showSnack, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
@@ -20,6 +20,7 @@ import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
 import { RaiseWith } from './Raise';
 import { recentPeople } from '../data/points';
+import { MeetingNotes } from './MeetingNotes';
 import { Series } from './Series';
 import { useSnackTask } from './useSnackTask';
 import { talkTime } from '../data/talkTime';
@@ -102,49 +103,6 @@ function AddAction({ m }: { m: Meeting }) {
       <input value={text} placeholder="Add an action, like “send the slides friday”" aria-label="Add an action" onChange={(e) => setText(e.target.value)} />
       <Voice onText={dictate} />
     </form>
-  );
-}
-
-const SAVE_AFTER = 800;
-
-// Saves while you type, and before the page hides or the meeting closes; takes synced notes while the field is not focused.
-function Notes({ m }: { m: Meeting }) {
-  const { store } = useCodex();
-  const [text, setText] = useState(m.notes ?? '');
-  const area = useRef<HTMLTextAreaElement>(null);
-  const row = useRef(m);
-  row.current = m;
-  const pending = useRef<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const flush = useCallback(() => {
-    clearTimeout(timer.current);
-    const t = pending.current;
-    pending.current = null;
-    if (t !== null && t !== (row.current.notes ?? '')) void store.editRow('meetings', row.current, { notes: t });
-  }, [store]);
-  useEffect(() => {
-    const hidden = () => document.visibilityState === 'hidden' && flush();
-    document.addEventListener('visibilitychange', hidden);
-    window.addEventListener('pagehide', flush);
-    return () => {
-      document.removeEventListener('visibilitychange', hidden);
-      window.removeEventListener('pagehide', flush);
-      flush();
-    };
-  }, [flush]);
-  useEffect(() => {
-    if (pending.current === null && document.activeElement !== area.current) setText(m.notes ?? '');
-  }, [m.notes]);
-  useEffect(() => fitHeight(area.current), [text]);
-  const change = (value: string) => {
-    setText(value);
-    pending.current = value;
-    clearTimeout(timer.current);
-    timer.current = setTimeout(flush, SAVE_AFTER);
-  };
-  return (
-    <textarea ref={area} className="mt-notes" value={text} rows={2} placeholder="Write your notes. They stay yours; the summary is written separately."
-      onChange={(e) => change(e.target.value)} onBlur={() => { const typed = pending.current !== null; flush(); if (!typed) setText(row.current.notes ?? ''); }} />
   );
 }
 
@@ -338,7 +296,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           <section className="mt-sec">
             <h2>My notes</h2>
-            <Notes key={meetingKey(m)} m={m} />
+            <MeetingNotes key={meetingKey(m)} m={m} />
           </section>
 
           <Fold title="Unassigned" count={count.unassigned}>
