@@ -32,6 +32,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const [typed, setTyped] = useState<string | null>(null);
   const [snoozing, setSnoozing] = useState(false);
   const [tidying, setTidying] = useState(false);
+  const [logging, setLogging] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -71,6 +72,8 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     saved.current = { ...saved.current, title: next };
     write({ title: next });
   };
+
+  const logTime = (n: number) => write({ spent: (Number(row.spent) || 0) + n });
 
   useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text]);
   // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
@@ -182,7 +185,12 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         ) : row.source && row.source !== 'capture' && <span className="as-chip static"><Icon name={src.icon} small /> {src.label}</span>}
         {row.people && <span className="as-chip static">{row.people}</span>}
         {suggested != null && <button className="as-chip quiet" title="Add this estimate, from similar done tasks" onClick={() => addEstimate(suggested)}><Icon name="add" small /> ~{minutesText(suggested)}</button>}
-        {Number(row.spent) > 0 && <span className="as-chip static" title="Time spent"><Icon name="watch" small /> {minutesText(Number(row.spent))}</span>}
+        {(row.status === 'open' || row.status === 'done') && (
+          <button className={`as-chip${Number(row.spent) > 0 ? '' : ' quiet'}`} title={Number(row.spent) > 0 ? 'Time spent, tap to log more' : 'Log time'} aria-expanded={logging} onClick={() => setLogging(!logging)}>
+            <Icon name="watch" small /> {Number(row.spent) > 0 ? minutesText(Number(row.spent)) : 'Log time'}
+          </button>
+        )}
+        {logging && [15, 30, 60].map((n) => <button key={n} className="as-chip" title={`Add ${minutesText(n)} spent`} onClick={() => logTime(n)}><Icon name="add" small /> {minutesText(n)}</button>)}
         {(row.status === 'open' || row.status === 'done') && <GoalPick row={row} onPick={(goal) => act.edit(row, { goal })} />}
         <span className="as-edit-ago">{ago(row.updated_at, ' ago')}</span>
       </div>
