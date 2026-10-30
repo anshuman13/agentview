@@ -19,8 +19,6 @@ so a power cut, an outage or a reboot at home only pauses scans and sync.
 
 - Bun with `bun:sqlite`, one database file, in the `assistant/` workspace of this repo
 - Sync: every row carries a version; clients push their changes and pull "changes since N"; last edit wins per field
-- Search: SQLite FTS5 for keywords, plus embeddings from a small local multilingual model (Norwegian and English),
-  compared in memory
 - Backups: `VACUUM INTO` a dated file, copied nightly to the laptop, plus Time Machine
 
 ## Profiles and accounts
@@ -49,12 +47,10 @@ sides run on the personal account.
 | slack_decisions | Decisions the Slack scan saw in watched channels, with channel, permalink and time; hub only, kept 14 days, read by the wiki update pass |
 | transcripts | The Gemini transcript text of each summarized meeting, kept on the hub only (not synced; the apps search it and read it through the hub) |
 | actions | Proposed Slack messages, Linear issues and tasks from a meeting, approved or rejected in Codex |
-| people | One row per person, with Slack id, emails and calendar names merged |
-| links | Item to person and item to item |
-| embeddings | Vector per item and fact |
 | jobs, runs | Scheduled jobs and their run history |
-
-Raw Slack and mail text is kept for 90 days; tasks, notes and facts stay.
+| chats | Slack channels and DMs the scan read, each with a running summary |
+| briefs | Morning briefs (kind `morning`), Slack summaries (`slack`) and the unanswered sent mail list (`waiting`) |
+| people, links, embeddings | Planned: people merged across sources, item links and vectors; nothing fills them yet |
 
 ## Slack and Gmail scans
 
