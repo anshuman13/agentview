@@ -66,13 +66,15 @@ export function dueMeetings(db: Database, profile: Profile, now = Date.now()): P
 // An import stopped by the usage limit only delays the next try and does not count.
 export function markTried(db: Database, profile: Profile, meetings: Pending[], now = Date.now(), failed = false) {
   const set = db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
-  const changes: Change[] = [];
-  for (const m of meetings) {
-    const count = triesOf(db, profile, m.id)[0] + (failed ? 0 : 1);
-    set.run(tried(profile, m.id), `${count},${now}`);
-    if (!failed) changes.push({ table: 'meetings', id: m.id, profile, updated_at: now, fields: { transcript: count >= TRIES ? 'missing' : 'waiting', tries: count } });
-  }
-  applyChanges(db, changes);
+  db.transaction(() => {
+    const changes: Change[] = [];
+    for (const m of meetings) {
+      const count = triesOf(db, profile, m.id)[0] + (failed ? 0 : 1);
+      set.run(tried(profile, m.id), `${count},${now}`);
+      if (!failed) changes.push({ table: 'meetings', id: m.id, profile, updated_at: now, fields: { transcript: count >= TRIES ? 'missing' : 'waiting', tries: count } });
+    }
+    applyChanges(db, changes);
+  })();
 }
 
 export const actionId = (meeting: string, title: string) => `meet:${createHash('sha1').update(`${meeting}\n${title.trim().toLowerCase()}`).digest('hex').slice(0, 16)}`;

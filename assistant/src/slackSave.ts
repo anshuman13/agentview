@@ -91,8 +91,10 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     texts.set(d.id, `${text ? `${text}\n\n` : ''}${d.from} on Slack: ${d.note.trim()} ${d.url}`);
   }
   for (const [id, text] of texts) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { text } });
-  applyChanges(db, changes);
-  saveDecisions(db, r.decisions ?? [], now);
+  db.transaction(() => {
+    applyChanges(db, changes);
+    saveDecisions(db, r.decisions ?? [], now);
+  })();
   return { added, urgent, said };
 }
 

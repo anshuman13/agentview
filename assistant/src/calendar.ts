@@ -49,10 +49,14 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
   const stale = db.prepare("SELECT id FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND starts_at >= ? AND starts_at < ? AND (notes IS NULL OR notes = '') AND (summary IS NULL OR summary = '')").all(profile, from, to) as { id: string }[];
   const gone = events.length ? stale.filter(({ id }) => !kept.has(id)).map(({ id }) => id) : [];
   for (const id of gone) changes.push({ table: 'meetings', id, profile, updated_at: now, deleted: true, fields: {} });
-  const applied = applyChanges(db, changes).applied;
-  for (const id of back) db.prepare('DELETE FROM meta WHERE key = ?').run(sweptKey(id));
-  for (const id of gone) db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(sweptKey(id), String(now));
-  return applied;
+  const unswept = db.prepare('DELETE FROM meta WHERE key = ?');
+  const sweep = db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
+  return db.transaction(() => {
+    const applied = applyChanges(db, changes).applied;
+    for (const id of back) unswept.run(sweptKey(id));
+    for (const id of gone) sweep.run(sweptKey(id), String(now));
+    return applied;
+  })();
 }
 
 export async function importCalendar(db: Database, profile: Profile, now = Date.now()) {
