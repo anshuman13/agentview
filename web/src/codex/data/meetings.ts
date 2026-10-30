@@ -75,7 +75,7 @@ export const peopleOf = (m: Meeting) => {
   let people = attendees.get(m);
   if (!people) {
     const s = typeof m.people === 'string' ? m.people : '';
-    people = (s.startsWith('[') ? listOf(s) : s.split(',')).map((p) => p.trim()).filter(Boolean);
+    people = [...new Set((s.startsWith('[') ? listOf(s) : s.split(',')).map((p) => p.trim()).filter(Boolean))];
     attendees.set(m, people);
   }
   return people;
