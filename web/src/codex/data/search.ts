@@ -1,7 +1,8 @@
 import type { ItemRow } from './sync';
 import { snippet } from '../../../../shared/snippet';
 import { POINT, RAISED } from './points';
-import { live, rowMatcher, queryWords, searchMeetings, searchWiki, type Fact, type Job, type Meeting, type Page } from './wiki';
+import { live, rowMatcher, queryWords, searchWiki, type Fact, type Job, type Meeting, type Page } from './wiki';
+import { searchMeetings } from './meetings';
 
 export { snippet };
 

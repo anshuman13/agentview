@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
-import { actionsOf, followThrough, live, type Meeting } from './data/wiki';
+import { live, type Meeting } from './data/wiki';
+import { actionsOf, followThrough } from './data/meetings';
 import { followUpText } from './data/meetingMarkdown';
 import { meetingTimeLeft, sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';

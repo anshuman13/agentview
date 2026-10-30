@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actionCount, actionCounts } from './wiki';
+import { actionCount, actionCounts } from './meetings';
 import type { ItemRow } from './sync';
 
 const STATUS = ['open', 'done', 'suggested', 'unassigned', 'dismissed', null];

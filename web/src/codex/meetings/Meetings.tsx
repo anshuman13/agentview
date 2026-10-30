@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { Guard } from '../../app/Guard';
 import { useCodex } from '../data';
-import { live, peopleOf } from '../data/wiki';
+import { live } from '../data/wiki';
+import { peopleOf } from '../data/meetings';
 import { meetingKey, useView } from '../view';
 import { MeetingsList } from './MeetingList';
 

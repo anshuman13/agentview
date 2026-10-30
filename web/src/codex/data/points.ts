@@ -1,5 +1,6 @@
 import { parseTimes, type ItemRow, type Profile } from './sync';
-import { live, othersOf, peopleOf, sameName, type Meeting } from './wiki';
+import { live, othersOf, type Meeting } from './wiki';
+import { peopleOf, sameName } from './meetings';
 
 // A point to raise is an item with status 'point' naming one person; ticked off or past its meeting it becomes 'raised'.
 export const POINT = 'point';

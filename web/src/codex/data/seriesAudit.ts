@@ -1,5 +1,6 @@
 import { isAllDay } from './load';
-import { listOf, live, seriesTitle, type Meeting } from './wiki';
+import { listOf, live, type Meeting } from './wiki';
+import { seriesTitle } from './meetings';
 import type { ItemRow } from './sync';
 
 const HOUR = 3600_000;

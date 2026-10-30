@@ -1,6 +1,7 @@
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
-import { listOf, othersOf, peopleOf, type Decision, type Meeting, type Question } from './wiki';
+import { listOf, othersOf, type Decision, type Meeting } from './wiki';
+import { peopleOf, type Question } from './meetings';
 
 const mine = (actions: ItemRow[]) => actions.filter((a) => a.status === 'open' || a.status === 'done');
 const ymd = (t: number) => {

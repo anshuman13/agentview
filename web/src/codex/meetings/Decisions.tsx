@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../ui/Icon';
 import { decisionsMarkdown } from '../data/meetingMarkdown';
-import { decisionLog, decisionsWith, peopleOf, type Meeting } from '../data/wiki';
+import { decisionLog, type Meeting } from '../data/wiki';
+import { decisionsWith, peopleOf } from '../data/meetings';
 import { when } from '../time';
 import { copyText, openMeeting } from '../view';
 

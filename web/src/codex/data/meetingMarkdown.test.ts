@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { agendaMarkdown, decisionsMarkdown, draftFor, followUpText, personMarkdown, toMarkdown } from './meetingMarkdown';
 import type { ItemRow } from './sync';
-import type { Decision, Meeting, Question } from './wiki';
+import type { Decision, Meeting } from './wiki';
+import type { Question } from './meetings';
 
 const meeting = (over: Partial<Meeting> = {}) =>
   ({ id: 'm1', profile: 'work', title: 'Planning', starts_at: Date.UTC(2026, 9, 29, 10), people: JSON.stringify(['Ada Lovelace', 'Grace Hopper']), summary: 'We planned the quarter.', decisions: JSON.stringify(['Ship in November']), others: JSON.stringify([{ who: 'Grace Hopper', what: 'draft the spec' }]), ...over }) as unknown as Meeting;

@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { personMarkdown } from '../data/meetingMarkdown';
-import { claimsMentioning, commitmentsOf, meetingsOf, openQuestions, pinsOf, questionKey } from '../data/wiki';
+import { claimsMentioning } from '../data/wiki';
+import { commitmentsOf, meetingsOf, openQuestions, pinsOf, questionKey } from '../data/meetings';
 import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
 import { copyText, openMeeting, setView, useEscapeBack } from '../view';

@@ -1,5 +1,6 @@
 import { isBlock } from '../../../../shared/util';
-import { decisionLog, factTime, live, openQuestions, peopleOf, questionKey, seriesTitle, type Fact, type Meeting } from './wiki';
+import { decisionLog, factTime, live, type Fact, type Meeting } from './wiki';
+import { openQuestions, peopleOf, questionKey, seriesTitle } from './meetings';
 import { statusTime } from './engine';
 import type { ItemRow } from './sync';
 

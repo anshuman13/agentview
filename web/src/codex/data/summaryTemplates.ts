@@ -1,4 +1,5 @@
-import { peopleOf, seriesTitle, type Meeting } from './wiki';
+import { type Meeting } from './wiki';
+import { peopleOf, seriesTitle } from './meetings';
 import { save, stored } from '../../ui/util';
 
 export const SUMMARY_TEMPLATES = {
