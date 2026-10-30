@@ -1,6 +1,7 @@
 import { api, notice } from '../app/store';
 import { fetchJson } from '../app/api';
 import { showChat } from '../ui/util';
+import { errText } from '../../../shared/util';
 import type { Call } from './mcpHelpers';
 
 export const insert = (text: string) => {
@@ -18,7 +19,7 @@ export async function share(lead: string, text: string, file: string) {
     const body = await fetchJson<{ path: string }>(api(`/api/paste?name=${encodeURIComponent(file)}`), { method: 'POST', headers: { 'content-type': 'text/plain' }, body: text });
     insert(`${lead}: [File: ${body.path}] `);
   } catch (err) {
-    notice(`Could not attach the result: ${err instanceof Error ? err.message : String(err)}`);
+    notice(`Could not attach the result: ${errText(err)}`);
   }
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { CheckState, PullRequest } from '../../../shared/protocol';
+import { errText } from '../../../shared/util';
 import { api, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 
@@ -12,8 +13,6 @@ const setList = (p: Partial<List>) => {
 };
 const subscribe = (f: () => void) => (subs.add(f), () => void subs.delete(f));
 export const useList = () => useSyncExternalStore(subscribe, () => list);
-
-export const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export async function call<T>(path: string, body?: object): Promise<T> {
   const r = await fetch(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
@@ -33,7 +32,7 @@ export async function load(cwd: string, fresh = false) {
     const prs = await call<PullRequest[]>(`/api/gh/prs${fresh ? '?fresh=1' : ''}`);
     if (req === latest) setList({ prs, error: '', loading: false });
   } catch (e) {
-    if (req === latest) setList({ prs: [], error: message(e), loading: false });
+    if (req === latest) setList({ prs: [], error: errText(e), loading: false });
   } finally {
     if (req === latest) inflight = '';
   }

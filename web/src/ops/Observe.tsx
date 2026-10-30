@@ -15,7 +15,7 @@ import { api, useStore } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
 import { askClaude, clickOnKey } from '../ui/util';
 import { Icon } from '../ui/Icon';
-import { message } from './pulls';
+import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
 
 const post = <T,>(url: string, body: unknown) => fetchJson<T>(api(url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -41,7 +41,7 @@ function track<T>(set: (l: Load<T>) => void, request: () => Promise<T>) {
   set({ data: null, error: '', busy: true });
   request().then(
     (data) => latest.get(set) === n && set({ data, error: '', busy: false }),
-    (e) => latest.get(set) === n && set({ data: null, error: message(e), busy: false }),
+    (e) => latest.get(set) === n && set({ data: null, error: errText(e), busy: false }),
   );
 }
 
@@ -254,7 +254,7 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
       onInfo(await post<ObserveInfo>('/api/observe/snowflake/config', { snowflake: rest }));
       setSaveMsg('Saved');
     } catch (e) {
-      setSaveMsg(message(e));
+      setSaveMsg(errText(e));
     }
   };
 
@@ -401,7 +401,7 @@ export function Observe() {
       show(await post<ObserveInfo>('/api/observe/config', { repo: info.repo, config }));
       setSaveMsg('Saved');
     } catch (e) {
-      setSaveMsg(message(e));
+      setSaveMsg(errText(e));
     }
   };
 

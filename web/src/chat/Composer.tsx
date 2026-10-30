@@ -8,6 +8,7 @@ import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
 import { Hl, wsUrl, plural, save, storedStrings } from '../ui/util';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
+import { errText } from '../../../shared/util';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
 import { accept, addUse, append, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
@@ -160,7 +161,7 @@ export function Composer() {
         const body = await uploadPaste(f);
         setText((t) => append(t, `[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `));
       } catch (err) {
-        notice(`Could not attach ${f.name || 'the file'}: ${err instanceof Error ? err.message : String(err)}`);
+        notice(`Could not attach ${f.name || 'the file'}: ${errText(err)}`);
       }
     }
     ta.current?.focus();

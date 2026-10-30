@@ -4,9 +4,10 @@ import { Icon } from '../ui/Icon';
 import { Block, Findings } from './Findings';
 import { Markdown } from '../chat/Chat';
 import { FileIcon } from '../workspace/FileIcon';
-import { CheckIcon, Counts, StateChip, call, load, message, setViewOpen, useList } from './pulls';
+import { CheckIcon, Counts, StateChip, call, load, setViewOpen, useList } from './pulls';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { PullRequest, PullRequestDetail } from '../../../shared/protocol';
+import { errText } from '../../../shared/util';
 import { ago, askClaude, pressable } from '../ui/util';
 import { Skeleton } from '../ui/Skeleton';
 
@@ -218,7 +219,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const diffs = useMemo(() => splitDiff(d?.diff ?? ''), [d?.diff]);
 
-  const fetchDetail = () => call<PullRequestDetail>(`/api/gh/pr/${pr.number}`).then(setD, (e) => setError(message(e)));
+  const fetchDetail = () => call<PullRequestDetail>(`/api/gh/pr/${pr.number}`).then(setD, (e) => setError(errText(e)));
   useEffect(() => void fetchDetail(), []);
 
   const act: Act = async (label, path, body) => {
@@ -229,7 +230,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
       await Promise.all([fetchDetail(), load(cwd, true)]);
       return true;
     } catch (e) {
-      setError(message(e));
+      setError(errText(e));
       return false;
     } finally {
       setBusy('');

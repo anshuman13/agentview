@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { GitFile, GitStatus } from '../../../shared/protocol';
+import { errText } from '../../../shared/util';
 import { api, setUi, useStore } from '../app/store';
 import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
@@ -111,7 +112,7 @@ export function Changes() {
       await fetchJson(api(`/api/git/${action}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       return true;
     } catch (err) {
-      setFailed(err instanceof Error ? err.message : String(err));
+      setFailed(errText(err));
       return false;
     } finally {
       void refresh();
