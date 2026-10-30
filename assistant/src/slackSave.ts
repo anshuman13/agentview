@@ -57,11 +57,12 @@ export const askId = (url: string) => `slack:${createHash('sha1').update(url).di
 export const saidId = (id: string) => `said:${id}`;
 
 // Saves one scan: chat summaries, asks and my promises as items to review, new details on tasks and channel decisions, and
-// closes asks I have replied to. Returns how many asks and promises are new and which asks are urgent.
+// closes asks I have replied to. Returns how many messages were read, how many asks and promises are new and which asks are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
   // A chat with nothing new keeps its running summary; one without an id is dropped.
   const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0 && c.id.trim()).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now, waiting: c.kind === 'dm' ? (c.waiting ? 1 : 0) : null } }));
+  const messages = changes.reduce((n, c) => n + (c.table === 'chats' ? (r.chats.find((x) => x.id === c.id)?.new_messages ?? 0) : 0), 0);
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
   let added = 0;
   for (const a of r.asks) {
@@ -108,7 +109,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     applyChanges(db, changes);
     saveDecisions(db, r.decisions ?? [], now);
   })();
-  return { added, urgent, said };
+  return { added, urgent, said, messages };
 }
 
 // Channel decisions with a web permalink are kept once per permalink for wiki updates, so a re-worded one is not looked at again; ones older than two weeks are dropped.

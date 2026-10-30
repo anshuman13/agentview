@@ -1,11 +1,25 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
-import { scanDue } from './slack.js';
+import { scanDue, scanPrompt } from './slack.js';
 import { acceptAsk, askId, saveScan } from './slackSave.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
 const ask = (url: string, urgent = false) => ({ url, from: 'Kim', chat: '#ai', title: 'Answer Kim', quote: 'Can you check?', urgent });
 const item = (db: ReturnType<typeof openDb>, url: string) => db.prepare('SELECT status, source, people FROM items WHERE id = ?').get(askId(url)) as { status: string; source: string; people: string } | null;
+
+describe('scan prompt and counts', () => {
+  test('lists recently closed asks and counts messages read', () => {
+    const db = openDb(':memory:');
+    const r = saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.', new_messages: 4 }, { id: 'C2', name: '#x', kind: 'channel', summary: 'Quiet.', new_messages: 0 }, { id: 'D1', name: 'Kim', kind: 'dm', summary: 'Hi.', new_messages: 2 }], asks: [ask('u1'), ask('u2')], answered: [] }, at(27, 10));
+    expect(r.messages).toBe(6);
+    saveScan(db, { chats: [], asks: [], answered: ['u1'] }, at(27, 11));
+    const prompt = scanPrompt(db, { me: 'U1', domain: 'x.slack.com', channels: [] }, at(27, 9), at(28, 10));
+    const [open, closed] = prompt.split('Recently closed asks');
+    expect(closed).toContain(`[${askId('u1')}] Answer Kim`);
+    expect(open).toContain(`[${askId('u2')}]`);
+    expect(open).not.toContain(askId('u1'));
+  });
+});
 
 describe('saveScan', () => {
   test('saves chats and new asks for review, and returns only new urgent asks', () => {
@@ -15,7 +29,7 @@ describe('saveScan', () => {
     expect(urgent.map((a) => a.url)).toEqual(['u1']);
     expect(item(db, 'u1')).toEqual({ status: 'suggested', source: 'slack', people: 'Kim · #ai' });
     expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
-    expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ added: 0, urgent: [], said: 0 });
+    expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ added: 0, urgent: [], said: 0, messages: 0 });
   });
 
   test('stores only web permalinks', () => {
