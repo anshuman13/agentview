@@ -238,7 +238,8 @@ export function newCapture(text: string, type: 'task' | 'note', profile: Profile
 
 export function edited<T extends { field_times: string; updated_at: number }>(row: T, patch: Partial<T>, now: number): T {
   const times = parseTimes(row.field_times);
-  for (const k of Object.keys(patch)) times[k] = now;
+  // An edit always outdates the value it replaces, even when this device's clock is behind the one that wrote it.
+  for (const k of Object.keys(patch)) times[k] = Math.max(now, (Number(times[k]) || 0) + 1);
   return { ...row, ...patch, field_times: JSON.stringify(times), updated_at: Math.max(row.updated_at, now), dirty: 1 };
 }
 

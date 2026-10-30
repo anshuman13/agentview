@@ -30,7 +30,7 @@ export function patchSQL(patch: Patch) {
   const keys = PATCHABLE.filter((k) => k in patch);
   if (!keys.length) return null;
   const sets = keys.map((k) => `${k} = ?`).join(', ');
-  const times = keys.map((k) => `'$.${k}', ?`).join(', ');
+  const times = keys.map((k) => `'$.${k}', max(?, IFNULL(json_extract(field_times, '$.${k}'), 0) + 1)`).join(', ');
   return { sql: `${sets}, field_times = json_set(field_times, ${times})`, params: (now: number): SqlValue[] => [...keys.map((k) => patch[k] ?? null), ...keys.map(() => now)] };
 }
 

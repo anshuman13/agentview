@@ -51,6 +51,11 @@ describe('edited', () => {
     expect(edited(row({ updated_at: 5000 }), { title: 'x' }, 2000).updated_at).toBe(5000);
   });
 
+  it('times an edit after the value it replaces when this clock is behind', () => {
+    const r = edited(row({ field_times: '{"title":5000,"deleted":5000}' }), { title: 'x', deleted: 1 }, 2000);
+    expect(times(r)).toEqual({ title: 5001, deleted: 5001 });
+  });
+
   it('starts from empty times when field_times is damaged', () => {
     expect(times(edited(row({ field_times: 'nope' }), { rank: 1 }, 4000))).toEqual({ rank: 4000 });
   });
@@ -64,18 +69,27 @@ describe('patchSQL', () => {
 
   it('sets values and field times in patchable order', () => {
     const p = patchSQL({ status: 'done', title: 'New' })!;
-    expect(p.sql).toBe("title = ?, status = ?, field_times = json_set(field_times, '$.title', ?, '$.status', ?)");
+    expect(p.sql).toBe("title = ?, status = ?, field_times = json_set(field_times, '$.title', max(?, IFNULL(json_extract(field_times, '$.title'), 0) + 1), '$.status', max(?, IFNULL(json_extract(field_times, '$.status'), 0) + 1))");
     expect(p.params(500)).toEqual(['New', 'done', 500, 500]);
   });
 
   it('writes null for an undefined value and times deleted', () => {
     const p = patchSQL({ at: undefined, deleted: 1 })!;
     expect(p.params(7)).toEqual([null, 1, 7, 7]);
-    expect(p.sql).toContain("'$.deleted', ?");
+    expect(p.sql).toContain("'$.deleted', max(?");
+  });
+
+  it('times an edit after the value it replaces when this clock is behind', async () => {
+    const { DatabaseSync } = await import('node:sqlite');
+    const db = new DatabaseSync(':memory:');
+    db.exec(`CREATE TABLE items (title TEXT, status TEXT, field_times TEXT); INSERT INTO items VALUES ('a', 'open', '{"title":5000}')`);
+    const p = patchSQL({ title: 'b', status: 'done' })!;
+    db.prepare(`UPDATE items SET ${p.sql}`).run(...p.params(2000));
+    expect(JSON.parse((db.prepare('SELECT field_times FROM items').get() as { field_times: string }).field_times)).toEqual({ title: 5001, status: 2000 });
   });
 
   it('clears the meeting link', () => {
-    expect(patchSQL({ meeting_id: null })!.sql).toBe("meeting_id = ?, field_times = json_set(field_times, '$.meeting_id', ?)");
+    expect(patchSQL({ meeting_id: null })!.sql).toBe("meeting_id = ?, field_times = json_set(field_times, '$.meeting_id', max(?, IFNULL(json_extract(field_times, '$.meeting_id'), 0) + 1))");
   });
 });
 
