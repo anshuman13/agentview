@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { edited, newCapture } from './engine';
-import { captureParams, patchSQL, swapSQL } from './localRows';
+import { captureParams, patchSQL, swapSQL, type SqlValue } from './localRows';
+import { WIKI_TABLES } from './store';
 import { TABLE_FIELDS, type ItemRow } from './sync';
 
 const times = (r: { field_times: string }) => JSON.parse(r.field_times);
@@ -111,5 +112,33 @@ describe('captureParams', () => {
   it('lists capture values in insert column order', () => {
     const r = newCapture('T\nB', 'task', 'work', 1000, 50, { id: 'm', title: 'Sync' });
     expect(captureParams(r)).toEqual([r.id, 'work', 1000, r.field_times, 'T', 'B', 'action', 'Sync', 50, 'open', 'm']);
+  });
+});
+
+describe('LocalStore.unlock', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('pulls everything again when a synced table is new', async () => {
+    const { DatabaseSync } = await import('node:sqlite');
+    const db = new DatabaseSync(':memory:');
+    const create = (t: string) => `CREATE TABLE ${t} (id TEXT NOT NULL, profile TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL,
+      deleted INTEGER NOT NULL DEFAULT 0, field_times TEXT NOT NULL DEFAULT '{}', ${TABLE_FIELDS[t].join(', ')}, dirty INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (profile, id));`;
+    db.exec(`CREATE TABLE sync_state (key TEXT PRIMARY KEY, value TEXT);
+      INSERT INTO sync_state VALUES ('since', '50'), ('meeting_link_repulled', '1'), ('sample_cleared', '1'), ('sample_repulled', '1');`);
+    for (const t of ['items', ...WIKI_TABLES].filter((t) => t !== 'briefs')) db.exec(create(t));
+    const invoke = async (cmd: string, args: { sql?: string; params?: SqlValue[] } = {}): Promise<unknown> => {
+      if (cmd === 'assistant_batch') return void db.exec(args.sql!);
+      if (cmd === 'assistant_query') return db.prepare(args.sql!).all(...(args.params ?? []));
+      if (cmd === 'assistant_exec') return Number(db.prepare(args.sql!).run(...(args.params ?? [])).changes);
+      return '';
+    };
+    const target = { addEventListener() {}, removeEventListener() {} };
+    vi.stubGlobal('window', target);
+    vi.stubGlobal('document', { ...target, visibilityState: 'hidden' });
+    vi.stubGlobal('fetch', () => new Promise(() => {}));
+    vi.stubGlobal('setInterval', () => 0);
+    const { LocalStore } = await import('./local');
+    await new LocalStore(invoke as never).unlock();
+    expect(db.prepare(`SELECT value FROM sync_state WHERE key = 'since'`).get()).toEqual({ value: '0' });
   });
 });

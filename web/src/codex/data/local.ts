@@ -94,9 +94,11 @@ export class LocalStore extends BaseStore implements AssistantStore {
     this.set({ phase: 'unlocking', message: 'Unlocking' });
     try {
       await this.invoke('assistant_open', { key: await this.getKey() });
+      // Rows of a table this app did not know yet were skipped by earlier pulls, as were columns below.
+      const known = new Set((await this.query<{ name: string }>(`SELECT name FROM sqlite_master WHERE type = 'table'`)).map((t) => t.name));
       await this.invoke('assistant_batch', { sql: SCHEMA });
       // Rows pulled before a column existed never get its value unless everything is pulled again.
-      let added = false;
+      let added = LocalStore.ALL.some((t) => !known.has(t));
       for (const t of ['items', ...WIKI_TABLES]) {
         const have = new Set((await this.query<{ name: string }>(`PRAGMA table_info(${t})`)).map((c) => c.name));
         if (!have.size) continue;
