@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useAssistantData } from '../data';
 import { Icon } from '../../ui/Icon';
 import { dayLabel } from '../data/dates';
@@ -7,6 +7,7 @@ import type { Fact, Meeting } from '../data/wiki';
 import { when } from '../time';
 import { copyText, openMeeting, setView, useView } from '../view';
 import { plural } from '../../ui/util';
+import { Review } from './Review';
 
 const MAX = 8;
 const text = (t: string | null) => t?.trim() || 'Untitled';
@@ -41,6 +42,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
       ...list('Open meeting actions', r.open.map((i) => text(i.title))),
     ].join('\n').trim();
   };
+  const [review, setReview] = useState(false);
   const copy = () => copyText(markdown());
   const empty = !r.decisions.length && !r.claims.length && !r.done.length && !r.open.length;
   return (
@@ -48,8 +50,10 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
       <div className="mt-log-bar">
         <span className="mt-load-share">Since {dayLabel(r.start)}: {plural(r.meetings, 'meeting')}, {hoursText(r.hours)}</span>
         <span className="spacer" />
+        <button className="btn" title="Done, slipped, stuck and waiting tasks" onClick={() => setReview(!review)}><Icon name="checklist" small /> <span>{review ? 'Summary' : 'Review'}</span></button>
         <button className="btn" title="Copy the week as Markdown" onClick={copy}><Icon name="copy" small /> <span>Copy</span></button>
       </div>
+      {review ? <Review now={now} /> : <>
       <Section title="Decisions" rows={r.decisions.map((d, i) => (
         <button key={i} className="mt-log-item" onClick={() => openMeeting(d.meeting)}>
           <span className="mt-log-text">{d.text}</span>
@@ -72,6 +76,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
         );
       })} />
       {empty && <div className="as-empty"><Icon name="calendar" /><div>Nothing this week yet.</div></div>}
+      </>}
     </div>
   );
 }
