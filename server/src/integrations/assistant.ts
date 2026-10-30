@@ -16,6 +16,9 @@ export async function assistantRoute(method: string, url: URL, body: () => Promi
   } else if (route === '/parse' && method === 'POST') {
     target = '/parse';
     init = { signal: AbortSignal.timeout(30_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
+  } else if (route === '/calendar/block' && method === 'POST') {
+    target = '/calendar/block';
+    init = { signal: AbortSignal.timeout(120_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
   } else if (route === '/transcripts' && method === 'POST') {
     target = '/transcripts';
     init = { signal: AbortSignal.timeout(300_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
