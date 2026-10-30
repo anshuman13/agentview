@@ -8,20 +8,119 @@
 - **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Sessions (open and recent chats) and Workspace (repos, chats, Paseo worktrees)
 - **Side chat**: the split icon on a chat row in the Sessions view opens that chat in a second column with its
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
-- **Codex** (top of the activity bar): Overview, Tasks, Meetings, Jobs and Wiki, filtered by work or
-  personal profile. Overview starts with the morning brief the hub writes at 08:00 on weekdays (today's meetings and free time, tasks due and overdue, how many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from the last workday), which folds and hides until tomorrow. It lists meetings that ended in the last two hours with their actions, a follow-up draft to copy and the notes, the meetings still ahead today with the meeting time left, a Plan strip of free gaps where a tap blocks time for a task due today on the calendar after you confirm the task, start, length and title (blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as meetings), Plan my day on the strip that packs overdue and due tasks into the free gaps by due time and estimate (30 minutes without one) and shows the plan to trim before Create adds the blocks, an At risk card listing tasks due by Friday that will not fit in the free work time before they are due, with the shortfall, overdue and due tasks with a check to mark them done and a clock to snooze them to tomorrow 09:00, a field on the next meeting's card that adds a timestamped line to its notes, what the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it), job reports and a follow-through card for meeting actions still open
-  after a week, and a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed. In Tasks a tap opens the task in place: title and notes are editable for every task, including ones from Slack or a meeting, with due time, profile, source link, Snooze, Tidy, Copy draft for an ask with a reply draft, Ask and Delete below; a tap outside closes it and saves. Slack and Gmail promises I made myself show under "You said" next to the asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source. Each day ends with Add task (its dot switches between work and personal when both are shown), which takes times like "friday 10" and stays open for the next one; rows with "- [ ]" checklist lines in the notes show how many are ticked, and the open task lists them to tick with a tap. A bare time like "3pm" in a later day's Add task lands on that day. Swiping left names the day the task moves to, and Snooze offers Today for a task due on a later day. Search (or /) filters tasks by title, notes and people, Overdue has Move to today with one undo, and tasks not dragged into an order sort by due time. Meetings imports the calendar every half hour and shows notes, summary, decisions, actions, pinned
-  text and earlier meetings of the same series, with decisions made and questions asked again; the page copies as Markdown or as a follow-up draft, an action copies as a message or opens a prefilled Linear issue, and the summary format suggests the
-  template last used for the series. The page of an upcoming meeting has a prep card: points to raise with its attendees (each with a Raised tick), what they took on last time, my open actions, open questions, and Copy agenda, which copies all of it as a Markdown checklist without a model call. Raise on a decision or an open task, and the field on a person page, save a point for the next meeting with that person (picked from the meeting's attendees and recent ones); a point waits for the first meeting with them after it was raised and counts as raised once that meeting ends. Person pages list the open points and include them when copied as Markdown; points stay out of Search. The header has a decision log filtered by person, a Load view (hours per week, share
-  recorded, who you meet most, time and actions done per recurring series, and a series value audit: meetings, hours, decisions and my actions per series over 8 weeks, with series that brought no decision or action of mine in 4 weeks flagged first as Nothing for you lately with the hours they cost; a tap opens the latest meeting) and a Week view whose Review lists done, slipped and stuck tasks and Waiting on by person: waiting tasks and sent mail with no reply after 3 workdays, with Copy nudge and Open; the decision log, Week (with Waiting on) and person pages copy as Markdown. Saved topics filter the list, show a timeline of matching
-  meetings, decisions and claims, and count what is new since you last looked. Meeting search also asks the hub, which keeps each transcript's text, and shows the words around a hit in the transcript; a summarized meeting's page has a talk time strip (each speaker's share of words in the transcript, top five, with the action and decision counts) and a collapsed Transcript section. The app-wide Search also lists Transcripts hits from the hub with the meeting's title, date and the words around the hit; offline the group is left out. Topics and person pages list
-  questions the meetings left open until you resolve them. Long lists show 50 rows at a time. The wiki is built from claims with sources, which can be
-  contested and go through Review; the wiki start page lists claims untouched for 90 days as Stale and claims a later meeting decision may have changed as Maybe changed, unless a proposed replacement already waits in Review; for meetings and Slack channel decisions of the last two weeks the hub proposes the updated claims for Review, marked From <meeting> or From #channel (see [codex-wiki.md](codex-wiki.md))
+- **Codex** (top of the activity bar): Overview, Tasks, Meetings, Jobs and Wiki, filtered by work or personal
+  profile; see [Codex](#codex)
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
 - **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs
 - **Command palette** (⇧⌘P or F1): every view, tab, page, model and mode as a searchable list
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
   follows the system setting; `?theme=light` in the URL picks one
+
+## Codex
+
+Codex shows Overview, Tasks, Meetings, Jobs and Wiki for the work profile, the personal profile or both. Under the
+nav, the sync line says when the app last synced with the hub. While the hub skips its Slack or calendar scan because
+that Claude account is at its usage limit, a line below it names the paused scans and the time the limit ends.
+
+### Overview
+
+- One line per weekly goal with done/total of the tasks linked to it
+- The morning brief the hub writes at 08:00 on weekdays: today's meetings and free time, tasks due and overdue, how
+  many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
+  the last workday. It folds and hides until tomorrow
+- Meetings that ended in the last two hours with their actions, a follow-up draft to copy and the notes
+- Since <meeting>: for the latest meeting that ended in the last two hours, the Slack and Gmail asks and the Slack DMs
+  that came in while it ran or up to 30 minutes after (the scans run every 15 and 30 minutes). Dismiss hides it for
+  that meeting
+- A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
+  length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
+  meetings. Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
+  week's goals first, due or not, then overdue and due tasks by due time. It shows the plan to trim before Create adds
+  the blocks
+- Copy standup copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
+  (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
+  days)
+- At risk: tasks due by Friday that will not fit in the free work time before they are due, with the shortfall
+- The meetings still ahead today with the meeting time left, and a field on the next meeting's card that adds a
+  timestamped line to its notes
+- Overdue and due tasks with a check to mark them done and a clock to snooze them to tomorrow 09:00
+- What the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it), job reports
+  and a follow-through card for meeting actions still open after a week
+- A card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
+- Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
+  1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person
+  page and has Copy nudge and Dismiss, which hides the person until the next contact
+
+### Tasks
+
+A tap opens the task in place: title and notes are editable for every task, including ones from Slack or a meeting,
+with due time, profile, source link, Start, Snooze, Tidy, Copy draft for an ask with a reply draft, Ask and Delete
+below; a tap outside closes it and saves. Slack and Gmail promises I made myself show under "You said" next to the
+asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source.
+
+- Each day ends with Add task (its dot switches between work and personal when both are shown), which takes times like
+  "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
+- Rows with "- [ ]" checklist lines in the notes show how many are ticked, and the open task lists them to tick with a
+  tap
+- Swiping left names the day the task moves to, and Snooze offers Today for a task due on a later day
+- Search (or /) filters tasks by title, notes and people, Overdue has Move to today with one undo, and tasks not
+  dragged into an order sort by due time
+- Focus timer: Start on an open task shows a bar over Codex with the task, the time so far against its estimate, and
+  Stop. Stop adds the whole minutes to the task's time spent, shown as a chip on the task, with an undo. One timer
+  runs at a time and survives a reload
+- An open task without a "~30m" estimate in its title gets one suggested as a chip: the average time spent on at least
+  two done tasks whose titles share half their words, rounded to 5 minutes. A tap adds it to the title
+- A goal menu links an open or done task to one of this week's goals of its profile
+
+### Related while writing
+
+Typing in a task's title or notes, a wiki note or a meeting's My notes shows up to 3 matches under the field: current
+wiki claims, past meetings and tasks from Slack of the same profile that share at least two key words with the line
+being written, most shared words first. A claim or meeting opens in Codex, a Slack task opens its Slack link.
+
+### Meetings
+
+Meetings imports the calendar every half hour and shows notes, summary, decisions, actions, pinned text and earlier
+meetings of the same series, with decisions made and questions asked again; the page copies as Markdown or as a
+follow-up draft, an action copies as a message or opens a prefilled Linear issue, and the summary format suggests the
+template last used for the series.
+
+The page of an upcoming meeting has a prep card: points to raise with its attendees (each with a Raised tick), what
+they took on last time, my open actions, open questions, and Copy agenda, which copies all of it as a Markdown
+checklist without a model call. Raise on a decision or an open task, and the field on a person page, save a point for
+the next meeting with that person (picked from the meeting's attendees and recent ones); a point waits for the first
+meeting with them after it was raised and counts as raised once that meeting ends. Points stay out of Search.
+
+A person page starts with what waits outside meetings: the summary of their Slack DM with Open in Slack, what they
+asked you and what you promised them in Slack or Gmail, and your sent mail to them with no reply. Below come their
+commitments, the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
+wiki claims that name them.
+
+The header has a decision log filtered by person, a Load view and a Week view:
+
+- Load: hours per week, share recorded, who you meet most, time and actions done per recurring series, and a series
+  value audit: meetings, hours, decisions and my actions per series over 8 weeks, with series that brought no decision
+  or action of mine in 4 weeks flagged first as Nothing for you lately with the hours they cost; a tap opens the
+  latest meeting
+- Week: Goals this week, where up to 3 goals per profile are set and renamed, then the week's decisions, new claims,
+  tasks done and open meeting actions. Its Review lists done, slipped and stuck tasks and Waiting on by person: waiting
+  tasks and sent mail with no reply after 3 workdays, with Copy nudge and Open. The decision log, Week (with Waiting
+  on) and person pages copy as Markdown
+
+Saved topics filter the list, show a timeline of matching meetings, decisions and claims, and count what is new since
+you last looked. Topics and person pages list questions the meetings left open until you resolve them. Meeting search
+also asks the hub, which keeps each transcript's text, and shows the words around a hit in the transcript; a
+summarized meeting's page has a talk time strip (each speaker's share of words in the transcript, top five, with the
+action and decision counts) and a collapsed Transcript section. The app-wide Search also lists Transcripts hits from
+the hub with the meeting's title, date and the words around the hit; offline the group is left out. Long lists show
+50 rows at a time.
+
+### Wiki
+
+The wiki is built from claims with sources, which can be contested and go through Review. The wiki start page lists
+claims untouched for 90 days as Stale and claims a later meeting decision may have changed as Maybe changed, unless a
+proposed replacement already waits in Review. For meetings and Slack channel decisions of the last two weeks the hub
+proposes the updated claims for Review, marked From <meeting> or From #channel (see [codex-wiki.md](codex-wiki.md)).
 
 ## Timeline and steering
 
@@ -97,6 +196,8 @@ bar turns browser notifications on or off.
 For a phone in the background, the same notifications can go to an [ntfy](https://ntfy.sh) topic. Push is off
 until you set `AGENTVIEW_NTFY`, or `ntfy` in `~/.agentview/observe.json`, to a topic name or a full URL on your own
 server, then subscribe to it in the ntfy app. Tapping the push opens the chat. The assistant hub uses the same topic for meeting and task reminders and the 08:00 morning brief.
+Urgent Slack and Gmail asks that arrive while a calendar meeting runs (not all-day events or focus blocks) are held
+and sent as one push, "N urgent while you were in <meeting>", within a minute after it ends.
 
 A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot
 in the chat list until its next message.
