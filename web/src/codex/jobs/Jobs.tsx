@@ -45,8 +45,12 @@ const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && r.profi
 const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
 
 function RunStatus({ r }: { r: Run }) {
-  if (r.status === 'running') return <Icon name="loading" small spin color="var(--accent)" />;
-  return <Icon name={r.status === 'ok' ? 'check' : 'error'} small color={r.status === 'ok' ? 'var(--ok)' : 'var(--err)'} />;
+  const label = r.status === 'running' ? 'Running' : r.status === 'ok' ? 'Succeeded' : 'Failed';
+  return (
+    <span role="img" aria-label={label} title={label}>
+      {r.status === 'running' ? <Icon name="loading" small spin color="var(--accent)" /> : <Icon name={r.status === 'ok' ? 'check' : 'error'} small color={r.status === 'ok' ? 'var(--ok)' : 'var(--err)'} />}
+    </span>
+  );
 }
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) => void; label: string }) {
@@ -90,7 +94,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
               {jobs.map((j) => {
                 const last = runsOf(runs, j)[0];
                 return (
-                  <div key={jobKey(j)} role="button" tabIndex={0} className={`mt-row jb-row${j.enabled ? '' : ' off'}`} onClick={() => setView({ open: jobKey(j) })} onKeyDown={(e) => e.key === 'Enter' && setView({ open: jobKey(j) })}>
+                  <div key={jobKey(j)} role="button" tabIndex={0} className={`mt-row jb-row${j.enabled ? '' : ' off'}`} onClick={() => setView({ open: jobKey(j) })} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setView({ open: jobKey(j) }); } }}>
                     <span className="mt-body">
                       <span className="mt-title">{j.name || 'Untitled job'}<span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work' : 'Personal'}</span></span>
                       <span className="wk-meta">
