@@ -339,7 +339,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   };
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + s.meetingsTomorrow.length + tomorrow.length;
-  const slack = snap.chats.some((c) => !c.deleted) || snap.briefs.some((b) => !b.deleted && b.kind === 'slack');
+  const fit = (x: { profile: string; deleted?: unknown }) => !x.deleted && (filter === 'all' || x.profile === filter);
+  const slack = snap.chats.some(fit) || snap.briefs.some((b) => fit(b) && b.kind === 'slack');
   const contextCount = reports.length + (digest ? 1 : 0) + (slack ? 1 : 0);
   const left = meetingTimeLeft(s.meetingsToday, now, s.endOfDay);
   const leftText = left >= 60 ? `${Math.floor(left / 60)}h${left % 60 ? String(left % 60).padStart(2, '0') : ''}` : `${left} min`;

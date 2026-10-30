@@ -106,11 +106,11 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     const time = new Date(Number(t.at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     byProfile.set(t.profile, [...(byProfile.get(t.profile) ?? []), { key, title: t.title ?? 'Task', body: [`Due ${time}`, first && clip(first, 120)].filter(Boolean).join('\n'), url: '', actions: [!repeats(t.text) && hubAction('Done', '/task/done', t.profile, t.id), hubAction('Snooze 1h', '/task/snooze', t.profile, t.id)].filter(Boolean).join('; ') }]);
   }
-  for (const group of byProfile.values()) {
+  for (const [profile, group] of byProfile) {
     if (group.length < 2) { out.push(...group); continue; }
     const lines = group.slice(0, 5).map((r) => `- ${r.title}`);
     if (group.length > 5) lines.push(`+${group.length - 5} more`);
-    out.push({ key: group[0].key, keys: group.map((r) => r.key), title: `${group.length} tasks due`, body: lines.join('\n'), url: '' });
+    out.push({ key: group[0].key, keys: group.map((r) => r.key), title: `${group.length} ${profile} tasks due`, body: lines.join('\n'), url: '' });
   }
   return out;
 }

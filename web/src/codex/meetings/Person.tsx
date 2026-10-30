@@ -75,7 +75,7 @@ export function Person({ name }: { name: string }) {
   const waiting = useMemo(() => {
     const seen = new Set<string>();
     return [...inbox.asks, ...inbox.promises].filter((r) => {
-      const k = r.source_url || r.profile + r.id;
+      const k = r.profile + r.id;
       if (seen.has(k)) return false;
       seen.add(k);
       return true;
