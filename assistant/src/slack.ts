@@ -52,7 +52,7 @@ export async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tool
     maxTurns,
     cwd: os.tmpdir(),
     env: { ENABLE_TOOL_SEARCH: 'false' },
-    ...(model === 'haiku' && { thinking: { type: 'disabled' as const } }),
+    ...(model === 'haiku' ? { thinking: { type: 'disabled' as const } } : { effort: 'medium' as const }),
     mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools }) },
     allowedTools: [...read, ...tools.map((t) => `mcp__codex__${t.name}`)],
     permissionMode: 'dontAsk',
@@ -143,8 +143,8 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
     return { content: [{ type: 'text', text: 'saved' }] };
   });
   const prompt = scanPrompt(db, c, since, now);
-  await run(prompt, 'haiku', [save, contextTool(db, now)], 40, () => saved != null);
-  if (!saved) throw new Error('Haiku did not save the scan');
+  await run(prompt, 'sonnet', [save, contextTool(db, now)], 40, () => saved != null);
+  if (!saved) throw new Error('The scan did not save');
   keepChannelIds(db, c, saved);
   const { chats, added, urgent, said, messages } = saveScan(db, saved, now);
   setMeta(db, 'slack:last', String(now));
