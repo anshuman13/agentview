@@ -12,6 +12,7 @@ import { save, stored, plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
+import { SinceMeeting } from './SinceMeeting';
 import { sourceOf } from './taskSource';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
@@ -344,6 +345,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       )}
       <MorningBrief now={now} />
       <JustEnded meetings={s.meetingsToday} now={now} />
+      <SinceMeeting now={now} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
       <div className="as-next-actions">

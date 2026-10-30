@@ -1,5 +1,6 @@
 import { isBlock } from '../../../../shared/util';
-import { decisionLog, factTime, live, type Fact, type Meeting } from './wiki';
+import { decisionLog, factTime, live, type Chat, type Fact, type Meeting } from './wiki';
+import { createdAt } from './review';
 import { openQuestions, peopleOf, questionKey, seriesTitle } from './meetings';
 import { statusTime } from './engine';
 import type { ItemRow } from './sync';
@@ -128,4 +129,23 @@ export function sinceLastVisit({ meetings, facts }: { meetings: Meeting[]; facts
     claims: live(facts).filter((f) => !f.superseded_by && factTime(f) > since && factTime(f) <= now).length,
     questions: openQuestions(recent, now).filter((q) => !resolved.includes(questionKey(q))).length,
   };
+}
+
+// The hub reads Slack every 15 minutes and mail every 30, so an ask from the last minutes of a meeting lands just after it.
+const SCAN_LAG = 30 * 60_000;
+const CATCH_UP_MS = 2 * HOUR;
+
+// The latest meeting that ended in the last two hours and is not dismissed, with the Slack and mail asks to review and
+// the DM chats that came in while it ran. Null when there is nothing to catch up on.
+export function sinceMeeting(meetings: Meeting[], items: ItemRow[], chats: Chat[], dismissed: string[], now: number) {
+  const ended = live(meetings)
+    .filter((m) => m.starts_at != null && m.ends_at != null && m.ends_at <= now && now - m.ends_at < CATCH_UP_MS && !isAllDay(m) && !isBlock(m.id) && !dismissed.includes(`${m.profile}:${m.id}:${m.ends_at}`))
+    .sort((a, b) => b.ends_at! - a.ends_at!);
+  for (const m of ended) {
+    const inside = (t: number | null) => t != null && t >= m.starts_at! && t <= m.ends_at! + SCAN_LAG;
+    const asks = items.filter((r) => !r.deleted && r.status === 'suggested' && (r.source === 'slack' || r.source === 'gmail') && !r.id.startsWith('said:') && inside(createdAt(r)));
+    const dms = chats.filter((c) => !c.deleted && c.kind === 'dm' && inside(c.last_at));
+    if (asks.length || dms.length) return { m, key: `${m.profile}:${m.id}:${m.ends_at}`, asks, dms };
+  }
+  return null;
 }
