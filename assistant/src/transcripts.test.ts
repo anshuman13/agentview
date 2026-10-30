@@ -4,7 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { TRIES, actionId, docReader, dueAt, dueMeetings, expireSuggested, formatLines, markTried, readSaved, saveNotes, saveTranscripts, searchTranscripts, transcriptText } from './transcripts.js';
+import { docReader, readSaved } from './transcriptDocs.js';
+import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, formatLines, markTried, saveNotes, saveTranscripts, searchTranscripts, transcriptText } from './transcripts.js';
 
 const MIN = 60_000;
 const now = Date.parse('2026-10-26T16:00:00Z');
