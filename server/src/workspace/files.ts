@@ -1,4 +1,4 @@
-import { readFile, readdir, realpath, stat } from 'node:fs/promises';
+import { open, readFile, readdir, realpath, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { inside } from '../../../shared/util.js';
@@ -88,6 +88,11 @@ export async function readFileWithOriginal(cwd: string, rel: string) {
   const abs = await viewPath(cwd, rel);
   const size = await stat(abs).then((s) => s.size).catch(() => 0);
   if (size > MAX_FILE) throw new Error(`File is ${Math.round(size / 1e6)} MB, too large to show`);
+  if (IMAGES[path.extname(rel).slice(1).toLowerCase()]) return { path: rel, content: '', original: '', image: true };
+  const head = Buffer.alloc(8192);
+  const handle = await open(abs);
+  const { bytesRead } = await handle.read(head, 0, head.length, 0).finally(() => handle.close());
+  if (head.subarray(0, bytesRead).includes(0)) return { path: rel, content: '', original: '', binary: true };
   const content = await readFile(abs, 'utf8').catch(() => '');
   const original = await git(path.dirname(abs), ['show', `HEAD:./${path.basename(abs)}`]).catch(() => '');
   return { path: rel, content, original };

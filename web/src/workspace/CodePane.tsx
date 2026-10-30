@@ -17,8 +17,8 @@ function useFile(path: string | null, bump: unknown) {
     let cancelled = false;
     fetch(api(`/api/file?path=${encodeURIComponent(path)}`))
       .then((r) => r.json())
-      .then((d: { content?: string; original?: string; error?: string }) => {
-        if (!cancelled) setFile({ path, content: d.content ?? '', original: d.original ?? '', error: d.error });
+      .then((d: { content?: string; original?: string; image?: boolean; binary?: boolean; error?: string }) => {
+        if (!cancelled) setFile({ path, content: d.content ?? '', original: d.original ?? '', image: d.image, binary: d.binary, error: d.error });
       })
       .catch(() => {
         if (!cancelled) setFile({ path, content: '', original: '', error: 'The file could not be loaded' });
@@ -112,7 +112,9 @@ export function CodePane() {
         </div>
       </div>
       {file?.error && <div className="cd-empty">{file.error === 'path outside project' ? 'This file is outside the project folder' : file.error}</div>}
-      {file && !file.error && (
+      {file?.image && <div className="cd-empty"><img src={api(`/api/image?path=${encodeURIComponent(file.path)}`)} alt={file.path} style={{ maxWidth: '100%', maxHeight: '100%' }} /></div>}
+      {file?.binary && <div className="cd-empty">Binary file</div>}
+      {file && !file.error && !file.image && !file.binary && (
         <Guard key={`${file.path}:${showDoc}`}>
           <Suspense fallback={null}>{showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} />}</Suspense>
         </Guard>

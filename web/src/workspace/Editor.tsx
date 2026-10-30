@@ -19,7 +19,7 @@ async function lang(path: string): Promise<Extension> {
   return [];
 }
 
-export type FileData = { path: string; content: string; original: string; error?: string };
+export type FileData = { path: string; content: string; original: string; image?: boolean; binary?: boolean; error?: string };
 
 type EditorProps = { file: FileData; diff: boolean; wrap: boolean; changesOnly: boolean; line?: number | null; viewRef: MutableRefObject<EditorView | null> };
 

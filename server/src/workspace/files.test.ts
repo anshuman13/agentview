@@ -20,6 +20,13 @@ describe('readFileWithOriginal access', () => {
     expect((await readFileWithOriginal(cwd, path.join(cwd, 'a.txt'))).content).toBe('hello');
   });
 
+  it('flags images and binary files without reading them as text', async () => {
+    writeFileSync(path.join(cwd, 'a.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1]));
+    writeFileSync(path.join(cwd, 'a.bin'), Buffer.from([1, 2, 0, 3]));
+    expect(await readFileWithOriginal(cwd, 'a.png')).toMatchObject({ image: true, content: '' });
+    expect(await readFileWithOriginal(cwd, 'a.bin')).toMatchObject({ binary: true, content: '' });
+  });
+
   it('reads absolute paths outside the cwd', async () => {
     expect((await readFileWithOriginal(cwd, '/etc/hosts')).content).not.toBe('');
   });
