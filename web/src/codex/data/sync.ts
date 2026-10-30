@@ -108,7 +108,8 @@ export function mergeIncoming<R extends SyncRow = ItemRow>(local: NoInfer<R> | n
   for (const f of TABLE_FIELDS[incoming.table] ?? FIELDS) {
     const it = inTimes[f] ?? (localTimes[f] ? 0 : incoming.updated_at);
     const lt = localTimes[f] ?? 0;
-    if (!local || it > lt) {
+    // On a tie the hub kept the value it stored first, so the device takes it too.
+    if (!local || it > lt || (it === lt && isTime(inTimes[f]))) {
       mergedFields[f] = values[f] ?? null;
       if (isTime(it)) times[f] = it;
     } else {
@@ -119,7 +120,7 @@ export function mergeIncoming<R extends SyncRow = ItemRow>(local: NoInfer<R> | n
 
   const idt = inTimes.deleted ?? 0;
   const ldt = localTimes.deleted ?? 0;
-  if (!local || idt > ldt) {
+  if (!local || idt > ldt || (idt === ldt && isTime(inTimes.deleted))) {
     merged.deleted = incoming.deleted ? 1 : 0;
     if (idt) times.deleted = idt;
   } else {

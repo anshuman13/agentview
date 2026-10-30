@@ -50,12 +50,12 @@ describe('rowToChange', () => {
 });
 
 describe('mergeIncoming', () => {
-  it('keeps local on a tie without marking dirty', () => {
+  it('takes the hub value on a tie, as the hub keeps the value it stored first', () => {
     const merged = mergeIncoming(
-      localRow({ title: 'Local', field_times: '{"title":1000}' }),
+      localRow({ title: 'Local', dirty: 0, field_times: '{"title":1000}' }),
       hubChange({ field_times: { title: 1000 } }, { title: 'Hub' }),
     );
-    expect(merged.title).toBe('Local');
+    expect(merged.title).toBe('Hub');
     expect(merged.dirty).toBe(0);
   });
 
