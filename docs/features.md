@@ -11,7 +11,8 @@
 - **Codex** (top of the activity bar): Overview, Tasks, Meetings, Jobs and Wiki, filtered by work or personal
   profile; see [Codex](#codex)
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
-- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs
+- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs.
+  The done and snooze buttons on Overview rows, Related chips and Remove goal have full-size tap targets
 - **Command palette** (⇧⌘P or F1): every view, tab, page, model and mode as a searchable list
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
   follows the system setting; `?theme=light` in the URL picks one
@@ -49,7 +50,8 @@ that Claude account is at its usage limit, a line below it names the paused scan
 - A card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person
-  page and has Copy nudge and Dismiss, which hides the person until the next contact
+  page and has Copy nudge and Dismiss, which hides the person until the next contact. On a narrow screen the buttons
+  wrap below the name
 
 ### Tasks
 
@@ -295,3 +297,7 @@ or a page puts focus back on what opened it.
   with Enter or Space. The file tree is a tree: arrow keys move, Right and Left open and close folders, Enter opens
 - Errors and deploy progress in the Observe, Deploy, GitHub and MCP panes are announced; closing a detail there
   returns focus to the list
+- In Codex, snack messages are announced, with "Undo available" when they have Undo. Goals, Keep in touch, Related
+  and the Slack DMs under Since <meeting> are lists, and Esc in a goal field restores its text. Dismissing a person
+  in Keep in touch focuses the next one; when Dismiss removes a whole Overview section, focus moves to the next
+  control below it, or to the page heading
