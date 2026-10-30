@@ -79,6 +79,7 @@ it('holds urgent pushes during a meeting and combines them once it ends', async 
   const meeting = db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES (?, 'work', 1, 0, ?, ?, ?)");
   meeting.run('block:t1', 'Focus', now - 60_000, now + 3600_000);
   meeting.run('cal:day', 'Offsite', now - 3600_000, now + 23 * 3600_000);
+  db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at, people) VALUES ('cal:focus', 'work', 1, 0, 'Focus: Write', ?, ?, '[]')").run(now - 60_000, now + 3600_000);
   expect(meetingAt(db, now)).toBeUndefined();
   meeting.run('cal:sync', 'Sync', now - 60_000, now + 1800_000);
   await pushOrHold(db, 'Kim: Review the plan', '#team', 'quote', '', '', now);

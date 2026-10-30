@@ -9,9 +9,9 @@ const MAX_HELD = 20;
 
 type Held = { title: string; chat: string; meeting: string };
 
-// The calendar meeting running at now, skipping all-day events and time blocks.
+// The calendar meeting running at now, skipping all-day events, time blocks and events with no other attendees.
 export function meetingAt(db: Database, now: number) {
-  const rows = db.prepare('SELECT id, title FROM meetings WHERE deleted = 0 AND starts_at <= ? AND ends_at > ? AND ends_at - starts_at < ?').all(now, now, ALL_DAY) as { id: string; title: string | null }[];
+  const rows = db.prepare("SELECT id, title FROM meetings WHERE deleted = 0 AND starts_at <= ? AND ends_at > ? AND ends_at - starts_at < ? AND COALESCE(people, '') <> '[]'").all(now, now, ALL_DAY) as { id: string; title: string | null }[];
   return rows.find((m) => !isBlock(m.id));
 }
 
