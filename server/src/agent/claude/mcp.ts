@@ -1,11 +1,12 @@
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
 import type { McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
 import { configDir, hasAlt } from './accounts.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
+import { writeJson } from '../../json.js';
 
 type Config = McpServerDef | undefined;
 type Status = {
@@ -179,8 +180,7 @@ export function setMcpGroup(service: string, group: string): Promise<McpGroups> 
     const g = await mcpGroups();
     if (group === 'work' || group === 'personal' || group === 'hidden') g[service] = group;
     else delete g[service];
-    await mkdir(path.dirname(GROUPS), { recursive: true });
-    await writeFile(GROUPS, JSON.stringify(g, null, 2));
+    await writeJson(GROUPS, g, { pretty: true });
     return g;
   });
   groupWrite = run.catch(() => undefined);

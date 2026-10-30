@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, unlinkSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
+import { mkdirSync, unlinkSync, watch, type FSWatcher } from 'node:fs';
 import { readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { getSessionInfo } from '../agent/claude/sessions.js';
 import { claudeSession } from '../agent/claude/driver.js';
@@ -20,6 +20,7 @@ import { sendWhenChanged } from './changed.js';
 import { parseSaved, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
+import { writeJsonSync } from '../json.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -218,8 +219,7 @@ function saveAndExit() {
     return sessionId ? [{ sessionId, crons: chat.crons, repeat, queued: chat.queuedMessages }] : [];
   });
   const chats = [...open, ...unrestored.filter((u) => !open.some((c) => c.sessionId === u.sessionId))];
-  mkdirSync(path.dirname(RESTORE), { recursive: true });
-  writeFileSync(RESTORE, JSON.stringify({ view: lastViewed?.state.session.sessionId, chats }));
+  writeJsonSync(RESTORE, { view: lastViewed?.state.session.sessionId, chats });
   try {
     unlinkSync(SOCK);
   } catch {}

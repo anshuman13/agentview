@@ -1,7 +1,8 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import type { Account } from '../../../../shared/protocol.js';
+import { writeJsonSync } from '../../json.js';
 
 const ALT_DIR = process.env.AGENTVIEW_ALT_CLAUDE || path.join(os.homedir(), '.claude-alt');
 const LIMITS = path.join(process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview'), 'limits.json');
@@ -36,8 +37,7 @@ const usable = (a: Account, now: number) => (a === 'main' || hasAlt()) && (limit
 
 const save = (file: string, data: unknown) => {
   try {
-    mkdirSync(path.dirname(file), { recursive: true });
-    writeFileSync(file, JSON.stringify(data));
+    writeJsonSync(file, data);
   } catch {}
 };
 

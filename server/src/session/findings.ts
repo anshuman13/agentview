@@ -1,7 +1,8 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { Finding, ReviewFindings } from '../../../shared/protocol.js';
+import { writeJson } from '../json.js';
 
 const FILE = path.join(process.env.AGENTVIEW_FINDINGS_DIR ?? path.join(os.homedir(), '.agentview'), 'findings.json');
 
@@ -16,8 +17,7 @@ async function load(): Promise<Stored> {
 }
 
 async function save() {
-  await mkdir(path.dirname(FILE), { recursive: true });
-  await writeFile(FILE, JSON.stringify(cache ?? {}, null, 2));
+  await writeJson(FILE, cache ?? {}, { pretty: true });
 }
 
 export const findingKey = (f: Finding) => `${f.file}:${f.line}:${f.summary.slice(0, 60)}`;

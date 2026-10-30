@@ -1,11 +1,12 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { ATTENTION_LABEL, type AttentionItem, type AttentionKind, type DeployStatus, type GitStatus, type PullRequest } from '../../../shared/protocol.js';
 import { listIssues, listPrs, type Issue } from './github.js';
 import { gitStatus } from '../workspace/git.js';
 import { deployWatch } from './deploy.js';
 import { post } from './notify.js';
+import { writeJson } from '../json.js';
 
 const FILE = path.join(os.homedir(), '.agentview/attention.json');
 const EVERY = 15 * 60_000;
@@ -97,13 +98,10 @@ async function load() {
 
 let saving: Promise<void> = Promise.resolve();
 
-// One write at a time, each to a temp file renamed over the old one, so the file is never half written.
+// One write at a time, so a slow write never lands after a newer one.
 function save() {
   saving = saving.catch(() => {}).then(async () => {
-    await mkdir(path.dirname(FILE), { recursive: true });
-    const tmp = `${FILE}.${process.pid}.tmp`;
-    await writeFile(tmp, JSON.stringify({ seen: Object.fromEntries(seen), dismissed: [...dismissed], autofix } satisfies Saved));
-    await rename(tmp, FILE);
+    await writeJson(FILE, { seen: Object.fromEntries(seen), dismissed: [...dismissed], autofix } satisfies Saved);
   });
   return saving;
 }

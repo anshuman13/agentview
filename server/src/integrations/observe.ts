@@ -3,9 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { randomUUID } from 'node:crypto';
 import { parseObject } from '../http/body.js';
-import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ROOTS } from '../workspace/worktrees.js';
 import { inside } from '../../../shared/util.js';
 import { allowedServers } from '../agent/claude/mcp.js';
@@ -23,6 +22,7 @@ import type {
   SnowflakeResult,
   SnowflakeTest,
 } from '../../../shared/observe.js';
+import { writeJson } from '../json.js';
 
 const DIR = path.join(os.homedir(), '.agentview');
 const FILE = path.join(DIR, 'observe.json');
@@ -50,11 +50,7 @@ const EXAMPLE: Settings = {
 };
 
 async function save(s: Settings) {
-  await mkdir(DIR, { recursive: true });
-  // Written whole and renamed, so a reader never sees half a file.
-  const tmp = `${FILE}.${process.pid}.${randomUUID()}.tmp`;
-  await writeFile(tmp, JSON.stringify(s, null, 2) + '\n', { mode: 0o600 });
-  await rename(tmp, FILE);
+  await writeJson(FILE, s, { pretty: true, mode: 0o600 });
 }
 
 async function load(): Promise<Settings> {
