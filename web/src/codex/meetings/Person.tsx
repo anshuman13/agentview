@@ -16,12 +16,14 @@ import { AddPoint, PointList, useMarkRaised } from './Raise';
 import { firstName, pointsOf } from '../data/points';
 import '../../styles/features/wiki.css';
 
+const pill = (n: number) => (n > 5 ? <span className="mt-of">{n}</span> : null);
+
 function Asks({ title, rows }: { title: string; rows: ItemRow[] }) {
   const act = useActions();
   if (!rows.length) return null;
   return (
     <section className="mt-sec">
-      <h2>{title}<span className="mt-of">{rows.length}</span></h2>
+      <h2>{title}{pill(rows.length)}</h2>
       <ul className="wk-claims">
         {rows.map((r) => (
           <li key={r.profile + r.id} className="wk-claim">
@@ -43,7 +45,7 @@ function OpenTasks({ rows }: { rows: ItemRow[] }) {
   if (!rows.length) return null;
   return (
     <section className="mt-sec">
-      <h2>Open tasks<span className="mt-of">{rows.length}</span></h2>
+      <h2>Open tasks{pill(rows.length)}</h2>
       <ul className="wk-claims">
         {rows.map((r) => (
           <li key={r.profile + r.id} className="wk-claim">
@@ -70,6 +72,15 @@ export function Person({ name }: { name: string }) {
   const commitments = useMemo(() => commitmentsOf(meetings, name), [meetings, name]);
   const claims = useMemo(() => claimsMentioning(facts, name), [facts, name]);
   const inbox = useMemo(() => personInbox(name, snap.items, snap.chats, unanswered(snap.briefs)), [name, snap.items, snap.chats, snap.briefs]);
+  const waiting = useMemo(() => {
+    const seen = new Set<string>();
+    return [...inbox.asks, ...inbox.promises].filter((r) => {
+      const k = r.source_url || r.profile + r.id;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }, [inbox]);
   const tasks = useMemo(() => openTasksOf(name, snap.items), [name, snap.items]);
   const questions = openQuestions(mine);
   const title = useMemo(() => new Map(pages.map((p) => [p.id, p.title])), [pages]);
@@ -94,18 +105,17 @@ export function Person({ name }: { name: string }) {
           {inbox.dm && (
             <section className="mt-sec">
               <h2>Slack DM</h2>
-              <p className="sm-text">{inbox.dm.summary}</p>
+              <p className="sm-text" title={inbox.dm.summary ?? undefined}>{(inbox.dm.summary ?? '').split('\n')[0]}</p>
               <div className="wk-meta">
                 {inbox.dm.last_at ? <span>{ago(inbox.dm.last_at, ' ago')}</span> : null}
                 {safeHref(inbox.dm.url) && <a className="mt-person" href={safeHref(inbox.dm.url)} target="_blank" rel="noreferrer">Open in Slack</a>}
               </div>
             </section>
           )}
-          <Asks title={`${firstName(shown)} asked you`} rows={inbox.asks} />
-          <Asks title="You promised" rows={inbox.promises} />
+          <Asks title="Waiting on you" rows={waiting} />
           {inbox.mail.length > 0 && (
             <section className="mt-sec">
-              <h2>Unanswered mail<span className="mt-of">{inbox.mail.length}</span></h2>
+              <h2>Unanswered mail{pill(inbox.mail.length)}</h2>
               <ul className="wk-claims">
                 {inbox.mail.map((w) => (
                   <li key={w.thread} className="wk-claim">
@@ -119,9 +129,9 @@ export function Person({ name }: { name: string }) {
 
           <OpenTasks rows={tasks} />
 
-          <section className="mt-sec">
-            <h2>Commitments<span className="mt-of">{commitments.length}</span></h2>
-            {commitments.length > 0 ? (
+          {commitments.length > 0 && (
+            <section className="mt-sec">
+              <h2>Commitments{pill(commitments.length)}</h2>
               <ul className="wk-claims">
                 {commitments.map((c, i) => (
                   <li key={i} className="wk-claim">
@@ -130,11 +140,11 @@ export function Person({ name }: { name: string }) {
                   </li>
                 ))}
               </ul>
-            ) : <p className="mt-pending">Nothing recorded for {shown}.</p>}
-          </section>
+            </section>
+          )}
 
           <section className="mt-sec">
-            <h2>Raise with {firstName(shown)}{points.length > 0 && <span className="mt-of">{points.length}</span>}</h2>
+            <h2>Raise with {firstName(shown)}{pill(points.length)}</h2>
             {points.length > 0 && <PointList points={points} person={false} />}
             <AddPoint person={name} profile={mine[0]?.profile ?? 'work'} />
           </section>
@@ -143,7 +153,7 @@ export function Person({ name }: { name: string }) {
 
           {pins.length > 0 && (
             <section className="mt-sec">
-              <h2>Pinned<span className="mt-of">{pins.length}</span></h2>
+              <h2>Pinned{pill(pins.length)}</h2>
               <PinList pins={pins} onOpen={(r) => openMeeting({ profile: r.profile, id: r.meeting_id! })} />
             </section>
           )}
@@ -155,7 +165,7 @@ export function Person({ name }: { name: string }) {
 
           {claims.length > 0 && (
             <section className="mt-sec">
-              <h2>In the wiki<span className="mt-of">{claims.length}</span></h2>
+              <h2>In the wiki{pill(claims.length)}</h2>
               <ul className="wk-claims">
                 {claims.map((f) => (
                   <li key={f.id} className="wk-claim">

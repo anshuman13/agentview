@@ -23,8 +23,9 @@
 Codex shows Overview, Tasks, Meetings, Jobs and Wiki for the work profile, the personal profile or both. Under the
 nav, the sync line says when the app last synced with the hub, how many changes still wait for the hub, and "Not saved on this device" when the local copy cannot be written. While the hub skips its Slack, Gmail or calendar scan because
 that Claude account is at its usage limit, a line below it names the paused scans and the time the limit ends.
-Below that, one small line per source shows the last Slack, Gmail and calendar run with its counts, the error in the
-warning color when the last run failed, or "not set up"; Slack and Gmail have a "Scan now" button.
+When everything is healthy that one line is all the nav shows. Only when a scan failed, stalled or is paused, one small
+line per source appears below it with the last Slack, Gmail and calendar run, its counts, the error in the warning color,
+or "not set up"; Slack and Gmail have a "Scan now" button.
 
 ### Overview
 
@@ -105,10 +106,10 @@ checklist without a model call. Raise on a decision or an open task, and the fie
 the next meeting with that person (picked from the meeting's attendees and recent ones); a point waits for the first
 meeting with them after it was raised and counts as raised once that meeting ends. Points stay out of Search.
 
-A person page starts with what waits outside meetings: the summary of their Slack DM with Open in Slack, what they
-asked you and what you promised them in Slack or Gmail (each with its age and a Done check that clears it), and your sent mail to them with no reply, then their open tasks (with a Done check, included when the page is copied as Markdown). Below come their
-commitments, the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
-wiki claims that name them.
+A person page starts with what waits outside meetings: the first line of their Slack DM summary (full text on hover) with Open in Slack,
+one "Waiting on you" list of what they asked you and what you promised them in Slack or Gmail (deduped by source link, each with its age and a Done check that clears it), and your sent mail to them with no reply, then their open tasks (with a Done check, included when the page is copied as Markdown). Below come their
+commitments (hidden when there are none), the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
+wiki claims that name them. A section shows its count only when it has more than 5 rows.
 
 The meeting list shows a badge only when something waits for you: actions to review, open actions, Now or soon, or a missing transcript. Rows carry no recording length, repeat icon or topic chips. The header has no Sync calendar button: the calendar syncs on open, on its interval and on pull-to-refresh. The linear and copy buttons on an action row, and an empty Date chip, show on hover or focus on desktop and stay visible on touch.
 

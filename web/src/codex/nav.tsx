@@ -42,7 +42,7 @@ function scanText(h: ScanHealth) {
   return { text: `${name} ${when(h.ok)}${counts ? ` · ${counts}` : ''}`, bad: false };
 }
 
-function ScanLines({ scans }: { scans: ScanHealth[] }) {
+function ScanLines({ scans, paused }: { scans: ScanHealth[]; paused: boolean }) {
   const store = useAssistantStore();
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -53,8 +53,9 @@ function ScanLines({ scans }: { scans: ScanHealth[] }) {
     store.scanNow(name).catch((err) => setFailed((f) => ({ ...f, [name]: (err as Error).message }))).finally(() => setBusy(null));
   };
   const sorted = Object.keys(SCAN_NAME).flatMap((k) => scans.filter((h) => h.scan === k));
-  return sorted.map((h) => {
-    const { text, bad } = failed[h.scan] ? { text: `${SCAN_NAME[h.scan]}: ${failed[h.scan]}`, bad: true } : scanText(h);
+  const rows = sorted.map((h) => ({ h, ...(failed[h.scan] ? { text: `${SCAN_NAME[h.scan]}: ${failed[h.scan]}`, bad: true } : scanText(h)) }));
+  if (!paused && !rows.some((r) => r.bad)) return null;
+  return rows.map(({ h, text, bad }) => {
     return (
       <div key={h.scan} className={`as-nav-scan${bad ? ' bad' : ''}`}>
         <span title={text} className={open === h.scan ? 'open' : ''} onClick={() => setOpen(open === h.scan ? null : h.scan)}>{text}</span>
@@ -92,7 +93,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
       </div>
       <button className={`as-nav-sync ${dot}`} title="Sync now" onClick={() => store.syncNow()}><span className="as-dot" /><span>{status}</span></button>
       {paused && <div className="as-nav-paused">{paused}</div>}
-      <ScanLines scans={sync.scans} />
+      <ScanLines scans={sync.scans} paused={!!paused} />
     </nav>
   );
 }
