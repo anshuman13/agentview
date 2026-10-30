@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import type { ItemRow } from '../data/sync';
-import { splitTitle } from '../data/engine';
+import { errorText, splitTitle } from '../data/engine';
 import { queryWords, rowMatcher } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
@@ -63,7 +63,7 @@ function NewNoteCard() {
   const create = () => {
     const t = text?.trim();
     setText(null);
-    if (t) void store.capture(t, 'note', filter === 'personal' ? 'personal' : 'work');
+    if (t) store.capture(t, 'note', filter === 'personal' ? 'personal' : 'work').catch((err) => showSnack(`Note not saved: ${errorText(err)}`));
   };
   if (text === null) return <button ref={card} className="wk-card wk-new" onClick={() => setText('')}><Icon name="add" /> New note</button>;
   return (

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAssistantData, useAssistantStore } from './data';
 import { GOAL, MAX_GOALS, carryOver, goalProgress, goalsOf, linkedTo } from './data/goals';
 import { weekStart } from './data/dates';
+import { errorText } from './data/engine';
 import type { ItemRow, Profile } from './data/sync';
 import { openTask, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
@@ -42,6 +43,9 @@ export function WeekGoals({ now }: { now: number }) {
     setText('');
     try {
       await store.capture(t, GOAL, profile, weekStart(now));
+    } catch (err) {
+      setText(t);
+      showSnack(`Goal not saved: ${errorText(err)}`);
     } finally {
       adding.current = false;
     }
@@ -99,6 +103,8 @@ export function GoalLines({ now }: { now: number }) {
     busy.current = true;
     try {
       for (const g of carry) await store.capture(g.title ?? '', GOAL, g.profile, weekStart(now));
+    } catch (err) {
+      showSnack(`Not carried over: ${errorText(err)}`);
     } finally {
       busy.current = false;
     }
