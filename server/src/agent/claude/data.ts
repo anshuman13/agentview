@@ -19,7 +19,7 @@ export function dataTools(o: { cwd: string }) {
   return [
     tool(
       'data_find',
-      `Find rows in AgentView's data. Tables: ${Object.entries(WRITABLE).map(([t, cs]) => `${t} (${cs.join(', ')})`).join('; ')}. items are tasks and notes: status open, suggested, note or done; at is a due time. Every query word must match. Pass id for one full row.`,
+      `Find rows in AgentView's data. Tables: ${Object.entries(WRITABLE).map(([t, cs]) => `${t} (${cs.join(', ')})`).join('; ')}. items are tasks and notes: status open, suggested, note or done; at is a due time. Status goal rows are weekly goals (at is their Monday), not tasks; a task links to one by goal. Every query word must match. Pass id for one full row.`,
       { table: z.enum(TABLE_NAMES), query: z.string().optional(), id: z.string().optional() },
       async ({ table, query, id }) => {
         const rows = await own(table);
