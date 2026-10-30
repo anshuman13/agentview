@@ -10,6 +10,12 @@ export function pressable(onClick: (e: MouseEvent<HTMLElement>) => void) {
   return { role: 'button' as const, tabIndex: 0, onClick, onKeyDown };
 }
 
+export const fitHeight = (el: HTMLTextAreaElement | null) => {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+};
+
 export const escapeHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // Links from synced or model-written text open only as web or mail links.

@@ -5,7 +5,7 @@ import { isRepeat, parseRepeat } from './data/recur';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago, readFlag, safeHref, saveFlag } from '../ui/util';
+import { ago, fitHeight, readFlag, safeHref, saveFlag } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack, type Filter } from './view';
 import { useActions } from './useActions';
 import { PickDue, PickTime, when } from './time';
@@ -66,12 +66,6 @@ function Check({ row, onDone }: { row: ItemRow; onDone?: () => void }) {
   );
 }
 
-const grow = (el: HTMLTextAreaElement | null) => {
-  if (!el) return;
-  el.style.height = 'auto';
-  el.style.height = `${el.scrollHeight}px`;
-};
-
 // The open task edits in place: title and notes save when they lose focus or the task closes.
 function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void }) {
   const act = useActions();
@@ -113,7 +107,7 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
   latest.current = save;
   useEffect(() => () => latest.current(), []);
 
-  useLayoutEffect(() => { grow(titleRef.current); grow(textRef.current); }, [title, text]);
+  useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text]);
   // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
   useEffect(() => { if (matchMedia('(hover: hover)').matches) titleRef.current?.focus({ preventScroll: true }); }, []);
   // The task grows out of its row instead of popping in.

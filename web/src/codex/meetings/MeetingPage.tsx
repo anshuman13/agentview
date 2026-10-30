@@ -11,7 +11,7 @@ import { clock, when } from '../time';
 import { dayLabel } from '../data/dates';
 import { errorText } from '../data/engine';
 import { Icon } from '../../ui/Icon';
-import { safeHref } from '../../ui/util';
+import { fitHeight, safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
 import { copyText, meetingKey, openMeeting, setView, showSnack, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
@@ -164,12 +164,7 @@ function Notes({ m }: { m: Meeting }) {
   useEffect(() => {
     if (pending.current === null && document.activeElement !== area.current) setText(m.notes ?? '');
   }, [m.notes]);
-  useEffect(() => {
-    const el = area.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [text]);
+  useEffect(() => fitHeight(area.current), [text]);
   const change = (value: string) => {
     setText(value);
     pending.current = value;
