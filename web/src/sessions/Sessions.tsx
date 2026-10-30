@@ -380,6 +380,8 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
       const r = await post('/api/attention/ask', it.id);
       if (r.error) notice(r.error);
       else send({ type: 'view', id: r.id });
+    } catch {
+      notice('Could not ask Claude');
     } finally {
       setBusy(null);
     }
@@ -405,7 +407,7 @@ function NeedsYou({ n, children }: { n: number; children: ReactNode }) {
           </span>
           <span className="acts">
             <button className="icon-btn" title="Ask Claude to handle this" onClick={(e) => { e.stopPropagation(); void ask(it); }}><Icon name="sparkle" small /></button>
-            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); void post('/api/attention/dismiss', it.id); }}><Icon name="close" small /></button>
+            <button className="icon-btn" title="Dismiss until it changes" onClick={(e) => { e.stopPropagation(); post('/api/attention/dismiss', it.id).catch(() => notice('Could not dismiss')); }}><Icon name="close" small /></button>
           </span>
         </div>
       ))}
