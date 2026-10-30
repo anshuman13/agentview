@@ -97,7 +97,7 @@ follow-up draft, an action copies as a message or opens a prefilled Linear issue
 template last used for the series.
 
 The page of an upcoming meeting has a prep card: points to raise with its attendees (each with a Raised tick), what
-they took on last time, my open actions, open questions, and Copy agenda, which copies all of it as a Markdown
+they took on last time (earlier meetings of the same profile with the same title or a shared attendee, up to 8 people), my open actions, open questions, and Copy agenda, which copies all of it as a Markdown
 checklist without a model call. Raise on a decision or an open task, and the field on a person page, save a point for
 the next meeting with that person (picked from the meeting's attendees and recent ones); a point waits for the first
 meeting with them after it was raised and counts as raised once that meeting ends. Points stay out of Search.

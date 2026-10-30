@@ -110,7 +110,7 @@ export function personInbox(name: string, items: ItemRow[], chats: Chat[], mail:
 }
 
 const WINDOW = 56 * DAY;
-const MAX_PEOPLE = 8;
+export const MAX_PEOPLE = 8;
 
 export type Lapsed = { name: string; key: string; last: number; gap: number; since: number };
 

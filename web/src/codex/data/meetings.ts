@@ -1,5 +1,6 @@
 import { dayLabel, dayStart } from './dates';
 import type { ItemRow, Profile } from './sync';
+import { MAX_PEOPLE } from './review';
 import { decisionLog, factTime, listOf, live, matcher, othersOf, queryWords, rowMatcher, type Decision, type Fact, type Meeting } from './wiki';
 
 // Meetings that have started, newest day first and in time order within a day. The future lives in Today and Upcoming.
@@ -111,15 +112,15 @@ export const decisionsWith = (log: Decision[], person: string) => (person ? log.
 export const commitmentsOf = (meetings: Meeting[], person: string) =>
   meetingsOf(meetings, person).flatMap((m) => othersOf(m).filter((o) => sameName(o.who, person)).map((o) => ({ meeting: m, what: o.what })));
 
-// The last two earlier meetings that share an attendee or the title, newest first, with their decisions and open actions.
+// The last two earlier meetings in the same profile that share the title or an attendee (meetings of up to 8 people only), newest first, with their decisions and open actions.
 export function priorWith(meeting: Meeting, meetings: Meeting[], items: ItemRow[]) {
   const people = peopleOf(meeting);
   const title = meeting.title?.trim().toLowerCase();
   const start = meeting.starts_at;
   if (start == null) return [];
   return live(meetings)
-    .filter((m) => m.starts_at != null && m.starts_at < start && !(m.id === meeting.id && m.profile === meeting.profile)
-      && ((!!title && m.title?.trim().toLowerCase() === title) || peopleOf(m).some((p) => people.some((q) => sameName(p, q)))))
+    .filter((m) => m.starts_at != null && m.starts_at < start && m.profile === meeting.profile && m.id !== meeting.id
+      && ((!!title && m.title?.trim().toLowerCase() === title) || (peopleOf(m).length <= MAX_PEOPLE && peopleOf(m).some((p) => people.some((q) => sameName(p, q))))))
     .sort((a, b) => b.starts_at! - a.starts_at!)
     .slice(0, 2)
     .map((m) => ({ meeting: m, decisions: listOf(m.decisions), open: actionsOf(items, m).filter((r) => r.status === 'open') }));

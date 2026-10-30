@@ -186,6 +186,12 @@ describe('priorWith', () => {
     expect(priorWith(next, meetings, []).map((p) => p.meeting.id)).toEqual(['m1']);
   });
 
+  it('ignores a shared attendee in a meeting of more than eight people', () => {
+    const crowd = Array.from({ length: 11 }, (_, i) => `Guest ${i}`).concat('Ola');
+    const meetings = [mtg('big', 'All hands', 100, { people: JSON.stringify(crowd) }), mtg('same', 'Planning', 50, { people: JSON.stringify(crowd) }), next];
+    expect(priorWith(next, meetings, []).map((p) => p.meeting.id)).toEqual(['same']);
+  });
+
   it('carries decisions and only open actions', () => {
     const m = mtg('m1', 'Planning', 100, { decisions: JSON.stringify(['Ship it', 'Cut scope']) });
     const items = [task('a', 'm1', 'open'), task('b', 'm1', 'done'), task('c', 'm1', 'suggested'), task('d', 'm1', 'open'), task('e', 'other', 'open')];
