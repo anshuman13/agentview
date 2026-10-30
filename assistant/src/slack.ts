@@ -61,7 +61,13 @@ const Detail = z.object({
   from: z.string().describe('Who said it'),
   url: z.string().describe('Permalink of the message'),
 });
-export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; said?: z.infer<typeof Said>[]; channels?: { name: string; id: string }[] };
+const Decided = z.object({
+  text: z.string().describe('What was decided, in one short line'),
+  channel: z.string().describe('#channel-name; never an id'),
+  url: z.string().describe('Permalink of the message with the decision'),
+  time: z.string().describe('When it was decided, as YYYY-MM-DDTHH:MM local time'),
+});
+export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; said?: z.infer<typeof Said>[]; decisions?: z.infer<typeof Decided>[]; channels?: { name: string; id: string }[] };
 
 // Permalinks come from the model, so only web links are stored or pushed; no comma or semicolon, which split ntfy actions.
 export const webUrl = (u: string | null | undefined) => (u && /^https?:\/\/[^\s,;]+$/i.test(u) ? u : null);
@@ -108,7 +114,21 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   }
   for (const [id, text] of texts) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { text } });
   applyChanges(db, changes);
+  saveDecisions(db, r.decisions ?? [], now);
   return { added, urgent, said };
+}
+
+// Channel decisions with a web permalink are kept once each for wiki updates; ones older than two weeks are dropped.
+function saveDecisions(db: Database, list: z.infer<typeof Decided>[], now: number) {
+  const add = db.prepare('INSERT OR IGNORE INTO slack_decisions (profile, id, text, channel, url, at) VALUES (?, ?, ?, ?, ?, ?)');
+  for (const d of list) {
+    const url = webUrl(d.url);
+    const text = d.text.trim();
+    const name = d.channel.trim().replace(/^#/, '');
+    if (!url || !text || !name) continue;
+    add.run(PROFILE, createHash('sha1').update(`${url}\n${text.toLowerCase()}`).digest('hex').slice(0, 16), text, `#${name}`, url, Math.min(parseWhen(d.time) ?? now, now));
+  }
+  db.prepare('DELETE FROM slack_decisions WHERE at < ?').run(now - 14 * DAY);
 }
 
 // Reads happen every quarter hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
@@ -187,7 +207,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
   const since = sinceOf(db, now);
   const chats = db.prepare('SELECT id, name, summary FROM chats WHERE profile = ? AND deleted = 0').all(PROFILE) as { id: string; name: string; summary: string | null }[];
   let saved: ScanResult | null = null;
-  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
+  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
@@ -205,6 +225,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
     'Add an ask only when a message clearly asks me to do, answer or decide something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
+    'In decisions, add each decision the new messages in the watched channels settle: a plan, owner, date, number or status the people there agreed on. Skip proposals, questions and chatter.',
     'In details, add a note when a new message gives more detail on one of the open asks or tracked tasks below: a date, a requirement, a link, a change of scope or who owns it. Use the id in brackets. Skip messages that only repeat the task.',
     '',
     'Previous summaries:',

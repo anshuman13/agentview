@@ -174,7 +174,7 @@ the chat's folder; Claude can mark a claim personal when it is about my personal
 
 | Table | New columns | Notes |
 | --- | --- | --- |
-| facts | state, replaces, added_by | `state` proposed, live or rejected (null means live, so existing rows stay live); `replaces` is the live claim a proposal would supersede; `added_by` is `claude:<chat id>`, `meeting:<id>` or `you` |
+| facts | state, replaces, added_by | `state` proposed, live or rejected (null means live, so existing rows stay live); `replaces` is the live claim a proposal would supersede; `added_by` is `claude:<chat id>`, `meeting:<id>`, `slack:<id>` or `you` |
 | pages | state | A page Claude proposes is `proposed` until a claim on it is approved |
 
 Approving a claim sets it live, makes its proposed page live, and sets `superseded_by` on the claim it replaces.
@@ -201,6 +201,12 @@ the profile's account, with only a save tool, writes a replacement ("As of <date
 change. Each is saved as a proposed claim with `replaces`, a meeting source and `added_by` `meeting:<id>`, unless the
 same text already replaces that claim. Its review card says "From <meeting title>". A meeting stopped by the usage
 limit is tried again on the next run.
+
+Slack decisions go the same way. The Slack scan also returns decisions settled in the watched channels (a short line,
+the channel, the permalink and the time), kept once per permalink and line in the hub-only `slack_decisions` table for
+14 days. Each one is looked at once (meta key `wikiupdate:work:slack:<id>`), with the channel name in place of the
+meeting title, in the same queue and limits as meetings. Its proposals have a Slack source with the permalink and
+`added_by` `slack:<id>`, and the review card says "From #channel".
 
 ### Steps
 

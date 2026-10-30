@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { openDb } from './db.js';
+import { saveScan } from './slack.js';
 import { applyChanges } from './sync.js';
-import { type Candidate, proposeWikiUpdates } from './wikiUpdates.js';
+import { type Candidate, type Origin, proposeWikiUpdates } from './wikiUpdates.js';
 
 const DAY = 86_400_000;
 const now = Date.parse('2026-10-30T12:00:00Z');
@@ -42,5 +43,27 @@ describe('wiki updates', () => {
     db.prepare("DELETE FROM meta WHERE key LIKE 'wikiupdate:%'").run();
     expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
     expect(asked).toHaveLength(1);
+  });
+
+  it('proposes updates from Slack channel decisions once each, with a Slack source', async () => {
+    const db = setup();
+    db.prepare("INSERT INTO meta (key, value) VALUES ('wikiupdate:work:cal:m', '1')").run();
+    const url = 'https://team.slack.test/archives/C1/p1';
+    const decision = { text: 'Basic plan costs 15 euros monthly', channel: 'pricing', url, time: '2026-10-29T10:00' };
+    const scan = (d: object[]) => saveScan(db, { chats: [], asks: [], answered: [], decisions: d as never }, now);
+    scan([decision, decision, { ...decision, url: 'javascript:x' }, { ...decision, text: 'Old', time: '2026-10-01T10:00' }]);
+    scan([decision]);
+    const asked: Origin[] = [];
+    const ask = async (_p: string, o: Origin) => {
+      asked.push(o);
+      return [{ claim: 'price', text: 'As of 29 Oct 2026, the Basic plan costs 15 euros monthly.' }];
+    };
+    expect(await proposeWikiUpdates(db, now, ask)).toBe(1);
+    expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
+    expect(asked.map((o) => o.decisions)).toEqual([['Basic plan costs 15 euros monthly']]);
+    const row = db.prepare("SELECT replaces, added_by, sources FROM facts WHERE state = 'proposed'").get() as { replaces: string; added_by: string; sources: string };
+    expect(row.replaces).toBe('price');
+    expect(row.added_by).toMatch(/^slack:[0-9a-f]{16}$/);
+    expect(JSON.parse(row.sources)).toEqual([{ kind: 'slack', label: '#pricing', url }]);
   });
 });

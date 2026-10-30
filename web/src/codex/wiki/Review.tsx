@@ -16,6 +16,9 @@ function ReviewCard({ fact }: { fact: Fact }) {
   const chat = chatOf(fact);
   const from = meetingOf(fact);
   const meeting = from ? meetings.find((m) => m.id === from && m.profile === fact.profile) : undefined;
+  const label = from
+    ? meeting?.title ?? sourcesOf(fact).find((s) => s.kind === 'meeting')?.label ?? 'a meeting'
+    : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack' : null;
   const approve = () => {
     const changes = approveChanges(fact, pages, facts);
     changes.forEach((c) => void store.editRow(c.table, c.row as never, c.patch as never));
@@ -36,7 +39,7 @@ function ReviewCard({ fact }: { fact: Fact }) {
         {page ? <>{page.title}{page.state === 'proposed' && <em> (new page in {page.section})</em>}{fact.heading && <> · {fact.heading}</>}</> : 'Memory'}
         {fact.profile === 'personal' && <span className="wk-src">Personal</span>}
       </div>
-      {from && <div className="wk-meta"><span>From {meeting?.title ?? sourcesOf(fact).find((s) => s.kind === 'meeting')?.label ?? 'a meeting'}</span></div>}
+      {label && <div className="wk-meta"><span>From {label}</span></div>}
       {editing ? (
         <div className="mt-action-edit"><textarea autoFocus rows={2} value={text} onChange={(e) => setText(e.target.value)} aria-label="Claim" /></div>
       ) : (

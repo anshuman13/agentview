@@ -46,6 +46,7 @@ sides run on the personal account.
 | facts | Memory and wiki claims: one-sentence statements with their sources, page and heading; a contradicting fact supersedes the old one, and a claim can be contested |
 | pages | Wiki pages grouped in sections |
 | meetings | Calendar meetings with my notes, the summary and decisions |
+| slack_decisions | Decisions the Slack scan saw in watched channels, with channel, permalink and time; hub only, kept 14 days, read by the wiki update pass |
 | transcripts | The Gemini transcript text of each summarized meeting, kept on the hub only (not synced; the apps search it and read it through the hub) |
 | actions | Proposed Slack messages, Linear issues and tasks from a meeting, approved or rejected in Codex |
 | people | One row per person, with Slack id, emails and calendar names merged |
@@ -67,6 +68,8 @@ Both scans also pick up my own promises ("I'll send it tomorrow") from what I wr
 "You said" with the link and a due date when I named one. Once a day the Gmail scan also looks at mail I sent in the
 last 14 days and keeps the threads where I asked something and nobody replied for 3 workdays, in one `briefs` row of
 kind `waiting`. An entry drops when a reply arrives or after 14 days. The weekly review lists them under Waiting on.
+The Slack scan also notes decisions settled in the watched channels, kept on the hub for 14 days; the wiki update
+pass proposes the claims they change for Review (see [codex-wiki.md](codex-wiki.md)).
 
 Each scan is off until its config file exists in `~/.agentview/assistant`:
 

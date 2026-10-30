@@ -63,6 +63,19 @@ export function openDb(file: string = DB_PATH): Database {
     )
   `);
 
+  // Decisions the Slack scan saw in channels, kept on the hub for wiki updates.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS slack_decisions (
+      profile TEXT NOT NULL,
+      id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      channel TEXT NOT NULL,
+      url TEXT NOT NULL,
+      at INTEGER NOT NULL,
+      PRIMARY KEY (profile, id)
+    )
+  `);
+
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));
     db.exec(createIndexSQL(tableName));

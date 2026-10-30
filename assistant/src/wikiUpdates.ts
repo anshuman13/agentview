@@ -14,6 +14,9 @@ const WITHIN = 14 * DAY;
 const MAX_CLAIMS = 20;
 
 type Meeting = { id: string; title: string | null; starts_at: number; calendar_url: string | null; decisions: string };
+type SlackDecision = { id: string; text: string; channel: string; url: string; at: number };
+// A meeting or a Slack message whose decisions may change claims. id keys the done mark; by is the claim's added_by.
+export type Origin = { id: string; by: string; title: string | null; at: number; decisions: string[]; what: string; source: { kind: 'meeting' | 'slack'; label: string; url?: string } };
 type Claim = { id: string; text: string; page_id: string; heading: string | null; at: number | null; updated_at: number; title: string };
 export type Candidate = { claim: Claim; decisions: string[] };
 export type Update = { claim: string; text: string };
@@ -28,27 +31,42 @@ const list = (s: string) => {
   }
 };
 
-// Meetings of the last two weeks with decisions that were not looked at yet.
-export function pendingMeetings(db: Database, profile: Profile, now = Date.now()): Meeting[] {
-  const rows = db.prepare(
+const dateOf = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+const fromMeeting = (m: Meeting): Origin => ({
+  id: m.id, by: `meeting:${m.id}`, title: m.title, at: m.starts_at, decisions: list(m.decisions),
+  what: `The meeting "${m.title ?? 'Meeting'}" on ${dateOf(m.starts_at)}`,
+  source: { kind: 'meeting', label: m.title || 'Meeting', ...(m.calendar_url && { url: m.calendar_url }) },
+});
+
+const fromSlack = (d: SlackDecision): Origin => ({
+  id: `slack:${d.id}`, by: `slack:${d.id}`, title: d.channel, at: d.at, decisions: [d.text],
+  what: `A message in ${d.channel} on ${dateOf(d.at)}`,
+  source: { kind: 'slack', label: d.channel, url: d.url },
+});
+
+// Meetings and Slack decisions of the last two weeks that were not looked at yet, oldest first.
+export function pendingOrigins(db: Database, profile: Profile, now = Date.now()): Origin[] {
+  const meetings = db.prepare(
     "SELECT id, title, starts_at, calendar_url, decisions FROM meetings WHERE profile = ? AND deleted = 0 AND starts_at >= ? AND COALESCE(ends_at, starts_at) <= ? AND decisions IS NOT NULL AND decisions NOT IN ('', '[]') ORDER BY starts_at",
   ).all(profile, now - WITHIN, now) as Meeting[];
+  const slack = db.prepare('SELECT id, text, channel, url, at FROM slack_decisions WHERE profile = ? AND at >= ? AND at <= ?').all(profile, now - WITHIN, now) as SlackDecision[];
   const done = db.prepare('SELECT 1 FROM meta WHERE key = ?');
-  return rows.filter((m) => !done.get(doneKey(profile, m.id)));
+  return [...meetings.map(fromMeeting), ...slack.map(fromSlack)].filter((o) => !done.get(doneKey(profile, o.id))).sort((a, b) => a.at - b.at);
 }
 
 export const markDone = (db: Database, profile: Profile, id: string, now = Date.now()) =>
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(doneKey(profile, id), String(now));
 
-// Current claims on live pages from before the meeting, with no proposed replacement yet, that a decision may change, with the decisions that touch each.
-export function candidates(db: Database, profile: Profile, m: Meeting): Candidate[] {
+// Current claims on live pages from before the decision, with no proposed replacement yet, that it may change, with the decisions that touch each.
+export function candidates(db: Database, profile: Profile, o: Origin): Candidate[] {
   const claims = db.prepare(
     "SELECT f.id, f.text, f.page_id, f.heading, f.at, f.updated_at, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND NOT EXISTS (SELECT 1 FROM facts r WHERE r.profile = f.profile AND r.replaces = f.id AND r.deleted = 0 AND r.state = 'proposed') AND f.text IS NOT NULL AND p.title IS NOT NULL",
   ).all(profile) as Claim[];
-  const decisions = list(m.decisions).map((text) => ({ text, key: decisionKey(text, m.title) }));
+  const decisions = o.decisions.map((text) => ({ text, key: decisionKey(text, o.title) }));
   const out: Candidate[] = [];
   for (const c of claims) {
-    if (Math.max(c.at ?? 0, c.updated_at) >= m.starts_at) continue;
+    if (Math.max(c.at ?? 0, c.updated_at) >= o.at) continue;
     const words = keyWords(c.text);
     const title = titleWords(c.title);
     const hits = decisions.filter((d) => mayChange(d.key, words, title)).map((d) => d.text);
@@ -58,10 +76,9 @@ export function candidates(db: Database, profile: Profile, m: Meeting): Candidat
 }
 
 const norm = (t: string) => t.trim().replace(/\s+/g, ' ').toLowerCase();
-const dateOf = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 // Saves each update as a proposed claim that replaces the old one, unless the same text already replaces it.
-export function saveUpdates(db: Database, profile: Profile, m: Meeting, found: Candidate[], updates: Update[], now = Date.now()) {
+export function saveUpdates(db: Database, profile: Profile, o: Origin, found: Candidate[], updates: Update[], now = Date.now()) {
   const byId = new Map(found.map((c) => [c.claim.id, c.claim]));
   const same = db.prepare('SELECT text FROM facts WHERE profile = ? AND replaces = ? AND deleted = 0');
   const changes: Change[] = [];
@@ -74,17 +91,17 @@ export function saveUpdates(db: Database, profile: Profile, m: Meeting, found: C
     if (seen.has(key) || (same.all(profile, old.id) as { text: string | null }[]).some((r) => norm(r.text ?? '') === norm(text))) continue;
     seen.add(key);
     changes.push({
-      table: 'facts', id: `upd:${createHash('sha1').update(`${m.id}\n${key}`).digest('hex').slice(0, 16)}`, profile, updated_at: now,
+      table: 'facts', id: `upd:${createHash('sha1').update(`${o.id}\n${key}`).digest('hex').slice(0, 16)}`, profile, updated_at: now,
       fields: {
-        text, page_id: old.page_id, heading: old.heading, at: now, state: 'proposed', replaces: old.id, added_by: `meeting:${m.id}`,
-        sources: JSON.stringify([{ kind: 'meeting', label: m.title || 'Meeting', ...(m.calendar_url && { url: m.calendar_url }) }]),
+        text, page_id: old.page_id, heading: old.heading, at: now, state: 'proposed', replaces: old.id, added_by: o.by,
+        sources: JSON.stringify([o.source]),
       },
     });
   }
   return applyChanges(db, changes).applied;
 }
 
-async function decide(profile: Profile, m: Meeting, found: Candidate[]) {
+async function decide(profile: Profile, o: Origin, found: Candidate[]) {
   const account = ACCOUNT_OF[profile];
   guardLimit(account);
   const dir = configDir(account);
@@ -97,9 +114,9 @@ async function decide(profile: Profile, m: Meeting, found: Candidate[]) {
     return { content: [{ type: 'text', text: 'saved' }] };
   });
   const prompt = [
-    `The meeting "${m.title ?? 'Meeting'}" on ${dateOf(m.starts_at)} made the decisions listed under each wiki claim below.`,
+    `${o.what} made the decisions listed under each wiki claim below.`,
     'For each claim, decide whether those decisions change it: update a number, owner, date, status or plan in it, contradict it, or end it.',
-    `When they do, call save_update with the claim id and the replacement claim: one or two specific sentences starting "As of ${dateOf(m.starts_at)}," that keep the still true detail from the old claim and lead with the subject.`,
+    `When they do, call save_update with the claim id and the replacement claim: one or two specific sentences starting "As of ${dateOf(o.at)}," that keep the still true detail from the old claim and lead with the subject.`,
     'When they do not, or you are unsure, save nothing for that claim. Do not use the em dash character. Do not do anything else.',
     '',
     ...found.flatMap((c) => [`[${c.claim.id}] (page ${c.claim.title}) ${c.claim.text}`, ...c.decisions.map((d) => `  - decision: ${d}`)]),
@@ -126,19 +143,19 @@ async function decide(profile: Profile, m: Meeting, found: Candidate[]) {
   return updates;
 }
 
-// Proposes wiki updates from each recent meeting's decisions, once per meeting. A meeting stopped by the usage limit waits for the next run.
+// Proposes wiki updates from the decisions of each recent meeting and Slack message, once each. One stopped by the usage limit waits for the next run.
 export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = decide) {
   let saved = 0;
   for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
-    for (const m of pendingMeetings(db, profile, now).slice(0, 5)) {
-      const found = candidates(db, profile, m);
+    for (const o of pendingOrigins(db, profile, now).slice(0, 5)) {
+      const found = candidates(db, profile, o);
       try {
-        if (found.length) saved += saveUpdates(db, profile, m, found, await ask(profile, m, found), now);
+        if (found.length) saved += saveUpdates(db, profile, o, found, await ask(profile, o, found), now);
       } catch (err) {
         console.error(`wiki updates ${profile}:`, err instanceof Error ? err.message : err);
         if (isLimited(ACCOUNT_OF[profile])) break;
       }
-      markDone(db, profile, m.id, now);
+      markDone(db, profile, o.id, now);
     }
   }
   return saved;
