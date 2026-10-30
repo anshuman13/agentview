@@ -1,11 +1,11 @@
 import { BadRequest } from '../../../server/src/http/body.js';
 import { pausedScans } from '../claude.js';
 import { currentVersion } from '../db.js';
-import { applyChanges, pullChanges, type Change } from '../sync.js';
+import { exchange, type Change } from '../sync.js';
 import { fail, readJson, send, type Ctx, type Routes } from './http.js';
 
-function sendPulled({ res, device, getDb }: Ctx, since: number) {
-  const pulled = pullChanges(getDb(), since);
+function sendPulled({ res, device, getDb }: Ctx, since: number, changes: Change[] = []) {
+  const pulled = exchange(getDb(), since, changes);
   send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, device, paused: pausedScans(getDb()) });
 }
 
@@ -24,8 +24,7 @@ export const syncRoutes: Routes = {
       if (!Array.isArray(data.changes)) {
         throw new BadRequest('Invalid changes field');
       }
-      applyChanges(c.getDb(), data.changes);
-      sendPulled(c, data.since);
+      sendPulled(c, data.since, data.changes);
     } catch (err) {
       fail(c.res, err);
     }

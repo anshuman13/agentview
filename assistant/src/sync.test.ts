@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { applyChanges, pullChanges } from './sync.js';
+import { applyChanges, exchange, pullChanges } from './sync.js';
 import { openDb, TABLES } from './db.js';
 import { Database } from 'bun:sqlite';
 import fs from 'fs';
@@ -65,6 +65,12 @@ describe('sync', () => {
     expect(first.changes.map((c) => c.id)).toEqual(['item1']);
     expect(first.hasMore).toBe(true);
     expect(pullChanges(db, first.version, 1).changes.map((c) => c.id)).toEqual(['item2']);
+  });
+
+  it('pulls everything for a device ahead of the hub even when its push raises the version past since', () => {
+    applyChanges(db, [ch({ id: 'item1', fields: { title: 'Item 1' } })]);
+    const pushed = [2, 3, 4].map((n) => ch({ id: `p${n}`, fields: { title: 'P' } }));
+    expect(exchange(db, 3, pushed).changes.map((c) => c.id)).toContain('item1');
   });
 
   it('keeps the same id in work and personal as two rows', () => {

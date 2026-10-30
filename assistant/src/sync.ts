@@ -167,6 +167,13 @@ export function applyChanges(
   return { version: maxVersion, applied };
 }
 
+// Pushes and pulls in one step. The since check runs before the push, which would otherwise raise the hub version past it.
+export function exchange(db: Database, since: number, changes: Change[]): PullResult {
+  if (since > currentVersion(db)) since = 0;
+  applyChanges(db, changes);
+  return pullChanges(db, since);
+}
+
 export function pullChanges(
   db: Database,
   since: number,
