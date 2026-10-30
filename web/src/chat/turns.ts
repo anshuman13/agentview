@@ -117,7 +117,7 @@ export function buildTurns(events: ChatEvent[]) {
       const cmd = str(e.input.command);
       if (!e.parent) turn.commands.push({ id: e.id, label: str(e.input.description) || firstLine(cmd), done: !!result, ...(denied(result) ? { denied: true } : { error: result?.isError ? errorLine(result.text) : undefined }) });
       if (result && !result.isError && /\bgit\b[\s\S]*\bcommit\b/.test(cmd)) {
-        for (const m of result.text.matchAll(COMMIT)) turn.commits.push({ hash: m[2], subject: m[3].trim() });
+        for (const m of result.text.matchAll(COMMIT)) if (!turn.commits.some((c) => c.hash === m[2])) turn.commits.push({ hash: m[2], subject: m[3].trim() });
       }
     }
     if (AGENT_TOOLS.has(e.name) && !e.parent) {
