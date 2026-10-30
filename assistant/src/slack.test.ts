@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { openDb } from './db.js';
-import { acceptAsk, askId, pushHours, saveScan, scanDue, slackConfig } from './slack.js';
+import { pushHours, scanDue, slackConfig } from './slack.js';
+import { acceptAsk, askId, saveScan } from './slackSave.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
 const ask = (url: string, urgent = false) => ({ url, from: 'Kim', chat: '#ai', title: 'Answer Kim', quote: 'Can you check?', urgent });

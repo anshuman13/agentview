@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { mailDue, mailId, saveMail, saveWaiting, unanswered } from './gmail.js';
-import { acceptAsk } from './slack.js';
+import { acceptAsk } from './slackSave.js';
 import { addWorkdays } from './time.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();

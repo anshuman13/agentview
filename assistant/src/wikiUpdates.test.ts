@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { openDb } from './db.js';
-import { saveScan } from './slack.js';
+import { saveScan } from './slackSave.js';
 import { applyChanges } from './sync.js';
 import { type Candidate, type Origin, proposeWikiUpdates } from './wikiUpdates.js';
 

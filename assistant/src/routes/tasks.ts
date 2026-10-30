@@ -2,7 +2,8 @@ import { isProfile } from '../db.js';
 import { once } from '../once.js';
 import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
-import { acceptAsk, summarizeSlack } from '../slack.js';
+import { summarizeSlack } from '../slack.js';
+import { acceptAsk } from '../slackSave.js';
 import { body, errText, send, type Ctx, type Routes } from './http.js';
 
 function taskAction(act: typeof finishTask) {
