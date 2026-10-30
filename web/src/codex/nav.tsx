@@ -31,7 +31,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   return (
     <nav className="as-nav">
       {LISTS.map((l) => (
-        <button key={l.id} className={list === l.id ? 'active' : ''} onClick={() => { setView({ list: l.id, open: null, anchor: null, person: null }); onPick?.(); }}>
+        <button key={l.id} className={list === l.id ? 'active' : ''} aria-current={list === l.id ? 'page' : undefined} onClick={() => { setView({ list: l.id, open: null, anchor: null, person: null }); onPick?.(); }}>
           <Icon name={l.icon} /><span>{l.label}</span>{count[l.id] > 0 && <span className="as-count">{count[l.id]}</span>}
         </button>
       ))}
