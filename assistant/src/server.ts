@@ -250,6 +250,7 @@ export function createServer(): http.Server {
 
       send(res, 404, { error: 'Not found' });
     } catch (err) {
+      console.error(`${req.method} ${req.url?.split('?')[0]}:`, err);
       if (!res.headersSent) {
         send(res, 500, { error: 'internal error' });
       }
