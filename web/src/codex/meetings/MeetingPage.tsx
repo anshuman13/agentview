@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
@@ -13,6 +13,7 @@ import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
 import { copyText, setView, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
+import { Fold as ContextFold } from '../Fold';
 import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
@@ -59,27 +60,30 @@ function AddAction({ m }: { m: Meeting }) {
 // One line on where the meeting is, so an empty action list always has a reason.
 function StateLine({ m, now }: { m: Meeting; now: number }) {
   const store = useAssistantStore();
-  const snap = useAssistantData();
-  const c = actionCount(snap.items, m);
-  const others = othersOf(m).length;
   const state = meetingState(m, now);
   const parts: string[] = [];
   if (state === 'upcoming') parts.push(`Starts ${when(m.starts_at!, now)}`);
   if (state === 'live') parts.push('In progress');
   if (state === 'waiting') parts.push('Waiting for the transcript');
   if (state === 'missing') parts.push('No transcript for this meeting');
-  if (state === 'done') {
-    parts.push(c.total ? `${c.total} for you` : 'Nothing for you');
-    if (c.review) parts.push(`${c.review} to review`);
-    if (others) parts.push(`${others} others took`);
-    if (c.unassigned) parts.push(`${c.unassigned} unassigned`);
-  }
   if (!parts.length) return null;
   return (
     <div className={`mt-state ${state}`}>
       <span>{parts.join(' · ')}</span>
       {(state === 'waiting' || state === 'missing') && <TranscriptButton m={m} label={state === 'missing' ? 'Retry' : 'Read now'} />}
       {state === 'missing' && <button className="btn sm" title="Nothing to add for this meeting" onClick={() => void store.editRow('meetings', m, { transcript: 'done' })}>Dismiss</button>}
+    </div>
+  );
+}
+
+function Notes({ m }: { m: Meeting }) {
+  const [editing, setEditing] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (editing) box.current?.querySelector('textarea')?.focus(); }, [editing]);
+  if (!m.notes && !editing) return <button className="mt-pending mt-add-notes" onClick={() => setEditing(true)}><Icon name="add" small /> Add notes</button>;
+  return (
+    <div ref={box} onBlur={(e) => { if (e.target instanceof HTMLTextAreaElement && !e.target.value) setEditing(false); }}>
+      <MeetingNotes key={rowKey(m)} m={m} />
     </div>
   );
 }
@@ -156,9 +160,10 @@ export function MeetingPage({ m }: { m: Meeting }) {
           <section className="mt-sec">
             <h2><Icon name="sparkle" small /> Summary{m.summary && <SummaryFormat m={m} series={prior} />}</h2>
             {m.summary ? <PinnableSummary m={m} /> : <p className="mt-pending">{state === 'missing' ? 'No summary without a transcript.' : 'Written from the transcript after the meeting.'}</p>}
+            {m.summary && pins.length > 0 && <PinList pins={pins} />}
           </section>
 
-          {pins.length > 0 && (
+          {!m.summary && pins.length > 0 && (
             <section className="mt-sec">
               <h2>Pinned<span className="mt-of">{pins.length}</span></h2>
               <PinList pins={pins} />
@@ -174,13 +179,14 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           {(state === 'upcoming' || state === 'live') && <Prep m={m} section />}
 
-          {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}
-
-          <Series m={m} prior={prior} />
+          <ContextFold id="meeting-context" title="Context" count={(transcript?.text ? 1 : 0) + (prior.length ? 1 : 0)}>
+            {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}
+            <Series m={m} prior={prior} />
+          </ContextFold>
 
           <section className="mt-sec">
             <h2>My notes</h2>
-            <MeetingNotes key={rowKey(m)} m={m} />
+            <Notes m={m} />
           </section>
 
           <Fold title="Unassigned" count={count.unassigned}>

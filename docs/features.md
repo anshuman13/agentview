@@ -94,8 +94,8 @@ being written, most shared words first. A claim or meeting opens in Codex, a Sla
 
 ### Meetings
 
-Meetings imports the calendar every half hour and shows notes, summary, decisions, actions, pinned text and earlier
-meetings of the same series, with decisions made and questions asked again; the page copies as Markdown or as a
+Meetings imports the calendar every half hour and shows notes, summary (pinned text sits under it), decisions, actions and a closed Context fold with talk time and earlier
+meetings of the same series, with decisions made and questions asked again; empty notes show a quiet "Add notes" row, and the page has no status line once the transcript is read; the page copies as Markdown or as a
 follow-up draft, an action copies as a message or opens a prefilled Linear issue, and the summary format suggests the
 template last used for the series. A meeting without a transcript is a quiet, muted "No transcript" (Retry and Dismiss on its page); the hub tries 8 times, or 2 when the previous meeting of the same title had none.
 
@@ -124,7 +124,7 @@ The header has a decision log filtered by person, a Load view and a Week view:
 Saved topics filter the list, show a timeline of matching meetings, decisions and claims, and count what is new since
 you last looked. Topics and person pages list questions the meetings left open until you resolve them. Meeting search
 also asks the hub, which keeps each transcript's text, and shows the words around a hit in the transcript; a
-summarized meeting's page has a talk time strip (each speaker's share of words in the transcript, top five, with the
+summarized meeting's page has a talk time strip in the Context fold (each speaker's share of words in the transcript, top five, with the
 action and decision counts) and a collapsed Transcript section. The app-wide Search also lists Transcripts hits from
 the hub with the meeting's title, date and the words around the hit; offline the group is left out. Search shows 8 hits per group with a Show N more button, and a Tasks and notes hit opens that task on Tasks. Long lists show
 50 rows at a time.
