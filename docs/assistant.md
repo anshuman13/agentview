@@ -19,6 +19,9 @@ so a power cut, an outage or a reboot at home only pauses scans and sync.
 
 - Bun with `bun:sqlite`, one database file, in the `assistant/` workspace of this repo
 - Sync: every row carries a version; clients push their changes and pull "changes since N"; last edit wins per field
+  (an edit is always timed after the value it replaces, so a device with a slow clock still wins). A device whose
+  saved version is past the hub's, as after a restore from backup, pulls everything again, and so does the phone app
+  when an update adds a synced table. The browser saves its version only together with the rows of that pull
 - Backups: `VACUUM INTO` a dated file, copied nightly to the laptop, plus Time Machine
 
 ## Profiles and accounts
@@ -58,8 +61,12 @@ On weekdays from 07 to 19 the hub reads the work account with Haiku and read-onl
 every 15 minutes (DMs, mentions and the watched channels), Gmail every 30 minutes (the inbox, without promotions,
 social, updates and forums). Messages and mail that ask me to act become suggested tasks in Tasks under "Is this
 yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
-reply before taking it. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default).
+reply before taking it. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default); during a calendar meeting
+they are held and sent as one push when it ends.
 Scan slots follow the hub's local clock, so half hours start at :00 and :30 in any time zone.
+While a Claude account is at its usage limit, the Slack scan and the calendar import of its profiles skip their
+runs. The hub logs the pause once per limit, and each sync reply lists the paused scans so the apps can show them
+until the limit ends.
 
 The same scan call writes a reply draft for each new ask, in my voice, 2 to 4 sentences in the language of the ask,
 kept in the item's `draft` column. For it the model reads the ask's thread and calls a local `ask_context` tool, which
