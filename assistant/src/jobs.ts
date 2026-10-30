@@ -1,11 +1,12 @@
 import type { Database } from 'bun:sqlite';
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, isLimited, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
+import { isLimited } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { ACCOUNT_OF } from './calendar.js';
+import { ask } from './claude.js';
 import type { Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { MIN } from './time.js';
@@ -45,7 +46,6 @@ export function canRead(name: string) {
 // Runs one job on its profile's account with read-only tools; it may add tasks to Codex and returns its reply.
 async function runJob(db: Database, job: Job) {
   const account = ACCOUNT_OF[job.profile];
-  const dir = configDir(account);
   const added: string[] = [];
   const addTask = tool('add_task', 'Add a task for me to Codex.', { title: z.string().describe('Short imperative task'), context: z.string().optional().describe('One sentence on why, with a link if there is one') }, async (a) => {
     const now = Date.now();
@@ -60,22 +60,15 @@ async function runJob(db: Database, job: Job) {
     'Use add_task for anything I need to act on. End with a short plain-text result for a phone notification. Do not use the em dash character.',
   ].join('\n');
   let result = '';
-  for await (const m of query({
-    prompt,
-    options: {
-      persistSession: false,
-      model: 'sonnet',
-      maxTurns: 30,
-      cwd: os.tmpdir(),
-      settingSources: [],
-      tools: ['WebSearch', 'WebFetch'],
-      env: { ...process.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
-      mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [addTask] }) },
-      allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task'],
-      canUseTool: async (name, input) => (canRead(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'Jobs can only read.' }),
-    },
+  for await (const m of ask(account, prompt, {
+    model: 'sonnet',
+    maxTurns: 30,
+    cwd: os.tmpdir(),
+    tools: ['WebSearch', 'WebFetch'],
+    mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [addTask] }) },
+    allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task'],
+    canUseTool: async (name, input) => (canRead(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'Jobs can only read.' }),
   })) {
-    stopOnOverage(account, m);
     if (m.type === 'result') {
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();

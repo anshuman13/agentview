@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
+import { ask } from './claude.js';
 import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, inWeekHours } from './time.js';
@@ -64,27 +64,18 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
     events = a.events;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  guardLimit(ACCOUNT_OF[profile]);
-  const dir = configDir(ACCOUNT_OF[profile]);
   const prompt = [
     `List my Google Calendar events on my primary calendar from ${new Date(from).toISOString()} to ${new Date(to).toISOString()}.`,
     'Leave out all-day events, events I declined, and events with no other attendees.',
     'Then call save_meetings once with all of them. Do not do anything else.',
   ].join(' ');
-  for await (const m of query({
-    prompt,
-    options: {
-      persistSession: false,
-      model: 'sonnet',
-      maxTurns: 12,
-      settingSources: [],
-      env: { ...process.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
-      mcpServers: { assistant: createSdkMcpServer({ name: 'assistant', tools: [save] }) },
-      allowedTools: [`${CALENDAR}list_events`, `${CALENDAR}get_event`, `${CALENDAR}list_calendars`, 'mcp__assistant__save_meetings'],
-      permissionMode: 'dontAsk',
-    },
+  for await (const m of ask(ACCOUNT_OF[profile], prompt, {
+    model: 'sonnet',
+    maxTurns: 12,
+    mcpServers: { assistant: createSdkMcpServer({ name: 'assistant', tools: [save] }) },
+    allowedTools: [`${CALENDAR}list_events`, `${CALENDAR}get_event`, `${CALENDAR}list_calendars`, 'mcp__assistant__save_meetings'],
+    permissionMode: 'dontAsk',
   })) {
-    stopOnOverage(ACCOUNT_OF[profile], m);
     // Meetings saved before the run hit its turn limit still count.
     if (m.type === 'result' && m.subtype !== 'success' && !events) throw new Error(`Calendar import ended with ${m.subtype}`);
   }

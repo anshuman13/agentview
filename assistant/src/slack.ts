@@ -3,13 +3,13 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { DB_DIR } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
+import { ask } from './claude.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, parseWhen } from './time.js';
 
@@ -153,25 +153,17 @@ export type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools'
 // Stops as soon as done() says the work is saved, so the model does not spend turns repeating itself.
 export async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false, read = READ_TOOLS) {
   const account = ACCOUNT_OF[PROFILE];
-  guardLimit(account);
-  const dir = configDir(account);
   let result = '';
-  for await (const m of query({
-    prompt,
-    options: {
-      persistSession: false,
-      model,
-      maxTurns,
-      cwd: os.tmpdir(),
-      settingSources: [],
-      env: { ...process.env, ENABLE_TOOL_SEARCH: 'false', ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
-      ...(model === 'haiku' && { thinking: { type: 'disabled' as const } }),
-      mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools }) },
-      allowedTools: [...read, ...tools.map((t) => `mcp__codex__${t.name}`)],
-      permissionMode: 'dontAsk',
-    },
+  for await (const m of ask(account, prompt, {
+    model,
+    maxTurns,
+    cwd: os.tmpdir(),
+    env: { ENABLE_TOOL_SEARCH: 'false' },
+    ...(model === 'haiku' && { thinking: { type: 'disabled' as const } }),
+    mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools }) },
+    allowedTools: [...read, ...tools.map((t) => `mcp__codex__${t.name}`)],
+    permissionMode: 'dontAsk',
   })) {
-    stopOnOverage(account, m);
     if (m.type === 'result') {
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();

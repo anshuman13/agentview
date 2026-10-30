@@ -1,11 +1,11 @@
 import os from 'node:os';
 import type { Database } from 'bun:sqlite';
-import { createSdkMcpServer, query, tool, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { blockId } from '../../shared/util.js';
-import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { BadRequest } from '../../server/src/http/body.js';
 import { ACCOUNT_OF } from './calendar.js';
+import { ask } from './claude.js';
 import { type Profile } from './db.js';
 import { once } from './once.js';
 import { applyChanges } from './sync.js';
@@ -43,31 +43,23 @@ export async function createEvent(b: Block, old: string | null): Promise<Created
     return { content: [{ type: 'text', text: 'saved' }] };
   });
   const account = ACCOUNT_OF[b.profile];
-  guardLimit(account);
-  const dir = configDir(account);
   const prompt = [
     old ? `Delete the event with id ${old} from my primary Google Calendar with no notifications; if it is already gone, go on.` : '',
     `Create one event on my primary Google Calendar titled ${JSON.stringify(b.title)},`,
     `from ${new Date(b.start).toISOString()} to ${new Date(b.end).toISOString()}, with no attendees, no description and no video call.`,
     'Then call event_created once with its link. Do not do anything else.',
   ].filter(Boolean).join(' ');
-  for await (const m of query({
-    prompt,
-    options: {
-      persistSession: false,
-      model: 'haiku',
-      thinking: { type: 'disabled' },
-      maxTurns: 4,
-      cwd: os.tmpdir(),
-      settingSources: [],
-      env: { ...process.env, ENABLE_TOOL_SEARCH: 'false', ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
-      mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [save] }) },
-      allowedTools: ['mcp__claude_ai_Google_Calendar__create_event', 'mcp__codex__event_created', ...(old ? [DELETE] : [])],
-      hooks: { PreToolUse: [{ matcher: DELETE, hooks: [async (input) => onlyEvent(input, old)] }] },
-      permissionMode: 'dontAsk',
-    },
+  for await (const m of ask(account, prompt, {
+    model: 'haiku',
+    thinking: { type: 'disabled' },
+    maxTurns: 4,
+    cwd: os.tmpdir(),
+    env: { ENABLE_TOOL_SEARCH: 'false' },
+    mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [save] }) },
+    allowedTools: ['mcp__claude_ai_Google_Calendar__create_event', 'mcp__codex__event_created', ...(old ? [DELETE] : [])],
+    hooks: { PreToolUse: [{ matcher: DELETE, hooks: [async (input) => onlyEvent(input, old)] }] },
+    permissionMode: 'dontAsk',
   })) {
-    stopOnOverage(account, m);
     if (made) break;
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Calendar block ended with ${m.subtype}`);
   }

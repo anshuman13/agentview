@@ -1,11 +1,12 @@
 import type { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import os from 'node:os';
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { decisionKey, keyWords, mayChange, titleWords } from '../../shared/claimMatch.js';
-import { configDir, guardLimit, isLimited, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
+import { isLimited } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
+import { ask } from './claude.js';
 import type { Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY } from './time.js';
@@ -111,8 +112,6 @@ export function saveUpdates(db: Database, profile: Profile, o: Origin, found: Ca
 
 async function decide(profile: Profile, o: Origin, found: Candidate[]) {
   const account = ACCOUNT_OF[profile];
-  guardLimit(account);
-  const dir = configDir(account);
   const updates: Update[] = [];
   const save = tool('save_update', 'Save the replacement for one claim that a decision changes.', {
     claim: z.string().describe('The claim id in brackets'),
@@ -129,23 +128,17 @@ async function decide(profile: Profile, o: Origin, found: Candidate[]) {
     '',
     ...found.flatMap((c) => [`[${c.claim.id}] (page ${c.claim.title}) ${c.claim.text}`, ...c.decisions.map((d) => `  - decision: ${d}`)]),
   ].join('\n');
-  for await (const msg of query({
-    prompt,
-    options: {
-      persistSession: false,
-      model: 'haiku',
-      maxTurns: 4 + found.length,
-      cwd: os.tmpdir(),
-      settingSources: [],
-      tools: [],
-      thinking: { type: 'disabled' },
-      env: { ...process.env, ENABLE_TOOL_SEARCH: 'false', ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
-      mcpServers: { wiki: createSdkMcpServer({ name: 'wiki', tools: [save] }) },
-      allowedTools: ['mcp__wiki__save_update'],
-      permissionMode: 'dontAsk',
-    },
+  for await (const msg of ask(account, prompt, {
+    model: 'haiku',
+    maxTurns: 4 + found.length,
+    cwd: os.tmpdir(),
+    tools: [],
+    thinking: { type: 'disabled' },
+    env: { ENABLE_TOOL_SEARCH: 'false' },
+    mcpServers: { wiki: createSdkMcpServer({ name: 'wiki', tools: [save] }) },
+    allowedTools: ['mcp__wiki__save_update'],
+    permissionMode: 'dontAsk',
   })) {
-    stopOnOverage(account, msg);
     if (msg.type === 'result' && msg.subtype !== 'success' && !updates.length) throw new Error(`Wiki update ended with ${msg.subtype}`);
   }
   return updates;

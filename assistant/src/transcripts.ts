@@ -3,11 +3,12 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { snippet } from '../../shared/snippet.js';
-import { configDir, guardLimit, isLimited, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
+import { configDir, isLimited } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
+import { ask } from './claude.js';
 import type { Profile } from './db.js';
 import { once, serial } from './once.js';
 import { applyChanges, type Change } from './sync.js';
@@ -213,7 +214,6 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     found.push(a);
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  guardLimit(ACCOUNT_OF[profile]);
   const dir = configDir(ACCOUNT_OF[profile]);
   const root = dir ?? path.join(os.homedir(), '.claude');
   const docs = docReader(root);
@@ -252,27 +252,21 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     'Skip meetings without a Gemini notes doc. Do not do anything else.',
   ].join('\n');
   let failure: string | null = null;
-  for await (const m of query({
-    prompt,
-    options: {
-      persistSession: false,
-      model: 'sonnet',
-      maxTurns: 10 + meetings.length * 4,
-      settingSources: [],
-      env: { ...process.env, MAX_MCP_OUTPUT_TOKENS: '100000', ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
-      mcpServers: { assistant: createSdkMcpServer({ name: 'assistant', tools: [save, saved] }) },
-      allowedTools: [
-        'mcp__claude_ai_Google_Calendar__get_event',
-        'mcp__claude_ai_Google_Drive__read_file_content',
-        'mcp__claude_ai_Google_Drive__search_files',
-        'mcp__claude_ai_Google_Docs__read_doc',
-        'mcp__assistant__save_meeting_notes',
-        'mcp__assistant__read_saved_output',
-      ],
-      permissionMode: 'dontAsk',
-    },
+  for await (const m of ask(ACCOUNT_OF[profile], prompt, {
+    model: 'sonnet',
+    maxTurns: 10 + meetings.length * 4,
+    env: { MAX_MCP_OUTPUT_TOKENS: '100000' },
+    mcpServers: { assistant: createSdkMcpServer({ name: 'assistant', tools: [save, saved] }) },
+    allowedTools: [
+      'mcp__claude_ai_Google_Calendar__get_event',
+      'mcp__claude_ai_Google_Drive__read_file_content',
+      'mcp__claude_ai_Google_Drive__search_files',
+      'mcp__claude_ai_Google_Docs__read_doc',
+      'mcp__assistant__save_meeting_notes',
+      'mcp__assistant__read_saved_output',
+    ],
+    permissionMode: 'dontAsk',
   })) {
-    stopOnOverage(ACCOUNT_OF[profile], m);
     docs.see(m);
     if (m.type === 'result' && m.subtype !== 'success') failure = m.subtype;
   }

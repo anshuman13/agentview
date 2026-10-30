@@ -1,8 +1,8 @@
 import os from 'node:os';
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
+import { ask } from './claude.js';
 import { dueAt } from './transcripts.js';
 
 const Found = z.object({
@@ -26,13 +26,11 @@ export function toParsed(text: string, f: Found | undefined, now = Date.now()): 
 
 // One Haiku call on the work account while I add a task: a clear title, the leftover detail, and when it is due if I said so.
 export async function parseTask(text: string, now = Date.now()): Promise<Parsed> {
-  guardLimit(ACCOUNT_OF.work);
   let found: Found | undefined;
   const save = tool('save_task', 'Save the task.', Found.shape, async (a) => {
     found = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  const dir = configDir(ACCOUNT_OF.work);
   const d = new Date(now);
   const prompt = [
     `Now is ${d.toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}, time zone ${Intl.DateTimeFormat().resolvedOptions().timeZone}.`,
@@ -41,23 +39,16 @@ export async function parseTask(text: string, now = Date.now()): Promise<Parsed>
     'Fix dictation errors, keep every fact, and do not invent anything. Do not use the em dash character.',
     `Text: ${JSON.stringify(text)}`,
   ].join('\n');
-  for await (const m of query({
-    prompt,
-    options: {
-      persistSession: false,
-      model: 'haiku',
-      systemPrompt: 'You turn quick notes into clear tasks.',
-      maxTurns: 3,
-      cwd: os.tmpdir(),
-      settingSources: [],
-      tools: [],
-      env: { ...process.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) },
-      mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [save] }) },
-      allowedTools: ['mcp__codex__save_task'],
-      permissionMode: 'dontAsk',
-    },
+  for await (const m of ask(ACCOUNT_OF.work, prompt, {
+    model: 'haiku',
+    systemPrompt: 'You turn quick notes into clear tasks.',
+    maxTurns: 3,
+    cwd: os.tmpdir(),
+    tools: [],
+    mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [save] }) },
+    allowedTools: ['mcp__codex__save_task'],
+    permissionMode: 'dontAsk',
   })) {
-    stopOnOverage(ACCOUNT_OF.work, m);
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Parse ended with ${m.subtype}`);
   }
   return toParsed(text, found, now);
