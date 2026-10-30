@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { ask } from './claude.js';
+import { ask, scanPaused } from './claude.js';
 import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, inWeekHours, slotStart } from './time.js';
@@ -144,7 +144,7 @@ export async function syncCalendar(db: () => Database, profiles = Object.keys(AC
 export function startCalendar(db: () => Database, every = 5 * 60_000) {
   const run = () => {
     try {
-      const due = (Object.keys(ACCOUNT_OF) as Profile[]).filter((p) => importDue(lastAttempt(db(), p)));
+      const due = (Object.keys(ACCOUNT_OF) as Profile[]).filter((p) => importDue(lastAttempt(db(), p)) && !scanPaused(db(), ACCOUNT_OF[p], 'calendar'));
       if (due.length) void syncCalendar(db, due);
     } catch (err) {
       console.error('calendar:', err instanceof Error ? err.message : err);

@@ -8,7 +8,7 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { DB_DIR } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
-import { ask } from './claude.js';
+import { ask, scanPaused } from './claude.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { applyChanges } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, slotStart } from './time.js';
@@ -187,7 +187,7 @@ export function startSlack(db: () => Database, every = MIN) {
   let tried = 0;
   const tick = async () => {
     const c = slackConfig();
-    if (busy || !c || !scanDue(tried)) return;
+    if (busy || !c || !scanDue(tried) || scanPaused(db(), ACCOUNT_OF[PROFILE], 'slack')) return;
     busy = true;
     tried = Date.now();
     try {

@@ -13,7 +13,7 @@ type Limits = Partial<Record<Account, number>>;
 // Until when each account is out of usage, kept across restarts. The hub marks limits in the same file, so it is read each time.
 const limited: Limits = {};
 const limits = (): Limits => readJsonSync<Limits | null>(LIMITS, null) ?? {};
-const limitedUntil = (a: Account) => Math.max(limits()[a] ?? 0, limited[a] ?? 0);
+export const limitedUntil = (a: Account) => Math.max(limits()[a] ?? 0, limited[a] ?? 0);
 
 // The second account counts once it is logged in. The file is large, so it is read again only when it changes.
 let altSeen = { mtime: -1, value: false };

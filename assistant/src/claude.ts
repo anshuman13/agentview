@@ -1,6 +1,7 @@
+import type { Database } from 'bun:sqlite';
 import { query, type Options } from '@anthropic-ai/claude-agent-sdk';
 import type { Account } from '../../shared/protocol.js';
-import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
+import { configDir, guardLimit, limitedUntil, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 
 // One run on the account, with no saved session or settings. It refuses at the usage limit and stops before extra usage.
 export async function* ask(account: Account, prompt: string, options: Options) {
@@ -11,4 +12,27 @@ export async function* ask(account: Account, prompt: string, options: Options) {
     stopOnOverage(account, m);
     yield m;
   }
+}
+
+export type Paused = { scan: string; reason: string; until: number };
+
+const noted = new Map<string, number>();
+
+// A scan skipped at the usage limit logs and records the pause once per limit mark, so the apps can show it.
+export function scanPaused(db: Database, account: Account, scan: string, now = Date.now()) {
+  const until = limitedUntil(account);
+  if (until <= now) return false;
+  const key = `paused:${scan}:${account}`;
+  if (noted.get(key) !== until) {
+    noted.set(key, until);
+    console.log(`${scan}: paused, the ${account} Claude account is at its usage limit until ${new Date(until).toLocaleString()}`);
+    const value: Paused = { scan, reason: 'Claude usage limit', until };
+    db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, JSON.stringify(value));
+  }
+  return true;
+}
+
+export function pausedScans(db: Database, now = Date.now()): Paused[] {
+  const rows = db.prepare("SELECT value FROM meta WHERE key LIKE 'paused:%' ORDER BY key DESC").all() as { value: string }[];
+  return rows.map((r) => JSON.parse(r.value) as Paused).filter((p) => p.until > now);
 }
