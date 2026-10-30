@@ -27,6 +27,21 @@ fn open_external(url: &tauri::Url) {
     }
 }
 
+// On Android a blocked link opens in the browser through the shell bridge, so the WebView and the browser never both open it.
+fn navigate(webview: &tauri::Webview, url: &tauri::Url) -> bool {
+    if trusted(url) {
+        return true;
+    }
+    #[cfg(desktop)]
+    if url.scheme() != "http" && url.scheme() != "https" {
+        open_external(url);
+    }
+    if cfg!(target_os = "android") && matches!(url.scheme(), "http" | "https" | "mailto" | "tel" | "sms" | "geo" | "intent" | "market") {
+        let _ = webview.eval(format!("window.AgentViewShell&&AgentViewShell.open({})", Value::String(url.to_string())));
+    }
+    false
+}
+
 fn data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -71,16 +86,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(Store::new())
         .invoke_handler(tauri::generate_handler![assistant_open, assistant_close, assistant_dev_key, assistant_batch, assistant_exec, assistant_query])
-        .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(|_, url| {
-            if trusted(url) {
-                return true;
-            }
-            #[cfg(desktop)]
-            if url.scheme() != "http" && url.scheme() != "https" {
-                open_external(url);
-            }
-            false
-        }).build())
+        .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(navigate).build())
         .setup(|app| {
             let builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &app.config().app.windows[0])?;
             // Links that open a new window (window.open, target="_blank") go to the default browser.

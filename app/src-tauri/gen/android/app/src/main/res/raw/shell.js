@@ -34,10 +34,9 @@
       save(a);
       return true;
     }
+    // A same-tab link is a navigation, which the app allows or opens in the browser.
+    if (a.target !== '_blank') return false;
     const web = u.protocol === 'http:' || u.protocol === 'https:';
-    if (web && u.origin === location.origin && a.target !== '_blank') return false;
-    // The WebView already follows this link, and the app installs the download itself.
-    if (web && u.pathname === '/api/app.apk' && a.target !== '_blank') return false;
     if (!web && !/^(mailto|tel|sms|geo|intent|market):$/.test(u.protocol)) return false;
     S.open(u.href);
     return true;

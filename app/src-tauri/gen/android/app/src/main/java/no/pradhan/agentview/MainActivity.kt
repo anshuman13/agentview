@@ -106,6 +106,8 @@ class MainActivity : TauriActivity() {
     WebView.setWebContentsDebuggingEnabled((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0)
     webView.setDownloadListener { url, _, _, mime, _ -> if (isUpdate(url, mime)) installUpdate(url) else openExternal(url) }
     webView.addJavascriptInterface(Shell(), "AgentViewShell")
+    // target=_blank then asks for a new window, which is refused, instead of navigating this one; shell.js opens it.
+    webView.settings.setSupportMultipleWindows(true)
     if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
       val script = resources.openRawResource(R.raw.shell).bufferedReader().use { it.readText() }
       WebViewCompat.addDocumentStartJavaScript(webView, script, setOf("*"))
