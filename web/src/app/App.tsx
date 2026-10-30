@@ -18,7 +18,8 @@ import { Guard } from './Guard';
 import { deepLink } from './deepLinks';
 import { isPage, pageOf, PageView, PAGES, type Page } from './pages';
 import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, AssistantBadge, Assistant, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, Loading } from './lazy';
-import { AppUpdate, CacheItem, McpItem, Offline, Restarting, UsageItem } from './StatusItems';
+import { AppUpdate, Offline, Restarting } from './StatusItems';
+import { StatusBar } from './StatusBar';
 
 import { canNotify, toggleNotify, useNotify } from './notify';
 import { THEME_NAMES, useTheme } from './theme';
@@ -43,13 +44,11 @@ const LONG_PRESS = 450;
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 export function App() {
-  const connected = useStore((s) => s.ui.connected);
   const pendingCount = useStore((s) => s.pending.length);
   const elsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
   const openFile = useStore((s) => s.ui.openFile);
   const repoPicker = useStore((s) => s.ui.repoPicker);
   const session = useStore((s) => s.session);
-  const status = useStore((s) => s.status);
   const mcp = useShownMcp();
   const [tab, setTab] = useState<Tab>(() => (narrow() && !deepLink.chat && !deepLink.session ? 'assistant' : 'chat'));
   const [editor, setEditor] = useState<'file' | 'browser' | 'agents' | 'assistant' | Page>('file');
@@ -398,26 +397,7 @@ export function App() {
         )}
       </div>
 
-      <footer className="statusbar desktop-only">
-        <button className="item project clickable" title={`${session.cwd}\nStart a chat in another repo (⌘O)`} onClick={() => setUi({ repoPicker: true })}><Icon name="folder" small /> {project}</button>
-        <span className={`item ${session.running ? 'busy' : 'idle'}`}>
-          <Icon name={session.running ? 'loading' : 'check'} small spin={session.running} /> {session.running ? 'Working' : 'Idle'}
-        </span>
-        {!['Idle', 'Working', 'Connecting'].includes(status) && <span className="item status-text">{status}</span>}
-        <span className="spacer" />
-        <McpItem />
-        <UsageItem />
-        <CacheItem />
-        {canNotify && (
-          <button className="item clickable" title={notifying ? 'Notifying you when Claude finishes or needs you. Click to turn off' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
-            <Icon name={notifying ? 'bell' : 'bell-slash'} small />
-          </button>
-        )}
-        <button className="item clickable" title={`Theme: ${THEME_NAMES[theme]}. Click to switch`} onClick={toggleTheme}><Icon name="color-mode" small /></button>
-        <button className="item clickable" title="Open on phone" onClick={() => setPhone((v) => !v)}><Icon name="device-mobile" small /></button>
-        <button className="item clickable" title="Switch to another Mac" onClick={() => setMacs((v) => !v)}><Icon name="vm" small /> {macName}</button>
-        {!connected && <span className="item error"><Icon name="plug" small /> Disconnected</span>}
-      </footer>
+      <StatusBar project={project} theme={theme} toggleTheme={toggleTheme} macName={macName} onPhone={() => setPhone((v) => !v)} onMacs={() => setMacs((v) => !v)} />
 
       <nav className="tabbar mobile-only">
         <button className={tab === 'assistant' && !more ? 'active' : ''} title="Codex. Hold to talk" {...assistantPress}>
