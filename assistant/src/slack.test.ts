@@ -20,6 +20,14 @@ describe('saveScan', () => {
     expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ added: 0, urgent: [] });
   });
 
+  test('stores only web permalinks', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [], asks: [ask('https://x.test/1'), ask('javascript:alert(1)')], answered: [] }, at(27, 10));
+    const url = (u: string) => (db.prepare('SELECT source_url FROM items WHERE id = ?').get(askId(u)) as { source_url: string | null }).source_url;
+    expect(url('https://x.test/1')).toBe('https://x.test/1');
+    expect(url('javascript:alert(1)')).toBeNull();
+  });
+
   test('keeps the summary of a chat with no new messages', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.', new_messages: 3 }], asks: [], answered: [] }, at(27, 10));

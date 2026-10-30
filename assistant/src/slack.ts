@@ -55,19 +55,22 @@ const Detail = z.object({
 });
 export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; channels?: { name: string; id: string }[] };
 
+// Permalinks come from the model, so only web links are stored or pushed.
+const webUrl = (u: string | null | undefined) => (u && /^https?:\/\//i.test(u) ? u : null);
+
 export const askId = (url: string) => `slack:${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
 
 // Saves one scan: chat summaries, asks as items to review, and closes asks I have replied to. Returns how many asks are new and which are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
   // A chat with nothing new keeps its running summary.
-  const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: c.url ?? null, summary: c.summary.trim(), last_at: now } }));
+  const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now } }));
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
   let added = 0;
   for (const a of r.asks) {
     const id = askId(a.url);
     if (has.get(PROFILE, id)) continue;
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: a.url, people: `${a.from} · ${a.chat}`, at: null, status: 'suggested' } });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'suggested' } });
     added++;
     if (a.urgent) urgent.push({ ...a, id });
   }
@@ -214,8 +217,9 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
 async function pushUrgent(c: SlackConfig, urgent: Awaited<ReturnType<typeof scanSlack>>['urgent'], now = Date.now()) {
   if (!pushHours(c, now)) return;
   for (const a of urgent) {
-    const actions = `view, Open, ${a.url}; http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-    await pushNtfy(`${a.from}: ${a.title}`, a.chat, a.quote, a.url, actions).catch(() => false);
+    const url = webUrl(a.url);
+    const accept = `http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
+    await pushNtfy(`${a.from}: ${a.title}`, a.chat, a.quote, url ?? '', url ? `view, Open, ${url}; ${accept}` : accept).catch(() => false);
   }
 }
 
@@ -230,7 +234,7 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
   const suggest = tool('suggest_task', 'Suggest a task for me; it waits for me to accept it.', { title: z.string(), quote: z.string(), url: z.string().describe('Permalink'), from: z.string(), chat: z.string() }, async (a) => {
     const id = askId(a.url);
     if (!db.prepare('SELECT 1 FROM items WHERE profile = ? AND id = ?').get(PROFILE, id)) {
-      applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Date.now(), fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: a.url, people: `${a.from} · ${a.chat}`, at: null, status: 'suggested' } }]);
+      applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Date.now(), fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'suggested' } }]);
       added.push(a.title.trim());
     }
     return { content: [{ type: 'text', text: 'added' }] };
