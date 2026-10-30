@@ -5,7 +5,7 @@ import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
 import { buildTranscript, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
-import { plural } from '../ui/util';
+import { clickOnKey, plural, pressable } from '../ui/util';
 import { ROW_WINDOW, revealMore, windowStart } from './window';
 import type { ChatEvent } from '../../../shared/protocol';
 
@@ -50,7 +50,7 @@ export function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; 
   return (
     <div ref={box} className="tr" onScroll={onScroll}>
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
-      {start > 0 && <div className="tr-more" onClick={showEarlier}>Show earlier ({start} hidden)</div>}
+      {start > 0 && <div className="tr-more" {...pressable(showEarlier)}>Show earlier ({start} hidden)</div>}
       {items.slice(start).map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
     </div>
   );
@@ -113,7 +113,7 @@ function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult
   return (
     <div className={`tr-step tr-act t-${stepTone(use.name)} ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
       <span className="tr-mark">{state === 'pending' ? <Icon name="loading" small spin /> : <i className="tr-hex" />}</span>
-      <span className="tr-text" title={object}>{verb && <span className="tr-verb">{verb} </span>}<span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span></span>
+      <span className="tr-text" title={object} role="button" tabIndex={0} aria-expanded={open} onKeyDown={clickOnKey}>{verb && <span className="tr-verb">{verb} </span>}<span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span></span>
       <span className="tr-dur">{dur}</span>
       {cmd && !open && <span className="tr-cmd" title={cmd}>$ {cmd.replace(/\s*\n\s*/g, ' ⏎ ')}</span>}
       {state === 'err' && !open && <span className="tr-err">{firstLine(result!.text) || 'Failed'}</span>}
@@ -138,7 +138,7 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
   const cut = rel.lastIndexOf('/');
   const name = rel.slice(cut + 1);
   return (
-    <div className={`tr-file tr-act ${it.denied ? 'denied' : it.error ? 'err' : ''}`} title={rel} onClick={() => setUi({ openFile: rel, follow: false })}>
+    <div className={`tr-file tr-act ${it.denied ? 'denied' : it.error ? 'err' : ''}`} title={rel} {...pressable(() => setUi({ openFile: rel, follow: false }))}>
       <FileIcon name={name} />
       <span className="tr-path"><span className="tr-dir">{cut >= 0 ? rel.slice(0, cut + 1) : ''}</span>{name}</span>
       {it.error ? (
@@ -163,7 +163,7 @@ function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: stri
     <div className="tr-agent-box tr-act">
       <div className={`tr-agent ${running ? 'running' : result?.isError && !denied(result) ? 'err' : 'done'} ${open ? 'open' : ''}`} onClick={() => canOpen && setOpen((v) => !v)}>
         <span className="tr-mark"><i className="tr-ring" /></span>
-        <span className="tr-text" title={desc}>
+        <span className="tr-text" title={desc} role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} aria-expanded={canOpen ? open : undefined} onKeyDown={canOpen ? clickOnKey : undefined}>
           {desc}
           <span className="tr-state"> · {type && `${type} · `}{state}{steps.length > 0 && ` · ${plural(steps.length, 'step')}`}</span>
           {running && <Icon name="loading" small spin />}
@@ -177,7 +177,7 @@ function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: stri
       </div>
       {shown.length > 0 && (
         <div className="tr-sub">
-          {!open && steps.length > shown.length && <div className="tr-more" onClick={() => setOpen(true)}>{steps.length - shown.length} earlier steps</div>}
+          {!open && steps.length > shown.length && <div className="tr-more" {...pressable(() => setOpen(true))}>{steps.length - shown.length} earlier steps</div>}
           {shown.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}
         </div>
       )}

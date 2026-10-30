@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import { send } from '../app/store';
 
+// Enter or Space on a focusable element that is not a button clicks it.
+export const clickOnKey = (e: KeyboardEvent<HTMLElement>) => {
+  if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  e.currentTarget.click();
+};
+
 export function pressable(onClick: (e: MouseEvent<HTMLElement>) => void) {
-  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
-    if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
-    e.preventDefault();
-    e.currentTarget.click();
-  };
-  return { role: 'button' as const, tabIndex: 0, onClick, onKeyDown };
+  return { role: 'button' as const, tabIndex: 0, onClick, onKeyDown: clickOnKey };
 }
 
 export const fitHeight = (el: HTMLTextAreaElement | null) => {
