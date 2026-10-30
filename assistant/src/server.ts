@@ -21,12 +21,7 @@ const isApp = (origin: string) => origin === 'http://tauri.localhost' || origin 
 
 let db: ReturnType<typeof openDb> | null = null;
 
-function getDb() {
-  if (!db) {
-    db = openDb();
-  }
-  return db;
-}
+const getDb = () => (db ??= openDb());
 
 // Only the phone app calls from a browser context; any other page (Origin or Sec-Fetch-Site set) could forge writes.
 export function fromAllowedPage(h: http.IncomingHttpHeaders) {

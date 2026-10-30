@@ -20,9 +20,21 @@ export function send(res: http.ServerResponse, status: number, obj: unknown, hea
   res.end(JSON.stringify(obj));
 }
 
+export const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
 export function fail(res: http.ServerResponse, err: unknown) {
-  const message = err instanceof Error ? err.message : String(err);
+  const message = errText(err);
   if (message === 'Request body too large') send(res, 413, { error: message }, { 'Connection': 'close' });
   else if (err instanceof BadRequest || err instanceof SyncError) send(res, 400, { error: message });
   else send(res, 500, { error: 'internal error' });
+}
+
+// The JSON body, or null once the error response is sent.
+export async function body<T>({ req, res }: Ctx, max: number): Promise<T | null> {
+  try {
+    return (await readJson(req, max)) as T;
+  } catch (err) {
+    fail(res, err);
+    return null;
+  }
 }

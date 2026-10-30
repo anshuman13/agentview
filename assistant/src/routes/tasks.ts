@@ -3,7 +3,7 @@ import { once } from '../once.js';
 import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
 import { acceptAsk, summarizeSlack } from '../slack.js';
-import { fail, readJson, send, type Ctx, type Routes } from './http.js';
+import { body, errText, send, type Ctx, type Routes } from './http.js';
 
 function taskAction(act: typeof finishTask) {
   return ({ res, url, getDb }: Ctx) => {
@@ -13,24 +13,25 @@ function taskAction(act: typeof finishTask) {
   };
 }
 
+function accept(source: 'slack' | 'gmail', name: string) {
+  return ({ res, url, getDb }: Ctx) => {
+    const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '', source);
+    send(res, ok ? 200 : 404, ok ? { ok } : { error: `No such ${name} task` });
+  };
+}
+
 export const taskRoutes: Routes = {
-  'POST /parse': async ({ req, res }) => {
-    let data: { profile?: unknown; text?: unknown };
-    try {
-      data = await readJson(req, 20_000);
-    } catch (err) {
-      fail(res, err);
-      return;
-    }
+  'POST /parse': async (c) => {
+    const data = await body<{ profile?: unknown; text?: unknown }>(c, 20_000);
+    if (!data) return;
     if (!isProfile(data.profile) || typeof data.text !== 'string' || !data.text.trim()) {
-      send(res, 400, { error: 'Missing profile or text' });
+      send(c.res, 400, { error: 'Missing profile or text' });
       return;
     }
     try {
-      const parsed = await parseTask(data.text.trim());
-      send(res, 200, parsed);
+      send(c.res, 200, await parseTask(data.text.trim()));
     } catch (err) {
-      send(res, 502, { error: err instanceof Error ? err.message : String(err) });
+      send(c.res, 502, { error: errText(err) });
     }
   },
 
@@ -42,17 +43,10 @@ export const taskRoutes: Routes = {
       const r = await once('slack', () => summarizeSlack(getDb()));
       send(res, 200, { added: r.added.length });
     } catch (err) {
-      send(res, 502, { error: err instanceof Error ? err.message : String(err) });
+      send(res, 502, { error: errText(err) });
     }
   },
 
-  'POST /slack/accept': ({ res, url, getDb }) => {
-    const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '');
-    send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Slack task' });
-  },
-
-  'POST /gmail/accept': ({ res, url, getDb }) => {
-    const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '', 'gmail');
-    send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Gmail task' });
-  },
+  'POST /slack/accept': accept('slack', 'Slack'),
+  'POST /gmail/accept': accept('gmail', 'Gmail'),
 };

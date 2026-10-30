@@ -1,7 +1,12 @@
 import { BadRequest } from '../../../server/src/http/body.js';
 import { currentVersion } from '../db.js';
 import { applyChanges, pullChanges, type Change } from '../sync.js';
-import { fail, readJson, send, type Routes } from './http.js';
+import { fail, readJson, send, type Ctx, type Routes } from './http.js';
+
+function sendPulled({ res, device, getDb }: Ctx, since: number) {
+  const pulled = pullChanges(getDb(), since);
+  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, device });
+}
 
 export const syncRoutes: Routes = {
   'GET /health': ({ res, getDb }) => {
@@ -9,45 +14,32 @@ export const syncRoutes: Routes = {
     send(res, 200, { ok: true, version });
   },
 
-  'POST /sync': async ({ req, res, device, getDb }) => {
+  'POST /sync': async (c) => {
     try {
-      const data = (await readJson(req, 5_000_000)) as { since: number; changes: Change[] };
+      const data = (await readJson(c.req, 5_000_000)) as { since: number; changes: Change[] };
       if (!Number.isInteger(data.since) || data.since < 0) {
         throw new BadRequest('Missing or invalid since field');
       }
       if (!Array.isArray(data.changes)) {
         throw new BadRequest('Invalid changes field');
       }
-      applyChanges(getDb(), data.changes);
-      const pulled = pullChanges(getDb(), data.since);
-      send(res, 200, {
-        version: pulled.version,
-        changes: pulled.changes,
-        hasMore: pulled.hasMore,
-        device,
-      });
+      applyChanges(c.getDb(), data.changes);
+      sendPulled(c, data.since);
     } catch (err) {
-      fail(res, err);
+      fail(c.res, err);
     }
   },
 
-  'GET /changes': ({ res, url, device, getDb }) => {
-    const since = Number(url.searchParams.get('since') ?? '0');
+  'GET /changes': (c) => {
+    const since = Number(c.url.searchParams.get('since') ?? '0');
     if (!Number.isInteger(since) || since < 0) {
-      send(res, 400, { error: 'Invalid since parameter' });
+      send(c.res, 400, { error: 'Invalid since parameter' });
       return;
     }
-
     try {
-      const pulled = pullChanges(getDb(), since);
-      send(res, 200, {
-        version: pulled.version,
-        changes: pulled.changes,
-        hasMore: pulled.hasMore,
-        device,
-      });
+      sendPulled(c, since);
     } catch (err) {
-      fail(res, err);
+      fail(c.res, err);
     }
   },
 };
