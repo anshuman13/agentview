@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { apiUrl } from '../app/api';
+import { apiBase, apiUrl } from '../app/api';
 import { send } from '../app/store';
 import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
@@ -36,6 +36,8 @@ const WORKSPACE_URL: Record<WorkspaceKey, string> = { repos: '/api/repos', chats
 
 const cached = { repos: [] as Repo[], trees: [] as Worktree[], chats: [] as SavedSession[] };
 const fetchedAt: Record<WorkspaceKey, number> = { repos: 0, chats: 0, trees: 0 };
+// The Mac the cache came from; the phone app switches Macs without a reload.
+let cachedFor = apiBase();
 
 export const staleKeys = (at: Record<WorkspaceKey, number>, now: number, minAge = WORKSPACE_MIN_AGE) =>
   (Object.keys(at) as WorkspaceKey[]).filter((k) => now - at[k] >= minAge);
@@ -58,12 +60,19 @@ export function useWorkspace(key: unknown) {
   }, []);
   useEffect(() => {
     const now = Date.now();
+    if (cachedFor !== apiBase()) {
+      cachedFor = apiBase();
+      Object.assign(cached, { repos: [], trees: [], chats: [] });
+      invalidateWorkspace();
+    }
     setRepos(cached.repos);
     setChats(cached.chats);
     setTrees(cached.trees);
     for (const k of staleKeys(fetchedAt, now)) {
       fetchedAt[k] = now;
+      const from = cachedFor;
       get(WORKSPACE_URL[k]).then((x) => {
+        if (from !== cachedFor) return;
         if (!x) return void (fetchedAt[k] = 0);
         (cached as Record<WorkspaceKey, unknown>)[k] = x;
         listeners.forEach((on) => on(k, x));
