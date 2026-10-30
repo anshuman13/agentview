@@ -23,6 +23,7 @@ import type {
   SnowflakeTest,
 } from '../../../shared/observe.js';
 import { writeJson } from '../json.js';
+import { git } from '../workspace/git.js';
 
 const DIR = path.join(os.homedir(), '.agentview');
 const FILE = path.join(DIR, 'observe.json');
@@ -69,7 +70,7 @@ async function load(): Promise<Settings> {
 async function repoName(cwd: string) {
   const root = ROOTS.find((r) => inside(cwd, r) && cwd !== r);
   if (root) return path.relative(root, cwd).split(path.sep)[0];
-  const common = await run('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd }).then((r) => r.stdout.trim()).catch(() => '');
+  const common = (await git(cwd, ['rev-parse', '--path-format=absolute', '--git-common-dir']).catch(() => '')).trim();
   return path.basename(common ? path.dirname(common) : cwd);
 }
 

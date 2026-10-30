@@ -1,7 +1,7 @@
 import fs from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { readJson } from '../json.js';
 import type { LiveChat, ServerMessage } from '../../../shared/protocol.js';
 
 const last = new Map<string, number>();
@@ -70,7 +70,7 @@ export function notifyStall(chat: LiveChat) {
 // A topic name on ntfy.sh or a full URL, from the environment or the ntfy key in observe.json. Off without either.
 export async function ntfyTopic() {
   if (process.env.AGENTVIEW_NTFY) return process.env.AGENTVIEW_NTFY;
-  const cfg = await readFile(OBSERVE, 'utf8').then(JSON.parse).catch(() => ({}));
+  const cfg = await readJson<any>(OBSERVE, {});
   return typeof cfg?.ntfy === 'string' && cfg.ntfy ? cfg.ntfy : 'off';
 }
 

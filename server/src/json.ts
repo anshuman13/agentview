@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 // Written to a temp file and renamed over the old one, so a crash or a second writer never leaves half a file.
@@ -27,5 +27,15 @@ export function writeJsonSync(file: string, data: unknown) {
   } catch (err) {
     rmSync(tmp, { force: true });
     throw err;
+  }
+}
+
+export const readJson = <T>(file: string, fallback: T): Promise<T> => readFile(file, 'utf8').then(JSON.parse).catch(() => fallback);
+
+export function readJsonSync<T>(file: string, fallback: T): T {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return fallback;
   }
 }

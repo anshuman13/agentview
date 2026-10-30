@@ -6,7 +6,7 @@ import type { GitFile, GitStatus } from '../../../shared/protocol.js';
 
 const exec = promisify(execFile);
 
-async function git(cwd: string, args: string[], ok = [0]) {
+export async function git(cwd: string, args: string[], ok = [0]) {
   try {
     // Long enough for a signing prompt or a slow hook, short enough that a request never hangs for good.
     return (await exec('git', args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 300_000 })).stdout;

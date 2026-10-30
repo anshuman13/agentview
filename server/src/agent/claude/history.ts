@@ -1,6 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
+import { readJson } from '../../json.js';
 import { getSessionMessages, getSubagentMessages, type SessionMessage } from '@anthropic-ai/claude-agent-sdk';
 
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
@@ -20,7 +21,7 @@ export async function subagentMessages(cwd: string, sessionId: string, cache = n
     const sig = st ? `${st.ino}:${st.size}:${st.mtimeMs}` : 'missing';
     const prev = cache.get(f);
     if (prev && prev.sig === sig) return;
-    const toolUseId = prev?.toolUseId ?? (await readFile(path.join(dir, f), 'utf8').then(JSON.parse).catch(() => null))?.toolUseId;
+    const toolUseId = prev?.toolUseId ?? (await readJson<any>(path.join(dir, f), null))?.toolUseId;
     if (!toolUseId) return;
     let ok = true;
     const msgs = await getSubagentMessages(sessionId, agentId, { dir: cwd }).catch(() => ((ok = false), []));

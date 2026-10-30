@@ -20,7 +20,7 @@ import { sendWhenChanged } from './changed.js';
 import { parseSaved, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
-import { writeJsonSync } from '../json.js';
+import { readJson, writeJsonSync } from '../json.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
 const PROJECT = path.resolve(process.argv[2] ?? process.env.PROJECT_DIR ?? process.cwd());
@@ -429,7 +429,7 @@ await new Promise<void>((ok) => {
 });
 console.log(`agent host on ${SOCK} for ${PROJECT}`);
 
-const last = await readFile(LAST, 'utf8').then(JSON.parse).catch(() => null);
+const last = await readJson<any>(LAST, null);
 lastViewed = (await restore().catch((err) => {
   console.error(`could not restore chats: ${err instanceof Error ? err.message : String(err)}`);
   return null;

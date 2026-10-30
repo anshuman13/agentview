@@ -2,17 +2,14 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { git } from './git.js';
 
 const exec = promisify(execFile);
 const HIDDEN = new Set(['node_modules', '.git', 'dist']);
 
 export async function listFiles(cwd: string): Promise<string[]> {
   try {
-    const { stdout } = await exec('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
-      cwd,
-      maxBuffer: 64 * 1024 * 1024,
-    });
-    return stdout.split('\n').filter(Boolean).sort();
+    return (await git(cwd, ['ls-files', '--cached', '--others', '--exclude-standard'])).split('\n').filter(Boolean).sort();
   } catch {
     return walk(cwd, '');
   }
@@ -89,6 +86,6 @@ export async function readFileWithOriginal(cwd: string, rel: string) {
   const size = await stat(abs).then((s) => s.size).catch(() => 0);
   if (size > MAX_FILE) throw new Error(`File is ${Math.round(size / 1e6)} MB, too large to show`);
   const content = await readFile(abs, 'utf8').catch(() => '');
-  const original = await exec('git', ['show', `HEAD:./${path.basename(abs)}`], { cwd: path.dirname(abs), maxBuffer: MAX_FILE }).then((r) => r.stdout, () => '');
+  const original = await git(path.dirname(abs), ['show', `HEAD:./${path.basename(abs)}`]).catch(() => '');
   return { path: rel, content, original };
 }

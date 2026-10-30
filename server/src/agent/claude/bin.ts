@@ -1,13 +1,12 @@
 import os from 'node:os';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
 import { deleteSession, getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import { BIN_MS, type BinnedSession } from '../../../../shared/protocol.js';
-import { writeJson } from '../../json.js';
+import { readJson, writeJson } from '../../json.js';
 
 const FILE = path.join(os.homedir(), '.agentview', 'bin.json');
 
-const load = (): Promise<BinnedSession[]> => readFile(FILE, 'utf8').then(JSON.parse).catch(() => []);
+const load = (): Promise<BinnedSession[]> => readJson<BinnedSession[]>(FILE, []);
 const save = async (list: BinnedSession[]) => {
   await writeJson(FILE, list, { pretty: true });
 };

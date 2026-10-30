@@ -1,8 +1,7 @@
-import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { Finding, ReviewFindings } from '../../../shared/protocol.js';
-import { writeJson } from '../json.js';
+import { readJson, writeJson } from '../json.js';
 
 const FILE = path.join(process.env.AGENTVIEW_FINDINGS_DIR ?? path.join(os.homedir(), '.agentview'), 'findings.json');
 
@@ -12,7 +11,7 @@ let cache: Stored | null = null;
 
 async function load(): Promise<Stored> {
   if (cache) return cache;
-  cache = await readFile(FILE, 'utf8').then(JSON.parse).catch(() => ({}));
+  cache = await readJson<Stored>(FILE, {});
   return cache!;
 }
 

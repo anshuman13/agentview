@@ -1,12 +1,11 @@
 import os from 'node:os';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
 import { ATTENTION_LABEL, type AttentionItem, type AttentionKind, type DeployStatus, type GitStatus, type PullRequest } from '../../../shared/protocol.js';
 import { listIssues, listPrs, type Issue } from './github.js';
 import { gitStatus } from '../workspace/git.js';
 import { deployWatch } from './deploy.js';
 import { post } from './notify.js';
-import { writeJson } from '../json.js';
+import { readJson, writeJson } from '../json.js';
 
 const FILE = path.join(os.homedir(), '.agentview/attention.json');
 const EVERY = 15 * 60_000;
@@ -89,7 +88,7 @@ let onChange: (items: AttentionItem[]) => void = () => {};
 let seeded = false;
 
 async function load() {
-  const saved: Saved | null = await readFile(FILE, 'utf8').then(JSON.parse).catch(() => null);
+  const saved: Saved | null = await readJson<Saved | null>(FILE, null);
   seeded = saved !== null;
   seen = new Map(Object.entries(saved?.seen ?? {}));
   dismissed = new Set(saved?.dismissed ?? []);

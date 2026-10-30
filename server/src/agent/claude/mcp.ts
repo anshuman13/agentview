@@ -1,12 +1,11 @@
 import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
 import type { McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
 import { configDir, hasAlt } from './accounts.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
-import { writeJson } from '../../json.js';
+import { readJson, writeJson } from '../../json.js';
 
 type Config = McpServerDef | undefined;
 type Status = {
@@ -47,10 +46,8 @@ export function mcpFrom(list: Status[], toolNames: string[] = []): McpServer[] {
     }));
 }
 
-export const readJson = (file: string) => readFile(file, 'utf8').then(JSON.parse).catch(() => ({}));
-
 // ~/.claude.json and the repo's .mcp.json
-export const readConfigs = (cwd: string) => Promise.all([readJson(path.join(os.homedir(), '.claude.json')), readJson(path.join(cwd, '.mcp.json'))]);
+export const readConfigs = (cwd: string) => Promise.all([readJson<any>(path.join(os.homedir(), '.claude.json'), {}), readJson<any>(path.join(cwd, '.mcp.json'), {})]);
 
 export function configEntries(servers: Record<string, Config> | undefined, scope: McpConfigEntry['scope']): McpConfigEntry[] {
   return Object.entries(servers ?? {}).map(([name, s]) => ({ name, scope, type: transport(s) ?? 'stdio', command: commandOf(s), env: envOf(s) }));
@@ -89,7 +86,7 @@ const readApprovals = async (cwd: string, user: any): Promise<Approval[]> => {
   const project = user.projects?.[cwd] ?? {};
   const files = [path.join(os.homedir(), '.claude', 'settings.json'), path.join(cwd, '.claude', 'settings.local.json')];
   if (project.hasTrustDialogAccepted === true) files.push(path.join(cwd, '.claude', 'settings.json'));
-  return [...(await Promise.all(files.map(readJson))), project];
+  return [...(await Promise.all(files.map((f) => readJson<any>(f, {})))), project];
 };
 
 // Servers Claude Code would start in this folder: user and local scope, plus approved project servers.
@@ -166,7 +163,7 @@ const GROUPS = path.join(os.homedir(), '.agentview', 'mcp-groups.json');
 export type McpGroups = Record<string, 'work' | 'personal' | 'hidden'>;
 
 export async function mcpGroups(): Promise<McpGroups> {
-  const g = await readJson(GROUPS);
+  const g = await readJson<any>(GROUPS, {});
   const out: McpGroups = {};
   if (Array.isArray(g.personal)) for (const s of g.personal) if (typeof s === 'string') out[s] = 'personal';
   for (const [k, v] of Object.entries(g)) if (v === 'work' || v === 'personal' || v === 'hidden') out[k] = v;

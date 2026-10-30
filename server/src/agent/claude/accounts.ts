@@ -1,23 +1,15 @@
 import os from 'node:os';
 import path from 'node:path';
-import { readFileSync, statSync } from 'node:fs';
+import { statSync } from 'node:fs';
 import type { Account } from '../../../../shared/protocol.js';
-import { writeJsonSync } from '../../json.js';
+import { readJsonSync, writeJsonSync } from '../../json.js';
 
 const ALT_DIR = process.env.AGENTVIEW_ALT_CLAUDE || path.join(os.homedir(), '.claude-alt');
 const LIMITS = path.join(process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview'), 'limits.json');
 const CHATS = path.join(path.dirname(LIMITS), 'chat-accounts.json');
 
-const readJson = (file: string) => {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8'));
-  } catch {
-    return null;
-  }
-};
-
 // Until when each account is out of usage, kept across restarts.
-const limited: Partial<Record<Account, number>> = readJson(LIMITS) ?? {};
+const limited: Partial<Record<Account, number>> = readJsonSync<typeof limited | null>(LIMITS, null) ?? {};
 
 // The second account counts once it is logged in. The file is large, so it is read again only when it changes.
 let altSeen = { mtime: -1, value: false };
@@ -27,7 +19,7 @@ export function hasAlt() {
   try {
     mtime = statSync(file).mtimeMs;
   } catch {}
-  if (mtime !== altSeen.mtime) altSeen = { mtime, value: Boolean(mtime && readJson(file)?.oauthAccount) };
+  if (mtime !== altSeen.mtime) altSeen = { mtime, value: Boolean(mtime && readJsonSync<{ oauthAccount?: unknown } | null>(file, null)?.oauthAccount) };
   return altSeen.value;
 }
 
@@ -46,7 +38,7 @@ export function markLimited(a: Account, until: number) {
   save(LIMITS, limited);
 }
 
-export const isLimited = (a: Account, now = Date.now()) => (readJson(LIMITS)?.[a] ?? limited[a] ?? 0) > now;
+export const isLimited = (a: Account, now = Date.now()) => (readJsonSync<typeof limited | null>(LIMITS, null)?.[a] ?? limited[a] ?? 0) > now;
 
 // Extra usage is never used: a rate limit event that reports it counts as hitting the limit, until the window resets.
 export function overageUntil(m: { type: string; rate_limit_info?: { isUsingOverage?: boolean; overageInUse?: boolean; resetsAt?: number } }, now = Date.now()) {
@@ -65,7 +57,7 @@ export function otherAccount(a: Account, now = Date.now()): Account | null {
 export const freshAccount = (now = Date.now()): Account => (usable('main', now) ? 'main' : otherAccount('main', now) ?? 'main');
 
 // Chats on the work account, so a reopened chat goes back to the account it was on.
-const chatAccounts: Record<string, Account> = readJson(CHATS) ?? {};
+const chatAccounts: Record<string, Account> = readJsonSync<Record<string, Account> | null>(CHATS, null) ?? {};
 
 export function rememberAccount(sessionId: string, a: Account) {
   if ((chatAccounts[sessionId] ?? 'main') === a) return;
