@@ -60,7 +60,7 @@ export function dueMeetings(db: Database, profile: Profile, now = Date.now()): P
 }
 
 // Counts a try for each meeting with no transcript yet and shows it on the meeting; after the last try it is missing.
-// An import that failed (usage limit, crash) only delays the next try and does not count.
+// An import stopped by the usage limit only delays the next try and does not count.
 export function markTried(db: Database, profile: Profile, meetings: Pending[], now = Date.now(), failed = false) {
   const set = db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
   const changes: Change[] = [];
@@ -220,14 +220,15 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
     busy = true;
     try {
       for (const profile of Object.keys(PROFILES) as Profile[]) {
-        const due = dueMeetings(db(), profile);
+        // A few at a time, so a backlog after a weekend never runs past the turn limit on every try.
+        const due = dueMeetings(db(), profile).slice(0, 5);
         if (!due.length) continue;
         try {
           const { found } = await readTranscripts(db(), profile, due, Date.now());
           markTried(db(), profile, due.filter((m) => !found.has(m.id)));
           if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
         } catch (err) {
-          markTried(db(), profile, due, Date.now(), true);
+          markTried(db(), profile, due, Date.now(), isLimited(PROFILES[profile]));
           console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
         }
       }

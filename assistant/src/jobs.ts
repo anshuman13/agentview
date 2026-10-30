@@ -17,7 +17,8 @@ type Job = { id: string; profile: Profile; name: string | null; schedule: string
 // Schedules are "hourly", "daily HH:MM", "weekdays HH:MM" or "weekly <day> HH:MM", in the hub's local time.
 export function nextRun(schedule: string | null, after: number): number | null {
   const s = (schedule ?? '').trim().toLowerCase();
-  if (s === 'hourly') return new Date(after).setMinutes(60, 0, 0);
+  // Whole UTC hours, so the repeated hour when clocks go back gets its run too.
+  if (s === 'hourly') return Math.floor(after / 3600_000) * 3600_000 + 3600_000;
   const m = /^(daily|weekdays|weekly (sun|mon|tue|wed|thu|fri|sat)) (\d{1,2}):(\d{2})$/.exec(s);
   if (!m || +m[3] > 23 || +m[4] > 59) return null;
   const ok = (d: Date) => (m[1] === 'daily' ? true : m[1] === 'weekdays' ? d.getDay() % 6 !== 0 : d.getDay() === DAYS.indexOf(m[2]));
@@ -107,7 +108,11 @@ function prune(db: Database, job: Job, now: number) {
 }
 
 export async function runDue(db: Database, now = Date.now()) {
-  for (const job of dueJobs(db, now)) {
+  for (const due of dueJobs(db, now)) {
+    // An earlier job can run for minutes; skip or update this one if it was turned off, deleted or edited meanwhile.
+    const live = db.prepare('SELECT prompt, next_run_at FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; next_run_at: number | null } | null;
+    if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) continue;
+    const job = { ...due, prompt: live.prompt };
     if (isLimited(PROFILES[job.profile])) continue;
     const id = randomUUID();
     const started = Date.now();
