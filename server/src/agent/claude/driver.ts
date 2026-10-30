@@ -441,8 +441,10 @@ export class ClaudeDriver implements AgentDriver {
       case 'rate_limit_event': {
         const until = overageUntil(msg);
         if (until) {
+          // An idle chat moves to the other account at once; the new CLI must not be interrupted.
+          const q = this.q;
           host.overage(until);
-          this.interrupt().catch(() => undefined);
+          if (this.q === q) this.interrupt().catch(() => undefined);
         }
         break;
       }

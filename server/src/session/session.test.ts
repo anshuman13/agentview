@@ -120,6 +120,22 @@ describe('AgentSession turns', () => {
     expect(s.state.session).toMatchObject({ account: 'alt', running: true });
   });
 
+  it('leaves the restarted Claude alone after extra usage while idle', () => {
+    const { s, handle, interrupt } = fakeSession();
+    const d = s.driver as unknown as ClaudeDriver;
+    const fresh = vi.fn(async () => {});
+    Object.assign(d, {
+      q: { interrupt, close: vi.fn() },
+      start: vi.fn(() => Object.assign(d, { q: { interrupt: fresh } })),
+      accounts: () => ['main', 'alt'],
+      limitHit: () => (d.setAccount('alt'), 'alt'),
+    });
+    s.crons = [{ schedule: '*/5 * * * *', prompt: 'check the build', recurring: true }];
+    handle({ type: 'rate_limit_event', rate_limit_info: { isUsingOverage: true, resetsAt: 1_900_000_000 } });
+    expect(fresh).not.toHaveBeenCalled();
+    expect(s.state.session).toMatchObject({ account: 'alt', running: true });
+  });
+
   it('waits for the reset when no other account has usage left', async () => {
     const { s, handle } = fakeSession();
     Object.assign(s.driver, { limitHit: vi.fn(() => null) });
