@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { minutesText, workGaps, type Span } from '../../shared/plan.js';
-import { clock } from '../../shared/util.js';
+import { clock, isBlock } from '../../shared/util.js';
 import type { Profile } from './db.js';
 import { applyChanges } from './sync.js';
 import { inWeekHours } from './time.js';
@@ -33,8 +33,9 @@ function lastWorkday(start: number) {
 export function buildBrief(db: Database, profile: Profile, now = Date.now()): Brief {
   const start = new Date(now).setHours(0, 0, 0, 0);
   const end = new Date(now).setHours(24, 0, 0, 0);
-  const meetings = db.prepare('SELECT title, starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = ? AND starts_at >= ? AND starts_at < ? ORDER BY starts_at').all(profile, start, end) as (Row & { starts_at: number; ends_at: number | null })[];
-  const timed = meetings.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
+  const busy = db.prepare('SELECT id, title, starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = ? AND starts_at >= ? AND starts_at < ? ORDER BY starts_at').all(profile, start, end) as (Row & { id: string; starts_at: number; ends_at: number | null })[];
+  const meetings = busy.filter((m) => !isBlock(m.id));
+  const timed = busy.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), start);
   const tasks = db.prepare("SELECT title, at FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND source NOT IN ('calendar', 'meeting') AND at IS NOT NULL AND CAST(at AS INTEGER) < ? ORDER BY CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number })[];
   const late = tasks.filter((t) => Number(t.at) < now).length;
