@@ -66,6 +66,14 @@ export function nextClock(hours: number, minutes: number, now: number) {
   return d.getTime();
 }
 
+export function fireTime(schedule: string, now = Date.now()) {
+  const [m, h, dom, mon] = schedule.trim().split(/\s+/).slice(0, 4).map(Number);
+  if ([m, h, dom, mon].some((n) => !Number.isInteger(n))) return null;
+  const at = new Date(new Date(now).getFullYear(), mon - 1, dom, h, m);
+  if (at.getTime() < now - 60_000) at.setFullYear(at.getFullYear() + 1);
+  return at.getTime();
+}
+
 // "You've hit your session limit · resets 1:50am (Europe/Oslo)" gives the time a loop may go on, plus a minute.
 // Only a short one-line notice counts, so a normal reply that mentions a limit does not switch accounts.
 export function limitReset(text: string, now = Date.now()): number | null {

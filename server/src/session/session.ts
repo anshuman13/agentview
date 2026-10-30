@@ -5,26 +5,10 @@ import { clock } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
 import { advance, looping, loopOff, needsApproval, planChangeText, planStep, withLoop, type LoopStep } from './loop.js';
-import { RepeatController, after, goalMet, limitReset, restorePrompt } from './repeat.js';
+import { RepeatController, after, fireTime, goalMet, limitReset, restorePrompt } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
-import { EventIndex, stopAgents } from './events.js';
+import { EventIndex, MAX_EVENTS, stopAgents, trimHistory } from './events.js';
 import { PR_URL, createsPr, prFrom } from './pr.js';
-
-const MAX_EVENTS = 3000;
-// A chat keeps its last few thousand events; the CLI transcript still has everything.
-function trimHistory(events: ChatEvent[]) {
-  if (events.length <= MAX_EVENTS) return events;
-  const kept = events.slice(-MAX_EVENTS);
-  return [{ id: randomUUID(), kind: 'system' as const, text: `${events.length - MAX_EVENTS} older events are not shown`, at: kept[0].at }, ...kept];
-}
-
-export function fireTime(schedule: string, now = Date.now()) {
-  const [m, h, dom, mon] = schedule.trim().split(/\s+/).slice(0, 4).map(Number);
-  if ([m, h, dom, mon].some((n) => !Number.isInteger(n))) return null;
-  const at = new Date(new Date(now).getFullYear(), mon - 1, dom, h, m);
-  if (at.getTime() < now - 60_000) at.setFullYear(at.getFullYear() + 1);
-  return at.getTime();
-}
 
 const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';

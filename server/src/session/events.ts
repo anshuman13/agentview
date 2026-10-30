@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol.js';
 
 export const agentOf = (events: ChatEvent[], toolUseId: string) => events.find((e): e is AgentEvent => e.kind === 'agent' && e.toolUseId === toolUseId);
@@ -57,4 +58,12 @@ export function stopAgents(events: ChatEvent[], ids: Iterable<string>, at: numbe
     out.push({ id: `${e.toolUseId}:stopped`, kind: 'tool_result', toolUseId: e.toolUseId, text, isError: false, at, stopped: true, ...(e.parent && { parent: e.parent }) });
   }
   return out;
+}
+
+export const MAX_EVENTS = 3000;
+// A chat keeps its last few thousand events; the CLI transcript still has everything.
+export function trimHistory(events: ChatEvent[]) {
+  if (events.length <= MAX_EVENTS) return events;
+  const kept = events.slice(-MAX_EVENTS);
+  return [{ id: randomUUID(), kind: 'system' as const, text: `${events.length - MAX_EVENTS} older events are not shown`, at: kept[0].at }, ...kept];
 }
