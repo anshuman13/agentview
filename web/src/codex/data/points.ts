@@ -37,7 +37,7 @@ export const endedPoints = (items: ItemRow[], meetings: Meeting[], now = Date.no
 
 // What the meeting's attendees took on in the given earlier meetings, as "Name: what".
 export const theirActions = (m: Meeting, earlier: Meeting[]) =>
-  earlier.flatMap((x) => othersOf(x).filter((o) => peopleOf(m).some((p) => sameName(p, o.who))).map((o) => `${firstName(o.who)}: ${o.what}`));
+  [...new Set(earlier.flatMap((x) => othersOf(x).filter((o) => peopleOf(m).some((p) => sameName(p, o.who))).map((o) => `${firstName(o.who)}: ${o.what}`)))];
 
 // Attendees of the given meeting first, then of the latest meetings of the profile that have started.
 export function recentPeople(meetings: Meeting[], profile: Profile, first: Meeting | null = null, max = 6, now = Date.now()) {
