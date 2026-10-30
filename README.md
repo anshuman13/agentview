@@ -20,7 +20,8 @@ installed and its login.
 | `npm run serve` | Server and vite, no reload on server changes |
 | `npm run dev` | Same, with server reload |
 | `npm run phone` | Install the latest Android build on a connected phone |
-| `npm test` | Unit tests |
+| `npm test` | Unit tests (vitest; server, web and shared) |
+| `npm test -w assistant` | Hub tests (bun test) |
 
 `PROJECT_DIR=/path` sets the folder for the very first chat; after that AgentView reopens the last chat you viewed.
 Restarting the server keeps running chats alive; see [architecture](docs/architecture.md).
@@ -32,6 +33,8 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
 - Steering while Claude works, editable next steps, permission and question cards, rewind and fork
 - Editor with diffs, Source Control, GitHub pull requests with review findings, a terminal, and your Chrome
 - Observe (Grafana, Snowflake), Deploy and MCP server pages
+- Codex: Overview, Tasks, Meetings, Jobs and Wiki, synced with an assistant hub that scans Slack, Gmail, the calendar
+  and meeting transcripts
 - `/loop` and `/goal`, loop mode (plan, build, test), Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 
@@ -40,5 +43,5 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
 - [Features](docs/features.md): layout, timeline, models, workspace, notifications, loops, shortcuts
 - [Integrations](docs/integrations.md): Chrome, MCP servers, Grafana and Snowflake
 - [Phone and other Macs](docs/macs.md)
-- [Assistant plan](docs/assistant.md)
+- [Assistant plan](docs/assistant.md), [Codex flows](docs/codex-flows.md) and [Codex wiki and meetings](docs/codex-wiki.md)
 - [Architecture](docs/architecture.md) and [decisions](docs/decisions.md)
