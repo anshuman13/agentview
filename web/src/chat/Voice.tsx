@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type Dispatch, type SetStateAction } from 'react';
-import { useStore } from '../app/store';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { Icon } from '../ui/Icon';
-import { readFlag, saveFlag } from '../ui/util';
 
 type Result = { isFinal: boolean; 0: { transcript: string } };
 type Recognition = {

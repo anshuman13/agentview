@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { ATTENTION_LABEL, type AttentionItem, type ChatEvent, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
+import { ATTENTION_LABEL, type AttentionItem, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
 import { notify } from './notify';
 import { apiUrl } from './api';
 

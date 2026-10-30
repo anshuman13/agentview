@@ -5,7 +5,7 @@ import { getState, send, notice, api, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { ago, save, stored, useTick } from '../ui/util';
 import { post } from './mcpActions';
-import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, merge, needsYou, rowKey, services, slug, splitName, type Group, type Row, type Service } from './mcpHelpers';
+import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, merge, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
 import { Detail } from './McpDetail';
 import { ServiceRow } from './McpServiceRow';
 

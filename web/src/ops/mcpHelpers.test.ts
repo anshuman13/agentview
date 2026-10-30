@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatEvent } from '../../../shared/protocol';
-import { accountGroup, argsOf, brief, fieldsOf, initialValues, kindOf, mcpCalls, merge, needsYou, plural, services, shortName, splitName, stateOf, toolId, usageText } from './mcpHelpers';
+import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, toolId } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {

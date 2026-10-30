@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, send, setUi, useStore } from '../app/store';
+import { useEffect, useMemo, useState } from 'react';
+import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Block, Findings } from './Findings';
 import { Markdown } from '../chat/Chat';
 import { FileIcon } from '../workspace/FileIcon';
 import { CheckIcon, Counts, StateChip, call, load, message, setViewOpen, useList } from './pulls';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
-import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol';
+import type { PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { ago, askClaude, pressable } from '../ui/util';
 import { Skeleton } from '../ui/Skeleton';
 

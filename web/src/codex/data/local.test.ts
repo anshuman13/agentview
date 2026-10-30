@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { edited, moved, newCapture } from './engine';
+import { edited, newCapture } from './engine';
 import { captureParams, patchSQL, swapSQL } from './localRows';
 import { TABLE_FIELDS, type ItemRow } from './sync';
 
