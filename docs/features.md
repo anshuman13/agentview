@@ -284,8 +284,9 @@ or a page puts focus back on what opened it.
 - A screen reader hears when Claude finishes a turn (its last reply, or the error it stopped on) and when it asks a
   question or for a permission, not every streamed word
 - Answering a question or permission card moves focus to the next card, or to the composer after the last one
-- The composer is labeled and its suggestion list is a listbox; the command palette and the file picker are dialogs
-  with listbox results, and closing them returns focus to where it was
+- The composer is labeled and its suggestion list is a listbox. The command palette, the file picker and the other
+  pickers (repo, model, saved prompts) list results as listboxes; closing a picker or a confirm dialog returns focus
+  to where it was
 - Transcript steps, open editors, Source Control rows, terminal tabs and the collapsible sections in the ops panes open
   with Enter or Space. The file tree is a tree: arrow keys move, Right and Left open and close folders, Enter opens
 - Errors and deploy progress in the Observe, Deploy, GitHub and MCP panes are announced; closing a detail there
