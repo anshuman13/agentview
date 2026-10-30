@@ -232,6 +232,15 @@ export async function syncTranscript(db: Database, profile: Profile, id: string,
   return once(`${profile}:${id}`, () => serial(lock(profile), async () => (await readTranscripts(db, profile, [m], now, instructions)).saved));
 }
 
+// Each profile and step logs its own failure, so one that throws does not skip the rest of the tick.
+async function step(name: string, fn: () => unknown) {
+  try {
+    await fn();
+  } catch (err) {
+    console.error(`${name}:`, err instanceof Error ? err.message : err);
+  }
+}
+
 export function startTranscripts(db: () => Database, every = 5 * MIN) {
   let busy = false;
   const run = async () => {
@@ -239,7 +248,7 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
     busy = true;
     try {
       for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
-        await serial(lock(profile), async () => {
+        await step(`transcripts ${profile}`, () => serial(lock(profile), async () => {
           // A few at a time, so a backlog after a weekend never runs past the turn limit on every try.
           const due = dueMeetings(db(), profile).slice(0, 5);
           if (!due.length) return;
@@ -251,13 +260,11 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
             markTried(db(), profile, due, Date.now(), isLimited(ACCOUNT_OF[profile]));
             console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
           }
-        });
+        }));
       }
-      expireSuggested(db());
-      pruneTried(db());
-      await proposeWikiUpdates(db());
-    } catch (err) {
-      console.error('transcripts:', err instanceof Error ? err.message : err);
+      await step('expire suggested', () => expireSuggested(db()));
+      await step('prune tries', () => pruneTried(db()));
+      await step('wiki updates', () => proposeWikiUpdates(db()));
     } finally {
       busy = false;
     }
