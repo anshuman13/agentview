@@ -63,7 +63,7 @@ On weekdays from 07 to 19 the hub reads the work account with Haiku and read-onl
 every 15 minutes (DMs, mentions and the watched channels), Gmail every 30 minutes (the inbox, without promotions,
 social, updates and forums). Slack reads page through to the last result, so a long gap misses nothing. Messages and mail that ask me to act become suggested tasks in Tasks under "Is this
 yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
-reply before taking it; an ask I already took and then answered in Slack stays open with a "Replied in Slack" note and a Replied cue. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default); during a calendar meeting
+reply before taking it; an ask I already took and then answered in Slack stays open with a "Replied in Slack" note and a Replied cue. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default; ones found earlier, or whose push failed, wait in meta for the next in-hours scan); during a calendar meeting
 with other attendees they are held and sent as one push when it ends.
 Scan slots follow the hub's local clock, so half hours start at :00 and :30 in any time zone.
 While a Claude account is at its usage limit, the Slack and Gmail scans and the calendar import of its profiles skip

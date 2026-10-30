@@ -48,3 +48,23 @@ export async function flushHeld(db: Database, now = Date.now()) {
   if (left.length) db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(KEY, JSON.stringify(left));
   else db.prepare('DELETE FROM meta WHERE key = ?').run(KEY);
 }
+
+const MAX_QUEUED = 20;
+
+// Urgent asks wait in meta until a scan inside push hours sends them; one leaves the list only after its push succeeds or its item is closed.
+export async function pushQueued<T extends { id: string }>(db: Database, key: string, urgent: T[], inHours: boolean, send: (a: T) => Promise<boolean>) {
+  let queue: T[] = [];
+  try {
+    queue = JSON.parse((db.prepare('SELECT value FROM meta WHERE key = ?').get(key) as { value: string } | null)?.value ?? '[]');
+  } catch {}
+  for (const a of urgent) if (!queue.some((q) => q.id === a.id)) queue.push(a);
+  queue = queue.slice(-MAX_QUEUED);
+  if (inHours) {
+    const open = db.prepare("SELECT 1 FROM items WHERE id = ? AND deleted = 0 AND status IN ('suggested', 'open')");
+    const left: T[] = [];
+    for (const a of queue) if (open.get(a.id) && !(await send(a).catch(() => false))) left.push(a);
+    queue = left;
+  }
+  if (queue.length) db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, JSON.stringify(queue));
+  else db.prepare('DELETE FROM meta WHERE key = ?').run(key);
+}

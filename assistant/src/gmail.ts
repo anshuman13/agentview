@@ -4,7 +4,7 @@ import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { ACCOUNT_OF } from './calendar.js';
 import { scanPaused } from './claude.js';
-import { pushOrHold } from './hold.js';
+import { pushOrHold, pushQueued } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
@@ -170,11 +170,10 @@ async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
 }
 
 async function pushUrgent(db: Database, c: GmailConfig, urgent: Awaited<ReturnType<typeof scanGmail>>['urgent'], now = Date.now()) {
-  if (!pushHours(c, now)) return;
-  for (const a of urgent) {
+  await pushQueued(db, 'gmail:unpushed', urgent, pushHours(c, now), (a) => {
     const accept = `http, Make task, ${HUB_URL}/gmail/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-    await pushOrHold(db, `${a.from}: ${a.title}`, 'Gmail', a.quote, a.link, `view, Open, ${a.link}; ${accept}`, now).catch(() => false);
-  }
+    return pushOrHold(db, `${a.from}: ${a.title}`, 'Gmail', a.quote, a.link, `view, Open, ${a.link}; ${accept}`, now);
+  });
 }
 
 // One Gmail scan with its urgent pushes, returning its counts.

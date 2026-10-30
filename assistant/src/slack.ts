@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { pushOrHold } from './hold.js';
+import { pushOrHold, pushQueued } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
@@ -146,12 +146,11 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
 }
 
 async function pushUrgent(db: Database, c: SlackConfig, urgent: Awaited<ReturnType<typeof scanSlack>>['urgent'], now = Date.now()) {
-  if (!pushHours(c, now)) return;
-  for (const a of urgent) {
+  await pushQueued(db, 'slack:unpushed', urgent, pushHours(c, now), (a) => {
     const url = webUrl(a.url);
     const accept = `http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-    await pushOrHold(db, `${a.from}: ${a.title}`, a.chat, a.quote, url ?? '', url ? `view, Open, ${url}; ${accept}` : accept, now).catch(() => false);
-  }
+    return pushOrHold(db, `${a.from}: ${a.title}`, a.chat, a.quote, url ?? '', url ? `view, Open, ${url}; ${accept}` : accept, now);
+  });
 }
 
 // The Sonnet summary across all chats since the last one, with suggested tasks. Runs when I ask for it.
