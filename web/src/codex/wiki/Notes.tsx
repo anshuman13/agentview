@@ -13,20 +13,25 @@ function NoteCard({ row }: { row: ItemRow }) {
   const full = [row.title ?? '', row.text ?? ''].filter(Boolean).join('\n');
   const [text, setText] = useState<string | null>(null);
   const card = useFocusBack<HTMLButtonElement>(text !== null);
+  const edits = (t: string) => {
+    const [first, ...rest] = t.split('\n');
+    return { title: first.slice(0, 120), text: rest.join('\n').trim() || null };
+  };
   const save = () => {
     const t = text?.trim();
     setText(null);
     if (t == null || t === full) return;
     if (!t) return void store.update(row, { deleted: 1 });
-    const [first, ...rest] = t.split('\n');
-    void store.update(row, { title: first.slice(0, 120), text: rest.join('\n').trim() || null });
+    void store.update(row, edits(t));
   };
   const remove = () => {
     void store.update(row, { deleted: 1 });
     showSnack('Note deleted', () => void store.update(row, { deleted: 0 }));
   };
+  // The card leaves the notes without a blur, so the edit in the field goes with the status.
   const toTask = () => {
-    void store.update(row, { status: 'open' });
+    const t = text?.trim();
+    void store.update(row, { ...(t && t !== full ? edits(t) : {}), status: 'open' });
     showSnack('Moved to Today', () => void store.update(row, { status: 'note' }));
   };
   if (text !== null) {
