@@ -51,8 +51,15 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
   const inputs = useRef(new Map<string, (d: string) => void>());
   const wasOpen = useRef(open);
   const starting = useRef(false);
-  const retry = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(retry.current), []);
+  const retries = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      retries.current.forEach(clearTimeout);
+    };
+  }, []);
   const url = (q = '') => apiUrl(`/api/terms?chat=${encodeURIComponent(chat)}${q}`);
 
   const load = async () => {
@@ -76,8 +83,10 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
 
   const gone = async (id: string) => {
     const list = await load().catch(() => null);
+    if (!alive.current) return;
     // Server restarting: try again until it answers, then reattach.
-    if (!list) return void (retry.current = setTimeout(() => gone(id), 2000));
+    if (!list) return void retries.current.set(id, setTimeout(() => gone(id), 2000));
+    retries.current.delete(id);
     if (list.some((t) => t.id === id)) setGens((g) => ({ ...g, [id]: (g[id] ?? 0) + 1 }));
     else if (list.length === 0) onToggle();
   };
