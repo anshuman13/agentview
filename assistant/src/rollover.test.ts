@@ -23,10 +23,17 @@ test('moves open tasks from earlier days to today at the same time', () => {
 
 test('keeps the first due date and sends a task to review after three moves', () => {
   const db = openDb(':memory:');
-  item(db, 'a', { at: at(24, 9) });
-  rollOver(db, at(25, 1));
-  rollOver(db, at(26, 1));
-  expect(get(db, 'a')).toEqual({ at: at(26, 9), rolls: 2, rolled_from: at(24, 9), status: 'open' });
-  rollOver(db, at(27, 1));
-  expect(get(db, 'a')).toEqual({ at: at(27, 9), rolls: 3, rolled_from: at(24, 9), status: 'suggested' });
+  item(db, 'a', { at: at(20, 9) });
+  rollOver(db, at(21, 1));
+  rollOver(db, at(22, 1));
+  expect(get(db, 'a')).toEqual({ at: at(22, 9), rolls: 2, rolled_from: at(20, 9), status: 'open' });
+  rollOver(db, at(23, 1));
+  expect(get(db, 'a')).toEqual({ at: at(23, 9), rolls: 3, rolled_from: at(20, 9), status: 'suggested' });
+});
+
+test('does not count weekend days toward review', () => {
+  const db = openDb(':memory:');
+  item(db, 'a', { at: at(23, 14) });
+  for (const d of [24, 25, 26]) rollOver(db, at(d, 1));
+  expect(get(db, 'a')).toEqual({ at: at(26, 14), rolls: 1, rolled_from: at(23, 14), status: 'open' });
 });

@@ -21,6 +21,16 @@ it('reminds before a meeting and about its actions once the transcript is read',
   expect(dueReminders(db, now)).toHaveLength(1);
 });
 
+it('gives a meeting at 08:00 its heads-up at 08:01, once', () => {
+  const db = openDb(':memory:');
+  const start = new Date(2026, 9, 26, 8).getTime();
+  db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES ('a', 'work', 1, 0, 'Standup', ?, ?)").run(start, start + 1800_000);
+  const [r] = dueReminders(db, start + 60_000);
+  expect(r.title).toBe('Standup starts now');
+  db.prepare("INSERT INTO meta (key, value) VALUES (?, '1')").run(`remind:${r.key}`);
+  expect(dueReminders(db, start + 120_000)).toHaveLength(0);
+});
+
 it('reminds about a task when it comes due', () => {
   const db = openDb(':memory:');
   const now = 1_000_000_000;

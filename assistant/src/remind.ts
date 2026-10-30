@@ -11,6 +11,7 @@ import { applyChanges } from './sync.js';
 import { DAY } from './time.js';
 
 const BEFORE = 10 * 60_000;
+const LATE = 5 * 60_000;
 const FRESH = 2 * 3600_000;
 // No pushes from 17:00 to 08:00; tasks that fell due in that time go out with the first check of the morning, also when
 // the midnight rollover has already moved them to the same time today.
@@ -68,13 +69,13 @@ export function snoozeTask(db: Database, profile: Profile, id: string, now = Dat
 export function dueReminders(db: Database, now = Date.now()): Reminder[] {
   const sent = (key: string) => getMeta(db, `remind:${key}`) != null;
   const out: Reminder[] = [];
-  const soon = (db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND starts_at > ? AND starts_at <= ? ORDER BY profile = 'work' DESC").all(now, now + BEFORE) as Meeting[]).filter((m) => !isBlock(m.id));
+  const soon = (db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND starts_at > ? AND starts_at <= ? ORDER BY profile = 'work' DESC").all(now - LATE, now + BEFORE) as Meeting[]).filter((m) => !isBlock(m.id));
   const seen = new Set<string>();
   for (const m of soon) {
     const key = `start:${m.id}:${m.starts_at}`;
     if (seen.has(key) || sent(key)) continue;
     seen.add(key);
-    const mins = Math.max(1, Math.round((m.starts_at! - now) / 60_000));
+    const mins = Math.round((m.starts_at! - now) / 60_000);
     const open = db.prepare("SELECT title FROM items WHERE deleted = 0 AND status = 'open' AND profile = ? AND meeting_id IN (SELECT id FROM meetings WHERE profile = ? AND title = ? AND id != ?)").all(m.profile, m.profile, m.title, m.id) as { title: string | null }[];
     const people = (() => { try { return (JSON.parse(m.people ?? '[]') as string[]).join(', '); } catch { return m.people; } })();
     const prev = db.prepare('SELECT summary, notes, decisions FROM meetings WHERE deleted = 0 AND profile = ? AND title = ? AND id != ? AND starts_at < ? ORDER BY starts_at DESC LIMIT 1').get(m.profile, m.title, m.id, m.starts_at) as { summary: string | null; notes: string | null; decisions: string | null } | null;
@@ -85,7 +86,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
       prev && section('Open questions', questionsIn(prev.summary, prev.notes)),
     ].filter(Boolean).join('\n');
     const url = webUrl(m.calendar_url);
-    out.push({ key, title: `${m.title ?? 'Meeting'} in ${mins} min`, body, url: url ?? '', actions: url ? `view, Open, ${url}` : '' });
+    out.push({ key, title: `${m.title ?? 'Meeting'} ${mins < 1 ? 'starts now' : `in ${mins} min`}`, body, url: url ?? '', actions: url ? `view, Open, ${url}` : '' });
   }
   const read = db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND transcript = 'done' AND ends_at > ? AND CAST(json_extract(field_times, '$.transcript') AS INTEGER) > ?").all(now - DAY, now - FRESH) as Meeting[];
   for (const m of read) {
