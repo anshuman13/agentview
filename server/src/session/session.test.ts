@@ -79,6 +79,18 @@ describe('AgentSession turns', () => {
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: expect.stringContaining('Loop stopped') });
   });
 
+  it('stops the loop when Claude exits mid-step', async () => {
+    const { s } = fakeSession();
+    const setModel = vi.fn(async () => {});
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel, applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
+    s.state.session.model = 'claude-sonnet-5-5';
+    s.setLoop(true);
+    await s.prompt('build it');
+    s.exited();
+    expect(s.state.session.loop.phase).toBe('failed');
+    expect(setModel).toHaveBeenLastCalledWith('claude-sonnet-5-5');
+  });
+
   it('asks for a loop plan only when the planner says it needs approval', async () => {
     const { s, result } = fakeSession();
     Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });

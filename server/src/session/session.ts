@@ -655,6 +655,12 @@ export class AgentSession implements AgentHost {
     this.setSession({ running: false, stopping: false, compacting: false });
     this.planChange = null;
     this.approvals.denyAll('Claude exited before this was answered.');
+    // No result comes for the step that was running, so the loop cannot advance.
+    const loop = this.state.session.loop;
+    if (looping(loop)) {
+      this.setSession({ loop: { ...loop, phase: 'failed' } });
+      this.endLoop(`Loop stopped: Claude exited during the ${loop.phase} step`);
+    }
     // Queued messages are not lost with the process; the first one starts a fresh CLI.
     if (!this.dequeue()) this.repeater.defer();
     this.orphan(this.runningAgents());
