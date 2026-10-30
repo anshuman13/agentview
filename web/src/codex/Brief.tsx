@@ -6,7 +6,7 @@ import { useView } from './view';
 import { clock } from './time';
 
 const DISMISSED = 'codex.briefDismissed';
-const COLLAPSED = 'codex.briefCollapsed';
+const OPEN = 'codex.briefOpen';
 const DAY = 86400000;
 const PREVIEW_LINES = 3;
 
@@ -22,16 +22,16 @@ function BriefBody({ rest }: { rest: string[] }) {
   );
 }
 
-// Today's morning brief from the hub, one per profile, shown for a day from the hub's midnight in any time zone: the header folds it, the cross hides it until tomorrow.
+// Today's morning brief from the hub, one per profile, shown for a day from the hub's midnight in any time zone, folded to its title by default: the header opens it, the cross hides it until tomorrow.
 export function MorningBrief({ now }: { now: number }) {
   const snap = useAssistantData();
   const { filter } = useView();
   const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(DISMISSED, []));
-  const [collapsed, setCollapsed] = useState(() => stored(COLLAPSED, false));
+  const [collapsed, setCollapsed] = useState(() => !stored(OPEN, false));
   const briefs = snap.briefs.filter((b) => !b.deleted && b.kind === 'morning' && b.from_at != null && now >= b.from_at && now - b.from_at < DAY && b.text && (filter === 'all' || b.profile === filter) && !dismissed.includes(b.profile + b.id))
     .sort((a, b) => Number(b.profile === 'work') - Number(a.profile === 'work'));
   if (!briefs.length) return null;
-  const toggle = () => { save(COLLAPSED, !collapsed); setCollapsed(!collapsed); };
+  const toggle = () => { save(OPEN, collapsed); setCollapsed(!collapsed); };
   const dismiss = (b: (typeof briefs)[number]) => {
     const next = [...dismissed.filter((k) => k.endsWith(b.id)), b.profile + b.id];
     setDismissed(next);

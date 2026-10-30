@@ -37,17 +37,17 @@ const marked = (text: string, spans: [number, number][]) => {
 
 type Chip = { label: string; q: string };
 
+// One chip: prep when a meeting starts within the hour, the weekly update on Thursday and Friday afternoons, otherwise the time-of-day ask.
 const recipes = (next: Meeting | undefined): Chip[] => {
   const now = new Date();
   const h = now.getHours();
-  const list: Chip[] = [
+  if (next && next.starts_at! - now.getTime() < 3600_000) return [{ label: 'Prep next meeting', q: prepText(next) }];
+  if ((now.getDay() === 4 || now.getDay() === 5) && h >= 12) return [{ label: 'Draft my weekly update', q: 'Draft my weekly update from what I got done this week and the meetings I was in: done, in progress, next. Short bullets.' }];
+  return [
     h < 12 ? { label: 'Plan my day', q: 'Plan my day. Use my calendar for today and my open items, suggest an order with times and point out conflicts.' }
       : h < 17 ? { label: "What's next", q: 'What should I do next? Use my calendar and my open items.' }
       : { label: 'Wrap up my day', q: 'Wrap up my day: what got done, what is still open, suggested meeting actions I have not confirmed, and my first meeting tomorrow.' },
   ];
-  if (now.getDay() === 4 || now.getDay() === 5) list.push({ label: 'Draft my weekly update', q: 'Draft my weekly update from what I got done this week and the meetings I was in: done, in progress, next. Short bullets.' });
-  if (next) list.unshift({ label: 'Prep next meeting', q: prepText(next) });
-  return list;
 };
 
 export const prepText = (m: Meeting) => `Prepare me for "${m.title}" at ${clock(m.starts_at!)}: who is in it, related Slack threads, Linear issues and docs, and what is still open from the last time we met.`;

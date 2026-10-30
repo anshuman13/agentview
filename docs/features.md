@@ -33,13 +33,15 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - For each profile with no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week, or Not now to hide the row for the week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
-  the last workday. It shows its title and 3 lines with Show all, folds and hides until tomorrow
+  the last workday. It shows as its title folded by default; opened it shows 3 lines with Show all, and it hides until tomorrow
 - Meetings that ended in the last two hours with their first 3 actions (Open notes for N more), a follow-up draft to copy and the notes
 - A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
   length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
   meetings. The strip shows once a block exists today, otherwise a Plan my day button; Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
   week's goals first, due or not, then overdue and due tasks by due time. It shows the plan to trim before Create adds
   the blocks
+- From 16:00 one Wrap up row with today's done and open counts and Move all to tomorrow; its header opens the first 5 open tasks to move, snooze or drop
+- The Overview ask bar shows one chip when empty: Prep next meeting within an hour of one, Draft my weekly update on Thursday and Friday afternoons, otherwise Plan my day, What's next or Wrap up my day
 - Copy standup, shown before 11:00, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
   days)

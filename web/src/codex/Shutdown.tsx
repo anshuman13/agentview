@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAssistantStore } from './data';
 import { UNROLL } from './useActions';
 import { SNOOZES, nextNine } from './data/engine';
@@ -9,10 +10,12 @@ import { showSnack } from './view';
 import { when } from './time';
 
 const SHUTDOWN_HOUR = 16;
+const SHOW = 5;
 
-// From 16:00 until midnight: tasks done today and the open ones due today or overdue, each moved, snoozed or dropped.
+// From 16:00 until midnight: one row with today's done and open counts and Move all; the header opens the first open tasks to move, snooze or drop.
 export function Shutdown({ open, done, now }: { open: ItemRow[]; done: number; now: number }) {
   const store = useAssistantStore();
+  const [shown, setShown] = useState(false);
   if (new Date(now).getHours() < SHUTDOWN_HOUR || !open.length) return null;
   const tomorrow = (r: ItemRow) => nextNine(new Date(now), r.profile);
   const change = (rs: ItemRow[], patch: Partial<ItemRow>, text: string) => {
@@ -33,9 +36,11 @@ export function Shutdown({ open, done, now }: { open: ItemRow[]; done: number; n
   };
   return (
     <section>
-      <div className="as-section">Wrap up · {plural(done, 'task')} done today</div>
+      <button className="as-section as-toggle" aria-expanded={shown} onClick={() => setShown(!shown)}>
+        Wrap up · {done} done · {open.length} open <Icon name={shown ? 'chevron-up' : 'chevron-down'} small />
+      </button>
       <div className="ov-follow">
-        {open.map((r) => (
+        {shown && open.slice(0, SHOW).map((r) => (
           <div key={r.profile + r.id} className="ov-follow-row">
             <span className="ov-follow-text"><span className="ov-t">{r.title}</span></span>
             <button className="ov-check" aria-label={`Move ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => change([r], { at: tomorrow(r), ...UNROLL }, `Moved to ${when(tomorrow(r))}`)}><Icon name="arrow-right" small /></button>
@@ -43,6 +48,7 @@ export function Shutdown({ open, done, now }: { open: ItemRow[]; done: number; n
             <button className="ov-check" aria-label={`Drop ${r.title}`} title="Drop" onClick={() => change([r], { deleted: 1 }, 'Dropped')}><Icon name="trash" small /></button>
           </div>
         ))}
+        {shown && open.length > SHOW && <div className="ov-follow-row ov-follow-text">+{open.length - SHOW} more</div>}
         <button className="ov-follow-row ov-follow-text" onClick={() => moveAll()}>Move all to tomorrow</button>
       </div>
     </section>
