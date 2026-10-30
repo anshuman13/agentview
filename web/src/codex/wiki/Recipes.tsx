@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react';
 import { allRecipes, matchRecipes, type Recipe } from '../data/recipes';
 
 export function useRecipes(q: string, fill: (text: string) => void) {
   const [index, setIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
+  const id = useId();
   const list = useMemo(() => (q.startsWith('/') ? matchRecipes(allRecipes(), q) : []), [q]);
   const open = list.length > 0 && !dismissed;
   useEffect(() => { setIndex(0); setDismissed(false); }, [q]);
@@ -21,14 +22,17 @@ export function useRecipes(q: string, fill: (text: string) => void) {
   };
 
   const menu = open && (
-    <ul className="wk-recipes" role="listbox">
+    <ul className="wk-recipes" role="listbox" id={id}>
       {list.map((r, i) => (
-        <li key={r.id} role="option" aria-selected={i === index} className={i === index ? 'on' : ''} onMouseEnter={() => setIndex(i)} onMouseDown={(e) => { e.preventDefault(); pick(r); }}>
+        <li key={r.id} id={`${id}-${i}`} role="option" aria-selected={i === index} className={i === index ? 'on' : ''} onMouseEnter={() => setIndex(i)} onMouseDown={(e) => { e.preventDefault(); pick(r); }}>
           {r.title}
         </li>
       ))}
     </ul>
   );
 
-  return { menu, onKeyDown };
+  // The field keeps focus; these tell a screen reader which recipe the arrows are on.
+  const field = { role: 'combobox', 'aria-expanded': open, 'aria-controls': open ? id : undefined, 'aria-activedescendant': open ? `${id}-${index}` : undefined } as const;
+
+  return { menu, onKeyDown, field };
 }
