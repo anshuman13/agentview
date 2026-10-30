@@ -58,6 +58,23 @@ function Fold({ title, count, children }: { title: string; count: number; childr
   );
 }
 
+// The transcript text stays on the hub and is fetched when the section opens.
+function Transcript({ m }: { m: Meeting }) {
+  const store = useAssistantStore();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState<string | null | undefined>(undefined);
+  const toggle = () => {
+    setOpen((v) => !v);
+    if (text === undefined) store.transcript(m).then(setText, (err) => setText(`Could not load the transcript: ${errorText(err)}`));
+  };
+  return (
+    <section className="mt-sec mt-fold">
+      <button className="mt-fold-head" aria-expanded={open} onClick={toggle}>Transcript <Icon name={open ? 'chevron-up' : 'chevron-down'} small /></button>
+      {open && (text === undefined ? <p className="mt-pending">Loading</p> : text ? <pre className="mt-transcript">{text}</pre> : <p className="mt-pending">No transcript text kept for this meeting.</p>)}
+    </section>
+  );
+}
+
 function AddAction({ m }: { m: Meeting }) {
   const store = useAssistantStore();
   const [text, setText] = useState('');
@@ -321,6 +338,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           <Fold title="Not mine" count={count.dismissed}>
             <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
           </Fold>
+          {state === 'done' && <Transcript key={meetingKey(m)} m={m} />}
         </article>
       </div>
       <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, all))} />

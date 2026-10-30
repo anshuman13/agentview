@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { newId } from '../data/sync';
 import { actionCount, actionCounts, groupMeetings, live, meetingState, openQuestions, peopleOf, searchMeetings, queryWords, rowMatcher, topicTimeline, trackedTopics, type Fact, type Meeting, type Question } from '../data/wiki';
@@ -51,14 +51,34 @@ const Badge = memo(function Badge({ m, now, review, total, done }: { m: Meeting;
 });
 
 const NO_TOPICS: string[] = [];
+const NO_HITS = new Map<string, string>();
 
-export const MeetingRow = memo(function MeetingRow({ m, now, topics = NO_TOPICS }: { m: Meeting; now: number; topics?: string[] }) {
+// What the hub finds in the transcripts for the query, by profile:id with a snippet; empty until it answers.
+function useTranscriptHits(query: string) {
+  const { store } = useCodex();
+  const [found, setFound] = useState({ q: '', hits: NO_HITS });
+  const q = query.trim();
+  useEffect(() => {
+    if (!q) return;
+    let live = true;
+    const t = setTimeout(() => {
+      store.searchTranscripts(q).then((hits) => live && setFound({ q, hits: new Map(hits.map((h) => [`${h.profile}:${h.id}`, h.snippet])) }), () => {});
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [q, store]);
+  return found.q === q ? found.hits : NO_HITS;
+}
+
+export const MeetingRow = memo(function MeetingRow({ m, now, topics = NO_TOPICS, said }: { m: Meeting; now: number; topics?: string[]; said?: string }) {
   const snap = useAssistantData();
   const count = actionCounts(snap.items).get(meetingKey(m)) ?? actionCount([], m);
-  return <MeetingRowView m={m} now={now} topics={topics} review={count.review} total={count.total} done={count.done} />;
+  return <MeetingRowView m={m} now={now} topics={topics} said={said} review={count.review} total={count.total} done={count.done} />;
 });
 
-const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, total, done }: { m: Meeting; now: number; topics: string[]; review: number; total: number; done: number }) {
+const MeetingRowView = memo(function MeetingRowView({ m, now, topics, said, review, total, done }: { m: Meeting; now: number; topics: string[]; said?: string; review: number; total: number; done: number }) {
   const tracked = useMemo(() => trackedTopics(m, topics), [m, topics]);
   const people = useMemo(() => peopleOf(m), [m]);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
@@ -74,6 +94,7 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, to
           {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
           {m.recorded_ms ? ` · ${Math.round(m.recorded_ms / 60000)} min recorded` : ''}
         </span>
+        {said && <span className="mt-said" title="From the transcript">{said}</span>}
       </span>
       {tracked.map((t) => <span key={t} className="chip pill sm" title="Tracked topic">{t}</span>)}
       <Badge m={m} now={now} review={review} total={total} done={done} />
@@ -200,10 +221,11 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   };
   const [syncing, runSync] = useSnackTask();
   const now = useMinute();
+  const said = useTranscriptHits(query);
   const found = useMemo(() => {
     const tracked = active.length ? mine.filter((m) => trackedTopics(m, active).length) : mine;
-    return searchMeetings(tracked, query);
-  }, [mine, query, active]);
+    return searchMeetings(tracked, query, said);
+  }, [mine, query, active, said]);
   const groups = useMemo(() => groupMeetings(found, now), [found, now]);
   const total = useMemo(() => groups.reduce((n, g) => n + g.rows.length, 0), [groups]);
   const [shown, more] = useWindow(`${filter}|${query}|${active.join(',')}`);
@@ -250,7 +272,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           {visible.map((g) => (
             <section key={g.label}>
               <div className="mt-day">{g.label}</div>
-              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} />)}</div>
+              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} said={said.get(meetingKey(m))} />)}</div>
             </section>
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />
