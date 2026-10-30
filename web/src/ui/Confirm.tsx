@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { useReturnFocus } from './util';
 
 export type ConfirmRequest = {
   title: string;
@@ -15,6 +16,7 @@ export function Confirm({ title, detail, warning, action, icon, input, run, onCl
   const ok = useRef<HTMLButtonElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(input?.value ?? '');
+  useReturnFocus();
   useEffect(() => (input ? field.current?.focus() : ok.current?.focus()), []);
   const go = () => {
     if (input && !value.trim()) return;

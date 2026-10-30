@@ -90,6 +90,18 @@ export function useEscape(onClose: () => void) {
   }, [onClose]);
 }
 
+// While `on`, remembers the focused element and puts focus back there on close, unless focus moved on.
+export function useReturnFocus(on = true) {
+  useEffect(() => {
+    if (!on) return;
+    const back = document.activeElement as HTMLElement | null;
+    return () => {
+      const at = document.activeElement;
+      if ((!at || at === document.body) && back?.isConnected) back.focus({ preventScroll: true });
+    };
+  }, [on]);
+}
+
 export function Hl({ text, hits, from = 0 }: { text: string; hits: number[]; from?: number }) {
   return <>{[...text].map((c, i) => (hits.includes(from + i) ? <b key={i}>{c}</b> : c))}</>;
 }

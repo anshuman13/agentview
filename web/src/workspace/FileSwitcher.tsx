@@ -3,7 +3,7 @@ import { api, setUi, useStore } from '../app/store';
 import { useOpened } from './opened';
 import { FileIcon } from './FileIcon';
 import { touch } from '../app/touch';
-import { Hl, listKeys } from '../ui/util';
+import { Hl, listKeys, useReturnFocus } from '../ui/util';
 import { fileCache as cache } from '../chat/composerLogic';
 
 export function FileSwitcher() {
@@ -17,6 +17,7 @@ export function FileSwitcher() {
   const [idx, setIdx] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
+  useReturnFocus(open);
 
   useEffect(() => {
     if (!open) return;
