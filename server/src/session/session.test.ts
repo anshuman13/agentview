@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireTime, prFrom, type AgentSession } from './session.js';
+import { fireTime, type AgentSession } from './session.js';
+import { prFrom } from './pr.js';
 import { claudeSession, type ClaudeDriver } from '../agent/claude/driver.js';
 import { historyFrom } from '../agent/claude/transcript.js';
 import type { History } from '../agent/types.js';

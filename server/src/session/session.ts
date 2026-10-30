@@ -8,6 +8,7 @@ import { advance, looping, loopOff, needsApproval, planChangeText, planStep, wit
 import { RepeatController, after, goalMet, limitReset, restorePrompt } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { EventIndex, stopAgents } from './events.js';
+import { PR_URL, createsPr, prFrom } from './pr.js';
 
 const MAX_EVENTS = 3000;
 // A chat keeps its last few thousand events; the CLI transcript still has everything.
@@ -27,21 +28,6 @@ export function fireTime(schedule: string, now = Date.now()) {
 
 const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
-
-const PR_URL = /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+)/;
-
-const createsPr = (e: ChatEvent) => e.kind === 'tool_use' && e.name === 'Bash' && /\bgh pr create\b/.test(String(e.input.command ?? ''));
-
-// The number of the last pull request a `gh pr create` in this chat printed.
-export function prFrom(events: ChatEvent[]): number | null {
-  const creates = new Set<string>();
-  let pr: number | null = null;
-  for (const e of events) {
-    if (createsPr(e)) creates.add(e.id);
-    else if (e.kind === 'tool_result' && creates.has(e.toolUseId)) pr = Number(PR_URL.exec(e.text)?.[1]) || pr;
-  }
-  return pr;
-}
 
 export class AgentSession implements AgentHost {
   readonly driver: AgentDriver;
