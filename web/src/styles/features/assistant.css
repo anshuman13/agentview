@@ -100,6 +100,10 @@
 .as-chip { flex: none; height: var(--size-xl); padding: 0 var(--sp-6); display: inline-flex; align-items: center; gap: var(--sp-3); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); font-size: var(--fs-sm); white-space: nowrap; }
 @media (hover: hover) { .as-chip:hover { color: var(--fg); border-color: var(--border-card); } }
 .as-chip.on { color: var(--fg); background: var(--accent-soft); border-color: transparent; }
+.dp-block { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-4); padding: var(--sp-6); }
+.dp-block select, .dp-block input { min-width: 0; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
+.dp-block input[type='number'] { width: 72px; }
+.dp-when { display: flex; align-items: center; gap: var(--sp-4); }
 .as-chip.work { color: var(--work); border-color: color-mix(in srgb, var(--work) 45%, transparent); }
 .as-chip.personal { color: var(--personal); border-color: color-mix(in srgb, var(--personal) 45%, transparent); }
 .as-chip.when, .as-chip.time { color: var(--accent-text); border-color: transparent; background: var(--accent-soft); }
