@@ -20,7 +20,7 @@ export const LISTS: { id: List; icon: string; label: string }[] = [
 const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
 
-const SCAN_NAME: Record<string, string> = { slack: 'Slack', gmail: 'Gmail', calendar: 'Calendar' };
+const SCAN_NAME: Record<string, string> = { slack: 'Slack', gmail: 'Gmail', calendar: 'Calendar', 'calendar:work': 'Calendar (work)', 'calendar:personal': 'Calendar (personal)' };
 
 function pausedText(paused: Paused[], now = Date.now()) {
   const on = paused.filter((p) => p.until > now);

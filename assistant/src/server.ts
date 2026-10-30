@@ -2,7 +2,7 @@ import http from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { APP_ORIGINS, allowedHostHeader, allowedPeer, peerName } from '../../server/src/http/access.js';
 import { openDb } from './db.js';
-import { startCalendar } from './calendar.js';
+import { ACCOUNT_OF, startCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
 import { startBrief } from './brief.js';
@@ -103,7 +103,7 @@ async function start() {
     startJobs(getDb);
     startSlack(getDb);
     startGmail(getDb);
-    startStallWatch(getDb, { slack: slackScan.setUp, gmail: gmailScan.setUp, calendar: () => true });
+    startStallWatch(getDb, { slack: slackScan.setUp, gmail: gmailScan.setUp, ...Object.fromEntries(Object.keys(ACCOUNT_OF).map((p) => [`calendar:${p}`, () => true])) });
   }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);

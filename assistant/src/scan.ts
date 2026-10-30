@@ -34,7 +34,7 @@ export const runScan = (db: Database, name: string, fn: () => Promise<Counts>) =
 
 export function scanHealth(db: Database, missing: string[] = []): ScanHealth[] {
   const rows = db.prepare("SELECT value FROM meta WHERE key LIKE 'scan:%' ORDER BY key").all() as { value: string }[];
-  const health = rows.map((r) => JSON.parse(r.value) as ScanHealth).filter((h) => !missing.includes(h.scan));
+  const health = rows.map((r) => JSON.parse(r.value) as ScanHealth).filter((h) => h.scan !== 'calendar' && !missing.includes(h.scan));
   return [...health, ...missing.map((scan) => ({ scan, missing: true }))];
 }
 
@@ -84,7 +84,7 @@ export async function checkStalls(db: Database, sources: Record<string, () => bo
     const h = health.find((x) => x.scan === name);
     const ok = h?.ok ?? 0;
     if (now - Math.max(ok, dayStart, since) < STALL || getMeta(db, `stall:${name}`) === String(ok)) continue;
-    const p = paused.find((x) => x.scan === name);
+    const p = paused.find((x) => x.scan === name.split(':')[0]);
     const reason = p ? `paused: usage limit until ${hm(p.until)}` : h?.error && (h.failed ?? 0) > ok ? h.error : `no success since ${ok ? hm(ok) : 'the hub started'}`;
     if (await push(`${name} scan stalled`, '', reason, '')) setMeta(db, `stall:${name}`, String(ok));
   }

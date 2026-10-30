@@ -69,7 +69,7 @@ Scan slots follow the hub's local clock, so half hours start at :00 and :30 in a
 While a Claude account is at its usage limit, the Slack and Gmail scans and the calendar import of its profiles skip
 their runs, and the scans catch up from their last read afterwards. The hub logs the pause once per limit, and each sync reply lists the paused scans so the apps can show them
 until the limit ends.
-Each Slack, Gmail and calendar run records its last success with counts and its last error in meta `scan:<name>`, and
+Each Slack and Gmail run, and each profile's calendar import (`calendar:work`, `calendar:personal`), records its last success with counts and its last error in meta `scan:<name>`, and
 the sync reply returns them as `scans`. `POST /scan?name=slack|gmail` runs one scan now outside its slot; it still
 honors the usage-limit pause and joins a scan that is already running.
 The Slack counts include `messages`, the new messages the scan read, so a run with no asks still shows it read something. The scan prompt also lists asks closed or deleted in the last 7 days so they are not added again.

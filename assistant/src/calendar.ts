@@ -112,7 +112,7 @@ function importOne(db: () => Database, profile: Profile, run: typeof importCalen
   return once<{ changed: number; error?: string }>(`calendar:${profile}`, async () => {
     try {
       setMeta(db(), triedKey(profile), String(Date.now()));
-      const { meetings: n } = await recordScan(db(), 'calendar', async () => {
+      const { meetings: n } = await recordScan(db(), `calendar:${profile}`, async () => {
         try {
           return { meetings: await run(db(), profile) };
         } catch (err) {
