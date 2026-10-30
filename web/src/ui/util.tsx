@@ -12,6 +12,9 @@ export function pressable(onClick: (e: MouseEvent<HTMLElement>) => void) {
 
 export const escapeHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+// Links from synced or model-written text open only as web or mail links.
+export const safeHref = (url: string | null | undefined) => (url && /^(https?:|mailto:)/i.test(url) ? url : undefined);
+
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));

@@ -4,7 +4,7 @@ import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
-import { ago, save, stored } from '../../ui/util';
+import { ago, safeHref, save, stored } from '../../ui/util';
 import { clock } from '../time';
 import { setView, showSnack } from '../view';
 import '../../styles/features/wiki.css';
@@ -46,7 +46,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
           {chats.length > 0 && (
             <div className="mt-rows">
               {chats.map((c) => (
-                <a key={c.profile + c.id} className="mt-row sm-chat" href={c.url ?? undefined} target="_blank" rel="noreferrer">
+                <a key={c.profile + c.id} className="mt-row sm-chat" href={safeHref(c.url)} target="_blank" rel="noreferrer">
                   <span className="mt-body">
                     <span className="mt-title">{c.name}</span>
                     <span className="sm-text">{c.summary}</span>
@@ -80,7 +80,7 @@ export function needsYou(text: string) {
     const m = bullet[1].match(/^(?:\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*)\s*:?\s*(.*)$/);
     const title = m ? (m[1] ?? m[3]) : bullet[1].split(':')[0];
     const rest = m ? m[4] : bullet[1].slice(title.length + 1);
-    const url = m?.[2] && /^(https?:|mailto:)/i.test(m[2]) ? m[2] : null;
+    const url = safeHref(m?.[2]) ?? null;
     out.push({ title: title.trim(), url, why: rest.trim().split(/(?<=[.!?])\s/)[0] });
   }
   return out;

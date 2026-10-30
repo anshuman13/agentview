@@ -8,6 +8,7 @@ import type { ItemRow } from '../data/sync';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, pinsOf, seriesOf, seriesRepeats, type Meeting } from '../data/wiki';
 import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
+import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
 import { setView, showSnack, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
@@ -266,7 +267,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
         <span className="spacer" />
         <CopyButtons m={m} actions={all} />
         {state === 'done' && <TranscriptButton m={m} label="Read again" />}
-        {m.calendar_url && <a className="btn sm" href={m.calendar_url} target="_blank" rel="noreferrer"><Icon name="calendar" small /> Calendar</a>}
+        {m.calendar_url && <a className="btn sm" href={safeHref(m.calendar_url)} target="_blank" rel="noreferrer"><Icon name="calendar" small /> Calendar</a>}
       </header>
       <div className="wk-scroll">
         <article className="mt-page">

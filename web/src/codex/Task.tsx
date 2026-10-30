@@ -4,7 +4,7 @@ import { atTime, errorText, hasDay, nextNine, parseWhen, stripWhen } from './dat
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago, readFlag, saveFlag } from '../ui/util';
+import { ago, readFlag, safeHref, saveFlag } from '../ui/util';
 import { FILTER_LABEL, setView, showSnack, type Filter } from './view';
 import { PickDue, PickTime, when } from './time';
 import { snoozes } from './AskBar';
@@ -268,7 +268,7 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
         <button className={`as-chip as-prof ${row.profile}`} title={`Move to ${FILTER_LABEL[other]}`} onClick={move}><ProfileDot profile={row.profile} />{FILTER_LABEL[row.profile]}</button>
         {row.meeting_id && <button className="as-chip" onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))}><Icon name="record" small /> Meeting</button>}
         {row.source_url ? (
-          <a className="as-chip" href={row.source_url} target="_blank" rel="noreferrer"><Icon name={src.icon} small /> {row.meeting_id ? 'Transcript' : src.label} <Icon name="link-external" small /></a>
+          <a className="as-chip" href={safeHref(row.source_url)} target="_blank" rel="noreferrer"><Icon name={src.icon} small /> {row.meeting_id ? 'Transcript' : src.label} <Icon name="link-external" small /></a>
         ) : row.source && row.source !== 'capture' && <span className="as-chip static"><Icon name={src.icon} small /> {src.label}</span>}
         {row.people && <span className="as-chip static">{row.people}</span>}
         <span className="as-edit-ago">{ago(row.updated_at, ' ago')}</span>
