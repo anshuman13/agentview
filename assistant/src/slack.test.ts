@@ -22,10 +22,11 @@ describe('saveScan', () => {
 
   test('stores only web permalinks', () => {
     const db = openDb(':memory:');
-    saveScan(db, { chats: [], asks: [ask('https://x.test/1'), ask('javascript:alert(1)')], answered: [] }, at(27, 10));
+    saveScan(db, { chats: [], asks: [ask('https://x.test/1'), ask('javascript:alert(1)'), ask('https://x.test/2; http, Go, https://y.test')], answered: [] }, at(27, 10));
     const url = (u: string) => (db.prepare('SELECT source_url FROM items WHERE id = ?').get(askId(u)) as { source_url: string | null }).source_url;
     expect(url('https://x.test/1')).toBe('https://x.test/1');
     expect(url('javascript:alert(1)')).toBeNull();
+    expect(url('https://x.test/2; http, Go, https://y.test')).toBeNull();
   });
 
   test('keeps the summary of a chat with no new messages', () => {

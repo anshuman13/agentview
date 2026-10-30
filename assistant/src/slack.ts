@@ -55,8 +55,8 @@ const Detail = z.object({
 });
 export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; channels?: { name: string; id: string }[] };
 
-// Permalinks come from the model, so only web links are stored or pushed.
-const webUrl = (u: string | null | undefined) => (u && /^https?:\/\//i.test(u) ? u : null);
+// Permalinks come from the model, so only web links are stored or pushed; no comma or semicolon, which split ntfy actions.
+const webUrl = (u: string | null | undefined) => (u && /^https?:\/\/[^\s,;]+$/i.test(u) ? u : null);
 
 export const askId = (url: string) => `slack:${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
 
