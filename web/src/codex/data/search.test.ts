@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GROUP_CAP, searchAll, snippet } from './search';
+import { GROUP_CAP, related, searchAll, snippet } from './search';
 import type { ItemRow } from './sync';
 import type { Fact, Job, Meeting, Page } from './wiki';
 
@@ -49,5 +49,18 @@ describe('search', () => {
     expect(s.endsWith('...')).toBe(true);
     expect(s).toContain('needle');
     expect(snippet(['x'], null, 'no match')).toBe('');
+  });
+
+  it('ranks related claims, meetings and Slack chats by shared key words', () => {
+    const rel = {
+      pages: [page('p1', 'Gateway')],
+      facts: [fact('f1', 'p1', 'Rate limit is 60 requests', { at: Date.now() }), fact('f2', 'p1', 'Lunch is at noon', { at: Date.now() })],
+      meetings: [meeting('m1', 'Gateway rate review', { starts_at: 5 }), meeting('m2', 'Rate chat', { notes: 'gateway limit requests' }), meeting('m3', 'Gateway rate', { starts_at: Date.now() + 1e9 })],
+      items: [item('s1', 'Gateway rate limit question', { source: 'slack', source_url: 'https://chat.example/s1' }), item('s2', 'Gateway rate', { source: 'slack', profile: 'personal' })],
+    };
+    const got = related(rel, 'raise the gateway rate limit for requests', 'work');
+    expect(got.map((h) => `${h.kind}:${h.id}`)).toEqual(['wiki:f1', 'meeting:m2', 'slack:s1']);
+    expect(related(rel, 'gateway rate limit requests', 'work', ['f1', 'm2']).map((h) => h.id)).toEqual(['s1', 'm1']);
+    expect(related(rel, 'gateway', 'work')).toEqual([]);
   });
 });
