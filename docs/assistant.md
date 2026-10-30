@@ -38,6 +38,8 @@ Collection stays per account. claude.ai connectors belong to the Claude account,
 Each profile has its own Claude config folder on the mini (nothing linked to `~/.claude`) and its own MCP list.
 Jobs are pinned to their account with no fallback: at a usage limit they wait and retry. Questions that need both
 sides run on the personal account.
+Before a Claude call, and before a job or scan is skipped for a limit, the hub checks the limit mark against live
+usage the same way chats do (see [features.md](features.md#personal-and-work-claude-accounts)).
 
 ## Data
 

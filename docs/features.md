@@ -222,6 +222,9 @@ its weekly and 5-hour usage as `w25 h15`, and the even weekly pace (100/7 % a da
 week is ahead of that pace or either window passes 80%, it turns yellow and a click switches the chat to the other
 account. A switch restarts the Claude process, so Claude recreates the chat's scheduled jobs in the new one.
 Only the CLI's own usage-limit notice counts as a limit, so a reply that mentions a rate limit does not switch.
+Before a new chat starts, a limit mark is checked against the account's live usage, at most every 5 minutes and
+without sending a prompt. The mark is cleared when the 5-hour and weekly windows are under 100% and no per-model
+weekly window is full; a failed check keeps it.
 
 ## Loops
 
