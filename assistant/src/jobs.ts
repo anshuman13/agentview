@@ -70,7 +70,7 @@ async function runJob(db: Database, job: Job) {
     mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [addTask] }) },
     allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task'],
     canUseTool: async (name, input) => (canRead(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'Jobs can only read.' }),
-  })) {
+  }, 20 * 60_000)) {
     if (m.type === 'result') {
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();

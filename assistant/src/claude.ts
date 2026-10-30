@@ -5,14 +5,29 @@ import { setMeta } from './db.js';
 import { configDir, guardLimit, limitedUntil, stopOnOverage, verifyLimit } from '../../server/src/agent/claude/accounts.js';
 
 // One run on the account, with no saved session or settings. It refuses at the usage limit and stops before extra usage.
-export async function* ask(account: Account, prompt: string, options: Options) {
+export const ASK_TIMEOUT_MS = 10 * 60_000;
+
+export async function* ask(account: Account, prompt: string, options: Options, timeoutMs = ASK_TIMEOUT_MS) {
   await verifyLimit(account);
   guardLimit(account);
   const dir = configDir(account);
   const env = { ...process.env, ...options.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) };
-  for await (const m of query({ prompt, options: { persistSession: false, settingSources: [], ...options, env } })) {
-    stopOnOverage(account, m);
-    yield m;
+  const abortController = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    abortController.abort();
+  }, timeoutMs);
+  try {
+    for await (const m of query({ prompt, options: { persistSession: false, settingSources: [], ...options, abortController, env } })) {
+      stopOnOverage(account, m);
+      yield m;
+    }
+  } catch (err) {
+    if (timedOut) throw new Error(`Claude run timed out after ${Math.round(timeoutMs / 60_000)} min`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
