@@ -5,7 +5,9 @@ import { DAY } from './time.js';
 import { acceptAsk, askId, saveScan } from './slackSave.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
-const ask = (url: string, urgent = false) => ({ url, from: 'Kim', chat: '#ai', title: 'Answer Kim', quote: 'Can you check?', urgent });
+// Each url gets its own topic, so asks are not taken for repeats of each other.
+const topic = (url: string) => `${url.replace(/\W/g, '')}topic`;
+const ask = (url: string, urgent = false) => ({ url, from: 'Kim', chat: '#ai', title: `Answer ${topic(url)}`, quote: 'Can you check?', urgent });
 const item = (db: ReturnType<typeof openDb>, url: string) => db.prepare('SELECT status, source, people FROM items WHERE id = ?').get(askId(url)) as { status: string; source: string; people: string } | null;
 
 describe('scan prompt and counts', () => {
@@ -16,7 +18,7 @@ describe('scan prompt and counts', () => {
     saveScan(db, { chats: [], asks: [], answered: ['u1'] }, at(27, 11));
     const prompt = scanPrompt(db, { me: 'U1', domain: 'x.slack.com', channels: [] }, at(27, 9), at(28, 10));
     const [open, closed] = prompt.split('Recently closed asks');
-    expect(closed).toContain(`[${askId('u1')}] Answer Kim`);
+    expect(closed).toContain(`[${askId('u1')}] Answer u1topic`);
     expect(open).toContain(`[${askId('u2')}]`);
     expect(open).not.toContain(askId('u1'));
   });
@@ -31,6 +33,16 @@ describe('saveScan', () => {
     expect(item(db, 'u1')).toEqual({ status: 'suggested', source: 'slack', people: 'Kim · #ai' });
     expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
     expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ chats: 0, added: 0, urgent: [], said: 0, messages: 0 });
+  });
+
+  test('skips repeats of a dismissed ask from another message, and asks in a DM I answered last', () => {
+    const db = openDb(':memory:');
+    const dm = (url: string, title: string) => ({ url, from: 'Kim', chat: 'DM', title, quote: 'Can you?', urgent: false });
+    saveScan(db, { chats: [], asks: [dm('u1', 'Give input on interview prep')], answered: [] }, at(27, 10));
+    db.prepare("UPDATE items SET status = 'dismissed' WHERE id = ?").run(askId('u1'));
+    expect(saveScan(db, { chats: [], asks: [dm('u2', 'Provide input on the interview prep'), dm('u3', 'Book the offsite venue')], answered: [] }, at(27, 11)).added).toBe(1);
+    const chat = { id: 'D1', name: 'Kim', kind: 'dm' as const, summary: 'I answered.', waiting: false };
+    expect(saveScan(db, { chats: [chat], asks: [dm('u4', 'Review the budget')], answered: [] }, at(27, 12)).added).toBe(0);
   });
 
   test('stores only web permalinks', () => {
@@ -67,7 +79,7 @@ describe('saveScan', () => {
 
   test('fulfilled closes the matching promise and leaves another open', () => {
     const db = openDb(':memory:');
-    const said = (url: string) => ({ url, to: 'Kim', chat: '#ai', title: 'Send Kim the draft', quote: 'I will send it' });
+    const said = (url: string) => ({ url, to: 'Kim', chat: '#ai', title: `Send ${topic(url)}`, quote: 'I will send it' });
     saveScan(db, { chats: [], asks: [], answered: [], said: [said('https://x.test/1'), said('https://x.test/2')] }, at(27, 10));
     expect(scanPrompt(db, { me: 'U1', domain: 'x.slack.com', channels: [] } as any, at(27, 9), at(27, 10))).toContain('Open promises:\n- [said:');
     saveScan(db, { chats: [], asks: [], answered: [], fulfilled: ['https://x.test/1'] }, at(27, 11));

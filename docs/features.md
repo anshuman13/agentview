@@ -66,6 +66,8 @@ A tap opens the task in place: title and notes are editable for every task, incl
 with due time, profile, source link, Start, Snooze, Tidy, Copy draft for an ask with a reply draft, Ask and Delete
 below; a tap outside closes it and saves. A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Slack and Gmail promises I made myself show under "You said" next to the
 asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source.
+The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
+seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message.
 
 - Each day ends with Add task (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day

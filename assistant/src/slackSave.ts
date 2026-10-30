@@ -56,6 +56,16 @@ export const askId = (url: string) => `slack:${createHash('sha1').update(url).di
 // My own promises keep the id of their source with this prefix, so the apps label them "You said".
 export const saidId = (id: string) => `said:${id}`;
 
+const words = (s: string) => new Set(s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []);
+// Two titles for the same thing: most words of the shorter one are in the other.
+export function sameAsk(a: string, b: string) {
+  const x = words(a), y = words(b);
+  if (!x.size || !y.size) return false;
+  let n = 0;
+  for (const w of x) if (y.has(w)) n++;
+  return n / Math.min(x.size, y.size) >= 0.6;
+}
+
 // Saves one scan: chat summaries, asks and my promises as items to review, new details on tasks and channel decisions, and
 // closes asks I have replied to. Returns how many chats had new messages and how many messages were read, how many asks and promises are new and which asks are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
@@ -65,11 +75,18 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const chats = changes.length;
   const messages = changes.reduce((n, c) => n + (c.table === 'chats' ? (r.chats.find((x) => x.id === c.id)?.new_messages ?? 0) : 0), 0);
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
+  // Slack items of the last week in any state, so an ask or promise already seen, done or dismissed is not added again from another message.
+  const seen = db.prepare("SELECT title, people FROM items WHERE profile = ? AND source = 'slack' AND updated_at > ?").all(PROFILE, now - 7 * DAY) as { title: string | null; people: string | null }[];
+  const known = (title: string, people: string) => seen.some((x) => x.people === people && sameAsk(x.title ?? '', title));
+  // A DM where I sent the last message has nothing waiting on me.
+  const replied = (a: ScanResult['asks'][number]) => a.chat === 'DM' && r.chats.some((c) => c.kind === 'dm' && c.waiting === false && c.name.trim().toLowerCase() === a.from.trim().toLowerCase());
   let added = 0;
   for (const a of r.asks) {
     const id = askId(a.url);
-    if (has.get(PROFILE, id) || changes.some((c) => c.id === id)) continue;
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
+    const people = `${a.from} · ${a.chat}`;
+    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || known(a.title, people) || replied(a)) continue;
+    seen.push({ title: a.title, people });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
     added++;
     if (a.urgent) urgent.push({ ...a, id });
   }
@@ -77,8 +94,10 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   for (const p of r.said ?? []) {
     // A promise without a usable permalink is told apart by its sentence.
     const id = saidId(askId(webUrl(p.url) ?? `${p.url}\n${p.quote.trim()}`));
-    if (has.get(PROFILE, id) || changes.some((c) => c.id === id)) continue;
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: p.title.trim(), text: p.quote.trim(), source: 'slack', source_url: webUrl(p.url), people: `${p.to} · ${p.chat}`, at: parseWhen(p.due), status: 'suggested' } });
+    const people = `${p.to} · ${p.chat}`;
+    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || known(p.title, people)) continue;
+    seen.push({ title: p.title, people });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: p.title.trim(), text: p.quote.trim(), source: 'slack', source_url: webUrl(p.url), people, at: parseWhen(p.due), status: 'suggested' } });
     said++;
   }
   const answeredOpen: string[] = [];

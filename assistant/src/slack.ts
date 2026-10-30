@@ -71,7 +71,7 @@ const openAsks = (db: Database, since: number) =>
 const openPromises = (db: Database, since: number) =>
   db.prepare("SELECT id, title, source_url FROM items WHERE profile = ? AND deleted = 0 AND id LIKE 'said:%' AND status IN ('suggested', 'open') AND updated_at > ? ORDER BY updated_at DESC LIMIT 30").all(PROFILE, since) as { id: string; title: string; source_url: string | null }[];
 const closedAsks = (db: Database, since: number) =>
-  db.prepare("SELECT id, title FROM items WHERE profile = ? AND source = 'slack' AND id NOT LIKE 'said:%' AND (deleted = 1 OR status = 'done') AND updated_at > ? ORDER BY updated_at DESC LIMIT 30").all(PROFILE, since) as { id: string; title: string }[];
+  db.prepare("SELECT id, title FROM items WHERE profile = ? AND source = 'slack' AND id NOT LIKE 'said:%' AND (deleted = 1 OR status IN ('done', 'dismissed')) AND updated_at > ? ORDER BY updated_at DESC LIMIT 30").all(PROFILE, since) as { id: string; title: string }[];
 const tracked = (db: Database) =>
   db.prepare("SELECT id, title FROM items WHERE profile = ? AND deleted = 0 AND status IN ('open', 'suggested') AND COALESCE(source, '') NOT IN ('slack', 'calendar') ORDER BY updated_at DESC LIMIT 60").all(PROFILE) as { id: string; title: string }[];
 
@@ -124,7 +124,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     'Open promises:',
     ...openPromises(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.source_url ?? ''}: ${a.title}`),
     '',
-    'Recently closed asks (done or deleted in the last 7 days); do not add these again unless a new message changes the request:',
+    'Recently closed asks (done, dismissed or deleted in the last 7 days); do not add these again unless a new message changes the request:',
     ...closedAsks(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.title}`),
     '',
     'Tracked tasks:',
