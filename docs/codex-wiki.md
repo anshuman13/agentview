@@ -198,7 +198,7 @@ the profile's account, with only a save tool, writes a replacement ("As of <date
 change. Each is saved as a proposed claim with `replaces`, a meeting source and `added_by` `meeting:<id>`, unless the
 same text already replaces that claim. Its review card says "From <meeting title>". A meeting stopped by the usage
 limit is tried again on the next run; one that fails for another reason gets up to 3 tries in all (meta key
-`wikiupdate-tries:<profile>:<id>`).
+`wikiupdate-tries:<profile>:<id>`). The tries key is dropped once the meeting is done, and the done key after 14 days.
 
 Slack decisions go the same way. The Slack scan also returns decisions settled in the watched channels (a short line,
 the channel, the permalink and the time), kept once per permalink (a re-worded decision from the same message is skipped) in the hub-only `slack_decisions` table for
