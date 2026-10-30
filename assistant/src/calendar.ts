@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ask, scanPaused } from './claude.js';
 import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
-import { DAY, inWeekHours, slotStart } from './time.js';
+import { inWeekHours, slotStart } from './time.js';
 import { once } from './once.js';
 
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
@@ -60,9 +60,10 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
 }
 
 export async function importCalendar(db: Database, profile: Profile, now = Date.now()) {
-  const from = new Date(now - DAY).setHours(0, 0, 0, 0);
-  const start = new Date(from);
-  const to = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 9).getTime();
+  // Calendar days, so a 23 or 25 hour day at a DST change does not shift the window.
+  const today = new Date(now);
+  const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1).getTime();
+  const to = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8).getTime();
   let events: CalendarEvent[] | null = null;
   // A second call adds to the first, so meetings saved earlier are not swept as gone.
   const save = tool('save_meetings', 'Save the meetings you found.', { events: z.array(Event) }, async (a) => {
