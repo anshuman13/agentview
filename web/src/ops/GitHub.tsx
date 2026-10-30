@@ -42,7 +42,7 @@ function Section({ title, prs, onOpen }: { title: string; prs: PullRequest[]; on
   const [open, setOpen] = useState(true);
   return (
     <>
-      <div className="section-head" {...pressable(() => setOpen(!open))}>
+      <div className="section-head" aria-expanded={open} {...pressable(() => setOpen(!open))}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
         <span className="label">{title}</span>
         <span className="badge quiet">{prs.length}</span>

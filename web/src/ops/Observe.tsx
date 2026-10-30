@@ -13,7 +13,7 @@ import type {
 import type { Repo } from '../../../shared/protocol';
 import { api, useStore } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
-import { askClaude } from '../ui/util';
+import { askClaude, clickOnKey } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import { message } from './pulls';
 import '../styles/features/observe.css';
@@ -72,7 +72,7 @@ function Section({ title, children, actions, open: initial = true }: { title: st
     <div className="obs-section">
       <div className="obs-head" onClick={() => setOpen((v) => !v)}>
         <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
-        <span className="name">{title}</span>
+        <span className="name" role="button" tabIndex={0} aria-expanded={open} onKeyDown={clickOnKey}>{title}</span>
         <span className="acts" onClick={(e) => e.stopPropagation()}>{actions}</span>
       </div>
       {open && <div className="obs-body">{children}</div>}
