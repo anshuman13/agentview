@@ -47,6 +47,8 @@ that Claude account is at its usage limit, a line below it names the paused scan
 - Overdue and due tasks with a check to mark them done and a clock to snooze them to tomorrow 09:00
 - What the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it), job reports
   and a follow-through card for meeting actions still open after a week
+- Waiting on you: up to 6 Slack DMs, newest first, where the other person wrote last and I have not replied, as the
+  Slack scan marks them. Each has Open in Slack and Task, which adds a task with the DM link and hides the DM until its next message
 - A card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person

@@ -51,7 +51,7 @@ export type Action = Common & {
 export type Job = Common & { name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null };
 export type Run = Common & { job_id: string | null; started_at: number | null; finished_at: number | null; status: string | null; output: string | null };
 
-export type Chat = Common & { name: string | null; kind: string | null; url: string | null; summary: string | null; last_at: number | null };
+export type Chat = Common & { name: string | null; kind: string | null; url: string | null; summary: string | null; last_at: number | null; waiting?: number | null };
 export type Brief = Common & { kind: string | null; text: string | null; from_at: number | null; to_at: number | null };
 
 export type Tables = { pages: Page; facts: Fact; meetings: Meeting; actions: Action; jobs: Job; runs: Run; chats: Chat; briefs: Brief };

@@ -1,14 +1,14 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
-import { live, type Meeting } from './data/wiki';
+import { live, type Chat, type Meeting } from './data/wiki';
 import { actionsOf, followThrough } from './data/meetings';
 import { followUpText } from './data/meetingMarkdown';
 import { meetingTimeLeft, sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';
 import { resolvedQuestions } from './meetings/OpenQuestions';
-import { atTime, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
+import { atTime, errorText, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
-import { save, stored, plural } from '../ui/util';
+import { ago, safeHref, save, stored, plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
@@ -193,6 +193,60 @@ function KeepInTouch() {
   );
 }
 
+const WAIT_HANDLED = 'codex.waitingHandled';
+const waitKey = (c: Chat) => `${c.profile}:${c.id}:${c.last_at ?? ''}`;
+
+// DMs where the other person wrote last and I have not replied, newest first. Task makes a task with the DM link and
+// hides the DM until its next message.
+function WaitingOnYou() {
+  const store = useAssistantStore();
+  const snap = useAssistantData();
+  const { filter } = useView();
+  const [handled, setHandled] = useState<string[]>(() => stored<string[]>(WAIT_HANDLED, []));
+  const list = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
+  const rows = useMemo(
+    () => live(snap.chats).filter((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter)).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0)),
+    [snap.chats, filter],
+  );
+  const shown = rows.filter((c) => !handled.includes(waitKey(c)));
+  if (!shown.length) return null;
+  const task = (c: Chat, i: number) => {
+    haptic('tap');
+    const name = c.name ?? 'DM';
+    void store.capture(`Reply to ${name}`, 'task', c.profile)
+      .then((r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }))
+      .then(() => {
+        const next = [...handled.filter((k) => rows.some((r) => waitKey(r) === k)), waitKey(c)];
+        setHandled(next);
+        save(WAIT_HANDLED, next);
+        showSnack('Added to Tasks');
+        requestAnimationFrame(() => {
+          const people = list.current?.querySelectorAll<HTMLElement>('button.ov-follow-text');
+          people?.[Math.min(i, people.length - 1)]?.focus();
+        });
+        focusPast(section.current);
+      }, (err) => showSnack(`Could not add: ${errorText(err)}`));
+  };
+  return (
+    <section ref={section}>
+      <div className="as-section">Waiting on you · {shown.length}</div>
+      <div className="ov-follow ov-wait" role="list" aria-label="Waiting on you" ref={list}>
+        {shown.slice(0, 6).map((c, i) => (
+          <div key={c.profile + c.id} className="ov-follow-row wrap" role="listitem">
+            <button className="ov-follow-text" onClick={() => setView({ person: c.name })}>
+              <span className="ov-t">{c.name}</span>
+              <span className="muted small">{c.last_at ? `${ago(c.last_at, ' ago')} · ` : ''}{c.summary}</span>
+            </button>
+            {safeHref(c.url) && <a className="btn sm" href={safeHref(c.url)} target="_blank" rel="noreferrer" aria-label={`Open the DM with ${c.name} in Slack`}>Open in Slack</a>}
+            <button className="btn sm" aria-label={`Make a task to reply to ${c.name}`} onClick={() => task(c, i)}>Task</button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const JUST_ENDED_MS = 2 * 3600_000;
 
 // Meetings that ended in the last two hours, with their actions, a follow-up draft to copy and the notes.
@@ -368,6 +422,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <AtRisk s={s} now={now} />
       <SinceLastVisit />
       <SlackCard />
+      <WaitingOnYou />
       {digest && (
         <section>
           <div className="as-section">{digest.title} · {dayLabel(digest.updated_at, true)}</div>
