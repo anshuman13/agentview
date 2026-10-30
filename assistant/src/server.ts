@@ -54,6 +54,14 @@ function getDb() {
   return db;
 }
 
+// Only the phone app calls from a browser context; any other page (Origin or Sec-Fetch-Site set) could forge writes.
+export function fromAllowedPage(h: http.IncomingHttpHeaders) {
+  const origin = h.origin ?? '';
+  if (origin === 'http://tauri.localhost' || origin === 'tauri://localhost') return true;
+  const site = h['sec-fetch-site'];
+  return !origin && (!site || site === 'none' || site === 'same-origin');
+}
+
 export function createServer(): http.Server {
   const server = http.createServer(async (req, res) => {
     try {
@@ -66,7 +74,13 @@ export function createServer(): http.Server {
       }
 
       const origin = req.headers.origin ?? '';
-      if (origin === 'http://tauri.localhost' || origin === 'tauri://localhost') {
+      const app = origin === 'http://tauri.localhost' || origin === 'tauri://localhost';
+      if (!fromAllowedPage(req.headers)) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end('{"error":"Forbidden"}');
+        return;
+      }
+      if (app) {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
