@@ -127,7 +127,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
     ...blocks.map((m) => ({ at: m.starts_at!, el: <span key={m.profile + m.id} className="as-chip on" title={m.title ?? ''}>{clock(m.starts_at!)}-{clock(m.ends_at!)} {m.title}</span> })),
   ].sort((a, b) => a.at - b.at);
   if (!plan && !pick && !timed.some((m) => isBlock(m.id))) {
-    return gaps.length && (late.length || open.length || goalTasks.length) ? <div className="as-next-actions"><button className="btn sm" onClick={planDay}><Icon name="sparkle" small /> Plan my day</button></div> : null;
+    return gaps.length > 0 && (late.length || open.length || goalTasks.length) ? <div className="as-next-actions"><button className="btn sm" onClick={planDay}><Icon name="sparkle" small /> Plan my day</button></div> : null;
   }
   return (
     <section>

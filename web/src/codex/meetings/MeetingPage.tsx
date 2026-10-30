@@ -22,6 +22,7 @@ import { RaiseWith } from './Raise';
 import { recentPeople } from '../data/points';
 import { MeetingNotes } from './MeetingNotes';
 import { Series } from './Series';
+import { talkTime } from '../data/talkTime';
 import { RoomMic, SummaryFormat, TalkTime, Transcript, TranscriptButton, useTranscript } from './Transcript';
 
 const ORDER: Record<string, number> = { open: 0, done: 1 };
@@ -116,6 +117,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const now = useMinute();
   const state = meetingState(m, now);
   const transcript = useTranscript(m, state === 'done');
+  const talkers = useMemo(() => (transcript?.text ? talkTime(transcript.text).length : 0), [transcript?.text]);
   const back = () => setView({ open: null });
   useEscapeBack(back);
   const day = m.starts_at ? new Date(m.starts_at).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) : '';
@@ -179,7 +181,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           {(state === 'upcoming' || state === 'live') && <Prep m={m} section />}
 
-          <ContextFold id="meeting-context" title="Context" count={(transcript?.text ? 1 : 0) + (prior.length ? 1 : 0)}>
+          <ContextFold id="meeting-context" title="Context" count={(talkers ? 1 : 0) + (prior.length ? 1 : 0)}>
             {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}
             <Series m={m} prior={prior} />
           </ContextFold>
