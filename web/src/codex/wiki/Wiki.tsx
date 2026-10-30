@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { Guard } from '../../app/Guard';
 import '../../styles/features/wiki.css';
 import { useView } from '../view';
 
@@ -12,5 +13,5 @@ const WikiPage = lazy(() => import('./WikiPage').then((m) => ({ default: m.WikiP
 
 export function Wiki({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
-  return <Suspense fallback={null}>{open ? <WikiPage id={open} /> : <WikiIndex onMenu={onMenu} />}</Suspense>;
+  return <Guard key={open ?? ''} retry><Suspense fallback={null}>{open ? <WikiPage id={open} /> : <WikiIndex onMenu={onMenu} />}</Suspense></Guard>;
 }
