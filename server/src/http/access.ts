@@ -103,7 +103,7 @@ const sameOrigin = (origin: string, host: string) => {
 };
 
 // The bundled app loads from its own origin and calls this server across origins.
-const APP_ORIGINS = new Set(['http://tauri.localhost', 'tauri://localhost']);
+export const APP_ORIGINS = new Set(['http://tauri.localhost', 'tauri://localhost']);
 export const appOrigin = (h: RequestHeaders, addr?: string) => (h.origin && APP_ORIGINS.has(h.origin) && addr !== undefined && allowedPeer(addr) ? h.origin : undefined);
 
 export type RequestHeaders = { host?: string; origin?: string; 'sec-fetch-site'?: string; 'sec-fetch-mode'?: string };

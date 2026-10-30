@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
-import { allowedHostHeader, allowedPeer, peerName } from '../../server/src/http/access.js';
+import { APP_ORIGINS, allowedHostHeader, allowedPeer, peerName } from '../../server/src/http/access.js';
 import { openDb } from './db.js';
 import { startCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
@@ -19,7 +19,6 @@ const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, 
 
 const ownHost = (host = '') => allowedHostHeader(host) || host === new URL(HUB_URL).host;
 
-const isApp = (origin: string) => origin === 'http://tauri.localhost' || origin === 'tauri://localhost';
 
 let db: ReturnType<typeof openDb> | null = null;
 
@@ -28,7 +27,7 @@ const getDb = () => (db ??= openDb());
 // Only the phone app calls from a browser context; any other page (Origin or Sec-Fetch-Site set) could forge writes.
 export function fromAllowedPage(h: http.IncomingHttpHeaders) {
   const origin = h.origin ?? '';
-  if (isApp(origin)) return true;
+  if (APP_ORIGINS.has(origin)) return true;
   const site = h['sec-fetch-site'];
   return !origin && (!site || site === 'none' || site === 'same-origin');
 }
@@ -44,7 +43,7 @@ export function createServer(): http.Server {
       }
 
       const origin = req.headers.origin ?? '';
-      const app = isApp(origin);
+      const app = APP_ORIGINS.has(origin);
       if (!ownHost(req.headers.host) || !fromAllowedPage(req.headers)) {
         send(res, 403, { error: 'Forbidden' });
         return;
