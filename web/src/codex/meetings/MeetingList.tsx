@@ -37,7 +37,7 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
 // The badge says where the meeting is: coming up, waiting for its transcript, or what it left for me.
 const Badge = memo(function Badge({ m, now, review, total, done }: { m: Meeting; now: number; review: number; total: number; done: number }) {
   const state = meetingState(m, now);
-  if (state === 'missing') return <span className="mt-count st-warn" title="No Gemini notes were found for this meeting">No transcript</span>;
+  if (state === 'missing') return <span className="mt-count st-err" title="No Gemini notes were found for this meeting">No transcript</span>;
   if (review > 0) return <span className="mt-count st-warn" title="Suggested actions to keep or dismiss">{review} to review</span>;
   if (total > 0) {
     return (

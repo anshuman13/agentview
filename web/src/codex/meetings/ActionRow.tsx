@@ -34,7 +34,7 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
   return (
     <div className={`mt-task ${status}`}>
       {mine && (
-        <button className="as-check" title={done ? 'Not done' : 'Done'} aria-label={done ? 'Not done' : 'Done'} onClick={() => { haptic(done ? 'tap' : 'success'); change({ status: done ? 'open' : 'done' }, done ? 'Moved back to Today' : 'Done'); }}>
+        <button className={`as-check${done ? ' on' : ''}`} title={done ? 'Not done' : 'Done'} aria-label={done ? 'Not done' : 'Done'} onClick={() => { haptic(done ? 'tap' : 'success'); change({ status: done ? 'open' : 'done' }, done ? 'Moved back to Today' : 'Done'); }}>
           <Icon name={done ? 'pass-filled' : 'circle-large-outline'} />
         </button>
       )}
