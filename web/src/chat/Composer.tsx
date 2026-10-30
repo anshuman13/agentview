@@ -99,6 +99,7 @@ export function Composer() {
     setText(readDraft(chat));
     setUses([]);
     setHist(null);
+    setPick(null);
   }, [chat, text]);
 
   useEffect(() => setSel(0), [popKey]);
