@@ -21,3 +21,21 @@ export function serial<T>(key: string, fn: () => Promise<T>): Promise<T> {
   });
   return job;
 }
+
+// Runs fn every ms, skipping a tick while the last one still runs, and logs a failure under name.
+export function loop(name: string, ms: number, fn: () => unknown, now = false) {
+  let busy = false;
+  const tick = async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      await fn();
+    } catch (err) {
+      console.error(`${name}:`, err instanceof Error ? err.message : err);
+    } finally {
+      busy = false;
+    }
+  };
+  if (now) void tick();
+  setInterval(tick, ms).unref();
+}

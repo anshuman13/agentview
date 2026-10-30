@@ -5,6 +5,7 @@ import { pruneMeta, textList, type Profile } from './db.js';
 import { rollOver } from './rollover.js';
 import { HUB_URL } from './slack.js';
 import { webUrl } from './slackSave.js';
+import { loop } from './once.js';
 import { applyChanges } from './sync.js';
 import { DAY } from './time.js';
 
@@ -98,22 +99,13 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
 }
 
 export function startReminders(db: () => Database, every = 60_000) {
-  let busy = false;
-  setInterval(async () => {
-    if (busy) return;
-    busy = true;
-    try {
-      rollOver(db());
-      pruneMeta(db(), 'remind:', Date.now() - 2 * DAY);
-      for (const r of dueReminders(db())) {
-        const key = `remind:${r.key}`;
-        db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(Date.now()));
-        if (!(await pushNtfy(r.title, '', r.body, r.url, r.actions).catch(() => false))) db().prepare('DELETE FROM meta WHERE key = ?').run(key);
-      }
-    } catch (err) {
-      console.error('reminders:', err instanceof Error ? err.message : err);
-    } finally {
-      busy = false;
+  loop('reminders', every, async () => {
+    rollOver(db());
+    pruneMeta(db(), 'remind:', Date.now() - 2 * DAY);
+    for (const r of dueReminders(db())) {
+      const key = `remind:${r.key}`;
+      db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(Date.now()));
+      if (!(await pushNtfy(r.title, '', r.body, r.url, r.actions).catch(() => false))) db().prepare('DELETE FROM meta WHERE key = ?').run(key);
     }
-  }, every).unref();
+  });
 }

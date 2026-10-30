@@ -3,6 +3,7 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { atRisk, minutesText, workGaps, type Span } from '../../shared/plan.js';
 import { blockId, clock, isBlock } from '../../shared/util.js';
 import { pruneMeta, type Profile } from './db.js';
+import { loop } from './once.js';
 import { applyChanges } from './sync.js';
 import { DAY, addWorkdays, inWeekHours, ymd } from './time.js';
 
@@ -91,16 +92,5 @@ export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy)
 }
 
 export function startBrief(db: () => Database, every = 60_000) {
-  let busy = false;
-  setInterval(async () => {
-    if (busy) return;
-    busy = true;
-    try {
-      await runBriefs(db());
-    } catch (err) {
-      console.error('brief:', err instanceof Error ? err.message : err);
-    } finally {
-      busy = false;
-    }
-  }, every).unref();
+  loop('brief', every, () => runBriefs(db()));
 }

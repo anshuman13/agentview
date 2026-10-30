@@ -8,6 +8,7 @@ import { DB_DIR } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, run } from './slack.js';
 import { saidId, webUrl } from './slackSave.js';
+import { loop } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN, addWorkdays, inWeekHours, localDate, parseWhen, slotStart, ymd } from './time.js';
 
@@ -188,23 +189,13 @@ async function pushUrgent(c: GmailConfig, urgent: Awaited<ReturnType<typeof scan
 }
 
 export function startGmail(db: () => Database, every = MIN) {
-  let busy = false;
   let tried = 0;
-  const tick = async () => {
+  loop('gmail', every, async () => {
     const c = gmailConfig();
-    if (busy || !c || !mailDue(tried)) return;
-    busy = true;
+    if (!c || !mailDue(tried)) return;
     tried = Date.now();
-    try {
-      const r = await scanGmail(db(), c);
-      console.log(`gmail: ${r.added} asks, ${r.said} promises, ${r.waiting} waiting, ${r.urgent.length} urgent`);
-      await pushUrgent(c, r.urgent);
-    } catch (err) {
-      console.error('gmail:', err instanceof Error ? err.message : err);
-    } finally {
-      busy = false;
-    }
-  };
-  void tick();
-  setInterval(tick, every).unref();
+    const r = await scanGmail(db(), c);
+    console.log(`gmail: ${r.added} asks, ${r.said} promises, ${r.waiting} waiting, ${r.urgent.length} urgent`);
+    await pushUrgent(c, r.urgent);
+  }, true);
 }

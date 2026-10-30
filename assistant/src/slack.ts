@@ -10,6 +10,7 @@ import { DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
+import { loop } from './once.js';
 import { applyChanges } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, slotStart } from './time.js';
 
@@ -179,23 +180,13 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
 }
 
 export function startSlack(db: () => Database, every = MIN) {
-  let busy = false;
   let tried = 0;
-  const tick = async () => {
+  loop('slack', every, async () => {
     const c = slackConfig();
-    if (busy || !c || !scanDue(tried) || scanPaused(db(), ACCOUNT_OF[PROFILE], 'slack')) return;
-    busy = true;
+    if (!c || !scanDue(tried) || scanPaused(db(), ACCOUNT_OF[PROFILE], 'slack')) return;
     tried = Date.now();
-    try {
-      const r = await scanSlack(db(), c);
-      console.log(`slack: ${r.chats} chats, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent`);
-      await pushUrgent(c, r.urgent);
-    } catch (err) {
-      console.error('slack:', err instanceof Error ? err.message : err);
-    } finally {
-      busy = false;
-    }
-  };
-  void tick();
-  setInterval(tick, every).unref();
+    const r = await scanSlack(db(), c);
+    console.log(`slack: ${r.chats} chats, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent`);
+    await pushUrgent(c, r.urgent);
+  }, true);
 }

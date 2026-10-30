@@ -9,6 +9,7 @@ import { errText } from '../../shared/util.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
 import type { Profile } from './db.js';
+import { loop } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, HOUR, MIN, slotStart } from './time.js';
 
@@ -146,17 +147,8 @@ export function dropOrphanRuns(db: Database, now = Date.now()) {
 
 export function startJobs(db: () => Database, every = MIN) {
   endInterrupted(db());
-  let busy = false;
-  const run = async () => {
-    if (busy) return;
-    busy = true;
-    try {
-      dropOrphanRuns(db());
-      await runDue(db());
-    } catch (err) {
-      console.error('jobs:', err instanceof Error ? err.message : err);
-    }
-    busy = false;
-  };
-  setInterval(run, every).unref();
+  loop('jobs', every, async () => {
+    dropOrphanRuns(db());
+    await runDue(db());
+  });
 }
