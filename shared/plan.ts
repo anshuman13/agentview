@@ -27,7 +27,7 @@ export function suggestEstimate(title: string | null, tasks: { title: string | n
   return Math.max(5, Math.round(mins.reduce((a, b) => a + b, 0) / mins.length / 5) * 5);
 }
 
-export const minutesText =(n: number) => (n >= 60 ? `${Math.floor(n / 60)}h${n % 60 ? String(n % 60).padStart(2, '0') : ''}` : `${n}m`);
+export const minutesText = (n: number) => (n >= 60 ? `${Math.floor(n / 60)}h${n % 60 ? String(n % 60).padStart(2, '0') : ''}` : `${n}m`);
 
 // Free spans between busy spans inside [from, to], gaps under 15 minutes dropped.
 export function freeGaps(busy: Span[], from: number, to: number): Span[] {
