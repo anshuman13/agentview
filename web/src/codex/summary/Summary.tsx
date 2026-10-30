@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
@@ -100,6 +100,7 @@ export function SlackCard() {
   const store = useAssistantStore();
   const { brief, asks, busy, summarize } = useSlack();
   const [handled, setHandled] = useState<string[]>(() => stored<string[]>(HANDLED, []));
+  const pending = useRef(new Set<string>());
   const all = brief?.text ? needsYou(brief.text) : [];
   const keyOf = (x: { title: string; url: string | null }) => x.url ?? x.title;
   const items = all.filter((x) => !handled.includes(keyOf(x)));
@@ -113,10 +114,16 @@ export function SlackCard() {
     });
   };
   const task = (x: { title: string; url: string | null; why: string }) => {
+    const key = keyOf(x);
+    if (pending.current.has(key)) return;
+    pending.current.add(key);
     haptic('tap');
     void store.capture(x.why ? `${x.title}: ${x.why}` : x.title, 'task', brief!.profile)
       .then((r) => x.url ? store.update(r, { text: x.url }) : undefined)
-      .then(() => { hide(x); showSnack('Added to Tasks'); }, (err) => showSnack(`Could not add: ${errorText(err)}`));
+      .then(() => { hide(x); showSnack('Added to Tasks'); }, (err) => {
+        pending.current.delete(key);
+        showSnack(`Could not add: ${errorText(err)}`);
+      });
   };
   return (
     <section>
