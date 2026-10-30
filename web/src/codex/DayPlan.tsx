@@ -13,7 +13,7 @@ const hhmm = (n: number) => minutesText(Math.round(n / 60_000));
 const keyOf = (r: ItemRow) => `${r.profile}:${r.id}`;
 export const DRAG_TYPE = 'application/x-codex-item';
 
-type Pick = { gap: Span; key: string; start: string; minutes: number; title: string };
+type Pick = { end: number; key: string; start: string; minutes: number; title: string };
 type Planned = { task: ItemRow; span: Span };
 
 const atClock = (day: number, text: string) => {
@@ -22,9 +22,17 @@ const atClock = (day: number, text: string) => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m).getTime();
 };
 
+const toMinute = (t: number) => Math.floor(t / 60_000) * 60_000;
+
+// The free span that holds the gap ending at end, its start cut to the minute so the start field can name it.
+function slotGap(busy: Span[], now: number, end: number): Span | null {
+  const g = workGaps(busy, now).find(([a, b]) => a < end && end <= b);
+  return g ? [toMinute(g[0]), g[1]] : null;
+}
+
 function pickFor(gap: Span, r: ItemRow | undefined): Pick {
   const [a, b] = (r && defaultBlock(gap, r.title)) || defaultBlock(gap, null) || gap;
-  return { gap, key: r ? keyOf(r) : '', start: clock(a), minutes: Math.round((b - a) / 60_000), title: r ? focusTitle(r.title) : '' };
+  return { end: gap[1], key: r ? keyOf(r) : '', start: clock(a), minutes: Math.round((b - a) / 60_000), title: r ? focusTitle(r.title) : '' };
 }
 
 // Today's free gaps in work hours from now, and planned estimates against the free time. A gap opens a form to block time for a task;
@@ -42,7 +50,9 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   if (!gaps.length && !planned && !blocks.length) return null;
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
   const task = pick && open.find((r) => keyOf(r) === pick.key);
-  const span = pick && pick.start ? fitBlock(pick.gap, atClock(pick.gap[0], pick.start), pick.minutes) : null;
+  const gap = pick ? gaps.find((g) => g[1] === pick.end) ?? null : null;
+  const slot = pick && slotGap(busy, now, pick.end);
+  const span = slot && pick.start ? fitBlock(slot, atClock(now, pick.start), pick.minutes) : null;
   const choose = (gap: Span, r?: ItemRow) => setPick(pickFor(gap, r ?? (open.length === 1 ? open[0] : undefined)));
   const drop = (gap: Span) => (e: React.DragEvent) => {
     const r = open.find((x) => keyOf(x) === e.dataTransfer.getData(DRAG_TYPE));
@@ -89,7 +99,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   };
   const chips = [
     ...gaps.map((g) => ({ at: g[0], el: (
-      <button key={`g${g[0]}`} className={`as-chip${pick?.gap[0] === g[0] ? ' on' : ''}`} title="Block time for a task" onClick={() => { setPlan(null); if (pick?.gap[0] === g[0]) setPick(null); else choose(g); }} onDragOver={(e) => e.dataTransfer.types.includes(DRAG_TYPE) && e.preventDefault()} onDrop={drop(g)}>
+      <button key={`g${g[0]}`} className={`as-chip${pick?.end === g[1] ? ' on' : ''}`} title="Block time for a task" onClick={() => { setPlan(null); if (pick?.end === g[1]) setPick(null); else choose(g); }} onDragOver={(e) => e.dataTransfer.types.includes(DRAG_TYPE) && e.preventDefault()} onDrop={drop(g)}>
         {clock(g[0])}-{clock(g[1])}
       </button>
     ) })),
@@ -125,13 +135,13 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
         <div className="ov-card dp-block">
           {open.length ? (
             <>
-              <select value={pick.key} aria-label="Task" onChange={(e) => setPick({ ...pickFor(pick.gap, open.find((r) => keyOf(r) === e.target.value)), key: e.target.value })}>
+              <select value={pick.key} aria-label="Task" onChange={(e) => setPick({ ...pickFor(gap ?? [now, pick.end], open.find((r) => keyOf(r) === e.target.value)), key: e.target.value })}>
                 <option value="" disabled>Pick a task due today</option>
                 {open.map((r) => <option key={keyOf(r)} value={keyOf(r)}>{r.title}</option>)}
               </select>
               <input value={pick.title} aria-label="Event title" placeholder="Event title" onChange={(e) => setPick({ ...pick, title: e.target.value })} />
               <div className="dp-when">
-                <input type="time" value={pick.start} aria-label="Start" min={clock(pick.gap[0])} max={clock(pick.gap[1])} onChange={(e) => setPick({ ...pick, start: e.target.value })} />
+                <input type="time" value={pick.start} aria-label="Start" min={slot ? clock(slot[0]) : undefined} max={slot ? clock(slot[1]) : undefined} onChange={(e) => setPick({ ...pick, start: e.target.value })} />
                 <input type="number" value={pick.minutes} aria-label="Minutes" min={5} step={5} onChange={(e) => setPick({ ...pick, minutes: Number(e.target.value) })} />
                 <span className="muted small">{span ? `min, ends ${clock(span[1])}` : 'min, outside this gap'}</span>
               </div>
