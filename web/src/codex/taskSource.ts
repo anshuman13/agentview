@@ -1,4 +1,4 @@
-import type { ItemRow } from './data/sync';
+import { isSaid, type ItemRow } from './data/sync';
 
 const SOURCES: Record<string, { icon: string; label: string }> = {
   slack: { icon: 'comment-discussion', label: 'Slack' },
@@ -12,4 +12,5 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
   capture: { icon: 'edit', label: 'You' },
   job: { icon: 'history', label: 'Job' },
 };
-export const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
+export const channelOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
+export const sourceOf = (r: ItemRow) => (isSaid(r) ? { icon: 'reply', label: 'You said' } : channelOf(r));

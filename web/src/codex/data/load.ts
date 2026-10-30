@@ -3,7 +3,7 @@ import { decisionLog, factTime, live, type Chat, type Fact, type Meeting } from 
 import { createdAt } from './review';
 import { openQuestions, peopleOf, questionKey, seriesTitle } from './meetings';
 import { statusTime } from './engine';
-import type { ItemRow } from './sync';
+import { isSaid, type ItemRow } from './sync';
 
 const HOUR = 3600_000;
 const MAX_HOURS = 8;
@@ -143,7 +143,7 @@ export function sinceMeeting(meetings: Meeting[], items: ItemRow[], chats: Chat[
     .sort((a, b) => b.ends_at! - a.ends_at!);
   for (const m of ended) {
     const inside = (t: number | null) => t != null && t >= m.starts_at! && t <= m.ends_at! + SCAN_LAG;
-    const asks = items.filter((r) => !r.deleted && r.status === 'suggested' && (r.source === 'slack' || r.source === 'gmail') && !r.id.startsWith('said:') && inside(createdAt(r)));
+    const asks = items.filter((r) => !r.deleted && r.status === 'suggested' && (r.source === 'slack' || r.source === 'gmail') && !isSaid(r) && inside(createdAt(r)));
     const dms = chats.filter((c) => !c.deleted && c.kind === 'dm' && inside(c.last_at));
     if (asks.length || dms.length) return { m, key: `${m.profile}:${m.id}:${m.ends_at}`, asks, dms };
   }

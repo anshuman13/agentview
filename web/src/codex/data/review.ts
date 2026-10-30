@@ -3,7 +3,7 @@ import { dayEnd, dayStart, pad, weekStart } from './dates';
 import { atTime, statusTime } from './engine';
 import { goalsOf } from './goals';
 import { packDay, workGaps, type Span } from './plan';
-import { parseTimes, type ItemRow } from './sync';
+import { isSaid, parseTimes, type ItemRow } from './sync';
 import { isAllDay } from './load';
 import { displayName, peopleOf, sameName } from './meetings';
 import { listOf, live as liveRows, type Brief, type Chat, type Meeting } from './wiki';
@@ -100,8 +100,8 @@ export function personInbox(name: string, items: ItemRow[], chats: Chat[], mail:
   const theirs = items.filter((r) => isAsk(r) && sameName(personOf(r.people), name));
   return {
     dm: liveRows(chats).find((c) => c.kind === 'dm' && c.summary && sameName(c.name ?? '', name)) ?? null,
-    asks: theirs.filter((r) => !r.id.startsWith('said:')),
-    promises: theirs.filter((r) => r.id.startsWith('said:')),
+    asks: theirs.filter((r) => !isSaid(r)),
+    promises: theirs.filter((r) => isSaid(r)),
     mail: mail.filter((w) => sameName(personOf(w.to), name)),
   };
 }

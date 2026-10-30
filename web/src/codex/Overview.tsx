@@ -7,13 +7,13 @@ import { meetingTimeLeft, sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';
 import { resolvedQuestions } from './meetings/OpenQuestions';
 import { atTime, errorText, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
-import type { ItemRow } from './data/sync';
+import { isSaid, type ItemRow } from './data/sync';
 import { ago, safeHref, save, stored, plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
 import { SinceMeeting } from './SinceMeeting';
-import { sourceOf } from './taskSource';
+import { channelOf, sourceOf } from './taskSource';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { GoalLines } from './Goals';
@@ -79,8 +79,7 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
 
 // Suggested actions grouped by meeting, or by source for Slack and Gmail asks, each group with Confirm all.
 // The hub gives my own promises from Slack and Gmail a said: id, and they group apart as "You said".
-const said = (r: ItemRow) => r.id.startsWith('said:');
-const groupOf = (r: ItemRow) => r.meeting_id ?? `source:${r.source ?? ''}${said(r) ? ':said' : ''}`;
+const groupOf = (r: ItemRow) => r.meeting_id ?? `source:${r.source ?? ''}${isSaid(r) ? ':said' : ''}`;
 
 export function Review({ rows }: { rows: ItemRow[] }) {
   const store = useAssistantStore();
@@ -94,7 +93,7 @@ export function Review({ rows }: { rows: ItemRow[] }) {
     <section key={g[0].profile + groupOf(g[0])}>
       {g[0].meeting_id
         ? <button className="as-section review as-toggle" onClick={() => setView({ list: 'meetings', open: `${g[0].profile}:${g[0].meeting_id}` })}>Is this yours? · {g[0].people || 'Meeting'}</button>
-        : <div className="as-section review">{said(g[0]) ? 'You said' : 'Is this yours?'} · {sourceOf(g[0]).label}</div>}
+        : <div className="as-section review">{isSaid(g[0]) ? 'You said' : 'Is this yours?'} · {channelOf(g[0]).label}</div>}
       <div className="as-group">
         {g.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}
         {g.length > 1 && <button className="as-confirm-all" onClick={() => confirmAll(store, g)}><Icon name="check-all" small /> Confirm all {g.length}</button>}

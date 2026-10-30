@@ -61,6 +61,8 @@ export type Merged<R extends SyncRow> = Omit<R, 'field_times'> & { field_times: 
 
 export const rowKey = (r: { profile: string; id: string }) => `${r.profile}:${r.id}`;
 
+export const isSaid = (r: { id: string }) => r.id.startsWith('said:');
+
 export function parseTimes(value: unknown): FieldTimes {
   if (!value) return {};
   if (typeof value === 'object') return value as FieldTimes;
