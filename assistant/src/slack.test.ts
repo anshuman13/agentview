@@ -40,6 +40,16 @@ describe('saveScan', () => {
     expect(db.prepare('SELECT id, waiting FROM chats ORDER BY id').all()).toEqual([{ id: 'C1', waiting: null }, { id: 'D1', waiting: 1 }, { id: 'D2', waiting: 0 }]);
   });
 
+  test('notes a reply once on an accepted ask and keeps it open', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [], asks: [ask('u1')], answered: [] }, at(27, 10));
+    acceptAsk(db, askId('u1'));
+    for (const h of [11, 12]) saveScan(db, { chats: [], asks: [], answered: ['u1'] }, at(27, h));
+    const row = db.prepare('SELECT status, text FROM items WHERE id = ?').get(askId('u1')) as { status: string; text: string };
+    expect(row.status).toBe('open');
+    expect(row.text).toBe('Can you check?\n\nReplied in Slack');
+  });
+
   test('closes answered asks I have not taken, and leaves accepted ones', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('u1'), ask('u2')], answered: [] }, at(27, 10));

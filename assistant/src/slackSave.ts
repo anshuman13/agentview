@@ -6,6 +6,7 @@ import { applyChanges, type Change } from './sync.js';
 import { DAY, parseWhen } from './time.js';
 
 export const PROFILE = 'work' as const;
+export const REPLIED = 'Replied in Slack';
 
 export const Chat = z.object({
   id: z.string().describe('Slack channel or DM id, like C0123 or D0123'),
@@ -78,10 +79,12 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: p.title.trim(), text: p.quote.trim(), source: 'slack', source_url: webUrl(p.url), people: `${p.to} · ${p.chat}`, at: parseWhen(p.due), status: 'suggested' } });
     said++;
   }
+  const answeredOpen: string[] = [];
   for (const url of r.answered) {
     const id = askId(url);
     const old = has.get(PROFILE, id) as { status: string } | null;
     if (old && (old.status === 'suggested' || old.status === 'unassigned')) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done' } });
+    else if (old?.status === 'open') answeredOpen.push(id);
   }
   // New details from Slack go at the end of the task's notes, once per message.
   const task = db.prepare("SELECT text FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND status IN ('open', 'suggested')");
@@ -92,6 +95,13 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     const text = texts.get(d.id) ?? row.text ?? '';
     if (text.includes(d.url)) continue;
     texts.set(d.id, `${text ? `${text}\n\n` : ''}${d.from} on Slack: ${d.note.trim()} ${d.url}`);
+  }
+  // An ask I accepted and then answered in Slack stays open, with one note.
+  const slackOpen = db.prepare("SELECT text FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND status = 'open' AND source = 'slack'");
+  for (const id of answeredOpen) {
+    const row = slackOpen.get(PROFILE, id) as { text: string | null } | null;
+    const text = texts.get(id) ?? row?.text ?? '';
+    if (row && !text.split('\n').includes(REPLIED)) texts.set(id, `${text ? `${text}\n\n` : ''}${REPLIED}`);
   }
   for (const [id, text] of texts) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { text } });
   db.transaction(() => {

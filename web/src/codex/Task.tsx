@@ -54,6 +54,7 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
           {isRepeat(row.text) && <span title="Repeats" role="img" aria-label="Repeats"><Icon name="sync" small /></span>}
           {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
           {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`} title={src.label} role="img" aria-label={src.label}><Icon name={src.icon} small /></span>}
+          {!isDone && row.text?.split('\n').includes('Replied in Slack') && <span className="as-quote" title="Replied in Slack"><Icon name="reply" small /> Replied</span>}
           {list.total > 0 && <span className={list.done === list.total ? 'as-list-done' : undefined}><button className="as-list-btn" aria-expanded={showList} aria-label="Checklist" onClick={(e) => { e.stopPropagation(); setShowList(!showList); }}><Icon name="checklist" small /> {list.done}/{list.total}</button></span>}
           {row.people && <span className="as-people">{row.people}</span>}
           {!list.total && !row.people && preview && !/^https?:\/\/\S+$/.test(preview) && <span className="as-quote">{preview}</span>}
