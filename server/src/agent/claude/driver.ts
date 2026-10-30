@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { query, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
-import type { Account, AgentEvent, ChatEvent, Effort } from '../../../../shared/protocol.js';
+import type { Account, Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { JsonlTail } from './tail.js';
@@ -14,11 +14,11 @@ import { bigBroRequest, bigBroVerdict } from './approval.js';
 import { ENDED, replayText, usageOf } from './tasks.js';
 import { agentResult, agentToolUse, isAgent, patchAgent, taskDone, taskToolUse } from './subagents.js';
 import { sessionUsage } from './usage.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { LiveText } from './stream.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
-const STREAM_FLUSH_MS = 80;
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
 
@@ -35,10 +35,8 @@ export class ClaudeDriver implements AgentDriver {
   private endedAt = 0;
   private sinceStatus = 0;
 
-  private live = new Map<string, Extract<ChatEvent, { kind: 'assistant' }>>();
-  private liveFlush = new Map<string, ReturnType<typeof setTimeout>>();
+  private live: LiveText;
   private edits = new Map<string, string>();
-  private liveMsgId = '';
 
   private resumedAuto = false;
   private allowed: string[] = [];
@@ -60,7 +58,9 @@ export class ClaudeDriver implements AgentDriver {
   private taskIds = new Map<string, string>();
   private restore: { model: string | null; team: boolean; permissionMode: string | null } | null = null;
 
-  constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main') {}
+  constructor(private host: AgentHost, private resume?: string, private fork = false, public account: Account = 'main') {
+    this.live = new LiveText(host);
+  }
 
   accounts(): Account[] {
     return hasAlt() ? ['main', 'alt'] : ['main'];
@@ -88,7 +88,7 @@ export class ClaudeDriver implements AgentDriver {
   private restart() {
     const q = this.q!;
     this.detach();
-    this.endLive();
+    this.live.end();
     q.close();
   }
 
@@ -412,7 +412,7 @@ export class ClaudeDriver implements AgentDriver {
         this.detach();
         this.inputQueue = [];
         this.sent = [];
-        if (!this.closed) this.endLive();
+        if (!this.closed) this.live.end();
         this.host.exited();
       }
     }
@@ -424,17 +424,6 @@ export class ClaudeDriver implements AgentDriver {
     if (block.name === 'ReportFindings') this.host.reportFindings(block.input);
     const file = (block.input as { file_path?: unknown })?.file_path;
     if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
-  }
-
-  // A turn can end before content_block_stop; send the partial text once more as finished so it stops streaming.
-  private endLive() {
-    for (const t of this.liveFlush.values()) clearTimeout(t);
-    this.liveFlush.clear();
-    for (const live of this.live.values()) {
-      live.streaming = false;
-      this.host.emit({ type: 'event', event: live });
-    }
-    this.live.clear();
   }
 
   private handle(msg: SDKMessage) {
@@ -519,40 +508,9 @@ export class ClaudeDriver implements AgentDriver {
         }
         return;
 
-      case 'stream_event': {
-        if (msg.parent_tool_use_id) return;
-        const ev = msg.event;
-        if (ev.type === 'message_start') this.liveMsgId = ev.message.id;
-        if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
-          const key = `${this.liveMsgId}:${ev.index}`;
-          const live = this.live.get(key);
-          if (!live) {
-            const e = { id: key, kind: 'assistant' as const, text: ev.delta.text, streaming: true, at: Date.now() };
-            this.live.set(key, e);
-            host.pushEvent(e);
-          } else {
-            live.text += ev.delta.text;
-            if (!this.liveFlush.has(key)) {
-              this.liveFlush.set(key, setTimeout(() => {
-                this.liveFlush.delete(key);
-                host.emit({ type: 'event', event: live });
-              }, STREAM_FLUSH_MS));
-            }
-          }
-        }
-        if (ev.type === 'content_block_stop') {
-          const key = `${this.liveMsgId}:${ev.index}`;
-          const live = this.live.get(key);
-          if (live) {
-            clearTimeout(this.liveFlush.get(key));
-            this.liveFlush.delete(key);
-            live.streaming = false;
-            host.emit({ type: 'event', event: live });
-          }
-          this.live.delete(key);
-        }
+      case 'stream_event':
+        if (!msg.parent_tool_use_id) this.live.event(msg.event);
         return;
-      }
 
       case 'assistant': {
         const parent = msg.parent_tool_use_id ?? undefined;
@@ -601,7 +559,7 @@ export class ClaudeDriver implements AgentDriver {
       }
 
       case 'result': {
-        this.endLive();
+        this.live.end();
         const ok = msg.subtype === 'success';
         host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}`, costUsd: msg.total_cost_usd, isError: msg.is_error });
         return;
