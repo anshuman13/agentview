@@ -246,5 +246,6 @@ export function edited<T extends { field_times: string; updated_at: number }>(ro
 // The item under the other profile keeps its id; every field is timed now, so it replaces a row moved away from there before.
 export function moved(row: ItemRow, there: ItemRow | undefined, profile: Profile, now: number): ItemRow {
   const fields = Object.fromEntries(FIELDS.map((f) => [f, row[f]])) as Partial<ItemRow>;
-  return edited(there ?? { ...row, profile, version: 0, field_times: '{}' }, { ...fields, deleted: 0 }, now);
+  // A weekly goal belongs to one profile, so the link does not move.
+  return edited(there ?? { ...row, profile, version: 0, field_times: '{}' }, { ...fields, goal: null, deleted: 0 }, now);
 }
