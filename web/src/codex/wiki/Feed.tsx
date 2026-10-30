@@ -16,7 +16,7 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
       .map((f) => ({ fact: f, kind: (f.contested ? 'contested' : replaced.has(f.id) ? 'updated' : 'added') as FeedKind, at: factTime(f) }))
       .sort((a, b) => b.at - a.at);
   }, [facts]);
-  const title = new Map(pages.map((p) => [p.id, p.title]));
+  const title = new Map(pages.map((p) => [`${p.profile}:${p.id}`, p.title]));
   const contested = entries.filter((e) => e.kind === 'contested').length;
   const shown = (onlyContested ? entries.filter((e) => e.kind === 'contested') : entries).slice(0, 10);
   const label: Record<FeedKind, string> = { added: 'New', updated: 'Updated', contested: 'Contested' };
@@ -38,7 +38,7 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
           return (
             <li key={fact.profile + fact.id} className={kind}>
               <button onClick={() => setView({ open: fact.page_id ?? MEMORY, anchor: fact.id })}>
-                <span className="wk-feed-top"><span className="wk-feed-kind">{label[kind]}</span><span className="wk-feed-page">{fact.page_id ? title.get(fact.page_id) : 'Memory'}</span></span>
+                <span className="wk-feed-top"><span className="wk-feed-kind">{label[kind]}</span><span className="wk-feed-page">{fact.page_id ? title.get(`${fact.profile}:${fact.page_id}`) : 'Memory'}</span></span>
                 <span className="wk-feed-text">{fact.text}</span>
                 <span className="wk-meta">
                   {kind === 'contested' && c ? <span>by {c.by}</span> : src && <span><Icon name={SOURCE_ICON[src.kind]} small /> {src.label}</span>}

@@ -14,7 +14,18 @@ export const Claim = memo(function Claim({ fact, old, page, flash }: { fact: Fac
   const proposed = fact.state === 'proposed';
   const [contesting, setContesting] = useState(false);
   const [note, setNote] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
   const c = contestOf(fact);
+  const startEdit = () => { setDraft(fact.text ?? ''); setEditing(true); };
+  const save = () => {
+    const next = draft.trim();
+    setEditing(false);
+    if (!next || next === fact.text) return;
+    const prev = fact.text;
+    void store.editRow('facts', fact, { text: next });
+    showSnack('Claim updated', () => void store.editRow('facts', fact, { text: prev }));
+  };
   const contest = () => {
     void store.editRow('facts', fact, { contested: JSON.stringify({ by: 'you', at: Date.now(), note: note.trim() }) });
     setContesting(false);
@@ -32,7 +43,16 @@ export const Claim = memo(function Claim({ fact, old, page, flash }: { fact: Fac
   };
   return (
     <li className={`wk-claim${c ? ' contested' : ''}${proposed ? ' proposed' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
-      <span className="wk-claim-text">{fact.text}</span>
+      {editing ? (
+        <div className="wk-contest-form">
+          <textarea autoFocus rows={2} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') setEditing(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
+          <div className="wk-contest-btns">
+            <button className="btn" onClick={() => setEditing(false)}>Cancel</button>
+            <button className="btn primary" onClick={save}>Save</button>
+          </div>
+        </div>
+      ) : <span className="wk-claim-text">{fact.text}</span>}
       <span className="wk-claim-foot">
         {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
         {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
@@ -47,6 +67,7 @@ export const Claim = memo(function Claim({ fact, old, page, flash }: { fact: Fac
             </>
           ) : (
             <>
+              {!editing && <button className="icon-btn" title="Edit the claim text" aria-label="Edit the claim text" onClick={startEdit}><Icon name="edit" small /></button>}
               <button className="icon-btn" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
               {fact.state === 'retired'
                 ? <button className="wk-act" title="Show this claim with the current ones again" onClick={() => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); }}><Icon name="history" small /> Restore</button>
