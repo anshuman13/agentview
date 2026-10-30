@@ -133,7 +133,9 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
     if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) return;
     if (e.key === 'Unidentified' || e.key === 'Process') return;
     if (e.metaKey && e.key === 'v') return;
+    // A key sent to the page is not also an app shortcut; ⌘I in a page's editor must not open Codex.
     e.preventDefault();
+    e.stopPropagation();
     send({ t: 'key', key: e.key, code: e.code, keyCode: e.keyCode, modifiers: mods(e) });
   };
   const onText = (e: React.FormEvent<HTMLTextAreaElement>) => {
