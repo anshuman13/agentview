@@ -7,12 +7,10 @@ import type { Meeting } from '../data/wiki';
 import { PickTime, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
-import { copyText, setView, showSnack } from '../view';
+import { copyText, showSnack } from '../view';
 
 // Opens Linear's new-issue form filled in; nothing is created until you submit it there.
 const linearIssue = (r: ItemRow, m: Meeting) => `https://linear.app/new?${new URLSearchParams({ title: r.title ?? '', description: draftFor(r, m).split('\n').slice(1).join('\n') })}`;
-
-const openMeeting = (r: ItemRow) => setView({ list: 'meetings', open: `${r.profile}:${r.meeting_id}` });
 
 export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
   for (const r of rows) void store.update(r, { status: 'open' });
@@ -21,7 +19,7 @@ export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
 
 // An action from a meeting. Suggested ones are kept (Today) or dismissed (Not mine, on the meeting); unassigned ones
 // can be taken; dismissed ones restored. Each open one has a date chip.
-export function ActionRow({ row, showMeeting = false, meeting }: { row: ItemRow; showMeeting?: boolean; meeting?: Meeting }) {
+export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting }) {
   const store = useAssistantStore();
   const change = (patch: Patch, text: string) => {
     const before = Object.fromEntries(Object.keys(patch).map((k) => [k, row[k as keyof ItemRow]])) as Patch;
@@ -42,7 +40,6 @@ export function ActionRow({ row, showMeeting = false, meeting }: { row: ItemRow;
       <div className="mt-task-body">
         <div className="mt-task-title">{row.title}</div>
         <div className="as-ctx">
-          {showMeeting && row.meeting_id && <button className="mt-task-from" onClick={() => openMeeting(row)}><Icon name="calendar" small /> {row.people || 'Meeting'}</button>}
           {(status === 'open' || status === 'suggested') && (
             <PickTime className={`mt-date${at != null && at < Date.now() ? ' late' : ''}`} value={at} title="Set a date" label={at != null ? when(at) : 'Date'}
               onPick={(t) => change({ at: t }, `Due ${when(t)}`)} />

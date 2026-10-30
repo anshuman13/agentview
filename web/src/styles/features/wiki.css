@@ -350,7 +350,6 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .mt-task.done .mt-task-title { color: var(--fg-faint); text-decoration: line-through; }
 .mt-task .as-ctx { flex-wrap: wrap; white-space: normal; }
 .mt-task-why { color: var(--fg-muted); }
-.mt-task-from { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0; border: 0; background: transparent; color: var(--accent-text); font: inherit; cursor: pointer; }
 .mt-task-pick { flex: none; display: flex; align-items: center; gap: var(--sp-3); }
 .mt-yes, .mt-no { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 8px; cursor: pointer; }
 .mt-yes { background: var(--ok-soft, color-mix(in srgb, var(--ok) 16%, transparent)); color: var(--ok); }
