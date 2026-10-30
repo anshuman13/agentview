@@ -472,7 +472,8 @@ export class AgentSession implements AgentHost {
       if (this.turns === 1) this.dequeue();
       return;
     } finally {
-      this.turns--;
+      // An exit during the switch already reset the count.
+      this.turns = Math.max(0, this.turns - 1);
     }
     // Stop pressed while the model or mode was switching: send nothing.
     if (!looping(this.state.session.loop)) {
@@ -514,7 +515,7 @@ export class AgentSession implements AgentHost {
       this.approvals.denyAll('The user sent a new message instead of answering.');
       this.turns++;
       await this.driver.interrupt().catch(() => {});
-      this.turns--;
+      this.turns = Math.max(0, this.turns - 1);
       ev.stopping = false;
       this.emit({ type: 'event', event: ev });
     } else await this.planFirst();
