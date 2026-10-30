@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useCodex } from '../data';
+import { useAssistantStore } from '../data';
 import type { Meeting } from '../data/wiki';
 import { fitHeight } from '../../ui/util';
 
@@ -7,7 +7,7 @@ const SAVE_AFTER = 800;
 
 // Saves while you type, and before the page hides or the meeting closes; takes synced notes while the field is not focused.
 export function MeetingNotes({ m }: { m: Meeting }) {
-  const { store } = useCodex();
+  const store = useAssistantStore();
   const [text, setText] = useState(m.notes ?? '');
   const area = useRef<HTMLTextAreaElement>(null);
   const row = useRef(m);

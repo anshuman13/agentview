@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useCodex } from '../data';
+import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { currentClaim, factTime, live, newPage, NO_STATS, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
@@ -64,7 +64,7 @@ function PageCard({ page, stats }: { page: Page; stats: Map<string | null, PageS
 }
 
 function NewPageCard({ section, sort }: { section: string; sort: number }) {
-  const { store } = useCodex();
+  const store = useAssistantStore();
   const [title, setTitle] = useState<string | null>(null);
   const card = useFocusBack<HTMLButtonElement>(title !== null);
   const create = () => {

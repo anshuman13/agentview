@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useAssistantStore, useCodex } from '../data';
+import { useAssistantStore } from '../data';
 import { errorText } from '../data/engine';
 import { SUMMARY_TEMPLATES, rememberTemplate, summaryInstructions, templateFor, type SummaryTemplate } from '../data/summaryTemplates';
 import { talkTime } from '../data/talkTime';
@@ -62,7 +62,7 @@ export function Transcript({ got }: { got: { text: string | null; error?: string
 const readable = (m: Meeting) => m.id.startsWith('cal:') && !!m.starts_at && m.starts_at <= Date.now();
 
 export function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
-  const { store } = useCodex();
+  const store = useAssistantStore();
   const [busy, run] = useSnackTask();
   if (!readable(m)) return null;
   const choose = (key: SummaryTemplate) => run(async () => {
@@ -80,7 +80,7 @@ export function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) 
 }
 
 export function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
-  const { store } = useCodex();
+  const store = useAssistantStore();
   const [busy, run] = useSnackTask();
   if (!readable(m)) return null;
   const read = () => run(async () => {
@@ -96,7 +96,7 @@ export function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
 // The room microphone speaks for whoever sits in the room; asked once per meeting, a yes reads the transcript again with
 // that speaker as me.
 export function RoomMic({ m }: { m: Meeting }) {
-  const { store } = useCodex();
+  const store = useAssistantStore();
   const [busy, setBusy] = useState(false);
   if (!m.room || m.room_me != null) return null;
   const yes = async () => {

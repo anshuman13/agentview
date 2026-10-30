@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useCodex } from '../data';
+import { memo, useState } from 'react';
+import { useAssistantStore } from '../data';
 import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
@@ -8,8 +8,8 @@ import { ClaudeChip, SourceChip } from './Chips';
 import { useReview } from './Review';
 import { shortDate } from './shared';
 
-export function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: string; flash: boolean }) {
-  const { store } = useCodex();
+export const Claim = memo(function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: string; flash: boolean }) {
+  const store = useAssistantStore();
   const review = useReview();
   const proposed = fact.state === 'proposed';
   const [contesting, setContesting] = useState(false);
@@ -84,4 +84,4 @@ export function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; pag
       ))}
     </li>
   );
-}
+});

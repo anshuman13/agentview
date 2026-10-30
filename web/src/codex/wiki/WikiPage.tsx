@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
-import { olderClaims, pageClaims, pageStats, proposals, sourcesOf, type Source } from '../data/wiki';
+import { olderClaims, pageClaims, pageStats, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { setView, useEscapeBack, useView } from '../view';
@@ -13,6 +13,7 @@ import { MEMORY, SOURCE_ICON, memoryPage, shortDate } from './shared';
 import { plural } from '../../ui/util';
 
 const SOURCE_NAME: Record<Source['kind'], [string, string]> = { meeting: ['meeting', 'meetings'], slack: ['Slack thread', 'Slack threads'], linear: ['Linear issue', 'Linear issues'], pr: ['pull request', 'pull requests'], doc: ['doc', 'docs'] };
+const NO_OLD: Fact[] = [];
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 export function WikiPage({ id }: { id: string }) {
@@ -102,7 +103,7 @@ export function WikiPage({ id }: { id: string }) {
                     <Icon name={showOlder ? 'chevron-down' : 'chevron-right'} small /> Older · {older.length}
                     <span>Retired or over 90 days old. Claude does not use these.</span>
                   </button>
-                  {showOlder && <ul className="wk-claims">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={[]} page={page.title ?? ''} flash={flash === f.id} />)}</ul>}
+                  {showOlder && <ul className="wk-claims">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page.title ?? ''} flash={flash === f.id} />)}</ul>}
                 </section>
               )}
               {!groups.length && !older.length && <div className="wk-none">No claims yet. They appear here as meetings, Slack threads and issues mention {page.title}.</div>}

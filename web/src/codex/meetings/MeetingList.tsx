@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { useAssistantData, useCodex } from '../data';
+import { useAssistantData, useAssistantStore, useCodex } from '../data';
 import { newId, rowKey } from '../data/sync';
 import { live, queryWords, rowMatcher, type Fact, type Meeting } from '../data/wiki';
 import { actionCount, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
@@ -56,7 +56,7 @@ const NO_HITS = new Map<string, string>();
 
 // What the hub finds in the transcripts of the filter's profiles for the query, by profile:id with a snippet; empty until it answers.
 export function useTranscriptHits(query: string) {
-  const { store } = useCodex();
+  const store = useAssistantStore();
   const { filter } = useView();
   const [found, setFound] = useState({ q: '', hits: NO_HITS });
   const text = query.trim();

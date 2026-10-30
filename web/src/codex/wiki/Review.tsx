@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useCodex } from '../data';
+import { useAssistantStore, useCodex } from '../data';
 import { approveAllChanges, approveChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack } from '../view';
@@ -71,15 +71,17 @@ function ReviewCard({ fact }: { fact: Fact }) {
   );
 }
 
+// Reads pages and facts when a button is pressed, so a claim row does not re-render for every store change.
 export function useReview() {
-  const { store, pages, facts } = useCodex();
+  const store = useAssistantStore();
   const run = (changes: { table: 'facts' | 'pages'; row: unknown; patch: unknown; undo: unknown }[], text: string) => {
     changes.forEach((c) => void store.editRow(c.table, c.row as never, c.patch as never));
     showSnack(text, () => changes.forEach((c) => void store.editRow(c.table, c.row as never, c.undo as never)));
   };
   return {
-    approve: (list: Fact[]) => run(approveAllChanges(list, pages, facts), `Approved ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`),
+    approve: (list: Fact[]) => run(approveAllChanges(list, store.snapshot().pages, store.snapshot().facts), `Approved ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`),
     reject: (list: Fact[]) => {
+      const { pages, facts } = store.snapshot();
       const page = pages.find((p) => list.length && p.id === list[0].page_id && p.profile === list[0].profile && p.state === 'proposed');
       const rest = page && proposals(facts).every((f) => f.page_id !== page.id || list.includes(f));
       run([
