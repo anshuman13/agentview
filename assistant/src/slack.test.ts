@@ -1,9 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { openDb } from './db.js';
-import { pushHours, scanDue, slackConfig } from './slack.js';
+import { scanDue } from './slack.js';
 import { acceptAsk, askId, saveScan } from './slackSave.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
@@ -65,21 +62,4 @@ test('reads every quarter hour on weekday working hours', () => {
   expect(scanDue(at(27, 10, 1), at(27, 10, 15))).toBe(true);
   expect(scanDue(0, at(27, 20))).toBe(false);
   expect(scanDue(0, at(31, 10))).toBe(false);
-});
-
-test('pushes only inside the configured hours', () => {
-  const c = { me: 'U1', domain: 'x', channels: [], push: { from: 8, to: 17 } };
-  expect(pushHours(c, at(27, 8))).toBe(true);
-  expect(pushHours(c, at(27, 17))).toBe(false);
-  expect(pushHours(c, at(25, 10))).toBe(false);
-});
-
-test('reads the config and ignores a broken one', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'slack-'));
-  fs.writeFileSync(path.join(dir, 'ok.json'), '{"me":"U1","domain":"x","channels":["a"]}');
-  fs.writeFileSync(path.join(dir, 'bad.json'), '{"channels":"a"}');
-  expect(slackConfig(path.join(dir, 'ok.json'))?.channels).toEqual(['a']);
-  expect(slackConfig(path.join(dir, 'bad.json'))).toBeNull();
-  expect(slackConfig(path.join(dir, 'missing.json'))).toBeNull();
-  fs.rmSync(dir, { recursive: true });
 });

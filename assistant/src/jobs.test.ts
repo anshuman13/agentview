@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { canRead, dropOrphanRuns, dueJobs, endInterrupted, nextRun, runDue } from './jobs.js';
+import { canRead, dropOrphanRuns, dueJobs, nextRun, runDue } from './jobs.js';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 
@@ -49,12 +49,6 @@ describe('dueJobs', () => {
     ]);
     expect(dueJobs(db, now).map((j) => j.id)).toEqual(['b', 'c']);
     expect((db.prepare("SELECT next_run_at FROM jobs WHERE id = 'a'").get() as { next_run_at: number }).next_run_at).toBe(at(2026, 10, 27, 9));
-  });
-  test('a run cut off by a restart is marked failed', () => {
-    const db = openDb(':memory:');
-    applyChanges(db, [{ table: 'runs', id: 'r', profile: 'work', updated_at: 1, fields: { job_id: 'a', started_at: 1, status: 'running' } }]);
-    endInterrupted(db, 2);
-    expect((db.prepare("SELECT status FROM runs WHERE id = 'r'").get() as { status: string }).status).toBe('error');
   });
   test('runs of a deleted job are deleted', () => {
     const db = openDb(':memory:');

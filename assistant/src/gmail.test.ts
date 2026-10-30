@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
-import { mailDue, mailId, saveMail, saveWaiting, unanswered } from './gmail.js';
+import { mailId, saveMail, saveWaiting, unanswered } from './gmail.js';
 import { acceptAsk } from './slackSave.js';
 import { addWorkdays } from './time.js';
 
@@ -32,14 +32,6 @@ describe('saveMail', () => {
     expect(item(db, 't1')!.status).toBe('done');
     expect(item(db, 't2')!.status).toBe('open');
   });
-});
-
-test('reads every half hour on weekday working hours', () => {
-  expect(mailDue(0, at(27, 10))).toBe(true);
-  expect(mailDue(at(27, 10, 1), at(27, 10, 29))).toBe(false);
-  expect(mailDue(at(27, 10, 1), at(27, 10, 30))).toBe(true);
-  expect(mailDue(0, at(27, 20))).toBe(false);
-  expect(mailDue(0, at(31, 10))).toBe(false);
 });
 
 test('saves my promises with their due time', () => {

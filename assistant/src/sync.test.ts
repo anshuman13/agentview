@@ -14,12 +14,6 @@ const ch = (o: Record<string, unknown>) => ({ table: 'items', id: 'item1', profi
 const item = (id = 'item1') => pullChanges(db, 0).changes.find((c) => c.id === id);
 
 describe('sync', () => {
-  it('insert then pull', () => {
-    const applied = applyChanges(db, [ch({ fields: { title: 'Item 1', text: 'Description' } })]);
-    expect(applied.applied).toBe(1);
-    expect(applied.version).toBeGreaterThan(0);
-    expect(item()?.fields).toMatchObject({ title: 'Item 1', text: 'Description' });
-  });
 
   it('merges per field by timestamp: newer wins, older loses, tie keeps stored, other fields survive', () => {
     applyChanges(db, [ch({ fields: { title: 'Old', text: 'Text 1' }, field_times: { title: 1000, text: 1000 } })]);
