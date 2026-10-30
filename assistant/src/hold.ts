@@ -4,6 +4,8 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 
 const KEY = 'held:pushes';
 const ALL_DAY = 20 * 3600_000;
+// While ntfy fails the list is never cleared, so it keeps only the newest.
+const MAX_HELD = 20;
 
 type Held = { title: string; chat: string; meeting: string };
 
@@ -25,7 +27,7 @@ export const heldPushes = (db: Database): Held[] => {
 export async function pushOrHold(db: Database, title: string, chat: string, body: string, url: string, actions: string, now = Date.now()) {
   const m = meetingAt(db, now);
   if (!m) return pushNtfy(title, chat, body, url, actions);
-  const list = [...heldPushes(db), { title, chat, meeting: m.title ?? 'a meeting' }];
+  const list = [...heldPushes(db), { title, chat, meeting: m.title ?? 'a meeting' }].slice(-MAX_HELD);
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(KEY, JSON.stringify(list));
   return true;
 }
