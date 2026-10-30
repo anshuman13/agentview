@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite';
 import path from 'node:path';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { pushNtfy } from '../../server/src/integrations/notify.js';
+import { pushOrHold } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
@@ -180,11 +180,11 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
   return { ...r, waiting: left.length };
 }
 
-async function pushUrgent(c: GmailConfig, urgent: Awaited<ReturnType<typeof scanGmail>>['urgent'], now = Date.now()) {
+async function pushUrgent(db: Database, c: GmailConfig, urgent: Awaited<ReturnType<typeof scanGmail>>['urgent'], now = Date.now()) {
   if (!mailPushHours(c, now)) return;
   for (const a of urgent) {
     const accept = `http, Make task, ${HUB_URL}/gmail/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-    await pushNtfy(`${a.from}: ${a.title}`, 'Gmail', a.quote, a.link, `view, Open, ${a.link}; ${accept}`).catch(() => false);
+    await pushOrHold(db, `${a.from}: ${a.title}`, 'Gmail', a.quote, a.link, `view, Open, ${a.link}; ${accept}`, now).catch(() => false);
   }
 }
 
@@ -196,6 +196,6 @@ export function startGmail(db: () => Database, every = MIN) {
     tried = Date.now();
     const r = await scanGmail(db(), c);
     console.log(`gmail: ${r.added} asks, ${r.said} promises, ${r.waiting} waiting, ${r.urgent.length} urgent`);
-    await pushUrgent(c, r.urgent);
+    await pushUrgent(db(), c, r.urgent);
   }, true);
 }

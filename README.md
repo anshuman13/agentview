@@ -39,7 +39,9 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
   and meeting transcripts. A person page adds their Slack DM summary, open asks, your promises and unanswered mail;
   Overview's Keep in touch card lists people gone quiet for over 1.5x their usual gap, with a nudge to copy;
   Copy standup on Overview copies yesterday's done tasks and decisions, today's plan and
-  waiting-on items older than two days
+  waiting-on items older than two days;
+  after a meeting, Overview lists the asks and DMs that came in while it ran, and urgent
+  pushes during a meeting wait and arrive as one push when it ends
 - `/loop` and `/goal`, loop mode (plan, build, test), Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 

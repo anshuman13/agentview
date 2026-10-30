@@ -3,6 +3,7 @@ import { isBlock } from '../../shared/util.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { pruneMeta, textList, type Profile } from './db.js';
 import { rollOver } from './rollover.js';
+import { flushHeld } from './hold.js';
 import { HUB_URL } from './slack.js';
 import { webUrl } from './slackSave.js';
 import { loop } from './once.js';
@@ -102,6 +103,7 @@ export function startReminders(db: () => Database, every = 60_000) {
   loop('reminders', every, async () => {
     rollOver(db());
     pruneMeta(db(), 'remind:', Date.now() - 2 * DAY);
+    await flushHeld(db());
     for (const r of dueReminders(db())) {
       const key = `remind:${r.key}`;
       db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(Date.now()));

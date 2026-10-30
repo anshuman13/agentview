@@ -1,6 +1,7 @@
 import { expect, it } from 'bun:test';
 import { openDb } from './db.js';
 import { dueReminders, finishTask, snoozeTask } from './remind.js';
+import { heldDue, meetingAt, pushOrHold } from './hold.js';
 
 it('reminds before a meeting and about its actions once the transcript is read', () => {
   const db = openDb(':memory:');
@@ -70,4 +71,18 @@ it('gives the due push Done and Snooze that sync', () => {
   expect(finishTask(db, 'personal', 't', now)).toBe(true);
   expect((db.prepare("SELECT status FROM items WHERE id = 't'").get() as { status: string }).status).toBe('done');
   expect(finishTask(db, 'work', 't', now)).toBe(false);
+});
+
+it('holds urgent pushes during a meeting and combines them once it ends', async () => {
+  const db = openDb(':memory:');
+  const now = 1_000_000_000;
+  const meeting = db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES (?, 'work', 1, 0, ?, ?, ?)");
+  meeting.run('block:t1', 'Focus', now - 60_000, now + 3600_000);
+  meeting.run('cal:day', 'Offsite', now - 3600_000, now + 23 * 3600_000);
+  expect(meetingAt(db, now)).toBeUndefined();
+  meeting.run('cal:sync', 'Sync', now - 60_000, now + 1800_000);
+  await pushOrHold(db, 'Kim: Review the plan', '#team', 'quote', '', '', now);
+  await pushOrHold(db, 'Bo: Sign the form', 'Gmail', 'quote', '', '', now + 60_000);
+  expect(heldDue(db, now + 120_000)).toBeNull();
+  expect(heldDue(db, now + 1800_000)).toEqual({ title: '2 urgent while you were in Sync', body: '- Kim: Review the plan (#team)\n- Bo: Sign the form (Gmail)' });
 });
