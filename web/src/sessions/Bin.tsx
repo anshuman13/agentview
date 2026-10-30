@@ -18,8 +18,8 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
   }, []);
   if (!list.length) return null;
   const restore = async (b: BinnedSession) => {
-    const r = await fetch(apiUrl(`/api/sessions/restore?id=${encodeURIComponent(b.sessionId)}`), { method: 'POST' });
-    if (!r.ok) return notice('Could not restore the chat');
+    const r = await fetch(apiUrl(`/api/sessions/restore?id=${encodeURIComponent(b.sessionId)}`), { method: 'POST' }).catch(() => null);
+    if (!r?.ok) return notice('Could not restore the chat');
     setList((l) => l.filter((x) => x.sessionId !== b.sessionId));
     onRestore(b);
   };
@@ -29,8 +29,8 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
     warning: 'The transcripts are removed permanently.',
     action: 'Empty bin',
     run: async () => {
-      const r = await fetch(apiUrl('/api/sessions/bin'), { method: 'DELETE' });
-      if (!r.ok) return notice('Could not empty the bin');
+      const r = await fetch(apiUrl('/api/sessions/bin'), { method: 'DELETE' }).catch(() => null);
+      if (!r?.ok) return notice('Could not empty the bin');
       setList([]);
     },
   });
