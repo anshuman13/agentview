@@ -19,6 +19,7 @@ import { Avatars } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
 import { useSnackTask } from './useSnackTask';
+import { talkTime } from '../data/talkTime';
 
 function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
   const snap = useAssistantData();
@@ -58,19 +59,50 @@ function Fold({ title, count, children }: { title: string; count: number; childr
   );
 }
 
-// The transcript text stays on the hub and is fetched when the section opens.
-function Transcript({ m }: { m: Meeting }) {
+// The transcript text stays on the hub; a summarized meeting fetches it once for the talk time and the Transcript section.
+function useTranscript(m: Meeting, on: boolean) {
   const store = useAssistantStore();
+  const [got, setGot] = useState<{ key: string; text: string | null; error?: string }>();
+  const key = meetingKey(m);
+  useEffect(() => {
+    if (!on) return;
+    let live = true;
+    store.transcript(m).then((text) => live && setGot({ key, text }), (err) => live && setGot({ key, text: null, error: errorText(err) }));
+    return () => {
+      live = false;
+    };
+  }, [key, on, store]);
+  return got?.key === key ? got : undefined;
+}
+
+const TOP = 5;
+
+function TalkTime({ text, actions, decisions }: { text: string; actions: number; decisions: number }) {
+  const speakers = useMemo(() => talkTime(text), [text]);
+  if (!speakers.length) return null;
+  const top = speakers.slice(0, TOP);
+  const rest = speakers.slice(TOP).reduce((a, s) => a + s.share, 0);
+  const parts = rest > 0 ? [...top, { name: 'Others', share: rest }] : top;
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
+  return (
+    <section className="mt-sec">
+      <h2>Talk time<span className="mt-of">{actions} {actions === 1 ? 'action' : 'actions'} · {decisions} {decisions === 1 ? 'decision' : 'decisions'}</span></h2>
+      <div className="mt-talk" role="img" aria-label={parts.map((p) => `${p.name} ${pct(p.share)}`).join(', ')}>
+        {parts.map((p, i) => <span key={p.name} className={`mt-talk-${i}`} style={{ width: pct(p.share) }} title={`${p.name} ${pct(p.share)}`} />)}
+      </div>
+      <div className="mt-talk-keys">
+        {parts.map((p, i) => <span key={p.name}><i className={`mt-talk-${i}`} />{p.name} {pct(p.share)}</span>)}
+      </div>
+    </section>
+  );
+}
+
+function Transcript({ got }: { got: { text: string | null; error?: string } | undefined }) {
   const [open, setOpen] = useState(false);
-  const [text, setText] = useState<string | null | undefined>(undefined);
-  const toggle = () => {
-    setOpen((v) => !v);
-    if (text === undefined) store.transcript(m).then(setText, (err) => setText(`Could not load the transcript: ${errorText(err)}`));
-  };
   return (
     <section className="mt-sec mt-fold">
-      <button className="mt-fold-head" aria-expanded={open} onClick={toggle}>Transcript <Icon name={open ? 'chevron-up' : 'chevron-down'} small /></button>
-      {open && (text === undefined ? <p className="mt-pending">Loading</p> : text ? <pre className="mt-transcript">{text}</pre> : <p className="mt-pending">No transcript text kept for this meeting.</p>)}
+      <button className="mt-fold-head" aria-expanded={open} onClick={() => setOpen((v) => !v)}>Transcript <Icon name={open ? 'chevron-up' : 'chevron-down'} small /></button>
+      {open && (!got ? <p className="mt-pending">Loading</p> : got.error ? <p className="mt-pending">Could not load the transcript: {got.error}</p> : got.text ? <pre className="mt-transcript">{got.text}</pre> : <p className="mt-pending">No transcript text kept for this meeting.</p>)}
     </section>
   );
 }
@@ -260,6 +292,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const people = peopleOf(m);
   const now = Date.now();
   const state = meetingState(m, now);
+  const transcript = useTranscript(m, state === 'done');
   const back = () => setView({ open: null });
   useEscapeBack(back);
   const day = m.starts_at ? new Date(m.starts_at).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) : '';
@@ -322,6 +355,8 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           {state === 'upcoming' && <Prep m={m} section />}
 
+          {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}
+
           <Series m={m} prior={prior} />
 
           <section className="mt-sec">
@@ -338,7 +373,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           <Fold title="Not mine" count={count.dismissed}>
             <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
           </Fold>
-          {state === 'done' && <Transcript key={meetingKey(m)} m={m} />}
+          {state === 'done' && <Transcript key={meetingKey(m)} got={transcript} />}
         </article>
       </div>
       <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, all))} />

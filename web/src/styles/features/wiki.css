@@ -376,6 +376,16 @@ li.contested .wk-feed-kind { color: var(--warn); }
 @media (hover: hover) { .mt-fold-head:hover { color: var(--fg); } }
 .mt-fold > :not(.mt-fold-head) { margin-top: var(--sp-5); }
 .mt-transcript { margin: 0; max-height: 60vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: var(--fs-md); line-height: var(--lh); color: var(--fg-muted); }
+.mt-talk { display: flex; height: 10px; margin-top: var(--sp-5); border-radius: var(--radius-pill); overflow: hidden; background: var(--hover); }
+.mt-talk > span { height: 100%; }
+.mt-talk-keys { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-7); margin-top: var(--sp-4); font-size: var(--fs-sm); color: var(--fg-muted); }
+.mt-talk-keys i { display: inline-block; width: 8px; height: 8px; margin-right: var(--sp-3); border-radius: 2px; }
+.mt-talk-0 { background: var(--c-meeting); }
+.mt-talk-1 { background: color-mix(in srgb, var(--c-meeting) 75%, transparent); }
+.mt-talk-2 { background: color-mix(in srgb, var(--c-meeting) 55%, transparent); }
+.mt-talk-3 { background: color-mix(in srgb, var(--c-meeting) 40%, transparent); }
+.mt-talk-4 { background: color-mix(in srgb, var(--c-meeting) 28%, transparent); }
+.mt-talk-5 { background: var(--border-strong); }
 .mt-others { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sp-4); font-size: var(--fs-lg); color: var(--fg-muted); }
 .mt-others b { color: var(--fg-strong); font-weight: 600; margin-right: var(--sp-2); }
 .wk-note textarea { flex: 1; min-height: 90px; border: 0; outline: 0; resize: none; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); line-height: var(--lh); }
