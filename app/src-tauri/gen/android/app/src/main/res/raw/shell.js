@@ -1,4 +1,16 @@
 (() => {
+  // Android does not offer frame navigations to the navigation check, so a frame from another site is stopped here.
+  if (window !== top) {
+    try {
+      void top.location.href;
+    } catch {
+      if (location.protocol !== 'about:') {
+        window.stop();
+        location.replace('about:blank');
+      }
+      return;
+    }
+  }
   const S = window.AgentViewShell;
   if (!S || window.__agentview) return;
   const handlers = {};
