@@ -280,9 +280,14 @@ export class ClaudeDriver implements AgentDriver {
     await this.q?.toggleMcpServer(name, enabled);
   }
 
-  async addMcp(name: string, def: unknown) {
+  private open() {
     this.start();
     if (!this.q) throw new Error('This chat was closed');
+    return this.q;
+  }
+
+  async addMcp(name: string, def: unknown) {
+    this.open();
     if (await inSettings(this.cwd, name)) return { error: undefined };
     this.addedMcp[name] = def as McpServerConfig;
     this.mcpServers = { ...this.mcpServers, [name]: def as McpServerConfig };
@@ -374,9 +379,7 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   async rewind(id: string) {
-    this.start();
-    if (!this.q) throw new Error('This chat was closed');
-    return this.q.rewindFiles(this.rewindIds.get(id) ?? id.replace(/:\d+$/, ''));
+    return this.open().rewindFiles(this.rewindIds.get(id) ?? id.replace(/:\d+$/, ''));
   }
 
   // The SDK takes cancelQueued at runtime but its types leave the option out.
@@ -426,10 +429,14 @@ export class ClaudeDriver implements AgentDriver {
     if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
   }
 
+  private continued() {
+    if (!this.state.session.running) this.host.turnStarted('Claude continued after a background task');
+  }
+
   private handle(msg: SDKMessage) {
     const host = this.host;
     // Turns the CLI starts by itself (a subagent handing back, a scheduled job) come without a prompt from us.
-    if (!this.state.session.running && (msg.type === 'assistant' || msg.type === 'stream_event') && !msg.parent_tool_use_id) host.turnStarted('Claude continued after a background task');
+    if ((msg.type === 'assistant' || msg.type === 'stream_event') && !msg.parent_tool_use_id) this.continued();
     switch (msg.type) {
       case 'rate_limit_event': {
         const until = overageUntil(msg);
@@ -497,7 +504,7 @@ export class ClaudeDriver implements AgentDriver {
           const toolUseId = msg.tool_use_id ? agentToolUse(this.host, msg.tool_use_id) : taskToolUse(this.taskIds, this.agents, msg.task_id);
           if (toolUseId) {
             // The CLI writes the report to the transcript before it streams; without this the watcher takes it for another process and restarts the CLI.
-            if (!this.state.session.running) host.turnStarted('Claude continued after a background task');
+            this.continued();
             const usage = msg.usage && usageOf(msg.usage);
             patchAgent(this.host, toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
             taskDone(this.host, this.agents, toolUseId, msg.task_id, msg.status, msg.summary);
