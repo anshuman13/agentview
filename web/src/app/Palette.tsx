@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getState, send, setUi, useStore } from './store';
 import { toggleNotify } from './notify';
 import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
+import { Back } from './back';
 import { Hl, listKeys, save, storedStrings } from '../ui/util';
 
 export type Command = { id: string; label: string; key?: string };
@@ -169,6 +170,7 @@ export function Palette() {
 
   return (
     <div className="overlay" onClick={close}>
+      <Back close={close} />
       <div className="palette" role="dialog" aria-label="Command palette" onClick={(e) => e.stopPropagation()}>
         <div className="palette-input">
           <span className="palette-prefix">&gt;</span>

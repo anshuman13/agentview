@@ -1,4 +1,5 @@
 import { send, useStore } from '../app/store';
+import { Back } from '../app/back';
 import { Icon } from '../ui/Icon';
 import { Markdown } from '../chat/Chat';
 import { Row } from '../chat/Transcript';
@@ -44,6 +45,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
 
   return (
     <div className={`ag ${stack ? 'stack' : ''} ${selected && current?.id === selected ? 'picked' : ''}`}>
+      {selected && current?.id === selected && (stack || matchMedia('(max-width: 900px)').matches) && <Back close={() => onSelect(null)} />}
       <ul className="ag-list">
         {list.map((a) => {
           const last = (a.status === 'running' && a.info?.progress) || a.lastStep;

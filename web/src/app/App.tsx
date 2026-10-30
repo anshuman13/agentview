@@ -19,6 +19,7 @@ import { StatusBar } from './StatusBar';
 import { useTheme } from './theme';
 import { MoreSheet, TabBar, type Tab, type View } from './TabBar';
 import { touch } from './touch';
+import { Back } from './back';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'assistant', icon: 'sparkle', title: 'Codex' },
@@ -117,6 +118,7 @@ export function App() {
 
   // The first init swaps the preset chat id for the server's; that is not a chat switch, so a deep-linked view stays.
   const prevId = useRef(session.id);
+  const [fromRepos, setFromRepos] = useState(false);
   useEffect(() => {
     const from = prevId.current;
     prevId.current = session.id;
@@ -124,9 +126,11 @@ export function App() {
     setTab((t) => {
       if (t !== 'repos') return t;
       slideFrom(1);
+      setFromRepos(true);
       return 'chat';
     });
   }, [session.id]);
+  useEffect(() => { if (tab !== 'chat') setFromRepos(false); }, [tab]);
 
   useEffect(() => {
     save('agentview.chatW', chatW);
@@ -270,6 +274,7 @@ export function App() {
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} data-codex={active === 'assistant'} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <AppUpdate />
+      {fromRepos && tab === 'chat' && narrow() && <Back close={() => { slideFrom(-1); setTab('repos'); }} />}
       <SwitchedBanner />
       <Restarting />
       <Offline />

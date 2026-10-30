@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { Back } from '../app/back';
 import { touch } from '../app/touch';
 import { listKeys, useReturnFocus } from './util';
 
@@ -23,6 +24,7 @@ export function QuickPick({ title, items, current, anchor, extra, onPick, onClos
 
   return (
     <div className={`overlay ${anchor ? 'anchored' : ''}`} onClick={onClose}>
+      <Back close={onClose} />
       <div
         className="switcher"
         role="dialog"
