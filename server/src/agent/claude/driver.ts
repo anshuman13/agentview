@@ -100,6 +100,8 @@ export class ClaudeDriver implements AgentDriver {
     this.gen++;
     this.wake?.();
     this.tasks.clear();
+    // Edits whose results never came went with the old CLI.
+    this.edits.clear();
   }
 
   get attached() {
