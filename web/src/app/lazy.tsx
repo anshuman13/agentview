@@ -1,7 +1,10 @@
 import { lazy } from 'react';
 
-export const Brief = lazy(() => import('../sessions/Brief').then((m) => ({ default: m.Brief })));
-export const AgentsPane = lazy(() => import('../sessions/AgentsPane').then((m) => ({ default: m.AgentsPane })));
+// Views that render chat markdown wait for marked too, so replies never show as plain text first.
+const withMd = <T,>(view: Promise<T>) => Promise.all([view, import('../chat/md')]).then(([m]) => m);
+
+export const Brief = lazy(() => withMd(import('../sessions/Brief')).then((m) => ({ default: m.Brief })));
+export const AgentsPane = lazy(() => withMd(import('../sessions/AgentsPane')).then((m) => ({ default: m.AgentsPane })));
 export const FileSwitcher = lazy(() => import('../workspace/FileSwitcher').then((m) => ({ default: m.FileSwitcher })));
 export const Palette = lazy(() => import('./Palette').then((m) => ({ default: m.Palette })));
 export const OpenChats = lazy(() => import('../sessions/Sessions').then((m) => ({ default: m.OpenChats })));
@@ -13,7 +16,7 @@ export const Assistant = lazy(() => import('../codex/Codex').then((m) => ({ defa
 export const FocusBar = lazy(() => import('../codex/focus').then((m) => ({ default: m.FocusBar })));
 export const Explorer = lazy(() => import('../workspace/Explorer').then((m) => ({ default: m.Explorer })));
 export const Changes = lazy(() => import('../workspace/Changes').then((m) => ({ default: m.Changes })));
-export const GitHub = lazy(() => import('../ops/GitHub').then((m) => ({ default: m.GitHub })));
+export const GitHub = lazy(() => withMd(import('../ops/GitHub')).then((m) => ({ default: m.GitHub })));
 export const Terminal = lazy(() => import('../workspace/Terminal').then((m) => ({ default: m.Terminal })));
 export const CodePane = lazy(() => import('../workspace/CodePane').then((m) => ({ default: m.CodePane })));
 export const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m) => ({ default: m.BrowserPane })));
@@ -22,4 +25,4 @@ export const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default:
 export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ default: m.McpPage })));
 export const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
 export const MacsPopover = lazy(() => import('./MacsPopover').then((m) => ({ default: m.MacsPopover })));
-export const Loading =() => <div className="loading">Loading…</div>;
+export const Loading = () => <div className="loading">Loading…</div>;
