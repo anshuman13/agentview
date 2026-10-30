@@ -1,12 +1,9 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { inside } from '../../../shared/util.js';
 import { git } from './git.js';
 
-const exec = promisify(execFile);
 const HIDDEN = new Set(['node_modules', '.git', 'dist']);
 
 const home = os.homedir();
@@ -47,7 +44,7 @@ export async function listDir(cwd: string, rel: string) {
   );
   const ignored = new Set(
     items.length
-      ? (await exec('git', ['check-ignore', '--', ...items.map((i) => i.path)], { cwd }).catch((e) => e)).stdout?.split('\n') ?? []
+      ? (await git(cwd, ['check-ignore', '--', ...items.map((i) => i.path)], [0, 1]).catch(() => '')).split('\n')
       : [],
   );
   return items
@@ -55,11 +52,9 @@ export async function listDir(cwd: string, rel: string) {
     .sort((a, b) => (a.dir !== b.dir ? (a.dir ? -1 : 1) : a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })));
 }
 
-const within = (file: string, root: string) => file === root || file.startsWith(root + path.sep);
-
 export function safeResolve(cwd: string, rel: string): string {
   const abs = path.resolve(cwd, rel);
-  if (!within(abs, path.resolve(cwd))) throw new Error('path outside project');
+  if (!inside(abs, path.resolve(cwd))) throw new Error('path outside project');
   return abs;
 }
 
