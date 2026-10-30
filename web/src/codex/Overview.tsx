@@ -24,7 +24,7 @@ import { MorningBrief } from './Brief';
 import { Icon } from '../ui/Icon';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
-import { copyText, focusPast, openMeeting, setView, setViewAt, showSnack, useView } from './view';
+import { copyText, focusPast, openMeeting, openTask, setView, setViewAt, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
 import { clock, when } from './time';
 import { touch } from '../app/touch';
@@ -107,6 +107,7 @@ const DISMISSED = 'agentview:followThrough';
 // Open actions from meetings over a week old: Task unlinks one from its meeting so it is a plain task, Dismiss hides it here.
 function FollowThrough() {
   const store = useAssistantStore();
+  const act = useActions();
   const snap = useAssistantData();
   const { meetings } = useCodex();
   const { filter } = useView();
@@ -136,10 +137,11 @@ function FollowThrough() {
               <span className="muted small">{m.title} · {dayLabel(m.starts_at!)}</span>
             </button>
             <button className="btn sm" aria-label={`Make ${r.title} a plain task`} onClick={() => void store.update(r, { meeting_id: null })}>Task</button>
+            <button className="btn sm" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); focusPast(section.current); }}>Done</button>
             <button className="btn sm" aria-label={`Dismiss ${r.title}`} onClick={() => dismiss(r)}>Dismiss</button>
           </div>
         ))}
-        {rows.length > 5 && <div className="ov-follow-row muted">+{rows.length - 5} more</div>}
+        {rows.length > 5 && <button className="ov-follow-row ov-follow-text muted" onClick={() => setView({ list: 'tasks', open: null })}>+{rows.length - 5} more</button>}
       </div>
     </section>
   );
@@ -329,7 +331,8 @@ function SinceLastVisit() {
 type Split = ReturnType<typeof useSplit>;
 
 // Tasks due by Friday that will not fit in the free work time before their due time, with the shortfall.
-function AtRisk({ s, now }: { s: Split; now: number }) {
+function AtRisk({ s, now, snooze }: { s: Split; now: number; snooze: (r: ItemRow) => void }) {
+  const act = useActions();
   const snap = useAssistantData();
   const { filter } = useView();
   const minute = Math.floor(now / 60000);
@@ -349,10 +352,12 @@ function AtRisk({ s, now }: { s: Split; now: number }) {
       <div className="ov-follow">
         {rows.map(({ task, short }) => (
           <div key={task.r.profile + task.r.id} className="ov-follow-row">
-            <button className="ov-follow-text" onClick={() => setView({ list: 'tasks', open: null })}>
+            <button className="ov-follow-text" onClick={() => openTask(task.r)}>
               <span className="ov-t">{task.r.title}</span>
               <span className="muted small">due {when(task.due, now)} · {minutesText(short)} short</span>
             </button>
+            <button className="ov-check" aria-label={`Mark ${task.r.title} done`} onClick={() => { haptic('success'); act.done(task.r); }}><Icon name="circle-large-outline" small /></button>
+            <button className="ov-check" aria-label={`Snooze ${task.r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(task.r)}><Icon name="clock" small /></button>
           </div>
         ))}
       </div>
@@ -435,7 +440,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <div className="as-next-actions">
         <button className="btn sm" onClick={() => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied')}><Icon name="copy" small /> Copy standup</button>
       </div>
-      <AtRisk s={s} now={now} />
+      <AtRisk s={s} now={now} snooze={snooze} />
       <SinceLastVisit />
       <SlackCard />
       <WaitingOnYou />
