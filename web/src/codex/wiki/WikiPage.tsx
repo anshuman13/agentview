@@ -24,21 +24,27 @@ export function WikiPage({ id }: { id: string }) {
   const pid = id === MEMORY ? null : id;
   const page = id === MEMORY ? memoryPage(facts) : pages.find((p) => p.id === id && !p.deleted && p.state !== 'rejected');
   const review = useReview();
-  useEffect(() => {
-    if (!anchor) return;
-    setAllFor(id);
-    document.getElementById(`claim-${anchor}`)?.scrollIntoView({ block: 'center' });
-    setFlash(anchor);
-    setView({ anchor: null });
-    const t = setTimeout(() => setFlash(null), 1600);
-    return () => clearTimeout(t);
-  }, [anchor, id]);
   const groups = useMemo(() => pageClaims(facts, pid), [facts, pid]);
   const older = useMemo(() => olderClaims(facts, pid), [facts, pid]);
   const total = useMemo(() => groups.reduce((n, g) => n + g.claims.length, 0), [groups]);
   const [shown, more] = useWindow(String(pid));
   const visible = useMemo(() => capGroups(groups, anchor || allFor === id ? Infinity : shown, 'claims'), [groups, shown, anchor, allFor, id]);
   const [showOlder, setShowOlder] = useState(false);
+  useEffect(() => setShowOlder(false), [id]);
+  useEffect(() => {
+    if (!anchor) return;
+    setAllFor(id);
+    if (older.some((f) => f.id === anchor)) setShowOlder(true);
+    setFlash(anchor);
+    setView({ anchor: null });
+  }, [anchor, id]);
+  // Runs again once Older opens, so a claim in it exists before the scroll.
+  useEffect(() => {
+    if (!flash) return;
+    document.getElementById(`claim-${flash}`)?.scrollIntoView({ block: 'center' });
+    const t = setTimeout(() => setFlash(null), 1600);
+    return () => clearTimeout(t);
+  }, [flash, showOlder]);
   const pending = useMemo(() => proposals(facts).filter((f) => (f.page_id ?? null) === pid), [facts, pid]);
   const st = useMemo(() => pageStats(facts, pid), [facts, pid]);
   const counts = useMemo(() => {
