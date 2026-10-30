@@ -4,7 +4,6 @@ import { newId } from '../data/sync';
 import { actionCount, actionCounts, groupMeetings, live, meetingState, openQuestions, peopleOf, searchMeetings, queryWords, rowMatcher, topicTimeline, trackedTopics, type Fact, type Meeting, type Question } from '../data/wiki';
 import { clock, when } from '../time';
 import { dayLabel, dayStart } from '../data/dates';
-import { errorText } from '../data/engine';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
@@ -14,6 +13,7 @@ import { Decisions } from './Decisions';
 import { Load } from './Load';
 import { OpenQuestions } from './OpenQuestions';
 import { Week } from './Week';
+import { useSnackTask } from './useSnackTask';
 import { usePullSync } from '../pullSync';
 import '../../styles/features/wiki.css';
 
@@ -196,7 +196,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     if (!active.includes(t)) markSeen(t);
     setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
   };
-  const [syncing, setSyncing] = useState(false);
+  const [syncing, runSync] = useSnackTask();
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const tick = () => setNow(Date.now());
@@ -226,17 +226,10 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
     setView({ open: meetingKey(row) });
   };
-  const syncCalendar = async () => {
-    setSyncing(true);
-    try {
-      const n = await store.syncCalendar();
-      showSnack(n ? `${n} meeting${n > 1 ? 's' : ''} updated from the calendar` : 'Calendar is up to date');
-    } catch (err) {
-      showSnack(`Calendar sync failed: ${errorText(err)}`);
-    } finally {
-      setSyncing(false);
-    }
-  };
+  const syncCalendar = () => runSync(async () => {
+    const n = await store.syncCalendar();
+    showSnack(n ? `${n} meeting${n > 1 ? 's' : ''} updated from the calendar` : 'Calendar is up to date');
+  }, 'Calendar sync failed');
   return (
     <div className="wk narrow">
       <header className="wk-head">

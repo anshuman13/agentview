@@ -18,6 +18,7 @@ import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
+import { useSnackTask } from './useSnackTask';
 
 function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
   const snap = useAssistantData();
@@ -128,20 +129,13 @@ function Notes({ m }: { m: Meeting }) {
 
 function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
   const { store } = useCodex();
-  const [busy, setBusy] = useState(false);
+  const [busy, run] = useSnackTask();
   if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
-  const choose = async (key: SummaryTemplate) => {
-    setBusy(true);
-    try {
-      await store.fetchTranscript(m, summaryInstructions(key));
-      rememberTemplate(m, key);
-      showSnack(`Summary rewritten as ${SUMMARY_TEMPLATES[key].label}`);
-    } catch (err) {
-      showSnack(`Summary failed: ${errorText(err)}`);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const choose = (key: SummaryTemplate) => run(async () => {
+    await store.fetchTranscript(m, summaryInstructions(key));
+    rememberTemplate(m, key);
+    showSnack(`Summary rewritten as ${SUMMARY_TEMPLATES[key].label}`);
+  }, 'Summary failed');
   const suggested = templateFor(m, series);
   return (
     <select className="mt-sync" value="" disabled={busy} aria-label="Summary format" title="Summary format" onChange={(e) => void choose(e.target.value as SummaryTemplate)}>
@@ -153,20 +147,13 @@ function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
 
 function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
   const { store } = useCodex();
-  const [busy, setBusy] = useState(false);
+  const [busy, run] = useSnackTask();
   if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
-  const run = async () => {
-    setBusy(true);
-    try {
-      showSnack((await store.fetchTranscript(m)) ? 'Read the transcript' : 'No transcript found yet');
-    } catch (err) {
-      showSnack(`Transcript sync failed: ${errorText(err)}`);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const read = () => run(async () => {
+    showSnack((await store.fetchTranscript(m)) ? 'Read the transcript' : 'No transcript found yet');
+  }, 'Transcript sync failed');
   return (
-    <button className="btn sm mt-sync" disabled={busy} title="Read the transcript: summary and actions" onClick={run}>
+    <button className="btn sm mt-sync" disabled={busy} title="Read the transcript: summary and actions" onClick={read}>
       <Icon name={busy ? 'loading' : 'sync'} small spin={busy} /> {busy ? 'Reading' : label}
     </button>
   );

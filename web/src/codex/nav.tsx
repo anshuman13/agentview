@@ -14,6 +14,7 @@ export const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'jobs', icon: 'history', label: 'Jobs' },
   { id: 'wiki', icon: 'book', label: 'Wiki' },
 ];
+const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
 
 export function AssistantNav({ onPick }: { onPick?: () => void }) {
@@ -22,7 +23,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const snap = useAssistantData();
   const s = useSplit();
   const { facts, pages } = useCodex();
-  const count: Record<List, number> = { today: 0, tasks: s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < s.endOfDay).length + s.review.length, summary: 0, meetings: 0, jobs: 0, wiki: reviewCount(pages, facts) };
+  const count: Record<List, number> = { today: 0, tasks: taskCount(s, s.endOfDay), summary: 0, meetings: 0, jobs: 0, wiki: reviewCount(pages, facts) };
   const sync = useSyncStatus();
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
   const dot = sync.error ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
@@ -51,7 +52,7 @@ export function useTodayCount() {
     const now = Date.now();
     const s = sharedSplit(snap.items, 'all', now);
     const endOfDay = new Date(now).setHours(24, 0, 0, 0);
-    return s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
+    return taskCount(s, endOfDay);
   }, [ready, snap.items, minute]);
 }
 
