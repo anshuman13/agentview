@@ -1,6 +1,7 @@
 import { atTime, statusTime } from './engine';
 import { parseTimes, type ItemRow } from './sync';
-import type { Brief } from './wiki';
+import { sameName } from './meetings';
+import { live as liveRows, type Brief, type Chat } from './wiki';
 
 const DAY = 86400000;
 export const STUCK_ROLLS = 3;
@@ -87,4 +88,19 @@ export function nudgeText(g: Waiting) {
   const first = g.name.split(' ')[0];
   const what = g.rows.map((x) => x.title).join('; ');
   return `Hi ${first}, a quick nudge on ${what}. Any update when you have a moment? Thanks!`;
+}
+
+// The person a Slack or Gmail item names: "Ada · DM" for Slack, "Ada" for Gmail.
+const personOf = (people: string | null) => (people ?? '').split(' · ')[0].replace(/<[^>]*>/, '').trim();
+const isAsk = (r: ItemRow) => live(r) && (r.source === 'slack' || r.source === 'gmail') && (r.status === 'open' || r.status === 'suggested');
+
+// What waits between me and a person outside meetings: their DM summary, their asks to me, my promises to them and my unanswered mail.
+export function personInbox(name: string, items: ItemRow[], chats: Chat[], mail: Unanswered[]) {
+  const theirs = items.filter((r) => isAsk(r) && sameName(personOf(r.people), name));
+  return {
+    dm: liveRows(chats).find((c) => c.kind === 'dm' && c.summary && sameName(c.name ?? '', name)) ?? null,
+    asks: theirs.filter((r) => !r.id.startsWith('said:')),
+    promises: theirs.filter((r) => r.id.startsWith('said:')),
+    mail: mail.filter((w) => sameName(personOf(w.to), name)),
+  };
 }

@@ -6,12 +6,34 @@ import { commitmentsOf, meetingsOf, openQuestions, pinsOf, questionKey } from '.
 import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
 import { copyText, openMeeting, setView, useEscapeBack } from '../view';
-import { plural } from '../../ui/util';
+import { ago, plural, safeHref } from '../../ui/util';
+import { personInbox, unanswered } from '../data/review';
+import type { ItemRow } from '../data/sync';
 import { Avatars, MeetingRow } from './Meetings';
 import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
 import { AddPoint, PointList, useMarkRaised } from './Raise';
 import { firstName, pointsOf } from '../data/points';
 import '../../styles/features/wiki.css';
+
+function Asks({ title, rows }: { title: string; rows: ItemRow[] }) {
+  if (!rows.length) return null;
+  return (
+    <section className="mt-sec">
+      <h2>{title}<span className="mt-of">{rows.length}</span></h2>
+      <ul className="wk-claims">
+        {rows.map((r) => (
+          <li key={r.profile + r.id} className="wk-claim">
+            <span className="wk-claim-text">{r.title}</span>
+            <span className="wk-claim-foot">
+              {r.source === 'gmail' ? 'Gmail' : 'Slack'}{r.status === 'suggested' ? ' · to review' : ''}
+              {safeHref(r.source_url) && <> · <a className="mt-person" href={safeHref(r.source_url)} target="_blank" rel="noreferrer">Open</a></>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export function Person({ name }: { name: string }) {
   const { meetings, facts, pages } = useCodex();
@@ -24,6 +46,7 @@ export function Person({ name }: { name: string }) {
   const pins = useMemo(() => pinsOf(snap.items, mine), [snap.items, mine]);
   const commitments = useMemo(() => commitmentsOf(meetings, name), [meetings, name]);
   const claims = useMemo(() => claimsMentioning(facts, name), [facts, name]);
+  const inbox = useMemo(() => personInbox(name, snap.items, snap.chats, unanswered(snap.briefs)), [name, snap.items, snap.chats, snap.briefs]);
   const questions = openQuestions(mine);
   const title = useMemo(() => new Map(pages.map((p) => [p.id, p.title])), [pages]);
   const now = Date.now();
@@ -43,6 +66,32 @@ export function Person({ name }: { name: string }) {
         <article className="mt-page">
           <div className="mt-person-head"><Avatars people={[name]} /><h1 className="wk-title">{name}</h1></div>
           <div className="wk-meta mt-when"><span>{plural(mine.length, 'meeting')}</span></div>
+
+          {inbox.dm && (
+            <section className="mt-sec">
+              <h2>Slack DM</h2>
+              <p className="sm-text">{inbox.dm.summary}</p>
+              <div className="wk-meta">
+                {inbox.dm.last_at ? <span>{ago(inbox.dm.last_at, ' ago')}</span> : null}
+                {safeHref(inbox.dm.url) && <a className="mt-person" href={safeHref(inbox.dm.url)} target="_blank" rel="noreferrer">Open in Slack</a>}
+              </div>
+            </section>
+          )}
+          <Asks title={`${firstName(name)} asked you`} rows={inbox.asks} />
+          <Asks title="You promised" rows={inbox.promises} />
+          {inbox.mail.length > 0 && (
+            <section className="mt-sec">
+              <h2>Unanswered mail<span className="mt-of">{inbox.mail.length}</span></h2>
+              <ul className="wk-claims">
+                {inbox.mail.map((w) => (
+                  <li key={w.thread} className="wk-claim">
+                    <span className="wk-claim-text">{w.subject}</span>
+                    <span className="wk-claim-foot">sent {ago(w.sent_at, ' ago')}{safeHref(w.url) && <> · <a className="mt-person" href={safeHref(w.url)} target="_blank" rel="noreferrer">Open</a></>}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="mt-sec">
             <h2>Commitments<span className="mt-of">{commitments.length}</span></h2>
