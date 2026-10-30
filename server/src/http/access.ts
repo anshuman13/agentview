@@ -2,10 +2,10 @@ import { execFile, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import type http from 'node:http';
 
-export const NETBIRD = ['/opt/homebrew/bin/netbird', '/usr/local/bin/netbird'].find((p) => existsSync(p)) ?? 'netbird';
+const NETBIRD = ['/opt/homebrew/bin/netbird', '/usr/local/bin/netbird'].find((p) => existsSync(p)) ?? 'netbird';
 const TTL = 15_000;
 
-export type NetbirdPeer = { fqdn: string; netbirdIp?: string; netbirdIpv6?: string };
+type NetbirdPeer = { fqdn: string; netbirdIp?: string; netbirdIpv6?: string };
 export type NetbirdStatus = {
   daemonStatus?: string;
   fqdn?: string;
@@ -73,7 +73,7 @@ export const allowedPeer = (addr = '') => {
 const short = (fqdn?: string) => fqdn?.split('.')[0] || undefined;
 
 // The NetBird name of the device a request comes from, such as "macmini"; loopback is this Mac.
-export const peerName = (addr = '') => {
+const peerName = (addr = '') => {
   const a = canon(addr);
   if (loopback(a) || a === status?.netbirdIp || a === status?.netbirdIpv6) return short(status?.fqdn) ?? 'local';
   const p = status?.peers?.details?.find((d) => (d.netbirdIp && canon(d.netbirdIp) === a) || (d.netbirdIpv6 && canon(d.netbirdIpv6) === a));
@@ -91,7 +91,7 @@ const hostOf = (u: string) => {
 const allowedHost = (h: string) => h === 'localhost' || h.endsWith('.localhost') || loopback(canon(h)) || h.endsWith('.netbird.cloud') || peers.has(canon(h));
 
 // The Host must name this Mac or a NetBird peer, which refuses a page whose own domain resolves to this address.
-export const allowedHostHeader = (host = '') => /^[\w.\-:[\]]+$/.test(host) && allowedHost(hostOf(`http://${host}`));
+const allowedHostHeader = (host = '') => /^[\w.\-:[\]]+$/.test(host) && allowedHost(hostOf(`http://${host}`));
 
 const sameOrigin = (origin: string, host: string) => {
   try {
@@ -103,10 +103,10 @@ const sameOrigin = (origin: string, host: string) => {
 };
 
 // The bundled app loads from its own origin and calls this server across origins.
-export const APP_ORIGINS = new Set(['http://tauri.localhost', 'tauri://localhost']);
+const APP_ORIGINS = new Set(['http://tauri.localhost', 'tauri://localhost']);
 export const appOrigin = (h: RequestHeaders, addr?: string) => (h.origin && APP_ORIGINS.has(h.origin) && addr !== undefined && allowedPeer(addr) ? h.origin : undefined);
 
-export type RequestHeaders = { host?: string; origin?: string; 'sec-fetch-site'?: string; 'sec-fetch-mode'?: string };
+type RequestHeaders = { host?: string; origin?: string; 'sec-fetch-site'?: string; 'sec-fetch-mode'?: string };
 
 // The page must be served by this server (Host allowed, Origin equal to it). Browsers send no Origin on plain GETs, so
 // Sec-Fetch-Site catches cross-site image and script loads; cross-site navigations into AgentView stay allowed.
