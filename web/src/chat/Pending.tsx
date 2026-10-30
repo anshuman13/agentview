@@ -1,15 +1,26 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
+import { useOnUnmount } from '../ui/util';
+import { touch } from '../app/touch';
 import { Markdown } from './Chat';
 import type { ChatEvent, PendingPermission, PendingQuestion } from '../../../shared/protocol';
 
 export function Pending() {
   const pending = useStore((s) => s.pending);
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
+  const list = useRef<HTMLDivElement>(null);
+  const count = useRef(pending.length);
+  // A card that is answered leaves; focus moves to the next card, or to the composer after the last.
+  const lost = () => !touch() && (!document.activeElement || document.activeElement === document.body);
+  useEffect(() => {
+    if (pending.length < count.current && lost()) list.current?.querySelector<HTMLElement>('.pd')?.focus();
+    count.current = pending.length;
+  }, [pending.length]);
+  useOnUnmount(() => lost() && window.dispatchEvent(new CustomEvent('agentview:focus')));
   if (!pending.length) return null;
   return (
-    <div className="pd-list">
+    <div className="pd-list" ref={list}>
       {pending.map((p, n) => {
         const first = n === 0;
         if (p.kind === 'question') return <QuestionCard key={p.id} q={p} first={first} />;
@@ -253,7 +264,10 @@ export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean 
             onChange={(e) => setOther(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && result && !e.nativeEvent.isComposing) answer(result);
-              if (e.key === 'Escape') setOther(null);
+              if (e.key === 'Escape') {
+                setOther(null);
+                requestAnimationFrame(() => ref.current?.querySelector<HTMLElement>('.pd-other')?.focus());
+              }
             }}
           />
         )}
