@@ -88,7 +88,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     const review = open.filter((a) => a.status === 'suggested').length;
     out.push({ key, title: `${open.length} for you from ${m.title ?? 'a meeting'}${review ? ` · ${review} to confirm` : ''}`, body: open.map((a) => `- ${a.title}${a.status === 'suggested' ? ' (yours?)' : ''}`).join('\n'), url: '' });
   }
-  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND CAST(at AS INTEGER) > ? AND CAST(at AS INTEGER) <= ?").all(now - BEFORE, now) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
+  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND CAST(at AS INTEGER) > ? AND CAST(at AS INTEGER) <= ?").all(now - FRESH, now) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
   for (const t of tasks) {
     const key = `task:${t.profile}:${t.id}:${Number(t.at)}`;
     if (sent(key)) continue;

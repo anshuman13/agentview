@@ -28,9 +28,19 @@ it('reminds about a task when it comes due', () => {
   item.run('a', 'Get burger buns', 'open', now - 60_000);
   item.run('b', 'Later', 'open', now + 60_000);
   item.run('c', 'Done already', 'done', now - 60_000);
-  item.run('d', 'Long ago', 'open', now - 3600_000);
+  item.run('d', 'Long ago', 'open', now - 3 * 3600_000);
   db.prepare("INSERT INTO items (id, profile, version, updated_at, title, status, at) VALUES ('e', 'work', 1, 0, 'No source', 'open', ?)").run(now - 60_000);
   expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Get burger buns', 'No source']);
+});
+
+it('catches up a task that came due while the hub was down, once', () => {
+  const db = openDb(':memory:');
+  const now = 1_000_000_000;
+  db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at) VALUES ('a', 'personal', 1, 0, 'Missed', 'capture', 'open', ?)").run(now - 40 * 60_000);
+  const [r] = dueReminders(db, now);
+  expect(r.title).toBe('Missed');
+  db.prepare("INSERT INTO meta (key, value) VALUES (?, '1')").run(`remind:${r.key}`);
+  expect(dueReminders(db, now)).toHaveLength(0);
 });
 
 it('reminds once about a meeting in both calendars and keeps open actions to its profile', () => {
