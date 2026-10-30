@@ -6,6 +6,7 @@ import { Icon } from '../ui/Icon';
 import { ago } from '../ui/util';
 import { FILTER_LABEL, setView, useView, type Filter, type List } from './view';
 import { sharedSplit, useMinute, useSplit } from './split';
+import { dayEnd } from './data/dates';
 
 export const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Overview' },
@@ -51,7 +52,7 @@ export function useTodayCount() {
     if (!ready) return 0;
     const now = Date.now();
     const s = sharedSplit(snap.items, 'all', now);
-    const endOfDay = new Date(now).setHours(24, 0, 0, 0);
+    const endOfDay = dayEnd(now);
     return taskCount(s, endOfDay);
   }, [ready, snap.items, minute]);
 }

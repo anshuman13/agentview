@@ -3,6 +3,7 @@ import { useAssistantData, useCodex } from './data';
 import { live, type Meeting } from './data/wiki';
 import { split } from './data/engine';
 import { useView } from './view';
+import { dayEnd, dayStart } from './data/dates';
 
 // Re-renders every minute and when the app comes back to the front, so due tasks move into Today; returns the time of the last tick.
 export function useMinute() {
@@ -38,11 +39,11 @@ export function useSplit() {
     const now = Date.now();
     const all = live(meetings).filter((m) => m.starts_at != null && (filter === 'all' || m.profile === filter));
     const ahead = all.filter((m) => (m.ends_at ?? m.starts_at!) > now).sort((a, b) => a.starts_at! - b.starts_at!);
-    const endOfDay = new Date(now).setHours(24, 0, 0, 0);
+    const endOfDay = dayEnd(now);
     const today = ahead.filter((m) => m.starts_at! < endOfDay);
     const next = today[0];
-    const startOfDay = new Date(now).setHours(0, 0, 0, 0);
-    const endOfTomorrow = new Date(now).setHours(48, 0, 0, 0);
+    const startOfDay = dayStart(now);
+    const endOfTomorrow = dayEnd(endOfDay);
     const byStart = (a: Meeting, b: Meeting) => a.starts_at! - b.starts_at!;
     // Open actions from earlier meetings with the same title.
     const earlier = next ? new Set(all.filter((m) => m.profile === next.profile && m.title === next.title && m.starts_at! < next.starts_at!).map((m) => m.id)) : null;

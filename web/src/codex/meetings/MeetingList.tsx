@@ -3,7 +3,7 @@ import { useAssistantData, useCodex } from '../data';
 import { newId } from '../data/sync';
 import { actionCount, actionCounts, groupMeetings, live, meetingState, openQuestions, peopleOf, searchMeetings, queryWords, rowMatcher, topicTimeline, trackedTopics, type Fact, type Meeting, type Question } from '../data/wiki';
 import { clock, when } from '../time';
-import { dayLabel, dayStart } from '../data/dates';
+import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
@@ -70,7 +70,7 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, to
       <span className="mt-body">
         <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
         <span className="mt-span">
-          {m.starts_at! >= new Date(now).setHours(24, 0, 0, 0) && `${dayLabel(m.starts_at!, true)}, `}
+          {m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
           {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
           {m.recorded_ms ? ` · ${Math.round(m.recorded_ms / 60000)} min recorded` : ''}
         </span>
