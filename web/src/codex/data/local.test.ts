@@ -13,10 +13,10 @@ describe('newCapture', () => {
     expect(r).toMatchObject({ title: 'Title', text: 'body line 1\nline 2', profile: 'personal', status: 'open', source: 'capture', dirty: 1, version: 0, deleted: 0, updated_at: 1000 });
   });
 
-  it('truncates the title to 120 characters and leaves empty text null', () => {
+  it('cuts a long title at 120 characters and moves the rest to the text', () => {
     const r = newCapture('x'.repeat(200), 'note', 'work', 1000);
     expect(r.title).toHaveLength(120);
-    expect(r.text).toBeNull();
+    expect(r.text).toHaveLength(80);
     expect(r.status).toBe('note');
   });
 

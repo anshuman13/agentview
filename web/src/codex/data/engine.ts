@@ -217,9 +217,16 @@ export const DIGEST_TITLE = 'Weekly digest';
 export const latestDigest = (items: ItemRow[], profile: 'all' | Profile) =>
   items.filter((r) => !r.deleted && r.status === 'note' && r.title?.startsWith(DIGEST_TITLE) && (profile === 'all' || r.profile === profile)).sort((a, b) => b.updated_at - a.updated_at)[0];
 
+export function splitTitle(text: string): { title: string; text: string | null } {
+  const [first, ...rest] = text.split('\n');
+  if (first.length <= 120) return { title: first, text: rest.join('\n').trim() || null };
+  const space = first.lastIndexOf(' ', 120);
+  const cut = space > 0 ? space : 120;
+  return { title: first.slice(0, cut), text: [first.slice(cut).trim(), ...rest].join('\n').trim() || null };
+}
+
 // A task added from a meeting is an action of that meeting, labelled with its title.
 export function newCapture(text: string, type: 'task' | 'note' | 'goal', profile: Profile, now: number, at: number | null = null, meeting: { id: string; title: string | null } | null = null): ItemRow {
-  const [first, ...rest] = text.split('\n');
   return {
     id: newId(),
     profile,
@@ -227,8 +234,7 @@ export function newCapture(text: string, type: 'task' | 'note' | 'goal', profile
     updated_at: now,
     deleted: 0,
     field_times: JSON.stringify({ title: now, text: now, source: now, status: now, ...(at != null && { at: now }), ...(meeting && { people: now, meeting_id: now }) }),
-    title: first.slice(0, 120),
-    text: rest.join('\n').trim() || null,
+    ...splitTitle(text),
     source: meeting ? 'action' : type === 'goal' ? 'goal' : 'capture',
     source_url: null,
     people: meeting?.title ?? null,

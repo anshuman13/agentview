@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { edited, isQuestion, latestDigest, latestRunByJob, moved, newCapture, parseWhen, split, staleTasks, stripWhen } from './engine';
+import { edited, isQuestion, latestDigest, latestRunByJob, moved, newCapture, parseWhen, split, splitTitle, staleTasks, stripWhen } from './engine';
 import { rowToChange, type ItemRow } from './sync';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
@@ -8,6 +8,15 @@ const read = (s: string) => {
   const w = parseWhen(s, now);
   return { at: w?.at, title: stripWhen(s, w) };
 };
+
+describe('splitTitle', () => {
+  it('keeps every word of a long first line', () => {
+    const line = Array.from({ length: 40 }, (_, i) => `word${i}`).join(' ');
+    const { title, text } = splitTitle(line);
+    expect(title.length).toBeLessThanOrEqual(120);
+    expect(`${title} ${text}`).toBe(line);
+  });
+});
 
 describe('parseWhen', () => {
   it('reads relative times', () => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import type { ItemRow } from '../data/sync';
+import { splitTitle } from '../data/engine';
 import { queryWords, rowMatcher } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
@@ -15,10 +16,6 @@ function NoteCard({ row }: { row: ItemRow }) {
   const [text, setText] = useState<string | null>(null);
   const [line, setLine] = useState('');
   const card = useFocusBack<HTMLButtonElement>(text !== null);
-  const edits = (t: string) => {
-    const [first, ...rest] = t.split('\n');
-    return { title: first.slice(0, 120), text: rest.join('\n').trim() || null };
-  };
   const remove = () => {
     void store.update(row, { deleted: 1 });
     showSnack('Note deleted', () => void store.update(row, { deleted: 0 }));
@@ -28,12 +25,12 @@ function NoteCard({ row }: { row: ItemRow }) {
     setText(null);
     if (t == null || t === full) return;
     if (!t) return remove();
-    void store.update(row, edits(t));
+    void store.update(row, splitTitle(t));
   };
   // The card leaves the notes without a blur, so the edit in the field goes with the status.
   const toTask = () => {
     const t = text?.trim();
-    void store.update(row, { ...(t && t !== full ? edits(t) : {}), status: 'open' });
+    void store.update(row, { ...(t && t !== full ? splitTitle(t) : {}), status: 'open' });
     showSnack('Moved to Today', () => void store.update(row, { status: 'note' }));
   };
   if (text !== null) {
