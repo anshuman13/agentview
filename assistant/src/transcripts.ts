@@ -12,6 +12,7 @@ import type { Profile } from './db.js';
 import { once } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN } from './time.js';
+import { proposeWikiUpdates } from './wikiUpdates.js';
 
 const WITHIN = 3 * DAY;
 export const TRIES = 8;
@@ -33,6 +34,7 @@ const Notes = z.object({
     }))
     .describe('Follow-ups that are mine, probably mine, or that nobody took; empty when there are none'),
   others: z.array(z.object({ who: z.string(), what: z.string() })).describe('What other people by name said they would do'),
+  decisions: z.array(z.string()).optional().describe('One short line per decision the meeting made, naming what it is about; empty when none'),
 });
 export type MeetingNotes = z.infer<typeof Notes>;
 
@@ -89,7 +91,7 @@ export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[],
     if (!m || !n.summary.trim()) continue;
     changes.push({
       table: 'meetings', id: n.id, profile, updated_at: now,
-      fields: { summary: n.summary.trim(), room: n.room?.trim() || null, others: JSON.stringify(n.others ?? []), transcript: (m.ends_at ?? 0) <= now ? 'done' : 'waiting' },
+      fields: { summary: n.summary.trim(), room: n.room?.trim() || null, others: JSON.stringify(n.others ?? []), transcript: (m.ends_at ?? 0) <= now ? 'done' : 'waiting', ...(n.decisions && { decisions: JSON.stringify(n.decisions.map((d) => d.trim()).filter(Boolean)) }) },
     });
     for (const a of n.actions) {
       if (!a.title.trim()) continue;
@@ -239,7 +241,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     'If the output is saved to a file because it is large, read that file with read_saved_output, all of it.',
     'Work from the transcript only. Ignore the summary, notes, details and next steps Gemini wrote at the top of the doc; do not copy or rely on them.',
     'I am the calendar owner: the attendee marked as self on the event. Find my name in the transcript.',
-    'Call save_meeting_notes once per meeting that has a transcript, in English: a short summary for me, my follow-ups as actions, and what others took on.',
+    'Call save_meeting_notes once per meeting that has a transcript, in English: a short summary for me, my follow-ups as actions, what others took on, and the decisions made.',
     ...formatLines(instructions),
     'Set room to the speaker named after a meeting room, if there is one.',
     'An action is owner "me" when I said I would do it, someone asked me by name and I agreed, I was named as the owner, or the room microphone said it and I was on it.',
@@ -312,6 +314,7 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
         }
       }
       expireSuggested(db());
+      await proposeWikiUpdates(db());
     } catch (err) {
       console.error('transcripts:', err instanceof Error ? err.message : err);
     } finally {
