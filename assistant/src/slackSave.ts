@@ -70,7 +70,8 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   }
   let said = 0;
   for (const p of r.said ?? []) {
-    const id = saidId(askId(p.url));
+    // A promise without a usable permalink is told apart by its sentence.
+    const id = saidId(askId(webUrl(p.url) ?? `${p.url}\n${p.quote.trim()}`));
     if (has.get(PROFILE, id) || changes.some((c) => c.id === id)) continue;
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: p.title.trim(), text: p.quote.trim(), source: 'slack', source_url: webUrl(p.url), people: `${p.to} · ${p.chat}`, at: parseWhen(p.due), status: 'suggested' } });
     said++;
