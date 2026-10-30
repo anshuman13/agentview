@@ -5,6 +5,7 @@ import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/cla
 import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, inWeekHours } from './time.js';
+import { once } from './once.js';
 
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
 export const ACCOUNT_OF = { work: 'alt', personal: 'main' } as const;
@@ -116,28 +117,22 @@ export function lastAttempt(db: Database, profile: Profile) {
   return Math.max(Number(row?.value ?? 0), lastImport(db, profile));
 }
 
-const running = new Map<Profile, Promise<{ changed: number; error?: string }>>();
-
+// A failed import, even one that could not record its attempt, comes back as an error and never rejects.
 function importOne(db: () => Database, profile: Profile, run: typeof importCalendar) {
-  let job = running.get(profile);
-  if (!job) {
-    job = (async () => {
+  return once<{ changed: number; error?: string }>(`calendar:${profile}`, async () => {
+    try {
       const set = db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
       set.run(triedKey(profile), String(Date.now()));
-      try {
-        const n = await run(db(), profile);
-        console.log(`calendar ${profile}: ${n} meetings changed`);
-        set.run(lastKey(profile), String(Date.now()));
-        return { changed: n };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error(`calendar ${profile}:`, message);
-        return { changed: 0, error: `${profile}: ${message}` };
-      }
-    })().finally(() => running.delete(profile));
-    running.set(profile, job);
-  }
-  return job;
+      const n = await run(db(), profile);
+      console.log(`calendar ${profile}: ${n} meetings changed`);
+      set.run(lastKey(profile), String(Date.now()));
+      return { changed: n };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`calendar ${profile}:`, message);
+      return { changed: 0, error: `${profile}: ${message}` };
+    }
+  });
 }
 
 // Imports the profiles and returns how many meetings changed and which profiles failed; a profile already importing is joined.
