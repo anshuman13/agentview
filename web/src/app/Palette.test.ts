@@ -56,7 +56,9 @@ describe('rankCommands', () => {
     expect(ids(rows)[0]).toBe('page:deploy');
     expect(ids(rows)).not.toContain('stop');
   });
-
+  it('offers the Codex views', () => {
+    expect(ids(rankCommands(cmds, 'tasks', []))).toContain('codex:tasks');
+  });
 });
 
 describe('remember', () => {

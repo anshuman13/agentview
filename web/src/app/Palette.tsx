@@ -3,7 +3,9 @@ import { getState, send, setUi, useStore } from './store';
 import { toggleNotify } from './notify';
 import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
 import { Back } from './back';
-import { Hl, listKeys, save, storedStrings } from '../ui/util';
+import { setView, type List } from '../codex/view';
+import { LISTS } from '../codex/nav';
+import { Hl, command, listKeys, save, storedStrings } from '../ui/util';
 
 export type Command = { id: string; label: string; key?: string };
 export type Match = { score: number; hits: number[] };
@@ -26,6 +28,8 @@ export function buildCommands(models: { value: string; displayName: string }[]):
   return [
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
+    ...LISTS.map((l) => ({ id: `codex:${l.id}`, label: `Codex: ${l.label}` })),
+    { id: 'codex:newtask', label: 'Codex: New task' },
     { id: 'terminal', label: 'View: Toggle Terminal', key: '⌘J' },
     { id: 'switchEditor', label: 'View: Switch File and Browser', key: '⌘E' },
     { id: 'toggleSidebar', label: 'View: Toggle Left Sidebar', key: '⌘B' },
@@ -105,6 +109,13 @@ export function remember(recent: string[], id: string, max = MAX_ROWS): string[]
 function perform(id: string) {
   const [kind, ...rest] = id.split(':');
   const arg = rest.join(':');
+  if (kind === 'codex') {
+    const add = arg === 'newtask';
+    setView({ list: add ? 'tasks' : (arg as List), open: null, person: null });
+    command('assistant');
+    if (add) requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event('tasks:add'))));
+    return;
+  }
   if (kind === 'model') send({ type: 'set_model', model: arg });
   else if (kind === 'effort') send({ type: 'set_effort', effort: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
