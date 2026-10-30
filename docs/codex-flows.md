@@ -3,7 +3,7 @@
 Goal: one coherent product. Every object has one home, every list answers one question, and everything a meeting
 produces ends up where I already look (Today). Draft 2 folds in a product review and a simulated Monday.
 
-## What is wrong today
+## What was wrong before draft 2
 
 | Area | Problem |
 | --- | --- |
@@ -69,10 +69,10 @@ Shown as the badge in the Meetings list and as one line at the top of the meetin
 
 | State | Line | Action |
 | --- | --- | --- |
-| Waiting | "Waiting for transcript · try 2 of 4" | ↻ Sync |
+| Waiting | "Waiting for the transcript · try 2 of 8" | Read now |
 | Processed, for me | "3 for you · 1 to review" | none |
 | Processed, none for me | "Nothing for you · 4 others took · 2 unassigned" | Review |
-| No transcript | "No Gemini notes found" | Retry · Add actions by hand |
+| No transcript | "No Gemini notes found for this meeting" | Retry · Add actions by hand |
 
 ## Flow 1: a meeting from calendar to actions
 
@@ -82,10 +82,10 @@ app open / every 30 min   calendar sync ─▶ meeting in Upcoming and the Next 
                           questions from the previous meeting with the same title; [Open]
 task due                  push with the due time and first line of the task; [Done] [Snooze 1h]
 before / during           Next card: [Prep] [Take notes] [Room mic is me]
-ends                      state Waiting; transcript import every 5 min, up to 4 tries
+ends                      state Waiting; transcript import up to 8 tries, 15 min apart
 processed                 push "3 for you from Design review · 1 to confirm" ─▶ meeting page
                           [Confirm all]  or per row ✗ ✓, each row has a date chip
-4 tries fail              state No transcript; Today shows one line "Design review: no transcript [Add by hand]"
+8 tries fail              state No transcript; the meeting page offers Retry and + Add an action
 ```
 
 Taps to confirm 3 actions with dates: push 1, Confirm all 1, 3 date chips 3 = 5 (was about 13).
@@ -227,31 +227,6 @@ Badge priority: no notes / waiting > "N review" (amber) > "x of y" (outline) > "
 ## Later
 
 - Home screen widget or quick tile straight to voice capture
-
-## Build plan (checked against the code)
-
-Fix first, these break the flows above today:
-
-1. Next card reads calendar items, which nothing writes any more, so it never shows a real meeting. Build it from
-   today's meetings.
-2. Old importer tasks (source "meeting", no meeting link) are still hidden from Today. One-time migration on the hub.
-3. The phone never re-pulls rows synced before it knew the meeting link. Add a one-time repull.
-4. The after-meeting push fires on a 30-minute timer, so it can go out before the import and never again. Send it
-   from the import instead.
-5. Tries are spent on errors and run 20 min apart, so a transcript later than about 65 min is never read, silently.
-   Count only real "doc not found" tries, widen the window, and record a synced pipeline state per meeting.
-6. A meeting added Friday afternoon reaches the hub Monday, past the 24 h transcript window. Calendar sync change
-   above fixes it.
-7. A manual Sync re-runs the model and reworded titles come back as new tasks, including dismissed ones. Pass the
-   existing actions to the model and match against them.
-
-Then, by size:
-
-| Size | Work |
-| --- | --- |
-| Small | Today order; Done today row (by status time, not last edit); drop Done and Notes from the drawer; Upcoming "Later today" and 7-day cap; meeting page order; push wording; calendar hours |
-| Medium | Pipeline state column; Unassigned, Others took and Not mine (new extractor fields and a synced column); room mic per meeting; Confirm all and date chips; undo toast |
-| Later | Weekly update preset; widget |
 
 ## Open questions
 
