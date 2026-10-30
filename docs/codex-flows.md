@@ -37,7 +37,7 @@ of four buckets, so "zero for me" is always explained.
 
 | List | Question | Contents |
 | --- | --- | --- |
-| Overview | How does my day look? | The morning brief (folds, hides until tomorrow), counts that open Tasks, Next card, today's meetings, a Plan strip (free gaps 08:00-17:00 against "~30m" estimates in titles), a Wrap up card from 16:00 (move to tomorrow, snooze, drop), what is due today, tomorrow's meetings and tasks, today's job reports |
+| Overview | How does my day look? | The morning brief (folds, hides until tomorrow), counts that open Tasks, Next card, today's meetings, a Plan strip (free gaps 08:00-17:00 against "~30m" estimates in titles; tapping a gap, or dropping a task on it, opens a form to block time for a task due today, and only Create adds a "Focus:" event with no attendees to that profile's calendar and moves the task to the block start), a Wrap up card from 16:00 (move to tomorrow, snooze, drop), what is due today, tomorrow's meetings and tasks, today's job reports |
 | Tasks | What needs me? | Overdue, Is this yours?, Today, then dated tasks by day for 7 days and Later, Done today row |
 | Meetings | What happened? | Past meetings only, newest first, with pipeline state; search covers tasks and meetings. Week has a Review: done, slipped and stuck tasks (moved 3+ times or over 30 days old) with Drop and Reschedule, and Waiting on grouped by person with Copy nudge |
 | Jobs | What runs on its own? | Prompts on a schedule (hourly, daily, weekdays, weekly) on the profile's account, read-only tools plus add_task; each run's reply is kept and pushed |
