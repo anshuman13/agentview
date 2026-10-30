@@ -72,6 +72,10 @@ describe('patchSQL', () => {
     expect(p.params(7)).toEqual([null, 1, 7, 7]);
     expect(p.sql).toContain("'$.deleted', ?");
   });
+
+  it('clears the meeting link', () => {
+    expect(patchSQL({ meeting_id: null })!.sql).toBe("meeting_id = ?, field_times = json_set(field_times, '$.meeting_id', ?)");
+  });
 });
 
 describe('swapSQL', () => {

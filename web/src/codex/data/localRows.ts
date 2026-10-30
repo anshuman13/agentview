@@ -4,7 +4,7 @@ import type { Patch } from './store';
 
 export type SqlValue = string | number | null;
 
-export const PATCHABLE = ['title', 'text', 'status', 'at', 'rolls', 'rolled_from', 'rank', 'source', 'people', 'deleted'] as const;
+export const PATCHABLE = ['title', 'text', 'status', 'at', 'rolls', 'rolled_from', 'rank', 'source', 'people', 'meeting_id', 'deleted'] as const;
 export const DONE_KEEP_MS = 60 * 86400_000;
 
 // SQL that writes row only if local is unchanged since it was read; it changes nothing when another write came first.
