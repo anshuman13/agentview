@@ -9,16 +9,12 @@ import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, run } from './slack.js';
 import { saidId, webUrl } from './slackSave.js';
 import { applyChanges, type Change } from './sync.js';
-import { DAY, MIN, addWorkdays, inWeekHours, localDate, parseWhen, slotStart } from './time.js';
+import { DAY, MIN, addWorkdays, inWeekHours, localDate, parseWhen, slotStart, ymd } from './time.js';
 
 const EVERY = 30 * MIN;
 const GMAIL = 'mcp__claude_ai_Gmail__';
 const READ_TOOLS = ['search_threads', 'get_thread'].map((t) => GMAIL + t);
 const PROFILE = 'work' as const;
-const day = (t: number) => {
-  const d = new Date(t);
-  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-};
 // Local midnight of the day of t, or of a later day, in epoch seconds: Gmail reads after:/before: dates as midnight Pacific.
 const dayStart = (t: number, days = 0) => Math.floor(new Date(t).setHours(24 * days, 0, 0, 0) / 1000);
 
@@ -143,7 +139,7 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
   const open = db.prepare("SELECT id, title, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'gmail' AND id NOT LIKE 'said:%' AND status = 'suggested' AND updated_at > ?").all(PROFILE, now - 7 * DAY) as { id: string; title: string; people: string }[];
   const waiting = unanswered(db);
   const checked = (db.prepare("SELECT value FROM meta WHERE key = 'gmail:waiting'").get() as { value: string } | null)?.value;
-  const daily = checked !== day(now);
+  const daily = checked !== ymd(now, '/');
   const unix = Math.floor(since / 1000);
   let saved: MailScan | null = null;
   const save = tool('save_mail', 'Save what you found. Call once at the end.', {
@@ -183,7 +179,7 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
   const r = saveMail(db, saved, now);
   const left = saveWaiting(db, (saved as MailScan).waiting ?? [], (saved as MailScan).replied ?? [], now);
   db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('gmail:last', ?)").run(String(now));
-  if (daily) db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('gmail:waiting', ?)").run(day(now));
+  if (daily) db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('gmail:waiting', ?)").run(ymd(now, '/'));
   return { ...r, waiting: left.length };
 }
 

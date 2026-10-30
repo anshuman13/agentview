@@ -4,7 +4,7 @@ import { atRisk, minutesText, workGaps, type Span } from '../../shared/plan.js';
 import { blockId, clock, isBlock } from '../../shared/util.js';
 import { pruneMeta, type Profile } from './db.js';
 import { applyChanges } from './sync.js';
-import { DAY, inWeekHours } from './time.js';
+import { DAY, addWorkdays, inWeekHours, ymd } from './time.js';
 
 const PROFILES: Profile[] = ['work', 'personal'];
 const TOP = 5;
@@ -13,21 +13,9 @@ const LONG = 20 * 3600_000;
 type Row = { title: string | null };
 export type Brief = { title: string; text: string; empty: boolean };
 
-const dayKey = (t: number) => {
-  const d = new Date(t);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-export const briefId = (now: number) => `morning:${dayKey(now)}`;
+export const briefId = (now: number) => `morning:${ymd(now)}`;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const top = <T extends Row>(rows: T[], tag: (r: T) => string = () => '') => [...rows.slice(0, TOP).map((r) => `- ${r.title ?? 'Untitled'}${tag(r)}`), ...(rows.length > TOP ? [`- +${rows.length - TOP} more`] : [])];
-
-// The previous weekday: Friday on a Monday.
-function lastWorkday(start: number) {
-  const d = new Date(start);
-  do d.setDate(d.getDate() - 1);
-  while (d.getDay() === 0 || d.getDay() === 6);
-  return d.getTime();
-}
 
 // Open tasks due this week that will not fit in the free work time before they are due; tasks with a focus block ahead are covered.
 function riskCount(db: Database, profile: Profile, now: number) {
@@ -50,7 +38,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const slack = db.prepare("SELECT id, title FROM items WHERE deleted = 0 AND profile = ? AND source = 'slack' AND status = 'suggested' ORDER BY updated_at DESC").all(profile) as (Row & { id: string })[];
   const said = slack.filter((r) => r.id.startsWith('said:'));
   const asks = slack.filter((r) => !said.includes(r));
-  const left = db.prepare("SELECT i.title, i.status, m.title AS meeting FROM items i JOIN meetings m ON m.profile = i.profile AND m.id = i.meeting_id WHERE i.deleted = 0 AND i.profile = ? AND i.status IN ('open', 'suggested') AND m.deleted = 0 AND m.starts_at >= ? AND m.starts_at < ? ORDER BY m.starts_at").all(profile, lastWorkday(start), start) as (Row & { status: string; meeting: string | null })[];
+  const left = db.prepare("SELECT i.title, i.status, m.title AS meeting FROM items i JOIN meetings m ON m.profile = i.profile AND m.id = i.meeting_id WHERE i.deleted = 0 AND i.profile = ? AND i.status IN ('open', 'suggested') AND m.deleted = 0 AND m.starts_at >= ? AND m.starts_at < ? ORDER BY m.starts_at").all(profile, addWorkdays(start, -1), start) as (Row & { status: string; meeting: string | null })[];
 
   const lines: string[] = [];
   if (meetings.length) {
@@ -79,7 +67,7 @@ export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy)
   pruneMeta(db, 'brief:', now - 2 * DAY);
   const sent: Profile[] = [];
   for (const profile of PROFILES) {
-    const key = `brief:${profile}:${dayKey(now)}`;
+    const key = `brief:${profile}:${ymd(now)}`;
     if (db.prepare('SELECT 1 FROM meta WHERE key = ?').get(key)) continue;
     const id = briefId(now);
     const b = buildBrief(db, profile, now);
