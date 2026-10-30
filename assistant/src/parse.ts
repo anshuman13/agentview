@@ -14,13 +14,14 @@ const Found = z.object({
 type Found = z.infer<typeof Found>;
 export type Parsed = { title: string; details: string | null; at: number | null };
 
-// The model's due string as a time; a due time already past counts as none.
+// The model's due string as a time; a due time already past counts as none, but a bare day counts until it is over.
 export function toParsed(text: string, f: Found | undefined, now = Date.now()): Parsed {
   const due = dueAt(f?.due ?? null);
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(f?.due?.trim() ?? '');
   return {
     title: f?.title.trim().slice(0, 120) || text.slice(0, 120),
     details: f?.details?.trim() || null,
-    at: Number.isFinite(due) && due > now ? due : null,
+    at: Number.isFinite(due) && (due > now || (day && due >= new Date(now).setHours(0, 0, 0, 0))) ? due : null,
   };
 }
 

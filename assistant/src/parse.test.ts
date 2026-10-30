@@ -13,4 +13,9 @@ describe('parse', () => {
     expect(toParsed('call bank', { title: '', details: ' ', due: '2026-10-25T10:00' }, now)).toEqual({ title: 'call bank', details: null, at: null });
     expect(toParsed('call bank', undefined, now)).toEqual({ title: 'call bank', details: null, at: null });
   });
+
+  test('keeps today as the due day after 09:00', () => {
+    expect(toParsed('call bank today', { title: 'Call the bank', details: null, due: '2026-10-26' }, now).at).toBe(new Date(2026, 9, 26, 9).getTime());
+    expect(toParsed('call bank', { title: 'Call the bank', details: null, due: '2026-10-25' }, now).at).toBe(null);
+  });
 });
