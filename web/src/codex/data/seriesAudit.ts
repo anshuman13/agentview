@@ -7,7 +7,7 @@ const HOUR = 3600_000;
 const WEEK = 7 * 24 * HOUR;
 const MAX_HOURS = 8;
 
-export type SeriesValue = { key: string; title: string; latest: Meeting; count: number; hours: number; decisions: number; actions: number; recentHours: number; quiet: boolean };
+type SeriesValue = { key: string; title: string; latest: Meeting; count: number; hours: number; decisions: number; actions: number; recentHours: number; quiet: boolean };
 
 // Recurring series (a title seen at least twice) over the last 8 weeks: hours, decisions and my actions (open or done).
 // A series is quiet when its meetings of the last 4 weeks brought no decision and no action of mine; quiet ones come first, most recent hours first.

@@ -1,7 +1,7 @@
 import { decisionKey, keyWords, mayChange, titleWords } from '../../../../shared/claimMatch';
 import { newId, rowKey, type Profile } from './sync';
 
-export type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
+type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
 
 // state is proposed, live, rejected or retired; null means live.
 export type Page = Common & { title: string | null; section: string | null; summary: string | null; sort: number | null; state: string | null };

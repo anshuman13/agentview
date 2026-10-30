@@ -14,7 +14,7 @@ export type Item =
   | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; running: boolean; steps: Item[] }
   | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> };
 
-export type Label = { verb: string; object: string; mono?: boolean; cmd?: string };
+type Label = { verb: string; object: string; mono?: boolean; cmd?: string };
 
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 
@@ -68,7 +68,7 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
   return { verb: 'Used', object: name };
 }
 
-export type Tone = 'read' | 'edit' | 'run' | 'web' | 'mcp' | 'agent' | 'other';
+type Tone = 'read' | 'edit' | 'run' | 'web' | 'mcp' | 'agent' | 'other';
 
 const TONES: Record<string, Tone> = {
   Read: 'read', Grep: 'read', Glob: 'read', LS: 'read', ToolSearch: 'read',

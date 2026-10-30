@@ -17,7 +17,7 @@ export function Transcript() {
   return <TranscriptView key={chat} events={events} cwd={cwd} running={running} />;
 }
 
-export function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: string; running: boolean }) {
+function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: string; running: boolean }) {
   const items = useMemo(() => buildTranscript(events), [events]);
   const box = useRef<HTMLDivElement>(null);
   const stick = useRef(true);

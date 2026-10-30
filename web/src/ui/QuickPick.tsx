@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { touch } from '../app/touch';
 import { listKeys, useReturnFocus } from './util';
 
-export type PickItem = { value: string; label: string; detail?: string };
+type PickItem = { value: string; label: string; detail?: string };
 
 export function QuickPick({ title, items, current, anchor, extra, onPick, onClose }: {
   title: string;

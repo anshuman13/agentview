@@ -30,8 +30,8 @@ export function buildFolders(repos: Repo[], trees: Worktree[], chats: SavedSessi
   return [...m.values()].sort((a, b) => b.last - a.last);
 }
 
-export const WORKSPACE_MIN_AGE = 30_000;
-export type WorkspaceKey = 'repos' | 'chats' | 'trees';
+const WORKSPACE_MIN_AGE = 30_000;
+type WorkspaceKey = 'repos' | 'chats' | 'trees';
 const WORKSPACE_URL: Record<WorkspaceKey, string> = { repos: '/api/repos', chats: '/api/sessions', trees: '/api/worktrees' };
 
 const cached = { repos: [] as Repo[], trees: [] as Worktree[], chats: [] as SavedSession[] };
@@ -112,7 +112,7 @@ export const KINDS: [RepoKind, string, string][] = [
 ];
 export const segmentOf = (f: Folder) => (f.repo?.root === 'workspace_personal' || f.cwd.includes('/workspace_personal/') ? 'personal' : 'work');
 
-export const isActive = (f: Folder, live: string[], now = Date.now()) =>
+const isActive = (f: Folder, live: string[], now = Date.now()) =>
   Boolean(f.repo?.dirty) || !isDefault(f.repo?.branch) || f.trees.length > 0 || now - f.last < WEEK ||
   live.some((c) => inside(c, f.cwd) || f.trees.some((w) => inside(c, w.cwd)));
 

@@ -7,7 +7,7 @@ const ORDER: Theme[] = ['dark', 'light'];
 export const THEME_NAMES: Record<Theme, string> = { dark: 'Dark', light: 'Light' };
 const isTheme = (t: unknown): t is Theme => ORDER.includes(t as Theme);
 
-export function currentTheme(): Theme {
+function currentTheme(): Theme {
   const t = document.documentElement.dataset.theme;
   return isTheme(t) ? t : 'dark';
 }

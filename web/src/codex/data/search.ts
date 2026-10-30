@@ -13,7 +13,7 @@ export const GROUP_CAP = 8;
 export type Hit = { id: string; profile: string; title: string; snippet: string; page?: string | null; when?: string };
 export type Group = { hits: Hit[]; total: number };
 export type Results = { tasks: Group; meetings: Group; wiki: Group; jobs: Group; total: number };
-export type SearchData = { items: ItemRow[]; meetings: Meeting[]; facts: Fact[]; pages: Page[]; jobs: Job[] };
+type SearchData = { items: ItemRow[]; meetings: Meeting[]; facts: Fact[]; pages: Page[]; jobs: Job[] };
 
 // Builds hits only for the rows shown, since a short query can match thousands of rows.
 const group = <T,>(rows: T[], hit: (r: T) => Hit): Group => ({ hits: rows.slice(0, GROUP_CAP).map(hit), total: rows.length });
@@ -43,7 +43,7 @@ export function searchAll(data: SearchData, query: string): Results {
 
 // Related while writing: current wiki claims, meetings and Slack chats sharing key words with the text.
 export type Related = { kind: 'wiki' | 'meeting' | 'slack'; profile: string; id: string; title: string; at: number; page?: string | null; url?: string | null };
-export type RelatedData = { items: ItemRow[]; meetings: Meeting[]; facts: Fact[]; pages: Page[] };
+type RelatedData = { items: ItemRow[]; meetings: Meeting[]; facts: Fact[]; pages: Page[] };
 type Index = Map<string, Related[]>;
 
 const indexes = new WeakMap<object, Index>();

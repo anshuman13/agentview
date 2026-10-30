@@ -30,7 +30,7 @@ export function decisionsMarkdown(rows: Decision[]) {
   return [...groups].map(([m, texts]) => `## ${m.title ?? 'Meeting'}${dateOf(m) ? `, ${dateOf(m)}` : ''}\n\n${texts.map((t) => `- ${t}`).join('\n')}`).join('\n\n') + '\n';
 }
 
-export type PersonParts = {
+type PersonParts = {
   commitments: { what: string; meeting: Meeting }[];
   questions: Question[];
   points: ItemRow[];
@@ -76,7 +76,7 @@ export function draftFor(a: ItemRow, m: Meeting) {
   return out.join('\n');
 }
 
-export type AgendaParts = { points: ItemRow[]; actions: string[]; questions: string[] };
+type AgendaParts = { points: ItemRow[]; actions: string[]; questions: string[] };
 
 export function agendaMarkdown(m: Meeting, parts: AgendaParts) {
   const sections: [string, string[]][] = [

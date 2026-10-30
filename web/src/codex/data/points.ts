@@ -6,8 +6,8 @@ import { peopleOf, sameName } from './meetings';
 export const POINT = 'point';
 export const RAISED = 'raised';
 
-export const isPoint = (r: ItemRow) => !r.deleted && r.status === POINT && !!r.people?.trim();
-export const raisedAt = (r: ItemRow) => parseTimes(r.field_times).source ?? r.updated_at;
+const isPoint = (r: ItemRow) => !r.deleted && r.status === POINT && !!r.people?.trim();
+const raisedAt = (r: ItemRow) => parseTimes(r.field_times).source ?? r.updated_at;
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
 // The first meeting with the point's person that starts after the point was raised.

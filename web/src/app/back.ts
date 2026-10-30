@@ -43,7 +43,7 @@ function commit(close: () => void) {
   stack.push(close);
 }
 
-export function pushBack(close: () => void) {
+function pushBack(close: () => void) {
   init();
   if (booting) waiting.push(close);
   else commit(close);

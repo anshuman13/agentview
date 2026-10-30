@@ -4,25 +4,25 @@ import type { ItemRow } from './sync';
 
 const RULE_RE = /\bevery\s+(day|weekday|week|month\s+on\s+the\s+(\d{1,2})(?:st|nd|rd|th)?|(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?)\b(?:\s+(?:at\s+)?(\d{1,2})(?:[:.](\d{2}))?\s?(am|pm)?\b)?/i;
 
-export type Rule = { kind: 'day' | 'weekday' | 'dow' | 'month'; dow: number; dom: number; h: number; m: number };
+type Rule = { kind: 'day' | 'weekday' | 'dow' | 'month'; dow: number; dom: number; h: number; m: number };
 
 const ord = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 
-export function ruleLine(r: Rule) {
+function ruleLine(r: Rule) {
   const t = `${pad(r.h)}:${pad(r.m)}`;
   if (r.kind === 'dow') return `Repeats: every ${WEEKDAYS[r.dow]} ${t}`;
   if (r.kind === 'month') return `Repeats: every month on the ${ord(r.dom)} ${t}`;
   return `Repeats: every ${r.kind} ${t}`;
 }
 
-export function occursOn(r: Rule, d: Date) {
+function occursOn(r: Rule, d: Date) {
   if (r.kind === 'day') return true;
   if (r.kind === 'weekday') return d.getDay() >= 1 && d.getDay() <= 5;
   return r.kind === 'dow' && d.getDay() === r.dow;
 }
 
 // The first matching time strictly after `after`. A month day past the month's end falls on its last day.
-export function nextAfter(r: Rule, after: number) {
+function nextAfter(r: Rule, after: number) {
   const base = new Date(after);
   for (let k = 0; k < 400; k++) {
     const t = r.kind === 'month'
@@ -57,7 +57,7 @@ function read(m: RegExpExecArray, now: Date): Rule | null {
   return r;
 }
 
-export type Repeat = { title: string; text: string; at: number };
+type Repeat = { title: string; text: string; at: number };
 
 // "Water plants every monday 9" gives the title, the "Repeats:" line and the first due time.
 export function parseRepeat(typed: string, now = new Date()): Repeat | null {

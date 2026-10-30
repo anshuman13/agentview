@@ -4,14 +4,14 @@ import { COMPACT_AT, MAX_GOAL_ROUNDS, type ChatEvent } from '../../../shared/pro
 import { apiUrl, fetchJson } from '../app/api';
 import { clock, span } from '../../../shared/util';
 
-export type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
+type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
 
-export type Ranked<T> = { item: T; hits: number[]; score: number };
+type Ranked<T> = { item: T; hits: number[]; score: number };
 
 export type Use = { server: string; tool?: string };
 
 export const MAX_ROWS = 8;
-export const MAX_STORED = 50;
+const MAX_STORED = 50;
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
 
 export function triggerAt(text: string, caret: number): Trigger {

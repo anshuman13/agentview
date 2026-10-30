@@ -39,7 +39,7 @@ export function followThrough(items: ItemRow[], meetings: Meeting[], dismissed: 
     .sort((a, b) => b.m.starts_at! - a.m.starts_at!);
 }
 
-export type ActionCount = { total: number; done: number; review: number; unassigned: number; dismissed: number };
+type ActionCount = { total: number; done: number; review: number; unassigned: number; dismissed: number };
 const NO_ACTIONS: ActionCount = { total: 0, done: 0, review: 0, unassigned: 0, dismissed: 0 };
 const counted = new WeakMap<ItemRow[], Map<string, ActionCount>>();
 
@@ -152,7 +152,7 @@ export function seriesRepeats(m: Meeting, prev: Meeting) {
   };
 }
 
-export type MeetingBrief = { tasks: { person: string; items: ItemRow[] }[]; claims: Fact[] };
+type MeetingBrief = { tasks: { person: string; items: ItemRow[] }[]; claims: Fact[] };
 
 // Open tasks that mention each attendee and up to three current claims that name an attendee or match the title.
 export function briefFor(meeting: Meeting, items: ItemRow[], facts: Fact[]): MeetingBrief {
@@ -170,7 +170,7 @@ export function briefFor(meeting: Meeting, items: ItemRow[], facts: Fact[]): Mee
 // The hub tries this many times, 15 minutes apart, before it gives up on a transcript (TRIES in transcripts.ts).
 export const TRANSCRIPT_TRIES = 8;
 
-export type MeetingState = 'upcoming' | 'live' | 'waiting' | 'done' | 'missing' | 'manual';
+type MeetingState = 'upcoming' | 'live' | 'waiting' | 'done' | 'missing' | 'manual';
 
 // Where a meeting is between the calendar and its transcript.
 export function meetingState(m: Meeting, now = Date.now()): MeetingState {
@@ -235,7 +235,7 @@ export function openQuestions(meetings: Meeting[], now = Date.now()): Question[]
   return list;
 }
 
-export type TopicEntry = { kind: 'meeting' | 'decision' | 'claim'; text: string; at: number; meeting?: Meeting; fact?: Fact };
+type TopicEntry = { kind: 'meeting' | 'decision' | 'claim'; text: string; at: number; meeting?: Meeting; fact?: Fact };
 
 // Past meetings, decisions and current claims matching the topic, newest first, plus how many are newer than `since`.
 export function topicTimeline(topic: string, meetings: Meeting[], facts: Fact[], since = 0, max = 20, now = Date.now()) {

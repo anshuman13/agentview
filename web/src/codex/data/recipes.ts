@@ -10,7 +10,7 @@ export const DEFAULT_RECIPES: Recipe[] = [
   { id: 'decisions', title: 'Open decisions', text: 'List the open decisions, who owns each, and what is blocking them.' },
 ];
 
-export const savedRecipes = (): Recipe[] => stored<Recipe[]>(KEY, []);
+const savedRecipes = (): Recipe[] => stored<Recipe[]>(KEY, []);
 export const allRecipes = (): Recipe[] => [...savedRecipes(), ...DEFAULT_RECIPES];
 
 export function recipeQuery(input: string): string | null {

@@ -22,7 +22,7 @@ const FILTERS: Filter[] = ['all', 'work', 'personal'];
 
 const SCAN_NAME: Record<string, string> = { slack: 'Slack', gmail: 'Gmail' };
 
-export function pausedText(paused: Paused[], now = Date.now()) {
+function pausedText(paused: Paused[], now = Date.now()) {
   const on = paused.filter((p) => p.until > now);
   if (!on.length) return '';
   const names = [...new Set(on.map((p) => SCAN_NAME[p.scan] ?? p.scan))];

@@ -11,7 +11,7 @@ export function toRow<R extends SyncRow = ItemRow>(m: Merged<R>): R {
 
 export type Dirty = { table: string; row: SyncRow };
 
-export type SyncIO = {
+type SyncIO = {
   active(): boolean;
   since(): Promise<number>;
   saveSince(since: number): Promise<void>;
@@ -184,7 +184,7 @@ export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
   };
 }
 
-export const STALE_DAYS = 14;
+const STALE_DAYS = 14;
 
 export function staleTasks(items: ItemRow[], now: number) {
   const cutoff = now - STALE_DAYS * 86400000;

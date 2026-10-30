@@ -24,7 +24,7 @@ function load(force = false) {
 if (typeof window !== 'undefined') window.addEventListener('agentview:mcp-groups', () => load(true));
 
 // The chat's MCP servers minus the ones hidden on the MCP page.
-export function useShownMcp() {
+function useShownMcp() {
   const mcp = useStore((s) => s.session.mcp);
   const base = useApiBase();
   const shown = useSyncExternalStore(subscribe, () => groups);

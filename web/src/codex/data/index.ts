@@ -29,7 +29,7 @@ export function useAssistantStore() {
   return assistantStore();
 }
 
-export function useAssistantSelect<T>(select: (snap: Snapshot) => T, eq: (a: T, b: T) => boolean = Object.is): T {
+function useAssistantSelect<T>(select: (snap: Snapshot) => T, eq: (a: T, b: T) => boolean = Object.is): T {
   const s = assistantStore();
   const last = useRef<{ snap: Snapshot; value: T } | undefined>(undefined);
   const get = useCallback(() => {

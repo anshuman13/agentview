@@ -9,8 +9,8 @@ import { peopleOf, sameName } from './meetings';
 import { listOf, live as liveRows, type Brief, type Chat, type Meeting } from './wiki';
 
 const DAY = 86400000;
-export const STUCK_ROLLS = 3;
-export const STUCK_DAYS = 30;
+const STUCK_ROLLS = 3;
+const STUCK_DAYS = 30;
 
 export const weekStart = (now: number) => {
   const d = new Date(now);
@@ -26,7 +26,7 @@ const isOpen = (r: ItemRow) => live(r) && r.status === 'open';
 
 // Creation time: the earliest field time, which is set when the row is captured.
 export const createdAt = (r: ItemRow) => Math.min(r.updated_at, ...Object.values(parseTimes(r.field_times)).filter((t) => t > 0));
-export const ageDays = (r: ItemRow, now: number) => Math.max(0, Math.floor((now - createdAt(r)) / DAY));
+const ageDays = (r: ItemRow, now: number) => Math.max(0, Math.floor((now - createdAt(r)) / DAY));
 
 export function weeklyReview(items: ItemRow[], now: number) {
   const start = weekStart(now);
@@ -45,7 +45,7 @@ export function weeklyReview(items: ItemRow[], now: number) {
 
 const nameRe = /^(?:waiting\s+(?:on|for)\s+([^:,\-\n(]+)|@(\S+))/i;
 
-export const waitingOn = (r: ItemRow): string | null => {
+const waitingOn = (r: ItemRow): string | null => {
   const title = r.title?.trim() ?? '';
   const m = nameRe.exec(title);
   if (m) return (m[1] ?? m[2]).trim() || null;
@@ -150,13 +150,13 @@ export function keepInTouch(meetings: Meeting[], chats: Chat[], items: ItemRow[]
 
 export const touchText = (name: string) => `Hi ${name.split(' ')[0]}, it has been a while! Up for a quick catch-up this week?`;
 // The Monday to Friday day before now's day, as [start, end).
-export function prevWorkday(now: number): Span {
+function prevWorkday(now: number): Span {
   const d = new Date(dayStart(now));
   do d.setDate(d.getDate() - 1); while (d.getDay() === 0 || d.getDay() === 6);
   return [d.getTime(), dayEnd(d.getTime())];
 }
 
-export const BLOCKED_DAYS = 2;
+const BLOCKED_DAYS = 2;
 const hm = (t: number) => `${pad(new Date(t).getHours())}:${pad(new Date(t).getMinutes())}`;
 
 // Standup text: what was done and decided on the previous workday, today's meetings and the tasks Plan my day would place,

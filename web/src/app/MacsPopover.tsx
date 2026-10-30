@@ -28,7 +28,7 @@ async function switchMac(m: Mac) {
   return true;
 }
 
-export function chooseMac(url: string) {
+function chooseMac(url: string) {
   setApiBase(url);
   loadMacName();
   switchedMac();

@@ -25,7 +25,7 @@ export const FIELDS = TABLES.items as (keyof ItemFields)[];
 export const TABLE_FIELDS: Record<string, readonly string[]> = Object.fromEntries(['items', 'facts', 'pages', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'].map((t) => [t, TABLES[t]]));
 
 export type Field = (typeof FIELDS)[number];
-export type FieldTimes = Record<string, number>;
+type FieldTimes = Record<string, number>;
 export type Profile = Change['profile'];
 
 export type ItemFields = {

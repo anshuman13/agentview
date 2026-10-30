@@ -2,7 +2,7 @@ import type { ChatEvent } from '../../../shared/protocol';
 import { buildTurns, openFailures } from './turns';
 import { plural } from '../ui/util';
 
-export type Recap = { turns: number; files: number; failed: number; pending: boolean };
+type Recap = { turns: number; files: number; failed: number; pending: boolean };
 
 // What happened in a chat after the last event the user saw; null when nothing is worth a line.
 export function recap(events: ChatEvent[], lastSeen: string | null, pending: boolean): Recap | null {

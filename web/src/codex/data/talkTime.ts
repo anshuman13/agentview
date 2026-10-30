@@ -1,4 +1,4 @@
-export type Speaker = { name: string; words: number; share: number };
+type Speaker = { name: string; words: number; share: number };
 
 const STAMP = /^\[?\(?\d{1,2}:\d{2}(:\d{2})?\)?\]?$/;
 const NAME = /^\p{Lu}[\p{L}'.-]*(?: [\p{L}'.-]+){0,3}$/u;

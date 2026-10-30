@@ -9,11 +9,11 @@ export const STATUS: Record<string, [tone: string, label: string]> = {
   disabled: ['off', 'Disabled'],
   probing: ['wait', 'Checking'],
 };
-export const statusOf = (s: string) => STATUS[s] ?? ['off', s];
+const statusOf = (s: string) => STATUS[s] ?? ['off', s];
 export const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
 export const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.status === 'needs-auth' && !r.live && !r.account ? ['off', 'OAuth via Claude'] : statusOf(r.status));
 
-export const SCOPES: [id: string, title: string, where: string][] = [
+const SCOPES: [id: string, title: string, where: string][] = [
   ['user', 'Your servers', '~/.claude.json'],
   ['project', 'This repo', '.mcp.json'],
   ['local', 'This folder', '~/.claude.json · project entry'],
@@ -66,8 +66,8 @@ export const brief = (input: Record<string, unknown>) =>
   Object.entries(input).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join(', ').replace(/\s+/g, ' ').slice(0, 160);
 
 export type Field = { name: string; kind: 'text' | 'long' | 'number' | 'integer' | 'bool' | 'enum' | 'json'; required: boolean; description?: string; options?: unknown[]; default?: unknown };
-export type Values = Record<string, string | boolean>;
-export const LONG = /\b(sql|body|content|markdown|code|script|prompt|message|logql|promql|json|yaml|multi-?line)\b/i;
+type Values = Record<string, string | boolean>;
+const LONG = /\b(sql|body|content|markdown|code|script|prompt|message|logql|promql|json|yaml|multi-?line)\b/i;
 
 export function fieldsOf(schema?: McpSchema): Field[] {
   const required = new Set(schema?.required ?? []);
@@ -115,10 +115,10 @@ export const runnable = (r: Row) => r.type !== 'claudeai' && r.type !== 'sse' &&
 export type Kind = 'Databases' | 'Tools' | 'Connectors';
 export type Service = { name: string; kind: Kind; variants: { variant: string; row: Row }[] };
 export const KINDS: Kind[] = ['Databases', 'Tools', 'Connectors'];
-export const SQL_TOOL = /execute_sql|run_query|query_sql|list_tables/;
-export const SQL_CMD = /postgres|mysql|sqlite|toolbox/i;
+const SQL_TOOL = /execute_sql|run_query|query_sql|list_tables/;
+const SQL_CMD = /postgres|mysql|sqlite|toolbox/i;
 
-export const splitName = (name: string): [service: string, variant: string] => {
+const splitName = (name: string): [service: string, variant: string] => {
   const i = name.search(/[_-]/);
   return i > 0 ? [name.slice(0, i), name.slice(i + 1)] : [name, ''];
 };

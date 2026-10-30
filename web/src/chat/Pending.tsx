@@ -78,7 +78,7 @@ export function PermissionCard({ p, mode, first }: CardProps) {
   );
 }
 
-export function PlanCard({ p, mode, first }: CardProps) {
+function PlanCard({ p, mode, first }: CardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const plan = str(p.input.plan);
   return (
@@ -190,7 +190,7 @@ function Diff({ a, b }: { a: string; b: string }) {
   );
 }
 
-export type DiffLine = [' ' | '-' | '+', string];
+type DiffLine = [' ' | '-' | '+', string];
 
 export function lineDiff(a: string, b: string): DiffLine[] {
   const x = a ? a.split('\n') : [];
@@ -209,7 +209,7 @@ export function lineDiff(a: string, b: string): DiffLine[] {
   return out;
 }
 
-export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
+function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});

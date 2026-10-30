@@ -4,11 +4,11 @@ import { chatCost } from '../../../shared/cost';
 export { chatCost };
 import { buildTranscript, denied, firstLine, type Item, type ToolResult, type ToolUse } from './steps';
 
-export type FileFact = { path: string; add: number; del: number };
-export type CommandFact = { id: string; label: string; done?: boolean; error?: string; denied?: boolean };
-export type CommitFact = { hash: string; subject: string };
-export type AgentFact = { id: string; label: string; type: string; state: 'running' | 'done' | 'failed' | 'stopped' | 'denied' };
-export type NoteFact = { id: string; text: string; kind: 'done' | 'important' | 'fable' };
+type FileFact = { path: string; add: number; del: number };
+type CommandFact = { id: string; label: string; done?: boolean; error?: string; denied?: boolean };
+type CommitFact = { hash: string; subject: string };
+type AgentFact = { id: string; label: string; type: string; state: 'running' | 'done' | 'failed' | 'stopped' | 'denied' };
+type NoteFact = { id: string; text: string; kind: 'done' | 'important' | 'fable' };
 export type Blocked = Extract<ChatEvent, { kind: 'blocked' }>;
 
 // A failed command stops counting once a later command in the same turn succeeds.
@@ -41,13 +41,13 @@ const COMMIT = /^\[([^\]\n]+) ([0-9a-f]{7,40})\] (.+)$/gm;
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
-export function handBack(text: string) {
+function handBack(text: string) {
   if (!text.startsWith('[Subagent hand-back]')) return text.trim();
   const lines = text.split('\n').slice(1);
   return lines.filter((l) => l.startsWith('  ') || l === '').map((l) => l.slice(2)).join('\n').trim();
 }
 
-export function errorLine(text: string) {
+function errorLine(text: string) {
   return text.split('\n').map((l) => l.trim()).find((l) => l && !/^Exit code \d+$/.test(l)) ?? 'Failed';
 }
 

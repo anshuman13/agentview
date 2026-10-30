@@ -10,7 +10,7 @@ const MAX_HOURS = 8;
 const DAY = 24 * HOUR;
 const SERIES_LIMIT = 8;
 
-export type LoadWeek = { start: number; hours: number; recorded: number; unrecorded: number };
+type LoadWeek = { start: number; hours: number; recorded: number; unrecorded: number };
 
 // Calendar attendees without a display name come through as emails, so fold first.last@x into First Last.
 const nameOf = (p: string) => (p.includes('@') ? p.split('@')[0].split(/[._]/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(' ') : p);
