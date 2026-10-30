@@ -23,11 +23,15 @@ import { talkTime } from '../data/talkTime';
 
 function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
   const snap = useAssistantData();
+  const undone = useMemo(() => {
+    const open = new Map(prior.map((x) => [x.profile + x.id, [] as ItemRow[]]));
+    for (const r of snap.items) if (!r.deleted && r.status === 'open' && r.meeting_id) open.get(r.profile + r.meeting_id)?.push(r);
+    return prior.flatMap((x) => open.get(x.profile + x.id)!.map((r) => ({ x, r })));
+  }, [prior, snap.items]);
   if (!prior.length) return null;
   const repeats = seriesRepeats(m, prior[0]);
   const date = (x: Meeting) => dayLabel(x.starts_at!);
   const decisions = prior.slice(0, 3).flatMap((x) => listOf(x.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ x, text })));
-  const undone = prior.flatMap((x) => actionsOf(snap.items, x).filter((r) => r.status === 'open').map((r) => ({ x, r })));
   return (
     <section className="mt-sec">
       <h2>Series</h2>

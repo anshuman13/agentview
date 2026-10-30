@@ -25,7 +25,7 @@ function sections(pages: Page[]) {
 }
 
 function Overview({ page, facts, pages }: { page: Page; facts: Fact[]; pages: Page[] }) {
-  const current = live(facts).filter(currentClaim(facts));
+  const current = useMemo(() => live(facts).filter(currentClaim(facts)), [facts]);
   const contested = current.filter((f) => f.contested).length;
   const updated = Math.max(page.updated_at, ...current.map(factTime));
   return (
@@ -130,7 +130,8 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
   const { pages, facts } = useCodex();
   const [query, setQuery] = useState('');
-  const overview = live(pages).find((p) => p.section === 'overview');
+  const overview = useMemo(() => live(pages).find((p) => p.section === 'overview'), [pages]);
+  const groups = useMemo(() => sections(pages), [pages]);
   const stats = useMemo(() => statsByPage(facts), [facts]);
   return (
     <div className="wk">
@@ -154,7 +155,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
                 <Stale />
                 <Drift />
                 {overview && <Overview page={overview} facts={facts} pages={pages} />}
-                {(sections(pages).length ? sections(pages) : [{ name: 'Pages', pages: [] as Page[] }]).map((s, i) => (
+                {(groups.length ? groups : [{ name: 'Pages', pages: [] as Page[] }]).map((s, i) => (
                   <section key={s.name}>
                     <div className="wk-label">{s.name}</div>
                     <div className="wk-cards">

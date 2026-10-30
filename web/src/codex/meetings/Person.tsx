@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { personMarkdown } from '../data/meetingMarkdown';
 import { claimsMentioning, commitmentsOf, meetingsOf, openQuestions, pinsOf, questionKey } from '../data/wiki';
@@ -14,12 +15,12 @@ export function Person({ name }: { name: string }) {
   const snap = useAssistantData();
   const back = () => setView({ person: null });
   useEscapeBack(back);
-  const mine = meetingsOf(meetings, name);
-  const pins = pinsOf(snap.items, mine);
-  const commitments = commitmentsOf(meetings, name);
-  const claims = claimsMentioning(facts, name);
+  const mine = useMemo(() => meetingsOf(meetings, name), [meetings, name]);
+  const pins = useMemo(() => pinsOf(snap.items, mine), [snap.items, mine]);
+  const commitments = useMemo(() => commitmentsOf(meetings, name), [meetings, name]);
+  const claims = useMemo(() => claimsMentioning(facts, name), [facts, name]);
   const questions = openQuestions(mine);
-  const title = new Map(pages.map((p) => [p.id, p.title]));
+  const title = useMemo(() => new Map(pages.map((p) => [p.id, p.title])), [pages]);
   const now = Date.now();
   const copy = () => {
     const resolved = resolvedQuestions();
