@@ -10,6 +10,11 @@ tab that was in the background catches up without a reload. A link that stays si
 Files and text shared to the phone app are attached in the chat composer, once; reopening the app from recents does
 not attach them again. The desktop window app opens mailto and vscode links in the Mac apps that handle them.
 
+The phone app's WebView shows only AgentView: the bundled page, localhost and NetBird addresses. Any other web link,
+and mailto, tel, sms, geo, intent and market links, opens once in the phone's browser or the app that handles it,
+never in both. An app update link installs the update in place. A frame from another site inside a page is stopped,
+and the Codex unlock only answers the bundled page itself.
+
 AgentView only accepts connections from this Mac and the peers `netbird status` lists, and refuses requests and
 websockets from other websites, including other servers on localhost.
 
