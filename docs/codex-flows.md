@@ -76,7 +76,9 @@ Shown as the badge in the Meetings list and as one line at the top of the meetin
 
 ```
 app open / every 30 min   calendar sync ─▶ meeting in Upcoming and the Next card
-10 min before             push "Design review in 10 min · 1 open from last time" ─▶ meeting page
+10 min before             push "Design review in 10 min": attendees, open from last time, last decisions and open
+                          questions from the previous meeting with the same title; [Open]
+task due                  push with the due time and first line of the task; [Done] [Snooze 1h]
 before / during           Next card: [Prep] [Take notes] [Room mic is me]
 ends                      state Waiting; transcript import every 5 min, up to 4 tries
 processed                 push "3 for you from Design review · 1 to confirm" ─▶ meeting page

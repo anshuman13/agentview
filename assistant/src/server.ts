@@ -6,7 +6,7 @@ import { openDb, currentVersion, isProfile, type Profile } from './db.js';
 import { ACCOUNT_OF, lastAttempt, startCalendar, syncCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { once } from './once.js';
-import { startReminders } from './remind.js';
+import { finishTask, snoozeTask, startReminders } from './remind.js';
 import { parseTask } from './parse.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
 import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
@@ -174,6 +174,14 @@ export function createServer(): http.Server {
       if (pathname === '/slack/accept' && req.method === 'POST') {
         const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '');
         send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Slack task' });
+        return;
+      }
+
+      if ((pathname === '/task/done' || pathname === '/task/snooze') && req.method === 'POST') {
+        const act = pathname === '/task/done' ? finishTask : snoozeTask;
+        const profile = url.searchParams.get('profile') ?? '';
+        const ok = isProfile(profile) && act(getDb(), profile, url.searchParams.get('id') ?? '');
+        send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such task' });
         return;
       }
 
