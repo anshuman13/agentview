@@ -421,7 +421,7 @@ export class AgentSession implements AgentHost {
     if (this.known(id)) return;
     if (this.loopCommand(text, id)) return;
     if (this.state.session.running) return this.queue(text, id);
-    await this.planFirst();
+    if (!(await this.planFirst())) return this.queue(text, id);
     // Another prompt may have started a turn while plan mode was being set.
     if (this.state.session.running) return this.queue(text, id);
     const loop = this.state.session.loop;
@@ -518,7 +518,10 @@ export class AgentSession implements AgentHost {
       this.turns = Math.max(0, this.turns - 1);
       ev.stopping = false;
       this.emit({ type: 'event', event: ev });
-    } else await this.planFirst();
+    } else if (!(await this.planFirst())) {
+      this.removeEvents((e) => e === ev);
+      return this.queue(text, id);
+    }
     this.enqueue(text, id);
   }
 
@@ -535,8 +538,16 @@ export class AgentSession implements AgentHost {
     return text;
   }
 
+  // A message that cannot start in plan mode waits in the queue, where Send now retries it.
   private async planFirst() {
-    if (this.state.session.team && this.state.session.permissionMode !== 'plan') await this.setPermissionMode('plan');
+    if (!this.state.session.team || this.state.session.permissionMode === 'plan') return true;
+    try {
+      await this.setPermissionMode('plan');
+      return true;
+    } catch (err) {
+      this.system(`Could not switch to plan mode (${errText(err)}), so the message is queued`);
+      return false;
+    }
   }
 
   startCompacting() {

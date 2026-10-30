@@ -367,6 +367,15 @@ describe('Team mode', () => {
     expect(s.state.session.permissionMode).toBe('plan');
   });
 
+  it('queues the message with a notice when plan mode fails', async () => {
+    const { s, q } = teamSession();
+    await s.setModel('team');
+    q.setPermissionMode.mockRejectedValueOnce(new Error('CLI gone'));
+    await s.prompt('add a feature', 'm1');
+    expect(s.queuedMessages).toEqual([{ id: 'm1', text: 'add a feature' }]);
+    expect(s.state.events.some((e) => e.kind === 'system' && e.text.includes('CLI gone'))).toBe(true);
+  });
+
   it('does not force plan mode outside Team mode or mid-turn', async () => {
     const { s, q } = teamSession();
     await s.prompt('hi');
