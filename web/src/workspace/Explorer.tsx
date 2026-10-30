@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { api, setUi, useStore } from '../app/store';
 import { FolderPicker } from '../sessions/Sessions';
 import { findHere, useWorkspace } from '../sessions/folders';
@@ -33,6 +33,7 @@ function ExplorerView({ cwd }: { cwd: string }) {
   const loading = useRef(new Set<string>());
   const reveal = useRef<string | null>(openFile);
   const tree = useRef<HTMLDivElement>(null);
+  const treeId = useId();
   const dirsRef = useRef(dirs);
   dirsRef.current = dirs;
 
@@ -65,6 +66,7 @@ function ExplorerView({ cwd }: { cwd: string }) {
     }
   };
   walk('', 0);
+  const selAt = rows.findIndex((r) => r.path === sel);
 
   useEffect(() => {
     if (cwd) missing.filter((p) => !loading.current.has(p)).forEach(fetchDir);
@@ -179,13 +181,18 @@ function ExplorerView({ cwd }: { cwd: string }) {
         </span>
       </div>
       {picking && <FolderPicker onClose={() => setPicking(false)} />}
-      <div className="ex-tree" ref={tree} tabIndex={0} onKeyDown={onKey}>
-        {rows.map((r) => {
+      <div className="ex-tree" ref={tree} tabIndex={0} role="tree" aria-label="Files" aria-activedescendant={selAt >= 0 ? `${treeId}-${selAt}` : undefined} onKeyDown={onKey}>
+        {rows.map((r, i) => {
           const open = r.dir && expanded.has(r.path);
           const changed = !r.dir && recent.includes(r.path);
           return (
             <div
               key={r.path}
+              id={`${treeId}-${i}`}
+              role="treeitem"
+              aria-level={r.depth + 1}
+              aria-expanded={r.dir ? open : undefined}
+              aria-selected={r.path === sel}
               data-path={r.path}
               className={`ex-row${r.path === sel ? ' selected' : ''}${r.hidden ? ' ignored' : ''}`}
               style={{ paddingLeft: 8 + r.depth * 8 }}
