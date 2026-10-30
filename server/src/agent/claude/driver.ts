@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
-import { query, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
+import { query, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import type { Account, Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
@@ -49,6 +49,7 @@ export class ClaudeDriver implements AgentDriver {
   private seen = '';
   private seenSubs = 0;
   private log: JsonlTail | null = null;
+  private chain: { entries: any[]; n: number; msgs: SessionMessage[] } | null = null;
   private subFiles = new Map<string, SubFile>();
   private dirty = true;
   private agents: AgentIds = new Map();
@@ -122,6 +123,7 @@ export class ClaudeDriver implements AgentDriver {
       this.transcript?.close();
       this.transcript = null;
       this.log = null;
+      this.chain = null;
       this.subFiles = new Map();
       this.dirty = true;
       return;
@@ -156,7 +158,7 @@ export class ClaudeDriver implements AgentDriver {
     this.dirty ||= t.read !== 'same' || t.changed;
     if (!this.dirty) return;
     const { subs } = t;
-    const msgs = await sessionMessages(sessionId, this.cwd, t.entries).catch(() => null);
+    const msgs = await this.messages(sessionId, t.entries).catch(() => null);
     const last = msgs && lastUuid(msgs);
     if (!msgs || !last || this.state.session.running) return;
     this.dirty = false;
@@ -183,7 +185,7 @@ export class ClaudeDriver implements AgentDriver {
   async loadHistory() {
     if (!this.resume) return null;
     const { entries, subs } = await this.readTranscript(this.resume);
-    const msgs = await sessionMessages(this.resume, this.cwd, entries);
+    const msgs = await this.messages(this.resume, entries);
     this.dirty = false;
     this.seen = lastUuid(msgs) ?? '';
     this.seenSubs = countAll(subs);
@@ -199,7 +201,17 @@ export class ClaudeDriver implements AgentDriver {
     }
     const log = this.log;
     const [read, { subs, changed }] = await Promise.all([log.read(), subagentMessages(this.cwd, sessionId, this.subFiles)]);
-    return { read, entries: log.entries.slice(), subs, changed };
+    return { read, entries: log.entries, subs, changed };
+  }
+
+  // The conversation chain only changes when the transcript does; a subagent write alone reuses the last one.
+  private async messages(sessionId: string, entries: any[]) {
+    const c = this.chain;
+    if (c?.entries === entries && c.n === entries.length) return c.msgs;
+    const n = entries.length;
+    const msgs = await sessionMessages(sessionId, this.cwd, entries.slice());
+    this.chain = { entries, n, msgs };
+    return msgs;
   }
 
   private history(...args: Parameters<typeof historyFrom>): History {

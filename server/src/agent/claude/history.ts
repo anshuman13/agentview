@@ -51,4 +51,6 @@ export async function sessionMessages(sessionId: string, cwd: string, entries: a
 
 export const countAll = (subs: Record<string, SessionMessage[]>) => Object.values(subs).reduce((n, m) => n + m.length, 0);
 
-export const lastUuid = (msgs: SessionMessage[]) => msgs.filter((m) => m.type !== 'system').at(-1)?.uuid;
+export function lastUuid(msgs: SessionMessage[]) {
+  for (let i = msgs.length - 1; i >= 0; i--) if (msgs[i].type !== 'system') return msgs[i].uuid;
+}
