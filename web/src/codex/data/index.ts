@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { isBlock } from '../../../../shared/util';
 import { bundled } from '../../app/api';
 import { LocalStore, tauriInvoke } from './local';
@@ -61,9 +61,17 @@ export function useSyncStatus() {
   return useAssistantSelect(selectSync);
 }
 
+// Meetings without time blocks, filtered once per meetings array for every caller.
+const withoutBlocks = new WeakMap<Snapshot['meetings'], Snapshot['meetings']>();
+const codexMeetings = (all: Snapshot['meetings']) => {
+  let out = withoutBlocks.get(all);
+  if (!out) withoutBlocks.set(all, (out = all.filter((m) => !isBlock(m.id))));
+  return out;
+};
+
 export function useCodex() {
   const store = useAssistantStore();
   const snap = useAssistantData();
-  const meetings = useMemo(() => snap.meetings.filter((m) => !isBlock(m.id)), [snap.meetings]);
+  const meetings = codexMeetings(snap.meetings);
   return { store, pages: snap.pages, facts: snap.facts, meetings, actions: snap.actions };
 }
