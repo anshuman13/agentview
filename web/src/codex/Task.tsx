@@ -16,6 +16,7 @@ import { estimateMin, minutesText } from './data/plan';
 import { sourceOf } from './taskSource';
 import { Check } from './TaskCheck';
 import { TaskEditor } from './TaskEditor';
+import { checkItems, toggleCheck } from './taskChecklist';
 
 export { UNROLL, useActions } from './useActions';
 
@@ -23,12 +24,14 @@ const DAY = 86400_000;
 
 // Checklist lines in the notes, like "- [ ] call" and "- [x] done".
 const checklist = (s: string | null) => {
-  const all = s?.match(/^\s*[-*] \[[ xX]\]/gm) ?? [];
-  return { done: all.filter((l) => /x/i.test(l)).length, total: all.length };
+  const items = checkItems(s);
+  return { items, done: items.filter((c) => c.done).length, total: items.length };
 };
 
 export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: { row: ItemRow; open: boolean; onOpen: () => void; onClose: () => void; onAsk: (r: ItemRow) => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean }) {
   const act = useActions();
+  const { store } = useAssistant();
+  const [showList, setShowList] = useState(false);
   if (open) return <TaskEditor row={row} onClose={onClose} onAsk={onAsk} />;
   const src = sourceOf(row);
   const at = atTime(row.at);
@@ -51,10 +54,19 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
           {isRepeat(row.text) && <span title="Repeats" role="img" aria-label="Repeats"><Icon name="sync" small /></span>}
           {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
           {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`} title={src.label} role="img" aria-label={src.label}><Icon name={src.icon} small /></span>}
-          {list.total > 0 && <span className={list.done === list.total ? 'as-list-done' : undefined}><Icon name="checklist" small /> {list.done}/{list.total}</span>}
+          {list.total > 0 && <span className={list.done === list.total ? 'as-list-done' : undefined}><button className="as-list-btn" aria-expanded={showList} aria-label="Checklist" onClick={(e) => { e.stopPropagation(); setShowList(!showList); }}><Icon name="checklist" small /> {list.done}/{list.total}</button></span>}
           {row.people && <span className="as-people">{row.people}</span>}
           {!list.total && !row.people && preview && !/^https?:\/\/\S+$/.test(preview) && <span className="as-quote">{preview}</span>}
         </div>
+        {showList && list.total > 0 && (
+          <div className="as-list" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+            {list.items.map((c, i) => (
+              <button key={i} role="checkbox" aria-checked={c.done} className={c.done ? 'on' : undefined} onClick={() => { haptic('tap'); void store.update(row, { text: toggleCheck(row.text ?? '', i) }); }}>
+                <Icon name={c.done ? 'pass-filled' : 'circle-large-outline'} small /> <span>{c.label || '(empty)'}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

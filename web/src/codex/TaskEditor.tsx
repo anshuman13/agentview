@@ -20,8 +20,7 @@ import { estimateMin, minutesText, suggestEstimate } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip } from './Related';
-
-const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
+import { checkItems, toggleCheck } from './taskChecklist';
 
 // The open task edits in place: title and notes save when they lose focus or the task closes.
 export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void }) {
@@ -42,11 +41,10 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const suggested = useMemo(() => (row.status === 'open' && estimateMin(title) == null ? suggestEstimate(title, snap.items.filter((r) => !r.deleted && r.profile === row.profile)) : null), [row.status, row.profile, title, snap.items]);
   // The phone keyboard covers the lower half, so the field moves into view once it is up.
   const reveal = (e: React.FocusEvent<HTMLTextAreaElement>) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
-  const checks = [...text.matchAll(CHECK_RE)].map((m) => ({ done: /x/i.test(m[1]), label: m[2].trim() }));
+  const checks = checkItems(text);
   // Ticking a checklist line flips its box in the notes and saves at once.
   const toggle = (n: number) => {
-    let i = 0;
-    const next = text.replace(CHECK_RE, (line, box: string) => (i++ === n ? line.replace(`[${box}]`, /x/i.test(box) ? '[ ]' : '[x]') : line));
+    const next = toggleCheck(text, n);
     setText(next);
     haptic('tap');
     if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; write({ text: next }); }

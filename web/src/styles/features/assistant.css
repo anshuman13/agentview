@@ -304,6 +304,13 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .as-add input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; box-shadow: none; }
 .as-add input:focus { outline: none; box-shadow: none; }
 .as-ctx > .as-list-done { color: var(--ok); }
+.as-list-btn { display: inline-flex; align-items: center; gap: var(--sp-2); margin: -8px; padding: 8px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.as-list { display: flex; flex-direction: column; margin-top: var(--sp-2); }
+.as-list button { display: flex; align-items: center; gap: var(--sp-3); min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; }
+.as-list button span { min-width: 0; overflow-wrap: anywhere; }
+.as-list button .codicon { flex: none; color: var(--fg-faint); }
+.as-list button.on { color: var(--fg-faint); text-decoration: line-through; }
+.as-list button.on .codicon { color: var(--ok); }
 .tasks .as-drop-empty { padding: var(--sp-5) var(--sp-7); }
 .tasks .as-target > .as-section { color: var(--accent-text); }
 .tasks .as-target > .as-list { border-color: var(--accent); }
