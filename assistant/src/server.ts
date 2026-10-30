@@ -4,6 +4,7 @@ import { allowedPeer, peerName } from '../../server/src/http/access.js';
 import { BadRequest, parseObject, readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion, isProfile, type Profile } from './db.js';
 import { ACCOUNT_OF, lastAttempt, startCalendar, syncCalendar } from './calendar.js';
+import { addBlock } from './block.js';
 import { startJobs } from './jobs.js';
 import { once } from './once.js';
 import { finishTask, snoozeTask, startReminders } from './remind.js';
@@ -117,6 +118,27 @@ export function createServer(): http.Server {
           send(res, errors.length ? 502 : 200, errors.length ? { error: errors.join('; '), changed } : { changed });
         } catch (err) {
           send(res, 502, { error: err instanceof Error ? err.message : String(err) });
+        }
+        return;
+      }
+
+      if (pathname === '/calendar/block' && req.method === 'POST') {
+        let data: { profile?: unknown; id?: unknown; start?: unknown; end?: unknown; title?: unknown };
+        try {
+          data = await readJson(req, 10_000);
+        } catch (err) {
+          fail(res, err);
+          return;
+        }
+        const { profile, id, start, end, title } = data;
+        if (!isProfile(profile) || typeof id !== 'string' || typeof start !== 'number' || typeof end !== 'number' || typeof title !== 'string') {
+          send(res, 400, { error: 'Missing profile, id, start, end or title' });
+          return;
+        }
+        try {
+          send(res, 200, await addBlock(getDb, { profile, id, start, end, title }));
+        } catch (err) {
+          send(res, err instanceof BadRequest ? 400 : 502, { error: err instanceof Error ? err.message : String(err) });
         }
         return;
       }
