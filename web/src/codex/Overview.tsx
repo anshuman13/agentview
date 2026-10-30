@@ -197,7 +197,7 @@ const WAIT_HANDLED = 'codex.waitingHandled';
 const waitKey = (c: Chat) => `${c.profile}:${c.id}:${c.last_at ?? ''}`;
 
 // DMs where the other person wrote last and I have not replied, newest first. Task makes a task with the DM link and
-// hides the DM until its next message.
+// hides the DM until its next message; Dismiss only hides it.
 function WaitingOnYou() {
   const store = useAssistantStore();
   const snap = useAssistantData();
@@ -212,6 +212,16 @@ function WaitingOnYou() {
   );
   const shown = rows.filter((c) => !handled.includes(waitKey(c)));
   if (!shown.length) return null;
+  const hide = (c: Chat, i: number) => {
+    const next = [...handled.filter((k) => rows.some((r) => waitKey(r) === k)), waitKey(c)];
+    setHandled(next);
+    save(WAIT_HANDLED, next);
+    requestAnimationFrame(() => {
+      const people = list.current?.querySelectorAll<HTMLElement>('button.ov-follow-text');
+      people?.[Math.min(i, people.length - 1)]?.focus();
+    });
+    focusPast(section.current);
+  };
   const task = (c: Chat, i: number) => {
     const key = waitKey(c);
     if (pending.current.has(key)) return;
@@ -221,15 +231,8 @@ function WaitingOnYou() {
     void store.capture(`Reply to ${name}`, 'task', c.profile)
       .then((r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }))
       .then(() => {
-        const next = [...handled.filter((k) => rows.some((r) => waitKey(r) === k)), waitKey(c)];
-        setHandled(next);
-        save(WAIT_HANDLED, next);
+        hide(c, i);
         showSnack('Added to Tasks');
-        requestAnimationFrame(() => {
-          const people = list.current?.querySelectorAll<HTMLElement>('button.ov-follow-text');
-          people?.[Math.min(i, people.length - 1)]?.focus();
-        });
-        focusPast(section.current);
       }, (err) => {
         pending.current.delete(key);
         showSnack(`Could not add: ${errorText(err)}`);
@@ -247,6 +250,7 @@ function WaitingOnYou() {
             </button>
             {safeHref(c.url) && <a className="btn sm" href={safeHref(c.url)} target="_blank" rel="noreferrer" aria-label={`Open the DM with ${c.name} in Slack`}>Open in Slack</a>}
             <button className="btn sm" aria-label={`Make a task to reply to ${c.name}`} onClick={() => task(c, i)}>Task</button>
+            <button className="btn sm" aria-label={`Dismiss ${c.name}`} onClick={() => hide(c, i)}>Dismiss</button>
           </div>
         ))}
       </div>
