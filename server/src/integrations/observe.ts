@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { parseObject } from '../http/body.js';
+import { parseObject, readBody } from '../http/body.js';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ROOTS } from '../workspace/files.js';
 import { inside } from '../../../shared/util.js';
@@ -371,19 +371,10 @@ async function addToClaude(server: string, cwd: string) {
   return { server, file: CLAUDE, info: await info(await repoName(cwd), cwd) };
 }
 
-async function body(req: http.IncomingMessage) {
-  let raw = '';
-  for await (const chunk of req) {
-    raw += chunk;
-    if (raw.length > 1_000_000) throw new Error('Request body too large');
-  }
-  return parseObject(raw);
-}
-
 export async function observe(req: http.IncomingMessage, url: URL, cwd: string) {
   const p = url.pathname;
   if (req.method === 'POST') {
-    const b = await body(req);
+    const b = parseObject(await readBody(req));
     if (p === '/api/observe/config') {
       if (typeof b.repo !== 'string' || !b.repo.trim()) throw new Error('Missing repo');
       return saveConfig(b.repo.trim(), b, cwd);
