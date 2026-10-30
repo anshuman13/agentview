@@ -23,7 +23,7 @@ import { blockId, isBlock } from '../../../shared/util';
 import { MorningBrief } from './Brief';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
-import { copyText, openMeeting, setView, showSnack, useView } from './view';
+import { copyText, focusPast, openMeeting, setView, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
 import { clock, when } from './time';
 import { touch } from '../app/touch';
@@ -111,6 +111,7 @@ function FollowThrough() {
   const { meetings } = useCodex();
   const { filter } = useView();
   const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(DISMISSED, []));
+  const section = useRef<HTMLElement>(null);
   const minute = Math.floor(Date.now() / 60000);
   const rows = useMemo(
     () => followThrough(snap.items, meetings.filter((m) => filter === 'all' || m.profile === filter), dismissed, minute * 60000),
@@ -122,9 +123,10 @@ function FollowThrough() {
     const next = [...new Set([...dismissed, r.profile + r.id])].filter((k) => live.has(k));
     setDismissed(next);
     save(DISMISSED, next);
+    focusPast(section.current);
   };
   return (
-    <section>
+    <section ref={section}>
       <div className="as-section">Follow-through · {rows.length}</div>
       <div className="ov-follow">
         {rows.slice(0, 5).map(({ r, m }) => (
@@ -151,6 +153,7 @@ function KeepInTouch() {
   const { filter } = useView();
   const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(TOUCH_DISMISSED, []));
   const list = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
   const hour = Math.floor(Date.now() / 3600_000);
   const rows = useMemo(() => {
     const pick = <T extends { profile: string }>(xs: T[]) => xs.filter((x) => filter === 'all' || x.profile === filter);
@@ -168,9 +171,10 @@ function KeepInTouch() {
       const people = list.current?.querySelectorAll<HTMLElement>('button.ov-follow-text');
       people?.[Math.min(i, people.length - 1)]?.focus();
     });
+    focusPast(section.current);
   };
   return (
-    <section>
+    <section ref={section}>
       <div className="as-section">Keep in touch · {shown.length}</div>
       <div className="ov-follow" role="list" aria-label="Keep in touch" ref={list}>
         {shown.slice(0, 5).map((x, i) => (
@@ -225,6 +229,7 @@ function SinceLastVisit() {
     if (t == null) save(LAST_VISIT, Date.now());
     return t;
   });
+  const section = useRef<HTMLElement>(null);
   const minute = Math.floor(Date.now() / 60000);
   const counts = useMemo(() => {
     const pick = <T extends { profile: string }>(rows: T[]) => rows.filter((r) => filter === 'all' || r.profile === filter);
@@ -242,9 +247,10 @@ function SinceLastVisit() {
     const now = Date.now();
     save(LAST_VISIT, now);
     setSince(now);
+    focusPast(section.current);
   };
   return (
-    <section>
+    <section ref={section}>
       <div className="ov-follow">
         <div className="ov-follow-row">
           <span className="ov-follow-text">Since you were last here: {parts.join(', ')}</span>

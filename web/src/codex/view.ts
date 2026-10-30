@@ -39,6 +39,20 @@ export function useSpotBack(scroller: RefObject<HTMLElement | null>, list: List)
   }, []);
 }
 
+// Call before Dismiss removes a whole section: once it is gone, focus the next control below it, or the page heading.
+export function focusPast(section: Element | null) {
+  const scroller = section?.closest('.as-scroll');
+  if (!section || !scroller) return;
+  const below = [...scroller.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => section.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING && !section.contains(el));
+  const heading = scroller.closest('.assistant')?.querySelector<HTMLElement>('h1');
+  requestAnimationFrame(() => {
+    if (section.isConnected) return;
+    const to = below.find((el) => el.isConnected) ?? heading;
+    if (to === heading) heading?.setAttribute('tabindex', '-1');
+    to?.focus();
+  });
+}
+
 // The direction of the last change drives the page transition in CSS.
 export const setView = (patch: Partial<View>) => {
   const next = { ...view, ...patch };
