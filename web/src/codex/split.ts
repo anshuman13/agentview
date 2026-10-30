@@ -4,17 +4,17 @@ import { live, type Meeting } from './data/wiki';
 import { split } from './data/engine';
 import { useView } from './view';
 
-// Re-renders every minute and when the app comes back to the front, so due tasks move into Today.
+// Re-renders every minute and when the app comes back to the front, so due tasks move into Today; returns the time of the last tick.
 export function useMinute() {
-  const [minute, tick] = useState(0);
+  const [now, setNow] = useState(Date.now);
   useEffect(() => {
-    const bump = () => tick((n) => n + 1);
+    const bump = () => setNow(Date.now());
     const t = setInterval(bump, 60000);
     const shown = () => document.visibilityState === 'visible' && bump();
     document.addEventListener('visibilitychange', shown);
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', shown); };
   }, []);
-  return minute;
+  return now;
 }
 
 // useSplit and useTodayCount share one result per items array, filter and minute.

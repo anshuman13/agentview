@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { newId } from '../data/sync';
 import { actionCount, actionCounts, groupMeetings, live, meetingState, openQuestions, peopleOf, searchMeetings, queryWords, rowMatcher, topicTimeline, trackedTopics, type Fact, type Meeting, type Question } from '../data/wiki';
@@ -15,6 +15,7 @@ import { OpenQuestions } from './OpenQuestions';
 import { Week } from './Week';
 import { useSnackTask } from './useSnackTask';
 import { usePullSync } from '../pullSync';
+import { useMinute } from '../split';
 import '../../styles/features/wiki.css';
 
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -198,17 +199,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
   };
   const [syncing, runSync] = useSnackTask();
-  const [now, setNow] = useState(Date.now);
-  useEffect(() => {
-    const tick = () => setNow(Date.now());
-    const shown = () => document.visibilityState === 'visible' && tick();
-    const t = setInterval(tick, 60_000);
-    document.addEventListener('visibilitychange', shown);
-    return () => {
-      clearInterval(t);
-      document.removeEventListener('visibilitychange', shown);
-    };
-  }, []);
+  const now = useMinute();
   const found = useMemo(() => {
     const tracked = active.length ? mine.filter((m) => trackedTopics(m, active).length) : mine;
     return searchMeetings(tracked, query);
