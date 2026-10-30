@@ -28,6 +28,7 @@ Slack / Linear / mail / me ──▶ Task (open) ──▶ Today or Upcoming (by
 Task: suggested → open → done
       suggested ✗ → "Not mine" on the meeting page (one tap brings it back)
       suggested for 7 days → moves to the meeting's Unassigned, leaves Today
+      open, rolled to a new day 3 times → suggested again, stays in review
 ```
 
 One task type. A meeting action is a task with a link to its meeting. Every extracted action lands in exactly one
@@ -40,7 +41,7 @@ of four buckets, so "zero for me" is always explained.
 | Overview | How does my day look? | The morning brief (folds, hides until tomorrow), counts that open Tasks, Next card, today's meetings, a Plan strip (free gaps 08:00-17:00 against "~30m" estimates in titles; tapping a gap, or dropping a task from the Overview lists on it on desktop, opens a form to block time for a task due today, and only Create adds a "Focus:" event with no attendees to that profile's calendar and moves the task to the block start; blocking the task again deletes its earlier event; blocks count as busy time in the strip but stay out of the Next card, the meeting lists and meeting reminders; Plan my day packs overdue and due tasks without a block into the free gaps by due time, then list order, using the estimate or 30 minutes, shows the plan as task and time lines you can remove (removing one packs the rest again), and only Create adds the blocks, one hub request per block; Create packs the plan again first, and when a task was done since or its time has passed it shows the new plan instead and waits for another Create), an At risk card (hidden when empty) listing open tasks due by Friday whose estimates, summed in due order, exceed the free work time before their due time (overdue counts as due 17:00 today, tasks with a focus block ahead are left out), with the shortfall, a Wrap up card from 16:00 (move to tomorrow, snooze, drop), what is due today (with the due time when it has one), tomorrow's meetings and tasks, today's job reports |
 | Tasks | What needs me? | Overdue, Is this yours?, Today, then dated tasks by day for 7 days and Later, Done today row |
 | Meetings | What happened? | Past meetings only, newest first, with pipeline state; search covers tasks and meetings. Week has a Review: done, slipped and stuck tasks (moved 3+ times or over 30 days old) with Drop and Reschedule, and Waiting on grouped by person (tasks plus sent mail with no reply after 3 workdays, each with Open) with Copy nudge |
-| Jobs | What runs on its own? | Prompts on a schedule (hourly, daily, weekdays, weekly) on the profile's account, read-only tools plus add_task; each run's reply is kept and pushed |
+| Jobs | What runs on its own? | Prompts on a schedule (hourly, daily, weekdays, weekly) on the profile's account, read-only tools plus add_task; each run's reply is pushed, and the last 20 runs keep theirs |
 | Wiki | What do I know? | Unchanged |
 
 Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its day, so it never leaves the page.
@@ -59,7 +60,7 @@ Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its d
 | Counts | "x of y" counts accepted actions only; suggested shown separately as amber "N to review" |
 | Push | Only when there is something to act on. Tapping it opens the meeting page. "Nothing for you" is a muted list badge |
 | Calendar | Sync on app open plus every 30 min, 07:00 to 19:00 |
-| Morning brief | Weekdays at 08:00 the hub writes a brief per profile with no model call: today's meetings and free time 08:00-17:00, tasks due and overdue (top 5), an "At risk: N tasks" line when tasks this week will not fit in the free work time before they are due, Slack asks to review, Slack promises of mine under "You said" and meeting actions still open from the last workday. It syncs to the phone and pushes "Today: N meetings, M tasks" once a day, skipping a profile with nothing on and a hub that starts after 11:00 |
+| Morning brief | Weekdays at 08:00 the hub writes a brief per profile with no model call: today's meetings and free time 08:00-17:00, tasks due and overdue (top 5), an "At risk: N tasks" line when tasks this week will not fit in the free work time before they are due, Slack asks to review, Slack promises of mine under "You said" and meeting actions still open from the last workday. It syncs to the phone and pushes "Today: N meetings, M tasks" once a day, skipping a profile with nothing on and a hub that starts after 11:00. The apps show it for 24 hours from the hub's midnight, in any time zone |
 | Raise next time | A point is an item with status point, the person in people and source raise, so it syncs like any task and stays out of Tasks and Notes. It belongs to the first meeting with that person, same profile, starting after it was raised; the prep card lists it, and when that meeting ends the app marks it raised. Ticking it off does the same. Raise on a task or decision offers that meeting's attendees, then recent ones |
 | Cut for now | "All ▾" filter and "●" on Today, "Missed Slack" chip, meeting-bound chat (daily chat with the meeting attached instead) |
 
