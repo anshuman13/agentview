@@ -134,7 +134,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       {checks.length > 0 && (
         <div className="as-edit-checks">
           {checks.map((c, i) => (
-            <button key={i} className={c.done ? 'on' : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => toggle(i)}>
+            <button key={i} role="checkbox" aria-checked={c.done} className={c.done ? 'on' : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => toggle(i)}>
               <Icon name={c.done ? 'pass-filled' : 'circle-large-outline'} small /> <span>{c.label || '(empty)'}</span>
             </button>
           ))}
