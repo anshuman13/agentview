@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { randomUUID } from 'node:crypto';
 import { parseObject } from '../http/body.js';
 import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { ROOTS } from '../workspace/worktrees.js';
@@ -51,7 +52,7 @@ const EXAMPLE: Settings = {
 async function save(s: Settings) {
   await mkdir(DIR, { recursive: true });
   // Written whole and renamed, so a reader never sees half a file.
-  const tmp = `${FILE}.${process.pid}.tmp`;
+  const tmp = `${FILE}.${process.pid}.${randomUUID()}.tmp`;
   await writeFile(tmp, JSON.stringify(s, null, 2) + '\n', { mode: 0o600 });
   await rename(tmp, FILE);
 }
