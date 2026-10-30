@@ -37,9 +37,9 @@ of four buckets, so "zero for me" is always explained.
 
 | List | Question | Contents |
 | --- | --- | --- |
-| Overview | How does my day look? | Counts that open Tasks, Next card, today's meetings, what is due today, tomorrow's meetings and tasks, today's job reports |
+| Overview | How does my day look? | Counts that open Tasks, Next card, today's meetings, a Plan strip (free gaps 08:00-17:00 against "~30m" estimates in titles), a Wrap up card from 16:00 (move to tomorrow, snooze, drop), what is due today, tomorrow's meetings and tasks, today's job reports |
 | Tasks | What needs me? | Overdue, Is this yours?, Today, then dated tasks by day for 7 days and Later, Done today row |
-| Meetings | What happened? | Past meetings only, newest first, with pipeline state; search covers tasks and meetings |
+| Meetings | What happened? | Past meetings only, newest first, with pipeline state; search covers tasks and meetings. Week has a Review: done, slipped and stuck tasks (moved 3+ times or over 30 days old) with Drop and Reschedule, and Waiting on grouped by person with Copy nudge |
 | Jobs | What runs on its own? | Prompts on a schedule (hourly, daily, weekdays, weekly) on the profile's account, read-only tools plus add_task; each run's reply is kept and pushed |
 | Wiki | What do I know? | Unchanged |
 
@@ -49,7 +49,7 @@ Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its d
 
 | Topic | Decision |
 | --- | --- |
-| Capture | The app reads the date itself; with none it asks When? with time chips (or No time) before saving. No model runs on add. Tidy on a task has Haiku, always on the work account, fix the title and details and set the time when the text says one |
+| Capture | "every monday 9" (day, weekday, week, a weekday, month on the Nth) makes a repeating task; checking it off adds the next one. The app reads the date itself; with none it asks When? with time chips (or No time) before saving. No model runs on add. Tidy on a task has Haiku, always on the work account, fix the title and details and set the time when the text says one |
 | Notes | No loose-note type. A composer capture becomes a task (undated if no date) or a question to the daily chat. "My notes" live only on the meeting and feed the extractor |
 | Done | No list. "Done today · N" row on Today with undo; evening wrap-up; "Draft my weekly update" as an Ask preset that reads this week's done tasks and meeting summaries |
 | Room mic | Asked once per meeting, not per action: "Were you on the room mic? [Yes]" converts its actions to mine (sure). Also a toggle on the Next card before the meeting |
@@ -223,7 +223,6 @@ Badge priority: no notes / waiting > "N review" (amber) > "x of y" (outline) > "
 ## Later
 
 - Home screen widget or quick tile straight to voice capture
-- "Waiting on" view per person, if Ask is not enough
 
 ## Build plan (checked against the code)
 
