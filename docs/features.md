@@ -278,3 +278,15 @@ or a page puts focus back on what opened it.
 | ⌘Enter | Commit in Source Control; run the query in Observe |
 | j / k | Move between tasks in Tasks; Enter or Space opens, Esc closes, x done, s snooze, Delete removes |
 | n / | New task for today; search tasks (on Tasks) |
+
+## Keyboard and screen readers
+
+- A screen reader hears when Claude finishes a turn (its last reply, or the error it stopped on) and when it asks a
+  question or for a permission, not every streamed word
+- Answering a question or permission card moves focus to the next card, or to the composer after the last one
+- The composer is labeled and its suggestion list is a listbox; the command palette and the file picker are dialogs
+  with listbox results, and closing them returns focus to where it was
+- Transcript steps, open editors, Source Control rows, terminal tabs and the collapsible sections in the ops panes open
+  with Enter or Space. The file tree is a tree: arrow keys move, Right and Left open and close folders, Enter opens
+- Errors and deploy progress in the Observe, Deploy, GitHub and MCP panes are announced; closing a detail there
+  returns focus to the list
