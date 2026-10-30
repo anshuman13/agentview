@@ -8,8 +8,12 @@ const ALT_DIR = process.env.AGENTVIEW_ALT_CLAUDE || path.join(os.homedir(), '.cl
 const LIMITS = path.join(process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview'), 'limits.json');
 const CHATS = path.join(path.dirname(LIMITS), 'chat-accounts.json');
 
-// Until when each account is out of usage, kept across restarts.
-const limited: Partial<Record<Account, number>> = readJsonSync<typeof limited | null>(LIMITS, null) ?? {};
+type Limits = Partial<Record<Account, number>>;
+
+// Until when each account is out of usage, kept across restarts. The hub marks limits in the same file, so it is read each time.
+const limited: Limits = {};
+const limits = (): Limits => readJsonSync<Limits | null>(LIMITS, null) ?? {};
+const limitedUntil = (a: Account) => Math.max(limits()[a] ?? 0, limited[a] ?? 0);
 
 // The second account counts once it is logged in. The file is large, so it is read again only when it changes.
 let altSeen = { mtime: -1, value: false };
@@ -25,7 +29,7 @@ export function hasAlt() {
 
 export const configDir = (a: Account) => (a === 'alt' ? ALT_DIR : undefined);
 
-const usable = (a: Account, now: number) => (a === 'main' || hasAlt()) && (limited[a] ?? 0) <= now;
+const usable = (a: Account, now: number) => (a === 'main' || hasAlt()) && limitedUntil(a) <= now;
 
 const save = (file: string, data: unknown) => {
   try {
@@ -35,10 +39,10 @@ const save = (file: string, data: unknown) => {
 
 export function markLimited(a: Account, until: number) {
   limited[a] = until;
-  save(LIMITS, limited);
+  save(LIMITS, { ...limits(), [a]: until });
 }
 
-export const isLimited = (a: Account, now = Date.now()) => (readJsonSync<typeof limited | null>(LIMITS, null)?.[a] ?? limited[a] ?? 0) > now;
+export const isLimited = (a: Account, now = Date.now()) => limitedUntil(a) > now;
 
 // Extra usage is never used: a rate limit event that reports it counts as hitting the limit, until the window resets.
 export function overageUntil(m: { type: string; rate_limit_info?: { isUsingOverage?: boolean; overageInUse?: boolean; resetsAt?: number } }, now = Date.now()) {

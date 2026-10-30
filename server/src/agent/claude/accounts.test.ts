@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
 const dir = vi.hoisted(() => {
@@ -43,5 +43,12 @@ describe('accounts', () => {
     expect(overageUntil({ type: 'assistant' })).toBe(null);
     expect(overageUntil({ type: 'rate_limit_event', rate_limit_info: { isUsingOverage: true, resetsAt: 1_900_000_000 } })).toBe(1_900_000_000_000);
     expect(overageUntil({ type: 'rate_limit_event', rate_limit_info: { overageInUse: true } }, 1000)).toBe(1000 + 5 * 3600_000);
+  });
+
+  it('keeps limits another process wrote', () => {
+    writeFileSync(`${dir}/limits.json`, JSON.stringify({ alt: 9000 }));
+    expect(otherAccount('main', 7000)).toBe(null);
+    markLimited('main', 8000);
+    expect(JSON.parse(readFileSync(`${dir}/limits.json`, 'utf8'))).toEqual({ main: 8000, alt: 9000 });
   });
 });
