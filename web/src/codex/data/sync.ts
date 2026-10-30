@@ -55,7 +55,6 @@ export type ItemRow = ItemFields & {
 
 export type SyncRow = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
 export type Merged<R extends SyncRow> = Omit<R, 'field_times'> & { field_times: FieldTimes };
-export type MergedRow = Merged<ItemRow>;
 
 export const rowKey = (r: { profile: string; id: string }) => `${r.profile}:${r.id}`;
 

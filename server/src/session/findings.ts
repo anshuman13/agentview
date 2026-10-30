@@ -65,5 +65,3 @@ export async function dismissFinding(repo: string, target: string, key: string):
 }
 
 const view = (repo: string, target: string, r: Stored[string][string]): ReviewFindings => ({ repo, target, at: r.at, findings: r.findings.filter((f) => !r.dismissed.includes(findingKey(f))) });
-
-export const resetFindingsForTest = () => (cache = {});

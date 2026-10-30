@@ -1,4 +1,4 @@
-import { save, stored } from '../../ui/util';
+import { stored } from '../../ui/util';
 
 export type Recipe = { id: string; title: string; text: string };
 
@@ -12,12 +12,6 @@ export const DEFAULT_RECIPES: Recipe[] = [
 
 export const savedRecipes = (): Recipe[] => stored<Recipe[]>(KEY, []);
 export const allRecipes = (): Recipe[] => [...savedRecipes(), ...DEFAULT_RECIPES];
-
-export function saveRecipe(text: string, title = text.slice(0, 60)) {
-  const t = text.trim();
-  if (!t) return;
-  save(KEY, [{ id: `r${Date.now().toString(36)}`, title, text: t }, ...savedRecipes().filter((r) => r.text !== t)]);
-}
 
 export function recipeQuery(input: string): string | null {
   return input.startsWith('/') ? input.slice(1).trim().toLowerCase() : null;
