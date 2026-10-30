@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Icon } from '../ui/Icon';
-import { dayLabel } from './data/dates';
+import { dayLabel, pad, ymd } from './data/dates';
 
 // Times are picked as a part of the day, not a minute.
 export const MORNING = 9;
@@ -34,8 +34,6 @@ export function when(at: number, now = Date.now(), withTime = false) {
   return withTime ? `${date} ${time}` : date;
 }
 
-const pad = (n: number) => String(n).padStart(2, '0');
-const localDate = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 
 // A menu of morning and evening slots, plus a day picker that lands on that day's morning.
 export function PickTime({ className, value, onPick, label = 'Pick time', title }: { className: string; value?: number | null; onPick: (at: number) => void; label?: React.ReactNode; title?: string }) {
@@ -56,7 +54,7 @@ export function PickTime({ className, value, onPick, label = 'Pick time', title 
     const el = input.current;
     if (!el) return;
     const d = new Date(value ?? NaN);
-    el.value = value === new Date(d.getFullYear(), d.getMonth(), d.getDate(), MORNING).getTime() ? localDate(value) : '';
+    el.value = value === new Date(d.getFullYear(), d.getMonth(), d.getDate(), MORNING).getTime() ? ymd(value) : '';
     try { el.showPicker(); } catch { el.focus(); el.click(); }
   };
   return (
@@ -72,7 +70,7 @@ export function PickTime({ className, value, onPick, label = 'Pick time', title 
   );
 }
 
-const localDateTime = (t: number) => { const d = new Date(t); return `${localDate(t)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const localDateTime = (t: number) => { const d = new Date(t); return `${ymd(t)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 
 // Text that opens the device's date and time picker; clearing the picker clears the time.
 export function PickDue({ className, value, onPick, children }: { className?: string; value: number | null; onPick: (at: number | null) => void; children: React.ReactNode }) {

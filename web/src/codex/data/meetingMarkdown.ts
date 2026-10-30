@@ -1,13 +1,10 @@
+import { ymd } from './dates';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
 import { listOf, othersOf, type Decision, type Meeting } from './wiki';
 import { peopleOf, type Question } from './meetings';
 
 const mine = (actions: ItemRow[]) => actions.filter((a) => a.status === 'open' || a.status === 'done');
-const ymd = (t: number) => {
-  const d = new Date(t);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
 const dateOf = (m: Meeting) => (m.starts_at ? ymd(m.starts_at) : '');
 const first = (name: string) => name.split(/\s+/)[0] ?? name;
 

@@ -1,3 +1,4 @@
+import { WEEKDAYS } from './dates';
 import { FIELDS, TABLE_FIELDS, newId, parseTimes, rowToChange } from './sync';
 import type { Run } from './wiki';
 import type { Change, ItemRow, Merged, Paused, Profile, PulledChange, Reply, SyncRow } from './sync';
@@ -54,7 +55,6 @@ export function atTime(at: ItemRow['at']) {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const at = (base: Date, days: number, hour: number, minute = 0) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + days, hour, minute).getTime();
 
 export function nextNine(now = new Date()) {
@@ -109,7 +109,7 @@ export function parseWhen(text: string, now = new Date()): When | null {
     else if (w === 'tomorrow' || w === 'tmrw') days = 1;
     else if (w === 'next week') days = ((8 - now.getDay()) % 7) || 7;
     else {
-      const i = DAYS.findIndex((n) => n.startsWith(w.slice(0, 3)));
+      const i = WEEKDAYS.findIndex((n) => n.startsWith(w.slice(0, 3)));
       days = ((i - now.getDay() + 7) % 7) || 7;
     }
   }

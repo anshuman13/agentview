@@ -1,17 +1,16 @@
+import { pad, WEEKDAYS } from './dates';
 import { atTime } from './engine';
 import type { ItemRow } from './sync';
 
-const NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const RULE_RE = /\bevery\s+(day|weekday|week|month\s+on\s+the\s+(\d{1,2})(?:st|nd|rd|th)?|(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?)\b(?:\s+(?:at\s+)?(\d{1,2})(?:[:.](\d{2}))?\s?(am|pm)?\b)?/i;
 
 export type Rule = { kind: 'day' | 'weekday' | 'dow' | 'month'; dow: number; dom: number; h: number; m: number };
 
-const pad = (n: number) => String(n).padStart(2, '0');
 const ord = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 
 export function ruleLine(r: Rule) {
   const t = `${pad(r.h)}:${pad(r.m)}`;
-  if (r.kind === 'dow') return `Repeats: every ${NAMES[r.dow]} ${t}`;
+  if (r.kind === 'dow') return `Repeats: every ${WEEKDAYS[r.dow]} ${t}`;
   if (r.kind === 'month') return `Repeats: every month on the ${ord(r.dom)} ${t}`;
   return `Repeats: every ${r.kind} ${t}`;
 }
@@ -53,7 +52,7 @@ function read(m: RegExpExecArray, now: Date): Rule | null {
     if (r.dom < 1 || r.dom > 31) return null;
   } else {
     r.kind = 'dow';
-    r.dow = NAMES.findIndex((n) => n.startsWith(m[3].toLowerCase().slice(0, 3)));
+    r.dow = WEEKDAYS.findIndex((n) => n.startsWith(m[3].toLowerCase().slice(0, 3)));
   }
   return r;
 }
