@@ -34,3 +34,20 @@ export function workGaps(busy: Span[], now: number, startHour = 8, endHour = 17)
   const close = new Date(d.getFullYear(), d.getMonth(), d.getDate(), endHour).getTime();
   return freeGaps(busy, Math.max(now, open), close);
 }
+
+const SLOT = 5 * 60_000;
+
+// A block in the gap from start, minutes long, cut at the gap end; null when start is outside the gap or under 5 minutes are left.
+export function fitBlock([from, to]: Span, start: number, minutes: number): Span | null {
+  if (start < from || start >= to || !(minutes > 0)) return null;
+  const end = Math.min(start + minutes * 60_000, to);
+  return end - start >= SLOT ? [start, end] : null;
+}
+
+// The default block for a task: the gap start rounded up to 5 minutes, its estimate or 30 minutes, capped at the gap.
+export function defaultBlock(gap: Span, title: string | null): Span | null {
+  const start = Math.ceil(gap[0] / SLOT) * SLOT;
+  return fitBlock(gap, start, estimateMin(title) ?? 30) ?? fitBlock(gap, gap[0], estimateMin(title) ?? 30);
+}
+
+export const focusTitle = (title: string | null) => `Focus: ${(title ?? '').replace(EST_RE, '').replace(/\s+/g, ' ').trim()}`;
