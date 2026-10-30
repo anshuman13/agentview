@@ -6,7 +6,7 @@ import type { Job, Run } from '../data/wiki';
 import { clock } from '../time';
 import { dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
-import { useOnUnmount } from '../../ui/util';
+import { firstLine, useOnUnmount } from '../../ui/util';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { usePullSync } from '../pullSync';
 import { useMinute } from '../split';
@@ -42,7 +42,6 @@ function at(t: number, now = Date.now()) {
 }
 
 const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && r.profile === j.profile && r.job_id === j.id).sort((a, b) => (b.started_at ?? 0) - (a.started_at ?? 0));
-const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
 
 function RunStatus({ r }: { r: Run }) {
   const label = r.status === 'running' ? 'Running' : r.status === 'ok' ? 'Succeeded' : 'Failed';

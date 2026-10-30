@@ -22,6 +22,7 @@ export const escapeHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, 
 export const safeHref = (url: string | null | undefined) => (url && /^(https?:|mailto:)/i.test(url) ? url : undefined);
 
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+export const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
 
 export const command = (id: string) => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
 

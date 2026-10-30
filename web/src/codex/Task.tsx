@@ -4,7 +4,7 @@ import { atTime, errorText, hasDay, nextNine, parseWhen, stripWhen } from './dat
 import { isRepeat, parseRepeat } from './data/recur';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { readFlag, saveFlag } from '../ui/util';
+import { firstLine, readFlag, saveFlag } from '../ui/util';
 import { FILTER_LABEL, showSnack, useFocusBack, type Filter } from './view';
 import { useActions } from './useActions';
 import { when } from './time';
@@ -21,7 +21,6 @@ export { UNROLL, useActions } from './useActions';
 
 const DAY = 86400_000;
 
-const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
 // Checklist lines in the notes, like "- [ ] call" and "- [x] done".
 const checklist = (s: string | null) => {
   const all = s?.match(/^\s*[-*] \[[ xX]\]/gm) ?? [];
