@@ -81,7 +81,7 @@ function GoalLine({ goal, items }: { goal: ItemRow; items: ItemRow[] }) {
 }
 
 const GOALS_SHOWN = 3;
-const CARRY_SKIPPED ='codex.goalCarrySkipped';
+const CARRY_SKIPPED = 'codex.goalCarrySkipped';
 
 export function GoalLines({ now }: { now: number }) {
   const store = useAssistantStore();

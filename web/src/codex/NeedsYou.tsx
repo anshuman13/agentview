@@ -25,7 +25,7 @@ type Bullet = { title: string; url: string | null; why: string };
 type Need =
   | { kind: 'overdue'; row: ItemRow; keys: string[] }
   | { kind: 'risk'; row: ItemRow; due: number; short: number; keys: string[] }
-  | { kind: 'ask'; row: ItemRow; keys: string[] }
+  | { kind: 'ask'; row: ItemRow; keys: string[]; marks: string[] }
   | { kind: 'dm'; chat: Chat; keys: string[] }
   | { kind: 'slack'; x: Bullet; profile: Chat['profile']; keys: string[] };
 
@@ -55,7 +55,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     return rankNeeds<Need>([
       s.overdue.map((row) => ({ kind: 'overdue', row, keys: [taskKey(row)] })),
       risk.map(({ task, short }) => ({ kind: 'risk', row: task.r, due: task.due, short, keys: [taskKey(task.r)] })),
-      s.review.map((row) => ({ kind: 'ask', row, keys: [taskKey(row), ...urlKey(row.source_url)] })),
+      s.review.map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
       dms.map((chat) => ({ kind: 'dm', chat, keys: [`chat:${chat.profile}:${chat.id}`, ...urlKey(chat.url)] })),
       bullets.map((x) => ({ kind: 'slack', x, profile: brief!.profile, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
     ]);
