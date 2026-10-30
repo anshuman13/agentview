@@ -19,7 +19,7 @@ export const snoozes = (now = new Date()) => SNOOZES.filter((s) => s.label !== '
 export const snoozeText = (s: { label: string; at: (now: Date) => number }, now = new Date()) => {
   if (!s.label.startsWith('In ')) return s.label;
   const at = s.at(now);
-  return `${s.label} · ${clock(at)}${muted(at) ? ' · no reminder until 08:00' : ''}`;
+  return `${s.label} · ${clock(at)}${muted(at) ? ' · reminder 08:00' : ''}`;
 };
 
 const marked = (text: string, spans: [number, number][]) => {

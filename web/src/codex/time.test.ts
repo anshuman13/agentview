@@ -6,7 +6,7 @@ describe('snooze text', () => {
     const { snoozeText, snoozes } = await import('./AskBar');
     const now = new Date(2026, 9, 26, 16, 30);
     const [hour, three] = snoozes(now);
-    expect(snoozeText(hour, now)).toBe('In 1 hour · 17:30 · no reminder until 08:00');
+    expect(snoozeText(hour, now)).toBe('In 1 hour · 17:30 · reminder 08:00');
     expect(snoozeText(three, new Date(2026, 9, 26, 10, 0))).toBe('In 3 hours · 13:00');
     expect(snoozeText({ label: 'Tomorrow', at: () => 0 }, now)).toBe('Tomorrow');
   });
