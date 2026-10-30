@@ -46,7 +46,7 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
     void store.editRow('meetings', cur, { notes: cur.notes ? `${cur.notes.trimEnd()}\n${line}` : line }).then(() => showSnack('Added to the notes'));
   };
   return (
-    <div className="as-next" onClick={open} role="button" tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && open()}>
+    <div className="as-next" onClick={open} role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(); } }}>
       <div className="as-next-head"><Icon name="calendar" small /> {clock(m.starts_at!)} <span className="muted">· {mins <= 0 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`}</span></div>
       <div className="as-next-title">{m.title}</div>
       {(people.length > 0 || carried > 0) && (

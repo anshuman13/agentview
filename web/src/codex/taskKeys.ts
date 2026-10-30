@@ -2,7 +2,7 @@ import { atTime, nextNine } from './data/engine';
 import type { ItemRow } from './data/sync';
 import type { useActions } from './useActions';
 
-// Keys on a focused task: j/k or arrows move, Enter opens, x done, s snooze to the next morning, Delete removes.
+// Keys on a focused task: j/k or arrows move, Enter or Space opens, x done, s snooze to the next morning, Delete removes.
 export function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen: () => void, act: ReturnType<typeof useActions>) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
@@ -10,14 +10,14 @@ export function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen
   if (step) {
     const rows = [...document.querySelectorAll<HTMLElement>('.tasks [data-row]')];
     rows[rows.indexOf(e.currentTarget) + step]?.focus();
-  } else if (e.key === 'Enter') onOpen();
+  } else if (e.key === 'Enter' || e.key === ' ') onOpen();
   else if (e.key === 'x' && open) act.done(row);
   else if (e.key === 's' && open) act.snooze(row, nextNine(new Date(Math.max(atTime(row.at) ?? 0, Date.now()))));
   else if (e.key === 'Delete' || e.key === 'Backspace') act.remove(row);
   else return;
   e.preventDefault();
   // When done, snooze or delete takes the row away, focus moves to its neighbour.
-  if (!step && e.key !== 'Enter') {
+  if (!step && e.key !== 'Enter' && e.key !== ' ') {
     const rows = [...document.querySelectorAll<HTMLElement>('.tasks [data-row]')];
     const i = rows.indexOf(e.currentTarget);
     const own = e.currentTarget.dataset.row;
