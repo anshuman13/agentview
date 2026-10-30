@@ -11,7 +11,7 @@ import { clock, when } from '../time';
 import { dayLabel } from '../data/dates';
 import { errorText } from '../data/engine';
 import { Icon } from '../../ui/Icon';
-import { fitHeight, safeHref } from '../../ui/util';
+import { fitHeight, plural, safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
 import { copyText, meetingKey, openMeeting, setView, showSnack, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
@@ -93,7 +93,7 @@ function TalkTime({ text, actions, decisions }: { text: string; actions: number;
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   return (
     <section className="mt-sec">
-      <h2>Talk time<span className="mt-of">{actions} {actions === 1 ? 'action' : 'actions'} · {decisions} {decisions === 1 ? 'decision' : 'decisions'}</span></h2>
+      <h2>Talk time<span className="mt-of">{plural(actions, 'action')} · {plural(decisions, 'decision')}</span></h2>
       <div className="mt-talk" role="img" aria-label={parts.map((p) => `${p.name} ${pct(p.share)}`).join(', ')}>
         {parts.map((p, i) => <span key={p.name} className={`mt-talk-${i}`} style={{ width: pct(p.share) }} title={`${p.name} ${pct(p.share)}`} />)}
       </div>
@@ -177,10 +177,13 @@ function Notes({ m }: { m: Meeting }) {
   );
 }
 
+// A calendar meeting that has started has a transcript to read.
+const readable = (m: Meeting) => m.id.startsWith('cal:') && !!m.starts_at && m.starts_at <= Date.now();
+
 function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
   const { store } = useCodex();
   const [busy, run] = useSnackTask();
-  if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
+  if (!readable(m)) return null;
   const choose = (key: SummaryTemplate) => run(async () => {
     await store.fetchTranscript(m, summaryInstructions(key));
     rememberTemplate(m, key);
@@ -198,7 +201,7 @@ function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
 function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
   const { store } = useCodex();
   const [busy, run] = useSnackTask();
-  if (!m.id.startsWith('cal:') || !m.starts_at || m.starts_at > Date.now()) return null;
+  if (!readable(m)) return null;
   const read = () => run(async () => {
     showSnack((await store.fetchTranscript(m)) ? 'Read the transcript' : 'No transcript found yet');
   }, 'Transcript sync failed');
