@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { md, renderBlocks, splitBlocks } from './Chat';
+import { md, renderBlocks, splitBlocks } from './md';
 
 const full = (t: string) => md.parse(t, { async: false }) as string;
 
