@@ -10,12 +10,13 @@ import { dayEnd } from './data/dates';
 import { clock } from './time';
 import type { Paused, ScanHealth } from './data/sync';
 
-export const LISTS: { id: List; icon: string; label: string }[] = [
+export const LISTS: { id: List; icon: string; label: string; hidden?: boolean }[] = [
   { id: 'today', icon: 'home', label: 'Overview' },
   { id: 'tasks', icon: 'checklist', label: 'Tasks' },
   { id: 'meetings', icon: 'record', label: 'Meetings' },
   { id: 'jobs', icon: 'history', label: 'Jobs' },
   { id: 'wiki', icon: 'book', label: 'Wiki' },
+  { id: 'summary', icon: 'comment-discussion', label: 'Slack summary', hidden: true },
 ];
 const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
@@ -83,7 +84,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const dot = sync.error || sync.saveError ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
   return (
     <nav className="as-nav">
-      {LISTS.map((l) => (
+      {LISTS.filter((l) => !l.hidden).map((l) => (
         <button key={l.id} className={list === l.id ? 'active' : ''} aria-current={list === l.id ? 'page' : undefined} onClick={() => { setView({ list: l.id, open: null, anchor: null, person: null }); onPick?.(); }}>
           <Icon name={l.icon} /><span>{l.label}</span>{count[l.id] > 0 && <span className="as-count">{count[l.id]}</span>}
         </button>
