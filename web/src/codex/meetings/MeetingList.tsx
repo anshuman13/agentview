@@ -94,7 +94,7 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, said, repe
     <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => openMeeting(m)}>
       <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
       <span className="mt-body">
-        <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{repeats && <span className="mt-repeat" title="Recurring meeting"><Icon name="repeat" small /></span>}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
+        <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{repeats && <span className="mt-repeat" title="Recurring meeting"><Icon name="sync" small /></span>}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
         <span className="mt-span">
           {m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
           {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
