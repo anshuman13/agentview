@@ -8,6 +8,10 @@ export const calendarRoutes: Routes = {
   'POST /calendar': async ({ res, url, getDb }) => {
     // The app asks with ?fresh=<ms> when it opens; a profile imported within that time is skipped.
     const fresh = Number(url.searchParams.get('fresh') ?? 0);
+    if (!Number.isFinite(fresh) || fresh < 0) {
+      send(res, 400, { error: 'fresh must be a number of milliseconds' });
+      return;
+    }
     const stale = (Object.keys(ACCOUNT_OF) as Profile[]).filter((p) => !fresh || Date.now() - lastAttempt(getDb(), p) > fresh);
     try {
       const { changed, errors } = stale.length ? await syncCalendar(getDb, stale) : { changed: 0, errors: [] };
