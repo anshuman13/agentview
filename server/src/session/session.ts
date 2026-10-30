@@ -260,12 +260,17 @@ export class AgentSession implements AgentHost {
   // A turn that ended on a usage limit goes on under the other account, if it has usage left.
   private failOver(until: number) {
     const from = this.driver.account;
-    const to = this.driver.limitHit(until);
+    const to = this.limitHit(until);
     if (!to) return false;
-    this.setSession({ account: to, accounts: this.driver.accounts() });
     this.system(`Usage limit on the ${accountName(from)} account until ${clock(until)}, continuing on the ${accountName(to)} account`);
     this.sendPrompt(CONTINUE);
     return true;
+  }
+
+  private limitHit(until: number) {
+    const to = this.driver.limitHit(until);
+    if (to) this.setSession({ account: to, accounts: this.driver.accounts() });
+    return to;
   }
 
   async setPermissionMode(mode: string) {
@@ -607,8 +612,7 @@ export class AgentSession implements AgentHost {
     // A report while idle (a background agent) has no turn to end, so the account changes now.
     if (!this.state.session.running) {
       const from = this.driver.account;
-      const to = this.driver.limitHit(until);
-      if (to) this.setSession({ account: to, accounts: this.driver.accounts() });
+      const to = this.limitHit(until);
       this.system(`Extra usage reported on the ${accountName(from)} account${to ? `, next turn runs on the ${accountName(to)} account` : ''}`);
       return;
     }
