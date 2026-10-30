@@ -1,6 +1,6 @@
 import { FIELDS, TABLE_FIELDS, newId, parseTimes, rowToChange } from './sync';
 import type { Run } from './wiki';
-import type { Change, ItemRow, Merged, Profile, PulledChange, Reply, SyncRow } from './sync';
+import type { Change, ItemRow, Merged, Paused, Profile, PulledChange, Reply, SyncRow } from './sync';
 
 export const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
 
@@ -18,6 +18,7 @@ export type SyncIO = {
   post(since: number, changes: Change[]): Promise<Reply>;
   clean(d: Dirty): Promise<void>;
   apply(change: PulledChange): Promise<void>;
+  paused?(p: Paused[]): void;
 };
 
 export async function runSync(io: SyncIO) {
@@ -28,6 +29,7 @@ export async function runSync(io: SyncIO) {
   while (more && io.active()) {
     const data = await io.post(since, pushed.map((d) => rowToChange(d.row, d.table)));
     if (!Array.isArray(data?.changes) || typeof data.version !== 'number') throw new Error('Unexpected hub response');
+    io.paused?.(Array.isArray(data.paused) ? data.paused : []);
     for (const row of pushed) await io.clean(row);
     changed ||= pushed.length > 0;
     pushed = [];

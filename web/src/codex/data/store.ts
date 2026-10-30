@@ -1,10 +1,10 @@
 import { edited, errorText } from './engine';
-import type { ItemFields, ItemRow, Profile } from './sync';
+import type { ItemFields, ItemRow, Paused, Profile } from './sync';
 import type { Table, Tables } from './wiki';
 
 export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'];
 
-export type SyncStatus = { syncing: boolean; last: number; error: string };
+export type SyncStatus = { syncing: boolean; last: number; error: string; paused: Paused[] };
 export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'meeting_id' | 'rolls' | 'rolled_from' | 'rank' | 'source' | 'people'>> & { deleted?: number };
 export type Parsed = { title: string; details: string | null; at: number | null };
 export type MeetingRef = { id: string; title: string | null } | null;
@@ -52,7 +52,7 @@ export abstract class BaseStore {
   private again = false;
 
   constructor(phase: Snapshot['phase']) {
-    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '' }, pages: [], facts: [], meetings: [], actions: [], jobs: [], runs: [], chats: [], briefs: [] };
+    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '', paused: [] }, pages: [], facts: [], meetings: [], actions: [], jobs: [], runs: [], chats: [], briefs: [] };
   }
 
   subscribe = (fn: () => void) => {

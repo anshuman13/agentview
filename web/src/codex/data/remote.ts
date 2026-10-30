@@ -196,6 +196,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
           map.set(keyOf(change), toRow(mergeIncoming<SyncRow>(map.get(keyOf(change)) ?? null, change)));
           this.syncTouched.add(change.table);
         },
+        paused: (paused) => this.setSync({ paused }),
       });
     } finally {
       if (this.syncTouched.size) this.save([...this.syncTouched]);

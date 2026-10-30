@@ -211,6 +211,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
         [row.profile, row.id, row.updated_at, row.field_times],
       ).then(() => void this.syncTouched.add(name)),
       apply: (change) => this.applyChange(change).then(() => void this.syncTouched.add(change.table)),
+      paused: (paused) => this.setSync({ paused }),
     });
   }
 

@@ -7,6 +7,8 @@ import { ago } from '../ui/util';
 import { FILTER_LABEL, setView, useView, type Filter, type List } from './view';
 import { sharedSplit, useMinute, useSplit } from './split';
 import { dayEnd } from './data/dates';
+import { clock } from './time';
+import type { Paused } from './data/sync';
 
 export const LISTS: { id: List; icon: string; label: string }[] = [
   { id: 'today', icon: 'home', label: 'Overview' },
@@ -18,6 +20,13 @@ export const LISTS: { id: List; icon: string; label: string }[] = [
 const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
 
+export function pausedText(paused: Paused[], now = Date.now()) {
+  const on = paused.filter((p) => p.until > now);
+  if (!on.length) return '';
+  const scans = [...new Set(on.map((p) => p.scan))].join(' and ');
+  return `${scans[0].toUpperCase()}${scans.slice(1)} scans paused: ${on[0].reason} until ${clock(Math.max(...on.map((p) => p.until)))}`;
+}
+
 export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { list, filter } = useView();
   const store = useAssistantStore();
@@ -27,6 +36,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const count: Record<List, number> = { today: 0, tasks: taskCount(s, s.endOfDay), summary: 0, meetings: 0, jobs: 0, wiki: reviewCount(pages, facts) };
   const sync = useSyncStatus();
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
+  const paused = pausedText(sync.paused);
   const dot = sync.error ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
   return (
     <nav className="as-nav">
@@ -40,6 +50,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
         {FILTERS.map((f) => <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'on' : ''} onClick={() => setView({ filter: f })}>{FILTER_LABEL[f]}</button>)}
       </div>
       <button className={`as-nav-sync ${dot}`} title="Sync now" onClick={() => store.syncNow()}><span className="as-dot" /><span>{status}</span></button>
+      {paused && <div className="as-nav-paused">{paused}</div>}
     </nav>
   );
 }

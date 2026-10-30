@@ -16,7 +16,8 @@ export type PulledChange = Change & {
   field_times: Record<string, number>;
 };
 
-export type Reply ={ version: number; changes: PulledChange[]; hasMore?: boolean };
+export type Paused = { scan: string; reason: string; until: number };
+export type Reply ={ version: number; changes: PulledChange[]; hasMore?: boolean; paused?: Paused[] };
 
 export const FIELDS = TABLES.items as (keyof ItemFields)[];
 
