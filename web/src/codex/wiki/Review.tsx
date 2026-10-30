@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { approveAllChanges, approveChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { Fold } from '../Fold';
 import { setView, showSnack } from '../view';
 import { ClaudeChip, SourceChip } from './Chips';
 import { PageTile } from './PageTile';
@@ -95,8 +96,6 @@ export function useReview() {
 // One card per page with its proposed claims, so a new page is reviewed as a page; memory claims are reviewed one by one.
 function PageReview({ page, list }: { page: Page; list: Fact[] }) {
   const review = useReview();
-  const headings = [...new Set(list.map((f) => f.heading || 'Notes'))];
-  const times = list.map((f) => f.at ?? 0).filter(Boolean);
   return (
     <div className="mt-action proposed wk-review">
       <div className="mt-action-kind"><Icon name="book" small />{page.state === 'proposed' ? `New page in ${page.section}` : 'Additions'}{page.profile === 'personal' && <span className="wk-src">Personal</span>}</div>
@@ -105,8 +104,6 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
       {page.summary && <div className="mt-action-body">{page.summary}</div>}
       <div className="wk-meta">
         <span>{list.length} {list.length === 1 ? 'claim' : 'claims'}</span>
-        <span>{headings.length} {headings.length === 1 ? 'heading' : 'headings'}</span>
-        {times.length > 0 && <span>{shortDate(Math.min(...times))} to {shortDate(Math.max(...times))}</span>}
       </div>
       <div className="mt-action-foot">
         <button className="wk-act" onClick={() => setView({ open: page.id, anchor: null })}><Icon name="book" small /> Read and edit</button>
@@ -118,67 +115,93 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
   );
 }
 
+const REVIEW_CAP = 3;
+const LOOK_CAP = 3;
+
 export function ToReview({ facts }: { facts: Fact[] }) {
   const { pages } = useCodex();
   const { byPage, loose } = useMemo(() => reviewGroups(pages, facts), [pages, facts]);
+  const [all, setAll] = useState(false);
   if (!byPage.length && !loose.length) return null;
+  const cards = [
+    ...byPage.map(({ page, list }) => <PageReview key={page.profile + page.id} page={page} list={list} />),
+    ...loose.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />),
+  ];
   return (
     <section>
       <div className="wk-label">To review · {reviewCount(pages, facts)}</div>
       <div className="wk-reviews">
-        {byPage.map(({ page, list }) => <PageReview key={page.profile + page.id} page={page} list={list} />)}
-        {loose.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />)}
+        {all ? cards : cards.slice(0, REVIEW_CAP)}
+        {!all && cards.length > REVIEW_CAP && <button className="wk-more" onClick={() => setAll(true)}>Show {cards.length - REVIEW_CAP} more</button>}
       </div>
     </section>
   );
 }
 
-export function Stale() {
-  const { pages, facts, meetings } = useCodex();
-  const list = useMemo(() => staleFacts(facts, pages, meetings), [pages, facts, meetings]);
+function Rows<T>({ label, list, row }: { label: string; list: T[]; row: (t: T) => ReactNode }) {
+  const [all, setAll] = useState(false);
   if (!list.length) return null;
-  const title = new Map(pages.map((p) => [`${p.profile}:${p.id}`, p.title]));
   return (
-    <section>
-      <div className="wk-label">Stale · {list.length}</div>
-      <ol className="wk-feed-list">
-        {list.slice(0, 10).map((f) => {
-          const months = Math.floor((Date.now() - factTime(f)) / (30 * 86_400_000));
-          return (
-            <li key={f.profile + f.id}>
-              <button onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}>
-                <span className="wk-feed-top"><span className="wk-feed-page">{title.get(`${f.profile}:${f.page_id}`)}</span></span>
-                <span className="wk-feed-text">{f.text}</span>
-                <span className="wk-meta"><span>{months} {months === 1 ? 'month' : 'months'}</span></span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
+    <div>
+      <div className="wk-label">{label} · {list.length}</div>
+      <ol className="wk-feed-list">{(all ? list : list.slice(0, LOOK_CAP)).map(row)}</ol>
+      {!all && list.length > LOOK_CAP && <button className="wk-more" onClick={() => setAll(true)}>+{list.length - LOOK_CAP} more</button>}
+    </div>
   );
 }
 
-// Claims a later meeting decision may have changed; opening one goes to the claim to edit or replace it.
-export function Drift() {
+function useLook() {
   const { pages, facts, meetings } = useCodex();
-  const list = useMemo(() => driftFacts(facts, pages, meetings), [pages, facts, meetings]);
-  if (!list.length) return null;
-  const title = new Map(pages.map((p) => [`${p.profile}:${p.id}`, p.title]));
-  return (
-    <section>
-      <div className="wk-label">Maybe changed · {list.length}</div>
-      <ol className="wk-feed-list">
-        {list.slice(0, 10).map(({ fact: f, decision: d }) => (
-          <li key={f.profile + f.id}>
-            <button onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}>
-              <span className="wk-feed-top"><span className="wk-feed-page">{title.get(`${f.profile}:${f.page_id}`)}</span></span>
-              <span className="wk-feed-text">{f.text}</span>
-              <span className="wk-meta"><span>{d.meeting.title ?? 'Meeting'}, {shortDate(d.at)}: {d.text}</span></span>
-            </button>
-          </li>
-        ))}
-      </ol>
-    </section>
+  const stale = useMemo(() => staleFacts(facts, pages, meetings), [pages, facts, meetings]);
+  const drift = useMemo(() => driftFacts(facts, pages, meetings), [pages, facts, meetings]);
+  const title = useMemo(() => new Map(pages.map((p) => [`${p.profile}:${p.id}`, p.title])), [pages]);
+  return { stale, drift, title };
+}
+
+function staleRow(title: Map<string, string | null>) {
+  return (f: Fact) => {
+    const months = Math.floor((Date.now() - factTime(f)) / (30 * 86_400_000));
+    return (
+      <li key={f.profile + f.id}>
+        <button onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}>
+          <span className="wk-feed-top"><span className="wk-feed-page">{title.get(`${f.profile}:${f.page_id}`)}</span></span>
+          <span className="wk-feed-text">{f.text}</span>
+          <span className="wk-meta"><span>{months} {months === 1 ? 'month' : 'months'}</span></span>
+        </button>
+      </li>
+    );
+  };
+}
+
+// Claims a later meeting decision may have changed; opening one goes to the claim to edit or replace it.
+function driftRow(title: Map<string, string | null>) {
+  return ({ fact: f, decision: d }: ReturnType<typeof driftFacts>[number]) => (
+    <li key={f.profile + f.id}>
+      <button onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}>
+        <span className="wk-feed-top"><span className="wk-feed-page">{title.get(`${f.profile}:${f.page_id}`)}</span></span>
+        <span className="wk-feed-text">{f.text}</span>
+        <span className="wk-meta"><span>{d.meeting.title ?? 'Meeting'}, {shortDate(d.at)}: {d.text}</span></span>
+      </button>
+    </li>
   );
+}
+
+export function NeedsLook() {
+  const { stale, drift, title } = useLook();
+  return (
+    <Fold id="wiki-look" title="Needs a look" count={stale.length + drift.length}>
+      <Rows label="Stale" list={stale} row={staleRow(title)} />
+      <Rows label="Maybe changed" list={drift} row={driftRow(title)} />
+    </Fold>
+  );
+}
+
+export function Stale() {
+  const { stale, title } = useLook();
+  return <Rows label="Stale" list={stale} row={staleRow(title)} />;
+}
+
+export function Drift() {
+  const { drift, title } = useLook();
+  return <Rows label="Maybe changed" list={drift} row={driftRow(title)} />;
 }

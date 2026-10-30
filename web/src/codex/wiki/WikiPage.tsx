@@ -77,8 +77,7 @@ export function WikiPage({ id }: { id: string }) {
               <h1 className="wk-title">{page.title}</h1>
               {page.summary && <p className="wk-lede">{page.summary}</p>}
               <div className="wk-meta wk-page-meta">
-                <span className="wk-kind">Wiki</span>
-                <span>{plural(st.claims + pending.length, 'claim')}</span>
+                <span>{plural(st.claims, 'claim')}</span>
                 <span>Updated {shortDate(Math.max(page.updated_at, st.updated))}</span>
                 {st.contested > 0 && <span className="wk-warn">{st.contested} contested</span>}
               </div>

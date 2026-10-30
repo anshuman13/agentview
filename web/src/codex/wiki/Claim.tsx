@@ -68,10 +68,10 @@ export const Claim = memo(function Claim({ fact, old, page, flash }: { fact: Fac
           ) : (
             <>
               {!editing && <button className="icon-btn" title="Edit the claim text" aria-label="Edit the claim text" onClick={startEdit}><Icon name="edit" small /></button>}
-              <button className="icon-btn" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
+              <button className="icon-btn wk-hov" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
               {fact.state === 'retired'
                 ? <button className="wk-act" title="Show this claim with the current ones again" onClick={() => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); }}><Icon name="history" small /> Restore</button>
-                : <button className="wk-act" title="Move this claim to Older; Claude stops using it" onClick={() => { void store.editRow('facts', fact, { state: 'retired' }); showSnack('Claim retired', () => void store.editRow('facts', fact, { state: null })); }}><Icon name="archive" small /> Retire</button>}
+                : <button className="wk-act wk-hov" title="Move this claim to Older; Claude stops using it" onClick={() => { void store.editRow('facts', fact, { state: 'retired' }); showSnack('Claim retired', () => void store.editRow('facts', fact, { state: null })); }}><Icon name="archive" small /> Retire</button>}
             </>
           )}
           {!proposed && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}

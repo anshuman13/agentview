@@ -8,7 +8,7 @@ import { AskBar } from './AskBar';
 import { Feed } from './Feed';
 import { Notes } from './Notes';
 import { PageTile } from './PageTile';
-import { Drift, Stale, ToReview } from './Review';
+import { NeedsLook, ToReview } from './Review';
 import { usePullSync } from '../pullSync';
 import { MEMORY, shortDate } from './shared';
 import { plural } from '../../ui/util';
@@ -154,8 +154,6 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
             {query.trim() ? <><Results pages={pages} facts={facts} stats={stats} query={query} /><Notes query={query} /></> : (
               <>
                 <ToReview facts={facts} />
-                <Stale />
-                <Drift />
                 {overview && <Overview page={overview} facts={facts} pages={pages} />}
                 {(groups.length ? groups : [{ name: 'Pages', pages: [] as Page[] }]).map((s, i) => (
                   <section key={s.name}>
@@ -167,6 +165,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
                     </div>
                   </section>
                 ))}
+                <NeedsLook />
                 <Notes query="" />
               </>
             )}
