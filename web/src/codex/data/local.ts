@@ -145,7 +145,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
     if (!given) this.syncTouched.clear();
     const seq = tables.map((t) => [t, (this.seqs[t] = (this.seqs[t] ?? 0) + 1)] as const);
     const read = (t: string) => t === 'items'
-      ? this.query<SyncRow>(`SELECT * FROM items WHERE deleted = 0 AND (IFNULL(status, '') != 'done' OR updated_at > ?)`, [doneCutoff(Date.now())])
+      ? this.query<SyncRow>(`SELECT * FROM items WHERE deleted = 0 AND (IFNULL(status, '') NOT IN ('done', 'raised') OR updated_at > ?)`, [doneCutoff(Date.now())])
       : this.query<SyncRow>(`SELECT * FROM ${t} WHERE deleted = 0`);
     const rows = await Promise.all(tables.map(read)).catch((e) => {
       if (!given) tables.forEach((t) => this.syncTouched.add(t));
