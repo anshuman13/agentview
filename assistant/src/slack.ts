@@ -37,8 +37,8 @@ export function pushHours(c: { push?: { from: number; to: number } }, now = Date
   return inWeekHours(now, from, to);
 }
 
-function sinceOf(db: Database, now: number) {
-  return Math.max(Number(getMeta(db, 'slack:last') ?? 0), now - 3 * DAY);
+export function sinceOf(db: Database, now: number) {
+  return Math.max(Number(getMeta(db, 'slack:last') ?? 0), now - 7 * DAY);
 }
 
 export type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;

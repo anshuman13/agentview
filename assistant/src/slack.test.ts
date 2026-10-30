@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { openDb } from './db.js';
-import { scanDue, scanPrompt } from './slack.js';
+import { openDb, setMeta } from './db.js';
+import { scanDue, scanPrompt, sinceOf } from './slack.js';
+import { DAY } from './time.js';
 import { acceptAsk, askId, saveScan } from './slackSave.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
@@ -102,4 +103,15 @@ test('reads every quarter hour on weekday working hours', () => {
   expect(scanDue(at(27, 10, 1), at(27, 10, 15))).toBe(true);
   expect(scanDue(0, at(27, 20))).toBe(false);
   expect(scanDue(0, at(31, 10))).toBe(false);
+});
+
+describe('sinceOf', () => {
+  test('slack:last 4 days back gives a 4 day window, capped at 7', () => {
+    const db = openDb(':memory:');
+    const now = at(28, 10);
+    setMeta(db, 'slack:last', String(now - 4 * DAY));
+    expect(now - sinceOf(db, now)).toBe(4 * DAY);
+    setMeta(db, 'slack:last', String(now - 20 * DAY));
+    expect(now - sinceOf(db, now)).toBe(7 * DAY);
+  });
 });
