@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { useBack } from '../app/back';
 import type { Profile } from './data/sync';
 
@@ -57,4 +57,16 @@ export function useEscapeBack(back: () => void) {
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   });
+}
+
+// When an inline editor closes and focus fell to the page, it goes back to the button that opened it.
+export function useFocusBack<T extends HTMLElement>(open: boolean) {
+  const ref = useRef<T>(null);
+  const was = useRef(open);
+  useEffect(() => {
+    const at = document.activeElement;
+    if (was.current && !open && (!at || at === document.body)) ref.current?.focus({ preventScroll: true });
+    was.current = open;
+  }, [open]);
+  return ref;
 }

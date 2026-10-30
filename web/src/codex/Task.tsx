@@ -5,7 +5,7 @@ import { isRepeat, parseRepeat } from './data/recur';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { readFlag, saveFlag } from '../ui/util';
-import { FILTER_LABEL, showSnack, type Filter } from './view';
+import { FILTER_LABEL, showSnack, useFocusBack, type Filter } from './view';
 import { useActions } from './useActions';
 import { when } from './time';
 import { Swipe } from './Swipe';
@@ -68,6 +68,7 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
 export function AddTask({ day, today, filter }: { day: number; today: number; filter: Filter }) {
   const { store } = useAssistant();
   const [on, setOn] = useState(false);
+  const addButton = useFocusBack<HTMLButtonElement>(on);
   const [text, setText] = useState('');
   const busy = useRef(false);
   const [picked, setPicked] = useState<Profile | null>(null);
@@ -98,7 +99,7 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
       busy.current = false;
     }
   };
-  if (!on) return <button className="as-add" onClick={() => setOn(true)}><Icon name="add" /> Add task</button>;
+  if (!on) return <button ref={addButton} className="as-add" onClick={() => setOn(true)}><Icon name="add" /> Add task</button>;
   return (
     <div className="as-add on" data-no-swipe>
       {filter === 'all' ? (

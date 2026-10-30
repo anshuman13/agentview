@@ -3,7 +3,7 @@ import { useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { currentClaim, factTime, live, newPage, NO_STATS, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
-import { setView } from '../view';
+import { setView, useFocusBack } from '../view';
 import { AskBar } from './AskBar';
 import { Feed } from './Feed';
 import { Notes } from './Notes';
@@ -66,6 +66,7 @@ function PageCard({ page, stats }: { page: Page; stats: Map<string | null, PageS
 function NewPageCard({ section, sort }: { section: string; sort: number }) {
   const { store } = useCodex();
   const [title, setTitle] = useState<string | null>(null);
+  const card = useFocusBack<HTMLButtonElement>(title !== null);
   const create = () => {
     const t = title?.trim();
     setTitle(null);
@@ -74,7 +75,7 @@ function NewPageCard({ section, sort }: { section: string; sort: number }) {
     void store.editRow('pages', page, {});
     setView({ open: page.id, anchor: null });
   };
-  if (title === null) return <button className="wk-card wk-new" onClick={() => setTitle('')}><Icon name="add" /> New page</button>;
+  if (title === null) return <button ref={card} className="wk-card wk-new" onClick={() => setTitle('')}><Icon name="add" /> New page</button>;
   return (
     <div className="wk-card wk-new editing">
       <input autoFocus enterKeyHint="done" value={title} placeholder="Page title" aria-label="Page title" onChange={(e) => setTitle(e.target.value)} onBlur={create}

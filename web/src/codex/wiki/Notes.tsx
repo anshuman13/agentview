@@ -5,13 +5,14 @@ import { queryWords, rowMatcher } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { ShowMore, useWindow } from '../../ui/useWindow';
-import { showSnack, useView } from '../view';
+import { showSnack, useFocusBack, useView } from '../view';
 
 // A loose note: a capture that is not a task. Tap to edit; the first line is its title.
 function NoteCard({ row }: { row: ItemRow }) {
   const store = useAssistantStore();
   const full = [row.title ?? '', row.text ?? ''].filter(Boolean).join('\n');
   const [text, setText] = useState<string | null>(null);
+  const card = useFocusBack<HTMLButtonElement>(text !== null);
   const save = () => {
     const t = text?.trim();
     setText(null);
@@ -41,7 +42,7 @@ function NoteCard({ row }: { row: ItemRow }) {
     );
   }
   return (
-    <button className="wk-card wk-note" onClick={() => setText(full)}>
+    <button ref={card} className="wk-card wk-note" onClick={() => setText(full)}>
       <span className="wk-card-title">{row.title || '(Untitled)'}</span>
       {row.text && <span className="wk-card-summary">{row.text}</span>}
       <span className="wk-card-foot"><span>{ago(row.updated_at, ' ago')}</span><span className="spacer" /><span>{row.profile === 'personal' ? 'Personal' : 'Work'}</span></span>
@@ -53,12 +54,13 @@ function NewNoteCard() {
   const store = useAssistantStore();
   const { filter } = useView();
   const [text, setText] = useState<string | null>(null);
+  const card = useFocusBack<HTMLButtonElement>(text !== null);
   const create = () => {
     const t = text?.trim();
     setText(null);
     if (t) void store.capture(t, 'note', filter === 'personal' ? 'personal' : 'work');
   };
-  if (text === null) return <button className="wk-card wk-new" onClick={() => setText('')}><Icon name="add" /> New note</button>;
+  if (text === null) return <button ref={card} className="wk-card wk-new" onClick={() => setText('')}><Icon name="add" /> New note</button>;
   return (
     <div className="wk-card wk-new wk-note editing">
       <textarea autoFocus value={text} placeholder="First line is the title" aria-label="New note" onChange={(e) => setText(e.target.value)} onBlur={create} onKeyDown={(e) => e.key === 'Escape' && setText(null)} />
