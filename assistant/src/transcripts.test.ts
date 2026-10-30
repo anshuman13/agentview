@@ -69,10 +69,10 @@ describe('transcripts', () => {
 
   it('moves suggested actions left for a week to unassigned', () => {
     const db = openDb(':memory:');
-    const item = (id: string, at: number) => ({ table: 'items', id, profile: 'work' as const, updated_at: at, fields: { title: id, status: 'suggested' } });
-    applyChanges(db, [item('old', now - 8 * 24 * 60 * MIN), item('new', now - 60 * MIN)]);
+    const item = (id: string, at: number, rolled_from: number | null = null) => ({ table: 'items', id, profile: 'work' as const, updated_at: at, fields: { title: id, status: 'suggested', rolled_from } });
+    applyChanges(db, [item('old', now - 8 * 24 * 60 * MIN), item('new', now - 60 * MIN), item('rolled', now - 8 * 24 * 60 * MIN, now - 10 * 24 * 60 * MIN)]);
     expect(expireSuggested(db, now)).toBe(1);
-    expect(db.prepare('SELECT id, status FROM items ORDER BY id').all()).toEqual([{ id: 'new', status: 'suggested' }, { id: 'old', status: 'unassigned' }]);
+    expect(db.prepare('SELECT id, status FROM items ORDER BY id').all()).toEqual([{ id: 'new', status: 'suggested' }, { id: 'old', status: 'unassigned' }, { id: 'rolled', status: 'suggested' }]);
   });
 
   it('reads saved tool outputs in chunks and nothing else', () => {
