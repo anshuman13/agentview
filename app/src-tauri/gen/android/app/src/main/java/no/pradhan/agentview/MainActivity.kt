@@ -131,8 +131,13 @@ class MainActivity : TauriActivity() {
     runOnUiThread { webView?.evaluateJavascript(js, null) }
   }
 
+  private fun onAppPage(): Boolean {
+    val u = Uri.parse(webView?.url ?: return false)
+    return u.scheme == "http" && u.host == "tauri.localhost" && u.port == -1
+  }
+
   private fun assistantResult(key: String?, error: String?) {
-    if (webView?.url?.startsWith("http://tauri.localhost") != true) return
+    if (!onAppPage()) return
     val detail = JSONObject().put(if (key != null) "key" else "error", key ?: error)
     val js = "window.dispatchEvent(new CustomEvent('assistant-key',{detail:$detail}))"
     runOnUiThread { webView?.evaluateJavascript(js, null) }
@@ -393,7 +398,7 @@ class MainActivity : TauriActivity() {
 
   inner class Shell {
     @JavascriptInterface
-    fun unlock() = runOnUiThread { if (webView?.url?.startsWith("http://tauri.localhost") == true) unlockAssistant() }
+    fun unlock() = runOnUiThread { if (onAppPage()) unlockAssistant() }
 
     @JavascriptInterface
     fun takeShared(): String = synchronized(shared) { JSONArray(shared).toString().also { shared.clear() } }
