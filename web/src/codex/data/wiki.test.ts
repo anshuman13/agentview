@@ -92,18 +92,20 @@ describe('meetings', () => {
     expect(g.map((x) => x.rows.map((m) => m.id))).toEqual([['today'], ['past1', 'past2'], ['old']]);
   });
 
-  it('searches decisions and transcripts as well as titles', () => {
+  it('searches decisions and transcript hits as well as titles', () => {
     const a = { ...meeting('Planning', at(0, 9)), decisions: 'Ship the Pricing page' };
-    const b = { ...meeting('Sync', at(0, 10)), transcript: 'we talked about pricing and budget' };
+    const b = { ...meeting('Sync', at(0, 10)), transcript: 'done' };
     const c = meeting('Other', at(0, 11));
-    expect(searchMeetings([a, b, c], 'pricing').map((m) => m.id)).toEqual(['Planning', 'Sync']);
-    expect(searchMeetings([a, b, c], 'pricing budget').map((m) => m.id)).toEqual(['Sync']);
-    expect(searchMeetings([a, b, c], '  ')).toHaveLength(3);
+    const said = new Map([['work:Sync', '...pricing and budget...']]);
+    expect(searchMeetings([a, b, c], 'pricing', said).map((m) => m.id)).toEqual(['Planning', 'Sync']);
+    expect(searchMeetings([a, b, c], 'pricing').map((m) => m.id)).toEqual(['Planning']);
+    expect(searchMeetings([a, b, c], 'done')).toEqual([]);
+    expect(searchMeetings([a, b, c], '  ', said)).toHaveLength(3);
   });
 
   it('lists the tracked topics a meeting mentions', () => {
-    const m = { ...meeting('Sync', at(0, 10)), summary: 'Agreed the Q4 Budget', transcript: 'hiring plan' };
-    expect(trackedTopics(m, ['budget', 'hiring', 'launch', 'q4 budget', ' '])).toEqual(['budget', 'hiring', 'q4 budget']);
+    const m = { ...meeting('Sync', at(0, 10)), summary: 'Agreed the Q4 Budget', notes: 'hiring plan', transcript: 'done' };
+    expect(trackedTopics(m, ['budget', 'hiring', 'launch', 'q4 budget', 'done', ' '])).toEqual(['budget', 'hiring', 'q4 budget']);
     expect(trackedTopics(m, [])).toEqual([]);
   });
 

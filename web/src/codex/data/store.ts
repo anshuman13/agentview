@@ -8,6 +8,7 @@ export type SyncStatus = { syncing: boolean; last: number; error: string };
 export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'meeting_id' | 'rolls' | 'rolled_from' | 'rank'>> & { deleted?: number };
 export type Parsed = { title: string; details: string | null; at: number | null };
 export type MeetingRef = { id: string; title: string | null } | null;
+export type TranscriptHit = { profile: Profile; id: string; snippet: string };
 export type Snapshot = {
   phase: 'locked' | 'unlocking' | 'ready';
   message: string;
@@ -29,6 +30,18 @@ export interface AssistantStore {
   fetchTranscript(m: { profile: Profile; id: string }, instructions?: string): Promise<number>;
   syncCalendar(fresh?: number): Promise<number>;
   summarizeSlack(): Promise<number>;
+  searchTranscripts(query: string): Promise<TranscriptHit[]>;
+  transcript(m: { profile: Profile; id: string }): Promise<string | null>;
+}
+
+export const transcriptPath = (m: { profile: Profile; id: string }) => `/transcript?profile=${m.profile}&id=${encodeURIComponent(m.id)}`;
+
+// A meeting without stored transcript text answers 404.
+export async function transcriptOf(resp: Response) {
+  if (resp.status === 404) return null;
+  const data = await resp.json().catch(() => null);
+  if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+  return typeof data?.text === 'string' ? data.text : null;
 }
 
 export abstract class BaseStore {

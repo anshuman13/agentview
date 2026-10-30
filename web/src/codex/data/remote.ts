@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot } from './store';
+import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { mergeIncoming } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
@@ -252,4 +252,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     await this.syncNow();
     return Number(data?.added ?? 0);
   };
+
+  searchTranscripts = async (query: string) => (await hub<{ hits?: TranscriptHit[] }>(`/api/assistant/transcripts/search?q=${encodeURIComponent(query)}`)).hits ?? [];
+
+  transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await call(`/api/assistant${transcriptPath(m)}`));
 }

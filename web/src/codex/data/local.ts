@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot } from './store';
+import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, errorText, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
 import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
@@ -287,4 +287,13 @@ export class LocalStore extends BaseStore implements AssistantStore {
     await this.syncNow();
     return Number(data?.added ?? 0);
   };
+
+  searchTranscripts = async (query: string) => {
+    const resp = await fetch(`${HUB}/transcripts/search?q=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(20000) });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    return (data?.hits ?? []) as TranscriptHit[];
+  };
+
+  transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await fetch(`${HUB}${transcriptPath(m)}`, { signal: AbortSignal.timeout(20000) }));
 }

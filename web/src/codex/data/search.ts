@@ -24,7 +24,7 @@ export function searchAll(data: SearchData, query: string): Results {
     .map((r): Hit => ({ id: r.id, profile: r.profile, title: r.title || r.text || 'Untitled', snippet: snippet(words, r.text, r.people, r.source), page: r.meeting_id }));
   const meetings = searchMeetings(live(data.meetings), query)
     .sort((a, b) => (b.starts_at ?? 0) - (a.starts_at ?? 0))
-    .map((m): Hit => ({ id: m.id, profile: m.profile, title: m.title || 'Meeting', snippet: snippet(words, m.summary, m.decisions, m.notes, m.people, m.transcript) }));
+    .map((m): Hit => ({ id: m.id, profile: m.profile, title: m.title || 'Meeting', snippet: snippet(words, m.summary, m.decisions, m.notes, m.people) }));
   const found = searchWiki(data.pages, data.facts, query);
   const wiki = [
     ...found.pages.map((p): Hit => ({ id: p.id, profile: p.profile, title: p.title || 'Untitled', snippet: snippet(words, p.summary), page: p.id })),

@@ -488,15 +488,17 @@ export function meetingState(m: Meeting, now = Date.now()): MeetingState {
   return 'waiting';
 }
 
-// Meetings whose title, people, notes, summary, decisions or transcript hold every word.
-export function searchMeetings<M extends Meeting>(meetings: M[], query: string) {
+// Meetings whose title, people, notes, summary or decisions hold every word, and those the hub found in the
+// transcript text (said, by profile:id).
+export function searchMeetings<M extends Meeting>(meetings: M[], query: string, said?: ReadonlyMap<string, string>) {
   const words = queryWords(query);
   if (!words.length) return meetings;
-  return meetings.filter(rowMatcher<Meeting>(words, 'meeting', (m) => [m.title, m.people, m.notes, m.summary, m.decisions, m.transcript]));
+  const hit = rowMatcher<Meeting>(words, 'meeting', (m) => [m.title, m.people, m.notes, m.summary, m.decisions]);
+  return meetings.filter((m) => hit(m) || !!said?.has(`${m.profile}:${m.id}`));
 }
 
 export const trackedTopics = (m: Meeting, topics: string[]) =>
-  topics.filter((t) => rowMatcher<Meeting>(queryWords(t), 'topic', (r) => [r.title, r.notes, r.summary, r.decisions, r.transcript])(m));
+  topics.filter((t) => rowMatcher<Meeting>(queryWords(t), 'topic', (r) => [r.title, r.notes, r.summary, r.decisions])(m));
 
 export type Question = { text: string; meeting: Meeting; at: number; profile: Profile };
 
