@@ -46,6 +46,7 @@ sides run on the personal account.
 | facts | Memory and wiki claims: one-sentence statements with their sources, page and heading; a contradicting fact supersedes the old one, and a claim can be contested |
 | pages | Wiki pages grouped in sections |
 | meetings | Calendar meetings with my notes, the summary and decisions |
+| transcripts | The Gemini transcript text of each summarized meeting, kept on the hub only (not synced; the apps search it and read it through the hub) |
 | actions | Proposed Slack messages, Linear issues and tasks from a meeting, approved or rejected in Codex |
 | people | One row per person, with Slack id, emails and calendar names merged |
 | links | Item to person and item to item |

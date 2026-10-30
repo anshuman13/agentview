@@ -14,7 +14,7 @@
   text and earlier meetings of the same series, with decisions made and questions asked again; the page copies as Markdown or as a follow-up draft, an action copies as a message or opens a prefilled Linear issue, and the summary format suggests the
   template last used for the series. The page of an upcoming meeting has a prep card. The header has a decision log filtered by person, a Load view (hours per week, share
   recorded, who you meet most, time and actions done per recurring series) and a Week view; the decision log, Week and person pages copy as Markdown. Saved topics filter the list, show a timeline of matching
-  meetings, decisions and claims, and count what is new since you last looked. Topics and person pages list
+  meetings, decisions and claims, and count what is new since you last looked. Meeting search also asks the hub, which keeps each transcript's text, and shows the words around a hit in the transcript; a summarized meeting's page has a collapsed Transcript section. Topics and person pages list
   questions the meetings left open until you resolve them. Long lists show 50 rows at a time. The wiki is built from claims with sources, which can be
   contested and go through Review; the wiki start page lists claims untouched for 90 days as Stale and claims a later meeting decision may have changed as Maybe changed (see [codex-wiki.md](codex-wiki.md))
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder

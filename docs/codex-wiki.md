@@ -83,7 +83,7 @@ Desktop (main column ≥ 880px wide)
 
 ## Meetings
 
-- List: search, then Today, Upcoming and Past grouped by day. Row: calendar icon, title, time range, an open action
+- List: search (titles, people, notes, summaries, decisions, and transcript text on the hub with a snippet of the hit), then Today, Upcoming and Past grouped by day. Row: calendar icon, title, time range, an open action
   count ("0 of 3") when there are proposals, and initials avatars.
 - Meeting page (canvas in the main column): back, title, date and time, people, "Recorded 46 min", link to the
   calendar. Sections: My notes (normal text colour, editable), Summary (AI, muted), Decisions, Actions.
