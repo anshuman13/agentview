@@ -37,7 +37,9 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
 - Observe (Grafana, Snowflake), Deploy and MCP server pages
 - Codex: Overview, Tasks, Meetings, Jobs and Wiki, synced with an assistant hub that scans Slack, Gmail, the calendar
   and meeting transcripts. A person page adds their Slack DM summary, open asks, your promises and unanswered mail;
-  Overview's Keep in touch card lists people gone quiet for over 1.5x their usual gap, with a nudge to copy
+  Overview's Keep in touch card lists people gone quiet for over 1.5x their usual gap, with a nudge to copy;
+  Copy standup on Overview copies yesterday's done tasks and decisions, today's plan and
+  waiting-on items older than two days
 - `/loop` and `/goal`, loop mode (plan, build, test), Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 

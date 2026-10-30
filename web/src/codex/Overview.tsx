@@ -15,6 +15,7 @@ import { Shutdown } from './Shutdown';
 import { sourceOf } from './taskSource';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
+import { standupText } from './data/review';
 import { atRisk, minutesText, type Span } from './data/plan';
 import { keepInTouch, touchText, type Lapsed } from './data/review';
 import { blockId, isBlock } from '../../../shared/util';
@@ -345,6 +346,9 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <JustEnded meetings={s.meetingsToday} now={now} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
+      <div className="as-next-actions">
+        <button className="btn sm" onClick={() => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied')}><Icon name="copy" small /> Copy standup</button>
+      </div>
       <AtRisk s={s} now={now} />
       <SinceLastVisit />
       <SlackCard />

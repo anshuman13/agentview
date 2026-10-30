@@ -1,10 +1,11 @@
+import { blockId, isBlock } from '../../../../shared/util';
+import { dayEnd, dayStart, pad } from './dates';
 import { atTime, statusTime } from './engine';
+import { packDay, workGaps, type Span } from './plan';
 import { parseTimes, type ItemRow } from './sync';
-import { isBlock } from '../../../../shared/util';
-import { dayStart } from './dates';
 import { isAllDay } from './load';
 import { peopleOf, sameName } from './meetings';
-import { live as liveRows, type Brief, type Chat, type Meeting } from './wiki';
+import { listOf, live as liveRows, type Brief, type Chat, type Meeting } from './wiki';
 
 const DAY = 86400000;
 export const STUCK_ROLLS = 3;
@@ -147,3 +148,34 @@ export function keepInTouch(meetings: Meeting[], chats: Chat[], items: ItemRow[]
 }
 
 export const touchText = (name: string) => `Hi ${name.split(' ')[0]}, it has been a while! Up for a quick catch-up this week?`;
+// The Monday to Friday day before now's day, as [start, end).
+export function prevWorkday(now: number): Span {
+  const d = new Date(dayStart(now));
+  do d.setDate(d.getDate() - 1); while (d.getDay() === 0 || d.getDay() === 6);
+  return [d.getTime(), dayEnd(d.getTime())];
+}
+
+export const BLOCKED_DAYS = 2;
+const hm = (t: number) => `${pad(new Date(t).getHours())}:${pad(new Date(t).getMinutes())}`;
+
+// Standup text: what was done and decided on the previous workday, today's meetings and the tasks Plan my day would place,
+// and waiting-on items older than two days. meetings holds focus blocks too; plan is the overdue and due-today tasks.
+export function standupText(items: ItemRow[], meetings: Meeting[], plan: ItemRow[], now: number) {
+  const [from, to] = prevWorkday(now);
+  const inPrev = (t: number | null) => t != null && t >= from && t < to;
+  const done = items.filter((r) => live(r) && r.status === 'done' && inPrev(statusTime(r))).map((r) => r.title ?? '');
+  const decided = meetings.filter((m) => inPrev(m.starts_at)).flatMap((m) => listOf(m.decisions).map((d) => `Decided: ${d} (${m.title})`));
+  const today = meetings.filter((m) => m.starts_at != null && m.ends_at != null && m.starts_at >= dayStart(now) && m.starts_at < dayEnd(now) && m.ends_at > m.starts_at && m.ends_at - m.starts_at < 20 * 3600_000);
+  const blocked = new Set(today.filter((m) => isBlock(m.id) && m.ends_at! > now).map((m) => `${m.profile}:${m.id}`));
+  const tasks = plan.filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`)).map((r) => ({ title: r.title, due: atTime(r.at) }));
+  const packed = packDay(tasks, workGaps(today.map((m) => [m.starts_at!, m.ends_at!] as Span), now));
+  const timed = [...today.map((m) => ({ at: m.starts_at!, text: m.title ?? '' })), ...packed.map((p) => ({ at: p.span[0], text: p.task.title ?? '' }))].sort((a, b) => a.at - b.at);
+  const placed = new Set(packed.map((p) => p.task));
+  const waiting = waitingByPerson(items, now).flatMap((g) => g.rows.filter((x) => x.days > BLOCKED_DAYS).map((x) => `${g.name}: ${x.title} (${x.days} days)`));
+  const section = (head: string, lines: string[]) => `${head}\n${lines.length ? lines.map((l) => `- ${l}`).join('\n') : 'Nothing'}`;
+  return [
+    section('Yesterday', [...done, ...decided]),
+    section('Today', [...timed.map((x) => `${hm(x.at)} ${x.text}`), ...tasks.filter((t) => !placed.has(t)).map((t) => t.title ?? '')]),
+    section('Blocked', waiting),
+  ].join('\n\n');
+}
