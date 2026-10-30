@@ -9,7 +9,7 @@ import { once } from './once.js';
 import { finishTask, snoozeTask, startReminders } from './remind.js';
 import { startBrief } from './brief.js';
 import { parseTask } from './parse.js';
-import { startTranscripts, syncTranscript } from './transcripts.js';
+import { searchTranscripts, startTranscripts, syncTranscript, transcriptText } from './transcripts.js';
 import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
 import { startGmail } from './gmail.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
@@ -160,6 +160,18 @@ export function createServer(): http.Server {
         } catch (err) {
           send(res, 502, { error: err instanceof Error ? err.message : String(err) });
         }
+        return;
+      }
+
+      if (pathname === '/transcripts/search' && req.method === 'GET') {
+        send(res, 200, { hits: searchTranscripts(getDb(), url.searchParams.get('q') ?? '') });
+        return;
+      }
+
+      if (pathname === '/transcript' && req.method === 'GET') {
+        const profile = url.searchParams.get('profile');
+        const text = isProfile(profile) ? transcriptText(getDb(), profile, url.searchParams.get('id') ?? '') : null;
+        send(res, text == null ? 404 : 200, text == null ? { error: 'No transcript' } : { text });
         return;
       }
 
