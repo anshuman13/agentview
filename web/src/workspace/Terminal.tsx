@@ -51,6 +51,8 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
   const inputs = useRef(new Map<string, (d: string) => void>());
   const wasOpen = useRef(open);
   const starting = useRef(false);
+  const retry = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(retry.current), []);
   const url = (q = '') => apiUrl(`/api/terms?chat=${encodeURIComponent(chat)}${q}`);
 
   const load = async () => {
@@ -74,8 +76,10 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
 
   const gone = async (id: string) => {
     const list = await load().catch(() => null);
-    if (list?.some((t) => t.id === id)) setGens((g) => ({ ...g, [id]: (g[id] ?? 0) + 1 }));
-    else if (list?.length === 0) onToggle();
+    // Server restarting: try again until it answers, then reattach.
+    if (!list) return void (retry.current = setTimeout(() => gone(id), 2000));
+    if (list.some((t) => t.id === id)) setGens((g) => ({ ...g, [id]: (g[id] ?? 0) + 1 }));
+    else if (list.length === 0) onToggle();
   };
 
   useEffect(() => {

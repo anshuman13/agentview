@@ -37,7 +37,7 @@ export function QuickPick({ title, items, current, anchor, extra, onPick, onClos
             if (e.key === 'Escape') onClose();
             if (e.key === 'ArrowDown') setIdx((i) => Math.min(i + 1, results.length - 1));
             if (e.key === 'ArrowUp') setIdx((i) => Math.max(i - 1, 0));
-            if (e.key === 'Enter' && results[idx]) onPick(results[idx].value);
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing && results[idx]) onPick(results[idx].value);
           }}
         />
         <ul>

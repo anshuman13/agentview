@@ -193,7 +193,7 @@ export function Palette() {
               if (e.key === 'Escape') close();
               else if (e.key === 'ArrowDown') setIdx((i) => Math.min(i + 1, Math.max(rows.length - 1, 0)));
               else if (e.key === 'ArrowUp') setIdx((i) => Math.max(i - 1, 0));
-              else if (e.key === 'Enter' && rows[idx]) run(rows[idx].cmd);
+              else if (e.key === 'Enter' && !e.nativeEvent.isComposing && rows[idx]) run(rows[idx].cmd);
               else return;
               e.preventDefault();
             }}

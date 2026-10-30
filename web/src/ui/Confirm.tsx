@@ -37,7 +37,7 @@ export function Confirm({ title, detail, warning, action, icon, input, run, onCl
               placeholder={input.placeholder}
               spellCheck={false}
               onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && go()}
+              onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && go()}
             />
           )}
           {warning && <div className="dialog-warning">{warning}</div>}

@@ -59,6 +59,13 @@ export function Deploy() {
       .finally(() => n === seq.current && setLoading(false));
   };
 
+  // Another repo has other apps; its status replaces this one's.
+  useEffect(() => {
+    setApp('');
+    setStatus(null);
+    setError('');
+  }, [cwd]);
+
   useEffect(() => {
     if (cwd) load();
   }, [cwd, app, job?.done]);

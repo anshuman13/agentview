@@ -69,7 +69,7 @@ export function FileSwitcher() {
             if (e.key === 'Escape') setUi({ switcherOpen: false });
             else if (e.key === 'ArrowDown') setIdx((i) => Math.min(i + 1, results.length - 1));
             else if (e.key === 'ArrowUp') setIdx((i) => Math.max(i - 1, 0));
-            else if (e.key === 'Enter' && results[idx]) pick(results[idx].f);
+            else if (e.key === 'Enter' && !e.nativeEvent.isComposing && results[idx]) pick(results[idx].f);
             else return;
             e.preventDefault();
           }}

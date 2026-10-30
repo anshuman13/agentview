@@ -417,7 +417,7 @@ export function Observe() {
             setInput(e.target.value);
             if (all.includes(e.target.value)) commit(e.target.value);
           }}
-          onKeyDown={(e) => e.key === 'Enter' && commit(input)}
+          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && commit(input)}
           onBlur={() => commit(input)}
         />
         <datalist id="obs-repos">{all.map((n) => <option key={n} value={n} />)}</datalist>

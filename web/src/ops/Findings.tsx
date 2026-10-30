@@ -28,9 +28,11 @@ const findingKey = (f: Finding) => `${f.file}:${f.line}:${f.summary.slice(0, 60)
 // What /code-review reported, most severe first; a row opens the file on its line.
 export function Findings({ target }: { target: string }) {
   const review = useStore((s) => s.findings[target]);
+  const cwd = useStore((s) => s.session.cwd);
+  // A chat in another repo clears the findings, so fetch that repo's.
   useEffect(() => {
     call<ReviewFindings | null>(`/api/findings?target=${target}`).then(setFindings, () => {});
-  }, [target]);
+  }, [target, cwd]);
   if (!review) return null;
   const open = (f: Finding) => setUi({ openFile: f.file, openLine: f.line, follow: false });
   const fix = (f: Finding) => send({ type: 'prompt', text: `Fix this review finding in ${f.file}:${f.line}: ${f.summary}${f.failure ? ` (${f.failure})` : ''}` });

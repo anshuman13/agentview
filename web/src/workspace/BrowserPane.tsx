@@ -163,7 +163,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           onBlur={() => setEditing(false)}
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') { go(); e.currentTarget.blur(); }
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) { go(); e.currentTarget.blur(); }
             if (e.key === 'Escape') e.currentTarget.blur();
           }}
         />
