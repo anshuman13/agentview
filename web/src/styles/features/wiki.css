@@ -247,6 +247,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 @media (pointer: coarse) { .mt-avatars > span { width: 26px; height: 26px; margin-left: -6px; } }
 .mt-avatars > .more { background: var(--hover); color: var(--fg-muted); }
 .mt-seg { display: flex; gap: var(--sp-2); }
+@media (max-width: 900px) { .mt-sync { display: none; } }
 .mt-take, .mt-cal, .mt-dec { height: 34px; border-radius: var(--radius-pill); padding: 0 var(--sp-8); }
 
 @container wk (max-width: 900px) {

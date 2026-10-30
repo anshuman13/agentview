@@ -8,13 +8,14 @@ import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { openMeeting, setView, useSpotBack, useView } from '../view';
+import { openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
 import { OpenQuestions } from './OpenQuestions';
 import { Week } from './Week';
 import { usePullRefresh } from '../usePullRefresh';
+import { useSnackTask } from './useSnackTask';
 import { useMinute } from '../split';
 import '../../styles/features/wiki.css';
 
@@ -230,11 +231,17 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
     setView({ open: rowKey(row) });
   };
+  const [syncing, runSync] = useSnackTask();
+  const syncCalendar = () => runSync(async () => {
+    const n = await store.syncCalendar();
+    showSnack(n ? `${n} meeting${n > 1 ? 's' : ''} updated from the calendar` : 'Calendar is up to date');
+  }, 'Calendar sync failed');
   return (
     <div className="wk narrow">
       <header className="wk-head">
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
         <h1>Meetings</h1>
+        <button className="icon-btn mt-sync" disabled={syncing} title="Sync calendar" aria-label="Sync calendar" onClick={syncCalendar}><Icon name={syncing ? 'loading' : 'sync'} small spin={syncing} /></button>
         <span className="spacer" />
         <label className="wk-search">
           <Icon name="search" small />

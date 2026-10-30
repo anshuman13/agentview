@@ -167,7 +167,7 @@ function useKeepInTouch() {
   }, [snap.meetings, snap.chats, snap.items, filter, hour]);
   const shown = rows.filter((x) => !dismissed.includes(x.key));
   const dismiss = (x: Lapsed) => {
-    const next = [...dismissed.filter((k) => rows.some((r) => r.key === k)), x.key];
+    const next = [...(filter === 'all' ? dismissed.filter((k) => rows.some((r) => r.key === k)) : dismissed), x.key];
     setDismissed(next);
     save(TOUCH_DISMISSED, next);
   };
@@ -216,7 +216,7 @@ function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const ended = meetings.filter((m) => m.ends_at != null && m.ends_at <= now && now - m.ends_at < JUST_ENDED_MS);
   if (!ended.length) return null;
   return ended.map((m) => {
-    const actions = actionsOf(snap.items, m).filter((r) => r.status === 'open' || r.status === 'suggested');
+    const actions = actionsOf(snap.items, m).filter((r) => r.status === 'open');
     const copy = () => copyText(followUpText(m, actions), 'Follow-up copied');
     return (
       <section key={m.profile + m.id}>
@@ -328,7 +328,10 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const digest = useMemo(() => latestDigest(snap.items, filter), [snap.items, filter]);
   const tasks = () => setView({ list: 'tasks', open: null });
   const needs = useNeedsYou(s, now);
-  const stale = useMemo(() => staleTasks(snap.items.filter((r) => filter === 'all' || r.profile === filter), minute * 60000), [snap.items, filter, minute]);
+  const stale = useMemo(() => {
+    const late = new Set(s.overdue.map((r) => r.profile + r.id));
+    return staleTasks(snap.items.filter((r) => (filter === 'all' || r.profile === filter) && !r.meeting_id && !late.has(r.profile + r.id)), minute * 60000);
+  }, [snap.items, s.overdue, filter, minute]);
   const follow = useFollowThrough();
   const touchRows = useKeepInTouch();
   const morning = new Date(now).getHours() < 11;
@@ -366,7 +369,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   );
   const sync = useSyncStatus();
   const loading = sync.syncing && !sync.last && !snap.items.length;
-  const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !s.meetingsToday.length && !s.meetingsTomorrow.length && !tomorrow.length;
+  const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !s.next && !upcoming.length && !s.meetingsTomorrow.length && !tomorrow.length;
   if (loading) return <Skeleton />;
   return (
     <>

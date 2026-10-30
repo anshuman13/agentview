@@ -34,7 +34,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
   the last workday. It shows as its title folded by default; opened it shows 3 lines with Show all, and it hides until tomorrow
-- Meetings that ended in the last two hours with their first 3 actions (Open notes for N more), a follow-up draft to copy and the notes
+- Meetings that ended in the last two hours with their first 3 open actions (suggested ones wait in Needs you) (Open notes for N more), a follow-up draft to copy and the notes
 - A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
   length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
   meetings. The strip shows once a block exists today, otherwise a Plan my day button; Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
@@ -50,7 +50,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   latest Slack summary's "Needs you" bullets, in that order and each item once. The first 5 show, with Show N more for
   the rest. Tasks have a check and a clock (snooze to tomorrow 09:00, next Monday for work tasks on Friday and Saturday),
   asks the same Mine/Not mine row as in Tasks, DMs Open in Slack, Task and Dismiss, and Slack bullets Task and Done
-- Later (folded, count in the header, state remembered): Stale (the 5 oldest tasks untouched for 14 days, with a check and a clock), the follow-through card, Keep in touch and tomorrow's meetings and tasks; hidden when empty
+- Later (folded, count in the header, state remembered): Stale (the 5 oldest tasks untouched for 14 days that are not overdue or meeting actions, with a check and a clock), the follow-through card, Keep in touch and tomorrow's meetings and tasks; hidden when empty
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
 - Tasks due today (tomorrow under Later) with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
@@ -113,7 +113,7 @@ one "Waiting on you" list of what they asked you and what you promised them in S
 commitments (hidden when there are none), the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
 wiki claims that name them. A section shows its count only when it has more than 5 rows.
 
-The meeting list shows a badge only when something waits for you: actions to review, open actions, Now or soon, or a missing transcript. Rows carry no recording length, repeat icon or topic chips. The header has no Sync calendar button: the calendar syncs on open, on its interval and on pull-to-refresh. The linear and copy buttons on an action row, and an empty Date chip, show on hover or focus on desktop and stay visible on touch.
+The meeting list shows a badge only when something waits for you: actions to review, open actions, Now or soon, or a missing transcript. Rows carry no recording length, repeat icon or topic chips. The calendar syncs on open, on its interval, on pull-to-refresh on the phone and from a small sync icon next to the title on desktop. The linear and copy buttons on an action row, and an empty Date chip, show on hover or focus on desktop and stay visible on touch.
 
 The header has one segmented control, Decisions (the log, filtered by person), Load or Week, one view at a time:
 
