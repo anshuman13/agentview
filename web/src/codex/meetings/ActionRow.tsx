@@ -18,6 +18,11 @@ export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
   showSnack(`${rows.length} added to Today`, () => rows.forEach((r) => void store.update(r, { status: r.status })));
 }
 
+export function dismissAll(store: AssistantStore, rows: ItemRow[]) {
+  for (const r of rows) void store.update(r, { status: 'dismissed' });
+  showSnack(`${rows.length} dismissed`, () => rows.forEach((r) => void store.update(r, { status: r.status })));
+}
+
 // An action from a meeting. Suggested ones are kept (Today) or dismissed (Not mine, on the meeting); unassigned ones
 // can be taken; dismissed ones restored. Each open one has a date chip.
 export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting }) {

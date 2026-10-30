@@ -12,7 +12,7 @@ const Person = lazy(() => import('./Person').then((m) => ({ default: m.Person })
 
 export { peopleOf };
 export { Avatars, MeetingRow } from './MeetingList';
-export { ActionRow, confirmAll } from './ActionRow';
+export { ActionRow, confirmAll, dismissAll } from './ActionRow';
 
 export function Meetings({ onMenu }: { onMenu: () => void }) {
   const { open, person } = useView();

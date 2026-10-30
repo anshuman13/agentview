@@ -25,7 +25,7 @@ import { Icon } from '../ui/Icon';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
 import { copyText, focusPast, openMeeting, openTask, setView, setViewAt, showSnack, useView } from './view';
-import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
+import { ActionRow, MeetingRow, confirmAll, dismissAll, peopleOf } from './meetings/Meetings';
 import { clock, when } from './time';
 import { touch } from '../app/touch';
 import type { useSplit } from './split';
@@ -97,6 +97,7 @@ export function Review({ rows }: { rows: ItemRow[] }) {
       <div className="as-group">
         {g.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}
         {g.length > 1 && <button className="as-confirm-all" onClick={() => confirmAll(store, g)}><Icon name="check-all" small /> Confirm all {g.length}</button>}
+        {g.length > 1 && <button className="as-dismiss-all" onClick={() => dismissAll(store, g)}><Icon name="close" small /> Dismiss all {g.length}</button>}
       </div>
     </section>
   ));
