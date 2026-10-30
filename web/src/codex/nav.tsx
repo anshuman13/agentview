@@ -20,10 +20,13 @@ export const LISTS: { id: List; icon: string; label: string }[] = [
 const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.length;
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
 
+const SCAN_NAME: Record<string, string> = { slack: 'Slack', gmail: 'Gmail' };
+
 export function pausedText(paused: Paused[], now = Date.now()) {
   const on = paused.filter((p) => p.until > now);
   if (!on.length) return '';
-  const scans = [...new Set(on.map((p) => p.scan))].join(' and ');
+  const names = [...new Set(on.map((p) => SCAN_NAME[p.scan] ?? p.scan))];
+  const scans = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
   return `${scans[0].toUpperCase()}${scans.slice(1)} scans paused: ${on[0].reason} until ${clock(Math.max(...on.map((p) => p.until)))}`;
 }
 
