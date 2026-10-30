@@ -12,13 +12,27 @@ const MarkdownDoc = lazy(() => import('./MarkdownDoc').then((m) => ({ default: m
 
 function useFile(path: string | null, bump: unknown) {
   const [file, setFile] = useState<FileData | null>(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') setTick((n) => n + 1);
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
   useEffect(() => {
     if (!path) return;
     let cancelled = false;
     fetch(api(`/api/file?path=${encodeURIComponent(path)}`))
       .then((r) => r.json())
       .then((d: { content?: string; original?: string; image?: boolean; binary?: boolean; error?: string }) => {
-        if (!cancelled) setFile({ path, content: d.content ?? '', original: d.original ?? '', image: d.image, binary: d.binary, error: d.error });
+        if (cancelled) return;
+        const next: FileData = { path, content: d.content ?? '', original: d.original ?? '', image: d.image, binary: d.binary, error: d.error };
+        setFile((prev) => (prev && prev.path === path && prev.content === next.content && prev.original === next.original && prev.image === next.image && prev.binary === next.binary && prev.error === next.error ? prev : next));
       })
       .catch(() => {
         if (!cancelled) setFile({ path, content: '', original: '', error: 'The file could not be loaded' });
@@ -26,7 +40,7 @@ function useFile(path: string | null, bump: unknown) {
     return () => {
       cancelled = true;
     };
-  }, [path, bump]);
+  }, [path, bump, tick]);
   return file?.path === path ? file : null;
 }
 
