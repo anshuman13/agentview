@@ -19,7 +19,7 @@
 :is(.chip, .mt-count).st-err { --tone: var(--err); }
 :is(.chip, .mt-count).st-warn { --tone: var(--warn); }
 :is(.chip, .mt-count).st-ok { --tone: var(--ok); }
-:is(.chip, .mt-count).st-run { --tone: var(--accent); }
+:is(.chip, .mt-count).st-run { --tone: var(--accent-text); }
 :is(.chip, .mt-count):is(.st-err, .st-warn, .st-ok, .st-run) { color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }
 button.chip { cursor: pointer; }
 @media (hover: hover) { button.chip:hover { color: var(--fg); background: var(--hover); } }
