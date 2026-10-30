@@ -7,7 +7,7 @@ import { decisionKey, keyWords, mayChange, titleWords } from '../../shared/claim
 import { isLimited } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
-import { pruneMeta, type Profile } from './db.js';
+import { pruneMeta, textList, type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY } from './time.js';
 
@@ -24,19 +24,11 @@ export type Candidate = { claim: Claim; decisions: string[] };
 export type Update = { claim: string; text: string };
 
 const doneKey = (profile: Profile, id: string) => `wikiupdate:${profile}:${id}`;
-const list = (s: string) => {
-  try {
-    const v = JSON.parse(s);
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x.trim()).map((x) => x.trim()) : [];
-  } catch {
-    return [];
-  }
-};
 
 const dateOf = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 const fromMeeting = (m: Meeting): Origin => ({
-  id: m.id, by: `meeting:${m.id}`, title: m.title, at: m.starts_at, decisions: list(m.decisions),
+  id: m.id, by: `meeting:${m.id}`, title: m.title, at: m.starts_at, decisions: textList(m.decisions).map((x) => x.trim()),
   what: `The meeting "${m.title ?? 'Meeting'}" on ${dateOf(m.starts_at)}`,
   source: { kind: 'meeting', label: m.title || 'Meeting', ...(m.calendar_url && { url: m.calendar_url }) },
 });

@@ -12,6 +12,16 @@ export const isProfile = (v: unknown): v is Profile => v === 'work' || v === 'pe
 
 export { TABLES };
 
+// The non-blank strings of a JSON array column; anything else reads as empty.
+export function textList(s: string | null): string[] {
+  try {
+    const v = JSON.parse(s ?? '[]');
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x.trim()) : [];
+  } catch {
+    return [];
+  }
+}
+
 const COMMON_COLUMNS = `
   id TEXT NOT NULL,
   profile TEXT NOT NULL CHECK (profile IN ('work','personal')),

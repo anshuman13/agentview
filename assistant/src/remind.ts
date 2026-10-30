@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { isBlock } from '../../shared/util.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
-import { pruneMeta, type Profile } from './db.js';
+import { pruneMeta, textList, type Profile } from './db.js';
 import { rollOver } from './rollover.js';
 import { HUB_URL } from './slack.js';
 import { webUrl } from './slackSave.js';
@@ -15,14 +15,6 @@ type Meeting = { id: string; profile: string; title: string | null; starts_at: n
 export type Reminder = { key: string; title: string; body: string; url: string; actions?: string };
 
 const clip = (s: string, n = 90) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
-const list = (s: string | null): string[] => {
-  try {
-    const v = JSON.parse(s ?? '[]');
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x.trim()) : [];
-  } catch {
-    return [];
-  }
-};
 
 // Same rule as the web: sentences ending in "?" and bullets under a "Questions" heading.
 export function questionsIn(...texts: (string | null)[]) {
@@ -79,7 +71,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     const body = [
       people && `With ${people}`,
       section('Open from last time', open.map((a) => a.title ?? '')),
-      prev && section('Decided last time', list(prev.decisions)),
+      prev && section('Decided last time', textList(prev.decisions)),
       prev && section('Open questions', questionsIn(prev.summary, prev.notes)),
     ].filter(Boolean).join('\n');
     const url = webUrl(m.calendar_url);

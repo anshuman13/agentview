@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { keyWords } from '../../shared/claimMatch.js';
+import { textList } from './db.js';
 import { DAY } from './time.js';
 
 const PROFILE = 'work' as const;
@@ -10,15 +11,6 @@ const RECENT = 30 * DAY;
 
 export const DRAFT_DESC = 'A reply I could send, in my voice: 2 to 4 sentences in the language of the ask';
 export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask, and write draft from the thread and what ask_context returns. Do not promise dates or facts you do not know.';
-
-const decisionsOf = (s: string | null) => {
-  try {
-    const v = JSON.parse(s ?? '[]');
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x.trim()) : [];
-  } catch {
-    return [];
-  }
-};
 
 // Current wiki claims and meeting decisions of the last 30 days that share at least two key words with the ask, best first.
 export function askContext(db: Database, ask: string, now = Date.now()) {
@@ -35,7 +27,7 @@ export function askContext(db: Database, ask: string, now = Date.now()) {
   const meetings = db.prepare("SELECT title, decisions FROM meetings WHERE profile = ? AND deleted = 0 AND starts_at BETWEEN ? AND ? AND decisions IS NOT NULL AND decisions NOT IN ('', '[]')").all(PROFILE, now - RECENT, now) as { title: string | null; decisions: string }[];
   return {
     claims: best(claims.map((c) => ({ hay: `${c.title ?? ''} ${c.text}`, line: `${c.title ? `${c.title}: ` : ''}${c.text}` }))),
-    decisions: best(meetings.flatMap((m) => decisionsOf(m.decisions).map((d) => ({ hay: d, line: `${d} (${m.title ?? 'meeting'})` })))),
+    decisions: best(meetings.flatMap((m) => textList(m.decisions).map((d) => ({ hay: d, line: `${d} (${m.title ?? 'meeting'})` })))),
   };
 }
 
