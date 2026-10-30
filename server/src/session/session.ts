@@ -4,8 +4,8 @@ import { COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, t
 import { clock } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
-import { advance, loopOff, needsApproval, planStep, type LoopStep } from './loop.js';
-import { RepeatController, after, goalMet, limitReset } from './repeat.js';
+import { advance, looping, loopOff, needsApproval, planChangeText, planStep, withLoop, type LoopStep } from './loop.js';
+import { RepeatController, after, goalMet, limitReset, restorePrompt } from './repeat.js';
 import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { EventIndex, stopAgents } from './events.js';
 
@@ -27,8 +27,6 @@ export function fireTime(schedule: string, now = Date.now()) {
 
 const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
-
-const looping = (loop: LoopState) => Boolean(loop.phase) && loop.phase !== 'passed' && loop.phase !== 'failed';
 
 const PR_URL = /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+)/;
 
@@ -430,7 +428,7 @@ export class AgentSession implements AgentHost {
   restoreCrons(crons: Cron[]) {
     this.crons = crons;
     this.system(`AgentView restarted, so Claude is recreating ${crons.length} scheduled ${crons.length === 1 ? 'job' : 'jobs'}`);
-    void this.prompt(`AgentView restarted. It is now ${new Date().toString()}. Your scheduled jobs are below. First run CronList: a job that is still listed survived the restart but will not fire, so CronDelete it. Then CronCreate each job below once, with the same cron, prompt and recurring flag, so exactly one copy exists. If a one-shot job's time has already passed, run its prompt now instead. Reply in one line.\n\n${JSON.stringify(crons.map(({ schedule, prompt, recurring }) => ({ cron: schedule, prompt, recurring })), null, 2)}`);
+    void this.prompt(restorePrompt(crons));
   }
 
   async prompt(text: string, id: string = randomUUID()) {
@@ -460,9 +458,7 @@ export class AgentSession implements AgentHost {
   }
 
   setLoop(on: boolean, max?: number) {
-    const loop = this.state.session.loop;
-    const next = { ...loop, on, max: Math.min(9, Math.max(1, Math.round(max ?? loop.max))) };
-    if (!on && looping(loop)) next.phase = null;
+    const next = withLoop(this.state.session.loop, on, max);
     this.setSession({ loop: next });
     this.system(on ? `Loop on: Opus plans and builds, Sonnet tests, up to ${next.max} ${next.max === 1 ? 'round' : 'rounds'}` : 'Loop off');
   }
@@ -539,9 +535,7 @@ export class AgentSession implements AgentHost {
 
   changePlan(next: string[]) {
     this.pushEvent({ id: randomUUID(), kind: 'plan', next, at: Date.now() });
-    const text = next.length
-      ? `I changed your plan. The remaining steps are now:\n${next.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nFollow this plan from here and update set_status to match.`
-      : 'I removed the remaining steps of your plan. Finish the current step, then stop and tell me where things stand.';
+    const text = planChangeText(next);
     if (this.state.session.running) this.planChange = text;
     else this.sendPrompt(text);
   }

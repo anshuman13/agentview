@@ -1,5 +1,6 @@
 import { MAX_GOAL_ROUNDS, type Repeat, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, span } from '../../../shared/util.js';
+import type { Cron } from '../agent/types.js';
 
 const UNIT: Record<string, number> = { m: 60_000, min: 60_000, h: 3_600_000 };
 
@@ -175,3 +176,6 @@ export class RepeatController {
     this.timer = after(at, () => this.fire());
   }
 }
+
+export const restorePrompt = (crons: Cron[]) =>
+  `AgentView restarted. It is now ${new Date().toString()}. Your scheduled jobs are below. First run CronList: a job that is still listed survived the restart but will not fire, so CronDelete it. Then CronCreate each job below once, with the same cron, prompt and recurring flag, so exactly one copy exists. If a one-shot job's time has already passed, run its prompt now instead. Reply in one line.\n\n${JSON.stringify(crons.map(({ schedule, prompt, recurring }) => ({ cron: schedule, prompt, recurring })), null, 2)}`;

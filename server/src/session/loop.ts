@@ -6,6 +6,19 @@ export type LoopStep = { phase: LoopPhase; model: string; mode: string; label: s
 
 export const loopOff = (max = 3): LoopState => ({ on: false, max, round: 0, phase: null });
 
+export const looping = (loop: LoopState) => Boolean(loop.phase) && loop.phase !== 'passed' && loop.phase !== 'failed';
+
+export function withLoop(loop: LoopState, on: boolean, max?: number): LoopState {
+  const next = { ...loop, on, max: Math.min(9, Math.max(1, Math.round(max ?? loop.max))) };
+  if (!on && looping(loop)) next.phase = null;
+  return next;
+}
+
+export const planChangeText = (next: string[]) =>
+  next.length
+    ? `I changed your plan. The remaining steps are now:\n${next.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nFollow this plan from here and update set_status to match.`
+    : 'I removed the remaining steps of your plan. Finish the current step, then stop and tell me where things stand.';
+
 export function verdictOf(text: string): 'pass' | 'fail' | null {
   const m = [...text.matchAll(/^\s*\**VERDICT:?\**\s*\**(PASS|FAIL)\**/gim)].at(-1);
   return m ? (m[1].toUpperCase() === 'PASS' ? 'pass' : 'fail') : null;

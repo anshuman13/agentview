@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
-import { query, getSubagentMessages, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
+import { query, type McpServerConfig, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import type { Account, AgentEvent, ChatEvent, Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
@@ -11,7 +11,8 @@ import { inSettings, mcpFrom } from './mcp.js';
 import { configDir, hasAlt, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
 import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, type SubFile } from './history.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
-import { ENDED, agentResultPatch, replayText, unchanged, usageOf } from './tasks.js';
+import { ENDED, replayText, usageOf } from './tasks.js';
+import { agentResult, agentToolUse, isAgent, patchAgent, taskDone, taskToolUse } from './subagents.js';
 import { sessionUsage } from './usage.js';
 import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, finalText, handbackOf, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
 
@@ -385,16 +386,6 @@ export class ClaudeDriver implements AgentDriver {
     return ok && live;
   }
 
-  // A SendMessage that resumes an agent carries its own tool id; follow the link back to the Agent call.
-  private agentToolUse(toolUseId: string) {
-    const link = this.host.eventById(toolUseId);
-    return link?.kind === 'tool_use' && link.agent ? link.agent : toolUseId;
-  }
-
-  private taskToolUse(taskId: string) {
-    return [...this.taskIds].find(([, t]) => t === taskId)?.[0] ?? this.agents.get(taskId);
-  }
-
   private async consume() {
     const q = this.q;
     if (!q) return;
@@ -433,44 +424,6 @@ export class ClaudeDriver implements AgentDriver {
     if (block.name === 'ReportFindings') this.host.reportFindings(block.input);
     const file = (block.input as { file_path?: unknown })?.file_path;
     if (EDIT_TOOLS.has(block.name) && typeof file === 'string') this.edits.set(block.id, file);
-  }
-
-  private patchAgent(toolUseId: string, patch: (a: AgentEvent) => Partial<AgentEvent>) {
-    const a = this.host.agentOf(toolUseId);
-    if (!a) return;
-    const next = patch(a);
-    if (unchanged(a, next)) return;
-    Object.assign(a, next);
-    this.host.emit({ type: 'event', event: a });
-  }
-
-  private agentResult(toolUseId: string, text: string, isError: boolean, output: any) {
-    this.patchAgent(toolUseId, agentResultPatch(text, isError, output, Date.now()));
-  }
-
-  private isAgent(toolUseId: string) {
-    const use = this.host.eventById(toolUseId);
-    return use?.kind === 'tool_use' && AGENT_TOOLS.has(use.name);
-  }
-
-  private taskDone(toolUseId: string, taskId: string, status: 'completed' | 'failed' | 'stopped', summary: string) {
-    const last = [...this.state.events].reverse().find((e) => e.kind === 'tool_result' && e.toolUseId === toolUseId);
-    if (last && !this.resumed(toolUseId, last.at)) return;
-    const ev: Extract<ChatEvent, { kind: 'tool_result' }> = { id: randomUUID(), kind: 'tool_result', toolUseId, text: summary, isError: status === 'failed', at: Date.now(), ...(status === 'stopped' && { stopped: true }) };
-    this.host.pushEvent(ev);
-    const sessionId = this.state.session.sessionId;
-    if (!sessionId || !this.isAgent(toolUseId) || status !== 'completed') return;
-    const agentId = [...this.agents].find(([, t]) => t === toolUseId)?.[0] ?? taskId;
-    void getSubagentMessages(sessionId, agentId, { dir: this.cwd }).catch(() => []).then((sub) => {
-      const text = handbackOf(sub) ?? finalText(sub);
-      if (!text) return;
-      ev.text = text;
-      this.host.emit({ type: 'event', event: ev });
-    });
-  }
-
-  private resumed(toolUseId: string, since: number) {
-    return this.state.events.some((e) => e.kind === 'tool_use' && e.agent === toolUseId && e.at > since);
   }
 
   // A turn can end before content_block_stop; send the partial text once more as finished so it stops streaming.
@@ -529,10 +482,10 @@ export class ClaudeDriver implements AgentDriver {
         } else if (msg.subtype === 'task_started') {
           this.tasks.add(msg.task_id);
           if (msg.tool_use_id) {
-            const toolUseId = this.agentToolUse(msg.tool_use_id);
+            const toolUseId = agentToolUse(this.host, msg.tool_use_id);
             this.taskIds.set(toolUseId, msg.task_id);
             host.adopt(toolUseId);
-            this.patchAgent(toolUseId, (a) => ({
+            patchAgent(this.host, toolUseId, (a) => ({
               status: 'running',
               background: msg.is_backgrounded ?? a.background,
               prompt: msg.prompt || a.prompt,
@@ -541,24 +494,24 @@ export class ClaudeDriver implements AgentDriver {
             }));
           }
         } else if (msg.subtype === 'task_progress') {
-          if (msg.tool_use_id) this.patchAgent(this.agentToolUse(msg.tool_use_id), (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
+          if (msg.tool_use_id) patchAgent(this.host, agentToolUse(this.host, msg.tool_use_id), (a) => ({ usage: usageOf(msg.usage), progress: msg.summary || a.progress }));
         } else if (msg.subtype === 'task_updated') {
           if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) this.tasks.delete(msg.task_id);
-          const toolUseId = this.taskToolUse(msg.task_id);
+          const toolUseId = taskToolUse(this.taskIds, this.agents, msg.task_id);
           const { status, end_time, is_backgrounded } = msg.patch;
-          if (toolUseId) this.patchAgent(toolUseId, () => ({
+          if (toolUseId) patchAgent(this.host, toolUseId, () => ({
             ...(status && ENDED[status] && { status: ENDED[status], endedAt: end_time ?? Date.now() }),
             ...(is_backgrounded !== undefined && { background: is_backgrounded }),
           }));
         } else if (msg.subtype === 'task_notification') {
           this.tasks.delete(msg.task_id);
-          const toolUseId = msg.tool_use_id ? this.agentToolUse(msg.tool_use_id) : this.taskToolUse(msg.task_id);
+          const toolUseId = msg.tool_use_id ? agentToolUse(this.host, msg.tool_use_id) : taskToolUse(this.taskIds, this.agents, msg.task_id);
           if (toolUseId) {
             // The CLI writes the report to the transcript before it streams; without this the watcher takes it for another process and restarts the CLI.
             if (!this.state.session.running) host.turnStarted('Claude continued after a background task');
             const usage = msg.usage && usageOf(msg.usage);
-            this.patchAgent(toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
-            this.taskDone(toolUseId, msg.task_id, msg.status, msg.summary);
+            patchAgent(this.host, toolUseId, (a) => ({ status: ENDED[msg.status], endedAt: a.status === 'running' ? Date.now() : a.endedAt ?? Date.now(), usage: usage || a.usage }));
+            taskDone(this.host, this.agents, toolUseId, msg.task_id, msg.status, msg.summary);
           }
         } else if (msg.subtype === 'local_command_output') {
           host.pushEvent({ id: msg.uuid, kind: 'assistant', text: msg.content, streaming: false, at: Date.now() });
@@ -605,7 +558,7 @@ export class ClaudeDriver implements AgentDriver {
         const parent = msg.parent_tool_use_id ?? undefined;
         if (parent) {
           const model = msg.message.model;
-          if (model) this.patchAgent(parent, () => ({ model }));
+          if (model) patchAgent(this.host, parent, () => ({ model }));
           for (const block of msg.message.content) {
             if (block.type === 'text' && block.text.trim()) host.pushEvent({ id: randomUUID(), kind: 'assistant', text: block.text, streaming: false, at: Date.now(), parent });
             if (block.type === 'tool_use') this.toolUse(block, parent);
@@ -634,8 +587,8 @@ export class ClaudeDriver implements AgentDriver {
           this.edits.delete(block.tool_use_id);
           if (edited && !block.is_error) host.noteFile(path.relative(this.cwd, edited), 'tool');
           const text = toolResultText(block);
-          const agent = this.isAgent(block.tool_use_id);
-          if (agent) this.agentResult(block.tool_use_id, text, Boolean(block.is_error), output);
+          const agent = isAgent(this.host, block.tool_use_id);
+          if (agent) agentResult(this.host, block.tool_use_id, text, Boolean(block.is_error), output);
           if (!parent && text.startsWith(ASYNC_LAUNCH)) {
             noteLaunch(this.agents, block.tool_use_id, text);
             continue;
