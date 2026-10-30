@@ -11,6 +11,7 @@ import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { loop } from './once.js';
+import { runScan } from './scan.js';
 import { applyChanges } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, workSlotDue } from './time.js';
 
@@ -178,14 +179,27 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
   return { text, added };
 }
 
+// One Slack scan with its urgent pushes, returning its counts.
+async function slackOnce(db: Database) {
+  const c = slackConfig();
+  if (!c) throw new Error('Slack is not set up');
+  const r = await scanSlack(db, c);
+  console.log(`slack: ${r.chats} chats, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent`);
+  await pushUrgent(db, c, r.urgent);
+  return { chats: r.chats, asks: r.asks, promises: r.said };
+}
+
+export const slackScan = {
+  setUp: () => slackConfig() != null,
+  paused: (db: Database) => scanPaused(db, ACCOUNT_OF[PROFILE], 'slack'),
+  run: (db: Database) => runScan(db, 'slack', () => slackOnce(db)),
+};
+
 export function startSlack(db: () => Database, every = MIN) {
   let tried = 0;
   loop('slack', every, async () => {
-    const c = slackConfig();
-    if (!c || !scanDue(tried) || (await scanPaused(db(), ACCOUNT_OF[PROFILE], 'slack'))) return;
+    if (!slackScan.setUp() || !scanDue(tried) || (await slackScan.paused(db()))) return;
     tried = Date.now();
-    const r = await scanSlack(db(), c);
-    console.log(`slack: ${r.chats} chats, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent`);
-    await pushUrgent(db(), c, r.urgent);
+    await slackScan.run(db());
   }, true);
 }

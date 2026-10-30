@@ -1,12 +1,14 @@
 import { BadRequest } from '../../../server/src/http/body.js';
 import { pausedScans } from '../claude.js';
 import { currentVersion } from '../db.js';
+import { scanHealth } from '../scan.js';
+import { SCANNERS } from './scan.js';
 import { exchange, type Change } from '../sync.js';
 import { fail, readJson, send, type Ctx, type Routes } from './http.js';
 
 function sendPulled({ res, device, getDb }: Ctx, since: number, changes: Change[] = []) {
   const pulled = exchange(getDb(), since, changes);
-  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, device, paused: pausedScans(getDb()) });
+  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, device, paused: pausedScans(getDb()), scans: scanHealth(getDb(), Object.keys(SCANNERS).filter((n) => !SCANNERS[n].setUp())) });
 }
 
 export const syncRoutes: Routes = {

@@ -11,6 +11,7 @@ import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, pushHours, run } from './slack.js';
 import { PROFILE, saidId, webUrl } from './slackSave.js';
 import { loop } from './once.js';
+import { runScan } from './scan.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN, addWorkdays, localDate, parseWhen, workSlotDue, ymd } from './time.js';
 
@@ -177,15 +178,28 @@ async function pushUrgent(db: Database, c: GmailConfig, urgent: Awaited<ReturnTy
   }
 }
 
+// One Gmail scan with its urgent pushes, returning its counts.
+async function gmailOnce(db: Database) {
+  const c = gmailConfig();
+  if (!c) throw new Error('Gmail is not set up');
+  const r = await scanGmail(db, c);
+  console.log(`gmail: ${r.added} asks, ${r.said} promises, ${r.waiting} waiting, ${r.urgent.length} urgent`);
+  await pushUrgent(db, c, r.urgent);
+  return { asks: r.added, promises: r.said, waiting: r.waiting };
+}
+
+export const gmailScan = {
+  setUp: () => gmailConfig() != null,
+  paused: (db: Database) => scanPaused(db, ACCOUNT_OF[PROFILE], 'gmail'),
+  run: (db: Database) => runScan(db, 'gmail', () => gmailOnce(db)),
+};
+
 // Reads every half hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
 export function startGmail(db: () => Database, every = MIN) {
   let tried = 0;
   loop('gmail', every, async () => {
-    const c = gmailConfig();
-    if (!c || !workSlotDue(tried, EVERY, Date.now()) || (await scanPaused(db(), ACCOUNT_OF[PROFILE], 'gmail'))) return;
+    if (!gmailScan.setUp() || !workSlotDue(tried, EVERY, Date.now()) || (await gmailScan.paused(db()))) return;
     tried = Date.now();
-    const r = await scanGmail(db(), c);
-    console.log(`gmail: ${r.added} asks, ${r.said} promises, ${r.waiting} waiting, ${r.urgent.length} urgent`);
-    await pushUrgent(db(), c, r.urgent);
+    await gmailScan.run(db());
   }, true);
 }

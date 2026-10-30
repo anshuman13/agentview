@@ -14,8 +14,9 @@ import { syncRoutes } from './routes/sync.js';
 import { calendarRoutes } from './routes/calendar.js';
 import { transcriptRoutes } from './routes/transcripts.js';
 import { taskRoutes } from './routes/tasks.js';
+import { scanRoutes } from './routes/scan.js';
 
-const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, ...taskRoutes };
+const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, ...taskRoutes, ...scanRoutes() };
 
 const ownHost = (host = '') => allowedHostHeader(host) || host === new URL(HUB_URL).host;
 

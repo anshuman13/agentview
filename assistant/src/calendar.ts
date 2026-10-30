@@ -6,6 +6,7 @@ import { deleteMeta, getMeta, setMeta, type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { MIN, workSlotDue } from './time.js';
 import { loop, once } from './once.js';
+import { recordScan } from './scan.js';
 import { errText } from '../../shared/util.js';
 
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
@@ -111,14 +112,20 @@ function importOne(db: () => Database, profile: Profile, run: typeof importCalen
   return once<{ changed: number; error?: string }>(`calendar:${profile}`, async () => {
     try {
       setMeta(db(), triedKey(profile), String(Date.now()));
-      const n = await run(db(), profile);
+      const { meetings: n } = await recordScan(db(), 'calendar', async () => {
+        try {
+          return { meetings: await run(db(), profile) };
+        } catch (err) {
+          throw new Error(`${profile}: ${errText(err)}`);
+        }
+      });
       console.log(`calendar ${profile}: ${n} meetings changed`);
       setMeta(db(), lastKey(profile), String(Date.now()));
       return { changed: n };
     } catch (err) {
       const message = errText(err);
-      console.error(`calendar ${profile}:`, message);
-      return { changed: 0, error: `${profile}: ${message}` };
+      console.error('calendar', message);
+      return { changed: 0, error: message };
     }
   });
 }
