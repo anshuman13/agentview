@@ -4,12 +4,17 @@ import { decisionLog, factTime, listOf, live, matcher, othersOf, queryWords, row
 
 // Meetings that have started, newest day first and in time order within a day. The future lives in Today and Upcoming.
 export function groupMeetings(meetings: Meeting[], now = Date.now()) {
-  const rows = live(meetings).filter((m) => m.starts_at != null && m.starts_at <= now);
+  const day = new Map<Meeting, number>();
+  for (const m of live(meetings)) if (m.starts_at != null && m.starts_at <= now) day.set(m, dayStart(m.starts_at));
   const today = dayStart(now);
   const groups: { label: string; rows: Meeting[] }[] = [];
-  const sorted = rows.sort((a, b) => dayStart(b.starts_at!) - dayStart(a.starts_at!) || a.starts_at! - b.starts_at!);
+  const sorted = [...day.keys()].sort((a, b) => day.get(b)! - day.get(a)! || a.starts_at! - b.starts_at!);
+  let lastDay: number | null = null;
+  let label = '';
   for (const m of sorted) {
-    const label = dayStart(m.starts_at!) === today ? 'Today' : dayLabel(m.starts_at!, true);
+    const d = day.get(m)!;
+    if (d !== lastDay) label = d === today ? 'Today' : dayLabel(m.starts_at!, true);
+    lastDay = d;
     const last = groups[groups.length - 1];
     if (last?.label === label) last.rows.push(m);
     else groups.push({ label, rows: [m] });
