@@ -435,6 +435,7 @@ export class AgentSession implements AgentHost {
   }
 
   restarted(why: string) {
+    this.orphan(this.runningAgents());
     if (this.crons.length) this.restoreCrons(this.crons, why);
   }
 
@@ -672,7 +673,11 @@ export class AgentSession implements AgentHost {
     this.approvals.denyAll('Claude exited before this was answered.');
     // Queued messages are not lost with the process; the first one starts a fresh CLI.
     if (!this.dequeue()) this.repeater.defer();
-    this.orphan(this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : [])));
+    this.orphan(this.runningAgents());
+  }
+
+  private runningAgents() {
+    return this.state.events.flatMap((e) => (e.kind === 'agent' && e.status === 'running' ? [e.toolUseId] : []));
   }
 
   private followUp() {

@@ -147,12 +147,14 @@ describe('AgentSession turns', () => {
     expect(setAccount).not.toHaveBeenCalled();
   });
 
-  it('recreates scheduled jobs after an account switch restarts Claude', () => {
+  it('recreates scheduled jobs and stops agents after an account switch restarts Claude', () => {
     const { s } = fakeSession();
     const send = vi.spyOn(s.driver, 'send');
     Object.assign(s.driver, { q: { close: vi.fn() }, start: vi.fn(), accounts: () => ['main', 'alt'] });
     s.crons = [{ schedule: '*/5 * * * *', prompt: 'check the build', recurring: true }];
+    s.pushEvent({ id: 'a1', kind: 'agent', toolUseId: 'tu1', status: 'running', background: true, prompt: 'p', at: 0 } as ChatEvent);
     s.setAccount('alt');
+    expect(s.agentOf('tu1')?.status).toBe('stopped');
     expect(send).toHaveBeenCalledWith(expect.stringMatching(/^Claude restarted on another account\..*check the build/s), expect.any(String));
     expect(s.state.session.running).toBe(true);
   });
