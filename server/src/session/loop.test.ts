@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { advance, loopOff, needsApproval, verdictOf } from './loop.js';
-import { after, limitReset, parseLoop } from './repeat.js';
+import { RepeatController, after, limitReset, parseLoop } from './repeat.js';
 
 describe('verdictOf', () => {
   it('reads the last verdict line', () => {
@@ -86,6 +86,32 @@ describe('limitReset', () => {
     expect(limitReset('All 229 tests pass', now)).toBeNull();
     expect(limitReset('rate limit resets Oct 25', now)).toBeNull();
     expect(limitReset('the limit is 5 retries', now)).toBeNull();
+    expect(limitReset('Done. I added retries to the client.\n\nNote the API rate limit resets at 5pm, so the sync may lag.', now)).toBeNull();
+  });
+});
+
+describe('RepeatController', () => {
+  it('runs a one-shot loop that came due while Claude was busy', () => {
+    vi.useFakeTimers();
+    let r = parseLoop('/loop at 01:50 check') as NonNullable<ReturnType<typeof parseLoop>> & object;
+    let running = true;
+    const sent: string[] = [];
+    const c = new RepeatController({
+      repeat: () => r as never,
+      running: () => running,
+      closed: () => false,
+      setSession: (p) => { r = (p.repeat ?? null) as never; },
+      system: () => {},
+      sendPrompt: (t) => sent.push(t),
+    });
+    c.set(r as never);
+    vi.setSystemTime((r as { nextAt: number }).nextAt);
+    vi.advanceTimersByTime(1);
+    vi.setSystemTime(Date.now() + 5 * 60_000);
+    running = false;
+    c.fire();
+    expect(sent).toEqual(['check']);
+    vi.useRealTimers();
   });
 });
 

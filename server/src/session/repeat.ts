@@ -47,6 +47,8 @@ export function parseLoop(text: string, now = Date.now()): Repeat | 'off' | 'usa
 
 // /loop at HH:MM runs the prompt once: the loop ends a second after it fires.
 export const once = (r: Repeat) => !r.every && r.until !== null && r.nextAt !== null && r.until - r.nextAt <= 1000;
+// A one-shot loop that has not run yet waits for its round even past until, when Claude was busy or the round was deferred.
+const unrun = (r: Repeat) => once(r) && r.round === 0;
 
 const MAX_EVERY = 7 * 24 * 3_600_000;
 const MAX_TIMER = 2 ** 31 - 1;
@@ -65,8 +67,10 @@ export function nextClock(hours: number, minutes: number, now: number) {
 }
 
 // "You've hit your session limit · resets 1:50am (Europe/Oslo)" gives the time a loop may go on, plus a minute.
+// Only a short one-line notice counts, so a normal reply that mentions a limit does not switch accounts.
 export function limitReset(text: string, now = Date.now()): number | null {
-  const m = /\blimit\b.*?\bresets?\b(?:\s+at)?\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/is.exec(text);
+  if (text.length > 160 || text.trim().includes('\n')) return null;
+  const m = /^.{0,40}\blimit\b.*?\bresets?\b(?:\s+at)?\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/is.exec(text);
   if (!m || (!m[2] && !m[3]) || Number(m[1]) > 23) return null;
   const meridiem = m[3]?.toLowerCase();
   const hours = meridiem ? (Number(m[1]) % 12) + (meridiem === 'pm' ? 12 : 0) : Number(m[1]);
@@ -139,7 +143,7 @@ export class RepeatController {
   fire() {
     const r = this.host.repeat();
     if (!r || this.held) return;
-    if (r.until && Date.now() >= r.until) return this.set(null, `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`);
+    if (r.until && Date.now() >= r.until && !unrun(r)) return this.set(null, `Loop finished at ${clock(r.until)} after ${r.round} ${r.round === 1 ? 'round' : 'rounds'}`);
     if (r.goal && r.round >= MAX_GOAL_ROUNDS) return this.set(null, `Goal not met after ${r.round} checks: ${r.goal}`);
     if (this.host.running()) {
       this.due = true;
@@ -170,7 +174,7 @@ export class RepeatController {
   private arm() {
     clearTimeout(this.timer);
     const r = this.host.repeat();
-    const at = Math.min(r?.nextAt ?? Infinity, r?.until ?? Infinity);
+    const at = Math.min(r?.nextAt ?? Infinity, r && unrun(r) ? Infinity : (r?.until ?? Infinity));
     // The driver reports its exit after close(); a closed chat must not wake up again.
     if (!r || at === Infinity || this.host.closed()) return;
     this.timer = after(at, () => this.fire());
