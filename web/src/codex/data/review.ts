@@ -1,6 +1,7 @@
 import { blockId, isBlock } from '../../../../shared/util';
 import { dayEnd, dayStart, pad } from './dates';
 import { atTime, statusTime } from './engine';
+import { goalsOf } from './goals';
 import { packDay, workGaps, type Span } from './plan';
 import { parseTimes, type ItemRow } from './sync';
 import { isAllDay } from './load';
@@ -159,7 +160,8 @@ export const BLOCKED_DAYS = 2;
 const hm = (t: number) => `${pad(new Date(t).getHours())}:${pad(new Date(t).getMinutes())}`;
 
 // Standup text: what was done and decided on the previous workday, today's meetings and the tasks Plan my day would place,
-// and waiting-on items older than two days. meetings holds focus blocks too; plan is the overdue and due-today tasks.
+// and waiting-on items older than two days. meetings holds focus blocks too; plan is the overdue and due-today tasks, and tasks
+// for this week's goals join them first, as in Plan my day.
 export function standupText(items: ItemRow[], meetings: Meeting[], plan: ItemRow[], now: number) {
   const [from, to] = prevWorkday(now);
   const inPrev = (t: number | null) => t != null && t >= from && t < to;
@@ -167,7 +169,11 @@ export function standupText(items: ItemRow[], meetings: Meeting[], plan: ItemRow
   const decided = meetings.filter((m) => inPrev(m.starts_at)).flatMap((m) => listOf(m.decisions).map((d) => `Decided: ${d} (${m.title})`));
   const today = meetings.filter((m) => m.starts_at != null && m.ends_at != null && m.starts_at >= dayStart(now) && m.starts_at < dayEnd(now) && m.ends_at > m.starts_at && m.ends_at - m.starts_at < 20 * 3600_000);
   const blocked = new Set(today.filter((m) => isBlock(m.id) && m.ends_at! > now).map((m) => `${m.profile}:${m.id}`));
-  const tasks = plan.filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`)).map((r) => ({ title: r.title, due: atTime(r.at) }));
+  const goals = new Set(goalsOf(items, now).map((g) => `${g.profile}:${g.id}`));
+  const forGoal = (r: ItemRow) => !!r.goal && goals.has(`${r.profile}:${r.goal}`);
+  const listed = new Set(plan.map((r) => `${r.profile}:${r.id}`));
+  const goalTasks = items.filter((r) => isOpen(r) && forGoal(r) && !listed.has(`${r.profile}:${r.id}`));
+  const tasks = [...plan, ...goalTasks].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`)).map((r) => ({ title: r.title, due: atTime(r.at), goal: forGoal(r) }));
   const packed = packDay(tasks, workGaps(today.map((m) => [m.starts_at!, m.ends_at!] as Span), now));
   const timed = [...today.map((m) => ({ at: m.starts_at!, text: m.title ?? '' })), ...packed.map((p) => ({ at: p.span[0], text: p.task.title ?? '' }))].sort((a, b) => a.at - b.at);
   const placed = new Set(packed.map((p) => p.task));
