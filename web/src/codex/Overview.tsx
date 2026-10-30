@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
-import { actionsOf, followThrough, type Meeting } from './data/wiki';
+import { actionsOf, followThrough, live, type Meeting } from './data/wiki';
 import { followUpText } from './data/meetingMarkdown';
 import { meetingTimeLeft, sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';
@@ -13,6 +13,8 @@ import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
 import { sourceOf, useActions } from './Task';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
+import { atRisk, minutesText, type Span } from './data/plan';
+import { blockId, isBlock } from '../../../shared/util';
 import { MorningBrief } from './Brief';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
@@ -204,6 +206,38 @@ function SinceLastVisit() {
 
 type Split = ReturnType<typeof useSplit>;
 
+// Tasks due by Friday that will not fit in the free work time before their due time, with the shortfall.
+function AtRisk({ s, now }: { s: Split; now: number }) {
+  const snap = useAssistantData();
+  const { filter } = useView();
+  const minute = Math.floor(now / 60000);
+  const rows = useMemo(() => {
+    const timed = live(snap.meetings).filter((m) => (filter === 'all' || m.profile === filter) && m.starts_at != null && m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < 20 * 3600_000);
+    const blocked = new Set(timed.filter((m) => isBlock(m.id) && m.ends_at! > minute * 60000).map((m) => `${m.profile}:${m.id}`));
+    const tasks = [...s.overdue, ...s.today, ...s.later].flatMap((r) => {
+      const due = atTime(r.at);
+      return due != null && !blocked.has(`${r.profile}:${blockId(r.id)}`) ? [{ title: r.title, due, r }] : [];
+    });
+    return atRisk(tasks, timed.map((m) => [m.starts_at!, m.ends_at!] as Span), minute * 60000);
+  }, [snap.meetings, filter, s, minute]);
+  if (!rows.length) return null;
+  return (
+    <section>
+      <div className="as-section late">At risk · {rows.length}</div>
+      <div className="ov-follow">
+        {rows.map(({ task, short }) => (
+          <div key={task.r.profile + task.r.id} className="ov-follow-row">
+            <button className="ov-follow-text" onClick={() => setView({ list: 'tasks', open: null })}>
+              <span className="ov-t">{task.r.title}</span>
+              <span className="muted small">due {when(task.due, now)} · {minutesText(short)} short</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
 export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
   const store = useAssistantStore();
@@ -268,7 +302,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <MorningBrief now={now} />
       <JustEnded meetings={s.meetingsToday} now={now} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
-      <DayPlan meetings={s.busyToday} open={dueToday} now={now} />
+      <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
+      <AtRisk s={s} now={now} />
       <SinceLastVisit />
       <SlackCard />
       {digest && (

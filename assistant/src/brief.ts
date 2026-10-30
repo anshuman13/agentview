@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
-import { minutesText, workGaps, type Span } from '../../shared/plan.js';
-import { clock, isBlock } from '../../shared/util.js';
+import { atRisk, minutesText, workGaps, type Span } from '../../shared/plan.js';
+import { blockId, clock, isBlock } from '../../shared/util.js';
 import type { Profile } from './db.js';
 import { applyChanges } from './sync.js';
 import { inWeekHours } from './time.js';
@@ -29,7 +29,15 @@ function lastWorkday(start: number) {
   return d.getTime();
 }
 
-// Today's meetings and free time, tasks due or overdue, Slack asks to review and meeting actions left from the last workday.
+// Open tasks due this week that will not fit in the free work time before they are due; tasks with a focus block ahead are covered.
+function riskCount(db: Database, profile: Profile, now: number) {
+  const week = new Date(now).setHours(24 * 7, 0, 0, 0);
+  const busy = db.prepare('SELECT starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = ? AND starts_at < ? AND ends_at > ? AND ends_at - starts_at < ?').all(profile, week, now, LONG) as { starts_at: number; ends_at: number }[];
+  const tasks = db.prepare("SELECT i.title, CAST(i.at AS INTEGER) AS due FROM items i WHERE i.deleted = 0 AND i.profile = ? AND i.status = 'open' AND COALESCE(i.source, '') NOT IN ('calendar', 'meeting') AND i.at IS NOT NULL AND CAST(i.at AS INTEGER) < ? AND NOT EXISTS (SELECT 1 FROM meetings m WHERE m.profile = i.profile AND m.id = ? || i.id AND m.deleted = 0 AND m.ends_at > ?)").all(profile, week, blockId(''), now) as { title: string | null; due: number }[];
+  return atRisk(tasks, busy.map((m) => [m.starts_at, m.ends_at] as Span), now).length;
+}
+
+// Today's meetings and free time, tasks due or overdue, tasks at risk this week, Slack asks to review and meeting actions left from the last workday.
 export function buildBrief(db: Database, profile: Profile, now = Date.now()): Brief {
   const start = new Date(now).setHours(0, 0, 0, 0);
   const end = new Date(now).setHours(24, 0, 0, 0);
@@ -50,12 +58,14 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
   lines.push(gaps.length ? `Free ${minutesText(Math.round(free / 60_000))}: ${gaps.map(([a, b]) => `${clock(a)}-${clock(b)}`).join(', ')}` : 'No free time 08:00-17:00');
   if (tasks.length) lines.push('', `Tasks · ${tasks.length} due today${late ? `, ${late} overdue` : ''}`, ...top(tasks, (t) => (Number(t.at) < now ? ' (overdue)' : '')));
+  const risk = riskCount(db, profile, now);
+  if (risk) lines.push('', `At risk: ${plural(risk, 'task')}`);
   if (asks.length) lines.push('', `Slack asks to review · ${asks.length}`, ...top(asks));
   if (left.length) lines.push('', `Still open from last workday · ${left.length}`, ...top(left, (a) => `${a.meeting ? ` (${a.meeting})` : ''}${a.status === 'suggested' ? ' (yours?)' : ''}`));
   return {
     title: `Today: ${plural(meetings.length, 'meeting')}, ${plural(tasks.length, 'task')}`,
     text: lines.join('\n'),
-    empty: !meetings.length && !tasks.length && !asks.length && !left.length,
+    empty: !meetings.length && !tasks.length && !risk && !asks.length && !left.length,
   };
 }
 

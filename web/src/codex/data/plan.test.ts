@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultBlock, estimateMin, fitBlock, focusTitle, workGaps } from './plan';
+import { atRisk, defaultBlock, estimateMin, fitBlock, focusTitle, packDay, workGaps } from './plan';
 
 const at = (h: number, m = 0) => new Date(2026, 9, 30, h, m).getTime();
 
@@ -41,5 +41,44 @@ describe('blocks', () => {
   });
   it('drops the estimate from the event title', () => {
     expect(focusTitle('Write doc ~30m today')).toBe('Focus: Write doc today');
+  });
+});
+
+describe('packDay', () => {
+  it('packs by due time then list order, skips gaps too short and leaves out what does not fit', () => {
+    const tasks = [
+      { title: 'Read notes', due: null },
+      { title: 'Write doc ~1h', due: at(15) },
+      { title: 'Reply to Mira ~45m', due: at(11) },
+      { title: 'Huge job ~3h', due: at(16) },
+    ];
+    const out = packDay(tasks, [[at(9, 2), at(9, 40)], [at(10), at(12)]]);
+    expect(out.map((p) => [p.task.title, p.span])).toEqual([
+      ['Reply to Mira ~45m', [at(10), at(10, 45)]],
+      ['Write doc ~1h', [at(10, 45), at(11, 45)]],
+      ['Read notes', [at(9, 5), at(9, 35)]],
+    ]);
+  });
+});
+
+describe('atRisk', () => {
+  const mon = (d: number, h: number, m = 0) => new Date(2026, 10, 2 + d, h, m).getTime();
+  it('flags tasks whose summed estimates exceed the free time before their due time', () => {
+    const busy: [number, number][] = [[mon(0, 8), mon(0, 16)], [mon(1, 8), mon(1, 17)]];
+    const tasks = [
+      { title: 'Slides ~1h', due: mon(0, 17) },
+      { title: 'Budget ~30m', due: mon(1, 12) },
+      { title: 'Late one', due: mon(-3, 9) },
+      { title: 'Plan ~2h', due: mon(2, 10) },
+      { title: 'Next week ~8h', due: mon(7, 9) },
+    ];
+    expect(atRisk(tasks, busy, mon(0, 7)).map((r) => [r.task.title, r.short])).toEqual([
+      ['Late one', 30],
+      ['Budget ~30m', 60],
+      ['Plan ~2h', 60],
+    ]);
+  });
+  it('is empty on the weekend', () => {
+    expect(atRisk([{ title: 'Slides', due: mon(5, 9) }], [], mon(5, 8))).toEqual([]);
   });
 });

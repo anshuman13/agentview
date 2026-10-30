@@ -51,3 +51,49 @@ export function defaultBlock(gap: Span, title: string | null): Span | null {
 }
 
 export const focusTitle = (title: string | null) => `Focus: ${(title ?? '').replace(EST_RE, '').replace(/\s+/g, ' ').trim()}`;
+
+const DEFAULT_MIN = 30;
+const taskMin = (title: string | null) => estimateMin(title) ?? DEFAULT_MIN;
+
+// Places tasks into the gaps in due time order, then list order, each at the first gap start (rounded up to 5 minutes)
+// with room for its whole estimate or 30 minutes; tasks that fit nowhere are left out.
+export function packDay<T extends { title: string | null; due: number | null }>(tasks: T[], gaps: Span[]): { task: T; span: Span }[] {
+  const free = gaps.map(([a, b]) => [a, b] as Span);
+  const order = tasks.map((task, i) => ({ task, i })).sort((x, y) => (x.task.due ?? Infinity) - (y.task.due ?? Infinity) || x.i - y.i);
+  const out: { task: T; span: Span }[] = [];
+  for (const { task } of order) {
+    const len = taskMin(task.title) * 60_000;
+    for (const g of free) {
+      const start = Math.ceil(g[0] / SLOT) * SLOT;
+      if (start + len > g[1]) continue;
+      out.push({ task, span: [start, start + len] });
+      g[0] = start + len;
+      break;
+    }
+  }
+  return out;
+}
+
+// Tasks due by the end of this week's Friday whose estimates, summed in due order, exceed the free work time before their
+// due time; overdue tasks count as due at 17:00 today. short is the missing minutes.
+export function atRisk<T extends { title: string | null; due: number }>(tasks: T[], busy: Span[], now: number, startHour = 8, endHour = 17): { task: T; short: number }[] {
+  const d = new Date(now);
+  const days = 5 - d.getDay();
+  if (d.getDay() === 0 || days < 0) return [];
+  const day = (i: number, h = 0) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + i, h).getTime();
+  const gaps = Array.from({ length: days + 1 }, (_, i) => workGaps(busy, Math.max(now, day(i)), startHour, endHour)).flat();
+  const freeBy = (t: number) => Math.round(gaps.reduce((n, [a, b]) => n + Math.max(0, Math.min(b, t) - a), 0) / 60_000);
+  const close = day(0, endHour);
+  const due = tasks
+    .filter((t) => t.due < day(days + 1))
+    .map((task) => ({ task, by: task.due < now ? Math.max(close, now) : task.due }))
+    .sort((a, b) => a.by - b.by);
+  const out: { task: T; short: number }[] = [];
+  let need = 0;
+  for (const { task, by } of due) {
+    need += taskMin(task.title);
+    const short = need - freeBy(by);
+    if (short > 0) out.push({ task, short });
+  }
+  return out;
+}
