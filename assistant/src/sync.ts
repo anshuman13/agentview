@@ -180,7 +180,7 @@ export function pullChanges(
     sql += dataColumns.join(', ');
     sql += ` FROM ${table} WHERE version > ? ORDER BY version, id LIMIT ?`;
 
-    const selectStmt = db.prepare(sql);
+    const selectStmt = stmt(db, sql);
     const rows = selectStmt.all(since, limit + 1) as any[];
 
     for (const row of rows) {
