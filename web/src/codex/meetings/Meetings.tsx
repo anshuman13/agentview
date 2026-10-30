@@ -15,6 +15,6 @@ export function Meetings({ onMenu }: { onMenu: () => void }) {
   const rows = live(meetings);
   const m = open ? rows.find((x) => meetingKey(x) === open) ?? rows.find((x) => x.id === open) : undefined;
   if (person) return <Person name={person} />;
-  if (m) return <MeetingPage m={m} />;
+  if (m) return <MeetingPage key={meetingKey(m)} m={m} />;
   return <MeetingsList onMenu={onMenu} />;
 }

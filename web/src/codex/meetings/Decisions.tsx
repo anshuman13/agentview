@@ -9,13 +9,14 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
   const [person, setPerson] = useState('');
   const log = useMemo(() => decisionLog(meetings), [meetings]);
   const people = useMemo(() => [...new Set(log.flatMap((d) => peopleOf(d.meeting)))].sort((a, b) => a.localeCompare(b)), [log]);
-  const rows = decisionsWith(log, person);
+  const who = people.includes(person) ? person : '';
+  const rows = decisionsWith(log, who);
   const copy = () => void navigator.clipboard.writeText(decisionsMarkdown(rows)).then(() => showSnack('Copied'), () => showSnack('Copy failed'));
   return (
     <div className="mt-log">
       {(people.length > 0 || rows.length > 0) && (
         <div className="mt-log-bar">
-          {people.length > 0 && <select value={person} aria-label="Filter by person" onChange={(e) => setPerson(e.target.value)}>
+          {people.length > 0 && <select value={who} aria-label="Filter by person" onChange={(e) => setPerson(e.target.value)}>
             <option value="">Everyone</option>
             {people.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>}
@@ -28,7 +29,7 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
           <span className="mt-log-from">{d.meeting.title || 'Meeting'} · {when(d.at)}</span>
         </button>
       ))}
-      {!rows.length && <div className="as-empty"><Icon name="check" /><div>{person ? 'No decisions with this person.' : 'No decisions yet.'}</div><div className="muted small">Decisions come from the meeting summaries.</div></div>}
+      {!rows.length && <div className="as-empty"><Icon name="check" /><div>{who ? 'No decisions with this person.' : 'No decisions yet.'}</div><div className="muted small">Decisions come from the meeting summaries.</div></div>}
     </div>
   );
 }

@@ -119,7 +119,7 @@ function Notes({ m }: { m: Meeting }) {
   };
   return (
     <textarea ref={area} className="mt-notes" value={text} rows={2} placeholder="Write your notes. They stay yours; the summary is written separately."
-      onChange={(e) => change(e.target.value)} onBlur={flush} />
+      onChange={(e) => change(e.target.value)} onBlur={() => { const typed = pending.current !== null; flush(); if (!typed) setText(row.current.notes ?? ''); }} />
   );
 }
 
