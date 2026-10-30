@@ -238,7 +238,7 @@ async function step(name: string, fn: () => unknown) {
   try {
     await fn();
   } catch (err) {
-    console.error(`${name}:`, err instanceof Error ? err.message : err);
+    console.error(`${name}:`, errText(err));
   }
 }
 
@@ -259,7 +259,7 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
             if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
           } catch (err) {
             markTried(db(), profile, due, Date.now(), isLimited(ACCOUNT_OF[profile]));
-            console.error(`transcripts ${profile}:`, err instanceof Error ? err.message : err);
+            console.error(`transcripts ${profile}:`, errText(err));
           }
         }));
       }

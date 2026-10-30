@@ -1,3 +1,5 @@
+import { errText } from '../../shared/util.js';
+
 const running = new Map<string, Promise<unknown>>();
 
 export function once<T>(key: string, fn: () => Promise<T>): Promise<T> {
@@ -31,7 +33,7 @@ export function loop(name: string, ms: number, fn: () => unknown, now = false) {
     try {
       await fn();
     } catch (err) {
-      console.error(`${name}:`, err instanceof Error ? err.message : err);
+      console.error(`${name}:`, errText(err));
     } finally {
       busy = false;
     }

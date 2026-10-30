@@ -4,6 +4,7 @@ import os from 'node:os';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { decisionKey, keyWords, mayChange, titleWords } from '../../shared/claimMatch.js';
+import { errText } from '../../shared/util.js';
 import { isLimited } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
@@ -152,7 +153,7 @@ export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = d
       try {
         if (found.length) saved += saveUpdates(db, profile, o, found, await ask(profile, o, found), now);
       } catch (err) {
-        console.error(`wiki updates ${profile}:`, err instanceof Error ? err.message : err);
+        console.error(`wiki updates ${profile}:`, errText(err));
         if (isLimited(ACCOUNT_OF[profile])) break;
         if (failed(db, profile, o.id) < MAX_TRIES) continue;
       }
