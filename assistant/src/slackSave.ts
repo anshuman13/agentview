@@ -47,7 +47,7 @@ export const Decided = z.object({
   url: z.string().describe('Permalink of the message with the decision'),
   time: z.string().describe('When it was decided, as YYYY-MM-DDTHH:MM local time'),
 });
-export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; details?: z.infer<typeof Detail>[]; said?: z.infer<typeof Said>[]; decisions?: z.infer<typeof Decided>[]; channels?: { name: string; id: string }[] };
+export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & { new_messages?: number })[]; asks: z.infer<typeof Ask>[]; answered: string[]; fulfilled?: string[]; details?: z.infer<typeof Detail>[]; said?: z.infer<typeof Said>[]; decisions?: z.infer<typeof Decided>[]; channels?: { name: string; id: string }[] };
 
 // Permalinks come from the model, so only web links are stored or pushed; no comma or semicolon, which split ntfy actions.
 export const webUrl = (u: string | null | undefined) => (u && /^https?:\/\/[^\s,;]+$/i.test(u) ? u : null);
@@ -87,6 +87,11 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     const old = has.get(PROFILE, id) as { status: string } | null;
     if (old && (old.status === 'suggested' || old.status === 'unassigned')) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done' } });
     else if (old?.status === 'open') answeredOpen.push(id);
+  }
+  for (const url of r.fulfilled ?? []) {
+    const id = saidId(askId(webUrl(url) ?? url));
+    const old = has.get(PROFILE, id) as { status: string } | null;
+    if (old && (old.status === 'suggested' || old.status === 'open')) changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done' } });
   }
   // New details from Slack go at the end of the task's notes, once per message.
   const task = db.prepare("SELECT text FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND status IN ('open', 'suggested')");

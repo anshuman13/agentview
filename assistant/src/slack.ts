@@ -68,6 +68,8 @@ export async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tool
 
 const openAsks = (db: Database, since: number) =>
   db.prepare("SELECT id, title, source_url, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'slack' AND id NOT LIKE 'said:%' AND status IN ('suggested', 'open') AND updated_at > ?").all(PROFILE, since) as { id: string; title: string; source_url: string; people: string }[];
+const openPromises = (db: Database, since: number) =>
+  db.prepare("SELECT id, title, source_url FROM items WHERE profile = ? AND deleted = 0 AND id LIKE 'said:%' AND status IN ('suggested', 'open') AND updated_at > ? ORDER BY updated_at DESC LIMIT 30").all(PROFILE, since) as { id: string; title: string; source_url: string | null }[];
 const closedAsks = (db: Database, since: number) =>
   db.prepare("SELECT id, title FROM items WHERE profile = ? AND source = 'slack' AND id NOT LIKE 'said:%' AND (deleted = 1 OR status = 'done') AND updated_at > ? ORDER BY updated_at DESC LIMIT 30").all(PROFILE, since) as { id: string; title: string }[];
 const tracked = (db: Database) =>
@@ -109,6 +111,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     DRAFT_STEP,
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip messages that report something already done ("added now", "invited") or only give an opinion, promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
+    'In fulfilled, list permalinks of the open promises below that I have since done, for example when I posted what I promised.',
     'In decisions, add each decision the new messages in the watched channels settle: a plan, owner, date, number or status the people there agreed on. Skip proposals, questions and chatter.',
     'In details, add a note when a new message gives more detail on one of the open asks or tracked tasks below: a date, a requirement, a link, a change of scope or who owns it. Use the id in brackets. Skip messages that only repeat the task.',
     '',
@@ -117,6 +120,9 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     '',
     'Open asks:',
     ...openAsks(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.source_url} ${a.people}: ${a.title}`),
+    '',
+    'Open promises:',
+    ...openPromises(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.source_url ?? ''}: ${a.title}`),
     '',
     'Recently closed asks (done or deleted in the last 7 days); do not add these again unless a new message changes the request:',
     ...closedAsks(db, now - 7 * DAY).map((a) => `- [${a.id}] ${a.title}`),
@@ -132,7 +138,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
 async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   const since = sinceOf(db, now);
   let saved: ScanResult | null = null;
-  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
+  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), fulfilled: z.array(z.string()).describe('Permalinks of my open promises that I have since done, e.g. I posted the thing I promised'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });

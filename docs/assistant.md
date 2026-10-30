@@ -72,7 +72,7 @@ until the limit ends.
 Each Slack and Gmail run, and each profile's calendar import (`calendar:work`, `calendar:personal`), records its last success with counts and its last error in meta `scan:<name>`, and
 the sync reply returns them as `scans`. `POST /scan?name=slack|gmail` runs one scan now outside its slot; it still
 honors the usage-limit pause and joins a scan that is already running.
-The Slack counts include `messages`, the new messages the scan read, so a run with no asks still shows it read something. The scan prompt also lists asks closed or deleted in the last 7 days so they are not added again.
+The Slack counts include `messages`, the new messages the scan read, so a run with no asks still shows it read something. The scan prompt also lists asks closed or deleted in the last 7 days so they are not added again. It also lists my open "You said" promises from the last 7 days, and a promise the scan sees I have since done is marked done.
 A failed run is retried after 2, 5 and 10 minutes inside work hours, then waits for its slots. When a set-up source has
 had no success for 45 minutes of work hours, the hub sends one push with the last error or the pause, and arms again after a success.
 

@@ -64,6 +64,16 @@ describe('saveScan', () => {
     expect(row.text).toBe('Can you check?\n\nReplied in Slack');
   });
 
+  test('fulfilled closes the matching promise and leaves another open', () => {
+    const db = openDb(':memory:');
+    const said = (url: string) => ({ url, to: 'Kim', chat: '#ai', title: 'Send Kim the draft', quote: 'I will send it' });
+    saveScan(db, { chats: [], asks: [], answered: [], said: [said('https://x.test/1'), said('https://x.test/2')] }, at(27, 10));
+    expect(scanPrompt(db, { me: 'U1', domain: 'x.slack.com', channels: [] } as any, at(27, 9), at(27, 10))).toContain('Open promises:\n- [said:');
+    saveScan(db, { chats: [], asks: [], answered: [], fulfilled: ['https://x.test/1'] }, at(27, 11));
+    const st = (u: string) => (db.prepare('SELECT status FROM items WHERE id = ?').get(`said:${askId(u)}`) as { status: string }).status;
+    expect([st('https://x.test/1'), st('https://x.test/2')]).toEqual(['done', 'suggested']);
+  });
+
   test('closes answered asks I have not taken, and leaves accepted ones', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('u1'), ask('u2')], answered: [] }, at(27, 10));
