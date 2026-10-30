@@ -227,13 +227,6 @@ a.as-chip { text-decoration: none; }
 /* Overview */
 /* The empty line hides when any Today block other than the standup button rendered above it. */
 .as-scroll > :not(.ov-empty, .as-next-actions) ~ .ov-empty { display: none; }
-.ov-summary { display: flex; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
-.ov-stat { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: var(--sp-6) var(--sp-7); border: 0; background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
-.ov-stat + .ov-stat { border-left: 1px solid var(--border); }
-@media (hover: hover) { .ov-stat:hover { background: var(--sunken); } }
-.ov-stat b { font-size: var(--fs-2xl); font-weight: 600; line-height: 1.2; color: var(--fg-strong); font-variant-numeric: tabular-nums; }
-.ov-stat.late b { color: var(--err); }
-.ov-stat.review b { color: var(--warn); }
 .ov-card .mt-row.past .mt-title { color: var(--fg-muted); }
 .ov-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .gl-lines { display: flex; flex-direction: column; gap: var(--sp-2); }
@@ -259,6 +252,8 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 }
 .ov-report { padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden; }
 .ov-report.full { display: block; }
+.ov-more { align-self: flex-start; }
+.ov-fold { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-6); }
 .ov-brief-head { display: flex; align-items: center; gap: var(--sp-2); }
 .ov-brief-head > .as-toggle { flex: 1; display: flex; }
 .as-ask { flex: none; align-self: center; color: var(--fg); font-size: var(--fs-sm); font-weight: 600; }

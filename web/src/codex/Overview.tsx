@@ -20,10 +20,11 @@ import { atRisk, minutesText, type Span } from './data/plan';
 import { keepInTouch, standupText, touchText, type Lapsed } from './data/review';
 import { blockId, isBlock } from '../../../shared/util';
 import { MorningBrief } from './Brief';
+import { Fold } from './Fold';
 import { Icon } from '../ui/Icon';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
-import { copyText, focusPast, openMeeting, openTask, setView, setViewAt, showSnack, useView } from './view';
+import { copyText, focusPast, openMeeting, openTask, setView, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, dismissAll, peopleOf } from './meetings/Meetings';
 import { clock, when } from './time';
 import { touch } from '../app/touch';
@@ -105,27 +106,31 @@ export function Review({ rows }: { rows: ItemRow[] }) {
 const DISMISSED = 'agentview:followThrough';
 
 // Open actions from meetings over a week old: Task unlinks one from its meeting so it is a plain task, Dismiss hides it here.
-function FollowThrough() {
-  const store = useAssistantStore();
-  const act = useActions();
+function useFollowThrough() {
   const snap = useAssistantData();
   const { meetings } = useCodex();
   const { filter } = useView();
   const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(DISMISSED, []));
-  const section = useRef<HTMLElement>(null);
   const minute = Math.floor(Date.now() / 60000);
   const rows = useMemo(
     () => followThrough(snap.items, meetings.filter((m) => filter === 'all' || m.profile === filter), dismissed, minute * 60000),
     [snap.items, meetings, filter, dismissed, minute],
   );
-  if (!rows.length) return null;
   const dismiss = (r: ItemRow) => {
     const live = new Set(snap.items.filter((x) => !x.deleted && x.meeting_id).map((x) => x.profile + x.id));
     const next = [...new Set([...dismissed, r.profile + r.id])].filter((k) => live.has(k));
     setDismissed(next);
     save(DISMISSED, next);
-    focusPast(section.current);
   };
+  return { rows, dismiss };
+}
+
+function FollowThrough({ f }: { f: ReturnType<typeof useFollowThrough> }) {
+  const store = useAssistantStore();
+  const act = useActions();
+  const section = useRef<HTMLElement>(null);
+  const { rows } = f;
+  const dismiss = (r: ItemRow) => { f.dismiss(r); focusPast(section.current); };
   return (
     <section ref={section}>
       <div className="as-section">Follow-through · {rows.length}</div>
@@ -150,12 +155,10 @@ function FollowThrough() {
 const TOUCH_DISMISSED = 'codex.keepInTouch';
 
 // People I usually meet or DM who have gone quiet for over 1.5x their usual gap: Copy nudge copies a short line, Dismiss hides them until the next contact.
-function KeepInTouch() {
+function useKeepInTouch() {
   const snap = useAssistantData();
   const { filter } = useView();
   const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(TOUCH_DISMISSED, []));
-  const list = useRef<HTMLDivElement>(null);
-  const section = useRef<HTMLElement>(null);
   const hour = Math.floor(Date.now() / 3600_000);
   const rows = useMemo(() => {
     const pick = <T extends { profile: string }>(xs: T[]) => xs.filter((x) => filter === 'all' || x.profile === filter);
@@ -163,11 +166,20 @@ function KeepInTouch() {
     return keepInTouch(pick(snap.meetings), pick(snap.chats), pick(snap.items), Date.now());
   }, [snap.meetings, snap.chats, snap.items, filter, hour]);
   const shown = rows.filter((x) => !dismissed.includes(x.key));
-  if (!shown.length) return null;
-  const dismiss = (x: Lapsed, i: number) => {
+  const dismiss = (x: Lapsed) => {
     const next = [...dismissed.filter((k) => rows.some((r) => r.key === k)), x.key];
     setDismissed(next);
     save(TOUCH_DISMISSED, next);
+  };
+  return { shown, dismiss };
+}
+
+function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
+  const list = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
+  const { shown } = k;
+  const dismiss = (x: Lapsed, i: number) => {
+    k.dismiss(x);
     // Focus the person that moved into this row, or the one above when the last went.
     requestAnimationFrame(() => {
       const people = list.current?.querySelectorAll<HTMLElement>('button.ov-follow-text');
@@ -196,6 +208,7 @@ function KeepInTouch() {
 }
 
 const JUST_ENDED_MS = 2 * 3600_000;
+const ACTIONS_SHOWN = 3;
 
 // Meetings that ended in the last two hours, with their actions, a follow-up draft to copy and the notes.
 function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
@@ -208,7 +221,12 @@ function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
     return (
       <section key={m.profile + m.id}>
         <div className="as-section">Just ended · {m.title}</div>
-        {actions.length > 0 && <div className="as-group">{actions.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}</div>}
+        {actions.length > 0 && (
+          <div className="as-group">
+            {actions.slice(0, ACTIONS_SHOWN).map((r) => <ActionRow key={r.profile + r.id} row={r} />)}
+            {actions.length > ACTIONS_SHOWN && <button className="as-confirm-all" onClick={() => openMeeting(m)}>Open notes for {actions.length - ACTIONS_SHOWN} more</button>}
+          </div>
+        )}
         <div className="as-next-actions">
           {!actions.length && meetingState(m, now) === 'waiting' && <span className="muted small ov-follow-text">Waiting for the transcript</span>}
           <button className="btn sm" onClick={copy}><Icon name="mail" small /> Copy follow-up</button>
@@ -265,11 +283,13 @@ function SinceLastVisit() {
 
 type Split = ReturnType<typeof useSplit>;
 
+const firstLine = (text: string | null | undefined) => (text ?? '').split('\n').find((l) => l.trim())?.trim() ?? '';
+
 function Stale({ rows, now, snooze }: { rows: ItemRow[]; now: number; snooze: (r: ItemRow) => void }) {
   const act = useActions();
   if (!rows.length) return null;
   return (
-    <section id="ov-stale" tabIndex={-1}>
+    <section>
       <div className="as-section">Stale · {rows.length}</div>
       <div className="ov-follow">
         {rows.slice(0, 5).map((r) => (
@@ -288,7 +308,7 @@ function Stale({ rows, now, snooze }: { rows: ItemRow[]; now: number; snooze: (r
   );
 }
 
-// The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
+// The day at a glance: what needs me, the next meeting, today's meetings and tasks, with later items and job reports in folds.
 export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
   const store = useAssistantStore();
   const act = useActions();
@@ -309,18 +329,17 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const tasks = () => setView({ list: 'tasks', open: null });
   const needs = useNeedsYou(s, now);
   const stale = useMemo(() => staleTasks(snap.items.filter((r) => filter === 'all' || r.profile === filter), minute * 60000), [snap.items, filter, minute]);
-  const stats = [
-    { n: dueToday.length, label: 'to do today', sel: '.as-section:not(.late):not(.review):not(.later):not(.done)', cls: '' },
-    { n: s.overdue.length, label: 'overdue', sel: '.as-section.late', cls: 'late' },
-    { n: s.review.length, label: 'to confirm', sel: '.as-section.review', cls: 'review' },
-    { n: stale.length, label: 'stale', sel: undefined, cls: '', id: 'ov-stale' },
-  ].filter((x) => x.n > 0);
+  const follow = useFollowThrough();
+  const touchRows = useKeepInTouch();
+  const morning = new Date(now).getHours() < 11;
   const snooze = (r: ItemRow) => {
     haptic('tap');
     const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
     void store.update(r, { at, rolls: null, rolled_from: null }).then(() => showSnack(`Snoozed to ${when(at)}`));
   };
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
+  const laterCount = stale.length + follow.rows.length + touchRows.shown.length + s.meetingsTomorrow.length + tomorrow.length;
+  const contextCount = reports.length + (digest ? 1 : 0);
   const left = meetingTimeLeft(s.meetingsToday, now, s.endOfDay);
   const leftText = left >= 60 ? `${Math.floor(left / 60)}h${left % 60 ? String(left % 60).padStart(2, '0') : ''}` : `${left} min`;
   const drag = !touch();
@@ -349,28 +368,18 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   if (loading) return <Skeleton />;
   return (
     <>
-      {stats.length > 0 && (
-        <div className="ov-summary">
-          {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={() => { if (x.sel) setViewAt({ list: 'tasks', open: null }, x.sel); else if (x.id) { const el = document.getElementById(x.id); el?.scrollIntoView({ behavior: 'smooth', block: 'start' }); el?.focus({ preventScroll: true }); } else tasks(); }}><b>{x.n}</b><span>{x.label}</span></button>)}
-        </div>
-      )}
       <GoalLines now={now} />
       <MorningBrief now={now} />
       <JustEnded meetings={s.meetingsToday} now={now} />
       <NeedsYou n={needs} now={now} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
-      <div className="as-next-actions">
-        <button className="btn sm" onClick={() => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied')}><Icon name="copy" small /> Copy standup</button>
-      </div>
-      <Stale rows={stale} now={now} snooze={snooze} />
-      <SinceLastVisit />
-      {digest && (
-        <section>
-          <div className="as-section">{digest.title} · {dayLabel(digest.updated_at, true)}</div>
-          <div className="ov-report">{digest.text}</div>
-        </section>
+      {morning && (
+        <div className="as-next-actions">
+          <button className="btn sm" onClick={() => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied')}><Icon name="copy" small /> Copy standup</button>
+        </div>
       )}
+      {morning && <SinceLastVisit />}
       {s.next && (
         <section>
           <div className="as-section next">Next</div>
@@ -380,7 +389,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       {upcoming.length > 0 && (
         <section>
           <div className="as-section">Meetings today · {upcoming.length}{left > 0 && <span title="Meeting time left today, including the next one"> · {leftText} left</span>}</div>
-          <div className="mt-rows ov-card">{upcoming.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+          <div className="mt-rows ov-card">{upcoming.slice(0, 3).map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
+          {upcoming.length > 3 && <button className="as-chip quiet ov-more" onClick={() => setView({ list: 'meetings', open: null })}>+{upcoming.length - 3} more</button>}
         </section>
       )}
       {dueToday.length > 0 && (
@@ -389,21 +399,37 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           {shown(dueToday, true)}
         </section>
       )}
-      {(s.meetingsTomorrow.length > 0 || tomorrow.length > 0) && (
-        <section>
-          <div className="as-section later">Tomorrow</div>
-          {s.meetingsTomorrow.length > 0 && <div className="mt-rows ov-card">{s.meetingsTomorrow.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>}
-          {tomorrow.length > 0 && shown(tomorrow)}
-        </section>
-      )}
-      <FollowThrough />
-      <KeepInTouch />
-      {reports.map(({ j, r }) => (
-        <section key={j.profile + j.id}>
-          <button className="as-section as-toggle" onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })}>{j.name} · {clock(r.started_at!)}</button>
-          <div className="ov-report">{r.output}</div>
-        </section>
-      ))}
+      <Fold id="later" title="Later" count={laterCount}>
+        <Stale rows={stale} now={now} snooze={snooze} />
+        <FollowThrough f={follow} />
+        <KeepInTouch k={touchRows} />
+        {(s.meetingsTomorrow.length > 0 || tomorrow.length > 0) && (
+          <section>
+            <div className="as-section later">Tomorrow</div>
+            {s.meetingsTomorrow.length > 0 && <div className="mt-rows ov-card">{s.meetingsTomorrow.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>}
+            {tomorrow.length > 0 && shown(tomorrow)}
+          </section>
+        )}
+      </Fold>
+      <Fold id="context" title="Context" count={contextCount}>
+        {reports.length > 0 && (
+          <div className="ov-follow">
+            {reports.map(({ j, r }) => (
+              <div key={j.profile + j.id} className="ov-follow-row">
+                <button className="ov-follow-text" onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })}>
+                  <span className="ov-t">{j.name} <span className="muted small">{clock(r.started_at!)} · {firstLine(r.output)}</span></span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {digest && (
+          <section>
+            <div className="as-section">{digest.title} · {dayLabel(digest.updated_at, true)}</div>
+            <div className="ov-report">{digest.text}</div>
+          </section>
+        )}
+      </Fold>
       {empty && (
         <div className="ov-empty muted small">
           <div>Nothing today</div>

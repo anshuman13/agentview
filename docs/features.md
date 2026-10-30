@@ -28,18 +28,18 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
 
 ### Overview
 
-- One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening on Tasks
+- One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening on Tasks; more than 3 goals show +N more
 - For each profile with no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week, or Not now to hide the row for the week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
-  the last workday. It folds and hides until tomorrow
-- Meetings that ended in the last two hours with their actions, a follow-up draft to copy and the notes
+  the last workday. It shows its title and 3 lines with Show all, folds and hides until tomorrow
+- Meetings that ended in the last two hours with their first 3 actions (Open notes for N more), a follow-up draft to copy and the notes
 - A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
   length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
-  meetings. Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
+  meetings. The strip shows once a block exists today, otherwise a Plan my day button; Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
   week's goals first, due or not, then overdue and due tasks by due time. It shows the plan to trim before Create adds
   the blocks
-- Copy standup copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
+- Copy standup, shown before 11:00, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
   days)
 - Needs you: one ranked list, shown only when it has rows, that holds overdue tasks, at-risk tasks (due by Friday and
@@ -47,12 +47,12 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
   latest Slack summary's "Needs you" bullets, in that order and each item once. The first 5 show, with Show N more for
   the rest. Tasks have a check and a clock (snooze to tomorrow 09:00, next Monday for work tasks on Friday and Saturday),
   asks the same Mine/Not mine row as in Tasks, DMs Open in Slack, Task and Dismiss, and Slack bullets Task and Done
-- Stale: the 5 oldest tasks untouched for 14 days, with a check and a clock; the stale chip scrolls to it
-- The meetings still ahead today with the meeting time left, and a field on the next meeting's card that adds a
+- Later (folded, count in the header, state remembered): Stale (the 5 oldest tasks untouched for 14 days, with a check and a clock), the follow-through card, Keep in touch and tomorrow's meetings and tasks; hidden when empty
+- The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
-- Tasks due today and tomorrow with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
-- Job reports and a follow-through card for meeting actions still open after a week (Task, Done, Dismiss)
-- A card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
+- Tasks due today (tomorrow under Later) with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
+- Context (folded like Later): one line per job report that opens the job, and the digest. Follow-through is meeting actions still open after a week (Task, Done, Dismiss)
+- Before 11:00, a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person
   page and has Copy nudge and Dismiss, which hides the person until the next contact. On a narrow screen the buttons

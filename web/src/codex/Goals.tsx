@@ -80,7 +80,8 @@ function GoalLine({ goal, items }: { goal: ItemRow; items: ItemRow[] }) {
   );
 }
 
-const CARRY_SKIPPED = 'codex.goalCarrySkipped';
+const GOALS_SHOWN = 3;
+const CARRY_SKIPPED ='codex.goalCarrySkipped';
 
 export function GoalLines({ now }: { now: number }) {
   const store = useAssistantStore();
@@ -102,11 +103,13 @@ export function GoalLines({ now }: { now: number }) {
       busy.current = false;
     }
   };
+  const [more, setMore] = useState(false);
   const offer = carry.length > 0 && !skipped;
   if (!goals.length && !offer) return null;
   return (
     <section className="gl-lines" role="list" aria-label="Goals this week">
-      {goals.map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} />)}
+      {(more ? goals : goals.slice(0, GOALS_SHOWN)).map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} />)}
+      {goals.length > GOALS_SHOWN && <button className="as-chip quiet ov-more" onClick={() => setMore(!more)}>{more ? 'Show fewer' : `+${goals.length - GOALS_SHOWN} more`}</button>}
       {offer && (
         <div className="gl-line" role="listitem">
           <span className="muted small">Carry over {carry.length} {carry.length === 1 ? 'goal' : 'goals'} from last week</span>
