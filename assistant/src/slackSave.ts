@@ -57,8 +57,8 @@ export const saidId = (id: string) => `said:${id}`;
 // Saves one scan: chat summaries, asks as items to review, and closes asks I have replied to. Returns how many asks are new and which are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
-  // A chat with nothing new keeps its running summary.
-  const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now } }));
+  // A chat with nothing new keeps its running summary; one without an id is dropped.
+  const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0 && c.id.trim()).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now } }));
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
   let added = 0;
   for (const a of r.asks) {
