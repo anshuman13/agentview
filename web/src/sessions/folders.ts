@@ -94,11 +94,11 @@ export function worktreeRequest(d: Folder, track: (branch: string | null, error?
     input: { value: d.repo?.branch.includes('/') ? `${d.repo.branch.split('/')[0]}/` : '', placeholder: 'Branch name' },
     run: async (branch) => {
       track(branch);
-      const r = await fetch(apiUrl('/api/worktrees'), { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) });
-      const body = await r.json().catch(() => null);
+      const r = await fetch(apiUrl('/api/worktrees'), { method: 'POST', body: JSON.stringify({ repo: d.cwd, branch }) }).catch(() => null);
+      const body = await r?.json().catch(() => null);
       invalidateWorkspace();
-      if (r.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
-      track(null, r.ok && body?.cwd ? undefined : body?.error ?? 'Could not create the worktree');
+      if (r?.ok && body?.cwd) send({ type: 'new_session', cwd: body.cwd });
+      track(null, r?.ok && body?.cwd ? undefined : body?.error ?? 'Could not create the worktree');
     },
   };
 }
@@ -148,8 +148,8 @@ export const deleteChat = (s: { sessionId: string; title: string; lastModified: 
     warning: forever ? 'The transcript is removed permanently.' : 'You can restore it from the bin for 24 hours.',
     action: 'Delete',
     run: async () => {
-      const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(s.sessionId)}${purge ? '&purge' : ''}`), { method: 'DELETE' });
-      if (!r.ok) return onError((await r.json().catch(() => null))?.error ?? 'Could not delete the chat');
+      const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(s.sessionId)}${purge ? '&purge' : ''}`), { method: 'DELETE' }).catch(() => null);
+      if (!r?.ok) return onError((await r?.json().catch(() => null))?.error ?? 'Could not delete the chat');
       invalidateWorkspace();
       onDone();
       refreshBin();
