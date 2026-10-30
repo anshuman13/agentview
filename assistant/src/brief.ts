@@ -16,6 +16,7 @@ type Row = { title: string | null };
 export type Brief = { title: string; text: string; empty: boolean };
 
 export const briefId = (now: number) => `morning:${ymd(now)}`;
+const dated = (t: { at: number | null }) => t.at != null && (t.at as unknown) !== '';
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const top = <T extends Row>(rows: T[], tag: (r: T) => string = () => '') => [...rows.slice(0, TOP).map((r) => `- ${r.title ?? 'Untitled'}${tag(r)}`), ...(rows.length > TOP ? [`- +${rows.length - TOP} more`] : [])];
 
@@ -27,16 +28,16 @@ function riskCount(db: Database, profile: Profile, now: number) {
   return atRisk(tasks, busy.map((m) => [m.starts_at, m.ends_at] as Span), now).length;
 }
 
-// Today's meetings and free time, tasks due or overdue, tasks at risk this week, Slack asks to review, Slack promises of mine and meeting actions left from the last workday.
+// Today's meetings and free time, tasks due, overdue or without a date, tasks at risk this week, Slack asks to review, Slack promises of mine and meeting actions left from the last workday.
 export function buildBrief(db: Database, profile: Profile, now = Date.now()): Brief {
   const start = new Date(now).setHours(0, 0, 0, 0);
   const end = new Date(now).setHours(24, 0, 0, 0);
   const busy = db.prepare('SELECT id, title, starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = ? AND starts_at >= ? AND starts_at < ? ORDER BY starts_at').all(profile, start, end) as (Row & { id: string; starts_at: number; ends_at: number | null })[];
-  const meetings = busy.filter((m) => !isBlock(m.id));
+  const meetings = busy.filter((m) => !isBlock(m.id) && (m.ends_at ?? m.starts_at) >= now);
   const timed = busy.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), start);
-  const tasks = db.prepare("SELECT title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND at IS NOT NULL AND CAST(at AS INTEGER) < ? ORDER BY CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number; rolls: number | null })[];
-  const late = tasks.filter((t) => Number(t.at) < now).length;
+  const tasks = db.prepare("SELECT title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND (at IS NULL OR at = '' OR CAST(at AS INTEGER) < ?) ORDER BY at IS NULL OR at = '', CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number | null; rolls: number | null })[];
+  const late = tasks.filter((t) => dated(t) && Number(t.at) < now).length;
   const rolled = tasks.filter((t) => (t.rolls ?? 0) > 0).length;
   const slack = db.prepare("SELECT id, title FROM items WHERE deleted = 0 AND profile = ? AND source = 'slack' AND status = 'suggested' ORDER BY updated_at DESC").all(profile) as (Row & { id: string })[];
   const said = slack.filter((r) => r.id.startsWith('said:'));
@@ -50,7 +51,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   }
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
   lines.push(gaps.length ? `Free ${minutesText(Math.round(free / 60_000))}: ${gaps.map(([a, b]) => `${clock(a)}-${clock(b)}`).join(', ')}` : 'No free time 08:00-17:00');
-  if (tasks.length) lines.push('', `Tasks · ${tasks.length} due today${late ? `, ${late} overdue` : ''}${rolled ? `, ${rolled} rolled` : ''}`, ...top(tasks, (t) => `${Number(t.at) < now ? ' (overdue)' : ''}${t.rolls ? ` (rolled ${t.rolls}x)` : ''}`));
+  if (tasks.length) lines.push('', `Tasks · ${tasks.length} due today${late ? `, ${late} overdue` : ''}${rolled ? `, ${rolled} rolled` : ''}`, ...top(tasks, (t) => `${dated(t) && Number(t.at) < now ? ' (overdue)' : ''}${t.rolls ? ` (rolled ${t.rolls}x)` : ''}`));
   const risk = riskCount(db, profile, now);
   if (risk) lines.push('', `At risk: ${plural(risk, 'task')}`);
   if (asks.length) lines.push('', `Slack asks to review · ${asks.length}`, ...top(asks));
