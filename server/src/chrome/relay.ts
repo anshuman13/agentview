@@ -67,6 +67,8 @@ function release() {
 }
 
 function attach(ws: WebSocket) {
+  // Chrome closed while this client was upgrading; its close handler already ran, so nothing would end this client.
+  if (chrome?.readyState !== WebSocket.OPEN) return ws.close(1011, 'closed');
   client?.close(1000, 'replaced');
   release();
   client = ws;
