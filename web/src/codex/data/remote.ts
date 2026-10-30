@@ -6,12 +6,14 @@ import type { Table, Tables } from './wiki';
 
 const SYNC_EVERY = 30000;
 const SAVE_DELAY = 500;
+const HUB_TIMEOUT = 30000;
 
 const call = (path: string, init?: RequestInit) => fetch(path, init);
 
 async function hub<T = Reply>(path: string, body?: unknown, init?: RequestInit): Promise<T> {
   const post = body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
-  const resp = await call(path, { ...post, ...init });
+  const signal = init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(HUB_TIMEOUT)]) : AbortSignal.timeout(HUB_TIMEOUT);
+  const resp = await call(path, { ...post, ...init, signal });
   const data = await resp.json().catch(() => null);
   if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
   return data;
@@ -151,7 +153,10 @@ export class RemoteStore extends BaseStore implements AssistantStore {
           }
         }
         await write(META_KEY, { since, columns: COLUMNS });
-      } catch {}
+        this.setSync({ saveError: false });
+      } catch {
+        this.setSync({ saveError: true });
+      }
     };
     const done = () => void this.writes--;
     const next = this.writes++ ? this.saving.then(run) : run();
@@ -162,7 +167,13 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     await this.syncNow();
   }
 
+  private countPending() {
+    const pending = Object.values(this.tables).reduce((n, map) => n + [...map.values()].filter((r) => r.dirty).length, 0);
+    if (pending !== this.snapshot().sync.pending) this.setSync({ pending });
+  }
+
   protected async refresh(tables?: string[]) {
+    this.countPending();
     const names = tables ?? [...this.syncTouched];
     this.syncTouched.clear();
     if (names.length) this.set(Object.fromEntries(names.map((t) => [t, [...this.tables[t].values()]])) as Partial<Snapshot>);
@@ -175,7 +186,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   protected async syncOnce() {
     await this.loaded;
-    return runSync({
+    return this.track(runSync({
       active: () => true,
       since: async () => this.since,
       saveSince: async (since) => void (this.since = since),
@@ -201,7 +212,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       },
       paused: (paused) => this.setSync({ paused }),
       scans: (scans) => this.setSync({ scans }),
-    });
+    }));
+  }
+
+  private track<T>(run: Promise<T>) {
+    return run.finally(() => this.countPending());
   }
 
   private put(table: string, row: SyncRow) {

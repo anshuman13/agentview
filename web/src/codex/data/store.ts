@@ -4,7 +4,7 @@ import type { Table, Tables } from './wiki';
 
 export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'];
 
-type SyncStatus = { syncing: boolean; last: number; error: string; paused: Paused[]; scans: ScanHealth[] };
+type SyncStatus = { syncing: boolean; last: number; error: string; pending: number; saveError: boolean; paused: Paused[]; scans: ScanHealth[] };
 export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'meeting_id' | 'rolls' | 'rolled_from' | 'rank' | 'source' | 'people' | 'spent' | 'goal'>> & { deleted?: number };
 export type Parsed = { title: string; details: string | null; at: number | null };
 export type MeetingRef = { id: string; title: string | null } | null;
@@ -53,7 +53,7 @@ export abstract class BaseStore {
   private again = false;
 
   constructor(phase: Snapshot['phase']) {
-    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '', paused: [], scans: [] }, pages: [], facts: [], meetings: [], actions: [], jobs: [], runs: [], chats: [], briefs: [] };
+    this.snap = { phase, message: '', items: [], sync: { syncing: false, last: 0, error: '', pending: 0, saveError: false, paused: [], scans: [] }, pages: [], facts: [], meetings: [], actions: [], jobs: [], runs: [], chats: [], briefs: [] };
   }
 
   subscribe = (fn: () => void) => {

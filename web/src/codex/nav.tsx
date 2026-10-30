@@ -73,9 +73,11 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   const { facts, pages } = useCodex();
   const count: Record<List, number> = { today: 0, tasks: taskCount(s, s.endOfDay), summary: 0, meetings: 0, jobs: 0, wiki: reviewCount(pages, facts) };
   const sync = useSyncStatus();
-  const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
+  const waiting = sync.pending ? ` · ${sync.pending} ${sync.pending === 1 ? 'change' : 'changes'} waiting` : '';
+  const base = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : sync.syncing ? 'Syncing' : 'Not synced yet';
+  const status = base + waiting + (sync.saveError ? ' · Not saved on this device' : '');
   const paused = pausedText(sync.paused);
-  const dot = sync.error ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
+  const dot = sync.error || sync.saveError ? 'bad' : sync.syncing ? 'busy' : sync.last ? 'ok' : 'off';
   return (
     <nav className="as-nav">
       {LISTS.map((l) => (
