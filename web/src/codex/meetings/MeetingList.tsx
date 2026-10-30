@@ -8,7 +8,7 @@ import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { meetingKey, openMeeting, setView, showSnack, useView } from '../view';
+import { meetingKey, openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
@@ -186,6 +186,7 @@ function TopicTimeline({ topic, meetings, facts }: { topic: string; meetings: Me
 
 export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
+  useSpotBack(pull.ref, 'meetings');
   const { meetings, facts, store } = useCodex();
   const { filter } = useView();
   const [query, setQuery] = useState('');

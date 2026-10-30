@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
 import { useBack } from '../app/back';
 import type { Profile } from './data/sync';
 
@@ -14,9 +14,36 @@ const subs = new Set<() => void>();
 
 const depth = (v: View) => (v.open ? 1 : 0) + (v.person ? 1 : 0);
 
+// The entry a page was opened from in a list, so going back focuses it again at the same scroll position.
+type Spot = { list: List; scroll: number; index: number; text: string };
+let spot: Spot | null = null;
+const FOCUSABLE = 'button, a[href], input, [tabindex]:not([tabindex="-1"])';
+
+function saveSpot(list: List) {
+  const at = document.activeElement as HTMLElement | null;
+  const scroller = at?.closest<HTMLElement>('.wk-scroll');
+  if (!at || !scroller) return;
+  spot = { list, scroll: scroller.scrollTop, index: [...scroller.querySelectorAll(FOCUSABLE)].indexOf(at), text: at.textContent ?? '' };
+}
+
+export function useSpotBack(scroller: RefObject<HTMLElement | null>, list: List) {
+  useLayoutEffect(() => {
+    const s = spot, el = scroller.current;
+    spot = null;
+    if (!s || s.list !== list || !el) return;
+    el.scrollTop = s.scroll;
+    const all = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    const hit = all[s.index]?.textContent === s.text ? all[s.index] : all.find((b) => b.textContent === s.text);
+    const at = document.activeElement;
+    if (!at || at === document.body) hit?.focus({ preventScroll: true });
+  }, []);
+}
+
 // The direction of the last change drives the page transition in CSS.
 export const setView = (patch: Partial<View>) => {
   const next = { ...view, ...patch };
+  if (next.list !== view.list) spot = null;
+  else if (!depth(view) && depth(next)) saveSpot(view.list);
   document.documentElement.dataset.nav = depth(next) > depth(view) ? 'push' : depth(next) < depth(view) ? 'pop' : 'switch';
   view = next;
   subs.forEach((f) => f());

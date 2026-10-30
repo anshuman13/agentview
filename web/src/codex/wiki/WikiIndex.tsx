@@ -3,7 +3,7 @@ import { useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { currentClaim, factTime, live, newPage, NO_STATS, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
-import { setView, useFocusBack } from '../view';
+import { setView, useFocusBack, useSpotBack } from '../view';
 import { AskBar } from './AskBar';
 import { Feed } from './Feed';
 import { Notes } from './Notes';
@@ -129,6 +129,7 @@ function MemoryCard({ stats }: { stats: Map<string | null, PageStats> }) {
 
 export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
+  useSpotBack(pull.ref, 'wiki');
   const { pages, facts } = useCodex();
   const [query, setQuery] = useState('');
   const overview = useMemo(() => live(pages).find((p) => p.section === 'overview'), [pages]);
