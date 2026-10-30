@@ -194,7 +194,7 @@ export function Composer() {
       try {
         const items = JSON.parse(shell.takeShared!() || '[]') as { name: string; type: string; data: string; text?: string }[];
         const texts = items.filter((it) => it.text).map((it) => it.text);
-        if (texts.length) setShared(texts.join('\n'));
+        if (texts.length) setShared((s) => (s === null ? texts.join('\n') : `${s}\n${texts.join('\n')}`));
         for (const it of items) {
           if (it.text) continue;
           else void attach([new File([Uint8Array.from(atob(it.data), (c) => c.charCodeAt(0))], it.name, { type: it.type })]);

@@ -94,8 +94,7 @@ export function cadenceOf(text: string | null, at: number | null): Cadence {
   if (!r) return 'custom';
   if (r.kind === 'day') return 'daily';
   if (r.kind === 'weekday') return 'weekdays';
-  if (at == null) return 'custom';
-  const d = new Date(at);
+  const d = new Date(at ?? Date.now());
   if (r.kind === 'dow') return r.dow === d.getDay() ? 'weekly' : 'custom';
   return r.dom === d.getDate() ? 'monthly' : 'custom';
 }
