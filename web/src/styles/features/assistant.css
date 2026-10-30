@@ -249,7 +249,7 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 @media (max-width: 480px) {
   .ov-follow-row.wrap { flex-wrap: wrap; }
   .ov-follow-row.wrap > .ov-follow-text { flex-basis: 100%; }
-  .ov-wait .btn.sm { height: var(--touch-sm); }
+  .ov-wait .btn.sm, .ov-follow-row .btn.sm, .as-next-actions .btn.sm { height: var(--touch-sm); }
 }
 .ov-report { padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden; }
 .ov-report.full { display: block; }
