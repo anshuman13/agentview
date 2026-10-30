@@ -24,14 +24,14 @@ function seed() {
 
 it('lists meetings, free time, tasks, Slack asks, my promises and actions left from Friday', () => {
   const b = buildBrief(seed(), 'work', at(MON, 8));
-  expect(b.title).toBe('Today: 2 meetings, 3 tasks');
+  expect(b.title).toBe('Today: 2 meetings, 2 tasks');
   expect(b.text.split('\n')).toEqual([
     'Meetings · 2',
     '09:00-09:30 Standup',
     '13:00-14:00 Review',
     'Free 7h30: 08:00-09:00, 09:30-13:00, 14:00-17:00',
     '',
-    'Tasks · 3 due today, 1 overdue',
+    'Tasks · 2 due today, 1 undated, 1 overdue',
     '- Send report (overdue)',
     '- Call bank',
     '- Share the plan',
@@ -54,8 +54,8 @@ it('lists tasks without a due time after dated ones and never marks them overdue
   item.run('n1', 'No date', null);
   item.run('n2', 'Empty date', '');
   const b = buildBrief(db, 'work', at(MON, 8));
-  expect(b.title).toBe('Today: 2 meetings, 5 tasks');
-  expect(b.text).toContain('Tasks · 5 due today, 1 overdue');
+  expect(b.title).toBe('Today: 2 meetings, 2 tasks');
+  expect(b.text).toContain('Tasks · 2 due today, 3 undated, 1 overdue');
   expect(b.text).toContain('- Call bank\n- Share the plan\n- No date\n- Empty date');
 });
 
@@ -76,7 +76,7 @@ it('stores and pushes once per profile and weekday morning', async () => {
   expect(await runBriefs(db, at(MON, 7, 59), push)).toEqual([]);
   expect(await runBriefs(db, at(MON, 8), push)).toEqual(['work']);
   expect(await runBriefs(db, at(MON, 8, 1), push)).toEqual([]);
-  expect(pushed).toEqual(['Today: 2 meetings, 3 tasks']);
+  expect(pushed).toEqual(['Today: 2 meetings, 2 tasks']);
   expect(db.prepare('SELECT profile, kind FROM briefs WHERE id = ?').all(briefId(at(MON, 8)))).toEqual([{ profile: 'work', kind: 'morning' }]);
   expect(await runBriefs(seed(), at(MON + 1, 17), push)).toEqual([]);
   expect(await runBriefs(seed(), at(MON - 2, 8), push)).toEqual([]);
@@ -100,7 +100,7 @@ it('tags tasks rolled over from earlier days and counts them in the header', () 
   const db = seed();
   db.prepare("UPDATE items SET rolls = 3 WHERE id = 't2'").run();
   const lines = buildBrief(db, 'work', at(MON, 8)).text.split('\n');
-  expect(lines).toContain('Tasks · 3 due today, 1 overdue, 1 rolled');
+  expect(lines).toContain('Tasks · 2 due today, 1 undated, 1 overdue, 1 rolled');
   expect(lines).toContain('- Call bank (rolled 3x)');
 });
 

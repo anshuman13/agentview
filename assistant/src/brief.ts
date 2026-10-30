@@ -38,6 +38,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), start);
   const tasks = db.prepare("SELECT title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND (at IS NULL OR at = '' OR CAST(at AS INTEGER) < ?) ORDER BY at IS NULL OR at = '', CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number | null; rolls: number | null })[];
   const late = tasks.filter((t) => dated(t) && Number(t.at) < now).length;
+  const due = tasks.filter(dated).length;
   const rolled = tasks.filter((t) => (t.rolls ?? 0) > 0).length;
   const slack = db.prepare("SELECT id, title FROM items WHERE deleted = 0 AND profile = ? AND source = 'slack' AND status = 'suggested' ORDER BY updated_at DESC").all(profile) as (Row & { id: string })[];
   const said = slack.filter((r) => r.id.startsWith('said:'));
@@ -51,16 +52,16 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   }
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
   lines.push(gaps.length ? `Free ${minutesText(Math.round(free / 60_000))}: ${gaps.map(([a, b]) => `${clock(a)}-${clock(b)}`).join(', ')}` : 'No free time 08:00-17:00');
-  if (tasks.length) lines.push('', `Tasks · ${tasks.length} due today${late ? `, ${late} overdue` : ''}${rolled ? `, ${rolled} rolled` : ''}`, ...top(tasks, (t) => `${dated(t) && Number(t.at) < now ? ' (overdue)' : ''}${t.rolls ? ` (rolled ${t.rolls}x)` : ''}`));
+  if (tasks.length) lines.push('', `Tasks · ${due} due today${tasks.length > due ? `, ${tasks.length - due} undated` : ''}${late ? `, ${late} overdue` : ''}${rolled ? `, ${rolled} rolled` : ''}`, ...top(tasks, (t) => `${dated(t) && Number(t.at) < now ? ' (overdue)' : ''}${t.rolls ? ` (rolled ${t.rolls}x)` : ''}`));
   const risk = riskCount(db, profile, now);
   if (risk) lines.push('', `At risk: ${plural(risk, 'task')}`);
   if (asks.length) lines.push('', `Slack asks to review · ${asks.length}`, ...top(asks));
   if (said.length) lines.push('', `You said · ${said.length}`, ...top(said));
   if (left.length) lines.push('', `Still open from last workday · ${left.length}`, ...top(left, (a) => `${a.meeting ? ` (${a.meeting})` : ''}${a.status === 'suggested' ? ' (yours?)' : ''}`));
   return {
-    title: `Today: ${plural(meetings.length, 'meeting')}, ${plural(tasks.length, 'task')}`,
+    title: `Today: ${plural(meetings.length, 'meeting')}, ${plural(due, 'task')}`,
     text: lines.join('\n'),
-    empty: !meetings.length && !tasks.length && !risk && !slack.length && !left.length,
+    empty: !meetings.length && !due && !risk && !slack.length && !left.length,
   };
 }
 
