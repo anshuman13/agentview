@@ -51,7 +51,8 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
   const task = pick && open.find((r) => keyOf(r) === pick.key);
   const gap = pick ? gaps.find((g) => g[1] === pick.end) ?? null : null;
-  const slot = pick && slotGap(busy, now, pick.end);
+  const own = task && timed.find((m) => m.profile === task.profile && m.id === blockId(task.id));
+  const slot = pick && slotGap(own ? busy.filter((_, i) => timed[i] !== own) : busy, now, pick.end);
   const span = slot && pick.start ? fitBlock(slot, atClock(now, pick.start), pick.minutes) : null;
   const choose = (gap: Span, r?: ItemRow) => setPick(pickFor(gap, r ?? (open.length === 1 ? open[0] : undefined)));
   const drop = (gap: Span) => (e: React.DragEvent) => {
