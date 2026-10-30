@@ -39,7 +39,7 @@ export function Review({ now }: { now: number }) {
   );
   const empty = !r.done.length && !r.slipped.length && !r.stuck.length && !waiting.length;
   return (
-    <div className="mt-load">
+    <>
       <div className="mt-log-bar"><span className="mt-load-share">Weekly review: {r.done.length} done, {r.slipped.length} slipped, {r.stuck.length} stuck</span></div>
       <Group title="Done this week" rows={r.done}>{(row) => <span className="mt-log-text">{row.title}</span>}</Group>
       <Group title="Slipped" rows={r.slipped}>{actions}</Group>
@@ -56,6 +56,6 @@ export function Review({ now }: { now: number }) {
         </section>
       )}
       {empty && <div className="as-empty"><Icon name="calendar" /><div>Nothing to review.</div></div>}
-    </div>
+    </>
   );
 }

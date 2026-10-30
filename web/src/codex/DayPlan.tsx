@@ -14,10 +14,10 @@ export function DayPlan({ meetings, open, now }: { meetings: Meeting[]; open: It
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
   return (
     <section>
-      <div className="as-section">Plan · planned {minutesText(planned)} / free {hhmm(free)}</div>
-      <div className="as-ctx">
+      <div className="as-section">Plan · {planned ? `planned ${minutesText(planned)} / ` : ''}free {hhmm(free)}</div>
+      <div className="as-chips">
         {gaps.map(([a, b]) => <span key={a} className="as-chip">{clock(a)}-{clock(b)}</span>)}
-        {!gaps.length && <span className="muted small">No free time left in work hours</span>}
+        {!gaps.length && <span className="as-ctx">No free time left in work hours</span>}
       </div>
     </section>
   );
