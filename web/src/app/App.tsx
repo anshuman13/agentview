@@ -16,7 +16,8 @@ import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { Guard } from './Guard';
 import { deepLink } from './deepLinks';
-import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, AssistantBadge, Assistant, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, Observe, Deploy, McpPage, ConnectPopover, Loading } from './lazy';
+import { isPage, pageOf, PageView, PAGES, type Page } from './pages';
+import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, AssistantBadge, Assistant, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, Loading } from './lazy';
 import { AppUpdate, CacheItem, McpItem, Offline, Restarting, UsageItem } from './StatusItems';
 
 import { canNotify, toggleNotify, useNotify } from './notify';
@@ -26,7 +27,6 @@ import { useShownMcp } from '../ops/mcpShown';
 
 type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
-type Page = 'observe' | 'deploy' | 'mcp';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'assistant', icon: 'sparkle', title: 'Codex' },
@@ -37,19 +37,10 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
 ];
 
-const PAGES: { id: Page; icon: string; title: string; kicker: string; sub: (repo: string) => string }[] = [
-  { id: 'observe', icon: 'pulse', title: 'Observe', kicker: 'Grafana · Snowflake', sub: (r) => `Dashboards, logs and data for ${r}. Ask Claude to query Grafana for you.` },
-  { id: 'deploy', icon: 'rocket', title: 'Deploy', kicker: 'Velodrome', sub: (r) => `Deploys of ${r}: what runs where, and a one-click deploy or rollback.` },
-  { id: 'mcp', icon: 'plug', title: 'MCP Servers', kicker: 'Model Context Protocol', sub: () => 'Work and personal servers, grouped by service. Same config as the Claude CLI, checked live.' },
-];
-const isPage = (v: string): v is Page => PAGES.some((p) => p.id === v);
-const pageOf = (id: Page) => PAGES.find((p) => p.id === id)!;
-
 const narrow = () => window.innerWidth <= 900;
 const LONG_PRESS = 450;
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
-
 
 export function App() {
   const connected = useStore((s) => s.ui.connected);
@@ -372,21 +363,7 @@ export function App() {
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><Suspense fallback={<Loading />}><CodePane /></Suspense></div>
           <div className={`editor ${active === 'agents' ? 'shown' : ''}`}>{active === 'agents' && <Suspense fallback={<Loading />}><AgentsPane selected={agentSel} onSelect={setAgentSel} /></Suspense>}</div>
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <Suspense fallback={<Loading />}><BrowserPane onEmpty={() => setEditor('file')} /></Suspense>}</div>
-          {page && (
-            <div key={page} className={`editor ${active === page ? 'shown' : ''}`}>
-              <div className={`page page-${page}`}>
-                <header className="page-hero">
-                  <div>
-                    <div className="page-kicker">{pageOf(page).kicker}</div>
-                    <h1>{pageOf(page).title}</h1>
-                    <div className="page-sub">{pageOf(page).sub(project ?? 'this repo')}</div>
-                  </div>
-                  <div id={`page-${page}-extra`} className="page-extra" />
-                </header>
-                <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'observe' ? <Observe /> : <Deploy />}</Suspense></div>
-              </div>
-            </div>
-          )}
+          {page && <PageView key={page} page={page} shown={active === page} project={project ?? 'this repo'} />}
           <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Suspense fallback={<Loading />}><Assistant /></Suspense></Guard>}</div>
           <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable onMacs={() => setMacs(true)} />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
