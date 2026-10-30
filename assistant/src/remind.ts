@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite';
+import { isBlock } from '../../shared/util.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import type { Profile } from './db.js';
 import { rollOver } from './rollover.js';
@@ -61,7 +62,7 @@ export function snoozeTask(db: Database, profile: Profile, id: string, now = Dat
 export function dueReminders(db: Database, now = Date.now()): Reminder[] {
   const sent = (key: string) => db.prepare('SELECT 1 FROM meta WHERE key = ?').get(`remind:${key}`);
   const out: Reminder[] = [];
-  const soon = db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND starts_at > ? AND starts_at <= ? ORDER BY profile = 'work' DESC").all(now, now + BEFORE) as Meeting[];
+  const soon = (db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND starts_at > ? AND starts_at <= ? ORDER BY profile = 'work' DESC").all(now, now + BEFORE) as Meeting[]).filter((m) => !isBlock(m.id));
   const seen = new Set<string>();
   for (const m of soon) {
     const key = `start:${m.id}:${m.starts_at}`;

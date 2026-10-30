@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isBlock } from '../../../shared/util';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
 import { useAssistantStore } from './data';
@@ -31,7 +32,7 @@ export function DayPlan({ meetings, open, now }: { meetings: Meeting[]; open: It
   const [saving, setSaving] = useState(false);
   const timed = meetings.filter((m) => m.starts_at != null && m.ends_at != null && m.ends_at > m.starts_at && new Date(m.ends_at).getTime() - m.starts_at < 20 * 3600_000);
   const busy = timed.map((m) => [m.starts_at!, m.ends_at!] as Span);
-  const blocks = timed.filter((m) => m.id.startsWith('block:') && m.ends_at! > now);
+  const blocks = timed.filter((m) => isBlock(m.id) && m.ends_at! > now);
   const gaps = workGaps(busy, now);
   const planned = open.reduce((n, r) => n + (estimateMin(r.title) ?? 0), 0);
   if (!gaps.length && !planned && !blocks.length) return null;

@@ -1,4 +1,5 @@
-import { useCallback, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
+import { isBlock } from '../../../../shared/util';
 import { bundled } from '../../app/api';
 import { LocalStore, tauriInvoke } from './local';
 import { RemoteStore } from './remote';
@@ -63,5 +64,6 @@ export function useSyncStatus() {
 export function useCodex() {
   const store = useAssistantStore();
   const snap = useAssistantData();
-  return { store, pages: snap.pages, facts: snap.facts, meetings: snap.meetings, actions: snap.actions };
+  const meetings = useMemo(() => snap.meetings.filter((m) => !isBlock(m.id)), [snap.meetings]);
+  return { store, pages: snap.pages, facts: snap.facts, meetings, actions: snap.actions };
 }

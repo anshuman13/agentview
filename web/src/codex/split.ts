@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useAssistantData, useCodex } from './data';
+import { isBlock } from '../../../shared/util';
+import { useAssistantData } from './data';
 import { live, type Meeting } from './data/wiki';
 import { split } from './data/engine';
 import { useView } from './view';
@@ -32,12 +33,12 @@ export function sharedSplit(items: Parameters<typeof split>[0], filter: Paramete
 
 export function useSplit() {
   const snap = useAssistantData();
-  const { meetings } = useCodex();
   const { filter } = useView();
   const minute = useMinute();
   return useMemo(() => {
     const now = Date.now();
-    const all = live(meetings).filter((m) => m.starts_at != null && (filter === 'all' || m.profile === filter));
+    const rows = live(snap.meetings).filter((m) => m.starts_at != null && (filter === 'all' || m.profile === filter));
+    const all = rows.filter((m) => !isBlock(m.id));
     const ahead = all.filter((m) => (m.ends_at ?? m.starts_at!) > now).sort((a, b) => a.starts_at! - b.starts_at!);
     const endOfDay = dayEnd(now);
     const today = ahead.filter((m) => m.starts_at! < endOfDay);
@@ -51,8 +52,9 @@ export function useSplit() {
     return {
       ...sharedSplit(snap.items, filter, now), next, then: today[1], carried, endOfDay, endOfTomorrow,
       meetingsToday: all.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay).sort(byStart),
+      busyToday: rows.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay),
       meetingsTomorrow: all.filter((m) => m.starts_at! >= endOfDay && m.starts_at! < endOfTomorrow).sort(byStart),
       nextLater: today.find((m) => m !== next && m.starts_at! > now) ?? ahead.find((m) => m.starts_at! >= endOfDay),
     };
-  }, [snap.items, meetings, filter, minute]);
+  }, [snap.items, snap.meetings, filter, minute]);
 }

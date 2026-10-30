@@ -266,7 +266,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <MorningBrief now={now} />
       <JustEnded meetings={s.meetingsToday} now={now} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
-      <DayPlan meetings={s.meetingsToday} open={dueToday} now={now} />
+      <DayPlan meetings={s.busyToday} open={dueToday} now={now} />
       <SinceLastVisit />
       <SlackCard />
       {digest && (

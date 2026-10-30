@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useAssistantData } from './data';
+import { useAssistantData, useCodex } from './data';
 import { GROUP_CAP, searchAll, type Group, type Hit } from './data/search';
 import { Icon } from '../ui/Icon';
 import { openMeeting, setView, useView } from './view';
@@ -30,21 +30,22 @@ function Hits({ label, group, open }: { label: string; group: Group; open: (h: H
 
 export function Search({ onMenu }: { onMenu: () => void }) {
   const snap = useAssistantData();
+  const { meetings } = useCodex();
   const { filter } = useView();
   const [query, setQuery] = useState('');
   const r = useMemo(() => {
     const keep = <T extends { profile: string }>(rows: T[]) => rows.filter((x) => filter === 'all' || x.profile === filter);
-    return searchAll({ items: keep(snap.items), meetings: keep(snap.meetings), facts: keep(snap.facts), pages: keep(snap.pages), jobs: keep(snap.jobs) }, query);
-  }, [snap.items, snap.meetings, snap.facts, snap.pages, snap.jobs, filter, query]);
+    return searchAll({ items: keep(snap.items), meetings: keep(meetings), facts: keep(snap.facts), pages: keep(snap.pages), jobs: keep(snap.jobs) }, query);
+  }, [snap.items, meetings, snap.facts, snap.pages, snap.jobs, filter, query]);
   const said = useTranscriptHits(query);
   const transcripts = useMemo((): Group => {
-    const byKey = new Map(live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter).map((m) => [`${m.profile}:${m.id}`, m]));
+    const byKey = new Map(live(meetings).filter((m) => filter === 'all' || m.profile === filter).map((m) => [`${m.profile}:${m.id}`, m]));
     const hits = [...said].flatMap(([k, text]): Hit[] => {
       const m = byKey.get(k);
       return m ? [{ id: m.id, profile: m.profile, title: m.title || 'Meeting', snippet: text, when: m.starts_at ? dayLabel(m.starts_at) : undefined }] : [];
     });
     return { hits: hits.slice(0, GROUP_CAP), total: hits.length };
-  }, [said, snap.meetings, filter]);
+  }, [said, meetings, filter]);
   const key = (h: Hit) => `${h.profile}:${h.id}`;
   return (
     <div className="wk narrow">
