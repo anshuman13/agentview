@@ -1,8 +1,9 @@
 import { atTime, nextNine } from './data/engine';
 import type { ItemRow } from './data/sync';
 import type { useActions } from './useActions';
+import { setView } from './view';
 
-// Keys on a focused task: j/k or arrows move, Enter or Space opens, x done, s snooze to the next morning, Delete removes.
+// Keys on a focused task: j/k or arrows move, Enter or Space opens, x done or back to open, s snooze to the next morning, Delete removes.
 export function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen: () => void, act: ReturnType<typeof useActions>) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
@@ -12,6 +13,7 @@ export function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen
     rows[rows.indexOf(e.currentTarget) + step]?.focus();
   } else if (e.key === 'Enter' || e.key === ' ') onOpen();
   else if (e.key === 'x' && open) act.done(row);
+  else if (e.key === 'x' && row.status === 'done') act.reopen(row);
   else if (e.key === 's' && open) act.snooze(row, nextNine(new Date(Math.max(atTime(row.at) ?? 0, Date.now()))));
   else if (e.key === 'Delete' || e.key === 'Backspace') act.remove(row);
   else return;
@@ -38,9 +40,14 @@ document.addEventListener('keydown', (e) => {
   if ((e.key !== 'j' && e.key !== 'k' && e.key !== 'n') || e.metaKey || e.ctrlKey || e.altKey) return;
   const at = document.activeElement;
   if (e.key === 'n') {
-    if ((at && at !== document.body && !at.matches('[data-row]')) || document.querySelector<HTMLElement>('.tasks')?.offsetParent == null) return;
+    if (at && at !== document.body && !at.matches('[data-row]')) return;
+    const add = () => window.dispatchEvent(new Event('tasks:add'));
+    if (document.querySelector<HTMLElement>('.tasks')?.offsetParent != null) add();
+    else if (document.querySelector<HTMLElement>('.assistant')?.offsetParent != null) {
+      setView({ list: 'tasks', open: null, person: null });
+      requestAnimationFrame(() => requestAnimationFrame(add));
+    } else return;
     e.preventDefault();
-    window.dispatchEvent(new Event('tasks:add'));
     return;
   }
   if (at && at !== document.body) return;

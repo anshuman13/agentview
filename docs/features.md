@@ -291,8 +291,8 @@ or a page puts focus back on what opened it.
 | y / n / a | Allow, deny or always allow the top permission card |
 | 1-9 | Pick an answer on the top question card |
 | ⌘Enter | Commit in Source Control; run the query in Observe |
-| j / k | Move between tasks in Tasks; Enter or Space opens, Esc closes, x done, s snooze, Delete removes |
-| n / | New task for today; search tasks (on Tasks) |
+| j / k | Move between tasks in Tasks; Enter or Space opens, Esc closes, x done (or back to open on a done task), s snooze, Delete removes |
+| n / | New task for today (opens Tasks from Overview or other Codex pages); search tasks (on Tasks) |
 
 ## Keyboard and screen readers
 
