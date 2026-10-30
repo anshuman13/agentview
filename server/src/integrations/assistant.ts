@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { errText } from '../../../shared/util.js';
 
 export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : 'http://macmini.netbird.cloud:7790');
 
@@ -34,7 +35,7 @@ export async function assistantRoute(method: string, url: URL, body: () => Promi
     const resp = await fetch(`${HUB}${target}`, init);
     return { status: resp.status, body: await resp.json().catch(() => ({ error: `Hub returned HTTP ${resp.status}` })) };
   } catch (err) {
-    return { status: 502, body: { error: `Assistant hub unreachable: ${err instanceof Error ? err.message : String(err)}` } };
+    return { status: 502, body: { error: `Assistant hub unreachable: ${errText(err)}` } };
   }
 }
 

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
-import { clock } from '../../../shared/util.js';
+import { clock, errText } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
 import { advance, looping, loopOff, needsApproval, planChangeText, planStep, withLoop, type LoopStep } from './loop.js';
@@ -13,7 +13,6 @@ import { PR_URL, createsPr, prFrom } from './pr.js';
 type UserEvent = Extract<ChatEvent, { kind: 'user' }>;
 
 const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
-const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
 
 export class AgentSession implements AgentHost {

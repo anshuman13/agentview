@@ -6,6 +6,7 @@ import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { inWeekHours, slotStart } from './time.js';
 import { once } from './once.js';
+import { errText } from '../../shared/util.js';
 
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
 export const ACCOUNT_OF = { work: 'alt', personal: 'main' } as const;
@@ -124,7 +125,7 @@ function importOne(db: () => Database, profile: Profile, run: typeof importCalen
       set.run(lastKey(profile), String(Date.now()));
       return { changed: n };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = errText(err);
       console.error(`calendar ${profile}:`, message);
       return { changed: 0, error: `${profile}: ${message}` };
     }

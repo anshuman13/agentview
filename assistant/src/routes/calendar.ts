@@ -2,7 +2,8 @@ import { BadRequest } from '../../../server/src/http/body.js';
 import { isProfile, type Profile } from '../db.js';
 import { ACCOUNT_OF, lastAttempt, syncCalendar } from '../calendar.js';
 import { addBlock } from '../block.js';
-import { body, errText, send, type Routes } from './http.js';
+import { errText } from '../../../shared/util.js';
+import { body, send, type Routes } from './http.js';
 
 export const calendarRoutes: Routes = {
   'POST /calendar': async ({ res, url, getDb }) => {

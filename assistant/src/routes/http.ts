@@ -1,5 +1,6 @@
 import type http from 'node:http';
 import { BadRequest, parseObject, readBody } from '../../../server/src/http/body.js';
+import { errText } from '../../../shared/util.js';
 import type { openDb } from '../db.js';
 import { SyncError } from '../sync.js';
 
@@ -20,7 +21,6 @@ export function send(res: http.ServerResponse, status: number, obj: unknown, hea
   res.end(JSON.stringify(obj));
 }
 
-export const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 export function fail(res: http.ServerResponse, err: unknown) {
   const message = errText(err);

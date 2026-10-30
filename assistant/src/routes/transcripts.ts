@@ -1,6 +1,7 @@
 import { isProfile } from '../db.js';
 import { NotFound, searchTranscripts, syncTranscript, transcriptText } from '../transcripts.js';
-import { body, errText, send, type Routes } from './http.js';
+import { errText } from '../../../shared/util.js';
+import { body, send, type Routes } from './http.js';
 
 export const transcriptRoutes: Routes = {
   'POST /transcripts': async (c) => {

@@ -15,6 +15,7 @@ import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
 import { chatCost } from '../../../shared/cost.js';
 import { replyLine, sumEdits } from '../../../shared/edits.js';
+import { errText } from '../../../shared/util.js';
 import { sendWhenChanged } from './changed.js';
 import { parseSaved, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
@@ -259,7 +260,7 @@ async function restore() {
   unrestored = saved.chats.slice();
   await Promise.all(saved.chats.map(async (s) => {
     const chat = await openSaved(s.sessionId).catch((err) => {
-      console.error(`could not reopen chat ${s.sessionId}: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(`could not reopen chat ${s.sessionId}: ${errText(err)}`);
       return null;
     });
     unrestored = unrestored.filter((u) => u !== s);
@@ -311,7 +312,7 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
     case 'allow_blocked':
       return chat.allowBlocked(String(msg.id));
     case 'set_model':
-      chat.setModel(msg.model).catch((err) => chat.system(`Could not set the model: ${err instanceof Error ? err.message : String(err)}`));
+      chat.setModel(msg.model).catch((err) => chat.system(`Could not set the model: ${errText(err)}`));
       return;
     case 'set_effort':
       return chat.setEffort(String(msg.effort));
@@ -388,7 +389,7 @@ const ready = new Promise<void>((ok) => (markReady = ok));
 const host = net.createServer((sock) => {
   const send = lines(sock, (v) => {
     const { n, ...req } = v as HostRequest & { n: number };
-    const fail = (err: unknown) => n && send({ n, ok: false, error: err instanceof Error ? err.message : String(err) });
+    const fail = (err: unknown) => n && send({ n, ok: false, error: errText(err) });
     // Answered at once, not after an await, so no broadcast for the chat can slip in between.
     if (req.op === 'state') {
       try {
@@ -430,7 +431,7 @@ console.log(`agent host on ${SOCK} for ${PROJECT}`);
 
 const last = await readJson<any>(LAST, null);
 lastViewed = (await restore().catch((err) => {
-  console.error(`could not restore chats: ${err instanceof Error ? err.message : String(err)}`);
+  console.error(`could not restore chats: ${errText(err)}`);
   return null;
 })) ?? (await (last?.sessionId ? openSaved(last.sessionId).catch(() => createChat(PROJECT)) : createChat(PROJECT)));
 markReady();

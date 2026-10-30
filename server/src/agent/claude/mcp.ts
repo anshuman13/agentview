@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
 import type { McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
+import { errText } from '../../../../shared/util.js';
 import { configDir, hasAlt } from './accounts.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
 import { readJson, writeJson } from '../../json.js';
@@ -116,7 +117,7 @@ export async function probeOne(name: string, scope: string, def: McpServerDef, c
     const { info, tools } = await run(key, def, cwd);
     return { ...base, status: 'connected', version: info?.version, tools: tools.map((t) => ({ name: t.name, description: t.description, readOnly: t.annotations?.readOnlyHint, destructive: t.annotations?.destructiveHint, inputSchema: t.inputSchema as McpSchema | undefined })) };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errText(err);
     return { ...base, status: authError(msg) ? 'needs-auth' : 'failed', error: msg };
   } finally {
     stop(key);
@@ -151,7 +152,7 @@ export async function mcpCall(cwd: string, name: string, def: McpServerDef, tool
   try {
     return { text: text(await run(key, def, tool, args, 60_000, cwd)), isError: false };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errText(err);
     if (authError(msg) || /needs login/.test(msg)) return { error: `${name} needs an OAuth login, so the MCP tab cannot run its tools. Ask Claude to use it in the chat.` };
     return { text: msg, isError: true };
   } finally {

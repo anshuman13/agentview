@@ -4,7 +4,8 @@ import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
 import { summarizeSlack } from '../slack.js';
 import { acceptAsk } from '../slackSave.js';
-import { body, errText, send, type Ctx, type Routes } from './http.js';
+import { errText } from '../../../shared/util.js';
+import { body, send, type Ctx, type Routes } from './http.js';
 
 function taskAction(act: typeof finishTask) {
   return ({ res, url, getDb }: Ctx) => {

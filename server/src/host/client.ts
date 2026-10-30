@@ -4,6 +4,7 @@ import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { errText } from '../../../shared/util.js';
 import { lines, socketPath, type HostLine, type HostRequest } from './protocol.js';
 
 const MAIN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'main.ts');
@@ -92,7 +93,7 @@ export class Host {
         closeSync(log);
       }
     } catch (err) {
-      console.error(`agent host: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(`agent host: ${errText(err)}`);
     }
   }
 }

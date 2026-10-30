@@ -5,6 +5,7 @@ import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { isLimited } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
+import { errText } from '../../shared/util.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
 import type { Profile } from './db.js';
@@ -115,7 +116,7 @@ export async function runDue(db: Database, now = Date.now(), run = runJob, notif
       output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n');
     } catch (err) {
       status = 'error';
-      output = err instanceof Error ? err.message : String(err);
+      output = errText(err);
     }
     const done = Date.now();
     const changes: Change[] = [{ table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output } }];

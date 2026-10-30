@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { snippet } from '../../shared/snippet.js';
+import { errText } from '../../shared/util.js';
 import { configDir, isLimited } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
@@ -160,7 +161,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     try {
       return { content: [{ type: 'text', text: readSaved(root, a.path, a.offset) }] };
     } catch (err) {
-      return { content: [{ type: 'text', text: err instanceof Error ? err.message : String(err) }], isError: true };
+      return { content: [{ type: 'text', text: errText(err) }], isError: true };
     }
   });
   const known = db.prepare("SELECT title, status FROM items WHERE profile = ? AND meeting_id = ? AND deleted = 0");
