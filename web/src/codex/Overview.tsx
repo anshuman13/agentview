@@ -11,7 +11,7 @@ import { save, stored, plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
-import { useActions } from './Task';
+import { sourceOf, useActions } from './Task';
 import { DayPlan } from './DayPlan';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
@@ -67,18 +67,22 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
   );
 }
 
-// Suggested actions grouped by meeting, each group with Confirm all.
+// Suggested actions grouped by meeting, or by source for Slack and Gmail asks, each group with Confirm all.
+const groupOf = (r: ItemRow) => r.meeting_id ?? `source:${r.source ?? ''}`;
+
 export function Review({ rows }: { rows: ItemRow[] }) {
   const store = useAssistantStore();
   const groups = rows.reduce<ItemRow[][]>((acc, r) => {
-    const g = acc.find((x) => x[0].profile === r.profile && x[0].meeting_id === r.meeting_id);
+    const g = acc.find((x) => x[0].profile === r.profile && groupOf(x[0]) === groupOf(r));
     if (g) g.push(r);
     else acc.push([r]);
     return acc;
   }, []);
   return groups.map((g) => (
-    <section key={g[0].profile + g[0].meeting_id}>
-      <button className="as-section review as-toggle" onClick={() => setView({ list: 'meetings', open: `${g[0].profile}:${g[0].meeting_id}` })}>Is this yours? · {g[0].people || 'Meeting'}</button>
+    <section key={g[0].profile + groupOf(g[0])}>
+      {g[0].meeting_id
+        ? <button className="as-section review as-toggle" onClick={() => setView({ list: 'meetings', open: `${g[0].profile}:${g[0].meeting_id}` })}>Is this yours? · {g[0].people || 'Meeting'}</button>
+        : <div className="as-section review">Is this yours? · {sourceOf(g[0]).label}</div>}
       <div className="as-group">
         {g.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}
         {g.length > 1 && <button className="as-confirm-all" onClick={() => confirmAll(store, g)}><Icon name="check-all" small /> Confirm all {g.length}</button>}

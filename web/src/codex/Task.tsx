@@ -27,7 +27,7 @@ const SOURCES: Record<string, { icon: string; label: string }> = {
   capture: { icon: 'edit', label: 'You' },
   job: { icon: 'history', label: 'Job' },
 };
-const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
+export const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 
 const SWIPE = 80;
 // A left swipe past this share of the row deletes instead of snoozing.

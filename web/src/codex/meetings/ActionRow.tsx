@@ -8,6 +8,7 @@ import { PickTime, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
 import { copyText, showSnack } from '../view';
+import { safeHref } from '../../ui/util';
 
 // Opens Linear's new-issue form filled in; nothing is created until you submit it there.
 const linearIssue = (r: ItemRow, m: Meeting) => `https://linear.app/new?${new URLSearchParams({ title: r.title ?? '', description: draftFor(r, m).split('\n').slice(1).join('\n') })}`;
@@ -48,6 +49,7 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
         </div>
       </div>
       {meeting && mine && !done && <a className="icon-btn" title="New Linear issue" aria-label="New Linear issue" href={linearIssue(row, meeting)} target="_blank" rel="noreferrer"><Icon name="issues" small /></a>}
+      {!meeting && row.source_url && <a className="icon-btn" title="Open source" aria-label="Open source" href={safeHref(row.source_url)} target="_blank" rel="noreferrer"><Icon name="link-external" small /></a>}
       {meeting && <button className="icon-btn" title="Copy as message" aria-label="Copy as message" onClick={() => copyText(draftFor(row, meeting))}><Icon name="copy" small /></button>}
       {status === 'suggested' && (
         <div className="mt-task-pick">
