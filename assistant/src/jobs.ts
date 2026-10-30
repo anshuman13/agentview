@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
-import { isLimited } from '../../server/src/agent/claude/accounts.js';
+import { verifyLimit } from '../../server/src/agent/claude/accounts.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { errText } from '../../shared/util.js';
 import { ACCOUNT_OF } from './calendar.js';
@@ -106,7 +106,7 @@ export async function runDue(db: Database, now = Date.now(), run = runJob, notif
     if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) continue;
     const job = { ...due, prompt: live.prompt };
     const planned = JSON.parse(live.field_times).next_run_at;
-    if (isLimited(ACCOUNT_OF[job.profile])) continue;
+    if (await verifyLimit(ACCOUNT_OF[job.profile])) continue;
     const id = randomUUID();
     const started = Date.now();
     applyChanges(db, [{ table: 'runs', id, profile: job.profile, updated_at: started, fields: { job_id: job.id, started_at: started, status: 'running' } }]);

@@ -183,7 +183,7 @@ export function startSlack(db: () => Database, every = MIN) {
   let tried = 0;
   loop('slack', every, async () => {
     const c = slackConfig();
-    if (!c || !scanDue(tried) || scanPaused(db(), ACCOUNT_OF[PROFILE], 'slack')) return;
+    if (!c || !scanDue(tried) || (await scanPaused(db(), ACCOUNT_OF[PROFILE], 'slack'))) return;
     tried = Date.now();
     const r = await scanSlack(db(), c);
     console.log(`slack: ${r.chats} chats, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent`);

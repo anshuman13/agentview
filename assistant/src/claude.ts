@@ -1,10 +1,11 @@
 import type { Database } from 'bun:sqlite';
 import { query, type Options } from '@anthropic-ai/claude-agent-sdk';
 import type { Account } from '../../shared/protocol.js';
-import { configDir, guardLimit, limitedUntil, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
+import { configDir, guardLimit, limitedUntil, stopOnOverage, verifyLimit } from '../../server/src/agent/claude/accounts.js';
 
 // One run on the account, with no saved session or settings. It refuses at the usage limit and stops before extra usage.
 export async function* ask(account: Account, prompt: string, options: Options) {
+  await verifyLimit(account);
   guardLimit(account);
   const dir = configDir(account);
   const env = { ...process.env, ...options.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) };
@@ -19,9 +20,9 @@ export type Paused = { scan: string; reason: string; until: number };
 const noted = new Map<string, number>();
 
 // A scan skipped at the usage limit logs and records the pause once per limit mark, so the apps can show it.
-export function scanPaused(db: Database, account: Account, scan: string, now = Date.now()) {
+export async function scanPaused(db: Database, account: Account, scan: string, now = Date.now()) {
+  if (limitedUntil(account) <= now || !(await verifyLimit(account))) return false;
   const until = limitedUntil(account);
-  if (until <= now) return false;
   const key = `paused:${scan}:${account}`;
   if (noted.get(key) !== until) {
     noted.set(key, until);

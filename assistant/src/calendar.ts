@@ -145,14 +145,15 @@ export async function syncCalendar(db: () => Database, profiles = Object.keys(AC
 }
 
 export function startCalendar(db: () => Database, every = 5 * 60_000) {
-  const run = () => {
+  const run = async () => {
     try {
-      const due = (Object.keys(ACCOUNT_OF) as Profile[]).filter((p) => importDue(lastAttempt(db(), p)) && !scanPaused(db(), ACCOUNT_OF[p], 'calendar'));
+      const due: Profile[] = [];
+      for (const p of Object.keys(ACCOUNT_OF) as Profile[]) if (importDue(lastAttempt(db(), p)) && !(await scanPaused(db(), ACCOUNT_OF[p], 'calendar'))) due.push(p);
       if (due.length) void syncCalendar(db, due);
     } catch (err) {
       console.error('calendar:', err instanceof Error ? err.message : err);
     }
   };
-  run();
-  setInterval(run, every).unref();
+  void run();
+  setInterval(() => void run(), every).unref();
 }
