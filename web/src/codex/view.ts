@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
 import { useBack } from '../app/back';
-import type { Profile } from './data/sync';
+import { rowKey, type Profile } from './data/sync';
 
 export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki';
 export type Filter = 'all' | Profile;
@@ -49,8 +49,7 @@ export const setView = (patch: Partial<View>) => {
   subs.forEach((f) => f());
 };
 type MeetingRef = { profile: string; id: string };
-export const meetingKey = (m: MeetingRef) => `${m.profile}:${m.id}`;
-export const openMeeting = (m: MeetingRef) => setView({ list: 'meetings', open: meetingKey(m), person: null });
+export const openMeeting = (m: MeetingRef) => setView({ list: 'meetings', open: rowKey(m), person: null });
 export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => view);
 
 // Snackbar with Undo, one at a time.

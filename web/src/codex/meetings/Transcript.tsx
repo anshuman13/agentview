@@ -6,14 +6,15 @@ import { talkTime } from '../data/talkTime';
 import type { Meeting } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { plural } from '../../ui/util';
-import { meetingKey, showSnack } from '../view';
+import { showSnack } from '../view';
+import { rowKey } from '../data/sync';
 import { useSnackTask } from './useSnackTask';
 
 // The transcript text stays on the hub; a summarized meeting fetches it for the talk time and the Transcript section, again after each new summary.
 export function useTranscript(m: Meeting, on: boolean) {
   const store = useAssistantStore();
   const [got, setGot] = useState<{ key: string; text: string | null; error?: string }>();
-  const key = meetingKey(m);
+  const key = rowKey(m);
   useEffect(() => {
     if (!on) return;
     let live = true;

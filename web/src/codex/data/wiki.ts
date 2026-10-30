@@ -1,5 +1,5 @@
 import { decisionKey, keyWords, mayChange, titleWords } from '../../../../shared/claimMatch';
-import { newId, type Profile } from './sync';
+import { newId, rowKey, type Profile } from './sync';
 
 export type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
 
@@ -88,11 +88,10 @@ export const othersOf = (m: Meeting) => {
 
 export const live = <T extends Common & { state?: string | null }>(rows: T[]) => rows.filter((r) => !r.deleted && (r.state ?? 'live') === 'live');
 
-const factKey = (f: { profile: string; id: string }) => `${f.profile}:${f.id}`;
 
 // A claim is current unless a live claim supersedes it.
 export function currentClaim(facts: Fact[]) {
-  const alive = new Set(live(facts).map(factKey));
+  const alive = new Set(live(facts).map(rowKey));
   return (f: Fact) => !f.superseded_by || !alive.has(`${f.profile}:${f.superseded_by}`);
 }
 
@@ -105,19 +104,19 @@ export const isOld = (f: Fact, now = Date.now()) => f.state === 'retired' || (f.
 export function pageClaims(facts: Fact[], pageId: string | null, now = Date.now()) {
   const all = live(facts);
   const current = currentClaim(facts);
-  const byKey = new Map(all.map((f) => [factKey(f), f]));
+  const byKey = new Map(all.map((f) => [rowKey(f), f]));
   const mine = all.filter((f) => (f.page_id ?? null) === pageId);
   const replaced = new Map<string, Fact[]>();
   for (const f of mine) {
     if (current(f)) continue;
     let top = f;
     const seen = new Set<string>();
-    while (!current(top) && !seen.has(factKey(top))) {
-      seen.add(factKey(top));
+    while (!current(top) && !seen.has(rowKey(top))) {
+      seen.add(rowKey(top));
       top = byKey.get(`${top.profile}:${top.superseded_by}`)!;
     }
     if (current(top)) {
-      const k = factKey(top);
+      const k = rowKey(top);
       const list = replaced.get(k);
       if (list) list.push(f);
       else replaced.set(k, [f]);
@@ -130,7 +129,7 @@ export function pageClaims(facts: Fact[], pageId: string | null, now = Date.now(
     if (!g) groups.push((g = { heading, claims: [] }));
     g.claims.push({ fact, old });
   };
-  for (const f of mine.filter((x) => current(x) && !isOld(x, now))) add(f, (replaced.get(factKey(f)) ?? []).sort((a, b) => (b.at ?? 0) - (a.at ?? 0)));
+  for (const f of mine.filter((x) => current(x) && !isOld(x, now))) add(f, (replaced.get(rowKey(f)) ?? []).sort((a, b) => (b.at ?? 0) - (a.at ?? 0)));
   // Proposed claims show in place, so a new page reads as a whole while it waits for review.
   for (const f of proposals(facts).filter((x) => (x.page_id ?? null) === pageId)) add(f, []);
   const newest = (g: (typeof groups)[number]) => Math.max(...g.claims.map((c) => c.fact.at ?? 0));

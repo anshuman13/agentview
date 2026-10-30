@@ -3,14 +3,14 @@ import { useAssistantStore, useAssistantData, useCodex } from '../data';
 import { ask, meetingAskText } from '../data/ask';
 import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
-import type { ItemRow } from '../data/sync';
+import { rowKey, type ItemRow } from '../data/sync';
 import { listOf, othersOf, type Meeting } from '../data/wiki';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, meetingState, peopleOf, pinsOf, seriesOf } from '../data/meetings';
 import { clock, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
-import { copyText, meetingKey, setView, useEscapeBack } from '../view';
+import { copyText, setView, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
 import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars } from './MeetingList';
@@ -179,7 +179,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           <section className="mt-sec">
             <h2>My notes</h2>
-            <MeetingNotes key={meetingKey(m)} m={m} />
+            <MeetingNotes key={rowKey(m)} m={m} />
           </section>
 
           <Fold title="Unassigned" count={count.unassigned}>
@@ -191,7 +191,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           <Fold title="Not mine" count={count.dismissed}>
             <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
           </Fold>
-          {state === 'done' && <Transcript key={meetingKey(m)} got={transcript} />}
+          {state === 'done' && <Transcript key={rowKey(m)} got={transcript} />}
         </article>
       </div>
       <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, all))} />

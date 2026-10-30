@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { blockId, isBlock } from '../../../shared/util';
-import type { ItemRow } from './data/sync';
+import { rowKey, type ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
 import { useAssistantStore } from './data';
 import { atTime, errorText } from './data/engine';
@@ -10,7 +10,6 @@ import { showSnack } from './view';
 import { Icon } from '../ui/Icon';
 
 const hhmm = (n: number) => minutesText(Math.round(n / 60_000));
-const keyOf = (r: ItemRow) => `${r.profile}:${r.id}`;
 export const DRAG_TYPE = 'application/x-codex-item';
 
 type Pick = { end: number; key: string; start: string; minutes: number; title: string };
@@ -32,7 +31,7 @@ function slotGap(busy: Span[], now: number, end: number): Span | null {
 
 function pickFor(gap: Span, r: ItemRow | undefined): Pick {
   const [a, b] = (r && defaultBlock(gap, r.title)) || defaultBlock(gap, null) || gap;
-  return { end: gap[1], key: r ? keyOf(r) : '', start: clock(a), minutes: Math.round((b - a) / 60_000), title: r ? focusTitle(r.title) : '' };
+  return { end: gap[1], key: r ? rowKey(r) : '', start: clock(a), minutes: Math.round((b - a) / 60_000), title: r ? focusTitle(r.title) : '' };
 }
 
 // Today's free gaps in work hours from now, and planned estimates against the free time. A gap opens a form to block time for a task;
@@ -49,14 +48,14 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   const planned = open.reduce((n, r) => n + (estimateMin(r.title) ?? 0), 0);
   if (!gaps.length && !planned && !blocks.length) return null;
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
-  const task = pick && open.find((r) => keyOf(r) === pick.key);
+  const task = pick && open.find((r) => rowKey(r) === pick.key);
   const gap = pick ? gaps.find((g) => g[1] === pick.end) ?? null : null;
   const own = task && timed.find((m) => m.profile === task.profile && m.id === blockId(task.id));
   const slot = pick && slotGap(own ? busy.filter((_, i) => timed[i] !== own) : busy, now, pick.end);
   const span = slot && pick.start ? fitBlock(slot, atClock(now, pick.start), pick.minutes) : null;
   const choose = (gap: Span, r?: ItemRow) => setPick(pickFor(gap, r ?? (open.length === 1 ? open[0] : undefined)));
   const drop = (gap: Span) => (e: React.DragEvent) => {
-    const r = open.find((x) => keyOf(x) === e.dataTransfer.getData(DRAG_TYPE));
+    const r = open.find((x) => rowKey(x) === e.dataTransfer.getData(DRAG_TYPE));
     if (!r) return;
     e.preventDefault();
     choose(gap, r);
@@ -64,19 +63,19 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   // Packs the open tasks without a block, or only those in keep, into the free time left from this moment.
   const pack = (keep?: Set<string>): Planned[] => {
     const blocked = new Set(blocks.map((m) => `${m.profile}:${m.id}`));
-    const tasks = [...late, ...open].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`) && (!keep || keep.has(keyOf(r)))).map((r) => ({ title: r.title, due: atTime(r.at), r }));
+    const tasks = [...late, ...open].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`) && (!keep || keep.has(rowKey(r)))).map((r) => ({ title: r.title, due: atTime(r.at), r }));
     return packDay(tasks, workGaps(busy, Date.now())).map((p) => ({ task: p.task.r, span: p.span }));
   };
   const planDay = () => {
     setPick(null);
     setPlan(pack());
   };
-  const leaveOut = (p: Planned) => setPlan(pack(new Set((plan ?? []).filter((x) => x !== p).map((x) => keyOf(x.task)))));
+  const leaveOut = (p: Planned) => setPlan(pack(new Set((plan ?? []).filter((x) => x !== p).map((x) => rowKey(x.task)))));
   const createPlan = async () => {
     if (!plan?.length) return;
     // Tasks done since the preview drop out and past time is not used; a changed plan is shown again before anything is created.
-    const fresh = pack(new Set(plan.map((p) => keyOf(p.task))));
-    const same = fresh.length === plan.length && fresh.every((p, i) => keyOf(p.task) === keyOf(plan[i].task) && p.span[0] === plan[i].span[0] && p.span[1] === plan[i].span[1]);
+    const fresh = pack(new Set(plan.map((p) => rowKey(p.task))));
+    const same = fresh.length === plan.length && fresh.every((p, i) => rowKey(p.task) === rowKey(plan[i].task) && p.span[0] === plan[i].span[0] && p.span[1] === plan[i].span[1]);
     if (!same) {
       setPlan(fresh);
       showSnack('The plan changed, check it and Create again');
@@ -130,7 +129,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
       {plan && (
         <div className="ov-card dp-block">
           {plan.length ? plan.map((p) => (
-            <div key={keyOf(p.task)} className="dp-when">
+            <div key={rowKey(p.task)} className="dp-when">
               <span className="muted small">{clock(p.span[0])}-{clock(p.span[1])}</span>
               <span className="ov-t">{p.task.title}</span>
               <span className="spacer" />
@@ -149,9 +148,9 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
         <div className="ov-card dp-block">
           {open.length ? (
             <>
-              <select value={pick.key} aria-label="Task" onChange={(e) => setPick({ ...pickFor(gap ?? [now, pick.end], open.find((r) => keyOf(r) === e.target.value)), key: e.target.value })}>
+              <select value={pick.key} aria-label="Task" onChange={(e) => setPick({ ...pickFor(gap ?? [now, pick.end], open.find((r) => rowKey(r) === e.target.value)), key: e.target.value })}>
                 <option value="" disabled>Pick a task due today</option>
-                {open.map((r) => <option key={keyOf(r)} value={keyOf(r)}>{r.title}</option>)}
+                {open.map((r) => <option key={rowKey(r)} value={rowKey(r)}>{r.title}</option>)}
               </select>
               <input value={pick.title} aria-label="Event title" placeholder="Event title" onChange={(e) => setPick({ ...pick, title: e.target.value })} />
               <div className="dp-when">

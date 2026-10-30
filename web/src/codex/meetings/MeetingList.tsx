@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from '../data';
-import { newId } from '../data/sync';
+import { newId, rowKey } from '../data/sync';
 import { live, queryWords, rowMatcher, type Fact, type Meeting } from '../data/wiki';
 import { actionCount, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
 import { clock, when } from '../time';
@@ -8,7 +8,7 @@ import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { meetingKey, openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
+import { openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
@@ -243,7 +243,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       title: 'Notes', starts_at: t, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: '', summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
     };
     void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
-    setView({ open: meetingKey(row) });
+    setView({ open: rowKey(row) });
   };
   const syncCalendar = () => runSync(async () => {
     const n = await store.syncCalendar();
@@ -277,7 +277,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           {visible.map((g) => (
             <section key={g.label}>
               <div className="mt-day">{g.label}</div>
-              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} said={said.get(meetingKey(m))} />)}</div>
+              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} said={said.get(rowKey(m))} />)}</div>
             </section>
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />

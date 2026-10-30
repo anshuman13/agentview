@@ -1,6 +1,6 @@
 import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
-import { mergeIncoming } from './sync';
+import { mergeIncoming, rowKey } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
 
@@ -17,7 +17,6 @@ async function hub<T = Reply>(path: string, body?: unknown, init?: RequestInit):
   return data;
 }
 
-const keyOf = (row: Pick<SyncRow, 'profile' | 'id'>) => `${row.profile}:${row.id}`;
 
 type Cached = { since: number; tables: Record<string, SyncRow[]> };
 
@@ -110,7 +109,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     if (!cached) return;
     for (const [table, rows] of Object.entries(cached.tables)) {
       const map = this.tables[table];
-      if (map) for (const row of rows) if (!map.has(keyOf(row))) map.set(keyOf(row), row);
+      if (map) for (const row of rows) if (!map.has(rowKey(row))) map.set(rowKey(row), row);
     }
     this.since = cached.since;
     if (!meta) {
@@ -185,15 +184,15 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         post: (since, changes: Change[]) => (changes.length ? hub('/api/assistant/sync', { since, changes }) : hub(`/api/assistant/changes?since=${since}`)),
         clean: async ({ table, row }) => {
           const map = this.tables[table];
-          const now = map.get(keyOf(row));
+          const now = map.get(rowKey(row));
           if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) {
-            map.set(keyOf(row), { ...now, dirty: 0 });
+            map.set(rowKey(row), { ...now, dirty: 0 });
             this.syncTouched.add(table);
           }
         },
         apply: async (change: PulledChange) => {
           const map = this.tables[change.table];
-          map.set(keyOf(change), toRow(mergeIncoming<SyncRow>(map.get(keyOf(change)) ?? null, change)));
+          map.set(rowKey(change), toRow(mergeIncoming<SyncRow>(map.get(rowKey(change)) ?? null, change)));
           this.syncTouched.add(change.table);
         },
         paused: (paused) => this.setSync({ paused }),
@@ -205,7 +204,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   private put(table: string, row: SyncRow) {
-    this.tables[table].set(keyOf(row), row);
+    this.tables[table].set(rowKey(row), row);
     this.save([table]);
     this.refresh([table]);
     this.syncNow();
@@ -218,19 +217,19 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   async update(row: ItemRow, patch: Patch) {
-    this.put('items', edited(this.rows.get(keyOf(row)) ?? row, patch, Date.now()));
+    this.put('items', edited(this.rows.get(rowKey(row)) ?? row, patch, Date.now()));
   }
 
   async move(row: ItemRow, profile: Profile) {
     const now = Date.now();
-    const key = keyOf({ profile, id: row.id });
-    const current = this.rows.get(keyOf(row)) ?? row;
+    const key = rowKey({ profile, id: row.id });
+    const current = this.rows.get(rowKey(row)) ?? row;
     this.rows.set(key, moved(current, this.rows.get(key), profile, now));
     this.put('items', edited(current, { deleted: 1 }, now));
   }
 
   editRow = async <K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>) => {
-    const current = (this.tables[table].get(keyOf(row)) as Tables[K] | undefined) ?? row;
+    const current = (this.tables[table].get(rowKey(row)) as Tables[K] | undefined) ?? row;
     this.put(table, edited(current, patch, Date.now()));
   };
 

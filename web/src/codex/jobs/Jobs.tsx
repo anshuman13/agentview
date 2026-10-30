@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
-import { newId, type Profile } from '../data/sync';
+import { newId, rowKey, type Profile } from '../data/sync';
 import type { Job, Run } from '../data/wiki';
 import { clock } from '../time';
 import { dayLabel, dayStart } from '../data/dates';
@@ -18,7 +18,6 @@ const KINDS = [['hourly', 'Every hour'], ['daily', 'Every day'], ['weekdays', 'W
 type Kind = (typeof KINDS)[number][0];
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
-const jobKey = (j: Job) => `${j.profile}:${j.id}`;
 
 // The hub reads the same "hourly", "daily HH:MM", "weekdays HH:MM" and "weekly <day> HH:MM" (assistant/src/jobs.ts).
 export function parseSchedule(s: string | null): { kind: Kind; day: string; time: string } {
@@ -77,7 +76,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
     const profile: Profile = filter === 'personal' ? 'personal' : 'work';
     const row: Job = { id: newId(), profile, version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}', name: 'New job', schedule: 'weekdays 08:00', prompt: '', enabled: 1, next_run_at: null, ...preset };
     void store.editRow('jobs', row, { name: row.name, schedule: row.schedule, prompt: row.prompt, enabled: 1 });
-    setView({ open: jobKey(row) });
+    setView({ open: rowKey(row) });
   };
   return (
     <div className="wk narrow">
@@ -95,7 +94,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
               {jobs.map((j) => {
                 const last = runsOf(runs, j)[0];
                 return (
-                  <div key={jobKey(j)} role="button" tabIndex={0} className={`mt-row jb-row${j.enabled ? '' : ' off'}`} onClick={() => setView({ open: jobKey(j) })} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setView({ open: jobKey(j) }); } }}>
+                  <div key={rowKey(j)} role="button" tabIndex={0} className={`mt-row jb-row${j.enabled ? '' : ' off'}`} onClick={() => setView({ open: rowKey(j) })} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setView({ open: rowKey(j) }); } }}>
                     <span className="mt-body">
                       <span className="mt-title">{j.name || 'Untitled job'}<span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work' : 'Personal'}</span></span>
                       <span className="wk-meta">
@@ -207,7 +206,7 @@ function JobPage({ j }: { j: Job }) {
 export function Jobs({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
   const snap = useAssistantData();
-  const j = open ? snap.jobs.find((x) => !x.deleted && jobKey(x) === open) : undefined;
+  const j = open ? snap.jobs.find((x) => !x.deleted && rowKey(x) === open) : undefined;
   if (j) return <JobPage j={j} />;
   return <JobsList onMenu={onMenu} />;
 }
