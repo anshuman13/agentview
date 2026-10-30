@@ -10,7 +10,10 @@ import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { EventIndex, MAX_EVENTS, stopAgents, trimHistory } from './events.js';
 import { PR_URL, createsPr, prFrom } from './pr.js';
 
+type UserEvent = Extract<ChatEvent, { kind: 'user' }>;
+
 const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
+const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
 
 export class AgentSession implements AgentHost {
@@ -28,9 +31,9 @@ export class AgentSession implements AgentHost {
 
   private turns = 0;
   private planChange: string | null = null;
-  private queued: Extract<ChatEvent, { kind: 'user' }>[] = [];
+  private queued: UserEvent[] = [];
   // Sent to Claude mid-turn, shown as waiting until Claude reaches its next step.
-  private pending: Extract<ChatEvent, { kind: 'user' }>[] = [];
+  private pending: UserEvent[] = [];
   // A message sent mid-turn missed the turn's last step, so the CLI starts a turn for it.
   private expectTurn = false;
   private autoCompact = true;
@@ -96,10 +99,19 @@ export class AgentSession implements AgentHost {
     if (this.known(id)) return;
     const s = this.state.session;
     if (!s.running || s.compacting || s.loop.on || text.trim().startsWith('/') || !this.driver.attached) return this.prompt(text, id);
-    const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), queued: true };
-    this.pending.push(ev);
-    this.pushEvent(ev);
+    this.hold(this.pending, text, id);
     this.driver.send(text, id, 'next');
+  }
+
+  private hold(list: UserEvent[], text: string, id: string) {
+    const ev: UserEvent = { id, kind: 'user', text, at: Date.now(), queued: true };
+    list.push(ev);
+    this.pushEvent(ev);
+  }
+
+  private removeEvents(drop: (e: ChatEvent) => boolean) {
+    this.state.events = this.state.events.filter((e) => !drop(e));
+    this.emit({ type: 'init', state: this.state });
   }
 
   // Stops the current step so a waiting message runs now.
@@ -107,14 +119,17 @@ export class AgentSession implements AgentHost {
     const held = this.queued.find((e) => e.id === id);
     if (held) {
       this.queued = this.queued.filter((e) => e !== held);
-      this.state.events = this.state.events.filter((e) => e !== held);
-      this.emit({ type: 'init', state: this.state });
+      this.removeEvents((e) => e === held);
       return this.steer(held.text);
     }
     if (!this.pending.some((e) => e.id === id) || this.state.session.stopping) return;
+    await this.stop();
+  }
+
+  private async stop(cancelQueued = false) {
     this.setSession({ stopping: true });
     try {
-      await this.driver.interrupt();
+      await this.driver.interrupt(cancelQueued);
     } catch (err) {
       this.setSession({ stopping: false });
       this.system(`Stop failed: ${String(err)}`);
@@ -185,12 +200,12 @@ export class AgentSession implements AgentHost {
   }
 
   async reconnectMcp(name: string) {
-    await this.driver.reconnectMcp(name).catch((err) => this.system(`Reconnecting ${name} failed: ${err instanceof Error ? err.message : String(err)}`));
+    await this.driver.reconnectMcp(name).catch((err) => this.system(`Reconnecting ${name} failed: ${errText(err)}`));
     await this.refreshMcp();
   }
 
   async toggleMcp(name: string, enabled: boolean) {
-    await this.driver.toggleMcp(name, enabled).catch((err) => this.system(`${enabled ? 'Enabling' : 'Disabling'} ${name} failed: ${err instanceof Error ? err.message : String(err)}`));
+    await this.driver.toggleMcp(name, enabled).catch((err) => this.system(`${enabled ? 'Enabling' : 'Disabling'} ${name} failed: ${errText(err)}`));
     await this.refreshMcp();
   }
 
@@ -342,23 +357,14 @@ export class AgentSession implements AgentHost {
     this.turns -= this.driver.dropInput();
     this.dropQueue();
     const dropped = new Set(this.pending.splice(0));
-    if (dropped.size) {
-      this.state.events = this.state.events.filter((e) => !dropped.has(e as Extract<ChatEvent, { kind: 'user' }>));
-      this.emit({ type: 'init', state: this.state });
-    }
+    if (dropped.size) this.removeEvents((e) => dropped.has(e as UserEvent));
     if (this.turns <= 0) {
       this.turns = 0;
       this.setSession({ running: false, compacting: false });
       this.repeater.defer();
       return;
     }
-    this.setSession({ stopping: true });
-    try {
-      await this.driver.interrupt(true);
-    } catch (err) {
-      this.setSession({ stopping: false });
-      this.system(`Stop failed: ${String(err)}`);
-    }
+    await this.stop(true);
   }
 
   async stopTask(toolUseId: string) {
@@ -382,17 +388,14 @@ export class AgentSession implements AgentHost {
   }
 
   private queue(text: string, id: string = randomUUID()) {
-    const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), queued: true };
-    this.queued.push(ev);
-    this.pushEvent(ev);
+    this.hold(this.queued, text, id);
   }
 
   private dropQueue() {
     if (!this.queued.length) return;
     const ids = new Set(this.queued.map((e) => e.id));
     this.queued = [];
-    this.state.events = this.state.events.filter((e) => !ids.has(e.id));
-    this.emit({ type: 'init', state: this.state });
+    this.removeEvents((e) => ids.has(e.id));
   }
 
   // Messages waiting behind a turn, saved when the host exits so a restart does not drop them.
@@ -463,7 +466,7 @@ export class AgentSession implements AgentHost {
     } catch (err) {
       // Nothing was sent, so no turn will end and clear running; stop the loop here.
       this.setSession({ running: this.turns > 1, loop: { ...this.state.session.loop, phase: 'failed' } });
-      this.endLoop(`Loop stopped: could not switch to the ${step.phase} step (${err instanceof Error ? err.message : String(err)})`);
+      this.endLoop(`Loop stopped: could not switch to the ${step.phase} step (${errText(err)})`);
       if (this.turns === 1) this.dequeue();
       return;
     } finally {
@@ -502,7 +505,7 @@ export class AgentSession implements AgentHost {
     if (this.loopCommand(text, id)) return;
     if (this.state.session.compacting) return this.queue(text, id);
     const running = this.state.session.running;
-    const ev: Extract<ChatEvent, { kind: 'user' }> = { id, kind: 'user', text, at: Date.now(), stopping: running };
+    const ev: UserEvent = { id, kind: 'user', text, at: Date.now(), stopping: running };
     this.pushEvent(ev);
     if (running) {
       this.release();
@@ -658,11 +661,8 @@ export class AgentSession implements AgentHost {
   }
 
   private followUp() {
-    if (this.planChange) {
-      const text = this.planChange;
-      this.planChange = null;
-      return text;
-    }
+    const plan = this.takePlanChange();
+    if (plan) return plan;
     if (this.autoCompact && (this.state.session.context ?? 0) >= COMPACT_AT) {
       this.autoCompact = false;
       return '/compact';
