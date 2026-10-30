@@ -19,7 +19,7 @@ export function editCount(name: string, input: Record<string, unknown>): EditCou
   return null;
 }
 
-export function failedTools(events: ChatEvent[]) {
+function failedTools(events: ChatEvent[]) {
   const failed = new Set<string>();
   for (const e of events) if (e.kind === 'tool_result' && e.isError) failed.add(e.toolUseId);
   return failed;

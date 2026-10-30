@@ -30,9 +30,9 @@ export type ObserveInfo = {
 
 export type SnowflakeTest = { row: Record<string, unknown>; ms: number };
 
-export type GrafanaDashboard = { uid: string; title: string; url: string; folder?: string };
+type GrafanaDashboard = { uid: string; title: string; url: string; folder?: string };
 
-export type LogLine = { ts: string; line: string; level?: string };
+type LogLine = { ts: string; line: string; level?: string };
 
 export type LogPattern = { pattern: string; count: number };
 
