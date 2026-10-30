@@ -7,6 +7,7 @@ import { rowKey, type ItemRow } from '../data/sync';
 import { listOf, othersOf, type Meeting } from '../data/wiki';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, displayName, meetingState, peopleOf, pinsOf, seriesOf } from '../data/meetings';
 import { clock, when } from '../time';
+import { useMinute } from '../split';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
@@ -108,7 +109,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const decisions = listOf(m.decisions);
   const people = peopleOf(m);
   const raiseTo = recentPeople(meetings, m.profile, m);
-  const now = Date.now();
+  const now = useMinute();
   const state = meetingState(m, now);
   const transcript = useTranscript(m, state === 'done');
   const back = () => setView({ open: null });
