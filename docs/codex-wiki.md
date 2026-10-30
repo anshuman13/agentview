@@ -4,14 +4,10 @@ Codex (the Assistant pane, `web/src/codex/Codex.tsx`) gets a Wiki and Meetings, 
 "Stilla walkthrough" and "Meetings in Codex" in `assistant-design.md`). The wiki is the priority and has to look
 good: calm typography, generous spacing, one accent colour, no boxed clutter.
 
-The scheduler agent that writes summaries, extracts claims and sends Slack and Linear actions does not exist yet.
-This work builds the screens and the data model; the agent fills the tables later. Until then the screens are empty.
-
 ## Navigation
 
-The Codex sidebar (desktop) and drawer (phone) become: Today, Upcoming, Meetings, Wiki, Notes, Done, then "Coming
-next" with Jobs and Devices. Opening a wiki page or a meeting keeps the list selected and shows a back arrow in the
-header. The view state (`list`, `open` id) lives in a small module shared by the nav and the pane.
+The Codex sidebar (desktop) and drawer (phone) list Overview, Tasks, Meetings, Jobs and Wiki. Opening a wiki page or a meeting keeps the list selected and shows a back arrow in the
+header. The view state (`list`, `open` id) lives in `web/src/codex/view.ts`, shared by the nav and the pane.
 
 ## Wiki index
 
@@ -83,16 +79,16 @@ Desktop (main column ≥ 880px wide)
 
 ## Meetings
 
-- List: search (titles, people, notes, summaries, decisions, and transcript text on the hub with a snippet of the hit), then Today, Upcoming and Past grouped by day. Row: calendar icon, title, time range, an open action
-  count ("0 of 3") when there are proposals, and initials avatars.
-- Meeting page (canvas in the main column): back, title, date and time, people, "Recorded 46 min", link to the
-  calendar. Sections: My notes (normal text colour, editable), Summary (AI, muted), Decisions, Actions. A meeting with
-  a stored transcript shows Talk time: a bar of the top five speakers' share of words ("Name: text" lines or a name
-  line before its text), with the action and decision counts.
-- Action approve card: kind icon (Slack ✉, Linear ◆, task ✓), target, title, body, Linear field chips; buttons
-  Edit, Reject (✕) and Approve (✓). Approve marks the action approved; the card says "Sends when the scheduler
-  runs" until the agent exists. Rejected cards collapse to one line with Undo.
-- On the phone the canvas is the page; the composer at the bottom asks about the meeting.
+- List: search (titles, people, notes, summaries, decisions, and transcript text on the hub with a snippet of the hit),
+  an Upcoming strip that steps through days with meetings, then past meetings grouped by day.
+- Meeting page (`web/src/codex/meetings/MeetingPage.tsx`): back, title, date and time, people, "Recorded 46 min",
+  link to the calendar. Sections: My actions, To review (with Confirm all), Summary (AI), Pinned, Decisions, the prep
+  card for an upcoming meeting, Talk time, earlier meetings of the series, My notes, then folded Unassigned, Others
+  took, Not mine and the Transcript. Talk time is a bar of the top five speakers' share of words ("Name: text" lines
+  or a name line before its text), with the action and decision counts.
+- Meeting actions are tasks (`items` rows with `meeting_id`). A row has a date chip, Copy as message and a New Linear
+  issue link; a suggested one has Not mine (✕) and Mine (✓).
+- The composer at the bottom asks about the meeting.
 
 ## Phone layout
 
@@ -110,8 +106,8 @@ next restart.
 | --- | --- | --- |
 | pages | title, section, summary, sort | Wiki pages; section "overview" is the organisation card |
 | facts | text, item_id, superseded_by, page_id, heading, sources, at, contested | A claim. `sources` is JSON `[{kind, label, url}]`; `contested` is JSON `{by, at, note}` or null; `superseded_by` is the newer claim's id |
-| meetings | title, starts_at, ends_at, people, calendar_url, recorded_ms, notes, summary, decisions | `notes` are mine, `summary` and `decisions` (JSON list) come from the agent |
-| actions | meeting_id, kind, target, title, body, fields, status, result_url | `kind` slack, linear or task; `status` proposed, approved, rejected, sent |
+| meetings | title, starts_at, ends_at, people, calendar_url, recorded_ms, notes, summary, decisions, transcript, tries, room, room_me, others | `notes` are mine; `summary`, `decisions` (JSON list), `room` and `others` come from the transcript import; `transcript` is the pipeline state and `tries` its count |
+| actions | meeting_id, kind, target, title, body, fields, status, result_url | Synced, but nothing in the hub writes it; meeting actions are `items` |
 
 Client (`web/src/codex/data`): the sync engine is generalised from `items` to a table list with per-table fields;
 the snapshot gains `pages`, `facts`, `meetings`, `actions`; the phone's local SQLite gets the same tables.
@@ -146,13 +142,14 @@ The data lives only in the hub database, never in this repo.
 
 ### Tools
 
-The in-process `agentview` MCP server in `server/src/agent/claude/options.ts` gets wiki tools next to
-`set_status`. They read and write the hub through its `/sync` API (`HUB` in `server/src/integrations/assistant.ts`).
+The in-process `agentview` MCP server in `server/src/agent/claude/options.ts` has the wiki tools from
+`server/src/agent/claude/wiki.ts` next to `set_status`, and `data_find` and `data_write` (`data.ts`) for tasks,
+meetings, actions and jobs. They read and write the hub through its `/sync` API (`HUB` in `server/src/integrations/assistant.ts`).
 
 | Tool | Does |
 | --- | --- |
 | `wiki_search(query)` | Pages and claims matching every word, with state (live, proposed, rejected); Claude calls it before proposing |
-| `wiki_page(id)` | One page's live claims by heading |
+| `wiki_page(id)` | One page's current claims by heading |
 | `wiki_propose(text, sources, page?, heading?, replaces?)` | Proposes a one-sentence claim. No page means memory. `replaces` names a live claim it would supersede. `page` can be an existing id or a new title and section |
 
 There is no delete or edit tool; contest, resolve and delete stay with me.
