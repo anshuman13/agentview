@@ -5,6 +5,7 @@ import { weekStart } from './data/dates';
 import type { ItemRow, Profile } from './data/sync';
 import { openTask, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
+import { save, stored } from '../ui/util';
 
 function GoalInput({ row }: { row: ItemRow }) {
   const store = useAssistantStore();
@@ -77,6 +78,8 @@ function GoalLine({ goal, items }: { goal: ItemRow; items: ItemRow[] }) {
   );
 }
 
+const CARRY_SKIPPED = 'codex.goalCarrySkipped';
+
 export function GoalLines({ now }: { now: number }) {
   const store = useAssistantStore();
   const { items } = useAssistantData();
@@ -85,6 +88,9 @@ export function GoalLines({ now }: { now: number }) {
   const goals = goalsOf(items, now, scope);
   const carry = carryOver(items, now, scope);
   const busy = useRef(false);
+  const week = String(weekStart(now));
+  const [skipped, setSkipped] = useState(() => stored<string>(CARRY_SKIPPED, '') === week);
+  const skip = () => { save(CARRY_SKIPPED, week); setSkipped(true); };
   const carryAll = async () => {
     if (busy.current) return;
     busy.current = true;
@@ -94,7 +100,7 @@ export function GoalLines({ now }: { now: number }) {
       busy.current = false;
     }
   };
-  if (!goals.length && !carry.length) return null;
+  if (!goals.length && (!carry.length || skipped)) return null;
   return (
     <section className="gl-lines" role="list" aria-label="Goals this week">
       {goals.map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} />)}
@@ -102,6 +108,7 @@ export function GoalLines({ now }: { now: number }) {
         <div className="gl-line" role="listitem">
           <span className="muted small">Carry over {carry.length} {carry.length === 1 ? 'goal' : 'goals'} from last week</span>
           <button className="as-chip" onClick={() => void carryAll()}>Carry over</button>
+          <button className="as-chip quiet" onClick={skip}>Not now</button>
         </div>
       )}
     </section>

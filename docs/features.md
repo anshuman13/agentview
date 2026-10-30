@@ -28,7 +28,7 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
 ### Overview
 
 - One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening on Tasks
-- With no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week
+- With no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week, or Not now to hide the row for the week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
   the last workday. It folds and hides until tomorrow
