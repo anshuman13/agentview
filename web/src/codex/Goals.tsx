@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAssistantData, useAssistantStore } from './data';
 import { GOAL, MAX_GOALS, goalProgress, goalsOf, weekStart } from './data/goals';
 import type { ItemRow } from './data/sync';
@@ -28,11 +28,17 @@ export function WeekGoals({ now }: { now: number }) {
   const profile = filter === 'all' ? 'work' : filter;
   const goals = goalsOf(items, now, profile);
   const [text, setText] = useState('');
+  const adding = useRef(false);
   const add = async () => {
     const t = text.trim();
-    if (!t || goals.length >= MAX_GOALS) return;
+    if (!t || adding.current || goals.length >= MAX_GOALS) return;
+    adding.current = true;
     setText('');
-    await store.capture(t, GOAL, profile, weekStart(now));
+    try {
+      await store.capture(t, GOAL, profile, weekStart(now));
+    } finally {
+      adding.current = false;
+    }
   };
   return (
     <section className="mt-wk-sec">
