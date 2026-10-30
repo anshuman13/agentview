@@ -200,6 +200,19 @@ describe('RemoteStore save', () => {
     store.dispose();
   });
 
+  it('keeps unsynced rows when a table is missing from the cache', async () => {
+    const stored = fakeIndexedDb([]);
+    stored.set('meta', { since: 7 });
+    stored.set('table:items', [{ ...taskRow('a'), dirty: 1 }]);
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void> };
+    await internal.loaded;
+    expect(store.snapshot().items.map((r) => r.id)).toEqual(['a']);
+    expect(internal.since).toBe(0);
+    store.dispose();
+  });
+
   it('reads the old single-key layout once and migrates it', async () => {
     const stored = fakeIndexedDb([]);
     stored.set('snapshot', { since: 7, tables: { items: [taskRow('a')], meetings: [{ ...taskRow('m'), title: 'x' }] } });

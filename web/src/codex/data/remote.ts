@@ -97,11 +97,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     let cached: Cached | undefined;
     if (meta) {
       cached = { since: meta.since, tables: {} };
-      // A table missing from the cache would never be fetched again, so start over with a full sync.
+      // A table missing from the cache would never be fetched again, so start over with a full sync, keeping the rows held.
       for (const table of Object.keys(this.tables)) {
         const rows = await read<SyncRow[]>(tableKey(table));
-        if (!rows) return;
-        cached.tables[table] = rows;
+        if (rows) cached.tables[table] = rows;
+        else cached.since = 0;
       }
     } else {
       cached = await read<Cached>(LEGACY_KEY);
