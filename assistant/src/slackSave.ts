@@ -127,7 +127,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   }
   const repliedDms = new Set(r.chats.filter((c) => c.kind === 'dm' && c.waiting === false).map((c) => `${c.name.trim()} · DM`.toLowerCase()));
   if (repliedDms.size) {
-    const stored = db.prepare("SELECT id, people FROM items WHERE profile = ? AND source = 'slack' AND status = 'suggested' AND deleted = 0 AND id NOT LIKE 'said:%'").all(PROFILE) as { id: string; people: string | null }[];
+    const stored = db.prepare("SELECT id, people FROM items WHERE profile = ? AND source = 'slack' AND status = 'suggested' AND deleted = 0 AND COALESCE(rolls, 0) = 0 AND id NOT LIKE 'said:%'").all(PROFILE) as { id: string; people: string | null }[];
     for (const o of stored) if (repliedDms.has((o.people ?? '').trim().toLowerCase()) && !changes.some((c) => c.id === o.id)) changes.push({ table: 'items', id: o.id, profile: PROFILE, updated_at: now, fields: { status: 'done' } });
   }
   for (const url of r.fulfilled ?? []) {

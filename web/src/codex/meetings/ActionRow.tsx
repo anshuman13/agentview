@@ -40,7 +40,7 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
   const dismiss = () => change({ status: 'dismissed' }, 'Moved to Not mine');
   const suggestedRows = () => [...document.querySelectorAll<HTMLElement>('.mt-task.suggested')];
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target !== e.currentTarget || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     const el = e.currentTarget;
     const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
     const yes = e.key === 'y' || e.key === 'Enter';
