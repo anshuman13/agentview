@@ -155,13 +155,18 @@ export function Composer() {
     apply(h.list[index]);
   };
 
+  const [uploading, setUploading] = useState(0);
+  const sendAfter = useRef<boolean | null>(null);
   const attach = async (list: File[]) => {
+    setUploading((n) => n + list.length);
     for (const f of list) {
       try {
         const body = await uploadPaste(f);
         setText((t) => append(t, `[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `));
       } catch (err) {
         notice(`Could not attach ${f.name || 'the file'}: ${errText(err)}`);
+      } finally {
+        setUploading((n) => n - 1);
       }
     }
     ta.current?.focus();
@@ -218,6 +223,8 @@ export function Composer() {
   const submit = (stop = false) => {
     const t = text.trim();
     if (!t) return;
+    if (uploading > 0) { sendAfter.current = stop; return; }
+    sendAfter.current = null;
     if (shell) {
       const cmd = t.slice(1).trim();
       if (cmd) runInTerminal(cmd).catch(() => notice('Terminal unavailable'));
@@ -235,6 +242,10 @@ export function Composer() {
     setHist(null);
     apply('');
   };
+
+  useEffect(() => {
+    if (uploading === 0 && sendAfter.current !== null) submit(sendAfter.current);
+  }, [uploading]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing) return;
@@ -315,6 +326,7 @@ export function Composer() {
           <button className="icon-btn attach" title="Add files for Claude to look at (or paste or drop them)" aria-label="Add files" onClick={() => picker.current?.click()}>
             <Icon name="file-add" small />
           </button>
+          {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {uploading}</span>}
           <Voice onText={dictate} />
           {running && !typed ? (
             <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onClick={() => send({ type: 'interrupt' })}>
