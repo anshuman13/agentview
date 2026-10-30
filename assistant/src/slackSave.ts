@@ -63,7 +63,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   let added = 0;
   for (const a of r.asks) {
     const id = askId(a.url);
-    if (has.get(PROFILE, id)) continue;
+    if (has.get(PROFILE, id) || changes.some((c) => c.id === id)) continue;
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people: `${a.from} · ${a.chat}`, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
     added++;
     if (a.urgent) urgent.push({ ...a, id });
