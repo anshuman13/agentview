@@ -365,6 +365,29 @@ function AtRisk({ s, now, snooze }: { s: Split; now: number; snooze: (r: ItemRow
   );
 }
 
+function Stale({ rows, now, snooze }: { rows: ItemRow[]; now: number; snooze: (r: ItemRow) => void }) {
+  const act = useActions();
+  if (!rows.length) return null;
+  return (
+    <section id="ov-stale" tabIndex={-1}>
+      <div className="as-section">Stale · {rows.length}</div>
+      <div className="ov-follow">
+        {rows.slice(0, 5).map((r) => (
+          <div key={r.profile + r.id} className="ov-follow-row">
+            <button className="ov-follow-text" onClick={() => openTask(r)}>
+              <span className="ov-t">{r.title}</span>
+              <span className="muted small">untouched {Math.floor((now - r.updated_at) / 86400000)} days</span>
+            </button>
+            <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
+            <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
+          </div>
+        ))}
+        {rows.length > 5 && <div className="ov-follow-row muted small">+{rows.length - 5} more</div>}
+      </div>
+    </section>
+  );
+}
+
 // The day at a glance: counts that open Tasks, the next meeting, today's and tomorrow's meetings, and what jobs reported today.
 export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
   const store = useAssistantStore();
@@ -389,7 +412,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     { n: dueToday.length, label: 'to do today', sel: '.as-section:not(.late):not(.review):not(.later):not(.done)', cls: '' },
     { n: s.overdue.length, label: 'overdue', sel: '.as-section.late', cls: 'late' },
     { n: s.review.length, label: 'to confirm', sel: '.as-section.review', cls: 'review' },
-    { n: stale.length, label: 'stale', sel: undefined, cls: '' },
+    { n: stale.length, label: 'stale', sel: undefined, cls: '', id: 'ov-stale' },
   ].filter((x) => x.n > 0);
   const snooze = (r: ItemRow) => {
     haptic('tap');
@@ -428,7 +451,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     <>
       {stats.length > 0 && (
         <div className="ov-summary">
-          {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={() => x.sel ? setViewAt({ list: 'tasks', open: null }, x.sel) : tasks()}><b>{x.n}</b><span>{x.label}</span></button>)}
+          {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={() => { if (x.sel) setViewAt({ list: 'tasks', open: null }, x.sel); else if (x.id) { const el = document.getElementById(x.id); el?.scrollIntoView({ behavior: 'smooth', block: 'start' }); el?.focus({ preventScroll: true }); } else tasks(); }}><b>{x.n}</b><span>{x.label}</span></button>)}
         </div>
       )}
       <GoalLines now={now} />
@@ -441,6 +464,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         <button className="btn sm" onClick={() => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied')}><Icon name="copy" small /> Copy standup</button>
       </div>
       <AtRisk s={s} now={now} snooze={snooze} />
+      <Stale rows={stale} now={now} snooze={snooze} />
       <SinceLastVisit />
       <SlackCard />
       <WaitingOnYou />

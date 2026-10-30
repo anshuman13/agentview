@@ -44,6 +44,7 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
   days)
 - At risk: tasks due by Friday that will not fit in the free work time before they are due, with the shortfall; a row opens the task and has a check and a clock like the rows below
+- Stale: the 5 oldest tasks untouched for 14 days, with a check and a clock; the stale chip scrolls to it
 - The meetings still ahead today with the meeting time left, and a field on the next meeting's card that adds a
   timestamped line to its notes
 - Overdue and due tasks with a check to mark them done and a clock to snooze them to tomorrow 09:00
