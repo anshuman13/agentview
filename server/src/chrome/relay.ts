@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
-import { chromeRunning, endpoint } from './chrome.js';
+import { chromeRunning, endpoint } from './launch.js';
 
 const PORT = Number(process.env.AGENTVIEW_RELAY_PORT ?? 7779);
 const TOKEN = process.env.AGENTVIEW_RELAY_TOKEN ?? '';
