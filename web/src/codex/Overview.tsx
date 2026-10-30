@@ -205,6 +205,7 @@ function WaitingOnYou() {
   const [handled, setHandled] = useState<string[]>(() => stored<string[]>(WAIT_HANDLED, []));
   const list = useRef<HTMLDivElement>(null);
   const section = useRef<HTMLElement>(null);
+  const pending = useRef(new Set<string>());
   const rows = useMemo(
     () => live(snap.chats).filter((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter)).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0)),
     [snap.chats, filter],
@@ -212,6 +213,9 @@ function WaitingOnYou() {
   const shown = rows.filter((c) => !handled.includes(waitKey(c)));
   if (!shown.length) return null;
   const task = (c: Chat, i: number) => {
+    const key = waitKey(c);
+    if (pending.current.has(key)) return;
+    pending.current.add(key);
     haptic('tap');
     const name = c.name ?? 'DM';
     void store.capture(`Reply to ${name}`, 'task', c.profile)
@@ -226,7 +230,10 @@ function WaitingOnYou() {
           people?.[Math.min(i, people.length - 1)]?.focus();
         });
         focusPast(section.current);
-      }, (err) => showSnack(`Could not add: ${errorText(err)}`));
+      }, (err) => {
+        pending.current.delete(key);
+        showSnack(`Could not add: ${errorText(err)}`);
+      });
   };
   return (
     <section ref={section}>
@@ -423,6 +430,12 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <SinceLastVisit />
       <SlackCard />
       <WaitingOnYou />
+      {s.review.length > 0 && (
+        <section>
+          <Review rows={s.review.slice(0, 3)} />
+          {s.review.length > 3 && <button className="btn sm" onClick={tasks}>+{s.review.length - 3} more in Tasks</button>}
+        </section>
+      )}
       {digest && (
         <section>
           <div className="as-section">{digest.title} · {dayLabel(digest.updated_at, true)}</div>
