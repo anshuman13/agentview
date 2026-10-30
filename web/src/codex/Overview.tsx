@@ -418,12 +418,6 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   if (loading) return <Skeleton />;
   return (
     <>
-      {empty && (
-        <div className="muted small">
-          <div>Nothing today</div>
-          {s.nextLater && <div>Next: {when(s.nextLater.starts_at!)} {s.nextLater.title}</div>}
-        </div>
-      )}
       {stats.length > 0 && (
         <div className="ov-summary">
           {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={() => x.sel ? setViewAt({ list: 'tasks', open: null }, x.sel) : tasks()}><b>{x.n}</b><span>{x.label}</span></button>)}
@@ -493,6 +487,12 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           <div className="ov-report">{r.output}</div>
         </section>
       ))}
+      {empty && (
+        <div className="ov-empty muted small">
+          <div>Nothing today</div>
+          {s.nextLater && <div>Next: {when(s.nextLater.starts_at!)} {s.nextLater.title}</div>}
+        </div>
+      )}
     </>
   );
 }

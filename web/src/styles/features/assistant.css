@@ -223,6 +223,8 @@ a.as-chip { text-decoration: none; }
 .workbench[data-codex='true'] .editor-group > :is(.tabs, .panel) { display: none; }
 
 /* Overview */
+/* The empty line hides when any Today section rendered above it. */
+.as-scroll > :not(.ov-empty) ~ .ov-empty { display: none; }
 .ov-summary { display: flex; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
 .ov-stat { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: var(--sp-6) var(--sp-7); border: 0; background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
 .ov-stat + .ov-stat { border-left: 1px solid var(--border); }
