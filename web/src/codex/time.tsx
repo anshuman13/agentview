@@ -43,6 +43,7 @@ export function PickTime({ className, value, onPick, label = 'Pick time', title 
   const pick = useRef(onPick);
   pick.current = onPick;
   // React's onChange fires on every input event; the native change event fires once the picker is confirmed.
+  // The input starts empty without a value, since confirming a pre-filled date fires no change.
   useEffect(() => {
     const el = input.current!;
     const change = () => { const [y, m, d] = el.value.split('-').map(Number); if (y && m && d) pick.current(new Date(y, m - 1, d, MORNING).getTime()); };
@@ -53,7 +54,7 @@ export function PickTime({ className, value, onPick, label = 'Pick time', title 
     if (v !== 'day') return v && onPick(Number(v));
     const el = input.current;
     if (!el) return;
-    el.value = localDate(value ?? slots()[0].at);
+    el.value = value == null ? '' : localDate(value);
     try { el.showPicker(); } catch { el.focus(); el.click(); }
   };
   return (
@@ -87,7 +88,7 @@ export function PickDue({ className, value, onPick, children }: { className?: st
   }, []);
   const open = () => {
     const el = input.current!;
-    el.value = localDateTime(value ?? slots()[0].at);
+    el.value = value == null ? '' : localDateTime(value);
     try { el.showPicker(); } catch { el.focus(); el.click(); }
   };
   return (
