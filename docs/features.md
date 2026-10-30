@@ -66,7 +66,8 @@ A failed compact is not retried.
 New chats start in Auto mode: Claude asks only before risky actions.
 
 **Team** in the model menu: Opus 5.5 plans each task, Sonnet 5.5 builds it and asks Opus for advice. Advisor calls
-re-read the conversation, so they cost more in long chats.
+re-read the conversation, so they cost more in long chats. When the chat cannot switch to plan mode, the message
+waits in the queue with a notice.
 
 Any chat can ask Fable 5.1 about a hard problem. Each call needs your approval.
 
@@ -107,7 +108,8 @@ enough that someone who missed the conversation could build from it, and starts 
 ready. A plan that deletes data, changes a schema, auth or security, reaches outside the repo, pushes or deploys,
 or guesses at an open question waits for your approval instead, and rejecting it stops the loop. Sonnet then tests the result as a separate model and ends with a verdict, and
 Opus fixes whatever the tester found, up to the number of rounds you pick. Phases show as violet markers in the
-timeline and transcript, the composer footer shows the current phase and round, and Stop ends the loop.
+timeline and transcript, the composer footer shows the current phase and round, and Stop ends the loop. Claude
+exiting during a step ends it too.
 
 ## Personal and work Claude accounts
 
@@ -118,6 +120,7 @@ and new chats start there until the limit resets. The composer menu shows the ac
 its weekly and 5-hour usage as `w25 h15`, and the even weekly pace (100/7 % a day, to the hour) on hover. When the
 week is ahead of that pace or either window passes 80%, it turns yellow and a click switches the chat to the other
 account. A switch restarts the Claude process, so Claude recreates the chat's scheduled jobs in the new one.
+Only the CLI's own usage-limit notice counts as a limit, so a reply that mentions a rate limit does not switch.
 
 ## Loops
 
@@ -151,7 +154,8 @@ palette), so they get the full width instead of the sidebar. One page is open at
 
 ## Shortcuts
 
-⌘ on a Mac, Ctrl elsewhere. Letter shortcuts stay out of the way of text fields.
+⌘ on a Mac, Ctrl elsewhere. Letter shortcuts stay out of the way of text fields. Closing a task, an inline editor
+or a page puts focus back on what opened it.
 
 | Key | Action |
 | --- | --- |
@@ -171,5 +175,5 @@ palette), so they get the full width instead of the sidebar. One page is open at
 | y / n / a | Allow, deny or always allow the top permission card |
 | 1-9 | Pick an answer on the top question card |
 | ⌘Enter | Commit in Source Control; run the query in Observe |
-| j / k | Move between tasks in Tasks; Enter opens, Esc closes, x done, s snooze, Delete removes |
+| j / k | Move between tasks in Tasks; Enter or Space opens, Esc closes, x done, s snooze, Delete removes |
 | n / | New task for today; search tasks (on Tasks) |
