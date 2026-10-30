@@ -8,6 +8,8 @@ import { copyText, openMeeting, setView, useEscapeBack } from '../view';
 import { plural } from '../../ui/util';
 import { Avatars, MeetingRow } from './Meetings';
 import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
+import { AddPoint, PointList, useMarkRaised } from './Raise';
+import { firstName, pointsOf } from '../data/points';
 import '../../styles/features/wiki.css';
 
 export function Person({ name }: { name: string }) {
@@ -15,7 +17,9 @@ export function Person({ name }: { name: string }) {
   const snap = useAssistantData();
   const back = () => setView({ person: null });
   useEscapeBack(back);
+  useMarkRaised();
   const mine = useMemo(() => meetingsOf(meetings, name), [meetings, name]);
+  const points = useMemo(() => pointsOf(snap.items, name), [snap.items, name]);
   const pins = useMemo(() => pinsOf(snap.items, mine), [snap.items, mine]);
   const commitments = useMemo(() => commitmentsOf(meetings, name), [meetings, name]);
   const claims = useMemo(() => claimsMentioning(facts, name), [facts, name]);
@@ -51,6 +55,12 @@ export function Person({ name }: { name: string }) {
                 ))}
               </ul>
             ) : <p className="mt-pending">Nothing recorded for {name}.</p>}
+          </section>
+
+          <section className="mt-sec">
+            <h2>Raise with {firstName(name)}{points.length > 0 && <span className="mt-of">{points.length}</span>}</h2>
+            {points.length > 0 && <PointList points={points} person={false} />}
+            <AddPoint person={name} profile={mine[0]?.profile ?? 'work'} />
           </section>
 
           <OpenQuestions questions={questions} />

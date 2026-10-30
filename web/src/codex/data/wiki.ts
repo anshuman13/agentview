@@ -386,7 +386,7 @@ export const peopleOf = (m: Meeting) => {
   return people;
 };
 
-const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+export const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 // Meetings the person attended, newest first.
 export const meetingsOf = (meetings: Meeting[], person: string) =>

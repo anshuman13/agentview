@@ -60,6 +60,7 @@ Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its d
 | Push | Only when there is something to act on. Tapping it opens the meeting page. "Nothing for you" is a muted list badge |
 | Calendar | Sync on app open plus every 30 min, 07:00 to 19:00 |
 | Morning brief | Weekdays at 08:00 the hub writes a brief per profile with no model call: today's meetings and free time 08:00-17:00, tasks due and overdue (top 5), Slack asks to review and meeting actions still open from the last workday. It syncs to the phone and pushes "Today: N meetings, M tasks" once a day, skipping a profile with nothing on and a hub that starts after 11:00 |
+| Raise next time | A point is an item with status point, the person in people and source raise, so it syncs like any task and stays out of Tasks and Notes. It belongs to the first meeting with that person, same profile, starting after it was raised; the prep card lists it, and when that meeting ends the app marks it raised. Ticking it off does the same. Raise on a task or decision offers that meeting's attendees, then recent ones |
 | Cut for now | "All ▾" filter and "●" on Today, "Missed Slack" chip, meeting-bound chat (daily chat with the meeting attached instead) |
 
 ## Meeting pipeline states

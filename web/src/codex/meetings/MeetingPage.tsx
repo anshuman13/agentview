@@ -18,6 +18,8 @@ import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
+import { RaiseWith } from './Raise';
+import { recentPeople } from '../data/points';
 import { useSnackTask } from './useSnackTask';
 import { talkTime } from '../data/talkTime';
 
@@ -294,6 +296,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const others = othersOf(m);
   const decisions = listOf(m.decisions);
   const people = peopleOf(m);
+  const raiseTo = recentPeople(meetings, m.profile, m);
   const now = Date.now();
   const state = meetingState(m, now);
   const transcript = useTranscript(m, state === 'done');
@@ -353,7 +356,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           {decisions.length > 0 && (
             <section className="mt-sec">
               <h2>Decisions</h2>
-              <ul className="mt-decisions">{decisions.map((d, i) => <li key={i}>{d}</li>)}</ul>
+              <ul className="mt-decisions">{decisions.map((d, i) => <li key={i}>{d}<RaiseWith text={d} profile={m.profile} people={raiseTo} /></li>)}</ul>
             </section>
           )}
 

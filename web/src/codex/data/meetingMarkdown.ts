@@ -75,3 +75,17 @@ export function draftFor(a: ItemRow, m: Meeting) {
   if (due != null) out.push(`Due: ${ymd(due)}`);
   return out.join('\n');
 }
+
+export type AgendaParts = { points: ItemRow[]; actions: string[]; questions: string[] };
+
+export function agendaMarkdown(m: Meeting, parts: AgendaParts) {
+  const sections: [string, string[]][] = [
+    ['To raise', parts.points.map((p) => `${first(p.people ?? '')}: ${p.title ?? ''}`)],
+    ['Open actions', parts.actions],
+    ['Open questions', parts.questions],
+  ];
+  const out = [`# Agenda: ${m.title ?? 'Meeting'}${dateOf(m) ? ` (${dateOf(m)})` : ''}`];
+  if (peopleOf(m).length) out.push(`Attendees: ${peopleOf(m).join(', ')}`);
+  for (const [head, lines] of sections) if (lines.length) out.push(`## ${head}\n\n${lines.map((l) => `- [ ] ${l}`).join('\n')}`);
+  return out.join('\n\n') + '\n';
+}

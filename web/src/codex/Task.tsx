@@ -14,6 +14,8 @@ import { Back } from '../app/back';
 import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
 import { estimateMin, minutesText } from './data/plan';
+import { recentPeople } from './data/points';
+import { RaiseWith } from './meetings/Raise';
 
 const SOURCES: Record<string, { icon: string; label: string }> = {
   slack: { icon: 'comment-discussion', label: 'Slack' },
@@ -149,7 +151,7 @@ const grow = (el: HTMLTextAreaElement | null) => {
 // The open task edits in place: title and notes save when they lose focus or the task closes.
 function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void }) {
   const act = useActions();
-  const { store } = useAssistant();
+  const { store, snap } = useAssistant();
   const [title, setTitle] = useState(row.title ?? '');
   const [text, setText] = useState(row.text ?? '');
   const saved = useRef({ title: row.title ?? '', text: row.text ?? '' });
@@ -297,6 +299,7 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
           {row.status === 'open' && <button className="btn" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
           {row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
           <button className="btn" title="Ask Claude about this task" onClick={then(() => onAsk(row))}><Icon name="sparkle" small /> Ask</button>
+          {row.status === 'open' && <RaiseWith className="btn" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
           <span className="spacer" />
           <button className="icon-btn as-delete" title="Delete" aria-label="Delete" onClick={then(() => act.remove(row))}><Icon name="trash" /></button>
         </div>

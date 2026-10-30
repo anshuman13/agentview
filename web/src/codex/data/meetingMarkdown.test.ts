@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decisionsMarkdown, draftFor, followUpText, personMarkdown, toMarkdown } from './meetingMarkdown';
+import { agendaMarkdown, decisionsMarkdown, draftFor, followUpText, personMarkdown, toMarkdown } from './meetingMarkdown';
 import type { ItemRow } from './sync';
 import type { Decision, Meeting, Question } from './wiki';
 
@@ -63,5 +63,13 @@ describe('personMarkdown', () => {
       claims: [],
     });
     expect(md).toBe('# Ada Lovelace\n\n## Commitments\n\n- draft the spec (Planning)\n\n## Open questions\n\n- Who owns billing?\n\n## Meetings\n\n- Planning (2026-10-29)\n');
+  });
+});
+
+describe('agendaMarkdown', () => {
+  it('lists points by first name, then actions and questions, skipping empty sections', () => {
+    const point = { id: 'p', title: 'Budget for Q1', people: 'Grace Hopper', status: 'point' } as unknown as ItemRow;
+    const md = agendaMarkdown(meeting(), { points: [point], actions: ['Grace: draft the spec'], questions: [] });
+    expect(md).toBe('# Agenda: Planning (2026-10-29)\n\nAttendees: Ada Lovelace, Grace Hopper\n\n## To raise\n\n- [ ] Grace: Budget for Q1\n\n## Open actions\n\n- [ ] Grace: draft the spec\n');
   });
 });
