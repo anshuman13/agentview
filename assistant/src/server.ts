@@ -1,33 +1,21 @@
 import http from 'node:http';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { allowedPeer, peerName } from '../../server/src/http/access.js';
-import { BadRequest, parseObject, readBody } from '../../server/src/http/body.js';
-import { openDb, currentVersion, isProfile, type Profile } from './db.js';
-import { ACCOUNT_OF, lastAttempt, startCalendar, syncCalendar } from './calendar.js';
-import { addBlock } from './block.js';
+import { openDb } from './db.js';
+import { startCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
-import { once } from './once.js';
-import { finishTask, snoozeTask, startReminders } from './remind.js';
+import { startReminders } from './remind.js';
 import { startBrief } from './brief.js';
-import { parseTask } from './parse.js';
-import { NotFound, searchTranscripts, startTranscripts, syncTranscript, transcriptText } from './transcripts.js';
-import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
+import { startTranscripts } from './transcripts.js';
+import { startSlack } from './slack.js';
 import { startGmail } from './gmail.js';
-import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
+import { send, type Routes } from './routes/http.js';
+import { syncRoutes } from './routes/sync.js';
+import { calendarRoutes } from './routes/calendar.js';
+import { transcriptRoutes } from './routes/transcripts.js';
+import { taskRoutes } from './routes/tasks.js';
 
-export const readJson = async (req: http.IncomingMessage, max: number) => parseObject(await readBody(req, max));
-
-function send(res: http.ServerResponse, status: number, obj: unknown, headers: http.OutgoingHttpHeaders = {}) {
-  res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
-  res.end(JSON.stringify(obj));
-}
-
-function fail(res: http.ServerResponse, err: unknown) {
-  const message = err instanceof Error ? err.message : String(err);
-  if (message === 'Request body too large') send(res, 413, { error: message }, { 'Connection': 'close' });
-  else if (err instanceof BadRequest || err instanceof SyncError) send(res, 400, { error: message });
-  else send(res, 500, { error: 'internal error' });
-}
+const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, ...taskRoutes };
 
 const isApp = (origin: string) => origin === 'http://tauri.localhost' || origin === 'tauri://localhost';
 
@@ -77,175 +65,9 @@ export function createServer(): http.Server {
       }
 
       const url = new URL(req.url ?? '/', 'http://localhost');
-      const pathname = url.pathname;
-
-      if (pathname === '/health' && req.method === 'GET') {
-        const version = currentVersion(getDb());
-        send(res, 200, { ok: true, version });
-        return;
-      }
-
-
-      if (pathname === '/sync' && req.method === 'POST') {
-        try {
-          const data = (await readJson(req, 5_000_000)) as { since: number; changes: Change[] };
-          if (!Number.isInteger(data.since) || data.since < 0) {
-            throw new BadRequest('Missing or invalid since field');
-          }
-          if (!Array.isArray(data.changes)) {
-            throw new BadRequest('Invalid changes field');
-          }
-          applyChanges(getDb(), data.changes);
-          const pulled = pullChanges(getDb(), data.since);
-          send(res, 200, {
-            version: pulled.version,
-            changes: pulled.changes,
-            hasMore: pulled.hasMore,
-            device,
-          });
-        } catch (err) {
-          fail(res, err);
-        }
-        return;
-      }
-
-      if (pathname === '/calendar' && req.method === 'POST') {
-        // The app asks with ?fresh=<ms> when it opens; a profile imported within that time is skipped.
-        const fresh = Number(url.searchParams.get('fresh') ?? 0);
-        const stale = (Object.keys(ACCOUNT_OF) as Profile[]).filter((p) => !fresh || Date.now() - lastAttempt(getDb(), p) > fresh);
-        try {
-          const { changed, errors } = stale.length ? await syncCalendar(getDb, stale) : { changed: 0, errors: [] };
-          send(res, errors.length ? 502 : 200, errors.length ? { error: errors.join('; '), changed } : { changed });
-        } catch (err) {
-          send(res, 502, { error: err instanceof Error ? err.message : String(err) });
-        }
-        return;
-      }
-
-      if (pathname === '/calendar/block' && req.method === 'POST') {
-        let data: { profile?: unknown; id?: unknown; start?: unknown; end?: unknown; title?: unknown };
-        try {
-          data = await readJson(req, 10_000);
-        } catch (err) {
-          fail(res, err);
-          return;
-        }
-        const { profile, id, start, end, title } = data;
-        if (!isProfile(profile) || typeof id !== 'string' || typeof start !== 'number' || typeof end !== 'number' || typeof title !== 'string') {
-          send(res, 400, { error: 'Missing profile, id, start, end or title' });
-          return;
-        }
-        try {
-          send(res, 200, await addBlock(getDb, { profile, id, start, end, title }));
-        } catch (err) {
-          send(res, err instanceof BadRequest ? 400 : 502, { error: err instanceof Error ? err.message : String(err) });
-        }
-        return;
-      }
-
-      if (pathname === '/parse' && req.method === 'POST') {
-        let data: { profile?: unknown; text?: unknown };
-        try {
-          data = await readJson(req, 20_000);
-        } catch (err) {
-          fail(res, err);
-          return;
-        }
-        if (!isProfile(data.profile) || typeof data.text !== 'string' || !data.text.trim()) {
-          send(res, 400, { error: 'Missing profile or text' });
-          return;
-        }
-        try {
-          const parsed = await parseTask(data.text.trim());
-          send(res, 200, parsed);
-        } catch (err) {
-          send(res, 502, { error: err instanceof Error ? err.message : String(err) });
-        }
-        return;
-      }
-
-      if (pathname === '/transcripts' && req.method === 'POST') {
-        let data: { profile?: unknown; id?: unknown; instructions?: unknown };
-        try {
-          data = await readJson(req, 10_000);
-        } catch (err) {
-          fail(res, err);
-          return;
-        }
-        if (!isProfile(data.profile) || typeof data.id !== 'string') {
-          send(res, 400, { error: 'Missing profile or id' });
-          return;
-        }
-        try {
-          const saved = await syncTranscript(getDb(), data.profile, data.id, Date.now(), typeof data.instructions === 'string' ? data.instructions : '');
-          send(res, 200, { saved });
-        } catch (err) {
-          send(res, err instanceof NotFound ? 404 : 502, { error: err instanceof Error ? err.message : String(err) });
-        }
-        return;
-      }
-
-      if (pathname === '/transcripts/search' && req.method === 'GET') {
-        const profile = url.searchParams.get('profile');
-        send(res, 200, { hits: searchTranscripts(getDb(), url.searchParams.get('q') ?? '', isProfile(profile) ? profile : undefined) });
-        return;
-      }
-
-      if (pathname === '/transcript' && req.method === 'GET') {
-        const profile = url.searchParams.get('profile');
-        const text = isProfile(profile) ? transcriptText(getDb(), profile, url.searchParams.get('id') ?? '') : null;
-        send(res, text == null ? 404 : 200, text == null ? { error: 'No transcript' } : { text });
-        return;
-      }
-
-      if (pathname === '/slack/summary' && req.method === 'POST') {
-        try {
-          const r = await once('slack', () => summarizeSlack(getDb()));
-          send(res, 200, { added: r.added.length });
-        } catch (err) {
-          send(res, 502, { error: err instanceof Error ? err.message : String(err) });
-        }
-        return;
-      }
-
-      if (pathname === '/slack/accept' && req.method === 'POST') {
-        const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '');
-        send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Slack task' });
-        return;
-      }
-
-      if ((pathname === '/task/done' || pathname === '/task/snooze') && req.method === 'POST') {
-        const act = pathname === '/task/done' ? finishTask : snoozeTask;
-        const profile = url.searchParams.get('profile') ?? '';
-        const ok = isProfile(profile) && act(getDb(), profile, url.searchParams.get('id') ?? '');
-        send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such task' });
-        return;
-      }
-
-      if (pathname === '/gmail/accept' && req.method === 'POST') {
-        const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '', 'gmail');
-        send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Gmail task' });
-        return;
-      }
-
-      if (pathname === '/changes' && req.method === 'GET') {
-        const since = Number(url.searchParams.get('since') ?? '0');
-        if (!Number.isInteger(since) || since < 0) {
-          send(res, 400, { error: 'Invalid since parameter' });
-          return;
-        }
-
-        try {
-          const pulled = pullChanges(getDb(), since);
-          send(res, 200, {
-            version: pulled.version,
-            changes: pulled.changes,
-            hasMore: pulled.hasMore,
-            device,
-          });
-        } catch (err) {
-          fail(res, err);
-        }
+      const route = routes[`${req.method} ${url.pathname}`];
+      if (route) {
+        await route({ req, res, url, device, getDb });
         return;
       }
 
