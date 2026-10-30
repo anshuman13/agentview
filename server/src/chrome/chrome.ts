@@ -107,7 +107,13 @@ export async function connect() {
   } catch (err) {
     return setState('off', (err as Error).message);
   }
-  const ws = new WebSocket(url, { maxPayload: 512 * 1024 * 1024, handshakeTimeout: 60000 });
+  let ws: WebSocket;
+  try {
+    ws = new WebSocket(url, { maxPayload: 512 * 1024 * 1024, handshakeTimeout: 60000 });
+  } catch {
+    // A half-written port file gives a URL the constructor rejects; without this the state stays connecting for good.
+    return setState('off', 'disabled');
+  }
   let failed: Promise<string> | null = null;
   ws.on('open', async () => {
     cdp = ws;
