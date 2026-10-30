@@ -1,5 +1,5 @@
 import { blockId, isBlock } from '../../../../shared/util';
-import { dayEnd, dayStart, pad } from './dates';
+import { dayEnd, dayStart, pad, weekStart } from './dates';
 import { atTime, statusTime } from './engine';
 import { goalsOf } from './goals';
 import { packDay, workGaps, type Span } from './plan';
@@ -12,10 +12,6 @@ const DAY = 86400000;
 const STUCK_ROLLS = 3;
 const STUCK_DAYS = 30;
 
-export const weekStart = (now: number) => {
-  const d = new Date(now);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime();
-};
 export const nextMonday = (now: number) => {
   const d = new Date(weekStart(now));
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7, 9).getTime();

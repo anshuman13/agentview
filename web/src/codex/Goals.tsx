@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useAssistantData, useAssistantStore } from './data';
-import { GOAL, MAX_GOALS, goalProgress, goalsOf, weekStart } from './data/goals';
+import { GOAL, MAX_GOALS, goalProgress, goalsOf } from './data/goals';
+import { weekStart } from './data/dates';
 import type { ItemRow } from './data/sync';
 import { showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';

@@ -2,7 +2,7 @@ import { editCount } from '../../../shared/edits';
 import { BIG_BRO, type ChatEvent } from '../../../shared/protocol';
 import { chatCost } from '../../../shared/cost';
 export { chatCost };
-import { buildTranscript, denied, firstLine, type Item, type ToolResult, type ToolUse } from './steps';
+import { buildTranscript, denied, firstLine, str, type Item, type ToolResult, type ToolUse } from './steps';
 
 type FileFact = { path: string; add: number; del: number };
 type CommandFact = { id: string; label: string; done?: boolean; error?: string; denied?: boolean };
@@ -38,8 +38,6 @@ export type Turn = {
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 const PHASE_TEXT: Record<string, string> = { plan: 'Plan · Opus', build: 'Build · Opus', test: 'Test · Sonnet' };
 const COMMIT = /^\[([^\]\n]+) ([0-9a-f]{7,40})\] (.+)$/gm;
-
-const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
 function handBack(text: string) {
   if (!text.startsWith('[Subagent hand-back]')) return text.trim();

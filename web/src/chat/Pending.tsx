@@ -4,6 +4,7 @@ import { Icon } from '../ui/Icon';
 import { useOnUnmount } from '../ui/util';
 import { touch } from '../app/touch';
 import { Markdown } from './Chat';
+import { str } from './steps';
 import type { ChatEvent, PendingPermission, PendingQuestion } from '../../../shared/protocol';
 
 export function Pending() {
@@ -57,8 +58,6 @@ const MODE_HINTS: Record<string, string> = {
 const ICONS: Record<string, string> = {
   Bash: 'terminal', Edit: 'edit', MultiEdit: 'edit', Write: 'new-file', WebFetch: 'globe', WebSearch: 'search', Agent: 'sparkle', Task: 'sparkle',
 };
-
-const str = (v: unknown) => (typeof v === 'string' ? v : '');
 
 type CardProps = { p: PendingPermission; mode: string; first: boolean };
 

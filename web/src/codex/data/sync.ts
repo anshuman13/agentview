@@ -71,6 +71,8 @@ export function parseTimes(value: unknown): FieldTimes {
   }
 }
 
+export const madeAt = (r: ItemRow) => parseTimes(r.field_times).source ?? r.updated_at;
+
 const isTime = (t: unknown): t is number => typeof t === 'number' && Number.isFinite(t);
 
 export function rowToChange<R extends SyncRow>(row: R, table = 'items'): Change {

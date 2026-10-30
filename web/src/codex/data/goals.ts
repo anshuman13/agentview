@@ -1,16 +1,10 @@
+import { weekStart } from './dates';
 import { atTime } from './engine';
-import { parseTimes, type ItemRow, type Profile } from './sync';
+import { madeAt, type ItemRow, type Profile } from './sync';
 
 // A weekly goal is an item with status 'goal' whose at is a time in its week, stored as that week's Monday 00:00; a task links to one by its goal field.
 export const GOAL = 'goal';
 export const MAX_GOALS = 3;
-
-export function weekStart(now: number) {
-  const d = new Date(now);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime();
-}
-
-const madeAt = (r: ItemRow) => parseTimes(r.field_times).source ?? r.updated_at;
 
 export function goalsOf(items: ItemRow[], now: number, profile?: Profile) {
   const start = weekStart(now);

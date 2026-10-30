@@ -1,4 +1,4 @@
-import { parseTimes, type ItemRow, type Profile } from './sync';
+import { madeAt, type ItemRow, type Profile } from './sync';
 import { live, othersOf, type Meeting } from './wiki';
 import { peopleOf, sameName } from './meetings';
 
@@ -7,12 +7,11 @@ export const POINT = 'point';
 export const RAISED = 'raised';
 
 const isPoint = (r: ItemRow) => !r.deleted && r.status === POINT && !!r.people?.trim();
-const raisedAt = (r: ItemRow) => parseTimes(r.field_times).source ?? r.updated_at;
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
 // The first meeting with the point's person that starts after the point was raised.
 export function pointMeeting(point: ItemRow, meetings: Meeting[]) {
-  const since = raisedAt(point);
+  const since = madeAt(point);
   let best: Meeting | undefined;
   for (const m of live(meetings)) {
     if (m.profile !== point.profile || m.starts_at == null || m.starts_at < since) continue;
@@ -23,10 +22,10 @@ export function pointMeeting(point: ItemRow, meetings: Meeting[]) {
 }
 
 export const pointsOf = (items: ItemRow[], person: string) =>
-  items.filter((r) => isPoint(r) && sameName(r.people!, person)).sort((a, b) => raisedAt(a) - raisedAt(b));
+  items.filter((r) => isPoint(r) && sameName(r.people!, person)).sort((a, b) => madeAt(a) - madeAt(b));
 
 export const pointsFor = (m: Meeting, items: ItemRow[], meetings: Meeting[]) =>
-  items.filter((r) => isPoint(r) && pointMeeting(r, meetings) === m).sort((a, b) => raisedAt(a) - raisedAt(b));
+  items.filter((r) => isPoint(r) && pointMeeting(r, meetings) === m).sort((a, b) => madeAt(a) - madeAt(b));
 
 // Open points whose meeting has ended.
 export const endedPoints = (items: ItemRow[], meetings: Meeting[], now = Date.now()) =>

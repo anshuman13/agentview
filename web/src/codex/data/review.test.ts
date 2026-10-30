@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
 import type { Meeting } from './wiki';
-import { keepInTouch, nextMonday, nudgeText, standupText, waitingByPerson, weeklyReview, weekStart } from './review';
+import { keepInTouch, nextMonday, nudgeText, standupText, waitingByPerson, weeklyReview } from './review';
+import { weekStart } from './dates';
 
 const row = (o: Partial<ItemRow>): ItemRow => ({ id: 'x', profile: 'work', version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0, title: 't', text: null, source: null, source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...o });
 
