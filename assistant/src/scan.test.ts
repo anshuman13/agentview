@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type http from 'node:http';
 import { openDb } from './db.js';
-import { backoff, runScan, scanHealth } from './scan.js';
+import { backoff, checkStalls, runScan, scanHealth } from './scan.js';
 import { MIN } from './time.js';
 import { scanRoutes } from './routes/scan.js';
 
@@ -52,4 +52,20 @@ test('failed runs retry after 2, 5 and 10 minutes, then wait for the slots', () 
   r.done(false, t);
   expect(r.due(t + 2 * MIN)).toBe(true);
   expect(r.due(new Date(2026, 9, 28, 19, 5).getTime())).toBe(false);
+});
+
+test('a stalled scan pushes once until it succeeds again', async () => {
+  const db = openDb(':memory:');
+  const at = (h: number, m = 0) => new Date(2026, 9, 28, h, m).getTime();
+  const sent: string[] = [];
+  const push = async (title: string, _: string, body: string) => (sent.push(`${title}: ${body}`), true);
+  const check = (t: number) => checkStalls(db, { slack: () => true, gmail: () => false }, at(6), t, push);
+  db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)').run('scan:slack', JSON.stringify({ scan: 'slack', ok: at(9), error: 'token expired', failed: at(9, 30) }));
+  await check(at(9, 40));
+  await check(at(9, 50));
+  await check(at(10, 30));
+  expect(sent).toEqual(['slack scan stalled: token expired']);
+  db.prepare('UPDATE meta SET value = ? WHERE key = ?').run(JSON.stringify({ scan: 'slack', ok: at(10, 35) }), 'scan:slack');
+  await check(at(11, 25));
+  expect(sent).toHaveLength(2);
 });

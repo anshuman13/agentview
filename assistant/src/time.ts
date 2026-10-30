@@ -33,6 +33,7 @@ export const ymd = (t: number, sep = '-') => {
   const d = new Date(t);
   return [d.getFullYear(), pad(d.getMonth() + 1), pad(d.getDate())].join(sep);
 };
+export const hm = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 export const localDate = (t: number) => `${new Date(t).toLocaleDateString('en-US', { weekday: 'long' })} ${ymd(t)}`;
 
 // A time the model wrote: "YYYY-MM-DD" (09:00 local), "YYYY-MM-DDTHH:MM" in local time, or a full date string.

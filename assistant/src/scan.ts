@@ -2,7 +2,9 @@ import type { Database } from 'bun:sqlite';
 import { errText } from '../../shared/util.js';
 import { getMeta, setMeta } from './db.js';
 import { loop, once } from './once.js';
-import { MIN, inWeekHours, workSlotDue } from './time.js';
+import { MIN, hm, inWeekHours, workSlotDue } from './time.js';
+import { pausedScans } from './claude.js';
+import { pushNtfy } from '../../server/src/integrations/notify.js';
 
 export type Counts = Record<string, number>;
 export type Scanner = { setUp(): boolean; paused(db: Database): Promise<boolean>; run(db: Database): Promise<Counts> };
@@ -67,4 +69,28 @@ export function startScan(name: string, s: Scanner, every: number, db: () => Dat
       throw err;
     }
   }, true);
+}
+
+const STALL = 45 * MIN;
+
+// Pushes once when a set-up scan has had no success for 45 minutes of work hours; after its next success it can push again.
+export async function checkStalls(db: Database, sources: Record<string, () => boolean>, since: number, now = Date.now(), push = pushNtfy) {
+  if (!inWeekHours(now, 7, 19)) return;
+  const dayStart = new Date(now).setHours(7, 0, 0, 0);
+  const health = scanHealth(db);
+  const paused = pausedScans(db, now);
+  for (const [name, setUp] of Object.entries(sources)) {
+    if (!setUp()) continue;
+    const h = health.find((x) => x.scan === name);
+    const ok = h?.ok ?? 0;
+    if (now - Math.max(ok, dayStart, since) < STALL || getMeta(db, `stall:${name}`) === String(ok)) continue;
+    const p = paused.find((x) => x.scan === name);
+    const reason = p ? `paused: usage limit until ${hm(p.until)}` : h?.error && (h.failed ?? 0) > ok ? h.error : `no success since ${ok ? hm(ok) : 'the hub started'}`;
+    if (await push(`${name} scan stalled`, '', reason, '')) setMeta(db, `stall:${name}`, String(ok));
+  }
+}
+
+export function startStallWatch(db: () => Database, sources: Record<string, () => boolean>) {
+  const since = Date.now();
+  loop('stall', MIN, () => checkStalls(db(), sources, since));
 }

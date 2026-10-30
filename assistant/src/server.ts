@@ -7,8 +7,9 @@ import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
 import { startBrief } from './brief.js';
 import { startTranscripts } from './transcripts.js';
-import { HUB_URL, startSlack } from './slack.js';
-import { startGmail } from './gmail.js';
+import { HUB_URL, slackScan, startSlack } from './slack.js';
+import { gmailScan, startGmail } from './gmail.js';
+import { startStallWatch } from './scan.js';
 import { send, type Routes } from './routes/http.js';
 import { syncRoutes } from './routes/sync.js';
 import { calendarRoutes } from './routes/calendar.js';
@@ -92,6 +93,7 @@ async function start() {
     startJobs(getDb);
     startSlack(getDb);
     startGmail(getDb);
+    startStallWatch(getDb, { slack: slackScan.setUp, gmail: gmailScan.setUp, calendar: () => true });
   }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);
