@@ -251,7 +251,7 @@ export function Composer() {
     if (ghost && (e.key === 'Tab' || e.key === 'ArrowRight') && el.selectionStart === text.length) { e.preventDefault(); apply(text + ghost); return; }
     if (e.key === 'ArrowUp' && (text === '' || onEntry) && !text.slice(0, el.selectionStart).includes('\n')) { e.preventDefault(); stepHistory(1); return; }
     if (e.key === 'ArrowDown' && onEntry && !text.slice(el.selectionEnd).includes('\n')) { e.preventDefault(); stepHistory(-1); return; }
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e.metaKey || e.ctrlKey); }
+    if (e.key === 'Enter' && !e.shiftKey && (!touch() || e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(e.metaKey || e.ctrlKey); }
   };
 
   const typed = text.trim().length > 0;
@@ -292,6 +292,7 @@ export function Composer() {
             onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart); }}
             onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
             onKeyDown={onKeyDown}
+            enterKeyHint={touch() ? 'enter' : undefined}
             onPaste={(e) => { if (e.clipboardData.files.length) { e.preventDefault(); void attach([...e.clipboardData.files]); } }}
           />
         </div>

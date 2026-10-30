@@ -21,6 +21,9 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
   const items = useMemo(() => buildTranscript(events), [events]);
   const box = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
+  const [stuck, setStuck] = useState(true);
+  const [behind, setBehind] = useState(false);
+  const lastUser = useRef('');
   const [shown, setShown] = useState(ROW_WINDOW);
   const grew = useRef(0);
   const start = windowStart(items.length, shown);
@@ -28,7 +31,14 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
 
   useEffect(() => {
     const el = box.current;
-    if (el && stick.current) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const mine = [...items].reverse().find((i) => i.kind === 'user')?.id ?? '';
+    if (mine !== lastUser.current) {
+      lastUser.current = mine;
+      if (mine) { stick.current = true; setStuck(true); }
+    }
+    if (stick.current) { el.scrollTop = el.scrollHeight; setBehind(false); }
+    else setBehind(true);
   }, [items.length, last, running]);
 
   useLayoutEffect(() => {
@@ -44,14 +54,29 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
 
   const onScroll = () => {
     const el = box.current;
-    if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (!el) return;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    stick.current = near;
+    setStuck(near);
+    if (near) setBehind(false);
+  };
+
+  const jump = () => {
+    const el = box.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    stick.current = true;
+    setStuck(true);
+    setBehind(false);
   };
 
   return (
+    <div className="tr-host">
     <div ref={box} className="tr" onScroll={onScroll}>
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
       {start > 0 && <div className="tr-more" {...pressable(showEarlier)}>Show earlier ({start} hidden)</div>}
       {items.slice(start).map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
+    </div>
+    {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest</button>}
     </div>
   );
 }
