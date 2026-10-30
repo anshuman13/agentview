@@ -244,7 +244,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
 
   move = async (row: ItemRow, profile: Profile) => {
     const now = Date.now();
-    await this.swap('items', profile, row.id, (there) => moved(row, there as ItemRow | undefined, profile, now));
+    const current = this.snapshot().items.find((r) => r.profile === row.profile && r.id === row.id) ?? row;
+    await this.swap('items', profile, row.id, (there) => moved(current, there as ItemRow | undefined, profile, now));
     await this.update(row, { deleted: 1 });
   };
 
