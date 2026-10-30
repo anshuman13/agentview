@@ -106,7 +106,7 @@ export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) 
     `1. My DMs and group DMs: slack_search_public_and_private with filters "is:dm", after="${unix}", sort "timestamp", include_context false.`,
     `2. Mentions of me: slack_search_public_and_private with keywords ["<@${c.me}>"], after="${unix}", sort "timestamp", include_context false.`,
     `3. These channels, with slack_read_channel oldest="${unix}" limit 40: ${c.channels.map((n) => `#${n} ${ids[n] ?? '(id unknown, find it with slack_list_user_channels name_prefix)'}`).join(', ')}.`,
-    'Make all of these reads in parallel in one turn. Read a thread with slack_read_thread only when a new message there might ask something of me.',
+    'Make all of these reads in parallel in one turn. When a read returns a next cursor, read the next page with it until there is none, so nothing since that time is missed. Read a thread with slack_read_thread only when a new message there might ask something of me.',
     '',
     `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
     'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old.',
