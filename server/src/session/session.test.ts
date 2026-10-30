@@ -219,6 +219,14 @@ describe('AgentSession turns', () => {
     expect(s.state.session.running).toBe(true);
   });
 
+  it('queues a prompt that arrives while the previous one is still starting', async () => {
+    const { s } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send');
+    await Promise.all([s.prompt('one', 'p1'), s.prompt('two', 'p2')]);
+    expect(send).toHaveBeenCalledOnce();
+    expect(s.state.events.find((e) => e.id === 'p2')).toMatchObject({ queued: true });
+  });
+
   it('sends prompts queued during a turn one per turn, in the order typed', async () => {
     const { s, result } = fakeSession();
     const sent = () => s.state.events.filter((e) => e.kind === 'user' && !e.queued).map((e) => e.kind === 'user' && e.text);

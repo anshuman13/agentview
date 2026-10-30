@@ -422,6 +422,8 @@ export class AgentSession implements AgentHost {
     if (this.loopCommand(text, id)) return;
     if (this.state.session.running) return this.queue(text, id);
     await this.planFirst();
+    // Another prompt may have started a turn while plan mode was being set.
+    if (this.state.session.running) return this.queue(text, id);
     const loop = this.state.session.loop;
     if (loop.on && !this.state.session.running && !text.trim().startsWith('/')) return this.startLoop(text, id);
     this.sendPrompt(text, id);
