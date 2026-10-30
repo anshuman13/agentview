@@ -64,7 +64,7 @@ every 15 minutes (DMs, mentions and the watched channels), Gmail every 30 minute
 social, updates and forums). Slack reads page through to the last result, so a long gap misses nothing. Messages and mail that ask me to act become suggested tasks in Tasks under "Is this
 yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
 reply before taking it. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default); during a calendar meeting
-they are held and sent as one push when it ends.
+with other attendees they are held and sent as one push when it ends.
 Scan slots follow the hub's local clock, so half hours start at :00 and :30 in any time zone.
 While a Claude account is at its usage limit, the Slack and Gmail scans and the calendar import of its profiles skip
 their runs, and the scans catch up from their last read afterwards. The hub logs the pause once per limit, and each sync reply lists the paused scans so the apps can show them

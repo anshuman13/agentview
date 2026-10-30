@@ -19,7 +19,7 @@
 ## Codex
 
 Codex shows Overview, Tasks, Meetings, Jobs and Wiki for the work profile, the personal profile or both. Under the
-nav, the sync line says when the app last synced with the hub. While the hub skips its Slack or calendar scan because
+nav, the sync line says when the app last synced with the hub. While the hub skips its Slack, Gmail or calendar scan because
 that Claude account is at its usage limit, a line below it names the paused scans and the time the limit ends.
 
 ### Overview
@@ -196,7 +196,8 @@ bar turns browser notifications on or off.
 For a phone in the background, the same notifications can go to an [ntfy](https://ntfy.sh) topic. Push is off
 until you set `AGENTVIEW_NTFY`, or `ntfy` in `~/.agentview/observe.json`, to a topic name or a full URL on your own
 server, then subscribe to it in the ntfy app. Tapping the push opens the chat. The assistant hub uses the same topic for meeting and task reminders and the 08:00 morning brief.
-Urgent Slack and Gmail asks that arrive while a calendar meeting runs (not all-day events or focus blocks) are held
+Urgent Slack and Gmail asks that arrive while a calendar meeting runs (not all-day events, time blocks or
+events with no other attendees) are held
 and sent as one push, "N urgent while you were in <meeting>", within a minute after it ends.
 
 A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot
