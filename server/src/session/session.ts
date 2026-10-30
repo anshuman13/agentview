@@ -660,7 +660,10 @@ export class AgentSession implements AgentHost {
     else if (idle && this.limitReset) this.system(`Usage limit reached, resets at ${clock(this.limitReset)}`);
     else if (idle && this.lastError) this.repeater.defer();
     else if (idle && (this.repeater.due || this.state.session.repeat?.every === 0)) this.repeater.fire();
+    // A turn that ends without a result (a local command) must not read the last one's.
     this.limitReset = null;
+    this.lastResult = '';
+    this.lastError = false;
   }
 
   // The agent process is gone; its queued input went with it, but the events stay.
