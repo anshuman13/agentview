@@ -9,7 +9,7 @@ import { touch } from '../app/touch';
 import { Hl, wsUrl, plural, save, storedStrings } from '../ui/util';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
-import { accept, addUse, append, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, append, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -363,6 +363,7 @@ export function Composer() {
           })}
         </ul>
       )}
+      <Announcer key={chat} />
       <ChatSettings pick={pick} setPick={setPick} savedCount={sentHistory.length} />
       {pick?.kind === 'saved' && (
         <QuickPick
@@ -393,4 +394,20 @@ export function Composer() {
       )}
     </div>
   );
+}
+
+// Tells a screen reader when Claude's turn ends or Claude asks something, without reading every streamed word.
+function Announcer() {
+  const running = useStore((s) => s.session.running);
+  const ask = useStore((s) => s.pending[s.pending.length - 1]);
+  const [text, setText] = useState('');
+  const was = useRef(running);
+  useEffect(() => {
+    if (was.current && !running) setText(turnEnd(getState().events));
+    was.current = running;
+  }, [running]);
+  useEffect(() => {
+    if (ask) setText(ask.kind === 'question' ? `Claude asks: ${ask.questions[0]?.question ?? ''}` : `Claude asks for permission: ${ask.title}`);
+  }, [ask?.id]);
+  return <div className="sr-only" role="status">{text}</div>;
 }

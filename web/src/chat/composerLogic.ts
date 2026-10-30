@@ -81,6 +81,17 @@ export function filesEdited(events: ChatEvent[]) {
   return paths.size;
 }
 
+// What a screen reader hears when a turn ends: the last top-level reply since the prompt, else the error.
+export function turnEnd(events: ChatEvent[]) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.kind === 'user') break;
+    if (e.kind === 'assistant' && !e.parent && e.text.trim()) return `Claude: ${e.text}`;
+    if (e.kind === 'result' && e.isError) return `Claude stopped: ${e.text}`;
+  }
+  return 'Claude finished';
+}
+
 export const contextPercent = (context: number | null) => (context === null ? null : Math.min(100, Math.round((context / COMPACT_AT) * 100)));
 
 const PHASES: Record<string, string> = { plan: 'Planning with Opus', build: 'Building with Opus', test: 'Testing with Sonnet', passed: 'Loop passed', failed: 'Loop stopped' };

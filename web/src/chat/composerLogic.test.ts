@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { accept, addUse, buildHistory, contextPercent, filesEdited, ghostFor, rankCommands, rankFiles, remember, terminalId, triggerAt, withUses } from './composerLogic';
+import { accept, addUse, buildHistory, contextPercent, filesEdited, ghostFor, rankCommands, rankFiles, remember, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;
@@ -104,6 +104,14 @@ describe('filesEdited', () => {
     ];
     expect(filesEdited(events)).toBe(2);
     expect(filesEdited([])).toBe(0);
+  });
+});
+
+describe('turnEnd', () => {
+  const say = (text: string, parent?: string): ChatEvent => ({ id: `a${++n}`, kind: 'assistant', text, streaming: false, at: n, parent });
+  it('reads the last top-level reply of the current turn only', () => {
+    expect(turnEnd([user('a'), say('old'), user('b'), say('new'), say('sub', 't1')])).toBe('Claude: new');
+    expect(turnEnd([user('a'), say('old'), user('b')])).toBe('Claude finished');
   });
 });
 
