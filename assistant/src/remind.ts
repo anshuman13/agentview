@@ -41,6 +41,9 @@ export function questionsIn(...texts: (string | null)[]) {
   return out;
 }
 
+// The app makes the next copy of a repeating task when it is done, so a reminder offers no Done for one.
+const repeats = (text: string | null) => /^\s*Repeats:/.test(text ?? '');
+
 const section = (label: string, lines: string[]) => (lines.length ? `${label}:\n${lines.slice(0, 3).map((l) => `- ${clip(l)}`).join('\n')}` : '');
 
 const hubAction = (label: string, path: string, profile: string, id: string) => `http, ${label}, ${HUB_URL}${path}?profile=${profile}&id=${encodeURIComponent(id)}, method=POST, clear=true`;
@@ -95,7 +98,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     if (sent(key)) continue;
     const first = (t.text ?? '').split('\n').map((l) => l.trim()).find(Boolean);
     const due = new Date(Number(t.at)).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    out.push({ key, title: t.title ?? 'Task', body: [`Due ${due}`, first && clip(first, 120)].filter(Boolean).join('\n'), url: '', actions: `${hubAction('Done', '/task/done', t.profile, t.id)}; ${hubAction('Snooze 1h', '/task/snooze', t.profile, t.id)}` });
+    out.push({ key, title: t.title ?? 'Task', body: [`Due ${due}`, first && clip(first, 120)].filter(Boolean).join('\n'), url: '', actions: [!repeats(t.text) && hubAction('Done', '/task/done', t.profile, t.id), hubAction('Snooze 1h', '/task/snooze', t.profile, t.id)].filter(Boolean).join('; ') });
   }
   return out;
 }
