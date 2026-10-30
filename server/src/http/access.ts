@@ -90,6 +90,9 @@ const hostOf = (u: string) => {
 
 const allowedHost = (h: string) => h === 'localhost' || h.endsWith('.localhost') || loopback(canon(h)) || h.endsWith('.netbird.cloud') || peers.has(canon(h));
 
+// The Host must name this Mac or a NetBird peer, which refuses a page whose own domain resolves to this address.
+export const allowedHostHeader = (host = '') => /^[\w.\-:[\]]+$/.test(host) && allowedHost(hostOf(`http://${host}`));
+
 const sameOrigin = (origin: string, host: string) => {
   try {
     const u = new URL(origin);
@@ -110,7 +113,7 @@ export type RequestHeaders = { host?: string; origin?: string; 'sec-fetch-site'?
 // The bundled app's origin is accepted when addr, the requester's address, is this Mac or a NetBird peer.
 export const allowedRequest = (h: RequestHeaders, addr?: string) => {
   const host = h.host ?? '';
-  if (!/^[\w.\-:[\]]+$/.test(host) || !allowedHost(hostOf(`http://${host}`))) return false;
+  if (!allowedHostHeader(host)) return false;
   if (appOrigin(h, addr)) return true;
   if (h.origin && !sameOrigin(h.origin, host)) return false;
   const site = h['sec-fetch-site'];

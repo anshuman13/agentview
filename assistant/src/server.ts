@@ -1,13 +1,13 @@
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
-import { allowedPeer, peerName } from '../../server/src/http/access.js';
+import { allowedHostHeader, allowedPeer, peerName } from '../../server/src/http/access.js';
 import { openDb } from './db.js';
 import { startCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
 import { startBrief } from './brief.js';
 import { startTranscripts } from './transcripts.js';
-import { startSlack } from './slack.js';
+import { HUB_URL, startSlack } from './slack.js';
 import { startGmail } from './gmail.js';
 import { send, type Routes } from './routes/http.js';
 import { syncRoutes } from './routes/sync.js';
@@ -16,6 +16,8 @@ import { transcriptRoutes } from './routes/transcripts.js';
 import { taskRoutes } from './routes/tasks.js';
 
 const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, ...taskRoutes };
+
+const ownHost = (host = '') => allowedHostHeader(host) || host === new URL(HUB_URL).host;
 
 const isApp = (origin: string) => origin === 'http://tauri.localhost' || origin === 'tauri://localhost';
 
@@ -43,7 +45,7 @@ export function createServer(): http.Server {
 
       const origin = req.headers.origin ?? '';
       const app = isApp(origin);
-      if (!fromAllowedPage(req.headers)) {
+      if (!ownHost(req.headers.host) || !fromAllowedPage(req.headers)) {
         send(res, 403, { error: 'Forbidden' });
         return;
       }
