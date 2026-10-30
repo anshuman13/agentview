@@ -154,7 +154,8 @@ function KeepInTouch() {
   const hour = Math.floor(Date.now() / 3600_000);
   const rows = useMemo(() => {
     const pick = <T extends { profile: string }>(xs: T[]) => xs.filter((x) => filter === 'all' || x.profile === filter);
-    return keepInTouch(pick(snap.meetings), pick(snap.chats), pick(snap.items), hour * 3600_000);
+    // The current time, as a contact from this hour would be past an hour-rounded now and not count.
+    return keepInTouch(pick(snap.meetings), pick(snap.chats), pick(snap.items), Date.now());
   }, [snap.meetings, snap.chats, snap.items, filter, hour]);
   const shown = rows.filter((x) => !dismissed.includes(x.key));
   if (!shown.length) return null;
