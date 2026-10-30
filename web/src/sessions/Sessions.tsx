@@ -121,9 +121,9 @@ export function Sessions() {
   };
 
   const call = async (url: string, fallback: string) => {
-    const r = await fetch(apiUrl(url), { method: 'DELETE' });
-    if (!r.ok) setError((await r.json().catch(() => null))?.error ?? fallback);
-    return r.ok;
+    const r = await fetch(apiUrl(url), { method: 'DELETE' }).catch(() => null);
+    if (!r?.ok) setError((await r?.json().catch(() => null))?.error ?? fallback);
+    return !!r?.ok;
   };
 
   const remove = (s: SavedSession) => setAsk(deleteChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), setError));

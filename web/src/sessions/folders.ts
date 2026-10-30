@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiUrl } from '../app/api';
 import { send } from '../app/store';
 import type { ConfirmRequest } from '../ui/Confirm';
@@ -44,17 +44,19 @@ export const invalidateWorkspace = () => {
   fetchedAt.repos = fetchedAt.chats = fetchedAt.trees = 0;
 };
 
+const listeners = new Set<(k: WorkspaceKey, x: unknown) => void>();
+
 export function useWorkspace(key: unknown) {
   const [repos, setRepos] = useState(cached.repos);
   const [trees, setTrees] = useState(cached.trees);
   const [chats, setChats] = useState(cached.chats);
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => void (mounted.current = false);
-  }, []);
   useEffect(() => {
     const apply = { repos: setRepos, chats: setChats, trees: setTrees } as Record<WorkspaceKey, (x: never) => void>;
+    const on = (k: WorkspaceKey, x: unknown) => apply[k](x as never);
+    listeners.add(on);
+    return () => void listeners.delete(on);
+  }, []);
+  useEffect(() => {
     const now = Date.now();
     setRepos(cached.repos);
     setChats(cached.chats);
@@ -64,7 +66,7 @@ export function useWorkspace(key: unknown) {
       get(WORKSPACE_URL[k]).then((x) => {
         if (!x) return void (fetchedAt[k] = 0);
         (cached as Record<WorkspaceKey, unknown>)[k] = x;
-        if (mounted.current) apply[k](x as never);
+        listeners.forEach((on) => on(k, x));
       });
     }
   }, [key]);
