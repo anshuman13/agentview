@@ -9,7 +9,7 @@ import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, pushHours, run } from './slack.js';
-import { PROFILE, expireSuggested, saidId, sameAsk, webUrl } from './slackSave.js';
+import { PROFILE, expireSuggested, saidId, seenItems, webUrl } from './slackSave.js';
 import { runScan, startScan } from './scan.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN, addWorkdays, localDate, parseWhen, ymd } from './time.js';
@@ -65,16 +65,14 @@ export function saveMail(db: Database, r: MailScan, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
   const changes: Change[] = expireSuggested(db, 'gmail', now);
   const urgent: (MailScan['asks'][number] & { id: string; link: string })[] = [];
-  // Gmail items of the last week in any state, so an ask or promise already seen, done or dismissed is not added again from another thread.
-  const seen = db.prepare("SELECT title, people FROM items WHERE profile = ? AND source = 'gmail' AND updated_at > ?").all(PROFILE, now - 7 * DAY) as { title: string | null; people: string | null }[];
-  const known = (title: string, people: string) => seen.some((x) => (x.people ?? '').trim().toLowerCase() === people.toLowerCase() && sameAsk(x.title ?? '', title));
+  const seen = seenItems(db, 'gmail', now);
   let added = 0;
   for (const a of r.asks) {
     if (!threadOk(a.thread_id)) continue;
     const id = mailId(a.thread_id);
     const people = a.from.trim();
-    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || known(a.title, people)) continue;
-    seen.push({ title: a.title, people });
+    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people)) continue;
+    seen.add(id, a.title, people);
     const link = threadUrl(a.thread_id, a.url);
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'gmail', source_url: link, people, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
     added++;
@@ -85,8 +83,8 @@ export function saveMail(db: Database, r: MailScan, now = Date.now()) {
     if (!threadOk(p.thread_id)) continue;
     const id = saidId(mailId(p.thread_id));
     const people = p.to.trim();
-    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || known(p.title, people)) continue;
-    seen.push({ title: p.title, people });
+    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, p.title, people)) continue;
+    seen.add(id, p.title, people);
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: p.title.trim(), text: p.quote.trim(), source: 'gmail', source_url: threadUrl(p.thread_id, p.url), people, at: parseWhen(p.due), status: 'suggested' } });
     said++;
   }

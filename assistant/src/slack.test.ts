@@ -54,6 +54,13 @@ describe('saveScan', () => {
     expect(saveScan(db, { chats: [chat], asks: [dm('u4', 'Review the budget')], answered: [] }, at(27, 12)).added).toBe(0);
   });
 
+  test('keeps different short asks apart, and an ask apart from my promise on it', () => {
+    const db = openDb(':memory:');
+    const dm = (url: string, title: string) => ({ url, from: 'Kim', chat: 'DM', title, quote: 'Can you?', urgent: false });
+    const r = saveScan(db, { chats: [], asks: [dm('u1', 'Review the doc'), dm('u2', 'Review the budget'), dm('u3', 'Send Kim the report')], said: [{ url: 'u4', to: 'Kim', chat: 'DM', title: 'Send the report', quote: 'Will do' }], answered: [] }, at(27, 10));
+    expect([r.added, r.said]).toEqual([3, 1]);
+  });
+
   test('stores only web permalinks', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('https://x.test/1'), ask('javascript:alert(1)'), ask('https://x.test/2; http, Go, https://y.test')], answered: [] }, at(27, 10));

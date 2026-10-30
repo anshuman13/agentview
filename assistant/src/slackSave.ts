@@ -56,19 +56,31 @@ export const askId = (url: string) => `slack:${createHash('sha1').update(url).di
 // My own promises keep the id of their source with this prefix, so the apps label them "You said".
 export const saidId = (id: string) => `said:${id}`;
 
-const words = (s: string) => new Set(s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []);
-// Two titles for the same thing: most words of the shorter one are in the other.
+const STOP = new Set(['the', 'and', 'for', 'you', 'your', 'with', 'about', 'from', 'this', 'that', 'into', 'our', 'are', 'can', 'will', 'not', 'all', 'her', 'his', 'him', 'them', 'they', 'its']);
+const words = (s: string) => new Set((s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).filter((w) => !STOP.has(w)));
+// Two titles for the same thing: at least two words in common, and most words of the shorter one are in the other.
 export function sameAsk(a: string, b: string) {
   const x = words(a), y = words(b);
   if (!x.size || !y.size) return false;
   let n = 0;
   for (const w of x) if (y.has(w)) n++;
-  return n / Math.min(x.size, y.size) >= 0.6;
+  return n >= 2 && n / Math.min(x.size, y.size) >= 0.6;
 }
 
-// Suggestions of one source nobody reviewed within a week are dismissed; their ids stay, so the same message is not added again.
+// Items of one source from the last week in any state, and older ones still to review, so an ask or promise already seen, done
+// or dismissed is not added again from another message. An ask is only matched with asks, and a promise of mine with promises.
+export function seenItems(db: Database, source: 'slack' | 'gmail', now: number) {
+  const seen = db.prepare("SELECT id, title, people FROM items WHERE profile = ? AND source = ? AND (updated_at > ? OR (deleted = 0 AND status = 'suggested'))").all(PROFILE, source, now - 7 * DAY) as { id: string; title: string | null; people: string | null }[];
+  const key = (p: string | null) => (p ?? '').trim().toLowerCase();
+  return {
+    known: (id: string, title: string, people: string) => seen.some((x) => x.id.startsWith('said:') === id.startsWith('said:') && key(x.people) === key(people) && sameAsk(x.title ?? '', title)),
+    add: (id: string, title: string, people: string) => void seen.push({ id, title, people }),
+  };
+}
+
+// Suggestions of one source nobody reviewed within a week are dismissed, but not tasks rollover sent back for review; their ids stay, so the same message is not added again.
 export function expireSuggested(db: Database, source: 'slack' | 'gmail', now: number): Change[] {
-  const rows = db.prepare("SELECT id FROM items WHERE profile = ? AND deleted = 0 AND status = 'suggested' AND source = ? AND updated_at < ?").all(PROFILE, source, now - 7 * DAY) as { id: string }[];
+  const rows = db.prepare("SELECT id FROM items WHERE profile = ? AND deleted = 0 AND status = 'suggested' AND COALESCE(rolls, 0) = 0 AND source = ? AND updated_at < ?").all(PROFILE, source, now - 7 * DAY) as { id: string }[];
   return rows.map((r) => ({ table: 'items', id: r.id, profile: PROFILE, updated_at: now, fields: { status: 'dismissed' } }));
 }
 
@@ -82,17 +94,15 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const chats = changes.filter((c) => c.table === 'chats').length;
   const messages = changes.reduce((n, c) => n + (c.table === 'chats' ? (r.chats.find((x) => x.id === c.id)?.new_messages ?? 0) : 0), 0);
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
-  // Slack items of the last week in any state, so an ask or promise already seen, done or dismissed is not added again from another message.
-  const seen = db.prepare("SELECT title, people FROM items WHERE profile = ? AND source = 'slack' AND updated_at > ?").all(PROFILE, now - 7 * DAY) as { title: string | null; people: string | null }[];
-  const known = (title: string, people: string) => seen.some((x) => x.people === people && sameAsk(x.title ?? '', title));
+  const seen = seenItems(db, 'slack', now);
   // A DM where I sent the last message has nothing waiting on me.
   const replied = (a: ScanResult['asks'][number]) => a.chat === 'DM' && r.chats.some((c) => c.kind === 'dm' && c.waiting === false && c.name.trim().toLowerCase() === a.from.trim().toLowerCase());
   let added = 0;
   for (const a of r.asks) {
     const id = askId(a.url);
     const people = `${a.from} · ${a.chat}`;
-    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || known(a.title, people) || replied(a)) continue;
-    seen.push({ title: a.title, people });
+    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
+    seen.add(id, a.title, people);
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
     added++;
     if (a.urgent) urgent.push({ ...a, id });
@@ -102,8 +112,8 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     // A promise without a usable permalink is told apart by its sentence.
     const id = saidId(askId(webUrl(p.url) ?? `${p.url}\n${p.quote.trim()}`));
     const people = `${p.to} · ${p.chat}`;
-    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || known(p.title, people)) continue;
-    seen.push({ title: p.title, people });
+    if (has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, p.title, people)) continue;
+    seen.add(id, p.title, people);
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: p.title.trim(), text: p.quote.trim(), source: 'slack', source_url: webUrl(p.url), people, at: parseWhen(p.due), status: 'suggested' } });
     said++;
   }
