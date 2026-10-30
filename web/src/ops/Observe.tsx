@@ -15,6 +15,7 @@ import { api, useStore } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
 import { askClaude } from '../ui/util';
 import { Icon } from '../ui/Icon';
+import { message } from './pulls';
 import '../styles/features/observe.css';
 
 const post = <T,>(url: string, body: unknown) => fetchJson<T>(api(url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -23,8 +24,6 @@ const clock = (iso: string) => {
   const t = Date.parse(iso);
   return Number.isNaN(t) ? iso : new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
-
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 type Load<T> = { data: T | null; error: string; busy: boolean };
 
