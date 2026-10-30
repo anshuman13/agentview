@@ -61,14 +61,27 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
     e.preventDefault();
     choose(gap, r);
   };
-  const planDay = () => {
+  // Packs the open tasks without a block, or only those in keep, into the free time left from this moment.
+  const pack = (keep?: Set<string>): Planned[] => {
     const blocked = new Set(blocks.map((m) => `${m.profile}:${m.id}`));
-    const tasks = [...late, ...open].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`)).map((r) => ({ title: r.title, due: atTime(r.at), r }));
-    setPick(null);
-    setPlan(packDay(tasks, gaps).map((p) => ({ task: p.task.r, span: p.span })));
+    const tasks = [...late, ...open].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`) && (!keep || keep.has(keyOf(r)))).map((r) => ({ title: r.title, due: atTime(r.at), r }));
+    return packDay(tasks, workGaps(busy, Date.now())).map((p) => ({ task: p.task.r, span: p.span }));
   };
+  const planDay = () => {
+    setPick(null);
+    setPlan(pack());
+  };
+  const leaveOut = (p: Planned) => setPlan(pack(new Set((plan ?? []).filter((x) => x !== p).map((x) => keyOf(x.task)))));
   const createPlan = async () => {
     if (!plan?.length) return;
+    // Tasks done since the preview drop out and past time is not used; a changed plan is shown again before anything is created.
+    const fresh = pack(new Set(plan.map((p) => keyOf(p.task))));
+    const same = fresh.length === plan.length && fresh.every((p, i) => keyOf(p.task) === keyOf(plan[i].task) && p.span[0] === plan[i].span[0] && p.span[1] === plan[i].span[1]);
+    if (!same) {
+      setPlan(fresh);
+      showSnack('The plan changed, check it and Create again');
+      return;
+    }
     setSaving(true);
     let made = 0;
     try {
@@ -121,7 +134,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
               <span className="muted small">{clock(p.span[0])}-{clock(p.span[1])}</span>
               <span className="ov-t">{p.task.title}</span>
               <span className="spacer" />
-              <button className="icon-btn" title="Leave out" aria-label={`Leave out ${p.task.title}`} onClick={() => setPlan(plan.filter((x) => x !== p))}><Icon name="close" small /></button>
+              <button className="icon-btn" title="Leave out" aria-label={`Leave out ${p.task.title}`} onClick={() => leaveOut(p)}><Icon name="close" small /></button>
             </div>
           )) : <span className="as-ctx">No task fits in today's free time</span>}
           <div className="dp-when">
