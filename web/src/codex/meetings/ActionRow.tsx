@@ -75,16 +75,16 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
         <div className="mt-task-title">{row.title}</div>
         <div className="as-ctx">
           {(status === 'open' || status === 'suggested') && (
-            <PickTime className={`mt-date${at != null && at < Date.now() ? ' late' : ''}`} value={at} title={at != null ? `${at < Date.now() ? 'Overdue' : 'Due'} ${when(at)}, set a date` : 'Set a date'} label={at != null ? when(at) : 'Date'}
+            <PickTime className={`mt-date${at != null && at < Date.now() ? ' late' : ''}${at == null ? ' empty' : ''}`} value={at} title={at != null ? `${at < Date.now() ? 'Overdue' : 'Due'} ${when(at)}, set a date` : 'Set a date'} label={at != null ? when(at) : 'Date'}
               onPick={(t) => change({ at: t }, `Due ${when(t)}`)} />
           )}
           {row.text && <span className="mt-task-why">{row.text}</span>}
         </div>
       </div>
-      {meeting && mine && !done && <a className="icon-btn" title="New Linear issue" aria-label="New Linear issue" href={linearIssue(row, meeting)} target="_blank" rel="noreferrer"><Icon name="issues" small /></a>}
+      {meeting && mine && !done && <a className="icon-btn mt-hov" title="New Linear issue" aria-label="New Linear issue" href={linearIssue(row, meeting)} target="_blank" rel="noreferrer"><Icon name="issues" small /></a>}
       {!meeting && row.source_url && <a className="icon-btn" title="Open source" aria-label="Open source" href={safeHref(row.source_url)} target="_blank" rel="noreferrer"><Icon name="link-external" small /></a>}
       {!meeting && row.draft && <button className="icon-btn" title="Copy draft" aria-label="Copy draft" onClick={() => copyText(row.draft!)}><Icon name="copy" small /></button>}
-      {meeting && <button className="icon-btn" title="Copy as message" aria-label="Copy as message" onClick={() => copyText(draftFor(row, meeting))}><Icon name="copy" small /></button>}
+      {meeting && <button className="icon-btn mt-hov" title="Copy as message" aria-label="Copy as message" onClick={() => copyText(draftFor(row, meeting))}><Icon name="copy" small /></button>}
       {status === 'suggested' && (
         <div className="mt-task-pick">
           <button className="mt-no" title="Not mine" aria-label="Not mine" onClick={dismiss}><Icon name="close" small /></button>

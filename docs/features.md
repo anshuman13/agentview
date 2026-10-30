@@ -110,7 +110,9 @@ asked you and what you promised them in Slack or Gmail (each with its age and a 
 commitments, the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
 wiki claims that name them.
 
-The header has a decision log filtered by person, a Load view and a Week view:
+The meeting list shows a badge only when something waits for you: actions to review, open actions, Now or soon, or a missing transcript. Rows carry no recording length, repeat icon or topic chips. The header has no Sync calendar button: the calendar syncs on open, on its interval and on pull-to-refresh. The linear and copy buttons on an action row, and an empty Date chip, show on hover or focus on desktop and stay visible on touch.
+
+The header has one segmented control, Decisions (the log, filtered by person), Load or Week, one view at a time:
 
 - Load: hours per week, share recorded, who you meet most, time and actions done per recurring series, and a series
   value audit: meetings, hours, decisions and my actions per series over 8 weeks, with series that brought no decision

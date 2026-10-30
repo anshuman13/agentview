@@ -1,21 +1,20 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantData, useAssistantStore, useCodex } from '../data';
 import { newId, rowKey } from '../data/sync';
 import { live, queryWords, rowMatcher, type Fact, type Meeting } from '../data/wiki';
-import { actionCount, groupMeetings, inSeries, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
+import { actionCount, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
 import { clock, when } from '../time';
 import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
+import { openMeeting, setView, useSpotBack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
 import { OpenQuestions } from './OpenQuestions';
 import { Week } from './Week';
-import { useSnackTask } from './useSnackTask';
-import { usePullSync } from '../pullSync';
+import { usePullRefresh } from '../usePullRefresh';
 import { useMinute } from '../split';
 import '../../styles/features/wiki.css';
 
@@ -39,19 +38,10 @@ const Badge = memo(function Badge({ m, now, review, total, done }: { m: Meeting;
   const state = meetingState(m, now);
   if (state === 'missing') return <span className="mt-count muted" title="No transcript was found for this meeting">No transcript</span>;
   if (review > 0) return <span className="mt-count st-warn" title="Suggested actions to keep or dismiss">{review} to review</span>;
-  if (total > 0) {
-    return (
-      <span className={`mt-count${done === total ? ' st-ok' : ''}`} title="My actions done">
-        <Icon name={done === total ? 'pass' : 'circle-large-outline'} small /> {done} of {total}
-      </span>
-    );
-  }
-  if (state === 'waiting') return <span className="mt-count muted" title="The transcript is read a few minutes after the meeting">Waiting</span>;
-  if (state === 'done') return <span className="mt-count muted">Nothing for you</span>;
+  if (total > done) return <span className="mt-count" title="My actions done"><Icon name="circle-large-outline" small /> {done} of {total}</span>;
   return null;
 });
 
-const NO_TOPICS: string[] = [];
 const NO_HITS = new Map<string, string>();
 
 // What the hub finds in the transcripts of the filter's profiles for the query, by profile:id with a snippet; empty until it answers.
@@ -76,16 +66,13 @@ export function useTranscriptHits(query: string) {
   return found.q === q ? found.hits : NO_HITS;
 }
 
-export const MeetingRow = memo(function MeetingRow({ m, now, topics = NO_TOPICS, said }: { m: Meeting; now: number; topics?: string[]; said?: string }) {
+export const MeetingRow = memo(function MeetingRow({ m, now, said }: { m: Meeting; now: number; said?: string }) {
   const snap = useAssistantData();
   const count = actionCount(snap.items, m);
-  const { meetings } = useCodex();
-  const repeats = inSeries(meetings).has(m.profile + m.id);
-  return <MeetingRowView m={m} now={now} topics={topics} said={said} repeats={repeats} review={count.review} total={count.total} done={count.done} />;
+  return <MeetingRowView m={m} now={now} said={said} review={count.review} total={count.total} done={count.done} />;
 });
 
-const MeetingRowView = memo(function MeetingRowView({ m, now, topics, said, repeats, review, total, done }: { m: Meeting; now: number; topics: string[]; said?: string; repeats: boolean; review: number; total: number; done: number }) {
-  const tracked = useMemo(() => trackedTopics(m, topics), [m, topics]);
+const MeetingRowView = memo(function MeetingRowView({ m, now, said, review, total, done }: { m: Meeting; now: number; said?: string; review: number; total: number; done: number }) {
   const people = useMemo(() => peopleOf(m), [m]);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
@@ -94,15 +81,13 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, said, repe
     <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => openMeeting(m)}>
       <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
       <span className="mt-body">
-        <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{repeats && <span className="mt-repeat" title="Recurring meeting"><Icon name="sync" small /></span>}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
+        <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
         <span className="mt-span">
           {m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
           {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
-          {m.recorded_ms ? ` · ${Math.round(m.recorded_ms / 60000)} min recorded` : ''}
         </span>
         {said && <span className="mt-said" title="From the transcript">{said}</span>}
       </span>
-      {tracked.map((t) => <span key={t} className="chip pill sm" title="Tracked topic">{t}</span>)}
       <Badge m={m} now={now} review={review} total={total} done={done} />
       <Avatars people={people} />
     </button>
@@ -111,7 +96,7 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, said, repe
 
 
 // Today, then each later day with meetings, one at a time, like a desk calendar.
-function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number; topics: string[] }) {
+function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const [picked, setPicked] = useState(0);
   const days = useMemo(() => {
     const today = dayStart(now);
@@ -141,7 +126,7 @@ function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number;
           {isToday && <i className="mt-up-dot" />}
         </div>
         <div className="mt-up-rows">
-          {rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} />)}
+          {rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}
           {!rows.length && <div className="mt-up-none">{days.length > 1 ? 'Nothing else today.' : 'Nothing on the calendar.'}</div>}
         </div>
       </div>
@@ -187,17 +172,16 @@ function TopicTimeline({ topic, meetings, facts }: { topic: string; meetings: Me
 }
 
 export function MeetingsList({ onMenu }: { onMenu: () => void }) {
-  const pull = usePullSync();
-  useSpotBack(pull.ref, 'meetings');
   const { meetings, facts, store } = useCodex();
+  const pullRef = useRef<HTMLDivElement>(null);
+  const ptr = usePullRefresh(pullRef, () => Promise.all([store.syncNow(), store.syncCalendar()]), true);
+  useSpotBack(pullRef, 'meetings');
   const { filter } = useView();
   const [query, setQuery] = useState('');
   const [topics, setTopics] = useState(() => stored<string[]>(TOPICS_KEY, []).filter((t) => typeof t === 'string'));
   const [active, setActive] = useState<string[]>([]);
   const [seen, setSeen] = useState(() => stored<Record<string, number>>(SEEN_KEY, {}));
-  const [log, setLog] = useState(false);
-  const [load, setLoad] = useState(false);
-  const [week, setWeek] = useState(false);
+  const [mode, setMode] = useState<'' | 'log' | 'load' | 'week'>('');
   const changeTopics = (next: string[]) => {
     setTopics(next);
     setActive((a) => a.filter((t) => next.includes(t)));
@@ -226,7 +210,6 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     if (!active.includes(t)) markSeen(t);
     setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
   };
-  const [syncing, runSync] = useSnackTask();
   const now = useMinute();
   const said = useTranscriptHits(query);
   const found = useMemo(() => {
@@ -247,10 +230,6 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
     setView({ open: rowKey(row) });
   };
-  const syncCalendar = () => runSync(async () => {
-    const n = await store.syncCalendar();
-    showSnack(n ? `${n} meeting${n > 1 ? 's' : ''} updated from the calendar` : 'Calendar is up to date');
-  }, 'Calendar sync failed');
   return (
     <div className="wk narrow">
       <header className="wk-head">
@@ -261,25 +240,24 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           <Icon name="search" small />
           <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
         </label>
-        <button className={`btn mt-dec${log ? ' on' : ''}`} aria-pressed={log} title="Decisions from all meetings" onClick={() => { setLog((v) => !v); setLoad(false); setWeek(false); }}><Icon name="check" small /> <span>Decisions</span></button>
-        <button className={`btn mt-dec${load ? ' on' : ''}`} aria-pressed={load} title="Hours in meetings per week" onClick={() => { setLoad((v) => !v); setLog(false); setWeek(false); }}><Icon name="graph" small /> <span>Load</span></button>
-        <button className={`btn mt-dec${week ? ' on' : ''}`} aria-pressed={week} title="This week in review" onClick={() => { setWeek((v) => !v); setLog(false); setLoad(false); }}><Icon name="calendar" small /> <span>Week</span></button>
-        <button className="btn mt-cal" disabled={syncing} title="Import the next days from Google Calendar (runs on its own every half hour from 7 to 19 on weekdays, and when the app opens)" onClick={syncCalendar}>
-          <Icon name={syncing ? 'loading' : 'sync'} small spin={syncing} /> <span>{syncing ? 'Syncing' : 'Sync calendar'}</span>
-        </button>
+        <div className="mt-seg" role="group" aria-label="View">
+          <button className={`btn mt-dec${mode === 'log' ? ' on' : ''}`} aria-pressed={mode === 'log'} title="Decisions from all meetings" onClick={() => setMode(mode === 'log' ? '' : 'log')}><Icon name="check" small /> <span>Decisions</span></button>
+          <button className={`btn mt-dec${mode === 'load' ? ' on' : ''}`} aria-pressed={mode === 'load'} title="Hours in meetings per week" onClick={() => setMode(mode === 'load' ? '' : 'load')}><Icon name="graph" small /> <span>Load</span></button>
+          <button className={`btn mt-dec${mode === 'week' ? ' on' : ''}`} aria-pressed={mode === 'week'} title="This week in review" onClick={() => setMode(mode === 'week' ? '' : 'week')}><Icon name="calendar" small /> <span>Week</span></button>
+        </div>
         <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
       </header>
-      {pull.indicator}
-      <div className="wk-scroll" ref={pull.ref}>
-        {log ? <Decisions meetings={mine} /> : load ? <Load meetings={mine} now={now} /> : week ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-list">
+      <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
+      <div className="wk-scroll" ref={pullRef}>
+        {mode === 'log' ? <Decisions meetings={mine} /> : mode === 'load' ? <Load meetings={mine} now={now} /> : mode === 'week' ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-list">
           <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
             onAdd={addTopic} onRemove={removeTopic} />
           {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
-          {!query && <Upcoming meetings={mine} now={now} topics={topics} />}
+          {!query && <Upcoming meetings={mine} now={now} />}
           {visible.map((g) => (
             <section key={g.label}>
               <div className="mt-day">{g.label}</div>
-              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} topics={topics} said={said.get(rowKey(m))} />)}</div>
+              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} said={said.get(rowKey(m))} />)}</div>
             </section>
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />
