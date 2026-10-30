@@ -11,7 +11,7 @@ import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { applyChanges } from './sync.js';
-import { DAY, MIN, inWeekHours, localDate } from './time.js';
+import { DAY, MIN, inWeekHours, localDate, slotStart } from './time.js';
 
 const EVERY = 15 * MIN;
 const SLACK = 'mcp__claude_ai_Slack__';
@@ -32,7 +32,7 @@ export function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig
 
 // Reads happen every quarter hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
 export function scanDue(last: number, now = Date.now()) {
-  return inWeekHours(now, 7, 19) && last < Math.floor(now / EVERY) * EVERY;
+  return inWeekHours(now, 7, 19) && last < slotStart(now, EVERY);
 }
 
 export function pushHours(c: SlackConfig, now = Date.now()) {

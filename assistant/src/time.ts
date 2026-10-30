@@ -7,6 +7,12 @@ export function inWeekHours(now: number, from: number, to: number) {
   return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= from && d.getHours() < to;
 }
 
+// The start of the slot of `every` ms (a divisor of an hour) that holds t, on the local clock, so half hours start at :00 and :30 in any time zone.
+export function slotStart(t: number, every: number) {
+  const d = new Date(t);
+  return t - ((d.getMinutes() * MIN) % every) - d.getSeconds() * 1000 - d.getMilliseconds();
+}
+
 // Moves n workdays (Monday to Friday) forward, or back when n is negative, keeping the time of day.
 export function addWorkdays(t: number, n: number) {
   const d = new Date(t);

@@ -9,7 +9,7 @@ import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, run } from './slack.js';
 import { saidId, webUrl } from './slackSave.js';
 import { applyChanges, type Change } from './sync.js';
-import { DAY, MIN, addWorkdays, inWeekHours, localDate, parseWhen } from './time.js';
+import { DAY, MIN, addWorkdays, inWeekHours, localDate, parseWhen, slotStart } from './time.js';
 
 const EVERY = 30 * MIN;
 const GMAIL = 'mcp__claude_ai_Gmail__';
@@ -128,7 +128,7 @@ export function saveWaiting(db: Database, found: z.infer<typeof Sent>[], replied
 
 // Reads every half hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
 export function mailDue(last: number, now = Date.now()) {
-  return inWeekHours(now, 7, 19) && last < Math.floor(now / EVERY) * EVERY;
+  return inWeekHours(now, 7, 19) && last < slotStart(now, EVERY);
 }
 
 export function mailPushHours(c: GmailConfig, now = Date.now()) {

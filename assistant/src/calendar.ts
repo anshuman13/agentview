@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ask } from './claude.js';
 import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
-import { DAY, inWeekHours } from './time.js';
+import { DAY, inWeekHours, slotStart } from './time.js';
 import { once } from './once.js';
 
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
@@ -93,8 +93,7 @@ const EVERY = 30 * 60_000;
 
 // True once per half hour from 07:00 to 19:00 on weekdays.
 export function importDue(last: number, now = Date.now()) {
-  const slot = Math.floor(now / EVERY) * EVERY;
-  return inWeekHours(now, FIRST, LAST) && last < slot;
+  return inWeekHours(now, FIRST, LAST) && last < slotStart(now, EVERY);
 }
 
 const lastKey = (p: Profile) => `calendar:last:${p}`;

@@ -9,7 +9,7 @@ import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
 import type { Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
-import { MIN } from './time.js';
+import { HOUR, MIN, slotStart } from './time.js';
 
 const KEEP = 20;
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -19,8 +19,8 @@ type Job = { id: string; profile: Profile; name: string | null; schedule: string
 // Schedules are "hourly", "daily HH:MM", "weekdays HH:MM" or "weekly <day> HH:MM", in the hub's local time.
 export function nextRun(schedule: string | null, after: number): number | null {
   const s = (schedule ?? '').trim().toLowerCase();
-  // Whole UTC hours, so the repeated hour when clocks go back gets its run too.
-  if (s === 'hourly') return Math.floor(after / 3600_000) * 3600_000 + 3600_000;
+  // Whole local hours a real hour apart, so the repeated hour when clocks go back gets its run too.
+  if (s === 'hourly') return slotStart(after, HOUR) + HOUR;
   const m = /^(daily|weekdays|weekly (sun|mon|tue|wed|thu|fri|sat)) (\d{1,2}):(\d{2})$/.exec(s);
   if (!m || +m[3] > 23 || +m[4] > 59) return null;
   const ok = (d: Date) => (m[1] === 'daily' ? true : m[1] === 'weekdays' ? d.getDay() % 6 !== 0 : d.getDay() === DAYS.indexOf(m[2]));
