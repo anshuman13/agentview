@@ -12,6 +12,13 @@ import { DAY } from './time.js';
 
 const BEFORE = 10 * 60_000;
 const FRESH = 2 * 3600_000;
+// No pushes from 17:00 to 08:00; tasks that fell due in that time go out with the first check of the morning.
+const QUIET = { from: 17, to: 8 };
+export const quiet = (now: number) => { const h = new Date(now).getHours(); return h >= QUIET.from || h < QUIET.to; };
+function taskSince(now: number) {
+  const morning = new Date(now).setHours(QUIET.to, 0, 0, 0);
+  return now - morning < FRESH ? Math.min(now - FRESH, new Date(morning - DAY).setHours(QUIET.from, 0, 0, 0)) : now - FRESH;
+}
 
 type Meeting = { id: string; profile: string; title: string | null; starts_at: number | null; ends_at: number | null; people: string | null; calendar_url: string | null };
 type Reminder = { key: string; title: string; body: string; url: string; actions?: string };
@@ -88,7 +95,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     const review = open.filter((a) => a.status === 'suggested').length;
     out.push({ key, title: `${open.length} for you from ${m.title ?? 'a meeting'}${review ? ` · ${review} to confirm` : ''}`, body: open.map((a) => `- ${a.title}${a.status === 'suggested' ? ' (yours?)' : ''}`).join('\n'), url: '' });
   }
-  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND CAST(at AS INTEGER) > ? AND CAST(at AS INTEGER) <= ?").all(now - FRESH, now) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
+  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND CAST(at AS INTEGER) > ? AND CAST(at AS INTEGER) <= ?").all(taskSince(now), now) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
   for (const t of tasks) {
     const key = `task:${t.profile}:${t.id}:${Number(t.at)}`;
     if (sent(key)) continue;
@@ -103,6 +110,7 @@ export function startReminders(db: () => Database, every = 60_000) {
   loop('reminders', every, async () => {
     rollOver(db());
     pruneMeta(db(), 'remind:', Date.now() - 2 * DAY);
+    if (quiet(Date.now())) return;
     await flushHeld(db());
     for (const r of dueReminders(db())) {
       const key = `remind:${r.key}`;

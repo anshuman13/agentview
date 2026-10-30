@@ -202,7 +202,7 @@ bar turns browser notifications on or off.
 
 For a phone in the background, the same notifications can go to an [ntfy](https://ntfy.sh) topic. Push is off
 until you set `AGENTVIEW_NTFY`, or `ntfy` in `~/.agentview/observe.json`, to a topic name or a full URL on your own
-server, then subscribe to it in the ntfy app. Tapping the push opens the chat. The assistant hub uses the same topic for meeting and task reminders and the 08:00 morning brief.
+server, then subscribe to it in the ntfy app. Tapping the push opens the chat. The assistant hub uses the same topic for meeting and task reminders and the 08:00 morning brief; it sends no reminders from 17:00 to 08:00, and tasks that fell due overnight go out with the first morning check.
 Urgent Slack and Gmail asks that arrive while a calendar meeting runs (not all-day events, time blocks or
 events with no other attendees) are held
 and sent as one push, "N urgent while you were in <meeting>", within a minute after it ends.

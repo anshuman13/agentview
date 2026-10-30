@@ -97,3 +97,12 @@ it('holds urgent pushes during a meeting and combines them once it ends', async 
   expect(heldDue(db, now + 120_000)).toBeNull();
   expect(heldDue(db, now + 1800_000)).toEqual({ count: 2, title: '2 urgent while you were in Sync', body: '- Kim: Review the plan (#team)\n- Bo: Sign the form (Gmail)' });
 });
+
+it('sends tasks that fell due overnight with the first morning check', () => {
+  const db = openDb(':memory:');
+  const now = new Date(2026, 9, 30, 8, 30).getTime();
+  const item = db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at) VALUES (?, 'personal', 1, 0, ?, 'capture', 'open', ?)");
+  item.run('a', 'Evening', new Date(2026, 9, 29, 22, 0).getTime());
+  item.run('b', 'Afternoon', new Date(2026, 9, 29, 16, 0).getTime());
+  expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Evening']);
+});
