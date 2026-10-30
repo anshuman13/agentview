@@ -149,4 +149,24 @@ describe('wiki tables', () => {
     expect(posted.map((c) => c.table)).toEqual(['facts']);
     expect(applied).toEqual(['pages']);
   });
+
+  it('follows a hub that starts over below the saved version', async () => {
+    const base = { table: 'items', profile: 'work' as const, deleted: false, updated_at: 1, fields: {}, field_times: {} };
+    const pages = [{ version: 1, hasMore: true, changes: [{ ...base, id: 'a', version: 1 }] }, { version: 2, changes: [{ ...base, id: 'b', version: 2 }] }];
+    const sent: number[] = [];
+    const saved: number[] = [];
+    const applied: string[] = [];
+    await runSync({
+      active: () => true,
+      since: async () => 500,
+      saveSince: async (s) => void saved.push(s),
+      dirty: async () => [],
+      post: async (since) => (sent.push(since), pages.shift()!),
+      clean: async () => {},
+      apply: async (c) => void applied.push(c.id),
+    });
+    expect(sent).toEqual([500, 1]);
+    expect(saved).toEqual([1, 2]);
+    expect(applied).toEqual(['a', 'b']);
+  });
 });

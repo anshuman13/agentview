@@ -1,5 +1,5 @@
 import { Database } from 'bun:sqlite';
-import { TABLES, isProfile, nextVersion, stmt, type Profile } from './db.js';
+import { TABLES, currentVersion, isProfile, nextVersion, stmt, type Profile } from './db.js';
 
 export class SyncError extends Error {}
 
@@ -172,6 +172,8 @@ export function pullChanges(
   since: number,
   limit = 1000
 ): PullResult {
+  // A device ahead of the hub, as after a restore from backup, would never see the rows written since, so it gets them all.
+  if (since > currentVersion(db)) since = 0;
   const allRows: Array<{ table: string; row: any }> = [];
 
   for (const table of Object.keys(TABLES)) {

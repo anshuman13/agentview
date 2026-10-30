@@ -40,7 +40,7 @@ export async function runSync(io: SyncIO) {
       changed = true;
     }
     more = data.hasMore === true;
-    if (more && data.version <= since) throw new Error('Hub did not advance the sync version');
+    if (more && data.version === since) throw new Error('Hub did not advance the sync version');
     since = data.version;
     await io.saveSince(since);
   }

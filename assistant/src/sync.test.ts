@@ -65,6 +65,14 @@ describe('sync', () => {
     expect(second.hasMore).toBe(false);
   });
 
+  it('pulls everything for a since past the hub version, as after a restore', () => {
+    applyChanges(db, [ch({ id: 'item1', fields: { title: 'Item 1' } }), ch({ id: 'item2', fields: { title: 'Item 2' } })]);
+    const first = pullChanges(db, 500, 1);
+    expect(first.changes.map((c) => c.id)).toEqual(['item1']);
+    expect(first.hasMore).toBe(true);
+    expect(pullChanges(db, first.version, 1).changes.map((c) => c.id)).toEqual(['item2']);
+  });
+
   it('keeps the same id in work and personal as two rows', () => {
     applyChanges(db, [ch({ fields: { title: 'Work Item' } })]);
     applyChanges(db, [ch({ profile: 'personal', fields: { title: 'Personal Item' } })]);
