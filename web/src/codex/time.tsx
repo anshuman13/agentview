@@ -7,6 +7,9 @@ const MORNING = 9;
 export const EVENING = 19;
 const slot = (now: Date, days: number, hour: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, hour).getTime();
 
+// Mirrors the hub's quiet hours (assistant/src/remind.ts): no reminders from 17:00 to 08:00.
+export const muted = (at: number) => { const h = new Date(at).getHours(); return h >= 17 || h < 8; };
+
 export function slots(now = new Date()): { label: string; at: number }[] {
   const h = now.getHours();
   return [

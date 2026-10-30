@@ -8,7 +8,7 @@ import { ago, fitHeight, reveal, safeHref, useOnUnmount } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
 import { PickDue, PickTime, when } from './time';
-import { snoozes } from './AskBar';
+import { snoozeText, snoozes } from './AskBar';
 import { Back } from '../app/back';
 import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
@@ -213,7 +213,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       {snoozing ? (
         <div className="as-edit-actions" ref={actions}>
           {at != null && at >= new Date().setHours(24, 0, 0, 0) && <button className="btn" onClick={then(() => act.due(row, null))}>Today</button>}
-          {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
+          {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{snoozeText(s)}</button>)}
           <PickTime className="btn" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
           <button className="icon-btn" title="Back" aria-label="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
         </div>

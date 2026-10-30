@@ -9,12 +9,18 @@ import { touch } from '../app/touch';
 import { Voice, useDictation } from '../chat/Voice';
 import { readFlag, reveal, saveFlag } from '../ui/util';
 import { FILTER_LABEL, showSnack, type Filter } from './view';
-import { EVENING, PickTime, clock, when } from './time';
+import { EVENING, PickTime, clock, muted, when } from './time';
 
 type Mode = 'task' | 'ask';
 
 const QUICK = ['In 1 hour', 'Tonight', 'Tomorrow'];
 export const snoozes = (now = new Date()) => SNOOZES.filter((s) => s.label !== 'Tonight' || now.getHours() < EVENING);
+
+export const snoozeText = (s: { label: string; at: (now: Date) => number }, now = new Date()) => {
+  if (!s.label.startsWith('In ')) return s.label;
+  const at = s.at(now);
+  return `${s.label} · ${clock(at)}${muted(at) ? ' · no reminder until 08:00' : ''}`;
+};
 
 const marked = (text: string, spans: [number, number][]) => {
   const out: React.ReactNode[] = [];
@@ -119,7 +125,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
             {m === 'task' && asking && !dated ? (
               <>
                 <span className="as-ask">When?</span>
-                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => void submit(s.at(new Date()))}><Icon name="clock" small /> {s.label}</button>)}
+                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => void submit(s.at(new Date()))}><Icon name="clock" small /> {snoozeText(s)}</button>)}
                 <button className="as-chip" onClick={() => void submit(null)}>No time</button>
                 <PickTime className="as-chip time" onPick={(t) => void submit(t)} />
               </>
@@ -127,7 +133,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
               <button className="as-chip when on" title="Remove the time" onClick={() => { setPick(null); setNoWhen(true); }}><Icon name="clock" small /> {due != null ? when(due) : 'Today'} <Icon name="close" small /></button>
             ) : (
               <>
-                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => setPick(s.at(new Date()))}><Icon name="clock" small /> {s.label}</button>)}
+                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => setPick(s.at(new Date()))}><Icon name="clock" small /> {snoozeText(s)}</button>)}
                 <PickTime className="as-chip time" onPick={setPick} />
               </>
             ))}
