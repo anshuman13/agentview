@@ -174,7 +174,7 @@ the chat's folder; Claude can mark a claim personal when it is about my personal
 
 | Table | New columns | Notes |
 | --- | --- | --- |
-| facts | state, replaces, added_by | `state` proposed, live or rejected (null means live, so existing rows stay live); `replaces` is the live claim a proposal would supersede; `added_by` is `claude:<chat id>` or `you` |
+| facts | state, replaces, added_by | `state` proposed, live or rejected (null means live, so existing rows stay live); `replaces` is the live claim a proposal would supersede; `added_by` is `claude:<chat id>`, `meeting:<id>` or `you` |
 | pages | state | A page Claude proposes is `proposed` until a claim on it is approved |
 
 Approving a claim sets it live, makes its proposed page live, and sets `superseded_by` on the claim it replaces.
@@ -185,9 +185,22 @@ Rejecting keeps the row as `rejected` so Claude sees it in `wiki_search` and doe
 - Wiki index: a "To review" section above the sections with a count, one approve card per proposal: the claim,
   target page and heading (or Memory), what it replaces (struck through), sources, the chat it came from. Buttons
   Edit, Reject and Approve, as on the meeting action cards. Rejected cards collapse with Undo.
+  Proposals on a live page are grouped into one card per page, except ones that replace a claim, which get their own
+  card so the old text shows.
 - The nav shows the review count next to Wiki.
 - A "Memory" card in the index lists live claims without a page.
 - Live claims Claude proposed show a small "Claude" source chip linking to the chat.
+
+### Updates from meeting decisions
+
+The transcript import saves each meeting's decisions. Every 5 minutes the hub looks at meetings of the last 14 days
+with decisions, once per meeting (meta key `wikiupdate:<profile>:<id>`). A claim is a candidate when it is current, on
+a live page, older than the meeting, and a decision shares two key words with it while the decision or meeting title
+names the page (the "Maybe changed" rule, in `shared/claimMatch.ts`). For a meeting with candidates one Haiku call on
+the profile's account, with only a save tool, writes a replacement ("As of <date>, ...") for each claim the decisions
+change. Each is saved as a proposed claim with `replaces`, a meeting source and `added_by` `meeting:<id>`, unless the
+same text already replaces that claim. Its review card says "From <meeting title>". A meeting stopped by the usage
+limit is tried again on the next run.
 
 ### Steps
 
