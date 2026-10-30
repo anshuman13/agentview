@@ -12,7 +12,7 @@ import { save, stored, plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
-import { sourceOf } from './Task';
+import { sourceOf } from './taskSource';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { atRisk, minutesText, type Span } from './data/plan';

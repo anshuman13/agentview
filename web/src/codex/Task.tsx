@@ -1,235 +1,36 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAssistant } from './data';
 import { atTime, errorText, hasDay, nextNine, parseWhen, stripWhen } from './data/engine';
 import { isRepeat, parseRepeat } from './data/recur';
-import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago, fitHeight, readFlag, safeHref, saveFlag } from '../ui/util';
-import { copyText, FILTER_LABEL, setView, showSnack, type Filter } from './view';
+import { readFlag, saveFlag } from '../ui/util';
+import { FILTER_LABEL, showSnack, type Filter } from './view';
 import { useActions } from './useActions';
-import { PickDue, PickTime, when } from './time';
-import { snoozes } from './AskBar';
+import { when } from './time';
 import { Swipe } from './Swipe';
 import { rowKey } from './taskKeys';
-import { Back } from '../app/back';
 import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
 import { estimateMin, minutesText } from './data/plan';
-import { recentPeople } from './data/points';
-import { RaiseWith } from './meetings/Raise';
+import { sourceOf } from './taskSource';
+import { Check } from './TaskCheck';
+import { TaskEditor } from './TaskEditor';
 
 export { UNROLL, useActions } from './useActions';
-
-const SOURCES: Record<string, { icon: string; label: string }> = {
-  slack: { icon: 'comment-discussion', label: 'Slack' },
-  linear: { icon: 'issues', label: 'Linear' },
-  gmail: { icon: 'mail', label: 'Gmail' },
-  mail: { icon: 'mail', label: 'Mail' },
-  calendar: { icon: 'calendar', label: 'Calendar' },
-  meeting: { icon: 'record', label: 'Meeting' },
-  action: { icon: 'checklist', label: 'Meeting' },
-  github: { icon: 'github', label: 'GitHub' },
-  capture: { icon: 'edit', label: 'You' },
-  job: { icon: 'history', label: 'Job' },
-};
-export const sourceOf = (r: ItemRow) => SOURCES[r.source ?? 'capture'] ?? { icon: 'circle-small', label: r.source ?? '' };
 
 const DAY = 86400_000;
 
 const firstLine = (s: string | null) => s?.split('\n').find((l) => l.trim())?.trim() ?? '';
-const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
 // Checklist lines in the notes, like "- [ ] call" and "- [x] done".
 const checklist = (s: string | null) => {
   const all = s?.match(/^\s*[-*] \[[ xX]\]/gm) ?? [];
   return { done: all.filter((l) => /x/i.test(l)).length, total: all.length };
 };
 
-function Check({ row, onDone }: { row: ItemRow; onDone?: () => void }) {
-  const act = useActions();
-  const [checked, setChecked] = useState(false);
-  useEffect(() => setChecked(false), [row.status]);
-  const isDone = row.status === 'done';
-  if (row.status === 'note') return <span className="as-check note"><Icon name="note" /></span>;
-  const tick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isDone) return act.reopen(row);
-    if (checked) return;
-    haptic('success');
-    setChecked(true);
-    setTimeout(() => { act.done(row); onDone?.(); }, 260);
-  };
-  return (
-    <button className={`as-check${checked || isDone ? ' on' : ''}`} title={isDone ? 'Not done' : 'Done'} aria-label={isDone ? 'Not done' : 'Done'} onClick={tick}>
-      <Icon name={checked || isDone ? 'pass-filled' : 'circle-large-outline'} />
-    </button>
-  );
-}
-
-// The open task edits in place: title and notes save when they lose focus or the task closes.
-function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void }) {
-  const act = useActions();
-  const { store, snap } = useAssistant();
-  const [title, setTitle] = useState(row.title ?? '');
-  const [text, setText] = useState(row.text ?? '');
-  const saved = useRef({ title: row.title ?? '', text: row.text ?? '' });
-  const [snoozing, setSnoozing] = useState(false);
-  const [tidying, setTidying] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLTextAreaElement>(null);
-  const textRef = useRef<HTMLTextAreaElement>(null);
-  const src = sourceOf(row);
-  const at = atTime(row.at);
-  // The phone keyboard covers the lower half, so the field moves into view once it is up.
-  const reveal = (e: React.FocusEvent<HTMLTextAreaElement>) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
-  const checks = [...text.matchAll(CHECK_RE)].map((m) => ({ done: /x/i.test(m[1]), label: m[2].trim() }));
-  // Ticking a checklist line flips its box in the notes and saves at once.
-  const toggle = (n: number) => {
-    let i = 0;
-    const next = text.replace(CHECK_RE, (line, box: string) => (i++ === n ? line.replace(`[${box}]`, /x/i.test(box) ? '[ ]' : '[x]') : line));
-    setText(next);
-    haptic('tap');
-    if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; act.edit(row, { text: next }); }
-  };
-  const pending = () => {
-    const patch: Patch = {};
-    if (title.trim() && title.trim() !== saved.current.title) patch.title = title.trim();
-    if (text !== saved.current.text) patch.text = text.trim() ? text : null;
-    return patch;
-  };
-  const save = () => {
-    const patch = pending();
-    if (!Object.keys(patch).length) return;
-    saved.current = { title: patch.title ?? saved.current.title, text };
-    act.edit(row, patch);
-  };
-  const latest = useRef(save);
-  latest.current = save;
-  useEffect(() => () => latest.current(), []);
-
-  useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text]);
-  // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
-  useEffect(() => { if (matchMedia('(hover: hover)').matches) titleRef.current?.focus({ preventScroll: true }); }, []);
-  // The task grows out of its row instead of popping in.
-  useLayoutEffect(() => {
-    const el = box.current;
-    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    el.animate([{ height: '56px', overflow: 'hidden' }, { height: `${el.offsetHeight}px`, overflow: 'hidden' }], { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' });
-  }, []);
-  useEffect(() => { setTimeout(() => box.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 190); }, []);
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' && !(e.key === 'Enter' && (e.metaKey || e.ctrlKey))) return;
-      const at = document.activeElement;
-      if (at && at !== document.body && !box.current?.contains(at)) return;
-      onClose();
-      requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus());
-    };
-    // A tap outside closes the task; a tap on another task opens that one instead.
-    const down = (e: PointerEvent) => {
-      const t = e.target as Element;
-      if (!box.current?.contains(t) && !t.closest('.as-row, .as-snack')) onClose();
-    };
-    window.addEventListener('keydown', key);
-    document.addEventListener('pointerdown', down);
-    return () => { window.removeEventListener('keydown', key); document.removeEventListener('pointerdown', down); };
-  }, [onClose, row.profile, row.id]);
-
-  const other: Profile = row.profile === 'work' ? 'personal' : 'work';
-  const move = () => {
-    const patch = pending();
-    saved.current = { title, text };
-    void act.move({ ...row, ...patch }, other);
-  };
-  const then = (f: () => void) => () => { save(); f(); onClose(); };
-  const timed = row.status === 'open' || row.status === 'suggested' || at != null;
-  // Haiku fixes a quick or dictated task into a clear title and notes, and sets the time if the text says one.
-  const tidy = async () => {
-    setTidying(true);
-    try {
-      const p = await store.parse([title, text].filter((s) => s.trim()).join('\n'), row.profile);
-      setTitle(p.title);
-      setText(p.details ?? '');
-      if (p.at != null && row.at == null) act.edit(row, { at: p.at });
-    } catch (err) {
-      showSnack(`Not tidied: ${(err as Error).message}`);
-    } finally {
-      setTidying(false);
-    }
-  };
-
-  return (
-    <div className={`as-edit ${row.profile}`} ref={box} data-no-swipe>
-      <Back close={onClose} />
-      <div className="as-edit-top">
-        <Check row={row} onDone={onClose} />
-        <textarea
-          ref={titleRef}
-          className="as-edit-title"
-          rows={1}
-          value={title}
-          placeholder="Title"
-          aria-label="Title"
-          enterKeyHint="next"
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={save}
-          onFocus={reveal}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); textRef.current?.focus(); } }}
-        />
-      </div>
-      <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Notes" aria-label="Notes" onChange={(e) => setText(e.target.value)} onBlur={save} onFocus={reveal} />
-      {checks.length > 0 && (
-        <div className="as-edit-checks">
-          {checks.map((c, i) => (
-            <button key={i} className={c.done ? 'on' : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => toggle(i)}>
-              <Icon name={c.done ? 'pass-filled' : 'circle-large-outline'} small /> <span>{c.label || '(empty)'}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="as-edit-meta">
-        {timed && (
-          <span className="as-edit-due">
-            <PickDue className={`as-chip${at == null ? ' quiet' : at < Date.now() && row.status === 'open' ? ' late' : ''}`} value={at} onPick={(t) => t !== at && act.due(row, t)}>
-              <Icon name="calendar" small /> {at == null ? 'Due' : when(at, Date.now(), true)}
-            </PickDue>
-            {at != null && <button className="as-chip-x" title="Clear due time" aria-label="Clear due time" onClick={() => act.due(row, null)}><Icon name="close" small /></button>}
-          </span>
-        )}
-        <button className={`as-chip as-prof ${row.profile}`} title={`Move to ${FILTER_LABEL[other]}`} onClick={move}><ProfileDot profile={row.profile} />{FILTER_LABEL[row.profile]}</button>
-        {row.meeting_id && <button className="as-chip" onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))}><Icon name="record" small /> Meeting</button>}
-        {row.source_url ? (
-          <a className="as-chip" href={safeHref(row.source_url)} target="_blank" rel="noreferrer"><Icon name={src.icon} small /> {row.meeting_id ? 'Transcript' : src.label} <Icon name="link-external" small /></a>
-        ) : row.source && row.source !== 'capture' && <span className="as-chip static"><Icon name={src.icon} small /> {src.label}</span>}
-        {row.people && <span className="as-chip static">{row.people}</span>}
-        <span className="as-edit-ago">{ago(row.updated_at, ' ago')}</span>
-      </div>
-      {snoozing ? (
-        <div className="as-edit-actions">
-          {at != null && at >= new Date().setHours(24, 0, 0, 0) && <button className="btn" onClick={then(() => act.due(row, null))}>Today</button>}
-          {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{s.label}</button>)}
-          <PickTime className="btn" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
-          <button className="icon-btn" title="Back" aria-label="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
-        </div>
-      ) : (
-        <div className="as-edit-actions">
-          {row.status === 'note' && <button className="btn" onClick={then(() => act.toTask(row))}>Make task</button>}
-          {row.status === 'open' && <button className="btn" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
-          {row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
-          {row.draft && <button className="btn" onClick={() => copyText(row.draft!)}><Icon name="copy" small /> Copy draft</button>}
-          <button className="btn" title="Ask Claude about this task" onClick={then(() => onAsk(row))}><Icon name="sparkle" small /> Ask</button>
-          {row.status === 'open' && <RaiseWith className="btn" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
-          <span className="spacer" />
-          <button className="icon-btn as-delete" title="Delete" aria-label="Delete" onClick={then(() => act.remove(row))}><Icon name="trash" /></button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: { row: ItemRow; open: boolean; onOpen: () => void; onClose: () => void; onAsk: (r: ItemRow) => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean }) {
   const act = useActions();
-  if (open) return <Editor row={row} onClose={onClose} onAsk={onAsk} />;
+  if (open) return <TaskEditor row={row} onClose={onClose} onAsk={onAsk} />;
   const src = sourceOf(row);
   const at = atTime(row.at);
   const now = Date.now();
