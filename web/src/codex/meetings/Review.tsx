@@ -8,6 +8,8 @@ import { PickTime, when } from '../time';
 import { copyText, showSnack, useView } from '../view';
 import { safeHref } from '../../ui/util';
 
+const short = (s: string) => (s.length > 24 ? `${s.slice(0, 23).trimEnd()}…` : s);
+
 function Group({ title, rows, children }: { title: string; rows: ItemRow[]; children: (r: ItemRow) => React.ReactNode }) {
   if (!rows.length) return null;
   return (
@@ -52,7 +54,7 @@ export function Review({ now }: { now: number }) {
           {waiting.map((g) => (
             <div key={g.name} className="mt-log-item">
               <span className="mt-log-text">{g.name}: {g.rows.map((x) => `${x.title} (${x.days}d)`).join(', ')}</span>
-              {g.rows.map((x) => x.url && <a key={x.key} className="btn sm" href={safeHref(x.url)} target="_blank" rel="noreferrer" title={`Open ${x.title}`}><Icon name="link-external" small /> Open</a>)}
+              {g.rows.map((x) => x.url && <a key={x.key} className="btn sm" href={safeHref(x.url)} target="_blank" rel="noreferrer" title={`Open ${x.title}`}><Icon name="link-external" small /> {short(x.title)}</a>)}
               <button className="btn sm" title="Copy a reminder message" onClick={() => copyText(nudgeText(g), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
             </div>
           ))}
