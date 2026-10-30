@@ -1,10 +1,10 @@
 import type { Database } from 'bun:sqlite';
-import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
+import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
@@ -22,12 +22,8 @@ export const HUB_URL = process.env.ASSISTANT_PUBLIC ?? 'http://macmini.netbird.c
 export type SlackConfig = { me: string; domain: string; channels: string[]; push?: { from: number; to: number } };
 
 export function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig | null {
-  try {
-    const c = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return typeof c?.me === 'string' && Array.isArray(c.channels) ? c : null;
-  } catch {
-    return null;
-  }
+  const c = readJsonSync<any>(file, null);
+  return typeof c?.me === 'string' && Array.isArray(c.channels) ? c : null;
 }
 
 // Reads happen every quarter hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.

@@ -1,9 +1,9 @@
 import type { Database } from 'bun:sqlite';
-import fs from 'node:fs';
 import path from 'node:path';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
+import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, run } from './slack.js';
@@ -22,12 +22,8 @@ const dayStart = (t: number, days = 0) => Math.floor(new Date(t).setHours(24 * d
 export type GmailConfig = { me: string; push?: { from: number; to: number } };
 
 export function gmailConfig(file = path.join(DB_DIR, 'gmail.json')): GmailConfig | null {
-  try {
-    const c = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return typeof c?.me === 'string' && c.me.includes('@') ? c : null;
-  } catch {
-    return null;
-  }
+  const c = readJsonSync<any>(file, null);
+  return typeof c?.me === 'string' && c.me.includes('@') ? c : null;
 }
 
 const Ask = z.object({
