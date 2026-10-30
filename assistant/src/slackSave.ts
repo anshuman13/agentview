@@ -66,13 +66,20 @@ export function sameAsk(a: string, b: string) {
   return n / Math.min(x.size, y.size) >= 0.6;
 }
 
+// Suggestions of one source nobody reviewed within a week are dismissed; their ids stay, so the same message is not added again.
+export function expireSuggested(db: Database, source: 'slack' | 'gmail', now: number): Change[] {
+  const rows = db.prepare("SELECT id FROM items WHERE profile = ? AND deleted = 0 AND status = 'suggested' AND source = ? AND updated_at < ?").all(PROFILE, source, now - 7 * DAY) as { id: string }[];
+  return rows.map((r) => ({ table: 'items', id: r.id, profile: PROFILE, updated_at: now, fields: { status: 'dismissed' } }));
+}
+
 // Saves one scan: chat summaries, asks and my promises as items to review, new details on tasks and channel decisions, and
 // closes asks I have replied to. Returns how many chats had new messages and how many messages were read, how many asks and promises are new and which asks are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
   // A chat with nothing new keeps its running summary; one without an id is dropped.
-  const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0 && c.id.trim()).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now, waiting: c.kind === 'dm' ? (c.waiting ? 1 : 0) : null } }));
-  const chats = changes.length;
+  const changes: Change[] = expireSuggested(db, 'slack', now);
+  changes.push(...r.chats.filter((c) => c.new_messages !== 0 && c.id.trim()).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now, waiting: c.kind === 'dm' ? (c.waiting ? 1 : 0) : null } })));
+  const chats = changes.filter((c) => c.table === 'chats').length;
   const messages = changes.reduce((n, c) => n + (c.table === 'chats' ? (r.chats.find((x) => x.id === c.id)?.new_messages ?? 0) : 0), 0);
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
   // Slack items of the last week in any state, so an ask or promise already seen, done or dismissed is not added again from another message.

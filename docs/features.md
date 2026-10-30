@@ -67,7 +67,7 @@ with due time, profile, source link, Start, Snooze, Tidy, Copy draft for an ask 
 below; a tap outside closes it and saves. A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Slack and Gmail promises I made myself show under "You said" next to the
 asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source.
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
-seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message.
+seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
 
 - Each day ends with Add task (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day

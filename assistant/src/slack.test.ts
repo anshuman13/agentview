@@ -25,6 +25,15 @@ describe('scan prompt and counts', () => {
 });
 
 describe('saveScan', () => {
+  test('dismisses suggestions older than a week, source by source', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [], asks: [ask('u1')], answered: [] }, at(10, 10));
+    saveScan(db, { chats: [], asks: [ask('u2')], answered: [] }, at(15, 10));
+    saveScan(db, { chats: [], asks: [], answered: [] }, at(18, 11));
+    expect(item(db, 'u1')!.status).toBe('dismissed');
+    expect(item(db, 'u2')!.status).toBe('suggested');
+  });
+
   test('saves chats and new asks for review, and returns only new urgent asks', () => {
     const db = openDb(':memory:');
     const { added, urgent } = saveScan(db, { chats: [{ id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.' }], asks: [ask('u1', true), ask('u2')], answered: [] }, at(27, 10));

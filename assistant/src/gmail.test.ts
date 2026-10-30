@@ -5,7 +5,8 @@ import { acceptAsk } from './slackSave.js';
 import { addWorkdays } from './time.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
-const ask = (thread_id: string, urgent = false, url?: string) => ({ thread_id, url, from: 'Kim', title: 'Reply to Kim', quote: 'Can you review this?', urgent });
+// Each thread gets its own topic, so asks are not taken for repeats of each other.
+const ask = (thread_id: string, urgent = false, url?: string, from = 'Kim') => ({ thread_id, url, from, title: `Reply ${thread_id.replace(/\W/g, '')}topic`, quote: 'Can you review this?', urgent });
 const item = (db: ReturnType<typeof openDb>, thread: string) => db.prepare('SELECT status, source, source_url, people FROM items WHERE id = ?').get(mailId(thread)) as { status: string; source: string; source_url: string; people: string } | null;
 
 describe('saveMail', () => {
@@ -32,6 +33,15 @@ describe('saveMail', () => {
     expect(item(db, 't1')!.status).toBe('done');
     expect(item(db, 't2')!.status).toBe('open');
   });
+});
+
+test('skips a similar ask from the same sender on another thread', () => {
+  const db = openDb(':memory:');
+  saveMail(db, { asks: [{ ...ask('t1'), title: 'Review the budget draft' }], answered: [] }, at(27, 10));
+  const r = saveMail(db, { asks: [{ ...ask('t2'), from: ' kim ', title: 'Review budget draft' }, { ...ask('t3', false, undefined, 'Ola'), title: 'Review the budget draft' }], answered: [] }, at(27, 11));
+  expect(r.added).toBe(1);
+  expect(item(db, 't2')).toBeNull();
+  expect(item(db, 't3')!.people).toBe('Ola');
 });
 
 test('saves my promises with their due time', () => {
