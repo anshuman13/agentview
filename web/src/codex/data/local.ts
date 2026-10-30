@@ -222,6 +222,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
       ).then(() => void this.syncTouched.add(name)),
       apply: (change) => this.applyChange(change).then(() => void this.syncTouched.add(change.table)),
       paused: (paused) => this.setSync({ paused }),
+      scans: (scans) => this.setSync({ scans }),
     });
   }
 
@@ -310,6 +311,13 @@ export class LocalStore extends BaseStore implements AssistantStore {
     if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
     await this.syncNow();
     return Number(data?.added ?? 0);
+  };
+
+  scanNow = async (name: 'slack' | 'gmail') => {
+    const resp = await fetch(`${HUB}/scan?name=${name}`, { method: 'POST', signal: AbortSignal.timeout(300000) });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    await this.syncNow();
   };
 
   searchTranscripts = async (query: string, profile?: Profile) => {

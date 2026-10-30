@@ -200,6 +200,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         this.save([change.table]);
       },
       paused: (paused) => this.setSync({ paused }),
+      scans: (scans) => this.setSync({ scans }),
     });
   }
 
@@ -257,6 +258,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     const data = await hub<{ added?: number }>('/api/assistant/slack/summary', undefined, { method: 'POST' });
     await this.syncNow();
     return Number(data?.added ?? 0);
+  };
+
+  scanNow = async (name: 'slack' | 'gmail') => {
+    await hub(`/api/assistant/scan?name=${name}`, undefined, { method: 'POST', signal: AbortSignal.timeout(300000) });
+    await this.syncNow();
   };
 
   searchTranscripts = async (query: string, profile?: Profile) => (await hub<{ hits?: TranscriptHit[] }>(`/api/assistant/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`)).hits ?? [];

@@ -181,6 +181,11 @@ a.as-chip { text-decoration: none; }
 .as-nav-sync.bad .as-dot { background: var(--err); }
 .as-nav-sync.bad { color: var(--err); }
 .as-nav-paused { padding: var(--sp-2) var(--sp-6); color: var(--warn); font-size: var(--fs-sm); }
+.as-nav-scan { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-6); color: var(--fg-muted); font-size: var(--fs-xs); }
+.as-nav-scan > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.as-nav-scan.bad { color: var(--warn); }
+.as-nav .as-nav-scan .as-scan-now { flex: none; height: auto; padding: 0 var(--sp-2); color: var(--fg-faint); font-size: var(--fs-xs); }
+.as-nav .as-nav-scan .as-scan-now:disabled { opacity: 0.6; }
 .as-nav-sync.busy .as-dot { background: var(--accent); animation: as-pulse 1s var(--ease) infinite alternate; }
 .as-head > .as-prof { padding: 2px var(--sp-5); border-radius: var(--radius-pill); background: var(--hover); font-size: var(--fs-sm); font-weight: 600; }
 

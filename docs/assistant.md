@@ -69,6 +69,9 @@ Scan slots follow the hub's local clock, so half hours start at :00 and :30 in a
 While a Claude account is at its usage limit, the Slack and Gmail scans and the calendar import of its profiles skip
 their runs, and the scans catch up from their last read afterwards. The hub logs the pause once per limit, and each sync reply lists the paused scans so the apps can show them
 until the limit ends.
+Each Slack, Gmail and calendar run records its last success with counts and its last error in meta `scan:<name>`, and
+the sync reply returns them as `scans`. `POST /scan?name=slack|gmail` runs one scan now outside its slot; it still
+honors the usage-limit pause and joins a scan that is already running.
 
 The same scan call writes a reply draft for each new ask, in my voice, 2 to 4 sentences in the language of the ask,
 kept in the item's `draft` column. For it the model reads the ask's thread and calls a local `ask_context` tool, which

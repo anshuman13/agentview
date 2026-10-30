@@ -1,7 +1,7 @@
 import { WEEKDAYS } from './dates';
 import { FIELDS, TABLE_FIELDS, newId, parseTimes, rowToChange } from './sync';
 import type { Run } from './wiki';
-import type { Change, ItemRow, Merged, Paused, Profile, PulledChange, Reply, SyncRow } from './sync';
+import type { Change, ItemRow, Merged, Paused, Profile, PulledChange, Reply, ScanHealth, SyncRow } from './sync';
 
 export const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
 
@@ -20,6 +20,7 @@ type SyncIO = {
   clean(d: Dirty): Promise<void>;
   apply(change: PulledChange): Promise<void>;
   paused?(p: Paused[]): void;
+  scans?(s: ScanHealth[]): void;
 };
 
 export async function runSync(io: SyncIO) {
@@ -31,6 +32,7 @@ export async function runSync(io: SyncIO) {
     const data = await io.post(since, pushed.map((d) => rowToChange(d.row, d.table)));
     if (!Array.isArray(data?.changes) || typeof data.version !== 'number') throw new Error('Unexpected hub response');
     io.paused?.(Array.isArray(data.paused) ? data.paused : []);
+    io.scans?.(Array.isArray(data.scans) ? data.scans : []);
     for (const row of pushed) await io.clean(row);
     changed ||= pushed.length > 0;
     pushed = [];
