@@ -99,17 +99,18 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   return { added, urgent, said };
 }
 
-// Channel decisions with a web permalink are kept once each for wiki updates; ones older than two weeks are dropped.
+// Channel decisions with a web permalink are kept once per permalink for wiki updates, so a re-worded one is not looked at again; ones older than two weeks are dropped.
 function saveDecisions(db: Database, list: z.infer<typeof Decided>[], now: number) {
+  db.prepare('DELETE FROM slack_decisions WHERE at < ?').run(now - 14 * DAY);
+  const seen = db.prepare('SELECT 1 FROM slack_decisions WHERE profile = ? AND url = ?');
   const add = db.prepare('INSERT OR IGNORE INTO slack_decisions (profile, id, text, channel, url, at) VALUES (?, ?, ?, ?, ?, ?)');
   for (const d of list) {
     const url = webUrl(d.url);
     const text = d.text.trim();
     const name = d.channel.trim().replace(/^#/, '');
-    if (!url || !text || !name) continue;
+    if (!url || !text || !name || seen.get(PROFILE, url)) continue;
     add.run(PROFILE, createHash('sha1').update(`${url}\n${text.toLowerCase()}`).digest('hex').slice(0, 16), text, `#${name}`, url, Math.min(parseWhen(d.time) ?? now, now));
   }
-  db.prepare('DELETE FROM slack_decisions WHERE at < ?').run(now - 14 * DAY);
 }
 
 export function acceptAsk(db: Database, id: string, source: 'slack' | 'gmail' = 'slack', now = Date.now()) {

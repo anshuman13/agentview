@@ -201,7 +201,7 @@ limit is tried again on the next run; one that fails for another reason gets up 
 `wikiupdate-tries:<profile>:<id>`).
 
 Slack decisions go the same way. The Slack scan also returns decisions settled in the watched channels (a short line,
-the channel, the permalink and the time), kept once per permalink and line in the hub-only `slack_decisions` table for
+the channel, the permalink and the time), kept once per permalink (a re-worded decision from the same message is skipped) in the hub-only `slack_decisions` table for
 14 days. Each one is looked at once (meta key `wikiupdate:work:slack:<id>`), with the channel name in place of the
 meeting title, in the same queue and limits as meetings. Its proposals have a Slack source with the permalink and
 `added_by` `slack:<id>`, and the review card says "From #channel".
