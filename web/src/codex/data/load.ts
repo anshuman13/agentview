@@ -49,7 +49,7 @@ function timeBySeries(meetings: Meeting[], items: ItemRow[], now: number, weeks:
       else row.oldestOpen = Math.min(row.oldestOpen ?? a.updated_at, a.updated_at);
     }
     if (m.starts_at > row.at) Object.assign(row, { title: m.title ?? title, at: m.starts_at });
-    const minutes = Math.min(m.ends_at - m.starts_at, MAX_HOURS * HOUR) / 60_000;
+    const minutes = Math.min(Math.min(m.ends_at, now) - m.starts_at, MAX_HOURS * HOUR) / 60_000;
     if (m.starts_at >= now - span) row.minutes += minutes;
     else row.before += minutes;
     sums.set(key, row);
@@ -90,7 +90,7 @@ export function meetingLoad(meetings: Meeting[], now: number, weeks = 4, items: 
     const at = m.starts_at;
     const week = [...out].reverse().find((w) => w.start <= at);
     if (!week) continue;
-    const hours = Math.min(Math.max(m.ends_at - at, 0) / HOUR, MAX_HOURS);
+    const hours = Math.min(Math.max(Math.min(m.ends_at, now) - at, 0) / HOUR, MAX_HOURS);
     week.hours += hours;
     if ((m.recorded_ms ?? 0) > 0) week.recorded++;
     else week.unrecorded++;

@@ -19,11 +19,12 @@ it('sums hours per local week across the October clock change, caps one meeting 
     meeting('open', new Date(2026, 9, 28, 9), 1, { ends_at: null }),
     meeting('old', new Date(2026, 8, 20, 9), 1),
     meeting('ooo', new Date(2026, 9, 27), 24),
+    meeting('now', new Date(2026, 9, 29, 11, 30), 2, { people: 'Cy' }),
   ], now);
   expect(weeks.map((w) => new Date(w.start).getDate())).toEqual([5, 12, 19, 26]);
-  expect(weeks.map((w) => w.hours)).toEqual([0, 0, 1, 10]);
+  expect(weeks.map((w) => w.hours)).toEqual([0, 0, 1, 10.5]);
   expect(weeks[2].recorded).toBe(1);
-  expect(weeks[3].unrecorded).toBe(2);
+  expect(weeks[3].unrecorded).toBe(3);
   expect(people[0]).toEqual({ name: 'Ann', hours: 11 });
 });
 
