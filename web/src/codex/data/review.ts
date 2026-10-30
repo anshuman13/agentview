@@ -1,7 +1,10 @@
 import { atTime, statusTime } from './engine';
 import { parseTimes, type ItemRow } from './sync';
-import { sameName } from './meetings';
-import { live as liveRows, type Brief, type Chat } from './wiki';
+import { isBlock } from '../../../../shared/util';
+import { dayStart } from './dates';
+import { isAllDay } from './load';
+import { peopleOf, sameName } from './meetings';
+import { live as liveRows, type Brief, type Chat, type Meeting } from './wiki';
 
 const DAY = 86400000;
 export const STUCK_ROLLS = 3;
@@ -104,3 +107,43 @@ export function personInbox(name: string, items: ItemRow[], chats: Chat[], mail:
     mail: mail.filter((w) => sameName(personOf(w.to), name)),
   };
 }
+
+const WINDOW = 56 * DAY;
+const MAX_PEOPLE = 8;
+
+export type Lapsed = { name: string; key: string; last: number; gap: number; since: number };
+
+// People I met or DMed on 3+ days in the last 8 weeks whose time since the last contact is over 1.5x their median gap, most overdue first.
+// Meetings with more than 8 people do not count as contact.
+export function keepInTouch(meetings: Meeting[], chats: Chat[], items: ItemRow[], now: number, dismissed: string[] = []): Lapsed[] {
+  const from = now - WINDOW;
+  const days = new Map<string, { name: string; days: Set<number> }>();
+  const add = (name: string, t: number | null) => {
+    if (!name || t == null || t < from || t > now) return;
+    const k = name.toLowerCase();
+    const p = days.get(k) ?? { name, days: new Set<number>() };
+    p.days.add(dayStart(t));
+    days.set(k, p);
+  };
+  for (const m of liveRows(meetings)) {
+    if (m.starts_at == null || isBlock(m.id) || (m.ends_at != null && isAllDay(m))) continue;
+    const people = peopleOf(m);
+    if (people.length <= MAX_PEOPLE) for (const p of people) add(p, m.starts_at);
+  }
+  for (const c of liveRows(chats)) if (c.kind === 'dm') add(c.name?.trim() ?? '', c.last_at);
+  for (const r of items) if (live(r) && r.source === 'slack' && / · DM$/.test(r.people ?? '')) add(personOf(r.people), createdAt(r));
+  const out: Lapsed[] = [];
+  for (const [k, { name, days: set }] of days) {
+    if (set.size < 3) continue;
+    const ts = [...set].sort((a, b) => a - b);
+    const gaps = ts.slice(1).map((t, i) => t - ts[i]).sort((a, b) => a - b);
+    const gap = gaps.length % 2 ? gaps[(gaps.length - 1) / 2] : (gaps[gaps.length / 2 - 1] + gaps[gaps.length / 2]) / 2;
+    const last = ts[ts.length - 1];
+    const since = now - last;
+    const key = `${k}:${last}`;
+    if (since > 1.5 * gap && !dismissed.includes(key)) out.push({ name, key, last, gap, since });
+  }
+  return out.sort((a, b) => b.since / b.gap - a.since / a.gap || a.name.localeCompare(b.name));
+}
+
+export const touchText = (name: string) => `Hi ${name.split(' ')[0]}, it has been a while! Up for a quick catch-up this week?`;

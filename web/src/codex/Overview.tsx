@@ -16,6 +16,7 @@ import { sourceOf } from './taskSource';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { atRisk, minutesText, type Span } from './data/plan';
+import { keepInTouch, touchText, type Lapsed } from './data/review';
 import { blockId, isBlock } from '../../../shared/util';
 import { MorningBrief } from './Brief';
 import { Icon } from '../ui/Icon';
@@ -135,6 +136,45 @@ function FollowThrough() {
           </div>
         ))}
         {rows.length > 5 && <div className="ov-follow-row muted">+{rows.length - 5} more</div>}
+      </div>
+    </section>
+  );
+}
+
+const TOUCH_DISMISSED = 'codex.keepInTouch';
+
+// People I usually meet or DM who have gone quiet for over 1.5x their usual gap: Copy nudge copies a short line, Dismiss hides them until the next contact.
+function KeepInTouch() {
+  const snap = useAssistantData();
+  const { filter } = useView();
+  const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(TOUCH_DISMISSED, []));
+  const hour = Math.floor(Date.now() / 3600_000);
+  const rows = useMemo(() => {
+    const pick = <T extends { profile: string }>(xs: T[]) => xs.filter((x) => filter === 'all' || x.profile === filter);
+    return keepInTouch(pick(snap.meetings), pick(snap.chats), pick(snap.items), hour * 3600_000);
+  }, [snap.meetings, snap.chats, snap.items, filter, hour]);
+  const shown = rows.filter((x) => !dismissed.includes(x.key));
+  if (!shown.length) return null;
+  const dismiss = (x: Lapsed) => {
+    const next = [...dismissed.filter((k) => rows.some((r) => r.key === k)), x.key];
+    setDismissed(next);
+    save(TOUCH_DISMISSED, next);
+  };
+  return (
+    <section>
+      <div className="as-section">Keep in touch · {shown.length}</div>
+      <div className="ov-follow">
+        {shown.slice(0, 5).map((x) => (
+          <div key={x.key} className="ov-follow-row">
+            <button className="ov-follow-text" onClick={() => setView({ person: x.name })}>
+              <span className="ov-t">{x.name}</span>
+              <span className="muted small">last {dayLabel(x.last)} · usually every {plural(Math.max(1, Math.round(x.gap / 86400000)), 'day')}</span>
+            </button>
+            <button className="btn sm" aria-label={`Copy a nudge to ${x.name}`} onClick={() => copyText(touchText(x.name), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
+            <button className="btn sm" aria-label={`Dismiss ${x.name}`} onClick={() => dismiss(x)}>Dismiss</button>
+          </div>
+        ))}
+        {shown.length > 5 && <div className="ov-follow-row muted">+{shown.length - 5} more</div>}
       </div>
     </section>
   );
@@ -346,6 +386,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         </section>
       )}
       <FollowThrough />
+      <KeepInTouch />
       {reports.map(({ j, r }) => (
         <section key={j.profile + j.id}>
           <button className="as-section as-toggle" onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })}>{j.name} · {clock(r.started_at!)}</button>

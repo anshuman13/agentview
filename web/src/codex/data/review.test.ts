@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { nextMonday, nudgeText, waitingByPerson, weeklyReview, weekStart } from './review';
+import type { Meeting } from './wiki';
+import { keepInTouch, nextMonday, nudgeText, waitingByPerson, weeklyReview, weekStart } from './review';
 
 const row = (o: Partial<ItemRow>): ItemRow => ({ id: 'x', profile: 'work', version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0, title: 't', text: null, source: null, source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...o });
 
@@ -49,5 +50,17 @@ describe('waitingByPerson', () => {
     const g = waitingByPerson([row({ id: '1', title: 'Waiting on Sara: contract', updated_at: now - 3 * 86400000 })], now, [{ thread: 't1', url: 'https://mail.example.test/t1', to: 'sara', subject: 'Budget', sent_at: now - 5 * 86400000 }]);
     expect(g.map((x) => [x.name, x.rows.map((y) => [y.title, y.days])])).toEqual([['Sara', [['Budget', 5], ['contract', 3]]]]);
     expect(nudgeText(g[0])).toBe('Hi Sara, a quick nudge on Budget; contract. Any update when you have a moment? Thanks!');
+  });
+});
+
+describe('keepInTouch', () => {
+  it('lists a weekly 1:1 missing for three weeks and not one met last week', () => {
+    const now = new Date(2026, 9, 30, 12).getTime();
+    const DAY = 86400000;
+    const meeting = (id: string, people: string, daysAgo: number) => ({ id: `cal:${id}`, profile: 'work', version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0, title: '1:1', people, starts_at: now - daysAgo * DAY, ends_at: now - daysAgo * DAY + 1800000 }) as unknown as Meeting;
+    const weekly = (who: string, latest: number) => [0, 1, 2, 3, 4].map((w) => meeting(`${who}${w}`, who, latest + 7 * w));
+    const rows = keepInTouch([...weekly('Ada', 21), ...weekly('Bo', 7)], [], [], now);
+    expect(rows.map((r) => [r.name, Math.round(r.gap / DAY)])).toEqual([['Ada', 7]]);
+    expect(keepInTouch(weekly('Ada', 21), [], [], now, [rows[0].key])).toEqual([]);
   });
 });
