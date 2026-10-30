@@ -162,7 +162,7 @@ a.as-chip { text-decoration: none; }
 .as-nav { display: flex; flex-direction: column; padding: var(--sp-4) var(--sp-4); gap: 1px; }
 .as-nav button { height: var(--size-2xl); padding: 0 var(--sp-6); display: flex; align-items: center; gap: var(--sp-6); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg); font-size: var(--fs-md); text-align: left; }
 @media (hover: hover) { .as-nav button:hover { background: var(--hover); } }
-.as-nav button.active { background: var(--raised); }
+.as-nav button.active { background: var(--hover); font-weight: 600; }
 .as-nav span:not(.as-count) { flex: 1; }
 .as-count { font-size: var(--fs-xs); color: var(--fg-muted); }
 .as-nav-label { padding: var(--sp-10) var(--sp-6) var(--sp-3); font-size: var(--fs-md); font-weight: 500; color: var(--fg-faint); }
