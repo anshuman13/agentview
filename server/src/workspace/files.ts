@@ -86,9 +86,9 @@ export async function readImage(cwd: string, rel: string) {
 
 export async function readFileWithOriginal(cwd: string, rel: string) {
   const abs = await viewPath(cwd, rel);
+  if (IMAGES[path.extname(rel).slice(1).toLowerCase()]) return { path: rel, content: '', original: '', image: true };
   const size = await stat(abs).then((s) => s.size).catch(() => 0);
   if (size > MAX_FILE) throw new Error(`File is ${Math.round(size / 1e6)} MB, too large to show`);
-  if (IMAGES[path.extname(rel).slice(1).toLowerCase()]) return { path: rel, content: '', original: '', image: true };
   const head = Buffer.alloc(8192);
   const bytesRead = await open(abs).then((h) => h.read(head, 0, head.length, 0).finally(() => h.close())).then((r) => r.bytesRead, () => 0);
   if (head.subarray(0, bytesRead).includes(0)) return { path: rel, content: '', original: '', binary: true };

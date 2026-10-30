@@ -215,7 +215,7 @@ function WaitingOnYou() {
   const shown = rows.filter((c) => !handled.includes(waitKey(c)));
   if (!shown.length) return null;
   const hide = (c: Chat, i: number) => {
-    const next = [...handled.filter((k) => rows.some((r) => waitKey(r) === k)), waitKey(c)];
+    const next = [...stored<string[]>(WAIT_HANDLED, []).filter((k) => rows.some((r) => waitKey(r) === k)), waitKey(c)];
     setHandled(next);
     save(WAIT_HANDLED, next);
     requestAnimationFrame(() => {
