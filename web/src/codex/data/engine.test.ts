@@ -17,6 +17,7 @@ describe('parseWhen', () => {
     expect(read('tea in 15m')).toEqual({ at: local(26, 17, 19), title: 'tea' });
     expect(read('in half an hour stretch').at).toBe(local(26, 17, 34));
     expect(read('pay rent in 2 days').at).toBe(local(28, 17, 4));
+    expect(read('water plants in half a day').at).toBe(local(27, 5, 4));
   });
 
   it('reads dates and times', () => {

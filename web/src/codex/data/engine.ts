@@ -92,7 +92,8 @@ export function parseWhen(text: string, now = new Date()): When | null {
     const amount = /^half/i.test(n) ? 0.5 : /^(an?|one)$/i.test(n) ? 1 : Number(n);
     const key = unit === 'm' || unit.startsWith('min') ? 'm' : unit[0];
     const target = new Date(now);
-    if (key in DAY_UNIT) target.setDate(target.getDate() + amount * DAY_UNIT[key]);
+    if (key in DAY_UNIT && Number.isInteger(amount * DAY_UNIT[key])) target.setDate(target.getDate() + amount * DAY_UNIT[key]);
+    else if (key in DAY_UNIT) target.setTime(now.getTime() + amount * DAY_UNIT[key] * 86_400_000);
     else target.setTime(now.getTime() + amount * UNIT[key]);
     return { at: Math.ceil(target.getTime() / 60_000) * 60_000, spans: [span(r)] };
   }

@@ -6,28 +6,33 @@ async function freshStore() {
   return new RemoteStore();
 }
 
-function request(run: () => unknown, delay: number) {
+function request(tx: Record<string, any>, run: () => unknown, delay: number) {
   const req: Record<string, any> = {};
   setTimeout(() => {
     try {
       req.result = run();
     } catch (e) {
-      req.error = e;
-      return req.onerror?.();
+      tx.error = req.error = e;
+      return tx.onerror?.();
     }
-    req.onsuccess?.();
+    tx.oncomplete?.();
   }, delay);
   return req;
 }
 
 function fakeIndexedDb(delays: number[]) {
   const stored = new Map<string, unknown>();
-  const objectStore = {
-    get: (key: string) => request(() => stored.get(key), 0),
-    put: (value: unknown, key: string) => request(() => void stored.set(key, structuredClone(value)), delays.shift() ?? 0),
-    delete: (key: string) => request(() => void stored.delete(key), 0),
+  const db = {
+    transaction: () => {
+      const tx: Record<string, any> = {};
+      tx.objectStore = () => ({
+        get: (key: string) => request(tx, () => stored.get(key), 0),
+        put: (value: unknown, key: string) => request(tx, () => void stored.set(key, structuredClone(value)), delays.shift() ?? 0),
+        delete: (key: string) => request(tx, () => void stored.delete(key), 0),
+      });
+      return tx;
+    },
   };
-  const db = { transaction: () => ({ objectStore: () => objectStore }) };
   vi.stubGlobal('indexedDB', {
     open: () => {
       const req: Record<string, any> = { result: db };

@@ -46,9 +46,11 @@ function cacheDb(): Promise<IDBDatabase> {
 async function cacheOp<T>(mode: IDBTransactionMode, op: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   const db = await cacheDb();
   return new Promise((resolve, reject) => {
-    const req = op(db.transaction('cache', mode).objectStore('cache'));
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    // Settles on the commit, so a quota error at commit time is not reported as saved.
+    const tx = db.transaction('cache', mode);
+    const req = op(tx.objectStore('cache'));
+    tx.oncomplete = () => resolve(req.result);
+    tx.onerror = tx.onabort = () => reject(tx.error ?? req.error);
   });
 }
 
@@ -221,8 +223,9 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   async move(row: ItemRow, profile: Profile) {
     const now = Date.now();
     const key = keyOf({ profile, id: row.id });
-    this.rows.set(key, moved(row, this.rows.get(key), profile, now));
-    this.put('items', edited(this.rows.get(keyOf(row)) ?? row, { deleted: 1 }, now));
+    const current = this.rows.get(keyOf(row)) ?? row;
+    this.rows.set(key, moved(current, this.rows.get(key), profile, now));
+    this.put('items', edited(current, { deleted: 1 }, now));
   }
 
   editRow = async <K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>) => {
