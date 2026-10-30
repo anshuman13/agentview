@@ -13,7 +13,7 @@ type Push = Exclude<HostLine, { n: number }>;
 // The API server's link to the agent host. Starts the host when none answers, and reconnects when it restarts.
 export class Host {
   connected = false;
-  private send: ((v: unknown) => void) | null = null;
+  private send: ((v: unknown) => boolean) | null = null;
   private seq = 0;
   private waiting = new Map<number, Reply>();
   private spawned = 0;
@@ -34,7 +34,11 @@ export class Host {
       clearTimeout(timer);
       reply(err, r);
     });
-    this.send({ n, ...req });
+    // A socket that is closing drops the write, so the caller hears now, not after the timeout.
+    if (!this.send({ n, ...req }) && this.waiting.delete(n)) {
+      clearTimeout(timer);
+      reply('The agent host is restarting, try again in a moment');
+    }
   }
 
   req<T = unknown>(req: HostRequest) {

@@ -45,6 +45,7 @@ export class ClaudeDriver implements AgentDriver {
   private addedMcp: Record<string, McpServerConfig> = {};
 
   private transcript: FSWatcher | null = null;
+  private watchedId: string | undefined;
   private transcriptTimer: NodeJS.Timeout | undefined;
   private seen = '';
   private seenSubs = 0;
@@ -116,7 +117,10 @@ export class ClaudeDriver implements AgentDriver {
       this.dirty = true;
       return;
     }
-    if (this.transcript) return;
+    if (this.transcript && this.watchedId === sessionId) return;
+    // A new session id (after /clear) needs a watcher on its own transcript.
+    this.transcript?.close();
+    this.watchedId = sessionId;
     try {
       this.transcript = watch(projectDir(this.cwd), { recursive: true }, (_, file) => {
         if (file && !file.startsWith(sessionId)) return;
@@ -271,6 +275,7 @@ export class ClaudeDriver implements AgentDriver {
 
   async addMcp(name: string, def: unknown) {
     this.start();
+    if (!this.q) throw new Error('This chat was closed');
     if (await inSettings(this.cwd, name)) return { error: undefined };
     this.addedMcp[name] = def as McpServerConfig;
     this.mcpServers = { ...this.mcpServers, [name]: def as McpServerConfig };
@@ -363,7 +368,8 @@ export class ClaudeDriver implements AgentDriver {
 
   async rewind(id: string) {
     this.start();
-    return this.q!.rewindFiles(this.rewindIds.get(id) ?? id.replace(/:\d+$/, ''));
+    if (!this.q) throw new Error('This chat was closed');
+    return this.q.rewindFiles(this.rewindIds.get(id) ?? id.replace(/:\d+$/, ''));
   }
 
   // The SDK takes cancelQueued at runtime but its types leave the option out.
@@ -499,7 +505,9 @@ export class ClaudeDriver implements AgentDriver {
             this.watchHistory(false);
             host.system('Forked into a new chat');
           }
+          const newId = this.transcript && msg.session_id !== this.state.session.sessionId;
           host.setSession({ sessionId: msg.session_id, model: msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
+          if (newId) this.watchHistory(true);
           if (changed) host.system(`Session started with ${msg.model}`);
           if (this.resume && msg.permissionMode !== 'auto' && !this.resumedAuto) {
             this.resumedAuto = true;

@@ -43,5 +43,5 @@ export function lines(sock: Socket, on: (v: unknown) => void) {
       }
     }
   });
-  return (v: unknown) => sock.writable && sock.write(`${JSON.stringify(v)}\n`);
+  return (v: unknown) => sock.writable && (sock.write(`${JSON.stringify(v)}\n`), true);
 }
