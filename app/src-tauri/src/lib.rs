@@ -19,7 +19,7 @@ fn trusted(url: &tauri::Url) -> bool {
     }
 }
 
-// Links the WebView cannot show itself (mail, VS Code) go to the app macOS registers for them.
+// Opens a link in the app macOS registers for its scheme (browser, mail, VS Code).
 #[cfg(desktop)]
 fn open_external(url: &tauri::Url) {
     if matches!(url.scheme(), "http" | "https" | "mailto" | "vscode") {
