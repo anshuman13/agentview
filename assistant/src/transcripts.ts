@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
+import { snippet } from '../../shared/snippet.js';
 import { configDir, guardLimit, isLimited, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import type { Profile } from './db.js';
@@ -114,19 +115,91 @@ export function expireSuggested(db: Database, now = Date.now()) {
   return applyChanges(db, rows.map((r) => ({ table: 'items', id: r.id, profile: r.profile, updated_at: now, fields: { status: 'unassigned' } }))).applied;
 }
 
-// Large tool outputs are saved under the config dir's tool-results folders; this reads the text back in chunks.
-export function readSaved(root: string, file: string, offset = 0) {
+const textOf = (content: unknown): string =>
+  typeof content === 'string' ? content : Array.isArray(content) ? content.map((c) => (typeof c?.text === 'string' ? c.text : '')).join('') : '';
+
+// A Drive read returns the doc as JSON with fileContent, sometimes inside a list of text blocks.
+export function docText(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.fileContent === 'string') return parsed.fileContent;
+    if (Array.isArray(parsed)) return docText(textOf(parsed));
+  } catch {}
+  return raw;
+}
+
+// Large tool outputs are saved under the config dir's tool-results folders.
+export function savedText(root: string, file: string) {
   const real = fs.realpathSync(path.resolve(file));
   const projects = fs.realpathSync(path.join(root, 'projects'));
   if (!real.startsWith(projects + path.sep) || !real.split(path.sep).includes('tool-results')) throw new Error('Only saved tool outputs can be read');
-  const raw = fs.readFileSync(real, 'utf8');
-  let text = raw;
-  try {
-    const parsed = JSON.parse(raw);
-    if (typeof parsed?.fileContent === 'string') text = parsed.fileContent;
-  } catch {}
+  return docText(fs.readFileSync(real, 'utf8'));
+}
+
+export function readSaved(root: string, file: string, offset = 0) {
+  const text = savedText(root, file);
   const end = Math.min(text.length, offset + CHUNK);
   return `${text.slice(offset, end)}\n[characters ${offset}-${end} of ${text.length}]`;
+}
+
+export const docIdOf = (s: string) => /\/d\/([\w-]{20,})/.exec(s)?.[1] ?? (/^[\w-]{20,}$/.test(s.trim()) ? s.trim() : null);
+
+type Block = { type?: string; id?: string; name?: string; input?: unknown; tool_use_id?: string; content?: unknown; is_error?: boolean };
+
+// The docs read during an import, by doc id, taken from the tool calls and their results in the query stream. An output
+// too large to return names the file it was saved to, which is read whole.
+export function docReader(root: string) {
+  const calls = new Map<string, string>();
+  const texts = new Map<string, string>();
+  const see = (m: { type: string; message?: unknown }) => {
+    const content = m.type === 'assistant' || m.type === 'user' ? (m.message as { content?: unknown } | undefined)?.content : null;
+    if (!Array.isArray(content)) return;
+    for (const b of content as Block[]) {
+      if (b.type === 'tool_use' && b.id && /(read_file_content|read_doc)$/.test(b.name ?? '')) {
+        const doc = Object.values(b.input ?? {}).map((v) => (typeof v === 'string' ? docIdOf(v) : null)).find(Boolean);
+        if (doc) calls.set(b.id, doc);
+      }
+      const doc = b.type === 'tool_result' && !b.is_error ? calls.get(b.tool_use_id ?? '') : undefined;
+      if (!doc) continue;
+      const raw = textOf(b.content);
+      const file = /(\/\S*\/tool-results\/[\w.-]*\w)/.exec(raw)?.[1];
+      let text: string;
+      try {
+        text = (file ? savedText(root, file) : docText(raw)).trim();
+      } catch {
+        continue;
+      }
+      if (text.length > (texts.get(doc)?.length ?? 0)) texts.set(doc, text);
+    }
+  };
+  // The doc the notes name; when they name none that was read, the only doc read, if it is alone.
+  const textFor = (url: string, alone: boolean) => {
+    const id = docIdOf(url);
+    if (id && texts.has(id)) return { doc: id, text: texts.get(id)! };
+    if (!alone || texts.size !== 1) return null;
+    const [doc, text] = [...texts][0];
+    return { doc, text };
+  };
+  return { see, textFor };
+}
+
+export function saveTranscripts(db: Database, profile: Profile, found: { id: string; doc: string; text: string }[], now = Date.now()) {
+  const put = db.prepare('INSERT OR REPLACE INTO transcripts (profile, id, doc, text, folded, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
+  db.transaction(() => found.forEach((t) => put.run(profile, t.id, t.doc, t.text, t.text.toLowerCase(), now)))();
+}
+
+export function transcriptText(db: Database, profile: Profile, id: string) {
+  return (db.prepare('SELECT text FROM transcripts WHERE profile = ? AND id = ?').get(profile, id) as { text: string } | null)?.text ?? null;
+}
+
+// Meetings whose transcript holds every word, newest first, with a stretch around the first hit.
+export function searchTranscripts(db: Database, query: string, limit = 50) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 10);
+  if (!words.length) return [];
+  const rows = db.prepare(
+    `SELECT t.profile, t.id, t.text FROM transcripts t JOIN meetings m ON m.profile = t.profile AND m.id = t.id AND m.deleted = 0 WHERE ${words.map(() => 'instr(t.folded, ?) > 0').join(' AND ')} ORDER BY m.starts_at DESC LIMIT ?`,
+  ).all(...words, limit) as { profile: Profile; id: string; text: string }[];
+  return rows.map((r) => ({ profile: r.profile, id: r.id, snippet: snippet(words, r.text) }));
 }
 
 // Asks Claude to read the transcript in the Gemini doc attached to each meeting's event and saves what it finds.
@@ -140,9 +213,11 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
   });
   guardLimit(ACCOUNT_OF[profile]);
   const dir = configDir(ACCOUNT_OF[profile]);
+  const root = dir ?? path.join(os.homedir(), '.claude');
+  const docs = docReader(root);
   const saved = tool('read_saved_output', 'Read a tool output that was too large and was saved to a file, 30000 characters at a time.', { path: z.string(), offset: z.number().int().min(0).optional() }, async (a) => {
     try {
-      return { content: [{ type: 'text', text: readSaved(dir ?? path.join(os.homedir(), '.claude'), a.path, a.offset) }] };
+      return { content: [{ type: 'text', text: readSaved(root, a.path, a.offset) }] };
     } catch (err) {
       return { content: [{ type: 'text', text: err instanceof Error ? err.message : String(err) }], isError: true };
     }
@@ -196,12 +271,17 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     },
   })) {
     stopOnOverage(ACCOUNT_OF[profile], m);
+    docs.see(m);
     if (m.type === 'result' && m.subtype !== 'success') failure = m.subtype;
   }
   const ids = new Set(meetings.map((m) => m.id));
   const mine = found.filter((n) => ids.has(n.id) && n.summary.trim());
   // A run that hit the turn limit keeps the notes it saved before it stopped.
   if (failure && !mine.length) throw new Error(`Transcript import ended with ${failure}`);
+  saveTranscripts(db, profile, mine.flatMap((n) => {
+    const t = docs.textFor(n.doc_url, mine.length === 1);
+    return t ? [{ id: n.id, ...t }] : [];
+  }), now);
   return { saved: saveNotes(db, profile, mine, now), found: new Set(mine.map((n) => n.id)) };
 }
 

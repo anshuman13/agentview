@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, formatLines, markTried, readSaved, saveNotes } from './transcripts.js';
+import { TRIES, actionId, docReader, dueAt, dueMeetings, expireSuggested, formatLines, markTried, readSaved, saveNotes, saveTranscripts, searchTranscripts, transcriptText } from './transcripts.js';
 
 const MIN = 60_000;
 const now = Date.parse('2026-10-26T16:00:00Z');
@@ -80,6 +80,50 @@ describe('transcripts', () => {
     expect(readSaved(root, path.join(dir, 'out.txt'), 30_000)).toBe(`${'x'.repeat(10_000)}\n[characters 30000-40000 of 40000]`);
     expect(() => readSaved(root, path.join(root, 'secret.txt'))).toThrow('Only saved tool outputs');
     expect(() => readSaved(root, path.join(dir, '..', '..', '..', '..', 'secret.txt'))).toThrow('Only saved tool outputs');
+  });
+
+  it('takes each doc read from the stream, and a saved output whole', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tx-'));
+    const dir = path.join(root, 'projects', 'p', 's', 'tool-results');
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'mcp-out.txt');
+    fs.writeFileSync(file, JSON.stringify([{ type: 'text', text: JSON.stringify({ fileContent: 'Kim: the long one' }) }]));
+    const a = 'A'.repeat(30), b = 'B'.repeat(30);
+    const use = (id: string, name: string, input: object) => ({ type: 'assistant', message: { content: [{ type: 'tool_use', id, name, input }] } });
+    const result = (id: string, content: unknown, is_error = false) => ({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content, is_error }] } });
+    const docs = docReader(root);
+    [
+      use('1', 'mcp__claude_ai_Google_Drive__read_file_content', { fileId: a }),
+      result('1', [{ type: 'text', text: JSON.stringify({ fileContent: 'Ola: short' }) }]),
+      use('2', 'mcp__claude_ai_Google_Docs__read_doc', { documentId: `https://docs.google.com/document/d/${b}/edit` }),
+      result('2', `<persisted-output>\nOutput too large. Full output saved to: ${file}\n\nPreview: Kim: the</persisted-output>`),
+      use('3', 'mcp__claude_ai_Google_Calendar__get_event', { eventId: 'C'.repeat(30) }),
+      result('3', 'event'),
+      use('4', 'mcp__claude_ai_Google_Drive__read_file_content', { fileId: a }),
+      result('4', 'failed', true),
+    ].forEach(docs.see);
+    expect(docs.textFor(`https://docs.google.com/document/d/${a}/edit`, false)).toEqual({ doc: a, text: 'Ola: short' });
+    expect(docs.textFor(`https://docs.google.com/document/d/${b}`, false)).toEqual({ doc: b, text: 'Kim: the long one' });
+    expect(docs.textFor('https://docs/unknown', true)).toBeNull();
+    const one = docReader(root);
+    [use('1', 'read_file_content', { fileId: a }), result('1', 'Ola: hi')].forEach(one.see);
+    expect(one.textFor('', true)).toEqual({ doc: a, text: 'Ola: hi' });
+    expect(one.textFor('', false)).toBeNull();
+  });
+
+  it('finds meetings by every word of their transcript', () => {
+    const db = openDb(':memory:');
+    applyChanges(db, [meeting('cal:a', 60 * MIN), meeting('cal:b', MIN), meeting('cal:gone', MIN)]);
+    applyChanges(db, [{ table: 'meetings', id: 'cal:gone', profile: 'work', updated_at: 2, deleted: true, fields: {} }]);
+    const long = `${'Intro. '.repeat(20)}Øystein: we ship the Rollout on friday. ${'Outro. '.repeat(20)}`;
+    saveTranscripts(db, 'work', [{ id: 'cal:a', doc: 'd1', text: long }, { id: 'cal:b', doc: 'd2', text: 'Kim: rollout later' }, { id: 'cal:gone', doc: 'd3', text: 'rollout' }], now);
+    expect(searchTranscripts(db, 'ROLLOUT').map((h) => h.id)).toEqual(['cal:b', 'cal:a']);
+    const [hit] = searchTranscripts(db, 'øystein friday');
+    expect(hit.id).toBe('cal:a');
+    expect(hit.snippet).toMatch(/^\.\.\..*Øystein: we ship the Rollout on friday.*\.\.\.$/);
+    expect(searchTranscripts(db, 'rollout nothing')).toEqual([]);
+    expect(transcriptText(db, 'work', 'cal:b')).toBe('Kim: rollout later');
+    expect(transcriptText(db, 'personal', 'cal:b')).toBeNull();
   });
 });
 

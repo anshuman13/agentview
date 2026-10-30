@@ -50,6 +50,18 @@ export function openDb(file: string = DB_PATH): Database {
       value TEXT
     )
   `);
+  // Transcript text stays on the hub: it is large and the apps search it here. folded is the lowercased text.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS transcripts (
+      profile TEXT NOT NULL,
+      id TEXT NOT NULL,
+      doc TEXT,
+      text TEXT NOT NULL,
+      folded TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (profile, id)
+    )
+  `);
 
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));
