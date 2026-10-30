@@ -132,7 +132,7 @@ export function createServer(): http.Server {
           return;
         }
         try {
-          const parsed = await parseTask(data.profile, data.text.trim());
+          const parsed = await parseTask(data.text.trim());
           send(res, 200, parsed);
         } catch (err) {
           send(res, 502, { error: err instanceof Error ? err.message : String(err) });

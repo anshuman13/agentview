@@ -3,7 +3,6 @@ import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod';
 import { configDir, guardLimit, stopOnOverage } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
-import type { Profile } from './db.js';
 import { dueAt } from './transcripts.js';
 
 const Found = z.object({
@@ -25,15 +24,15 @@ export function toParsed(text: string, f: Found | undefined, now = Date.now()): 
   };
 }
 
-// One Haiku call while I add a task: a clear title, the leftover detail, and when it is due if I said so.
-export async function parseTask(profile: Profile, text: string, now = Date.now()): Promise<Parsed> {
-  guardLimit(ACCOUNT_OF[profile]);
+// One Haiku call on the work account while I add a task: a clear title, the leftover detail, and when it is due if I said so.
+export async function parseTask(text: string, now = Date.now()): Promise<Parsed> {
+  guardLimit(ACCOUNT_OF.work);
   let found: Found | undefined;
   const save = tool('save_task', 'Save the task.', Found.shape, async (a) => {
     found = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  const dir = configDir(ACCOUNT_OF[profile]);
+  const dir = configDir(ACCOUNT_OF.work);
   const d = new Date(now);
   const prompt = [
     `Now is ${d.toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}, time zone ${Intl.DateTimeFormat().resolvedOptions().timeZone}.`,
@@ -58,7 +57,7 @@ export async function parseTask(profile: Profile, text: string, now = Date.now()
       permissionMode: 'dontAsk',
     },
   })) {
-    stopOnOverage(ACCOUNT_OF[profile], m);
+    stopOnOverage(ACCOUNT_OF.work, m);
     if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Parse ended with ${m.subtype}`);
   }
   return toParsed(text, found, now);
