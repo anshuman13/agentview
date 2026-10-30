@@ -12,10 +12,12 @@ test('moves open tasks from earlier days to today at the same time', () => {
   item(db, 'old', { at: at(26, 14) });
   item(db, 'today', { at: at(27, 8) });
   item(db, 'undated', { at: null });
+  item(db, 'blank', { at: '' });
   item(db, 'done', { at: at(25, 9), status: 'done' });
   expect(rollOver(db, at(27, 10))).toBe(1);
   expect(get(db, 'old')).toEqual({ at: at(27, 14), rolls: 1, rolled_from: at(26, 14), status: 'open' });
   expect(get(db, 'today').rolls).toBeNull();
+  expect(get(db, 'blank').rolls).toBeNull();
   expect(get(db, 'done').at).toBe(at(25, 9));
 });
 
