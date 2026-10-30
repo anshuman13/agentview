@@ -174,6 +174,7 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     'Say things directly and briefly. Do not use the em dash character.',
     'Skip meetings without a Gemini notes doc. Do not do anything else.',
   ].join('\n');
+  let failure: string | null = null;
   for await (const m of query({
     prompt,
     options: {
@@ -195,10 +196,12 @@ async function readTranscripts(db: Database, profile: Profile, meetings: Pending
     },
   })) {
     stopOnOverage(ACCOUNT_OF[profile], m);
-    if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Transcript import ended with ${m.subtype}`);
+    if (m.type === 'result' && m.subtype !== 'success') failure = m.subtype;
   }
   const ids = new Set(meetings.map((m) => m.id));
   const mine = found.filter((n) => ids.has(n.id) && n.summary.trim());
+  // A run that hit the turn limit keeps the notes it saved before it stopped.
+  if (failure && !mine.length) throw new Error(`Transcript import ended with ${failure}`);
   return { saved: saveNotes(db, profile, mine, now), found: new Set(mine.map((n) => n.id)) };
 }
 

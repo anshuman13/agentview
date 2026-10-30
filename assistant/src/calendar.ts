@@ -84,7 +84,8 @@ export async function importCalendar(db: Database, profile: Profile, now = Date.
     },
   })) {
     stopOnOverage(ACCOUNT_OF[profile], m);
-    if (m.type === 'result' && m.subtype !== 'success') throw new Error(`Calendar import ended with ${m.subtype}`);
+    // Meetings saved before the run hit its turn limit still count.
+    if (m.type === 'result' && m.subtype !== 'success' && !events) throw new Error(`Calendar import ended with ${m.subtype}`);
   }
   if (!events) throw new Error('Claude did not save any meetings');
   return saveMeetings(db, profile, events, from, to, now);
