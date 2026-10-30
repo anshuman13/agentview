@@ -10,6 +10,7 @@ import { startTranscripts } from './transcripts.js';
 import { HUB_URL, slackScan, startSlack } from './slack.js';
 import { gmailScan, startGmail } from './gmail.js';
 import { startStallWatch } from './scan.js';
+import { hm } from './time.js';
 import { send, type Routes } from './routes/http.js';
 import { syncRoutes } from './routes/sync.js';
 import { calendarRoutes } from './routes/calendar.js';
@@ -80,7 +81,16 @@ export function createServer(): http.Server {
   return server;
 }
 
+// api.log has no timestamps of its own, so each hub log line starts with HH:MM.
+function stampConsole() {
+  for (const k of ['log', 'error'] as const) {
+    const write = console[k].bind(console);
+    console[k] = (...args: unknown[]) => write(hm(Date.now()), ...args);
+  }
+}
+
 async function start() {
+  stampConsole();
   process.on('unhandledRejection', (err) => console.error('unhandled rejection:', err));
   const port = Number(process.env.ASSISTANT_PORT ?? 7790);
   const server = createServer();
