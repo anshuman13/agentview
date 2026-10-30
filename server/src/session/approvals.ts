@@ -29,6 +29,8 @@ export class Approvals {
   constructor(private state: ServerState, private emit: (m: ServerMessage) => void) {}
 
   ask(toolName: string, input: Record<string, unknown>, opts: AskOptions): Promise<Decision> {
+    // A turn stopped just before this call never fires 'abort' again, so the card would stay up.
+    if (opts.signal.aborted) return Promise.resolve({ behavior: 'deny', message: 'aborted' });
     const id = randomUUID();
     const req: PendingRequest =
       toolName === 'AskUserQuestion'
@@ -52,7 +54,7 @@ export class Approvals {
       opts.signal.addEventListener('abort', () => {
         this.finish(id);
         resolve({ behavior: 'deny', message: 'aborted' });
-      });
+      }, { once: true });
     });
   }
 

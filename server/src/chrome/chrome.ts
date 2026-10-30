@@ -330,10 +330,11 @@ function stop() {
   if (retryTimer) clearTimeout(retryTimer);
   retryTimer = null;
   retryDelay = 2000;
+  // Also cancels a watch() still attaching, which would otherwise screencast to no one.
+  watchSeq++;
   if (!watching) return;
   release(watching.session);
   watching = null;
-  watchSeq++;
 }
 
 const BUTTONS = new Set(['left', 'right', 'middle', 'none']);

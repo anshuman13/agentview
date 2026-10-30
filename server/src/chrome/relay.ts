@@ -97,6 +97,8 @@ const server = http.createServer((_req, res) => {
 });
 
 server.on('upgrade', async (req, socket, head) => {
+  // A client that resets while Chrome opens would otherwise throw an unhandled 'error' and end the relay.
+  socket.on('error', () => {});
   if (req.headers.origin || req.url !== `/${TOKEN}`) {
     socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
     return;
