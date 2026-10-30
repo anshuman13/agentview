@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { api, getState, notice, prompt, queueNext, send, sinceHeard, steer, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Voice, useDictation } from './Voice';
@@ -69,6 +69,7 @@ export function Composer() {
   const card = useRef<HTMLDivElement>(null);
   const pop = useRef<HTMLUListElement>(null);
   const wantCaret = useRef<number | null>(null);
+  const popId = useId();
 
   const at = Math.min(caret, text.length);
   const trigger = useMemo(() => triggerAt(text, at), [text, at]);
@@ -281,6 +282,10 @@ export function Composer() {
             ref={ta}
             value={text}
             rows={1}
+            aria-label="Message Claude"
+            aria-autocomplete="list"
+            aria-controls={open ? popId : undefined}
+            aria-activedescendant={open ? `${popId}-${sel}` : undefined}
             placeholder={placeholder}
             spellCheck={!shell}
             onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart); }}
@@ -340,12 +345,12 @@ export function Composer() {
         </span>
       </div>
       {open && (
-        <ul ref={pop} className="cp-pop" role="listbox">
+        <ul ref={pop} id={popId} className="cp-pop" role="listbox" aria-label={trigger?.kind === 'command' ? 'Commands' : 'Files'}>
           {items.map((r, i) => {
             if (trigger?.kind === 'command') {
               const c = r.item as { name: string; description: string };
               return (
-                <li key={c.name} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
+                <li key={c.name} id={`${popId}-${i}`} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
                   <span className="cp-name">/<Hl text={c.name} hits={r.hits} /></span>
                   <span className="cp-detail">{c.description}</span>
                 </li>
@@ -354,7 +359,7 @@ export function Composer() {
             const f = r.item as string;
             const base = f.lastIndexOf('/') + 1;
             return (
-              <li key={f} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} title={f} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
+              <li key={f} id={`${popId}-${i}`} role="option" aria-selected={i === sel} className={i === sel ? 'active' : ''} title={f} onMouseDown={(e) => { e.preventDefault(); choose(i); }}>
                 <FileIcon name={f} />
                 <span className="cp-name"><Hl text={f.slice(base)} hits={r.hits} from={base} /></span>
                 <span className="cp-detail"><Hl text={f.slice(0, Math.max(base - 1, 0))} hits={r.hits} /></span>

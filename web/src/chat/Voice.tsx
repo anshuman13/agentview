@@ -76,6 +76,7 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
     <button
       className={`icon-btn voice${listening ? ' on' : ''}${error ? ' error' : ''}`}
       title={error || (listening ? 'Stop dictation' : 'Dictate (click, or hold to talk)')}
+      aria-label="Dictate"
       aria-pressed={listening}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
