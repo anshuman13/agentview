@@ -23,6 +23,8 @@ installed and its login.
 | `npm test` | Unit tests (vitest; server, web and shared) |
 | `npm test -w assistant` | Hub tests (bun test) |
 
+Both test runs load `test-setup.ts`, which points the Claude config, usage limit and findings folders at a temp dir.
+
 `PROJECT_DIR=/path` sets the folder for the very first chat; after that AgentView reopens the last chat you viewed.
 Restarting the server keeps running chats alive; see [architecture](docs/architecture.md).
 
