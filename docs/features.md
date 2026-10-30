@@ -50,7 +50,7 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
 - The meetings still ahead today with the meeting time left, and a field on the next meeting's card that adds a
   timestamped line to its notes
 - Overdue and due tasks with a check to mark them done and a clock to snooze them to tomorrow 09:00
-- What the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it), job reports
+- What the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it; the first 5 show, with Show N more for the rest), job reports
   and a follow-through card for meeting actions still open after a week (Task, Done, Dismiss)
 - Waiting on you: up to 6 Slack DMs, newest first, where the other person wrote last and I have not replied, as the
   Slack scan marks them. Each has Open in Slack, Task, which adds a task with the DM link and hides the DM until its next message, and Dismiss, which only hides it until then

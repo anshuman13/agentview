@@ -100,6 +100,7 @@ export function SlackCard() {
   const store = useAssistantStore();
   const { brief, asks, busy, summarize } = useSlack();
   const [handled, setHandled] = useState<string[]>(() => stored<string[]>(HANDLED, []));
+  const [showAll, setShowAll] = useState(false);
   const pending = useRef(new Set<string>());
   const all = brief?.text ? needsYou(brief.text) : [];
   const keyOf = (x: { title: string; url: string | null }) => x.url ?? x.title;
@@ -129,7 +130,7 @@ export function SlackCard() {
     <section>
       <div className="as-section">Slack{brief?.to_at ? ` · ${ago(brief.to_at, ' ago')}` : ''}</div>
       <div className="ov-follow">
-        {items.slice(0, 5).map((x, i) => (
+        {(showAll ? items : items.slice(0, 5)).map((x, i) => (
           <div key={i} className="ov-follow-row">
             <a className="ov-follow-text" href={x.url ?? undefined} target="_blank" rel="noreferrer">
               <span className="ov-t">{x.title}</span>
@@ -139,6 +140,12 @@ export function SlackCard() {
             <button className="btn sm" aria-label={`Mark ${x.title} handled`} onClick={() => hide(x)}>Done</button>
           </div>
         ))}
+        {!showAll && items.length > 5 && (
+          <div className="ov-follow-row">
+            <span className="ov-follow-text" />
+            <button className="btn sm" onClick={() => setShowAll(true)}>Show {items.length - 5} more</button>
+          </div>
+        )}
         {brief && !items.length && <div className="ov-follow-row muted small">Nothing needs you.</div>}
         <div className="ov-follow-row">
           {asks > 0 ? <button className="ov-follow-text" onClick={() => setView({ list: 'tasks' })}><span className="ov-t">{asks} from Slack to review</span></button> : <span className="ov-follow-text" />}
