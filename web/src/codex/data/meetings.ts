@@ -139,6 +139,11 @@ const seriesTitleOf = (m: Meeting) => {
   return title;
 };
 
+const sharesGuests = (people: string[], other: string[]) => {
+  if (!people.length || !other.length) return people.length === other.length;
+  return people.filter((p) => other.some((q) => sameName(p, q))).length * 2 >= Math.min(people.length, other.length);
+};
+
 // Earlier meetings of the same recurring series: equal title once dates and numbers are stripped, and at least half of the smaller guest list in common. Newest first.
 export function seriesOf(meetings: Meeting[], m: Meeting) {
   const title = seriesTitleOf(m);
@@ -147,11 +152,33 @@ export function seriesOf(meetings: Meeting[], m: Meeting) {
   return live(meetings)
     .filter((x) => {
       if (x.profile !== m.profile || x.id === m.id || x.starts_at == null || x.starts_at >= m.starts_at! || seriesTitleOf(x) !== title) return false;
-      const other = peopleOf(x);
-      if (!people.length || !other.length) return people.length === other.length;
-      return people.filter((p) => other.some((q) => sameName(p, q))).length * 2 >= Math.min(people.length, other.length);
+      return sharesGuests(people, peopleOf(x));
     })
     .sort((a, b) => b.starts_at! - a.starts_at!);
+}
+
+const seriesMembers = new WeakMap<Meeting[], Set<string>>();
+// Keys (profile + id) of meetings that belong to a series of 2 or more, computed once per meetings array.
+export function inSeries(meetings: Meeting[]) {
+  let out = seriesMembers.get(meetings);
+  if (out) return out;
+  out = new Set<string>();
+  const buckets = new Map<string, Meeting[]>();
+  for (const m of live(meetings)) {
+    const title = seriesTitleOf(m);
+    if (!title || m.starts_at == null) continue;
+    const key = m.profile + '\n' + title;
+    buckets.set(key, [...(buckets.get(key) ?? []), m]);
+  }
+  for (const group of buckets.values()) {
+    if (group.length < 2) continue;
+    const guests = group.map(peopleOf);
+    group.forEach((m, i) => {
+      if (group.some((_, j) => j !== i && sharesGuests(guests[i], guests[j]))) out.add(m.profile + m.id);
+    });
+  }
+  seriesMembers.set(meetings, out);
+  return out;
 }
 
 // What this meeting repeats from the previous one in its series: decisions made again and questions still being asked.

@@ -244,6 +244,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .mt-topic { display: inline-flex; align-items: center; gap: var(--sp-1); }
 .mt-topics input { width: 120px; height: 26px; padding: 0 var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg); font: inherit; font-size: var(--fs-xs); outline: 0; }
 .mt-topics input:focus { border-color: var(--border-strong); }
+.mt-repeat { flex: none; margin-left: var(--sp-4); color: var(--fg-faint); }
 .mt-badge { flex: none; padding: 1px var(--sp-4); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-text); font-size: var(--fs-xs); font-weight: 600; }
 .mt-count { flex: none; display: inline-flex; align-items: center; gap: var(--sp-3); padding: 2px var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg); font-size: var(--fs-xs); font-weight: 500; font-variant-numeric: tabular-nums; }
 .mt-count .codicon.icon { font-size: 12px; }

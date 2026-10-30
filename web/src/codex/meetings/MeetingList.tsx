@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useAssistantStore, useCodex } from '../data';
 import { newId, rowKey } from '../data/sync';
 import { live, queryWords, rowMatcher, type Fact, type Meeting } from '../data/wiki';
-import { actionCount, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
+import { actionCount, groupMeetings, inSeries, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
 import { clock, when } from '../time';
 import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
@@ -79,10 +79,12 @@ export function useTranscriptHits(query: string) {
 export const MeetingRow = memo(function MeetingRow({ m, now, topics = NO_TOPICS, said }: { m: Meeting; now: number; topics?: string[]; said?: string }) {
   const snap = useAssistantData();
   const count = actionCount(snap.items, m);
-  return <MeetingRowView m={m} now={now} topics={topics} said={said} review={count.review} total={count.total} done={count.done} />;
+  const { meetings } = useCodex();
+  const repeats = inSeries(meetings).has(m.profile + m.id);
+  return <MeetingRowView m={m} now={now} topics={topics} said={said} repeats={repeats} review={count.review} total={count.total} done={count.done} />;
 });
 
-const MeetingRowView = memo(function MeetingRowView({ m, now, topics, said, review, total, done }: { m: Meeting; now: number; topics: string[]; said?: string; review: number; total: number; done: number }) {
+const MeetingRowView = memo(function MeetingRowView({ m, now, topics, said, repeats, review, total, done }: { m: Meeting; now: number; topics: string[]; said?: string; repeats: boolean; review: number; total: number; done: number }) {
   const tracked = useMemo(() => trackedTopics(m, topics), [m, topics]);
   const people = useMemo(() => peopleOf(m), [m]);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
@@ -92,7 +94,7 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, said, revi
     <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => openMeeting(m)}>
       <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
       <span className="mt-body">
-        <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
+        <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{repeats && <span className="mt-repeat" title="Recurring meeting"><Icon name="repeat" small /></span>}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
         <span className="mt-span">
           {m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
           {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}

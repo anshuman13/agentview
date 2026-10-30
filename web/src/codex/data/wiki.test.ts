@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
 import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, RETIRE_AFTER, pageClaims, pageStats, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
-import { actionCount, briefFor, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesRepeats, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
+import { actionCount, briefFor, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesRepeats, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -221,6 +221,11 @@ describe('seriesOf', () => {
 
   it('excludes the other profile', () => {
     expect(ids(cur, [mtg('w', 'Team stand-up', 100, { people: four, profile: 'personal' })])).toEqual([]);
+  });
+
+  it('marks only meetings with a matching partner as in a series', () => {
+    const all = [mtg('a', '1:1 Oct 1', 100, { people: 'Ola' }), mtg('b', '1:1 Oct 8', 200, { people: 'Ola' }), mtg('c', '1:1 Oct 9', 300, { people: 'Kari' }), mtg('d', 'Retro', 400, { people: 'Ola' }), mtg('e', '1:1', 500, { people: 'Ola', profile: 'personal' })];
+    expect([...inSeries(all)].sort()).toEqual(['worka', 'workb']);
   });
 });
 
