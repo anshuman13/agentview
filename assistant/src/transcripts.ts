@@ -118,10 +118,10 @@ export function saveNotes(db: Database, profile: Profile, found: MeetingNotes[],
   return applyChanges(db, changes).applied;
 }
 
-// Suggested actions I left for a week leave Today and wait on their meeting as unassigned. A task of mine that went back
-// to review after rolling over has no meeting to wait on, so it stays.
+// Suggested meeting actions I left for a week leave Today and wait on their meeting as unassigned. A task of mine that went
+// back to review after rolling over stays.
 export function expireSuggested(db: Database, now = Date.now()) {
-  const rows = db.prepare("SELECT id, profile FROM items WHERE deleted = 0 AND status = 'suggested' AND rolled_from IS NULL AND CAST(COALESCE(json_extract(field_times, '$.status'), updated_at) AS INTEGER) < ?").all(now - EXPIRE) as { id: string; profile: Profile }[];
+  const rows = db.prepare("SELECT id, profile FROM items WHERE deleted = 0 AND status = 'suggested' AND meeting_id IS NOT NULL AND COALESCE(rolls, 0) = 0 AND CAST(COALESCE(json_extract(field_times, '$.status'), updated_at) AS INTEGER) < ?").all(now - EXPIRE) as { id: string; profile: Profile }[];
   return applyChanges(db, rows.map((r) => ({ table: 'items', id: r.id, profile: r.profile, updated_at: now, fields: { status: 'unassigned' } }))).applied;
 }
 
