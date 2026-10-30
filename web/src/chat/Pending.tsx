@@ -252,7 +252,7 @@ export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean 
             placeholder="Type your answer, Enter to send"
             onChange={(e) => setOther(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && result) answer(result);
+              if (e.key === 'Enter' && result && !e.nativeEvent.isComposing) answer(result);
               if (e.key === 'Escape') setOther(null);
             }}
           />

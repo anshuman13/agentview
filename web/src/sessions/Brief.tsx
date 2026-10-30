@@ -345,7 +345,7 @@ function Step({ text, editing = false, onSave, onDrop }: { text: string; editing
           onChange={(e) => setValue(e.target.value)}
           onBlur={done}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') done();
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) done();
             if (e.key === 'Escape') { setValue(text); setEdit(false); if (!text) onDrop(); }
           }}
         />

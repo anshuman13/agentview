@@ -294,7 +294,7 @@ export function Composer() {
       if (e.key === 'ArrowDown') { e.preventDefault(); setSel((i) => (i + 1) % items.length); return; }
       if (e.key === 'ArrowUp') { e.preventDefault(); setSel((i) => (i - 1 + items.length) % items.length); return; }
       if (e.key === 'Escape') { e.preventDefault(); setDismissed(popKey); return; }
-      const exact = trigger?.kind === 'command' && (items[sel].item as { name: string }).name === trigger.query;
+      const exact = trigger?.kind === 'command' && (items[sel]?.item as { name: string } | undefined)?.name === trigger.query;
       if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'Enter' && !e.shiftKey && !exact)) { e.preventDefault(); choose(sel); return; }
     }
     if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); cycleMode(); return; }
