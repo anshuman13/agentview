@@ -176,6 +176,30 @@ describe('RemoteStore save', () => {
     store.dispose();
   });
 
+  it('never saves a since past rows it has not written', async () => {
+    const stored = fakeIndexedDb([]);
+    fakeDom();
+    let release!: (v: unknown) => void;
+    const pages: unknown[] = [{ version: 2, hasMore: true, changes: [{ table: 'items', ...taskRow('a'), version: 2 }] }, new Promise((r) => (release = r))];
+    vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => pages.shift() }));
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void>; syncOnce(): Promise<boolean> };
+    await internal.loaded;
+    await internal.saving;
+    stored.clear();
+    const sync = internal.syncOnce();
+    await new Promise((r) => setTimeout(r, 5));
+    internal.save(['meetings']);
+    internal.flush();
+    await internal.saving;
+    const since = (stored.get('meta') as { since: number } | undefined)?.since ?? 0;
+    const items = (stored.get('table:items') as { id: string }[] | undefined) ?? [];
+    expect(since < 2 || items.some((r) => r.id === 'a')).toBe(true);
+    release({ version: 3, changes: [] });
+    await sync;
+    store.dispose();
+  });
+
   it('reads the old single-key layout once and migrates it', async () => {
     const stored = fakeIndexedDb([]);
     stored.set('snapshot', { since: 7, tables: { items: [taskRow('a')], meetings: [{ ...taskRow('m'), title: 'x' }] } });
