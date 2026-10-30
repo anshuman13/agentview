@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { canRead, dropOrphanRuns, dueJobs, endInterrupted, nextRun } from './jobs.js';
+import { canRead, dropOrphanRuns, dueJobs, endInterrupted, nextRun, runDue } from './jobs.js';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 
@@ -67,6 +67,20 @@ describe('dueJobs', () => {
     expect(dropOrphanRuns(db, 2)).toBe(0);
     expect(dropOrphanRuns(db, 2 * 86_400_000)).toBe(1);
     expect(db.prepare('SELECT id, deleted, output FROM runs ORDER BY id').all()).toEqual([{ id: 'ra', deleted: 1, output: null }, { id: 'rb', deleted: 0, output: 'x' }]);
+  });
+});
+
+describe('runDue', () => {
+  test('keeps a Run now pressed during the run on a phone whose clock is behind', async () => {
+    const db = openDb(':memory:');
+    const now = Date.now();
+    applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: now - 3_600_000, fields: { name: 'A', schedule: 'daily 09:00', prompt: 'x', enabled: 1, next_run_at: now - 1 } }]);
+    const run = async () => {
+      applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: now - 60_000, fields: { next_run_at: now - 60_000 } }]);
+      return { result: 'done', added: [] };
+    };
+    await runDue(db, now, run, async () => true);
+    expect((db.prepare("SELECT next_run_at FROM jobs WHERE id = 'a'").get() as { next_run_at: number }).next_run_at).toBe(now - 60_000);
   });
 });
 

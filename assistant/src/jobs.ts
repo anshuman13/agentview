@@ -97,12 +97,13 @@ function prune(db: Database, job: Job, now: number) {
   applyChanges(db, old.map((r) => ({ table: 'runs', id: r.id, profile: job.profile, deleted: true, updated_at: now, fields: { output: null } })));
 }
 
-export async function runDue(db: Database, now = Date.now()) {
+export async function runDue(db: Database, now = Date.now(), run = runJob, notify = pushNtfy) {
   for (const due of dueJobs(db, now)) {
     // An earlier job can run for minutes; skip or update this one if it was turned off, deleted or edited meanwhile.
-    const live = db.prepare('SELECT prompt, next_run_at FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; next_run_at: number | null } | null;
+    const live = db.prepare('SELECT prompt, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; next_run_at: number | null; field_times: string } | null;
     if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) continue;
     const job = { ...due, prompt: live.prompt };
+    const planned = JSON.parse(live.field_times).next_run_at;
     if (isLimited(ACCOUNT_OF[job.profile])) continue;
     const id = randomUUID();
     const started = Date.now();
@@ -110,7 +111,7 @@ export async function runDue(db: Database, now = Date.now()) {
     let status = 'ok';
     let output = '';
     try {
-      const { result, added } = await runJob(db, job);
+      const { result, added } = await run(db, job);
       output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n');
     } catch (err) {
       status = 'error';
@@ -118,14 +119,15 @@ export async function runDue(db: Database, now = Date.now()) {
     }
     const done = Date.now();
     const changes: Change[] = [{ table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output } }];
-    // An edit made during the run (Off, a new schedule, Run now) set next_run_at itself, so it is kept.
+    // An edit made during the run (Off, a new schedule, Run now) set next_run_at itself, so it is kept. Its field time
+    // comes from the client's clock, so only whether it changed is compared.
     const cur = db.prepare('SELECT schedule, enabled, field_times FROM jobs WHERE id = ? AND profile = ?').get(job.id, job.profile) as { schedule: string | null; enabled: number | null; field_times: string } | null;
-    if (cur && (JSON.parse(cur.field_times).next_run_at ?? 0) < started) {
+    if (cur && JSON.parse(cur.field_times).next_run_at === planned) {
       changes.push({ table: 'jobs', id: job.id, profile: job.profile, updated_at: done, fields: { next_run_at: cur.enabled ? nextRun(cur.schedule, done) : null } });
     }
     applyChanges(db, changes);
     prune(db, job, done);
-    await pushNtfy(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
+    await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
   }
 }
 
