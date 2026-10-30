@@ -87,6 +87,12 @@ export class ClaudeDriver implements AgentDriver {
   // Ends the CLI process; the next prompt resumes the session in a fresh one with the same settings.
   private restart() {
     const q = this.q!;
+    this.detach();
+    this.endLive();
+    q.close();
+  }
+
+  private detach() {
     const { model, team, permissionMode, sessionId } = this.state.session;
     this.restore = { model, team, permissionMode };
     this.resume = sessionId ?? this.resume;
@@ -94,8 +100,6 @@ export class ClaudeDriver implements AgentDriver {
     this.gen++;
     this.wake?.();
     this.tasks.clear();
-    this.endLive();
-    q.close();
   }
 
   get attached() {
@@ -405,15 +409,9 @@ export class ClaudeDriver implements AgentDriver {
     } finally {
       if (this.q === q) {
         // The CLI is gone; drop it so the next prompt resumes the session in a fresh process.
-        const { model, team, permissionMode, sessionId } = this.state.session;
-        this.restore = { model, team, permissionMode };
-        this.resume = sessionId ?? this.resume;
-        this.q = null;
-        this.gen++;
+        this.detach();
         this.inputQueue = [];
         this.sent = [];
-        this.wake?.();
-        this.tasks.clear();
         if (!this.closed) this.endLive();
         this.host.exited();
       }
