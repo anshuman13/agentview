@@ -31,13 +31,15 @@ export function WikiPage({ id }: { id: string }) {
   const visible = useMemo(() => capGroups(groups, anchor || allFor === id ? Infinity : shown, 'claims'), [groups, shown, anchor, allFor, id]);
   const [showOlder, setShowOlder] = useState(false);
   useEffect(() => setShowOlder(false), [id]);
+  // An anchor that arrives before the claims waits for them.
+  const loaded = facts.length > 0;
   useEffect(() => {
-    if (!anchor) return;
+    if (!anchor || !loaded) return;
     setAllFor(id);
     if (older.some((f) => f.id === anchor)) setShowOlder(true);
     setFlash(anchor);
     setView({ anchor: null });
-  }, [anchor, id]);
+  }, [anchor, id, loaded, older]);
   // Runs again once Older opens, so a claim in it exists before the scroll.
   useEffect(() => {
     if (!flash) return;
