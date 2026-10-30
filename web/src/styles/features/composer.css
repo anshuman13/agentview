@@ -66,6 +66,8 @@
 .cp-hint { flex: none; white-space: nowrap; }
 .cp-stats { flex: 1 1 auto; min-width: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .cp-stats > * + *::before { content: ' · '; }
+/* Inline-block keeps a button's underline off the separator. */
+.cp-stats > button + *::before, .cp-stats > * + button::before { display: inline-block; white-space: pre; text-decoration: none; }
 .cp-stats .near { color: var(--warn); }
 .cp-stats .over { color: var(--err); }
 .cp-stats .codicon { font-size: var(--fs-xs); vertical-align: -1px; }
