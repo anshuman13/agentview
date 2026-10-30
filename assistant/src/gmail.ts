@@ -13,6 +13,10 @@ const EVERY = 30 * MIN;
 const GMAIL = 'mcp__claude_ai_Gmail__';
 const READ_TOOLS = ['search_threads', 'get_thread'].map((t) => GMAIL + t);
 const PROFILE = 'work' as const;
+const day = (t: number) => {
+  const d = new Date(t);
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+};
 
 // Kept outside the repo in ~/.agentview/assistant/gmail.json: my address, and the hours pushes may go out.
 export type GmailConfig = { me: string; push?: { from: number; to: number } };
