@@ -33,6 +33,6 @@ export function scanPaused(db: Database, account: Account, scan: string, now = D
 }
 
 export function pausedScans(db: Database, now = Date.now()): Paused[] {
-  const rows = db.prepare("SELECT value FROM meta WHERE key LIKE 'paused:%' ORDER BY key DESC").all() as { value: string }[];
-  return rows.map((r) => JSON.parse(r.value) as Paused).filter((p) => p.until > now);
+  const rows = db.prepare("SELECT key, value FROM meta WHERE key LIKE 'paused:%' ORDER BY key DESC").all() as { key: string; value: string }[];
+  return rows.filter((r) => limitedUntil(r.key.split(':')[2] as Account) > now).map((r) => JSON.parse(r.value) as Paused).filter((p) => p.until > now);
 }
