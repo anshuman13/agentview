@@ -44,6 +44,7 @@ function scanText(h: ScanHealth) {
 function ScanLines({ scans }: { scans: ScanHealth[] }) {
   const store = useAssistantStore();
   const [busy, setBusy] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
   const [failed, setFailed] = useState<Record<string, string>>({});
   const scan = (name: 'slack' | 'gmail') => {
     setBusy(name);
@@ -55,7 +56,7 @@ function ScanLines({ scans }: { scans: ScanHealth[] }) {
     const { text, bad } = failed[h.scan] ? { text: `${SCAN_NAME[h.scan]}: ${failed[h.scan]}`, bad: true } : scanText(h);
     return (
       <div key={h.scan} className={`as-nav-scan${bad ? ' bad' : ''}`}>
-        <span title={text}>{text}</span>
+        <span title={text} className={open === h.scan ? 'open' : ''} onClick={() => setOpen(open === h.scan ? null : h.scan)}>{text}</span>
         {(h.scan === 'slack' || h.scan === 'gmail') && !h.missing && (
           <button className="as-scan-now" disabled={busy !== null} onClick={() => scan(h.scan as 'slack' | 'gmail')}>{busy === h.scan ? 'Scanning' : 'Scan now'}</button>
         )}

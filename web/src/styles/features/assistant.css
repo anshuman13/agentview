@@ -181,8 +181,10 @@ a.as-chip { text-decoration: none; }
 .as-nav-sync.bad .as-dot { background: var(--err); }
 .as-nav-sync.bad { color: var(--err); }
 .as-nav-paused { padding: var(--sp-2) var(--sp-6); color: var(--warn); font-size: var(--fs-sm); }
-.as-nav-scan { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-6); color: var(--fg-muted); font-size: var(--fs-xs); }
+.as-nav-scan { display: flex; align-items: flex-start; gap: var(--sp-3); padding: 0 var(--sp-6); color: var(--fg-muted); font-size: var(--fs-xs); }
 .as-nav-scan > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.as-nav-scan > span { cursor: pointer; }
+.as-nav-scan > span.open { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
 .as-nav-scan.bad { color: var(--warn); }
 .as-nav .as-nav-scan .as-scan-now { flex: none; height: auto; padding: 0 var(--sp-2); color: var(--fg-faint); font-size: var(--fs-xs); }
 .as-nav .as-nav-scan .as-scan-now:disabled { opacity: 0.6; }
