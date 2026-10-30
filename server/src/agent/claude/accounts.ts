@@ -52,9 +52,14 @@ function clearLimit(a: Account) {
 }
 
 type Window = { utilization: number | null } | null | undefined;
-export type LiveUsage = { rate_limits?: { five_hour?: Window; seven_day?: Window } | null };
+type Windows = { five_hour?: Window; seven_day?: Window; seven_day_opus?: Window; seven_day_sonnet?: Window; seven_day_oauth_apps?: Window; model_scoped?: Window[] };
+export type LiveUsage = { rate_limits?: Windows | null };
 
 const under = (w: Window) => w?.utilization != null && w.utilization < 100;
+
+// A mark can come from a per-model weekly limit, so any full window keeps it.
+const free = (r: Windows | null | undefined) =>
+  !!r && under(r.five_hour) && under(r.seven_day) && ![r.seven_day_opus, r.seven_day_sonnet, r.seven_day_oauth_apps, ...(r.model_scoped ?? [])].some((w) => (w?.utilization ?? 0) >= 100);
 
 // The account's live usage, read from a CLI that gets no prompt, so the check itself uses none.
 export async function liveUsage(a: Account): Promise<LiveUsage> {
@@ -79,7 +84,7 @@ export async function liveUsage(a: Account): Promise<LiveUsage> {
 const checked = new Map<Account, number>();
 const checking = new Map<Account, Promise<boolean>>();
 
-// A limit mark can be wrong, so live usage confirms it at most every 5 minutes; a mark with both windows under 100% is cleared. A failed check keeps the mark.
+// A limit mark can be wrong, so live usage confirms it at most every 5 minutes; a mark with every window under 100% is cleared. A failed check keeps the mark.
 export function verifyLimit(a: Account, check = liveUsage): Promise<boolean> {
   if (!isLimited(a)) return Promise.resolve(false);
   const now = Date.now();
@@ -88,7 +93,7 @@ export function verifyLimit(a: Account, check = liveUsage): Promise<boolean> {
   const until = limitedUntil(a);
   const run = check(a)
     .then((u) => {
-      if (under(u.rate_limits?.five_hour) && under(u.rate_limits?.seven_day) && limitedUntil(a) === until) clearLimit(a);
+      if (free(u.rate_limits) && limitedUntil(a) === until) clearLimit(a);
     })
     .catch(() => {})
     .then(() => isLimited(a))

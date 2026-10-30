@@ -47,7 +47,7 @@ describe('accounts', () => {
     expect(JSON.parse(readFileSync(`${dir}/limits.json`, 'utf8'))).toEqual({ main: 8000, alt: 9000 });
   });
 
-  it('clears a limit mark only when live usage shows both windows under 100%', async () => {
+  it('clears a limit mark only when live usage shows every window under 100%', async () => {
     const soon = Date.now() + 3600_000;
     const usage = (five: number, week: number) => ({ rate_limits: { five_hour: { utilization: five }, seven_day: { utilization: week } } });
     markLimited('main', soon);
@@ -58,6 +58,8 @@ describe('accounts', () => {
     expect(free).not.toHaveBeenCalled();
     markLimited('alt', soon);
     expect(await verifyLimit('alt', async () => usage(100, 20))).toBe(true);
+    vi.setSystemTime(Date.now() + 6 * 60_000);
+    expect(await verifyLimit('alt', async () => ({ rate_limits: { ...usage(10, 20).rate_limits, seven_day_opus: { utilization: 100 } } }))).toBe(true);
     vi.setSystemTime(Date.now() + 6 * 60_000);
     expect(await verifyLimit('alt', free)).toBe(false);
     expect(isLimited('alt')).toBe(false);
