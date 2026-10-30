@@ -86,7 +86,9 @@ Desktop (main column ≥ 880px wide)
 - List: search (titles, people, notes, summaries, decisions, and transcript text on the hub with a snippet of the hit), then Today, Upcoming and Past grouped by day. Row: calendar icon, title, time range, an open action
   count ("0 of 3") when there are proposals, and initials avatars.
 - Meeting page (canvas in the main column): back, title, date and time, people, "Recorded 46 min", link to the
-  calendar. Sections: My notes (normal text colour, editable), Summary (AI, muted), Decisions, Actions.
+  calendar. Sections: My notes (normal text colour, editable), Summary (AI, muted), Decisions, Actions. A meeting with
+  a stored transcript shows Talk time: a bar of the top five speakers' share of words ("Name: text" lines or a name
+  line before its text), with the action and decision counts.
 - Action approve card: kind icon (Slack ✉, Linear ◆, task ✓), target, title, body, Linear field chips; buttons
   Edit, Reject (✕) and Approve (✓). Approve marks the action approved; the card says "Sends when the scheduler
   runs" until the agent exists. Rejected cards collapse to one line with Undo.
