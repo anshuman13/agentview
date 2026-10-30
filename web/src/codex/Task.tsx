@@ -6,7 +6,7 @@ import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { ago, readFlag, safeHref, saveFlag } from '../ui/util';
-import { FILTER_LABEL, setView, showSnack, type Filter } from './view';
+import { copyText, FILTER_LABEL, setView, showSnack, type Filter } from './view';
 import { PickDue, PickTime, when } from './time';
 import { snoozes } from './AskBar';
 import { isDragging } from './drag';
@@ -298,6 +298,7 @@ function Editor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; on
           {row.status === 'note' && <button className="btn" onClick={then(() => act.toTask(row))}>Make task</button>}
           {row.status === 'open' && <button className="btn" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
           {row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
+          {row.draft && <button className="btn" onClick={() => copyText(row.draft!)}><Icon name="copy" small /> Copy draft</button>}
           <button className="btn" title="Ask Claude about this task" onClick={then(() => onAsk(row))}><Icon name="sparkle" small /> Ask</button>
           {row.status === 'open' && <RaiseWith className="btn" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
           <span className="spacer" />
