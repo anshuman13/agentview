@@ -13,8 +13,9 @@ function GoalInput({ row }: { row: ItemRow }) {
     if (t && t !== row.title) void store.update(row, { title: t.slice(0, 120) });
   };
   return (
-    <div className="gl-row">
-      <input className="gl-input" value={text} aria-label="Goal" onChange={(e) => setText(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
+    <div className="gl-row" role="listitem">
+      <input className="gl-input" value={text} aria-label="Goal" onChange={(e) => setText(e.target.value)} onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); else if (e.key === 'Escape') setText(row.title ?? ''); }} />
       <button className="icon-btn" title="Remove goal" aria-label={`Remove ${row.title}`} onClick={() => { void store.update(row, { deleted: 1 }); showSnack('Goal removed', () => void store.update(row, { deleted: 0 })); }}><Icon name="close" small /></button>
     </div>
   );
@@ -43,9 +44,9 @@ export function WeekGoals({ now }: { now: number }) {
   return (
     <section className="mt-wk-sec">
       <div className="mt-load-head">Goals this week ({goals.length}/{MAX_GOALS})</div>
-      {goals.map((g) => <GoalInput key={g.profile + g.id} row={g} />)}
+      {goals.length > 0 && <div role="list" aria-label="Goals">{goals.map((g) => <GoalInput key={g.profile + g.id} row={g} />)}</div>}
       {goals.length < MAX_GOALS && (
-        <input className="gl-input" value={text} placeholder="Add a goal" aria-label="New goal" enterKeyHint="done" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void add()} />
+        <input className="gl-input" value={text} placeholder="Add a goal" aria-label="New goal" enterKeyHint="done" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void add(); else if (e.key === 'Escape') setText(''); }} />
       )}
     </section>
   );
@@ -58,10 +59,10 @@ export function GoalLines({ now }: { now: number }) {
   const goals = goalsOf(items, now, filter === 'all' ? undefined : filter);
   if (!goals.length) return null;
   return (
-    <section className="gl-lines">
+    <section className="gl-lines" role="list" aria-label="Goals this week">
       {goals.map((g) => {
         const p = goalProgress(items, g);
-        return <div key={g.profile + g.id} className="gl-line"><span className="muted small">This week</span> <span className="ov-t">{g.title}</span> <span className="muted small">{p.done}/{p.total}</span></div>;
+        return <div key={g.profile + g.id} className="gl-line" role="listitem"><span className="muted small">This week</span> <span className="ov-t">{g.title}</span> <span className="muted small">{p.done}/{p.total}<span className="sr-only"> tasks done</span></span></div>;
       })}
     </section>
   );

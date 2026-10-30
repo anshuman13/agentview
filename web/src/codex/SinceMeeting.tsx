@@ -36,7 +36,7 @@ export function SinceMeeting({ now }: { now: number }) {
         ))}
         <div className="ov-follow-row">
           <span className="ov-follow-text" />
-          <button className="btn sm" onClick={dismiss}>Dismiss</button>
+          <button className="btn sm" aria-label={`Dismiss since ${r.m.title ?? 'the meeting'}`} onClick={dismiss}>Dismiss</button>
         </div>
       </div>
     </section>

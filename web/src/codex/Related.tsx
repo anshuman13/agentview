@@ -9,6 +9,7 @@ import { MEMORY } from './wiki/shared';
 
 const WAIT = 300;
 const ICON: Record<Hit['kind'], string> = { wiki: 'book', meeting: 'record', slack: 'comment-discussion' };
+const KIND: Record<Hit['kind'], string> = { wiki: 'Wiki', meeting: 'Meeting', slack: 'Slack' };
 
 // The line the caret is on, so long notes match on what is being written now.
 export const caretLine = (el: HTMLTextAreaElement) => {
@@ -33,13 +34,13 @@ export function RelatedStrip({ text, profile, skip = '' }: { text: string; profi
   const hits = useMemo(() => related({ items: snap.items, meetings, facts: snap.facts, pages: snap.pages }, query, profile, [skip]), [query, profile, skip, snap.items, meetings, snap.facts, snap.pages]);
   if (!hits.length) return null;
   return (
-    <div className="as-related" aria-label="Related">
+    <div className="as-related" role="list" aria-label="Related">
       {hits.map((h) => {
-        const body = <><Icon name={ICON[h.kind]} small /><span className="as-related-title">{h.title}</span>{h.kind === 'meeting' && h.at > 0 && <span className="as-related-when">{dayLabel(h.at)}</span>}</>;
-        return h.kind === 'slack'
-          ? <a key={h.kind + h.id} className="as-related-hit" href={safeHref(h.url)} target="_blank" rel="noreferrer" onMouseDown={keep}>{body}</a>
-          : <button key={h.kind + h.id} className="as-related-hit" onMouseDown={keep}
-            onClick={leave(() => (h.kind === 'meeting' ? openMeeting(h) : setView({ list: 'wiki', open: h.page ?? MEMORY, anchor: h.id, person: null })))}>{body}</button>;
+        const body = <><Icon name={ICON[h.kind]} small /><span className="sr-only">{KIND[h.kind]}: </span><span className="as-related-title">{h.title}</span>{h.kind === 'meeting' && h.at > 0 && <span className="as-related-when">{dayLabel(h.at)}</span>}</>;
+        return <span key={h.kind + h.id} role="listitem" className="as-related-item">{h.kind === 'slack'
+          ? <a className="as-related-hit" href={safeHref(h.url)} target="_blank" rel="noreferrer" onMouseDown={keep}>{body}</a>
+          : <button className="as-related-hit" onMouseDown={keep}
+            onClick={leave(() => (h.kind === 'meeting' ? openMeeting(h) : setView({ list: 'wiki', open: h.page ?? MEMORY, anchor: h.id, person: null })))}>{body}</button>}</span>;
       })}
     </div>
   );

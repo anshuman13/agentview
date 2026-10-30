@@ -58,8 +58,23 @@ type Snack = { text: string; undo?: () => void; id: number };
 let snack: Snack | null = null;
 const snackSubs = new Set<() => void>();
 let snackTimer: ReturnType<typeof setTimeout> | undefined;
+// A persistent status region so a screen reader hears each snack, even a repeat of the last one.
+let live: HTMLElement | null = null;
+function announce(text: string) {
+  if (typeof document === 'undefined') return;
+  if (!live) {
+    live = document.createElement('div');
+    live.className = 'sr-only';
+    live.setAttribute('role', 'status');
+    document.body.append(live);
+  }
+  const el = live;
+  el.textContent = '';
+  setTimeout(() => (el.textContent = text), 100);
+}
 export function showSnack(text: string, undo?: () => void) {
   snack = { text, undo, id: Date.now() };
+  announce(undo ? `${text}. Undo available` : text);
   snackSubs.forEach((f) => f());
   clearTimeout(snackTimer);
   snackTimer = setTimeout(hideSnack, SNACK_MS);

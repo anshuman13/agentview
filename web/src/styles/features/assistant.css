@@ -345,6 +345,7 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 }
 .as-related { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin: var(--sp-2) 0; }
 .as-edit .as-related { margin-left: 38px; }
+.as-related-item { display: contents; }
 .as-related-hit { display: inline-flex; align-items: center; gap: var(--sp-2); max-width: 100%; padding: 2px var(--sp-4); border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); text-decoration: none; cursor: pointer; }
 .as-related-hit:hover { color: var(--fg); border-color: var(--border-strong); }
 .as-related-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28ch; }

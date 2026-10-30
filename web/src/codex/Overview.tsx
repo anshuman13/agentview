@@ -150,6 +150,7 @@ function KeepInTouch() {
   const snap = useAssistantData();
   const { filter } = useView();
   const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(TOUCH_DISMISSED, []));
+  const list = useRef<HTMLDivElement>(null);
   const hour = Math.floor(Date.now() / 3600_000);
   const rows = useMemo(() => {
     const pick = <T extends { profile: string }>(xs: T[]) => xs.filter((x) => filter === 'all' || x.profile === filter);
@@ -158,26 +159,31 @@ function KeepInTouch() {
   }, [snap.meetings, snap.chats, snap.items, filter, hour]);
   const shown = rows.filter((x) => !dismissed.includes(x.key));
   if (!shown.length) return null;
-  const dismiss = (x: Lapsed) => {
+  const dismiss = (x: Lapsed, i: number) => {
     const next = [...dismissed.filter((k) => rows.some((r) => r.key === k)), x.key];
     setDismissed(next);
     save(TOUCH_DISMISSED, next);
+    // Focus the person that moved into this row, or the one above when the last went.
+    requestAnimationFrame(() => {
+      const people = list.current?.querySelectorAll<HTMLElement>('button.ov-follow-text');
+      people?.[Math.min(i, people.length - 1)]?.focus();
+    });
   };
   return (
     <section>
       <div className="as-section">Keep in touch · {shown.length}</div>
-      <div className="ov-follow">
-        {shown.slice(0, 5).map((x) => (
-          <div key={x.key} className="ov-follow-row">
+      <div className="ov-follow" role="list" aria-label="Keep in touch" ref={list}>
+        {shown.slice(0, 5).map((x, i) => (
+          <div key={x.key} className="ov-follow-row" role="listitem">
             <button className="ov-follow-text" onClick={() => setView({ person: x.name })}>
               <span className="ov-t">{x.name}</span>
               <span className="muted small">last {dayLabel(x.last)} · usually every {plural(Math.max(1, Math.round(x.gap / 86400000)), 'day')}</span>
             </button>
             <button className="btn sm" aria-label={`Copy a nudge to ${x.name}`} onClick={() => copyText(touchText(x.name), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
-            <button className="btn sm" aria-label={`Dismiss ${x.name}`} onClick={() => dismiss(x)}>Dismiss</button>
+            <button className="btn sm" aria-label={`Dismiss ${x.name}`} onClick={() => dismiss(x, i)}>Dismiss</button>
           </div>
         ))}
-        {shown.length > 5 && <div className="ov-follow-row muted">+{shown.length - 5} more</div>}
+        {shown.length > 5 && <div className="ov-follow-row muted" role="listitem">+{shown.length - 5} more</div>}
       </div>
     </section>
   );
