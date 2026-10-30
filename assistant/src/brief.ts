@@ -37,7 +37,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const meetings = busy.filter((m) => !isBlock(m.id));
   const timed = busy.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), start);
-  const tasks = db.prepare("SELECT title, at FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND source NOT IN ('calendar', 'meeting') AND at IS NOT NULL AND CAST(at AS INTEGER) < ? ORDER BY CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number })[];
+  const tasks = db.prepare("SELECT title, at FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND at IS NOT NULL AND CAST(at AS INTEGER) < ? ORDER BY CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number })[];
   const late = tasks.filter((t) => Number(t.at) < now).length;
   const asks = db.prepare("SELECT title FROM items WHERE deleted = 0 AND profile = ? AND source = 'slack' AND status = 'suggested' ORDER BY updated_at DESC").all(profile) as Row[];
   const left = db.prepare("SELECT i.title, i.status, m.title AS meeting FROM items i JOIN meetings m ON m.profile = i.profile AND m.id = i.meeting_id WHERE i.deleted = 0 AND i.profile = ? AND i.status IN ('open', 'suggested') AND m.deleted = 0 AND m.starts_at >= ? AND m.starts_at < ? ORDER BY m.starts_at").all(profile, lastWorkday(start), start) as (Row & { status: string; meeting: string | null })[];
