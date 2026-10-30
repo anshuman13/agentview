@@ -79,15 +79,16 @@ export function openDb(file: string = DB_PATH): Database {
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));
     db.exec(createIndexSQL(tableName));
-    if (tableName === 'items') {
-      db.exec('CREATE INDEX IF NOT EXISTS items_meeting_idx ON items(profile, meeting_id)');
-      db.exec('CREATE INDEX IF NOT EXISTS items_status_idx ON items(profile, status)');
-    }
     const existing = new Set((db.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[]).map((c) => c.name));
     for (const col of dataColumns) {
       if (!existing.has(col)) db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${col}`);
     }
   }
+  db.exec('CREATE INDEX IF NOT EXISTS items_meeting_idx ON items(profile, meeting_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS items_status_idx ON items(profile, status)');
+  db.exec('CREATE INDEX IF NOT EXISTS meetings_starts_idx ON meetings(starts_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS facts_replaces_idx ON facts(profile, replaces)');
+  db.exec('CREATE INDEX IF NOT EXISTS runs_job_idx ON runs(profile, job_id)');
 
   const versionRow = db.prepare('SELECT value FROM meta WHERE key = ?').get('version');
   if (!versionRow) {
