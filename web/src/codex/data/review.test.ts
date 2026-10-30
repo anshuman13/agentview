@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { nextMonday, waitingByPerson, weeklyReview, weekStart } from './review';
+import { nextMonday, nudgeText, waitingByPerson, weeklyReview, weekStart } from './review';
 
 const row = (o: Partial<ItemRow>): ItemRow => ({ id: 'x', profile: 'work', version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0, title: 't', text: null, source: null, source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...o });
 
@@ -40,7 +40,14 @@ describe('waitingByPerson', () => {
       row({ id: '4', title: 'Reply', people: 'Jon' }),
       row({ id: '5', title: 'Waiting on Sara', status: 'done' }),
     ], now);
-    expect(g.map((x) => [x.name, x.rows.map((y) => y.row.id)])).toEqual([['Sara', ['2', '1']], ['Jon', ['3']]]);
+    expect(g.map((x) => [x.name, x.rows.map((y) => y.row?.id)])).toEqual([['Sara', ['2', '1']], ['Jon', ['3']]]);
     expect(g[0].rows[0].days).toBe(9);
+  });
+
+  it('adds unanswered mail to the same person and nudges by subject', () => {
+    const now = new Date(2026, 9, 30).getTime();
+    const g = waitingByPerson([row({ id: '1', title: 'Waiting on Sara: contract', updated_at: now - 3 * 86400000 })], now, [{ thread: 't1', url: 'https://mail.example.test/t1', to: 'sara', subject: 'Budget', sent_at: now - 5 * 86400000 }]);
+    expect(g.map((x) => [x.name, x.rows.map((y) => [y.title, y.days])])).toEqual([['Sara', [['Budget', 5], ['contract', 3]]]]);
+    expect(nudgeText(g[0])).toBe('Hi Sara, a quick nudge on Budget; contract. Any update when you have a moment? Thanks!');
   });
 });

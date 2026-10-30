@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { useAssistantData, useAssistantStore } from '../data';
 import { Icon } from '../../ui/Icon';
-import { nextMonday, nudgeText, ageDays, waitingByPerson, weeklyReview } from '../data/review';
+import { nextMonday, nudgeText, unanswered, waitingByPerson, weeklyReview } from '../data/review';
 import type { ItemRow } from '../data/sync';
 import type { Patch } from '../data/store';
 import { PickTime, when } from '../time';
 import { copyText, showSnack, useView } from '../view';
+import { safeHref } from '../../ui/util';
 
 function Group({ title, rows, children }: { title: string; rows: ItemRow[]; children: (r: ItemRow) => React.ReactNode }) {
   if (!rows.length) return null;
@@ -19,11 +20,12 @@ function Group({ title, rows, children }: { title: string; rows: ItemRow[]; chil
 
 export function Review({ now }: { now: number }) {
   const store = useAssistantStore();
-  const { items: all } = useAssistantData();
+  const { items: all, briefs } = useAssistantData();
   const { filter } = useView();
   const items = useMemo(() => (filter === 'all' ? all : all.filter((i) => i.profile === filter)), [all, filter]);
   const r = useMemo(() => weeklyReview(items, now), [items, now]);
-  const waiting = useMemo(() => waitingByPerson(items, now), [items, now]);
+  const mail = useMemo(() => unanswered(briefs.filter((b) => filter === 'all' || b.profile === filter)), [briefs, filter]);
+  const waiting = useMemo(() => waitingByPerson(items, now, mail), [items, now, mail]);
   const change = (row: ItemRow, patch: Patch, text: string) => {
     const before = Object.fromEntries(Object.keys(patch).map((k) => [k, row[k as keyof ItemRow]])) as Patch;
     void store.update(row, patch);
@@ -49,7 +51,8 @@ export function Review({ now }: { now: number }) {
           <div className="mt-load-head">Waiting on ({waiting.length})</div>
           {waiting.map((g) => (
             <div key={g.name} className="mt-log-item">
-              <span className="mt-log-text">{g.name}: {g.rows.map((x) => `${x.row.title} (${ageDays(x.row, now)}d)`).join(', ')}</span>
+              <span className="mt-log-text">{g.name}: {g.rows.map((x) => `${x.title} (${x.days}d)`).join(', ')}</span>
+              {g.rows.map((x) => x.url && <a key={x.key} className="btn sm" href={safeHref(x.url)} target="_blank" rel="noreferrer" title={`Open ${x.title}`}><Icon name="link-external" small /> Open</a>)}
               <button className="btn sm" title="Copy a reminder message" onClick={() => copyText(nudgeText(g), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
             </div>
           ))}

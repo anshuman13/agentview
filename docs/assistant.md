@@ -63,6 +63,11 @@ social, updates and forums). Messages and mail that ask me to act become suggest
 yours?", one per Slack permalink or Gmail thread, with the sender and a link back. A suggestion closes itself when I
 reply before taking it. Urgent ones are pushed with a Make task action inside the push hours (08 to 17 by default).
 
+Both scans also pick up my own promises ("I'll send it tomorrow") from what I wrote, as suggested tasks labelled
+"You said" with the link and a due date when I named one. Once a day the Gmail scan also looks at mail I sent in the
+last 14 days and keeps the threads where I asked something and nobody replied for 3 workdays, in one `briefs` row of
+kind `waiting`. An entry drops when a reply arrives or after 14 days. The weekly review lists them under Waiting on.
+
 Each scan is off until its config file exists in `~/.agentview/assistant`:
 
 ```json
