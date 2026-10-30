@@ -421,6 +421,9 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .jb-prompt { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-6) var(--sp-7); border-radius: 10px; font-size: 16px; line-height: 1.5; }
 .jb-run { padding: var(--sp-6) 0; border-top: 1px solid var(--border); }
 .jb-run .wk-meta .codicon.icon { font-size: 12px; }
+.jb-run-head { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; font: inherit; font-size: var(--fs-sm); color: var(--fg-muted); text-align: left; cursor: pointer; }
+.jb-run-head .codicon.icon { font-size: 12px; flex: none; }
+.jb-run-line { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .jb-output { margin-top: var(--sp-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; color: var(--fg); }
 .jb-row .as-prof, .mt-when .as-prof { font-size: var(--fs-xs); font-weight: 600; }
 

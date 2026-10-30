@@ -139,6 +139,10 @@ claims untouched for 90 days as Stale and claims a later meeting decision may ha
 proposed replacement already waits in Review. For meetings and Slack channel decisions of the last two weeks the hub
 proposes the updated claims for Review (again if a meeting is re-synced with different decisions), marked From <meeting> or From #channel (see [codex-wiki.md](codex-wiki.md)).
 
+### Jobs
+
+The Jobs list shows the Work or Personal badge only when the visible jobs belong to both profiles, and shows Off instead of the next run for a disabled job. The Weekly digest preset appears only while the list is empty. A job page has a switch (no On/Off text) and the When section instead of a Next line in the header. Only the latest run shows its output; older runs are one line (time, status, first line) that opens on a click, 5 runs at first.
+
 ## Timeline and steering
 
 Claude reports progress through a `set_status` tool added to every chat: current step, finished parts, next steps

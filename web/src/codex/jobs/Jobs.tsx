@@ -72,7 +72,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
   useMinute();
   const { jobs, runs, store, filter, enable } = useJobs();
-  const hasDigest = jobs.some((j) => j.name === WEEKLY_DIGEST.name);
+  const mixed = new Set(jobs.map((j) => j.profile)).size > 1;
   const add = (preset?: JobPreset) => {
     const t = Date.now();
     const profile: Profile = filter === 'personal' ? 'personal' : 'work';
@@ -98,11 +98,10 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
                 return (
                   <div key={rowKey(j)} role="button" tabIndex={0} className={`mt-row jb-row${j.enabled ? '' : ' off'}`} onClick={() => setView({ open: rowKey(j) })} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setView({ open: rowKey(j) }); } }}>
                     <span className="mt-body">
-                      <span className="mt-title">{j.name || 'Untitled job'}<span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work' : 'Personal'}</span></span>
+                      <span className="mt-title">{j.name || 'Untitled job'}{mixed && <span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work' : 'Personal'}</span>}</span>
                       <span className="wk-meta">
                         <span>{describe(j.schedule)}</span>
-                        {queued(j, runs, Date.now()) ? <span>Queued</span> : j.enabled && j.next_run_at ? <span>Next {at(j.next_run_at)}</span> : null}
-                        {!j.enabled && <span>Off</span>}
+                        {!j.enabled ? <span>Off</span> : queued(j, runs, Date.now()) ? <span>Queued</span> : j.next_run_at ? <span>Next {at(j.next_run_at)}</span> : null}
                       </span>
                       {last && <span className="jb-last"><RunStatus r={last} /> {last.status === 'running' ? 'Running now' : `${at(last.started_at ?? 0)}: ${firstLine(last.output) || 'No reply'}`}</span>}
                     </span>
@@ -113,12 +112,32 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
             </div>
           )}
           {!jobs.length && <div className="as-empty"><Icon name="history" /><div>No jobs yet.</div><div className="muted small">A job runs a prompt on a schedule, can add tasks, and sends you the result.</div></div>}
-          <div className="jb-presets">
-            {!hasDigest && <button className="btn sm" onClick={() => add(WEEKLY_DIGEST)}><Icon name="sparkle" small /> Weekly digest</button>}
-            <button className="btn sm" onClick={() => add({ name: 'Linear changes', schedule: 'weekdays 08:00', prompt: EXAMPLE })}><Icon name="add" small /> Example</button>
-          </div>
+          {!jobs.length && <div className="jb-presets"><button className="btn sm" onClick={() => add(WEEKLY_DIGEST)}><Icon name="sparkle" small /> Weekly digest</button></div>}
         </div>
       </div>
+    </div>
+  );
+}
+
+function RunRow({ r, latest }: { r: Run; latest: boolean }) {
+  const [open, setOpen] = useState(false);
+  const secs = r.finished_at && r.started_at ? <span>{Math.max(1, Math.round((r.finished_at - r.started_at) / 1000))} s</span> : null;
+  if (latest) {
+    return (
+      <div className="jb-run">
+        <div className="wk-meta"><span><RunStatus r={r} /> {at(r.started_at ?? 0)}</span>{secs}</div>
+        {r.output && <div className="jb-output">{r.output}</div>}
+      </div>
+    );
+  }
+  return (
+    <div className="jb-run">
+      <button className="jb-run-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <RunStatus r={r} />
+        <span>{at(r.started_at ?? 0)}</span>
+        {!open && <span className="jb-run-line">{firstLine(r.output)}</span>}
+      </button>
+      {open && r.output && <div className="jb-output">{r.output}</div>}
     </div>
   );
 }
@@ -126,7 +145,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
 function JobPage({ j }: { j: Job }) {
   useMinute();
   const { runs, store, enable } = useJobs();
-  const [shown, more] = useWindow(j.id, 10);
+  const [shown, more] = useWindow(j.id, 5);
   const [name, setName] = useState(j.name ?? '');
   const [prompt, setPrompt] = useState(j.prompt ?? '');
   useEffect(() => setName(j.name ?? ''), [j.name]);
@@ -169,7 +188,7 @@ function JobPage({ j }: { j: Job }) {
           <input className="wk-title jb-name" value={name} placeholder="Job name" aria-label="Job name" onChange={(e) => setName(e.target.value)} onBlur={save} />
           <div className="wk-meta mt-when">
             <span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work account' : 'Personal account'}</span>
-            {isQueued ? <span>Queued</span> : j.enabled && j.next_run_at ? <span>Next {at(j.next_run_at)}</span> : null}
+            {isQueued && <span>Queued</span>}
           </div>
           <section className="mt-sec">
             <h2>When</h2>
@@ -183,7 +202,7 @@ function JobPage({ j }: { j: Job }) {
                 </select>
               )}
               {sched.kind !== 'hourly' && <input type="time" value={sched.time} aria-label="Time" onChange={(e) => e.target.value && setSchedule({ time: e.target.value })} />}
-              <span className="jb-on">{j.enabled ? 'On' : 'Off'}<Switch on={!!j.enabled} label="Run on schedule" onChange={(on) => enable(j, on)} /></span>
+              <span className="jb-on"><Switch on={!!j.enabled} label="Run on schedule" onChange={(on) => enable(j, on)} /></span>
             </div>
           </section>
           <section className="mt-sec">
@@ -193,12 +212,7 @@ function JobPage({ j }: { j: Job }) {
           </section>
           <section className="mt-sec">
             <h2>Runs</h2>
-            {list.slice(0, shown).map((r) => (
-              <div key={r.id} className="jb-run">
-                <div className="wk-meta"><span><RunStatus r={r} /> {at(r.started_at ?? 0)}</span>{r.finished_at && r.started_at ? <span>{Math.max(1, Math.round((r.finished_at - r.started_at) / 1000))} s</span> : null}</div>
-                {r.output && <div className="jb-output">{r.output}</div>}
-              </div>
-            ))}
+            {list.slice(0, shown).map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} />)}
             <ShowMore shown={shown} total={list.length} onMore={more} />
             {!list.length && <div className="muted small">Not run yet.</div>}
           </section>
