@@ -98,6 +98,7 @@ export function Composer() {
     draftFor.current = chat;
     setText(readDraft(chat));
     setUses([]);
+    setHist(null);
   }, [chat, text]);
 
   useEffect(() => setSel(0), [popKey]);
