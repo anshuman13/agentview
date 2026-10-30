@@ -47,6 +47,21 @@ describe('wiki updates', () => {
     expect(db.prepare("SELECT key FROM meta WHERE key LIKE 'wikiupdate%'").all()).toEqual([]);
   });
 
+  it('asks again when a meeting is re-synced with different decisions', async () => {
+    const db = setup();
+    let asked = 0;
+    const ask = async () => {
+      asked++;
+      return [];
+    };
+    await proposeWikiUpdates(db, now, ask);
+    await proposeWikiUpdates(db, now, ask);
+    expect(asked).toBe(1);
+    applyChanges(db, [{ ...row('meetings', 'cal:m', { decisions: '["Basic plan now costs 14 euros monthly"]' }), updated_at: 2 }]);
+    await proposeWikiUpdates(db, now, ask);
+    expect(asked).toBe(2);
+  });
+
   it('tries a failing origin three times before skipping it', async () => {
     const db = setup();
     let asked = 0;

@@ -16,7 +16,7 @@ function GoalInput({ row }: { row: ItemRow }) {
   };
   return (
     <div className="gl-row" role="listitem">
-      <input className="gl-input" value={text} aria-label="Goal" onChange={(e) => setText(e.target.value)} onBlur={save}
+      <input className="gl-input" value={text} aria-label="Goal" onChange={(e) => setText(e.target.value)} onBlur={() => { if (text.trim()) save(); else setText(row.title ?? ''); }}
         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); else if (e.key === 'Escape') setText(row.title ?? ''); }} />
       <button className="icon-btn" title="Remove goal" aria-label={`Remove ${row.title}`} onClick={() => { void store.update(row, { deleted: 1 }); showSnack('Goal removed', () => void store.update(row, { deleted: 0 })); }}><Icon name="close" small /></button>
     </div>
@@ -47,7 +47,7 @@ export function WeekGoals({ now }: { now: number }) {
   return (
     <section className="mt-wk-sec">
       <div className="mt-load-head">Goals this week ({goals.length}/{MAX_GOALS})</div>
-      {goals.length > 0 && <div role="list" aria-label="Goals">{goals.map((g) => <GoalInput key={g.profile + g.id} row={g} />)}</div>}
+      {goals.length > 0 && <div role="list" aria-label="Goals">{goals.map((g) => <GoalInput key={g.profile + g.id + g.title} row={g} />)}</div>}
       {filter === 'all' && (
         <select className="as-chip quiet" value={pick} aria-label="Goal profile" onChange={(e) => setPick(e.target.value as Profile)}>
           <option value="work">Work</option>

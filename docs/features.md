@@ -135,7 +135,7 @@ the hub with the meeting's title, date and the words around the hit; offline the
 The wiki is built from claims with sources, which can be edited, contested and go through Review. The wiki start page lists
 claims untouched for 90 days as Stale and claims a later meeting decision may have changed as Maybe changed, unless a
 proposed replacement already waits in Review. For meetings and Slack channel decisions of the last two weeks the hub
-proposes the updated claims for Review, marked From <meeting> or From #channel (see [codex-wiki.md](codex-wiki.md)).
+proposes the updated claims for Review (again if a meeting is re-synced with different decisions), marked From <meeting> or From #channel (see [codex-wiki.md](codex-wiki.md)).
 
 ## Timeline and steering
 

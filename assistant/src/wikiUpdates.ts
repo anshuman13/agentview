@@ -24,7 +24,8 @@ type Claim = { id: string; text: string; page_id: string; heading: string | null
 export type Candidate = { claim: Claim; decisions: string[] };
 export type Update = { claim: string; text: string };
 
-const doneKey = (profile: Profile, id: string) => `wikiupdate:${profile}:${id}`;
+const legacyKey = (profile: Profile, id: string) => `wikiupdate:${profile}:${id}`;
+const doneKey = (profile: Profile, o: Origin) => `${legacyKey(profile, o.id)}:${createHash('sha1').update(o.decisions.join('\n')).digest('hex').slice(0, 8)}`;
 
 const dateOf = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -46,14 +47,15 @@ function pendingOrigins(db: Database, profile: Profile, now = Date.now()): Origi
     "SELECT id, title, starts_at, calendar_url, decisions FROM meetings WHERE profile = ? AND deleted = 0 AND starts_at >= ? AND COALESCE(ends_at, starts_at) <= ? AND decisions IS NOT NULL AND decisions NOT IN ('', '[]') ORDER BY starts_at",
   ).all(profile, now - WITHIN, now) as Meeting[];
   const slack = db.prepare('SELECT id, text, channel, url, at FROM slack_decisions WHERE profile = ? AND at >= ? AND at <= ?').all(profile, now - WITHIN, now) as SlackDecision[];
-  return [...meetings.map(fromMeeting), ...slack.map(fromSlack)].filter((o) => getMeta(db, doneKey(profile, o.id)) == null).sort((a, b) => a.at - b.at);
+  return [...meetings.map(fromMeeting), ...slack.map(fromSlack)].filter((o) => getMeta(db, doneKey(profile, o)) == null && getMeta(db, legacyKey(profile, o.id)) == null).sort((a, b) => a.at - b.at);
 }
 
 const triesKey = (profile: Profile, id: string) => `wikiupdate-tries:${profile}:${id}`;
 
-function markDone(db: Database, profile: Profile, id: string, now = Date.now()) {
-  setMeta(db, doneKey(profile, id), String(now));
-  deleteMeta(db, triesKey(profile, id));
+function markDone(db: Database, profile: Profile, o: Origin, now = Date.now()) {
+  setMeta(db, doneKey(profile, o), String(now));
+  deleteMeta(db, legacyKey(profile, o.id));
+  deleteMeta(db, triesKey(profile, o.id));
 }
 
 function failed(db: Database, profile: Profile, id: string) {
@@ -140,7 +142,7 @@ async function decide(profile: Profile, o: Origin, found: Candidate[]) {
   return updates;
 }
 
-// Proposes wiki updates from the decisions of each recent meeting and Slack message, once each. One stopped by the usage limit waits for the next run;
+// Proposes wiki updates from the decisions of each recent meeting and Slack message, once each (again when a meeting's decisions change). One stopped by the usage limit waits for the next run;
 // one that fails otherwise is tried again on the next runs, up to MAX_TRIES in all.
 export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = decide) {
   let saved = 0;
@@ -156,7 +158,7 @@ export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = d
         if (isLimited(ACCOUNT_OF[profile])) break;
         if (failed(db, profile, o.id) < MAX_TRIES) continue;
       }
-      markDone(db, profile, o.id, now);
+      markDone(db, profile, o, now);
     }
   }
   return saved;
