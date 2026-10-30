@@ -36,8 +36,36 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
   const mine = status === 'open' || status === 'done';
   const done = status === 'done';
   const at = atTime(row.at);
+  const accept = () => change({ status: 'open' }, 'Added to Today');
+  const dismiss = () => change({ status: 'dismissed' }, 'Moved to Not mine');
+  const suggestedRows = () => [...document.querySelectorAll<HTMLElement>('.mt-task.suggested')];
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey) return;
+    const el = e.currentTarget;
+    const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
+    const yes = e.key === 'y' || e.key === 'Enter';
+    const no = e.key === 'n' || e.key === 'Delete' || e.key === 'Backspace';
+    if (!step && !yes && !no) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rows = suggestedRows();
+    const i = rows.indexOf(el);
+    if (step) return rows[i + step]?.focus();
+    if (yes) accept();
+    else dismiss();
+    let tries = 0;
+    const move = () => {
+      if (el.isConnected) {
+        if (++tries < 20) requestAnimationFrame(move);
+        return;
+      }
+      const left = suggestedRows();
+      (left[i] ?? left[i - 1])?.focus();
+    };
+    requestAnimationFrame(move);
+  };
   return (
-    <div className={`mt-task ${status}`}>
+    <div className={`mt-task ${status}`} {...(status === 'suggested' && { tabIndex: 0, onKeyDown })}>
       {mine && (
         <button className={`as-check${done ? ' on' : ''}`} title={done ? 'Not done' : 'Done'} aria-label={done ? 'Not done' : 'Done'} onClick={() => { haptic(done ? 'tap' : 'success'); change({ status: done ? 'open' : 'done' }, done ? 'Moved back to Today' : 'Done'); }}>
           <Icon name={done ? 'pass-filled' : 'circle-large-outline'} />
@@ -59,8 +87,8 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
       {meeting && <button className="icon-btn" title="Copy as message" aria-label="Copy as message" onClick={() => copyText(draftFor(row, meeting))}><Icon name="copy" small /></button>}
       {status === 'suggested' && (
         <div className="mt-task-pick">
-          <button className="mt-no" title="Not mine" aria-label="Not mine" onClick={() => change({ status: 'dismissed' }, 'Moved to Not mine')}><Icon name="close" small /></button>
-          <button className="mt-yes" title="Mine, add to Today" aria-label="Mine, add to Today" onClick={() => change({ status: 'open' }, 'Added to Today')}><Icon name="check" small /></button>
+          <button className="mt-no" title="Not mine" aria-label="Not mine" onClick={dismiss}><Icon name="close" small /></button>
+          <button className="mt-yes" title="Mine, add to Today" aria-label="Mine, add to Today" onClick={accept}><Icon name="check" small /></button>
         </div>
       )}
       {status === 'unassigned' && <button className="btn sm" onClick={() => change({ status: 'open' }, 'Added to Today')}>Take it</button>}
