@@ -1,7 +1,7 @@
 import http from 'node:http';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { allowedPeer, peerName } from '../../server/src/http/access.js';
-import { readBody } from '../../server/src/http/body.js';
+import { BadRequest, parseObject, readBody } from '../../server/src/http/body.js';
 import { openDb, currentVersion, isProfile, type Profile } from './db.js';
 import { ACCOUNT_OF, lastAttempt, startCalendar, syncCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
@@ -12,24 +12,7 @@ import { startTranscripts, syncTranscript } from './transcripts.js';
 import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 
-export class BadRequest extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'BadRequest';
-  }
-}
-
-export async function readJson(req: http.IncomingMessage, max: number): Promise<Record<string, unknown>> {
-  const body = await readBody(req, max);
-  let data: unknown;
-  try {
-    data = JSON.parse(body);
-  } catch {
-    throw new BadRequest('Invalid JSON');
-  }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new BadRequest('Body must be a JSON object');
-  return data as Record<string, unknown>;
-}
+export const readJson = async (req: http.IncomingMessage, max: number) => parseObject(await readBody(req, max));
 
 function send(res: http.ServerResponse, status: number, obj: unknown, headers: http.OutgoingHttpHeaders = {}) {
   res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
@@ -102,20 +85,14 @@ export function createServer(): http.Server {
 
       if (pathname === '/sync' && req.method === 'POST') {
         try {
-          const body = await readBody(req, 5_000_000);
-          let data: { since: number; changes: Change[] };
-          try {
-            data = JSON.parse(body);
-          } catch {
-            throw new BadRequest('Invalid JSON');
-          }
-          if (!data || !Number.isInteger(data.since) || data.since < 0) {
+          const data = (await readJson(req, 5_000_000)) as { since: number; changes: Change[] };
+          if (!Number.isInteger(data.since) || data.since < 0) {
             throw new BadRequest('Missing or invalid since field');
           }
           if (!Array.isArray(data.changes)) {
             throw new BadRequest('Invalid changes field');
           }
-          const applied = applyChanges(getDb(), data.changes ?? []);
+          applyChanges(getDb(), data.changes);
           const pulled = pullChanges(getDb(), data.since);
           send(res, 200, {
             version: pulled.version,

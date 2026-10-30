@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { Readable } from 'node:stream';
 import type http from 'node:http';
-import { BadRequest, fromAllowedPage, readJson } from './server.js';
+import { BadRequest } from '../../server/src/http/body.js';
+import { fromAllowedPage, readJson } from './server.js';
 
 const req = (body: string) => Readable.from([Buffer.from(body)]) as unknown as http.IncomingMessage;
 
