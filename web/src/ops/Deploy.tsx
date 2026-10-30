@@ -97,7 +97,7 @@ export function Deploy() {
     <div className="deploy" ref={root}>
       <div className="deploy-head">
         {s && s.apps.length > 1 ? (
-          <select className="deploy-app" value={s.app} onChange={(e) => setApp(e.target.value)}>
+          <select className="deploy-app" aria-label="App" value={s.app} onChange={(e) => setApp(e.target.value)}>
             {s.apps.map((a) => <option key={a}>{a}</option>)}
           </select>
         ) : (

@@ -141,7 +141,7 @@ function Grafana({ info }: { info: ObserveInfo }) {
           ask();
         }}
       >
-        <input value={question} placeholder={`Ask about ${info.repo} in Grafana`} spellCheck={false} onChange={(e) => setQuestion(e.target.value)} />
+        <input value={question} placeholder={`Ask about ${info.repo} in Grafana`} aria-label={`Ask about ${info.repo} in Grafana`} spellCheck={false} onChange={(e) => setQuestion(e.target.value)} />
         <button className="btn primary" disabled={!question.trim()}><Icon name="sparkle" small /> Ask</button>
       </form>
       <div className="obs-dashboards">
@@ -318,6 +318,7 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
         value={sql}
         rows={4}
         spellCheck={false}
+        aria-label="SQL query"
         placeholder={connected ? 'SELECT ... (Cmd+Enter runs; SELECT, SHOW, DESCRIBE and WITH only)' : 'Save a connection to run queries'}
         disabled={!connected}
         onChange={(e) => setSql(e.target.value)}
@@ -414,6 +415,7 @@ export function Observe() {
           list="obs-repos"
           value={input}
           placeholder="Project"
+          aria-label="Project"
           spellCheck={false}
           onChange={(e) => {
             setInput(e.target.value);
@@ -437,7 +439,7 @@ export function Observe() {
           <Grafana key={`g-${info.repo}`} info={info} />
           <Snowflake info={info} onInfo={setInfo} />
           <Section title="Settings" open={!info.config}>
-            <textarea className="obs-editor" value={draft} spellCheck={false} rows={14} onChange={(e) => setDraft(e.target.value)} />
+            <textarea className="obs-editor" aria-label="Observe settings" value={draft} spellCheck={false} rows={14} onChange={(e) => setDraft(e.target.value)} />
             <div className="obs-save">
               <button className="btn primary" onClick={saveConfig}>Save</button>
               {saveMsg && <span className={saveMsg === 'Saved' ? 'muted' : 'error'}>{saveMsg}</span>}

@@ -160,6 +160,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
         <input
           className="url"
           placeholder="Address"
+          aria-label="Address"
           value={url}
           onFocus={() => setEditing(true)}
           onBlur={() => setEditing(false)}

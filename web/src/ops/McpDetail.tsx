@@ -58,7 +58,7 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
       <div className="mcp-tools-head">
         <span>Tools</span><span className="muted">{row.tools?.length ?? 0}</span>
         <span className="spacer" />
-        {(row.tools?.length ?? 0) > 6 && <input placeholder="Filter" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}
+        {(row.tools?.length ?? 0) > 6 && <input placeholder="Filter" aria-label="Filter tools" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}
       </div>
       <div className="mcp-tools">
         {tools.map((t) => (

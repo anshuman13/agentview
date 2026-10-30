@@ -181,7 +181,7 @@ function ActionBar({ pr, busy, act, confirm }: { pr: PullRequest; busy: boolean;
 
   return (
     <div className="gh-actionbar">
-      <textarea className="gh-text" placeholder="Leave a comment" value={text} rows={2} onChange={(e) => setText(e.target.value)} />
+      <textarea className="gh-text" placeholder="Leave a comment" aria-label="Comment" value={text} rows={2} onChange={(e) => setText(e.target.value)} />
       <div className="gh-actions">
         <button className="btn sm primary" disabled={busy} onClick={approve}><Icon name="check" small /> Approve</button>
         <button className="btn sm" disabled={busy || needsText} title={needsText ? 'Write a comment first' : ''} onClick={() => review('request_changes')}><Icon name="request-changes" small /> Request changes</button>
