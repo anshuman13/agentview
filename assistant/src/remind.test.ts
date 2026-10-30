@@ -106,3 +106,10 @@ it('sends tasks that fell due overnight with the first morning check', () => {
   item.run('b', 'Afternoon', new Date(2026, 9, 29, 16, 0).getTime());
   expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Evening']);
 });
+
+it('catches up an evening task the midnight rollover moved to today', () => {
+  const db = openDb(':memory:');
+  const now = new Date(2026, 9, 30, 8, 30).getTime();
+  db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at, rolls) VALUES ('a', 'personal', 1, 0, 'Rolled', 'capture', 'open', ?, 1)").run(new Date(2026, 9, 30, 22, 0).getTime());
+  expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Rolled']);
+});
