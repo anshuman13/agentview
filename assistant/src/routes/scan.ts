@@ -1,11 +1,8 @@
-import type { Database } from 'bun:sqlite';
 import { errText } from '../../../shared/util.js';
 import { gmailScan } from '../gmail.js';
-import type { Counts } from '../scan.js';
+import type { Scanner } from '../scan.js';
 import { slackScan } from '../slack.js';
 import { send, type Routes } from './http.js';
-
-type Scanner = { setUp(): boolean; paused(db: Database): Promise<boolean>; run(db: Database): Promise<Counts> };
 
 export const SCANNERS: Record<string, Scanner> = { slack: slackScan, gmail: gmailScan };
 

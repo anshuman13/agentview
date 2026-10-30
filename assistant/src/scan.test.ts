@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test';
 import type http from 'node:http';
 import { openDb } from './db.js';
-import { runScan, scanHealth } from './scan.js';
+import { backoff, runScan, scanHealth } from './scan.js';
+import { MIN } from './time.js';
 import { scanRoutes } from './routes/scan.js';
 
 test('a failing scan keeps its last success and records the error', async () => {
@@ -33,4 +34,22 @@ test('scan now joins a running scan', async () => {
   release();
   expect(await Promise.all([a, b])).toEqual([{ status: 200, body: '{"counts":{"n":1}}' }, { status: 200, body: '{"counts":{"n":1}}' }]);
   expect(runs).toBe(1);
+});
+
+test('failed runs retry after 2, 5 and 10 minutes, then wait for the slots', () => {
+  const r = backoff();
+  let t = new Date(2026, 9, 28, 10, 0).getTime();
+  expect(r.due(t)).toBe(false);
+  for (const wait of [2, 5, 10]) {
+    r.done(false, t);
+    expect(r.due(t + (wait - 1) * MIN)).toBe(false);
+    t += wait * MIN;
+    expect(r.due(t)).toBe(true);
+  }
+  r.done(false, t);
+  expect(r.due(t + 60 * MIN)).toBe(false);
+  r.done(true, t);
+  r.done(false, t);
+  expect(r.due(t + 2 * MIN)).toBe(true);
+  expect(r.due(new Date(2026, 9, 28, 19, 5).getTime())).toBe(false);
 });

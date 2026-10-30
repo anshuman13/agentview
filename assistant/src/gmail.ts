@@ -10,10 +10,9 @@ import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, pushHours, run } from './slack.js';
 import { PROFILE, saidId, webUrl } from './slackSave.js';
-import { loop } from './once.js';
-import { runScan } from './scan.js';
+import { runScan, startScan } from './scan.js';
 import { applyChanges, type Change } from './sync.js';
-import { DAY, MIN, addWorkdays, localDate, parseWhen, workSlotDue, ymd } from './time.js';
+import { DAY, MIN, addWorkdays, localDate, parseWhen, ymd } from './time.js';
 
 const EVERY = 30 * MIN;
 const GMAIL = 'mcp__claude_ai_Gmail__';
@@ -195,11 +194,4 @@ export const gmailScan = {
 };
 
 // Reads every half hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
-export function startGmail(db: () => Database, every = MIN) {
-  let tried = 0;
-  loop('gmail', every, async () => {
-    if (!gmailScan.setUp() || !workSlotDue(tried, EVERY, Date.now()) || (await gmailScan.paused(db()))) return;
-    tried = Date.now();
-    await gmailScan.run(db());
-  }, true);
-}
+export const startGmail = (db: () => Database) => startScan('gmail', gmailScan, EVERY, db);

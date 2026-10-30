@@ -6,7 +6,7 @@ import { deleteMeta, getMeta, setMeta, type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { MIN, workSlotDue } from './time.js';
 import { loop, once } from './once.js';
-import { recordScan } from './scan.js';
+import { backoff, recordScan } from './scan.js';
 import { errText } from '../../shared/util.js';
 
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
@@ -142,10 +142,15 @@ export async function syncCalendar(db: () => Database, profiles = Object.keys(AC
   return { changed, errors };
 }
 
-export function startCalendar(db: () => Database, every = 5 * 60_000) {
+// Imports each profile once per slot, sooner after a failed import.
+export function startCalendar(db: () => Database, every = MIN) {
+  const retries = new Map<Profile, ReturnType<typeof backoff>>();
   loop('calendar', every, async () => {
-    const due: Profile[] = [];
-    for (const p of Object.keys(ACCOUNT_OF) as Profile[]) if (importDue(lastAttempt(db(), p)) && !(await scanPaused(db(), ACCOUNT_OF[p], 'calendar'))) due.push(p);
-    if (due.length) void syncCalendar(db, due);
+    for (const p of Object.keys(ACCOUNT_OF) as Profile[]) {
+      const retry = retries.get(p) ?? retries.set(p, backoff()).get(p)!;
+      if (!(importDue(lastAttempt(db(), p)) || retry.due(Date.now())) || (await scanPaused(db(), ACCOUNT_OF[p], 'calendar'))) continue;
+      const { error } = await importOne(db, p, importCalendar);
+      retry.done(!error, Date.now());
+    }
   }, true);
 }

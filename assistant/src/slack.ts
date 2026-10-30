@@ -10,8 +10,7 @@ import { DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
-import { loop } from './once.js';
-import { runScan } from './scan.js';
+import { runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, workSlotDue } from './time.js';
 
@@ -195,11 +194,4 @@ export const slackScan = {
   run: (db: Database) => runScan(db, 'slack', () => slackOnce(db)),
 };
 
-export function startSlack(db: () => Database, every = MIN) {
-  let tried = 0;
-  loop('slack', every, async () => {
-    if (!slackScan.setUp() || !scanDue(tried) || (await slackScan.paused(db()))) return;
-    tried = Date.now();
-    await slackScan.run(db());
-  }, true);
-}
+export const startSlack = (db: () => Database) => startScan('slack', slackScan, EVERY, db);
