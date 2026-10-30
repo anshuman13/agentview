@@ -65,7 +65,7 @@ function Fold({ title, count, children }: { title: string; count: number; childr
   );
 }
 
-// The transcript text stays on the hub; a summarized meeting fetches it once for the talk time and the Transcript section.
+// The transcript text stays on the hub; a summarized meeting fetches it for the talk time and the Transcript section, again after each new summary.
 function useTranscript(m: Meeting, on: boolean) {
   const store = useAssistantStore();
   const [got, setGot] = useState<{ key: string; text: string | null; error?: string }>();
@@ -77,7 +77,7 @@ function useTranscript(m: Meeting, on: boolean) {
     return () => {
       live = false;
     };
-  }, [key, on, store]);
+  }, [key, on, m.summary, store]);
   return got?.key === key ? got : undefined;
 }
 
