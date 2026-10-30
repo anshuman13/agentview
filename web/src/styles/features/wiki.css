@@ -279,6 +279,8 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .mt-load-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg-strong); }
 .mt-load-share { font-size: var(--fs-sm); color: var(--fg-muted); }
 .mt-wk-sec { display: flex; flex-direction: column; gap: var(--sp-4); }
+.mt-load-audit { display: flex; flex-direction: column; gap: var(--sp-4); }
+.mt-load-quiet { font-size: var(--fs-xs); color: var(--warn); }
 .mt-load-person { display: flex; justify-content: space-between; gap: var(--sp-4); font-size: var(--fs-md); }
 
 /* Meeting page */

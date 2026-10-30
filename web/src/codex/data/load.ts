@@ -22,7 +22,7 @@ const midnight = (t: number) => {
   const d = new Date(t);
   return d.getHours() === 0 && d.getMinutes() === 0;
 };
-const isAllDay = (m: Meeting) => m.ends_at! > m.starts_at! && midnight(m.starts_at!) && midnight(m.ends_at!);
+export const isAllDay = (m: Meeting) => m.ends_at! > m.starts_at! && midnight(m.starts_at!) && midnight(m.ends_at!);
 
 // Minutes per recurring series (a title seen at least twice) over the last `weeks` weeks and the change against the `weeks` before (null when the series is new), most minutes first, with done and total meeting actions and the oldest open one's time.
 function timeBySeries(meetings: Meeting[], items: ItemRow[], now: number, weeks: number) {
