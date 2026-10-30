@@ -23,6 +23,7 @@ export async function* ask(account: Account, prompt: string, options: Options, t
       stopOnOverage(account, m);
       yield m;
     }
+    if (timedOut) throw new Error(`Claude run timed out after ${Math.round(timeoutMs / 60_000)} min`);
   } catch (err) {
     if (timedOut) throw new Error(`Claude run timed out after ${Math.round(timeoutMs / 60_000)} min`);
     throw err;
