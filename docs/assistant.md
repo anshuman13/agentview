@@ -47,7 +47,7 @@ sides run on the personal account.
 | slack_decisions | Decisions the Slack scan saw in watched channels, with channel, permalink and time; hub only, kept 14 days, read by the wiki update pass |
 | transcripts | The Gemini transcript text of each summarized meeting, kept on the hub only (not synced; the apps search it and read it through the hub) |
 | actions | Proposed Slack messages and Linear issues from a meeting; synced but unused, since meeting actions are items with `meeting_id` |
-| jobs, runs | Scheduled jobs and their run history |
+| jobs, runs | Scheduled jobs and their run history; a day after a job is deleted its runs are deleted too |
 | chats | Slack channels and DMs the scan read, each with a running summary |
 | briefs | Morning briefs (kind `morning`), Slack summaries (`slack`) and the unanswered sent mail list (`waiting`) |
 | people, links, embeddings | Planned: people merged across sources, item links and vectors; nothing fills them yet |

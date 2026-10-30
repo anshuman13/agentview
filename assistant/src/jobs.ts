@@ -9,7 +9,7 @@ import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
 import type { Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
-import { HOUR, MIN, slotStart } from './time.js';
+import { DAY, HOUR, MIN, slotStart } from './time.js';
 
 const KEEP = 20;
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -135,6 +135,12 @@ export function endInterrupted(db: Database, now = Date.now()) {
   applyChanges(db, stuck.map((r) => ({ table: 'runs', id: r.id, profile: r.profile, updated_at: now, fields: { finished_at: now, status: 'error', output: 'Interrupted by a restart' } })));
 }
 
+// Runs of a job deleted a day ago are deleted too; the wait leaves time to undo the delete.
+export function dropOrphanRuns(db: Database, now = Date.now()) {
+  const rows = db.prepare("SELECT r.id, r.profile FROM runs r JOIN jobs j ON j.profile = r.profile AND j.id = r.job_id AND j.deleted = 1 AND CAST(json_extract(j.field_times, '$.deleted') AS INTEGER) < ? WHERE r.deleted = 0").all(now - DAY) as { id: string; profile: Profile }[];
+  return applyChanges(db, rows.map((r) => ({ table: 'runs', id: r.id, profile: r.profile, deleted: true, updated_at: now, fields: { output: null } }))).applied;
+}
+
 export function startJobs(db: () => Database, every = MIN) {
   endInterrupted(db());
   let busy = false;
@@ -142,6 +148,7 @@ export function startJobs(db: () => Database, every = MIN) {
     if (busy) return;
     busy = true;
     try {
+      dropOrphanRuns(db());
       await runDue(db());
     } catch (err) {
       console.error('jobs:', err instanceof Error ? err.message : err);

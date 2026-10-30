@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { canRead, dueJobs, endInterrupted, nextRun } from './jobs.js';
+import { canRead, dropOrphanRuns, dueJobs, endInterrupted, nextRun } from './jobs.js';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 
@@ -55,6 +55,18 @@ describe('dueJobs', () => {
     applyChanges(db, [{ table: 'runs', id: 'r', profile: 'work', updated_at: 1, fields: { job_id: 'a', started_at: 1, status: 'running' } }]);
     endInterrupted(db, 2);
     expect((db.prepare("SELECT status FROM runs WHERE id = 'r'").get() as { status: string }).status).toBe('error');
+  });
+  test('runs of a deleted job are deleted', () => {
+    const db = openDb(':memory:');
+    applyChanges(db, [
+      { table: 'jobs', id: 'a', profile: 'work', updated_at: 1, deleted: true, fields: { name: 'A' } },
+      { table: 'jobs', id: 'b', profile: 'work', updated_at: 1, fields: { name: 'B' } },
+      { table: 'runs', id: 'ra', profile: 'work', updated_at: 1, fields: { job_id: 'a', output: 'x' } },
+      { table: 'runs', id: 'rb', profile: 'work', updated_at: 1, fields: { job_id: 'b', output: 'x' } },
+    ]);
+    expect(dropOrphanRuns(db, 2)).toBe(0);
+    expect(dropOrphanRuns(db, 2 * 86_400_000)).toBe(1);
+    expect(db.prepare('SELECT id, deleted, output FROM runs ORDER BY id').all()).toEqual([{ id: 'ra', deleted: 1, output: null }, { id: 'rb', deleted: 0, output: 'x' }]);
   });
 });
 
