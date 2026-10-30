@@ -60,7 +60,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
 }
 
 // Weekdays from 08:00 until 11:00 each profile with something on gets one brief stored for the phone and one push; a failed
-// push retries.
+// push or an empty brief retries, so a calendar imported later that morning still gets one.
 export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy) {
   if (!inWeekHours(now, 8, 11)) return [];
   const sent: Profile[] = [];
@@ -69,8 +69,8 @@ export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy)
     if (db.prepare('SELECT 1 FROM meta WHERE key = ?').get(key)) continue;
     const id = briefId(now);
     const b = buildBrief(db, profile, now);
-    db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(now));
     if (b.empty) continue;
+    db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(now));
     if (!db.prepare('SELECT 1 FROM briefs WHERE profile = ? AND id = ?').get(profile, id)) {
       applyChanges(db, [{ table: 'briefs', id, profile, updated_at: now, fields: { kind: 'morning', text: `${b.title}\n${b.text}`, from_at: new Date(now).setHours(0, 0, 0, 0), to_at: now } }]);
     }

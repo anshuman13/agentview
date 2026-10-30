@@ -62,3 +62,10 @@ it('retries a failed push without storing the brief twice', async () => {
   expect(await runBriefs(db, at(MON, 8, 1), async () => true)).toEqual(['work']);
   expect(db.prepare("SELECT to_at FROM briefs WHERE profile = 'work'").all()).toEqual([{ to_at: at(MON, 8) }]);
 });
+
+it('sends a brief that was empty at 08:00 once the calendar lands', async () => {
+  const db = seed();
+  expect(await runBriefs(db, at(MON, 8), async () => true)).toEqual(['work']);
+  db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES ('p', 'personal', 1, 0, 'Dentist', ?, ?)").run(at(MON, 16), at(MON, 17));
+  expect(await runBriefs(db, at(MON, 9), async () => true)).toEqual(['personal']);
+});
