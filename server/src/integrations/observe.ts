@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 import { parseObject, readBody } from '../http/body.js';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ROOTS } from '../workspace/files.js';
-import { inside } from '../../../shared/util.js';
+import { errText, inside } from '../../../shared/util.js';
 import { allowedServers } from '../agent/claude/mcp.js';
 import { callTool, data, listTools, stop, text, type McpResult, type McpServerDef } from './mcpClient.js';
 import type {
@@ -63,7 +63,7 @@ async function load(): Promise<Settings> {
   try {
     return JSON.parse(raw);
   } catch (err) {
-    throw new Error(`${FILE} is not valid JSON: ${(err as Error).message}`);
+    throw new Error(`${FILE} is not valid JSON: ${errText(err)}`);
   }
 }
 
@@ -211,7 +211,7 @@ async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef): Promi
       if (rows.length) return { patterns: rank(rows), source: 'Loki patterns', link };
       notes.push('Loki patterns: none');
     } catch (e) {
-      notes.push(`Loki patterns: ${(e as Error).message.split('\n')[0]}`);
+      notes.push(`Loki patterns: ${errText(e).split('\n')[0]}`);
     }
   }
   if (tools.has('find_error_pattern_logs')) {
@@ -221,7 +221,7 @@ async function patterns(cfg: ObserveConfig['grafana'], def: McpServerDef): Promi
       if (rows.length) return { patterns: rank(rows), source: 'Sift', link };
       notes.push('Sift: none');
     } catch (e) {
-      notes.push(`Sift: ${(e as Error).message.split('\n')[0]}`);
+      notes.push(`Sift: ${errText(e).split('\n')[0]}`);
     }
   }
   const r = data(await callTool(keyOf('grafana', def), def, 'query_loki_logs', { datasourceUid: uid, logql: `${selector} ${ERRORS}`, limit: 100, format: 'compact', ...RANGE })) as any;

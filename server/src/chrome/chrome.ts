@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
 import { chromeRunning, endpoint, failure, launchProfile, openMac, ownProfile } from './launch.js';
+import { errText } from '../../../shared/util.js';
 
 export { chromeRunning, endpoint, ownProfile };
 
@@ -105,7 +106,7 @@ export async function connect() {
   try {
     url = await endpoint();
   } catch (err) {
-    return setState('off', (err as Error).message);
+    return setState('off', errText(err));
   }
   let ws: WebSocket;
   try {
