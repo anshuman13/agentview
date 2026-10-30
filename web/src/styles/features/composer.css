@@ -112,7 +112,9 @@
   .cp-pop li { height: var(--touch); }
   .cp-pop { max-height: min(300px, 45vh); max-height: min(300px, 45dvh); }
   .cp-under { font-size: var(--fs-sm); line-height: var(--line-sm); }
-  .cp-stats { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-3); }
+  .cp-stats { display: flex; align-items: center; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; }
+  .cp-stats::-webkit-scrollbar { display: none; }
+  .cp-stats > :first-child { margin-left: auto; }
   .cp-stats > * + *::before { content: none; }
   .cp-stats > * { flex: none; }
   .cp-stats > .cp-ctx { display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--sp-5); border: 1px solid var(--border); border-radius: 16px; text-decoration: none; }

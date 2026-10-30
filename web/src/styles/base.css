@@ -59,13 +59,12 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 @media (hover: none) { .md-copy { opacity: 1; } }
 .md a { color: var(--link); text-decoration: none; }
 @media (hover: hover) { .md a:hover { text-decoration: underline; } }
-.md table { border-collapse: collapse; }
-.md :is(th, td) { border: 1px solid var(--border-strong); padding: 3px var(--sp-4); text-align: left; }
+.md table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.md :is(th, td) { border: 1px solid var(--border-strong); padding: 3px var(--sp-4); text-align: left; word-break: normal; overflow-wrap: normal; }
 .md blockquote { border-left: 3px solid var(--border-strong); padding-left: var(--sp-5); color: var(--fg-muted); }
 .md strong { color: var(--fg); }
 @media (max-width: 900px) {
   .md { overflow-wrap: anywhere; }
-  .md table { display: block; max-width: 100%; overflow-x: auto; }
 }
 
 @media (pointer: coarse) {
