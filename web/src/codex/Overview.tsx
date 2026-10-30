@@ -13,6 +13,7 @@ import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
 import { sourceOf, useActions } from './Task';
 import { DayPlan } from './DayPlan';
+import { MorningBrief } from './Brief';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
 import { copyText, openMeeting, setView, showSnack, useView } from './view';
@@ -253,6 +254,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           {stats.map((x) => <button key={x.label} className={`ov-stat ${x.cls}`} onClick={tasks}><b>{x.n}</b><span>{x.label}</span></button>)}
         </div>
       )}
+      <MorningBrief now={now} />
       <JustEnded meetings={s.meetingsToday} now={now} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
       <DayPlan meetings={s.meetingsToday} open={dueToday} now={now} />

@@ -37,7 +37,7 @@ of four buckets, so "zero for me" is always explained.
 
 | List | Question | Contents |
 | --- | --- | --- |
-| Overview | How does my day look? | Counts that open Tasks, Next card, today's meetings, a Plan strip (free gaps 08:00-17:00 against "~30m" estimates in titles), a Wrap up card from 16:00 (move to tomorrow, snooze, drop), what is due today, tomorrow's meetings and tasks, today's job reports |
+| Overview | How does my day look? | The morning brief (folds, hides until tomorrow), counts that open Tasks, Next card, today's meetings, a Plan strip (free gaps 08:00-17:00 against "~30m" estimates in titles), a Wrap up card from 16:00 (move to tomorrow, snooze, drop), what is due today, tomorrow's meetings and tasks, today's job reports |
 | Tasks | What needs me? | Overdue, Is this yours?, Today, then dated tasks by day for 7 days and Later, Done today row |
 | Meetings | What happened? | Past meetings only, newest first, with pipeline state; search covers tasks and meetings. Week has a Review: done, slipped and stuck tasks (moved 3+ times or over 30 days old) with Drop and Reschedule, and Waiting on grouped by person with Copy nudge |
 | Jobs | What runs on its own? | Prompts on a schedule (hourly, daily, weekdays, weekly) on the profile's account, read-only tools plus add_task; each run's reply is kept and pushed |
@@ -59,6 +59,7 @@ Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its d
 | Counts | "x of y" counts accepted actions only; suggested shown separately as amber "N to review" |
 | Push | Only when there is something to act on. Tapping it opens the meeting page. "Nothing for you" is a muted list badge |
 | Calendar | Sync on app open plus every 30 min, 07:00 to 19:00 |
+| Morning brief | Weekdays at 08:00 the hub writes a brief per profile with no model call: today's meetings and free time 08:00-17:00, tasks due and overdue (top 5), Slack asks to review and meeting actions still open from the last workday. It syncs to the phone and pushes "Today: N meetings, M tasks" once a day, skipping a profile with nothing on and a hub that starts after 11:00 |
 | Cut for now | "All ▾" filter and "●" on Today, "Missed Slack" chip, meeting-bound chat (daily chat with the meeting attached instead) |
 
 ## Meeting pipeline states

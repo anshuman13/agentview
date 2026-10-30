@@ -7,6 +7,7 @@ import { ACCOUNT_OF, lastAttempt, startCalendar, syncCalendar } from './calendar
 import { startJobs } from './jobs.js';
 import { once } from './once.js';
 import { finishTask, snoozeTask, startReminders } from './remind.js';
+import { startBrief } from './brief.js';
 import { parseTask } from './parse.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
 import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
@@ -230,6 +231,7 @@ async function start() {
   const server = createServer();
 
   startReminders(getDb);
+  startBrief(getDb);
   if (process.env.ASSISTANT_CALENDAR !== '0') {
     startCalendar(getDb);
     startTranscripts(getDb);

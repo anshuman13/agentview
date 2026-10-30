@@ -220,6 +220,9 @@ a.as-chip { text-decoration: none; }
 .ov-follow-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) { .ov-follow-text:hover .ov-t { text-decoration: underline; } }
 .ov-report { padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden; }
+.ov-report.full { display: block; }
+.ov-brief-head { display: flex; align-items: center; gap: var(--sp-2); }
+.ov-brief-head > .as-toggle { flex: 1; display: flex; }
 .as-ask { flex: none; align-self: center; color: var(--fg); font-size: var(--fs-sm); font-weight: 600; }
 
 /* Tasks page: same layout and card language as Meetings. */
