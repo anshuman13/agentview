@@ -31,7 +31,7 @@ export interface AssistantStore {
   syncCalendar(fresh?: number): Promise<number>;
   blockTime(row: ItemRow, start: number, end: number, title: string): Promise<void>;
   summarizeSlack(): Promise<number>;
-  searchTranscripts(query: string): Promise<TranscriptHit[]>;
+  searchTranscripts(query: string, profile?: Profile): Promise<TranscriptHit[]>;
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
 }
 

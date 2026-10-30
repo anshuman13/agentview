@@ -301,8 +301,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return Number(data?.added ?? 0);
   };
 
-  searchTranscripts = async (query: string) => {
-    const resp = await fetch(`${HUB}/transcripts/search?q=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(20000) });
+  searchTranscripts = async (query: string, profile?: Profile) => {
+    const resp = await fetch(`${HUB}/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`, { signal: AbortSignal.timeout(20000) });
     const data = await resp.json().catch(() => null);
     if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
     return (data?.hits ?? []) as TranscriptHit[];

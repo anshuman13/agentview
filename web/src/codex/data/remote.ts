@@ -259,7 +259,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     return Number(data?.added ?? 0);
   };
 
-  searchTranscripts = async (query: string) => (await hub<{ hits?: TranscriptHit[] }>(`/api/assistant/transcripts/search?q=${encodeURIComponent(query)}`)).hits ?? [];
+  searchTranscripts = async (query: string, profile?: Profile) => (await hub<{ hits?: TranscriptHit[] }>(`/api/assistant/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`)).hits ?? [];
 
   transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await call(`/api/assistant${transcriptPath(m)}`));
 }

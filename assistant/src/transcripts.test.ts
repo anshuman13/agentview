@@ -122,6 +122,11 @@ describe('transcripts', () => {
     expect(hit.id).toBe('cal:a');
     expect(hit.snippet).toMatch(/^\.\.\..*Øystein: we ship the Rollout on friday.*\.\.\.$/);
     expect(searchTranscripts(db, 'rollout nothing')).toEqual([]);
+    expect(searchTranscripts(db, '"Rollout," friday?').map((h) => h.id)).toEqual(['cal:a']);
+    applyChanges(db, [{ ...meeting('cal:p', 0), profile: 'personal' }]);
+    saveTranscripts(db, 'personal', [{ id: 'cal:p', doc: 'd4', text: 'rollout at home' }], now);
+    expect(searchTranscripts(db, 'rollout', 'work').map((h) => h.id)).toEqual(['cal:b', 'cal:a']);
+    expect(searchTranscripts(db, 'rollout', 'personal').map((h) => h.id)).toEqual(['cal:p']);
     expect(transcriptText(db, 'work', 'cal:b')).toBe('Kim: rollout later');
     expect(transcriptText(db, 'personal', 'cal:b')).toBeNull();
   });

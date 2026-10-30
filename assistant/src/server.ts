@@ -186,7 +186,8 @@ export function createServer(): http.Server {
       }
 
       if (pathname === '/transcripts/search' && req.method === 'GET') {
-        send(res, 200, { hits: searchTranscripts(getDb(), url.searchParams.get('q') ?? '') });
+        const profile = url.searchParams.get('profile');
+        send(res, 200, { hits: searchTranscripts(getDb(), url.searchParams.get('q') ?? '', isProfile(profile) ? profile : undefined) });
         return;
       }
 

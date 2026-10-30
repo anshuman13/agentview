@@ -194,13 +194,13 @@ export function transcriptText(db: Database, profile: Profile, id: string) {
   return (db.prepare('SELECT text FROM transcripts WHERE profile = ? AND id = ?').get(profile, id) as { text: string } | null)?.text ?? null;
 }
 
-// Meetings whose transcript holds every word, newest first, with a stretch around the first hit.
-export function searchTranscripts(db: Database, query: string, limit = 50) {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 10);
+// Meetings whose transcript holds every word, newest first, with a stretch around the first hit; only the profile's when given.
+export function searchTranscripts(db: Database, query: string, profile?: Profile, limit = 50) {
+  const words = query.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean).slice(0, 10);
   if (!words.length) return [];
   const rows = db.prepare(
-    `SELECT t.profile, t.id, t.text FROM transcripts t JOIN meetings m ON m.profile = t.profile AND m.id = t.id AND m.deleted = 0 WHERE ${words.map(() => 'instr(t.folded, ?) > 0').join(' AND ')} ORDER BY m.starts_at DESC LIMIT ?`,
-  ).all(...words, limit) as { profile: Profile; id: string; text: string }[];
+    `SELECT t.profile, t.id, t.text FROM transcripts t JOIN meetings m ON m.profile = t.profile AND m.id = t.id AND m.deleted = 0 WHERE ${profile ? 't.profile = ? AND ' : ''}${words.map(() => 'instr(t.folded, ?) > 0').join(' AND ')} ORDER BY m.starts_at DESC LIMIT ?`,
+  ).all(...(profile ? [profile] : []), ...words, limit) as { profile: Profile; id: string; text: string }[];
   return rows.map((r) => ({ profile: r.profile, id: r.id, snippet: snippet(words, r.text) }));
 }
 

@@ -53,22 +53,25 @@ const Badge = memo(function Badge({ m, now, review, total, done }: { m: Meeting;
 const NO_TOPICS: string[] = [];
 const NO_HITS = new Map<string, string>();
 
-// What the hub finds in the transcripts for the query, by profile:id with a snippet; empty until it answers.
+// What the hub finds in the transcripts of the filter's profiles for the query, by profile:id with a snippet; empty until it answers.
 export function useTranscriptHits(query: string) {
   const { store } = useCodex();
+  const { filter } = useView();
   const [found, setFound] = useState({ q: '', hits: NO_HITS });
-  const q = query.trim();
+  const text = query.trim();
+  const profile = filter === 'all' ? undefined : filter;
+  const q = `${filter}|${text}`;
   useEffect(() => {
-    if (!q) return;
+    if (!text) return;
     let live = true;
     const t = setTimeout(() => {
-      store.searchTranscripts(q).then((hits) => live && setFound({ q, hits: new Map(hits.map((h) => [`${h.profile}:${h.id}`, h.snippet])) }), () => {});
+      store.searchTranscripts(text, profile).then((hits) => live && setFound({ q, hits: new Map(hits.map((h) => [`${h.profile}:${h.id}`, h.snippet])) }), () => {});
     }, 300);
     return () => {
       live = false;
       clearTimeout(t);
     };
-  }, [q, store]);
+  }, [q, text, profile, store]);
   return found.q === q ? found.hits : NO_HITS;
 }
 
