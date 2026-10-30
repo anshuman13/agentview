@@ -80,9 +80,10 @@ function fixStep(report: string): LoopStep {
   };
 }
 
-export function advance(state: LoopState, result: string, planDenied = false): { state: LoopState; step: LoopStep | null; note: string | null } {
+export function advance(state: LoopState, result: string, { planDenied = false, failed = false } = {}): { state: LoopState; step: LoopStep | null; note: string | null } {
   if (!state.on || !state.phase) return { state, step: null, note: null };
   if (state.phase === 'plan' && planDenied) return { state: { ...state, phase: 'failed' }, step: null, note: 'Loop stopped: the plan was not approved' };
+  if (failed && looping(state)) return { state: { ...state, phase: 'failed' }, step: null, note: `Loop stopped: the ${state.phase} step failed` };
   if (state.phase === 'plan') return { state: { ...state, phase: 'build' }, step: buildStep(), note: null };
   if (state.phase === 'build') return { state: { ...state, phase: 'test' }, step: testStep(state.round, state.max), note: null };
   if (state.phase === 'test') {

@@ -45,10 +45,17 @@ describe('advance', () => {
   });
 
   it('stops when the plan was not approved', () => {
-    const r = advance({ ...on, phase: 'plan' }, '', true);
+    const r = advance({ ...on, phase: 'plan' }, '', { planDenied: true });
     expect(r.state.phase).toBe('failed');
     expect(r.step).toBe(null);
     expect(r.note).toContain('not approved');
+  });
+
+  it('stops when a step failed instead of going to the next one', () => {
+    const r = advance({ ...on, phase: 'build' }, '', { failed: true });
+    expect(r.state.phase).toBe('failed');
+    expect(r.step).toBe(null);
+    expect(r.note).toBe('Loop stopped: the build step failed');
   });
 
   it('passes when the tester says so', () => {

@@ -637,7 +637,7 @@ export class AgentSession implements AgentHost {
       this.expectTurn = true;
       this.release();
     }
-    const loop = idle ? advance(this.state.session.loop, this.lastResult, this.planDenied) : null;
+    const loop = idle ? advance(this.state.session.loop, this.lastResult, { planDenied: this.planDenied, failed: this.lastError }) : null;
     if (loop) this.setSession({ loop: loop.state });
     const next = idle && !loop?.step ? this.followUp() : null;
     this.setSession({ running: this.turns > 0 || next !== null || Boolean(loop?.step), compacting: false, stopping: false });
