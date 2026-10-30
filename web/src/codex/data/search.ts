@@ -16,9 +16,9 @@ export type Results = { tasks: Group; meetings: Group; wiki: Group; jobs: Group;
 type SearchData = { items: ItemRow[]; meetings: Meeting[]; facts: Fact[]; pages: Page[]; jobs: Job[] };
 
 // Builds hits only for the rows shown, since a short query can match thousands of rows.
-const group = <T,>(rows: T[], hit: (r: T) => Hit): Group => ({ hits: rows.slice(0, GROUP_CAP).map(hit), total: rows.length });
+const group = <T,>(rows: T[], hit: (r: T) => Hit, all = false): Group => ({ hits: (all ? rows : rows.slice(0, GROUP_CAP)).map(hit), total: rows.length });
 
-export function searchAll(data: SearchData, query: string): Results {
+export function searchAll(data: SearchData, query: string, expanded: string[] = []): Results {
   const words = queryWords(query);
   const none = { hits: [], total: 0 };
   if (!words.length) return { tasks: none, meetings: none, wiki: none, jobs: none, total: 0 };
@@ -33,10 +33,10 @@ export function searchAll(data: SearchData, query: string): Results {
   ];
   const jobs = live(data.jobs).filter((j) => hitJob(j));
   return {
-    tasks: group(tasks, (r) => ({ id: r.id, profile: r.profile, title: r.title || r.text || 'Untitled', snippet: snippet(words, r.text, r.people, r.source), page: r.meeting_id })),
-    meetings: group(meetings, (m) => ({ id: m.id, profile: m.profile, title: m.title || 'Meeting', snippet: snippet(words, m.summary, m.decisions, m.notes, m.people) })),
-    wiki: group(wiki, (hit) => hit()),
-    jobs: group(jobs, (j) => ({ id: j.id, profile: j.profile, title: j.name || 'Untitled job', snippet: snippet(words, j.prompt) })),
+    tasks: group(tasks, (r) => ({ id: r.id, profile: r.profile, title: r.title || r.text || 'Untitled', snippet: snippet(words, r.text, r.people, r.source), page: r.meeting_id }), expanded.includes('tasks')),
+    meetings: group(meetings, (m) => ({ id: m.id, profile: m.profile, title: m.title || 'Meeting', snippet: snippet(words, m.summary, m.decisions, m.notes, m.people) }), expanded.includes('meetings')),
+    wiki: group(wiki, (hit) => hit(), expanded.includes('wiki')),
+    jobs: group(jobs, (j) => ({ id: j.id, profile: j.profile, title: j.name || 'Untitled job', snippet: snippet(words, j.prompt) }), expanded.includes('jobs')),
     total: tasks.length + meetings.length + wiki.length + jobs.length,
   };
 }

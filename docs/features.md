@@ -119,7 +119,7 @@ you last looked. Topics and person pages list questions the meetings left open u
 also asks the hub, which keeps each transcript's text, and shows the words around a hit in the transcript; a
 summarized meeting's page has a talk time strip (each speaker's share of words in the transcript, top five, with the
 action and decision counts) and a collapsed Transcript section. The app-wide Search also lists Transcripts hits from
-the hub with the meeting's title, date and the words around the hit; offline the group is left out. Long lists show
+the hub with the meeting's title, date and the words around the hit; offline the group is left out. Search shows 8 hits per group with a Show N more button, and a Tasks and notes hit opens that task on Tasks. Long lists show
 50 rows at a time.
 
 ### Wiki

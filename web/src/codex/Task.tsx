@@ -5,7 +5,7 @@ import { isRepeat, parseRepeat } from './data/recur';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { firstLine, readFlag, saveFlag } from '../ui/util';
-import { FILTER_LABEL, showSnack, useFocusBack, type Filter } from './view';
+import { FILTER_LABEL, showSnack, takeTask, useFocusBack, type Filter } from './view';
 import { useActions } from './useActions';
 import { when } from './time';
 import { Swipe } from './Swipe';
@@ -32,6 +32,11 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
   const act = useActions();
   const { store } = useAssistant();
   const [showList, setShowList] = useState(false);
+  useEffect(() => {
+    if (open || !takeTask(row.profile + row.id)) return;
+    onOpen();
+    requestAnimationFrame(() => document.querySelector('.as-edit')?.scrollIntoView({ block: 'nearest' }));
+  }, []);
   if (open) return <TaskEditor row={row} onClose={onClose} onAsk={onAsk} />;
   const src = sourceOf(row);
   const at = atTime(row.at);

@@ -76,6 +76,17 @@ export function setViewAt(patch: Partial<View>, selector: string) {
 }
 type MeetingRef = { profile: string; id: string };
 export const openMeeting = (m: MeetingRef) => setView({ list: 'meetings', open: rowKey(m), person: null });
+// A task to open once its row renders on Tasks; a row hidden in a collapsed section lets it lapse.
+let wantTask: { key: string; until: number } | null = null;
+export const openTask = (t: MeetingRef) => {
+  wantTask = { key: t.profile + t.id, until: Date.now() + 1500 };
+  setView({ list: 'tasks', open: null, person: null });
+};
+export function takeTask(key: string) {
+  if (!wantTask || wantTask.key !== key || Date.now() > wantTask.until) return false;
+  wantTask = null;
+  return true;
+}
 export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => view);
 
 // Snackbar with Undo, one at a time.

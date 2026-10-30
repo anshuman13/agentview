@@ -42,6 +42,11 @@ describe('search', () => {
     expect(r.tasks.total).toBe(12);
   });
 
+  it('returns every hit for an expanded group', () => {
+    const items = Array.from({ length: 12 }, (_, i) => item(`n${i}`, 'Budget note'));
+    expect(searchAll({ ...data, items }, 'budget', ['tasks']).tasks.hits).toHaveLength(12);
+  });
+
   it('cuts a snippet around the first match', () => {
     const text = `${'a '.repeat(60)}needle ${'b '.repeat(60)}`;
     const s = snippet(['needle'], text);
