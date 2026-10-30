@@ -6,10 +6,10 @@ import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
 import { ago, safeHref, save, stored } from '../../ui/util';
 import { clock } from '../time';
+import { dayLabel } from '../data/dates';
 import { setView, showSnack } from '../view';
 import '../../styles/features/wiki.css';
 
-const day = (t: number) => new Date(t).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
 
 // Slack in one place: the running summary of each chat from the quarter-hourly Haiku read, and a Sonnet summary on demand.
 export function Summary({ onMenu }: { onMenu: () => void }) {
@@ -39,7 +39,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
           {asks > 0 && <button className="as-section review as-toggle" onClick={() => setView({ list: 'tasks' })}>{asks} from Slack to review <Icon name="arrow-right" small /></button>}
           {brief?.text && (
             <section className="sm-brief">
-              <div className="wk-meta"><span>Sonnet summary</span><span>{day(brief.from_at ?? 0)} {clock(brief.from_at ?? 0)} to {clock(brief.to_at ?? 0)}</span></div>
+              <div className="wk-meta"><span>Sonnet summary</span><span>{dayLabel(brief.from_at ?? 0, true)} {clock(brief.from_at ?? 0)} to {clock(brief.to_at ?? 0)}</span></div>
               <Markdown text={brief.text} />
             </section>
           )}

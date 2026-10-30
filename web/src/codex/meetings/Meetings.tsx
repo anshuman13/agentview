@@ -1,8 +1,8 @@
 import { useCodex } from '../data';
 import { live, peopleOf } from '../data/wiki';
-import { useView } from '../view';
+import { meetingKey, useView } from '../view';
 import { MeetingPage } from './MeetingPage';
-import { MeetingsList, meetingKey } from './MeetingList';
+import { MeetingsList } from './MeetingList';
 import { Person } from './Person';
 
 export { peopleOf };

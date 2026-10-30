@@ -3,7 +3,8 @@ import { personMarkdown } from '../data/meetingMarkdown';
 import { claimsMentioning, commitmentsOf, meetingsOf, openQuestions, pinsOf, questionKey } from '../data/wiki';
 import { PinList } from './Pins';
 import { Icon } from '../../ui/Icon';
-import { setView, showSnack, useEscapeBack } from '../view';
+import { copyText, setView, useEscapeBack } from '../view';
+import { plural } from '../../ui/util';
 import { Avatars, MeetingRow } from './Meetings';
 import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
 import '../../styles/features/wiki.css';
@@ -24,7 +25,7 @@ export function Person({ name }: { name: string }) {
   const copy = () => {
     const resolved = resolvedQuestions();
     const text = personMarkdown(name, { commitments, questions: questions.filter((q) => !resolved.includes(questionKey(q))), pins, meetings: mine, claims });
-    void navigator.clipboard.writeText(text).then(() => showSnack('Copied'), () => showSnack('Copy failed'));
+    copyText(text);
   };
   return (
     <div className="wk narrow">
@@ -36,7 +37,7 @@ export function Person({ name }: { name: string }) {
       <div className="wk-scroll">
         <article className="mt-page">
           <div className="mt-person-head"><Avatars people={[name]} /><h1 className="wk-title">{name}</h1></div>
-          <div className="wk-meta mt-when"><span>{mine.length} meeting{mine.length === 1 ? '' : 's'}</span></div>
+          <div className="wk-meta mt-when"><span>{plural(mine.length, 'meeting')}</span></div>
 
           <section className="mt-sec">
             <h2>Commitments<span className="mt-of">{commitments.length}</span></h2>

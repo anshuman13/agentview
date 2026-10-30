@@ -4,6 +4,7 @@ import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, type Profile } from '../data/sync';
 import type { Job, Run } from '../data/wiki';
 import { clock } from '../time';
+import { dayLabel } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { usePullSync } from '../pullSync';
@@ -36,7 +37,7 @@ export function describe(s: string | null) {
 
 function at(t: number, now = Date.now()) {
   const days = Math.round((new Date(t).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86400_000);
-  const day = days === 0 ? 'today' : days === 1 ? 'tomorrow' : days === -1 ? 'yesterday' : new Date(t).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+  const day = days === 0 ? 'today' : days === 1 ? 'tomorrow' : days === -1 ? 'yesterday' : dayLabel(t, true);
   return `${day} ${clock(t)}`;
 }
 

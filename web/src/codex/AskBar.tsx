@@ -2,19 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { useAssistantStore, useCodex } from './data';
 import type { Meeting } from './data/wiki';
 import { ask, askText } from './data/ask';
-import { SNOOZES, isQuestion, parseWhen, stripWhen } from './data/engine';
+import { SNOOZES, errorText, isQuestion, parseWhen, stripWhen } from './data/engine';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
 import { Voice, useDictation } from '../chat/Voice';
 import { readFlag, saveFlag } from '../ui/util';
 import { FILTER_LABEL, showSnack, type Filter } from './view';
-import { PickTime, clock, when } from './time';
+import { EVENING, PickTime, clock, when } from './time';
 
 type Mode = 'task' | 'ask';
 
 const QUICK = ['In 1 hour', 'Tonight', 'Tomorrow'];
-export const snoozes = (now = new Date()) => SNOOZES.filter((s) => s.label !== 'Tonight' || now.getHours() < 19);
+export const snoozes = (now = new Date()) => SNOOZES.filter((s) => s.label !== 'Tonight' || now.getHours() < EVENING);
 
 const marked = (text: string, spans: [number, number][]) => {
   const out: React.ReactNode[] = [];
@@ -100,7 +100,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
     try {
       await save(stripWhen(text, w) || typed, at);
     } catch (err) {
-      showSnack(`Not saved: ${(err as Error).message}`);
+      showSnack(`Not saved: ${errorText(err)}`);
     } finally {
       busy.current = false;
     }

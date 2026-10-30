@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Icon } from '../ui/Icon';
+import { dayLabel } from './data/dates';
 
 // Times are picked as a part of the day, not a minute.
 export const MORNING = 9;
@@ -24,12 +25,12 @@ export function when(at: number, now = Date.now(), withTime = false) {
   const today = new Date(now);
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86400000);
   const part = d.getMinutes() === 0 && d.getHours() === MORNING ? 'morning' : d.getMinutes() === 0 && d.getHours() === EVENING ? 'evening' : null;
-  const time = part ?? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const time = part ?? clock(at);
   if (days === 0) return part ? `this ${part}` : time;
   if (days === 1) return `tomorrow ${time}`;
   if (days === -1) return `yesterday ${time}`;
   if (days > 1 && days < 7) return `${d.toLocaleDateString([], { weekday: 'short' })} ${time}`;
-  const date = d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  const date = dayLabel(at);
   return withTime ? `${date} ${time}` : date;
 }
 

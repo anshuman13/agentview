@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAssistantData, useCodex } from '../data';
+import { dayLabel } from '../data/dates';
 import { briefFor, openQuestions, priorWith, questionKey, type Meeting } from '../data/wiki';
 import { resolvedQuestions } from './OpenQuestions';
 
@@ -26,7 +27,7 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
           {prior.map(({ meeting, decisions, open: openActions }) => (
             <div key={meeting.profile + meeting.id} className="as-ctx">
               <span>{meeting.title}</span>
-              <span>{new Date(meeting.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+              <span>{dayLabel(meeting.starts_at!)}</span>
               {decisions[0] && <span className="as-quote">{decisions[0].split('\n')[0]}</span>}
               {openActions.length > 0 && <span className="as-due late">{openActions.length} open</span>}
             </div>

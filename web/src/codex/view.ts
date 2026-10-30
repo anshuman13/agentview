@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { useBack } from '../app/back';
 import type { Profile } from './data/sync';
+import type { Meeting } from './data/wiki';
 
 export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki';
 export type Filter = 'all' | Profile;
@@ -21,6 +22,8 @@ export const setView = (patch: Partial<View>) => {
   view = next;
   subs.forEach((f) => f());
 };
+export const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
+export const openMeeting = (m: Meeting) => setView({ list: 'meetings', open: meetingKey(m), person: null });
 export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => view);
 
 // Snackbar with Undo, one at a time.
@@ -36,6 +39,7 @@ export function showSnack(text: string, undo?: () => void) {
   snackTimer = setTimeout(hideSnack, SNACK_MS);
 }
 export const useSnack = () => useSyncExternalStore((f) => (snackSubs.add(f), () => snackSubs.delete(f)), () => snack);
+export const copyText = (text: string, done = 'Copied') => void navigator.clipboard.writeText(text).then(() => showSnack(done), () => showSnack('Copy failed'));
 export function hideSnack() {
   snack = null;
   snackSubs.forEach((f) => f());

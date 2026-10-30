@@ -1,12 +1,14 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { newId } from '../data/sync';
-import { actionCount, actionCounts, dayStart, groupMeetings, live, meetingState, openQuestions, peopleOf, searchMeetings, queryWords, rowMatcher, topicTimeline, trackedTopics, type Fact, type Meeting, type Question } from '../data/wiki';
+import { actionCount, actionCounts, groupMeetings, live, meetingState, openQuestions, peopleOf, searchMeetings, queryWords, rowMatcher, topicTimeline, trackedTopics, type Fact, type Meeting, type Question } from '../data/wiki';
 import { clock, when } from '../time';
+import { dayLabel, dayStart } from '../data/dates';
+import { errorText } from '../data/engine';
 import { Icon } from '../../ui/Icon';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { setView, showSnack, useView } from '../view';
+import { meetingKey, openMeeting, setView, showSnack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
@@ -18,7 +20,6 @@ import '../../styles/features/wiki.css';
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const TOPICS_KEY = 'agentview.meetingTopics';
 const SEEN_KEY = 'agentview.meetingTopicsSeen';
-export const meetingKey = (m: Meeting) => `${m.profile}:${m.id}`;
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
   if (!people.length) return null;
@@ -63,12 +64,12 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, to
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
   const mins = Math.round((m.starts_at! - now) / 60000);
   return (
-    <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => setView({ list: 'meetings', open: meetingKey(m), person: null })}>
+    <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => openMeeting(m)}>
       <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
       <span className="mt-body">
         <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
         <span className="mt-span">
-          {m.starts_at! >= new Date(now).setHours(24, 0, 0, 0) && `${new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, `}
+          {m.starts_at! >= new Date(now).setHours(24, 0, 0, 0) && `${dayLabel(m.starts_at!, true)}, `}
           {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
           {m.recorded_ms ? ` · ${Math.round(m.recorded_ms / 60000)} min recorded` : ''}
         </span>
@@ -145,7 +146,7 @@ function TopicTimeline({ topic, meetings, facts }: { topic: string; meetings: Me
       <OpenQuestions questions={questions} />
       <section className="mt-tl">
         {entries.map((e, i) => (
-          <button key={i} className="mt-log-item mt-tl-item" onClick={() => (e.meeting ? setView({ list: 'meetings', open: meetingKey(e.meeting), person: null }) : setView({ list: 'wiki', open: e.fact?.page_id ?? null, anchor: null }))}>
+          <button key={i} className="mt-log-item mt-tl-item" onClick={() => (e.meeting ? openMeeting(e.meeting) : setView({ list: 'wiki', open: e.fact?.page_id ?? null, anchor: null }))}>
             <Icon name={e.kind === 'claim' ? 'book' : e.kind === 'decision' ? 'check' : 'calendar'} small />
             <span className="mt-log-text">{e.text}</span>
             <span className="mt-log-from">{when(e.at)}</span>
@@ -231,7 +232,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       const n = await store.syncCalendar();
       showSnack(n ? `${n} meeting${n > 1 ? 's' : ''} updated from the calendar` : 'Calendar is up to date');
     } catch (err) {
-      showSnack(`Calendar sync failed: ${err instanceof Error ? err.message : String(err)}`);
+      showSnack(`Calendar sync failed: ${errorText(err)}`);
     } finally {
       setSyncing(false);
     }

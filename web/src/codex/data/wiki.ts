@@ -1,3 +1,4 @@
+import { dayStart, dayLabel } from './dates';
 import { newId, type ItemRow, type Profile } from './sync';
 
 export type Common = { id: string; profile: Profile; version: number; updated_at: number; deleted: number; field_times: string; dirty: number };
@@ -281,8 +282,6 @@ export function approveAllChanges(list: Fact[], pages: Page[], facts: Fact[]) {
   });
 }
 
-export const dayStart = (t: number) => new Date(t).setHours(0, 0, 0, 0);
-
 // Meetings that have started, newest day first and in time order within a day. The future lives in Today and Upcoming.
 export function groupMeetings(meetings: Meeting[], now = Date.now()) {
   const rows = live(meetings).filter((m) => m.starts_at != null && m.starts_at <= now);
@@ -290,7 +289,7 @@ export function groupMeetings(meetings: Meeting[], now = Date.now()) {
   const groups: { label: string; rows: Meeting[] }[] = [];
   const sorted = rows.sort((a, b) => dayStart(b.starts_at!) - dayStart(a.starts_at!) || a.starts_at! - b.starts_at!);
   for (const m of sorted) {
-    const label = dayStart(m.starts_at!) === today ? 'Today' : new Date(m.starts_at!).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+    const label = dayStart(m.starts_at!) === today ? 'Today' : dayLabel(m.starts_at!, true);
     const last = groups[groups.length - 1];
     if (last?.label === label) last.rows.push(m);
     else groups.push({ label, rows: [m] });

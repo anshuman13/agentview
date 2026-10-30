@@ -3,7 +3,7 @@ import { Icon } from '../../ui/Icon';
 import { decisionsMarkdown } from '../data/meetingMarkdown';
 import { decisionLog, decisionsWith, peopleOf, type Meeting } from '../data/wiki';
 import { when } from '../time';
-import { setView, showSnack } from '../view';
+import { copyText, openMeeting } from '../view';
 
 export function Decisions({ meetings }: { meetings: Meeting[] }) {
   const [person, setPerson] = useState('');
@@ -11,7 +11,7 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
   const people = useMemo(() => [...new Set(log.flatMap((d) => peopleOf(d.meeting)))].sort((a, b) => a.localeCompare(b)), [log]);
   const who = people.includes(person) ? person : '';
   const rows = decisionsWith(log, who);
-  const copy = () => void navigator.clipboard.writeText(decisionsMarkdown(rows)).then(() => showSnack('Copied'), () => showSnack('Copy failed'));
+  const copy = () => copyText(decisionsMarkdown(rows));
   return (
     <div className="mt-log">
       {(people.length > 0 || rows.length > 0) && (
@@ -24,7 +24,7 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
         </div>
       )}
       {rows.map((d, i) => (
-        <button key={`${d.meeting.profile}:${d.meeting.id}:${i}`} className="mt-log-item" onClick={() => setView({ list: 'meetings', open: `${d.meeting.profile}:${d.meeting.id}`, person: null })}>
+        <button key={`${d.meeting.profile}:${d.meeting.id}:${i}`} className="mt-log-item" onClick={() => openMeeting(d.meeting)}>
           <span className="mt-log-text">{d.text}</span>
           <span className="mt-log-from">{d.meeting.title || 'Meeting'} · {when(d.at)}</span>
         </button>

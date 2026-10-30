@@ -3,8 +3,7 @@ import { useCodex } from '../data';
 import { openQuestions, questionKey, type Question } from '../data/wiki';
 import { when } from '../time';
 import { save, stored } from '../../ui/util';
-import { setView } from '../view';
-import { meetingKey } from './MeetingList';
+import { openMeeting } from '../view';
 
 const RESOLVED = 'agentview.questionsResolved';
 export const resolvedQuestions = () => stored<string[]>(RESOLVED, []);
@@ -29,7 +28,7 @@ export function OpenQuestions({ questions }: { questions: Question[] }) {
           <li key={questionKey(q)} className="wk-claim">
             <span className="wk-claim-text">{q.text}</span>
             <span className="wk-claim-foot">
-              <button className="mt-person" onClick={() => setView({ list: 'meetings', open: meetingKey(q.meeting), person: null })}>{q.meeting.title} · {when(q.at)}</button>
+              <button className="mt-person" onClick={() => openMeeting(q.meeting)}>{q.meeting.title} · {when(q.at)}</button>
               <button className="btn sm" aria-label={`Resolve ${q.text}`} onClick={() => resolve(q)}>Resolve</button>
             </span>
           </li>

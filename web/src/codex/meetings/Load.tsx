@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { Icon } from '../../ui/Icon';
 import { useAssistantData } from '../data';
-import { meetingLoad } from '../data/load';
+import { hoursText, meetingLoad } from '../data/load';
+import { dayLabel } from '../data/dates';
 import type { Meeting } from '../data/wiki';
-
-const hoursText = (h: number) => `${h.toFixed(1)} h`;
 
 export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const { items } = useAssistantData();
@@ -17,7 +16,7 @@ export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
     <div className="mt-load">
       <div className="mt-load-weeks">
         {weeks.map((w) => {
-          const label = new Date(w.start).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '');
+          const label = dayLabel(w.start, true).replace(',', '');
           return (
             <div key={w.start} className="mt-load-row">
               <span className="mt-load-label">{label}</span>

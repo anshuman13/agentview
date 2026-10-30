@@ -1,17 +1,15 @@
 import { useMemo, type ReactNode } from 'react';
 import { useAssistantData } from '../data';
 import { Icon } from '../../ui/Icon';
-import { weekReview } from '../data/load';
+import { dayLabel } from '../data/dates';
+import { hoursText, weekReview } from '../data/load';
 import type { Fact, Meeting } from '../data/wiki';
 import { when } from '../time';
-import { setView, showSnack, useView } from '../view';
+import { copyText, openMeeting, setView, useView } from '../view';
 import { plural } from '../../ui/util';
 
 const MAX = 8;
-const hoursText = (h: number) => `${h.toFixed(1)} h`;
 const text = (t: string | null) => t?.trim() || 'Untitled';
-const openMeeting = (m: Meeting) => setView({ list: 'meetings', open: `${m.profile}:${m.id}`, person: null });
-const dayText = (t: number) => new Date(t).toLocaleDateString([], { day: 'numeric', month: 'short' });
 
 function Section({ title, rows }: { title: string; rows: ReactNode[] }) {
   if (!rows.length) return null;
@@ -33,7 +31,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
   const markdown = () => {
     const list = (title: string, rows: string[]) => (rows.length ? [`## ${title} (${rows.length})`, ...rows.map((x) => `- ${x}`), ''] : []);
     return [
-      `# Week of ${dayText(r.start)}`,
+      `# Week of ${dayLabel(r.start)}`,
       '',
       `${plural(r.meetings, 'meeting')}, ${hoursText(r.hours)} in meetings`,
       '',
@@ -43,12 +41,12 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
       ...list('Open meeting actions', r.open.map((i) => text(i.title))),
     ].join('\n').trim();
   };
-  const copy = () => void navigator.clipboard.writeText(markdown()).then(() => showSnack('Copied'), () => showSnack('Copy failed'));
+  const copy = () => copyText(markdown());
   const empty = !r.decisions.length && !r.claims.length && !r.done.length && !r.open.length;
   return (
     <div className="mt-load">
       <div className="mt-log-bar">
-        <span className="mt-load-share">Since {dayText(r.start)}: {r.meetings} meeting{r.meetings === 1 ? '' : 's'}, {hoursText(r.hours)}</span>
+        <span className="mt-load-share">Since {dayLabel(r.start)}: {plural(r.meetings, 'meeting')}, {hoursText(r.hours)}</span>
         <span className="spacer" />
         <button className="btn" title="Copy the week as Markdown" onClick={copy}><Icon name="copy" small /> <span>Copy</span></button>
       </div>

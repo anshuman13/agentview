@@ -7,13 +7,15 @@ import { SUMMARY_TEMPLATES, rememberTemplate, summaryInstructions, templateFor, 
 import type { ItemRow } from '../data/sync';
 import { TRANSCRIPT_TRIES as TRIES, actionCount, actionsOf, listOf, meetingState, othersOf, peopleOf, pinsOf, seriesOf, seriesRepeats, type Meeting } from '../data/wiki';
 import { clock, when } from '../time';
+import { dayLabel } from '../data/dates';
+import { errorText } from '../data/engine';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
-import { setView, showSnack, useEscapeBack } from '../view';
+import { copyText, meetingKey, openMeeting, setView, showSnack, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
 import { ActionRow, confirmAll } from './ActionRow';
-import { Avatars, meetingKey } from './MeetingList';
+import { Avatars } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
 
@@ -21,8 +23,8 @@ function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
   const snap = useAssistantData();
   if (!prior.length) return null;
   const repeats = seriesRepeats(m, prior[0]);
-  const date = (x: Meeting) => new Date(x.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' });
-  const open = (x: Meeting) => setView({ list: 'meetings', open: meetingKey(x), person: null });
+  const date = (x: Meeting) => dayLabel(x.starts_at!);
+  const open = openMeeting;
   const decisions = prior.slice(0, 3).flatMap((x) => listOf(x.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ x, text })));
   const undone = prior.flatMap((x) => actionsOf(snap.items, x).filter((r) => r.status === 'open').map((r) => ({ x, r })));
   return (
@@ -135,7 +137,7 @@ function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
       rememberTemplate(m, key);
       showSnack(`Summary rewritten as ${SUMMARY_TEMPLATES[key].label}`);
     } catch (err) {
-      showSnack(`Summary failed: ${err instanceof Error ? err.message : String(err)}`);
+      showSnack(`Summary failed: ${errorText(err)}`);
     } finally {
       setBusy(false);
     }
@@ -158,7 +160,7 @@ function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
     try {
       showSnack((await store.fetchTranscript(m)) ? 'Read the transcript' : 'No transcript found yet');
     } catch (err) {
-      showSnack(`Transcript sync failed: ${err instanceof Error ? err.message : String(err)}`);
+      showSnack(`Transcript sync failed: ${errorText(err)}`);
     } finally {
       setBusy(false);
     }
@@ -214,7 +216,7 @@ function RoomMic({ m }: { m: Meeting }) {
       await store.fetchTranscript(m);
       showSnack('Read again with the room mic as you');
     } catch (err) {
-      showSnack(`Transcript sync failed: ${err instanceof Error ? err.message : String(err)}`);
+      showSnack(`Transcript sync failed: ${errorText(err)}`);
     } finally {
       setBusy(false);
     }
@@ -231,11 +233,10 @@ function RoomMic({ m }: { m: Meeting }) {
 
 function CopyButtons({ m, actions }: { m: Meeting; actions: ItemRow[] }) {
   if (!hasContent(m, actions)) return null;
-  const copy = (text: string, done: string) => void navigator.clipboard.writeText(text).then(() => showSnack(done), () => showSnack('Copy failed'));
   return (
     <>
-      <button className="icon-btn" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={() => copy(toMarkdown(m, actions), 'Copied')}><Icon name="copy" /></button>
-      <button className="icon-btn" title="Copy a follow-up draft" aria-label="Copy a follow-up draft" onClick={() => copy(followUpText(m, actions), 'Follow-up copied')}><Icon name="mail" /></button>
+      <button className="icon-btn" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={() => copyText(toMarkdown(m, actions))}><Icon name="copy" /></button>
+      <button className="icon-btn" title="Copy a follow-up draft" aria-label="Copy a follow-up draft" onClick={() => copyText(followUpText(m, actions), 'Follow-up copied')}><Icon name="mail" /></button>
     </>
   );
 }

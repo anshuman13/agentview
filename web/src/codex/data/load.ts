@@ -79,6 +79,8 @@ export function meetingTimeLeft(meetings: Meeting[], now: number, endOfDay: numb
 }
 
 // Hours in meetings per week (Monday to Sunday, local time, oldest first, current week last) and who I shared the most hours with.
+export const hoursText = (h: number) => `${h.toFixed(1)} h`;
+
 export function meetingLoad(meetings: Meeting[], now: number, weeks = 4, items: ItemRow[] = []) {
   const starts = Array.from({ length: weeks }, (_, i) => mondayOf(now, weeks - 1 - i));
   const out: LoadWeek[] = starts.map((start) => ({ start, hours: 0, recorded: 0, unrecorded: 0 }));

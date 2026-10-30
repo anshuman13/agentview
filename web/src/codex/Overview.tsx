@@ -8,11 +8,11 @@ import { resolvedQuestions } from './meetings/OpenQuestions';
 import { atTime, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { save, stored, plural } from '../ui/util';
-import { meetingKey } from './meetings/MeetingList';
+import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
-import { setView, showSnack, useView } from './view';
+import { copyText, openMeeting, setView, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
 import { clock, when } from './time';
 import type { useSplit } from './split';
@@ -111,9 +111,9 @@ function FollowThrough() {
       <div className="ov-follow">
         {rows.slice(0, 5).map(({ r, m }) => (
           <div key={r.profile + r.id} className="ov-follow-row">
-            <button className="ov-follow-text" onClick={() => setView({ list: 'meetings', open: meetingKey(m), person: null })}>
+            <button className="ov-follow-text" onClick={() => openMeeting(m)}>
               <span className="ov-t">{r.title}</span>
-              <span className="muted small">{m.title} · {new Date(m.starts_at!).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+              <span className="muted small">{m.title} · {dayLabel(m.starts_at!)}</span>
             </button>
             <button className="btn sm" aria-label={`Make ${r.title} a plain task`} onClick={() => void store.update(r, { meeting_id: null })}>Task</button>
             <button className="btn sm" aria-label={`Dismiss ${r.title}`} onClick={() => dismiss(r)}>Dismiss</button>
@@ -134,7 +134,7 @@ function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
   if (!ended.length) return null;
   return ended.map((m) => {
     const actions = actionsOf(snap.items, m).filter((r) => r.status === 'open' || r.status === 'suggested');
-    const copy = () => void navigator.clipboard.writeText(followUpText(m, actions)).then(() => showSnack('Follow-up copied'), () => showSnack('Copy failed'));
+    const copy = () => copyText(followUpText(m, actions), 'Follow-up copied');
     return (
       <section key={m.profile + m.id}>
         <div className="as-section">Just ended · {m.title}</div>
@@ -142,7 +142,7 @@ function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
         <div className="as-next-actions">
           {!actions.length && <span className="muted small ov-follow-text">No actions yet. Open the notes to read the transcript.</span>}
           <button className="btn sm" onClick={copy}><Icon name="mail" small /> Copy follow-up</button>
-          <button className="btn sm" onClick={() => setView({ list: 'meetings', open: meetingKey(m), person: null })}><Icon name="edit" small /> Notes</button>
+          <button className="btn sm" onClick={() => openMeeting(m)}><Icon name="edit" small /> Notes</button>
         </div>
       </section>
     );
@@ -250,7 +250,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <SlackCard />
       {digest && (
         <section>
-          <div className="as-section">{digest.title} · {new Date(digest.updated_at).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+          <div className="as-section">{digest.title} · {dayLabel(digest.updated_at, true)}</div>
           <div className="ov-report">{digest.text}</div>
         </section>
       )}
