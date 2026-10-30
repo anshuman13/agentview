@@ -500,7 +500,7 @@ export class AgentSession implements AgentHost {
     if (note) this.system(note);
     const model = this.loopPrevModel;
     this.loopPrevModel = null;
-    if (model && model !== this.state.session.model) void this.setModel(model);
+    if (model && model !== this.state.session.model) this.setModel(model).catch((err) => this.system(`Could not switch back to ${model}: ${errText(err)}`));
   }
 
   async steer(text: string, id: string = randomUUID()) {

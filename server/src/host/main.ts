@@ -312,7 +312,7 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
     case 'allow_blocked':
       return chat.allowBlocked(String(msg.id));
     case 'set_model':
-      void chat.setModel(msg.model);
+      chat.setModel(msg.model).catch((err) => chat.system(`Could not set the model: ${err instanceof Error ? err.message : String(err)}`));
       return;
     case 'set_effort':
       return chat.setEffort(String(msg.effort));
