@@ -84,7 +84,7 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, topics, review, to
 
 // Today, then each later day with meetings, one at a time, like a desk calendar.
 function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number; topics: string[] }) {
-  const [at, setAt] = useState(0);
+  const [picked, setPicked] = useState(0);
   const days = useMemo(() => {
     const today = dayStart(now);
     const out = new Map<number, Meeting[]>([[today, []]]);
@@ -94,7 +94,8 @@ function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number;
     }
     return [...out];
   }, [meetings, now]);
-  const i = Math.min(at, days.length - 1);
+  const next = days.findIndex(([d]) => d >= picked);
+  const i = next < 0 ? days.length - 1 : next;
   const [day, rows] = days[i];
   const isToday = day === dayStart(now);
   return (
@@ -102,8 +103,8 @@ function Upcoming({ meetings, now, topics }: { meetings: Meeting[]; now: number;
       <div className="mt-up-head">
         <span>Upcoming</span>
         <span className="spacer" />
-        <button className="icon-btn" title="Earlier day" aria-label="Earlier day" disabled={i === 0} onClick={() => setAt(i - 1)}><Icon name="chevron-left" small /></button>
-        <button className="icon-btn" title="Next day with meetings" aria-label="Next day" disabled={i === days.length - 1} onClick={() => setAt(i + 1)}><Icon name="chevron-right" small /></button>
+        <button className="icon-btn" title="Earlier day" aria-label="Earlier day" disabled={i === 0} onClick={() => setPicked(days[i - 1][0])}><Icon name="chevron-left" small /></button>
+        <button className="icon-btn" title="Next day with meetings" aria-label="Next day" disabled={i === days.length - 1} onClick={() => setPicked(days[i + 1][0])}><Icon name="chevron-right" small /></button>
       </div>
       <div className="mt-up-card">
         <div className="mt-up-date">
