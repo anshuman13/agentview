@@ -71,11 +71,11 @@ export const focusTitle = (title: string | null) => `Focus: ${(title ?? '').repl
 const DEFAULT_MIN = 30;
 const taskMin = (title: string | null) => estimateMin(title) ?? DEFAULT_MIN;
 
-// Places tasks into the gaps in due time order, then list order, each at the first gap start (rounded up to 5 minutes)
-// with room for its whole estimate or 30 minutes; tasks that fit nowhere are left out.
-export function packDay<T extends { title: string | null; due: number | null }>(tasks: T[], gaps: Span[]): { task: T; span: Span }[] {
+// Places tasks into the gaps, tasks linked to a weekly goal first, then in due time order, then list order, each at the first
+// gap start (rounded up to 5 minutes) with room for its whole estimate or 30 minutes; tasks that fit nowhere are left out.
+export function packDay<T extends { title: string | null; due: number | null; goal?: boolean }>(tasks: T[], gaps: Span[]): { task: T; span: Span }[] {
   const free = gaps.map(([a, b]) => [a, b] as Span);
-  const order = tasks.map((task, i) => ({ task, i })).sort((x, y) => (x.task.due ?? Infinity) - (y.task.due ?? Infinity) || x.i - y.i);
+  const order = tasks.map((task, i) => ({ task, i })).sort((x, y) => Number(!!y.task.goal) - Number(!!x.task.goal) || (x.task.due ?? Infinity) - (y.task.due ?? Infinity) || x.i - y.i);
   const out: { task: T; span: Span }[] = [];
   for (const { task } of order) {
     const len = taskMin(task.title) * 60_000;

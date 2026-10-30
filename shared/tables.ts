@@ -1,5 +1,5 @@
 export const TABLES: Record<string, string[]> = {
-  items: ['title', 'text', 'source', 'source_url', 'people', 'at', 'status', 'meeting_id', 'rolls', 'rolled_from', 'rank', 'draft', 'spent'],
+  items: ['title', 'text', 'source', 'source_url', 'people', 'at', 'status', 'meeting_id', 'rolls', 'rolled_from', 'rank', 'draft', 'spent', 'goal'],
   facts: ['text', 'item_id', 'superseded_by', 'page_id', 'heading', 'sources', 'at', 'contested', 'state', 'replaces', 'added_by'],
   pages: ['title', 'section', 'summary', 'sort', 'state'],
   meetings: ['title', 'starts_at', 'ends_at', 'people', 'calendar_url', 'recorded_ms', 'notes', 'summary', 'decisions', 'transcript', 'tries', 'room', 'room_me', 'others'],

@@ -42,6 +42,7 @@ export type ItemFields = {
   rank: number | null;
   draft?: string | null;
   spent?: number | null;
+  goal?: string | null;
 };
 
 export type ItemRow = ItemFields & {

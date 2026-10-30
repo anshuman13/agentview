@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { atRisk, defaultBlock, estimateMin, fitBlock, focusTitle, packDay, suggestEstimate, workGaps } from './plan';
+import { goalProgress, goalsOf } from './goals';
+import type { ItemRow } from './sync';
 
 const at = (h: number, m = 0) => new Date(2026, 9, 30, h, m).getTime();
 
@@ -68,6 +70,18 @@ describe('packDay', () => {
       ['Write doc ~1h', [at(10, 45), at(11, 45)]],
       ['Read notes', [at(9, 5), at(9, 35)]],
     ]);
+  });
+});
+
+describe('weekly goals', () => {
+  it('counts linked tasks done of total and plans goal tasks first', () => {
+    const item = (id: string, o: Partial<ItemRow>) => ({ id, profile: 'work', deleted: 0, field_times: '{}', updated_at: 0, title: id, at: null, status: 'open', goal: null, ...o }) as ItemRow;
+    const goal = item('Ship beta', { status: 'goal', at: new Date(2026, 9, 26).getTime() });
+    const items = [goal, item('Write tests', { goal: goal.id, status: 'done' }), item('Fix login', { goal: goal.id }), item('Tidy inbox', {})];
+    expect(goalsOf(items, at(10))).toEqual([goal]);
+    expect(goalProgress(items, goal)).toEqual({ done: 1, total: 2 });
+    const tasks = [{ title: 'Tidy inbox', due: at(11) }, { title: 'Fix login', due: null, goal: true }];
+    expect(packDay(tasks, [[at(10), at(10, 30)]]).map((p) => p.task.title)).toEqual(['Fix login']);
   });
 });
 

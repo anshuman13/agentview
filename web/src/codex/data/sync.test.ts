@@ -87,7 +87,7 @@ describe('mergeIncoming', () => {
     expect(merged.title).toBe('Local title');
     expect(merged.text).toBe('Hub text');
     expect(merged.status).toBe('open');
-    expect(merged.field_times).toEqual({ title: 2000, text: 1800, status: 1800, source: 1800, source_url: 1800, people: 1800, at: 1800, meeting_id: 1800, rolls: 1800, rolled_from: 1800, rank: 1800, draft: 1800, spent: 1800 });
+    expect(merged.field_times).toEqual({ title: 2000, text: 1800, status: 1800, source: 1800, source_url: 1800, people: 1800, at: 1800, meeting_id: 1800, rolls: 1800, rolled_from: 1800, rank: 1800, draft: 1800, spent: 1800, goal: 1800 });
     expect(merged.dirty).toBe(1);
   });
 
