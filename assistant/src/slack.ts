@@ -251,7 +251,7 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
 }
 
 export function acceptAsk(db: Database, id: string, now = Date.now()) {
-  const row = db.prepare("SELECT 1 FROM items WHERE profile = ? AND id = ? AND source = 'slack'").get(PROFILE, id);
+  const row = db.prepare("SELECT 1 FROM items WHERE profile = ? AND id = ? AND source = 'slack' AND deleted = 0").get(PROFILE, id);
   if (!row) return false;
   applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'open' } }]);
   return true;
