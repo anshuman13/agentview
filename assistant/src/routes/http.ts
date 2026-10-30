@@ -21,7 +21,6 @@ export function send(res: http.ServerResponse, status: number, obj: unknown, hea
   res.end(JSON.stringify(obj));
 }
 
-
 export function fail(res: http.ServerResponse, err: unknown) {
   const message = errText(err);
   if (message === 'Request body too large') send(res, 413, { error: message }, { 'Connection': 'close' });

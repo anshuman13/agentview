@@ -19,7 +19,6 @@ const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, 
 
 const ownHost = (host = '') => allowedHostHeader(host) || host === new URL(HUB_URL).host;
 
-
 let db: ReturnType<typeof openDb> | null = null;
 
 const getDb = () => (db ??= openDb());

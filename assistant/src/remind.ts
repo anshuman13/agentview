@@ -55,8 +55,8 @@ export function snoozeTask(db: Database, profile: Profile, id: string, now = Dat
   return true;
 }
 
-// A heads-up before each meeting with what is still open from the last one, and a nudge once its transcript is read and
-// has left me actions. A meeting with nothing for me gets no nudge.
+// A heads-up before each meeting with what is still open from the last one, a nudge once its transcript is read and
+// has left me actions, and one when a task falls due. A meeting with nothing for me gets no nudge.
 export function dueReminders(db: Database, now = Date.now()): Reminder[] {
   const sent = (key: string) => getMeta(db, `remind:${key}`) != null;
   const out: Reminder[] = [];

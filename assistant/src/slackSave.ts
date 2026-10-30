@@ -54,7 +54,8 @@ export const askId = (url: string) => `slack:${createHash('sha1').update(url).di
 // My own promises keep the id of their source with this prefix, so the apps label them "You said".
 export const saidId = (id: string) => `said:${id}`;
 
-// Saves one scan: chat summaries, asks as items to review, and closes asks I have replied to. Returns how many asks are new and which are urgent.
+// Saves one scan: chat summaries, asks and my promises as items to review, new details on tasks and channel decisions, and
+// closes asks I have replied to. Returns how many asks and promises are new and which asks are urgent.
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
   // A chat with nothing new keeps its running summary; one without an id is dropped.

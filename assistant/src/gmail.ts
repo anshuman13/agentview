@@ -9,7 +9,7 @@ import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
 import { HUB_URL, pushHours, run } from './slack.js';
-import { saidId, webUrl } from './slackSave.js';
+import { PROFILE, saidId, webUrl } from './slackSave.js';
 import { loop } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN, addWorkdays, localDate, parseWhen, workSlotDue, ymd } from './time.js';
@@ -17,7 +17,6 @@ import { DAY, MIN, addWorkdays, localDate, parseWhen, workSlotDue, ymd } from '.
 const EVERY = 30 * MIN;
 const GMAIL = 'mcp__claude_ai_Gmail__';
 const READ_TOOLS = ['search_threads', 'get_thread'].map((t) => GMAIL + t);
-const PROFILE = 'work' as const;
 // Local midnight of the day of t, or of a later day, in epoch seconds: Gmail reads after:/before: dates as midnight Pacific.
 const dayStart = (t: number, days = 0) => Math.floor(new Date(t).setHours(24 * days, 0, 0, 0) / 1000);
 
@@ -61,7 +60,7 @@ const threadOk = (id: string) => /^[A-Za-z0-9_-]+$/.test(id);
 export const mailId = (thread: string) => `gmail:${thread}`;
 const threadUrl = (thread: string, url?: string) => webUrl(url) ?? `https://mail.google.com/mail/u/0/#all/${thread}`;
 
-// Saves one scan: mail that needs me as items to review, and closes the ones I have since answered.
+// Saves one scan: mail that needs me and my promises as items to review, and closes the asks I have since answered.
 export function saveMail(db: Database, r: MailScan, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
   const changes: Change[] = [];

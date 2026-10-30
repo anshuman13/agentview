@@ -82,7 +82,7 @@ export function pruneTried(db: Database, now = Date.now()) {
   db.prepare("DELETE FROM meta WHERE key LIKE 'transcript:%' AND CAST(substr(value, instr(value, ',') + 1) AS INTEGER) < ?").run(now - WITHIN);
 }
 
-export const actionId =(meeting: string, title: string) => `meet:${createHash('sha1').update(`${meeting}\n${title.trim().toLowerCase()}`).digest('hex').slice(0, 16)}`;
+export const actionId = (meeting: string, title: string) => `meet:${createHash('sha1').update(`${meeting}\n${title.trim().toLowerCase()}`).digest('hex').slice(0, 16)}`;
 
 const STATUS = { me: 'open', maybe: 'suggested', nobody: 'unassigned' } as const;
 
@@ -144,9 +144,9 @@ export function searchTranscripts(db: Database, query: string, profile?: Profile
   return rows.map((r) => ({ profile: r.profile, id: r.id, snippet: snippet(words, r.text) }));
 }
 
-// Asks Claude to read the transcript in the Gemini doc attached to each meeting's event and saves what it finds.
 const formatLines = (instructions: string) => (instructions.trim() ? [`Write the summary to this brief: ${instructions.trim().slice(0, 1000)}`] : []);
 
+// Asks Claude to read the transcript in the Gemini doc attached to each meeting's event and saves what it finds.
 async function readTranscripts(db: Database, profile: Profile, meetings: Pending[], now: number, instructions = '') {
   const found: MeetingNotes[] = [];
   const save = tool('save_meeting_notes', 'Save the summary and my actions for one meeting.', Notes.shape, async (a) => {
