@@ -154,7 +154,7 @@ export function McpPage() {
           </section>
         )}
       </div>
-      {current && <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} onClose={() => setSel(null)} />}
+      {current && <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} onClose={() => { document.querySelector<HTMLElement>(`[data-row="${CSS.escape(rowKey(current))}"]`)?.focus(); setSel(null); }} />}
     </div>
   );
 }

@@ -7,14 +7,14 @@ export function ServiceRow({ service, sel, usageOf, onPick, group, onGroup, onHi
   const other: Group = group === 'work' ? 'personal' : 'work';
   return (
     <div className={`mcp-row ${service.variants.some((v) => rowKey(v.row) === sel) ? 'selected' : ''}`}>
-      <button className="mcp-row-name" onClick={() => onPick(rowKey(service.variants[0].row))}>{shortName(service.name)}</button>
+      <button className="mcp-row-name" data-row={rowKey(service.variants[0].row)} onClick={() => onPick(rowKey(service.variants[0].row))}>{shortName(service.name)}</button>
       <div className="mcp-chips">
         {service.variants.map(({ variant, row }) => {
           const [tone, label] = stateOf(row);
           const u = usageOf(row);
           const title = `${row.name} · ${label}${row.tools?.length ? ` · ${plural(row.tools.length, 'tool')}` : ''}${u ? ` · ${usageText(u)}` : ''}`;
           return (
-            <button key={rowKey(row)} className={`mcp-chip ${tone} ${rowKey(row) === sel ? 'selected' : ''}`} title={title} onClick={() => onPick(rowKey(row))}>
+            <button key={rowKey(row)} data-row={rowKey(row)} className={`mcp-chip ${tone} ${rowKey(row) === sel ? 'selected' : ''}`} title={title} onClick={() => onPick(rowKey(row))}>
               <span className={`dot ${tone}`} />{variant || label}
             </button>
           );

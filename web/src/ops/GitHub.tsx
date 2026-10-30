@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Block, Findings } from './Findings';
@@ -22,7 +22,7 @@ const Avatar = ({ login }: { login: string }) => <span className="gh-avatar" tit
 function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
   const chat = useStore((s) => s.live.find((c) => c.pr === pr.number));
   return (
-    <div className="gh-pr" {...pressable(onOpen)} title={`#${pr.number} ${pr.title}`}>
+    <div className="gh-pr" data-pr={pr.number} {...pressable(onOpen)} title={`#${pr.number} ${pr.title}`}>
       <CheckIcon state={pr.checks} />
       <div className="gh-title"><span className="gh-title-text">{pr.title}</span><span className="gh-num">#{pr.number}</span></div>
       <div className="gh-meta">
@@ -101,10 +101,17 @@ export function GitHub() {
     return () => setViewOpen(false);
   }, []);
   const pr = prs.find((p) => p.number === open);
+  const root = useRef<HTMLDivElement>(null);
+  const back = useRef<number | null>(null);
+  useEffect(() => {
+    if (open !== null || back.current === null) return;
+    root.current?.querySelector<HTMLElement>(`[data-pr="${back.current}"]`)?.focus();
+    back.current = null;
+  }, [open]);
 
   return (
-    <div className="gh">
-      {pr ? <Detail key={pr.number} pr={pr} onBack={() => setOpen(null)} /> : <PrList onOpen={setOpen} />}
+    <div className="gh" ref={root}>
+      {pr ? <Detail key={pr.number} pr={pr} onBack={() => { back.current = pr.number; setOpen(null); }} /> : <PrList onOpen={setOpen} />}
     </div>
   );
 }
@@ -232,7 +239,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
   return (
     <div className="gh-detail">
       <div className="gh-bar">
-        <button className="icon-btn" title="Back" onClick={onBack}><Icon name="arrow-left" small /></button>
+        <button className="icon-btn" title="Back" autoFocus onClick={onBack}><Icon name="arrow-left" small /></button>
         <span className="gh-num">#{pr.number}</span>
         <span className="spacer" />
         <a className="icon-btn" href={pr.url} target="_blank" rel="noreferrer" title="Open on GitHub"><Icon name="link-external" small /></a>
