@@ -4,6 +4,7 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { pruneMeta, type Profile } from './db.js';
 import { rollOver } from './rollover.js';
 import { HUB_URL } from './slack.js';
+import { webUrl } from './slackSave.js';
 import { applyChanges } from './sync.js';
 import { DAY } from './time.js';
 
@@ -81,7 +82,8 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
       prev && section('Decided last time', list(prev.decisions)),
       prev && section('Open questions', questionsIn(prev.summary, prev.notes)),
     ].filter(Boolean).join('\n');
-    out.push({ key, title: `${m.title ?? 'Meeting'} in ${mins} min`, body, url: m.calendar_url ?? '', actions: m.calendar_url ? `view, Open, ${m.calendar_url}` : '' });
+    const url = webUrl(m.calendar_url);
+    out.push({ key, title: `${m.title ?? 'Meeting'} in ${mins} min`, body, url: url ?? '', actions: url ? `view, Open, ${url}` : '' });
   }
   const read = db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND transcript = 'done' AND ends_at > ? AND CAST(json_extract(field_times, '$.transcript') AS INTEGER) > ?").all(now - DAY, now - FRESH) as Meeting[];
   for (const m of read) {
