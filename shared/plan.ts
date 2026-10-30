@@ -11,7 +11,23 @@ export function estimateMin(title: string | null) {
   return n > 0 ? n : null;
 }
 
-export const minutesText = (n: number) => (n >= 60 ? `${Math.floor(n / 60)}h${n % 60 ? String(n % 60).padStart(2, '0') : ''}` : `${n}m`);
+const words = (title: string | null) => new Set((title ?? '').replace(EST_RE, '').toLowerCase().match(/\p{L}{3,}|\d+/gu) ?? []);
+
+// The average actual minutes of done tasks whose titles share at least half their words with title, rounded to 5 minutes;
+// null when fewer than 2 such tasks have actual minutes.
+export function suggestEstimate(title: string | null, tasks: { title: string | null; status: string | null; spent?: number | null }[]) {
+  const mine = words(title);
+  if (!mine.size) return null;
+  const mins = tasks.filter((t) => {
+    if (t.status !== 'done' || !(Number(t.spent) > 0)) return false;
+    const theirs = words(t.title);
+    return [...mine].filter((w) => theirs.has(w)).length * 2 >= Math.max(mine.size, theirs.size);
+  }).map((t) => Number(t.spent));
+  if (mins.length < 2) return null;
+  return Math.max(5, Math.round(mins.reduce((a, b) => a + b, 0) / mins.length / 5) * 5);
+}
+
+export const minutesText =(n: number) => (n >= 60 ? `${Math.floor(n / 60)}h${n % 60 ? String(n % 60).padStart(2, '0') : ''}` : `${n}m`);
 
 // Free spans between busy spans inside [from, to], gaps under 15 minutes dropped.
 export function freeGaps(busy: Span[], from: number, to: number): Span[] {

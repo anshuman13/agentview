@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atRisk, defaultBlock, estimateMin, fitBlock, focusTitle, packDay, workGaps } from './plan';
+import { atRisk, defaultBlock, estimateMin, fitBlock, focusTitle, packDay, suggestEstimate, workGaps } from './plan';
 
 const at = (h: number, m = 0) => new Date(2026, 9, 30, h, m).getTime();
 
@@ -14,6 +14,16 @@ describe('estimateMin', () => {
     expect(estimateMin('About 30m of work')).toBeNull();
     expect(estimateMin('Fix ~0m')).toBeNull();
     expect(estimateMin(null)).toBeNull();
+  });
+});
+
+describe('suggestEstimate', () => {
+  it('averages actual minutes of 2 or more similar done tasks', () => {
+    const done = (title: string, spent: number | null) => ({ title, status: 'done', spent });
+    const past = [done('Write weekly report', 40), done('Write the weekly report ~30m', 20), done('Weekly report', null), done('Fix login bug', 90), { title: 'Write weekly report', status: 'open', spent: 60 }];
+    expect(suggestEstimate('Write weekly report', past)).toBe(30);
+    expect(suggestEstimate('Fix login bug', past)).toBeNull();
+    expect(suggestEstimate('Plan trip', past)).toBeNull();
   });
 });
 

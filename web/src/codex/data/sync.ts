@@ -41,6 +41,7 @@ export type ItemFields = {
   rolled_from: number | null;
   rank: number | null;
   draft?: string | null;
+  spent?: number | null;
 };
 
 export type ItemRow = ItemFields & {
