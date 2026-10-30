@@ -85,7 +85,7 @@ before / during           Next card: [Prep] [Take notes] [Room mic is me]
 ends                      state Waiting; transcript import up to 8 tries, 15 min apart
 processed                 push "3 for you from Design review · 1 to confirm" ─▶ meeting page
                           [Confirm all]  or per row ✗ ✓, each row has a date chip
-8 tries fail              state No transcript; the meeting page offers Retry and + Add an action
+8 tries fail              state No transcript; the meeting page offers Retry and an Add an action field
 ```
 
 Taps to confirm 3 actions with dates: push 1, Confirm all 1, 3 date chips 3 = 5 (was about 13).
