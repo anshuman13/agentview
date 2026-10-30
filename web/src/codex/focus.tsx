@@ -76,12 +76,12 @@ export function FocusBar() {
   const pct = est ? Math.min(100, (ms / (est * 60_000)) * 100) : 0;
   const over = est != null && ms > est * 60_000;
   return (
-    <div className={`as-focus ${f.profile}${over ? ' over' : ''}`} role="status">
+    <div className={`as-focus ${f.profile}${over ? ' over' : ''}`} role="region" aria-label="Focus timer">
       {est != null && <div className="as-focus-fill" style={{ width: `${pct}%` }} />}
       <Icon name="watch" small />
       <span className="as-focus-title">{focusTitle(title).slice(7) || '(Untitled)'}</span>
-      <span className="as-focus-time">{elapsed(ms)}{est != null && <span className="muted"> / {minutesText(est)}</span>}</span>
-      <button className="btn sm" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button>
+      <span className="as-focus-time" role="timer">{elapsed(ms)}{est != null && <span className="muted"> / {minutesText(est)}</span>}</span>
+      <button className="btn sm" aria-label="Stop the focus timer" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button>
     </div>
   );
 }
