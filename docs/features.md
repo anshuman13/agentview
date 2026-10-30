@@ -80,6 +80,7 @@ asks under "Is this yours?", where an ask has Copy draft for the reply the scan 
   runs at a time and survives a reload
 - An open task without a "~30m" estimate in its title gets one suggested as a chip: the average time spent on at least
   two done tasks whose titles share half their words, rounded to 5 minutes. A tap adds it to the title
+- A Repeat menu on an open task sets Never, Daily, Weekdays, Weekly (its due weekday) or Monthly (its due day) by writing or removing the "Repeats:" first line of the notes; other rules show as Custom.
 - A goal menu links an open or done task to one of this week's goals of its profile
 
 ### Related while writing

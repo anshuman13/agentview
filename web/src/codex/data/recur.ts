@@ -71,6 +71,35 @@ export function parseRepeat(typed: string, now = new Date()): Repeat | null {
 
 export const isRepeat = (text: string | null) => !!text && /^\s*Repeats:/.test(text);
 
+export type Cadence = 'never' | 'daily' | 'weekdays' | 'weekly' | 'monthly' | 'custom';
+
+// Adds, replaces or removes (rule null) the "Repeats:" first line of a task's text.
+export function withRule(text: string, rule: string | null) {
+  const rest = isRepeat(text) ? text.replace(/^[^\n]*\n?/, '') : text;
+  return rule ? (rest ? `${rule}\n${rest}` : rule) : rest;
+}
+
+// The rule line for a cadence, timed and anchored on the due time (or `now` without one).
+export function cadenceLine(c: Exclude<Cadence, 'never' | 'custom'>, at: number | null, now = Date.now()) {
+  const d = new Date(at ?? now);
+  const kind = { daily: 'day', weekdays: 'weekday', weekly: 'dow', monthly: 'month' }[c] as Rule['kind'];
+  return ruleLine({ kind, dow: d.getDay(), dom: d.getDate(), h: at == null ? 9 : d.getHours(), m: at == null ? 0 : d.getMinutes() });
+}
+
+// Which choice the text's rule is, given the due time; a rule that is none of them is custom.
+export function cadenceOf(text: string | null, at: number | null): Cadence {
+  if (!text || !isRepeat(text)) return 'never';
+  const m = RULE_RE.exec(text.split('\n')[0]);
+  const r = m && read(m, new Date(at ?? Date.now()));
+  if (!r) return 'custom';
+  if (r.kind === 'day') return 'daily';
+  if (r.kind === 'weekday') return 'weekdays';
+  if (at == null) return 'custom';
+  const d = new Date(at);
+  if (r.kind === 'dow') return r.dow === d.getDay() ? 'weekly' : 'custom';
+  return r.dom === d.getDate() ? 'monthly' : 'custom';
+}
+
 // The row to create when a repeating task is done, or null. Skips a copy that already exists.
 export function nextRepeat(row: ItemRow, now: number, rows: ItemRow[] = []): { title: string; text: string; at: number } | null {
   if (!row.text || !isRepeat(row.text)) return null;

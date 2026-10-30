@@ -47,7 +47,7 @@ export function sharedTask(text: string, now = new Date()) {
   return { title: stripWhen(typed, w) || typed, at: w?.at ?? null };
 }
 
-export const append =(text: string, add: string) => `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;
+export const append = (text: string, add: string) => `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;
 
 export function addUse(uses: Use[], u: Use): Use[] {
   const keep = (x: Use) => x.server !== u.server || (!!u.tool && !!x.tool && x.tool !== u.tool);

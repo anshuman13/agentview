@@ -20,6 +20,7 @@ import { estimateMin, minutesText, suggestEstimate } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip } from './Related';
+import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
 import { checkItems, toggleCheck } from './taskChecklist';
 
 // The open task edits in place: title and notes save when they lose focus or the task closes.
@@ -47,6 +48,13 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     setText(next);
     haptic('tap');
     if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; write({ text: next }); }
+  };
+  const cadence = cadenceOf(text, at);
+  const repeat = (c: Cadence) => {
+    if (c === 'custom') return;
+    const next = withRule(text, c === 'never' ? null : cadenceLine(c, at));
+    setText(next);
+    if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; write({ text: next.trim() ? next : null }); }
   };
   // The move waits for the last save, so the phone's store copies the saved title and notes to the other profile.
   const saving = useRef<Promise<void>>(Promise.resolve());
@@ -175,6 +183,16 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             </PickDue>
             {at != null && <button className="as-chip-x" title="Clear due time" aria-label="Clear due time" onClick={() => act.due(row, null)}><Icon name="close" small /></button>}
           </span>
+        )}
+        {row.status === 'open' && (
+          <select className={`as-chip${cadence === 'never' ? ' quiet' : ''}`} value={cadence} aria-label="Repeat" onChange={(e) => repeat(e.target.value as Cadence)}>
+            <option value="never">Never repeats</option>
+            <option value="daily">Daily</option>
+            <option value="weekdays">Weekdays</option>
+            <option value="weekly">Weekly{at != null ? ` on ${new Date(at).toLocaleDateString(undefined, { weekday: 'long' })}` : ''}</option>
+            <option value="monthly">Monthly{at != null ? ` on the ${new Date(at).getDate()}` : ''}</option>
+            {cadence === 'custom' && <option value="custom" disabled>Custom</option>}
+          </select>
         )}
         <button className={`as-chip as-prof ${row.profile}`} title={`Move to ${FILTER_LABEL[other]}`} onClick={move}><ProfileDot profile={row.profile} />{FILTER_LABEL[row.profile]}</button>
         {row.meeting_id && <button className="as-chip" onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))}><Icon name="record" small /> Meeting</button>}

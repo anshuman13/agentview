@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextRepeat, parseRepeat } from './recur';
+import { cadenceLine, cadenceOf, nextRepeat, parseRepeat, withRule } from './recur';
 import type { ItemRow } from './sync';
 
 const d = (y: number, mo: number, day: number, h = 9, mi = 0) => new Date(y, mo, day, h, mi).getTime();
@@ -46,5 +46,27 @@ describe('nextRepeat', () => {
     const r = row('Repeats: every day 09:00', d(2026, 9, 30));
     const copy = row('Repeats: every day 09:00', d(2026, 9, 31), { id: 'b', status: 'open' });
     expect(nextRepeat(r, d(2026, 9, 30, 10), [r, copy])).toBeNull();
+  });
+});
+
+describe('repeat rule line', () => {
+  const at = d(2026, 10, 2, 8, 30);
+  it('adds, replaces and removes the rule line', () => {
+    expect(withRule('Notes', 'Repeats: every day 09:00')).toBe('Repeats: every day 09:00\nNotes');
+    expect(withRule('', 'Repeats: every day 09:00')).toBe('Repeats: every day 09:00');
+    expect(withRule('Repeats: every day 09:00\nNotes', 'Repeats: every weekday 09:00')).toBe('Repeats: every weekday 09:00\nNotes');
+    expect(withRule('Repeats: every day 09:00\nNotes', null)).toBe('Notes');
+    expect(withRule('Repeats: every day 09:00', null)).toBe('');
+    expect(withRule('Notes', null)).toBe('Notes');
+  });
+  it('builds the rule from the due time and reads it back', () => {
+    expect(cadenceLine('weekly', at)).toBe('Repeats: every monday 08:30');
+    expect(cadenceLine('monthly', at)).toBe('Repeats: every month on the 2nd 08:30');
+    expect(cadenceOf(cadenceLine('weekly', at), at)).toBe('weekly');
+    expect(cadenceOf(cadenceLine('monthly', at), at)).toBe('monthly');
+    expect(cadenceOf('Repeats: every weekday 09:00', at)).toBe('weekdays');
+    expect(cadenceOf('Repeats: every friday 09:00', at)).toBe('custom');
+    expect(cadenceOf('Repeats: whenever', at)).toBe('custom');
+    expect(cadenceOf('Notes', at)).toBe('never');
   });
 });
