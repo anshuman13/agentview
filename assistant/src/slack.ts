@@ -140,9 +140,9 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   await run(prompt, 'haiku', [save, contextTool(db, now)], 40, () => saved != null);
   if (!saved) throw new Error('Haiku did not save the scan');
   keepChannelIds(db, c, saved);
-  const { added, urgent, said, messages } = saveScan(db, saved, now);
+  const { chats, added, urgent, said, messages } = saveScan(db, saved, now);
   setMeta(db, 'slack:last', String(now));
-  return { chats: (saved as ScanResult).chats.length, messages, asks: added, said, urgent };
+  return { chats, messages, asks: added, said, urgent };
 }
 
 async function pushUrgent(db: Database, c: SlackConfig, urgent: Awaited<ReturnType<typeof scanSlack>>['urgent'], now = Date.now()) {

@@ -29,7 +29,7 @@ describe('saveScan', () => {
     expect(urgent.map((a) => a.url)).toEqual(['u1']);
     expect(item(db, 'u1')).toEqual({ status: 'suggested', source: 'slack', people: 'Kim · #ai' });
     expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
-    expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ added: 0, urgent: [], said: 0, messages: 0 });
+    expect(saveScan(db, { chats: [], asks: [ask('u1', true)], answered: [] }, at(27, 11))).toEqual({ chats: 0, added: 0, urgent: [], said: 0, messages: 0 });
   });
 
   test('stores only web permalinks', () => {
