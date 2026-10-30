@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { parseObject } from '../http/body.js';
 import type { DeployEnv, DeployJob, DeployRecord, DeployStatus } from '../../../shared/protocol.js';
+import { inside } from '../../../shared/util.js';
 
 const exec = promisify(execFile);
 const VELODROME = 'https://velodrome.prod.nube.tech';
@@ -70,7 +71,7 @@ async function context(cwd: string, want: string | null) {
   });
   const apps = await findApps(root);
   if (!apps.length) throw new Error(`${path.basename(root)} has no Velo app (no .deploy/app.yaml)`);
-  const score = (a: App) => (cwd === a.dir || cwd.startsWith(a.dir + '/') ? a.dir.length : 0);
+  const score = (a: App) => (inside(cwd, a.dir) ? a.dir.length : 0);
   apps.sort((a, b) => score(b) - score(a));
   const app = apps.find((a) => a.project === want) ?? apps[0];
   if (!app.envs.length) throw new Error(`${app.project} lists no environments in .deploy/app.yaml`);
