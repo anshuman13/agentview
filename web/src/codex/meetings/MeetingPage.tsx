@@ -171,7 +171,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
             </section>
           )}
 
-          {state === 'upcoming' && <Prep m={m} section />}
+          {(state === 'upcoming' || state === 'live') && <Prep m={m} section />}
 
           {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}
 
