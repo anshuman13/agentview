@@ -42,7 +42,7 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
         <div className="mt-task-title">{row.title}</div>
         <div className="as-ctx">
           {(status === 'open' || status === 'suggested') && (
-            <PickTime className={`mt-date${at != null && at < Date.now() ? ' late' : ''}`} value={at} title="Set a date" label={at != null ? when(at) : 'Date'}
+            <PickTime className={`mt-date${at != null && at < Date.now() ? ' late' : ''}`} value={at} title={at != null ? `${at < Date.now() ? 'Overdue' : 'Due'} ${when(at)}, set a date` : 'Set a date'} label={at != null ? when(at) : 'Date'}
               onPick={(t) => change({ at: t }, `Due ${when(t)}`)} />
           )}
           {row.text && <span className="mt-task-why">{row.text}</span>}

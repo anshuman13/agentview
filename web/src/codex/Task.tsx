@@ -47,7 +47,7 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
       <div className="as-body">
         <div className="as-title"><ProfileDot profile={row.profile} />{row.title || '(Untitled)'}</div>
         <div className="as-ctx">
-          {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}</span>}
+          {due && <span className={at! < now ? 'as-due late' : 'as-due'}>{due}{at! < now && late <= 0 && <span className="sr-only"> overdue</span>}</span>}
           {est != null && !isDone && <span className="as-chip" title="Estimate">{minutesText(est)}</span>}
           {isRepeat(row.text) && <span title="Repeats"><Icon name="sync" small /></span>}
           {row.rolled_from != null && !isDone && <span>from {new Date(row.rolled_from).toLocaleDateString([], { weekday: 'short' })}</span>}
