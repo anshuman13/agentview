@@ -28,12 +28,15 @@ export async function runSync(io: SyncIO) {
   let pushed = await io.dirty();
   let more = true;
   let changed = false;
+  const rejected: { table: string; id: string; reason: string }[] = [];
   while (more && io.active()) {
     const data = await io.post(since, pushed.map((d) => rowToChange(d.row, d.table)));
     if (!Array.isArray(data?.changes) || typeof data.version !== 'number') throw new Error('Unexpected hub response');
     io.paused?.(Array.isArray(data.paused) ? data.paused : []);
     io.scans?.(Array.isArray(data.scans) ? data.scans : []);
-    for (const row of pushed) await io.clean(row);
+    const refused = Array.isArray(data.rejected) ? data.rejected : [];
+    rejected.push(...refused);
+    for (const row of pushed) if (!refused.some((r) => r.table === row.table && r.id === row.row.id)) await io.clean(row);
     changed ||= pushed.length > 0;
     pushed = [];
     for (const change of data.changes) {
@@ -46,6 +49,7 @@ export async function runSync(io: SyncIO) {
     since = data.version;
     await io.saveSince(since);
   }
+  if (rejected.length) throw new Error(`${rejected.length} change${rejected.length > 1 ? 's' : ''} rejected: ${rejected[0].reason}`);
   return changed;
 }
 

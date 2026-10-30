@@ -82,6 +82,12 @@ describe('sync', () => {
     expect(pulled.changes.find((c) => c.profile === 'personal')?.fields.title).toBe('Personal Item');
   });
 
+  it('applies the valid changes of a batch and returns the invalid one as rejected', () => {
+    const out = exchange(db, 0, [ch({ id: 'ok', fields: { title: 'fine' } }), ch({ id: 'bad', fields: { nope: 'x' } })]);
+    expect(out.changes.map((c) => c.id)).toEqual(['ok']);
+    expect(out.rejected).toEqual([{ table: 'items', id: 'bad', reason: 'Invalid field nope for table items' }]);
+  });
+
   it.each([
     ['Invalid table', { table: 'invalid_table' }],
     ['Invalid table', { table: 'toString' }],

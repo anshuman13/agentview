@@ -25,50 +25,82 @@ type PullResult = {
   hasMore: boolean;
 };
 
+function invalid(change: Change): string | null {
+  try {
+    check(change);
+    return null;
+  } catch (err) {
+    if (err instanceof SyncError) return err.message;
+    throw err;
+  }
+}
+
+function check(change: Change) {
+  if (!change || typeof change !== 'object') throw new SyncError('Invalid change');
+  if (!Object.hasOwn(TABLES, change.table)) {
+    throw new SyncError(`Invalid table: ${change.table}`);
+  }
+  if (typeof change.id !== 'string' || !change.id) {
+    throw new SyncError(`Invalid id: must be non-empty string`);
+  }
+  if (!isProfile(change.profile)) {
+    throw new SyncError(`Invalid profile: ${change.profile}`);
+  }
+  if (typeof change.updated_at !== 'number' || !Number.isFinite(change.updated_at)) {
+    throw new SyncError(`Invalid updated_at: must be a finite number`);
+  }
+  if (!change.fields || typeof change.fields !== 'object' || Array.isArray(change.fields)) {
+    throw new SyncError('Invalid fields: must be an object');
+  }
+  const validColumns = TABLES[change.table];
+  for (const field of Object.keys(change.fields)) {
+    if (!validColumns.includes(field)) {
+      throw new SyncError(
+        `Invalid field ${field} for table ${change.table}`
+      );
+    }
+    const value = change.fields[field];
+    if (value !== null && typeof value !== 'string' && typeof value !== 'number') {
+      throw new SyncError(
+        `Invalid value type for ${field}: must be string, number, or null`
+      );
+    }
+  }
+  if (change.field_times) {
+    for (const [field, time] of Object.entries(change.field_times)) {
+      if (typeof time !== 'number' || !Number.isFinite(time)) {
+        throw new SyncError(`Invalid field_times.${field}: must be a finite number`);
+      }
+    }
+  }
+}
+
+export type Rejected = { table: string; id: string; reason: string };
+
 export function applyChanges(
   db: Database,
   changes: Change[]
 ): { version: number; applied: number } {
-  for (const change of changes) {
-    if (!change || typeof change !== 'object') throw new SyncError('Invalid change');
-    if (!Object.hasOwn(TABLES, change.table)) {
-      throw new SyncError(`Invalid table: ${change.table}`);
-    }
-    if (typeof change.id !== 'string' || !change.id) {
-      throw new SyncError(`Invalid id: must be non-empty string`);
-    }
-    if (!isProfile(change.profile)) {
-      throw new SyncError(`Invalid profile: ${change.profile}`);
-    }
-    if (typeof change.updated_at !== 'number' || !Number.isFinite(change.updated_at)) {
-      throw new SyncError(`Invalid updated_at: must be a finite number`);
-    }
-    if (!change.fields || typeof change.fields !== 'object' || Array.isArray(change.fields)) {
-      throw new SyncError('Invalid fields: must be an object');
-    }
-    const validColumns = TABLES[change.table];
-    for (const field of Object.keys(change.fields)) {
-      if (!validColumns.includes(field)) {
-        throw new SyncError(
-          `Invalid field ${field} for table ${change.table}`
-        );
-      }
-      const value = change.fields[field];
-      if (value !== null && typeof value !== 'string' && typeof value !== 'number') {
-        throw new SyncError(
-          `Invalid value type for ${field}: must be string, number, or null`
-        );
-      }
-    }
-    if (change.field_times) {
-      for (const [field, time] of Object.entries(change.field_times)) {
-        if (typeof time !== 'number' || !Number.isFinite(time)) {
-          throw new SyncError(`Invalid field_times.${field}: must be a finite number`);
-        }
-      }
-    }
-  }
+  for (const change of changes) check(change);
+  return write(db, changes);
+}
 
+// Applies the valid changes and returns the invalid ones, so one bad change does not block the batch.
+export function applyValid(db: Database, changes: Change[]): { version: number; applied: number; rejected: Rejected[] } {
+  const good: Change[] = [];
+  const rejected: Rejected[] = [];
+  for (const change of changes) {
+    const reason = invalid(change);
+    if (reason === null) good.push(change);
+    else rejected.push({ table: String(change?.table), id: String(change?.id), reason });
+  }
+  return { ...write(db, good), rejected };
+}
+
+function write(
+  db: Database,
+  changes: Change[]
+): { version: number; applied: number } {
   let maxVersion = 0;
   let applied = 0;
 
@@ -168,10 +200,10 @@ export function applyChanges(
 }
 
 // Pushes and pulls in one step. The since check runs before the push, which would otherwise raise the hub version past it.
-export function exchange(db: Database, since: number, changes: Change[]): PullResult {
+export function exchange(db: Database, since: number, changes: Change[]): PullResult & { rejected: Rejected[] } {
   if (since > currentVersion(db)) since = 0;
-  applyChanges(db, changes);
-  return pullChanges(db, since);
+  const { rejected } = applyValid(db, changes);
+  return { ...pullChanges(db, since), rejected };
 }
 
 export function pullChanges(

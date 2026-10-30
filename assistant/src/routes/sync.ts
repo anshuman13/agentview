@@ -8,7 +8,7 @@ import { fail, readJson, send, type Ctx, type Routes } from './http.js';
 
 function sendPulled({ res, device, getDb }: Ctx, since: number, changes: Change[] = []) {
   const pulled = exchange(getDb(), since, changes);
-  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, device, paused: pausedScans(getDb()), scans: scanHealth(getDb(), Object.keys(SCANNERS).filter((n) => !SCANNERS[n].setUp())) });
+  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, rejected: pulled.rejected, device, paused: pausedScans(getDb()), scans: scanHealth(getDb(), Object.keys(SCANNERS).filter((n) => !SCANNERS[n].setUp())) });
 }
 
 export const syncRoutes: Routes = {
