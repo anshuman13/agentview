@@ -10,7 +10,7 @@ import { configDir, isLimited } from '../../server/src/agent/claude/accounts.js'
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
 import type { Profile } from './db.js';
-import { once, serial } from './once.js';
+import { loop, once, serial } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, MIN } from './time.js';
 import { docReader, readSaved } from './transcriptDocs.js';
@@ -243,33 +243,24 @@ async function step(name: string, fn: () => unknown) {
 }
 
 export function startTranscripts(db: () => Database, every = 5 * MIN) {
-  let busy = false;
-  const run = async () => {
-    if (busy) return;
-    busy = true;
-    try {
-      for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
-        await step(`transcripts ${profile}`, () => serial(lock(profile), async () => {
-          // A few at a time, so a backlog after a weekend never runs past the turn limit on every try.
-          const due = dueMeetings(db(), profile).slice(0, 5);
-          if (!due.length) return;
-          try {
-            const { found } = await readTranscripts(db(), profile, due, Date.now());
-            markTried(db(), profile, due.filter((m) => !found.has(m.id)));
-            if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
-          } catch (err) {
-            markTried(db(), profile, due, Date.now(), isLimited(ACCOUNT_OF[profile]));
-            console.error(`transcripts ${profile}:`, errText(err));
-          }
-        }));
-      }
-      await step('expire suggested', () => expireSuggested(db()));
-      await step('prune tries', () => pruneTried(db()));
-      await step('wiki updates', () => proposeWikiUpdates(db()));
-    } finally {
-      busy = false;
+  loop('transcripts', every, async () => {
+    for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
+      await step(`transcripts ${profile}`, () => serial(lock(profile), async () => {
+        // A few at a time, so a backlog after a weekend never runs past the turn limit on every try.
+        const due = dueMeetings(db(), profile).slice(0, 5);
+        if (!due.length) return;
+        try {
+          const { found } = await readTranscripts(db(), profile, due, Date.now());
+          markTried(db(), profile, due.filter((m) => !found.has(m.id)));
+          if (found.size) console.log(`transcripts ${profile}: ${found.size} meetings summarized`);
+        } catch (err) {
+          markTried(db(), profile, due, Date.now(), isLimited(ACCOUNT_OF[profile]));
+          console.error(`transcripts ${profile}:`, errText(err));
+        }
+      }));
     }
-  };
-  void run();
-  setInterval(run, every).unref();
+    await step('expire suggested', () => expireSuggested(db()));
+    await step('prune tries', () => pruneTried(db()));
+    await step('wiki updates', () => proposeWikiUpdates(db()));
+  }, true);
 }

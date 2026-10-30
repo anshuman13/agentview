@@ -5,7 +5,7 @@ import { ask, scanPaused } from './claude.js';
 import { type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { inWeekHours, slotStart } from './time.js';
-import { once } from './once.js';
+import { loop, once } from './once.js';
 import { errText } from '../../shared/util.js';
 
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
@@ -145,15 +145,9 @@ export async function syncCalendar(db: () => Database, profiles = Object.keys(AC
 }
 
 export function startCalendar(db: () => Database, every = 5 * 60_000) {
-  const run = async () => {
-    try {
-      const due: Profile[] = [];
-      for (const p of Object.keys(ACCOUNT_OF) as Profile[]) if (importDue(lastAttempt(db(), p)) && !(await scanPaused(db(), ACCOUNT_OF[p], 'calendar'))) due.push(p);
-      if (due.length) void syncCalendar(db, due);
-    } catch (err) {
-      console.error('calendar:', err instanceof Error ? err.message : err);
-    }
-  };
-  void run();
-  setInterval(() => void run(), every).unref();
+  loop('calendar', every, async () => {
+    const due: Profile[] = [];
+    for (const p of Object.keys(ACCOUNT_OF) as Profile[]) if (importDue(lastAttempt(db(), p)) && !(await scanPaused(db(), ACCOUNT_OF[p], 'calendar'))) due.push(p);
+    if (due.length) void syncCalendar(db, due);
+  }, true);
 }
