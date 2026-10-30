@@ -108,7 +108,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
     'Make all of these reads in parallel in one turn. When a read returns a next cursor, read the next page with it until there is none, so nothing since that time is missed. Read a thread with slack_read_thread only when a new message there might ask something of me.',
     '',
     `Permalinks look like https://${c.domain}/archives/<channel id>/p<ts without the dot>.`,
-    'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old.',
+    'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old. For a DM, set waiting when the other person sent the last message and I have not replied.',
     'Add an ask only when a message clearly asks me to do, answer or decide something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     DRAFT_STEP,
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',

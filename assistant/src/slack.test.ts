@@ -34,6 +34,12 @@ describe('saveScan', () => {
     expect(db.prepare("SELECT summary FROM chats WHERE id = 'C1'").get()).toEqual({ summary: 'Talk.' });
   });
 
+  test('keeps the waiting flag on DMs only', () => {
+    const db = openDb(':memory:');
+    saveScan(db, { chats: [{ id: 'D1', name: 'Kim', kind: 'dm', summary: 'Asks for the doc.', waiting: true }, { id: 'D2', name: 'Ola', kind: 'dm', summary: 'Thanked me.' }, { id: 'C1', name: '#ai', kind: 'channel', summary: 'Talk.', waiting: true }], asks: [], answered: [] }, at(27, 10));
+    expect(db.prepare('SELECT id, waiting FROM chats ORDER BY id').all()).toEqual([{ id: 'C1', waiting: null }, { id: 'D1', waiting: 1 }, { id: 'D2', waiting: 0 }]);
+  });
+
   test('closes answered asks I have not taken, and leaves accepted ones', () => {
     const db = openDb(':memory:');
     saveScan(db, { chats: [], asks: [ask('u1'), ask('u2')], answered: [] }, at(27, 10));

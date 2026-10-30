@@ -14,6 +14,7 @@ export const Chat = z.object({
   url: z.string().optional().describe('Permalink to the newest message'),
   summary: z.string().describe('The updated running summary: what is going on, who waits on me, what was decided. At most 3 short sentences.'),
   new_messages: z.number().describe('How many new messages you read in this chat since the last pass'),
+  waiting: z.boolean().optional().describe('DMs only: true when the other person sent the last message and I have not replied'),
 });
 export const Ask = z.object({
   url: z.string().describe('Permalink of the message'),
@@ -59,7 +60,7 @@ export const saidId = (id: string) => `said:${id}`;
 export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const has = db.prepare('SELECT status FROM items WHERE profile = ? AND id = ?');
   // A chat with nothing new keeps its running summary; one without an id is dropped.
-  const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0 && c.id.trim()).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now } }));
+  const changes: Change[] = r.chats.filter((c) => c.new_messages !== 0 && c.id.trim()).map((c) => ({ table: 'chats', id: c.id, profile: PROFILE, updated_at: now, fields: { name: c.name, kind: c.kind, url: webUrl(c.url), summary: c.summary.trim(), last_at: now, waiting: c.kind === 'dm' ? (c.waiting ? 1 : 0) : null } }));
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
   let added = 0;
   for (const a of r.asks) {
