@@ -1,10 +1,9 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
-import { haptic } from '../../ui/haptic';
-import { ago, safeHref, save, stored } from '../../ui/util';
+import { ago, safeHref } from '../../ui/util';
 import { clock } from '../time';
 import { dayLabel } from '../data/dates';
 import { setView, showSnack } from '../view';
@@ -90,68 +89,4 @@ export function needsYou(text: string) {
     out.push({ title: title.trim(), url, why: rest.trim().split(/(?<=[.!?])\s/)[0] });
   }
   return out;
-}
-
-// The latest Slack brief on Overview: only what needs me, one line each, and the asks waiting in Tasks.
-const HANDLED = 'codex.slackHandled';
-
-// Needs you items from the latest summary: Task makes one a task with its link, Done hides it.
-export function SlackCard() {
-  const store = useAssistantStore();
-  const { brief, asks, busy, summarize } = useSlack();
-  const [handled, setHandled] = useState<string[]>(() => stored<string[]>(HANDLED, []));
-  const [showAll, setShowAll] = useState(false);
-  const pending = useRef(new Set<string>());
-  const all = brief?.text ? needsYou(brief.text) : [];
-  const keyOf = (x: { title: string; url: string | null }) => x.url ?? x.title;
-  const items = all.filter((x) => !handled.includes(keyOf(x)));
-  if (!brief && !asks) return null;
-  const hide = (x: { title: string; url: string | null }) => {
-    const live = new Set(all.map(keyOf));
-    setHandled((h) => {
-      const next = [...h.filter((k) => live.has(k)), keyOf(x)];
-      save(HANDLED, next);
-      return next;
-    });
-  };
-  const task = (x: { title: string; url: string | null; why: string }) => {
-    const key = keyOf(x);
-    if (pending.current.has(key)) return;
-    pending.current.add(key);
-    haptic('tap');
-    void store.capture(x.why ? `${x.title}: ${x.why}` : x.title, 'task', brief!.profile)
-      .then((r) => x.url ? store.update(r, { text: x.url }) : undefined)
-      .then(() => { hide(x); showSnack('Added to Tasks'); }, (err) => {
-        pending.current.delete(key);
-        showSnack(`Could not add: ${errorText(err)}`);
-      });
-  };
-  return (
-    <section>
-      <div className="as-section">Slack{brief?.to_at ? ` · ${ago(brief.to_at, ' ago')}` : ''}</div>
-      <div className="ov-follow">
-        {(showAll ? items : items.slice(0, 5)).map((x, i) => (
-          <div key={i} className="ov-follow-row">
-            <a className="ov-follow-text" href={x.url ?? undefined} target="_blank" rel="noreferrer">
-              <span className="ov-t">{x.title}</span>
-              {x.why && <span className="muted small">{x.why}</span>}
-            </a>
-            <button className="btn sm" aria-label={`Make ${x.title} a task`} onClick={() => task(x)}>Task</button>
-            <button className="btn sm" aria-label={`Mark ${x.title} handled`} onClick={() => hide(x)}>Done</button>
-          </div>
-        ))}
-        {!showAll && items.length > 5 && (
-          <div className="ov-follow-row">
-            <span className="ov-follow-text" />
-            <button className="btn sm" onClick={() => setShowAll(true)}>Show {items.length - 5} more</button>
-          </div>
-        )}
-        {brief && !items.length && <div className="ov-follow-row muted small">Nothing needs you.</div>}
-        <div className="ov-follow-row">
-          {asks > 0 ? <button className="ov-follow-text" onClick={() => setView({ list: 'tasks' })}><span className="ov-t">{asks} from Slack to review</span></button> : <span className="ov-follow-text" />}
-          <button className="btn sm" disabled={busy} onClick={summarize}><Icon name={busy ? 'loading' : 'sparkle'} small /> {busy ? 'Summarizing' : 'Summarize'}</button>
-        </div>
-      </div>
-    </section>
-  );
 }

@@ -4,7 +4,6 @@ import { live, type Chat, type Meeting } from './data/wiki';
 import { actionsOf, displayName, followThrough, meetingState } from './data/meetings';
 import { followUpText } from './data/meetingMarkdown';
 import { meetingTimeLeft, sinceLastVisit } from './data/load';
-import { SlackCard } from './summary/Summary';
 import { resolvedQuestions } from './meetings/OpenQuestions';
 import { atTime, errorText, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
 import { isSaid, type ItemRow } from './data/sync';
@@ -12,7 +11,7 @@ import { ago, safeHref, save, stored, plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
-import { SinceMeeting } from './SinceMeeting';
+import { NeedsYou, useNeedsYou } from './NeedsYou';
 import { channelOf, sourceOf } from './taskSource';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
@@ -196,71 +195,6 @@ function KeepInTouch() {
   );
 }
 
-const WAIT_HANDLED = 'codex.waitingHandled';
-const waitKey = (c: Chat) => `${c.profile}:${c.id}:${c.last_at ?? ''}`;
-
-// DMs where the other person wrote last and I have not replied, newest first. Task makes a task with the DM link and
-// hides the DM until its next message; Dismiss only hides it.
-function WaitingOnYou() {
-  const store = useAssistantStore();
-  const snap = useAssistantData();
-  const { filter } = useView();
-  const [handled, setHandled] = useState<string[]>(() => stored<string[]>(WAIT_HANDLED, []));
-  const list = useRef<HTMLDivElement>(null);
-  const section = useRef<HTMLElement>(null);
-  const pending = useRef(new Set<string>());
-  const rows = useMemo(
-    () => live(snap.chats).filter((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter)).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0)),
-    [snap.chats, filter],
-  );
-  const shown = rows.filter((c) => !handled.includes(waitKey(c)));
-  if (!shown.length) return null;
-  const hide = (c: Chat, i: number) => {
-    const next = [...stored<string[]>(WAIT_HANDLED, []).filter((k) => rows.some((r) => waitKey(r) === k)), waitKey(c)];
-    setHandled(next);
-    save(WAIT_HANDLED, next);
-    requestAnimationFrame(() => {
-      const people = list.current?.querySelectorAll<HTMLElement>('button.ov-follow-text');
-      people?.[Math.min(i, people.length - 1)]?.focus();
-    });
-    focusPast(section.current);
-  };
-  const task = (c: Chat, i: number) => {
-    const key = waitKey(c);
-    if (pending.current.has(key)) return;
-    pending.current.add(key);
-    haptic('tap');
-    const name = c.name ?? 'DM';
-    void store.capture(`Reply to ${name}`, 'task', c.profile)
-      .then((r) => store.update(r, { text: [c.summary, safeHref(c.url)].filter(Boolean).join('\n\n') || null, source: 'slack', people: `${name} · DM` }))
-      .then(() => {
-        hide(c, i);
-        showSnack('Added to Tasks');
-      }, (err) => {
-        pending.current.delete(key);
-        showSnack(`Could not add: ${errorText(err)}`);
-      });
-  };
-  return (
-    <section ref={section}>
-      <div className="as-section">Waiting on you · {shown.length}</div>
-      <div className="ov-follow ov-wait" role="list" aria-label="Waiting on you" ref={list}>
-        {shown.slice(0, 6).map((c, i) => (
-          <div key={c.profile + c.id} className="ov-follow-row wrap" role="listitem">
-            <button className="ov-follow-text" onClick={() => setView({ person: c.name })}>
-              <span className="ov-t">{c.name}</span>
-              <span className="muted small">{c.last_at ? `${ago(c.last_at, ' ago')} · ` : ''}{c.summary}</span>
-            </button>
-            {safeHref(c.url) && <a className="btn sm" href={safeHref(c.url)} target="_blank" rel="noreferrer" aria-label={`Open the DM with ${c.name} in Slack`}>Open in Slack</a>}
-            <button className="btn sm" aria-label={`Make a task to reply to ${c.name}`} onClick={() => task(c, i)}>Task</button>
-            <button className="btn sm" aria-label={`Dismiss ${c.name}`} onClick={() => hide(c, i)}>Dismiss</button>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 const JUST_ENDED_MS = 2 * 3600_000;
 
 // Meetings that ended in the last two hours, with their actions, a follow-up draft to copy and the notes.
@@ -331,41 +265,6 @@ function SinceLastVisit() {
 
 type Split = ReturnType<typeof useSplit>;
 
-// Tasks due by Friday that will not fit in the free work time before their due time, with the shortfall.
-function AtRisk({ s, now, snooze }: { s: Split; now: number; snooze: (r: ItemRow) => void }) {
-  const act = useActions();
-  const snap = useAssistantData();
-  const { filter } = useView();
-  const minute = Math.floor(now / 60000);
-  const rows = useMemo(() => {
-    const timed = live(snap.meetings).filter((m) => (filter === 'all' || m.profile === filter) && m.starts_at != null && m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < 20 * 3600_000);
-    const blocked = new Set(timed.filter((m) => isBlock(m.id) && m.ends_at! > minute * 60000).map((m) => `${m.profile}:${m.id}`));
-    const tasks = [...s.overdue, ...s.today, ...s.later].flatMap((r) => {
-      const due = atTime(r.at);
-      return due != null && !blocked.has(`${r.profile}:${blockId(r.id)}`) ? [{ title: r.title, due, r }] : [];
-    });
-    return atRisk(tasks, timed.map((m) => [m.starts_at!, m.ends_at!] as Span), minute * 60000);
-  }, [snap.meetings, filter, s, minute]);
-  if (!rows.length) return null;
-  return (
-    <section>
-      <div className="as-section late">At risk · {rows.length}</div>
-      <div className="ov-follow">
-        {rows.map(({ task, short }) => (
-          <div key={task.r.profile + task.r.id} className="ov-follow-row">
-            <button className="ov-follow-text" onClick={() => openTask(task.r)}>
-              <span className="ov-t">{task.r.title}</span>
-              <span className="muted small">due {when(task.due, now)} · {minutesText(short)} short</span>
-            </button>
-            <button className="ov-check" aria-label={`Mark ${task.r.title} done`} onClick={() => { haptic('success'); act.done(task.r); }}><Icon name="circle-large-outline" small /></button>
-            <button className="ov-check" aria-label={`Snooze ${task.r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(task.r)}><Icon name="clock" small /></button>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function Stale({ rows, now, snooze }: { rows: ItemRow[]; now: number; snooze: (r: ItemRow) => void }) {
   const act = useActions();
   if (!rows.length) return null;
@@ -408,6 +307,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   }, [snap.jobs, snap.runs, filter, startOfDay]);
   const digest = useMemo(() => latestDigest(snap.items, filter), [snap.items, filter]);
   const tasks = () => setView({ list: 'tasks', open: null });
+  const needs = useNeedsYou(s, now);
   const stale = useMemo(() => staleTasks(snap.items.filter((r) => filter === 'all' || r.profile === filter), minute * 60000), [snap.items, filter, minute]);
   const stats = [
     { n: dueToday.length, label: 'to do today', sel: '.as-section:not(.late):not(.review):not(.later):not(.done)', cls: '' },
@@ -445,8 +345,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   );
   const sync = useSyncStatus();
   const loading = sync.syncing && !sync.last && !snap.items.length;
-  const waiting = live(snap.chats).some((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter) && !stored<string[]>(WAIT_HANDLED, []).includes(waitKey(c)));
-  const empty = !loading && !waiting && !s.overdue.length && !dueToday.length && !s.review.length && !s.meetingsToday.length && !s.meetingsTomorrow.length && !tomorrow.length;
+  const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !s.meetingsToday.length && !s.meetingsTomorrow.length && !tomorrow.length;
   if (loading) return <Skeleton />;
   return (
     <>
@@ -458,23 +357,14 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <GoalLines now={now} />
       <MorningBrief now={now} />
       <JustEnded meetings={s.meetingsToday} now={now} />
-      <SinceMeeting now={now} />
+      <NeedsYou n={needs} now={now} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
       <div className="as-next-actions">
         <button className="btn sm" onClick={() => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied')}><Icon name="copy" small /> Copy standup</button>
       </div>
-      <AtRisk s={s} now={now} snooze={snooze} />
       <Stale rows={stale} now={now} snooze={snooze} />
       <SinceLastVisit />
-      <SlackCard />
-      <WaitingOnYou />
-      {s.review.length > 0 && (
-        <section>
-          <Review rows={s.review.slice(0, 3)} />
-          {s.review.length > 3 && <button className="btn sm" onClick={tasks}>+{s.review.length - 3} more in Tasks</button>}
-        </section>
-      )}
       {digest && (
         <section>
           <div className="as-section">{digest.title} · {dayLabel(digest.updated_at, true)}</div>
@@ -491,12 +381,6 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         <section>
           <div className="as-section">Meetings today · {upcoming.length}{left > 0 && <span title="Meeting time left today, including the next one"> · {leftText} left</span>}</div>
           <div className="mt-rows ov-card">{upcoming.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
-        </section>
-      )}
-      {s.overdue.length > 0 && (
-        <section>
-          <div className="as-section late">Overdue · {s.overdue.length}</div>
-          {shown(s.overdue)}
         </section>
       )}
       {dueToday.length > 0 && (

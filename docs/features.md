@@ -34,9 +34,6 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
   the last workday. It folds and hides until tomorrow
 - Meetings that ended in the last two hours with their actions, a follow-up draft to copy and the notes
-- Since <meeting>: for the latest meeting that ended in the last two hours, the Slack and Gmail asks and the Slack DMs
-  that came in while it ran or up to 30 minutes after (the scans run every 15 and 30 minutes). Dismiss hides it for
-  that meeting
 - A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
   length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
   meetings. Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
@@ -45,15 +42,16 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
 - Copy standup copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
   days)
-- At risk: tasks due by Friday that will not fit in the free work time before they are due, with the shortfall; a row opens the task and has a check and a clock like the rows below
+- Needs you: one ranked list, shown only when it has rows, that holds overdue tasks, at-risk tasks (due by Friday and
+  not fitting in the free work time, with the shortfall), asks and promises to confirm, Slack DMs waiting on me and the
+  latest Slack summary's "Needs you" bullets, in that order and each item once. The first 5 show, with Show N more for
+  the rest. Tasks have a check and a clock (snooze to tomorrow 09:00, next Monday for work tasks on Friday and Saturday),
+  asks the same Mine/Not mine row as in Tasks, DMs Open in Slack, Task and Dismiss, and Slack bullets Task and Done
 - Stale: the 5 oldest tasks untouched for 14 days, with a check and a clock; the stale chip scrolls to it
 - The meetings still ahead today with the meeting time left, and a field on the next meeting's card that adds a
   timestamped line to its notes
-- Overdue and due tasks with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
-- What the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it; the first 5 show, with Show N more for the rest), job reports
-  and a follow-through card for meeting actions still open after a week (Task, Done, Dismiss)
-- Waiting on you: up to 6 Slack DMs, newest first, where the other person wrote last and I have not replied, as the
-  Slack scan marks them. Each has Open in Slack, Task, which adds a task with the DM link and hides the DM until its next message, and Dismiss, which only hides it until then
+- Tasks due today and tomorrow with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
+- Job reports and a follow-through card for meeting actions still open after a week (Task, Done, Dismiss)
 - A card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person

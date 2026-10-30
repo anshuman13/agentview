@@ -1,7 +1,7 @@
 process.env.TZ = 'Europe/Oslo';
 
 import { describe, expect, it } from 'vitest';
-import { meetingLoad, meetingTimeLeft, sinceLastVisit, sinceMeeting, weekReview } from './load';
+import { meetingLoad, meetingTimeLeft, sinceLastVisit, weekReview } from './load';
 import type { ItemRow } from './sync';
 import type { Chat, Fact, Meeting } from './wiki';
 
@@ -94,27 +94,5 @@ describe('meetingTimeLeft', () => {
     const mt = (id: string, a: number, b: number) => ({ id, starts_at: a, ends_at: b }) as Meeting;
     const day = [mt('a', at(9), at(10)), mt('b', at(9, 30), at(11)), mt('c', at(13), at(13, 30)), mt('all', at(0), at(24))];
     expect(meetingTimeLeft(day, at(9, 15), at(24))).toBe(135);
-  });
-});
-
-describe('sinceMeeting', () => {
-  it('picks asks and DMs from the latest ended meeting and skips all-day events, blocks and dismissed ones', () => {
-    const at = (h: number, m = 0) => new Date(2026, 9, 29, h, m).getTime();
-    const now = at(11, 30);
-    const ask = (id: string, t: number, extra: Partial<ItemRow> = {}) => ({ id, profile: 'work', deleted: 0, updated_at: t, field_times: {}, status: 'suggested', source: 'slack', ...extra }) as unknown as ItemRow;
-    const dm = (id: string, t: number, kind = 'dm') => ({ id, profile: 'work', deleted: 0, kind, last_at: t }) as Chat;
-    const meetings = [
-      meeting('sync', new Date(2026, 9, 29, 10), 1),
-      meeting('day', new Date(2026, 9, 29), 24),
-      meeting('block:focus', new Date(2026, 9, 29, 11), 0.25),
-    ];
-    const items = [ask('a', at(10, 20)), ask('mail', at(11, 10), { source: 'gmail' }), ask('before', at(9, 50)), ask('said:x', at(10, 30)), ask('open', at(10, 30), { status: 'open' })];
-    const chats = [dm('d', at(10, 40)), dm('ch', at(10, 40), 'channel')];
-    const r = sinceMeeting(meetings, items, chats, [], now)!;
-    expect(r.m.id).toBe('sync');
-    expect(r.asks.map((x) => x.id)).toEqual(['a', 'mail']);
-    expect(r.dms.map((x) => x.id)).toEqual(['d']);
-    expect(sinceMeeting(meetings, items, chats, [r.key], now)).toBeNull();
-    expect(sinceMeeting(meetings, items, chats, [], at(13, 30))).toBeNull();
   });
 });
