@@ -1,7 +1,7 @@
 process.env.TZ = 'Europe/Oslo';
 
-import { expect, it } from 'vitest';
-import { meetingLoad, sinceLastVisit, weekReview } from './load';
+import { describe, expect, it } from 'vitest';
+import { meetingLoad, meetingTimeLeft, sinceLastVisit, weekReview } from './load';
 import type { ItemRow } from './sync';
 import type { Fact, Meeting } from './wiki';
 
@@ -85,4 +85,13 @@ it('counts meetings, decisions, claims and open questions after the last visit',
   const facts = [fact('new', at(28)), fact('old', at(26)), fact('sup', at(28), { superseded_by: 'new' }), fact('gone', at(28), { deleted: 1 })];
   expect(sinceLastVisit({ meetings, facts }, since, now)).toEqual({ meetings: 1, decisions: 2, claims: 1, questions: 1 });
   expect(sinceLastVisit({ meetings, facts }, since, now, ['work:who owns launch?']).questions).toBe(0);
+});
+
+describe('meetingTimeLeft', () => {
+  it('counts overlaps once, clips to now and skips all-day events', () => {
+    const at = (h: number, m = 0) => new Date(2026, 9, 30, h, m).getTime();
+    const mt = (id: string, a: number, b: number) => ({ id, starts_at: a, ends_at: b }) as Meeting;
+    const day = [mt('a', at(9), at(10)), mt('b', at(9, 30), at(11)), mt('c', at(13), at(13, 30)), mt('all', at(0), at(24))];
+    expect(meetingTimeLeft(day, at(9, 15), at(24))).toBe(135);
+  });
 });

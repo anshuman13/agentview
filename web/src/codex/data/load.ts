@@ -61,6 +61,23 @@ function timeBySeries(meetings: Meeting[], items: ItemRow[], now: number, weeks:
     .map(([key, r]) => ({ key, title: r.title, minutes: Math.round(r.minutes), change: r.before > 0 ? Math.round(r.minutes - r.before) : null, done: r.done, total: r.total, oldestOpen: r.oldestOpen }));
 }
 
+// Minutes of meetings still ahead between now and the end of the day, overlaps counted once, all-day events left out.
+export function meetingTimeLeft(meetings: Meeting[], now: number, endOfDay: number) {
+  const spans = meetings
+    .filter((m) => m.starts_at != null && m.ends_at != null && !isAllDay(m))
+    .map((m) => [Math.max(m.starts_at!, now), Math.min(m.ends_at!, endOfDay)])
+    .filter(([a, b]) => b > a)
+    .sort((x, y) => x[0] - y[0]);
+  let total = 0;
+  let until = now;
+  for (const [a, b] of spans) {
+    if (b <= until) continue;
+    total += b - Math.max(a, until);
+    until = b;
+  }
+  return Math.round(total / 60_000);
+}
+
 // Hours in meetings per week (Monday to Sunday, local time, oldest first, current week last) and who I shared the most hours with.
 export function meetingLoad(meetings: Meeting[], now: number, weeks = 4, items: ItemRow[] = []) {
   const starts = Array.from({ length: weeks }, (_, i) => mondayOf(now, weeks - 1 - i));

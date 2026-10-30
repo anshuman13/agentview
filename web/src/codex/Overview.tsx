@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { actionsOf, followThrough, type Meeting } from './data/wiki';
 import { followUpText } from './data/meetingMarkdown';
-import { sinceLastVisit } from './data/load';
+import { meetingTimeLeft, sinceLastVisit } from './data/load';
 import { SlackCard } from './summary/Summary';
 import { resolvedQuestions } from './meetings/OpenQuestions';
 import { atTime, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
@@ -224,6 +224,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     void store.update(r, { at, rolls: null, rolled_from: null }).then(() => showSnack(`Snoozed to ${when(at)}`));
   };
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
+  const left = meetingTimeLeft(s.meetingsToday, now, s.endOfDay);
+  const leftText = left >= 60 ? `${Math.floor(left / 60)}h${left % 60 ? String(left % 60).padStart(2, '0') : ''}` : `${left} min`;
   const shown = (rs: ItemRow[]) => (
     <div className="ov-follow">
       {rs.slice(0, 5).map((r) => (
@@ -260,7 +262,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       )}
       {upcoming.length > 0 && (
         <section>
-          <div className="as-section">Meetings today · {upcoming.length}</div>
+          <div className="as-section">Meetings today · {upcoming.length}{left > 0 && <span title="Meeting time left today, including the next one"> · {leftText} left</span>}</div>
           <div className="mt-rows ov-card">{upcoming.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
         </section>
       )}
