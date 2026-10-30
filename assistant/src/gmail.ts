@@ -73,16 +73,12 @@ export function mailPushHours(c: GmailConfig, now = Date.now()) {
   return inWeekHours(now, from, to);
 }
 
-const day = (t: number) => {
-  const d = new Date(t);
-  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-};
-
 // One Haiku pass over the inbox since the last pass. Read only: the prompt and the allowed tools never send or change mail.
 export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
   const row = db.prepare("SELECT value FROM meta WHERE key = 'gmail:last'").get() as { value: string } | null;
   const since = Math.max(Number(row?.value ?? 0), now - 3 * DAY);
   const open = db.prepare("SELECT id, title, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'gmail' AND status = 'suggested' AND updated_at > ?").all(PROFILE, now - 7 * DAY) as { id: string; title: string; people: string }[];
+  const unix = Math.floor(since / 1000);
   let saved: MailScan | null = null;
   const save = tool('save_mail', 'Save what you found. Call once at the end.', { asks: z.array(Ask), answered: z.array(z.string()).describe('Thread ids from the open asks that I have replied to since') }, async (a) => {
     saved = a;
@@ -90,8 +86,8 @@ export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) 
   });
   const prompt = [
     `I am ${c.me}. Read what is new in my Gmail inbox since ${new Date(since).toISOString()}. Only read: never send, reply, draft, label, archive or trash anything.`,
-    `1. search_threads with query "in:inbox after:${day(since)} -category:promotions -category:social -category:updates -category:forums", view THREAD_VIEW_SUMMARY, pageSize 30.`,
-    ...(open.length ? [`2. search_threads with query "from:me after:${day(since)}", view THREAD_VIEW_IDS_ONLY, pageSize 50, to see which threads I replied to.`] : []),
+    `1. search_threads with query "in:inbox after:${unix} -category:promotions -category:social -category:updates -category:forums", view THREAD_VIEW_SUMMARY, pageSize 30.`,
+    ...(open.length ? [`2. search_threads with query "from:me after:${unix}", view THREAD_VIEW_IDS_ONLY, pageSize 50, to see which threads I replied to.`] : []),
     'Make these searches in parallel in one turn. Read a thread with get_thread, messageFormat PLAIN_TEXT, only when the summary is not enough to tell whether it asks something of me.',
     '',
     'Add an ask only when a person wrote to me and clearly asks me to do, answer, review or decide something, and the newest message in the thread is not from me.',
