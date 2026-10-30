@@ -52,6 +52,9 @@ export function workGaps(busy: Span[], now: number, startHour = 8, endHour = 17)
 }
 
 const SLOT = 5 * 60_000;
+const DEFAULT_MIN = 30;
+const taskMin = (title: string | null) => estimateMin(title) ?? DEFAULT_MIN;
+const toSlot = (t: number) => Math.ceil(t / SLOT) * SLOT;
 
 // A block in the gap from start, minutes long, cut at the gap end; null when start is outside the gap or under 5 minutes are left.
 export function fitBlock([from, to]: Span, start: number, minutes: number): Span | null {
@@ -62,14 +65,10 @@ export function fitBlock([from, to]: Span, start: number, minutes: number): Span
 
 // The default block for a task: the gap start rounded up to 5 minutes, its estimate or 30 minutes, capped at the gap.
 export function defaultBlock(gap: Span, title: string | null): Span | null {
-  const start = Math.ceil(gap[0] / SLOT) * SLOT;
-  return fitBlock(gap, start, estimateMin(title) ?? 30) ?? fitBlock(gap, gap[0], estimateMin(title) ?? 30);
+  return fitBlock(gap, toSlot(gap[0]), taskMin(title)) ?? fitBlock(gap, gap[0], taskMin(title));
 }
 
 export const focusTitle = (title: string | null) => `Focus: ${(title ?? '').replace(EST_RE, '').replace(/\s+/g, ' ').trim()}`;
-
-const DEFAULT_MIN = 30;
-const taskMin = (title: string | null) => estimateMin(title) ?? DEFAULT_MIN;
 
 // Places tasks into the gaps, tasks linked to a weekly goal first, then in due time order, then list order, each at the first
 // gap start (rounded up to 5 minutes) with room for its whole estimate or 30 minutes; tasks that fit nowhere are left out.
@@ -80,7 +79,7 @@ export function packDay<T extends { title: string | null; due: number | null; go
   for (const { task } of order) {
     const len = taskMin(task.title) * 60_000;
     for (const g of free) {
-      const start = Math.ceil(g[0] / SLOT) * SLOT;
+      const start = toSlot(g[0]);
       if (start + len > g[1]) continue;
       out.push({ task, span: [start, start + len] });
       g[0] = start + len;
