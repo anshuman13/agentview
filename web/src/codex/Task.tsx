@@ -77,7 +77,7 @@ export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: {
     </div>
   );
   if (isNote || isDone) return <Swipe onDelete={() => act.remove(row)}>{body}</Swipe>;
-  const later = nextNine(new Date(Math.max(at ?? 0, now)));
+  const later = nextNine(new Date(Math.max(at ?? 0, now)), row.profile);
   return <Swipe onRight={() => act.done(row)} onLeft={() => act.snooze(row, later)} leftLabel={when(later, now)} onDelete={() => act.remove(row)}>{body}</Swipe>;
 }
 

@@ -63,15 +63,16 @@ export function atTime(at: ItemRow['at']) {
 
 const at = (base: Date, days: number, hour: number, minute = 0) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + days, hour, minute).getTime();
 
-export function nextNine(now = new Date()) {
-  return at(now, 1, 9);
+export function nextNine(now = new Date(), profile?: Profile) {
+  const skip = profile === 'work' ? [0, 0, 0, 0, 0, 2, 1][now.getDay()] : 0;
+  return at(now, 1 + skip, 9);
 }
 
-export const SNOOZES: { label: string; at: (now: Date) => number }[] = [
+export const SNOOZES: { label: string; at: (now: Date, profile?: Profile) => number }[] = [
   { label: 'In 1 hour', at: (now) => Math.ceil((now.getTime() + 3600_000) / 60_000) * 60_000 },
   { label: 'In 3 hours', at: (now) => now.getTime() + 3 * 3600_000 },
   { label: 'Tonight', at: (now) => (now.getHours() < 19 ? at(now, 0, 19) : at(now, 1, 19)) },
-  { label: 'Tomorrow', at: (now) => nextNine(now) },
+  { label: 'Tomorrow', at: (now, profile) => nextNine(now, profile) },
   { label: 'Next week', at: (now) => at(now, ((8 - now.getDay()) % 7) || 7, 9) },
 ];
 

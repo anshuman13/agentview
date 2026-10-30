@@ -49,7 +49,7 @@ warning color when the last run failed, or "not set up"; Slack and Gmail have a 
 - Stale: the 5 oldest tasks untouched for 14 days, with a check and a clock; the stale chip scrolls to it
 - The meetings still ahead today with the meeting time left, and a field on the next meeting's card that adds a
   timestamped line to its notes
-- Overdue and due tasks with a check to mark them done and a clock to snooze them to tomorrow 09:00
+- Overdue and due tasks with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
 - What the latest Slack summary says needs you (Task turns one into a task with its link, Done hides it; the first 5 show, with Show N more for the rest), job reports
   and a follow-through card for meeting actions still open after a week (Task, Done, Dismiss)
 - Waiting on you: up to 6 Slack DMs, newest first, where the other person wrote last and I have not replied, as the

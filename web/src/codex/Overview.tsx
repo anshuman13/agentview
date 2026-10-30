@@ -417,7 +417,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   ].filter((x) => x.n > 0);
   const snooze = (r: ItemRow) => {
     haptic('tap');
-    const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)));
+    const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
     void store.update(r, { at, rolls: null, rolled_from: null }).then(() => showSnack(`Snoozed to ${when(at)}`));
   };
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);

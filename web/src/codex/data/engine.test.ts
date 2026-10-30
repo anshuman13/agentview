@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { edited, isQuestion, latestDigest, latestRunByJob, moved, newCapture, parseWhen, split, splitTitle, staleTasks, stripWhen } from './engine';
+import { edited, isQuestion, latestDigest, latestRunByJob, moved, newCapture, nextNine, parseWhen, split, splitTitle, staleTasks, stripWhen } from './engine';
 import { rowToChange, type ItemRow } from './sync';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
@@ -144,5 +144,15 @@ describe('latestRunByJob', () => {
   it('keeps the newest finished run with output per job since the cutoff', () => {
     const best = latestRunByJob([run('a', 'j1', 10), run('b', 'j1', 30), run('c', 'j1', 40, { status: 'failed' }), run('d', 'j2', 5), run('e', 'j3', 50, { output: null }), run('f', 'j4', 60, { deleted: 1 })], 10);
     expect([...best.entries()].map(([k, r]) => [k, (r as { id: string }).id])).toEqual([['workj1', 'b']]);
+  });
+});
+
+describe('nextNine', () => {
+  it('skips the weekend for work only', () => {
+    const day = (t: number) => new Date(t).toDateString() + ' ' + new Date(t).getHours();
+    const fri = new Date(2026, 9, 30, 15);
+    expect(day(nextNine(fri, 'work'))).toBe('Mon Nov 02 2026 9');
+    expect(day(nextNine(fri, 'personal'))).toBe('Sat Oct 31 2026 9');
+    expect(day(nextNine(new Date(2026, 10, 2, 15), 'work'))).toBe('Tue Nov 03 2026 9');
   });
 });

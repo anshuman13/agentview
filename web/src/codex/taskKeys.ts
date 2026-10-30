@@ -14,7 +14,7 @@ export function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen
   } else if (e.key === 'Enter' || e.key === ' ') onOpen();
   else if (e.key === 'x' && open) act.done(row);
   else if (e.key === 'x' && row.status === 'done') act.reopen(row);
-  else if (e.key === 's' && open) act.snooze(row, nextNine(new Date(Math.max(atTime(row.at) ?? 0, Date.now()))));
+  else if (e.key === 's' && open) act.snooze(row, nextNine(new Date(Math.max(atTime(row.at) ?? 0, Date.now())), row.profile));
   else if (e.key === 'Delete' || e.key === 'Backspace') act.remove(row);
   else return;
   e.preventDefault();

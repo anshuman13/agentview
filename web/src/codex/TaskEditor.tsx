@@ -213,7 +213,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       {snoozing ? (
         <div className="as-edit-actions" ref={actions}>
           {at != null && at >= new Date().setHours(24, 0, 0, 0) && <button className="btn" onClick={then(() => act.due(row, null))}>Today</button>}
-          {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date())))}>{snoozeText(s)}</button>)}
+          {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</button>)}
           <PickTime className="btn" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
           <button className="icon-btn" title="Back" aria-label="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
         </div>

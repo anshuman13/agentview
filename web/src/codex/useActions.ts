@@ -29,7 +29,7 @@ export function useActions() {
       });
     },
     reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
-    snooze: (r: ItemRow, at = nextNine()) => change(r, { at, ...UNROLL }, `Snoozed to ${when(at)}`),
+    snooze: (r: ItemRow, at = nextNine(undefined, r.profile)) => change(r, { at, ...UNROLL }, `Snoozed to ${when(at)}`),
     remove: (r: ItemRow) => {
       stopFocusFor(r);
       change(r, { deleted: 1 }, 'Deleted');
