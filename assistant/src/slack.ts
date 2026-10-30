@@ -155,7 +155,7 @@ async function pushUrgent(db: Database, c: SlackConfig, urgent: Awaited<ReturnTy
   await pushQueued(db, 'slack:unpushed', urgent, pushHours(c, now), (a) => {
     const url = webUrl(a.url);
     const accept = `http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-    return pushOrHold(db, `${a.from}: ${a.title}`, a.chat, a.quote, url ?? '', url ? `view, Open, ${url}; ${accept}` : accept, now);
+    return pushOrHold(db, `${a.from}: ${a.title}`, a.chat, a.quote, url ?? '', url ? `view, Open, ${url}; ${accept}` : accept, now, a.id);
   });
 }
 

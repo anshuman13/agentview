@@ -95,7 +95,7 @@ it('holds urgent pushes during a meeting and combines them once it ends', async 
   await pushOrHold(db, 'Kim: Review the plan', '#team', 'quote', '', '', now);
   await pushOrHold(db, 'Bo: Sign the form', 'Gmail', 'quote', '', '', now + 60_000);
   expect(heldDue(db, now + 120_000)).toBeNull();
-  expect(heldDue(db, now + 1800_000)).toEqual({ count: 2, title: '2 urgent while you were in Sync', body: '- Kim: Review the plan (#team)\n- Bo: Sign the form (Gmail)' });
+  expect(heldDue(db, now + 1800_000)).toEqual({ raw: 2, count: 2, title: '2 urgent while you were in Sync', body: '- Kim: Review the plan (#team)\n- Bo: Sign the form (Gmail)' });
 });
 
 it('sends tasks that fell due overnight with the first morning check', () => {

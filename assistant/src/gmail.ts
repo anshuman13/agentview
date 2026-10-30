@@ -177,7 +177,7 @@ async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
 async function pushUrgent(db: Database, c: GmailConfig, urgent: Awaited<ReturnType<typeof scanGmail>>['urgent'], now = Date.now()) {
   await pushQueued(db, 'gmail:unpushed', urgent, pushHours(c, now), (a) => {
     const accept = `http, Make task, ${HUB_URL}/gmail/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-    return pushOrHold(db, `${a.from}: ${a.title}`, 'Gmail', a.quote, a.link, `view, Open, ${a.link}; ${accept}`, now);
+    return pushOrHold(db, `${a.from}: ${a.title}`, 'Gmail', a.quote, a.link, `view, Open, ${a.link}; ${accept}`, now, a.id);
   });
 }
 

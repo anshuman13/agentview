@@ -212,7 +212,8 @@ until you set `AGENTVIEW_NTFY`, or `ntfy` in `~/.agentview/observe.json`, to a t
 server, then subscribe to it in the ntfy app. Tapping the push opens the chat. The assistant hub uses the same topic for meeting and task reminders and the 08:00 morning brief; it sends no reminders from 17:00 to 08:00, and tasks that fell due overnight go out with the first morning check.
 Urgent Slack and Gmail asks that arrive while a calendar meeting runs (not all-day events, time blocks or
 events with no other attendees) are held
-and sent as one push, "N urgent while you were in <meeting>", within a minute after it ends.
+and sent as one push, "N urgent while you were in <meeting>", within a minute after it ends. Asks you accepted
+or dismissed meanwhile are left out, and a queued push for an ask you already reviewed is dropped.
 
 A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot
 in the chat list until its next message.
