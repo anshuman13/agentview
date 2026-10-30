@@ -42,6 +42,8 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
   waiting-on items older than two days;
   after a meeting, Overview lists the asks and DMs that came in while it ran, and urgent
   pushes during a meeting wait and arrive as one push when it ends
+- Focus timer on a task: Start shows a bar over Codex until Stop, which adds the minutes to the task's time spent; tasks
+  without an estimate get one suggested from similar done tasks
 - `/loop` and `/goal`, loop mode (plan, build, test), Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 

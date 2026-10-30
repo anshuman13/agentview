@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAssistant } from './data';
 import { atTime } from './data/engine';
 import type { Patch } from './data/store';
@@ -16,6 +16,8 @@ import { recentPeople } from './data/points';
 import { RaiseWith } from './meetings/Raise';
 import { sourceOf } from './taskSource';
 import { Check } from './TaskCheck';
+import { estimateMin, minutesText, suggestEstimate } from './data/plan';
+import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 
 const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
 
@@ -33,6 +35,8 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const textRef = useRef<HTMLTextAreaElement>(null);
   const src = sourceOf(row);
   const at = atTime(row.at);
+  const focused = isFocused(useFocus(), row);
+  const suggested = useMemo(() => (row.status === 'open' && estimateMin(title) == null ? suggestEstimate(title, snap.items) : null), [row.status, title, snap.items]);
   // The phone keyboard covers the lower half, so the field moves into view once it is up.
   const reveal = (e: React.FocusEvent<HTMLTextAreaElement>) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
   const checks = [...text.matchAll(CHECK_RE)].map((m) => ({ done: /x/i.test(m[1]), label: m[2].trim() }));
@@ -60,6 +64,12 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     write(patch);
   };
   useOnUnmount(save);
+  const addEstimate = (n: number) => {
+    const next = `${title.trim()} ~${minutesText(n)}`;
+    setTitle(next);
+    saved.current = { ...saved.current, title: next };
+    write({ title: next });
+  };
 
   useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text]);
   // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
@@ -169,6 +179,8 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
           <a className="as-chip" href={safeHref(row.source_url)} target="_blank" rel="noreferrer"><Icon name={src.icon} small /> {row.meeting_id ? 'Transcript' : src.label} <Icon name="link-external" small /></a>
         ) : row.source && row.source !== 'capture' && <span className="as-chip static"><Icon name={src.icon} small /> {src.label}</span>}
         {row.people && <span className="as-chip static">{row.people}</span>}
+        {suggested != null && <button className="as-chip quiet" title="Add this estimate, from similar done tasks" onClick={() => addEstimate(suggested)}><Icon name="add" small /> ~{minutesText(suggested)}</button>}
+        {Number(row.spent) > 0 && <span className="as-chip static" title="Time spent"><Icon name="watch" small /> {minutesText(Number(row.spent))}</span>}
         <span className="as-edit-ago">{ago(row.updated_at, ' ago')}</span>
       </div>
       {snoozing ? (
@@ -181,6 +193,9 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       ) : (
         <div className="as-edit-actions" ref={actions}>
           {row.status === 'note' && <button className="btn" onClick={then(() => act.toTask(row))}>Make task</button>}
+          {row.status === 'open' && (focused
+            ? <button className="btn" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button>
+            : <button className="btn" title="Start a focus timer" onClick={() => { save(); startFocus(row); }}><Icon name="play" small /> Start</button>)}
           {row.status === 'open' && <button className="btn" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
           {row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
           {row.draft && <button className="btn" onClick={() => copyText(row.draft!)}><Icon name="copy" small /> Copy draft</button>}

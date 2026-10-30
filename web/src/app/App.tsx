@@ -13,7 +13,7 @@ import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { Guard } from './Guard';
 import { deepLink } from './deepLinks';
 import { isPage, pageOf, PageView, PAGES, type Page } from './pages';
-import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, Assistant, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, Loading } from './lazy';
+import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, Assistant, FocusBar, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, Loading } from './lazy';
 import { AppUpdate, Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { useTheme } from './theme';
@@ -336,7 +336,7 @@ export function App() {
           <div className={`editor ${active === 'agents' ? 'shown' : ''}`}>{active === 'agents' && <Suspense fallback={<Loading />}><AgentsPane selected={agentSel} onSelect={setAgentSel} /></Suspense>}</div>
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <Suspense fallback={<Loading />}><BrowserPane onEmpty={() => setEditor('file')} /></Suspense>}</div>
           {page && <PageView key={page} page={page} shown={active === page} project={project ?? 'this repo'} />}
-          <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Suspense fallback={<Loading />}><Assistant /></Suspense></Guard>}</div>
+          <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Suspense fallback={null}><FocusBar /></Suspense><Suspense fallback={<Loading />}><Assistant /></Suspense></Guard>}</div>
           <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable onMacs={() => setMacs(true)} />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
             <div className="empty-state">

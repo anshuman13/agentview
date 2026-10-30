@@ -10,7 +10,8 @@ export const Sessions = lazy(() => import('../sessions/Sessions').then((m) => ({
 export const AssistantNav = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantNav })));
 export const AssistantBadge = lazy(() => import('../codex/nav').then((m) => ({ default: m.AssistantBadge })));
 export const Assistant = lazy(() => import('../codex/Codex').then((m) => ({ default: m.Assistant })));
-export const Explorer = lazy(() => import('../workspace/Explorer').then((m) => ({ default: m.Explorer })));
+export const FocusBar = lazy(() => import('../codex/focus').then((m) => ({ default: m.FocusBar })));
+export const Explorer =lazy(() => import('../workspace/Explorer').then((m) => ({ default: m.Explorer })));
 export const Changes = lazy(() => import('../workspace/Changes').then((m) => ({ default: m.Changes })));
 export const GitHub = lazy(() => import('../ops/GitHub').then((m) => ({ default: m.GitHub })));
 export const Terminal = lazy(() => import('../workspace/Terminal').then((m) => ({ default: m.Terminal })));
