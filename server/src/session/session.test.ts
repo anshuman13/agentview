@@ -7,12 +7,7 @@ import { historyFrom } from '../agent/claude/transcript.js';
 import type { History } from '../agent/types.js';
 import { BIG_BRO, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
 
-vi.hoisted(() => {
-  const dir = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`;
-  process.env.CLAUDE_CONFIG_DIR = dir;
-  process.env.AGENTVIEW_ALT_CLAUDE = `${dir}/alt`;
-  process.env.AGENTVIEW_LIMITS_DIR = dir;
-});
+vi.hoisted(() => (process.env.CLAUDE_CONFIG_DIR = `${process.env.TMPDIR ?? '/tmp'}/agentview-test-${process.pid}`));
 
 function fakeSession() {
   const s = claudeSession('/tmp/project');

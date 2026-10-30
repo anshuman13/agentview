@@ -1,4 +1,4 @@
-import { describe, expect, it, setSystemTime } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { openDb } from './db.js';
 import { saveScan } from './slack.js';
 import { applyChanges } from './sync.js';
@@ -52,13 +52,7 @@ describe('wiki updates', () => {
       asked++;
       throw new Error('network down');
     };
-    // Past any usage limit this machine has marked, so the error does not read as one.
-    setSystemTime(new Date('2100-01-01'));
-    try {
-      for (let i = 0; i < 4; i++) expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
-    } finally {
-      setSystemTime();
-    }
+    for (let i = 0; i < 4; i++) expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
     expect(asked).toBe(3);
   });
 
