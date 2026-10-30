@@ -3,6 +3,7 @@ import { useAssistantData } from '../data';
 import { Icon } from '../../ui/Icon';
 import { dayLabel } from '../data/dates';
 import { hoursText, weekReview } from '../data/load';
+import { unanswered, waitingByPerson } from '../data/review';
 import type { Fact, Meeting } from '../data/wiki';
 import { when } from '../time';
 import { copyText, openMeeting, setView, useView } from '../view';
@@ -24,12 +25,13 @@ function Section({ title, rows }: { title: string; rows: ReactNode[] }) {
 }
 
 export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fact[]; now: number }) {
-  const { items: all } = useAssistantData();
+  const { items: all, briefs } = useAssistantData();
   const { filter } = useView();
   const items = useMemo(() => (filter === 'all' ? all : all.filter((i) => i.profile === filter)), [all, filter]);
   const r = useMemo(() => weekReview({ meetings, facts, items }, now), [meetings, facts, items, now]);
   const byKey = useMemo(() => new Map(meetings.map((m) => [`${m.profile}:${m.id}`, m])), [meetings]);
   const markdown = () => {
+    const waiting = waitingByPerson(items, now, unanswered(briefs.filter((b) => filter === 'all' || b.profile === filter)));
     const list = (title: string, rows: string[]) => (rows.length ? [`## ${title} (${rows.length})`, ...rows.map((x) => `- ${x}`), ''] : []);
     return [
       `# Week of ${dayLabel(r.start)}`,
@@ -40,6 +42,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
       ...list('New claims', r.claims.map((f) => text(f.text))),
       ...list('Tasks done', r.done.map((i) => text(i.title))),
       ...list('Open meeting actions', r.open.map((i) => text(i.title))),
+      ...list('Waiting on', waiting.flatMap((g) => g.rows.map((x) => `${g.name}: ${x.title} (${plural(x.days, 'day')})`))),
     ].join('\n').trim();
   };
   const [review, setReview] = useState(false);
