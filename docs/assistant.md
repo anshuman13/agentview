@@ -72,6 +72,8 @@ until the limit ends.
 Each Slack, Gmail and calendar run records its last success with counts and its last error in meta `scan:<name>`, and
 the sync reply returns them as `scans`. `POST /scan?name=slack|gmail` runs one scan now outside its slot; it still
 honors the usage-limit pause and joins a scan that is already running.
+A failed run is retried after 2, 5 and 10 minutes inside work hours, then waits for its slots. When a set-up source has
+had no success for 45 minutes of work hours, the hub sends one push with the last error or the pause, and arms again after a success.
 
 The same scan call writes a reply draft for each new ask, in my voice, 2 to 4 sentences in the language of the ask,
 kept in the item's `draft` column. For it the model reads the ask's thread and calls a local `ask_context` tool, which
