@@ -19,6 +19,14 @@ fn trusted(url: &tauri::Url) -> bool {
     }
 }
 
+// Links the WebView cannot show itself (mail, VS Code) go to the app macOS registers for them.
+#[cfg(desktop)]
+fn open_external(url: &tauri::Url) {
+    if matches!(url.scheme(), "http" | "https" | "mailto" | "vscode") {
+        let _ = std::process::Command::new("open").arg(url.as_str()).spawn();
+    }
+}
+
 fn data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -63,15 +71,22 @@ pub fn run() {
     tauri::Builder::default()
         .manage(Store::new())
         .invoke_handler(tauri::generate_handler![assistant_open, assistant_close, assistant_dev_key, assistant_batch, assistant_exec, assistant_query])
-        .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(|_, url| trusted(url)).build())
+        .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(|_, url| {
+            if trusted(url) {
+                return true;
+            }
+            #[cfg(desktop)]
+            if url.scheme() != "http" && url.scheme() != "https" {
+                open_external(url);
+            }
+            false
+        }).build())
         .setup(|app| {
             let builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &app.config().app.windows[0])?;
             // Links that open a new window (window.open, target="_blank") go to the default browser.
             #[cfg(desktop)]
             let builder = builder.on_new_window(|url, _| {
-                if matches!(url.scheme(), "http" | "https") {
-                    let _ = std::process::Command::new("open").arg(url.as_str()).spawn();
-                }
+                open_external(&url);
                 tauri::webview::NewWindowResponse::Deny
             });
             builder.build()?;
