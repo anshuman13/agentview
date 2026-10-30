@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import { send } from '../app/store';
 
 export function pressable(onClick: (e: MouseEvent<HTMLElement>) => void) {
@@ -100,6 +100,13 @@ export function useTick(ms: number, on = true) {
     return () => clearInterval(t);
   }, [ms, on]);
   return now;
+}
+
+// Calls the latest `fn` when the component unmounts.
+export function useOnUnmount(fn: () => void) {
+  const latest = useRef(fn);
+  latest.current = fn;
+  useEffect(() => () => latest.current(), []);
 }
 
 // Runs `fn` every `ms` while the tab is visible and `root` is on screen.

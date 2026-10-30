@@ -4,7 +4,7 @@ import { atTime } from './data/engine';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago, fitHeight, safeHref } from '../ui/util';
+import { ago, fitHeight, safeHref, useOnUnmount } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
 import { PickDue, PickTime, when } from './time';
@@ -59,9 +59,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     saved.current = { title: patch.title ?? saved.current.title, text };
     write(patch);
   };
-  const latest = useRef(save);
-  latest.current = save;
-  useEffect(() => () => latest.current(), []);
+  useOnUnmount(save);
 
   useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text]);
   // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.

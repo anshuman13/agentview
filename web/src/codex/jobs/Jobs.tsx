@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, type Profile } from '../data/sync';
@@ -6,6 +6,7 @@ import type { Job, Run } from '../data/wiki';
 import { clock } from '../time';
 import { dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
+import { useOnUnmount } from '../../ui/util';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { usePullSync } from '../pullSync';
 import { useMinute } from '../split';
@@ -128,14 +129,11 @@ function JobPage({ j }: { j: Job }) {
   const [prompt, setPrompt] = useState(j.prompt ?? '');
   useEffect(() => setName(j.name ?? ''), [j.name]);
   useEffect(() => setPrompt(j.prompt ?? ''), [j.prompt]);
-  const typed = useRef({ j, name, prompt });
-  typed.current = { j, name, prompt };
   const save = () => {
-    const { j, name, prompt } = typed.current;
     if (name !== (j.name ?? '')) void store.editRow('jobs', j, { name: name.trim() || 'Untitled job' });
     if (prompt !== (j.prompt ?? '')) void store.editRow('jobs', j, { prompt });
   };
-  useEffect(() => save, []);
+  useOnUnmount(save);
   const back = () => setView({ open: null });
   useEscapeBack(back);
   const sched = parseSchedule(j.schedule);
