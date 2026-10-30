@@ -7,6 +7,7 @@ import { clock } from '../time';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { usePullSync } from '../pullSync';
+import { useMinute } from '../split';
 import '../../styles/features/wiki.css';
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -62,6 +63,7 @@ function useJobs() {
 
 function JobsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
+  useMinute();
   const { jobs, runs, store, filter, enable } = useJobs();
   const hasDigest = jobs.some((j) => j.name === WEEKLY_DIGEST.name);
   const add = (preset?: JobPreset) => {
@@ -115,6 +117,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
 }
 
 function JobPage({ j }: { j: Job }) {
+  useMinute();
   const { runs, store, enable } = useJobs();
   const [name, setName] = useState(j.name ?? '');
   const [prompt, setPrompt] = useState(j.prompt ?? '');
