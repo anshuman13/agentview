@@ -12,13 +12,14 @@ import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
 import { sourceOf, useActions } from './Task';
-import { DayPlan } from './DayPlan';
+import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { MorningBrief } from './Brief';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
 import { copyText, openMeeting, setView, showSnack, useView } from './view';
 import { ActionRow, MeetingRow, confirmAll, peopleOf } from './meetings/Meetings';
 import { clock, when } from './time';
+import { touch } from '../app/touch';
 import type { useSplit } from './split';
 
 // The next meeting today: Prep asks Claude, Notes opens the meeting, and the mic toggle tells the transcript reader
@@ -235,12 +236,20 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
   const left = meetingTimeLeft(s.meetingsToday, now, s.endOfDay);
   const leftText = left >= 60 ? `${Math.floor(left / 60)}h${left % 60 ? String(left % 60).padStart(2, '0') : ''}` : `${left} min`;
-  const shown = (rs: ItemRow[]) => (
+  const drag = !touch();
+  const dueAt = (r: ItemRow) => {
+    const t = atTime(r.at);
+    return t != null && t >= startOfDay && t < s.endOfDay ? clock(t) : null;
+  };
+  const shown = (rs: ItemRow[], timed = false) => (
     <div className="ov-follow">
       {rs.slice(0, 5).map((r) => (
-        <div key={r.profile + r.id} className="ov-follow-row">
+        <div key={r.profile + r.id} className="ov-follow-row" draggable={drag} onDragStart={drag ? (e) => e.dataTransfer.setData(DRAG_TYPE, `${r.profile}:${r.id}`) : undefined}>
           <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
-          <button className="ov-follow-text" onClick={tasks}><span className="ov-t">{r.title}</span></button>
+          <button className="ov-follow-text" onClick={tasks}>
+            <span className="ov-t">{r.title}</span>
+            {timed && dueAt(r) && <span className="muted small">{dueAt(r)}</span>}
+          </button>
           <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
         </div>
       ))}
@@ -287,7 +296,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       {dueToday.length > 0 && (
         <section>
           <div className="as-section">To do today · {dueToday.length}</div>
-          {shown(dueToday)}
+          {shown(dueToday, true)}
         </section>
       )}
       {(s.meetingsTomorrow.length > 0 || tomorrow.length > 0) && (
