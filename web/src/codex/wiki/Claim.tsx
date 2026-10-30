@@ -58,7 +58,7 @@ export function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; pag
       </span>
       {contesting && (
         <div className="wk-contest-form">
-          <textarea autoFocus rows={2} value={note} placeholder="What is wrong or out of date? Link a source if you have one." onChange={(e) => setNote(e.target.value)}
+          <textarea autoFocus rows={2} value={note} aria-label="Why this claim is wrong" placeholder="What is wrong or out of date? Link a source if you have one." onChange={(e) => setNote(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') setContesting(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) contest(); }} />
           <div className="wk-contest-btns">
             <button className="btn" onClick={() => setContesting(false)}>Cancel</button>

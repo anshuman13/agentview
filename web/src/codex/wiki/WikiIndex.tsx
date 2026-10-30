@@ -77,7 +77,7 @@ function NewPageCard({ section, sort }: { section: string; sort: number }) {
   if (title === null) return <button className="wk-card wk-new" onClick={() => setTitle('')}><Icon name="add" /> New page</button>;
   return (
     <div className="wk-card wk-new editing">
-      <input autoFocus enterKeyHint="done" value={title} placeholder="Page title" onChange={(e) => setTitle(e.target.value)} onBlur={create}
+      <input autoFocus enterKeyHint="done" value={title} placeholder="Page title" aria-label="Page title" onChange={(e) => setTitle(e.target.value)} onBlur={create}
         onKeyDown={(e) => { if (e.key === 'Enter') create(); if (e.key === 'Escape') setTitle(null); }} />
       <span className="wk-card-summary">Claims about it are added as meetings, Slack and Linear mention it.</span>
     </div>

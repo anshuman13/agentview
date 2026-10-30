@@ -31,7 +31,7 @@ function NoteCard({ row }: { row: ItemRow }) {
   if (text !== null) {
     return (
       <div className="wk-card wk-note editing">
-        <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === 'Escape' && setText(null)} />
+        <textarea autoFocus value={text} aria-label="Note" onChange={(e) => setText(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === 'Escape' && setText(null)} />
         <span className="wk-card-foot">
           <button className="btn sm" onMouseDown={(e) => e.preventDefault()} onClick={toTask}>Make task</button>
           <span className="spacer" />
@@ -61,7 +61,7 @@ function NewNoteCard() {
   if (text === null) return <button className="wk-card wk-new" onClick={() => setText('')}><Icon name="add" /> New note</button>;
   return (
     <div className="wk-card wk-new wk-note editing">
-      <textarea autoFocus value={text} placeholder="First line is the title" onChange={(e) => setText(e.target.value)} onBlur={create} onKeyDown={(e) => e.key === 'Escape' && setText(null)} />
+      <textarea autoFocus value={text} placeholder="First line is the title" aria-label="New note" onChange={(e) => setText(e.target.value)} onBlur={create} onKeyDown={(e) => e.key === 'Escape' && setText(null)} />
     </div>
   );
 }

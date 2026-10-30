@@ -41,7 +41,7 @@ export function MeetingNotes({ m }: { m: Meeting }) {
     timer.current = setTimeout(flush, SAVE_AFTER);
   };
   return (
-    <textarea ref={area} className="mt-notes" value={text} rows={2} placeholder="Write your notes. They stay yours; the summary is written separately."
+    <textarea ref={area} className="mt-notes" value={text} rows={2} aria-label="Your notes" placeholder="Write your notes. They stay yours; the summary is written separately."
       onChange={(e) => change(e.target.value)} onBlur={() => { const typed = pending.current !== null; flush(); if (!typed) setText(row.current.notes ?? ''); }} />
   );
 }

@@ -11,7 +11,7 @@ export function AskBar({ placeholder, onAsk }: { placeholder: string; onAsk: (q:
       {recipes.menu}
       <div className="wk-ask-box">
         <Icon name="sparkle" />
-        <input value={q} placeholder={placeholder} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => !recipes.onKeyDown(e) && e.key === 'Enter' && !e.nativeEvent.isComposing && submit()} />
+        <input value={q} placeholder={placeholder} aria-label={placeholder} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => !recipes.onKeyDown(e) && e.key === 'Enter' && !e.nativeEvent.isComposing && submit()} />
         <button className="cp-send" aria-label="Ask" title="Ask in a new chat" disabled={!q.trim()} onClick={submit}><Icon name="arrow-up" /></button>
       </div>
     </div>

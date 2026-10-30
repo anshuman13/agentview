@@ -144,6 +144,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
             rows={1}
             value={text}
             placeholder="Add a task or ask anything"
+            aria-label="Add a task or ask anything"
             onChange={(e) => { setText(e.target.value); if (!e.target.value.trim()) { setAsking(false); setNoWhen(false); setPick(null); } }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && (!touch() || e.metaKey || e.ctrlKey)) { e.preventDefault(); void submit(); } }}
           />
