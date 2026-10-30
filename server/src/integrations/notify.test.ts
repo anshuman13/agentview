@@ -11,7 +11,7 @@ vi.mock('node:fs/promises', async (orig) => ({
   writeFile: vi.fn(async (_p: string, data: string) => void (files.tmp = data)),
   rename: vi.fn(async () => void (files.observe = files.tmp)),
 }));
-import { pushNtfy, stallWatch } from './notify.js';
+import { notifyAway, pushNtfy, stallWatch } from './notify.js';
 
 describe('pushNtfy', () => {
   const sent = vi.fn(async () => new Response(''));
@@ -90,5 +90,30 @@ describe('stallWatch', () => {
     expect(w.seen('a', false)).toBe(false);
     vi.advanceTimersByTime(10 * 60_000);
     expect(onStall).not.toHaveBeenCalled();
+  });
+});
+
+describe('notifyAway', () => {
+  const sent = vi.fn(async () => new Response(''));
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', sent);
+    process.env.AGENTVIEW_NTFY = 'topic';
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    delete process.env.AGENTVIEW_NTFY;
+    sent.mockClear();
+  });
+
+  it('sends a needs-you push 5 s after a finished push', async () => {
+    const chat = { id: 'c1', cwd: '/x/repo', title: 'T' } as any;
+    const away = () => chat;
+    notifyAway({ type: 'event', event: { kind: 'result', text: 'Done' } } as any, away);
+    vi.advanceTimersByTime(5_000);
+    notifyAway({ type: 'pending', request: { id: 'p1', kind: 'permission', title: 'Allow?' } } as any, away);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sent).toHaveBeenCalledTimes(2);
   });
 });

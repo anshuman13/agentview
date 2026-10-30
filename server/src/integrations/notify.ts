@@ -4,7 +4,7 @@ import path from 'node:path';
 import { readJson } from '../json.js';
 import type { LiveChat, ServerMessage } from '../../../shared/protocol.js';
 
-const last = new Map<string, number>();
+const last = new Map<string, { at: number; key: string }>();
 const FIFO = path.join(os.homedir(), '.agentview/notify.fifo');
 const OBSERVE = path.join(os.homedir(), '.agentview/observe.json');
 const APP = 'http://localhost:7777';
@@ -19,8 +19,12 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null) {
   const body = detail(m);
   if (body === null) return;
   const chat = away();
-  if (!chat || Date.now() - (last.get(chat.id) ?? 0) < 30_000) return;
-  last.set(chat.id, Date.now());
+  if (!chat) return;
+  const kind = m.type === 'pending' ? 'needs' : 'finished';
+  const key = m.type === 'pending' ? `needs:${m.request.id}` : kind;
+  const prev = last.get(`${chat.id}:${kind}`);
+  if (prev && prev.key === key && Date.now() - prev.at < 30_000) return;
+  last.set(`${chat.id}:${kind}`, { at: Date.now(), key });
   const title = `Claude ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
   post(title, chat.title, body.slice(0, 200), `${APP}/?chat=${chat.id}`);
 }
