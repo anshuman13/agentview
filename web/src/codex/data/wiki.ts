@@ -124,19 +124,15 @@ export function pageClaims(facts: Fact[], pageId: string | null, now = Date.now(
     }
   }
   const groups: { heading: string; claims: { fact: Fact; old: Fact[] }[] }[] = [];
-  for (const f of mine.filter((x) => current(x) && !isOld(x, now))) {
-    const heading = f.heading || 'Notes';
+  const add = (fact: Fact, old: Fact[]) => {
+    const heading = fact.heading || 'Notes';
     let g = groups.find((x) => x.heading === heading);
     if (!g) groups.push((g = { heading, claims: [] }));
-    g.claims.push({ fact: f, old: (replaced.get(factKey(f)) ?? []).sort((a, b) => (b.at ?? 0) - (a.at ?? 0)) });
-  }
+    g.claims.push({ fact, old });
+  };
+  for (const f of mine.filter((x) => current(x) && !isOld(x, now))) add(f, (replaced.get(factKey(f)) ?? []).sort((a, b) => (b.at ?? 0) - (a.at ?? 0)));
   // Proposed claims show in place, so a new page reads as a whole while it waits for review.
-  for (const f of proposals(facts).filter((x) => (x.page_id ?? null) === pageId)) {
-    const heading = f.heading || 'Notes';
-    let g = groups.find((x) => x.heading === heading);
-    if (!g) groups.push((g = { heading, claims: [] }));
-    g.claims.push({ fact: f, old: [] });
-  }
+  for (const f of proposals(facts).filter((x) => (x.page_id ?? null) === pageId)) add(f, []);
   const newest = (g: (typeof groups)[number]) => Math.max(...g.claims.map((c) => c.fact.at ?? 0));
   for (const g of groups) g.claims.sort((a, b) => (b.fact.at ?? 0) - (a.fact.at ?? 0));
   return groups.sort((a, b) => newest(b) - newest(a));
