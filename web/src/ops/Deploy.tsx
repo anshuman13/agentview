@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { api, useStore } from '../app/store';
+import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protocol';
@@ -32,11 +33,7 @@ export function track(cwd: string, job: DeployJob, every = 3000) {
   }, every);
 }
 
-async function post(path: string, body: unknown) {
-  const r = await fetch(api(path), { method: 'POST', body: JSON.stringify(body) }).then((x) => x.json());
-  if (r.error) throw new Error(r.error);
-  return r as DeployJob;
-}
+const post = (path: string, body: unknown) => fetchJson<DeployJob>(api(path), { method: 'POST', body: JSON.stringify(body) });
 
 export function Deploy() {
   const cwd = useStore((s) => s.session.cwd);

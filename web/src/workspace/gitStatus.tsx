@@ -12,9 +12,9 @@ export async function refresh() {
   const n = ++seq;
   try {
     const r = await fetch(api('/api/git/status'));
-    const d = await r.json();
+    const d = await r.json().catch(() => null);
     if (n !== seq) return;
-    git = r.ok ? { status: d, error: '' } : { status: null, error: d.error };
+    git = r.ok && d ? { status: d, error: '' } : { status: null, error: d?.error ?? `Request failed (${r.status})` };
   } catch {
     return;
   }

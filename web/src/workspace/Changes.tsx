@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { GitFile, GitStatus } from '../../../shared/protocol';
 import { api, setUi, useStore } from '../app/store';
+import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
@@ -106,11 +107,10 @@ export function Changes() {
   const run: Run = async (action, body) => {
     setFailed('');
     try {
-      const r = await fetch(api(`/api/git/${action}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (!r.ok) setFailed((await r.json()).error);
-      return r.ok;
+      await fetchJson(api(`/api/git/${action}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      return true;
     } catch (err) {
-      setFailed(String(err));
+      setFailed(err instanceof Error ? err.message : String(err));
       return false;
     } finally {
       void refresh();

@@ -1,15 +1,11 @@
 import { useEffect, type ReactNode } from 'react';
 import { api, send, setFindings, setUi, useStore } from '../app/store';
+import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { pressable } from '../ui/util';
 import type { Finding, ReviewFindings } from '../../../shared/protocol';
 
-async function call<T>(path: string, body?: object): Promise<T> {
-  const r = await fetch(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
-  const data = await r.json().catch(() => ({ error: `Request failed (${r.status})` }));
-  if (!r.ok || data?.error) throw new Error(data?.error ?? `Request failed (${r.status})`);
-  return data;
-}
+const call = <T,>(path: string, body?: object) => fetchJson<T>(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
 
 export function Block({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
   return (

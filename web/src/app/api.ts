@@ -37,6 +37,14 @@ let base = bundled ? read() || knownMacs()[0]?.url || (/Android/i.test(navigator
 const listeners = new Set<() => void>();
 
 export const apiBase = () => base;
+
+// The parsed JSON body; throws the server's error, or `Request failed (status)` when the body has none or is not JSON.
+export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const r = await fetch(url, init);
+  const body = await r.json().catch(() => null);
+  if (!r.ok || body?.error) throw new Error(body?.error ?? `Request failed (${r.status})`);
+  return body as T;
+}
 export const apiUrl = (path: string) => base + path;
 export const wsUrl = (query: string) => `${base ? base.replace(/^http/, 'ws') : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`}/ws?${query}`;
 export const macOrigin = () => base || location.origin;

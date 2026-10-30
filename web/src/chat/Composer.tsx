@@ -6,7 +6,7 @@ import { QuickPick } from '../ui/QuickPick';
 import { FileIcon } from '../workspace/FileIcon';
 import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
-import { apiUrl } from '../app/api';
+import { apiUrl, fetchJson } from '../app/api';
 import { Hl, wsUrl, plural } from '../ui/util';
 import { ACCOUNT_LABEL, COMPACT_AT, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import { accept, addUse, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, remember, repeatLabel, repeatPill, loopLabel, terminalId, triggerAt, useLabel, withUses, type Use } from './composerLogic';
@@ -206,9 +206,7 @@ export function Composer() {
   const attach = async (list: File[]) => {
     for (const f of list) {
       try {
-        const r = await fetch(apiUrl(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`), { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });
-        const body = await r.json();
-        if (!r.ok) throw new Error(body.error);
+        const body = await fetchJson<{ path: string }>(apiUrl(`/api/paste?name=${encodeURIComponent(f.name || 'pasted')}`), { method: 'POST', headers: { 'content-type': f.type || 'application/octet-stream' }, body: f });
         setText((t) => `${t}${t && !/\s$/.test(t) ? ' ' : ''}[${f.type.startsWith('image/') ? 'Image' : 'File'}: ${body.path}] `);
       } catch (err) {
         notice(`Could not attach ${f.name || 'the file'}: ${err instanceof Error ? err.message : String(err)}`);

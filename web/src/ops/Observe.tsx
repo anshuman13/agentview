@@ -12,19 +12,12 @@ import type {
 } from '../../../shared/observe';
 import type { Repo } from '../../../shared/protocol';
 import { api, useStore } from '../app/store';
-import { apiUrl } from '../app/api';
+import { apiUrl, fetchJson } from '../app/api';
 import { askClaude } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import '../styles/features/observe.css';
 
-async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, init);
-  const x = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
-  if (!r.ok || x?.error) throw new Error(x?.error ?? `HTTP ${r.status}`);
-  return x;
-}
-
-const post = <T,>(url: string, body: unknown) => getJson<T>(api(url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+const post = <T,>(url: string, body: unknown) => fetchJson<T>(api(url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
 const clock = (iso: string) => {
   const t = Date.parse(iso);
@@ -60,7 +53,7 @@ function useLoad<T>(url: string | null): [Load<T>, () => void] {
     if (!url) return;
     let live = true;
     setState({ data: null, error: '', busy: true });
-    getJson<T>(api(url)).then(
+    fetchJson<T>(api(url)).then(
       (data) => live && setState({ data, error: '', busy: false }),
       (e) => live && setState({ data: null, error: e.message, busy: false }),
     );
@@ -217,7 +210,7 @@ const FIELDS: { key: keyof Omit<SnowflakeInfo, 'auth' | 'hasSecret'>; label: str
 
 function Picker({ kind, parent, value, onPick, enabled }: { kind: 'database' | 'schema' | 'table'; parent: string; value: string; onPick: (v: string) => void; enabled: boolean }) {
   const [list, setList] = useState<Load<SnowflakeObjects>>({ data: null, error: '', busy: false });
-  const load = () => track(setList, () => getJson<SnowflakeObjects>(api(`/api/observe/snowflake/objects?kind=${kind}&${parent}`)));
+  const load = () => track(setList, () => fetchJson<SnowflakeObjects>(api(`/api/observe/snowflake/objects?kind=${kind}&${parent}`)));
   useEffect(() => {
     bump(setList);
     setList({ data: null, error: '', busy: false });
@@ -376,7 +369,7 @@ export function Observe() {
   const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
-    getJson<Repo[]>(apiUrl('/api/repos')).then((x) => setNames(x.map((r) => r.name)), () => {});
+    fetchJson<Repo[]>(apiUrl('/api/repos')).then((x) => setNames(x.map((r) => r.name)), () => {});
   }, []);
 
   useEffect(() => setPicked(''), [chat]);
@@ -391,7 +384,7 @@ export function Observe() {
     let live = true;
     setInfo(null);
     setError('');
-    getJson<ObserveInfo>(api(`/api/observe${picked ? `?repo=${encodeURIComponent(picked)}` : ''}`)).then((i) => live && show(i), (e) => live && setError(e.message));
+    fetchJson<ObserveInfo>(api(`/api/observe${picked ? `?repo=${encodeURIComponent(picked)}` : ''}`)).then((i) => live && show(i), (e) => live && setError(e.message));
     return () => void (live = false);
   }, [picked, chat]);
 
