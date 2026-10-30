@@ -145,7 +145,7 @@ export function searchTranscripts(db: Database, query: string, profile?: Profile
 }
 
 // Asks Claude to read the transcript in the Gemini doc attached to each meeting's event and saves what it finds.
-export const formatLines = (instructions: string) => (instructions.trim() ? [`Write the summary to this brief: ${instructions.trim().slice(0, 1000)}`] : []);
+const formatLines = (instructions: string) => (instructions.trim() ? [`Write the summary to this brief: ${instructions.trim().slice(0, 1000)}`] : []);
 
 async function readTranscripts(db: Database, profile: Profile, meetings: Pending[], now: number, instructions = '') {
   const found: MeetingNotes[] = [];

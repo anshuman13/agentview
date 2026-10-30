@@ -5,7 +5,7 @@ import fs from 'fs';
 import { TABLES } from '../../shared/tables.js';
 
 export const DB_DIR = path.join(os.homedir(), '.agentview', 'assistant');
-export const DB_PATH = path.join(DB_DIR, 'assistant.db');
+const DB_PATH = path.join(DB_DIR, 'assistant.db');
 
 export type Profile = 'work' | 'personal';
 export const isProfile = (v: unknown): v is Profile => v === 'work' || v === 'personal';

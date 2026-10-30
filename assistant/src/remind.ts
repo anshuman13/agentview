@@ -14,12 +14,12 @@ const BEFORE = 10 * 60_000;
 const FRESH = 2 * 3600_000;
 
 type Meeting = { id: string; profile: string; title: string | null; starts_at: number | null; ends_at: number | null; people: string | null; calendar_url: string | null };
-export type Reminder = { key: string; title: string; body: string; url: string; actions?: string };
+type Reminder = { key: string; title: string; body: string; url: string; actions?: string };
 
 const clip = (s: string, n = 90) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 // Same rule as the web: sentences ending in "?" and bullets under a "Questions" heading.
-export function questionsIn(...texts: (string | null)[]) {
+function questionsIn(...texts: (string | null)[]) {
   const out: string[] = [];
   for (const text of texts) {
     let under = false;

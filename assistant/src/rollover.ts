@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite';
 import type { Profile } from './db.js';
 import { applyChanges } from './sync.js';
 
-export const STALE = 3;
+const STALE = 3;
 
 // Open tasks from an earlier day move to today at the same time. After STALE moves a task goes back to review.
 export function rollOver(db: Database, now = Date.now()) {

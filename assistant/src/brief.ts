@@ -63,7 +63,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
 }
 
 // Morning and Slack briefs past the keep window are no longer shown; their rows stay behind for sync without the text.
-export function pruneBriefs(db: Database, now = Date.now()) {
+function pruneBriefs(db: Database, now = Date.now()) {
   const old = db.prepare("SELECT id, profile FROM briefs WHERE deleted = 0 AND kind IN ('morning', 'slack') AND to_at < ?").all(now - KEEP) as { id: string; profile: Profile }[];
   applyChanges(db, old.map((b) => ({ table: 'briefs', id: b.id, profile: b.profile, deleted: true, updated_at: now, fields: { text: null } })));
 }

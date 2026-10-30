@@ -20,9 +20,9 @@ const READ_TOOLS = ['slack_search_public_and_private', 'slack_read_channel', 'sl
 export const HUB_URL = process.env.ASSISTANT_PUBLIC ?? 'http://macmini.netbird.cloud:7790';
 
 // Kept outside the repo in ~/.agentview/assistant/slack.json: my Slack user id, the workspace domain and the channels to watch.
-export type SlackConfig = { me: string; domain: string; channels: string[]; push?: { from: number; to: number } };
+type SlackConfig = { me: string; domain: string; channels: string[]; push?: { from: number; to: number } };
 
-export function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig | null {
+function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig | null {
   const c = readJsonSync<any>(file, null);
   return typeof c?.me === 'string' && Array.isArray(c.channels) ? c : null;
 }
@@ -90,7 +90,7 @@ function keepChannelIds(db: Database, c: SlackConfig, r: ScanResult) {
 }
 
 // One Haiku pass over my DMs, mentions and watched channels since the last pass.
-export async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
+async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   const since = sinceOf(db, now);
   const chats = db.prepare('SELECT id, name, summary FROM chats WHERE profile = ? AND deleted = 0').all(PROFILE) as { id: string; name: string; summary: string | null }[];
   let saved: ScanResult | null = null;

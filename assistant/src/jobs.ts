@@ -134,7 +134,7 @@ export async function runDue(db: Database, now = Date.now(), run = runJob, notif
 }
 
 // A run cut off by a hub restart is marked failed; its job runs again at the next tick.
-export function endInterrupted(db: Database, now = Date.now()) {
+function endInterrupted(db: Database, now = Date.now()) {
   const stuck = db.prepare("SELECT id, profile FROM runs WHERE deleted = 0 AND status = 'running'").all() as { id: string; profile: Profile }[];
   applyChanges(db, stuck.map((r) => ({ table: 'runs', id: r.id, profile: r.profile, updated_at: now, fields: { finished_at: now, status: 'error', output: 'Interrupted by a restart' } })));
 }

@@ -19,7 +19,7 @@ const Event = z.object({
   people: z.array(z.string()).describe('Other attendees by name, or email when there is no name'),
   url: z.string().optional().describe('The event link in Google Calendar'),
 });
-export type CalendarEvent = z.infer<typeof Event>;
+type CalendarEvent = z.infer<typeof Event>;
 
 // Upserts the events as meetings and removes calendar meetings in the window that are gone, unless they have notes.
 // A meeting removed here comes back when its event reappears; one you deleted stays deleted.
@@ -57,7 +57,7 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
   })();
 }
 
-export async function importCalendar(db: Database, profile: Profile, now = Date.now()) {
+async function importCalendar(db: Database, profile: Profile, now = Date.now()) {
   // Calendar days, so a 23 or 25 hour day at a DST change does not shift the window.
   const today = new Date(now);
   const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1).getTime();

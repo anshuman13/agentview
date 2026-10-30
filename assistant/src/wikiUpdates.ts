@@ -41,7 +41,7 @@ const fromSlack = (d: SlackDecision): Origin => ({
 });
 
 // Meetings and Slack decisions of the last two weeks that were not looked at yet, oldest first.
-export function pendingOrigins(db: Database, profile: Profile, now = Date.now()): Origin[] {
+function pendingOrigins(db: Database, profile: Profile, now = Date.now()): Origin[] {
   const meetings = db.prepare(
     "SELECT id, title, starts_at, calendar_url, decisions FROM meetings WHERE profile = ? AND deleted = 0 AND starts_at >= ? AND COALESCE(ends_at, starts_at) <= ? AND decisions IS NOT NULL AND decisions NOT IN ('', '[]') ORDER BY starts_at",
   ).all(profile, now - WITHIN, now) as Meeting[];
@@ -51,7 +51,7 @@ export function pendingOrigins(db: Database, profile: Profile, now = Date.now())
 
 const triesKey = (profile: Profile, id: string) => `wikiupdate-tries:${profile}:${id}`;
 
-export function markDone(db: Database, profile: Profile, id: string, now = Date.now()) {
+function markDone(db: Database, profile: Profile, id: string, now = Date.now()) {
   setMeta(db, doneKey(profile, id), String(now));
   deleteMeta(db, triesKey(profile, id));
 }
@@ -64,7 +64,7 @@ function failed(db: Database, profile: Profile, id: string) {
 }
 
 // Current claims on live pages from before the decision, with no proposed replacement yet, that it may change, with the decisions that touch each.
-export function candidates(db: Database, profile: Profile, o: Origin): Candidate[] {
+function candidates(db: Database, profile: Profile, o: Origin): Candidate[] {
   const claims = db.prepare(
     "SELECT f.id, f.text, f.page_id, f.heading, f.at, f.updated_at, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND NOT EXISTS (SELECT 1 FROM facts r WHERE r.profile = f.profile AND r.replaces = f.id AND r.deleted = 0 AND r.state = 'proposed') AND f.text IS NOT NULL AND p.title IS NOT NULL",
   ).all(profile) as Claim[];
@@ -83,7 +83,7 @@ export function candidates(db: Database, profile: Profile, o: Origin): Candidate
 const norm = (t: string) => t.trim().replace(/\s+/g, ' ').toLowerCase();
 
 // Saves each update as a proposed claim that replaces the old one, unless the same text already replaces it.
-export function saveUpdates(db: Database, profile: Profile, o: Origin, found: Candidate[], updates: Update[], now = Date.now()) {
+function saveUpdates(db: Database, profile: Profile, o: Origin, found: Candidate[], updates: Update[], now = Date.now()) {
   const byId = new Map(found.map((c) => [c.claim.id, c.claim]));
   const same = db.prepare('SELECT text FROM facts WHERE profile = ? AND replaces = ? AND deleted = 0');
   const changes: Change[] = [];

@@ -29,14 +29,14 @@ export function eventIdOf(url: string | null) {
   return /^[a-z0-9_]+$/i.test(id) ? id : null;
 }
 
-export function checkBlock(db: Database, b: Block) {
+function checkBlock(db: Database, b: Block) {
   if (!Number.isFinite(b.start) || !Number.isFinite(b.end) || b.end <= b.start || b.end - b.start > MAX) return 'Invalid start or end';
   if (!b.title.trim() || b.title.length > 200) return 'Invalid title';
   const item = db.prepare("SELECT 1 FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND status = 'open'").get(b.profile, b.id);
   return item ? null : 'No such open task';
 }
 
-export async function createEvent(b: Block, old: string | null): Promise<Created> {
+async function createEvent(b: Block, old: string | null): Promise<Created> {
   let made: Created | null = null;
   const save = tool('event_created', 'Report the event you created.', { url: z.string().optional().describe('The event link in Google Calendar') }, async (a) => {
     made = { url: a.url ?? null };

@@ -19,7 +19,7 @@ export type PulledChange = Change & {
   field_times: Record<string, number>;
 };
 
-export type PullResult = {
+type PullResult = {
   version: number;
   changes: PulledChange[];
   hasMore: boolean;

@@ -7,7 +7,7 @@ const textOf = (content: unknown): string =>
   typeof content === 'string' ? content : Array.isArray(content) ? content.map((c) => (typeof c?.text === 'string' ? c.text : '')).join('') : '';
 
 // A Drive read returns the doc as JSON with fileContent, sometimes inside a list of text blocks.
-export function docText(raw: string): string {
+function docText(raw: string): string {
   try {
     const parsed = JSON.parse(raw);
     if (typeof parsed?.fileContent === 'string') return parsed.fileContent;
@@ -17,7 +17,7 @@ export function docText(raw: string): string {
 }
 
 // Large tool outputs are saved under the config dir's tool-results folders.
-export function savedText(root: string, file: string) {
+function savedText(root: string, file: string) {
   const real = fs.realpathSync(path.resolve(file));
   const projects = fs.realpathSync(path.join(root, 'projects'));
   if (!real.startsWith(projects + path.sep) || !real.split(path.sep).includes('tool-results')) throw new Error('Only saved tool outputs can be read');
@@ -30,7 +30,7 @@ export function readSaved(root: string, file: string, offset = 0) {
   return `${text.slice(offset, end)}\n[characters ${offset}-${end} of ${text.length}]`;
 }
 
-export const docIdOf = (s: string) => /\/d\/([\w-]{20,})/.exec(s)?.[1] ?? (/^[\w-]{20,}$/.test(s.trim()) ? s.trim() : null);
+const docIdOf = (s: string) => /\/d\/([\w-]{20,})/.exec(s)?.[1] ?? (/^[\w-]{20,}$/.test(s.trim()) ? s.trim() : null);
 
 type Block = { type?: string; id?: string; name?: string; input?: unknown; tool_use_id?: string; content?: unknown; is_error?: boolean };
 

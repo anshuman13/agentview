@@ -22,9 +22,9 @@ const PROFILE = 'work' as const;
 const dayStart = (t: number, days = 0) => Math.floor(new Date(t).setHours(24 * days, 0, 0, 0) / 1000);
 
 // Kept outside the repo in ~/.agentview/assistant/gmail.json: my address, and the hours pushes may go out.
-export type GmailConfig = { me: string; push?: { from: number; to: number } };
+type GmailConfig = { me: string; push?: { from: number; to: number } };
 
-export function gmailConfig(file = path.join(DB_DIR, 'gmail.json')): GmailConfig | null {
+function gmailConfig(file = path.join(DB_DIR, 'gmail.json')): GmailConfig | null {
   const c = readJsonSync<any>(file, null);
   return typeof c?.me === 'string' && c.me.includes('@') ? c : null;
 }
@@ -53,13 +53,13 @@ const Sent = z.object({
   subject: z.string().describe('The subject of the thread'),
   sent_at: z.string().describe('When I sent my last message, as YYYY-MM-DDTHH:MM local time'),
 });
-export type MailScan = { asks: z.infer<typeof Ask>[]; answered: string[]; said?: z.infer<typeof Said>[]; waiting?: z.infer<typeof Sent>[]; replied?: string[] };
+type MailScan = { asks: z.infer<typeof Ask>[]; answered: string[]; said?: z.infer<typeof Said>[]; waiting?: z.infer<typeof Sent>[]; replied?: string[] };
 // A thread where I asked something and nobody has replied yet.
 export type Unanswered = { thread: string; url: string; to: string; subject: string; sent_at: number };
 
 const threadOk = (id: string) => /^[A-Za-z0-9_-]+$/.test(id);
 export const mailId = (thread: string) => `gmail:${thread}`;
-export const threadUrl = (thread: string, url?: string) => webUrl(url) ?? `https://mail.google.com/mail/u/0/#all/${thread}`;
+const threadUrl = (thread: string, url?: string) => webUrl(url) ?? `https://mail.google.com/mail/u/0/#all/${thread}`;
 
 // Saves one scan: mail that needs me as items to review, and closes the ones I have since answered.
 export function saveMail(db: Database, r: MailScan, now = Date.now()) {
@@ -92,7 +92,7 @@ export function saveMail(db: Database, r: MailScan, now = Date.now()) {
   return { added, urgent, said };
 }
 
-export const WAIT_WORKDAYS = 3;
+const WAIT_WORKDAYS = 3;
 const WAIT_MAX = 14 * DAY;
 const WAITING_ID = 'gmail:waiting';
 
@@ -122,7 +122,7 @@ export function saveWaiting(db: Database, found: z.infer<typeof Sent>[], replied
 }
 
 // One Haiku pass over the inbox since the last pass. Read only: the prompt and the allowed tools never send or change mail.
-export async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
+async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
   const since = Math.max(Number(getMeta(db, 'gmail:last') ?? 0), now - 3 * DAY);
   const open = db.prepare("SELECT id, title, people FROM items WHERE profile = ? AND deleted = 0 AND source = 'gmail' AND id NOT LIKE 'said:%' AND status = 'suggested' AND updated_at > ?").all(PROFILE, now - 7 * DAY) as { id: string; title: string; people: string }[];
   const waiting = unanswered(db);
