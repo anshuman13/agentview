@@ -1,8 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { Back } from './back';
 import { connect, embedded, getState, send, setUi, useStore } from './store';
-import { MCP_BAD } from '../../../shared/protocol';
-import { AgentsBadge } from '../sessions/AgentsBadge';
 import { openAgent } from '../sessions/agents';
 import { FileIcon } from '../workspace/FileIcon';
 import { ChangesBadge } from '../workspace/gitStatus';
@@ -11,23 +8,17 @@ import { Icon } from '../ui/Icon';
 import { command, pressable, save, stored } from '../ui/util';
 import { haptic } from '../ui/haptic';
 import { slideFrom, useTabSwipe } from './tabSwipe';
-import { useSheetDrag } from '../ui/useSheetDrag';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { MacsPopover, SwitchedBanner, useMacName } from './MacsPopover';
 import { Guard } from './Guard';
 import { deepLink } from './deepLinks';
 import { isPage, pageOf, PageView, PAGES, type Page } from './pages';
-import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, AssistantBadge, Assistant, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, Loading } from './lazy';
+import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, Assistant, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, Loading } from './lazy';
 import { AppUpdate, Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
-
-import { canNotify, toggleNotify, useNotify } from './notify';
-import { THEME_NAMES, useTheme } from './theme';
+import { useTheme } from './theme';
+import { MoreSheet, TabBar, type Tab, type View } from './TabBar';
 import { touch } from './touch';
-import { useShownMcp } from '../ops/mcpShown';
-
-type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
-type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'assistant', icon: 'sparkle', title: 'Codex' },
@@ -39,7 +30,6 @@ const VIEWS: { id: View; icon: string; title: string }[] = [
 ];
 
 const narrow = () => window.innerWidth <= 900;
-const LONG_PRESS = 450;
 
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -49,16 +39,12 @@ export function App() {
   const openFile = useStore((s) => s.ui.openFile);
   const repoPicker = useStore((s) => s.ui.repoPicker);
   const session = useStore((s) => s.session);
-  const mcp = useShownMcp();
   const [tab, setTab] = useState<Tab>(() => (narrow() && !deepLink.chat && !deepLink.session ? 'assistant' : 'chat'));
   const [editor, setEditor] = useState<'file' | 'browser' | 'agents' | 'assistant' | Page>('file');
   const [seenAssistant, setSeenAssistant] = useState(false);
-  const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const pressed = useRef(false);
   const [agentSel, setAgentSel] = useState<string | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [more, setMore] = useState(false);
-  const moreSheet = useSheetDrag(more, () => setMore(false));
   const [browse, setBrowse] = useState(false);
   const openPage = (p: Page) => { setPage(p); setEditor(p); setTab((t) => (narrow() ? 'code' : t)); };
   const reveal = (el: HTMLElement | null) => el?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
@@ -72,7 +58,6 @@ export function App() {
   const [chatW, setChatW] = useState(() => stored<number>('agentview.chatW', 480) || 480);
   const [termH, setTermH] = useState(() => stored<number>('agentview.termH', 240) || 240);
   const [terminal, setTerminal] = useState(false);
-  const notifying = useNotify();
   const [theme, toggleTheme] = useTheme();
   const beside = useStore((s) => (s.ui.beside && s.ui.beside !== s.session.id ? s.ui.beside : null));
   const besideChat = useStore((s) => s.live.find((c) => c.id === s.ui.beside));
@@ -241,7 +226,6 @@ export function App() {
   const chatsView = view === 'chats' || view === 'sessions';
   const inChats = tab === 'repos' && chatsView;
   const inMore = tab === 'term' || tab === 'browser' || tab === 'code' || (tab === 'repos' && !chatsView);
-  const mcpOk = mcp.filter((m) => m.status === 'connected').length;
   const goTab = (t: Tab) => {
     haptic();
     setMore(false);
@@ -254,20 +238,9 @@ export function App() {
     if (t === 'assistant') { setEditor('assistant'); window.dispatchEvent(new Event('assistant:shown')); }
   };
   useEffect(() => { if (showing === 'assistant') setSeenAssistant(true); }, [showing]);
-  const assistantPress = {
-    onPointerDown: () => {
-      pressed.current = false;
-      pressTimer.current = setTimeout(() => { pressed.current = true; goTab('assistant'); setTimeout(() => window.dispatchEvent(new Event('assistant:voice')), 100); }, LONG_PRESS);
-    },
-    onPointerUp: () => clearTimeout(pressTimer.current),
-    onPointerCancel: () => clearTimeout(pressTimer.current),
-    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
-    onClick: () => { if (!pressed.current) goTab('assistant'); pressed.current = false; },
-  };
   const goSide = (v: View) => { haptic(); setMore(false); setView(v); setTab('repos'); };
   const swipeTabs = [() => goTab('assistant'), () => goTab('chat'), () => goSide('chats'), () => goTab('agents')];
   useTabSwipe(more ? -1 : tab === 'assistant' ? 0 : tab === 'chat' ? 1 : inChats ? 2 : tab === 'agents' ? 3 : -1, swipeTabs.length, (i) => swipeTabs[i]());
-  const act = (f: () => void) => () => { setMore(false); f(); };
   const reopen = (e: React.MouseEvent) => {
     const el = e.target as HTMLElement;
     const row = el.closest<HTMLElement>('.ex-row');
@@ -399,81 +372,8 @@ export function App() {
 
       <StatusBar project={project} theme={theme} toggleTheme={toggleTheme} macName={macName} onPhone={() => setPhone((v) => !v)} onMacs={() => setMacs((v) => !v)} />
 
-      <nav className="tabbar mobile-only">
-        <button className={tab === 'assistant' && !more ? 'active' : ''} title="Codex. Hold to talk" {...assistantPress}>
-          <Icon name="sparkle" />
-          <span>Codex</span>
-          <Suspense fallback={null}><AssistantBadge /></Suspense>
-        </button>
-        <button className={tab === 'chat' && !more ? 'active' : ''} onClick={() => goTab('chat')}>
-          <Icon name="comment" />
-          <span>Chat</span>
-          {pendingCount > 0 && <span className="badge">{pendingCount}</span>}
-        </button>
-        <button className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
-          <Icon name="comment-discussion" />
-          <span>Sessions</span>
-          {elsewhere > 0 && <span className="badge">{elsewhere}</span>}
-        </button>
-        <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => goTab('agents')}>
-          <Icon name="hubot" />
-          <span>Agents</span>
-          <AgentsBadge />
-        </button>
-        <button className={more || inMore ? 'active' : ''} onClick={() => setMore((v) => !v)}>
-          <Icon name="ellipsis" />
-          <span>More</span>
-        </button>
-      </nav>
-      {more && (
-        <div className="more-sheet-overlay mobile-only" ref={moreSheet.overlay} onClick={moreSheet.close}>
-          <Back close={() => setMore(false)} />
-          <div className="more-sheet" ref={moreSheet.sheet} onClick={(e) => e.stopPropagation()}>
-            <div className="sheet-handle" {...moreSheet.handle} />
-            <div className="more-status">
-              <button className="more-project" title={`${session.cwd}\nStart a chat in another repo`} onClick={act(() => setUi({ repoPicker: true }))}>
-                <Icon name="folder" small /><span>{project}</span>
-              </button>
-              {canNotify && (
-                <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
-                  <Icon name={notifying ? 'bell' : 'bell-slash'} />
-                </button>
-              )}
-              <button className="icon-btn" title={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme}><Icon name="color-mode" /></button>
-            </div>
-            <button className={tab === 'code' ? 'active' : ''} onClick={() => goTab('code')}>
-              <Icon name="files" /><span>Files</span>
-            </button>
-            <button className={tab === 'browser' ? 'active' : ''} onClick={() => goTab('browser')}>
-              <Icon name="globe" /><span>Browser</span>
-            </button>
-            <button className={tab === 'term' ? 'active' : ''} onClick={() => goTab('term')}>
-              <Icon name="terminal" /><span>Terminal</span>
-            </button>
-            <button className={tab === 'repos' && view === 'changes' ? 'active' : ''} onClick={() => goSide('changes')}>
-              <Icon name="source-control" /><span>Source Control</span><ChangesBadge />
-            </button>
-            <button className={tab === 'repos' && view === 'github' ? 'active' : ''} onClick={() => goSide('github')}>
-              <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
-            </button>
-            <span className="more-label">Tools</span>
-            {PAGES.map((p) => (
-              <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
-                <Icon name={p.icon} />
-                <span>{p.title}</span>
-                {p.id === 'mcp' && mcp.length > 0 && <span className="more-meta"><span className={`dot ${mcp.some((m) => MCP_BAD.includes(m.status)) ? 'bad' : mcpOk ? 'ok' : 'off'}`} /> {mcpOk}/{mcp.length}</span>}
-              </button>
-            ))}
-            <span className="more-divider" />
-            <button onClick={act(() => setMacs(true))}>
-              <Icon name="vm" /><span>{macName || 'Macs'}</span><span className="more-meta">switch</span>
-            </button>
-            <button onClick={act(() => window.dispatchEvent(new Event('agentview:palette')))}>
-              <Icon name="terminal-cmd" /><span>Command Palette</span>
-            </button>
-          </div>
-        </div>
-      )}
+      <TabBar tab={tab} more={more} inChats={inChats} inMore={inMore} goTab={goTab} goSide={goSide} toggleMore={() => setMore((v) => !v)} />
+      <MoreSheet open={more} onClose={() => setMore(false)} tab={tab} view={view} showing={showing} project={project} theme={theme} toggleTheme={toggleTheme} macName={macName} goTab={goTab} goSide={goSide} openPage={openPage} onMacs={() => setMacs(true)} />
 
       <Suspense fallback={null}>
         <FileSwitcher />
