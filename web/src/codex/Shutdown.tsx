@@ -25,7 +25,7 @@ export function Shutdown({ open, done, now }: { open: ItemRow[]; done: number; n
     haptic('tap');
     const before = open.map((r) => [r, { at: r.at, rolls: r.rolls, rolled_from: r.rolled_from }] as const);
     for (const r of open) void store.update(r, { at: tomorrow(r), ...UNROLL });
-    showSnack(`Moved ${plural(open.length, 'task')} to ${when(tomorrow(open[0]))}`, () => before.forEach(([r, b]) => void store.update(r, b)));
+    showSnack(`Moved ${plural(open.length, 'task')} to ${when(Math.min(...open.map(tomorrow)))}`, () => before.forEach(([r, b]) => void store.update(r, b)));
   };
   const snooze = (r: ItemRow) => {
     const at = SNOOZES[0].at(new Date(now), r.profile);

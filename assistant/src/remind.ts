@@ -97,7 +97,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     const review = open.filter((a) => a.status === 'suggested').length;
     out.push({ key, title: `${open.length} for you from ${m.title ?? 'a meeting'}${review ? ` · ${review} to confirm` : ''}`, body: open.map((a) => `- ${a.title}${a.status === 'suggested' ? ' (yours?)' : ''}`).join('\n'), url: '' });
   }
-  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND ((CAST(at AS INTEGER) > ?1 AND CAST(at AS INTEGER) <= ?2) OR (rolls > 0 AND CAST(at AS INTEGER) - ?3 > ?1 AND CAST(at AS INTEGER) - ?3 <= ?2))").all(taskSince(now), now, DAY) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
+  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND ((CAST(at AS INTEGER) > ?1 AND CAST(at AS INTEGER) <= ?2) OR (rolled_from IS NOT NULL AND CAST(at AS INTEGER) - ?3 > ?1 AND CAST(at AS INTEGER) - ?3 <= ?2))").all(taskSince(now), now, DAY) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
   for (const t of tasks) {
     const key = `task:${t.profile}:${t.id}:${Number(t.at)}`;
     if (sent(key)) continue;
