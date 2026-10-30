@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAssistant } from './data';
 import { atTime, errorText, hasDay, nextNine, parseWhen, stripWhen } from './data/engine';
-import { isRepeat, nextRepeat, parseRepeat } from './data/recur';
+import { isRepeat, parseRepeat } from './data/recur';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { ago, readFlag, safeHref, saveFlag } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack, type Filter } from './view';
+import { useActions } from './useActions';
 import { PickDue, PickTime, when } from './time';
 import { snoozes } from './AskBar';
 import { Swipe } from './Swipe';
@@ -16,6 +17,8 @@ import { haptic } from '../ui/haptic';
 import { estimateMin, minutesText } from './data/plan';
 import { recentPeople } from './data/points';
 import { RaiseWith } from './meetings/Raise';
+
+export { UNROLL, useActions } from './useActions';
 
 const SOURCES: Record<string, { icon: string; label: string }> = {
   slack: { icon: 'comment-discussion', label: 'Slack' },
@@ -40,39 +43,6 @@ const checklist = (s: string | null) => {
   const all = s?.match(/^\s*[-*] \[[ xX]\]/gm) ?? [];
   return { done: all.filter((l) => /x/i.test(l)).length, total: all.length };
 };
-
-export const UNROLL = { rolls: null, rolled_from: null };
-
-export function useActions() {
-  const { store } = useAssistant();
-  const change = (r: ItemRow, patch: Patch, text: string) => {
-    const before = Object.fromEntries(Object.keys(patch).map((k) => [k, r[k as keyof ItemRow]])) as Patch;
-    void store.update(r, patch);
-    showSnack(text, () => void store.update(r, before));
-  };
-  return {
-    done: (r: ItemRow) => {
-      const next = nextRepeat(r, Date.now(), store.snapshot().items);
-      if (!next) return change(r, { status: 'done' }, 'Done');
-      const made = store.capture(`${next.title}\n${next.text}`, 'task', r.profile, next.at).catch(() => null);
-      void store.update(r, { status: 'done' });
-      showSnack(`Done · next ${when(next.at)}`, () => {
-        void store.update(r, { status: r.status });
-        void made.then((n) => n && store.update(n, { deleted: 1 }));
-      });
-    },
-    reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
-    snooze: (r: ItemRow, at = nextNine()) => change(r, { at, ...UNROLL }, `Snoozed to ${when(at)}`),
-    remove: (r: ItemRow) => change(r, { deleted: 1 }, 'Deleted'),
-    toTask: (r: ItemRow) => change(r, { status: 'open', ...UNROLL }, 'Moved to Today'),
-    due: (r: ItemRow, at: number | null) => change(r, { at, ...UNROLL }, at == null ? 'Due time cleared' : `Due ${when(at)}`),
-    edit: (r: ItemRow, patch: Patch) => void store.update(r, patch),
-    move: (r: ItemRow, to: Profile) => store.move(r, to).then(() => showSnack(`Moved to ${FILTER_LABEL[to]}`, () => {
-      const moved = store.snapshot().items.find((x) => x.profile === to && x.id === r.id);
-      void store.move(moved ?? { ...r, profile: to }, r.profile).catch((err) => showSnack(`Not moved: ${errorText(err)}`));
-    }), (err) => showSnack(`Not moved: ${errorText(err)}`)),
-  };
-}
 
 function Check({ row, onDone }: { row: ItemRow; onDone?: () => void }) {
   const act = useActions();
