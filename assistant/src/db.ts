@@ -119,6 +119,11 @@ export function nextVersion(db: Database): number {
   throw new Error('Failed to update version');
 }
 
+// Drops the meta keys under prefix whose value, a time in ms, is older than before.
+export function pruneMeta(db: Database, prefix: string, before: number) {
+  stmt(db, "DELETE FROM meta WHERE substr(key, 1, length(?)) = ? AND CAST(value AS INTEGER) < ?").run(prefix, prefix, before);
+}
+
 export function currentVersion(db: Database): number {
   const row = db.prepare('SELECT CAST(value AS INTEGER) as value FROM meta WHERE key = ?').get('version') as { value: number } | undefined;
   return row ? row.value : 0;

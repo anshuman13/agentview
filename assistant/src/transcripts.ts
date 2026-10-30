@@ -77,7 +77,12 @@ export function markTried(db: Database, profile: Profile, meetings: Pending[], n
   })();
 }
 
-export const actionId = (meeting: string, title: string) => `meet:${createHash('sha1').update(`${meeting}\n${title.trim().toLowerCase()}`).digest('hex').slice(0, 16)}`;
+// Try counts of meetings that ended before the window are no longer read; the last try came after the meeting ended.
+export function pruneTried(db: Database, now = Date.now()) {
+  db.prepare("DELETE FROM meta WHERE key LIKE 'transcript:%' AND CAST(substr(value, instr(value, ',') + 1) AS INTEGER) < ?").run(now - WITHIN);
+}
+
+export const actionId =(meeting: string, title: string) => `meet:${createHash('sha1').update(`${meeting}\n${title.trim().toLowerCase()}`).digest('hex').slice(0, 16)}`;
 
 const STATUS = { me: 'open', maybe: 'suggested', nobody: 'unassigned' } as const;
 
@@ -249,6 +254,7 @@ export function startTranscripts(db: () => Database, every = 5 * MIN) {
         });
       }
       expireSuggested(db());
+      pruneTried(db());
       await proposeWikiUpdates(db());
     } catch (err) {
       console.error('transcripts:', err instanceof Error ? err.message : err);

@@ -7,7 +7,7 @@ import { decisionKey, keyWords, mayChange, titleWords } from '../../shared/claim
 import { isLimited } from '../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
-import type { Profile } from './db.js';
+import { pruneMeta, type Profile } from './db.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY } from './time.js';
 
@@ -57,11 +57,15 @@ export function pendingOrigins(db: Database, profile: Profile, now = Date.now())
   return [...meetings.map(fromMeeting), ...slack.map(fromSlack)].filter((o) => !done.get(doneKey(profile, o.id))).sort((a, b) => a.at - b.at);
 }
 
-export const markDone = (db: Database, profile: Profile, id: string, now = Date.now()) =>
+const triesKey = (profile: Profile, id: string) => `wikiupdate-tries:${profile}:${id}`;
+
+export function markDone(db: Database, profile: Profile, id: string, now = Date.now()) {
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(doneKey(profile, id), String(now));
+  db.prepare('DELETE FROM meta WHERE key = ?').run(triesKey(profile, id));
+}
 
 function failed(db: Database, profile: Profile, id: string) {
-  const key = `wikiupdate-tries:${profile}:${id}`;
+  const key = triesKey(profile, id);
   const n = Number((db.prepare('SELECT value FROM meta WHERE key = ?').get(key) as { value: string } | null)?.value ?? 0) + 1;
   db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(n));
   return n;
@@ -149,6 +153,8 @@ async function decide(profile: Profile, o: Origin, found: Candidate[]) {
 export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = decide) {
   let saved = 0;
   for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
+    // An origin is marked done after it happened, so a mark older than the window is never looked up again.
+    pruneMeta(db, `wikiupdate:${profile}:`, now - WITHIN);
     for (const o of pendingOrigins(db, profile, now).slice(0, 5)) {
       const found = candidates(db, profile, o);
       try {

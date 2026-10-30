@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
 import { isBlock } from '../../shared/util.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
-import type { Profile } from './db.js';
+import { pruneMeta, type Profile } from './db.js';
 import { rollOver } from './rollover.js';
 import { HUB_URL } from './slack.js';
 import { applyChanges } from './sync.js';
@@ -110,6 +110,7 @@ export function startReminders(db: () => Database, every = 60_000) {
     busy = true;
     try {
       rollOver(db());
+      pruneMeta(db(), 'remind:', Date.now() - 2 * DAY);
       for (const r of dueReminders(db())) {
         const key = `remind:${r.key}`;
         db().prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, String(Date.now()));

@@ -43,6 +43,8 @@ describe('wiki updates', () => {
     db.prepare("DELETE FROM meta WHERE key LIKE 'wikiupdate:%'").run();
     expect(await proposeWikiUpdates(db, now, ask)).toBe(0);
     expect(asked).toHaveLength(1);
+    await proposeWikiUpdates(db, now + 15 * DAY, ask);
+    expect(db.prepare("SELECT key FROM meta WHERE key LIKE 'wikiupdate%'").all()).toEqual([]);
   });
 
   it('tries a failing origin three times before skipping it', async () => {
@@ -58,7 +60,7 @@ describe('wiki updates', () => {
 
   it('proposes updates from Slack channel decisions once each, with a Slack source', async () => {
     const db = setup();
-    db.prepare("INSERT INTO meta (key, value) VALUES ('wikiupdate:work:cal:m', '1')").run();
+    db.prepare("INSERT INTO meta (key, value) VALUES ('wikiupdate:work:cal:m', ?)").run(String(now));
     const url = 'https://team.slack.test/archives/C1/p1';
     const decision = { text: 'Basic plan costs 15 euros monthly', channel: 'pricing', url, time: '2026-10-29T10:00' };
     const scan = (d: object[]) => saveScan(db, { chats: [], asks: [], answered: [], decisions: d as never }, now);

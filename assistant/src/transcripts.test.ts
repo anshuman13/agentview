@@ -4,7 +4,7 @@ import path from 'node:path';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
 import { docReader, readSaved } from './transcriptDocs.js';
-import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, markTried, saveNotes, saveTranscripts, searchTranscripts, transcriptText } from './transcripts.js';
+import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, markTried, pruneTried, saveNotes, saveTranscripts, searchTranscripts, transcriptText } from './transcripts.js';
 
 const MIN = 60_000;
 const tempRoot = () => {
@@ -36,6 +36,10 @@ describe('transcripts', () => {
     }
     expect(dueMeetings(db, 'work', now + 300 * MIN).map((m) => m.id)).toEqual(['cal:later']);
     expect(db.prepare("SELECT transcript, tries FROM meetings WHERE id = 'cal:just'").get()).toEqual({ transcript: 'missing', tries: TRIES });
+    pruneTried(db, now + 2 * 24 * 60 * MIN);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM meta WHERE key LIKE 'transcript:%'").get()).toEqual({ n: 3 });
+    pruneTried(db, now + 4 * 24 * 60 * MIN);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM meta WHERE key LIKE 'transcript:%'").get()).toEqual({ n: 0 });
   });
 
   it('saves the summary, sorts actions by owner and adds each once', () => {

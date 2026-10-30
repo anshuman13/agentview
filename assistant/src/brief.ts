@@ -2,9 +2,9 @@ import type { Database } from 'bun:sqlite';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { atRisk, minutesText, workGaps, type Span } from '../../shared/plan.js';
 import { blockId, clock, isBlock } from '../../shared/util.js';
-import type { Profile } from './db.js';
+import { pruneMeta, type Profile } from './db.js';
 import { applyChanges } from './sync.js';
-import { inWeekHours } from './time.js';
+import { DAY, inWeekHours } from './time.js';
 
 const PROFILES: Profile[] = ['work', 'personal'];
 const TOP = 5;
@@ -76,6 +76,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
 // push or an empty brief retries, so a calendar imported later that morning still gets one.
 export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy) {
   if (!inWeekHours(now, 8, 11)) return [];
+  pruneMeta(db, 'brief:', now - 2 * DAY);
   const sent: Profile[] = [];
   for (const profile of PROFILES) {
     const key = `brief:${profile}:${dayKey(now)}`;
