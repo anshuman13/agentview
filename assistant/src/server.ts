@@ -10,6 +10,7 @@ import { finishTask, snoozeTask, startReminders } from './remind.js';
 import { parseTask } from './parse.js';
 import { startTranscripts, syncTranscript } from './transcripts.js';
 import { acceptAsk, startSlack, summarizeSlack } from './slack.js';
+import { startGmail } from './gmail.js';
 import { applyChanges, pullChanges, SyncError, type Change } from './sync.js';
 
 export const readJson = async (req: http.IncomingMessage, max: number) => parseObject(await readBody(req, max));
@@ -185,6 +186,12 @@ export function createServer(): http.Server {
         return;
       }
 
+      if (pathname === '/gmail/accept' && req.method === 'POST') {
+        const ok = acceptAsk(getDb(), url.searchParams.get('id') ?? '', 'gmail');
+        send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Gmail task' });
+        return;
+      }
+
       if (pathname === '/changes' && req.method === 'GET') {
         const since = Number(url.searchParams.get('since') ?? '0');
         if (!Number.isInteger(since) || since < 0) {
@@ -228,6 +235,7 @@ async function start() {
     startTranscripts(getDb);
     startJobs(getDb);
     startSlack(getDb);
+    startGmail(getDb);
   }
   server.listen(port, '0.0.0.0', () => {
     console.log(`Assistant server listening on port ${port}`);
