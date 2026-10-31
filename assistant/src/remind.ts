@@ -64,7 +64,7 @@ export function snoozeTask(db: Database, profile: Profile, id: string, now = Dat
   return true;
 }
 
-// A heads-up before each meeting with what is still open from the last one, a nudge once its transcript is read and
+// A heads-up before each meeting that has something to prep (open actions, last decisions or questions, or a calendar link), a nudge once its transcript is read and
 // has left me actions, and one when a task falls due. A meeting with nothing for me gets no nudge.
 export function dueReminders(db: Database, now = Date.now()): Reminder[] {
   const sent = (key: string) => getMeta(db, `remind:${key}`) != null;
@@ -79,13 +79,16 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     const open = db.prepare("SELECT title FROM items WHERE deleted = 0 AND status = 'open' AND profile = ? AND meeting_id IN (SELECT id FROM meetings WHERE profile = ? AND title = ? AND id != ?)").all(m.profile, m.profile, m.title, m.id) as { title: string | null }[];
     const people = (() => { try { return (JSON.parse(m.people ?? '[]') as string[]).join(', '); } catch { return m.people; } })();
     const prev = db.prepare('SELECT summary, notes, decisions FROM meetings WHERE deleted = 0 AND profile = ? AND title = ? AND id != ? AND starts_at < ? ORDER BY starts_at DESC LIMIT 1').get(m.profile, m.title, m.id, m.starts_at) as { summary: string | null; notes: string | null; decisions: string | null } | null;
+    const decided = prev ? textList(prev.decisions) : [];
+    const questions = prev ? questionsIn(prev.summary, prev.notes) : [];
+    const url = webUrl(m.calendar_url);
+    if (!open.length && !decided.length && !questions.length && !url) continue;
     const body = [
       people && `With ${people}`,
       section('Open from last time', open.map((a) => a.title ?? '')),
-      prev && section('Decided last time', textList(prev.decisions)),
-      prev && section('Open questions', questionsIn(prev.summary, prev.notes)),
+      section('Decided last time', decided),
+      section('Open questions', questions),
     ].filter(Boolean).join('\n');
-    const url = webUrl(m.calendar_url);
     out.push({ key, title: `${m.title ?? 'Meeting'} ${mins < 1 ? 'starts now' : `in ${mins} min`}`, body, url: url ?? '', actions: url ? `view, Open, ${url}` : '' });
   }
   const read = db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND transcript = 'done' AND ends_at > ? AND CAST(json_extract(field_times, '$.transcript') AS INTEGER) > ?").all(now - DAY, now - FRESH) as Meeting[];
@@ -110,7 +113,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     if (group.length < 2) { out.push(...group); continue; }
     const lines = group.slice(0, 5).map((r) => `- ${r.title}`);
     if (group.length > 5) lines.push(`+${group.length - 5} more`);
-    out.push({ key: group[0].key, keys: group.map((r) => r.key), title: `${group.length} ${profile} tasks due`, body: lines.join('\n'), url: '' });
+    out.push({ key: group[0].key, keys: group.map((r) => r.key), title: `${group.length} ${profile} tasks due`, body: lines.join('\n'), url: '', actions: `view, Open, ${HUB_URL}/tasks` });
   }
   return out;
 }

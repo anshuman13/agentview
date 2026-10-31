@@ -24,7 +24,7 @@ it('reminds before a meeting and about its actions once the transcript is read',
 it('gives a meeting at 08:00 its heads-up at 08:01, once', () => {
   const db = openDb(':memory:');
   const start = new Date(2026, 9, 26, 8).getTime();
-  db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES ('a', 'work', 1, 0, 'Standup', ?, ?)").run(start, start + 1800_000);
+  db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at, calendar_url) VALUES ('a', 'work', 1, 0, 'Standup', ?, ?, 'https://cal.example/s')").run(start, start + 1800_000);
   const [r] = dueReminders(db, start + 60_000);
   expect(r.title).toBe('Standup starts now');
   db.prepare("INSERT INTO meta (key, value) VALUES (?, '1')").run(`remind:${r.key}`);
@@ -51,7 +51,7 @@ it('marks every task in a group as sent', () => {
   item.run('b', 'Two', now - 60_000);
   const [r] = dueReminders(db, now);
   expect(r.body).toBe('- One\n- Two');
-  expect(r.actions).toBeUndefined();
+  expect(r.actions).toMatch(/^view, Open, .+\/tasks$/);
   for (const k of r.keys!) db.prepare("INSERT INTO meta (key, value) VALUES (?, '1')").run(`remind:${k}`);
   item.run('c', 'Three', now - 30_000);
   expect(dueReminders(db, now).map((x) => x.title)).toEqual(['Three']);
@@ -70,7 +70,7 @@ it('catches up a task that came due while the hub was down, once', () => {
 it('reminds once about a meeting in both calendars and keeps open actions to its profile', () => {
   const db = openDb(':memory:');
   const now = 1_000_000_000;
-  const meeting = db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES (?, ?, 1, 0, 'Sync', ?, ?)");
+  const meeting = db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at, calendar_url) VALUES (?, ?, 1, 0, 'Sync', ?, ?, 'https://cal.example/e')");
   meeting.run('cal:e', 'work', now + 5 * 60_000, now + 3600_000);
   meeting.run('cal:e', 'personal', now + 5 * 60_000, now + 3600_000);
   meeting.run('cal:old', 'personal', now - 7 * 86400_000, now - 7 * 86400_000 + 3600_000);
@@ -78,6 +78,13 @@ it('reminds once about a meeting in both calendars and keeps open actions to its
   const due = dueReminders(db, now);
   expect(due).toHaveLength(1);
   expect(due[0].body).toBe('');
+});
+
+it('skips the heads-up when there is nothing to prep', () => {
+  const db = openDb(':memory:');
+  const now = 1_000_000_000;
+  db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at, people) VALUES ('a', 'work', 1, 0, 'Standup', ?, ?, 'Kim')").run(now + 5 * 60_000, now + 3600_000);
+  expect(dueReminders(db, now)).toHaveLength(0);
 });
 
 it('adds the last decisions and open questions to the heads-up', () => {

@@ -129,7 +129,7 @@ export async function runDue(db: Database, now = Date.now(), run = runJob, notif
     }
     applyChanges(db, changes);
     prune(db, job, done);
-    await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
+    if (status !== 'ok' || /\b(push|notify)\b/i.test(job.prompt ?? '')) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
   }
 }
 
