@@ -75,10 +75,10 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 - Today ends with an Add task button and later days with a small + (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
 - Rows with "- [ ]" checklist lines in the notes show how many are ticked; a tap on the count opens the list under the row to tick, and the task page lists them too
-- The task page is laid out like TickTick's task detail (the header shows the profile name, not the title). A top row has the check circle, the due chip ("Today 10:00", "Tomorrow", "Mon 3 Nov" or "Date")
+- The task page is laid out like TickTick's task detail (the header has only Back). A top row has the check circle, coloured blue for Work and magenta for Personal, the due chip ("Today 10:00", "Tomorrow", "Mon 3 Nov" or "Date")
   and a "..." menu (Add estimate, Log time with +15m, +30m and +1h, Goal, Open meeting, source link, Snooze, Tidy, Make task, Copy draft, Raise, Move, Ask Claude, Delete). The body is a large title,
   the Description notes, and the checklist as subtask rows ending in "Add subtask", which appends a "- [ ] " line. A sticky bottom bar has the
-  Work or Personal chip (moves the task) and the repeat and focus buttons; an existing estimate shows as muted text under the notes
+  repeat and focus buttons; an existing estimate shows as muted text under the notes
 - Swiping left names the day the task moves to, and Snooze offers Today for a task due on a later day
 - Search (or /) filters tasks by title, notes and people, Overdue has Move to today with one undo, and tasks not
   dragged into an order sort by due time

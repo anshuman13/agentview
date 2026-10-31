@@ -164,6 +164,8 @@ a.as-chip { text-decoration: none; }
 @media (hover: hover) { .as-edit-actions .as-delete:hover { color: var(--err); } }
 .as-check.on { color: var(--ok); }
 .as-check.on .codicon.icon { animation: as-pop 260ms var(--ease); }
+.as-edit.work .as-check:not(.on) { color: var(--work); }
+.as-edit.personal .as-check:not(.on) { color: var(--personal); }
 .as-row:has(.as-check.on) .as-title { color: var(--fg-faint); text-decoration: line-through; }
 
 .as-prof.work { color: var(--work); }
@@ -321,16 +323,18 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .as-tt-menu-chips { display: flex; gap: var(--sp-2); padding: 0 var(--sp-6) var(--sp-2); }
 .as-tt-pick.quiet { opacity: 0.4; }
 .as-tt-add { color: var(--fg-muted) !important; }
-.as-tt-fine { display: flex; gap: var(--sp-6); margin-left: 38px; font-size: var(--fs-sm); color: var(--fg-faint); }
+.as-tt-fine { display: flex; gap: var(--sp-6); margin-left: 38px; font-size: var(--fs-xs, var(--fs-sm)); color: var(--fg-faint); }
 .as-tt-fine span:last-child { margin-left: auto; }
 .as-tt-fine span:first-child:not(:last-child) { margin-left: 0; }
 .as-page .as-edit-checks { margin: 0; gap: var(--sp-2); }
-.as-page .as-edit-checks button { min-height: 40px; }
-.as-page .as-edit-text { margin-left: 0; width: 100% !important; min-height: var(--sp-24); }
-.as-page .as-tt-fine { margin-left: 0; }
+.as-page .as-edit-checks button { min-height: 40px; font-size: var(--fs-2xl); }
+.as-page .as-edit-text { margin-left: 0; width: 100% !important; min-height: var(--sp-24); font-size: var(--fs-2xl) !important; }
+.as-page .as-tt-fine { margin: var(--sp-12) 0 0; }
+.as-page .as-tt-top .as-tt-chip { font-size: var(--fs-lg); color: var(--fg-muted); }
+.as-page .as-tt-top .as-tt-chip.late { color: var(--err); }
 .as-page .as-tt-body { gap: var(--sp-8); padding-top: var(--sp-6); }
 .as-page .as-tt-bar { border-top: 0; }
-.as-page .as-edit-title { width: 100%; font-size: 24px !important; font-weight: 600 !important; line-height: 32px; padding-top: 0 !important; }
+.as-page .as-edit-title { width: 100%; font-size: var(--fs-3xl) !important; font-weight: 600 !important; line-height: 1.35; padding-top: 0 !important; color: var(--fg-strong); }
 .as-page .as-edit-top { align-items: flex-start; }
 .as-search { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-4); padding: 0 var(--sp-2) 0 var(--sp-5); min-height: 44px; border: 1px solid var(--border-card); border-radius: 12px; background: var(--surface); color: var(--fg-muted); }
 .as-search input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); box-shadow: none; }

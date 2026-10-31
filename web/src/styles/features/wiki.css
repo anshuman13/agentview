@@ -5,7 +5,6 @@
 :root[data-theme='light'] .wk { --wk-card: var(--bg); }
 .wk :is(button, a, [role='button']):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .wk-head { flex: none; display: flex; align-items: center; gap: var(--sp-4); width: 100%; max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-10) var(--wk-pad) var(--sp-6); }
-.wk-head .as-page-profile { font-size: var(--fs-lg); font-weight: 500; letter-spacing: 0; color: var(--fg-muted); }
 .wk-head h1 { margin: 0; font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
 .wk-scroll { flex: 1; min-height: 0; overflow-y: auto; container-type: inline-size; mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
 .wk-label { font-size: var(--fs-md); font-weight: 500; color: var(--fg-muted); }
@@ -479,8 +478,9 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .sm-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); align-items: flex-start; }
 .sm-body h2 { margin: 0; font-size: var(--fs-lg); font-weight: 600; color: var(--fg-strong); }
 .sm-body h3 { margin: 0 0 var(--sp-2); font-size: var(--row-title); font-weight: 600; }
-.sm-body ul { margin: 0; padding-left: var(--sp-8); }
-.sm-line { border: 0; background: transparent; padding: 2px 0; font: inherit; font-size: var(--row-title); color: var(--fg); text-align: left; cursor: pointer; }
+.sm-body ul { margin: 0; padding: 0; list-style: none; align-self: stretch; }
+.sm-line { position: relative; display: block; width: 100%; border: 0; background: transparent; padding: 4px 0 4px var(--sp-8); font: inherit; font-size: var(--row-title); line-height: 1.4; color: var(--fg); text-align: left; cursor: pointer; }
+.sm-line::before { content: ''; position: absolute; left: 4px; top: calc(4px + 0.7em - 2.5px); width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .sm-line:hover { color: var(--fg-strong); }
 .sm-filter { width: 240px; flex: none; display: flex; flex-direction: column; padding: var(--sp-2) var(--sp-6); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .sm-filter label { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); min-height: var(--row-h); font-size: var(--row-meta); color: var(--meta-fg); }

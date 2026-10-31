@@ -10,7 +10,6 @@ import { useActions } from './useActions';
 import { clock, PickDue, PickTime } from './time';
 import { snoozeText, snoozes } from './AskBar';
 import { Back } from '../app/back';
-import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
 import { recentPeople } from './data/points';
 import { RaiseWith } from './meetings/Raise';
@@ -155,7 +154,6 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       <Back close={onClose} />
       <header className="wk-head">
         <button className="icon-btn" title="Back to tasks" aria-label="Back" onClick={onClose}><Icon name="arrow-left" /></button>
-        <span className="as-page-profile">{FILTER_LABEL[row.profile]}</span>
       </header>
       <div className="wk-scroll">
     <div className={`as-edit ${row.profile}`} ref={box} data-no-swipe>
@@ -236,7 +234,6 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         {(row.people || row.updated_at || estimate != null) && <div className="as-tt-fine">{estimate != null && <span>~{minutesText(estimate)}</span>}{row.people && <span>{row.people}</span>}<span>{ago(row.updated_at, ' ago')}</span></div>}
       </div>
       <div className="as-tt-bar">
-        <button className={`as-tt-chip as-prof ${row.profile}`} title={`Move to ${FILTER_LABEL[other]}`} onClick={move}><ProfileDot profile={row.profile} />{FILTER_LABEL[row.profile]}</button>
         {row.status === 'open' && (
           <label className={`as-tt-ico as-tt-pick${cadence === 'never' ? ' quiet' : ' on'}`} title="Repeat">
             <Icon name="sync" />
