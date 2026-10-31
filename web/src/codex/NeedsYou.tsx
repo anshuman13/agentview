@@ -7,7 +7,7 @@ import { atRisk, minutesText, type Span } from './data/plan';
 import { CAP, collapse, rankNeeds } from './data/needsYou';
 import { needsYou } from './summary/Summary';
 import { ActionRow } from './meetings/Meetings';
-import { UNROLL, useActions } from './useActions';
+import { UNROLL, unrollFor, useActions } from './useActions';
 import { ago, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
 import { Icon } from '../ui/Icon';
@@ -103,7 +103,7 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
   const snooze = (r: ItemRow) => {
     haptic('tap');
     const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
-    void store.update(r, { at, rolls: null, rolled_from: null }).then(() => showSnack(`Snoozed to ${when(at)}`));
+    void store.update(r, { at, ...unrollFor(at) }).then(() => showSnack(`Snoozed to ${when(at)}`));
   };
   const taskRow = (r: ItemRow, label: string, note: string) => (
     <div key={r.profile + r.id} className="ov-follow-row">

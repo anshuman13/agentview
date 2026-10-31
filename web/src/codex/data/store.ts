@@ -23,7 +23,7 @@ export interface AssistantStore {
   unlock(): Promise<void>;
   capture(text: string, type: 'task' | 'note' | 'goal', profile: Profile, at?: number | null, meeting?: MeetingRef): Promise<ItemRow>;
   update(row: ItemRow, patch: Patch): Promise<void>;
-  move(row: ItemRow, profile: Profile): Promise<void>;
+  move(row: ItemRow, profile: Profile, goal?: string | null): Promise<void>;
   editRow<K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>): Promise<void>;
   syncNow(): Promise<void>;
   parse(text: string, profile: Profile): Promise<Parsed>;

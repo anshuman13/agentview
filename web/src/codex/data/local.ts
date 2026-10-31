@@ -257,10 +257,10 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return p ? this.edit(row, p.sql, p.params) : Promise.resolve();
   };
 
-  move = async (row: ItemRow, profile: Profile) => {
+  move = async (row: ItemRow, profile: Profile, goal: string | null = null) => {
     const now = Date.now();
     const current = this.snapshot().items.find((r) => r.profile === row.profile && r.id === row.id) ?? row;
-    await this.swap('items', profile, row.id, (there) => moved(current, there as ItemRow | undefined, profile, now));
+    await this.swap('items', profile, row.id, (there) => moved(current, there as ItemRow | undefined, profile, now, goal));
     await this.update(row, { deleted: 1 });
   };
 

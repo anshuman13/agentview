@@ -97,7 +97,8 @@ export function cadenceOf(text: string | null, at: number | null): Cadence {
   if (at == null) return r.kind === 'dow' ? 'weekly' : 'monthly';
   const d = new Date(at);
   if (r.kind === 'dow') return r.dow === d.getDay() ? 'weekly' : 'custom';
-  return r.dom === d.getDate() ? 'monthly' : 'custom';
+  // A rule on the 31st reads as monthly on the clamped last day of a shorter month.
+  return r.dom === d.getDate() || (d.getDate() === new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() && r.dom >= d.getDate()) ? 'monthly' : 'custom';
 }
 
 // The row to create when a repeating task is done, or null. Skips a copy that already exists.

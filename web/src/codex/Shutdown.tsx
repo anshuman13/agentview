@@ -1,5 +1,5 @@
 import { useAssistantStore } from './data';
-import { UNROLL } from './useActions';
+import { UNROLL, unrollFor } from './useActions';
 import { SNOOZES, nextNine } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { plural } from '../ui/util';
@@ -30,7 +30,7 @@ export function Shutdown({ open, done, now }: { open: ItemRow[]; done: number; n
   };
   const snooze = (r: ItemRow) => {
     const at = SNOOZES[0].at(new Date(now), r.profile);
-    change([r], { at, ...UNROLL }, `Snoozed to ${when(at)}`);
+    change([r], { at, ...unrollFor(at, now) }, `Snoozed to ${when(at)}`);
   };
   return (
     <>

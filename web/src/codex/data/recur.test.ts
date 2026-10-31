@@ -64,6 +64,8 @@ describe('repeat rule line', () => {
     expect(cadenceLine('monthly', at)).toBe('Repeats: every month on the 2nd 08:30');
     expect(cadenceOf(cadenceLine('weekly', at), at)).toBe('weekly');
     expect(cadenceOf(cadenceLine('monthly', at), at)).toBe('monthly');
+    expect(cadenceOf('Repeats: every month on the 31st 09:00', new Date(2026, 1, 28, 9).getTime())).toBe('monthly');
+    expect(cadenceOf('Repeats: every month on the 15th 09:00', new Date(2026, 1, 28, 9).getTime())).toBe('custom');
     expect(cadenceOf('Repeats: every weekday 09:00', at)).toBe('weekdays');
     expect(cadenceOf('Repeats: every friday 09:00', at)).toBe('custom');
     expect(cadenceOf('Repeats: whenever', at)).toBe('custom');

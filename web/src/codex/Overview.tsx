@@ -13,7 +13,7 @@ import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
 import { NeedsYou, useNeedsYou } from './NeedsYou';
 import { channelOf, sourceOf } from './taskSource';
-import { useActions } from './useActions';
+import { unrollFor, useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { GoalLines } from './Goals';
 import { atRisk, minutesText, type Span } from './data/plan';
@@ -338,7 +338,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const snooze = (r: ItemRow) => {
     haptic('tap');
     const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
-    void store.update(r, { at, rolls: null, rolled_from: null }).then(() => showSnack(`Snoozed to ${when(at)}`));
+    void store.update(r, { at, ...unrollFor(at) }).then(() => showSnack(`Snoozed to ${when(at)}`));
   };
   const risky = new Set(needs.rows.flatMap((n) => (n.kind === 'risk' ? [n.row.profile + n.row.id] : [])));
   const todo = dueToday.filter((r) => !risky.has(r.profile + r.id));

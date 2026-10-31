@@ -1,5 +1,6 @@
 import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
+import { doneCutoff } from './localRows';
 import { TABLE_FIELDS, mergeIncoming, rowKey } from './sync';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
@@ -206,6 +207,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       apply: async (change: PulledChange) => {
         const map = this.tables[change.table];
         map.set(rowKey(change), toRow(mergeIncoming<SyncRow>(map.get(rowKey(change)) ?? null, change)));
+        this.prune(change.table);
         this.syncTouched.add(change.table);
         this.save([change.table]);
       },
@@ -216,6 +218,17 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   private track<T>(run: Promise<T>) {
     return run.finally(() => this.countPending());
+  }
+
+  // Synced tombstones and old done items are not kept; LocalStore filters the same done rows when it reads.
+  private prune(table: string) {
+    const map = this.tables[table];
+    const cutoff = doneCutoff(Date.now());
+    for (const [key, row] of map) {
+      const r = row as SyncRow & { status?: string | null };
+      if (r.dirty) continue;
+      if ((r.deleted && r.version > 0) || (table === 'items' && (r.status === 'done' || r.status === 'raised') && r.updated_at <= cutoff)) map.delete(key);
+    }
   }
 
   private put(table: string, row: SyncRow) {
@@ -235,11 +248,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.put('items', edited(this.rows.get(rowKey(row)) ?? row, patch, Date.now()));
   }
 
-  async move(row: ItemRow, profile: Profile) {
+  async move(row: ItemRow, profile: Profile, goal: string | null = null) {
     const now = Date.now();
     const key = rowKey({ profile, id: row.id });
     const current = this.rows.get(rowKey(row)) ?? row;
-    this.rows.set(key, moved(current, this.rows.get(key), profile, now));
+    this.rows.set(key, moved(current, this.rows.get(key), profile, now, goal));
     this.put('items', edited(current, { deleted: 1 }, now));
   }
 

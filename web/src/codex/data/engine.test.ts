@@ -96,6 +96,11 @@ describe('moved', () => {
     expect(change.fields).toMatchObject({ title: 'Call the bank', at: 5000, people: 'Ola', rank: 2, source_url: null });
   });
 
+  it('restores the weekly goal when given', () => {
+    expect(moved({ ...row, goal: 'g1' }, undefined, 'personal', 2000).goal).toBeNull();
+    expect(moved(row, undefined, 'work', 2000, 'g1').goal).toBe('g1');
+  });
+
   it('brings back a row moved away before', () => {
     const gone = edited({ ...row, profile: 'personal' as const, title: 'Old' }, { deleted: 1 }, 1500);
     const m = moved(row, gone, 'personal', 2000);
