@@ -21,6 +21,7 @@ type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; call
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
+const USAGE_EVERY = 2 * 60_000;
 
 export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
 
@@ -34,6 +35,7 @@ export class ClaudeDriver implements AgentDriver {
   private gen = 0;
   private endedAt = 0;
   private sinceStatus = 0;
+  private usageTimer: ReturnType<typeof setInterval> | undefined;
 
   private live: LiveText;
   private edits = new Map<string, string>();
@@ -177,6 +179,7 @@ export class ClaudeDriver implements AgentDriver {
 
   close() {
     this.closed = true;
+    clearInterval(this.usageTimer);
     this.watchHistory(false);
     this.wake?.();
     this.q?.close();
@@ -252,6 +255,10 @@ export class ClaudeDriver implements AgentDriver {
     void this.consume();
     void this.loadMeta();
     void this.loadUsage();
+    // Plan usage also moves from other chats and other devices, so an idle chat reads it again every few minutes.
+    clearInterval(this.usageTimer);
+    this.usageTimer = setInterval(() => void this.loadUsage(), USAGE_EVERY);
+    this.usageTimer.unref?.();
   }
 
   private async loadMeta() {
