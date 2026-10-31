@@ -55,7 +55,7 @@ const push = (v: unknown) => apis.forEach((send) => send(v));
 const broadcast = (m: ServerMessage, chat?: AgentSession) => push({ chat: chat?.id ?? null, m });
 
 let serving = false;
-const live = new Map<string, { chat: AgentSession; watcher: FSWatcher }>();
+const live = new Map<string, { chat: AgentSession; watcher: { close(): void } }>();
 let counts: Record<string, number> = {};
 let lastViewed: AgentSession;
 let restarting: NodeJS.Timeout | null = null;
@@ -170,16 +170,34 @@ setInterval(() => {
   if (orphaned && Date.now() - orphaned > ORPHAN_MS && ![...live.values()].some(({ chat }) => busy(chat))) saveAndExit();
 }, 60_000);
 
+// One recursive watcher per folder, shared by every chat in it and closed with the last one.
+const folders = new Map<string, { listeners: Set<(rel: string) => void>; watcher: FSWatcher }>();
+
 function watchFiles(cwd: string, onChange: (rel: string) => void) {
-  const timers = new Map<string, NodeJS.Timeout>();
-  return watch(cwd, { recursive: true }, (_, rel) => {
-    if (!rel || IGNORED.test(rel)) return;
-    clearTimeout(timers.get(rel));
-    timers.set(rel, setTimeout(() => {
-      timers.delete(rel);
-      stat(path.join(cwd, rel)).then((s) => s.isFile() && onChange(rel)).catch(() => {});
-    }, 200));
-  }).on('error', (err) => console.error(`watcher: ${String(err)}`));
+  let folder = folders.get(cwd);
+  if (!folder) {
+    const listeners = new Set<(rel: string) => void>();
+    const timers = new Map<string, NodeJS.Timeout>();
+    const watcher = watch(cwd, { recursive: true }, (_, rel) => {
+      if (!rel || IGNORED.test(rel)) return;
+      clearTimeout(timers.get(rel));
+      timers.set(rel, setTimeout(() => {
+        timers.delete(rel);
+        stat(path.join(cwd, rel)).then((s) => s.isFile() && listeners.forEach((l) => l(rel))).catch(() => {});
+      }, 200));
+    }).on('error', (err) => console.error(`watcher: ${String(err)}`));
+    folder = { listeners, watcher };
+    folders.set(cwd, folder);
+  }
+  const { listeners, watcher } = folder;
+  listeners.add(onChange);
+  return {
+    close() {
+      if (!listeners.delete(onChange) || listeners.size) return;
+      watcher.close();
+      folders.delete(cwd);
+    },
+  };
 }
 
 const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() => false);
