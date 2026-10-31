@@ -20,7 +20,7 @@ import { atRisk, minutesText, type Span } from './data/plan';
 import { keepInTouch, standupText, touchText, type Lapsed } from './data/review';
 import { blockId, isBlock } from '../../../shared/util';
 import { MorningBrief } from './Brief';
-import { Fold } from './Fold';
+import { Capped, Fold } from './Fold';
 import { Icon } from '../ui/Icon';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
@@ -136,7 +136,7 @@ function FollowThrough({ f }: { f: ReturnType<typeof useFollowThrough> }) {
     <section ref={section}>
       <div className="as-section">Follow-through · {rows.length}</div>
       <div className="ov-follow">
-        {rows.slice(0, 5).map(({ r, m }) => (
+        <Capped items={rows} render={({ r, m }) => (
           <div key={r.profile + r.id} className="ov-follow-row">
             <button className="ov-follow-text" onClick={() => openMeeting(m)}>
               <span className="ov-t">{r.title}</span>
@@ -146,8 +146,7 @@ function FollowThrough({ f }: { f: ReturnType<typeof useFollowThrough> }) {
             <button className="btn sm" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); focusPast(section.current); }}>Done</button>
             <button className="btn sm" aria-label={`Dismiss ${r.title}`} onClick={() => dismiss(r)}>Dismiss</button>
           </div>
-        ))}
-        {rows.length > 5 && <button className="ov-follow-row ov-follow-text muted" onClick={() => setView({ list: 'tasks', open: null })}>+{rows.length - 5} more</button>}
+        )} />
       </div>
     </section>
   );
@@ -193,7 +192,7 @@ function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
     <section ref={section}>
       <div className="as-section">Keep in touch · {shown.length}</div>
       <div className="ov-follow" role="list" aria-label="Keep in touch" ref={list}>
-        {shown.slice(0, 5).map((x, i) => (
+        <Capped items={shown} render={(x, i) => (
           <div key={x.key} className="ov-follow-row wrap" role="listitem">
             <button className="ov-follow-text" onClick={() => setView({ person: x.name })}>
               <span className="ov-t">{displayName(x.name)}</span>
@@ -202,8 +201,7 @@ function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
             <button className="btn sm" aria-label={`Copy a nudge to ${x.name}`} onClick={() => copyText(touchText(x.name), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
             <button className="btn sm" aria-label={`Dismiss ${x.name}`} onClick={() => dismiss(x, i)}>Dismiss</button>
           </div>
-        ))}
-        {shown.length > 5 && <div className="ov-follow-row muted" role="listitem">+{shown.length - 5} more</div>}
+        )} />
       </div>
     </section>
   );
@@ -294,7 +292,7 @@ function Stale({ rows, now, snooze }: { rows: ItemRow[]; now: number; snooze: (r
     <section>
       <div className="as-section">Stale · {rows.length}</div>
       <div className="ov-follow">
-        {rows.slice(0, 5).map((r) => (
+        <Capped items={rows} render={(r) => (
           <div key={r.profile + r.id} className="ov-follow-row">
             <button className="ov-follow-text" onClick={() => openTask(r)}>
               <span className="ov-t">{r.title}</span>
@@ -303,8 +301,7 @@ function Stale({ rows, now, snooze }: { rows: ItemRow[]; now: number; snooze: (r
             <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
             <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
           </div>
-        ))}
-        {rows.length > 5 && <div className="ov-follow-row muted small">+{rows.length - 5} more</div>}
+        )} />
       </div>
     </section>
   );
@@ -360,7 +357,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   };
   const shown = (rs: ItemRow[], timed = false) => (
     <div className="ov-follow">
-      {rs.slice(0, 5).map((r) => (
+      <Capped items={rs} render={(r) => (
         <div key={r.profile + r.id} className="ov-follow-row" draggable={drag} onDragStart={drag ? (e) => e.dataTransfer.setData(DRAG_TYPE, `${r.profile}:${r.id}`) : undefined}>
           <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
           <button className="ov-follow-text" onClick={tasks}>
@@ -369,8 +366,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           </button>
           <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
         </div>
-      ))}
-      {rs.length > 5 && <button className="ov-follow-row ov-follow-text muted" onClick={tasks}>+{rs.length - 5} more</button>}
+      )} />
     </div>
   );
   const sync = useSyncStatus();

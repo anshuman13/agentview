@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useAssistantData } from './data';
 import { save, stored } from '../ui/util';
+import { Fold } from './Fold';
 import { Icon } from '../ui/Icon';
 import { useView } from './view';
 import { clock } from './time';
 
 const DISMISSED = 'codex.briefDismissed';
-const OPEN = 'codex.briefOpen';
 const DAY = 86400000;
 const PREVIEW_LINES = 3;
 
@@ -27,11 +27,9 @@ export function MorningBrief({ now }: { now: number }) {
   const snap = useAssistantData();
   const { filter } = useView();
   const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(DISMISSED, []));
-  const [collapsed, setCollapsed] = useState(() => !stored(OPEN, false));
   const briefs = snap.briefs.filter((b) => !b.deleted && b.kind === 'morning' && b.from_at != null && now >= b.from_at && now - b.from_at < DAY && b.text && (filter === 'all' || b.profile === filter) && !dismissed.includes(b.profile + b.id))
     .sort((a, b) => Number(b.profile === 'work') - Number(a.profile === 'work'));
   if (!briefs.length) return null;
-  const toggle = () => { save(OPEN, collapsed); setCollapsed(!collapsed); };
   const dismiss = (b: (typeof briefs)[number]) => {
     const next = [...dismissed.filter((k) => k.endsWith(b.id)), b.profile + b.id];
     setDismissed(next);
@@ -40,15 +38,10 @@ export function MorningBrief({ now }: { now: number }) {
   return briefs.map((b) => {
     const [title, ...rest] = b.text!.split('\n');
     return (
-      <section key={b.profile + b.id}>
-        <div className="ov-brief-head">
-          <button className="as-section as-toggle" aria-expanded={!collapsed} onClick={toggle}>
-            {title}{filter === 'all' ? ` · ${b.profile}` : ''} · {clock(b.to_at ?? b.from_at!)} <Icon name={collapsed ? 'chevron-down' : 'chevron-up'} small />
-          </button>
-          <button className="icon-btn" title="Hide until tomorrow" aria-label="Hide the brief until tomorrow" onClick={() => dismiss(b)}><Icon name="close" small /></button>
-        </div>
-        {!collapsed && <BriefBody rest={rest} />}
-      </section>
+      <Fold key={b.profile + b.id} id={`brief-${b.profile}`} title={`${title}${filter === 'all' ? ` · ${b.profile}` : ''} · ${clock(b.to_at ?? b.from_at!)}`}
+        action={<button className="icon-btn" title="Hide until tomorrow" aria-label="Hide the brief until tomorrow" onClick={() => dismiss(b)}><Icon name="close" small /></button>}>
+        <BriefBody rest={rest} />
+      </Fold>
     );
   });
 }

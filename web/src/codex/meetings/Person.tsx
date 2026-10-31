@@ -16,7 +16,7 @@ import { AddPoint, PointList, useMarkRaised } from './Raise';
 import { firstName, pointsOf } from '../data/points';
 import '../../styles/features/wiki.css';
 
-const pill = (n: number) => (n > 5 ? <span className="mt-of">{n}</span> : null);
+const pill = (n: number) => (n > 0 ? <span className="mt-of">{n}</span> : null);
 
 function Asks({ title, rows }: { title: string; rows: ItemRow[] }) {
   const act = useActions();

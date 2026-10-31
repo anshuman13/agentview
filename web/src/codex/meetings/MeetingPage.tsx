@@ -13,7 +13,7 @@ import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
 import { copyText, setView, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
-import { Fold as ContextFold } from '../Fold';
+import { Fold } from '../Fold';
 import { ActionRow, confirmAll } from './ActionRow';
 import { Avatars } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
@@ -26,17 +26,6 @@ import { talkTime } from '../data/talkTime';
 import { RoomMic, SummaryFormat, TalkTime, Transcript, TranscriptButton, useTranscript } from './Transcript';
 
 const ORDER: Record<string, number> = { open: 0, done: 1 };
-
-function Fold({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  if (!count) return null;
-  return (
-    <section className="mt-sec mt-fold">
-      <button className="mt-fold-head" aria-expanded={open} onClick={() => setOpen((v) => !v)}>{title} · {count} <Icon name={open ? 'chevron-up' : 'chevron-down'} small /></button>
-      {open && children}
-    </section>
-  );
-}
 
 function AddAction({ m }: { m: Meeting }) {
   const store = useAssistantStore();
@@ -181,23 +170,23 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           {(state === 'upcoming' || state === 'live') && <Prep m={m} section />}
 
-          <ContextFold id="meeting-context" title="Context" count={(talkers ? 1 : 0) + (prior.length ? 1 : 0)}>
+          <Fold id="meeting-context" title="Context" count={(talkers ? 1 : 0) + (prior.length ? 1 : 0)}>
             {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}
             <Series m={m} prior={prior} />
-          </ContextFold>
+          </Fold>
 
           <section className="mt-sec">
             <h2>My notes</h2>
             <Notes m={m} />
           </section>
 
-          <Fold title="Unassigned" count={count.unassigned}>
+          <Fold id="meeting-unassigned" remember={false} title="Unassigned" count={count.unassigned}>
             <div className="mt-tasks">{by('unassigned').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
           </Fold>
-          <Fold title="Others took" count={others.length}>
+          <Fold id="meeting-others" remember={false} title="Others took" count={others.length}>
             <ul className="mt-others">{others.map((o, i) => <li key={i}><b>{o.who}</b> {o.what}</li>)}</ul>
           </Fold>
-          <Fold title="Not mine" count={count.dismissed}>
+          <Fold id="meeting-not-mine" remember={false} title="Not mine" count={count.dismissed}>
             <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
           </Fold>
           {state === 'done' && <Transcript key={rowKey(m)} got={transcript} />}

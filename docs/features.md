@@ -33,7 +33,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - For each profile with no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week, or Not now to hide the row for the week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
-  the last workday. It shows as its title folded by default; opened it shows 3 lines with Show all, and it hides until tomorrow
+  the last workday. It shows as its title folded by default (open state kept per profile); opened it shows 3 lines with Show all, and it hides until tomorrow
 - Meetings that ended in the last two hours with their first 3 open actions (suggested ones wait in Needs you) (Open notes for N more), a follow-up draft to copy and the notes
 - Tasks at risk show only in Needs you, not again in To do today
 - A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
@@ -41,7 +41,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   meetings. The strip shows once a block exists today, otherwise a Plan my day button; Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
   week's goals first, due or not, then overdue and due tasks by due time. It shows the plan to trim before Create adds
   the blocks
-- From 16:00 one Wrap up row with today's done and open counts and Move all to tomorrow; its header opens the first 5 open tasks to move, snooze or drop
+- From 16:00 one Wrap up row with today's done and open counts and Move all to tomorrow; its header (not remembered) opens the first 5 open tasks to move, snooze or drop, with +N more expanding in place
 - The Overview ask bar shows one chip when empty: Prep next meeting within an hour of one, Draft my weekly update on Thursday and Friday afternoons, otherwise Plan my day, What's next or Wrap up my day
 - Copy standup, shown before 11:00 and after that as a row in the Context fold, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
@@ -51,7 +51,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   latest Slack summary's "Needs you" bullets, in that order and each item once. The first 5 show, with Show N more for
   the rest. Three or more overdue tasks collapse into one "N overdue" row that opens Tasks, with a check that moves them all to today. Tasks have a check and a clock (snooze to tomorrow 09:00, next Monday for work tasks on Friday and Saturday),
   asks the same Mine/Not mine row as in Tasks, DMs Open in Slack, Task and Dismiss, and Slack bullets Task and Done
-- Later (folded, count in the header, state remembered): Stale (the 5 oldest tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, with a check and a clock), the follow-through card, Keep in touch and tomorrow's meetings and tasks; hidden when empty
+- Later (folded, count in the header, state remembered): Stale (the 5 oldest tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, with a check and a clock), the follow-through card, Keep in touch and tomorrow's meetings and tasks; hidden when empty. Every list of 5 rows or more in Later and the task lists shows +N more that expands in place, then Show fewer. All folds use one header, Title N, and the meeting page folds (Unassigned, Others took, Not mine) start closed each visit
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
 - Tasks due today (tomorrow under Later) with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
@@ -112,7 +112,7 @@ meeting with them after it was raised and counts as raised once that meeting end
 A person page starts with what waits outside meetings: the first line of their Slack DM summary (full text on hover) with Open in Slack,
 one "Waiting on you" list of what they asked you and what you promised them in Slack or Gmail (deduped by source link, each with its age and a Done check that clears it), and your sent mail to them with no reply, then their open tasks (with a Done check, included when the page is copied as Markdown). Below come their
 commitments (hidden when there are none), the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
-wiki claims that name them. A section shows its count only when it has more than 5 rows.
+wiki claims that name them. A section shows its count whenever it has rows.
 
 The meeting list shows a badge only when something waits for you: actions to review, open actions, Now or soon, or a missing transcript. Rows carry no recording length, repeat icon or topic chips. The calendar syncs on open, on its interval, on pull-to-refresh on the phone and from a small sync icon next to the title on desktop. The linear and copy buttons on an action row, and an empty Date chip, show on hover or focus on desktop and stay visible on touch.
 
