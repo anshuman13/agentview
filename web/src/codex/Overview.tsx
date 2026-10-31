@@ -341,7 +341,10 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   };
   const risky = new Set(needs.rows.flatMap((n) => (n.kind === 'risk' ? [n.row.profile + n.row.id] : [])));
   const todo = dueToday.filter((r) => !risky.has(r.profile + r.id));
-  const upcoming = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
+  // Meetings show here only when running or starting within two hours; the Meetings page has the rest.
+  const soon = (m: Meeting) => m.starts_at! - now < 2 * 3600_000 && (m.ends_at ?? m.starts_at!) > now;
+  const next = s.next && soon(s.next) ? s.next : null;
+  const upcoming = s.meetingsToday.filter((m) => m !== s.next && soon(m));
   const fit = (x: { profile: string; deleted?: unknown }) => !x.deleted && (filter === 'all' || x.profile === filter);
   const slack = snap.chats.some(fit) || snap.briefs.some((b) => fit(b) && b.kind === 'slack');
   const standup = () => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied');
@@ -368,27 +371,23 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     </div>
   );
   // A quiet day shows the next day with meetings or tasks, so the page always says what comes next.
-  const quiet = !s.next && !upcoming.length && !todo.length;
+  const quiet = !next && !upcoming.length && !todo.length;
   const nextUp = useMemo(() => {
     if (!quiet) return null;
     const end = s.endOfDay + 7 * 86400_000;
-    const ms = live(snap.meetings).filter((m) => fit(m) && m.starts_at != null && m.starts_at >= s.endOfDay && m.starts_at < end);
     const ts = s.later.filter((r) => atTime(r.at)! >= s.endOfDay && atTime(r.at)! < end);
-    const first = Math.min(...ms.map((m) => m.starts_at!), ...ts.map((r) => atTime(r.at)!));
-    if (!isFinite(first)) return null;
-    const day = new Date(first).setHours(0, 0, 0, 0), next = new Date(day).setHours(24);
-    const on = (t: number) => t >= day && t < next;
+    if (!ts.length) return null;
+    const day = new Date(Math.min(...ts.map((r) => atTime(r.at)!))).setHours(0, 0, 0, 0), after = new Date(day).setHours(24);
     return {
       label: day === s.endOfDay ? 'Tomorrow' : dayLabel(day, true),
       tomorrow: day === s.endOfDay,
-      meetings: ms.filter((m) => on(m.starts_at!)).sort((a, b) => a.starts_at! - b.starts_at!),
-      tasks: ts.filter((r) => on(atTime(r.at)!)),
+      tasks: ts.filter((r) => atTime(r.at)! >= day && atTime(r.at)! < after),
     };
-  }, [quiet, snap.meetings, s.later, s.endOfDay, filter]);
-  const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (nextUp?.tomorrow ? 0 : s.meetingsTomorrow.length + tomorrow.length);
+  }, [quiet, s.later, s.endOfDay]);
+  const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (nextUp?.tomorrow ? 0 : tomorrow.length);
   const sync = useSyncStatus();
   const loading = sync.syncing && !sync.last && !snap.items.length;
-  const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !s.next && !upcoming.length && !s.meetingsTomorrow.length && !tomorrow.length;
+  const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp;
   if (loading) return <Skeleton />;
   return (
     <>
@@ -404,10 +403,10 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         </div>
       )}
       {morning && <SinceLastVisit />}
-      {s.next && (
+      {next && (
         <section>
           <div className="as-section next">Next</div>
-          <NextCard m={s.next} then={s.then} carried={s.carried} onPrep={onPrep} />
+          <NextCard m={next} then={s.then && soon(s.then) ? s.then : undefined} carried={s.carried} onPrep={onPrep} />
         </section>
       )}
       {upcoming.length > 0 && (
@@ -426,18 +425,16 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       {nextUp && (
         <section>
           <div className="as-section next">Next up · {nextUp.label}</div>
-          {nextUp.meetings.length > 0 && <div className="mt-rows ov-card">{nextUp.meetings.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} noDay />)}</div>}
-          {nextUp.tasks.length > 0 && shown(nextUp.tasks)}
+          {shown(nextUp.tasks)}
         </section>
       )}
       <Fold id="later" title="Later" count={laterCount}>
         <Stale rows={stale} now={now} snooze={snooze} />
         <FollowThrough f={follow} />
         <KeepInTouch k={touchRows} />
-        {!nextUp?.tomorrow && (s.meetingsTomorrow.length > 0 || tomorrow.length > 0) && (
+        {!nextUp?.tomorrow && tomorrow.length > 0 && (
           <section>
             <div className="as-section later">Tomorrow</div>
-            {s.meetingsTomorrow.length > 0 && <div className="mt-rows ov-card">{s.meetingsTomorrow.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>}
             {tomorrow.length > 0 && shown(tomorrow)}
           </section>
         )}
