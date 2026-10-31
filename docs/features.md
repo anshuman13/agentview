@@ -49,7 +49,8 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   tasks due today flagged High or Medium, then Needs you (overdue tasks, at-risk tasks due by Friday that do not fit the free
   work time, asks and promises to confirm, Slack DMs waiting on me, the latest Slack summary's "Needs you" bullets, each once,
   three or more overdue collapsing into Clear N overdue with Move to today), then the rest of today's tasks by priority and
-  time. With nothing to do today it shows the next day's tasks under that day as a plain list with "Nothing is due today",
+  time. With nothing to do today it sums up the next day with tasks instead of listing them: task count and estimated time,
+  flagged count, that day's meetings and their time, the main sources and people, and the task to start with, under "Nothing is due today",
   or on a Saturday or Sunday "It's the weekend. Nothing is due until Tuesday". On a weekend with things to do the list is
   titled When you are back, says it can wait until Monday and drops the red numbers. The first three are numbered cards (red number when late, waiting or
   about to start) with the thing to do, why and its source, and one action: Done (or Tomorrow) for tasks, Reply (or Handled)

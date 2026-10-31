@@ -249,6 +249,9 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .fc-more { min-height: var(--touch); border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--accent-text); font: inherit; font-size: var(--type-subheadline-size); cursor: pointer; }
 .fc > .as-section:not(:first-child) { margin-top: var(--sp-6); }
 .fc-rest { margin: 0 0 var(--sp-5); padding: 0 var(--sp-7); color: var(--fg-muted); font-size: var(--fs-subheadline); }
+.fc-ahead { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: var(--fs-md); }
+.fc-ahead ul { display: flex; flex-direction: column; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.fc-first { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-5) 0 0; border: 0; border-top: 1px solid var(--border); background: none; color: var(--fg); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
 .fc-why { display: flex; align-items: flex-start; gap: var(--sp-3); font-size: var(--type-subheadline-size); line-height: 1.35; color: var(--fg-muted); }
 .fc-why > .codicon, .fc-why > .as-flag { flex: none; margin-top: 2px; width: 14px; height: 14px; }
 .fc-why > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }

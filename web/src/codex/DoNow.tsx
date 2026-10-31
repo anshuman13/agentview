@@ -3,12 +3,12 @@ import { useAssistantStore } from './data';
 import { atTime, nextNine } from './data/engine';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
-import { minutesText } from './data/plan';
+import { estimateMin, minutesText } from './data/plan';
 import { peopleOf } from './meetings/Meetings';
 import { channelOf } from './taskSource';
 import { UNROLL, unrollFor, useActions } from './useActions';
 import type { useNeedsYou } from './NeedsYou';
-import { ago, safeHref } from '../ui/util';
+import { ago, plural, safeHref } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
 import { openMeeting, openTask, setView, showSnack } from './view';
@@ -29,7 +29,7 @@ const rankTask = (r: ItemRow, now: number) => (r.priority ?? 0) * 10 + Math.min(
 export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   needs: ReturnType<typeof useNeedsYou>;
   today: ItemRow[];
-  nextUp: { label: string; tomorrow: boolean; tasks: ItemRow[] } | null;
+  nextUp: Ahead | null;
   meeting: Meeting | null;
   now: number;
   onPrep: () => void;
@@ -139,21 +139,35 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   );
 }
 
-// Nothing to do today: say so, and on a weekend say rest, then preview the next day's tasks without urging them.
-function Ahead({ next, now }: { next: { label: string; tomorrow: boolean; tasks: ItemRow[] }; now: number }) {
+type Ahead = { label: string; tomorrow: boolean; tasks: ItemRow[]; meetings: Meeting[] };
+
+const names = (xs: string[]) => xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
+
+// Nothing to do today: say so, and on a weekend say rest, then sum up the next day in a few lines instead of listing it again.
+function Ahead({ next, now }: { next: Ahead; now: number }) {
   const day = next.tomorrow ? 'tomorrow' : new Date(atTime(next.tasks[0].at)!).toLocaleDateString(undefined, { weekday: 'long' });
   const weekend = [0, 6].includes(new Date(now).getDay());
+  const ts = [...next.tasks].sort((a, b) => rankTask(b, now) - rankTask(a, now) || (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0));
+  const est = ts.map((r) => estimateMin(r.title)).filter((m): m is number => m != null);
+  const ms = [...next.meetings].sort((a, b) => a.starts_at! - b.starts_at!);
+  const meetMin = ms.reduce((n, m) => n + Math.max(0, ((m.ends_at ?? m.starts_at!) - m.starts_at!) / 60000), 0);
+  const flagged = ts.filter((r) => (r.priority ?? 0) >= 2).length;
+  const count = (xs: string[]) => [...xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<string, number>())].sort((a, b) => b[1] - a[1]).map(([x]) => x);
+  const from = count(ts.map((r) => channelOf(r).label).filter(Boolean)).slice(0, 2);
+  const people = count(ts.flatMap((r) => (r.people ?? '').split(',').map((p) => p.trim()).filter(Boolean))).slice(0, 3);
+  const lines = [
+    [plural(ts.length, 'task'), est.length > 0 && `about ${minutesText(est.reduce((a, b) => a + b, 0))}`, flagged > 0 && `${flagged} flagged`].filter(Boolean).join(', '),
+    ms.length > 0 && `${plural(ms.length, 'meeting')}, ${minutesText(Math.round(meetMin))}, first at ${clock(ms[0].starts_at!)}`,
+    from.length > 0 && `Mostly from ${names(from)}`,
+    people.length > 0 && `With ${names(people)}`,
+  ].filter(Boolean) as string[];
   return (
     <section className="fc">
-      <div className="as-section">{next.label} · {next.tasks.length}</div>
+      <div className="as-section">{next.label}</div>
       <p className="fc-rest">{weekend ? `It's the weekend. Nothing is due until ${day}.` : `Nothing is due today. Next up ${day}.`}</p>
-      <div className="ov-follow">
-        {next.tasks.map((r) => (
-          <div key={r.profile + r.id} className="ov-follow-row">
-            <button className="ov-follow-text" onClick={() => openTask(r)}><span className="ov-t">{r.title ?? '(Untitled)'}</span></button>
-            {r.priority ? <Flag priority={r.priority} /> : null}
-          </div>
-        ))}
+      <div className="fc-ahead">
+        <ul>{lines.map((l) => <li key={l}>{l}</li>)}</ul>
+        <button className="fc-first" onClick={() => openTask(ts[0])}><span className="muted small">Start with</span><span>{ts[0].title ?? '(Untitled)'}</span></button>
       </div>
     </section>
   );

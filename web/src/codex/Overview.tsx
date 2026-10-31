@@ -385,8 +385,9 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       label: day === s.endOfDay ? 'Tomorrow' : dayLabel(day, true),
       tomorrow: day === s.endOfDay,
       tasks: ts.filter((r) => atTime(r.at)! >= day && atTime(r.at)! < after),
+      meetings: live(snap.meetings).filter((m) => (filter === 'all' || m.profile === filter) && m.starts_at! >= day && m.starts_at! < after),
     };
-  }, [quiet, s.later, s.endOfDay]);
+  }, [quiet, s.later, s.endOfDay, snap.meetings, filter]);
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (nextUp?.tomorrow ? 0 : tomorrow.length);
   const sync = useSyncStatus();
   const loading = sync.syncing && !sync.last && !snap.items.length;
