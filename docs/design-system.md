@@ -122,6 +122,9 @@ outside closes. Status: built; the task page menu uses it, cp-pop stays (it is a
 Height `--row-h` 40px (`--touch` on coarse pointers), padding `--list-pad`. Leading check or
 icon, title in body type one line with ellipsis, meta in label type `--meta-fg`, trailing
 IconButton sm or Chip shown on hover. Hairline only between groups.
+`<Row leading title meta trailing lines href onClick>` (web/src/ui/Row.tsx, components/rows.css): 48px
+minimum, title clamps to 1 or 2 lines, a hairline under each row starts at the title, state layers
+as buttons, a button or (with href) a link. Status: built; the topic timeline in Meetings uses it.
 
 ### Panel (EuiPanel)
 `<Panel title action padding>`; `.ui-panel`. Elevation 1 on `--surface`, `--shape-lg`.

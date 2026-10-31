@@ -7,6 +7,7 @@ import { clock, when } from '../time';
 import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
+import { Row } from '../../ui/Row';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
@@ -160,13 +161,15 @@ function TopicTimeline({ topic, meetings, facts }: { topic: string; meetings: Me
   return (
     <>
       <OpenQuestions questions={questions} />
-      <section className="mt-tl">
+      <section>
         {entries.map((e, i) => (
-          <button key={i} className="mt-log-item mt-tl-item" onClick={() => (e.meeting ? openMeeting(e.meeting) : setView({ list: 'wiki', open: e.fact?.page_id ?? null, anchor: null }))}>
-            <Icon name={e.kind === 'claim' ? 'book' : e.kind === 'decision' ? 'check' : 'calendar'} small />
-            <span className="mt-log-text">{e.text}</span>
-            <span className="mt-log-from">{when(e.at)}</span>
-          </button>
+          <Row
+            key={i}
+            leading={<Icon name={e.kind === 'claim' ? 'book' : e.kind === 'decision' ? 'check' : 'calendar'} small />}
+            title={e.text}
+            trailing={when(e.at)}
+            onClick={() => (e.meeting ? openMeeting(e.meeting) : setView({ list: 'wiki', open: e.fact?.page_id ?? null, anchor: null }))}
+          />
         ))}
       </section>
     </>

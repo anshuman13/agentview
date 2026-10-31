@@ -451,10 +451,6 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .mt-pins .wk-claim-text { white-space: pre-wrap; }
 .mt-person-head { display: flex; align-items: center; gap: var(--sp-6); }
 .mt-person-head .mt-avatars > span { width: 36px; height: 36px; font-size: 13px; }
-.mt-tl { display: flex; flex-direction: column; gap: var(--sp-2); }
-.mt-tl-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-4); padding: var(--sp-3) var(--sp-5); }
-.mt-tl-item .mt-log-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
-.mt-tl-item .mt-log-from { white-space: nowrap; }
 .mt-topic-new { margin-left: var(--sp-2); padding: 0 var(--sp-2); border-radius: var(--radius-pill); background: var(--hover); color: var(--fg-strong); font-size: var(--fs-xs); }
 
 /* List tokens (--row-h, --row-title, --row-meta, --meta-fg, --hairline): flat rows, hairlines, quiet meta. */

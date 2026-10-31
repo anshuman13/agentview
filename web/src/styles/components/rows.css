@@ -1,0 +1,23 @@
+/* Design system Row (web/src/ui/Row.tsx). */
+.ui-row {
+  --state: 0%; --lead-w: 24px;
+  position: relative; display: flex; align-items: center; gap: var(--sp-6); width: 100%; min-height: 48px; padding: var(--sp-3) var(--list-pad); border: 0; border-radius: 0;
+  color: var(--on-surface); font: inherit; font-size: var(--type-body-size); line-height: var(--type-body-line); text-align: left; text-decoration: none; cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+.ui-row, .ui-row:is(:hover, :focus-visible, :active) {
+  background: linear-gradient(color-mix(in srgb, currentColor var(--state), transparent) 0 0), transparent;
+}
+@media (hover: hover) { .ui-row:hover { --state: var(--state-hover); } }
+.ui-row:focus-visible { --state: var(--state-focus); outline: 2px solid var(--accent); outline-offset: -2px; }
+.ui-row:active { --state: var(--state-press); }
+.ui-row::after { content: ''; position: absolute; right: 0; bottom: 0; left: var(--list-pad); border-bottom: var(--hairline); }
+.ui-row.has-lead::after { left: calc(var(--list-pad) + var(--lead-w) + var(--sp-6)); }
+.ui-row:last-child::after { display: none; }
+.ui-row-lead { flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--lead-w); color: var(--on-surface-muted); }
+.ui-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ui-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: anywhere; }
+.ui-row-title.two { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
+.ui-row-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--type-label-size); line-height: var(--type-label-line); color: var(--meta-fg); }
+.ui-row-trail { flex: none; display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--type-label-size); color: var(--on-surface-muted); }
+@media (pointer: coarse) { .ui-row { min-height: var(--touch); } }
