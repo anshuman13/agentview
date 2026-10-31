@@ -330,3 +330,5 @@ or a page puts focus back on what opened it.
   and the Slack DMs under Since <meeting> are lists, and Esc in a goal field restores its text. Dismissing a person
   in Keep in touch focuses the next one; when Dismiss removes a whole Overview section, focus moves to the next
   control below it, or to the page heading
+
+- Codex lists share design tokens in tokens.css: `--row-h` (40px), `--row-title` and `--row-meta` (md and sm type), `--meta-fg` (muted secondary text) and `--hairline` (1px separators). Task rows, section headers with counts and the Slack Summary page use them, and Summary has a Today / Week range control that filters the chat summaries.

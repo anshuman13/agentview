@@ -42,7 +42,9 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
   const { brief, asks, busy, summarize } = useSlack();
   const [allChats, setAllChats] = useState(false);
   const [allBrief, setAllBrief] = useState(false);
-  const chats = snap.chats.filter((c) => !c.deleted && c.summary?.trim()).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
+  const [range, setRange] = useState<'today' | 'week'>('week');
+  const since = range === 'today' ? new Date().setHours(0, 0, 0, 0) : Date.now() - 7 * 86400000;
+  const chats = snap.chats.filter((c) => !c.deleted && c.summary?.trim() && (c.last_at ?? 0) >= since).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
   const briefLines = brief?.text?.split('\n') ?? [];
   const longBrief = briefLines.length > BRIEF_LINES;
   return (
@@ -51,6 +53,9 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
         <h1>Summary</h1>
         <span className="spacer" />
+        <div className="sm-range" role="radiogroup" aria-label="Range">
+          {(['today', 'week'] as const).map((r) => <button key={r} role="radio" aria-checked={range === r} className={range === r ? 'on' : ''} onClick={() => setRange(r)}>{r === 'today' ? 'Today' : 'Week'}</button>)}
+        </div>
         <button className="btn primary mt-take" disabled={busy} onClick={summarize}><Icon name={busy ? 'loading' : 'sparkle'} small /> <span>{busy ? 'Summarizing' : 'Summarize'}</span></button>
       </header>
       <div className="wk-scroll">
@@ -65,6 +70,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
           )}
           {chats.length > 0 && (
             <div className="mt-rows">
+              <div className="as-section"><span className="as-section-name">Chats</span><span>{chats.length}</span></div>
               {(allChats ? chats : chats.slice(0, CHATS)).map((c) => (
                 <a key={c.profile + c.id} className="mt-row sm-chat" href={safeHref(c.url)} target="_blank" rel="noreferrer">
                   <span className="mt-body">

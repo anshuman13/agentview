@@ -30,6 +30,12 @@
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --list-pad: var(--sp-8);
+  --row-h: 40px;
+  --row-title: var(--fs-md);
+  --row-meta: var(--fs-sm);
+  --meta-fg: var(--fg-muted);
+  --hairline: 1px solid var(--border);
   --sp-1: 2px;
   --sp-2: 4px;
   --sp-3: 6px;
