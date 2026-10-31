@@ -4,6 +4,7 @@ import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
+import { EmptyState, Panel } from '../../ui/Panel';
 import { ago, safeHref } from '../../ui/util';
 import { clock } from '../time';
 import { dayLabel } from '../data/dates';
@@ -72,10 +73,10 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
                   <ul>{g.lines.map((l) => <li key={l.row.profile + l.row.id}><button className="sm-line" onClick={() => openTask(l.row)}>[{dayLabel(l.at)}] {l.text}</button></li>)}</ul>
                 </section>
               ))}
-              {!report.groups.length && <div className="muted small">No tasks in this range.</div>}
+              {!report.groups.length && <EmptyState size="sm" icon="checklist" title="No tasks in this range" hint="Pick another date or status." />}
               <Button size="sm" icon="copy" onClick={() => copyText(report.markdown)}>Copy</Button>
             </div>
-            <div className="sm-filter">
+            <Panel padding="sm" className="sm-filter">
               <label><span>Date</span>
                 <select value={range} onChange={(e) => setRange(e.target.value as DateRange)}>
                   <option value="today">Today</option><option value="week">This week</option><option value="last">Last week</option><option value="month">This month</option>
@@ -86,7 +87,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
                   <option value="all">All</option><option value="done">Completed</option><option value="open">Not completed</option>
                 </select>
               </label>
-            </div>
+            </Panel>
           </div>
           {asks > 0 && <button className="as-section review as-toggle" onClick={() => setView({ list: 'tasks' })}>{asks} from Slack to review <Icon name="arrow-right" small /></button>}
           {brief?.text && (

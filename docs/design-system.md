@@ -1,114 +1,147 @@
-# Design system
+# Design system v2
 
-Basic controls share one look. Tokens live in web/src/styles/tokens.css; primitive styles live in
-web/src/styles/components/*.css; React primitives live in web/src/ui/Button.tsx. Features compose
-these and keep only layout in their own feature CSS.
+Tokens live in web/src/styles/tokens.css (scales first, then roles); primitive styles live in
+web/src/styles/components/*.css; React primitives live in web/src/ui (Button.tsx, Panel.tsx).
+Features compose these and keep only layout in their own CSS. Components read role tokens
+(`--type-*`, `--shape-*`, `--elev-*`, `--state-*`, colour roles), never raw scale values.
+
+Sources: Elastic EUI for panels, empty prompts, density and colour roles; Material 3 for state
+layers, elevation levels, the shape scale, type roles and touch targets.
 
 ## Principles
 
-- Calm: grey chrome, no borders where spacing does the job, hover shows only under `(hover: hover)`.
-- Content first: controls are quiet by default and get louder only when they act or are selected.
-- One accent per screen: at most one primary button; the accent marks interaction, never decoration.
-- Colour codes identity: Work is blue (`--work`), Personal is magenta (`--personal`). Status colours
-  (`--err`, `--warn`, `--ok`) only mark state, always next to text or an icon.
-- Phones: inputs render at 16px (`--fs-2xl`) so iOS does not zoom; on coarse pointers every control
-  reaches `--touch` (44px), or `--touch-sm` (36px) for chips inside dense rows.
-- Focus: every control shows a 2px `--accent` ring on `:focus-visible`.
+- Calm: warm near-black and warm greys, no borders where spacing does the job, hover only under
+  `(hover: hover)`, short motion (`--dur`, 120ms).
+- Content first: chrome is quiet grey; controls get louder only when they act or are selected.
+- One accent: `--accent` marks interaction (focus, selection, links, the one primary action).
+- Profile marks: Work blue (`--work`) and Personal magenta (`--personal`) are the only identity
+  colours on tasks and lists. Status colours mark state, always next to text or an icon.
+- Dense on desktop, roomy on touch: 28 and 36px controls with a pointer, 44px on coarse pointers.
 
-## Sizes
+## Foundations
+
+### Type roles (Material 3 roles, our sizes)
+
+| Role | Size | Weight | Line height | Use |
+| --- | --- | --- | --- | --- |
+| display | `--fs-6xl` 28px | 600 | `--lh-tight` | rare: onboarding, big numbers |
+| headline | `--fs-4xl` 22px | 600 | `--lh-tight` | page title |
+| title | `--fs-lg` 14px | 600 | `--lh-snug` | panel, section and empty titles |
+| body | `--fs-md` 13px | 400 | `--lh` | text, rows |
+| label | `--fs-sm` 12px | 500 | `--lh-tight` | buttons, chips, meta |
+
+Tokens: `--type-{role}-size`, `--type-{role}-weight`, `--type-{role}-line`. Coarse pointers
+raise the small steps (tokens.css media query); inputs stay at 16px so iOS does not zoom.
+
+### Spacing (EUI density)
+
+2px unit: `--sp-N` = N x 2px. Inside a control `--sp-2` to `--sp-6`; between controls `--sp-4`;
+panel padding `--sp-8` (`--sp-2 --sp-6` for dense list panels); between sections `--sp-12`.
+
+### Shape (Material 3 scale, fewer steps)
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--control-sm` | 28px | small buttons, icon buttons and chips |
-| `--control-md` | 36px | default buttons and icon buttons |
-| `--size-2xl` | 32px | default chip |
-| `--touch` | 44px | coarse pointer minimum |
-| `--radius-sm` / `--radius-md` | 4px / 6px | buttons / icon buttons and chips |
+| `--shape-sm` | 4px | buttons, fields, menu items |
+| `--shape-md` | 6px | icon buttons, chips |
+| `--shape-lg` | 12px | panels, menus, sheets |
+| `--shape-full` | pill | badges, avatars, empty-state icon |
 
-## Button
+### Elevation (Material 3 levels, EUI borders)
 
-`<Button variant size icon>`; classes `.btn .btn-{variant} .btn-{size}`.
-
-| Variant | Text | Fill | Border | Hover |
-| --- | --- | --- | --- | --- |
-| primary | `--on-accent` | `--accent-fill` | same | `--accent-hover` |
-| secondary (default) | `--fg` | none | `--border-strong` | `--hover` |
-| quiet | `--fg-muted` | none | none | `--fg`, `--hover` |
-| danger | `--err` | `--err` at 14% | none | `--err` at 24% |
-
-| Size | Height | Padding | Font |
+| Level | Token | Surface | Use |
 | --- | --- | --- | --- |
-| sm | `--control-sm` | `--sp-5` | `--fs-sm` |
-| md (default) | `--control-md` | `--sp-6` | `--fs-md` |
+| 0 | `--elev-0` none | `--bg` | page content |
+| 1 | `--elev-1` 1px `--border` ring | `--surface` | panels, cards |
+| 2 | `--elev-2` = `--shadow-sm` | `--raised` | sheets, dragged rows |
+| 3 | `--elev-3` = `--shadow-lg` | `--raised` | menus, dialogs, popovers |
 
-Disabled is 50% opacity. Legacy `.btn.xs/.sm/.lg/.primary/.quiet/.danger` remain until migrated.
+Level 1 is a hairline drawn with box-shadow, so it never shifts layout. Only 2 and 3 cast shadows.
 
-## IconButton
+### State layers (Material 3)
 
-`<IconButton icon label size on small>`; classes `.icon-btn .icon-btn-{size}`. `label` sets
-`aria-label` and the tooltip. Square, `--radius-md`, `--fg-muted`; hover `--fg` on `--hover`;
-`.on` is `--accent-text`. Sizes as Button (28px, 36px; 44px on touch). Plain `.icon-btn` (24px)
-stays for dense toolbars.
+Interactive controls lay a tint of their own content colour (`currentColor`) over their fill:
+hover `--state-hover` 8%, focus `--state-focus` 10% plus the 2px `--accent` ring, pressed
+`--state-press` 12%. Each control sets `--fill`; buttons.css draws
+`linear-gradient(color-mix(currentColor var(--state), transparent)), var(--fill)`. One rule
+covers every variant, works on any fill, and shows pressed feedback on touch. Disabled is 50%
+opacity with no layer.
 
-## Chip
+## Colour roles (EUI semantic roles)
 
-`<Chip on late size icon>`; classes `.chip.chip-btn` plus `.on`, `.late`, `.chip-sm`. For filters,
-due dates and quick picks. Use `chipClass()` when a wrapper (such as a date picker) owns the button.
-
-| State | Text | Fill |
+| Role | Token | Meaning |
 | --- | --- | --- |
-| quiet (default) | `--fg-muted` | none, `--hover` on hover |
-| on (selected) | `--fg` | `--accent-soft` |
-| late | `--err` | none |
+| surface | `--bg` | page content |
+| surface-raised | `--raised` | menus, sheets, dialogs |
+| on-surface | `--on-surface` = `--fg` | primary text and icons |
+| muted | `--on-surface-muted` = `--fg-muted` | secondary text, idle icons |
+| faint | `--on-surface-faint` = `--fg-faint` | placeholders, empty icons |
+| accent | `--accent`, `--accent-text`, `--accent-fill`, `--accent-soft` | interaction only |
+| danger | `--danger` = `--err` | failed, late, destructive |
+| ok | `--ok` | done |
+| work | `--work` | Work profile mark |
+| personal | `--personal` | Personal profile mark |
 
-Height `--size-2xl` (sm: `--control-sm`), padding `--sp-4`, gap `--sp-3`, `--fs-sm`, `--radius-md`.
-Static `.chip` without `.chip-btn` is a read-only tag (badges.css).
+Chrome behind content is `--surface` (one step darker than `--bg`). Soft tints are the role
+colour at 14% (`--warn-soft`); selected is `--accent-soft`.
 
-## Field
+## Components
 
-Input, select and textarea share one look (components/inputs.css).
+### Button
+`<Button variant size icon>`; `.btn .btn-{variant} .btn-{size}`. Label type, `--shape-sm`.
+Sizes: sm `--control-sm` padding `--sp-5`; md `--control-md` padding `--sp-6`; 44px on touch.
 
-| Part | Token |
-| --- | --- |
-| fill | `--sunken` |
-| border | `--border`, `--accent` on focus |
-| radius | `--radius-sm` |
-| padding | `--sp-2` `--sp-4` |
-| placeholder | `--fg-faint` |
-| font | inherit; `--fs-2xl` on coarse pointers |
+| Variant | Content | `--fill` | Border |
+| --- | --- | --- | --- |
+| primary | `--on-accent` | `--accent-fill` | same |
+| secondary (default) | `--fg` | none | `--border-strong` |
+| quiet | `--fg-muted`, `--fg` on hover | none | none |
+| danger | `--danger` | `--danger` at 14% | none |
 
-Use a borderless field (title, description) only where the field is the page content.
+### IconButton
+`<IconButton icon label size on>`; square, `--shape-md`, `--fg-muted`, `--fg` on hover, `.on`
+is `--accent-text`. 28 / 36px, 44px on touch (Material 48dp target, sized to iOS 44pt).
 
-## Menu
+### Chip
+`<Chip on late size icon>`; `.chip.chip-btn`. Filters and quick picks (Material filter chip).
+Height `--size-2xl`, padding `--sp-4`, label type, `--shape-md`. Quiet: `--fg-muted`, no fill.
+On: `--fg` over `--accent-soft`. Late: `--danger`. Static `.chip` is a read-only tag.
 
-A popover anchored to its trigger (an IconButton with `aria-haspopup="menu"` and `aria-expanded`).
+### Field
+Fill `--sunken`, border `--border` (`--accent` on focus), `--shape-sm`, padding `--sp-2 --sp-4`,
+placeholder `--on-surface-faint`. Borderless only where the field is the page content.
 
-| Part | Token |
-| --- | --- |
-| panel | `--raised`, 1px `--border-card`, radius 12px, `--shadow-lg`, padding `--sp-2` |
-| item | min-height 40px, padding 0 `--sp-6`, gap `--sp-4`, `--fs-md`, `--radius-sm` |
-| item hover | `--hover` |
-| leading icon | small Icon, `--fg-muted` |
-| danger item | `--err`, last in the list |
+### Menu
+Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0 `--sp-6`, gap
+`--sp-4`, body type, `--shape-sm`, state layers as buttons. Danger item last, in `--danger`.
 
-Items use `role="menuitem"`; Escape and an outside click close the menu.
+### Row
+Height `--row-h` 40px (`--touch` on coarse pointers), padding `--list-pad`. Leading check or
+icon, title in body type one line with ellipsis, meta in label type `--meta-fg`, trailing
+IconButton sm or Chip shown on hover. Hairline only between groups.
 
-## Row
+### Panel (EuiPanel)
+`<Panel title action padding>`; `.ui-panel`. Elevation 1 on `--surface`, `--shape-lg`.
+Padding md `--sp-8`, sm `--sp-2 --sp-6` for panels holding rows. Optional header: title role
+on the left, an action (IconButton sm or Button quiet sm) on the right. No nested panels.
 
-A list row: leading, title, meta, trailing.
+### Badge
+Counts and short state. Pill, `--size-2xs` high, `--fs-2xs` 600. Neutral `--border-strong`;
+quiet `--hover`; waiting `--warn`; running `--accent-fill` with a dot (EUI badge colours, kept
+to state roles only).
 
-| Part | Token |
-| --- | --- |
-| height | `--row-h` (40px), `--touch` on coarse pointers |
-| padding | `--list-pad` sides |
-| leading | check or icon, `--icon` |
-| title | `--row-title`, `--fg`, one line with ellipsis |
-| meta | `--row-meta`, `--meta-fg` |
-| trailing | IconButton sm or a Chip, shown on hover with `(hover: hover)` |
-| separator | `--hairline` only between groups |
+### EmptyState (EuiEmptyPrompt)
+`<EmptyState icon title hint action size>`; `.ui-empty`. Centred: icon in a 48px `--hover`
+circle (40px at sm) in `--on-surface-muted`, title role, hint in body `--on-surface-muted`,
+then at most one action. md for a whole view, sm inside a panel or report. The icon stays grey;
+the accent is for the action.
+
+### Section header
+Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
+trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state layer on hover.
 
 ## Migration
 
-TaskEditor is the reference screen. Next: as-chip, as-add, as-section-btn, mt-add, cp-chip,
-mcp-chip, ag-chip, the feature icon buttons that resize `.icon-btn`, and the menus (as-tt-menu,
-as-menu, cp-pop) into one Menu component.
+Done: Summary uses Panel (filter card) and EmptyState (empty report). Next: replace `.as-empty`
+and `.empty-state` with EmptyState, move menus (as-tt-menu, as-menu, cp-pop) to one Menu, and
+move feature chips (as-chip, mt-add, cp-chip, mcp-chip, ag-chip) to Chip.

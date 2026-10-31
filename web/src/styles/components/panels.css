@@ -49,3 +49,21 @@
   .dialog-actions button { min-height: var(--touch); }
   .dialog-input { height: var(--touch); font-size: var(--fs-2xl); }
 }
+
+/* Design system Panel and EmptyState (web/src/ui/Panel.tsx). */
+.ui-panel { background: var(--surface); box-shadow: var(--elev-1); border-radius: var(--shape-lg); }
+.ui-panel-sm { padding: var(--sp-2) var(--sp-6); }
+.ui-panel-md { padding: var(--sp-8); }
+.ui-panel-head { display: flex; align-items: center; gap: var(--sp-4); min-height: var(--control-sm); margin-bottom: var(--sp-4); }
+.ui-panel-title { flex: 1; min-width: 0; margin: 0; font-size: var(--type-title-size); font-weight: var(--type-title-weight); line-height: var(--type-title-line); color: var(--on-surface); }
+
+.ui-empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); text-align: center; color: var(--on-surface); }
+.ui-empty-md { padding: var(--sp-24) var(--sp-8); }
+.ui-empty-sm { padding: var(--sp-12) var(--sp-8); align-self: stretch; }
+.ui-empty-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--sp-4); border-radius: var(--shape-full); background: var(--hover); color: var(--on-surface-muted); }
+.ui-empty-icon > .codicon.icon { font-size: var(--icon-xl); }
+.ui-empty-sm .ui-empty-icon { width: 40px; height: 40px; margin-bottom: var(--sp-2); }
+.ui-empty-sm .ui-empty-icon > .codicon.icon { font-size: var(--icon-lg); }
+.ui-empty-title { font-size: var(--type-title-size); font-weight: var(--type-title-weight); line-height: var(--type-title-line); }
+.ui-empty-hint { max-width: 320px; font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--on-surface-muted); }
+.ui-empty > :is(.btn, button):last-child { margin-top: var(--sp-6); }

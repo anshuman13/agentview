@@ -27,12 +27,12 @@ button.chip { cursor: pointer; }
 /* Design system Chip: an interactive .chip, quiet by default, .on when selected, .late when overdue. */
 .chip.chip-btn {
   height: var(--size-2xl); padding: 0 var(--sp-4); gap: var(--sp-3); border: 0; border-radius: var(--radius-md);
-  background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); white-space: nowrap; cursor: pointer;
+  color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); white-space: nowrap; cursor: pointer;
 }
 .chip.chip-btn.chip-sm { height: var(--control-sm); }
-.chip.chip-btn.on { color: var(--fg); background: var(--accent-soft); }
+.chip.chip-btn.on { color: var(--fg); }
 .chip.chip-btn.late { color: var(--err); }
-@media (hover: hover) { .chip.chip-btn:hover { color: var(--fg); background: var(--hover); } .chip.chip-btn.late:hover { color: var(--err); } }
+@media (hover: hover) { .chip.chip-btn:hover { color: var(--fg); } .chip.chip-btn.late:hover { color: var(--err); } }
 @media (pointer: coarse) { .chip.chip-btn { min-height: var(--touch-sm); } }
 
 .dot { flex: none; display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-round); background: var(--fg-faint); }

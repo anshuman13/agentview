@@ -276,6 +276,44 @@
   --c-knowledge-soft: color-mix(in srgb, var(--c-knowledge) 14%, transparent);
 }
 
+/* Roles (docs/design-system.md): what components read; aliases of the scales above. */
+:root {
+  --on-surface: var(--fg);
+  --on-surface-muted: var(--fg-muted);
+  --on-surface-faint: var(--fg-faint);
+  --danger: var(--err);
+
+  --type-display-size: var(--fs-6xl);
+  --type-display-weight: 600;
+  --type-display-line: var(--lh-tight);
+  --type-headline-size: var(--fs-4xl);
+  --type-headline-weight: 600;
+  --type-headline-line: var(--lh-tight);
+  --type-title-size: var(--fs-lg);
+  --type-title-weight: 600;
+  --type-title-line: var(--lh-snug);
+  --type-body-size: var(--fs-md);
+  --type-body-weight: 400;
+  --type-body-line: var(--lh);
+  --type-label-size: var(--fs-sm);
+  --type-label-weight: 500;
+  --type-label-line: var(--lh-tight);
+
+  --shape-sm: var(--radius-sm);
+  --shape-md: var(--radius-md);
+  --shape-lg: 12px;
+  --shape-full: var(--radius-pill);
+
+  --elev-0: none;
+  --elev-1: 0 0 0 1px var(--border);
+  --elev-2: var(--shadow-sm);
+  --elev-3: var(--shadow-lg);
+
+  --state-hover: 8%;
+  --state-focus: 10%;
+  --state-press: 12%;
+}
+
 /* Touch: raise the small type steps so nothing renders under 12px; inputs stay at 16px to stop iOS zoom. */
 @media (pointer: coarse) {
   :root { --fs-2xs: 12px; --fs-xs: 12px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 15px; --fs-xl: 16px; }
