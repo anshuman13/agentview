@@ -57,6 +57,15 @@
 .observe .obs-link { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--link); text-decoration: none; white-space: nowrap; }
 @media (hover: hover) { .observe .obs-link:hover { text-decoration: underline; } }
 
+.observe .obs-panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-3); padding: var(--sp-2) var(--sp-6); }
+.observe .obs-panel { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; padding: var(--sp-3) var(--sp-4); color: var(--fg); text-decoration: none; background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.observe .obs-panel .name { font-size: var(--fs-xs); color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.observe .obs-panel .val { font-size: var(--fs-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.observe .obs-panel .val.error { font-size: var(--fs-sm); font-weight: 400; }
+.observe .obs-panel .unit { margin-left: var(--sp-1); font-size: var(--fs-xs); font-weight: 400; color: var(--fg-muted); }
+.observe .obs-panel svg { width: 100%; height: 28px; }
+.observe .obs-panel path { fill: none; stroke: var(--link); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+@media (hover: hover) { .observe a.obs-panel:hover { border-color: var(--border-strong); background: var(--hover); } }
 .observe .obs-logs { margin: var(--sp-1) var(--sp-6); max-height: 260px; line-height: var(--line-xs); }
 .observe .obs-logs .line { display: flex; gap: var(--sp-4); padding: 1px var(--sp-4); border-left: 2px solid transparent; }
 .observe .obs-logs .line:is(.level-error, .level-fatal, .level-critical) { border-left-color: var(--err); }

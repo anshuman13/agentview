@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type {
   GrafanaDashboards,
   GrafanaLogs,
+  GrafanaPanel,
+  GrafanaPanels,
   GrafanaPatterns,
   ObserveInfo,
   SnowflakeAuth,
@@ -106,15 +108,39 @@ function AddToClaude({ server, added, disabled, title, onDone }: { server: 'snow
   );
 }
 
+const num = (v: number) => (Math.abs(v) >= 1000 ? v.toLocaleString([], { maximumFractionDigits: 0 }) : String(Math.round(v * 100) / 100));
+
+function PanelCard({ p }: { p: GrafanaPanel }) {
+  const vs = p.points.map((x) => x[1]);
+  const min = Math.min(...vs);
+  const max = Math.max(...vs);
+  const W = 120;
+  const H = 28;
+  const path = p.points
+    .map(([, v], i) => `${i ? 'L' : 'M'}${((i / Math.max(p.points.length - 1, 1)) * W).toFixed(1)},${(max === min ? H / 2 : H - 2 - ((v - min) / (max - min)) * (H - 4)).toFixed(1)}`)
+    .join('');
+  const title = p.error && !p.points.length ? `${p.title}\n${p.error}` : `${p.title}\nmin ${num(min)}${p.unit ?? ''}, max ${num(max)}${p.unit ?? ''} (6h)`;
+  const body = (
+    <>
+      <span className="name">{p.title}</span>
+      {p.last === null ? <span className="val error">{p.error ?? 'No data'}</span> : <span className="val">{num(p.last)}<span className="unit">{p.unit ?? ''}</span></span>}
+      {p.points.length > 1 && <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true"><path d={path} /></svg>}
+    </>
+  );
+  return p.link ? <a className="obs-panel" href={p.link} target="_blank" rel="noreferrer" title={title}>{body}</a> : <div className="obs-panel" title={title}>{body}</div>;
+}
+
 function Grafana({ info }: { info: ObserveInfo }) {
   const repo = encodeURIComponent(info.repo);
   const [dash, refreshDash] = useLoad<GrafanaDashboards>(`/api/observe/grafana/dashboards?repo=${repo}`);
+  const [panels, refreshPanels] = useLoad<GrafanaPanels>(`/api/observe/grafana/panels?repo=${repo}`);
   const [logs, refreshLogs] = useLoad<GrafanaLogs>(`/api/observe/grafana/logs?repo=${repo}`);
   const [pats, refreshPats] = useLoad<GrafanaPatterns>(`/api/observe/grafana/patterns?repo=${repo}`);
   const cfg = info.config ?? info.guess;
   const selector = cfg.grafana?.lokiSelector ?? '';
   const refresh = () => {
     refreshDash();
+    refreshPanels();
     refreshLogs();
     refreshPats();
   };
@@ -161,6 +187,17 @@ function Grafana({ info }: { info: ObserveInfo }) {
         <Err text={dash.error} />
         {dash.data?.dashboards.length === 0 && <div className="obs-hint">No dashboards match "{cfg.grafana?.query || info.repo}". Set grafana.query or grafana.dashboards in the settings.</div>}
       </div>
+      <Sub title="Metrics, last 6 hours">
+        {panels.busy && <Loading />}
+        <Err text={panels.error} />
+        {panels.data && panels.data.panels.length > 0 && <div className="obs-panels">{panels.data.panels.map((p) => <PanelCard key={p.title} p={p} />)}</div>}
+        {panels.data && panels.data.panels.length === 0 && (
+          <div className="obs-hint">
+            No metric panels configured.
+            <button className="obs-ask" onClick={prompt('look at this service\'s dashboards and suggest 3-4 PromQL panels (request rate, error rate, latency, saturation) as JSON for grafana.panels, an array of {"title","query","unit"}, and check that each query returns data')}><Icon name="sparkle" small /> Suggest panels</button>
+          </div>
+        )}
+      </Sub>
       <Sub title="Error logs, last hour" link={logs.data?.link} ask={prompt('query Loki for error lines in the last hour, group them and explain the top causes with one example line each')}>
         {logs.busy && <Loading />}
         <Err text={logs.error} />

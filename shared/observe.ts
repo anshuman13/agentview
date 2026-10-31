@@ -1,5 +1,7 @@
+export type GrafanaPanelConfig = { title: string; query: string; unit?: string };
+
 export type ObserveConfig = {
-  grafana?: { url?: string; query?: string; dashboards?: { title: string; url: string; uid?: string }[]; lokiSelector?: string; lokiUid?: string };
+  grafana?: { url?: string; query?: string; dashboards?: { title: string; url: string; uid?: string }[]; lokiSelector?: string; lokiUid?: string; panels?: GrafanaPanelConfig[] };
 };
 
 export type SnowflakeAuth = 'pat' | 'password';
@@ -37,6 +39,10 @@ type LogLine = { ts: string; line: string; level?: string };
 export type LogPattern = { pattern: string; count: number };
 
 export type GrafanaDashboards = { dashboards: GrafanaDashboard[]; link?: string };
+
+export type GrafanaPanel = { title: string; unit?: string; points: [number, number][]; last: number | null; error?: string; link?: string };
+
+export type GrafanaPanels = { panels: GrafanaPanel[] };
 
 export type GrafanaLogs = { logs: LogLine[]; link?: string; scanned: number };
 

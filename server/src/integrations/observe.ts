@@ -12,6 +12,8 @@ import { callTool, data, listTools, stop, text, type McpResult, type McpServerDe
 import type {
   GrafanaDashboards,
   GrafanaLogs,
+  GrafanaPanel,
+  GrafanaPanels,
   GrafanaPatterns,
   LogPattern,
   ObserveConfig,
@@ -22,6 +24,7 @@ import type {
   SnowflakeResult,
   SnowflakeTest,
 } from '../../../shared/observe.js';
+import { seriesPoints } from './promSeries.js';
 import { writeJson } from '../json.js';
 import { git } from '../workspace/git.js';
 
@@ -90,6 +93,7 @@ async function guess(repo: string, s: Settings): Promise<ObserveConfig> {
       url: others.find((c) => c.grafana?.url)?.grafana?.url ?? '',
       query: repo,
       dashboards: [],
+      panels: [],
       lokiSelector: pick(/grafana\/loki-selector:\s*'?(\{[^\n']*\})/, hint) ?? `{app="${repo}"}`,
     },
   };
@@ -134,6 +138,7 @@ const RANGE = { startRfc3339: 'now-1h', endRfc3339: 'now' };
 const ERRORS = '|~ "(?i)(error|exception|traceback|fatal|panic)"';
 
 const lokiCache = new Map<string, string>();
+const promCache = new Map<string, string>();
 
 async function lokiUid(def: McpServerDef, cfg: ObserveConfig['grafana']) {
   if (cfg?.lokiUid) return cfg.lokiUid;
@@ -146,8 +151,18 @@ async function lokiUid(def: McpServerDef, cfg: ObserveConfig['grafana']) {
   return uid;
 }
 
-async function exploreLink(def: McpServerDef, uid: string, expr: string) {
-  const args = { resourceType: 'explore', datasourceUid: uid, queries: [{ refId: 'A', expr }], timeRange: { from: 'now-1h', to: 'now' } };
+async function promUid(def: McpServerDef, cfg: ObserveConfig['grafana']) {
+  const key = grafanaBase(def, cfg);
+  if (promCache.has(key)) return promCache.get(key)!;
+  const r = data(await callTool(keyOf('grafana', def), def, 'list_datasources', { type: 'prometheus' })) as { datasources?: { uid: string }[] } | null;
+  const uid = r?.datasources?.[0]?.uid;
+  if (!uid) throw new Error('Grafana has no Prometheus datasource');
+  promCache.set(key, uid);
+  return uid;
+}
+
+async function exploreLink(def: McpServerDef, uid: string, expr: string, from = 'now-1h') {
+  const args = { resourceType: 'explore', datasourceUid: uid, queries: [{ refId: 'A', expr }], timeRange: { from, to: 'now' } };
   const r = await callTool(keyOf('grafana', def), def, 'generate_deeplink', args).catch(() => null);
   const url = r ? text(r).trim() : '';
   return /^https?:\/\//.test(url) ? url : undefined;
@@ -173,6 +188,32 @@ async function dashboards(repo: string, cfg: ObserveConfig['grafana'], def: McpS
   const seen = new Set<string>();
   const all = [...pinned, ...found].filter((d) => d.url && !seen.has(d.url) && seen.add(d.url));
   return { dashboards: all, link: base ? `${base}/dashboards?query=${encodeURIComponent(query)}` : undefined };
+}
+
+const PANEL_MS = 20_000;
+const PANEL_STEP = 300;
+const PANEL_FROM = 'now-6h';
+
+async function panels(cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<GrafanaPanels> {
+  const configured = (cfg?.panels ?? []).filter((p) => p && typeof p.title === 'string' && typeof p.query === 'string' && p.query.trim());
+  if (!configured.length) return { panels: [] };
+  const uid = await promUid(def, cfg);
+  const key = keyOf('grafana', def);
+  const one = async (p: { title: string; query: string; unit?: string }): Promise<GrafanaPanel> => {
+    const out: GrafanaPanel = { title: p.title, unit: p.unit, points: [], last: null };
+    try {
+      const args = { datasourceUid: uid, expr: p.query, queryType: 'range', startTime: PANEL_FROM, endTime: 'now', stepSeconds: PANEL_STEP };
+      const [r, link] = await Promise.all([callTool(key, def, 'query_prometheus', args, PANEL_MS), exploreLink(def, uid, p.query, PANEL_FROM)]);
+      out.link = link;
+      out.points = seriesPoints(data(r));
+      out.last = out.points.length ? out.points[out.points.length - 1][1] : null;
+      if (!out.points.length) out.error = 'No data';
+    } catch (e) {
+      out.error = errText(e).split('\n')[0].slice(0, 200);
+    }
+    return out;
+  };
+  return { panels: await Promise.all(configured.map(one)) };
 }
 
 async function logs(cfg: ObserveConfig['grafana'], def: McpServerDef): Promise<GrafanaLogs> {
@@ -356,6 +397,7 @@ async function saveConfig(repo: string, b: Record<string, unknown>, cwd: string)
   }
   await save({ ...s, repos });
   lokiCache.clear();
+  promCache.clear();
   return info(repo, cwd);
 }
 
@@ -394,6 +436,7 @@ export async function observe(req: http.IncomingMessage, url: URL, cwd: string) 
     const def = grafanaDef(servers);
     const cfg = (await configFor(repo, s)).grafana;
     if (p === '/api/observe/grafana/dashboards') return dashboards(repo, cfg, def);
+    if (p === '/api/observe/grafana/panels') return panels(cfg, def);
     if (p === '/api/observe/grafana/logs') return logs(cfg, def);
     if (p === '/api/observe/grafana/patterns') return patterns(cfg, def);
   }

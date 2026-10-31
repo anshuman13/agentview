@@ -283,6 +283,11 @@ are read once and removed from the address bar.
 Observe, Deploy and MCP Servers open as tabs in the editor area (the lower three activity bar icons, or the command
 palette), so they get the full width instead of the sidebar. One page is open at a time; opening another replaces it.
 
+Observe's Grafana section shows a card per entry in a repo's `grafana.panels` (`{ title, query, unit }`, a PromQL query in
+`~/.agentview/observe.json`): the last value, a 6 hour sparkline with min and max in the hover title, and a link to Explore.
+A failing panel shows its error without affecting the others. With no panels, a button asks Claude to suggest some from the
+service's dashboards. The refresh button reloads the panels too.
+
 ## Shortcuts
 
 ⌘ on a Mac, Ctrl elsewhere. Letter shortcuts stay out of the way of text fields. Closing a task, an inline editor
