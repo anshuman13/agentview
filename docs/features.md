@@ -34,8 +34,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
   the last workday. It shows as its title folded by default (open state kept per profile); opened it shows 3 lines with Show all, and it hides until tomorrow
-- Meetings that ended in the last two hours with their first 3 open actions (suggested ones wait in Needs you) (Open notes for N more), a follow-up draft to copy and the notes
-- Tasks at risk show only in Needs you, not again in To do today
+- Meetings that ended in the last two hours with their first 3 open actions (suggested ones wait in Do now) (Open notes for N more), a follow-up draft to copy and the notes
 - A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
   length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
   meetings. The strip shows once a block exists today, otherwise a Plan my day button; Plan my day packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
@@ -46,17 +45,18 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - Copy standup, shown before 11:00 and after that as a row in the Context fold, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
   days)
-- Needs you: one ranked list, shown only when it has rows, that holds overdue tasks, at-risk tasks (due by Friday and
-  not fitting in the free work time, with the shortfall), asks and promises to confirm, Slack DMs waiting on me and the
-  latest Slack summary's "Needs you" bullets, in that order and each item once. The first 5 show, with Show N more for
-  the rest. Three or more overdue tasks collapse into one "N overdue" row that opens Tasks, with a check that moves them all to today. Tasks have a check and a clock (snooze to tomorrow 09:00, next Monday for work tasks on Friday and Saturday),
-  asks the same Mine/Not mine row as in Tasks, DMs Open in Slack, Task and Dismiss (the row opens the person page), and Slack bullets Task and Done
+- Do now: one ranked list of what to work on, top of the page. The order is: the next meeting when it starts within two hours (Prep),
+  tasks due today flagged High or Medium, then Needs you (overdue tasks, at-risk tasks due by Friday that do not fit the free
+  work time, asks and promises to confirm, Slack DMs waiting on me, the latest Slack summary's "Needs you" bullets, each once,
+  three or more overdue collapsing into Clear N overdue with Move to today), then the rest of today's tasks by priority and
+  time; on a day with none, the next day with tasks. The first three are numbered cards (red number when late, waiting or
+  about to start) with the thing to do, why and its source, and one action: Done (or Tomorrow) for tasks, Reply (or Handled)
+  for Slack and DMs, Mine (or Not mine) for asks. The rest follow under Then with one action each, 5 shown, Show N more
+- A meeting starting within 15 minutes or running shows its full card under Now above Do now, with prep, a note field and the room mic toggle
 - Later (folded, count in the header, state remembered): Stale (tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, oldest first, with a check and a clock), the follow-through card (meeting actions still open after a week: Task, Done, Dismiss), Keep in touch and tomorrow's tasks; hidden when empty. Every list of more than 5 rows in Later and the task lists shows +N more that expands in place, then Show fewer. All folds use one header, Title N, and the meeting page folds (Unassigned, Others took, Not mine) start closed each visit
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
-- Meetings show on Overview only when running or starting within two hours (the Next card and the meetings list); the Meetings page has the rest
-- Next up: on a quiet day (no meeting within two hours and no tasks due today) the next day with tasks within a week; when that day is tomorrow, Later leaves out its Tomorrow block
-- Tasks due today (tomorrow under Later), each row opening its task page, with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
+- Meetings show on Overview only when running or starting within two hours; the Meetings page has the rest. When Do now falls back to the next day's tasks and that day is tomorrow, Later leaves out its Tomorrow block
 - Context (folded like Later): a Slack summary line that opens the Summary page (a TickTick-style report with Date (Today, This week, Last week, This month) and Status (All, Completed, Not completed) rows, Completed and Not completed lines that open the task, and a Copy button for Markdown; below it a link to the Slack asks to review; the 8 latest chats with a summary in the range, Show N more; the Sonnet summary folded to 8 lines; and Summarize), one line per job report that opens the job, and the digest
 - Before 11:00, a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over

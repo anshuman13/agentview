@@ -11,7 +11,8 @@ import { ago, safeHref, save, stored, plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Prep } from './meetings/Prep';
 import { Shutdown } from './Shutdown';
-import { NeedsYou, useNeedsYou } from './NeedsYou';
+import { useNeedsYou } from './NeedsYou';
+import { DoNow } from './DoNow';
 import { channelOf, sourceOf } from './taskSource';
 import { unrollFor, useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
@@ -344,6 +345,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   // Meetings show here only when running or starting within two hours; the Meetings page has the rest.
   const soon = (m: Meeting) => m.starts_at! - now < 2 * 3600_000 && (m.ends_at ?? m.starts_at!) > now;
   const next = s.next && soon(s.next) ? s.next : null;
+  // A meeting starting within 15 minutes or running gets the full card; one later in the two hours is a line in Do now.
+  const close = next && next.starts_at! - now < 15 * 60_000 ? next : null;
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && soon(m));
   const fit = (x: { profile: string; deleted?: unknown }) => !x.deleted && (filter === 'all' || x.profile === filter);
   const slack = snap.chats.some(fit) || snap.briefs.some((b) => fit(b) && b.kind === 'slack');
@@ -394,7 +397,13 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <GoalLines now={now} />
       <MorningBrief now={now} />
       <JustEnded meetings={s.meetingsToday} now={now} />
-      <NeedsYou n={needs} now={now} />
+      {close && (
+        <section>
+          <div className="as-section next">Now</div>
+          <NextCard m={close} then={s.then && soon(s.then) ? s.then : undefined} carried={s.carried} onPrep={onPrep} />
+        </section>
+      )}
+      <DoNow needs={needs} today={todo} nextUp={nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
       {morning && (
@@ -403,29 +412,11 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         </div>
       )}
       {morning && <SinceLastVisit />}
-      {next && (
-        <section>
-          <div className="as-section next">Next</div>
-          <NextCard m={next} then={s.then && soon(s.then) ? s.then : undefined} carried={s.carried} onPrep={onPrep} />
-        </section>
-      )}
       {upcoming.length > 0 && (
         <section>
           <div className="as-section">Meetings today · {upcoming.length}{left > 0 && <span title="Meeting time left today, including the next one"> · {leftText} left</span>}</div>
           <div className="mt-rows ov-card">{upcoming.slice(0, 3).map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
           {upcoming.length > 3 && <button className="as-chip quiet ov-more" onClick={() => setView({ list: 'meetings', open: null })}>+{upcoming.length - 3} more</button>}
-        </section>
-      )}
-      {todo.length > 0 && (
-        <section>
-          <div className="as-section">To do today · {todo.length}</div>
-          {shown(todo, true)}
-        </section>
-      )}
-      {nextUp && (
-        <section>
-          <div className="as-section next">Next up · {nextUp.label}</div>
-          {shown(nextUp.tasks)}
         </section>
       )}
       <Fold id="later" title="Later" count={laterCount}>

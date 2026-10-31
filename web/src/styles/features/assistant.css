@@ -239,6 +239,20 @@ a.as-chip { text-decoration: none; }
 .gl-row { display: flex; align-items: center; gap: var(--sp-3); }
 .gl-input { flex: 1; min-width: 0; padding: var(--sp-3) var(--sp-5); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; font-size: var(--fs-md); }
 select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-size: var(--fs-sm); }
+/* Do now: the top three as numbered cards with one action each, hot ones (late, waiting, about to start) marked red. */
+.fc-top { display: flex; flex-direction: column; gap: var(--sp-4); margin: 0; padding: 0; list-style: none; }
+.fc-item { display: flex; gap: var(--sp-6); padding: var(--sp-7) var(--sp-8); border-radius: 12px; background: var(--group-card); cursor: pointer; }
+.fc-n { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius-round); background: var(--accent-soft); color: var(--accent-text); font-size: var(--type-subheadline-size); font-weight: 700; font-variant-numeric: tabular-nums; }
+.fc-item.hot .fc-n { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+.fc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.fc-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: var(--type-headline-size); font-weight: 600; line-height: 1.3; color: var(--fg); overflow-wrap: anywhere; }
+.fc-more { min-height: var(--touch); border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--accent-text); font: inherit; font-size: var(--type-subheadline-size); cursor: pointer; }
+.fc > .as-section:not(:first-child) { margin-top: var(--sp-6); }
+.fc-why { display: flex; align-items: flex-start; gap: var(--sp-3); font-size: var(--type-subheadline-size); line-height: 1.35; color: var(--fg-muted); }
+.fc-why > .codicon, .fc-why > .as-flag { flex: none; margin-top: 2px; width: 14px; height: 14px; }
+.fc-why > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.fc-acts { display: flex; gap: var(--sp-4); margin-top: var(--sp-4); }
+.fc .ov-follow-row .as-flag { width: 14px; height: 14px; }
 .ov-follow { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: var(--fs-md); overflow: hidden; }
 .ov-follow-row { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-5) var(--sp-7); }
 .ov-follow-row + .ov-follow-row { border-top: 1px solid var(--border); }
