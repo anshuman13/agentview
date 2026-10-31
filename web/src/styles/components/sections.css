@@ -1,0 +1,17 @@
+/* Design system Section header (web/src/ui/Section.tsx). */
+.ui-section { display: flex; align-items: center; gap: var(--sp-4); padding-right: var(--list-pad); }
+.ui-section-head {
+  --state: 0%;
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--list-pad); border: 0; border-radius: 0;
+  color: var(--on-surface-muted); font: inherit; font-size: var(--type-label-size); font-weight: var(--type-label-weight); line-height: var(--type-label-line); text-align: left;
+}
+button.ui-section-head { cursor: pointer; transition: background var(--dur) var(--ease); }
+.ui-section-head, button.ui-section-head:is(:hover, :focus-visible, :active) {
+  background: linear-gradient(color-mix(in srgb, currentColor var(--state), transparent) 0 0), transparent;
+}
+@media (hover: hover) { button.ui-section-head:hover { --state: var(--state-hover); } }
+button.ui-section-head:focus-visible { --state: var(--state-focus); outline: 2px solid var(--accent); outline-offset: -2px; }
+button.ui-section-head:active { --state: var(--state-press); }
+.ui-section-head > .codicon { transition: transform var(--dur) var(--ease); }
+.ui-section-head[aria-expanded='true'] > .codicon { transform: rotate(90deg); }
+.ui-section-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

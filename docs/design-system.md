@@ -145,6 +145,8 @@ the accent is for the action.
 ### Section header
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state layer on hover.
+`<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
+`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers use it.
 
 ## Migration
 

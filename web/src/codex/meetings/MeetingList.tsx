@@ -8,6 +8,7 @@ import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
@@ -267,7 +268,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           {!query && <Upcoming meetings={mine} now={now} />}
           {visible.map((g) => (
             <section key={g.label}>
-              <div className="mt-day">{g.label}</div>
+              <Section label={g.label} />
               <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} said={said.get(rowKey(m))} />)}</div>
             </section>
           ))}

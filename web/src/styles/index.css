@@ -9,6 +9,7 @@
 @import './components/panels.css';
 @import './components/menus.css';
 @import './components/rows.css';
+@import './components/sections.css';
 @import './features/workbench.css';
 @import './features/browser.css';
 @import './features/terminal.css';

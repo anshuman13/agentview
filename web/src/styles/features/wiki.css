@@ -196,7 +196,6 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .wk.narrow { --wk-max: 732px; }
 .mt-list, .mt-log, .mt-load { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); display: flex; flex-direction: column; gap: var(--sp-8); }
 .mt-list section { display: flex; flex-direction: column; gap: var(--sp-2); }
-.mt-day { padding: var(--sp-3) 0; font-size: var(--fs-sm); font-weight: 500; color: var(--fg); }
 .mt-days { display: flex; flex-direction: column; container-type: inline-size; }
 .mt-days > .mt-row { margin: 0 calc(-1 * var(--sp-4)); padding: var(--sp-2) var(--sp-4); border-radius: var(--radius-md); }
 @media (hover: hover) { .mt-days > .mt-row:hover { background: var(--hover); } }
