@@ -153,3 +153,5 @@ trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state lay
 Done: Summary uses Panel (filter card) and EmptyState (empty report). Next: replace `.as-empty`
 and `.empty-state` with EmptyState, move the remaining menus (as-menu) to Menu, and
 move feature chips (as-chip, mt-add, cp-chip, mcp-chip, ag-chip) to Chip.
+
+As of 31 Oct 2026 the light and dark themes use Apple's iOS system colours: white or black page, #F2F2F7 or #1C1C1E for cards and chrome, systemBlue accent and work, systemPurple personal, and Apple's Increase Contrast hues for status text in light. Meeting and knowledge icons are neutral.

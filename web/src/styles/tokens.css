@@ -7,7 +7,8 @@
 
   1. Scales: spacing (2px unit, --sp-N = N * 2px), type, line height, radius,
      control sizes, elevation, motion, z-index.
-  2. Semantic colours for dark (default, Spotify) and light. Every colour has
+  2. Semantic colours for dark (default) and light, taken from Apple's iOS
+     system palette (systemBackground, label, separator, systemBlue...). Every colour has
      one meaning, used the same way everywhere:
      - Neutral: greys for chrome, icons and text. Icons are grey, white when
        active; they never get a colour of their own.
@@ -21,7 +22,7 @@
        behind white text, so both reach 4.5:1.
      - Identity: --agent (subagents), --work and --personal; things you tell
        apart at a glance.
-     - Kind: --c-meeting (meetings) and --c-knowledge (notes, wiki claims).
+     - Kind: --c-meeting and --c-knowledge are neutral; a kind is told by its icon.
      - Content: diffs, syntax and the terminal's ANSI colours read the hues.
      Add a colour only by giving it one of these roles.
   Components use only these names; one-off geometry (tree indents, fixed
@@ -143,43 +144,43 @@
   --file-folder: #dcb67a;
 }
 
-/* Dark: warm near-black, modelled on Stilla. Chrome is the darkest layer, content sits one step up. */
+/* Dark: Apple's iOS dark system colours. Page is systemBackground, cards and chrome secondarySystemBackground, menus tertiary. */
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --sunken: #080706;
-  --bg: #1c1a17;
-  --surface: #0c0b09;
-  --raised: #292724;
-  --hover: #292724;
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --border-card: rgba(255, 255, 255, 0.24);
-  --fg-faint: #938f89;
-  --fg-muted: #b2afa8;
-  --fg: #f7f6f2;
-  --fg-strong: #fcfcfa;
-  --hue-violet: #b49bc8;
-  --hue-amber: #f59b23;
-  --hue-teal: #2dd4bf;
-  --hue-blue: #509bf5;
-  --hue-magenta: #ff5fb8;
-  --hue-green: #3fcf6e;
-  --hue-yellow: #ffc864;
-  --hue-red: #ff4d5e;
-  --hue-sky: #4cc3ff;
-  --hue-orange: #ff6437;
-  --hue-brown: #d68a4c;
-  --hue-brand: #4a7aff;
+  --sunken: #1c1c1e;
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --raised: #2c2c2e;
+  --hover: rgba(118, 118, 128, 0.24);
+  --border: rgba(84, 84, 88, 0.6);
+  --border-strong: #48484a;
+  --border-card: #545458;
+  --fg-faint: rgba(235, 235, 245, 0.45);
+  --fg-muted: rgba(235, 235, 245, 0.6);
+  --fg: #ffffff;
+  --fg-strong: #ffffff;
+  --hue-violet: #5e5ce6;
+  --hue-amber: #ff9f0a;
+  --hue-teal: #40cbe0;
+  --hue-blue: #0a84ff;
+  --hue-magenta: #bf5af2;
+  --hue-green: #30d158;
+  --hue-yellow: #ffd60a;
+  --hue-red: #ff453a;
+  --hue-sky: #64d2ff;
+  --hue-orange: #ff9f0a;
+  --hue-brown: #ac8e68;
+  --hue-brand: #0a84ff;
   --on-accent: #ffffff;
   --on-color: #ffffff;
-  --accent-fill: #3b69e8;
-  --accent-text: #6a92ff;
+  --accent-fill: #0a84ff;
+  --accent-text: #409cff;
   --link: var(--accent-text);
   --prompt: var(--accent-text);
   --agent: var(--hue-violet);
-  --c-meeting: var(--hue-sky);
-  --c-knowledge: var(--hue-brown);
+  --c-meeting: var(--fg-muted);
+  --c-knowledge: var(--fg-muted);
   --claude: var(--fg-muted);
   --ok: var(--hue-green);
   --warn: var(--hue-amber);
@@ -204,42 +205,42 @@
   --syn-invalid: var(--hue-red);
 }
 
-/* Light. */
+/* Light: Apple's iOS light system colours. Status and kind hues use Apple's Increase Contrast variants because they also colour text. */
 :root[data-theme='light'] {
   color-scheme: light;
-  --sunken: #f3f3f3;
+  --sunken: #f2f2f7;
   --bg: #ffffff;
-  --surface: #f8f8f8;
+  --surface: #f2f2f7;
   --raised: #ffffff;
-  --hover: #ececec;
-  --border: #e4e4e4;
-  --border-strong: #d6d6d6;
-  --border-card: #cccccc;
-  --fg-faint: #6b6b6b;
-  --fg-muted: #626262;
-  --fg: #1f1f1f;
-  --fg-strong: #0a0a0a;
-  --hue-violet: #6355be;
-  --hue-amber: #b5651d;
-  --hue-teal: #2a6f80;
-  --hue-blue: #4a6f94;
-  --hue-magenta: #a2489b;
-  --hue-green: #176a39;
-  --hue-yellow: #8a5a00;
-  --hue-red: #ad2144;
-  --hue-sky: #2676ab;
-  --hue-orange: #b5651d;
-  --hue-brown: #8a6a4e;
-  --hue-brand: #2a6f80;
+  --hover: rgba(118, 118, 128, 0.12);
+  --border: #e5e5ea;
+  --border-strong: #d1d1d6;
+  --border-card: #c6c6c8;
+  --fg-faint: rgba(60, 60, 67, 0.6);
+  --fg-muted: #6c6c70;
+  --fg: #000000;
+  --fg-strong: #000000;
+  --hue-violet: #3634a3;
+  --hue-amber: #c93400;
+  --hue-teal: #008299;
+  --hue-blue: #007aff;
+  --hue-magenta: #af52de;
+  --hue-green: #248a3d;
+  --hue-yellow: #b25000;
+  --hue-red: #d70015;
+  --hue-sky: #0071a4;
+  --hue-orange: #c93400;
+  --hue-brown: #7f6545;
+  --hue-brand: #007aff;
   --on-accent: #ffffff;
   --on-color: #ffffff;
-  --accent-fill: var(--accent);
-  --accent-text: #24626f;
+  --accent-fill: #007aff;
+  --accent-text: #007aff;
   --link: var(--accent-text);
   --prompt: var(--accent-text);
   --agent: var(--hue-violet);
-  --c-meeting: var(--hue-sky);
-  --c-knowledge: var(--hue-brown);
+  --c-meeting: var(--fg-muted);
+  --c-knowledge: var(--fg-muted);
   --claude: var(--fg-muted);
   --ok: var(--hue-green);
   --warn: var(--hue-yellow);
