@@ -4,10 +4,10 @@ import { live, type Chat } from './data/wiki';
 import { atTime, errorText, nextNine } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { atRisk, minutesText, type Span } from './data/plan';
-import { CAP, rankNeeds } from './data/needsYou';
+import { CAP, collapse, rankNeeds } from './data/needsYou';
 import { needsYou } from './summary/Summary';
 import { ActionRow } from './meetings/Meetings';
-import { useActions } from './useActions';
+import { UNROLL, useActions } from './useActions';
 import { ago, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
 import { Icon } from '../ui/Icon';
@@ -24,6 +24,7 @@ const urlKey = (u: string | null | undefined) => (safeHref(u) ? [`url:${safeHref
 type Bullet = { title: string; url: string | null; why: string };
 type Need =
   | { kind: 'overdue'; row: ItemRow; keys: string[] }
+  | { kind: 'overdueAll'; rows: ItemRow[]; keys: string[] }
   | { kind: 'risk'; row: ItemRow; due: number; short: number; keys: string[] }
   | { kind: 'ask'; row: ItemRow; keys: string[]; marks: string[] }
   | { kind: 'dm'; chat: Chat; keys: string[] }
@@ -52,13 +53,14 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     const dms = live(snap.chats).filter((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter) && !waitDone.includes(waitKey(c))).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
     const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack' && (filter === 'all' || b.profile === filter)).sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
     const bullets = brief?.text ? needsYou(brief.text).filter((x) => !slackDone.includes(bulletKey(x))) : [];
-    return rankNeeds<Need>([
+    const ranked = rankNeeds<Need>([
       s.overdue.map((row) => ({ kind: 'overdue', row, keys: [taskKey(row)] })),
       risk.map(({ task, short }) => ({ kind: 'risk', row: task.r, due: task.due, short, keys: [taskKey(task.r)] })),
       s.review.map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
       dms.map((chat) => ({ kind: 'dm', chat, keys: [`chat:${chat.profile}:${chat.id}`, ...urlKey(chat.url)] })),
       bullets.map((x) => ({ kind: 'slack', x, profile: brief!.profile, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
     ]);
+    return collapse<Need>(ranked, (x) => x.kind === 'overdue', 3, (xs) => ({ kind: 'overdueAll', rows: xs.flatMap((x) => (x.kind === 'overdue' ? [x.row] : [])), keys: [] }));
   }, [snap.meetings, snap.chats, snap.briefs, filter, s, minute, waitDone, slackDone]);
   const hideChat = (c: Chat) => {
     const next = [...stored<string[]>(WAIT_HANDLED, []).filter((k) => live(snap.chats).some((r) => waitKey(r) === k)), waitKey(c)];
@@ -116,6 +118,15 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
   const rowOf = (x: Need) => {
     switch (x.kind) {
       case 'overdue': return taskRow(x.row, 'Overdue', atTime(x.row.at) != null ? ` · due ${when(atTime(x.row.at)!, now)}` : '');
+      case 'overdueAll': return (
+        <div key="overdue" className="ov-follow-row">
+          <button className="ov-follow-text" onClick={() => setView({ list: 'tasks', open: null })}>
+            <span className="ov-t">{x.rows.length} overdue</span>
+            <span className="muted small">Open Tasks to go through them</span>
+          </button>
+          <button className="ov-check" aria-label={`Move ${x.rows.length} overdue tasks to today`} title="Move all to today" onClick={() => { haptic('success'); for (const r of x.rows) void store.update(r, { at: now, ...UNROLL }); showSnack('Moved to today'); }}><Icon name="check-all" small /></button>
+        </div>
+      );
       case 'risk': return taskRow(x.row, 'At risk', ` · due ${when(x.due, now)} · ${minutesText(x.short)} short`);
       case 'ask': return <ActionRow key={x.row.profile + x.row.id} row={x.row} />;
       case 'dm': {

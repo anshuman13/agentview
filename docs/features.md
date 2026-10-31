@@ -43,15 +43,15 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   the blocks
 - From 16:00 one Wrap up row with today's done and open counts and Move all to tomorrow; its header opens the first 5 open tasks to move, snooze or drop
 - The Overview ask bar shows one chip when empty: Prep next meeting within an hour of one, Draft my weekly update on Thursday and Friday afternoons, otherwise Plan my day, What's next or Wrap up my day
-- Copy standup, shown before 11:00, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
+- Copy standup, shown before 11:00 and after that as a row in the Context fold, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
   days)
 - Needs you: one ranked list, shown only when it has rows, that holds overdue tasks, at-risk tasks (due by Friday and
   not fitting in the free work time, with the shortfall), asks and promises to confirm, Slack DMs waiting on me and the
   latest Slack summary's "Needs you" bullets, in that order and each item once. The first 5 show, with Show N more for
-  the rest. Tasks have a check and a clock (snooze to tomorrow 09:00, next Monday for work tasks on Friday and Saturday),
+  the rest. Three or more overdue tasks collapse into one "N overdue" row that opens Tasks, with a check that moves them all to today. Tasks have a check and a clock (snooze to tomorrow 09:00, next Monday for work tasks on Friday and Saturday),
   asks the same Mine/Not mine row as in Tasks, DMs Open in Slack, Task and Dismiss, and Slack bullets Task and Done
-- Later (folded, count in the header, state remembered): Stale (the 5 oldest tasks untouched for 14 days that are not overdue or meeting actions, with a check and a clock), the follow-through card, Keep in touch and tomorrow's meetings and tasks; hidden when empty
+- Later (folded, count in the header, state remembered): Stale (the 5 oldest tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, with a check and a clock), the follow-through card, Keep in touch and tomorrow's meetings and tasks; hidden when empty
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
 - Tasks due today (tomorrow under Later) with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)

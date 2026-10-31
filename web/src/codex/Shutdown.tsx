@@ -44,7 +44,7 @@ export function Shutdown({ open, done, now }: { open: ItemRow[]; done: number; n
           <div key={r.profile + r.id} className="ov-follow-row">
             <span className="ov-follow-text"><span className="ov-t">{r.title}</span></span>
             <button className="ov-check" aria-label={`Move ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => change([r], { at: tomorrow(r), ...UNROLL }, `Moved to ${when(tomorrow(r))}`)}><Icon name="arrow-right" small /></button>
-            <button className="ov-check" aria-label={`Snooze ${r.title} 1 hour`} title="In 1 hour" onClick={() => snooze(r)}><Icon name="clock" small /></button>
+            <button className="ov-check" aria-label={`Snooze ${r.title} 1 hour`} title="In 1 hour" onClick={() => snooze(r)}><Icon name="history" small /></button>
             <button className="ov-check" aria-label={`Drop ${r.title}`} title="Drop" onClick={() => change([r], { deleted: 1 }, 'Dropped')}><Icon name="trash" small /></button>
           </div>
         ))}

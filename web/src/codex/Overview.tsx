@@ -131,6 +131,7 @@ function FollowThrough({ f }: { f: ReturnType<typeof useFollowThrough> }) {
   const section = useRef<HTMLElement>(null);
   const { rows } = f;
   const dismiss = (r: ItemRow) => { f.dismiss(r); focusPast(section.current); };
+  if (!rows.length) return null;
   return (
     <section ref={section}>
       <div className="as-section">Follow-through · {rows.length}</div>
@@ -187,6 +188,7 @@ function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
     });
     focusPast(section.current);
   };
+  if (!shown.length) return null;
   return (
     <section ref={section}>
       <div className="as-section">Keep in touch · {shown.length}</div>
@@ -330,8 +332,9 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const needs = useNeedsYou(s, now);
   const stale = useMemo(() => {
     const late = new Set(s.overdue.map((r) => r.profile + r.id));
-    return staleTasks(snap.items.filter((r) => (filter === 'all' || r.profile === filter) && !r.meeting_id && !late.has(r.profile + r.id)), minute * 60000);
-  }, [snap.items, s.overdue, filter, minute]);
+    const shownElsewhere = (r: ItemRow) => { const t = atTime(r.at); return t != null && t < s.endOfTomorrow; };
+    return staleTasks(snap.items.filter((r) => (filter === 'all' || r.profile === filter) && !r.meeting_id && !late.has(r.profile + r.id) && !shownElsewhere(r)), minute * 60000);
+  }, [snap.items, s.overdue, s.endOfTomorrow, filter, minute]);
   const follow = useFollowThrough();
   const touchRows = useKeepInTouch();
   const morning = new Date(now).getHours() < 11;
@@ -346,7 +349,8 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + s.meetingsTomorrow.length + tomorrow.length;
   const fit = (x: { profile: string; deleted?: unknown }) => !x.deleted && (filter === 'all' || x.profile === filter);
   const slack = snap.chats.some(fit) || snap.briefs.some((b) => fit(b) && b.kind === 'slack');
-  const contextCount = reports.length + (digest ? 1 : 0) + (slack ? 1 : 0);
+  const standup = () => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied');
+  const contextCount = reports.length + (digest ? 1 : 0) + (slack ? 1 : 0) + (morning ? 0 : 1);
   const left = meetingTimeLeft(s.meetingsToday, now, s.endOfDay);
   const leftText = left >= 60 ? `${Math.floor(left / 60)}h${left % 60 ? String(left % 60).padStart(2, '0') : ''}` : `${left} min`;
   const drag = !touch();
@@ -383,7 +387,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
       {morning && (
         <div className="as-next-actions">
-          <button className="btn sm" onClick={() => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied')}><Icon name="copy" small /> Copy standup</button>
+          <button className="btn sm" onClick={standup}><Icon name="copy" small /> Copy standup</button>
         </div>
       )}
       {morning && <SinceLastVisit />}
@@ -419,6 +423,15 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         )}
       </Fold>
       <Fold id="context" title="Context" count={contextCount}>
+        {!morning && (
+          <div className="ov-follow">
+            <div className="ov-follow-row">
+              <button className="ov-follow-text" onClick={standup}>
+                <span className="ov-t"><Icon name="copy" small /> Copy standup</span>
+              </button>
+            </div>
+          </div>
+        )}
         {slack && (
           <div className="ov-follow">
             <div className="ov-follow-row">
