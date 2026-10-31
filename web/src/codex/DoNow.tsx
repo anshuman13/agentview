@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAssistantStore } from './data';
+import { useAssistantData, useAssistantStore } from './data';
 import { atTime, nextNine } from './data/engine';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
@@ -141,9 +141,7 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
 
 type Ahead = { label: string; tomorrow: boolean; tasks: ItemRow[]; meetings: Meeting[] };
 
-const names = (xs: string[]) => xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
-
-// Nothing to do today: say so, and on a weekend say rest, then sum up the next day in a few lines instead of listing it again.
+// Nothing to do today: say so, and on a weekend say rest, then sum up the next day with the hub's written summary and its counts.
 function Ahead({ next, now }: { next: Ahead; now: number }) {
   const day = next.tomorrow ? 'tomorrow' : new Date(atTime(next.tasks[0].at)!).toLocaleDateString(undefined, { weekday: 'long' });
   const weekend = [0, 6].includes(new Date(now).getDay());
@@ -152,21 +150,19 @@ function Ahead({ next, now }: { next: Ahead; now: number }) {
   const ms = [...next.meetings].sort((a, b) => a.starts_at! - b.starts_at!);
   const meetMin = ms.reduce((n, m) => n + Math.max(0, ((m.ends_at ?? m.starts_at!) - m.starts_at!) / 60000), 0);
   const flagged = ts.filter((r) => (r.priority ?? 0) >= 2).length;
-  const count = (xs: string[]) => [...xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<string, number>())].sort((a, b) => b[1] - a[1]).map(([x]) => x);
-  const from = count(ts.map((r) => channelOf(r).label).filter(Boolean)).slice(0, 2);
-  const people = count(ts.flatMap((r) => (r.people ?? '').split(',').map((p) => p.trim()).filter(Boolean))).slice(0, 3);
-  const lines = [
+  const start = new Date(atTime(ts[0].at)!).setHours(0, 0, 0, 0);
+  const brief = useAssistantData().briefs.find((b) => !b.deleted && b.kind === 'ahead' && b.from_at === start && b.text);
+  const facts = [
     [plural(ts.length, 'task'), est.length > 0 && `about ${minutesText(est.reduce((a, b) => a + b, 0))}`, flagged > 0 && `${flagged} flagged`].filter(Boolean).join(', '),
     ms.length > 0 && `${plural(ms.length, 'meeting')}, ${minutesText(Math.round(meetMin))}, first at ${clock(ms[0].starts_at!)}`,
-    from.length > 0 && `Mostly from ${names(from)}`,
-    people.length > 0 && `With ${names(people)}`,
-  ].filter(Boolean) as string[];
+  ].filter(Boolean).join(' · ');
   return (
     <section className="fc">
       <div className="as-section">{next.label}</div>
       <p className="fc-rest">{weekend ? `It's the weekend. Nothing is due until ${day}.` : `Nothing is due today. Next up ${day}.`}</p>
       <div className="fc-ahead">
-        <ul>{lines.map((l) => <li key={l}>{l}</li>)}</ul>
+        {brief && <p className="fc-summary">{brief.text}</p>}
+        <span className="muted small">{facts}</span>
         <button className="fc-first" onClick={() => openTask(ts[0])}><span className="muted small">Start with</span><span>{ts[0].title ?? '(Untitled)'}</span></button>
       </div>
     </section>

@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
 import { openDb } from './db.js';
-import { briefId, buildBrief, runBriefs } from './brief.js';
+import { aheadDay, briefId, buildBrief, runAhead, runBriefs } from './brief.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 10, d, h, m).getTime();
 const MON = 2;
@@ -111,4 +111,17 @@ it('sends a brief at 13:00 when the hub was down all morning', async () => {
 
 it('lists only free time still ahead in a brief sent later in the day', () => {
   expect(buildBrief(seed(), 'work', at(MON, 13, 30)).text).toContain('Free 3h: 14:00-17:00');
+});
+
+it('sums up the next day with work only when nothing is due today, and again only when it changes', async () => {
+  const db = seed();
+  expect(aheadDay(db, at(MON, 8))).toBeNull();
+  db.prepare("UPDATE items SET status = 'done' WHERE id IN ('t1', 't2')").run();
+  const prompts: string[] = [];
+  const write = async (p: string) => (prompts.push(p), 'You need to finish the move — then rest.');
+  expect(await runAhead(db, at(MON, 18), write)).toBe('You need to finish the move, then rest.');
+  expect(prompts[0]).toContain('- Tomorrow');
+  expect(db.prepare("SELECT kind, from_at FROM briefs WHERE id = 'ahead:2026-11-03'").get()).toEqual({ kind: 'ahead', from_at: at(MON + 1, 0) });
+  expect(await runAhead(db, at(MON, 20), write)).toBeNull();
+  expect(prompts).toHaveLength(1);
 });

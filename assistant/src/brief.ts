@@ -5,7 +5,10 @@ import { blockId, clock, isBlock } from '../../shared/util.js';
 import { deleteMeta, getMeta, pruneMeta, setMeta, type Profile } from './db.js';
 import { loop } from './once.js';
 import { applyChanges } from './sync.js';
-import { DAY, addWorkdays, inWeekHours, ymd } from './time.js';
+import { DAY, HOUR, addWorkdays, inWeekHours, localDate, ymd } from './time.js';
+import { run } from './slack.js';
+import { scanPaused } from './claude.js';
+import { ACCOUNT_OF } from './calendar.js';
 
 const PROFILES: Profile[] = ['work', 'personal'];
 const TOP = 5;
@@ -65,9 +68,9 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   };
 }
 
-// Morning and Slack briefs past the keep window are no longer shown; their rows stay behind for sync without the text.
+// Morning, Slack and ahead briefs past the keep window are no longer shown; their rows stay behind for sync without the text.
 function pruneBriefs(db: Database, now = Date.now()) {
-  const old = db.prepare("SELECT id, profile FROM briefs WHERE deleted = 0 AND kind IN ('morning', 'slack') AND to_at < ?").all(now - KEEP) as { id: string; profile: Profile }[];
+  const old = db.prepare("SELECT id, profile FROM briefs WHERE deleted = 0 AND kind IN ('morning', 'slack', 'ahead') AND to_at < ?").all(now - KEEP) as { id: string; profile: Profile }[];
   applyChanges(db, old.map((b) => ({ table: 'briefs', id: b.id, profile: b.profile, deleted: true, updated_at: now, fields: { text: null } })));
 }
 
@@ -94,6 +97,46 @@ export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy)
   return sent;
 }
 
+// With nothing open due today, the next day with work tasks in the coming week: its tasks, meetings and the Slack asks still open.
+export function aheadDay(db: Database, now = Date.now()) {
+  const end = new Date(now).setHours(24, 0, 0, 0);
+  const open = "deleted = 0 AND profile = 'work' AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND at IS NOT NULL AND at <> ''";
+  if (db.prepare(`SELECT 1 FROM items WHERE ${open} AND CAST(at AS INTEGER) < ?`).get(end)) return null;
+  const first = db.prepare(`SELECT MIN(CAST(at AS INTEGER)) AS t FROM items WHERE ${open} AND CAST(at AS INTEGER) >= ? AND CAST(at AS INTEGER) < ?`).get(end, end + 7 * DAY) as { t: number | null };
+  if (first.t == null) return null;
+  const day = new Date(first.t).setHours(0, 0, 0, 0), after = new Date(day).setHours(24);
+  const tasks = db.prepare(`SELECT title, text, people FROM items WHERE ${open} AND CAST(at AS INTEGER) >= ? AND CAST(at AS INTEGER) < ? ORDER BY COALESCE(CAST(priority AS INTEGER), 0) DESC, CAST(at AS INTEGER)`).all(day, after) as (Row & { text: string | null; people: string | null })[];
+  const meetings = db.prepare("SELECT id, title, starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = 'work' AND starts_at >= ? AND starts_at < ? ORDER BY starts_at").all(day, after) as (Row & { id: string; starts_at: number; ends_at: number | null })[];
+  const asks = db.prepare("SELECT title FROM items WHERE deleted = 0 AND profile = 'work' AND source = 'slack' AND status IN ('open', 'suggested') ORDER BY updated_at DESC LIMIT 10").all() as Row[];
+  return { day, tasks, meetings: meetings.filter((m) => !isBlock(m.id)), asks };
+}
+
+export function aheadPrompt(a: NonNullable<ReturnType<typeof aheadDay>>) {
+  return [
+    `Write a short summary of my work day on ${localDate(a.day)}: what I need to get done and what it is for, in 2 or 3 plain sentences addressed to me ("You need to ...").`,
+    'Group related tasks into one point and lead with the most important. Name people only when a task is for them. Do not list every task, do not add advice, headings, bullets or em dashes. Reply with the summary only.',
+    '', 'Tasks:', ...a.tasks.map((t) => `- ${t.title ?? 'Untitled'}${t.people ? ` (with ${t.people})` : ''}${t.text ? `: ${t.text.slice(0, 300).replace(/\s+/g, ' ')}` : ''}`),
+    '', 'Meetings:', ...(a.meetings.length ? a.meetings.map((m) => `- ${clock(m.starts_at)} ${m.title ?? 'Meeting'}`) : ['(none)']),
+    '', 'Slack asks still open:', ...(a.asks.length ? a.asks.map((t) => `- ${t.title}`) : ['(none)']),
+  ].join('\n');
+}
+
+// The next day's summary, written by Haiku and stored as an ahead brief for that day; written again when its tasks or meetings change, at most hourly.
+export async function runAhead(db: Database, now = Date.now(), write = (prompt: string) => run(prompt, 'haiku', [], 1, () => false, [])) {
+  const a = aheadDay(db, now);
+  if (!a) return null;
+  const key = [...a.tasks.map((t) => t.title), ...a.meetings.map((m) => m.title)].join('|');
+  const id = `ahead:${ymd(a.day)}`;
+  if (getMeta(db, 'ahead:key') === `${id}:${key}` || now - Number(getMeta(db, 'ahead:last') ?? 0) < HOUR) return null;
+  if (await scanPaused(db, ACCOUNT_OF.work, 'ahead', now)) return null;
+  setMeta(db, 'ahead:last', String(now));
+  const text = (await write(aheadPrompt(a))).replace(/\s*\u2014\s*/g, ', ');
+  if (!text) return null;
+  setMeta(db, 'ahead:key', `${id}:${key}`);
+  applyChanges(db, [{ table: 'briefs', id, profile: 'work', updated_at: now, fields: { kind: 'ahead', text, from_at: a.day, to_at: now } }]);
+  return text;
+}
+
 export function startBrief(db: () => Database, every = 60_000) {
-  loop('brief', every, () => runBriefs(db()));
+  loop('brief', every, async () => { await runBriefs(db()); await runAhead(db()); });
 }
