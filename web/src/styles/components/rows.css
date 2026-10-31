@@ -18,6 +18,6 @@
 .ui-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ui-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: anywhere; }
 .ui-row-title.two { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
-.ui-row-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--type-label-size); line-height: var(--type-label-line); color: var(--meta-fg); }
+.ui-row-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg); }
 .ui-row-trail { flex: none; display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--type-label-size); color: var(--on-surface-muted); }
 @media (pointer: coarse) { .ui-row { min-height: var(--touch); } }
