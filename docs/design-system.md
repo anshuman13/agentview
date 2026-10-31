@@ -154,6 +154,12 @@ circle (40px at sm) in `--on-surface-muted`, title role, hint in body `--on-surf
 then at most one action. md for a whole view, sm inside a panel or report. The icon stays grey;
 the accent is for the action.
 
+### Grouped list (iOS inset grouped)
+Overview cards (`.ov-follow`, `.mt-rows.ov-card`, Needs you) and Meetings day groups (`.mt-days`) are
+inset grouped lists: page `--group-page` (grey #F2F2F7 in light, black in dark), card `--group-card`
+(white in light, #1C1C1E in dark), `--shape-lg` radius, no border, rows 44px minimum with a hairline
+inset to the text start. Section labels above cards are Footnote size, `--fg-muted`, sentence case.
+
 ### Section header
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state layer on hover.

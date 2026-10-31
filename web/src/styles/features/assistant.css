@@ -402,3 +402,18 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .as-related-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28ch; }
 .as-related-when { color: var(--fg-faint); }
 .as-people { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* Overview: iOS inset grouped lists. Grey page in light, cards 12px with no border, hairlines inset to the text. */
+.as-editor:has(.assistant:not(.tasks, .wide, .locked)) { background: var(--group-page); }
+.assistant:not(.tasks) .as-scroll :is(.ov-follow, .mt-rows.ov-card) { border: 0; border-radius: var(--shape-lg); background: var(--group-card); }
+.assistant:not(.tasks) .as-scroll .ov-follow-row { position: relative; min-height: var(--touch); padding: var(--sp-4) var(--sp-8); }
+.assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row { position: relative; min-height: var(--touch); padding: var(--sp-4) var(--sp-8); }
+.assistant:not(.tasks) .as-scroll :is(.ov-follow-row, .mt-rows.ov-card > .mt-row) + :is(.ov-follow-row, .mt-row) { border-top: 0; }
+.assistant:not(.tasks) .as-scroll :is(.ov-follow-row, .mt-rows.ov-card > .mt-row) + :is(.ov-follow-row, .mt-row)::before {
+  content: ''; position: absolute; top: 0; right: 0; left: var(--sp-8); height: 1px; background: var(--border);
+}
+.assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row + .mt-row::before { left: calc(var(--sp-8) + 40px + var(--sp-7)); }
+.assistant:not(.tasks) .as-scroll .ov-needs > * + * { border-top: 0; }
+@media (hover: hover) { .assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row:hover { background: var(--hover); } }
+.assistant:not(.tasks) .as-section { padding: 0 var(--sp-8) var(--sp-3); border-bottom: 0; font-size: var(--type-footnote-size); font-weight: 400; line-height: var(--type-footnote-line); }
+.assistant:not(.tasks) .as-section:not(.late, .review, .next, .done, .later) { color: var(--fg-muted); }

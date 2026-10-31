@@ -473,3 +473,11 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .sm-filter { display: flex; flex-direction: column; }
 .sm-filter label { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); min-height: var(--row-h); font-size: var(--row-meta); color: var(--meta-fg); }
 .sm-filter select { border: 0; background: transparent; color: var(--fg); font: inherit; text-align: right; cursor: pointer; }
+
+/* Meetings: day groups as iOS inset grouped cards on a grey page in light. */
+.wk:has(.mt-days) { background: var(--group-page); }
+.wk .mt-days { border-radius: var(--shape-lg); background: var(--group-card); overflow: hidden; }
+.wk .mt-days > .mt-row { position: relative; min-height: var(--touch); margin: 0; padding: var(--sp-4) var(--sp-8); border-radius: 0; }
+.wk .mt-days > .mt-row + .mt-row::before { content: ''; position: absolute; top: 0; right: 0; left: calc(var(--sp-8) + 40px + var(--sp-7)); height: 1px; background: var(--border); }
+.wk .mt-list section > .ui-section .ui-section-head { padding: var(--sp-3) var(--sp-8); font-size: var(--type-footnote-size); font-weight: 400; }
+:is(.wk .mt-days, .as-scroll .mt-rows.ov-card) .mt-tile { background: var(--hover); }

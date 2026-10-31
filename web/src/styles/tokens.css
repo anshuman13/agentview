@@ -159,6 +159,8 @@
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
+  --group-page: #000000;
+  --group-card: #1c1c1e;
   --sunken: #1c1c1e;
   --bg: #000000;
   --surface: #1c1c1e;
@@ -219,6 +221,8 @@
 /* Light: Apple's iOS light system colours. Status and kind hues use Apple's Increase Contrast variants because they also colour text. */
 :root[data-theme='light'] {
   color-scheme: light;
+  --group-page: #f2f2f7;
+  --group-card: #ffffff;
   --sunken: #f2f2f7;
   --bg: #ffffff;
   --surface: #f2f2f7;
