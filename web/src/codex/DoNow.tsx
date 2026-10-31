@@ -29,7 +29,7 @@ const rankTask = (r: ItemRow, now: number) => (r.priority ?? 0) * 10 + Math.min(
 export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   needs: ReturnType<typeof useNeedsYou>;
   today: ItemRow[];
-  nextUp: { label: string; tasks: ItemRow[] } | null;
+  nextUp: { label: string; tomorrow: boolean; tasks: ItemRow[] } | null;
   meeting: Meeting | null;
   now: number;
   onPrep: () => void;
@@ -91,19 +91,20 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
     why: [meeting.starts_at! <= now ? 'Now' : `In ${Math.max(1, Math.round((meeting.starts_at! - now) / 60000))} min`, peopleOf(meeting).slice(0, 2).join(', ')].filter(Boolean).join(' · '),
     open: () => openMeeting(meeting), act: { label: 'Prep', run: onPrep },
   }] : [];
-  const later = !todays.length && nextUp ? nextUp.tasks.map((r) => task(r, [nextUp.label, prio(r)].filter(Boolean).join(' · '))) : [];
-  const items = [...meetingItem, ...flagged, ...fromNeeds, ...todays.filter((i) => !flagged.includes(i)), ...later];
-  if (!items.length) return null;
+  const items = [...meetingItem, ...flagged, ...fromNeeds, ...todays.filter((i) => !flagged.includes(i))];
+  if (!items.length) return nextUp ? <Ahead next={nextUp} now={now} /> : null;
   const rest = items.slice(TOP);
+  const weekend = [0, 6].includes(new Date(now).getDay());
   const button = (i: Item) => i.act.href
     ? <a className="btn btn-sm btn-tinted" href={i.act.href} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{i.act.label}</a>
     : <button className="btn btn-sm btn-tinted" onClick={(e) => { e.stopPropagation(); i.act.run?.(); }}>{i.act.label}</button>;
   return (
     <section className="fc">
-      <div className="as-section next">Do now</div>
+      <div className="as-section next">{weekend ? 'When you are back' : 'Do now'}</div>
+      {weekend && <p className="fc-rest">It's the weekend. All of this can wait until Monday.</p>}
       <ol className="fc-top">
         {items.slice(0, TOP).map((i, n) => (
-          <li key={i.key} className={`fc-item${i.hot ? ' hot' : ''}`} onClick={i.open}>
+          <li key={i.key} className={`fc-item${i.hot && !weekend ? ' hot' : ''}`} onClick={i.open}>
             <span className="fc-n">{n + 1}</span>
             <div className="fc-body">
               <div className="fc-title">{i.title}</div>
@@ -134,6 +135,26 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+// Nothing to do today: say so, and on a weekend say rest, then preview the next day's tasks without urging them.
+function Ahead({ next, now }: { next: { label: string; tomorrow: boolean; tasks: ItemRow[] }; now: number }) {
+  const day = next.tomorrow ? 'tomorrow' : new Date(atTime(next.tasks[0].at)!).toLocaleDateString(undefined, { weekday: 'long' });
+  const weekend = [0, 6].includes(new Date(now).getDay());
+  return (
+    <section className="fc">
+      <div className="as-section">{next.label} · {next.tasks.length}</div>
+      <p className="fc-rest">{weekend ? `It's the weekend. Nothing is due until ${day}.` : `Nothing is due today. Next up ${day}.`}</p>
+      <div className="ov-follow">
+        {next.tasks.map((r) => (
+          <div key={r.profile + r.id} className="ov-follow-row">
+            <button className="ov-follow-text" onClick={() => openTask(r)}><span className="ov-t">{r.title ?? '(Untitled)'}</span></button>
+            {r.priority ? <Flag priority={r.priority} /> : null}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

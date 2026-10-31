@@ -49,7 +49,9 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   tasks due today flagged High or Medium, then Needs you (overdue tasks, at-risk tasks due by Friday that do not fit the free
   work time, asks and promises to confirm, Slack DMs waiting on me, the latest Slack summary's "Needs you" bullets, each once,
   three or more overdue collapsing into Clear N overdue with Move to today), then the rest of today's tasks by priority and
-  time; on a day with none, the next day with tasks. The first three are numbered cards (red number when late, waiting or
+  time. With nothing to do today it shows the next day's tasks under that day as a plain list with "Nothing is due today",
+  or on a Saturday or Sunday "It's the weekend. Nothing is due until Tuesday". On a weekend with things to do the list is
+  titled When you are back, says it can wait until Monday and drops the red numbers. The first three are numbered cards (red number when late, waiting or
   about to start) with the thing to do, why and its source, and one action: Done (or Tomorrow) for tasks, Reply (or Handled)
   for Slack and DMs, Mine (or Not mine) for asks. The rest follow under Then with one action each, 5 shown, Show N more
 - A meeting starting within 15 minutes or running shows its full card under Now above Do now, with prep, a note field and the room mic toggle
