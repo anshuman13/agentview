@@ -3,6 +3,7 @@ import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
+import { Button } from '../../ui/Button';
 import { ago, safeHref } from '../../ui/util';
 import { clock } from '../time';
 import { dayLabel } from '../data/dates';
@@ -72,7 +73,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
                 </section>
               ))}
               {!report.groups.length && <div className="muted small">No tasks in this range.</div>}
-              <button className="btn" onClick={() => copyText(report.markdown)}><Icon name="copy" small /> <span>Copy</span></button>
+              <Button size="sm" icon="copy" onClick={() => copyText(report.markdown)}>Copy</Button>
             </div>
             <div className="sm-filter">
               <label><span>Date</span>

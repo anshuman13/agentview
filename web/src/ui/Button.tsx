@@ -20,16 +20,17 @@ export function Button({ variant = 'secondary', size = 'md', icon, className, ty
   );
 }
 
-export function IconButton({ icon, label, size = 'md', on, small, className, type = 'button', ...rest }: Native & {
+export function IconButton({ icon, label, size = 'md', on, small, spin, className, type = 'button', ...rest }: Native & {
   icon: string;
   label: string;
   size?: Size;
   on?: boolean;
   small?: boolean;
+  spin?: boolean;
 }) {
   return (
     <button type={type} aria-label={label} title={rest.title ?? label} className={cx('icon-btn', `icon-btn-${size}`, on && 'on', className)} {...rest}>
-      <Icon name={icon} small={small} />
+      <Icon name={icon} small={small} spin={spin} />
     </button>
   );
 }

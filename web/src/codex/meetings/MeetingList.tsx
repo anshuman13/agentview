@@ -6,6 +6,7 @@ import { actionCount, groupMeetings, meetingState, openQuestions, peopleOf, sear
 import { clock, when } from '../time';
 import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { save, stored } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
@@ -241,7 +242,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       <header className="wk-head">
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
         <h1>Meetings</h1>
-        <button className="icon-btn mt-sync" disabled={syncing} title="Sync calendar" aria-label="Sync calendar" onClick={syncCalendar}><Icon name={syncing ? 'loading' : 'sync'} small spin={syncing} /></button>
+        <IconButton className="mt-sync" size="sm" small icon={syncing ? 'loading' : 'sync'} spin={syncing} label="Sync calendar" disabled={syncing} onClick={syncCalendar} />
         <span className="spacer" />
         <label className="wk-search">
           <Icon name="search" small />
