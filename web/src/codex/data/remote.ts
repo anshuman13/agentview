@@ -232,15 +232,23 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         }
       },
       apply: async (change: PulledChange) => {
-        const map = this.tables[change.table];
-        map.set(rowKey(change), toRow(mergeIncoming<SyncRow>(map.get(rowKey(change)) ?? null, change)));
-        this.save(change.table, rowKey(change));
+        this.applySynced(change);
         this.prune(change.table);
-        this.syncTouched.add(change.table);
+      },
+      applyAll: async (changes: PulledChange[]) => {
+        for (const change of changes) this.applySynced(change);
+        for (const table of new Set(changes.map((c) => c.table))) this.prune(table);
       },
       paused: (paused) => this.setSync({ paused }),
       scans: (scans) => this.setSync({ scans }),
     }));
+  }
+
+  private applySynced(change: PulledChange) {
+    const map = this.tables[change.table];
+    map.set(rowKey(change), toRow(mergeIncoming<SyncRow>(map.get(rowKey(change)) ?? null, change)));
+    this.save(change.table, rowKey(change));
+    this.syncTouched.add(change.table);
   }
 
   private track<T>(run: Promise<T>) {

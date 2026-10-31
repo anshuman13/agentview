@@ -92,5 +92,5 @@ export async function pushNtfy(title: string, subtitle: string, body: string, ur
   if (!to) return false;
   return fetch(to, { method: 'POST', headers: { Title: header(title), ...(url ? { Click: url } : {}), ...(actions ? { Actions: header(actions) } : {}) }, body: [subtitle, body].filter(Boolean).join('\n'), signal: AbortSignal.timeout(10_000) })
     .then((r) => r.ok)
-    .catch((e) => e?.name === 'TimeoutError' || e?.name === 'AbortError');
+    .catch(() => false);
 }

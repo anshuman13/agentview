@@ -7,7 +7,7 @@ import { atRisk, minutesText, type Span } from './data/plan';
 import { CAP, collapse, rankNeeds } from './data/needsYou';
 import { needsYou } from './summary/Summary';
 import { ActionRow } from './meetings/Meetings';
-import { UNROLL, unrollFor, useActions } from './useActions';
+import { unrollFor, useActions } from './useActions';
 import { ago, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
 import { Icon } from '../ui/Icon';
@@ -105,6 +105,17 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
     const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
     void store.update(r, { at, ...unrollFor(at) }).then(() => showSnack(`Snoozed to ${when(at)}`));
   };
+  const moveToday = (rows: ItemRow[]) => {
+    haptic('success');
+    const before = rows.map((r) => ({ r, at: r.at, rolls: r.rolls, rolled_from: r.rolled_from }));
+    for (const r of rows) {
+      const from = new Date(atTime(r.at) ?? now);
+      const t = new Date(now).setHours(from.getHours(), from.getMinutes(), 0, 0);
+      const at = t > now ? t : now;
+      void store.update(r, { at, ...unrollFor(at, now) });
+    }
+    showSnack('Moved to today', () => before.forEach(({ r, ...prev }) => void store.update(r, prev)));
+  };
   const taskRow = (r: ItemRow, label: string, note: string) => (
     <div key={r.profile + r.id} className="ov-follow-row">
       <button className="ov-follow-text" onClick={() => openTask(r)}>
@@ -124,7 +135,7 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
             <span className="ov-t">{x.rows.length} overdue</span>
             <span className="muted small">Open Tasks to go through them</span>
           </button>
-          <button className="ov-check" aria-label={`Move ${x.rows.length} overdue tasks to today`} title="Move all to today" onClick={() => { haptic('success'); for (const r of x.rows) void store.update(r, { at: now, ...UNROLL }); showSnack('Moved to today'); }}><Icon name="check-all" small /></button>
+          <button className="ov-check" aria-label={`Move ${x.rows.length} overdue tasks to today`} title="Move all to today" onClick={() => moveToday(x.rows)}><Icon name="arrow-right" small /></button>
         </div>
       );
       case 'risk': return taskRow(x.row, 'At risk', ` · due ${when(x.due, now)} · ${minutesText(x.short)} short`);

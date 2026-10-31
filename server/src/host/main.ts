@@ -185,7 +185,11 @@ function watchFiles(cwd: string, onChange: (rel: string) => void) {
         timers.delete(rel);
         stat(path.join(cwd, rel)).then((s) => s.isFile() && listeners.forEach((l) => l(rel))).catch(() => {});
       }, 200));
-    }).on('error', (err) => console.error(`watcher: ${String(err)}`));
+    }).on('error', (err) => {
+      console.error(`watcher: ${String(err)}`);
+      watcher.close();
+      if (folders.get(cwd)?.watcher === watcher) folders.delete(cwd);
+    });
     folder = { listeners, watcher };
     folders.set(cwd, folder);
   }

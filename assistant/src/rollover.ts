@@ -16,7 +16,7 @@ export function rollOver(db: Database, now = Date.now()) {
     const at = new Date(now).setHours(from.getHours(), from.getMinutes(), 0, 0);
     const rolls = (r.rolls ?? 0) + (weekday ? 1 : 0);
     const stored = JSON.parse(r.field_times ?? '{}') as Record<string, number>;
-    const after = Object.fromEntries(['at', 'rolls', 'rolled_from', 'status'].map((f) => [f, (stored[f] ?? 0) + 1]));
+    const after = { ...Object.fromEntries(['at', 'rolls', 'rolled_from'].map((f) => [f, (stored[f] ?? 0) + 1])), ...(rolls >= STALE && { status: now }) };
     return { table: 'items', id: r.id, profile: r.profile, updated_at: now, field_times: after, fields: { at, rolls, rolled_from: r.rolled_from ?? Number(r.at), ...(rolls >= STALE && { status: 'suggested' }) } };
   })).applied;
 }

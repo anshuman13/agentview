@@ -9,6 +9,10 @@ import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
 import { copyText, showSnack } from '../view';
 import { safeHref } from '../../ui/util';
+import { UNROLL } from '../useActions';
+
+// Matches STALE in assistant/src/rollover.ts: at this many rolls a task goes back to review.
+const STALE_ROLLS = 3;
 
 // Opens Linear's new-issue form filled in; nothing is created until you submit it there.
 const linearIssue = (r: ItemRow, m: Meeting) => `https://linear.app/new?${new URLSearchParams({ title: r.title ?? '', description: draftFor(r, m).split('\n').slice(1).join('\n') })}`;
@@ -36,7 +40,7 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
   const mine = status === 'open' || status === 'done';
   const done = status === 'done';
   const at = atTime(row.at);
-  const accept = () => change({ status: 'open' }, 'Added to Today');
+  const accept = () => change({ status: 'open', ...((row.rolls ?? 0) >= STALE_ROLLS && UNROLL) }, 'Added to Today');
   const dismiss = () => change({ status: 'dismissed' }, 'Moved to Not mine');
   const suggestedRows = () => [...document.querySelectorAll<HTMLElement>('.mt-task.suggested')];
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {

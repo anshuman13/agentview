@@ -45,10 +45,10 @@ describe('pushNtfy', () => {
     expect(init.body).toBe('Allow?');
   });
 
-  it('counts a timeout as sent and a network error as failed', async () => {
+  it('counts a timeout and a network error as failed', async () => {
     files.observe = '{"ntfy":"topic"}';
     sent.mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'));
-    expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(true);
+    expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(false);
     sent.mockRejectedValueOnce(new TypeError('fetch failed'));
     expect(await pushNtfy('t', 's', 'b', 'http://x')).toBe(false);
   });
