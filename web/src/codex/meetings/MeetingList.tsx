@@ -70,13 +70,13 @@ export function useTranscriptHits(query: string) {
   return found.q === q ? found.hits : NO_HITS;
 }
 
-export const MeetingRow = memo(function MeetingRow({ m, now, said }: { m: Meeting; now: number; said?: string }) {
+export const MeetingRow = memo(function MeetingRow({ m, now, said, noDay }: { m: Meeting; now: number; said?: string; noDay?: boolean }) {
   const snap = useAssistantData();
   const count = actionCount(snap.items, m);
-  return <MeetingRowView m={m} now={now} said={said} review={count.review} total={count.total} done={count.done} />;
+  return <MeetingRowView m={m} now={now} said={said} noDay={noDay} review={count.review} total={count.total} done={count.done} />;
 });
 
-const MeetingRowView = memo(function MeetingRowView({ m, now, said, review, total, done }: { m: Meeting; now: number; said?: string; review: number; total: number; done: number }) {
+const MeetingRowView = memo(function MeetingRowView({ m, now, said, noDay, review, total, done }: { m: Meeting; now: number; said?: string; noDay?: boolean; review: number; total: number; done: number }) {
   const people = useMemo(() => peopleOf(m), [m]);
   const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
   const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
@@ -91,7 +91,7 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, said, review, tota
       <Badge m={m} now={now} review={review} total={total} done={done} />
       <Avatars people={people} />
       <span className="mt-span">
-        {m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
+        {!noDay && m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
         {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
       </span>
     </button>
@@ -99,42 +99,29 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, said, review, tota
 });
 
 
-// Today, then each later day with meetings, one at a time, like a desk calendar.
+// The coming week grouped by day, so the next working morning sits at the top.
 function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
-  const [picked, setPicked] = useState(0);
   const days = useMemo(() => {
-    const today = dayStart(now);
-    const out = new Map<number, Meeting[]>([[today, []]]);
-    for (const m of live(meetings).filter((x) => x.starts_at != null && (x.ends_at ?? x.starts_at) > now).sort((a, b) => a.starts_at! - b.starts_at!)) {
+    const today = dayStart(now), end = today + 7 * 86400_000;
+    const out = new Map<number, Meeting[]>();
+    for (const m of live(meetings).filter((x) => x.starts_at != null && (x.ends_at ?? x.starts_at) > now && x.starts_at < end).sort((a, b) => a.starts_at! - b.starts_at!)) {
       const d = Math.max(today, dayStart(m.starts_at!));
       out.set(d, [...(out.get(d) ?? []), m]);
     }
     return [...out];
   }, [meetings, now]);
-  const next = days.findIndex(([d]) => d >= picked);
-  const i = next < 0 ? days.length - 1 : next;
-  const [day, rows] = days[i];
-  const isToday = day === dayStart(now);
+  const label = (d: number) => d === dayStart(now) ? 'Today' : d === dayEnd(now) ? 'Tomorrow' : dayLabel(d, true);
   return (
-    <section className="mt-upcoming">
-      <div className="mt-up-head">
-        <span>Upcoming</span>
-        <span className="spacer" />
-        <button className="icon-btn" title="Earlier day" aria-label="Earlier day" disabled={i === 0} onClick={() => setPicked(days[i - 1][0])}><Icon name="chevron-left" small /></button>
-        <button className="icon-btn" title="Next day with meetings" aria-label="Next day" disabled={i === days.length - 1} onClick={() => setPicked(days[i + 1][0])}><Icon name="chevron-right" small /></button>
-      </div>
-      <div className="mt-up-card">
-        <div className="mt-up-date">
-          <b>{new Date(day).getDate()}</b>
-          <span>{isToday ? 'Today' : new Date(day).toLocaleDateString([], { weekday: 'short', month: 'short' })}</span>
-          {isToday && <i className="mt-up-dot" />}
-        </div>
-        <div className="mt-up-rows">
-          {rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}
-          {!rows.length && <div className="mt-up-none">{days.length > 1 ? 'Nothing else today.' : 'Nothing on the calendar.'}</div>}
-        </div>
-      </div>
-    </section>
+    <>
+      <div className="mt-up-head">Upcoming</div>
+      {days.map(([d, rows]) => (
+        <section key={d}>
+          <Section label={label(d)} />
+          <div className="mt-days">{rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} noDay />)}</div>
+        </section>
+      ))}
+      {!days.length && <div className="mt-up-none">Nothing on the calendar this week.</div>}
+    </>
   );
 }
 
@@ -266,6 +253,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
             onAdd={addTopic} onRemove={removeTopic} />
           {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
           {!query && <Upcoming meetings={mine} now={now} />}
+          {!query && visible.length > 0 && <div className="mt-up-head">Earlier</div>}
           {visible.map((g) => (
             <section key={g.label}>
               <Section label={g.label} />
