@@ -25,10 +25,12 @@ type Cached = { since: number; tables: Record<string, SyncRow[]> };
 const META_KEY = 'meta';
 const LEGACY_KEY = 'snapshot';
 const tableKey = (table: string) => `table:${table}`;
+const rowId = (table: string, key: string) => `row:${table}:${key}`;
+const rowRange = (table: string) => IDBKeyRange.bound(`row:${table}:`, `row:${table}:\uffff`);
 // Rows cached before a column existed never get its value unless everything is pulled again.
 const COLUMNS = JSON.stringify(TABLE_FIELDS);
 
-// The browser keeps the rows and the hub version in IndexedDB, so a reload pulls only rows changed since.
+// The browser keeps one record per row and the hub version in IndexedDB, so a reload pulls only rows changed since.
 let dbOpen: Promise<IDBDatabase> | undefined;
 
 function cacheDb(): Promise<IDBDatabase> {
@@ -57,13 +59,24 @@ async function cacheOp<T>(mode: IDBTransactionMode, op: (s: IDBObjectStore) => I
   });
 }
 
+async function cacheWrite(ops: (s: IDBObjectStore) => void): Promise<void> {
+  const db = await cacheDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('cache', 'readwrite');
+    ops(tx.objectStore('cache'));
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error);
+  });
+}
+
 export class RemoteStore extends BaseStore implements AssistantStore {
   readonly kind = 'remote';
   private tables: Record<string, Map<string, SyncRow>> = Object.fromEntries(['items', ...WIKI_TABLES].map((t) => [t, new Map()]));
   private since = 0;
   private loaded = this.load();
   private saving: Promise<void> = Promise.resolve();
-  private unsaved = new Set<string>();
+  private unsaved = new Map<string, Set<string>>();
+  private stale: string[] = [];
   private writes = 0;
   private saveDue = false;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -97,9 +110,16 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   private async load() {
     const read = <T>(key: string) => cacheOp<T | undefined>('readonly', (s) => s.get(key)).catch(() => undefined);
-    const meta = await read<{ since: number; columns?: string }>(META_KEY);
+    const meta = await read<{ since: number; columns?: string; layout?: number }>(META_KEY);
     let cached: Cached | undefined;
-    if (meta) {
+    if (meta?.layout === 2) {
+      cached = { since: meta.columns === COLUMNS ? meta.since : 0, tables: {} };
+      for (const table of Object.keys(this.tables)) {
+        const rows = await cacheOp<SyncRow[]>('readonly', (s) => s.getAll(rowRange(table))).catch(() => undefined);
+        if (rows) cached.tables[table] = rows;
+        else cached.since = 0;
+      }
+    } else if (meta) {
       cached = { since: meta.columns === COLUMNS ? meta.since : 0, tables: {} };
       // A table missing from the cache would never be fetched again, so start over with a full sync, keeping the rows held.
       for (const table of Object.keys(this.tables)) {
@@ -116,17 +136,20 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       if (map) for (const row of rows) if (!map.has(rowKey(row))) map.set(rowKey(row), row);
     }
     this.since = cached.since;
-    if (!meta) {
-      this.save(Object.keys(this.tables));
+    if (meta?.layout !== 2) {
+      // The whole-table records are split into rows and deleted in the same write.
+      for (const [table, map] of Object.entries(this.tables)) this.save(table, ...map.keys());
+      this.stale = [LEGACY_KEY, ...Object.keys(this.tables).map(tableKey)];
       this.flush();
-      this.saving = this.saving.then(() => cacheOp('readwrite', (s) => s.delete(LEGACY_KEY)).then(() => {}, () => {}));
     }
     await this.refresh(Object.keys(this.tables));
   }
 
-  // Saves are coalesced: tables touched within SAVE_DELAY are written once, from the rows as they are at flush time.
-  private save(tables: string[]) {
-    tables.forEach((t) => this.unsaved.add(t));
+  // Saves are coalesced: rows touched within SAVE_DELAY are written once, as they are at flush time.
+  private save(table: string, ...keys: string[]) {
+    const set = this.unsaved.get(table) ?? new Set<string>();
+    keys.forEach((k) => set.add(k));
+    this.unsaved.set(table, set);
     this.saveDue = true;
     this.saveTimer ??= setTimeout(() => this.flush(), SAVE_DELAY);
   }
@@ -137,24 +160,28 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     if (!this.saveDue) return;
     this.saveDue = false;
     const run = async () => {
-      // Every row pulled up to this version is in a queued table, so the version is read before the tables are.
+      // Every row pulled up to this version is queued, so the version is read before the rows are.
       const since = this.since;
-      const names = [...this.unsaved];
+      const pending = [...this.unsaved];
       this.unsaved.clear();
-      const write = (key: string, value: unknown) => cacheOp('readwrite', (s) => s.put(value, key));
-      // A table that failed stays queued and the version is not saved, so a reload never skips its rows.
+      const stale = this.stale;
+      // Rows, deletions and the version commit together; on failure the rows stay queued and a reload never skips them.
       try {
-        for (const [i, table] of names.entries()) {
-          try {
-            await write(tableKey(table), [...this.tables[table].values()]);
-          } catch (e) {
-            names.slice(i).forEach((t) => this.unsaved.add(t));
-            throw e;
+        await cacheWrite((s) => {
+          for (const [table, keys] of pending) {
+            for (const key of keys) {
+              const row = this.tables[table].get(key);
+              if (row) s.put(row, rowId(table, key));
+              else s.delete(rowId(table, key));
+            }
           }
-        }
-        await write(META_KEY, { since, columns: COLUMNS });
+          stale.forEach((k) => s.delete(k));
+          s.put({ since, columns: COLUMNS, layout: 2 }, META_KEY);
+        });
+        this.stale = this.stale.filter((k) => !stale.includes(k));
         this.setSync({ saveError: false });
       } catch {
+        for (const [table, keys] of pending) this.save(table, ...keys);
         this.setSync({ saveError: true });
       }
     };
@@ -201,15 +228,15 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) {
           map.set(rowKey(row), { ...now, dirty: 0 });
           this.syncTouched.add(table);
-          this.save([table]);
+          this.save(table, rowKey(row));
         }
       },
       apply: async (change: PulledChange) => {
         const map = this.tables[change.table];
         map.set(rowKey(change), toRow(mergeIncoming<SyncRow>(map.get(rowKey(change)) ?? null, change)));
+        this.save(change.table, rowKey(change));
         this.prune(change.table);
         this.syncTouched.add(change.table);
-        this.save([change.table]);
       },
       paused: (paused) => this.setSync({ paused }),
       scans: (scans) => this.setSync({ scans }),
@@ -227,13 +254,16 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     for (const [key, row] of map) {
       const r = row as SyncRow & { status?: string | null };
       if (r.dirty) continue;
-      if ((r.deleted && r.version > 0) || (table === 'items' && (r.status === 'done' || r.status === 'raised') && r.updated_at <= cutoff)) map.delete(key);
+      if ((r.deleted && r.version > 0) || (table === 'items' && (r.status === 'done' || r.status === 'raised') && r.updated_at <= cutoff)) {
+        map.delete(key);
+        this.save(table, key);
+      }
     }
   }
 
   private put(table: string, row: SyncRow) {
     this.tables[table].set(rowKey(row), row);
-    this.save([table]);
+    this.save(table, rowKey(row));
     this.refresh([table]);
     this.syncNow();
   }
@@ -253,6 +283,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     const key = rowKey({ profile, id: row.id });
     const current = this.rows.get(rowKey(row)) ?? row;
     this.rows.set(key, moved(current, this.rows.get(key), profile, now, goal));
+    this.save('items', key);
     this.put('items', edited(current, { deleted: 1 }, now));
   }
 

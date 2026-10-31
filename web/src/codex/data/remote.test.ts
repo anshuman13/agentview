@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { TABLE_FIELDS } from './sync';
 
 async function freshStore() {
   vi.resetModules();
@@ -6,33 +7,38 @@ async function freshStore() {
   return new RemoteStore();
 }
 
-function request(tx: Record<string, any>, run: () => unknown, delay: number) {
-  const req: Record<string, any> = {};
-  setTimeout(() => {
-    try {
-      req.result = run();
-    } catch (e) {
-      tx.error = req.error = e;
-      return tx.onerror?.();
-    }
-    tx.oncomplete?.();
-  }, delay);
-  return req;
-}
-
 function fakeIndexedDb(delays: number[]) {
   const stored = new Map<string, unknown>();
   const db = {
     transaction: () => {
       const tx: Record<string, any> = {};
+      let open = 0;
+      let failed = false;
+      const request = (run: () => unknown, delay: number) => {
+        const req: Record<string, any> = {};
+        open++;
+        setTimeout(() => {
+          if (failed) return --open === 0 ? tx.onerror?.() : undefined;
+          try {
+            req.result = run();
+          } catch (e) {
+            failed = true;
+            tx.error = req.error = e;
+          }
+          if (--open === 0) failed ? tx.onerror?.() : tx.oncomplete?.();
+        }, delay);
+        return req;
+      };
       tx.objectStore = () => ({
-        get: (key: string) => request(tx, () => stored.get(key), 0),
-        put: (value: unknown, key: string) => request(tx, () => void stored.set(key, structuredClone(value)), delays.shift() ?? 0),
-        delete: (key: string) => request(tx, () => void stored.delete(key), 0),
+        get: (key: string) => request(() => stored.get(key), 0),
+        getAll: (range: { lo: string; hi: string }) => request(() => [...stored].filter(([k]) => k >= range.lo && k <= range.hi).map(([, v]) => v), 0),
+        put: (value: unknown, key: string) => request(() => void stored.set(key, structuredClone(value)), delays.shift() ?? 0),
+        delete: (key: string) => request(() => void stored.delete(key), 0),
       });
       return tx;
     },
   };
+  vi.stubGlobal('IDBKeyRange', { bound: (lo: string, hi: string) => ({ lo, hi }) });
   vi.stubGlobal('indexedDB', {
     open: () => {
       const req: Record<string, any> = { result: db };
@@ -42,6 +48,8 @@ function fakeIndexedDb(delays: number[]) {
   });
   return stored;
 }
+
+const rowsOf = (stored: Map<string, unknown>, table: string) => [...stored].filter(([k]) => k.startsWith(`row:${table}:`)).map(([, v]) => v as any);
 
 function fakeDom() {
   const listeners = { window: new Set(), document: new Set() };
@@ -72,7 +80,7 @@ describe('RemoteStore.dispose', () => {
   });
 });
 
-type Internal = { since: number; save(tables: string[]): void; flush(): void; saving: Promise<void>; tables: Record<string, Map<string, any>> };
+type Internal = { since: number; save(table: string, ...keys: string[]): void; flush(): void; saving: Promise<void>; tables: Record<string, Map<string, any>> };
 
 const taskRow = (id: string) => ({ profile: 'work', id, version: 1, dirty: 0, updated_at: 1, field_times: '{}', title: id, status: 'open', deleted: 0 });
 
@@ -83,18 +91,18 @@ describe('RemoteStore save', () => {
     const store = await freshStore();
     const internal = store as unknown as Internal;
     internal.since = 1;
-    internal.save([]);
+    internal.save('items');
     internal.flush();
     await new Promise((r) => setTimeout(r, 5));
     internal.since = 2;
-    internal.save([]);
+    internal.save('items');
     internal.flush();
     await internal.saving;
     expect((stored.get('meta') as { since: number }).since).toBe(2);
     store.dispose();
   });
 
-  it('writes only the changed table', async () => {
+  it('writes only the changed row', async () => {
     const stored = fakeIndexedDb([]);
     fakeDom();
     const store = await freshStore();
@@ -104,11 +112,11 @@ describe('RemoteStore save', () => {
     await store.capture('one', 'task', 'work');
     internal.flush();
     await internal.saving;
-    expect([...stored.keys()].sort()).toEqual(['meta', 'table:items']);
+    expect([...stored.keys()].sort()).toEqual(['meta', expect.stringMatching(/^row:items:work:/)]);
     store.dispose();
   });
 
-  it('keeps a table queued and the old since when its write fails', async () => {
+  it('keeps a row queued and the old since when its write fails', async () => {
     const stored = fakeIndexedDb([]);
     fakeDom();
     const store = await freshStore();
@@ -118,7 +126,7 @@ describe('RemoteStore save', () => {
     const set = stored.set.bind(stored);
     let fail = true;
     stored.set = (k, v) => {
-      if (k === 'table:items' && fail) { fail = false; throw new Error('quota'); }
+      if (k.startsWith('row:items:') && fail) { fail = false; throw new Error('quota'); }
       return set(k, v);
     };
     internal.since = 5;
@@ -126,14 +134,14 @@ describe('RemoteStore save', () => {
     internal.flush();
     await internal.saving;
     expect(stored.has('meta')).toBe(false);
-    internal.save([]);
+    internal.save('items');
     internal.flush();
     await internal.saving;
-    expect([...stored.keys()].sort()).toEqual(['meta', 'table:items']);
+    expect([...stored.keys()].sort()).toEqual(['meta', expect.stringMatching(/^row:items:work:/)]);
     store.dispose();
   });
 
-  it('writes a table once for rapid edits and flushes when the page hides', async () => {
+  it('writes a row once for rapid edits and flushes when the page hides', async () => {
     const stored = fakeIndexedDb([]);
     const puts: string[] = [];
     const set = stored.set.bind(stored);
@@ -149,13 +157,13 @@ describe('RemoteStore save', () => {
     expect(puts).toEqual([]);
     await new Promise((r) => setTimeout(r, 600));
     await internal.saving;
-    expect(puts.filter((k) => k === 'table:items')).toHaveLength(1);
-    expect((stored.get('table:items') as { title: string }[])[0].title).toBe('t8');
+    expect(puts.filter((k) => k.startsWith('row:'))).toHaveLength(1);
+    expect(rowsOf(stored, 'items')[0].title).toBe('t8');
     await store.update(row, { title: 'last' });
     vi.stubGlobal('document', { addEventListener() {}, removeEventListener() {}, visibilityState: 'hidden' });
     (internal as unknown as { onHide(): void }).onHide();
     await internal.saving;
-    expect((stored.get('table:items') as { title: string }[])[0].title).toBe('last');
+    expect(rowsOf(stored, 'items')[0].title).toBe('last');
     store.dispose();
   });
 
@@ -172,7 +180,7 @@ describe('RemoteStore save', () => {
     await expect(internal.syncOnce()).rejects.toThrow('Unexpected hub response');
     internal.flush();
     await internal.saving;
-    expect((stored.get('table:items') as { id: string }[]).map((r) => r.id)).toEqual(['a']);
+    expect(rowsOf(stored, 'items').map((r) => r.id)).toEqual(['a']);
     store.dispose();
   });
 
@@ -189,11 +197,11 @@ describe('RemoteStore save', () => {
     stored.clear();
     const sync = internal.syncOnce();
     await new Promise((r) => setTimeout(r, 5));
-    internal.save(['meetings']);
+    internal.save('meetings');
     internal.flush();
     await internal.saving;
     const since = (stored.get('meta') as { since: number } | undefined)?.since ?? 0;
-    const items = (stored.get('table:items') as { id: string }[] | undefined) ?? [];
+    const items = rowsOf(stored, 'items');
     expect(since < 2 || items.some((r) => r.id === 'a')).toBe(true);
     release({ version: 3, changes: [] });
     await sync;
@@ -225,6 +233,40 @@ describe('RemoteStore save', () => {
     store.dispose();
   });
 
+  it('deletes a pruned row from the cache', async () => {
+    const stored = fakeIndexedDb([]);
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void>; prune(t: string): void };
+    await internal.loaded;
+    await store.capture('one', 'task', 'work');
+    internal.flush();
+    await internal.saving;
+    const [key] = [...internal.tables.items.keys()];
+    expect(rowsOf(stored, 'items')).toHaveLength(1);
+    internal.tables.items.set(key, { ...internal.tables.items.get(key), deleted: 1, dirty: 0, version: 2 });
+    internal.prune('items');
+    internal.flush();
+    await internal.saving;
+    expect(rowsOf(stored, 'items')).toHaveLength(0);
+    store.dispose();
+  });
+
+  it('splits whole-table records into rows and deletes them', async () => {
+    const stored = fakeIndexedDb([]);
+    stored.set('meta', { since: 7, columns: JSON.stringify(TABLE_FIELDS) });
+    for (const t of ['items', 'facts', 'pages', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs']) stored.set(`table:${t}`, t === 'items' ? [taskRow('a'), taskRow('b')] : []);
+    fakeDom();
+    const store = await freshStore();
+    const internal = store as unknown as Internal & { loaded: Promise<void> };
+    await internal.loaded;
+    await internal.saving;
+    expect(rowsOf(stored, 'items').map((r) => r.id).sort()).toEqual(['a', 'b']);
+    expect([...stored.keys()].some((k) => k.startsWith('table:'))).toBe(false);
+    expect(internal.since).toBe(7);
+    store.dispose();
+  });
+
   it('reads the old single-key layout once and migrates it', async () => {
     const stored = fakeIndexedDb([]);
     stored.set('snapshot', { since: 7, tables: { items: [taskRow('a')], meetings: [{ ...taskRow('m'), title: 'x' }] } });
@@ -237,7 +279,8 @@ describe('RemoteStore save', () => {
     expect(store.snapshot().meetings).toHaveLength(1);
     expect(stored.has('snapshot')).toBe(false);
     expect((stored.get('meta') as { since: number }).since).toBe(7);
-    expect(stored.get('table:items')).toHaveLength(1);
+    expect(rowsOf(stored, 'items')).toHaveLength(1);
+    expect([...stored.keys()].some((k) => k.startsWith('table:'))).toBe(false);
     store.dispose();
   });
 });
