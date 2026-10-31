@@ -51,7 +51,7 @@ it('marks every task in a group as sent', () => {
   item.run('b', 'Two', now - 60_000);
   const [r] = dueReminders(db, now);
   expect(r.body).toBe('- One\n- Two');
-  expect(r.actions).toMatch(/^view, Open, .+\/tasks$/);
+  expect(r.actions).toBeUndefined();
   for (const k of r.keys!) db.prepare("INSERT INTO meta (key, value) VALUES (?, '1')").run(`remind:${k}`);
   item.run('c', 'Three', now - 30_000);
   expect(dueReminders(db, now).map((x) => x.title)).toEqual(['Three']);

@@ -113,7 +113,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     if (group.length < 2) { out.push(...group); continue; }
     const lines = group.slice(0, 5).map((r) => `- ${r.title}`);
     if (group.length > 5) lines.push(`+${group.length - 5} more`);
-    out.push({ key: group[0].key, keys: group.map((r) => r.key), title: `${group.length} ${profile} tasks due`, body: lines.join('\n'), url: '', actions: `view, Open, ${HUB_URL}/tasks` });
+    out.push({ key: group[0].key, keys: group.map((r) => r.key), title: `${group.length} ${profile} tasks due`, body: lines.join('\n'), url: '' });
   }
   return out;
 }
