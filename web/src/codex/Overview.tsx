@@ -325,7 +325,6 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     });
   }, [snap.jobs, snap.runs, filter, startOfDay]);
   const digest = useMemo(() => latestDigest(snap.items, filter), [snap.items, filter]);
-  const tasks = () => setView({ list: 'tasks', open: null });
   const needs = useNeedsYou(s, now);
   const stale = useMemo(() => {
     const late = new Set(s.overdue.map((r) => r.profile + r.id));
@@ -360,7 +359,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <Capped items={rs} render={(r) => (
         <div key={r.profile + r.id} className="ov-follow-row" draggable={drag} onDragStart={drag ? (e) => e.dataTransfer.setData(DRAG_TYPE, `${r.profile}:${r.id}`) : undefined}>
           <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
-          <button className="ov-follow-text" onClick={tasks}>
+          <button className="ov-follow-text" onClick={() => openTask(r)}>
             <span className="ov-t">{r.title}</span>
             {timed && dueAt(r) && <span className="muted small">{dueAt(r)}</span>}
           </button>

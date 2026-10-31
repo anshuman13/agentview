@@ -29,7 +29,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 
 ### Overview
 
-- One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening on Tasks; goals with all linked tasks done drop off; more than 3 goals show +N more
+- One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening its task page; goals with all linked tasks done drop off; more than 3 goals show +N more
 - For each profile with no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week, or Not now to hide the row for the week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
   many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
@@ -50,12 +50,12 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   not fitting in the free work time, with the shortfall), asks and promises to confirm, Slack DMs waiting on me and the
   latest Slack summary's "Needs you" bullets, in that order and each item once. The first 5 show, with Show N more for
   the rest. Three or more overdue tasks collapse into one "N overdue" row that opens Tasks, with a check that moves them all to today. Tasks have a check and a clock (snooze to tomorrow 09:00, next Monday for work tasks on Friday and Saturday),
-  asks the same Mine/Not mine row as in Tasks, DMs Open in Slack, Task and Dismiss, and Slack bullets Task and Done
-- Later (folded, count in the header, state remembered): Stale (the 5 oldest tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, with a check and a clock), the follow-through card, Keep in touch and tomorrow's meetings and tasks; hidden when empty. Every list of 5 rows or more in Later and the task lists shows +N more that expands in place, then Show fewer. All folds use one header, Title N, and the meeting page folds (Unassigned, Others took, Not mine) start closed each visit
+  asks the same Mine/Not mine row as in Tasks, DMs Open in Slack, Task and Dismiss (the row opens the person page), and Slack bullets Task and Done
+- Later (folded, count in the header, state remembered): Stale (tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, oldest first, with a check and a clock), the follow-through card (meeting actions still open after a week: Task, Done, Dismiss), Keep in touch and tomorrow's meetings and tasks; hidden when empty. Every list of more than 5 rows in Later and the task lists shows +N more that expands in place, then Show fewer. All folds use one header, Title N, and the meeting page folds (Unassigned, Others took, Not mine) start closed each visit
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
-- Tasks due today (tomorrow under Later) with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
-- Context (folded like Later): a Slack summary line that opens the Summary page (the 8 latest chats with a summary, Show N more, the Sonnet summary folded to 8 lines, and Summarize), one line per job report that opens the job, and the digest. Follow-through is meeting actions still open after a week (Task, Done, Dismiss)
+- Tasks due today (tomorrow under Later), each row opening its task page, with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
+- Context (folded like Later): a Slack summary line that opens the Summary page (a Today / Week range, Week by default; a link to the Slack asks to review; the 8 latest chats with a summary in the range, Show N more; the Sonnet summary folded to 8 lines; and Summarize), one line per job report that opens the job, and the digest
 - Before 11:00, a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person
@@ -64,24 +64,21 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 
 ### Tasks
 
-A tap opens the task as its own page, with a back button and the title in the header: title and notes are editable for every task, including ones from Slack or a meeting,
-with due time, profile, source link, Start, Snooze, Tidy, Copy draft for an ask with a reply draft, Ask and Delete
-below; Back, Esc or a phone swipe-back closes it, saves, and returns to the list at the same scroll with focus on its row. A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Slack and Gmail promises I made myself show under "You said" next to the
+A tap opens the task as its own page, with a back button in the header: title and notes are editable for every task, including ones from Slack or a meeting (see the layout below); Back, Esc, ⌘Enter or a phone swipe-back closes it, saves, and returns to the list at the same scroll with focus on its row. A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Slack and Gmail promises I made myself show under "You said" next to the
 asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source.
 A group of more than one shows Confirm all and Dismiss all, which act on the rows listed in it and offer Undo.
 A focused "Is this yours?" row takes y or Enter for Mine, n or Delete for Not mine, and j/k or arrows to move between rows.
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
 seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message, and it closes that person's suggested DM asks when I sent the last message; an ask answered in the same scan is not saved. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
 
-- Closed task rows show the due label and the source icon, plus the repeat icon, checklist count and Replied when they apply; the estimate, the "from" day and the notes preview show only on the task page (notes keep their preview)
+- Closed task rows show the due label, source icon and people, plus the repeat icon, checklist count and Replied when they apply; the estimate shows only on the task page
 - Today ends with an Add task button and later days with a small + (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
-- Rows with "- [ ]" checklist lines in the notes show how many are ticked, and the task page lists them to tick with a
-  tap
+- Rows with "- [ ]" checklist lines in the notes show how many are ticked; a tap on the count opens the list under the row to tick, and the task page lists them too
 - The task page is laid out like TickTick's task detail (the header shows the profile name, not the title). A top row has the due chip ("Today 10:00", "Tomorrow", "Mon 3 Nov" or "Date"),
   the estimate and a "..." menu (Snooze, Tidy, Make task, Copy draft, Raise, Move, Ask Claude, Delete). The body is the check circle and a large title,
   the Description notes, and the checklist as subtask rows ending in "Add subtask", which appends a "- [ ] " line. A sticky bottom bar has the
-  Work or Personal chip (moves the task), icons for repeat, goal, meeting and source, and the time-spent and focus buttons
+  Work or Personal chip (moves the task), icons for repeat, goal, meeting and source, and the time-spent and focus buttons (the time-spent chip offers +15m, +30m and +1h to log by hand)
 - Swiping left names the day the task moves to, and Snooze offers Today for a task due on a later day
 - Search (or /) filters tasks by title, notes and people, Overdue has Move to today with one undo, and tasks not
   dragged into an order sort by due time
@@ -107,14 +104,14 @@ meetings of the same series, with decisions made and questions asked again; empt
 follow-up draft, an action copies as a message or opens a prefilled Linear issue, and the summary format suggests the
 template last used for the series. A meeting without a transcript is a quiet, muted "No transcript" (Retry and Dismiss on its page); the hub tries 8 times, or 2 when the previous meeting of the same title had none.
 
-The page of an upcoming meeting has a prep card: points to raise with its attendees (each with a Raised tick), what
+The page of an upcoming or running meeting has a Prep section: points to raise with its attendees (each with a Raised tick), what
 they took on last time (earlier meetings of the same profile with the same title or a shared attendee, up to 8 people), my open actions, open questions, and Copy agenda, which copies all of it as a Markdown
 checklist without a model call. Raise on a decision or an open task, and the field on a person page, save a point for
 the next meeting with that person (picked from the meeting's attendees and recent ones); a point waits for the first
 meeting with them after it was raised and counts as raised once that meeting ends. Points stay out of Search.
 
 A person page starts with what waits outside meetings: the first line of their Slack DM summary (full text on hover) with Open in Slack,
-one "Waiting on you" list of what they asked you and what you promised them in Slack or Gmail (deduped by source link, each with its age and a Done check that clears it), and your sent mail to them with no reply, then their open tasks (with a Done check, included when the page is copied as Markdown). Below come their
+one "Waiting on you" list of what they asked you and what you promised them in Slack or Gmail (each item once, so two asks from one message both show, each with its age and a Done check that clears it), and your sent mail to them with no reply, then their open tasks (with a Done check, included when the page is copied as Markdown). Below come their
 commitments (hidden when there are none), the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
 wiki claims that name them. A section shows its count whenever it has rows.
 
@@ -335,4 +332,4 @@ or a page puts focus back on what opened it.
   in Keep in touch focuses the next one; when Dismiss removes a whole Overview section, focus moves to the next
   control below it, or to the page heading
 
-- Codex lists share design tokens in tokens.css: `--row-h` (40px), `--row-title` and `--row-meta` (md and sm type), `--meta-fg` (muted secondary text) and `--hairline` (1px separators). Task rows, section headers with counts and the Slack Summary page use them, and Summary has a Today / Week range control that filters the chat summaries.
+- Codex lists share design tokens in tokens.css: `--row-h` (40px), `--row-title` and `--row-meta` (md and sm type), `--meta-fg` (muted secondary text) and `--hairline` (1px separators). Task rows, section headers with counts and the Slack Summary page use them.

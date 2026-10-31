@@ -6,7 +6,7 @@ import { Icon } from '../../ui/Icon';
 import { ago, safeHref } from '../../ui/util';
 import { clock } from '../time';
 import { dayLabel } from '../data/dates';
-import { setView, showSnack } from '../view';
+import { setView, showSnack, useView } from '../view';
 import '../../styles/features/wiki.css';
 
 const CHATS = 8;
@@ -24,9 +24,10 @@ const head = (lines: string[]) => {
 function useSlack() {
   const store = useAssistantStore();
   const snap = useAssistantData();
+  const { filter } = useView();
   const [busy, setBusy] = useState(false);
-  const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
-  const asks = snap.items.filter((r) => !r.deleted && r.source === 'slack' && r.status === 'suggested').length;
+  const brief = snap.briefs.filter((b) => !b.deleted && (filter === 'all' || b.profile === filter) && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
+  const asks = snap.items.filter((r) => !r.deleted && (filter === 'all' || r.profile === filter) && r.source === 'slack' && r.status === 'suggested').length;
   const summarize = () => {
     setBusy(true);
     store.summarizeSlack().then(
@@ -40,11 +41,12 @@ function useSlack() {
 export function Summary({ onMenu }: { onMenu: () => void }) {
   const snap = useAssistantData();
   const { brief, asks, busy, summarize } = useSlack();
+  const { filter } = useView();
   const [allChats, setAllChats] = useState(false);
   const [allBrief, setAllBrief] = useState(false);
   const [range, setRange] = useState<'today' | 'week'>('week');
   const since = range === 'today' ? new Date().setHours(0, 0, 0, 0) : Date.now() - 7 * 86400000;
-  const chats = snap.chats.filter((c) => !c.deleted && c.summary?.trim() && (c.last_at ?? 0) >= since).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
+  const chats = snap.chats.filter((c) => !c.deleted && (filter === 'all' || c.profile === filter) && c.summary?.trim() && (c.last_at ?? 0) >= since).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
   const briefLines = brief?.text?.split('\n') ?? [];
   const longBrief = briefLines.length > BRIEF_LINES;
   return (
