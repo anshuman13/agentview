@@ -148,9 +148,9 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
               <span className="ov-t">{c.name}</span>
               <span className="muted small">DM · {c.last_at ? `${ago(c.last_at, ' ago')} · ` : ''}{c.summary}</span>
             </button>
-            {safeHref(c.url) && <a className="btn sm" href={safeHref(c.url)} target="_blank" rel="noreferrer" aria-label={`Open the DM with ${c.name} in Slack`}>Open in Slack</a>}
-            <button className="btn sm" aria-label={`Make a task to reply to ${c.name}`} onClick={() => n.chatTask(c)}>Task</button>
-            <button className="btn sm" aria-label={`Dismiss ${c.name}`} onClick={() => n.hideChat(c)}>Dismiss</button>
+            {safeHref(c.url) && <a className="btn btn-sm btn-gray" href={safeHref(c.url)} target="_blank" rel="noreferrer" aria-label={`Open the DM with ${c.name} in Slack`}>Open in Slack</a>}
+            <button className="btn btn-sm btn-gray" aria-label={`Make a task to reply to ${c.name}`} onClick={() => n.chatTask(c)}>Task</button>
+            <button className="btn btn-sm btn-gray" aria-label={`Dismiss ${c.name}`} onClick={() => n.hideChat(c)}>Dismiss</button>
           </div>
         );
       }
@@ -161,8 +161,8 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
               <span className="ov-t">{x.x.title}</span>
               <span className="muted small">Slack{x.x.why ? ` · ${x.x.why}` : ''}</span>
             </a>
-            <button className="btn sm" aria-label={`Make ${x.x.title} a task`} onClick={() => n.bulletTask(x.x, x.profile)}>Task</button>
-            <button className="btn sm" aria-label={`Mark ${x.x.title} handled`} onClick={() => n.hideBullet(x.x)}>Done</button>
+            <button className="btn btn-sm btn-gray" aria-label={`Make ${x.x.title} a task`} onClick={() => n.bulletTask(x.x, x.profile)}>Task</button>
+            <button className="btn btn-sm btn-gray" aria-label={`Mark ${x.x.title} handled`} onClick={() => n.hideBullet(x.x)}>Done</button>
           </div>
         );
     }
@@ -175,7 +175,7 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
         {!showAll && n.rows.length > CAP && (
           <div className="ov-follow-row">
             <span className="ov-follow-text" />
-            <button className="btn sm" onClick={() => setShowAll(true)}>Show {n.rows.length - CAP} more</button>
+            <button className="btn btn-sm btn-gray" onClick={() => setShowAll(true)}>Show {n.rows.length - CAP} more</button>
           </div>
         )}
       </div>

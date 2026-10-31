@@ -63,8 +63,8 @@ function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meeting; ca
       <input className="as-next-jot" value={jot} placeholder="Jot a note" enterKeyHint="done" aria-label={`Note for ${m.title}`}
         onClick={(e) => e.stopPropagation()} onChange={(e) => { saved.current = ''; setJot(e.target.value); }} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') addNote(); }} onBlur={addNote} />
       <div className="as-next-actions">
-        <button className="btn sm" onClick={(e) => { e.stopPropagation(); onPrep(); }}><Icon name="sparkle" small /> Prep</button>
-        <button className="btn sm" onClick={(e) => { e.stopPropagation(); open(); }}><Icon name="edit" small /> Notes</button>
+        <button className="btn btn-sm btn-gray" onClick={(e) => { e.stopPropagation(); onPrep(); }}><Icon name="sparkle" small /> Prep</button>
+        <button className="btn btn-sm btn-gray" onClick={(e) => { e.stopPropagation(); open(); }}><Icon name="edit" small /> Notes</button>
         {m.id.startsWith('cal:') && (
           <button className={`btn sm${m.room_me === 1 ? ' on' : ''}`} title="I am on the room microphone in this meeting" aria-pressed={m.room_me === 1}
             onClick={(e) => { e.stopPropagation(); void store.editRow('meetings', m, { room_me: m.room_me === 1 ? null : 1 }); }}>
@@ -142,9 +142,9 @@ function FollowThrough({ f }: { f: ReturnType<typeof useFollowThrough> }) {
               <span className="ov-t">{r.title}</span>
               <span className="muted small">{m.title} · {dayLabel(m.starts_at!)}</span>
             </button>
-            <button className="btn sm" aria-label={`Make ${r.title} a plain task`} onClick={() => void store.update(r, { meeting_id: null })}>Task</button>
-            <button className="btn sm" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); focusPast(section.current); }}>Done</button>
-            <button className="btn sm" aria-label={`Dismiss ${r.title}`} onClick={() => dismiss(r)}>Dismiss</button>
+            <button className="btn btn-sm btn-gray" aria-label={`Make ${r.title} a plain task`} onClick={() => void store.update(r, { meeting_id: null })}>Task</button>
+            <button className="btn btn-sm btn-gray" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); focusPast(section.current); }}>Done</button>
+            <button className="btn btn-sm btn-gray" aria-label={`Dismiss ${r.title}`} onClick={() => dismiss(r)}>Dismiss</button>
           </div>
         )} />
       </div>
@@ -198,8 +198,8 @@ function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
               <span className="ov-t">{displayName(x.name)}</span>
               <span className="muted small">last {dayLabel(x.last)} · usually every {plural(Math.max(1, Math.round(x.gap / 86400000)), 'day')}</span>
             </button>
-            <button className="btn sm" aria-label={`Copy a nudge to ${x.name}`} onClick={() => copyText(touchText(x.name), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
-            <button className="btn sm" aria-label={`Dismiss ${x.name}`} onClick={() => dismiss(x, i)}>Dismiss</button>
+            <button className="btn btn-sm btn-gray" aria-label={`Copy a nudge to ${x.name}`} onClick={() => copyText(touchText(x.name), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
+            <button className="btn btn-sm btn-gray" aria-label={`Dismiss ${x.name}`} onClick={() => dismiss(x, i)}>Dismiss</button>
           </div>
         )} />
       </div>
@@ -229,8 +229,8 @@ function JustEnded({ meetings, now }: { meetings: Meeting[]; now: number }) {
         )}
         <div className="as-next-actions">
           {!actions.length && meetingState(m, now) === 'waiting' && <span className="muted small ov-follow-text">Waiting for the transcript</span>}
-          <button className="btn sm" onClick={copy}><Icon name="mail" small /> Copy follow-up</button>
-          <button className="btn sm" onClick={() => openMeeting(m)}><Icon name="edit" small /> Notes</button>
+          <button className="btn btn-sm btn-gray" onClick={copy}><Icon name="mail" small /> Copy follow-up</button>
+          <button className="btn btn-sm btn-gray" onClick={() => openMeeting(m)}><Icon name="edit" small /> Notes</button>
         </div>
       </section>
     );
@@ -274,7 +274,7 @@ function SinceLastVisit() {
       <div className="ov-follow">
         <div className="ov-follow-row">
           <span className="ov-follow-text">Since you were last here: {parts.join(', ')}</span>
-          <button className="btn sm" onClick={dismiss}>Dismiss</button>
+          <button className="btn btn-sm btn-gray" onClick={dismiss}>Dismiss</button>
         </div>
       </div>
     </section>
@@ -399,7 +399,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
       {morning && (
         <div className="as-next-actions">
-          <button className="btn sm" onClick={standup}><Icon name="copy" small /> Copy standup</button>
+          <button className="btn btn-sm btn-gray" onClick={standup}><Icon name="copy" small /> Copy standup</button>
         </div>
       )}
       {morning && <SinceLastVisit />}
