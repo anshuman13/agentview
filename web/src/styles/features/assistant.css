@@ -312,11 +312,6 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .as-tt-pick select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .as-tt-pick:not(:has(select)) { display: none; }
 .as-tt-more { position: relative; }
-.as-tt-menu { position: absolute; top: 100%; right: 0; z-index: var(--z-popover); display: flex; flex-direction: column; min-width: 200px; padding: var(--sp-2); border: 1px solid var(--border-card); border-radius: 12px; background: var(--raised); box-shadow: var(--shadow-lg); }
-.as-tt-menu > button, .as-tt-menu > a, .as-tt-menu-row, .as-tt-menu .as-tt-raise, .as-tt-menu .as-tt-menu-pick { display: flex; align-items: center; gap: var(--sp-4); min-height: 40px; padding: 0 var(--sp-6); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; }
-.as-tt-menu .as-delete { color: var(--err); }
-@media (hover: hover) { .as-tt-menu > button:hover, .as-tt-menu > a:hover, .as-tt-menu .as-tt-raise:hover, .as-tt-menu .as-tt-menu-pick:hover { background: var(--hover); } }
-.as-tt-menu > a { text-decoration: none; }
 .as-tt-menu-row:not(:has(select)) { display: none; }
 .as-tt-menu-row select { flex: 1; min-width: 0; }
 .as-tt-menu-chips { display: flex; gap: var(--sp-2); padding: 0 var(--sp-6) var(--sp-2); }

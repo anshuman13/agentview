@@ -5,6 +5,7 @@ import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { Button, Chip, chipClass, IconButton } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
 import { ago, fitHeight, reveal, safeHref, useOnUnmount } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
@@ -42,7 +43,6 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const [typed, setTyped] = useState<string | null>(null);
   const [snoozing, setSnoozing] = useState(false);
   const [menu, setMenu] = useState(false);
-  const menuBox = useRef<HTMLDivElement>(null);
   const [tidying, setTidying] = useState(false);
   const [logging, setLogging] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -108,20 +108,9 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       if (!at || at === document.body) document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus();
     });
   }, [row.profile, row.id]);
-  // The more menu closes on an outside tap, and its first item takes focus.
-  const actions = useRef<HTMLDivElement>(null);
-  const menuOpen = useRef(menu);
-  menuOpen.current = menu;
-  useEffect(() => {
-    if (!menu) return;
-    const away = (e: PointerEvent) => { if (!menuBox.current?.contains(e.target as Node)) { setMenu(false); setSnoozing(false); } };
-    document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
-  }, [menu]);
-  useEffect(() => { if (menu) actions.current?.querySelector<HTMLElement>('button, select')?.focus(); }, [menu, snoozing]);
+  const moreBtn = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && menuOpen.current) { setMenu(false); setSnoozing(false); return; }
       if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) onClose();
     };
     window.addEventListener('keydown', key);
@@ -169,40 +158,40 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
           </span>
         )}
         <span className="spacer" />
-        <div className="as-tt-more" ref={menuBox}>
-          <IconButton icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSnoozing(false); }} />
+        <div className="as-tt-more">
+          <IconButton ref={moreBtn} icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSnoozing(false); }} />
           {menu && (
-            <div className="as-tt-menu" role="menu" ref={actions}>
+            <Menu key={snoozing ? 'snooze' : 'main'} trigger={moreBtn} className="as-tt-menu" onClose={() => { setMenu(false); setSnoozing(false); }}>
               {snoozing ? (
                 <>
-                  <button role="menuitem" onClick={() => setSnoozing(false)}><Icon name="arrow-left" small /> Snooze</button>
-                  {at != null && at >= new Date().setHours(24, 0, 0, 0) && <button role="menuitem" onClick={then(() => act.due(row, null))}>Today</button>}
-                  {snoozes().map((s) => <button key={s.label} role="menuitem" onClick={then(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</button>)}
-                  <PickTime className="as-tt-menu-pick" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
+                  <MenuItem onClick={() => setSnoozing(false)} icon="arrow-left">Snooze</MenuItem>
+                  {at != null && at >= new Date().setHours(24, 0, 0, 0) && <MenuItem onClick={then(() => act.due(row, null))}>Today</MenuItem>}
+                  {snoozes().map((s) => <MenuItem key={s.label} onClick={then(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</MenuItem>)}
+                  <PickTime className="ui-menu-item" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
                 </>
               ) : (
                 <>
-                  {suggested != null && <button role="menuitem" title="Add this estimate, from similar done tasks" onClick={() => { setMenu(false); addEstimate(suggested); }}><Icon name="add" small /> Add estimate ~{minutesText(suggested)}</button>}
+                  {suggested != null && <MenuItem title="Add this estimate, from similar done tasks" onClick={() => { setMenu(false); addEstimate(suggested); }} icon="add">Add estimate ~{minutesText(suggested)}</MenuItem>}
                   {(row.status === 'open' || row.status === 'done') && (
                     <>
-                      <button role="menuitem" aria-label="Log time" aria-expanded={logging} onClick={() => setLogging(!logging)}><Icon name="watch" small /> Log time{Number(row.spent) > 0 && ` (${minutesText(Number(row.spent))})`}</button>
+                      <MenuItem aria-label="Log time" aria-expanded={logging} onClick={() => setLogging(!logging)} icon="watch">Log time{Number(row.spent) > 0 && ` (${minutesText(Number(row.spent))})`}</MenuItem>
                       {logging && <div className="as-tt-menu-chips">{[15, 30, 60].map((n) => <Chip key={n} size="sm" title={`Add ${minutesText(n)} spent`} onClick={() => logTime(n)}>+{minutesText(n)}</Chip>)}</div>}
-                      <div className="as-tt-menu-row"><Icon name="target" small /><GoalPick row={row} onPick={(goal) => act.edit(row, { goal })} /></div>
+                      <div className="ui-menu-item as-tt-menu-row"><Icon name="target" small /><GoalPick row={row} onPick={(goal) => act.edit(row, { goal })} /></div>
                     </>
                   )}
-                  {row.meeting_id && <button role="menuitem" onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))}><Icon name="record" small /> Open meeting</button>}
-                  {row.source_url && <a role="menuitem" href={safeHref(row.source_url)} target="_blank" rel="noreferrer" onClick={() => setMenu(false)}><Icon name={src.icon} small /> {row.meeting_id ? 'Transcript' : src.label}</a>}
-                  {row.status === 'note' && <button role="menuitem" onClick={then(() => act.toTask(row))}><Icon name="check" small /> Make task</button>}
-                  {row.status === 'open' && <button role="menuitem" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
-                  {row.status === 'open' && <button role="menuitem" disabled={tidying} onClick={() => { setMenu(false); void tidy(); }}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
-                  {row.draft && <button role="menuitem" onClick={() => { setMenu(false); copyText(row.draft!); }}><Icon name="copy" small /> Copy draft</button>}
-                  {row.status === 'open' && <RaiseWith className="as-tt-raise" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
-                  <button role="menuitem" onClick={() => { setMenu(false); move(); }}><Icon name="arrow-swap" small /> Move to {FILTER_LABEL[other]}</button>
-                  <button role="menuitem" onClick={then(() => onAsk(row))}><Icon name="sparkle" small /> Ask Claude</button>
-                  <button role="menuitem" className="as-delete" onClick={then(() => act.remove(row))}><Icon name="trash" small /> Delete</button>
+                  {row.meeting_id && <MenuItem onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))} icon="record">Open meeting</MenuItem>}
+                  {row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(false)} icon={src.icon}>{row.meeting_id ? 'Transcript' : src.label}</MenuItem>}
+                  {row.status === 'note' && <MenuItem onClick={then(() => act.toTask(row))} icon="check">Make task</MenuItem>}
+                  {row.status === 'open' && <MenuItem onClick={() => setSnoozing(true)} icon="clock">Snooze</MenuItem>}
+                  {row.status === 'open' && <MenuItem disabled={tidying} onClick={() => { setMenu(false); void tidy(); }} icon={tidying ? 'loading' : 'wand'} spin={tidying}>Tidy</MenuItem>}
+                  {row.draft && <MenuItem onClick={() => { setMenu(false); copyText(row.draft!); }} icon="copy">Copy draft</MenuItem>}
+                  {row.status === 'open' && <RaiseWith className="ui-menu-item" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
+                  <MenuItem onClick={() => { setMenu(false); move(); }} icon="arrow-swap">Move to {FILTER_LABEL[other]}</MenuItem>
+                  <MenuItem onClick={then(() => onAsk(row))} icon="sparkle">Ask Claude</MenuItem>
+                  <MenuItem danger onClick={then(() => act.remove(row))} icon="trash">Delete</MenuItem>
                 </>
               )}
-            </div>
+            </Menu>
           )}
         </div>
       </div>

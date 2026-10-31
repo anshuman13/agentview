@@ -114,6 +114,9 @@ placeholder `--on-surface-faint`. Borderless only where the field is the page co
 ### Menu
 Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0 `--sp-6`, gap
 `--sp-4`, body type, `--shape-sm`, state layers as buttons. Danger item last, in `--danger`.
+`<Menu trigger onClose>` with `<MenuItem icon danger href>` and `<MenuSeparator>` (web/src/ui/Menu.tsx,
+components/menus.css). Arrow keys, Home and End move, Esc closes and refocuses the trigger, a press
+outside closes. Status: built; the task page menu uses it, cp-pop stays (it is a listbox).
 
 ### Row
 Height `--row-h` 40px (`--touch` on coarse pointers), padding `--list-pad`. Leading check or
@@ -143,5 +146,5 @@ trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state lay
 ## Migration
 
 Done: Summary uses Panel (filter card) and EmptyState (empty report). Next: replace `.as-empty`
-and `.empty-state` with EmptyState, move menus (as-tt-menu, as-menu, cp-pop) to one Menu, and
+and `.empty-state` with EmptyState, move the remaining menus (as-menu) to Menu, and
 move feature chips (as-chip, mt-add, cp-chip, mcp-chip, ag-chip) to Chip.
