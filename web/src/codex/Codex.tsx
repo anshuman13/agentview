@@ -6,10 +6,10 @@ import { reviewCount } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { atTime, errorText, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
-import type { ItemRow } from './data/sync';
+import { rowKey, type ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { ago } from '../ui/util';
-import { FILTER_LABEL, hideSnack, showSnack, useSnack, useView, type Filter, type List } from './view';
+import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
 import { Jobs } from './jobs/Jobs';
 import { Summary } from './summary/Summary';
@@ -17,6 +17,7 @@ import { Meetings } from './meetings/Meetings';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
 import { AddTask, TaskRow, UNROLL, useActions } from './Task';
+import { TaskEditor } from './TaskEditor';
 import { Overview, Review } from './Overview';
 import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
@@ -70,12 +71,16 @@ function moveTo(r: ItemRow, day: number, today: number) {
 
 const CALENDAR_FRESH = 15 * 60_000;
 
+function SpotBack({ scroller }: { scroller: React.RefObject<HTMLElement | null> }) {
+  useSpotBack(scroller, 'tasks');
+  return null;
+}
+
 export function Assistant() {
   const { store, snap } = useAssistant();
-  const { list, filter } = useView();
+  const { list, filter, open } = useView();
   const s = useSplit();
   const root = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState<ItemRow | null>(null);
   const [drawer, setDrawer] = useState(false);
   const [olderOpen, setOlderOpen] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
@@ -120,8 +125,8 @@ export function Assistant() {
   }, [store, ready]);
 
   // An item moved to the other profile keeps its id, so the open task follows it.
-  const current = open && (snap.items.find((r) => r.profile === open.profile && r.id === open.id && !r.deleted) ?? snap.items.find((r) => r.id === open.id && !r.deleted));
-  const close = useCallback(() => setOpen(null), []);
+  const current = list === 'tasks' && open ? snap.items.find((r) => rowKey(r) === open && !r.deleted) ?? snap.items.find((r) => r.id === open.slice(open.indexOf(':') + 1) && !r.deleted) : undefined;
+  const close = useCallback(() => setView({ open: null }), []);
   const askAbout = (r: ItemRow) => ask(askText('Help me with this item.', snap.items, r));
   const { sync } = snap;
   const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : 'Syncing';
@@ -148,6 +153,16 @@ export function Assistant() {
       </div>
     </div>
   );
+
+  if (current) {
+    return (
+      <div className="assistant wide" ref={root}>
+        <TaskEditor key={rowKey(current)} row={current} onClose={close} onAsk={askAbout} />
+        <SnackBar />
+        {drawerSheet}
+      </div>
+    );
+  }
 
   if (list !== 'today' && list !== 'tasks') {
     const Page = { wiki: Wiki, meetings: Meetings, jobs: Jobs, summary: Summary }[list];
@@ -203,7 +218,7 @@ export function Assistant() {
           return (
             <Fragment key={k}>
               {line && <div className="as-drop-line" />}
-              <TaskRow row={r} open={!!current && sameRow(current, r)} onOpen={() => setOpen(r)} onClose={close} onAsk={askAbout} onGrab={key && !(current && sameRow(current, r)) ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
+              <TaskRow row={r} onOpen={() => setView({ open: rowKey(r) })} onGrab={key ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
             </Fragment>
           );
         })}
@@ -297,6 +312,7 @@ export function Assistant() {
           </>
         )}
       </div>
+      {list === 'tasks' && <SpotBack scroller={scroller} />}
 
       {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || '(Untitled)'}</div>}
       <SnackBar />

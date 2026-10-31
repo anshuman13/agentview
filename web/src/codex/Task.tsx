@@ -5,7 +5,7 @@ import { isRepeat, parseRepeat } from './data/recur';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { firstLine, readFlag, saveFlag } from '../ui/util';
-import { FILTER_LABEL, showSnack, takeTask, useFocusBack, type Filter } from './view';
+import { FILTER_LABEL, showSnack, useFocusBack, type Filter } from './view';
 import { useActions } from './useActions';
 import { when } from './time';
 import { Swipe } from './Swipe';
@@ -14,7 +14,6 @@ import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
 import { sourceOf } from './taskSource';
 import { Check } from './TaskCheck';
-import { TaskEditor } from './TaskEditor';
 import { checkItems, toggleCheck } from './taskChecklist';
 
 export { UNROLL, useActions } from './useActions';
@@ -27,16 +26,10 @@ const checklist = (s: string | null) => {
   return { items, done: items.filter((c) => c.done).length, total: items.length };
 };
 
-export function TaskRow({ row, open, onOpen, onClose, onAsk, onGrab, lifted }: { row: ItemRow; open: boolean; onOpen: () => void; onClose: () => void; onAsk: (r: ItemRow) => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean }) {
+export function TaskRow({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen: () => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean }) {
   const act = useActions();
   const { store } = useAssistant();
   const [showList, setShowList] = useState(false);
-  useEffect(() => {
-    if (open || !takeTask(row.profile + row.id)) return;
-    onOpen();
-    requestAnimationFrame(() => document.querySelector('.as-edit')?.scrollIntoView({ block: 'nearest' }));
-  }, []);
-  if (open) return <TaskEditor row={row} onClose={onClose} onAsk={onAsk} />;
   const src = sourceOf(row);
   const at = atTime(row.at);
   const now = Date.now();

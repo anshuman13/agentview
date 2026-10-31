@@ -64,19 +64,19 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 
 ### Tasks
 
-A tap opens the task in place: title and notes are editable for every task, including ones from Slack or a meeting,
+A tap opens the task as its own page, with a back button and the title in the header: title and notes are editable for every task, including ones from Slack or a meeting,
 with due time, profile, source link, Start, Snooze, Tidy, Copy draft for an ask with a reply draft, Ask and Delete
-below; a tap outside closes it and saves. A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Slack and Gmail promises I made myself show under "You said" next to the
+below; Back, Esc or a phone swipe-back closes it, saves, and returns to the list at the same scroll with focus on its row. A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Slack and Gmail promises I made myself show under "You said" next to the
 asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source.
 A group of more than one shows Confirm all and Dismiss all, which act on the rows listed in it and offer Undo.
 A focused "Is this yours?" row takes y or Enter for Mine, n or Delete for Not mine, and j/k or arrows to move between rows.
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
 seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message, and it closes that person's suggested DM asks when I sent the last message; an ask answered in the same scan is not saved. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
 
-- Closed task rows show the due label and the source icon, plus the repeat icon, checklist count and Replied when they apply; the estimate, the "from" day and the notes preview show only in the editor (notes keep their preview)
+- Closed task rows show the due label and the source icon, plus the repeat icon, checklist count and Replied when they apply; the estimate, the "from" day and the notes preview show only on the task page (notes keep their preview)
 - Today ends with an Add task button and later days with a small + (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
-- Rows with "- [ ]" checklist lines in the notes show how many are ticked, and the open task lists them to tick with a
+- Rows with "- [ ]" checklist lines in the notes show how many are ticked, and the task page lists them to tick with a
   tap
 - Swiping left names the day the task moves to, and Snooze offers Today for a task due on a later day
 - Search (or /) filters tasks by title, notes and people, Overdue has Move to today with one undo, and tasks not
@@ -290,7 +290,7 @@ service's dashboards. The refresh button reloads the panels too.
 
 ## Shortcuts
 
-⌘ on a Mac, Ctrl elsewhere. Letter shortcuts stay out of the way of text fields. Closing a task, an inline editor
+⌘ on a Mac, Ctrl elsewhere. Letter shortcuts stay out of the way of text fields. Closing a task page, an inline editor
 or a page puts focus back on what opened it.
 
 | Key | Action |

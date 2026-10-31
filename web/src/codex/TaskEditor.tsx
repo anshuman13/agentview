@@ -23,7 +23,7 @@ import { caretLine, RelatedStrip } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
 import { checkItems, toggleCheck } from './taskChecklist';
 
-// The open task edits in place: title and notes save when they lose focus or the task closes.
+// The open task is a page: title and notes save when they lose focus or the task closes.
 export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void }) {
   const act = useActions();
   const { store, snap } = useAssistant();
@@ -84,18 +84,11 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text]);
   // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
   useEffect(() => { if (matchMedia('(hover: hover)').matches) titleRef.current?.focus({ preventScroll: true }); }, []);
-  // The task grows out of its row instead of popping in.
-  useLayoutEffect(() => {
-    const el = box.current;
-    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    el.animate([{ height: '56px', overflow: 'hidden' }, { height: `${el.offsetHeight}px`, overflow: 'hidden' }], { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' });
-  }, []);
-  useEffect(() => { setTimeout(() => box.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 190); }, []);
   // Closing by key or button puts focus back on the task's row.
   useEffect(() => () => {
     requestAnimationFrame(() => {
       const at = document.activeElement;
-      if (!at || at === document.body) document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus({ preventScroll: true });
+      if (!at || at === document.body) document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus();
     });
   }, [row.profile, row.id]);
   // Opening or leaving the snooze choices keeps focus in the actions.
@@ -108,20 +101,11 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   }, [snoozing]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' && !(e.key === 'Enter' && (e.metaKey || e.ctrlKey))) return;
-      const at = document.activeElement;
-      if (at && at !== document.body && !box.current?.contains(at)) return;
-      onClose();
-    };
-    // A tap outside closes the task; a tap on another task opens that one instead.
-    const down = (e: PointerEvent) => {
-      const t = e.target as Element;
-      if (!box.current?.contains(t) && !t.closest('.as-row, .as-snack')) onClose();
+      if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) onClose();
     };
     window.addEventListener('keydown', key);
-    document.addEventListener('pointerdown', down);
-    return () => { window.removeEventListener('keydown', key); document.removeEventListener('pointerdown', down); };
-  }, [onClose, row.profile, row.id]);
+    return () => window.removeEventListener('keydown', key);
+  }, [onClose]);
 
   const other: Profile = row.profile === 'work' ? 'personal' : 'work';
   const move = () => {
@@ -146,8 +130,14 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   };
 
   return (
-    <div className={`as-edit ${row.profile}`} ref={box} data-no-swipe>
+    <div className="wk narrow as-page">
       <Back close={onClose} />
+      <header className="wk-head">
+        <button className="icon-btn" title="Back to tasks" aria-label="Back" onClick={onClose}><Icon name="arrow-left" /></button>
+        <h1>{title.trim() || '(Untitled)'}</h1>
+      </header>
+      <div className="wk-scroll">
+    <div className={`as-edit ${row.profile}`} ref={box} data-no-swipe>
       <div className="as-edit-top">
         <Check row={row} onDone={onClose} />
         <textarea
@@ -232,6 +222,8 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
           <button className="icon-btn as-delete" title="Delete" aria-label="Delete" onClick={then(() => act.remove(row))}><Icon name="trash" /></button>
         </div>
       )}
+    </div>
+      </div>
     </div>
   );
 }

@@ -289,9 +289,9 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .tasks .as-row.checked .as-title { color: var(--fg-muted); }
 .tasks .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
 .tasks .as-drop-line { margin-left: 52px; }
-.tasks .as-list > .as-edit { margin: 0; border: 0; border-radius: 0; box-shadow: none; background: var(--hover); padding: var(--sp-5) var(--sp-5) var(--sp-6) var(--sp-4); }
-.tasks .as-list > .as-edit .as-chip:not(.when, .time, .on, .static) { background: var(--bg); }
-.tasks .as-list > .as-edit:not(:last-child) { border-bottom: 1px solid var(--border); }
+.as-page .wk-head h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xl); }
+.as-page .wk-scroll { padding: 0 var(--wk-pad) var(--sp-24); }
+.as-page .as-edit { width: 100%; max-width: 760px; margin: 0 auto; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
 .as-search { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-4); padding: 0 var(--sp-2) 0 var(--sp-5); min-height: 44px; border: 1px solid var(--border-card); border-radius: 12px; background: var(--surface); color: var(--fg-muted); }
 .as-search input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); box-shadow: none; }
 .as-search input:focus { outline: none; box-shadow: none; }

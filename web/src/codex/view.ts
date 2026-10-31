@@ -6,7 +6,7 @@ export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki';
 export type Filter = 'all' | Profile;
 export const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
-// The list, filter and open page or meeting are shared by the sidebar on desktop and the drawer on the phone.
+// The list, filter and open page, meeting or task are shared by the sidebar on desktop and the drawer on the phone.
 export type View = { list: List; filter: Filter; open: string | null; anchor: string | null; person: string | null };
 
 let view: View = { list: 'today', filter: 'all', open: null, anchor: null, person: null };
@@ -21,7 +21,7 @@ const FOCUSABLE = 'button, a[href], input, [tabindex]:not([tabindex="-1"])';
 
 function saveSpot(list: List) {
   const at = document.activeElement as HTMLElement | null;
-  const scroller = at?.closest<HTMLElement>('.wk-scroll');
+  const scroller = at?.closest<HTMLElement>('.wk-scroll, .as-scroll');
   if (!at || !scroller) return;
   spot = { list, scroll: scroller.scrollTop, index: [...scroller.querySelectorAll(FOCUSABLE)].indexOf(at), text: at.textContent ?? '' };
 }
@@ -76,17 +76,7 @@ export function setViewAt(patch: Partial<View>, selector: string) {
 }
 type MeetingRef = { profile: string; id: string };
 export const openMeeting = (m: MeetingRef) => setView({ list: 'meetings', open: rowKey(m), person: null });
-// A task to open once its row renders on Tasks; a row hidden in a collapsed section lets it lapse.
-let wantTask: { key: string; until: number } | null = null;
-export const openTask = (t: MeetingRef) => {
-  wantTask = { key: t.profile + t.id, until: Date.now() + 1500 };
-  setView({ list: 'tasks', open: null, person: null });
-};
-export function takeTask(key: string) {
-  if (!wantTask || wantTask.key !== key || Date.now() > wantTask.until) return false;
-  wantTask = null;
-  return true;
-}
+export const openTask = (t: MeetingRef) => setView({ list: 'tasks', open: rowKey(t), person: null });
 export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => view);
 
 // Snackbar with Undo, one at a time.
