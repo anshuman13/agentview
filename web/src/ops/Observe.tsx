@@ -132,10 +132,10 @@ function PanelCard({ p }: { p: GrafanaPanel }) {
 
 function Grafana({ info }: { info: ObserveInfo }) {
   const repo = encodeURIComponent(info.repo);
-  const [dash, refreshDash] = useLoad<GrafanaDashboards>(`/api/observe/grafana/dashboards?repo=${repo}`);
-  const [panels, refreshPanels] = useLoad<GrafanaPanels>(`/api/observe/grafana/panels?repo=${repo}`);
-  const [logs, refreshLogs] = useLoad<GrafanaLogs>(`/api/observe/grafana/logs?repo=${repo}`);
-  const [pats, refreshPats] = useLoad<GrafanaPatterns>(`/api/observe/grafana/patterns?repo=${repo}`);
+  const [dash, refreshDash] = useLoad<GrafanaDashboards>(info.grafanaServer ? `/api/observe/grafana/dashboards?repo=${repo}` : null);
+  const [panels, refreshPanels] = useLoad<GrafanaPanels>(info.grafanaServer ? `/api/observe/grafana/panels?repo=${repo}` : null);
+  const [logs, refreshLogs] = useLoad<GrafanaLogs>(info.grafanaServer ? `/api/observe/grafana/logs?repo=${repo}` : null);
+  const [pats, refreshPats] = useLoad<GrafanaPatterns>(info.grafanaServer ? `/api/observe/grafana/patterns?repo=${repo}` : null);
   const cfg = info.config ?? info.guess;
   const selector = cfg.grafana?.lokiSelector ?? '';
   const refresh = () => {

@@ -12,7 +12,7 @@
   profile; see [Codex](#codex)
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
 - **Share to the app (Android)**: text or a link shared into AgentView asks "Add as task" (saved to Tasks, with a time read from the text) or "Send to chat" (appended to the composer).
-- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs. The tab bar shows a count only on Chat (waiting); Sessions (waiting elsewhere) and Agents (running) show a dot.
+- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs. The interval sync runs only while the app is visible. The tab bar shows a count only on Chat (waiting); Sessions (waiting elsewhere) and Agents (running) show a dot.
   The done and snooze buttons on Overview rows, Related chips and Remove goal have full-size tap targets
 - **Command palette** (⇧⌘P or F1): every view, tab, page, Codex list, model and mode as a searchable list
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
@@ -283,7 +283,7 @@ are read once and removed from the address bar.
 Observe, Deploy and MCP Servers open as tabs in the editor area (the lower three activity bar icons, or the command
 palette), so they get the full width instead of the sidebar. One page is open at a time; opening another replaces it.
 
-Observe's Grafana section shows a card per entry in a repo's `grafana.panels` (`{ title, query, unit }`, a PromQL query in
+Without a Grafana MCP server, Observe makes no Grafana requests. Observe's Grafana section shows a card per entry in a repo's `grafana.panels` (`{ title, query, unit }`, a PromQL query in
 `~/.agentview/observe.json`): the last value, a 6 hour sparkline with min and max in the hover title, and a link to Explore.
 A failing panel shows its error without affecting the others. With no panels, a button asks Claude to suggest some from the
 service's dashboards. The refresh button reloads the panels too.

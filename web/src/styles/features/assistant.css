@@ -25,6 +25,7 @@
 .as-scroll section { display: flex; flex-direction: column; }
 .as-section { display: flex; align-items: baseline; gap: var(--sp-3); padding: 0 0 var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-md); font-weight: 600; color: var(--fg-strong); }
 .as-section > span { font-weight: 400; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+.as-section.as-toggle { display: flex; align-items: center; min-height: 40px; }
 .as-toggle { align-self: stretch; border-width: 0 0 1px; background: transparent; cursor: pointer; text-align: left; }
 .as-toggle > .codicon.icon { align-self: center; margin-left: auto; color: var(--fg-faint); }
 .as-section.late { color: var(--err); }
@@ -244,6 +245,7 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .ov-check:last-child { margin: -6px -8px -6px 0; }
 @media (hover: hover) { .ov-check:hover { color: var(--ok, var(--fg)); background: var(--sunken); } }
 .ov-follow-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-follow-text > .muted.small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
 @media (hover: hover) { .ov-follow-text:hover .ov-t { text-decoration: underline; } }
 @media (max-width: 480px) {
   .ov-follow-row.wrap { flex-wrap: wrap; }
@@ -265,7 +267,7 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
 .tasks .as-scroll { padding: var(--sp-4) var(--tk-pad) var(--sp-16); gap: var(--sp-8); }
 .tasks .as-scroll section { gap: var(--sp-2); }
-.tasks .as-section { padding: var(--sp-3) 0; border-bottom: 0; font-size: var(--fs-sm); font-weight: 500; color: var(--fg); }
+.tasks .as-section { padding: var(--sp-3) 0; border-bottom: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--fg); }
 .tasks .as-section > span { display: inline-block; min-width: 18px; padding: 0 var(--sp-3); border-radius: var(--radius-pill); background: var(--hover); color: var(--fg-muted); font-size: var(--fs-xs); font-weight: 500; text-align: center; line-height: 18px; }
 .tasks .as-section.later, .tasks .as-section.done { color: var(--fg-muted); }
 .tasks .as-section.late { color: var(--err); }
@@ -365,3 +367,4 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 @media (hover: hover) { .as-related-hit:hover { color: var(--fg); border-color: var(--border-strong); } }
 .as-related-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28ch; }
 .as-related-when { color: var(--fg-faint); }
+.as-people { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

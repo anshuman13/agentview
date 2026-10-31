@@ -233,7 +233,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 @media (max-width: 600px) { .mt-row .mt-count.muted { display: none; } }
 .mt-topics { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .mt-topic { display: inline-flex; align-items: center; gap: var(--sp-1); }
-.mt-topics input { width: 120px; height: 26px; padding: 0 var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg); font: inherit; font-size: var(--fs-xs); outline: 0; }
+.mt-topics input { width: 120px; height: 26px; min-height: 36px; padding: 0 var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg); font: inherit; font-size: var(--fs-xs); outline: 0; }
 .mt-topics input:focus { border-color: var(--border-strong); }
 .mt-repeat { flex: none; margin-left: var(--sp-4); color: var(--fg-faint); }
 .mt-badge { flex: none; padding: 1px var(--sp-4); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-text); font-size: var(--fs-xs); font-weight: 600; }
@@ -419,6 +419,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .jb-output { margin-top: var(--sp-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; color: var(--fg); }
 .jb-row .as-prof, .mt-when .as-prof { font-size: var(--fs-xs); font-weight: 600; }
 
+.sm-brief a { display: inline-block; padding: 6px 0; }
 .sm-brief { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .sm-chat { text-decoration: none; }
 .sm-chat .mt-body { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }

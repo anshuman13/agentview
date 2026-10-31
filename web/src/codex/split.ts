@@ -11,8 +11,8 @@ export function useMinute() {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const bump = () => setNow(Date.now());
-    const t = setInterval(bump, 60000);
     const shown = () => document.visibilityState === 'visible' && bump();
+    const t = setInterval(shown, 60000);
     document.addEventListener('visibilitychange', shown);
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', shown); };
   }, []);

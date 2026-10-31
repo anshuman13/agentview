@@ -64,7 +64,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
   constructor(private invoke: Invoke) {
     super('locked');
     this.set({ message: 'Locked' });
-    this.timer = setInterval(this.syncNow, SYNC_EVERY);
+    this.timer = setInterval(this.onVisible, SYNC_EVERY);
     window.addEventListener('online', this.syncNow);
     document.addEventListener('visibilitychange', this.onVisible);
   }
