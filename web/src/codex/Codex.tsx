@@ -8,6 +8,7 @@ import { atTime, errorText, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
 import { rowKey, type ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
+import { haptic } from '../ui/haptic';
 import { ago } from '../ui/util';
 import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
@@ -316,6 +317,7 @@ export function Assistant() {
             )}
           </>
         )}
+        {list === 'tasks' && query == null && !drag && <button className="as-fab" aria-label="Add task" title="Add task" onClick={() => { haptic('tap'); window.dispatchEvent(new Event('tasks:add')); }}><Icon name="add" /></button>}
       </div>
       {list === 'tasks' && <SpotBack scroller={scroller} />}
 

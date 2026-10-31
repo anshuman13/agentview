@@ -340,6 +340,14 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 @media (hover: hover) { button.as-add:hover { color: var(--accent-text); } }
 .as-add-quiet { display: flex; align-items: center; justify-content: center; width: 32px; min-height: 32px; margin: var(--sp-1) 0 0 var(--sp-4); padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); opacity: 0.6; cursor: pointer; }
 @media (hover: hover) { button.as-add-quiet:hover { color: var(--accent-text); opacity: 1; } }
+/* Floating add on touch, like TickTick: sticks to the bottom right of the task list. */
+.as-fab { display: none; }
+@media (pointer: coarse) {
+  .as-fab { position: sticky; bottom: var(--sp-4); z-index: var(--z-raised); align-self: flex-end; display: grid; place-items: center; flex: none; width: 56px; height: 56px; margin: auto 0 0; padding: 0; border: 0; border-radius: var(--radius-round); background: var(--accent); color: #fff; box-shadow: var(--shadow-md); cursor: pointer; }
+  .as-fab .codicon { font-size: 24px; }
+  .as-fab:active { transform: scale(0.94); }
+  .assistant:has(.as-add.on :focus) .as-fab { display: none; }
+}
 .as-add.on { color: var(--accent-text); background: var(--surface); border: 1px solid var(--border-card); cursor: text; }
 .as-add-prof { display: grid; place-items: center; width: 28px; height: 28px; margin-left: -6px; padding: 0; border: 0; border-radius: var(--radius-round); background: transparent; cursor: pointer; }
 .as-add-prof .prof-dot { width: 10px; height: 10px; margin: 0; }

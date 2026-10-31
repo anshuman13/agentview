@@ -77,6 +77,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 - Closed task rows are calm like TickTick: a check circle coloured by profile (blue Work, magenta Personal), the title (up to two lines), and on the right only an exact time such as 14:30 (none for the 09:00 and 19:00 slots, Nd late in red for overdue) with the repeat icon and checklist count when they apply; the source, people, Replied and the estimate show on the task page. Notes keep a preview line
 - Today ends with an Add task button and later days with a small + (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
+- On the phone a round blue + floats at the bottom right of Tasks, like TickTick; a tap opens today's Add task
 - Rows with "- [ ]" checklist lines in the notes show how many are ticked; a tap on the count opens the list under the row to tick, and the task page lists them too
 - The task page is laid out like TickTick's task detail (the header has only Back). A top row has the check circle, coloured blue for Work and magenta for Personal, the due chip ("Today 10:00", "Tomorrow", "Mon 3 Nov" or "Date")
   and a "..." menu (Add estimate, Log time with +15m, +30m and +1h, Goal, Open meeting, source link, Snooze, Tidy, Make task, Copy draft, Raise, Move, Ask Claude, Delete). The body is a large title,
