@@ -7,7 +7,7 @@ import { Icon } from '../ui/Icon';
 import { ago, fitHeight, reveal, safeHref, useOnUnmount } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
-import { PickDue, PickTime, when } from './time';
+import { clock, PickDue, PickTime } from './time';
 import { snoozeText, snoozes } from './AskBar';
 import { Back } from '../app/back';
 import { ProfileDot } from './ProfileDot';
@@ -23,6 +23,15 @@ import { caretLine, RelatedStrip } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
 import { checkItems, toggleCheck } from './taskChecklist';
 
+const dueLabel = (at: number | null) => {
+  if (at == null) return 'Date';
+  const d = new Date(at);
+  const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
+  const time = d.getHours() || d.getMinutes() ? clock(at) : '';
+  if (days === 0 || days === 1) return `${days ? 'Tomorrow' : 'Today'}${time ? ` ${time}` : ''}`;
+  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+};
+
 // The open task is a page: title and notes save when they lose focus or the task closes.
 export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void }) {
   const act = useActions();
@@ -32,6 +41,8 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const saved = useRef({ title: row.title ?? '', text: row.text ?? '' });
   const [typed, setTyped] = useState<string | null>(null);
   const [snoozing, setSnoozing] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const menuBox = useRef<HTMLDivElement>(null);
   const [tidying, setTidying] = useState(false);
   const [logging, setLogging] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -42,6 +53,12 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const focused = isFocused(useFocus(), row);
   const suggested = useMemo(() => (row.status === 'open' && estimateMin(title) == null ? suggestEstimate(title, snap.items.filter((r) => !r.deleted && r.profile === row.profile)) : null), [row.status, row.profile, title, snap.items]);
   const checks = checkItems(text);
+  const estimate = estimateMin(title);
+  const addSubtask = () => {
+    const next = `${text}${text && !text.endsWith('\n') ? '\n' : ''}- [ ] `;
+    setText(next);
+    requestAnimationFrame(() => { const el = textRef.current; if (el) { el.focus(); el.setSelectionRange(next.length, next.length); } });
+  };
   // Ticking a checklist line flips its box in the notes and saves at once.
   const toggle = (n: number) => {
     const next = toggleCheck(text, n);
@@ -91,16 +108,20 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       if (!at || at === document.body) document.querySelector<HTMLElement>(`[data-row="${row.profile}${row.id}"]`)?.focus();
     });
   }, [row.profile, row.id]);
-  // Opening or leaving the snooze choices keeps focus in the actions.
+  // The more menu closes on an outside tap, and its first item takes focus.
   const actions = useRef<HTMLDivElement>(null);
-  const shown = useRef(snoozing);
+  const menuOpen = useRef(menu);
+  menuOpen.current = menu;
   useEffect(() => {
-    if (shown.current === snoozing) return;
-    shown.current = snoozing;
-    if (!box.current?.contains(document.activeElement)) actions.current?.querySelector<HTMLElement>('button, select')?.focus();
-  }, [snoozing]);
+    if (!menu) return;
+    const away = (e: PointerEvent) => { if (!menuBox.current?.contains(e.target as Node)) { setMenu(false); setSnoozing(false); } };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [menu]);
+  useEffect(() => { if (menu) actions.current?.querySelector<HTMLElement>('button, select')?.focus(); }, [menu, snoozing]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && menuOpen.current) { setMenu(false); setSnoozing(false); return; }
       if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) onClose();
     };
     window.addEventListener('keydown', key);
@@ -138,90 +159,106 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       </header>
       <div className="wk-scroll">
     <div className={`as-edit ${row.profile}`} ref={box} data-no-swipe>
-      <div className="as-edit-top">
-        <Check row={row} onDone={onClose} />
-        <textarea
-          ref={titleRef}
-          className="as-edit-title"
-          rows={1}
-          value={title}
-          placeholder="Title"
-          aria-label="Title"
-          enterKeyHint="next"
-          onChange={(e) => { setTitle(e.target.value); setTyped((t) => t ?? ''); }}
-          onBlur={save}
-          onFocus={reveal}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); textRef.current?.focus(); } }}
-        />
+      <div className="as-tt-top">
+        {timed && (
+          <span className="as-tt-due">
+            <PickDue className={`as-tt-chip${at == null ? ' quiet' : at < Date.now() && row.status === 'open' ? ' late' : ''}`} value={at} onPick={(t) => t !== at && act.due(row, t)}>
+              <Icon name="calendar" small /> {dueLabel(at)}
+            </PickDue>
+            {at != null && <button className="as-tt-ico" title="Clear due time" aria-label="Clear due time" onClick={() => act.due(row, null)}><Icon name="close" small /></button>}
+          </span>
+        )}
+        <span className="spacer" />
+        {estimate != null
+          ? <span className="as-tt-chip static" title="Estimate">~{minutesText(estimate)}</span>
+          : suggested != null && <button className="as-tt-chip quiet" title="Add this estimate, from similar done tasks" onClick={() => addEstimate(suggested)}><Icon name="add" small /> ~{minutesText(suggested)}</button>}
+        <div className="as-tt-more" ref={menuBox}>
+          <button className="as-tt-ico" title="More" aria-label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSnoozing(false); }}><Icon name="kebab-horizontal" /></button>
+          {menu && (
+            <div className="as-tt-menu" role="menu" ref={actions}>
+              {snoozing ? (
+                <>
+                  <button role="menuitem" onClick={() => setSnoozing(false)}><Icon name="arrow-left" small /> Snooze</button>
+                  {at != null && at >= new Date().setHours(24, 0, 0, 0) && <button role="menuitem" onClick={then(() => act.due(row, null))}>Today</button>}
+                  {snoozes().map((s) => <button key={s.label} role="menuitem" onClick={then(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</button>)}
+                  <PickTime className="as-tt-menu-pick" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
+                </>
+              ) : (
+                <>
+                  {row.status === 'note' && <button role="menuitem" onClick={then(() => act.toTask(row))}><Icon name="check" small /> Make task</button>}
+                  {row.status === 'open' && <button role="menuitem" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
+                  {row.status === 'open' && <button role="menuitem" disabled={tidying} onClick={() => { setMenu(false); void tidy(); }}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
+                  {row.draft && <button role="menuitem" onClick={() => { setMenu(false); copyText(row.draft!); }}><Icon name="copy" small /> Copy draft</button>}
+                  {row.status === 'open' && <RaiseWith className="as-tt-raise" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
+                  <button role="menuitem" onClick={() => { setMenu(false); move(); }}><Icon name="arrow-swap" small /> Move to {FILTER_LABEL[other]}</button>
+                  <button role="menuitem" onClick={then(() => onAsk(row))}><Icon name="sparkle" small /> Ask Claude</button>
+                  <button role="menuitem" className="as-delete" onClick={then(() => act.remove(row))}><Icon name="trash" small /> Delete</button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-      <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Notes" aria-label="Notes" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onBlur={save} onFocus={reveal} />
-      {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
-      {checks.length > 0 && (
+      <div className="as-tt-body">
+        <div className="as-edit-top">
+          <Check row={row} onDone={onClose} />
+          <textarea
+            ref={titleRef}
+            className="as-edit-title"
+            rows={1}
+            value={title}
+            placeholder="Title"
+            aria-label="Title"
+            enterKeyHint="next"
+            onChange={(e) => { setTitle(e.target.value); setTyped((t) => t ?? ''); }}
+            onBlur={save}
+            onFocus={reveal}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); textRef.current?.focus(); } }}
+          />
+        </div>
+        <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Description" aria-label="Description" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onBlur={save} onFocus={reveal} />
+        {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
         <div className="as-edit-checks">
           {checks.map((c, i) => (
             <button key={i} role="checkbox" aria-checked={c.done} className={c.done ? 'on' : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => toggle(i)}>
               <Icon name={c.done ? 'pass-filled' : 'circle-large-outline'} small /> <span>{c.label || '(empty)'}</span>
             </button>
           ))}
+          <button className="as-tt-add" onMouseDown={(e) => e.preventDefault()} onClick={addSubtask}><Icon name="add" small /> Add subtask</button>
         </div>
-      )}
-      <div className="as-edit-meta">
-        {timed && (
-          <span className="as-edit-due">
-            <PickDue className={`as-chip${at == null ? ' quiet' : at < Date.now() && row.status === 'open' ? ' late' : ''}`} value={at} onPick={(t) => t !== at && act.due(row, t)}>
-              <Icon name="calendar" small /> {at == null ? 'Due' : when(at, Date.now(), true)}
-            </PickDue>
-            {at != null && <button className="as-chip-x" title="Clear due time" aria-label="Clear due time" onClick={() => act.due(row, null)}><Icon name="close" small /></button>}
-          </span>
-        )}
+        {(row.people || row.updated_at) && <div className="as-tt-fine">{row.people && <span>{row.people}</span>}<span>{ago(row.updated_at, ' ago')}</span></div>}
+      </div>
+      <div className="as-tt-bar">
+        <button className={`as-tt-chip as-prof ${row.profile}`} title={`Move to ${FILTER_LABEL[other]}`} onClick={move}><ProfileDot profile={row.profile} />{FILTER_LABEL[row.profile]}</button>
         {row.status === 'open' && (
-          <select className={`as-chip${cadence === 'never' ? ' quiet' : ''}`} value={cadence} aria-label="Repeat" onChange={(e) => repeat(e.target.value as Cadence)}>
-            <option value="never">Never repeats</option>
-            <option value="daily">Daily</option>
-            <option value="weekdays">Weekdays</option>
-            <option value="weekly">Weekly{at != null ? ` on ${new Date(at).toLocaleDateString(undefined, { weekday: 'long' })}` : ''}</option>
-            <option value="monthly">Monthly{at != null ? ` on the ${new Date(at).getDate()}` : ''}</option>
-            {cadence === 'custom' && <option value="custom" disabled>Custom</option>}
-          </select>
+          <label className={`as-tt-ico as-tt-pick${cadence === 'never' ? '' : ' on'}`} title="Repeat">
+            <Icon name="sync" />
+            <select value={cadence} aria-label="Repeat" onChange={(e) => repeat(e.target.value as Cadence)}>
+              <option value="never">Never repeats</option>
+              <option value="daily">Daily</option>
+              <option value="weekdays">Weekdays</option>
+              <option value="weekly">Weekly{at != null ? ` on ${new Date(at).toLocaleDateString(undefined, { weekday: 'long' })}` : ''}</option>
+              <option value="monthly">Monthly{at != null ? ` on the ${new Date(at).getDate()}` : ''}</option>
+              {cadence === 'custom' && <option value="custom" disabled>Custom</option>}
+            </select>
+          </label>
         )}
-        <button className={`as-chip as-prof ${row.profile}`} title={`Move to ${FILTER_LABEL[other]}`} onClick={move}><ProfileDot profile={row.profile} />{FILTER_LABEL[row.profile]}</button>
-        {row.meeting_id && <button className="as-chip" onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))}><Icon name="record" small /> Meeting</button>}
+        {(row.status === 'open' || row.status === 'done') && <span className="as-tt-ico as-tt-pick" title="Goal"><Icon name="target" /><GoalPick row={row} onPick={(goal) => act.edit(row, { goal })} /></span>}
+        {row.meeting_id && <button className="as-tt-ico" title="Open the meeting" aria-label="Meeting" onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))}><Icon name="record" /></button>}
         {row.source_url ? (
-          <a className="as-chip" href={safeHref(row.source_url)} target="_blank" rel="noreferrer"><Icon name={src.icon} small /> {row.meeting_id ? 'Transcript' : src.label} <Icon name="link-external" small /></a>
-        ) : row.source && row.source !== 'capture' && <span className="as-chip static"><Icon name={src.icon} small /> {src.label}</span>}
-        {row.people && <span className="as-chip static">{row.people}</span>}
-        {suggested != null && <button className="as-chip quiet" title="Add this estimate, from similar done tasks" onClick={() => addEstimate(suggested)}><Icon name="add" small /> ~{minutesText(suggested)}</button>}
+          <a className="as-tt-ico" title={row.meeting_id ? 'Transcript' : src.label} aria-label={row.meeting_id ? 'Transcript' : src.label} href={safeHref(row.source_url)} target="_blank" rel="noreferrer"><Icon name={src.icon} /></a>
+        ) : row.source && row.source !== 'capture' && <span className="as-tt-ico static" title={src.label}><Icon name={src.icon} /></span>}
+        <span className="spacer" />
+        {logging && [15, 30, 60].map((n) => <button key={n} className="as-tt-chip" title={`Add ${minutesText(n)} spent`} onClick={() => logTime(n)}>+{minutesText(n)}</button>)}
         {(row.status === 'open' || row.status === 'done') && (
-          <button className={`as-chip${Number(row.spent) > 0 ? '' : ' quiet'}`} title={Number(row.spent) > 0 ? 'Time spent, tap to log more' : 'Log time'} aria-expanded={logging} onClick={() => setLogging(!logging)}>
-            <Icon name="watch" small /> {Number(row.spent) > 0 ? minutesText(Number(row.spent)) : 'Log time'}
+          <button className={`as-tt-chip${Number(row.spent) > 0 ? '' : ' quiet'}`} title={Number(row.spent) > 0 ? 'Time spent, tap to log more' : 'Log time'} aria-label="Log time" aria-expanded={logging} onClick={() => setLogging(!logging)}>
+            <Icon name="watch" small />{Number(row.spent) > 0 && ` ${minutesText(Number(row.spent))}`}
           </button>
         )}
-        {logging && [15, 30, 60].map((n) => <button key={n} className="as-chip" title={`Add ${minutesText(n)} spent`} onClick={() => logTime(n)}><Icon name="add" small /> {minutesText(n)}</button>)}
-        {(row.status === 'open' || row.status === 'done') && <GoalPick row={row} onPick={(goal) => act.edit(row, { goal })} />}
-        <span className="as-edit-ago">{ago(row.updated_at, ' ago')}</span>
+        {row.status === 'open' && (focused
+          ? <button className="as-tt-ico on" title="Stop the focus timer" aria-label="Stop" onClick={stopFocus}><Icon name="debug-stop" /></button>
+          : <button className="as-tt-ico" title="Start a focus timer" aria-label="Start focus" onClick={() => { save(); startFocus(row); }}><Icon name="play" /></button>)}
       </div>
-      {snoozing ? (
-        <div className="as-edit-actions" ref={actions}>
-          {at != null && at >= new Date().setHours(24, 0, 0, 0) && <button className="btn" onClick={then(() => act.due(row, null))}>Today</button>}
-          {snoozes().map((s) => <button key={s.label} className="btn" onClick={then(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</button>)}
-          <PickTime className="btn" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
-          <button className="icon-btn" title="Back" aria-label="Back" onClick={() => setSnoozing(false)}><Icon name="close" /></button>
-        </div>
-      ) : (
-        <div className="as-edit-actions" ref={actions}>
-          {row.status === 'note' && <button className="btn" onClick={then(() => act.toTask(row))}>Make task</button>}
-          {row.status === 'open' && (focused
-            ? <button className="btn" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button>
-            : <button className="btn" title="Start a focus timer" onClick={() => { save(); startFocus(row); }}><Icon name="play" small /> Start</button>)}
-          {row.status === 'open' && <button className="btn" onClick={() => setSnoozing(true)}><Icon name="clock" small /> Snooze</button>}
-          {row.status === 'open' && <button className="btn" disabled={tidying} onClick={() => void tidy()}><Icon name={tidying ? 'loading' : 'wand'} small spin={tidying} /> Tidy</button>}
-          {row.draft && <button className="btn" onClick={() => copyText(row.draft!)}><Icon name="copy" small /> Copy draft</button>}
-          <button className="btn" title="Ask Claude about this task" onClick={then(() => onAsk(row))}><Icon name="sparkle" small /> Ask</button>
-          {row.status === 'open' && <RaiseWith className="btn" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
-          <span className="spacer" />
-          <button className="icon-btn as-delete" title="Delete" aria-label="Delete" onClick={then(() => act.remove(row))}><Icon name="trash" /></button>
-        </div>
-      )}
     </div>
       </div>
     </div>

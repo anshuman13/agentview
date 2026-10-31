@@ -78,6 +78,10 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
 - Rows with "- [ ]" checklist lines in the notes show how many are ticked, and the task page lists them to tick with a
   tap
+- The task page is laid out like TickTick's task detail. A top row has the due chip ("Today 10:00", "Tomorrow", "Mon 3 Nov" or "Date"),
+  the estimate and a "..." menu (Snooze, Tidy, Make task, Copy draft, Raise, Move, Ask Claude, Delete). The body is the check circle and a large title,
+  the Description notes, and the checklist as subtask rows ending in "Add subtask", which appends a "- [ ] " line. A sticky bottom bar has the
+  Work or Personal chip (moves the task), icons for repeat, goal, meeting and source, and the time-spent and focus buttons
 - Swiping left names the day the task moves to, and Snooze offers Today for a task due on a later day
 - Search (or /) filters tasks by title, notes and people, Overdue has Move to today with one undo, and tasks not
   dragged into an order sort by due time

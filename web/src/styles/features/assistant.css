@@ -292,8 +292,35 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .tasks .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
 .tasks .as-drop-line { margin-left: 52px; }
 .as-page .wk-head h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xl); }
-.as-page .wk-scroll { padding: 0 var(--wk-pad) var(--sp-24); }
-.as-page .as-edit { width: 100%; max-width: 760px; margin: 0 auto; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.as-page .wk-scroll { display: flex; flex-direction: column; padding: 0 var(--sp-8); mask-image: none; }
+.as-page .as-edit { flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: 0; gap: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.as-tt-top, .as-tt-bar { display: flex; align-items: center; gap: var(--sp-3); min-height: 48px; }
+.as-tt-top .spacer, .as-tt-bar .spacer { flex: 1; }
+.as-tt-body { flex: 1; display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) 0 var(--sp-12); }
+.as-tt-bar { position: sticky; bottom: 0; z-index: var(--z-raised); border-top: 1px solid var(--border); background: var(--bg); padding-bottom: env(safe-area-inset-bottom); }
+.as-tt-chip { flex: none; height: var(--size-2xl); padding: 0 var(--sp-4); display: inline-flex; align-items: center; gap: var(--sp-3); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-sm); white-space: nowrap; cursor: pointer; }
+.as-tt-chip.quiet { color: var(--fg-muted); }
+.as-tt-chip.late { color: var(--err); }
+.as-tt-chip.static { color: var(--fg-muted); cursor: default; }
+.as-tt-top .as-pick > button { display: inline-flex; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.as-tt-due { display: inline-flex; align-items: center; }
+.as-tt-ico { position: relative; display: grid; place-items: center; width: var(--touch); height: var(--touch); padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg); opacity: 0.6; cursor: pointer; text-decoration: none; }
+.as-tt-ico.on, .as-tt-pick.on { color: var(--accent-text); opacity: 1; }
+.as-tt-ico.static { cursor: default; }
+@media (hover: hover) { .as-tt-ico:hover:not(.static), .as-tt-chip:hover { opacity: 1; background: var(--hover); } }
+.as-tt-pick select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.as-tt-pick:not(:has(select)) { display: none; }
+.as-tt-more { position: relative; }
+.as-tt-menu { position: absolute; top: 100%; right: 0; z-index: var(--z-popover); display: flex; flex-direction: column; min-width: 200px; padding: var(--sp-2); border: 1px solid var(--border-card); border-radius: 12px; background: var(--raised); box-shadow: var(--shadow-lg); }
+.as-tt-menu > button, .as-tt-menu .as-tt-raise, .as-tt-menu .as-tt-menu-pick { display: flex; align-items: center; gap: var(--sp-4); min-height: 40px; padding: 0 var(--sp-6); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; }
+.as-tt-menu .as-delete { color: var(--err); }
+@media (hover: hover) { .as-tt-menu > button:hover, .as-tt-menu .as-tt-raise:hover, .as-tt-menu .as-tt-menu-pick:hover { background: var(--hover); } }
+.as-tt-add { color: var(--fg-muted) !important; }
+.as-tt-fine { display: flex; gap: var(--sp-6); margin-left: 38px; font-size: var(--fs-sm); color: var(--fg-faint); }
+.as-tt-fine span:last-child { margin-left: auto; }
+.as-page .as-edit-checks { margin: 0; }
+.as-page .as-edit-title { font-size: 20px !important; font-weight: 600 !important; line-height: 28px; padding-top: 0 !important; }
+.as-page .as-edit-top { align-items: flex-start; }
 .as-search { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-4); padding: 0 var(--sp-2) 0 var(--sp-5); min-height: 44px; border: 1px solid var(--border-card); border-radius: 12px; background: var(--surface); color: var(--fg-muted); }
 .as-search input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); box-shadow: none; }
 .as-search input:focus { outline: none; box-shadow: none; }
