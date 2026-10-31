@@ -277,6 +277,7 @@ export type ClientMessage =
   | { type: 'open_session'; sessionId: string }
   | { type: 'new_session'; cwd?: string; fork?: string }
   | { type: 'mcp_status' }
+  | { type: 'usage' }
   | { type: 'mcp_reconnect'; name: string }
   | { type: 'mcp_toggle'; name: string; enabled: boolean }
   | { type: 'restart'; now?: boolean };

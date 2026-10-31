@@ -89,6 +89,7 @@ export function UsageItem() {
     week && `Week: ${week.pct}% used, resets ${at(week.resetsAt)}`,
     pace !== null && `Even pace (100/7 a day): ${pace}% by now`,
     advice && (other && running ? `${advice} once Claude stops` : other ? `${advice}. Click to switch` : advice),
+    !(ahead && other && !running) && 'Click to read usage again',
   ].filter(Boolean).join('\n');
   const warn = ahead || Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
   const body = (
@@ -101,7 +102,7 @@ export function UsageItem() {
   return ahead && other && !running ? (
     <button className={`item clickable${warn ? ' warn' : ''}`} title={title} onClick={() => send({ type: 'set_account', account: other })}>{body}</button>
   ) : (
-    <span className={`item${warn ? ' warn' : ''}`} title={title}>{body}</span>
+    <button className={`item clickable${warn ? ' warn' : ''}`} title={title} onClick={() => send({ type: 'usage' })}>{body}</button>
   );
 }
 

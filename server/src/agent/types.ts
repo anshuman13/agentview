@@ -41,6 +41,7 @@ export interface AgentDriver {
   rewind(promptId: string): Promise<{ canRewind: boolean; error?: string; filesChanged?: string[] }>;
   stopTask(toolUseId: string): Promise<boolean>;
   mcpStatus(): Promise<McpServer[] | null>;
+  refreshUsage?(): Promise<void>;
   reconnectMcp(name: string): Promise<void>;
   toggleMcp(name: string, enabled: boolean): Promise<void>;
   addMcp(name: string, def: unknown): Promise<{ error?: string }>;

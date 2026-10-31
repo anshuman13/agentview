@@ -21,7 +21,7 @@ type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; call
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
-const USAGE_EVERY = 2 * 60_000;
+const USAGE_EVERY = 10 * 60_000;
 
 export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
 
@@ -275,6 +275,10 @@ export class ClaudeDriver implements AgentDriver {
     } catch (err) {
       process.stderr.write(`loadMeta failed: ${String(err)}\n`);
     }
+  }
+
+  refreshUsage() {
+    return this.loadUsage();
   }
 
   private async loadUsage() {

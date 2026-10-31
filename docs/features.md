@@ -249,7 +249,7 @@ exiting during a step ends it too.
 history with `~/.claude` and keeps its own login; log in once with `CLAUDE_CONFIG_DIR=~/.claude-alt claude` and
 `/login`. When a turn ends on a usage limit, the chat moves to the other account and continues where it stopped,
 and new chats start there until the limit resets. The composer menu shows the account (Personal or Work) and switches it by hand. The status bar shows the account with
-its weekly and 5-hour usage as `w25 h15` (read when a turn ends and every 2 minutes while the chat is open), and the even weekly pace (100/7 % a day, to the hour) on hover. When the
+its weekly and 5-hour usage as `w25 h15` (read when a turn ends, every 10 minutes while the chat is open, and on a click), and the even weekly pace (100/7 % a day, to the hour) on hover. When the
 week is ahead of that pace or either window passes 80%, it turns yellow and a click switches the chat to the other
 account. A switch restarts the Claude process, so Claude recreates the chat's scheduled jobs in the new one.
 Only the CLI's own usage-limit notice counts as a limit, so a reply that mentions a rate limit does not switch.

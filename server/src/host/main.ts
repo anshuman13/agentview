@@ -359,6 +359,9 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
     case 'mcp_status':
       void chat.refreshMcp();
       return;
+    case 'usage':
+      void chat.refreshUsage();
+      return;
     case 'mcp_reconnect':
       void chat.reconnectMcp(String(msg.name));
       return;

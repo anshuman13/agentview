@@ -196,6 +196,10 @@ export class AgentSession implements AgentHost {
     this.driver.start();
   }
 
+  async refreshUsage() {
+    await this.driver.refreshUsage?.();
+  }
+
   async refreshMcp() {
     const list = await this.driver.mcpStatus();
     if (list) this.setSession({ mcp: list });
