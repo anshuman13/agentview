@@ -348,10 +348,11 @@
   --state-press: 12%;
 }
 
-/* Touch: Apple's sizes for text (Body 17, Subheadline 15 for meta, Footnote 13); nothing under 12px; inputs stay at 16px to stop iOS zoom. */
+/* Touch: Apple's sizes one step down (Body 16, Subheadline 14 for meta, Footnote 12); nothing under 12px; inputs stay at 16px to stop iOS zoom. */
 @media (pointer: coarse) {
   :root {
-    --fs-2xs: 12px; --fs-xs: 12px; --fs-sm: 13px; --fs-md: 17px; --fs-lg: 17px; --fs-xl: 16px;
+    --fs-headline: 16px; --fs-body: 16px; --fs-callout: 15px; --fs-subheadline: 14px; --fs-footnote: 12px; --fs-caption: 12px;
+    --fs-2xs: 12px; --fs-xs: 12px; --fs-sm: 12px; --fs-md: 16px; --fs-lg: 16px; --fs-xl: 15px;
     --type-headline-size: var(--fs-headline);
     --type-body-size: var(--fs-body);
     --type-callout-size: var(--fs-callout);
@@ -360,5 +361,5 @@
     --type-caption-size: var(--fs-caption);
     --type-label-size: var(--fs-footnote);
   }
-  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), textarea, select { font-size: var(--fs-2xl) !important; }
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), textarea, select { font-size: 16px !important; }
 }

@@ -314,7 +314,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 
 @media (max-width: 900px) {
   .mt-action { padding: var(--sp-8) var(--sp-8) var(--sp-5); }
-    .mt-notes, .mt-summary, .mt-decisions li { font-size: 17px; }
+    .mt-notes, .mt-summary, .mt-decisions li { font-size: 16px; }
   .mt-approve, .mt-reject { height: var(--touch-sm); }
   .mt-reject { width: var(--touch-sm); }
   :is(.mt-raise, .wk-head) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }

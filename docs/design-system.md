@@ -28,19 +28,19 @@ Each role names an Apple text style. Desktop keeps dense sizes; coarse pointers 
 | --- | --- | --- | --- | --- |
 | large-title | Large Title | 34px | 34px | 700 |
 | title | Title 2 | 22px | 22px | 700 |
-| headline | Headline | 14px | 17px | 600 |
-| body | Body | 13px | 17px | 400 |
-| callout | Callout | 13px | 16px | 400 |
-| subheadline (meta) | Subheadline | 12px | 15px | 400 |
-| footnote | Footnote | 12px | 13px | 400 |
+| headline | Headline | 14px | 16px | 600 |
+| body | Body | 13px | 16px | 400 |
+| callout | Callout | 13px | 15px | 400 |
+| subheadline (meta) | Subheadline | 12px | 14px | 400 |
+| footnote | Footnote | 12px | 12px | 400 |
 | caption | Caption 2 | 11px | 12px | 400 |
-| label | Footnote, 500 | 12px | 13px | 500 |
+| label | Footnote, 500 | 12px | 12px | 500 |
 
 Tokens: `--type-{role}-size`, `--type-{role}-weight`, `--type-{role}-line`; `--type-meta-*` is the
 subheadline. The Apple scale is `--fs-large-title` 34, `--fs-title1` 28, `--fs-title2` 22,
 `--fs-title3` 20, `--fs-headline` and `--fs-body` 17, `--fs-callout` 16, `--fs-subheadline` 15,
 `--fs-footnote` 13, `--fs-caption` 12, `--fs-caption2` 11; the older `--fs-*` steps alias it.
-Inputs stay at 16px so iOS does not zoom.
+Touch runs the text roles one step below Apple's sizes. Inputs stay at 16px so iOS does not zoom.
 
 ### Spacing (EUI density)
 
