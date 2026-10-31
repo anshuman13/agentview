@@ -5,7 +5,7 @@ import type { Table, Tables } from './wiki';
 export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'];
 
 type SyncStatus = { syncing: boolean; last: number; error: string; pending: number; saveError: boolean; paused: Paused[]; scans: ScanHealth[] };
-export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'meeting_id' | 'rolls' | 'rolled_from' | 'rank' | 'source' | 'people' | 'spent' | 'goal'>> & { deleted?: number };
+export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'meeting_id' | 'rolls' | 'rolled_from' | 'rank' | 'source' | 'people' | 'spent' | 'goal' | 'priority' | 'tags' | 'remind'>> & { deleted?: number };
 export type Parsed = { title: string; details: string | null; at: number | null };
 export type MeetingRef = { id: string; title: string | null } | null;
 export type TranscriptHit = { profile: Profile; id: string; snippet: string };

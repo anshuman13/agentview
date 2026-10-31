@@ -23,6 +23,7 @@ import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
 import { checkItems, toggleCheck } from './taskChecklist';
+import { Flag, PRIORITIES, REMINDS, tagList } from './AddSheet';
 
 const dueLabel = (at: number | null) => {
   if (at == null) return 'Date';
@@ -45,6 +46,11 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const [menu, setMenu] = useState(false);
   const [tidying, setTidying] = useState(false);
   const [logging, setLogging] = useState(false);
+  const [flagging, setFlagging] = useState(false);
+  const [tagging, setTagging] = useState(false);
+  const flagBtn = useRef<HTMLButtonElement>(null);
+  const tags = tagList(row.tags);
+  const setTags = (next: string[]) => act.edit(row, { tags: next.length ? [...new Set(next)].join(' ') : null });
   const box = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -151,13 +157,23 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         <Check row={row} onDone={onClose} />
         {timed && (
           <span className="as-tt-due">
-            <PickDue className={chipClass({ late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={(t) => t !== at && act.due(row, t)}>
-              <Icon name="calendar" small /> {dueLabel(at)}
+            <PickDue className={chipClass({ late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={(t) => t !== at && act.due(row, t)} remind={row.remind ?? null} onRemind={(r) => act.edit(row, { remind: r })}>
+              <Icon name="calendar" small /> {dueLabel(at)}{row.remind != null && at != null && <Icon name={row.remind < 0 ? 'bell-slash' : 'bell'} small />}
             </PickDue>
             {at != null && <IconButton icon="close" small label="Clear due time" onClick={() => act.due(row, null)} />}
           </span>
         )}
         <span className="spacer" />
+        {row.status !== 'note' && (
+          <div className="as-tt-more">
+            <button ref={flagBtn} className="icon-btn as-tt-flag" aria-label="Priority" title="Priority" aria-haspopup="menu" aria-expanded={flagging} onClick={() => setFlagging(!flagging)}><Flag priority={row.priority} /></button>
+            {flagging && (
+              <Menu trigger={flagBtn} className="as-tt-menu" onClose={() => setFlagging(false)}>
+                {PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={(row.priority ?? 0) === p} className="ui-menu-item as-flag-item" onClick={() => { setFlagging(false); haptic('tap'); act.edit(row, { priority: p || null }); }}><Flag priority={p} /><span>{l} priority</span></button>)}
+              </Menu>
+            )}
+          </div>
+        )}
         <div className="as-tt-more">
           <IconButton ref={moreBtn} icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSnoozing(false); }} />
           {menu && (
@@ -176,6 +192,13 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
                     <>
                       <MenuItem aria-label="Log time" aria-expanded={logging} onClick={() => setLogging(!logging)} icon="watch">Log time{Number(row.spent) > 0 && ` (${minutesText(Number(row.spent))})`}</MenuItem>
                       {logging && <div className="as-tt-menu-chips">{[15, 30, 60].map((n) => <Chip key={n} size="sm" title={`Add ${minutesText(n)} spent`} onClick={() => logTime(n)}>+{minutesText(n)}</Chip>)}</div>}
+                      {at != null && row.status === 'open' && (
+                        <label className="ui-menu-item as-tt-menu-row"><Icon name="bell" small />
+                          <select value={String(row.remind ?? null)} aria-label="Reminder" onChange={(e) => act.edit(row, { remind: e.target.value === 'null' ? null : Number(e.target.value) })}>
+                            {REMINDS.map(([v, l]) => <option key={l} value={String(v)}>Reminder: {l}</option>)}
+                          </select>
+                        </label>
+                      )}
                       <div className="ui-menu-item as-tt-menu-row"><Icon name="target" small /><GoalPick row={row} onPick={(goal) => act.edit(row, { goal })} /></div>
                     </>
                   )}
@@ -211,6 +234,14 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); textRef.current?.focus(); } }}
           />
         </div>
+        {(tags.length > 0 || tagging) && (
+          <div className="as-tags">
+            {tags.map((t) => <button key={t} className="as-tag" title={`Remove #${t}`} onClick={() => setTags(tags.filter((x) => x !== t))}>#{t} <Icon name="close" small /></button>)}
+            {tagging && <input autoFocus className="as-tag-input" placeholder="Tag" aria-label="New tag" enterKeyHint="done"
+              onKeyDown={(e) => { const v = e.currentTarget.value.replace(/^#/, '').trim().toLowerCase(); if ((e.key === 'Enter' || e.key === ' ') && v) { e.preventDefault(); setTags([...tags, v]); e.currentTarget.value = ''; } else if (e.key === 'Escape') setTagging(false); }}
+              onBlur={(e) => { const v = e.currentTarget.value.replace(/^#/, '').trim().toLowerCase(); if (v) setTags([...tags, v]); setTagging(false); }} />}
+          </div>
+        )}
         <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Description" aria-label="Description" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onBlur={save} onFocus={reveal} />
         {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
         <div className="as-edit-checks">
@@ -237,6 +268,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             </select>
           </label>
         )}
+        {row.status !== 'note' && <IconButton icon="tag" label="Add tag" title="Add tag" onClick={() => setTagging(true)} />}
         <span className="spacer" />
         {row.status === 'open' && (focused
           ? <IconButton icon="debug-stop" on label="Stop" title="Stop the focus timer" onClick={stopFocus} />

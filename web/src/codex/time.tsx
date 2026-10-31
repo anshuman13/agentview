@@ -77,7 +77,7 @@ export function PickTime({ className, value, onPick, label = 'Pick time', title 
 const localDateTime = (t: number) => { const d = new Date(t); return `${ymd(t)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 
 // Text that opens the device's date and time picker; clearing the picker clears the time.
-export function PickDue({ className, value, onPick, children }: { className?: string; value: number | null; onPick: (at: number | null) => void; children: React.ReactNode }) {
+export function PickDue({ className, value, onPick, remind, onRemind, children }: { className?: string; value: number | null; onPick: (at: number | null) => void; remind?: number | null; onRemind?: (r: number | null) => void; children: React.ReactNode }) {
   const input = useRef<HTMLInputElement>(null);
   const pick = useRef(onPick);
   pick.current = onPick;
@@ -101,7 +101,7 @@ export function PickDue({ className, value, onPick, children }: { className?: st
     <span className={`as-pick ${className ?? ''}`}>
       <button type="button" onClick={open}>{children}</button>
       <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden />
-      {sheet && <DateSheet value={{ at: value, cadence: 'never' }} onDone={(p) => p.at !== value && onPick(p.at)} onClose={() => setSheet(false)} />}
+      {sheet && <DateSheet value={{ at: value, cadence: 'never', remind }} reminder={!!onRemind} onDone={(p) => { if (p.at !== value) onPick(p.at); if (onRemind && (p.remind ?? null) !== (remind ?? null)) onRemind(p.remind ?? null); }} onClose={() => setSheet(false)} />}
     </span>
   );
 }

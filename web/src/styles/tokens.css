@@ -287,6 +287,9 @@
   --accent-hover: color-mix(in oklch, var(--accent) 85%, var(--fg-strong));
   --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
   --work: var(--hue-blue);
+  --prio-high: var(--hue-red);
+  --prio-medium: var(--hue-orange);
+  --prio-low: var(--hue-blue);
   --personal: var(--hue-magenta);
   --warn-soft: color-mix(in srgb, var(--warn) 14%, transparent);
   --c-meeting-soft: color-mix(in srgb, var(--c-meeting) 14%, transparent);

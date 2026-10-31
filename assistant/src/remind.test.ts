@@ -43,6 +43,16 @@ it('reminds about a task when it comes due', () => {
   expect(dueReminders(db, now).map((r) => r.title)).toEqual(['2 personal tasks due']);
 });
 
+it('reminds early by the task remind minutes, and never at -1', () => {
+  const db = openDb(':memory:');
+  const now = new Date(2026, 9, 28, 10).getTime();
+  const item = db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at, remind) VALUES (?, 'personal', 1, 0, ?, 'capture', 'open', ?, ?)");
+  item.run('a', 'Early', now + 25 * 60_000, 30);
+  item.run('b', 'Muted', now - 60_000, -1);
+  item.run('c', 'Not yet', now + 40 * 60_000, 30);
+  expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Early']);
+});
+
 it('marks every task in a group as sent', () => {
   const db = openDb(':memory:');
   const now = 1_000_000_000;

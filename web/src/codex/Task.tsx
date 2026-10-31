@@ -13,6 +13,7 @@ import { rowKey } from './taskKeys';
 import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
 import { Check } from './TaskCheck';
+import { Flag, tagList } from './AddSheet';
 import { checkItems, toggleCheck } from './taskChecklist';
 
 export { UNROLL, useActions } from './useActions';
@@ -56,6 +57,8 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay }: { row: ItemRow; 
         )}
       </div>
       <div className="as-meta">
+        {tagList(row.tags).slice(0, 2).map((t) => <span key={t} className="as-tag-meta">#{t}</span>)}
+        {!isDone && !!row.priority && <span title={`${['', 'Low', 'Medium', 'High'][row.priority]} priority`} role="img" aria-label={`${['', 'Low', 'Medium', 'High'][row.priority]} priority`}><Flag priority={row.priority} /></span>}
         {due && <span className={at! < now ? 'as-due late' : late === 0 ? 'as-due today' : 'as-due'}>{due}{at! < now && late <= 0 && <span className="sr-only"> overdue</span>}</span>}
         {isRepeat(row.text) && <span title="Repeats" role="img" aria-label="Repeats"><Icon name="sync" small /></span>}
         {list.total > 0 && <span className={list.done === list.total ? 'as-list-done' : undefined}><button className="as-list-btn" aria-expanded={showList} aria-label="Checklist" onClick={(e) => { e.stopPropagation(); setShowList(!showList); }}><Icon name="checklist" small /> {list.done}/{list.total}</button></span>}

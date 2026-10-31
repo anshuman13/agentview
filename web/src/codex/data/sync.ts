@@ -44,6 +44,12 @@ export type ItemFields = {
   draft?: string | null;
   spent?: number | null;
   goal?: string | null;
+  // 0 none, 1 low, 2 medium, 3 high.
+  priority?: number | null;
+  // Space-separated tag names, without the #.
+  tags?: string | null;
+  // Minutes before the due time to remind; null is at the due time, -1 is no reminder.
+  remind?: number | null;
 };
 
 export type ItemRow = ItemFields & {

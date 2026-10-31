@@ -86,7 +86,7 @@ export function Assistant() {
   const s = useSplit();
   const root = useRef<HTMLDivElement>(null);
   const [drawer, setDrawer] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<boolean | number>(false);
   const [olderOpen, setOlderOpen] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
   const [calError, setCalError] = useState('');
@@ -318,14 +318,14 @@ export function Assistant() {
             )}
           </>
         )}
-        {list === 'tasks' && query == null && !drag && <button className="as-fab" aria-label="Add task" title="Add task" onClick={() => setAdding(true)}><Icon name="add" /></button>}
+        {list === 'tasks' && query == null && !drag && <button className="as-fab" aria-label="Add task" title="Add task" onClick={() => setAdding(true)} onContextMenu={(e) => { e.preventDefault(); setAdding(Date.now()); }}><Icon name="add" /></button>}
       </div>
       {list === 'tasks' && <SpotBack scroller={scroller} />}
 
       {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || '(Untitled)'}</div>}
       <SnackBar />
       <Composer items={snap.items} next={s.next} filter={filter} />
-      {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}
+      {adding !== false && <AddSheet filter={filter} voice={typeof adding === 'number' ? adding : undefined} onClose={() => setAdding(false)} />}
       {drawerSheet}
     </div>
   );

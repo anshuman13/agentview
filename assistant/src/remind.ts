@@ -11,6 +11,9 @@ import { applyChanges } from './sync.js';
 import { DAY, inWeekHours } from './time.js';
 
 const BEFORE = 10 * 60_000;
+// A task's remind is minutes before its due time to push; none is at the due time and a negative one is never.
+const EARLY = 'IFNULL(CAST(remind AS INTEGER), 0)';
+const ALERT = `(CAST(at AS INTEGER) - ${EARLY} * 60000)`;
 const LATE = 5 * 60_000;
 const FRESH = 2 * 3600_000;
 // No pushes from 17:00 to 08:00; tasks that fell due in that time go out with the first check of the morning, also when
@@ -100,7 +103,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     const review = open.filter((a) => a.status === 'suggested').length;
     out.push({ key, title: `${open.length} for you from ${m.title ?? 'a meeting'}${review ? ` · ${review} to confirm` : ''}`, body: open.map((a) => `- ${a.title}${a.status === 'suggested' ? ' (yours?)' : ''}`).join('\n'), url: '' });
   }
-  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND ((CAST(at AS INTEGER) > ?1 AND CAST(at AS INTEGER) <= ?2) OR (?4 AND rolled_from IS NOT NULL AND CAST(at AS INTEGER) - ?3 > ?1 AND CAST(at AS INTEGER) - ?3 <= ?2))").all(taskSince(now), now, DAY, inWeekHours(now, 0, 24) ? 1 : 0) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
+  const tasks = db.prepare(`SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND ${EARLY} >= 0 AND ((${ALERT} > ?1 AND ${ALERT} <= ?2) OR (?4 AND rolled_from IS NOT NULL AND ${ALERT} - ?3 > ?1 AND ${ALERT} - ?3 <= ?2))`).all(taskSince(now), now, DAY, inWeekHours(now, 0, 24) ? 1 : 0) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
   const byProfile = new Map<string, Reminder[]>();
   for (const t of tasks) {
     const key = `task:${t.profile}:${t.id}:${Number(t.at)}`;
