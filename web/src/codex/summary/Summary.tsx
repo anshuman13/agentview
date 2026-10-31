@@ -6,7 +6,8 @@ import { Icon } from '../../ui/Icon';
 import { ago, safeHref } from '../../ui/util';
 import { clock } from '../time';
 import { dayLabel } from '../data/dates';
-import { setView, showSnack, useView } from '../view';
+import { copyText, openTask, setView, showSnack, useView } from '../view';
+import { buildReport, type DateRange, type StatusFilter } from './report';
 import '../../styles/features/wiki.css';
 
 const CHATS = 8;
@@ -44,8 +45,10 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
   const { filter } = useView();
   const [allChats, setAllChats] = useState(false);
   const [allBrief, setAllBrief] = useState(false);
-  const [range, setRange] = useState<'today' | 'week'>('week');
+  const [range, setRange] = useState<DateRange>('week');
+  const [status, setStatus] = useState<StatusFilter>('all');
   const since = range === 'today' ? new Date().setHours(0, 0, 0, 0) : Date.now() - 7 * 86400000;
+  const report = buildReport(snap.items.filter((r) => filter === 'all' || r.profile === filter), range, status);
   const chats = snap.chats.filter((c) => !c.deleted && (filter === 'all' || c.profile === filter) && c.summary?.trim() && (c.last_at ?? 0) >= since).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
   const briefLines = brief?.text?.split('\n') ?? [];
   const longBrief = briefLines.length > BRIEF_LINES;
@@ -55,13 +58,35 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
         <h1>Summary</h1>
         <span className="spacer" />
-        <div className="sm-range" role="radiogroup" aria-label="Range">
-          {(['today', 'week'] as const).map((r) => <button key={r} role="radio" aria-checked={range === r} className={range === r ? 'on' : ''} onClick={() => setRange(r)}>{r === 'today' ? 'Today' : 'Week'}</button>)}
-        </div>
         <button className="btn primary mt-take" disabled={busy} onClick={summarize}><Icon name={busy ? 'loading' : 'sparkle'} small /> <span>{busy ? 'Summarizing' : 'Summarize'}</span></button>
       </header>
       <div className="wk-scroll">
         <div className="mt-list">
+          <div className="sm-report">
+            <div className="sm-body">
+              <h2>{report.title}</h2>
+              {report.groups.map((g) => (
+                <section key={g.name}>
+                  <h3>{g.name}</h3>
+                  <ul>{g.lines.map((l) => <li key={l.row.profile + l.row.id}><button className="sm-line" onClick={() => openTask(l.row)}>[{dayLabel(l.at)}] {l.text}</button></li>)}</ul>
+                </section>
+              ))}
+              {!report.groups.length && <div className="muted small">No tasks in this range.</div>}
+              <button className="btn" onClick={() => copyText(report.markdown)}><Icon name="copy" small /> <span>Copy</span></button>
+            </div>
+            <div className="sm-filter">
+              <label><span>Date</span>
+                <select value={range} onChange={(e) => setRange(e.target.value as DateRange)}>
+                  <option value="today">Today</option><option value="week">This week</option><option value="last">Last week</option><option value="month">This month</option>
+                </select>
+              </label>
+              <label><span>Status</span>
+                <select value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}>
+                  <option value="all">All</option><option value="done">Completed</option><option value="open">Not completed</option>
+                </select>
+              </label>
+            </div>
+          </div>
           {asks > 0 && <button className="as-section review as-toggle" onClick={() => setView({ list: 'tasks' })}>{asks} from Slack to review <Icon name="arrow-right" small /></button>}
           {brief?.text && (
             <section className="sm-brief">

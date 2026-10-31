@@ -55,7 +55,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
 - Tasks due today (tomorrow under Later), each row opening its task page, with a check to mark them done and a clock to snooze them to tomorrow 09:00 (next Monday for work tasks on Friday and Saturday)
-- Context (folded like Later): a Slack summary line that opens the Summary page (a Today / Week range, Week by default; a link to the Slack asks to review; the 8 latest chats with a summary in the range, Show N more; the Sonnet summary folded to 8 lines; and Summarize), one line per job report that opens the job, and the digest
+- Context (folded like Later): a Slack summary line that opens the Summary page (a TickTick-style report with Date (Today, This week, Last week, This month) and Status (All, Completed, Not completed) rows, Completed and Not completed lines that open the task, and a Copy button for Markdown; below it a link to the Slack asks to review; the 8 latest chats with a summary in the range, Show N more; the Sonnet summary folded to 8 lines; and Summarize), one line per job report that opens the job, and the digest
 - Before 11:00, a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person
