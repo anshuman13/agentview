@@ -186,6 +186,45 @@ export class LocalStore extends BaseStore implements AssistantStore {
     throw new Error(`Could not save ${name} row ${id}`);
   }
 
+  private batchMissing = false;
+
+  // Applies a pulled page in one transaction. A row changed by another write since it was read is retried on its own,
+  // and an app build without the batch command applies rows one at a time.
+  private async applyChanges(changes: PulledChange[]) {
+    if (!changes.length) return;
+    if (!this.batchMissing) {
+      try {
+        const locals = new Map<string, SyncRow>();
+        for (const name of new Set(changes.map((c) => c.table))) {
+          const ids = changes.filter((c) => c.table === name).map((c) => c.id);
+          for (let i = 0; i < ids.length; i += 400) {
+            const chunk = ids.slice(i, i + 400);
+            const rows = await this.query<SyncRow>(`SELECT * FROM ${name} WHERE id IN (${chunk.map(() => '?').join(', ')})`, chunk);
+            for (const r of rows) locals.set(`${name}:${r.profile}:${r.id}`, r);
+          }
+        }
+        const statements = changes.map((c) => {
+          const local = locals.get(`${c.table}:${c.profile}:${c.id}`);
+          const { sql, params } = swapSQL(c.table, toRow(mergeIncoming<SyncRow>(local ?? null, c)), local);
+          return [sql, params];
+        });
+        const counts = await this.invoke<number[]>('assistant_exec_many', { statements });
+        for (const [i, c] of changes.entries()) {
+          if (!counts[i] && locals.has(`${c.table}:${c.profile}:${c.id}`)) await this.applyChange(c);
+          this.syncTouched.add(c.table);
+        }
+        return;
+      } catch (err) {
+        if (!/not found/i.test(errorText(err))) throw err;
+        this.batchMissing = true;
+      }
+    }
+    for (const c of changes) {
+      await this.applyChange(c);
+      this.syncTouched.add(c.table);
+    }
+  }
+
   private applyChange(change: PulledChange) {
     return this.swap(change.table, change.profile, change.id, (local) => toRow(mergeIncoming<SyncRow>(local ?? null, change)));
   }
@@ -221,6 +260,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
         [row.profile, row.id, row.updated_at, row.field_times],
       ).then(() => void this.syncTouched.add(name)),
       apply: (change) => this.applyChange(change).then(() => void this.syncTouched.add(change.table)),
+      applyAll: (changes) => this.applyChanges(changes),
       paused: (paused) => this.setSync({ paused }),
       scans: (scans) => this.setSync({ scans }),
     });

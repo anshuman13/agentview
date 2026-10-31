@@ -19,6 +19,7 @@ type SyncIO = {
   post(since: number, changes: Change[]): Promise<Reply>;
   clean(d: Dirty): Promise<void>;
   apply(change: PulledChange): Promise<void>;
+  applyAll?(changes: PulledChange[]): Promise<void>;
   paused?(p: Paused[]): void;
   scans?(s: ScanHealth[]): void;
 };
@@ -57,11 +58,10 @@ export async function runSync(io: SyncIO) {
     for (const { row } of batch) if (!refused.some((r) => r.table === row.table && r.id === row.row.id)) await io.clean(row);
     changed ||= batch.length > 0;
     if (queue.length) continue;
-    for (const change of data.changes) {
-      if (!Object.hasOwn(TABLE_FIELDS, change?.table) || typeof change.id !== 'string' || !['work', 'personal'].includes(change.profile)) continue;
-      await io.apply(change);
-      changed = true;
-    }
+    const valid = data.changes.filter((change) => Object.hasOwn(TABLE_FIELDS, change?.table) && typeof change.id === 'string' && ['work', 'personal'].includes(change.profile));
+    if (io.applyAll) await io.applyAll(valid);
+    else for (const change of valid) await io.apply(change);
+    changed ||= valid.length > 0;
     more = data.hasMore === true;
     if (more && data.version === since) throw new Error('Hub did not advance the sync version');
     since = data.version;

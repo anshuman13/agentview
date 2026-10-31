@@ -41,7 +41,11 @@ impl Store {
         let conn = Connection::open(path).map_err(|e| e.to_string())?;
         conn.execute_batch(&format!("PRAGMA key = \"x'{key}'\";")).map_err(|e| e.to_string())?;
         conn.query_row("select count(*) from sqlite_master", [], |r| r.get::<_, i64>(0)).map_err(|_| "wrong key or damaged database".to_string())?;
-        conn.pragma_update(None, "journal_mode", "WAL").map_err(|e| e.to_string())?;
+        let mode: String = conn.query_row("PRAGMA journal_mode", [], |r| r.get(0)).map_err(|e| e.to_string())?;
+        if !mode.eq_ignore_ascii_case("wal") {
+            conn.pragma_update(None, "journal_mode", "WAL").map_err(|e| e.to_string())?;
+        }
+        conn.pragma_update(None, "synchronous", "NORMAL").map_err(|e| e.to_string())?;
         *self.0.lock().unwrap() = Some(conn);
         Ok(())
     }
@@ -62,13 +66,29 @@ impl Store {
 
     pub fn exec(&self, sql: &str, params: &[Value]) -> Result<usize, String> {
         let p = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
-        self.with(|c| c.execute(sql, params_from_iter(p)))
+        self.with(|c| c.prepare_cached(sql)?.execute(params_from_iter(p)))
+    }
+
+    pub fn exec_many(&self, statements: &[(String, Vec<Value>)]) -> Result<Vec<usize>, String> {
+        let bound = statements
+            .iter()
+            .map(|(sql, params)| Ok((sql, params.iter().map(to_sql).collect::<Result<Vec<_>, String>>()?)))
+            .collect::<Result<Vec<_>, String>>()?;
+        self.with(|c| {
+            let tx = c.unchecked_transaction()?;
+            let mut changed = Vec::with_capacity(bound.len());
+            for (sql, p) in bound {
+                changed.push(tx.prepare_cached(sql)?.execute(params_from_iter(p))?);
+            }
+            tx.commit()?;
+            Ok(changed)
+        })
     }
 
     pub fn query(&self, sql: &str, params: &[Value]) -> Result<Vec<Map<String, Value>>, String> {
         let p = params.iter().map(to_sql).collect::<Result<Vec<_>, _>>()?;
         self.with(|c| {
-            let mut stmt = c.prepare(sql)?;
+            let mut stmt = c.prepare_cached(sql)?;
             let names: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
             let rows = stmt.query_map(params_from_iter(p), |row| {
                 let mut m = Map::new();
@@ -144,6 +164,18 @@ mod tests {
         assert!(s2.query("select 1", &[]).is_err());
         assert!(s2.open(&file, "short").is_err());
         s2.open(&file, KEY).unwrap();
+    }
+
+    #[test]
+    fn exec_many_commits_together_and_rolls_back_on_error() {
+        let d = tmp("em");
+        let s = Store::new();
+        s.open(&d.join("a.db"), KEY).unwrap();
+        s.batch("create table t(a primary key)").unwrap();
+        let ins = |a: &str| ("insert into t values (?)".to_string(), vec![json!(a)]);
+        assert_eq!(s.exec_many(&[ins("x"), ins("y")]).unwrap(), vec![1, 1]);
+        assert!(s.exec_many(&[ins("z"), ins("x")]).is_err());
+        assert_eq!(s.query("select a from t", &[]).unwrap().len(), 2);
     }
 
     #[test]

@@ -77,6 +77,11 @@ fn assistant_exec(store: State<Store>, sql: String, params: Vec<Value>) -> Resul
 }
 
 #[tauri::command]
+fn assistant_exec_many(store: State<Store>, statements: Vec<(String, Vec<Value>)>) -> Result<Vec<usize>, String> {
+    store.exec_many(&statements)
+}
+
+#[tauri::command]
 fn assistant_query(store: State<Store>, sql: String, params: Vec<Value>) -> Result<Vec<Map<String, Value>>, String> {
     store.query(&sql, &params)
 }
@@ -85,7 +90,7 @@ fn assistant_query(store: State<Store>, sql: String, params: Vec<Value>) -> Resu
 pub fn run() {
     tauri::Builder::default()
         .manage(Store::new())
-        .invoke_handler(tauri::generate_handler![assistant_open, assistant_close, assistant_dev_key, assistant_batch, assistant_exec, assistant_query])
+        .invoke_handler(tauri::generate_handler![assistant_open, assistant_close, assistant_dev_key, assistant_batch, assistant_exec, assistant_exec_many, assistant_query])
         .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(navigate).build())
         .setup(|app| {
             let builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &app.config().app.windows[0])?;
