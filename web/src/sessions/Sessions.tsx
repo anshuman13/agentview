@@ -11,7 +11,7 @@ import { Bin } from './Bin';
 import { PullState, usePullRequests } from '../ops/pulls';
 import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
-const PAGE = 10;
+const PAGE = 5;
 
 function FilterInput({ value, set }: { value: string; set: (v: string) => void }) {
   return <input placeholder="Filter repos and sessions" value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && set('')} />;

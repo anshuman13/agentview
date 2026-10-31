@@ -44,12 +44,12 @@ export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }
       <button className={tab === 'chat' && !more ? 'active' : ''} onClick={() => goTab('chat')}>
         <Icon name="comment" />
         <span>Chat</span>
-        {pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+        {pendingCount > 0 && <span className="badge" aria-label={`${pendingCount} waiting`}>{pendingCount}</span>}
       </button>
       <button className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
         <Icon name="comment-discussion" />
         <span>Sessions</span>
-        {elsewhere > 0 && <span className="badge">{elsewhere}</span>}
+        {elsewhere > 0 && <span className="dot waiting" role="img" aria-label={`${elsewhere} waiting`} />}
       </button>
       <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => goTab('agents')}>
         <Icon name="hubot" />

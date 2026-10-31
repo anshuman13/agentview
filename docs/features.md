@@ -5,14 +5,14 @@
 - **Task box** (right): prompt, mode and model menus, context meter, and the timeline below it. An Agents tab at the
   right of its header lists the chat's subagents. ⌥⌘B hides it
 - **Editor** (center): File tab follows Claude's edits and shows the diff against HEAD. Markdown files open as a rendered document with an outline, and the preview button shows the source. In the diff, a long press or a right click on a line quotes it into the composer as `path:line`. Browser tab shows your Chrome. Observe, Deploy and MCP open as further tabs here
-- **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Sessions (open and recent chats) and Workspace (repos, chats, Paseo worktrees)
+- **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Sessions (open and recent chats) and Workspace (repos, chats, Paseo worktrees). In Workspace a repo with no live chat starts folded to its header, and a repo shows its 5 latest chats with Show more
 - **Side chat**: the split icon on a chat row in the Sessions view opens that chat in a second column with its
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
 - **Codex** (top of the activity bar): Overview, Tasks, Meetings, Jobs and Wiki, filtered by work or personal
   profile; see [Codex](#codex)
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
 - **Share to the app (Android)**: text or a link shared into AgentView asks "Add as task" (saved to Tasks, with a time read from the text) or "Send to chat" (appended to the composer).
-- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs.
+- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs. The tab bar shows a count only on Chat (waiting); Sessions (waiting elsewhere) and Agents (running) show a dot.
   The done and snooze buttons on Overview rows, Related chips and Remove goal have full-size tap targets
 - **Command palette** (⇧⌘P or F1): every view, tab, page, Codex list, model and mode as a searchable list
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page

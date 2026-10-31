@@ -92,6 +92,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
   .tabbar button.active { color: var(--fg); }
   .tabbar .codicon.icon { font-size: var(--icon-lg); }
   .tabbar .badge { position: absolute; top: var(--sp-2); right: 20%; }
+  .tabbar .dot { position: absolute; top: var(--sp-2); right: 28%; }
 
   .more-sheet-overlay {
     position: fixed; inset: 0; bottom: calc(var(--tabbar-h) + var(--safe-bottom)); z-index: var(--z-sheet);
