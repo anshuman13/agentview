@@ -3,17 +3,21 @@ import { Icon } from './Icon';
 
 type Native = Omit<ComponentPropsWithRef<'button'>, 'children'>;
 type Size = 'sm' | 'md';
+type Variant = 'filled' | 'tinted' | 'gray' | 'plain' | 'danger';
+type LegacyVariant = 'primary' | 'secondary' | 'quiet';
+
+const variants: Record<LegacyVariant, Variant> = { primary: 'filled', secondary: 'gray', quiet: 'plain' };
 
 const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 
-export function Button({ variant = 'secondary', size = 'md', icon, className, type = 'button', children, ...rest }: Native & {
-  variant?: 'primary' | 'secondary' | 'quiet' | 'danger';
-  size?: Size;
+export function Button({ variant = 'gray', size = 'md', icon, className, type = 'button', children, ...rest }: Native & {
+  variant?: Variant | LegacyVariant;
+  size?: Size | 'lg';
   icon?: string;
   children?: ReactNode;
 }) {
   return (
-    <button type={type} className={cx('btn', `btn-${variant}`, `btn-${size}`, className)} {...rest}>
+    <button type={type} className={cx('btn', `btn-${variants[variant as LegacyVariant] ?? variant}`, `btn-${size}`, className)} {...rest}>
       {icon && <Icon name={icon} small />}
       {children}
     </button>

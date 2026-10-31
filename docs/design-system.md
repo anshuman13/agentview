@@ -96,16 +96,19 @@ colour at 14% (`--warn-soft`); selected is `--accent-soft`.
 
 ## Components
 
-### Button
-`<Button variant size icon>`; `.btn .btn-{variant} .btn-{size}`. Label type, `--shape-sm`.
-Sizes: sm `--control-sm` padding `--sp-5`; md `--control-md` padding `--sp-6`; 44px on touch.
+### Button (iOS button styles)
+`<Button variant size icon>`; `.btn .btn-{variant} .btn-{size}`. Variants filled, tinted, gray, plain,
+danger; sizes sm 28px and md 34px (capsule, `--radius-pill`), lg 50px (12px radius, 17px semibold).
+On coarse pointers sm and md keep their look but get a 44px hit area (an `::after` layer).
+Old names still work: primary is filled, secondary (default) is gray, quiet is plain.
 
-| Variant | Content | `--fill` | Border |
-| --- | --- | --- | --- |
-| primary | `--on-accent` | `--accent-fill` | same |
-| secondary (default) | `--fg` | none | `--border-strong` |
-| quiet | `--fg-muted`, `--fg` on hover | none | none |
-| danger | `--danger` | `--danger` at 14% | none |
+| Variant | Label | `--fill` |
+| --- | --- | --- |
+| filled | `--on-accent` | `--accent-fill` |
+| tinted | `--accent-text` | `--accent` at 15% |
+| gray (default) | `--accent-text` | `--hover` (systemFill) |
+| plain | `--accent-text` | none |
+| danger | `--danger` | `--danger` at 14% |
 
 ### IconButton
 `<IconButton icon label size on>`; square, `--shape-md`, `--fg-muted`, `--fg` on hover, `.on`
