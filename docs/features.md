@@ -71,7 +71,7 @@ A focused "Is this yours?" row takes y or Enter for Mine, n or Delete for Not mi
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
 seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message, and it closes that person's suggested DM asks when I sent the last message; an ask answered in the same scan is not saved. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
 
-- Closed task rows show the due label, source icon and people, plus the repeat icon, checklist count and Replied when they apply; the estimate shows only on the task page
+- Closed task rows are one line like TickTick: a check circle coloured by profile (blue Work, magenta Personal), the title (one line on a phone, up to two on desktop), and on the right the due label (red when late, accent when due today, muted otherwise) with the repeat icon, checklist count and source icon when they apply; people, Replied and the estimate show only on the task page. Notes keep a preview line
 - Today ends with an Add task button and later days with a small + (its dot switches between work and personal when both are shown), which takes times like
   "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
 - Rows with "- [ ]" checklist lines in the notes show how many are ticked; a tap on the count opens the list under the row to tick, and the task page lists them too
