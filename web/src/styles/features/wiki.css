@@ -212,6 +212,10 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .prof-dot.personal { background: var(--personal); }
 :is(.mt-rows, .mt-days, .mt-up-rows) .mt-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 :is(.mt-rows, .mt-days, .mt-up-rows) .mt-title .mt-badge, :is(.mt-rows, .mt-days, .mt-up-rows) .mt-title .as-prof { margin-left: var(--sp-4); }
+.mt-row:has(> .mt-span) { align-items: flex-start; }
+.mt-row:has(> .mt-span) > .mt-body { align-self: auto; padding-top: 10px; }
+.mt-row:has(> .mt-span) > .mt-span { flex: none; margin-top: 11px; }
+.mt-row:has(> .mt-span) > :is(.mt-count, .mt-avatars) { margin-top: 8px; }
 .mt-span { font-size: var(--fs-sm); line-height: 18px; color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mt-said { font-size: var(--fs-sm); line-height: 18px; color: var(--fg-muted); font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 

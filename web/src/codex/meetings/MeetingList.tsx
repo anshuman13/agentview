@@ -86,14 +86,14 @@ const MeetingRowView = memo(function MeetingRowView({ m, now, said, review, tota
       <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
       <span className="mt-body">
         <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
-        <span className="mt-span">
-          {m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
-          {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
-        </span>
         {said && <span className="mt-said" title="From the transcript">{said}</span>}
       </span>
       <Badge m={m} now={now} review={review} total={total} done={done} />
       <Avatars people={people} />
+      <span className="mt-span">
+        {m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
+        {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
+      </span>
     </button>
   );
 });
