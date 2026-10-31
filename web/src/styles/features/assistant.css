@@ -231,6 +231,7 @@ a.as-chip { text-decoration: none; }
 /* The empty line hides when any Today block other than the standup button rendered above it. */
 .as-scroll > :not(.ov-empty, .as-next-actions) ~ .ov-empty { display: none; }
 .ov-card .mt-row.past .mt-title { color: var(--fg-muted); }
+.ov-card .mt-avatars { display: none; }
 .ov-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .gl-lines { display: flex; flex-direction: column; gap: var(--sp-2); }
 .gl-line { display: flex; align-items: baseline; gap: var(--sp-3); white-space: nowrap; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; max-width: 100%; }
