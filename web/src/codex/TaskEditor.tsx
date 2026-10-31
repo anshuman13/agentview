@@ -155,7 +155,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       <Back close={onClose} />
       <header className="wk-head">
         <button className="icon-btn" title="Back to tasks" aria-label="Back" onClick={onClose}><Icon name="arrow-left" /></button>
-        <h1>{title.trim() || '(Untitled)'}</h1>
+        <h1 className="as-page-profile">{FILTER_LABEL[row.profile]}</h1>
       </header>
       <div className="wk-scroll">
     <div className={`as-edit ${row.profile}`} ref={box} data-no-swipe>

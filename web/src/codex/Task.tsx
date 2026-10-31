@@ -71,7 +71,7 @@ export function TaskRow({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen:
 }
 
 // A quick add at the end of a day: Enter saves and keeps the field open for the next task.
-export function AddTask({ day, today, filter }: { day: number; today: number; filter: Filter }) {
+export function AddTask({ day, today, filter, empty = false }: { day: number; today: number; filter: Filter; empty?: boolean }) {
   const { store } = useAssistant();
   const [on, setOn] = useState(false);
   const addButton = useFocusBack<HTMLButtonElement>(on);
@@ -106,7 +106,7 @@ export function AddTask({ day, today, filter }: { day: number; today: number; fi
     }
   };
   if (!on && day !== today) return <button ref={addButton} className="as-add-quiet" aria-label="Add task" title="Add task" onClick={() => setOn(true)}><Icon name="add" small /></button>;
-  if (!on) return <button ref={addButton} className="as-add" onClick={() => setOn(true)}><Icon name="add" /> Add task</button>;
+  if (!on) return <button ref={addButton} className="as-add" onClick={() => setOn(true)}><Icon name="add" /> {empty ? 'Nothing today' : 'Add task'}</button>;
   return (
     <div className="as-add on" data-no-swipe>
       {filter === 'all' ? (
