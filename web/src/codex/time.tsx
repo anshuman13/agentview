@@ -3,7 +3,7 @@ import { Icon } from '../ui/Icon';
 import { dayLabel, pad, ymd } from './data/dates';
 
 // Times are picked as a part of the day, not a minute.
-const MORNING = 9;
+export const MORNING = 9;
 export const EVENING = 19;
 const slot = (now: Date, days: number, hour: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, hour).getTime();
 

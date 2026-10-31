@@ -263,7 +263,7 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .as-ask { flex: none; align-self: center; color: var(--fg); font-size: var(--fs-sm); font-weight: 600; }
 
 /* Tasks page: same layout and card language as Meetings. */
-.assistant.tasks { --tk-pad: var(--sp-16); max-width: calc(732px + 2 * var(--tk-pad)); container: tasks / inline-size; }
+.assistant.tasks { --tk-pad: var(--sp-16); --tk-indent: 30px; max-width: calc(732px + 2 * var(--tk-pad)); container: tasks / inline-size; }
 .tasks .as-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
 .tasks .as-head h1 { font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
@@ -281,8 +281,10 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .tasks .as-toggle.done { color: var(--fg-faint); }
 .tasks section > .as-list { border: 0; border-radius: 0; background: transparent; }
 .tasks .as-list:empty { display: none; }
+.tasks .as-part { padding: var(--sp-4) 0 var(--sp-1) var(--tk-indent); font-size: var(--fs-xs); font-weight: 500; color: var(--fg-faint); }
+.tasks .as-part > span { font-variant-numeric: tabular-nums; }
 .tasks .as-row { min-height: 48px; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-radius: 0; }
-.tasks .as-row::after { left: 42px; }
+.tasks .as-row::after { left: var(--tk-indent); }
 .tasks .as-body { padding-top: 0; gap: 0; }
 .tasks .as-row.work:not(.checked) .as-check:not(.on), .tasks .as-row.work:not(.checked) .as-check:not(.on) .codicon.icon { color: var(--work); }
 .tasks .as-row.personal:not(.checked) .as-check:not(.on), .tasks .as-row.personal:not(.checked) .as-check:not(.on) .codicon.icon { color: var(--personal); }
@@ -298,7 +300,7 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .tasks .as-meta > .as-due.late { color: var(--err); }
 .tasks .as-row.checked .as-title { color: var(--fg-muted); }
 .tasks .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
-.tasks .as-drop-line { margin-left: 42px; }
+.tasks .as-drop-line { margin-left: var(--tk-indent); }
 .as-page .wk-head h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xl); }
 .as-page .wk-scroll { display: flex; flex-direction: column; padding: 0 var(--sp-8); mask-image: none; }
 .as-page .as-edit { flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: 0; gap: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
@@ -357,15 +359,12 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .tasks .as-empty { padding: var(--sp-16) var(--sp-8); }
 
 @media (max-width: 900px) {
-  .assistant.tasks { --tk-pad: var(--sp-8); }
+  .assistant.tasks { --tk-pad: var(--sp-8); --tk-indent: 42px; }
   .tasks .as-head { padding: var(--sp-6) var(--tk-pad) var(--sp-4); }
   .tasks .as-head h1 { font-size: var(--fs-4xl); }
   .tasks .as-scroll { padding-top: var(--sp-2); gap: var(--sp-6); }
   .tasks .as-row { padding: var(--sp-1) 0; }
   .tasks .as-check { margin: 0; }
-  .tasks .as-row::after { left: 42px; }
-  .tasks .as-drop-line { margin-left: 42px; }
-  .tasks .as-title { -webkit-line-clamp: 1; line-clamp: 1; }
   .tasks .as-composer { padding: var(--sp-3) var(--tk-pad) var(--sp-6); }
 }
 

@@ -7,12 +7,11 @@ import { Icon } from '../ui/Icon';
 import { firstLine, readFlag, saveFlag } from '../ui/util';
 import { FILTER_LABEL, showSnack, useFocusBack, type Filter } from './view';
 import { useActions } from './useActions';
-import { when } from './time';
+import { clock, EVENING, MORNING, when } from './time';
 import { Swipe } from './Swipe';
 import { rowKey } from './taskKeys';
 import { ProfileDot } from './ProfileDot';
 import { haptic } from '../ui/haptic';
-import { sourceOf } from './taskSource';
 import { Check } from './TaskCheck';
 import { checkItems, toggleCheck } from './taskChecklist';
 
@@ -26,17 +25,18 @@ const checklist = (s: string | null) => {
   return { items, done: items.filter((c) => c.done).length, total: items.length };
 };
 
-export function TaskRow({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen: () => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean }) {
+// inDay: the row sits under its day and part-of-day headers, so it shows only an exact clock time.
+export function TaskRow({ row, onOpen, onGrab, lifted, inDay }: { row: ItemRow; onOpen: () => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean; inDay?: boolean }) {
   const act = useActions();
   const { store } = useAssistant();
   const [showList, setShowList] = useState(false);
-  const src = sourceOf(row);
   const at = atTime(row.at);
   const now = Date.now();
   const isDone = row.status === 'done';
   const isNote = row.status === 'note';
   const late = at != null ? Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY) : 0;
-  const due = at != null && !isNote && !isDone ? (late > 0 ? `${late}d late` : when(at, now)) : null;
+  const slot = at != null && new Date(at).getMinutes() === 0 && [MORNING, EVENING].includes(new Date(at).getHours());
+  const due = at == null || isNote || isDone ? null : late > 0 ? `${late}d late` : !inDay ? when(at, now) : slot ? null : clock(at);
   const list = checklist(row.text);
   const preview = isRepeat(row.text) ? '' : firstLine(row.text);
   const body = (
@@ -59,7 +59,6 @@ export function TaskRow({ row, onOpen, onGrab, lifted }: { row: ItemRow; onOpen:
         {due && <span className={at! < now ? 'as-due late' : late === 0 ? 'as-due today' : 'as-due'}>{due}{at! < now && late <= 0 && <span className="sr-only"> overdue</span>}</span>}
         {isRepeat(row.text) && <span title="Repeats" role="img" aria-label="Repeats"><Icon name="sync" small /></span>}
         {list.total > 0 && <span className={list.done === list.total ? 'as-list-done' : undefined}><button className="as-list-btn" aria-expanded={showList} aria-label="Checklist" onClick={(e) => { e.stopPropagation(); setShowList(!showList); }}><Icon name="checklist" small /> {list.done}/{list.total}</button></span>}
-        {row.source && row.source !== 'capture' && <span className={`as-src ${row.source}`} title={src.label} role="img" aria-label={src.label}><Icon name={src.icon} small /></span>}
       </div>
     </div>
   );

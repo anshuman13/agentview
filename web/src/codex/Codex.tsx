@@ -38,7 +38,7 @@ function dayLabel(at: number) {
   const d = new Date(at);
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
   if (days === 1) return 'Tomorrow';
-  return d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function SnackBar() {
@@ -57,6 +57,9 @@ const UPCOMING_DAYS = 7;
 type Day = { key: string; label: string; day: number | null; rows: ItemRow[] };
 // Rows keep the order they were dragged into; the rest follow by due time.
 const ranked = (rs: ItemRow[]) => [...rs].sort((a, b) => (a.rank ?? 1e15) - (b.rank ?? 1e15) || (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0));
+// A day's tasks split by part of the day; tasks without a time come first.
+const PARTS = ['Anytime', 'Morning', 'Afternoon', 'Evening'];
+const partOf = (r: ItemRow) => { const at = atTime(r.at); if (at == null) return 0; const h = new Date(at).getHours(); return h < 12 ? 1 : h < 17 ? 2 : 3; };
 const matches = (r: ItemRow, q: string) => [r.title, r.text, r.people].some((x) => x?.toLowerCase().includes(q));
 const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
 
@@ -190,7 +193,7 @@ export function Assistant() {
     if (g) g.rows.push(r);
     else days.push({ key, label: later ? 'Later' : dayLabel(at), day, rows: [r] });
   }
-  for (const d of days) d.rows = ranked(d.rows);
+  for (const d of days) d.rows = d.day == null ? ranked(d.rows) : ranked(d.rows).sort((a, b) => partOf(a) - partOf(b));
   const tomorrow = new Date(now).setHours(24, 0, 0, 0);
   if (drag && !days.some((d) => d.day === tomorrow)) days.splice(1, 0, { key: String(tomorrow), label: 'Tomorrow', day: tomorrow, rows: [] });
   // Dropping sets the order of the day's rows and moves the task to that day.
@@ -207,18 +210,20 @@ export function Assistant() {
     });
     if (at !== undefined) showSnack(`Moved to ${target.label}`, () => act.edit(row, { at: row.at, rank: row.rank, rolls: row.rolls, rolled_from: row.rolled_from }));
   }
-  const rows = (rs: ItemRow[], key?: string, droppable = true) => {
+  const rows = (rs: ItemRow[], key?: string, droppable = true, parts = false) => {
     const over = key && droppable && drag?.over?.section === key ? drag.over.index : -1;
     const shown = rs.filter((r) => r.profile + r.id !== drag?.key);
     return (
       <div className="as-list" data-drop={droppable ? key : undefined}>
-        {rs.map((r) => {
+        {rs.map((r, i) => {
           const k = r.profile + r.id;
           const line = over >= 0 && shown[over] && shown[over].profile + shown[over].id === k;
+          const part = parts && (i === 0 || partOf(rs[i - 1]) !== partOf(r)) && rs.filter((x) => partOf(x) === partOf(r)).length;
           return (
             <Fragment key={k}>
+              {part && <div className="as-part">{PARTS[partOf(r)]} <span>{part}</span></div>}
               {line && <div className="as-drop-line" />}
-              <TaskRow row={r} onOpen={() => setView({ open: rowKey(r) })} onGrab={key ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
+              <TaskRow row={r} inDay={parts} onOpen={() => setView({ open: rowKey(r) })} onGrab={key ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
             </Fragment>
           );
         })}
@@ -230,7 +235,7 @@ export function Assistant() {
   const section = (d: Day) => (d.rows.length > 0 || drag || d.key === 'today') && (
     <section key={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
       <div className={`as-section${d.key === 'today' ? '' : ' later'}`}>{d.label} {d.rows.length > 0 && <span>{d.rows.length}</span>}</div>
-      {rows(d.rows, d.key, d.day != null)}
+      {rows(d.rows, d.key, d.day != null, d.day != null)}
       {d.day != null && !drag && <AddTask day={d.day} today={startOfDay} filter={filter} />}
     </section>
   );
