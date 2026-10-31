@@ -362,7 +362,7 @@ export function Composer() {
           {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {uploading}</span>}
           <Voice onText={dictate} />
           {running && !typed ? (
-            <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onClick={() => send({ type: 'interrupt' })}>
+            <button className="cp-stop" title={stopping ? 'Stopping…' : 'Stop Claude'} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onPointerDown={(e) => e.preventDefault()} onClick={() => send({ type: 'interrupt' })}>
               <Icon name={stopping ? 'loading' : 'debug-stop'} small spin={stopping} />
             </button>
           ) : (
@@ -371,6 +371,7 @@ export function Composer() {
               title={shell ? 'Run in the terminal (Enter)' : compacting ? 'Sends when compacting is done (Enter)' : running ? 'Send at Claude\'s next step (Enter), stop and send (⌘Enter or hold)' : 'Send (Enter)'}
               aria-label={shell ? 'Run' : 'Send'}
               disabled={!typed}
+              onPointerDown={(e) => e.preventDefault()}
               onClick={(e) => submit(e.metaKey || e.ctrlKey)}
               onContextMenu={(e) => { if (!running) return; e.preventDefault(); submit(true); }}
             >
