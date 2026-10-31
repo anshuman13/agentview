@@ -47,3 +47,25 @@ button.link { background: transparent; border: 0; padding: 0; color: var(--link)
 @media (max-width: 900px) {
   .btn, .btn:is(.xs, .sm, .lg) { height: var(--touch); padding: 0 var(--sp-6); font-size: var(--fs-md); }
 }
+
+/* Design system (docs/design-system.md): Button and IconButton stack variant and size classes on .btn and .icon-btn. */
+.btn.btn-sm { height: var(--control-sm); padding: 0 var(--sp-5); font-size: var(--fs-sm); }
+.btn.btn-md { height: var(--control-md); padding: 0 var(--sp-6); gap: var(--sp-3); font-size: var(--fs-md); }
+.btn.btn-secondary { color: var(--fg); background: transparent; border-color: var(--border-strong); }
+.btn.btn-quiet { color: var(--fg-muted); background: transparent; border-color: transparent; }
+.btn.btn-primary { color: var(--on-accent); background: var(--accent-fill); border-color: var(--accent-fill); }
+.btn.btn-danger { color: var(--err); background: color-mix(in srgb, var(--err) 14%, transparent); border-color: transparent; }
+@media (hover: hover) {
+  .btn.btn-quiet:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
+  .btn.btn-primary:hover:not(:disabled) { color: var(--on-accent); background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.btn-danger:hover:not(:disabled) { color: var(--err); background: color-mix(in srgb, var(--err) 24%, transparent); }
+}
+.icon-btn { cursor: pointer; text-decoration: none; }
+.icon-btn.icon-btn-sm { width: var(--control-sm); height: var(--control-sm); border-radius: var(--radius-md); }
+.icon-btn.icon-btn-md { width: var(--control-md); height: var(--control-md); border-radius: var(--radius-md); }
+.icon-btn.on { color: var(--accent-text); }
+:is(.btn, .icon-btn, .chip-btn):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (pointer: coarse) {
+  .btn:is(.btn-sm, .btn-md) { min-height: var(--touch); }
+  .icon-btn:is(.icon-btn-sm, .icon-btn-md) { width: var(--touch); height: var(--touch); }
+}

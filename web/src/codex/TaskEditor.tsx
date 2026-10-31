@@ -4,6 +4,7 @@ import { atTime } from './data/engine';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
+import { Button, Chip, chipClass, IconButton } from '../ui/Button';
 import { ago, fitHeight, reveal, safeHref, useOnUnmount } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
@@ -161,15 +162,15 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         <Check row={row} onDone={onClose} />
         {timed && (
           <span className="as-tt-due">
-            <PickDue className={`as-tt-chip${at == null ? ' quiet' : at < Date.now() && row.status === 'open' ? ' late' : ''}`} value={at} onPick={(t) => t !== at && act.due(row, t)}>
+            <PickDue className={chipClass({ late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={(t) => t !== at && act.due(row, t)}>
               <Icon name="calendar" small /> {dueLabel(at)}
             </PickDue>
-            {at != null && <button className="as-tt-ico" title="Clear due time" aria-label="Clear due time" onClick={() => act.due(row, null)}><Icon name="close" small /></button>}
+            {at != null && <IconButton icon="close" small label="Clear due time" onClick={() => act.due(row, null)} />}
           </span>
         )}
         <span className="spacer" />
         <div className="as-tt-more" ref={menuBox}>
-          <button className="as-tt-ico" title="More" aria-label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSnoozing(false); }}><Icon name="kebab-horizontal" /></button>
+          <IconButton icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSnoozing(false); }} />
           {menu && (
             <div className="as-tt-menu" role="menu" ref={actions}>
               {snoozing ? (
@@ -185,7 +186,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
                   {(row.status === 'open' || row.status === 'done') && (
                     <>
                       <button role="menuitem" aria-label="Log time" aria-expanded={logging} onClick={() => setLogging(!logging)}><Icon name="watch" small /> Log time{Number(row.spent) > 0 && ` (${minutesText(Number(row.spent))})`}</button>
-                      {logging && <div className="as-tt-menu-chips">{[15, 30, 60].map((n) => <button key={n} className="as-tt-chip" title={`Add ${minutesText(n)} spent`} onClick={() => logTime(n)}>+{minutesText(n)}</button>)}</div>}
+                      {logging && <div className="as-tt-menu-chips">{[15, 30, 60].map((n) => <Chip key={n} size="sm" title={`Add ${minutesText(n)} spent`} onClick={() => logTime(n)}>+{minutesText(n)}</Chip>)}</div>}
                       <div className="as-tt-menu-row"><Icon name="target" small /><GoalPick row={row} onPick={(goal) => act.edit(row, { goal })} /></div>
                     </>
                   )}
@@ -229,13 +230,13 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
               <Icon name={c.done ? 'pass-filled' : 'circle-large-outline'} small /> <span>{c.label || '(empty)'}</span>
             </button>
           ))}
-          <button className="as-tt-add" onMouseDown={(e) => e.preventDefault()} onClick={addSubtask}><Icon name="add" small /> Add subtask</button>
+          <Button variant="quiet" size="sm" icon="add" className="as-tt-add" onMouseDown={(e) => e.preventDefault()} onClick={addSubtask}>Add subtask</Button>
         </div>
         {(row.people || row.updated_at || estimate != null) && <div className="as-tt-fine">{estimate != null && <span>~{minutesText(estimate)}</span>}{row.people && <span>{row.people}</span>}<span>{ago(row.updated_at, ' ago')}</span></div>}
       </div>
       <div className="as-tt-bar">
         {row.status === 'open' && (
-          <label className={`as-tt-ico as-tt-pick${cadence === 'never' ? ' quiet' : ' on'}`} title="Repeat">
+          <label className={`icon-btn icon-btn-md as-tt-pick${cadence === 'never' ? '' : ' on'}`} title="Repeat">
             <Icon name="sync" />
             <select value={cadence} aria-label="Repeat" onChange={(e) => repeat(e.target.value as Cadence)}>
               <option value="never">Never repeats</option>
@@ -249,8 +250,8 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         )}
         <span className="spacer" />
         {row.status === 'open' && (focused
-          ? <button className="as-tt-ico on" title="Stop the focus timer" aria-label="Stop" onClick={stopFocus}><Icon name="debug-stop" /></button>
-          : <button className="as-tt-ico" title="Start a focus timer" aria-label="Start focus" onClick={() => { save(); startFocus(row); }}><Icon name="play" /></button>)}
+          ? <IconButton icon="debug-stop" on label="Stop" title="Stop the focus timer" onClick={stopFocus} />
+          : <IconButton icon="play" label="Start focus" title="Start a focus timer" onClick={() => { save(); startFocus(row); }} />)}
       </div>
     </div>
       </div>
