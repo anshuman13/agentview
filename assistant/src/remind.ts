@@ -8,7 +8,7 @@ import { HUB_URL } from './slack.js';
 import { webUrl } from './slackSave.js';
 import { loop } from './once.js';
 import { applyChanges } from './sync.js';
-import { DAY } from './time.js';
+import { DAY, inWeekHours } from './time.js';
 
 const BEFORE = 10 * 60_000;
 const LATE = 5 * 60_000;
@@ -91,7 +91,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     ].filter(Boolean).join('\n');
     out.push({ key, title: `${m.title ?? 'Meeting'} ${mins < 1 ? 'starts now' : `in ${mins} min`}`, body, url: url ?? '', actions: url ? `view, Open, ${url}` : '' });
   }
-  const read = db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND transcript = 'done' AND ends_at > ? AND CAST(json_extract(field_times, '$.transcript') AS INTEGER) > ?").all(now - DAY, now - FRESH) as Meeting[];
+  const read = db.prepare("SELECT * FROM meetings WHERE deleted = 0 AND transcript = 'done' AND ends_at > ? AND CAST(json_extract(field_times, '$.transcript') AS INTEGER) > ?").all(now - DAY, taskSince(now)) as Meeting[];
   for (const m of read) {
     const key = `actions:${m.profile}:${m.id}`;
     if (sent(key)) continue;
@@ -100,7 +100,7 @@ export function dueReminders(db: Database, now = Date.now()): Reminder[] {
     const review = open.filter((a) => a.status === 'suggested').length;
     out.push({ key, title: `${open.length} for you from ${m.title ?? 'a meeting'}${review ? ` · ${review} to confirm` : ''}`, body: open.map((a) => `- ${a.title}${a.status === 'suggested' ? ' (yours?)' : ''}`).join('\n'), url: '' });
   }
-  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND ((CAST(at AS INTEGER) > ?1 AND CAST(at AS INTEGER) <= ?2) OR (rolled_from IS NOT NULL AND CAST(at AS INTEGER) - ?3 > ?1 AND CAST(at AS INTEGER) - ?3 <= ?2))").all(taskSince(now), now, DAY) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
+  const tasks = db.prepare("SELECT id, profile, title, text, at FROM items WHERE deleted = 0 AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND ((CAST(at AS INTEGER) > ?1 AND CAST(at AS INTEGER) <= ?2) OR (?4 AND rolled_from IS NOT NULL AND CAST(at AS INTEGER) - ?3 > ?1 AND CAST(at AS INTEGER) - ?3 <= ?2))").all(taskSince(now), now, DAY, inWeekHours(now, 0, 24) ? 1 : 0) as { id: string; profile: string; title: string | null; text: string | null; at: number }[];
   const byProfile = new Map<string, Reminder[]>();
   for (const t of tasks) {
     const key = `task:${t.profile}:${t.id}:${Number(t.at)}`;

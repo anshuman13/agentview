@@ -21,6 +21,14 @@ test('moves open tasks from earlier days to today at the same time', () => {
   expect(get(db, 'done').at).toBe(at(25, 9));
 });
 
+test('keeps a phone edit made before the rollover', () => {
+  const db = openDb(':memory:');
+  item(db, 'a', { at: at(26, 14) });
+  rollOver(db, at(27, 0));
+  applyChanges(db, [{ table: 'items', id: 'a', profile: 'work', updated_at: at(26, 23), fields: { at: at(28, 9) } }]);
+  expect(get(db, 'a').at).toBe(at(28, 9));
+});
+
 test('keeps the first due date and sends a task to review after three moves', () => {
   const db = openDb(':memory:');
   item(db, 'a', { at: at(20, 9) });

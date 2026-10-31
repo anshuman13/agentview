@@ -11,6 +11,9 @@ describe('estimateMin', () => {
     expect(estimateMin('Review ~1h')).toBe(60);
     expect(estimateMin('Plan ~1h30m')).toBe(90);
     expect(estimateMin('Plan ~1h 30m')).toBe(90);
+    expect(estimateMin('Write ~30 min')).toBe(30);
+    expect(estimateMin('Plan ~45 mins')).toBe(45);
+    expect(estimateMin('Plan ~1h30')).toBe(90);
   });
   it('ignores titles without an estimate', () => {
     expect(estimateMin('About 30m of work')).toBeNull();

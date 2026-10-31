@@ -1,6 +1,6 @@
 export type Span = [number, number];
 
-const EST_RE = /~\s*(?:(\d+)\s*h(?:\s*(\d+)\s*m?)?|(\d+)\s*m)\b/i;
+const EST_RE = /~\s*(?:(\d+)\s*h(?:\s*(\d+)\s*m?)?|(\d+)\s*m(?:ins?)?)\b/i;
 const MIN_GAP = 15;
 
 // Minutes from "~30m", "~1h" or "~1h30m" in a title, or null.

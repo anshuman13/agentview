@@ -64,6 +64,7 @@ it('counts tasks this week that will not fit before they are due, leaving out bl
   const item = db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at) VALUES (?, 'work', 1, 0, ?, 'capture', 'open', ?)");
   item.run('big', 'Write the plan ~8h', at(MON + 1, 10));
   item.run('held', 'Draft memo ~8h', at(MON, 12));
+  item.run('blank', 'Blank date ~8h', '');
   db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES ('block:held', 'work', 1, 0, 'Focus: Draft memo', ?, ?)").run(at(MON, 10), at(MON, 11));
   const lines = buildBrief(db, 'work', at(MON, 8)).text.split('\n');
   expect(lines).toContain('At risk: 1 task');

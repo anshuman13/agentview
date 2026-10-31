@@ -24,7 +24,7 @@ const top = <T extends Row>(rows: T[], tag: (r: T) => string = () => '') => [...
 function riskCount(db: Database, profile: Profile, now: number) {
   const week = new Date(now).setHours(24 * 7, 0, 0, 0);
   const busy = db.prepare('SELECT starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = ? AND starts_at < ? AND ends_at > ? AND ends_at - starts_at < ?').all(profile, week, now, LONG) as { starts_at: number; ends_at: number }[];
-  const tasks = db.prepare("SELECT i.title, CAST(i.at AS INTEGER) AS due FROM items i WHERE i.deleted = 0 AND i.profile = ? AND i.status = 'open' AND COALESCE(i.source, '') NOT IN ('calendar', 'meeting') AND i.at IS NOT NULL AND CAST(i.at AS INTEGER) < ? AND NOT EXISTS (SELECT 1 FROM meetings m WHERE m.profile = i.profile AND m.id = ? || i.id AND m.deleted = 0 AND m.ends_at > ?)").all(profile, week, blockId(''), now) as { title: string | null; due: number }[];
+  const tasks = db.prepare("SELECT i.title, CAST(i.at AS INTEGER) AS due FROM items i WHERE i.deleted = 0 AND i.profile = ? AND i.status = 'open' AND COALESCE(i.source, '') NOT IN ('calendar', 'meeting') AND i.at IS NOT NULL AND i.at <> '' AND CAST(i.at AS INTEGER) < ? AND NOT EXISTS (SELECT 1 FROM meetings m WHERE m.profile = i.profile AND m.id = ? || i.id AND m.deleted = 0 AND m.ends_at > ?)").all(profile, week, blockId(''), now) as { title: string | null; due: number }[];
   return atRisk(tasks, busy.map((m) => [m.starts_at, m.ends_at] as Span), now).length;
 }
 

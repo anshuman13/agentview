@@ -144,3 +144,17 @@ it('catches up an evening task the midnight rollover moved to today', () => {
   db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at, rolled_from) VALUES ('a', 'personal', 1, 0, 'Rolled', 'capture', 'open', ?, ?)").run(new Date(2026, 9, 30, 22, 0).getTime(), new Date(2026, 9, 29, 22, 0).getTime());
   expect(dueReminders(db, now).map((r) => r.title)).toEqual(['Rolled']);
 });
+
+it('sends meeting actions the next morning when the transcript landed in the quiet hours', () => {
+  const db = openDb(':memory:');
+  const landed = new Date(2026, 9, 29, 17, 45).getTime();
+  db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at, transcript, field_times) VALUES ('a', 'work', 1, 0, 'Planning', ?, ?, 'done', ?)").run(landed - 7200_000, landed - 3600_000, JSON.stringify({ transcript: landed }));
+  db.prepare("INSERT INTO items (id, profile, version, updated_at, meeting_id, title, source, status) VALUES ('x', 'work', 1, 0, 'a', 'Send the notes', 'action', 'open')").run();
+  expect(dueReminders(db, new Date(2026, 9, 30, 8, 30).getTime()).map((r) => r.title)).toEqual(['1 for you from Planning']);
+});
+
+it('does not repeat a rolled evening task on weekend mornings', () => {
+  const db = openDb(':memory:');
+  db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at, rolled_from) VALUES ('a', 'personal', 1, 0, 'Rolled', 'capture', 'open', ?, ?)").run(new Date(2026, 9, 31, 22, 0).getTime(), new Date(2026, 9, 30, 22, 0).getTime());
+  expect(dueReminders(db, new Date(2026, 9, 31, 8, 30).getTime())).toEqual([]);
+});

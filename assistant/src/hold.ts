@@ -46,8 +46,9 @@ export function heldDue(db: Database, now = Date.now()) {
 // Clears only the entries it examined, so one held while the push was on its way stays for the next.
 export async function flushHeld(db: Database, now = Date.now()) {
   const due = heldDue(db, now);
+  const seen = due ? heldPushes(db).slice(0, due.raw).map((h) => JSON.stringify(h)) : [];
   if (!due || (due.count && !(await pushNtfy(due.title, '', due.body, '').catch(() => false)))) return;
-  const left = heldPushes(db).slice(due.raw);
+  const left = heldPushes(db).filter((h) => !seen.includes(JSON.stringify(h)));
   if (left.length) db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(KEY, JSON.stringify(left));
   else db.prepare('DELETE FROM meta WHERE key = ?').run(KEY);
 }
