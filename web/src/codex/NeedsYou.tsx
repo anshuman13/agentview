@@ -7,7 +7,7 @@ import { atRisk, minutesText, type Span } from './data/plan';
 import { CAP, collapse, rankNeeds } from './data/needsYou';
 import { needsYou } from './summary/Summary';
 import { ActionRow } from './meetings/Meetings';
-import { unrollFor, useActions } from './useActions';
+import { UNROLL, unrollFor, useActions } from './useActions';
 import { ago, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
 import { Icon } from '../ui/Icon';
@@ -112,7 +112,7 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
       const from = new Date(atTime(r.at) ?? now);
       const t = new Date(now).setHours(from.getHours(), from.getMinutes(), 0, 0);
       const at = t > now ? t : now;
-      void store.update(r, { at, ...unrollFor(at, now) });
+      void store.update(r, { at, ...UNROLL });
     }
     showSnack('Moved to today', () => before.forEach(({ r, ...prev }) => void store.update(r, prev)));
   };

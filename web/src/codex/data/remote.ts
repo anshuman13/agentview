@@ -181,7 +181,13 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         this.stale = this.stale.filter((k) => !stale.includes(k));
         this.setSync({ saveError: false });
       } catch {
-        for (const [table, keys] of pending) this.save(table, ...keys);
+        // Re-queued without a timer, so a lasting error retries on the next change, not in a loop.
+        for (const [table, keys] of pending) {
+          const set = this.unsaved.get(table) ?? new Set<string>();
+          keys.forEach((k) => set.add(k));
+          this.unsaved.set(table, set);
+        }
+        this.saveDue = true;
         this.setSync({ saveError: true });
       }
     };

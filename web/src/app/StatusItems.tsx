@@ -89,7 +89,7 @@ export function UsageItem() {
     week && `Week: ${week.pct}% used, resets ${at(week.resetsAt)}`,
     pace !== null && `Even pace (100/7 a day): ${pace}% by now`,
     advice && (other && running ? `${advice} once Claude stops` : other ? `${advice}. Click to switch` : advice),
-    !(ahead && other && !running) && 'Click to read usage again',
+    !(ahead && other && !running) && 'Click to read usage again (needs an open Claude process)',
   ].filter(Boolean).join('\n');
   const warn = ahead || Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
   const body = (

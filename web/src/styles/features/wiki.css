@@ -5,7 +5,7 @@
 :root[data-theme='light'] .wk { --wk-card: var(--bg); }
 .wk :is(button, a, [role='button']):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .wk-head { flex: none; display: flex; align-items: center; gap: var(--sp-4); width: 100%; max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-10) var(--wk-pad) var(--sp-6); }
-.wk-head h1.as-page-profile { font-size: var(--fs-lg); font-weight: 500; letter-spacing: 0; color: var(--fg-muted); }
+.wk-head .as-page-profile { font-size: var(--fs-lg); font-weight: 500; letter-spacing: 0; color: var(--fg-muted); }
 .wk-head h1 { margin: 0; font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
 .wk-scroll { flex: 1; min-height: 0; overflow-y: auto; container-type: inline-size; mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
 .wk-label { font-size: var(--fs-md); font-weight: 500; color: var(--fg-muted); }

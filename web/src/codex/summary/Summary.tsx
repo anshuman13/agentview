@@ -26,7 +26,7 @@ function useSlack() {
   const snap = useAssistantData();
   const { filter } = useView();
   const [busy, setBusy] = useState(false);
-  const brief = snap.briefs.filter((b) => !b.deleted && (filter === 'all' || b.profile === filter) && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
+  const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack').sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
   const asks = snap.items.filter((r) => !r.deleted && (filter === 'all' || r.profile === filter) && r.source === 'slack' && r.status === 'suggested').length;
   const summarize = () => {
     setBusy(true);
