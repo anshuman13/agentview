@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { DateSheet } from './AddSheet';
 import { Icon } from '../ui/Icon';
 import { dayLabel, pad, ymd } from './data/dates';
 
@@ -89,7 +90,9 @@ export function PickDue({ className, value, onPick, children }: { className?: st
     el.addEventListener('change', change);
     return () => el.removeEventListener('change', change);
   }, []);
+  const [sheet, setSheet] = useState(false);
   const open = () => {
+    if (matchMedia('(pointer: coarse)').matches) return setSheet(true);
     const el = input.current!;
     el.value = value == null ? '' : localDateTime(value);
     try { el.showPicker(); } catch { el.focus(); el.click(); }
@@ -98,6 +101,7 @@ export function PickDue({ className, value, onPick, children }: { className?: st
     <span className={`as-pick ${className ?? ''}`}>
       <button type="button" onClick={open}>{children}</button>
       <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden />
+      {sheet && <DateSheet value={{ at: value, cadence: 'never' }} onDone={(p) => p.at !== value && onPick(p.at)} onClose={() => setSheet(false)} />}
     </span>
   );
 }

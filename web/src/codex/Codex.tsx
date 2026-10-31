@@ -8,7 +8,6 @@ import { atTime, errorText, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
 import { rowKey, type ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { haptic } from '../ui/haptic';
 import { ago } from '../ui/util';
 import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { Wiki } from './wiki/Wiki';
@@ -17,6 +16,7 @@ import { Summary } from './summary/Summary';
 import { Meetings } from './meetings/Meetings';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
+import { AddSheet } from './AddSheet';
 import { AddTask, TaskRow, UNROLL, useActions } from './Task';
 import { TaskEditor } from './TaskEditor';
 import { Overview, Review } from './Overview';
@@ -86,6 +86,7 @@ export function Assistant() {
   const s = useSplit();
   const root = useRef<HTMLDivElement>(null);
   const [drawer, setDrawer] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [olderOpen, setOlderOpen] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
   const [calError, setCalError] = useState('');
@@ -317,13 +318,14 @@ export function Assistant() {
             )}
           </>
         )}
-        {list === 'tasks' && query == null && !drag && <button className="as-fab" aria-label="Add task" title="Add task" onClick={() => { haptic('tap'); window.dispatchEvent(new Event('tasks:add')); }}><Icon name="add" /></button>}
+        {list === 'tasks' && query == null && !drag && <button className="as-fab" aria-label="Add task" title="Add task" onClick={() => setAdding(true)}><Icon name="add" /></button>}
       </div>
       {list === 'tasks' && <SpotBack scroller={scroller} />}
 
       {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || '(Untitled)'}</div>}
       <SnackBar />
       <Composer items={snap.items} next={s.next} filter={filter} />
+      {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}
       {drawerSheet}
     </div>
   );
