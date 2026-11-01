@@ -45,6 +45,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - Copy standup, shown before 11:00 and after that as a row in the Context fold, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
   days)
+- Under the Overview greeting, one line with the meetings left, tasks due and overdue count today; hidden when all are zero
 - Do now: one ranked list of what to work on, top of the page. The order is: the next meeting when it starts within two hours (Prep),
   tasks due today flagged High or Medium, then Needs you (overdue tasks, at-risk tasks due by Friday that do not fit the free
   work time, asks and promises to confirm, Slack DMs waiting on me, the latest Slack summary's "Needs you" bullets, each once,

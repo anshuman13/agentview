@@ -8,7 +8,7 @@ import { atTime, errorText, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
 import { rowKey, type ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago } from '../ui/util';
+import { ago, plural } from '../ui/util';
 import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
@@ -186,6 +186,8 @@ export function Assistant() {
   // Today holds everything due before midnight; later tasks follow by day, so a dated action never leaves the page.
   const horizon = new Date(now).setHours(24 * (UPCOMING_DAYS + 1), 0, 0, 0);
   const dueToday = [...s.today, ...s.later.filter((r) => atTime(r.at)! < s.endOfDay)];
+  const meetingsLeft = s.meetingsToday.filter((m) => (m.ends_at ?? m.starts_at!) > Date.now()).length;
+  const dayLine = [meetingsLeft > 0 && plural(meetingsLeft, 'meeting'), dueToday.length > 0 && plural(dueToday.length, 'task'), s.overdue.length > 0 && `${s.overdue.length} overdue`].filter(Boolean).join(' · ');
   const startOfDay = new Date(now).setHours(0, 0, 0, 0);
   const days: Day[] = [{ key: 'today', label: 'Today', day: startOfDay, rows: ranked(dueToday) }];
   for (const r of s.later.filter((r) => atTime(r.at)! >= s.endOfDay)) {
@@ -260,6 +262,7 @@ export function Assistant() {
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
         <div className="as-title-wrap">
           <h1>{heading}</h1>
+          {list === 'today' && dayLine && <div className="as-dayline">{dayLine}</div>}
         </div>
         {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
         {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}

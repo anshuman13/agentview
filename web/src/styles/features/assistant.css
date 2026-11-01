@@ -16,6 +16,7 @@
 
 .as-head { flex: none; display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-8) var(--sp-8) var(--sp-4); }
 .as-title-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.as-dayline { color: var(--fg-muted); font-size: var(--fs-subheadline); font-variant-numeric: tabular-nums; }
 .as-head h1 { min-width: 0; margin: 0; font-size: var(--fs-4xl); font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .as-menu { display: none; }
 @keyframes as-pulse { to { opacity: 0.3; } }
