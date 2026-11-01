@@ -1,4 +1,15 @@
-import { lazy } from 'react';
+import { lazy, useState, type ComponentType } from 'react';
+
+// Starts loading at once and renders without suspending once loaded, so a page's enter animation never follows a skeleton.
+export function prefetch<P extends object>(load: () => Promise<ComponentType<P>>) {
+  let ready: ComponentType<P> | undefined;
+  const p = load().then((c) => (ready = c));
+  const Lazy = lazy(() => p.then((c) => ({ default: c }))) as unknown as ComponentType<P>;
+  return function Prefetched(props: P) {
+    const [C] = useState(() => ready ?? Lazy);
+    return <C {...props} />;
+  };
+}
 
 // Views that render chat markdown wait for marked too, so replies never show as plain text first.
 const withMd = <T,>(view: Promise<T>) => Promise.all([view, import('../chat/md')]).then(([m]) => m);

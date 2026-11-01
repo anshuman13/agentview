@@ -1,4 +1,4 @@
-import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
 import { useAssistant, useCodex } from './data';
@@ -21,13 +21,14 @@ import { useDrag, type Drop } from './drag';
 import { Back } from '../app/back';
 import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
 import { Skeleton } from '../ui/Skeleton';
+import { prefetch } from '../app/lazy';
 import '../styles/features/assistant.css';
 
-const TaskEditor = lazy(() => import('./TaskEditor').then((m) => ({ default: m.TaskEditor })));
-const Wiki = lazy(() => import('./wiki/Wiki').then((m) => ({ default: m.Wiki })));
-const Jobs = lazy(() => import('./jobs/Jobs').then((m) => ({ default: m.Jobs })));
-const Summary = lazy(() => import('./summary/Summary').then((m) => ({ default: m.Summary })));
-const Meetings = lazy(() => import('./meetings/Meetings').then((m) => ({ default: m.Meetings })));
+const TaskEditor = prefetch(() => import('./TaskEditor').then((m) => m.TaskEditor));
+const Wiki = prefetch(() => import('./wiki/Wiki').then((m) => m.Wiki));
+const Jobs = prefetch(() => import('./jobs/Jobs').then((m) => m.Jobs));
+const Summary = prefetch(() => import('./summary/Summary').then((m) => m.Summary));
+const Meetings = prefetch(() => import('./meetings/Meetings').then((m) => m.Meetings));
 
 const DAY = 86400_000;
 
