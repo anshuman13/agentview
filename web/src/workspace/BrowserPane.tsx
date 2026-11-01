@@ -16,6 +16,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const vp = useRef({ w: 0, h: 0 });
   const touch = useRef(false);
+  const tap = useRef({ x: 0, y: 0 });
   const [state, setState] = useState<State>({ state: 'connecting', reason: '' });
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           setCurrent(m.current);
           setPinned(m.pinned);
         }
+        if (m.t === 'editable' && !m.on && document.activeElement === kbd.current) kbd.current?.blur();
         if (m.t === 'frame' && img.current) {
           vp.current = { w: m.w, h: m.h };
           img.current.src = `data:image/jpeg;base64,${m.data}`;
@@ -106,6 +108,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
     e.currentTarget.setPointerCapture(e.pointerId);
     if (e.pointerType !== 'mouse') {
       touch.current = true;
+      tap.current = { x: e.clientX, y: e.clientY };
       send({ t: 'touch', type: 'touchStart', ...pos(e) });
       return;
     }
@@ -123,6 +126,8 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const onUp = (e: React.PointerEvent) => {
     if (e.pointerType !== 'mouse') {
       if (touch.current) send({ t: 'touch', type: 'touchEnd', ...pos(e) });
+      // Focus inside the tap itself, as phones only open the keyboard from a user gesture.
+      if (touch.current && Math.hypot(e.clientX - tap.current.x, e.clientY - tap.current.y) < 8) kbd.current?.focus({ preventScroll: true });
       touch.current = false;
       return;
     }

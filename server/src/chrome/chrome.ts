@@ -16,6 +16,7 @@ let nextId = 1;
 const calls = new Map<number, { resolve: (r: any) => void; reject: (e: Error) => void }>();
 const tabs = new Map<string, Tab>();
 const viewers = new Set<WebSocket>();
+const EDITABLE = "(() => { const a = document.activeElement; return !!a && (a.isContentEditable || /^(INPUT|TEXTAREA)$/.test(a.tagName)); })()";
 const selfOrigins = new Set<string>();
 let pinned: string | null = null;
 let watching: { target: string; session: string } | null = null;
@@ -345,6 +346,12 @@ function stop() {
 
 const BUTTONS = new Set(['left', 'right', 'middle', 'none']);
 
+// The phone opened its keyboard on the tap; it closes again unless the tap landed in a text field.
+async function editable(ws: WebSocket, s: string) {
+  const { result } = await call('Runtime.evaluate', { expression: EDITABLE, returnByValue: true }, s, 3000).catch(() => ({ result: { value: false } }));
+  if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: 'editable', on: result?.value === true }));
+}
+
 async function input(m: any, ws: WebSocket) {
   const s = watching?.session;
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
@@ -411,7 +418,10 @@ async function input(m: any, ws: WebSocket) {
       const x = num(m.x);
       const y = num(m.y);
       const ends = m.type === 'touchEnd' || m.type === 'touchCancel';
-      if (emulated?.session === s && emulated.key) return call('Input.dispatchTouchEvent', { type: m.type, touchPoints: ends ? [] : [{ x, y }] }, s);
+      if (emulated?.session === s && emulated.key) {
+        await call('Input.dispatchTouchEvent', { type: m.type, touchPoints: ends ? [] : [{ x, y }] }, s);
+        return m.type === 'touchEnd' ? editable(ws, s) : undefined;
+      }
       const t = touches.get(ws);
       if (m.type === 'touchStart') return void touches.set(ws, { x, y, moved: false });
       if (!t) return;
@@ -423,7 +433,8 @@ async function input(m: any, ws: WebSocket) {
       touches.delete(ws);
       if (m.type === 'touchCancel' || t.moved) return;
       await call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 }, s);
-      return call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 }, s);
+      await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 }, s);
+      return editable(ws, s);
     }
   }
 }
