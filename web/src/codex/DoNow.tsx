@@ -92,16 +92,19 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
     open: () => openMeeting(meeting), act: { label: 'Prep', run: onPrep },
   }] : [];
   const items = [...meetingItem, ...flagged, ...fromNeeds, ...todays.filter((i) => !flagged.includes(i))];
-  if (!items.length) return nextUp ? <Ahead next={nextUp} now={now} /> : null;
+  const ahead = nextUp && !todays.length && !meeting ? <Ahead next={nextUp} now={now} /> : null;
+  if (!items.length) return ahead;
   const rest = items.slice(TOP);
   const weekend = [0, 6].includes(new Date(now).getDay());
   const button = (i: Item) => i.act.href
     ? <a className="btn btn-sm btn-tinted" href={i.act.href} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{i.act.label}</a>
     : <button className="btn btn-sm btn-tinted" onClick={(e) => { e.stopPropagation(); i.act.run?.(); }}>{i.act.label}</button>;
   return (
+    <>
+    {weekend && ahead}
     <section className="fc">
       <div className="as-section next">{weekend ? 'When you are back' : 'Do now'}</div>
-      {weekend && <p className="fc-rest">It's the weekend. All of this can wait until Monday.</p>}
+      {weekend && !ahead && <p className="fc-rest">It's the weekend. All of this can wait until Monday.</p>}
       <ol className="fc-top">
         {items.slice(0, TOP).map((i, n) => (
           <li key={i.key} className={`fc-item${i.hot && !weekend ? ' hot' : ''}`} onClick={i.open}>
@@ -136,6 +139,8 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
         </>
       )}
     </section>
+    {!weekend && ahead}
+    </>
   );
 }
 

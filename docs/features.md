@@ -53,7 +53,8 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   done that day, which the hub writes with Haiku when nothing work is open today (again when that day's tasks or meetings
   change, at most hourly), then the task and meeting counts and the task to start with, under "Nothing is due today",
   or on a Saturday or Sunday "It's the weekend. Nothing is due until Tuesday". On a weekend with things to do the list is
-  titled When you are back, says it can wait until Monday and drops the red numbers. The first three are numbered cards (red number when late, waiting or
+  titled When you are back, says it can wait until Monday and drops the red numbers; the next day's summary sits above it on a
+  weekend and below it on a weekday. The first three are numbered cards (red number when late, waiting or
   about to start) with the thing to do, why and its source, and one action: Done (or Tomorrow) for tasks, Reply (or Handled)
   for Slack and DMs, Mine (or Not mine) for asks. The rest follow under Then with one action each, 5 shown, Show N more
 - A meeting starting within 15 minutes or running shows its full card under Now above Do now, with prep, a note field and the room mic toggle
