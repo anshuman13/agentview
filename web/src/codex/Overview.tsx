@@ -472,7 +472,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       </Fold>
       {empty && (
         <div className="ov-empty muted small">
-          <div>Nothing today</div>
+          <div>{s.doneToday.length ? `All clear. ${plural(s.doneToday.length, 'task')} done today.` : 'Nothing today'}</div>
           {s.nextLater && <div>Next: {when(s.nextLater.starts_at!)} {s.nextLater.title}</div>}
         </div>
       )}
