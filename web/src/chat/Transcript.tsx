@@ -22,6 +22,7 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
   const box = useRef<HTMLDivElement>(null);
   const rows = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
+  const size = useRef('');
   const [stuck, setStuck] = useState(true);
   const [behind, setBehind] = useState(false);
   const lastUser = useRef('');
@@ -48,7 +49,9 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
     if (!el || !rows.current) return;
     const ro = new ResizeObserver(() => {
       if (stick.current) el.scrollTop = el.scrollHeight;
+      size.current = `${el.scrollHeight},${el.clientHeight}`;
     });
+    ro.observe(el);
     ro.observe(rows.current);
     return () => ro.disconnect();
   }, []);
@@ -67,6 +70,9 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
   const onScroll = () => {
     const el = box.current;
     if (!el) return;
+    // The browser scrolls on its own when the content or box changes size; only a scroll at a steady size is the user's.
+    const now = `${el.scrollHeight},${el.clientHeight}`;
+    if (now !== size.current) { size.current = now; return; }
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     stick.current = near;
     setStuck(near);

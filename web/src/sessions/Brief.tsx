@@ -119,12 +119,20 @@ export function Brief() {
   useEffect(() => scrollEnd(false), [turns.length, next.length, running, waiting]);
 
   // Cards settle after the first paint (clipped replies, Markdown, the plan card), so a pane at the bottom follows them.
+  // A scroll the browser makes because the content or pane changed size (a chat swap clamps it to the top) does not unstick it.
   useEffect(() => {
     const sc = root.current?.querySelector<HTMLElement>('.brief-status');
     if (!sc) return;
     let stick = true;
-    const onScroll = () => { stick = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80; };
-    const ro = new ResizeObserver(() => { if (stick) sc.scrollTop = sc.scrollHeight; });
+    let size = '';
+    const measure = () => `${sc.scrollHeight},${sc.clientHeight}`;
+    const onScroll = () => {
+      const now = measure();
+      if (now === size) stick = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80;
+      size = now;
+    };
+    const ro = new ResizeObserver(() => { if (stick) sc.scrollTop = sc.scrollHeight; size = measure(); });
+    ro.observe(sc);
     for (const c of sc.children) ro.observe(c);
     sc.addEventListener('scroll', onScroll);
     return () => { ro.disconnect(); sc.removeEventListener('scroll', onScroll); };
