@@ -45,16 +45,17 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - Copy standup, shown before 11:00 and after that as a row in the Context fold, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today
   (today's meetings and the tasks Plan my day would place, with times) and Blocked (Waiting on items older than two
   days)
-- Under the Overview greeting, one line with the meetings left, tasks due and overdue count today; hidden when all are zero
+- Later and Context on Overview are rows of one grouped card that open in place
+- Under the Overview greeting, one line with the meetings left, tasks due and overdue count today, or Nothing due today (Weekend, nothing due today on Saturday and Sunday)
 - Do now: one ranked list of what to work on, top of the page. The order is: the next meeting when it starts within two hours (Prep),
   tasks due today flagged High or Medium, then Needs you (overdue tasks, at-risk tasks due by Friday that do not fit the free
   work time, asks and promises to confirm, Slack DMs waiting on me, the latest Slack summary's "Needs you" bullets, each once,
   three or more overdue collapsing into Clear N overdue with Move to today), then the rest of today's tasks by priority and
   time. With nothing to do today it sums up the next day with tasks instead of listing them: a few sentences on what to get
   done that day, which the hub writes with Haiku when nothing work is open today (again when that day's tasks or meetings
-  change, at most hourly), then the task and meeting counts and the task to start with, under "Nothing is due today",
-  or on a Saturday or Sunday "It's the weekend. Nothing is due until Tuesday". On a weekend with things to do the list is
-  titled When you are back, says it can wait until Monday and drops the red numbers; the next day's summary sits above it on a
+  change, at most hourly), then big counts (tasks with estimated time, meetings with their time, first meeting) and a Start
+  with row for the top task, in one card under that day's name. On a weekend with things to do the list is titled When you
+  are back and drops the red numbers; the next day's summary sits above it on a
   weekend and below it on a weekday. The first three are numbered cards (red number when late, waiting or
   about to start) with the thing to do, why and its source, and one action: Done (or Tomorrow) for tasks, Reply (or Handled)
   for Slack and DMs, Mine (or Not mine) for asks. The rest follow under Then with one action each (task rows also swipe right for Done, left for Tomorrow), 5 shown, Show N more

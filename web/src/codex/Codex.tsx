@@ -187,7 +187,8 @@ export function Assistant() {
   const horizon = new Date(now).setHours(24 * (UPCOMING_DAYS + 1), 0, 0, 0);
   const dueToday = [...s.today, ...s.later.filter((r) => atTime(r.at)! < s.endOfDay)];
   const meetingsLeft = s.meetingsToday.filter((m) => (m.ends_at ?? m.starts_at!) > Date.now()).length;
-  const dayLine = [meetingsLeft > 0 && plural(meetingsLeft, 'meeting'), dueToday.length > 0 && plural(dueToday.length, 'task'), s.overdue.length > 0 && `${s.overdue.length} overdue`].filter(Boolean).join(' · ');
+  const dayLine = [meetingsLeft > 0 && plural(meetingsLeft, 'meeting'), dueToday.length > 0 && plural(dueToday.length, 'task'), s.overdue.length > 0 && `${s.overdue.length} overdue`].filter(Boolean).join(' · ')
+    || (s.overdue.length + dueToday.length ? '' : [0, 6].includes(new Date().getDay()) ? 'Weekend, nothing due today' : 'Nothing due today');
   const startOfDay = new Date(now).setHours(0, 0, 0, 0);
   const days: Day[] = [{ key: 'today', label: 'Today', day: startOfDay, rows: ranked(dueToday) }];
   for (const r of s.later.filter((r) => atTime(r.at)! >= s.endOfDay)) {

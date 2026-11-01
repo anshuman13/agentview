@@ -105,7 +105,6 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
     {weekend && ahead}
     <section className="fc">
       <div className="as-section next">{weekend ? 'When you are back' : 'Do now'}</div>
-      {weekend && !ahead && <p className="fc-rest">It's the weekend. All of this can wait until Monday.</p>}
       <ol className="fc-top">
         {items.slice(0, TOP).map((i, n) => (
           <li key={i.key} className={`fc-item${i.hot && !weekend ? ' hot' : ''}`} onClick={i.open}>
@@ -150,29 +149,30 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
 
 type Ahead = { label: string; tomorrow: boolean; tasks: ItemRow[]; meetings: Meeting[] };
 
-// Nothing to do today: say so, and on a weekend say rest, then sum up the next day with the hub's written summary and its counts.
+// Nothing to do today: the next day at a glance, with the hub's written summary, its counts and the task to start with.
 function Ahead({ next, now }: { next: Ahead; now: number }) {
-  const day = next.tomorrow ? 'tomorrow' : new Date(atTime(next.tasks[0].at)!).toLocaleDateString(undefined, { weekday: 'long' });
-  const weekend = [0, 6].includes(new Date(now).getDay());
   const ts = [...next.tasks].sort((a, b) => rankTask(b, now) - rankTask(a, now) || (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0));
-  const est = ts.map((r) => estimateMin(r.title)).filter((m): m is number => m != null);
+  const est = ts.map((r) => estimateMin(r.title)).filter((m): m is number => m != null).reduce((a, b) => a + b, 0);
   const ms = [...next.meetings].sort((a, b) => a.starts_at! - b.starts_at!);
-  const meetMin = ms.reduce((n, m) => n + Math.max(0, ((m.ends_at ?? m.starts_at!) - m.starts_at!) / 60000), 0);
+  const meetMin = Math.round(ms.reduce((n, m) => n + Math.max(0, ((m.ends_at ?? m.starts_at!) - m.starts_at!) / 60000), 0));
   const flagged = ts.filter((r) => (r.priority ?? 0) >= 2).length;
   const start = new Date(atTime(ts[0].at)!).setHours(0, 0, 0, 0);
   const brief = useAssistantData().briefs.find((b) => !b.deleted && b.kind === 'ahead' && b.from_at === start && b.text);
-  const facts = [
-    [plural(ts.length, 'task'), est.length > 0 && `about ${minutesText(est.reduce((a, b) => a + b, 0))}`, flagged > 0 && `${flagged} flagged`].filter(Boolean).join(', '),
-    ms.length > 0 && `${plural(ms.length, 'meeting')}, ${minutesText(Math.round(meetMin))}, first at ${clock(ms[0].starts_at!)}`,
-  ].filter(Boolean).join(' · ');
+  const stats: [string | number, string][] = [
+    [ts.length, `${ts.length === 1 ? 'task' : 'tasks'}${est ? `, ${minutesText(est)}` : ''}`],
+    [ms.length, `${ms.length === 1 ? 'meeting' : 'meetings'}${meetMin ? `, ${minutesText(meetMin)}` : ''}`],
+    ...(ms.length ? [[clock(ms[0].starts_at!), 'first meeting'] as [string, string]] : flagged ? [[flagged, 'flagged'] as [number, string]] : []),
+  ];
   return (
     <section className="fc">
       <div className="as-section">{next.label}</div>
-      <p className="fc-rest">{weekend ? `It's the weekend. Nothing is due until ${day}.` : `Nothing is due today. Next up ${day}.`}</p>
       <div className="fc-ahead">
         {brief && <p className="fc-summary">{brief.text}</p>}
-        <span className="muted small">{facts}</span>
-        <button className="fc-first" onClick={() => openTask(ts[0])}><span className="muted small">Start with</span><span>{ts[0].title ?? '(Untitled)'}</span></button>
+        <div className="fc-stats">{stats.map(([n, l]) => <div key={l}><b>{n}</b><span>{l}</span></div>)}</div>
+        <button className="fc-first" onClick={() => openTask(ts[0])}>
+          <span><span className="muted small">Start with</span>{ts[0].title ?? '(Untitled)'}</span>
+          <Icon name="chevron-right" small />
+        </button>
       </div>
     </section>
   );

@@ -422,6 +422,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           {upcoming.length > 3 && <button className="as-chip quiet ov-more" onClick={() => setView({ list: 'meetings', open: null })}>+{upcoming.length - 3} more</button>}
         </section>
       )}
+      <div className="ov-group">
       <Fold id="later" title="Later" count={laterCount}>
         <Stale rows={stale} now={now} snooze={snooze} />
         <FollowThrough f={follow} />
@@ -470,6 +471,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           </section>
         )}
       </Fold>
+      </div>
       {empty && (
         <div className="ov-empty muted small">
           <div>{s.doneToday.length ? `All clear. ${plural(s.doneToday.length, 'task')} done today.` : 'Nothing today'}</div>
