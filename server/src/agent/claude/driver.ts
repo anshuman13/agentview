@@ -177,6 +177,10 @@ export class ClaudeDriver implements AgentDriver {
     if (this.q) this.restart();
   }
 
+  kill() {
+    this.q?.close();
+  }
+
   close() {
     this.closed = true;
     clearInterval(this.usageTimer);

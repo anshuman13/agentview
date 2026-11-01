@@ -16,6 +16,7 @@ const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
 
 const RETRY_COMPACT_GROWTH = 20_000;
+const STOP_TIMEOUT = 15_000;
 
 export class AgentSession implements AgentHost {
   readonly driver: AgentDriver;
@@ -132,6 +133,12 @@ export class AgentSession implements AgentHost {
     this.setSession({ stopping: true });
     try {
       await this.driver.interrupt(cancelQueued);
+      // A CLI stuck in a tool (such as a macOS privacy prompt) never ends the turn, so end the process.
+      setTimeout(() => {
+        if (!this.state.session.stopping) return;
+        this.system('Claude did not stop, so its process was ended');
+        this.driver.kill();
+      }, STOP_TIMEOUT).unref?.();
     } catch (err) {
       this.setSession({ stopping: false });
       this.system(`Stop failed: ${String(err)}`);

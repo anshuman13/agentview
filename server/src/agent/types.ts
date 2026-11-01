@@ -49,6 +49,8 @@ export interface AgentDriver {
   loadHistory(): Promise<History | null>;
   watchHistory(on: boolean): void;
   settled(): void;
+  // Ends a CLI that stopped answering; the session hears exited().
+  kill(): void;
   close(): void;
 }
 
