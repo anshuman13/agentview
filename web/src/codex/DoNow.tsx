@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useAssistantData, useAssistantStore } from './data';
 import { atTime, nextNine } from './data/engine';
 import type { ItemRow } from './data/sync';
@@ -14,9 +14,10 @@ import { haptic } from '../ui/haptic';
 import { openMeeting, openTask, setView, showSnack } from './view';
 import { clock, when } from './time';
 import { Flag } from './AddSheet';
+import { Swipe } from './Swipe';
 
 type Act = { label: string; run?: () => void; href?: string };
-type Item = { key: string; icon: string; title: string; why: string; hot?: boolean; priority?: number | null; open: () => void; act: Act; done?: () => void; doneLabel?: string };
+type Item = { key: string; swipe?: { done: () => void; later: () => void }; icon: string; title: string; why: string; hot?: boolean; priority?: number | null; open: () => void; act: Act; done?: () => void; doneLabel?: string };
 
 const TOP = 3;
 const MORE = 5;
@@ -44,7 +45,7 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   };
   const task = (r: ItemRow, why: string, hot = false): Item => ({
     key: `t:${r.profile}:${r.id}`, icon: channelOf(r).icon ?? 'circle-large-outline', title: r.title ?? '(Untitled)', why, hot, priority: r.priority,
-    open: () => openTask(r), act: { label: 'Done', run: done(r) }, done: () => snooze(r), doneLabel: 'Tomorrow',
+    open: () => openTask(r), act: { label: 'Done', run: done(r) }, done: () => snooze(r), doneLabel: 'Tomorrow', swipe: { done: done(r), later: () => snooze(r) },
   });
   const timeOf = (r: ItemRow) => { const t = atTime(r.at); return t != null && new Date(t).getHours() + new Date(t).getMinutes() > 0 && t > now ? `at ${clock(t)}` : ''; };
   const prio = (r: ItemRow) => (['', 'Low priority', 'Medium priority', 'High priority'][r.priority ?? 0] ?? '');
@@ -124,16 +125,19 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
         <>
           <div className="as-section">Then · {rest.length}</div>
           <div className="ov-follow">
-            {(all ? rest : rest.slice(0, MORE)).map((i) => (
-              <div key={i.key} className="ov-follow-row">
-                <button className="ov-follow-text" onClick={i.open}>
-                  <span className="ov-t">{i.title}</span>
-                  <span className="muted small">{i.why}</span>
-                </button>
-                {i.priority ? <Flag priority={i.priority} /> : null}
-                {button(i)}
-              </div>
-            ))}
+            {(all ? rest : rest.slice(0, MORE)).map((i) => {
+              const row = (
+                <div className="ov-follow-row">
+                  <button className="ov-follow-text" onClick={i.open}>
+                    <span className="ov-t">{i.title}</span>
+                    <span className="muted small">{i.why}</span>
+                  </button>
+                  {i.priority ? <Flag priority={i.priority} /> : null}
+                  {button(i)}
+                </div>
+              );
+              return i.swipe ? <Swipe key={i.key} onRight={i.swipe.done} onLeft={i.swipe.later}>{row}</Swipe> : <Fragment key={i.key}>{row}</Fragment>;
+            })}
             {!all && rest.length > MORE && <button className="fc-more" onClick={() => setAll(true)}>Show {rest.length - MORE} more</button>}
           </div>
         </>

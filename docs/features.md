@@ -57,7 +57,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   titled When you are back, says it can wait until Monday and drops the red numbers; the next day's summary sits above it on a
   weekend and below it on a weekday. The first three are numbered cards (red number when late, waiting or
   about to start) with the thing to do, why and its source, and one action: Done (or Tomorrow) for tasks, Reply (or Handled)
-  for Slack and DMs, Mine (or Not mine) for asks. The rest follow under Then with one action each, 5 shown, Show N more
+  for Slack and DMs, Mine (or Not mine) for asks. The rest follow under Then with one action each (task rows also swipe right for Done, left for Tomorrow), 5 shown, Show N more
 - A meeting starting within 15 minutes or running shows its full card under Now above Do now, with prep, a note field and the room mic toggle
 - Later (folded, count in the header, state remembered): Stale (tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, oldest first, with a check and a clock), the follow-through card (meeting actions still open after a week: Task, Done, Dismiss), Keep in touch and tomorrow's tasks; hidden when empty. Every list of more than 5 rows in Later and the task lists shows +N more that expands in place, then Show fewer. All folds use one header, Title N, and the meeting page folds (Unassigned, Others took, Not mine) start closed each visit
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a

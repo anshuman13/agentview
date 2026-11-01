@@ -7,10 +7,10 @@ const SWIPE = 80;
 // A left swipe past this share of the row deletes instead of snoozing.
 const SWIPE_DELETE = 0.55;
 
-export function Swipe({ onRight, onLeft, leftLabel = 'Tomorrow', onDelete, children }: { onRight?: () => void; onLeft?: () => void; leftLabel?: string; onDelete: () => void; children: React.ReactNode }) {
+export function Swipe({ onRight, onLeft, leftLabel = 'Tomorrow', onDelete, children }: { onRight?: () => void; onLeft?: () => void; leftLabel?: string; onDelete?: () => void; children: React.ReactNode }) {
   const [dx, setDx] = useState(0);
   const width = useRef(1);
-  const deleting = dx < 0 && (!onLeft || -dx > width.current * SWIPE_DELETE);
+  const deleting = !!onDelete && dx < 0 && (!onLeft || -dx > width.current * SWIPE_DELETE);
   const from = useRef<{ x: number; y: number } | null>(null);
   const moving = useRef(false);
   const swiped = useRef(false);
@@ -32,7 +32,7 @@ export function Swipe({ onRight, onLeft, leftLabel = 'Tomorrow', onDelete, child
             moving.current = true;
             e.currentTarget.setPointerCapture(e.pointerId);
           }
-          setDx(mx > 0 ? (onRight ? mx : 0) : mx);
+          setDx(mx > 0 ? (onRight ? mx : 0) : onLeft || onDelete ? mx : 0);
         }}
         onPointerUp={() => {
           if (moving.current) { swiped.current = true; setTimeout(() => { swiped.current = false; }, 0); }
