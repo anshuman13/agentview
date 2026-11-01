@@ -9,7 +9,7 @@ const PORT_FILE = path.join(os.homedir(), 'Library/Application Support/Google/Ch
 const CDP = process.env.CHROME_CDP;
 delete process.env.CHROME_CDP;
 const PROFILE = path.join(os.homedir(), '.agentview/chrome');
-const PROFILE_PORT = 9333;
+export const PROFILE_PORT = 9333;
 
 export const ownProfile = () => existsSync(PROFILE);
 

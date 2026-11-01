@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
 import { DATA_RULES, dataTools } from './data.js';
 import { WIKI_RULES, wikiTools } from './wiki.js';
+import { ownProfile, PROFILE_PORT } from '../../chrome/launch.js';
 
 export const TEAM = { model: 'opusplan', advisor: 'claude-opus-5-5' };
 
@@ -18,6 +19,11 @@ const INSTRUCTIONS = [
   WIKI_RULES,
   DATA_RULES,
 ].join(' ');
+
+// A Mac with its own AgentView Chrome lets chats drive it too: the Browser tab shows it and it holds its own logins.
+const OWN_CHROME = "This Mac also runs AgentView's own Chrome, driven with the mcp__browser tools. Use it when the user asks for the AgentView browser, or when a site in Claude in Chrome is signed in to the wrong account.";
+const ownChrome = (): Record<string, McpServerConfig> =>
+  ownProfile() ? { browser: { type: 'stdio', command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {};
 
 function statusServer(onStatus: (text: string) => void, o: { cwd: string; chat: () => string | null }) {
   return createSdkMcpServer({
@@ -64,7 +70,7 @@ export function agentOptions(o: {
     forkSession: o.fork,
     effort: o.effort,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(o.configDir && { CLAUDE_CONFIG_DIR: o.configDir }) },
-    systemPrompt: { type: 'preset', preset: 'claude_code', append: INSTRUCTIONS },
+    systemPrompt: { type: 'preset', preset: 'claude_code', append: ownProfile() ? `${INSTRUCTIONS} ${OWN_CHROME}` : INSTRUCTIONS },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
     enableFileCheckpointing: true,
@@ -72,7 +78,7 @@ export function agentOptions(o: {
     disallowedTools: ['mcp__playwright'],
     extraArgs: { chrome: null },
     permissionMode: 'auto',
-    mcpServers: { agentview: statusServer(o.onStatus, { cwd: o.cwd, chat: o.chat }), ...o.mcp },
+    mcpServers: { agentview: statusServer(o.onStatus, { cwd: o.cwd, chat: o.chat }), ...ownChrome(), ...o.mcp },
     toolConfig: { askUserQuestion: { previewFormat: 'markdown' } },
     canUseTool: o.canUseTool,
     perTaskStopAffordance: true,
