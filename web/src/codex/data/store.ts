@@ -68,7 +68,10 @@ export abstract class BaseStore {
     this.subs.forEach((fn) => fn());
   }
 
+  // A sync tick repeats the same status most of the time; only a change re-renders the app.
   protected setSync(patch: Partial<SyncStatus>) {
+    const cur = this.snap.sync as Record<string, unknown>;
+    if (Object.entries(patch).every(([k, v]) => v === cur[k] || JSON.stringify(v) === JSON.stringify(cur[k]))) return;
     this.set({ sync: { ...this.snap.sync, ...patch } });
   }
 
@@ -100,20 +103,22 @@ export abstract class BaseStore {
 
   private async loop() {
     this.setSync({ syncing: true });
+    let last = 0;
     try {
       do {
         this.again = false;
         let changed = true;
         try {
           changed = await this.syncOnce();
-          if (this.ready) this.setSync({ last: Date.now(), error: '' });
+          if (this.ready) last = Date.now();
         } catch (err) {
+          last = 0;
           if (this.ready) this.setSync({ error: errorText(err) });
         }
         if (changed) await this.refresh().catch(() => {});
       } while (this.again && this.ready);
     } finally {
-      this.setSync({ syncing: false });
+      this.setSync({ syncing: false, ...(last && { last, error: '' }) });
     }
   }
 }
