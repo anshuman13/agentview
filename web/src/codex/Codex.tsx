@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
 import { useAssistant, useCodex } from './data';
@@ -10,15 +10,10 @@ import { rowKey, type ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { ago } from '../ui/util';
 import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useSpotBack, useView, type Filter, type List } from './view';
-import { Wiki } from './wiki/Wiki';
-import { Jobs } from './jobs/Jobs';
-import { Summary } from './summary/Summary';
-import { Meetings } from './meetings/Meetings';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
 import { AddSheet } from './AddSheet';
 import { AddTask, TaskRow, UNROLL, useActions } from './Task';
-import { TaskEditor } from './TaskEditor';
 import { Overview, Review } from './Overview';
 import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
@@ -28,6 +23,11 @@ import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
 import { Skeleton } from '../ui/Skeleton';
 import '../styles/features/assistant.css';
 
+const TaskEditor = lazy(() => import('./TaskEditor').then((m) => ({ default: m.TaskEditor })));
+const Wiki = lazy(() => import('./wiki/Wiki').then((m) => ({ default: m.Wiki })));
+const Jobs = lazy(() => import('./jobs/Jobs').then((m) => ({ default: m.Jobs })));
+const Summary = lazy(() => import('./summary/Summary').then((m) => ({ default: m.Summary })));
+const Meetings = lazy(() => import('./meetings/Meetings').then((m) => ({ default: m.Meetings })));
 
 const DAY = 86400_000;
 
@@ -162,7 +162,9 @@ export function Assistant() {
   if (current) {
     return (
       <div className="assistant wide" ref={root}>
-        <TaskEditor key={rowKey(current)} row={current} onClose={close} onAsk={askAbout} />
+        <Suspense fallback={<Skeleton />}>
+          <TaskEditor key={rowKey(current)} row={current} onClose={close} onAsk={askAbout} />
+        </Suspense>
         <SnackBar />
         {drawerSheet}
       </div>
@@ -173,7 +175,7 @@ export function Assistant() {
     const Page = { wiki: Wiki, meetings: Meetings, jobs: Jobs, summary: Summary }[list];
     return (
       <div className="assistant wide" ref={root}>
-        <Page onMenu={() => setDrawer(true)} />
+        <Suspense fallback={<Skeleton />}><Page onMenu={() => setDrawer(true)} /></Suspense>
         <SnackBar />
         {drawerSheet}
       </div>

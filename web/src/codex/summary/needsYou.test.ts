@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { needsYou } from './Summary';
+import { needsYou } from './needsYou';
 
 it('keeps reading bullets after an intro line and stops at the next heading', () => {
   const text = ['## Needs you', 'These are waiting on you:', '- [Review](https://x.test/1): Ann asked. More later.', '- **Budget**: due Friday', '## FYI', '- Not this'].join('\n');

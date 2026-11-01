@@ -4,7 +4,7 @@ import { atTime, nextNine } from './data/engine';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
 import { estimateMin, minutesText } from './data/plan';
-import { peopleOf } from './meetings/Meetings';
+import { peopleOf } from './data/meetings';
 import { channelOf } from './taskSource';
 import { UNROLL, unrollFor, useActions } from './useActions';
 import type { useNeedsYou } from './NeedsYou';
