@@ -60,6 +60,10 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
     const ok = await notify(a.title, '', a.text, '').catch(() => false);
     return { content: [{ type: 'text', text: ok ? 'sent' : 'push is not set up, so nothing was sent' }] };
   });
+  const stop = tool('stop_job', 'Turn this job off so it does not run again, for a job whose work is done.', {}, async () => {
+    applyChanges(db, [{ table: 'jobs', id: job.id, profile: job.profile, updated_at: Date.now(), fields: { enabled: 0, next_run_at: null } }]);
+    return { content: [{ type: 'text', text: 'turned off' }] };
+  });
   const allow = jobAllows(job.tools);
   const browser = allow.browser && ownProfile();
   const prompt = [
@@ -69,7 +73,7 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
       ? `This runs on a schedule with no one watching. Only read, except with the tools this job allows: ${allow.names.join(', ')}.`
       : 'This runs on a schedule with no one watching. Only read: do not send, post, create or change anything outside Codex.',
     ...(browser ? ['The mcp__browser tools drive AgentView\'s own Chrome, which holds its own logins. Wait for a page to finish loading before you read it.'] : []),
-    'Use add_task for anything I need to act on and notify for anything I must see right away. End with a short plain-text result for a phone notification. Do not use the em dash character.',
+    'Use add_task for anything I need to act on, notify for anything I must see right away, and stop_job once its work is done for good. End with a short plain-text result for a phone notification. Do not use the em dash character.',
   ].join('\n');
   let result = '';
   for await (const m of ask(account, prompt, {
@@ -78,10 +82,10 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
     cwd: os.tmpdir(),
     tools: ['WebSearch', 'WebFetch'],
     mcpServers: {
-      codex: createSdkMcpServer({ name: 'codex', tools: [addTask, push] }),
+      codex: createSdkMcpServer({ name: 'codex', tools: [addTask, push, stop] }),
       ...(browser ? { browser: { type: 'stdio' as const, command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {}),
     },
-    allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task', 'mcp__codex__notify'],
+    allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task', 'mcp__codex__notify', 'mcp__codex__stop_job'],
     canUseTool: async (name, input) => (canRead(name) || allow.allows(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'This job can only read and use the tools it allows.' }),
   }, 20 * 60_000)) {
     if (m.type === 'result') {
@@ -140,7 +144,9 @@ export async function runDue(db: Database, now = Date.now(), run: typeof runJob 
     // comes from the client's clock, so only whether it changed is compared.
     const cur = db.prepare('SELECT schedule, enabled, field_times FROM jobs WHERE id = ? AND profile = ?').get(job.id, job.profile) as { schedule: string | null; enabled: number | null; field_times: string } | null;
     if (cur && JSON.parse(cur.field_times).next_run_at === planned) {
-      changes.push({ table: 'jobs', id: job.id, profile: job.profile, updated_at: done, fields: { next_run_at: cur.enabled ? nextRun(cur.schedule, done) : null } });
+      // A schedule with no run left (a one-off) turns the job off.
+      const next = cur.enabled ? nextRun(cur.schedule, done) : null;
+      changes.push({ table: 'jobs', id: job.id, profile: job.profile, updated_at: done, fields: next == null ? { next_run_at: null, enabled: 0 } : { next_run_at: next } });
     }
     applyChanges(db, changes);
     prune(db, job, done);
