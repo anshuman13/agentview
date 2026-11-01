@@ -179,6 +179,7 @@ export async function summarizeSlack(db: Database, now = Date.now()) {
     `Summarize my Slack since ${new Date(from).toISOString()}. I am Slack user ${c.me}. Do not send or change anything in Slack.`,
     'Below are running summaries per chat and my open asks. Read threads with the Slack tools when you need detail.',
     'Write markdown with these sections, skipping empty ones: **Needs you**, **Decided**, **Worth following**. Short bullets, each with a [link](permalink) and who.',
+    'Needs you holds only messages that wait for my reply, review or decision. A notice with nothing to answer, such as a booking or a status update, goes under Worth following.',
     'Call suggest_task for each thing I should do that is not already an open ask.',
     'Do not use the em dash character.',
     '',
