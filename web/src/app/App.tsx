@@ -245,11 +245,22 @@ export function App() {
   useEffect(() => {
     if (!touch()) return;
     const text = (el: Element | null) => !!el && (el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && /^(text|search|url|email|tel|password|number)$/.test(el.type)) || (el as HTMLElement).isContentEditable);
-    const sync = () => document.querySelector('.workbench')?.toggleAttribute('data-kbd', text(document.activeElement));
+    // Android's back gesture closes the keyboard but leaves the field focused, so the keyboard counts as up only while the viewport is short.
+    const vv = window.visualViewport;
+    const tall = new Map<number, number>();
+    const up = () => {
+      const h = vv?.height ?? window.innerHeight;
+      const full = Math.max(tall.get(window.innerWidth) ?? 0, h);
+      tall.set(window.innerWidth, full);
+      return h < full - 120;
+    };
+    const sync = () => document.querySelector('.workbench')?.toggleAttribute('data-kbd', text(document.activeElement) && up());
+    up();
     document.addEventListener('focusin', sync);
     const out = () => { setTimeout(sync); };
     document.addEventListener('focusout', out);
-    return () => { document.removeEventListener('focusin', sync); document.removeEventListener('focusout', out); };
+    vv?.addEventListener('resize', sync);
+    return () => { document.removeEventListener('focusin', sync); document.removeEventListener('focusout', out); vv?.removeEventListener('resize', sync); };
   }, []);
   const goSide = (v: View) => { haptic(); setMore(false); setView(v); setTab('repos'); };
   const swipeTabs = [() => goTab('assistant'), () => goTab('chat'), () => goSide('chats'), () => goTab('agents')];
