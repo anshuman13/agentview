@@ -118,12 +118,17 @@ export function Brief() {
   };
   useEffect(() => scrollEnd(false), [turns.length, next.length, running, waiting]);
 
-  // Cards settle after the first paint (clipped replies, the plan card), so scroll once more a moment later.
+  // Cards settle after the first paint (clipped replies, Markdown, the plan card), so a pane at the bottom follows them.
   useEffect(() => {
-    scrollEnd(true);
-    const t = setTimeout(() => scrollEnd(true), 400);
-    return () => clearTimeout(t);
-  }, [sessionId]);
+    const sc = root.current?.querySelector<HTMLElement>('.brief-status');
+    if (!sc) return;
+    let stick = true;
+    const onScroll = () => { stick = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80; };
+    const ro = new ResizeObserver(() => { if (stick) sc.scrollTop = sc.scrollHeight; });
+    for (const c of sc.children) ro.observe(c);
+    sc.addEventListener('scroll', onScroll);
+    return () => { ro.disconnect(); sc.removeEventListener('scroll', onScroll); };
+  }, [sessionId, full, showAgents]);
 
   return (
     <div className="brief" ref={root}>

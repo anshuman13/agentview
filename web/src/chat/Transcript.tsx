@@ -20,6 +20,7 @@ export function Transcript() {
 function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: string; running: boolean }) {
   const items = useMemo(() => buildTranscript(events), [events]);
   const box = useRef<HTMLDivElement>(null);
+  const rows = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
   const [stuck, setStuck] = useState(true);
   const [behind, setBehind] = useState(false);
@@ -40,6 +41,17 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
     if (stick.current) { el.scrollTop = el.scrollHeight; setBehind(false); }
     else setBehind(true);
   }, [items.length, last, running]);
+
+  // Rows grow after they render (Markdown loads late, images decode), so a chat that sticks to the bottom follows them.
+  useEffect(() => {
+    const el = box.current;
+    if (!el || !rows.current) return;
+    const ro = new ResizeObserver(() => {
+      if (stick.current) el.scrollTop = el.scrollHeight;
+    });
+    ro.observe(rows.current);
+    return () => ro.disconnect();
+  }, []);
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -72,9 +84,11 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
   return (
     <div className="tr-host">
     <div ref={box} className="tr" onScroll={onScroll}>
+      <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
       {start > 0 && <div className="tr-more" {...pressable(showEarlier)}>Show earlier ({start} hidden)</div>}
       {items.slice(start).map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
+      </div>
     </div>
     {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest</button>}
     </div>
