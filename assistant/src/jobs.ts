@@ -11,27 +11,25 @@ import { ask } from './claude.js';
 import type { Profile } from './db.js';
 import { loop } from './once.js';
 import { applyChanges, type Change } from './sync.js';
-import { DAY, HOUR, MIN, slotStart } from './time.js';
+import { DAY, MIN } from './time.js';
+import { nextRun } from '../../shared/schedule.js';
+import { ownProfile, PROFILE_PORT } from '../../server/src/chrome/launch.js';
+
+export { nextRun };
 
 const KEEP = 20;
-const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
-type Job = { id: string; profile: Profile; name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null };
+type Job = { id: string; profile: Profile; name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null; tools: string | null };
 
-// Schedules are "hourly", "daily HH:MM", "weekdays HH:MM" or "weekly <day> HH:MM", in the hub's local time.
-export function nextRun(schedule: string | null, after: number): number | null {
-  const s = (schedule ?? '').trim().toLowerCase();
-  // Whole local hours a real hour apart, so the repeated hour when clocks go back gets its run too.
-  if (s === 'hourly') return slotStart(after, HOUR) + HOUR;
-  const m = /^(daily|weekdays|weekly (sun|mon|tue|wed|thu|fri|sat)) (\d{1,2}):(\d{2})$/.exec(s);
-  if (!m || +m[3] > 23 || +m[4] > 59) return null;
-  const ok = (d: Date) => (m[1] === 'daily' ? true : m[1] === 'weekdays' ? d.getDay() % 6 !== 0 : d.getDay() === DAYS.indexOf(m[2]));
-  const base = new Date(after);
-  for (let i = 0; i < 8; i++) {
-    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i, +m[3], +m[4]);
-    if (d.getTime() > after && ok(d)) return d.getTime();
-  }
-  return null;
+// The tools a job may use beyond reading: "browser" for AgentView's own Chrome, or MCP tool names, where a trailing * matches a prefix.
+export function jobAllows(tools: string | null) {
+  const names = (tools ?? '').split(/[\s,]+/).filter(Boolean);
+  const browser = names.includes('browser');
+  return {
+    browser,
+    names,
+    allows: (tool: string) => (browser && tool.startsWith('mcp__browser__')) || names.some((n) => (n.endsWith('*') ? tool.startsWith(n.slice(0, -1)) : tool === n)),
+  };
 }
 
 const READ = /^(get|list|search|read|query|fetch|find)/i;
@@ -45,21 +43,33 @@ export function canRead(name: string) {
   return READ.test(action);
 }
 
-// Runs one job on its profile's account with read-only tools; it may add tasks to Codex and returns its reply.
-async function runJob(db: Database, job: Job) {
+// Runs one job on its profile's account with read-only tools plus the ones the job allows; it may add tasks to Codex,
+// push a notification and returns its reply.
+async function runJob(db: Database, job: Job, notify = pushNtfy) {
   const account = ACCOUNT_OF[job.profile];
   const added: string[] = [];
+  let notified = false;
   const addTask = tool('add_task', 'Add a task for me to Codex.', { title: z.string().describe('Short imperative task'), context: z.string().optional().describe('One sentence on why, with a link if there is one') }, async (a) => {
     const now = Date.now();
     applyChanges(db, [{ table: 'items', id: randomUUID(), profile: job.profile, updated_at: now, fields: { title: a.title.trim(), text: a.context?.trim() || null, source: 'job', people: job.name, status: 'open', at: null } }]);
     added.push(a.title.trim());
     return { content: [{ type: 'text', text: 'added' }] };
   });
+  const push = tool('notify', 'Send me a push notification on my phone now.', { title: z.string().max(80), text: z.string().max(500) }, async (a) => {
+    notified = true;
+    const ok = await notify(a.title, '', a.text, '').catch(() => false);
+    return { content: [{ type: 'text', text: ok ? 'sent' : 'push is not set up, so nothing was sent' }] };
+  });
+  const allow = jobAllows(job.tools);
+  const browser = allow.browser && ownProfile();
   const prompt = [
     job.prompt ?? '',
     '',
-    'This runs on a schedule with no one watching. Only read: do not send, post, create or change anything outside Codex.',
-    'Use add_task for anything I need to act on. End with a short plain-text result for a phone notification. Do not use the em dash character.',
+    allow.names.length
+      ? `This runs on a schedule with no one watching. Only read, except with the tools this job allows: ${allow.names.join(', ')}.`
+      : 'This runs on a schedule with no one watching. Only read: do not send, post, create or change anything outside Codex.',
+    ...(browser ? ['The mcp__browser tools drive AgentView\'s own Chrome, which holds its own logins. Wait for a page to finish loading before you read it.'] : []),
+    'Use add_task for anything I need to act on and notify for anything I must see right away. End with a short plain-text result for a phone notification. Do not use the em dash character.',
   ].join('\n');
   let result = '';
   for await (const m of ask(account, prompt, {
@@ -67,22 +77,25 @@ async function runJob(db: Database, job: Job) {
     maxTurns: 30,
     cwd: os.tmpdir(),
     tools: ['WebSearch', 'WebFetch'],
-    mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools: [addTask] }) },
-    allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task'],
-    canUseTool: async (name, input) => (canRead(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'Jobs can only read.' }),
+    mcpServers: {
+      codex: createSdkMcpServer({ name: 'codex', tools: [addTask, push] }),
+      ...(browser ? { browser: { type: 'stdio' as const, command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {}),
+    },
+    allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task', 'mcp__codex__notify'],
+    canUseTool: async (name, input) => (canRead(name) || allow.allows(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'This job can only read and use the tools it allows.' }),
   }, 20 * 60_000)) {
     if (m.type === 'result') {
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();
     }
   }
-  return { result, added };
+  return { result, added, notified };
 }
 
 // Fills in the next run of enabled jobs that have none and returns the jobs that are due. A job that is off has a next
 // run only when Run now was pressed.
 export function dueJobs(db: Database, now = Date.now()): Job[] {
-  const jobs = db.prepare('SELECT id, profile, name, schedule, prompt, enabled, next_run_at FROM jobs WHERE deleted = 0').all() as Job[];
+  const jobs = db.prepare('SELECT id, profile, name, schedule, prompt, enabled, next_run_at, tools FROM jobs WHERE deleted = 0').all() as Job[];
   const plan: Change[] = [];
   for (const j of jobs) {
     if (j.next_run_at != null || !j.enabled) continue;
@@ -99,12 +112,12 @@ function prune(db: Database, job: Job, now: number) {
   applyChanges(db, old.map((r) => ({ table: 'runs', id: r.id, profile: job.profile, deleted: true, updated_at: now, fields: { output: null } })));
 }
 
-export async function runDue(db: Database, now = Date.now(), run = runJob, notify = pushNtfy) {
+export async function runDue(db: Database, now = Date.now(), run: typeof runJob = runJob, notify = pushNtfy) {
   for (const due of dueJobs(db, now)) {
     // An earlier job can run for minutes; skip or update this one if it was turned off, deleted or edited meanwhile.
-    const live = db.prepare('SELECT prompt, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; next_run_at: number | null; field_times: string } | null;
+    const live = db.prepare('SELECT prompt, tools, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; tools: string | null; next_run_at: number | null; field_times: string } | null;
     if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) continue;
-    const job = { ...due, prompt: live.prompt };
+    const job = { ...due, prompt: live.prompt, tools: live.tools };
     const planned = JSON.parse(live.field_times).next_run_at;
     if (await verifyLimit(ACCOUNT_OF[job.profile])) continue;
     const id = randomUUID();
@@ -112,8 +125,10 @@ export async function runDue(db: Database, now = Date.now(), run = runJob, notif
     applyChanges(db, [{ table: 'runs', id, profile: job.profile, updated_at: started, fields: { job_id: job.id, started_at: started, status: 'running' } }]);
     let status = 'ok';
     let output = '';
+    let notified = false;
     try {
-      const { result, added } = await run(db, job);
+      const { result, added, ...r } = await run(db, job, notify);
+      notified = r.notified;
       output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';
     } catch (err) {
       status = 'error';
@@ -129,7 +144,7 @@ export async function runDue(db: Database, now = Date.now(), run = runJob, notif
     }
     applyChanges(db, changes);
     prune(db, job, done);
-    if (status !== 'ok' || /\b(push|notify)\b/i.test(job.prompt ?? '')) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
+    if (status !== 'ok' || (!notified && /\b(push|notify)\b/i.test(job.prompt ?? ''))) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
   }
 }
 

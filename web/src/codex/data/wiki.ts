@@ -48,7 +48,7 @@ export type Action = Common & {
   result_url: string | null;
 };
 
-export type Job = Common & { name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null };
+export type Job = Common & { name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null; tools: string | null };
 export type Run = Common & { job_id: string | null; started_at: number | null; finished_at: number | null; status: string | null; output: string | null };
 
 export type Chat = Common & { name: string | null; kind: string | null; url: string | null; summary: string | null; last_at: number | null; waiting?: number | null };

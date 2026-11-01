@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { canRead, dropOrphanRuns, dueJobs, nextRun, runDue } from './jobs.js';
+import { canRead, dropOrphanRuns, dueJobs, jobAllows, nextRun, runDue } from './jobs.js';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 
@@ -34,6 +34,18 @@ describe('nextRun', () => {
   test('a bad schedule has no next run', () => {
     expect(nextRun('sometimes', now)).toBeNull();
     expect(nextRun('daily 25:00', now)).toBeNull();
+    expect(nextRun('*/15 0-8 * *', now)).toBeNull();
+    expect(nextRun('0 24 * * *', now)).toBeNull();
+  });
+  test('cron steps through a window and skips to the next matching day', () => {
+    expect(nextRun('*/15 0-8 2 11 *', now)).toBe(at(2026, 11, 2, 0));
+    expect(nextRun('*/15 0-8 2 11 *', at(2026, 11, 2, 0, 7))).toBe(at(2026, 11, 2, 0, 15));
+    expect(nextRun('*/15 0-8 2 11 *', at(2026, 11, 2, 8, 45))).toBe(at(2027, 11, 2, 0));
+    expect(nextRun('30 7 * * 1-5', at(2026, 10, 30, 9))).toBe(at(2026, 11, 2, 7, 30));
+  });
+  test('once runs at its time and never after', () => {
+    expect(nextRun('once 2026-11-02 00:00', now)).toBe(at(2026, 11, 2, 0));
+    expect(nextRun('once 2026-11-02 00:00', at(2026, 11, 2, 0))).toBeNull();
   });
 });
 
@@ -71,10 +83,18 @@ describe('runDue', () => {
     applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: now - 3_600_000, fields: { name: 'A', schedule: 'daily 09:00', prompt: 'x', enabled: 1, next_run_at: now - 1 } }]);
     const run = async () => {
       applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: now - 60_000, fields: { next_run_at: now - 60_000 } }]);
-      return { result: 'done', added: [] };
+      return { result: 'done', added: [], notified: false };
     };
     await runDue(db, now, run, async () => true);
     expect((db.prepare("SELECT next_run_at FROM jobs WHERE id = 'a'").get() as { next_run_at: number }).next_run_at).toBe(now - 60_000);
+  });
+});
+
+describe('jobAllows', () => {
+  test('allows the browser and named tools, with * as a prefix', () => {
+    const a = jobAllows('browser, mcp__claude_ai_Slack__slack_send_message mcp__linear__*');
+    expect(['mcp__browser__browser_click', 'mcp__claude_ai_Slack__slack_send_message', 'mcp__linear__create_issue'].every(a.allows)).toBe(true);
+    expect(a.allows('mcp__claude_ai_Gmail__send_message') || jobAllows(null).allows('mcp__browser__browser_click')).toBe(false);
   });
 });
 

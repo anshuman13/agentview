@@ -14,7 +14,7 @@ const page = (id: string, title: string): Page => ({ ...common(id), title, secti
 const fact = (id: string, pageId: string | null, text: string, extra: Partial<Fact> = {}): Fact => ({
   ...common(id), text, item_id: null, superseded_by: null, page_id: pageId, heading: 'One', sources: null, at: 0, contested: null, state: null, replaces: null, added_by: null, ...extra,
 });
-const job = (id: string, name: string, prompt: string): Job => ({ ...common(id), name, schedule: 'hourly', prompt, enabled: 1, next_run_at: null });
+const job = (id: string, name: string, prompt: string): Job => ({ ...common(id), name, schedule: 'hourly', prompt, enabled: 1, next_run_at: null, tools: null });
 
 const data = {
   items: [item('i1', 'Send budget'), item('i2', 'Budget gone', { status: 'dismissed' }), item('i4', 'Budget point', { status: 'point' }), item('i3', 'Other')],

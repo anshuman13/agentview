@@ -396,6 +396,9 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
 .jb-when { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
 .jb-when select, .jb-when input { flex: none; width: auto; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
+.jb-when .jb-custom { flex: 1 1 180px; font-family: var(--font-mono, monospace); }
+.jb-when .jb-custom[aria-invalid='true'] { border-color: var(--err); }
+.jb-tools { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-4) var(--sp-7); border-radius: 10px; font-size: 16px; }
 .jb-on { display: inline-flex; align-items: center; gap: var(--sp-4); margin-left: auto; font-size: var(--fs-md); color: var(--fg-muted); }
 .jb-prompt { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-6) var(--sp-7); border-radius: 10px; font-size: 16px; line-height: 1.5; }
 .jb-run { padding: var(--sp-6) 0; border-top: 1px solid var(--border); }

@@ -11,25 +11,31 @@ import { ShowMore, useWindow } from '../../ui/useWindow';
 import { setView, showSnack, useEscapeBack, useView } from '../view';
 import { usePullSync } from '../pullSync';
 import { useMinute } from '../split';
+import { nextRun } from '../../../../shared/schedule';
 import '../../styles/features/wiki.css';
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
-const KINDS = [['hourly', 'Every hour'], ['daily', 'Every day'], ['weekdays', 'Weekdays'], ['weekly', 'Once a week']] as const;
+const KINDS = [['hourly', 'Every hour'], ['daily', 'Every day'], ['weekdays', 'Weekdays'], ['weekly', 'Once a week'], ['custom', 'Custom']] as const;
 type Kind = (typeof KINDS)[number][0];
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
 
-// The hub reads the same "hourly", "daily HH:MM", "weekdays HH:MM" and "weekly <day> HH:MM" (assistant/src/jobs.ts).
+// The simple schedules get pickers; a one-off ("once YYYY-MM-DD HH:MM") or a cron line is Custom (shared/schedule.ts).
 export function parseSchedule(s: string | null): { kind: Kind; day: string; time: string } {
-  const m = /^(hourly|daily|weekdays|weekly)(?: (sun|mon|tue|wed|thu|fri|sat))?(?: (\d{1,2}:\d{2}))?$/.exec((s ?? '').trim().toLowerCase());
-  return { kind: (m?.[1] as Kind) ?? 'weekdays', day: m?.[2] ?? 'mon', time: m?.[3]?.padStart(5, '0') ?? '08:00' };
+  const t = (s ?? '').trim().toLowerCase();
+  const m = /^(hourly|daily|weekdays|weekly)(?: (sun|mon|tue|wed|thu|fri|sat))?(?: (\d{1,2}:\d{2}))?$/.exec(t);
+  return { kind: (m?.[1] as Kind) ?? (t ? 'custom' : 'weekdays'), day: m?.[2] ?? 'mon', time: m?.[3]?.padStart(5, '0') ?? '08:00' };
 }
 
 export const scheduleOf = (kind: Kind, day: string, time: string) => (kind === 'hourly' ? 'hourly' : kind === 'weekly' ? `weekly ${day} ${time}` : `${kind} ${time}`);
 
 export function describe(s: string | null) {
   const { kind, day, time } = parseSchedule(s);
+  if (kind === 'custom') {
+    const once = /^once (\S+) (\S+)$/i.exec(s!.trim());
+    return once ? `Once, ${dayLabel(new Date(`${once[1]}T00:00`).getTime(), true)} at ${once[2]}` : `Cron ${s!.trim()}`;
+  }
   if (kind === 'hourly') return 'Every hour';
   if (kind === 'daily') return `Every day at ${time}`;
   if (kind === 'weekdays') return `Weekdays at ${time}`;
@@ -76,7 +82,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
   const add = (preset?: JobPreset) => {
     const t = Date.now();
     const profile: Profile = filter === 'personal' ? 'personal' : 'work';
-    const row: Job = { id: newId(), profile, version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}', name: 'New job', schedule: 'weekdays 08:00', prompt: '', enabled: 1, next_run_at: null, ...preset };
+    const row: Job = { id: newId(), profile, version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}', name: 'New job', schedule: 'weekdays 08:00', prompt: '', enabled: 1, next_run_at: null, tools: null, ...preset };
     void store.editRow('jobs', row, { name: row.name, schedule: row.schedule, prompt: row.prompt, enabled: 1 });
     setView({ open: rowKey(row) });
   };
@@ -148,19 +154,28 @@ function JobPage({ j }: { j: Job }) {
   const [shown, more] = useWindow(j.id, 5);
   const [name, setName] = useState(j.name ?? '');
   const [prompt, setPrompt] = useState(j.prompt ?? '');
+  const [tools, setTools] = useState(j.tools ?? '');
+  const [custom, setCustom] = useState(j.schedule ?? '');
   useEffect(() => setName(j.name ?? ''), [j.name]);
   useEffect(() => setPrompt(j.prompt ?? ''), [j.prompt]);
+  useEffect(() => setTools(j.tools ?? ''), [j.tools]);
+  useEffect(() => setCustom(j.schedule ?? ''), [j.schedule]);
   const save = () => {
     if (name !== (j.name ?? '')) void store.editRow('jobs', j, { name: name.trim() || 'Untitled job' });
     if (prompt !== (j.prompt ?? '')) void store.editRow('jobs', j, { prompt });
+    if (tools.trim() !== (j.tools ?? '')) void store.editRow('jobs', j, { tools: tools.trim() || null });
   };
+  const customOk = nextRun(custom, Date.now()) != null;
+  const saveCustom = () => { if (customOk && custom.trim() !== j.schedule) void store.editRow('jobs', j, { schedule: custom.trim(), next_run_at: null }); };
   useOnUnmount(save);
   const back = () => setView({ open: null });
   useEscapeBack(back);
   const sched = parseSchedule(j.schedule);
   const setSchedule = (p: Partial<typeof sched>) => {
     const n = { ...sched, ...p };
-    void store.editRow('jobs', j, { schedule: scheduleOf(n.kind, n.day, n.time), next_run_at: null });
+    // Custom starts from the current schedule, which the custom field reads too.
+    if (n.kind !== 'custom') void store.editRow('jobs', j, { schedule: scheduleOf(n.kind, n.day, n.time), next_run_at: null });
+    else if (sched.kind !== 'custom') void store.editRow('jobs', j, { schedule: `once ${new Date(Date.now() + 3_600_000).toLocaleDateString('sv')} ${n.time}`, next_run_at: null });
   };
   const list = runsOf(runs, j);
   const running = list[0]?.status === 'running';
@@ -201,14 +216,21 @@ function JobPage({ j }: { j: Job }) {
                   {[1, 2, 3, 4, 5, 6, 0].map((i) => <option key={i} value={DAYS[i]}>{DAY_NAMES[i].slice(0, -1)}</option>)}
                 </select>
               )}
-              {sched.kind !== 'hourly' && <input type="time" value={sched.time} aria-label="Time" onChange={(e) => e.target.value && setSchedule({ time: e.target.value })} />}
+              {sched.kind === 'custom' && <input className="jb-custom" value={custom} aria-label="Custom schedule" aria-invalid={!customOk} placeholder="*/15 0-8 * * 1-5" onChange={(e) => setCustom(e.target.value)} onBlur={saveCustom} onKeyDown={(e) => e.key === 'Enter' && saveCustom()} />}
+              {sched.kind !== 'hourly' && sched.kind !== 'custom' && <input type="time" value={sched.time} aria-label="Time" onChange={(e) => e.target.value && setSchedule({ time: e.target.value })} />}
               <span className="jb-on"><Switch on={!!j.enabled} label="Run on schedule" onChange={(on) => enable(j, on)} /></span>
             </div>
+            {sched.kind === 'custom' && <div className="muted small">{customOk ? `Next ${at(nextRun(custom, Date.now())!)}. ` : 'This never runs. '}Use "once 2026-11-02 09:00" for one run, or a cron line: minute, hour, day, month, weekday.</div>}
           </section>
           <section className="mt-sec">
             <h2>Prompt</h2>
             <textarea className="jb-prompt" rows={4} value={prompt} placeholder={EXAMPLE} aria-label="Prompt" onChange={(e) => setPrompt(e.target.value)} onBlur={save} />
-            <div className="muted small">Runs on the {j.profile} Claude account. It can only read, add tasks to Codex, and send you its reply.</div>
+            <div className="muted small">Runs on the {j.profile} Claude account. It reads, adds tasks to Codex, can push you a notification, and sends you its reply.</div>
+          </section>
+          <section className="mt-sec">
+            <h2>Allowed tools</h2>
+            <input className="jb-tools" value={tools} placeholder="browser, mcp__claude_ai_Slack__slack_send_message" aria-label="Allowed tools" onChange={(e) => setTools(e.target.value)} onBlur={save} />
+            <div className="muted small">Tools it may use beyond reading, with no one watching: browser for AgentView's own Chrome, or tool names, where * matches the rest.</div>
           </section>
           <section className="mt-sec">
             <h2>Runs</h2>
