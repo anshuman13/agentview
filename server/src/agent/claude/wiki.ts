@@ -2,6 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
+import { profileOf } from './accounts.js';
 import { hubPush, hubRows, type HubChange, type HubRow } from '../../integrations/assistant.js';
 
 export const WIKI_RULES = [
@@ -15,8 +16,7 @@ export const WIKI_RULES = [
   'Never propose secrets, credentials, tokens or file contents.',
 ].join(' ');
 
-const PERSONAL = path.join(os.homedir(), 'workspace_personal');
-export const profileOf = (cwd: string) => (cwd === PERSONAL || cwd.startsWith(PERSONAL + path.sep) ? 'personal' : 'work') as HubRow['profile'];
+export { profileOf };
 
 const PROFILE = z.enum(['work', 'personal']).optional().describe('Which wiki: work or personal. Defaults to the profile of the chat\'s folder');
 const text = (t: string) => ({ content: [{ type: 'text' as const, text: t }] });

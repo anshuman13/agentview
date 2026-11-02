@@ -135,20 +135,25 @@ export function otherAccount(a: Account, now = Date.now()): Account | null {
   return [...AUTO.slice(i + 1), ...AUTO.slice(0, i)].find((o) => o !== a && usable(o, now)) ?? null;
 }
 
-// New chats start on the main account unless it is out of usage.
-export const freshAccount = (now = Date.now()): Account => (usable('main', now) ? 'main' : otherAccount('main', now) ?? 'main');
+const PERSONAL = path.join(os.homedir(), 'workspace_personal');
+export const profileOf = (cwd: string) => (cwd === PERSONAL || cwd.startsWith(PERSONAL + path.sep) ? 'personal' : 'work');
 
-// Chats on the work account, so a reopened chat goes back to the account it was on.
+// New chats start on the folder's account, personal or work, unless it is out of usage.
+export const freshAccount = (cwd: string, now = Date.now()): Account => {
+  const a: Account = profileOf(cwd) === 'personal' || !loggedIn('alt') ? 'main' : 'alt';
+  return usable(a, now) ? a : otherAccount(a, now) ?? a;
+};
+
+// The account each chat was last on, so a reopened chat goes back to it.
 const chatAccounts: Record<string, Account> = readJsonSync<Record<string, Account> | null>(CHATS, null) ?? {};
 
 export function rememberAccount(sessionId: string, a: Account) {
-  if ((chatAccounts[sessionId] ?? 'main') === a) return;
-  if (a === 'main') delete chatAccounts[sessionId];
-  else chatAccounts[sessionId] = a;
+  if (chatAccounts[sessionId] === a) return;
+  chatAccounts[sessionId] = a;
   save(CHATS, chatAccounts);
 }
 
-export const reopenAccount = (sessionId: string | undefined, now = Date.now()): Account => {
+export const reopenAccount = (sessionId: string | undefined, cwd: string, now = Date.now()): Account => {
   const a = sessionId ? chatAccounts[sessionId] : undefined;
-  return a && usable(a, now) ? a : freshAccount(now);
+  return a && usable(a, now) ? a : freshAccount(cwd, now);
 };

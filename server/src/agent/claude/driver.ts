@@ -23,7 +23,7 @@ const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const STATUS_EVERY = 8;
 const USAGE_EVERY = 10 * 60_000;
 
-export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
+export const claudeSession = (cwd: string, resume?: string, fork = false, account = reopenAccount(resume, cwd)) => new AgentSession(cwd, (host) => new ClaudeDriver(host, resume, fork, account), resume ?? null);
 
 // Runs a chat on the Claude Agent SDK: one CLI process at a time, resumed from its transcript when it exits.
 export class ClaudeDriver implements AgentDriver {

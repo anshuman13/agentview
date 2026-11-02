@@ -1,7 +1,10 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import { describe, expect, it, vi } from 'vitest';
 
 const dir = process.env.AGENTVIEW_LIMITS_DIR!;
+const HOME = `${os.homedir()}/workspace_personal/app`;
+const WORK = `${os.homedir()}/workspace/app`;
 
 const { freshAccount, isLimited, loggedIn, loggedInAccounts, markLimited, otherAccount, overageUntil, rememberAccount, reopenAccount, verifyLimit } = await import('./accounts.js');
 
@@ -13,10 +16,10 @@ describe('accounts', () => {
     writeFileSync(`${dir}/alt/.claude.json`, JSON.stringify({ oauthAccount: { emailAddress: 'a@b.c' } }));
     expect(loggedIn('alt')).toBe(true);
     expect(otherAccount('main', 1000)).toBe('alt');
-    expect(freshAccount(1000)).toBe('main');
+    expect(freshAccount(HOME, 1000)).toBe('main');
     markLimited('main', 5000);
-    expect(freshAccount(1000)).toBe('alt');
-    expect(freshAccount(6000)).toBe('main');
+    expect(freshAccount(HOME, 1000)).toBe('alt');
+    expect(freshAccount(HOME, 6000)).toBe('main');
     markLimited('alt', 5000);
     expect(otherAccount('main', 1000)).toBe(null);
     expect(otherAccount('alt', 6000)).toBe('main');
@@ -29,20 +32,25 @@ describe('accounts', () => {
     writeFileSync(`${dir}/alt2/.claude.json`, JSON.stringify({ oauthAccount: { emailAddress: 'a@b.c' } }));
     expect(loggedInAccounts()).toEqual(['main', 'alt', 'alt2']);
     expect(otherAccount('main', 1000)).toBe(null);
-    expect(freshAccount(1000)).toBe('main');
+    expect(freshAccount(HOME, 1000)).toBe('main');
     expect(otherAccount('alt2', 6000)).toBe('main');
     expect(otherAccount('main', 6000)).toBe('alt');
     rmSync(`${dir}/alt2`, { recursive: true });
     expect(loggedInAccounts()).toEqual(['main', 'alt']);
   });
 
+  it('starts a work folder on the work account', () => {
+    expect(freshAccount(WORK, 6000)).toBe('alt');
+    expect(freshAccount(HOME, 6000)).toBe('main');
+  });
+
   it('reopens a chat on the account it was on while that one has usage left', () => {
     rememberAccount('s1', 'alt');
-    expect(reopenAccount('s1', 6000)).toBe('alt');
-    expect(reopenAccount('s2', 6000)).toBe('main');
-    expect(reopenAccount('s1', 1000)).toBe('main');
+    expect(reopenAccount('s1', HOME, 6000)).toBe('alt');
+    expect(reopenAccount('s2', HOME, 6000)).toBe('main');
+    expect(reopenAccount('s1', HOME, 1000)).toBe('main');
     rememberAccount('s1', 'main');
-    expect(reopenAccount('s1', 6000)).toBe('main');
+    expect(reopenAccount('s1', HOME, 6000)).toBe('main');
   });
 
   it('counts extra usage as hitting the limit', () => {
