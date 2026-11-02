@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { statSync } from 'node:fs';
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import type { Account } from '../../../../shared/protocol.js';
+import { ACCOUNT_NOTE, type Account } from '../../../../shared/protocol.js';
 import { readJsonSync, writeJsonSync } from '../../json.js';
 
 const DIRS: Partial<Record<Account, string>> = {
@@ -10,6 +10,7 @@ const DIRS: Partial<Record<Account, string>> = {
   alt2: process.env.AGENTVIEW_ALT2_CLAUDE || path.join(os.homedir(), '.claude-alt2'),
 };
 const ORDER: Account[] = ['main', 'alt', 'alt2'];
+const AUTO = ORDER.filter((a) => !ACCOUNT_NOTE[a]);
 const LIMITS = path.join(process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview'), 'limits.json');
 const CHATS = path.join(path.dirname(LIMITS), 'chat-accounts.json');
 
@@ -128,10 +129,10 @@ export function stopOnOverage(a: Account, m: Parameters<typeof overageUntil>[0])
   throw new Error('Stopped before using extra usage');
 }
 
-// The account to switch to when this one hits its limit: the next one after it with usage left.
+// The account to switch to when this one hits its limit: the next one after it with usage left, skipping hand-picked ones.
 export function otherAccount(a: Account, now = Date.now()): Account | null {
-  const i = ORDER.indexOf(a);
-  return [...ORDER.slice(i + 1), ...ORDER.slice(0, i)].find((o) => usable(o, now)) ?? null;
+  const i = AUTO.indexOf(a);
+  return [...AUTO.slice(i + 1), ...AUTO.slice(0, i)].find((o) => o !== a && usable(o, now)) ?? null;
 }
 
 // New chats start on the main account unless it is out of usage.

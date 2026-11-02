@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { ACCOUNT_LABEL, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
@@ -258,7 +258,8 @@ export class AgentSession implements AgentHost {
     if (a === this.driver.account) return;
     this.driver.setAccount(a as Account);
     this.setSession({ account: a as Account, accounts });
-    this.system(`Switched to the ${accountName(a as Account)} Claude account`);
+    const note = ACCOUNT_NOTE[a as Account];
+    this.system(`Switched to the ${accountName(a as Account)} Claude account${note ? `. ${note}` : ''}`);
   }
 
   // A turn that ended on a usage limit goes on under the other account, if it has usage left.

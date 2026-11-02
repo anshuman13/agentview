@@ -1,6 +1,6 @@
 import { send, useStore } from '../app/store';
 import { QuickPick } from '../ui/QuickPick';
-import { ACCOUNT_LABEL, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
+import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
 
 const MODES: Record<string, { label: string; detail: string; icon: string }> = {
   default: { label: 'Default', detail: 'Ask before edits and risky commands', icon: 'shield' },
@@ -85,7 +85,7 @@ export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null;
           anchor={pick.at}
           title="Select Claude account"
           current={account}
-          items={accounts.map((a) => ({ value: a, label: ACCOUNT_LABEL[a] }))}
+          items={accounts.map((a) => ({ value: a, label: ACCOUNT_LABEL[a], detail: ACCOUNT_NOTE[a] }))}
           onPick={(v) => { send({ type: 'set_account', account: v }); close(); }}
           onClose={close}
         />

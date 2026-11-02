@@ -24,11 +24,12 @@ describe('accounts', () => {
     expect(isLimited('alt', 6000)).toBe(false);
   });
 
-  it('falls back through the logged-in accounts in order', () => {
+  it('never falls back to a hand-picked account', () => {
     mkdirSync(`${dir}/alt2`, { recursive: true });
     writeFileSync(`${dir}/alt2/.claude.json`, JSON.stringify({ oauthAccount: { emailAddress: 'a@b.c' } }));
     expect(loggedInAccounts()).toEqual(['main', 'alt', 'alt2']);
-    expect(otherAccount('main', 1000)).toBe('alt2');
+    expect(otherAccount('main', 1000)).toBe(null);
+    expect(freshAccount(1000)).toBe('main');
     expect(otherAccount('alt2', 6000)).toBe('main');
     expect(otherAccount('main', 6000)).toBe('alt');
     rmSync(`${dir}/alt2`, { recursive: true });
