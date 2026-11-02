@@ -73,6 +73,12 @@ export class AgentSession implements AgentHost {
     this.state.session.accounts = this.driver.accounts();
   }
 
+  // The state for a client that opens the chat, with accounts logged in since the chat started.
+  view() {
+    this.state.session.accounts = this.driver.accounts();
+    return this.state;
+  }
+
   onMessage(fn: (m: ServerMessage) => void) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);

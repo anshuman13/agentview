@@ -377,7 +377,7 @@ async function handle(req: HostRequest): Promise<unknown> {
       await ready;
       return { last: lastViewed.id, restarting: Boolean(restarting), chats: liveList() } satisfies Hello;
     case 'state':
-      return get(req.id).state;
+      return get(req.id).view();
     case 'cmd':
       await command(get(req.id), req.msg);
       return null;
@@ -420,7 +420,7 @@ const host = net.createServer((sock) => {
     // Answered at once, not after an await, so no broadcast for the chat can slip in between.
     if (req.op === 'state') {
       try {
-        send({ n, ok: true, r: get(req.id).state });
+        send({ n, ok: true, r: get(req.id).view() });
       } catch (err) {
         fail(err);
       }
