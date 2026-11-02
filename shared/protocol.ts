@@ -277,7 +277,7 @@ export type ClientMessage =
   | { type: 'view'; id: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'new_session'; cwd?: string; fork?: string }
+  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal' }
   | { type: 'mcp_status' }
   | { type: 'usage' }
   | { type: 'mcp_reconnect'; name: string }

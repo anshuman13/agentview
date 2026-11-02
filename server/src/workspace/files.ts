@@ -9,8 +9,10 @@ const HIDDEN = new Set(['node_modules', '.git', 'dist']);
 const home = os.homedir();
 export const ROOTS = (process.env.AGENTVIEW_ROOTS ?? '~/workspace:~/workspace_personal').split(':').filter(Boolean).map((r) => path.resolve(r.replace(/^~/, home)));
 const PASEO_TREES = path.join(home, '.paseo/worktrees');
+// Codex questions about work items run here, outside ~/workspace_personal, so they get the work account and profile.
+export const CODEX_WORK = path.join(home, '.agentview/codex-work');
 
-export const allowedFolder = (dir: string) => [...ROOTS, PASEO_TREES].some((r) => inside(dir, r) && dir !== r);
+export const allowedFolder = (dir: string) => dir === CODEX_WORK || [...ROOTS, PASEO_TREES].some((r) => inside(dir, r) && dir !== r);
 
 export async function listFiles(cwd: string): Promise<string[]> {
   try {

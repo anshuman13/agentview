@@ -173,7 +173,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
           <Feed pages={pages} facts={facts} />
         </div>
       </div>
-      <AskBar placeholder="Ask the wiki" onAsk={(q) => ask(wikiAskText(q, pages, facts))} />
+      <AskBar placeholder="Ask the wiki" onAsk={(q) => ask(wikiAskText(q, pages, facts), 'work')} />
     </div>
   );
 }

@@ -127,7 +127,7 @@ export function WikiPage({ id }: { id: string }) {
         )}
       </div>
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
-      {page && pid && <AskBar placeholder={`Ask about ${page.title}`} onAsk={(q) => ask(wikiAskText(q, pages, facts, id))} />}
+      {page && pid && <AskBar placeholder={`Ask about ${page.title}`} onAsk={(q) => ask(wikiAskText(q, pages, facts, id), page.profile)} />}
     </div>
   );
 }

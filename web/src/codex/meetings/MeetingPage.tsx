@@ -192,7 +192,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
           {state === 'done' && <Transcript key={rowKey(m)} got={transcript} />}
         </article>
       </div>
-      <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, all))} />
+      <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, all), m.profile)} />
     </div>
   );
 }

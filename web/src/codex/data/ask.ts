@@ -1,7 +1,7 @@
 import { getState, notice, prompt, queueNext, send } from '../../app/store';
 import { macOrigin } from '../../app/api';
 import { atTime } from './engine';
-import type { ItemRow } from './sync';
+import type { ItemRow, Profile } from './sync';
 import { currentClaim, factTime, isOld, listOf, live, othersOf, sourcesOf, type Fact, type Meeting, type Page } from './wiki';
 
 const line = (r: ItemRow) => {
@@ -31,14 +31,14 @@ export function askText(question: string, items: ItemRow[], about?: ItemRow, mee
 }
 
 type Daily = { day: string; mac: string; chat: string; sessionId: string | null };
-const KEY = 'codex-chat';
+const key = (p: Profile) => `codex-chat-${p}`;
 const today = () => new Date().toDateString();
-const readDaily = (): Daily | null => { try { return JSON.parse(localStorage.getItem(KEY) ?? 'null'); } catch { return null; } };
-const saveDaily = (d: Daily) => localStorage.setItem(KEY, JSON.stringify(d));
+const readDaily = (p: Profile): Daily | null => { try { return JSON.parse(localStorage.getItem(key(p)) ?? 'null'); } catch { return null; } };
+const saveDaily = (p: Profile, d: Daily) => localStorage.setItem(key(p), JSON.stringify(d));
 let asking = false;
 
-// Sends the question to today's Codex chat on the current Mac. The first question of the day, or fresh, opens a new chat.
-export function ask(text: string, fresh = false) {
+// Sends the question to today's Codex chat for the profile on the current Mac. The first question of the day, or fresh, opens a new chat.
+export function ask(text: string, profile: Profile, fresh = false) {
   const s = getState();
   if (!s.ui.connected) {
     notice('Not connected to a Mac, the question was not sent');
@@ -47,7 +47,7 @@ export function ask(text: string, fresh = false) {
   if (asking) return false;
   asking = true;
   const mac = macOrigin();
-  const d = readDaily();
+  const d = readDaily(profile);
   const reuse = !fresh && d?.day === today() && d.mac === mac ? d : null;
   const open = reuse && s.live.find((c) => c.id === reuse.chat || (reuse.sessionId != null && c.sessionId === reuse.sessionId));
   const from = s.session.id;
@@ -56,7 +56,7 @@ export function ask(text: string, fresh = false) {
     if (from !== open.id) send({ type: 'view', id: open.id });
     ready = (id) => id === open.id;
   } else {
-    send(reuse?.sessionId ? { type: 'open_session', sessionId: reuse.sessionId } : { type: 'new_session' });
+    send(reuse?.sessionId ? { type: 'open_session', sessionId: reuse.sessionId } : { type: 'new_session', profile });
     ready = (id) => !!id && id !== from;
   }
   const started = Date.now();
@@ -66,7 +66,7 @@ export function ask(text: string, fresh = false) {
       clearInterval(t);
       asking = false;
       (session.running ? queueNext : prompt)(text, () => {});
-      remember(mac, session.id, session.sessionId ?? (open ? open.sessionId : reuse?.sessionId) ?? null);
+      remember(profile, mac, session.id, session.sessionId ?? (open ? open.sessionId : reuse?.sessionId) ?? null);
     } else if (Date.now() - started > 15000) {
       clearInterval(t);
       asking = false;
@@ -78,13 +78,13 @@ export function ask(text: string, fresh = false) {
 }
 
 // A new chat gets its Claude session id after the first prompt; keep it so a closed chat can be reopened.
-function remember(mac: string, chat: string, sessionId: string | null) {
-  saveDaily({ day: today(), mac, chat, sessionId });
+function remember(profile: Profile, mac: string, chat: string, sessionId: string | null) {
+  saveDaily(profile, { day: today(), mac, chat, sessionId });
   if (sessionId) return;
   const started = Date.now();
   const t = setInterval(() => {
     const c = getState().live.find((x) => x.id === chat);
-    if (c?.sessionId) saveDaily({ day: today(), mac, chat, sessionId: c.sessionId });
+    if (c?.sessionId) saveDaily(profile, { day: today(), mac, chat, sessionId: c.sessionId });
     if (c?.sessionId || Date.now() - started > 60000) clearInterval(t);
   }, 1000);
 }

@@ -3,7 +3,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -14,7 +14,7 @@ import { ntfyTopic, post } from './integrations/notify.js';
 import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
 import { emptyBin, listBin, removeSession, restoreSession } from './agent/claude/bin.js';
-import { listDir, listFiles, readFileWithOriginal, readImage } from './workspace/files.js';
+import { CODEX_WORK, listDir, listFiles, readFileWithOriginal, readImage } from './workspace/files.js';
 import { github } from './integrations/github.js';
 import { assistantRoute } from './integrations/assistant.js';
 import { attention, dismissAttention, onAttention, refreshAttention, startAttention } from './integrations/attention.js';
@@ -438,7 +438,8 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       host.req<string>({ op: 'open', sessionId: msg.sessionId }).then((c) => view(client, c), fail);
       break;
     case 'new_session':
-      host.req<string>({ op: 'new', cwd: msg.cwd ?? chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }) }).then((c) => view(client, c), fail);
+      if (msg.profile === 'work') mkdirSync(CODEX_WORK, { recursive: true });
+      host.req<string>({ op: 'new', cwd: msg.profile === 'work' ? CODEX_WORK : msg.profile === 'personal' ? PROJECT : msg.cwd ?? chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }) }).then((c) => view(client, c), fail);
       break;
     case 'restart':
       restart(Boolean(msg.now), false);

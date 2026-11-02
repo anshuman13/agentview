@@ -264,7 +264,9 @@ exiting during a step ends it too.
 `./claude-alt.sh` sets up `~/.claude-alt` for a work Claude login and `./claude-alt.sh 2` sets up `~/.claude-alt2` for Work
 Enterprise, next to the personal one in `~/.claude`. Each shares settings, skills, plugins and chat history with `~/.claude` and keeps its own
 login; log in once with `CLAUDE_CONFIG_DIR=<dir> claude` and `/login`. A new chat under `~/workspace_personal` starts on
-Personal and any other folder on Work; a reopened chat goes back to the account it was last on. When a turn ends on a usage limit, the chat moves to the next
+Personal and any other folder on Work; a reopened chat goes back to the account it was last on. Codex questions go to a daily
+chat per profile: work ones run in `~/.agentview/codex-work`, so they get the Work account and the work wiki and data, and
+personal ones in this repo. When a turn ends on a usage limit, the chat moves to the next
 logged-in account with usage left (Personal, then Work; Work Enterprise is for documents only and is never picked on its own) and continues where it stopped, and new chats start
 there until the limit resets. The composer menu shows the account (Personal, Work or Work Enterprise) and switches it by hand. The status bar shows the account with
 its weekly and 5-hour usage as `w25 h15` (read when a turn ends, every 10 minutes while the chat is open, and on a click while a Claude process is open), and the even weekly pace (100/7 % a day, to the hour) on hover. When the
