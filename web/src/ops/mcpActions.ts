@@ -27,6 +27,6 @@ export const cite = (c: Call) => share(`Earlier mcp__${c.server}__${c.tool} call
 
 export const post = (path: string, body?: unknown) => fetchJson<any>(api(path), { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
 
-// The work Claude account is signed in to claude.ai in Chrome on the Mac, the personal one in Firefox.
+// The work Claude accounts are signed in to claude.ai in Chrome on the Mac, the personal one in Firefox.
 export const openConnectors = (account?: string) =>
-  post('/api/open', { url: 'https://claude.ai/settings/connectors', browser: account === 'alt' ? 'chrome' : 'firefox' }).catch((e) => notice(`Could not open claude.ai: ${e.message}`));
+  post('/api/open', { url: 'https://claude.ai/settings/connectors', browser: account && account !== 'main' ? 'chrome' : 'firefox' }).catch((e) => notice(`Could not open claude.ai: ${e.message}`));

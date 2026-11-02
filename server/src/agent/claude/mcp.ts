@@ -2,9 +2,9 @@ import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
-import type { McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
+import type { Account, McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
 import { errText } from '../../../../shared/util.js';
-import { configDir, hasAlt } from './accounts.js';
+import { configDir, loggedInAccounts } from './accounts.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
 import { readJson, writeJson } from '../../json.js';
 
@@ -185,11 +185,11 @@ export function setMcpGroup(service: string, group: string): Promise<McpGroups> 
   return run;
 }
 
-// claude.ai connector status per Claude account, from `claude mcp list`, so the page knows both accounts without a chat on each.
+// claude.ai connector status per Claude account, from `claude mcp list`, so the page knows every account without a chat on each.
 type Connector = { name: string; status: string };
 let connectorCache: { at: number; value: Promise<Record<string, Connector[]>> } | null = null;
 
-function listConnectors(account: 'main' | 'alt'): Promise<Connector[]> {
+function listConnectors(account: Account): Promise<Connector[]> {
   const env = { ...process.env };
   delete env.CLAUDE_CONFIG_DIR;
   const dir = configDir(account);
@@ -208,7 +208,8 @@ function listConnectors(account: 'main' | 'alt'): Promise<Connector[]> {
 
 export function connectorStatus(refresh = false) {
   if (!connectorCache || refresh || Date.now() - connectorCache.at > 5 * 60_000) {
-    const value = Promise.all([listConnectors('main'), hasAlt() ? listConnectors('alt') : Promise.resolve([])]).then(([main, alt]) => ({ main, alt }));
+    const accounts = loggedInAccounts();
+    const value = Promise.all(accounts.map(listConnectors)).then((lists) => Object.fromEntries(accounts.map((a, i) => [a, lists[i]])));
     connectorCache = { at: Date.now(), value };
     // A failed listing is not kept, so the next load tries again.
     value.catch(() => connectorCache?.value === value && (connectorCache = null));

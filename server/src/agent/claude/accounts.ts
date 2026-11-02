@@ -5,7 +5,11 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Account } from '../../../../shared/protocol.js';
 import { readJsonSync, writeJsonSync } from '../../json.js';
 
-const ALT_DIR = process.env.AGENTVIEW_ALT_CLAUDE || path.join(os.homedir(), '.claude-alt');
+const DIRS: Partial<Record<Account, string>> = {
+  alt: process.env.AGENTVIEW_ALT_CLAUDE || path.join(os.homedir(), '.claude-alt'),
+  alt2: process.env.AGENTVIEW_ALT2_CLAUDE || path.join(os.homedir(), '.claude-alt2'),
+};
+const ORDER: Account[] = ['main', 'alt', 'alt2'];
 const LIMITS = path.join(process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview'), 'limits.json');
 const CHATS = path.join(path.dirname(LIMITS), 'chat-accounts.json');
 
@@ -16,21 +20,25 @@ const limited: Limits = {};
 const limits = (): Limits => readJsonSync<Limits | null>(LIMITS, null) ?? {};
 export const limitedUntil = (a: Account) => Math.max(limits()[a] ?? 0, limited[a] ?? 0);
 
-// The second account counts once it is logged in. The file is large, so it is read again only when it changes.
-let altSeen = { mtime: -1, value: false };
-export function hasAlt() {
-  const file = path.join(ALT_DIR, '.claude.json');
+// An extra account counts once it is logged in. The file is large, so it is read again only when it changes.
+const seen = new Map<Account, { mtime: number; value: boolean }>();
+export function loggedIn(a: Account) {
+  const dir = DIRS[a];
+  if (!dir) return true;
+  const file = path.join(dir, '.claude.json');
   let mtime = 0;
   try {
     mtime = statSync(file).mtimeMs;
   } catch {}
-  if (mtime !== altSeen.mtime) altSeen = { mtime, value: Boolean(mtime && readJsonSync<{ oauthAccount?: unknown } | null>(file, null)?.oauthAccount) };
-  return altSeen.value;
+  if (mtime !== seen.get(a)?.mtime) seen.set(a, { mtime, value: Boolean(mtime && readJsonSync<{ oauthAccount?: unknown } | null>(file, null)?.oauthAccount) });
+  return seen.get(a)!.value;
 }
 
-export const configDir = (a: Account) => (a === 'alt' ? ALT_DIR : undefined);
+export const loggedInAccounts = () => ORDER.filter(loggedIn);
 
-const usable = (a: Account, now: number) => (a === 'main' || hasAlt()) && limitedUntil(a) <= now;
+export const configDir = (a: Account) => DIRS[a];
+
+const usable = (a: Account, now: number) => loggedIn(a) && limitedUntil(a) <= now;
 
 const save = (file: string, data: unknown) => {
   try {
@@ -120,10 +128,10 @@ export function stopOnOverage(a: Account, m: Parameters<typeof overageUntil>[0])
   throw new Error('Stopped before using extra usage');
 }
 
-// The account to switch to when this one hits its limit, if the other one has usage left.
+// The account to switch to when this one hits its limit: the next one after it with usage left.
 export function otherAccount(a: Account, now = Date.now()): Account | null {
-  const o: Account = a === 'main' ? 'alt' : 'main';
-  return usable(o, now) ? o : null;
+  const i = ORDER.indexOf(a);
+  return [...ORDER.slice(i + 1), ...ORDER.slice(0, i)].find((o) => usable(o, now)) ?? null;
 }
 
 // New chats start on the main account unless it is out of usage.

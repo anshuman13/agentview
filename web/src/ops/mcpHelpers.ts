@@ -144,8 +144,8 @@ export function services(rows: Row[]): Service[] {
 
 export type Group = 'work' | 'personal';
 
-// claude.ai connectors belong to the chat's Claude account: alt is the work account, main the personal one.
-export const accountGroup = (a: string): Group => (a === 'alt' ? 'work' : 'personal');
+// claude.ai connectors belong to the chat's Claude account: main is the personal one, the others are work.
+export const accountGroup = (a: string): Group => (a === 'main' ? 'personal' : 'work');
 export const shortName = (name: string) => name.replace(/^claude\.ai /, '');
 export const hideKey = (s: Service) => `hide:${s.name}`;
 export const groupKey = (r: Row) => splitName(r.name)[0];

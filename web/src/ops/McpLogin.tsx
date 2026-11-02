@@ -31,7 +31,7 @@ export function ClaudeAiLogin({ name, live, account }: { name: string; live: boo
         <button className="btn" onClick={() => { openConnectors(account); setOpened(true); }}><Icon name="link-external" small /> Connect on claude.ai</button>
         {opened && live && <button className="btn" onClick={() => send({ type: 'mcp_reconnect', name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
       </div>
-      <div className="muted">{opened ? `Opened in ${account === 'alt' ? 'Chrome' : 'Firefox'} on the Mac. Once it says Connected there, reconnect it here.` : `Opens in ${account === 'alt' ? 'Chrome' : 'Firefox'} on the Mac.`}</div>
+      <div className="muted">{opened ? `Opened in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac. Once it says Connected there, reconnect it here.` : `Opens in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac.`}</div>
     </div>
   );
 }

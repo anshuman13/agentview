@@ -8,7 +8,7 @@ import { AgentSession } from '../../session/session.js';
 import { JsonlTail } from './tail.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
-import { configDir, hasAlt, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
+import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
 import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, type SubFile } from './history.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
 import { ENDED, replayText, usageOf } from './tasks.js';
@@ -66,7 +66,7 @@ export class ClaudeDriver implements AgentDriver {
   }
 
   accounts(): Account[] {
-    return hasAlt() ? ['main', 'alt'] : ['main'];
+    return loggedInAccounts();
   }
 
   setAccount(a: Account) {

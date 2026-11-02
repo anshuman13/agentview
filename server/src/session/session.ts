@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
@@ -12,7 +12,7 @@ import { PR_URL, createsPr, prFrom } from './pr.js';
 
 type UserEvent = Extract<ChatEvent, { kind: 'user' }>;
 
-const accountName = (a: Account) => (a === 'main' ? 'personal' : 'work');
+const accountName = (a: Account) => ACCOUNT_LABEL[a];
 const CONTINUE = 'You hit a usage limit and now run on another Claude account. Continue where you stopped.';
 
 const RETRY_COMPACT_GROWTH = 20_000;
@@ -247,7 +247,7 @@ export class AgentSession implements AgentHost {
 
   setAccount(a: string) {
     const accounts = this.driver.accounts();
-    if (!accounts.includes(a as Account)) return this.system('No work Claude account is logged in. Run ./claude-alt.sh first');
+    if (!accounts.includes(a as Account)) return this.system('That Claude account is not logged in. Run ./claude-alt.sh first');
     if (this.state.session.running) return this.system('Stop Claude before switching account');
     if (a === this.driver.account) return;
     this.driver.setAccount(a as Account);

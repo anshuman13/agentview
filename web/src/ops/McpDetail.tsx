@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MCP_BAD } from '../../../shared/protocol';
+import { ACCOUNT_LABEL, MCP_BAD, type Account } from '../../../shared/protocol';
 import { send } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { openConnectors, use } from './mcpActions';
@@ -42,7 +42,7 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
         {row.env && <><dt>Env</dt><dd className="mono wrap">{row.env.join('  ')}</dd></>}
         <dt>From</dt><dd>{scope}{where ? <span className="muted mono"> · {where}</span> : null}</dd>
         <dt>In chat</dt><dd>{row.live ? 'Loaded' : 'Not loaded'}</dd>
-        {row.account ? <><dt>Account</dt><dd>{row.account === 'alt' ? 'Work' : 'Personal'} Claude account</dd></> : <>
+        {row.account ? <><dt>Account</dt><dd>{ACCOUNT_LABEL[row.account as Account] ?? row.account} Claude account</dd></> : <>
           <dt>Group</dt>
           <dd className="mcp-seg">
             {(['work', 'personal'] as Group[]).map((g) => <button key={g} className={`btn ${g === group ? 'on' : ''}`} onClick={() => g !== group && onGroup(g)}>{g === 'work' ? 'Work' : 'Personal'}</button>)}

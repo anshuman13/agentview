@@ -1,17 +1,17 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
 const dir = process.env.AGENTVIEW_LIMITS_DIR!;
 
-const { freshAccount, hasAlt, isLimited, markLimited, otherAccount, overageUntil, rememberAccount, reopenAccount, verifyLimit } = await import('./accounts.js');
+const { freshAccount, isLimited, loggedIn, loggedInAccounts, markLimited, otherAccount, overageUntil, rememberAccount, reopenAccount, verifyLimit } = await import('./accounts.js');
 
 describe('accounts', () => {
   it('falls back to the second account only once it is logged in and has usage left', () => {
-    expect(hasAlt()).toBe(false);
+    expect(loggedIn('alt')).toBe(false);
     expect(otherAccount('main', 1000)).toBe(null);
     mkdirSync(`${dir}/alt`, { recursive: true });
     writeFileSync(`${dir}/alt/.claude.json`, JSON.stringify({ oauthAccount: { emailAddress: 'a@b.c' } }));
-    expect(hasAlt()).toBe(true);
+    expect(loggedIn('alt')).toBe(true);
     expect(otherAccount('main', 1000)).toBe('alt');
     expect(freshAccount(1000)).toBe('main');
     markLimited('main', 5000);
@@ -22,6 +22,17 @@ describe('accounts', () => {
     expect(otherAccount('alt', 6000)).toBe('main');
     expect(isLimited('alt', 1000)).toBe(true);
     expect(isLimited('alt', 6000)).toBe(false);
+  });
+
+  it('falls back through the logged-in accounts in order', () => {
+    mkdirSync(`${dir}/alt2`, { recursive: true });
+    writeFileSync(`${dir}/alt2/.claude.json`, JSON.stringify({ oauthAccount: { emailAddress: 'a@b.c' } }));
+    expect(loggedInAccounts()).toEqual(['main', 'alt', 'alt2']);
+    expect(otherAccount('main', 1000)).toBe('alt2');
+    expect(otherAccount('alt2', 6000)).toBe('main');
+    expect(otherAccount('main', 6000)).toBe('alt');
+    rmSync(`${dir}/alt2`, { recursive: true });
+    expect(loggedInAccounts()).toEqual(['main', 'alt']);
   });
 
   it('reopens a chat on the account it was on while that one has usage left', () => {
