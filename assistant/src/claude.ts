@@ -11,7 +11,8 @@ export async function* ask(account: Account, prompt: string, options: Options, t
   await verifyLimit(account);
   guardLimit(account);
   const dir = configDir(account);
-  const env = { ...process.env, ...options.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) };
+  // Scans need the claude.ai connectors from the first turn, so the run waits for them to connect.
+  const env = { ...process.env, MCP_CONNECTION_NONBLOCKING: '0', ...options.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) };
   const abortController = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
