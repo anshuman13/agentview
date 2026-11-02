@@ -87,8 +87,8 @@ export function buildTurns(events: ChatEvent[]) {
     if (e.kind === 'plan') next = e.next;
     if (e.kind === 'blocked') turn.blocked.push(e);
     if (e.kind === 'result') turn.ended = e.at;
-    if (e.kind === 'system' && (e.text.startsWith('Compact') || e.text.startsWith('Loop ') || e.text.startsWith('Usage limit'))) {
-      turn.notes.push({ id: e.id, text: e.text, kind: /fail|limit/i.test(e.text) ? 'important' : 'done' });
+    if (e.kind === 'system' && (e.text.startsWith('Compact') || e.text.startsWith('Loop ') || e.text.startsWith('Usage limit') || e.text.startsWith('Logged out'))) {
+      turn.notes.push({ id: e.id, text: e.text, kind: /fail|limit|logged out/i.test(e.text) ? 'important' : 'done' });
     }
     if (e.kind === 'tool_result' && fableCalls.has(e.toolUseId) && !e.isError) turn.notes.push({ id: e.id, text: handBack(e.text), kind: 'fable' });
     if (e.kind !== 'tool_use') continue;

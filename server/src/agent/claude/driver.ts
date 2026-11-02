@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { query, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
-import type { Account, Effort } from '../../../../shared/protocol.js';
+import { ACCOUNT_LABEL, type Account, type Effort } from '../../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, History } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { JsonlTail } from './tail.js';
@@ -567,6 +567,7 @@ export class ClaudeDriver implements AgentDriver {
           if (block.type === 'tool_use') this.toolUse(block);
           // The CLI marks its own usage-limit notice with error 'rate_limit'; Claude's replies never carry it.
           if (block.type === 'text' && msg.error === 'rate_limit') host.noteLimit(block.text);
+          if (block.type === 'text' && msg.error === 'authentication_failed') host.system(`Logged out of the ${ACCOUNT_LABEL[this.account]} Claude account (${block.text}). Run claude, then /login`);
         }
         return;
       }
