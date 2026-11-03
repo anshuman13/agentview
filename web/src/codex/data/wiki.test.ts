@@ -50,10 +50,10 @@ describe('wiki', () => {
     expect(searchWiki(pages, facts, 'zeta').claims).toEqual([]);
   });
 
-  it('counts one review per page and one per claim without a page or replacing a claim', () => {
+  it('counts every proposed claim', () => {
     const more = [...facts, fact('g', 'p1', 'Two', 'Eta proposal', { state: 'proposed' }), fact('h', null as unknown as string, 'One', 'Memory proposal', { state: 'proposed' })];
-    expect(reviewCount(pages, more)).toBe(2);
-    expect(reviewCount(pages, [...more, fact('i', 'p1', 'One', 'Update', { state: 'proposed', replaces: 'a' })])).toBe(3);
+    expect(reviewCount(pages, more)).toBe(3);
+    expect(reviewCount(pages, [...more, fact('i', 'p1', 'One', 'Update', { state: 'proposed', replaces: 'a' })])).toBe(4);
   });
 
   it('sorts claims newest first and moves retired and aged ones to Older', () => {

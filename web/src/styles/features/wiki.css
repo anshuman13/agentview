@@ -315,11 +315,13 @@ li.contested .wk-feed-kind { color: var(--warn); }
 @media (max-width: 900px) {
   .mt-action { padding: var(--sp-8) var(--sp-8) var(--sp-5); }
     .mt-notes, .mt-summary, .mt-decisions li { font-size: 16px; }
-  .mt-approve, .mt-reject { height: var(--touch-sm); }
-  .mt-reject { width: var(--touch-sm); }
-  :is(.mt-raise, .wk-head) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
-  .wk-act, .wk-claims .wk-claim-foot > .wk-act { height: var(--size-2xl); }
-  .wk-claims .wk-claim-foot > .wk-act { margin-block: -5px; }
+  .mt-approve, .mt-reject { height: var(--touch-md); }
+  .mt-reject { width: var(--touch-md); }
+  :is(.mt-raise, .wk-head) > .icon-btn { width: var(--touch-md); height: var(--touch-md); }
+  .wk-act, .wk-claims .wk-claim-foot > .wk-act { height: var(--touch-md); }
+  .wk-claims .wk-claim-foot > .wk-act { margin-block: -9px; }
+  .wk-claim-acts { gap: var(--sp-5); }
+  .wk-claim-acts .icon-btn, .wk-claims .wk-claim-acts .icon-btn { width: var(--touch-md); height: var(--touch-md); min-width: var(--touch-md); }
 }
 
 .wk-reviews { display: grid; gap: var(--sp-4); max-width: 720px; }

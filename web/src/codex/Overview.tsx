@@ -7,6 +7,7 @@ import type { ItemRow } from './data/sync';
 import { plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Shutdown } from './Shutdown';
+import { ClaimsToReview } from './overview/ClaimsToReview';
 import { useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
 import { unrollFor, useActions } from './useActions';
@@ -126,6 +127,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     <>
       <GoalLines now={now} />
       <MorningBrief now={now} />
+      <ClaimsToReview />
       <JustEnded meetings={s.meetingsToday} now={now} />
       {close && (
         <section>

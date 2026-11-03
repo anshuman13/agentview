@@ -266,10 +266,8 @@ export function reviewGroups(pages: Page[], facts: Fact[]) {
   return { byPage: [...byPage.values()], loose };
 }
 
-export function reviewCount(pages: Page[], facts: Fact[]) {
-  const { byPage, loose } = reviewGroups(pages, facts);
-  return byPage.length + loose.length;
-}
+// How many claims wait for a decision, so the badge says 75 for 75 claims and not 3 for 3 pages.
+export const reviewCount = (_pages: Page[], facts: Fact[]) => proposals(facts).length;
 
 export const chatOf = (f: Fact) => (f.added_by?.startsWith('claude:') ? f.added_by.slice(7) : null);
 export const meetingOf = (f: Fact) => (f.added_by?.startsWith('meeting:') ? f.added_by.slice(8) : null);
