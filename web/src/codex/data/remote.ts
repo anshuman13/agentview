@@ -337,8 +337,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     await this.syncNow();
   };
 
-  sendReply = async (id: string, edited: boolean) => {
-    const r = await hub<SentReply>(`/api/assistant/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, undefined, { method: 'POST', signal: AbortSignal.timeout(120000) });
+  sendReply = async (id: string, edited: boolean, text?: string) => {
+    const r = await hub<SentReply>(`/api/assistant/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { text }, { method: 'POST', signal: AbortSignal.timeout(120000) });
     await this.syncNow();
     return r;
   };

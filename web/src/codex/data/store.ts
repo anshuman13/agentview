@@ -33,7 +33,7 @@ export interface AssistantStore {
   summarizeSlack(): Promise<number>;
   scanNow(name: 'slack' | 'gmail'): Promise<void>;
   autopilot(patch?: Partial<AutopilotConfig>): Promise<AutopilotState>;
-  sendReply(id: string, edited: boolean): Promise<SentReply>;
+  sendReply(id: string, edited: boolean, text?: string): Promise<SentReply>;
   searchTranscripts(query: string, profile?: Profile): Promise<TranscriptHit[]>;
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
 }

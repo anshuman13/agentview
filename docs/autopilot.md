@@ -53,7 +53,10 @@ meeting to end. In away mode the scan runs every day from 07:00 to 22:00, and it
 so a first away scan answers nothing older than the mode.
 
 The switch on outside the away dates is assist mode; inside them it is away mode. Dry run, on by default, logs every reply
-the hub would send on the ask instead of sending it. The switch off is the kill switch. The scan reads the settings each
+the hub would send on the ask instead of sending it. Send reply, pressed by me on the push or on the ask, posts even in a
+dry run: the app sends the draft as it reads on the phone with the request, so an edit made a moment ago is what goes out, and
+a failed send stays on the draft card with a Retry button. If someone answered the thread first, nothing is posted and the ask
+closes. The switch off is the kill switch. The scan reads the settings each
 time, so no restart is needed. Sent and dry-run replies are in the hub-only `replies`
 table, one row per ask, with tier, confidence, the text and the permalink of the post.
 

@@ -353,8 +353,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return Number(data?.added ?? 0);
   };
 
-  sendReply = async (id: string, edited: boolean) => {
-    const resp = await fetch(`${HUB}/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { method: 'POST', signal: AbortSignal.timeout(120000) });
+  sendReply = async (id: string, edited: boolean, text?: string) => {
+    const resp = await fetch(`${HUB}/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(120000) });
     const data = await resp.json().catch(() => null);
     if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
     await this.syncNow();

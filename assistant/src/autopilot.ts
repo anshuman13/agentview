@@ -337,16 +337,17 @@ export async function awayDigest(db: Database, c: AutopilotConfig, now = Date.no
   return text;
 }
 
-// Send reply pressed on a push, or on the ask: posts the stored draft as my own reply (no marker) and closes the ask.
+// Send reply pressed on a push, or on the ask: posts the draft as my own reply (no marker) and closes the ask. I pressed
+// Send, so it posts even in a dry run. text is the draft as edited on the phone, which may not have synced yet.
 // edited says I changed the draft before sending, for the sent-unchanged measure.
-export async function replyNow(db: Database, c: AutopilotConfig, id: string, now = Date.now(), post = postReply, edited = false) {
+export async function replyNow(db: Database, c: AutopilotConfig, id: string, now = Date.now(), post = postReply, edited = false, text?: string) {
   const row = db.prepare("SELECT id, source_url, people, draft, updated_at FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND source = 'slack' AND status IN ('suggested', 'open')").get(PROFILE, id) as { id: string; source_url: string | null; people: string | null; draft: string | null; updated_at: number } | null;
   if (reply(db, id)?.status === 'sent') return { status: 'sent' as const, url: null };
-  if (!row?.draft?.trim() || !row.source_url) return null;
+  const draft = (text ?? row?.draft ?? '').trim();
+  if (!row || !draft || !row.source_url) return null;
   const [from = '', chat = 'DM'] = (row.people ?? '').split(' · ');
-  const r = await sendReply(db, c, { id, url: row.source_url, from, chat }, 'answer', row.draft.trim(), now, post);
+  const r = await sendReply(db, { ...c, dry_run: false }, { id, url: row.source_url, from, chat }, 'answer', draft, now, post);
   if (edited) db.prepare('UPDATE replies SET edited = 1 WHERE profile = ? AND id = ?').run(PROFILE, id);
-  if (r.status !== 'sent') return r;
-  applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Math.max(now, row.updated_at + 1), fields: { status: 'done' } }]);
+  if (r.status === 'sent' || r.status === 'answered') applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Math.max(now, row.updated_at + 1), fields: { status: 'done', ...(text !== undefined ? { draft } : {}) } }]);
   return r;
 }

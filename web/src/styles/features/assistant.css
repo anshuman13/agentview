@@ -355,6 +355,7 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .as-draft-text { font-size: var(--fs-md); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; resize: vertical; }
 .as-draft-bar { display: flex; gap: var(--sp-3); }
+.as-draft-err { font-size: var(--fs-sm); color: var(--err); overflow-wrap: anywhere; }
 .as-tt-fine { display: flex; gap: var(--sp-6); margin-left: 38px; font-size: var(--fs-xs, var(--fs-sm)); color: var(--fg-faint); }
 .as-tt-fine span:last-child { margin-left: auto; }
 .as-tt-fine span:first-child:not(:last-child) { margin-left: 0; }

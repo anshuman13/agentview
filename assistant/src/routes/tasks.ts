@@ -9,7 +9,7 @@ import { learnVoice } from '../voice.js';
 import { acceptAsk } from '../slackSave.js';
 import { autopilotConfig, autopilotState, replyNow, saveAutopilot } from '../autopilot.js';
 import { errText } from '../../../shared/util.js';
-import { body, send, type Ctx, type Routes } from './http.js';
+import { body, readJson, send, type Ctx, type Routes } from './http.js';
 
 function taskAction(act: typeof finishTask) {
   return ({ res, url, getDb }: Ctx) => {
@@ -91,11 +91,14 @@ export const taskRoutes: Routes = {
   },
 
   'POST /slack/accept': accept('slack', 'Slack'),
-  'POST /slack/reply': async ({ res, url, getDb }) => {
+  'POST /slack/reply': async ({ req, res, url, getDb }) => {
     const id = url.searchParams.get('id') ?? '';
     const edited = url.searchParams.get('edited') === '1';
+    // A push action posts no body, the app posts the draft as it reads on the phone.
+    const data = (await readJson(req, 20_000).catch(() => null)) as { text?: string } | null;
+    const text = typeof data?.text === 'string' ? data.text : undefined;
     try {
-      const r = await once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(getDb()), id, Date.now(), undefined, edited));
+      const r = await once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(getDb()), id, Date.now(), undefined, edited, text));
       send(res, r ? 200 : 404, r ?? { error: 'No Slack ask with a draft' });
     } catch (err) {
       send(res, 502, { error: errText(err) });

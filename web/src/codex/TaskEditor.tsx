@@ -41,17 +41,21 @@ function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantStore; on
   const [text, setText] = useState(row.draft ?? '');
   const [edited, setEdited] = useState(false);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => { if (!editing) setText(row.draft ?? ''); }, [row.draft, editing]);
   const keep = () => { setEditing(false); if (text.trim() !== (row.draft ?? '')) { onEdit(text.trim() || null); setEdited(true); } };
+  // The text goes with the request, so an edit made a moment ago is what gets posted even before it has synced.
   const send = async () => {
+    const changed = editing ? text.trim() !== (row.draft ?? '') : edited;
     if (editing) keep();
     setSending(true);
+    setError('');
     try {
-      const r = await store.sendReply(row.id, edited);
+      const r = await store.sendReply(row.id, changed, text.trim());
       haptic('success');
-      showSnack(r.status === 'dry' ? 'Dry run: the reply was noted on the ask, not sent' : r.status === 'answered' ? 'Not sent: someone already answered in the thread' : 'Reply sent');
+      showSnack(r.status === 'answered' ? 'Not sent: someone already answered in the thread' : 'Reply sent');
     } catch (err) {
-      showSnack(`Not sent: ${(err as Error).message}`);
+      setError((err as Error).message);
     } finally {
       setSending(false);
     }
@@ -62,8 +66,9 @@ function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantStore; on
       {editing
         ? <textarea className="as-draft-text" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
         : <div className="as-draft-text">{row.draft}</div>}
+      {error && <div className="as-draft-err">Not sent: {error}</div>}
       <div className="as-draft-bar">
-        <Button size="sm" icon={sending ? 'loading' : 'send'} disabled={sending} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>Send</Button>
+        <Button size="sm" icon={sending ? 'loading' : error ? 'refresh' : 'send'} disabled={sending} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : 'Send'}</Button>
         {!editing && <Button variant="quiet" size="sm" icon="edit" onClick={() => setEditing(true)}>Edit</Button>}
         <Button variant="quiet" size="sm" icon="close" onClick={() => onEdit(null)}>Skip</Button>
       </div>

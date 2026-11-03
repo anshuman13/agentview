@@ -205,6 +205,17 @@ describe('replyNow', () => {
     expect(await replyNow(db, { enabled: true, dry_run: false }, askId(url('u2')), now, post)).toBeNull();
     expect(posts.length).toBe(1);
   });
+  test('posts in a dry run too, uses the text sent with the press, and closes an ask someone else answered', async () => {
+    const now = at(10, 10);
+    const db = withAsks([ask('u1'), ask('u2')], now);
+    posts.length = 0;
+    expect(await replyNow(db, { enabled: true, dry_run: true }, askId(url('u1')), now, post, true, 'Edited on the phone.')).toEqual({ status: 'sent', url: url('u1') + '/reply' });
+    expect(posts).toEqual([url('u1') + ': Edited on the phone.']);
+    expect(db.prepare('SELECT status, draft FROM items WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'done', draft: 'Edited on the phone.' });
+    expect(db.prepare('SELECT edited FROM replies WHERE id = ?').get(askId(url('u1')))).toEqual({ edited: 1 });
+    expect(await replyNow(db, { enabled: true, dry_run: false }, askId(url('u2')), now, async () => ANSWERED)).toEqual({ status: 'answered', url: null });
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'done' });
+  });
 });
 
 test('settings are cleaned on save and read back from the database', () => {
