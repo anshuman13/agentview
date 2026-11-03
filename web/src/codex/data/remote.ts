@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
+import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type SentReply, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { doneCutoff } from './localRows';
 import { TABLE_FIELDS, mergeIncoming, rowKey } from './sync';
@@ -335,6 +335,12 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   scanNow = async (name: 'slack' | 'gmail') => {
     await hub(`/api/assistant/scan?name=${name}`, undefined, { method: 'POST', signal: AbortSignal.timeout(300000) });
     await this.syncNow();
+  };
+
+  sendReply = async (id: string, edited: boolean) => {
+    const r = await hub<SentReply>(`/api/assistant/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, undefined, { method: 'POST', signal: AbortSignal.timeout(120000) });
+    await this.syncNow();
+    return r;
   };
 
   autopilot = (patch?: Partial<AutopilotConfig>) => hub<AutopilotState>('/api/assistant/autopilot', patch, patch ? undefined : { method: 'GET' });

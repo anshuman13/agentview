@@ -207,12 +207,14 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
 }
 
 // Send reply pressed on a push, or on the ask: posts the stored draft as my own reply (no marker) and closes the ask.
-export async function replyNow(db: Database, c: AutopilotConfig, id: string, now = Date.now(), post = postReply) {
+// edited says I changed the draft before sending, for the sent-unchanged measure.
+export async function replyNow(db: Database, c: AutopilotConfig, id: string, now = Date.now(), post = postReply, edited = false) {
   const row = db.prepare("SELECT id, source_url, people, draft, updated_at FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND source = 'slack' AND status IN ('suggested', 'open')").get(PROFILE, id) as { id: string; source_url: string | null; people: string | null; draft: string | null; updated_at: number } | null;
   if (reply(db, id)?.status === 'sent') return { status: 'sent' as const, url: null };
   if (!row?.draft?.trim() || !row.source_url) return null;
   const [from = '', chat = 'DM'] = (row.people ?? '').split(' · ');
   const r = await sendReply(db, c, { id, url: row.source_url, from, chat }, 'answer', row.draft.trim(), now, post);
+  if (edited) db.prepare('UPDATE replies SET edited = 1 WHERE profile = ? AND id = ?').run(PROFILE, id);
   if (r.status === 'dry') return r;
   applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Math.max(now, row.updated_at + 1), fields: { status: 'done' } }]);
   return r;

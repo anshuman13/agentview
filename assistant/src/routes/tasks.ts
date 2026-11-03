@@ -85,8 +85,9 @@ export const taskRoutes: Routes = {
   'POST /slack/accept': accept('slack', 'Slack'),
   'POST /slack/reply': async ({ res, url, getDb }) => {
     const id = url.searchParams.get('id') ?? '';
+    const edited = url.searchParams.get('edited') === '1';
     try {
-      const r = await once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(getDb()), id));
+      const r = await once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(getDb()), id, Date.now(), undefined, edited));
       send(res, r ? 200 : 404, r ?? { error: 'No Slack ask with a draft' });
     } catch (err) {
       send(res, 502, { error: errText(err) });

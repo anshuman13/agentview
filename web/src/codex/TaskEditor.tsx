@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAssistant } from './data';
 import { atTime } from './data/engine';
-import type { Patch } from './data/store';
+import type { AssistantStore, Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { Button, Chip, chipClass, IconButton } from '../ui/Button';
@@ -35,6 +35,42 @@ const dueLabel = (at: number | null) => {
 };
 
 // The open task is a page: title and notes save when they lose focus or the task closes.
+// The reply draft of a Slack ask: Send posts it in the thread as me, Edit changes it first, Skip drops it.
+function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantStore; onEdit: (draft: string | null) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(row.draft ?? '');
+  const [edited, setEdited] = useState(false);
+  const [sending, setSending] = useState(false);
+  useEffect(() => { if (!editing) setText(row.draft ?? ''); }, [row.draft, editing]);
+  const keep = () => { setEditing(false); if (text.trim() !== (row.draft ?? '')) { onEdit(text.trim() || null); setEdited(true); } };
+  const send = async () => {
+    if (editing) keep();
+    setSending(true);
+    try {
+      const r = await store.sendReply(row.id, edited);
+      haptic('success');
+      showSnack(r.status === 'dry' ? 'Dry run: the reply was noted on the ask, not sent' : 'Reply sent');
+    } catch (err) {
+      showSnack(`Not sent: ${(err as Error).message}`);
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <div className="as-draft">
+      <div className="as-draft-head">Reply draft</div>
+      {editing
+        ? <textarea className="as-draft-text" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
+        : <div className="as-draft-text">{row.draft}</div>}
+      <div className="as-draft-bar">
+        <Button size="sm" icon={sending ? 'loading' : 'send'} disabled={sending} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>Send</Button>
+        {!editing && <Button variant="quiet" size="sm" icon="edit" onClick={() => setEditing(true)}>Edit</Button>}
+        <Button variant="quiet" size="sm" icon="close" onClick={() => onEdit(null)}>Skip</Button>
+      </div>
+    </div>
+  );
+}
+
 export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void }) {
   const act = useActions();
   const { store, snap } = useAssistant();
@@ -252,6 +288,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
           ))}
           <Button variant="quiet" size="sm" icon="add" className="as-tt-add" onMouseDown={(e) => e.preventDefault()} onClick={addSubtask}>Add subtask</Button>
         </div>
+        {row.draft && row.source === 'slack' && (row.status === 'suggested' || row.status === 'open') && <Draft row={row} store={store} onEdit={(draft) => act.edit(row, { draft })} />}
         {(row.people || row.updated_at || estimate != null) && <div className="as-tt-fine">{estimate != null && <span>~{minutesText(estimate)}</span>}{row.people && <span>{row.people}</span>}<span>{ago(row.updated_at, ' ago')}</span></div>}
       </div>
       <div className="as-tt-bar">

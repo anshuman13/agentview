@@ -105,6 +105,8 @@ export function openDb(file: string = DB_PATH): Database {
       PRIMARY KEY (profile, id)
     )
   `);
+  const replyCols = new Set((db.prepare('PRAGMA table_info(replies)').all() as { name: string }[]).map((c) => c.name));
+  if (!replyCols.has('edited')) db.exec('ALTER TABLE replies ADD COLUMN edited INTEGER');
 
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));

@@ -5,7 +5,7 @@ import type { Table, Tables } from './wiki';
 export const WIKI_TABLES: Table[] = ['pages', 'facts', 'meetings', 'actions', 'jobs', 'runs', 'chats', 'briefs'];
 
 type SyncStatus = { syncing: boolean; last: number; error: string; pending: number; saveError: boolean; paused: Paused[]; scans: ScanHealth[] };
-export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'meeting_id' | 'rolls' | 'rolled_from' | 'rank' | 'source' | 'people' | 'spent' | 'goal' | 'priority' | 'tags' | 'remind'>> & { deleted?: number };
+export type Patch = Partial<Pick<ItemFields, 'title' | 'text' | 'status' | 'at' | 'meeting_id' | 'rolls' | 'rolled_from' | 'rank' | 'source' | 'people' | 'spent' | 'goal' | 'priority' | 'tags' | 'remind' | 'draft'>> & { deleted?: number };
 export type Parsed = { title: string; details: string | null; at: number | null };
 export type MeetingRef = { id: string; title: string | null } | null;
 export type TranscriptHit = { profile: Profile; id: string; snippet: string };
@@ -33,11 +33,13 @@ export interface AssistantStore {
   summarizeSlack(): Promise<number>;
   scanNow(name: 'slack' | 'gmail'): Promise<void>;
   autopilot(patch?: Partial<AutopilotConfig>): Promise<AutopilotState>;
+  sendReply(id: string, edited: boolean): Promise<SentReply>;
   searchTranscripts(query: string, profile?: Profile): Promise<TranscriptHit[]>;
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
 }
 
 export type AutopilotConfig = { enabled: boolean; dry_run: boolean; away: { from: string; to: string; backup: string; note: string }; escalate: string[]; dms: boolean; channels?: string[]; min_confidence: number };
+export type SentReply = { status: 'sent' | 'dry'; url: string | null };
 export type AutopilotReply = { id: string; who: string | null; chat: string | null; tier: string | null; confidence: number | null; status: string; text: string | null; url: string | null; at: number };
 export type AutopilotState = { config: AutopilotConfig; mode: 'off' | 'assist' | 'away'; watched: string[]; covered: string[]; push: { from: number; to: number }; texts: { hold: string; marker: string } | null; scan: ScanHealth | null; replies: AutopilotReply[] };
 

@@ -27,6 +27,9 @@ export async function assistantRoute(method: string, url: URL, body: () => Promi
   else if (route === '/autopilot' && method === 'POST') {
     target = '/autopilot';
     init = { ...init, method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
+  } else if (route === '/slack/reply' && method === 'POST') {
+    target = `/slack/reply?id=${encodeURIComponent(url.searchParams.get('id') ?? '')}${url.searchParams.get('edited') === '1' ? '&edited=1' : ''}`;
+    init = { signal: AbortSignal.timeout(120_000), method: 'POST' };
   } else if (route === '/slack/summary' && method === 'POST') {
     target = '/slack/summary';
     init = { signal: AbortSignal.timeout(300_000), method: 'POST' };
