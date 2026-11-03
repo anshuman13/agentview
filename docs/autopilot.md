@@ -27,8 +27,10 @@ FAQ the drafts can lean on.
 | assist (daily) | me, one tap | nothing; every draft waits for Send or Skip |
 | away (vacation) | the hub | tier A answers and tier B holding notes; tier C only pushes me |
 
-The switch is the "Reply for me in Slack" card at the top of Jobs. Tapping the card opens Dry run, the away dates, the
-backup, an extra line for the holding note, the people never to answer, and the last 10 replies. The settings live in
+The switch is the "Reply for me in Slack" card at the top of Jobs. Tapping the card shows what the scan watches and
+its last run, chips for DMs and each watched channel (tap to cover or uncover one; temp channels start uncovered), Dry
+run, the people never to answer, the away dates folded behind one line (dates, backup, an extra line for the holding
+note), and Seen: the last 15 asks with what was done (Replied, Would reply, Could answer, Needs you, Escalate, Failed). The settings live in
 the hub's meta table (`GET` and `POST /autopilot`); a `autopilot.json` next to the database seeds them once.
 
 The switch on outside the away dates is assist mode; inside them it is away mode. Dry run, on by default, logs every reply

@@ -37,6 +37,7 @@ describe('modeOf', () => {
 test('DMs and watched channels are allowed, temp channels and others are not', () => {
   const watched = ['ai-help', 'tmp-rollout', 'temp-x'];
   expect(channelAllowed({}, watched, 'DM')).toBe(true);
+  expect(channelAllowed({ dms: false }, watched, 'DM')).toBe(false);
   expect(channelAllowed({}, watched, '#ai-help')).toBe(true);
   expect(channelAllowed({}, watched, '#tmp-rollout')).toBe(false);
   expect(channelAllowed({}, watched, '#random')).toBe(false);
@@ -132,7 +133,7 @@ test('settings are cleaned on save and read back from the database', () => {
   const db = openDb(':memory:');
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual({});
   const c = saveAutopilot(db, { enabled: 1, away: { from: '2026-12-20', to: 'soon', backup: ' Kim ' }, escalate: 'Mia, , Bo', min_confidence: 2 });
-  expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], min_confidence: 0.8 });
+  expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], dms: true, min_confidence: 0.8 });
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual(c);
   expect(modeOf(c, at(22, 10))).toBe('assist');
 });

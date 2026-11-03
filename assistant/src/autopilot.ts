@@ -4,7 +4,8 @@ import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
-import { run } from './slack.js';
+import { run, slackConfig } from './slack.js';
+import { scanHealth } from './scan.js';
 import { PROFILE, webUrl } from './slackSave.js';
 import { applyChanges } from './sync.js';
 import { DAY, HOUR, ymd } from './time.js';
@@ -13,7 +14,7 @@ import { DAY, HOUR, ymd } from './time.js';
 // is pushed with a Send reply action. Inside the away window the hub answers tier A asks itself and sends one holding
 // note per person; dry_run logs what it would send instead of sending.
 export type Away = { from: string; to: string; backup?: string; note?: string };
-export type AutopilotConfig = { enabled?: boolean; dry_run?: boolean; away?: Away; escalate?: string[]; channels?: string[]; min_confidence?: number };
+export type AutopilotConfig = { enabled?: boolean; dry_run?: boolean; away?: Away; escalate?: string[]; dms?: boolean; channels?: string[]; min_confidence?: number };
 export type Mode = 'off' | 'assist' | 'away';
 export const TIERS = ['answer', 'hold', 'escalate'] as const;
 export type Tier = (typeof TIERS)[number];
@@ -34,7 +35,7 @@ export function autopilotConfig(db: Database, file = path.join(DB_DIR, 'autopilo
   const raw = getMeta(db, META);
   if (raw) {
     try {
-      return JSON.parse(raw) as AutopilotConfig;
+      return { dms: true, ...(JSON.parse(raw) as AutopilotConfig) };
     } catch {}
   }
   const seed = readJsonSync<AutopilotConfig | null>(file, null);
@@ -50,6 +51,7 @@ export function saveAutopilot(db: Database, c: Record<string, unknown>): Autopil
     dry_run: c.dry_run !== false && c.dry_run !== 0,
     away: { from: DATE.test(from) ? from : '', to: DATE.test(to) ? to : '', backup: str(away.backup), note: str(away.note) },
     escalate: Array.isArray(c.escalate) ? c.escalate.map(str).filter(Boolean) : typeof c.escalate === 'string' ? c.escalate.split(',').map((x) => x.trim()).filter(Boolean) : [],
+    dms: c.dms !== false && c.dms !== 0,
     ...(Array.isArray(c.channels) ? { channels: c.channels.map(str).filter(Boolean) } : {}),
     min_confidence: typeof c.min_confidence === 'number' && c.min_confidence >= 0 && c.min_confidence <= 1 ? c.min_confidence : 0.8,
   };
@@ -57,13 +59,14 @@ export function saveAutopilot(db: Database, c: Record<string, unknown>): Autopil
   return clean;
 }
 
-export type Logged = { id: string; who: string | null; chat: string | null; tier: string | null; status: string; text: string | null; url: string | null; at: number };
+export type Logged = { id: string; who: string | null; chat: string | null; tier: string | null; confidence: number | null; status: string; text: string | null; url: string | null; at: number };
 
-// The settings, the mode now and the last replies, for the Jobs page.
+// The settings, the mode now, what the scan watches and its last run, and the last asks seen with what was done, for the Jobs page.
 export function autopilotState(db: Database, now = Date.now()) {
   const config = autopilotConfig(db);
-  const replies = db.prepare("SELECT id, who, chat, tier, status, text, url, COALESCE(sent_at, at) AS at FROM replies WHERE profile = ? AND status <> 'held' ORDER BY COALESCE(sent_at, at) DESC LIMIT 10").all(PROFILE) as Logged[];
-  return { config, mode: modeOf(config, now), replies };
+  const watched = slackConfig()?.channels ?? [];
+  const replies = db.prepare('SELECT id, who, chat, tier, confidence, status, text, url, COALESCE(sent_at, at) AS at FROM replies WHERE profile = ? ORDER BY COALESCE(sent_at, at) DESC LIMIT 15').all(PROFILE) as Logged[];
+  return { config, mode: modeOf(config, now), watched, covered: coveredChannels(config, watched), scan: scanHealth(db).find((h) => h.scan === 'slack') ?? null, replies };
 }
 
 export function modeOf(c: AutopilotConfig, now = Date.now()): Mode {
@@ -91,12 +94,12 @@ export function awayLines(c: AutopilotConfig, now = Date.now()) {
 
 export const escalated = (c: AutopilotConfig, from: string) => (c.escalate ?? []).some((n) => n.trim() && from.toLowerCase().includes(n.trim().toLowerCase()));
 
-// DMs and the watched channels, minus temp ones, unless the config names its own list.
+// The watched channels minus temp ones, unless the config names its own list.
+export const coveredChannels = (c: AutopilotConfig, watched: string[]) => c.channels ?? watched.filter((n) => !/^te?mp[-_]/.test(n));
+
 export function channelAllowed(c: AutopilotConfig, watched: string[], chat: string) {
-  if (chat === 'DM') return true;
-  const name = chat.replace(/^#/, '');
-  const list = c.channels ?? watched.filter((n) => !/^te?mp[-_]/.test(n));
-  return list.includes(name);
+  if (chat === 'DM') return c.dms !== false;
+  return coveredChannels(c, watched).includes(chat.replace(/^#/, ''));
 }
 
 const reply = (db: Database, id: string) => db.prepare('SELECT status, who, mode, tier FROM replies WHERE profile = ? AND id = ?').get(PROFILE, id) as Reply | null;

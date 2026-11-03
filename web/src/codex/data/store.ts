@@ -37,9 +37,9 @@ export interface AssistantStore {
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
 }
 
-export type AutopilotConfig = { enabled: boolean; dry_run: boolean; away: { from: string; to: string; backup: string; note: string }; escalate: string[]; min_confidence: number };
-export type AutopilotReply = { id: string; who: string | null; chat: string | null; tier: string | null; status: string; text: string | null; url: string | null; at: number };
-export type AutopilotState = { config: AutopilotConfig; mode: 'off' | 'assist' | 'away'; replies: AutopilotReply[] };
+export type AutopilotConfig = { enabled: boolean; dry_run: boolean; away: { from: string; to: string; backup: string; note: string }; escalate: string[]; dms: boolean; channels?: string[]; min_confidence: number };
+export type AutopilotReply = { id: string; who: string | null; chat: string | null; tier: string | null; confidence: number | null; status: string; text: string | null; url: string | null; at: number };
+export type AutopilotState = { config: AutopilotConfig; mode: 'off' | 'assist' | 'away'; watched: string[]; covered: string[]; scan: ScanHealth | null; replies: AutopilotReply[] };
 
 export const transcriptPath = (m: { profile: Profile; id: string }) => `/transcript?profile=${m.profile}&id=${encodeURIComponent(m.id)}`;
 

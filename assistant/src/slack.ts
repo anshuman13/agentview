@@ -9,7 +9,7 @@ import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
-import { afterScan, autopilotConfig, awayLines, modeOf, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, awayLines, channelAllowed, modeOf, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
@@ -23,7 +23,7 @@ export const HUB_URL = process.env.ASSISTANT_PUBLIC ?? 'http://macmini.netbird.c
 // Kept outside the repo in ~/.agentview/assistant/slack.json: my Slack user id, the workspace domain and the channels to watch.
 export type SlackConfig = { me: string; domain: string; channels: string[]; push?: { from: number; to: number } };
 
-function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig | null {
+export function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig | null {
   const c = readJsonSync<any>(file, null);
   return typeof c?.me === 'string' && Array.isArray(c.channels) ? c : null;
 }
@@ -152,7 +152,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   const { chats, added, urgent, said, messages, newAsks } = saveScan(db, saved, now);
   setMeta(db, 'slack:last', String(now));
   const replies = await afterScan(db, auto, c.channels, newAsks, now);
-  return { chats, messages, asks: added, said, urgent, newAsks, replies, mode: modeOf(auto, now) };
+  return { chats, messages, asks: added, said, urgent, newAsks, replies, mode: modeOf(auto, now), auto };
 }
 
 // In assist mode an ask with a draft gets a Send reply action and the draft in the body; otherwise only urgent asks are pushed.
@@ -210,7 +210,7 @@ async function slackOnce(db: Database) {
   const auto = r.mode === 'off' ? '' : `, autopilot ${r.mode}: ${r.replies.answered.length} answered, ${r.replies.held.length} held, ${r.replies.skipped.length} skipped`;
   console.log(`slack: ${r.chats} chats, ${r.messages} messages, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent${auto}`);
   const assist = r.mode === 'assist';
-  await pushUrgent(db, c, assist ? r.newAsks.filter((a) => a.urgent || a.draft?.trim()) : r.urgent, assist);
+  await pushUrgent(db, c, assist ? r.newAsks.filter((a) => a.urgent || (a.draft?.trim() && channelAllowed(r.auto, c.channels, a.chat))) : r.urgent, assist);
   return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said, ...(r.mode === 'away' ? { replied: r.replies.answered.length + r.replies.held.length } : {}) };
 }
 

@@ -66,50 +66,78 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) 
   return <button role="switch" aria-checked={on} aria-label={label} className={`jb-switch${on ? ' on' : ''}`} onClick={(e) => { e.stopPropagation(); onChange(!on); }}><span /></button>;
 }
 
-const MODE_LINE = { off: 'Off. Drafts stay on the asks.', assist: 'On. Each Slack ask with a draft is pushed with Send reply.', away: 'Away. Sure answers go out with an auto-reply marker, the rest get a holding note.' };
+const MODE_LINE = { off: 'Off', assist: 'On: each ask with a draft is pushed to you with Send reply', away: 'Away: sure answers go out, the rest get a holding note' };
+const SEEN: Record<string, string> = { sent: 'Replied', dry: 'Would reply', error: 'Failed', answer: 'Could answer', hold: 'Needs you', escalate: 'Escalate' };
+const when = (t: number) => (t >= new Date().setHours(0, 0, 0, 0) ? clock(t) : dayLabel(t, true));
 
-// The switch for replying on my behalf in Slack, with the away window, backup, people to never answer and the last replies.
+function scanLine(s: AutopilotState) {
+  const parts = [s.config.dms ? 'DMs and mentions' : 'mentions', `${s.covered.length} of ${s.watched.length} channels`];
+  const h = s.scan;
+  const last = !h ? 'Slack scan not set up' : h.error && (h.failed ?? 0) >= (h.ok ?? 0) ? `last scan ${when(h.failed!)} failed` : h.ok ? `last scan ${when(h.ok)}${h.counts ? `, ${h.counts.messages ?? 0} messages, ${h.counts.asks ?? 0} asks` : ''}` : 'no scan yet';
+  return `Watching ${parts.join(' and ')} every 15 min on weekdays · ${last}`;
+}
+
+// The switch for replying on my behalf in Slack: what it covers, dry run, the people never to answer, the away dates and what it saw.
 function Autopilot() {
   const store = useAssistantStore();
   const [state, setState] = useState<AutopilotState | null>(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
+  const [away, setAway] = useState(false);
   const [form, setForm] = useState({ from: '', to: '', backup: '', note: '', escalate: '' });
   const load = (p: Promise<AutopilotState>) => p.then((s) => { setState(s); setForm({ ...s.config.away, escalate: s.config.escalate.join(', ') }); setError(''); }).catch((err) => setError((err as Error).message));
   useEffect(() => void load(store.autopilot()), [store]);
   const save = (patch: Partial<AutopilotConfig>) => load(store.autopilot(patch));
   const saveForm = () => {
-    const { escalate, ...away } = form;
+    const { escalate, ...a } = form;
     const c = state?.config;
-    if (!c || (JSON.stringify(away) === JSON.stringify(c.away) && escalate === c.escalate.join(', '))) return;
-    void save({ away, escalate: escalate.split(',').map((x) => x.trim()).filter(Boolean) });
+    if (!c || (JSON.stringify(a) === JSON.stringify(c.away) && escalate === c.escalate.join(', '))) return;
+    void save({ away: a, escalate: escalate.split(',').map((x) => x.trim()).filter(Boolean) });
   };
   const c = state?.config;
+  const toggleChannel = (name: string) => {
+    if (!state) return;
+    const on = state.covered.includes(name);
+    void save({ channels: on ? state.covered.filter((n) => n !== name) : [...state.covered, name] });
+  };
+  const awayText = c?.away.from && c.away.to ? `${dayLabel(new Date(`${c.away.from}T00:00`).getTime(), true)} to ${dayLabel(new Date(`${c.away.to}T00:00`).getTime(), true)}${c.away.backup ? `, ${c.away.backup} covers` : ''}` : 'not set';
   return (
-    <section className="jb-auto" aria-label="Autopilot">
-      <div className="mt-row jb-row" role="button" tabIndex={0} onClick={() => setOpen(!open)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(!open); } }}>
+    <section className="mt-rows jb-auto" aria-label="Autopilot">
+      <div className="mt-row jb-row" role="button" tabIndex={0} aria-expanded={open} onClick={() => setOpen(!open)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(!open); } }}>
         <span className="mt-body">
           <span className="mt-title">Reply for me in Slack</span>
           <span className="wk-meta"><span>{error || (state ? MODE_LINE[state.mode] : 'Loading')}</span>{c?.dry_run && c.enabled && <span>Dry run</span>}</span>
         </span>
         {c && <Switch on={c.enabled} label="Reply for me in Slack" onChange={(on) => void save({ enabled: on })} />}
       </div>
-      {open && c && (
+      {open && state && c && (
         <div className="jb-auto-form">
-          <label className="jb-auto-line"><span>Dry run: log the reply on the ask instead of sending it</span><Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} /></label>
-          <div className="jb-when">
-            <span>Away from</span><input type="date" aria-label="Away from" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} onBlur={saveForm} />
-            <span>to</span><input type="date" aria-label="Away to" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} onBlur={saveForm} />
+          <div className="muted small">{scanLine(state)}</div>
+          <div className="jb-chips" role="group" aria-label="Covers">
+            <button className={`jb-chip${c.dms ? ' on' : ''}`} aria-pressed={c.dms} onClick={() => void save({ dms: !c.dms })}>DMs</button>
+            {state.watched.map((n) => <button key={n} className={`jb-chip${state.covered.includes(n) ? ' on' : ''}`} aria-pressed={state.covered.includes(n)} onClick={() => toggleChannel(n)}>#{n}</button>)}
           </div>
-          <input aria-label="Backup" placeholder="Who covers while you are away" value={form.backup} onChange={(e) => setForm({ ...form, backup: e.target.value })} onBlur={saveForm} />
-          <input aria-label="Away note" placeholder="Extra line for the holding note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} onBlur={saveForm} />
+          <label className="jb-auto-line"><span>Dry run: note the reply on the ask instead of sending it</span><Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} /></label>
           <input aria-label="Never answer" placeholder="Never answer these people (names, comma separated)" value={form.escalate} onChange={(e) => setForm({ ...form, escalate: e.target.value })} onBlur={saveForm} />
-          <div className="muted small">Away mode answers only inside the dates. Outside them, on means every ask with a draft is pushed with Send reply. Nothing is sent while Dry run is on.</div>
+          <button className="jb-auto-line jb-fold" aria-expanded={away} onClick={() => setAway(!away)}><span>Away dates: {awayText}</span><Icon name={away ? 'chevron-down' : 'chevron-right'} small /></button>
+          {away && (
+            <div className="jb-auto-away">
+              <div className="jb-when">
+                <input type="date" aria-label="Away from" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} onBlur={saveForm} />
+                <span>to</span>
+                <input type="date" aria-label="Away to" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} onBlur={saveForm} />
+              </div>
+              <input aria-label="Backup" placeholder="Who covers while you are away" value={form.backup} onChange={(e) => setForm({ ...form, backup: e.target.value })} onBlur={saveForm} />
+              <input aria-label="Away note" placeholder="Extra line for the holding note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} onBlur={saveForm} />
+              <div className="muted small">Between these dates it answers sure questions itself with an auto-reply marker and sends one holding note per person; outside them it only pushes you drafts.</div>
+            </div>
+          )}
           {state.replies.length > 0 && (
             <div className="jb-auto-log">
+              <div className="muted small">Seen</div>
               {state.replies.map((r) => (
                 <div key={r.id} className="jb-run">
-                  <div className="wk-meta"><span>{r.status === 'dry' ? 'Would reply' : r.status === 'sent' ? 'Replied' : r.status}</span><span>{r.who}{r.chat ? ` · ${r.chat}` : ''}</span><span>{at(r.at)}</span>{r.url && <a href={r.url} target="_blank" rel="noreferrer">Open</a>}</div>
+                  <div className="wk-meta"><span>{SEEN[r.status] ?? SEEN[r.tier ?? ''] ?? 'Seen'}</span><span>{r.who}{r.chat ? ` · ${r.chat}` : ''}</span><span>{when(r.at)}</span>{r.url && <a href={r.url} target="_blank" rel="noreferrer">Open</a>}</div>
                   {r.text && <div className="jb-output">{r.text}</div>}
                 </div>
               ))}
