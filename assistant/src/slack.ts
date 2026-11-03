@@ -10,7 +10,7 @@ import { DRAFT_STEP, contextTool } from './draft.js';
 import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
-import { afterScan, autopilotConfig, awayLines, awayStart, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, awayLines, awayStart, escalateLines, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
@@ -151,7 +151,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  const prompt = scanPrompt(db, c, since, now, awayLines(auto, now));
+  const prompt = scanPrompt(db, c, since, now, [...escalateLines(auto), ...awayLines(auto, now)]);
   await run(prompt, 'sonnet', [save, contextTool(db, now)], 40, () => saved != null);
   if (!saved) throw new Error('The scan did not save');
   keepChannelIds(db, c, saved);

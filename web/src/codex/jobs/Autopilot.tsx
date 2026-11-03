@@ -41,15 +41,15 @@ export function Autopilot() {
   const [open, setOpen] = useState(false);
   const [fold, setFold] = useState<'away' | 'covers' | 'never' | null>(null);
   const [all, setAll] = useState(false);
-  const [form, setForm] = useState({ from: '', to: '', backup: '', note: '', escalate: '' });
-  const load = (p: Promise<AutopilotState>) => p.then((s) => { setState(s); setForm({ ...s.config.away, escalate: s.config.escalate.join(', ') }); setError(''); }).catch((err) => setError((err as Error).message));
+  const [form, setForm] = useState({ from: '', to: '', backup: '', note: '', escalate: '', manager: '' });
+  const load = (p: Promise<AutopilotState>) => p.then((s) => { setState(s); setForm({ ...s.config.away, escalate: s.config.escalate.join(', '), manager: s.config.manager ?? '' }); setError(''); }).catch((err) => setError((err as Error).message));
   useEffect(() => void load(store.autopilot()), [store]);
   const save = (patch: Partial<AutopilotConfig>) => load(store.autopilot(patch));
   const saveForm = () => {
-    const { escalate, ...a } = form;
+    const { escalate, manager, ...a } = form;
     const c = state?.config;
-    if (!c || (JSON.stringify(a) === JSON.stringify(c.away) && escalate === c.escalate.join(', '))) return;
-    void save({ away: a, escalate: escalate.split(',').map((x) => x.trim()).filter(Boolean) });
+    if (!c || (JSON.stringify(a) === JSON.stringify(c.away) && escalate === c.escalate.join(', ') && manager === (c.manager ?? ''))) return;
+    void save({ away: a, escalate: escalate.split(',').map((x) => x.trim()).filter(Boolean), manager });
   };
   const c = state?.config;
   const toggleChannel = (name: string) => {
@@ -102,9 +102,10 @@ export function Autopilot() {
             </div>
             <div className="muted small">{scanLine(state)}</div>
           </Fold>
-          <Fold title={c.escalate.length ? `Never answers ${c.escalate.length === 1 ? c.escalate[0] : `${c.escalate.length} people`}` : 'Never answers: nobody yet'} open={fold === 'never'} onToggle={() => toggle('never')}>
-            <input aria-label="Never answer" placeholder="Names, comma separated" value={form.escalate} onChange={(e) => setForm({ ...form, escalate: e.target.value })} onBlur={saveForm} />
-            <div className="muted small">Their asks always go to your phone.</div>
+          <Fold title={c.escalate.length || c.manager ? `Never answers ${[...(c.manager ? [c.manager] : []), ...c.escalate].length === 1 ? (c.manager || c.escalate[0]) : `${c.escalate.length + (c.manager ? 1 : 0)} people`}` : 'Never answers: nobody yet'} open={fold === 'never'} onToggle={() => toggle('never')}>
+            <input aria-label="Manager" placeholder="Your manager, name or Slack user id" value={form.manager} onChange={(e) => setForm({ ...form, manager: e.target.value })} onBlur={saveForm} />
+            <input aria-label="Never answer" placeholder="Names or Slack user ids, comma separated" value={form.escalate} onChange={(e) => setForm({ ...form, escalate: e.target.value })} onBlur={saveForm} />
+            <div className="muted small">Their asks always go to your phone. A name matches whole words, a user id (U...) matches exactly.</div>
           </Fold>
           {replies.length > 0 && (
             <div className="jb-auto-log">

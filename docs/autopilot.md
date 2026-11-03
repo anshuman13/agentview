@@ -56,7 +56,7 @@ The draft step gets three more outputs per ask: `tier`, `confidence` (0 to 1) an
 | --- | --- | --- | --- |
 | A, answer | A question the wiki, FAQ or the thread itself answers: access, setup, where a doc is, how a thing works, a status I have already written down | push with Send / Skip | send when confidence >= 0.8 and at least one claim id it cites (`claims`, from `ask_context`) is still a live wiki claim, else tier B |
 | B, hold | Asks for a decision, an approval, a review, an estimate, my opinion, access I grant, or a meeting | push with Send / Skip of the draft | send one holding note per person per 3 days ("I'm away until X, <backup> covers this, I'll see it when back") and add a task |
-| C, escalate | Production incident, a message from my manager or a named list, legal or HR, anything with "urgent" or "down", anything from outside the company | push now | push now, no reply |
+| C, escalate | Production incident, a message from my manager (the `manager` setting) or the never-answer list (names match whole words, Slack user ids exactly), legal or HR, anything with "urgent" or "down", anything from outside the company | push now | push now, no reply |
 
 Never sent, whatever the tier: credentials or tokens, anything to a Slack Connect or external channel, a reply in a
 thread where someone else already answered after the ask (the scan flags it, and the post step re-reads the thread and
@@ -65,7 +65,8 @@ thread is skipped and pushed to me instead), a
 reply to a message older than when the mode turned on, mail (Gmail keeps its own vacation responder; the hub only
 drafts).
 
-Every sent reply starts with a short marker: "(auto-reply from Anshuman's assistant)" in away mode, nothing in
+A post that fails is retried on the next away scans, three tries in all, then pushed to me once (`tries` on the
+replies row). Every sent reply starts with a short marker: "(auto-reply from Anshuman's assistant)" in away mode, nothing in
 assist mode since I pressed Send myself.
 
 ## Build order

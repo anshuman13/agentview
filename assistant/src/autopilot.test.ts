@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ANSWERED, afterScan, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { ANSWERED, afterScan, escalated, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
 import { askId, saveScan, threadKey } from './slackSave.js';
@@ -153,7 +153,32 @@ describe('afterScan', () => {
     };
     const r = await afterScan(db, away, ['ai-help'], asks, now, flaky);
     expect(r).toEqual({ answered: ['Answer u2'], held: [], skipped: ['Answer u1'], followups: [] });
-    expect(db.prepare("SELECT status FROM replies WHERE id = ?").get(askId(url('u1')))).toEqual({ status: 'error' });
+    expect(db.prepare("SELECT status, tries FROM replies WHERE id = ?").get(askId(url('u1')))).toEqual({ status: 'error', tries: 1 });
+  });
+
+  test('retries a failed post on the next scans, then pushes me once after the third failure', async () => {
+    const now = at(22, 10);
+    const asks = [ask('u1')];
+    const db = withAsks(asks, now);
+    const down = async () => { throw new Error('Slack down'); };
+    const pushes: string[] = [];
+    const push = async (title: string) => { pushes.push(title); return true; };
+    await afterScan(db, away, ['ai-help'], asks, now, down, push);
+    const r2 = await afterScan(db, away, ['ai-help'], [], now + HOUR, down, push);
+    expect(r2.answered).toEqual([]);
+    expect(db.prepare("SELECT tries FROM replies WHERE id = ?").get(askId(url('u1')))).toEqual({ tries: 2 });
+    await afterScan(db, away, ['ai-help'], [], now + 2 * HOUR, down, push);
+    expect(pushes).toEqual([]);
+    await afterScan(db, away, ['ai-help'], [], now + 3 * HOUR, down, push);
+    expect(pushes).toEqual(['Reply failed 3 times']);
+    await afterScan(db, away, ['ai-help'], [], now + 4 * HOUR, down, push);
+    expect(pushes.length).toBe(1);
+    posts.length = 0;
+    const db2 = withAsks(asks, now);
+    await afterScan(db2, away, ['ai-help'], asks, now, down, push);
+    const r = await afterScan(db2, away, ['ai-help'], [], now + HOUR, post, push);
+    expect(r.answered).toEqual(['Answer u1']);
+    expect(db2.prepare("SELECT status FROM replies WHERE id = ?").get(askId(url('u1')))).toEqual({ status: 'sent' });
   });
 });
 
@@ -175,7 +200,7 @@ test('settings are cleaned on save and read back from the database', () => {
   const db = openDb(':memory:');
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual({});
   const c = saveAutopilot(db, { enabled: 1, away: { from: '2026-12-20', to: 'soon', backup: ' Kim ' }, escalate: 'Mia, , Bo', min_confidence: 2 });
-  expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], dms: true, min_confidence: 0.8 });
+  expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], manager: '', dms: true, min_confidence: 0.8 });
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual(c);
   expect(modeOf(c, at(22, 10))).toBe('assist');
   expect(autopilotState(db, at(22, 10)).texts).toBeNull();
@@ -189,4 +214,14 @@ test('awayStart is midnight of the first away day, only while away', () => {
   expect(awayStart(c, inside)).toBe(new Date(2026, 9, 26).getTime());
   expect(awayStart(c, new Date(2026, 10, 2, 10).getTime())).toBe(0);
   expect(awayStart({ enabled: true }, inside)).toBe(0);
+});
+
+test('escalated matches whole names or exact user ids, and always the manager', () => {
+  const c: AutopilotConfig = { escalate: ['Mia', 'U0ABC1234'], manager: 'Bo Li' };
+  expect(escalated(c, 'Mia Berg')).toBe(true);
+  expect(escalated(c, 'Jeremia Holm')).toBe(false);
+  expect(escalated(c, 'Someone', 'U0ABC1234')).toBe(true);
+  expect(escalated(c, 'U0ABC1234 fan')).toBe(false);
+  expect(escalated(c, 'bo li')).toBe(true);
+  expect(escalated({}, 'Mia')).toBe(false);
 });
