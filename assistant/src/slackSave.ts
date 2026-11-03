@@ -25,6 +25,9 @@ export const Ask = z.object({
   quote: z.string().describe('The key sentence of the message'),
   urgent: z.boolean().describe('True only if someone is blocked on me, there is a deadline today, an incident, or I was pinged more than once'),
   draft: z.string().optional().describe(DRAFT_DESC),
+  tier: z.enum(['answer', 'hold', 'escalate']).optional().describe('answer: the thread or ask_context fully answers it as a fact. hold: it needs my decision, approval, review, estimate, opinion, access I grant, or a meeting. escalate: an incident or outage, anything urgent, HR or legal, or someone outside the company.'),
+  confidence: z.number().min(0).max(1).optional().describe('How sure you are that the draft is correct and complete, 0 to 1'),
+  why: z.string().optional().describe('One line on the tier and confidence'),
 });
 // A commitment I made myself, like "I'll send it tomorrow".
 export const Said = z.object({
@@ -94,6 +97,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
   const chats = changes.filter((c) => c.table === 'chats').length;
   const messages = changes.reduce((n, c) => n + (c.table === 'chats' ? (r.chats.find((x) => x.id === c.id)?.new_messages ?? 0) : 0), 0);
   const urgent: (ScanResult['asks'][number] & { id: string })[] = [];
+  const newAsks: (ScanResult['asks'][number] & { id: string })[] = [];
   const seen = seenItems(db, 'slack', now);
   // A DM where I sent the last message has nothing waiting on me.
   const replied = (a: ScanResult['asks'][number]) => a.chat === 'DM' && r.chats.some((c) => c.kind === 'dm' && c.waiting === false && c.name.trim().toLowerCase() === a.from.trim().toLowerCase());
@@ -106,6 +110,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     seen.add(id, a.title, people);
     changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
     added++;
+    newAsks.push({ ...a, id });
     if (a.urgent) urgent.push({ ...a, id });
   }
   let said = 0;
@@ -157,7 +162,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     applyChanges(db, changes);
     saveDecisions(db, r.decisions ?? [], now);
   })();
-  return { chats, added, urgent, said, messages };
+  return { chats, added, urgent, said, messages, newAsks };
 }
 
 // Channel decisions with a web permalink are kept once per permalink for wiki updates, so a re-worded one is not looked at again; ones older than two weeks are dropped.

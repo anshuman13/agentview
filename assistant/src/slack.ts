@@ -9,6 +9,7 @@ import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
+import { afterScan, autopilotConfig, awayLines, modeOf, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
@@ -94,7 +95,7 @@ function keepChannelIds(db: Database, c: SlackConfig, r: ScanResult) {
 }
 
 // The Haiku prompt for one scan: what to read, what to add, and the open and recently closed asks.
-export function scanPrompt(db: Database, c: SlackConfig, since: number, now: number) {
+export function scanPrompt(db: Database, c: SlackConfig, since: number, now: number, extra: string[] = []) {
   const chats = db.prepare('SELECT id, name, summary FROM chats WHERE profile = ? AND deleted = 0').all(PROFILE) as { id: string; name: string; summary: string | null }[];
   const unix = Math.floor(since / 1000);
   const ids = channelIds(db);
@@ -109,6 +110,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old. For a DM, set waiting when the other person sent the last message and I have not replied.',
     'Add an ask when a message clearly asks me to do, answer or decide something, puts a direct question to me, makes a request to me in a thread I am in, or asks me to review or approve something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     DRAFT_STEP,
+    ...extra,
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip messages that report something already done ("added now", "invited") or only give an opinion, promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
     'In fulfilled, list permalinks of the open promises below that I have since done, for example when I posted what I promised.',
@@ -142,20 +144,26 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  const prompt = scanPrompt(db, c, since, now);
+  const auto = autopilotConfig();
+  const prompt = scanPrompt(db, c, since, now, awayLines(auto, now));
   await run(prompt, 'sonnet', [save, contextTool(db, now)], 40, () => saved != null);
   if (!saved) throw new Error('The scan did not save');
   keepChannelIds(db, c, saved);
-  const { chats, added, urgent, said, messages } = saveScan(db, saved, now);
+  const { chats, added, urgent, said, messages, newAsks } = saveScan(db, saved, now);
   setMeta(db, 'slack:last', String(now));
-  return { chats, messages, asks: added, said, urgent };
+  const replies = await afterScan(db, auto, c.channels, newAsks, now);
+  return { chats, messages, asks: added, said, urgent, newAsks, replies, mode: modeOf(auto, now) };
 }
 
-async function pushUrgent(db: Database, c: SlackConfig, urgent: Awaited<ReturnType<typeof scanSlack>>['urgent'], now = Date.now()) {
+// In assist mode an ask with a draft gets a Send reply action and the draft in the body; otherwise only urgent asks are pushed.
+async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], assist = false, now = Date.now()) {
   await pushQueued(db, 'slack:unpushed', urgent, pushHours(c, now), (a) => {
     const url = webUrl(a.url);
+    const draft = assist && a.draft?.trim();
     const accept = `http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-    return pushOrHold(db, `${a.from}: ${a.title}`, a.chat, a.quote, url ?? '', url ? `view, Open, ${url}; ${accept}` : accept, now, a.id);
+    const send = draft ? `http, Send reply, ${HUB_URL}/slack/reply?id=${encodeURIComponent(a.id)}, method=POST, clear=true; ` : '';
+    const body = draft ? `${a.quote}\n\nReply: ${draft}` : a.quote;
+    return pushOrHold(db, `${a.from}: ${a.title}`, a.chat, body, url ?? '', `${url ? `view, Open, ${url}; ` : ''}${send}${accept}`, now, a.id);
   });
 }
 
@@ -199,9 +207,11 @@ async function slackOnce(db: Database) {
   const c = slackConfig();
   if (!c) throw new Error('Slack is not set up');
   const r = await scanSlack(db, c);
-  console.log(`slack: ${r.chats} chats, ${r.messages} messages, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent`);
-  await pushUrgent(db, c, r.urgent);
-  return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said };
+  const auto = r.mode === 'off' ? '' : `, autopilot ${r.mode}: ${r.replies.answered.length} answered, ${r.replies.held.length} held, ${r.replies.skipped.length} skipped`;
+  console.log(`slack: ${r.chats} chats, ${r.messages} messages, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent${auto}`);
+  const assist = r.mode === 'assist';
+  await pushUrgent(db, c, assist ? r.newAsks.filter((a) => a.urgent || a.draft?.trim()) : r.urgent, assist);
+  return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said, ...(r.mode === 'away' ? { replied: r.replies.answered.length + r.replies.held.length } : {}) };
 }
 
 export const slackScan = {

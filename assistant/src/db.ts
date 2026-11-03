@@ -86,6 +86,26 @@ export function openDb(file: string = DB_PATH): Database {
     )
   `);
 
+  // Replies the autopilot sent or would send for Slack asks, hub only: one row per ask.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS replies (
+      profile TEXT NOT NULL,
+      id TEXT NOT NULL,
+      who TEXT,
+      chat TEXT,
+      tier TEXT,
+      confidence REAL,
+      why TEXT,
+      text TEXT,
+      mode TEXT,
+      status TEXT NOT NULL,
+      url TEXT,
+      at INTEGER NOT NULL,
+      sent_at INTEGER,
+      PRIMARY KEY (profile, id)
+    )
+  `);
+
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));
     db.exec(createIndexSQL(tableName));

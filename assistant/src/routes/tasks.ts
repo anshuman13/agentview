@@ -4,6 +4,7 @@ import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
 import { summarizeSlack } from '../slack.js';
 import { acceptAsk } from '../slackSave.js';
+import { autopilotConfig, replyNow } from '../autopilot.js';
 import { errText } from '../../../shared/util.js';
 import { body, send, type Ctx, type Routes } from './http.js';
 
@@ -50,5 +51,14 @@ export const taskRoutes: Routes = {
   },
 
   'POST /slack/accept': accept('slack', 'Slack'),
+  'POST /slack/reply': async ({ res, url, getDb }) => {
+    const id = url.searchParams.get('id') ?? '';
+    try {
+      const r = await once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(), id));
+      send(res, r ? 200 : 404, r ?? { error: 'No Slack ask with a draft' });
+    } catch (err) {
+      send(res, 502, { error: errText(err) });
+    }
+  },
   'POST /gmail/accept': accept('gmail', 'Gmail'),
 };
