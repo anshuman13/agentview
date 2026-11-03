@@ -100,7 +100,7 @@ Each scan is off until its config file exists in `~/.agentview/assistant`:
 
 ## Autopilot
 
-With `~/.agentview/assistant/autopilot.json` enabled, every new Slack ask with a draft is pushed with Send reply, which posts
+With the "Reply for me in Slack" switch on at the top of Jobs, every new Slack ask with a draft is pushed with Send reply, which posts
 the draft as a thread reply through the Slack connector and closes the ask (`POST /slack/reply?id=`). Inside the away
 window the scan answers itself: the draft step also sets a tier (answer, hold, escalate) and a confidence; a sure answer
 goes out with an auto-reply marker, the rest get one holding note per person per 3 days naming the backup, escalated

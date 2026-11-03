@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
+import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, errorText, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
 import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
@@ -351,6 +351,13 @@ export class LocalStore extends BaseStore implements AssistantStore {
     if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
     await this.syncNow();
     return Number(data?.added ?? 0);
+  };
+
+  autopilot = async (patch?: Partial<AutopilotConfig>) => {
+    const resp = await fetch(`${HUB}/autopilot`, patch ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch), signal: AbortSignal.timeout(30000) } : { signal: AbortSignal.timeout(30000) });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    return data as AutopilotState;
   };
 
   scanNow = async (name: 'slack' | 'gmail') => {

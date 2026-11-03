@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
+import type { AutopilotConfig, AutopilotState } from '../data/store';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, rowKey, type Profile } from '../data/sync';
 import type { Job, Run } from '../data/wiki';
@@ -65,6 +66,61 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) 
   return <button role="switch" aria-checked={on} aria-label={label} className={`jb-switch${on ? ' on' : ''}`} onClick={(e) => { e.stopPropagation(); onChange(!on); }}><span /></button>;
 }
 
+const MODE_LINE = { off: 'Off. Drafts stay on the asks.', assist: 'On. Each Slack ask with a draft is pushed with Send reply.', away: 'Away. Sure answers go out with an auto-reply marker, the rest get a holding note.' };
+
+// The switch for replying on my behalf in Slack, with the away window, backup, people to never answer and the last replies.
+function Autopilot() {
+  const store = useAssistantStore();
+  const [state, setState] = useState<AutopilotState | null>(null);
+  const [error, setError] = useState('');
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ from: '', to: '', backup: '', note: '', escalate: '' });
+  const load = (p: Promise<AutopilotState>) => p.then((s) => { setState(s); setForm({ ...s.config.away, escalate: s.config.escalate.join(', ') }); setError(''); }).catch((err) => setError((err as Error).message));
+  useEffect(() => void load(store.autopilot()), [store]);
+  const save = (patch: Partial<AutopilotConfig>) => load(store.autopilot(patch));
+  const saveForm = () => {
+    const { escalate, ...away } = form;
+    const c = state?.config;
+    if (!c || (JSON.stringify(away) === JSON.stringify(c.away) && escalate === c.escalate.join(', '))) return;
+    void save({ away, escalate: escalate.split(',').map((x) => x.trim()).filter(Boolean) });
+  };
+  const c = state?.config;
+  return (
+    <section className="jb-auto" aria-label="Autopilot">
+      <div className="mt-row jb-row" role="button" tabIndex={0} onClick={() => setOpen(!open)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(!open); } }}>
+        <span className="mt-body">
+          <span className="mt-title">Reply for me in Slack</span>
+          <span className="wk-meta"><span>{error || (state ? MODE_LINE[state.mode] : 'Loading')}</span>{c?.dry_run && c.enabled && <span>Dry run</span>}</span>
+        </span>
+        {c && <Switch on={c.enabled} label="Reply for me in Slack" onChange={(on) => void save({ enabled: on })} />}
+      </div>
+      {open && c && (
+        <div className="jb-auto-form">
+          <label className="jb-auto-line"><span>Dry run: log the reply on the ask instead of sending it</span><Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} /></label>
+          <div className="jb-when">
+            <span>Away from</span><input type="date" aria-label="Away from" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} onBlur={saveForm} />
+            <span>to</span><input type="date" aria-label="Away to" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} onBlur={saveForm} />
+          </div>
+          <input aria-label="Backup" placeholder="Who covers while you are away" value={form.backup} onChange={(e) => setForm({ ...form, backup: e.target.value })} onBlur={saveForm} />
+          <input aria-label="Away note" placeholder="Extra line for the holding note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} onBlur={saveForm} />
+          <input aria-label="Never answer" placeholder="Never answer these people (names, comma separated)" value={form.escalate} onChange={(e) => setForm({ ...form, escalate: e.target.value })} onBlur={saveForm} />
+          <div className="muted small">Away mode answers only inside the dates. Outside them, on means every ask with a draft is pushed with Send reply. Nothing is sent while Dry run is on.</div>
+          {state.replies.length > 0 && (
+            <div className="jb-auto-log">
+              {state.replies.map((r) => (
+                <div key={r.id} className="jb-run">
+                  <div className="wk-meta"><span>{r.status === 'dry' ? 'Would reply' : r.status === 'sent' ? 'Replied' : r.status}</span><span>{r.who}{r.chat ? ` · ${r.chat}` : ''}</span><span>{at(r.at)}</span>{r.url && <a href={r.url} target="_blank" rel="noreferrer">Open</a>}</div>
+                  {r.text && <div className="jb-output">{r.text}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function useJobs() {
   const store = useAssistantStore();
   const snap = useAssistantData();
@@ -97,6 +153,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
       {pull.indicator}
       <div className="wk-scroll" ref={pull.ref}>
         <div className="mt-list">
+          <Autopilot />
           {jobs.length > 0 && (
             <div className="mt-rows">
               {jobs.map((j) => {

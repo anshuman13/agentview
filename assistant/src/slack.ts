@@ -144,7 +144,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  const auto = autopilotConfig();
+  const auto = autopilotConfig(db);
   const prompt = scanPrompt(db, c, since, now, awayLines(auto, now));
   await run(prompt, 'sonnet', [save, contextTool(db, now)], 40, () => saved != null);
   if (!saved) throw new Error('The scan did not save');

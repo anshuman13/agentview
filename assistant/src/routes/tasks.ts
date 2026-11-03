@@ -4,7 +4,7 @@ import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
 import { summarizeSlack } from '../slack.js';
 import { acceptAsk } from '../slackSave.js';
-import { autopilotConfig, replyNow } from '../autopilot.js';
+import { autopilotConfig, autopilotState, replyNow, saveAutopilot } from '../autopilot.js';
 import { errText } from '../../../shared/util.js';
 import { body, send, type Ctx, type Routes } from './http.js';
 
@@ -50,11 +50,20 @@ export const taskRoutes: Routes = {
     }
   },
 
+  'GET /autopilot': ({ res, getDb }) => send(res, 200, autopilotState(getDb())),
+  'POST /autopilot': async (c) => {
+    const data = await body<Record<string, unknown>>(c, 20_000);
+    if (!data) return;
+    const db = c.getDb();
+    saveAutopilot(db, { ...autopilotConfig(db), ...data });
+    send(c.res, 200, autopilotState(db));
+  },
+
   'POST /slack/accept': accept('slack', 'Slack'),
   'POST /slack/reply': async ({ res, url, getDb }) => {
     const id = url.searchParams.get('id') ?? '';
     try {
-      const r = await once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(), id));
+      const r = await once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(getDb()), id));
       send(res, r ? 200 : 404, r ?? { error: 'No Slack ask with a draft' });
     } catch (err) {
       send(res, 502, { error: errText(err) });

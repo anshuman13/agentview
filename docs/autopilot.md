@@ -27,15 +27,13 @@ FAQ the drafts can lean on.
 | assist (daily) | me, one tap | nothing; every draft waits for Send or Skip |
 | away (vacation) | the hub | tier A answers and tier B holding notes; tier C only pushes me |
 
-`~/.agentview/assistant/autopilot.json` holds the flag:
+The switch is the "Reply for me in Slack" card at the top of Jobs. Tapping the card opens Dry run, the away dates, the
+backup, an extra line for the holding note, the people never to answer, and the last 10 replies. The settings live in
+the hub's meta table (`GET` and `POST /autopilot`); a `autopilot.json` next to the database seeds them once.
 
-```json
-{ "enabled": false, "dry_run": true, "away": { "from": "2026-12-20", "to": "2027-01-05", "backup": "<name>", "note": "" }, "escalate": ["<name>"], "min_confidence": 0.8 }
-```
-
-`enabled` true is assist mode; inside the away window it is away mode. `dry_run` true (the default) logs every reply the
-hub would send on the ask instead of sending it. Setting `enabled` false, or deleting the file, is the kill switch. The
-hub reads the file at every scan, so no restart is needed. Sent and dry-run replies are in the hub-only `replies`
+The switch on outside the away dates is assist mode; inside them it is away mode. Dry run, on by default, logs every reply
+the hub would send on the ask instead of sending it. The switch off is the kill switch. The scan reads the settings each
+time, so no restart is needed. Sent and dry-run replies are in the hub-only `replies`
 table, one row per ask, with tier, confidence, the text and the permalink of the post.
 
 ## Tiers

@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
+import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { doneCutoff } from './localRows';
 import { TABLE_FIELDS, mergeIncoming, rowKey } from './sync';
@@ -336,6 +336,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     await hub(`/api/assistant/scan?name=${name}`, undefined, { method: 'POST', signal: AbortSignal.timeout(300000) });
     await this.syncNow();
   };
+
+  autopilot = (patch?: Partial<AutopilotConfig>) => hub<AutopilotState>('/api/assistant/autopilot', patch, patch ? undefined : { method: 'GET' });
 
   searchTranscripts = async (query: string, profile?: Profile) => (await hub<{ hits?: TranscriptHit[] }>(`/api/assistant/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`)).hits ?? [];
 

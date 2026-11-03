@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { afterScan, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, sendReply, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { askId, saveScan } from './slackSave.js';
 import { HOUR } from './time.js';
@@ -126,4 +126,13 @@ describe('replyNow', () => {
     expect(await replyNow(db, { enabled: true, dry_run: false }, askId(url('u2')), now, post)).toBeNull();
     expect(posts.length).toBe(1);
   });
+});
+
+test('settings are cleaned on save and read back from the database', () => {
+  const db = openDb(':memory:');
+  expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual({});
+  const c = saveAutopilot(db, { enabled: 1, away: { from: '2026-12-20', to: 'soon', backup: ' Kim ' }, escalate: 'Mia, , Bo', min_confidence: 2 });
+  expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], min_confidence: 0.8 });
+  expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual(c);
+  expect(modeOf(c, at(22, 10))).toBe('assist');
 });

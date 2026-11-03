@@ -393,6 +393,11 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .jb-switch > span { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--fg-strong); transition: transform var(--dur); }
 .jb-switch.on { background: var(--accent); }
 .jb-switch.on > span { transform: translateX(16px); }
+.jb-auto { margin-bottom: var(--sp-6); }
+.jb-auto-form { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-5) var(--sp-6); }
+.jb-auto-form input:not([type='date']) { height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
+.jb-auto-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); font-size: var(--fs-sm); color: var(--fg-muted); }
+.jb-auto-log { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-3); }
 .jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
 .jb-when { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
 .jb-when select, .jb-when input { flex: none; width: auto; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }

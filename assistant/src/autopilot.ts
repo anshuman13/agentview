@@ -3,7 +3,7 @@ import path from 'node:path';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { readJsonSync } from '../../server/src/json.js';
-import { DB_DIR } from './db.js';
+import { DB_DIR, getMeta, setMeta } from './db.js';
 import { run } from './slack.js';
 import { PROFILE, webUrl } from './slackSave.js';
 import { applyChanges } from './sync.js';
@@ -25,7 +25,46 @@ export const DAY_CAP = 40;
 const HOLD_AGAIN = 3 * DAY;
 const SLACK = 'mcp__claude_ai_Slack__';
 
-export const autopilotConfig = (file = path.join(DB_DIR, 'autopilot.json')): AutopilotConfig => readJsonSync<AutopilotConfig | null>(file, null) ?? {};
+const META = 'autopilot';
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+
+// The settings live in the hub's meta table, set from the Jobs page; a autopilot.json next to the database seeds them once.
+export function autopilotConfig(db: Database, file = path.join(DB_DIR, 'autopilot.json')): AutopilotConfig {
+  const raw = getMeta(db, META);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as AutopilotConfig;
+    } catch {}
+  }
+  const seed = readJsonSync<AutopilotConfig | null>(file, null);
+  return seed ? saveAutopilot(db, seed) : {};
+}
+
+// Keeps only the known fields in their proper shape and stores them.
+export function saveAutopilot(db: Database, c: Record<string, unknown>): AutopilotConfig {
+  const away = (c.away ?? {}) as Record<string, unknown>;
+  const from = str(away.from), to = str(away.to);
+  const clean: AutopilotConfig = {
+    enabled: c.enabled === true || c.enabled === 1,
+    dry_run: c.dry_run !== false && c.dry_run !== 0,
+    away: { from: DATE.test(from) ? from : '', to: DATE.test(to) ? to : '', backup: str(away.backup), note: str(away.note) },
+    escalate: Array.isArray(c.escalate) ? c.escalate.map(str).filter(Boolean) : typeof c.escalate === 'string' ? c.escalate.split(',').map((x) => x.trim()).filter(Boolean) : [],
+    ...(Array.isArray(c.channels) ? { channels: c.channels.map(str).filter(Boolean) } : {}),
+    min_confidence: typeof c.min_confidence === 'number' && c.min_confidence >= 0 && c.min_confidence <= 1 ? c.min_confidence : 0.8,
+  };
+  setMeta(db, META, JSON.stringify(clean));
+  return clean;
+}
+
+export type Logged = { id: string; who: string | null; chat: string | null; tier: string | null; status: string; text: string | null; url: string | null; at: number };
+
+// The settings, the mode now and the last replies, for the Jobs page.
+export function autopilotState(db: Database, now = Date.now()) {
+  const config = autopilotConfig(db);
+  const replies = db.prepare("SELECT id, who, chat, tier, status, text, url, COALESCE(sent_at, at) AS at FROM replies WHERE profile = ? AND status <> 'held' ORDER BY COALESCE(sent_at, at) DESC LIMIT 10").all(PROFILE) as Logged[];
+  return { config, mode: modeOf(config, now), replies };
+}
 
 export function modeOf(c: AutopilotConfig, now = Date.now()): Mode {
   if (!c.enabled) return 'off';

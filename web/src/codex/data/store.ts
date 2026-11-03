@@ -32,9 +32,14 @@ export interface AssistantStore {
   blockTime(row: ItemRow, start: number, end: number, title: string): Promise<void>;
   summarizeSlack(): Promise<number>;
   scanNow(name: 'slack' | 'gmail'): Promise<void>;
+  autopilot(patch?: Partial<AutopilotConfig>): Promise<AutopilotState>;
   searchTranscripts(query: string, profile?: Profile): Promise<TranscriptHit[]>;
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
 }
+
+export type AutopilotConfig = { enabled: boolean; dry_run: boolean; away: { from: string; to: string; backup: string; note: string }; escalate: string[]; min_confidence: number };
+export type AutopilotReply = { id: string; who: string | null; chat: string | null; tier: string | null; status: string; text: string | null; url: string | null; at: number };
+export type AutopilotState = { config: AutopilotConfig; mode: 'off' | 'assist' | 'away'; replies: AutopilotReply[] };
 
 export const transcriptPath = (m: { profile: Profile; id: string }) => `/transcript?profile=${m.profile}&id=${encodeURIComponent(m.id)}`;
 
