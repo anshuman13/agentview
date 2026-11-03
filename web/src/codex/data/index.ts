@@ -21,8 +21,7 @@ if (import.meta.hot) {
 }
 
 export function useAssistant() {
-  const s = assistantStore();
-  return { store: s, snap: useSyncExternalStore(s.subscribe, s.snapshot) };
+  return { store: assistantStore(), snap: useAssistantData() };
 }
 
 export function useAssistantStore() {
@@ -53,6 +52,13 @@ const selectData = ({ sync: _sync, ...data }: Snapshot) => data;
 // The snapshot without sync status, so a sync tick that changes no data re-renders nobody.
 export function useAssistantData() {
   return useAssistantSelect(selectData, shallowEqual);
+}
+
+const selectGate = ({ sync }: Snapshot) => ({ error: sync.error, loading: sync.syncing && !sync.last });
+
+// The sync facts the tasks page shows, equal across ticks that change nothing else.
+export function useSyncGate() {
+  return useAssistantSelect(selectGate, shallowEqual);
 }
 
 const selectSync = (snap: Snapshot) => snap.sync;

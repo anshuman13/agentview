@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAssistantStore, useAssistantData, useSyncStatus } from './data';
+import { useAssistantStore, useAssistantData, useSyncGate } from './data';
 import { live, type Meeting } from './data/wiki';
 import { meetingTimeLeft } from './data/load';
 import { atTime, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
@@ -119,8 +119,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     };
   }, [quiet, s.later, s.endOfDay, snap.meetings, filter]);
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (nextUp?.tomorrow ? 0 : tomorrow.length);
-  const sync = useSyncStatus();
-  const loading = sync.syncing && !sync.last && !snap.items.length;
+  const loading = useSyncGate().loading && !snap.items.length;
   const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp;
   if (loading) return <Skeleton />;
   return (

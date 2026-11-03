@@ -1,14 +1,14 @@
 import { Fragment, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
-import { useAssistant, useCodex } from './data';
+import { useAssistant, useCodex, useSyncGate } from './data';
 import { reviewCount } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { atTime, errorText, reviewedSince, split } from './data/engine';
 import type { Patch } from './data/store';
 import { rowKey, type ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { ago, plural } from '../ui/util';
+import { plural } from '../ui/util';
 import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
@@ -134,9 +134,8 @@ export function Assistant() {
   const current = list === 'tasks' && open ? snap.items.find((r) => rowKey(r) === open && !r.deleted) ?? snap.items.find((r) => r.id === open.slice(open.indexOf(':') + 1) && !r.deleted) : undefined;
   const close = useCallback(() => setView({ open: null }), []);
   const askAbout = (r: ItemRow) => ask(askText('Help me with this item.', snap.items, r), r.profile);
-  const { sync } = snap;
-  const status = sync.error ? `Sync failed: ${sync.error}` : sync.last ? `Synced ${ago(sync.last, ' ago')}` : 'Syncing';
-  const loading = sync.syncing && !sync.last && !snap.items.length;
+  const gate = useSyncGate();
+  const loading = gate.loading && !snap.items.length;
   const heading = list === 'today' ? `${greeting()}, ${new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric' })}` : LISTS.find((l) => l.id === list)!.label;
 
   if (!ready) {
@@ -269,7 +268,7 @@ export function Assistant() {
         {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
         {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}
       </header>
-      {sync.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> {status}. Your changes are kept on this device.</button>}
+      {gate.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
       {calError && <button className="as-error" onClick={() => store.syncCalendar().then(() => setCalError(''), (err) => setCalError(errorText(err)))}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
