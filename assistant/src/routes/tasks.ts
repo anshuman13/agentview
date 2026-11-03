@@ -3,6 +3,7 @@ import { once } from '../once.js';
 import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
 import { summarizeSlack } from '../slack.js';
+import { learnPeople } from '../people.js';
 import { mineFaq } from '../faq.js';
 import { learnVoice } from '../voice.js';
 import { acceptAsk } from '../slackSave.js';
@@ -53,6 +54,13 @@ export const taskRoutes: Routes = {
   },
 
   // Mines a support channel into proposed FAQ claims: POST /slack/faq?channel=name&days=90.
+  'POST /slack/people': async ({ res, getDb }) => {
+    try {
+      send(res, 200, await once('people', () => learnPeople(getDb())));
+    } catch (err) {
+      send(res, 502, { error: errText(err) });
+    }
+  },
   'POST /slack/faq': async ({ res, url, getDb }) => {
     const channel = (url.searchParams.get('channel') ?? '').replace(/^#/, '');
     const days = Number(url.searchParams.get('days') ?? 90) || 90;

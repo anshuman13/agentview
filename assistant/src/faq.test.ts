@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { peopleInput, saveOwners } from './people.js';
 import { openDb } from './db.js';
 import { FAQ_PAGE, saveFaqs } from './faq.js';
 import { saveVoice, voiceLines } from './voice.js';
@@ -23,4 +24,18 @@ test('a learned voice feeds the draft step and proposes its traits once', () => 
   expect(saveVoice(db, v, 2)).toBe(0);
   expect(voiceLines(db)).toEqual(['Write each draft the way I write: Short, direct, no greeting. Messages I wrote, for the tone: "On it, back by 3."']);
   expect(db.prepare("SELECT COUNT(*) AS n FROM facts WHERE state = 'proposed' AND added_by = 'voice'").get()).toEqual({ n: 2 });
+});
+
+test('saveOwners proposes one claim per person and thing on a proposed Who does what page', () => {
+  const db = openDb(':memory:');
+  const now = Date.now();
+  const o = { person: 'Kim Berg', thing: 'the invoice export', url: 'https://x.slack.com/archives/C1/p1', at: '28 Oct 2026', heading: 'Systems' };
+  expect(saveOwners(db, [o, { ...o, url: '' }, { ...o, thing: 'the budget sheet' }], now)).toBe(2);
+  const rows = db.prepare("SELECT text, state, heading FROM facts ORDER BY text").all();
+  expect(rows).toEqual([
+    { text: 'As of 28 Oct 2026, Kim Berg owns the budget sheet.', state: 'proposed', heading: 'Systems' },
+    { text: 'As of 28 Oct 2026, Kim Berg owns the invoice export.', state: 'proposed', heading: 'Systems' },
+  ]);
+  expect(db.prepare("SELECT title, state FROM pages").get()).toEqual({ title: 'Who does what', state: 'proposed' });
+  expect(peopleInput(db, now)).toContain('Chat summaries:');
 });
