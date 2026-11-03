@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type http from 'node:http';
 import { openDb } from './db.js';
-import { backoff, checkStalls, runScan, scanHealth } from './scan.js';
+import { backoff, checkStalls, noteCost, runScan, scanCosts, scanHealth } from './scan.js';
 import { MIN } from './time.js';
 import { scanRoutes } from './routes/scan.js';
 
@@ -69,4 +69,12 @@ test('a stalled scan pushes once until it succeeds again', async () => {
   db.prepare('UPDATE meta SET value = ? WHERE key = ?').run(JSON.stringify({ scan: 'slack', ok: at(10, 35) }), 'scan:slack');
   await check(at(11, 25));
   expect(sent).toHaveLength(2);
+});
+
+test('noteCost keeps the last 20 scan costs, newest first', () => {
+  const db = openDb(':memory:');
+  for (let i = 0; i < 25; i++) noteCost(db, 'slack', { at: i, input: 1, output: 1, cache_read: 0, cache_write: 0, usd: 0.01, turns: 3 });
+  const costs = scanCosts(db);
+  expect(costs.length).toBe(20);
+  expect(costs[0].at).toBe(24);
 });

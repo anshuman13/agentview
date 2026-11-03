@@ -12,7 +12,7 @@ import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
 import { afterScan, autopilotConfig, awayLines, awayStart, escalateLines, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
-import { runScan, startScan } from './scan.js';
+import { noteCost, runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, workSlotDue } from './time.js';
 
@@ -50,7 +50,9 @@ const isAway = (db: Database, now = Date.now()) => modeOf(autopilotConfig(db), n
 export type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
 
 // Stops as soon as done() says the work is saved, so the model does not spend turns repeating itself.
-export async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false, read = READ_TOOLS) {
+export type Usage = { input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number };
+
+export async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false, read = READ_TOOLS, onUsage?: (u: Usage) => void) {
   const account = ACCOUNT_OF[PROFILE];
   let result = '';
   for await (const m of ask(account, prompt, {
@@ -64,6 +66,7 @@ export async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tool
     permissionMode: 'dontAsk',
   })) {
     if (m.type === 'result') {
+      onUsage?.({ input: m.usage.input_tokens, output: m.usage.output_tokens, cache_read: m.usage.cache_read_input_tokens, cache_write: m.usage.cache_creation_input_tokens, usd: m.total_cost_usd, turns: m.num_turns });
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();
     }
@@ -101,7 +104,7 @@ function keepChannelIds(db: Database, c: SlackConfig, r: ScanResult) {
 
 // The Haiku prompt for one scan: what to read, what to add, and the open and recently closed asks.
 export function scanPrompt(db: Database, c: SlackConfig, since: number, now: number, extra: string[] = []) {
-  const chats = db.prepare('SELECT id, name, summary FROM chats WHERE profile = ? AND deleted = 0').all(PROFILE) as { id: string; name: string; summary: string | null }[];
+  const chats = db.prepare('SELECT id, name, summary FROM chats WHERE profile = ? AND deleted = 0 AND COALESCE(last_at, updated_at) > ?').all(PROFILE, now - 2 * DAY) as { id: string; name: string; summary: string | null }[];
   const unix = Math.floor(since / 1000);
   const ids = channelIds(db);
   return [
@@ -152,7 +155,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
     return { content: [{ type: 'text', text: 'saved' }] };
   });
   const prompt = scanPrompt(db, c, since, now, [...escalateLines(auto), ...awayLines(auto, now)]);
-  await run(prompt, 'sonnet', [save, contextTool(db, now)], 40, () => saved != null);
+  await run(prompt, 'sonnet', [save, contextTool(db, now)], 40, () => saved != null, READ_TOOLS, (u) => noteCost(db, 'slack', { at: now, ...u }));
   if (!saved) throw new Error('The scan did not save');
   keepChannelIds(db, c, saved);
   const { chats, added, urgent, said, messages, newAsks } = saveScan(db, saved, now);

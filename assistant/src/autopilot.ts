@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { run, slackConfig } from './slack.js';
-import { scanHealth } from './scan.js';
+import { scanCosts, scanHealth } from './scan.js';
 import { PROFILE, threadKey, webUrl } from './slackSave.js';
 import { liveClaims } from './draft.js';
 import { applyChanges } from './sync.js';
@@ -20,7 +20,7 @@ export type AutopilotConfig = { enabled?: boolean; dry_run?: boolean; away?: Awa
 export type Mode = 'off' | 'assist' | 'away';
 export const TIERS = ['answer', 'hold', 'escalate'] as const;
 export type Tier = (typeof TIERS)[number];
-export type NewAsk = { id: string; url: string; from: string; chat: string; title: string; quote: string; urgent: boolean; draft?: string; tier?: Tier; confidence?: number; why?: string; answered_by_other?: boolean; claims?: string[]; from_id?: string };
+export type NewAsk = { id: string; url: string; from: string; chat: string; title: string; quote: string; urgent: boolean; draft?: string; tier?: Tier; confidence?: number; why?: string; answered_by_other?: boolean; claims?: string[]; from_id?: string; external?: boolean };
 type Reply = { status: string; who: string; mode: string; tier: string | null };
 
 export const HOUR_CAP = 10;
@@ -71,13 +71,13 @@ export function autopilotState(db: Database, now = Date.now()) {
   const watched = slack?.channels ?? [];
   const replies = db.prepare('SELECT id, who, chat, tier, confidence, status, text, url, COALESCE(sent_at, at) AS at FROM replies WHERE profile = ? ORDER BY COALESCE(sent_at, at) DESC LIMIT 15').all(PROFILE) as Logged[];
   const texts = config.away?.to ? { hold: holdNote(config.away), marker: marker(config.away) } : null;
-  return { config, mode: modeOf(config, now), watched, covered: coveredChannels(config, watched), push: slack?.push ?? { from: 8, to: 17 }, texts, scan: scanHealth(db).find((h) => h.scan === 'slack') ?? null, replies };
+  return { config, mode: modeOf(config, now), watched, covered: coveredChannels(config, watched), push: slack?.push ?? { from: 8, to: 17 }, texts, scan: scanHealth(db).find((h) => h.scan === 'slack') ?? null, cost: scanCosts(db)[0] ?? null, replies };
 }
 
 // Which new asks get a push: urgent ones always; in away mode also escalations, which it never answers; in assist mode every
 // ask with a draft in a covered chat, so Send reply is one tap.
 export function toPush(mode: Mode, c: AutopilotConfig, watched: string[], asks: NewAsk[], followups: string[] = []) {
-  if (mode === 'away') return asks.filter((a) => a.urgent || a.tier === 'escalate' || escalated(c, a.from, a.from_id) || followups.includes(a.id));
+  if (mode === 'away') return asks.filter((a) => a.urgent || a.tier === 'escalate' || escalated(c, a.from, a.from_id) || a.external || followups.includes(a.id));
   if (mode === 'assist') return asks.filter((a) => a.urgent || (a.draft?.trim() && !a.answered_by_other && channelAllowed(c, watched, a.chat)));
   return asks.filter((a) => a.urgent);
 }
@@ -209,6 +209,7 @@ export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: str
   return { status, url };
 }
 
+// followups: asks it did not answer that I must see, pushed in away mode: a second ask in a thread or within 3 days of a holding note.
 export type Outcome = { answered: string[]; held: string[]; skipped: string[]; followups: string[] };
 
 export const MAX_TRIES = 3;
@@ -261,7 +262,7 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
       continue;
     }
     // A tier answer must rest on a claim that is still live; without one it is a hold.
-    const tier: Tier = escalated(c, a.from, a.from_id) ? 'escalate' : a.tier === 'answer' && !liveClaims(db, a.claims ?? []).length ? 'hold' : (a.tier ?? 'hold');
+    const tier: Tier = escalated(c, a.from, a.from_id) || a.external ? 'escalate' : a.tier === 'answer' && !liveClaims(db, a.claims ?? []).length ? 'hold' : (a.tier ?? 'hold');
     if (a.answered_by_other || tier === 'escalate' || !channelAllowed(c, watched, a.chat) || !underCaps(db, now)) {
       out.skipped.push(a.title);
       continue;
@@ -273,7 +274,11 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
       } else if (holdDue(db, a.from, now)) {
         const r = await sendReply(db, c, a, 'hold', holdNote(c.away), now, post);
         (r.status === 'answered' ? out.skipped : out.held).push(a.title);
-      } else out.skipped.push(a.title);
+      } else {
+        db.prepare("UPDATE replies SET status = 'skipped', why = 'second ask within 3 days of a holding note' WHERE profile = ? AND id = ?").run(PROFILE, a.id);
+        out.followups.push(a.id);
+        out.skipped.push(a.title);
+      }
     } catch (err) {
       console.error(`autopilot: ${a.title}:`, err);
       out.skipped.push(a.title);

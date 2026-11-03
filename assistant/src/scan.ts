@@ -8,9 +8,24 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 
 export type Counts = Record<string, number>;
 export type Scanner = { setUp(): boolean; paused(db: Database): Promise<boolean>; run(db: Database): Promise<Counts>; everyDay?(db: Database): boolean };
+export type ScanCost = { at: number; input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number };
 export type ScanHealth = { scan: string; ok?: number; counts?: Counts; error?: string; failed?: number; stalled?: number; missing?: boolean };
 
 const key = (name: string) => `scan:${name}`;
+const COSTS = 20;
+
+export const scanCosts = (db: Database, name = 'slack'): ScanCost[] => {
+  try {
+    return JSON.parse(getMeta(db, `${key(name)}:cost`) ?? '[]');
+  } catch {
+    return [];
+  }
+};
+
+// Keeps the last 20 runs' token counts and cost under scan:<name>:cost, newest first.
+export function noteCost(db: Database, name: string, c: ScanCost) {
+  setMeta(db, `${key(name)}:cost`, JSON.stringify([c, ...scanCosts(db, name)].slice(0, COSTS)));
+}
 
 function note(db: Database, name: string, fields: Partial<ScanHealth>) {
   const prev = JSON.parse(getMeta(db, key(name)) ?? '{}') as ScanHealth;

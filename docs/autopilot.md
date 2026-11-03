@@ -37,6 +37,9 @@ scan's last run) and the people never to answer; then Seen, the last asks with w
 answer, Needs you, Escalate, Failed), three at a time. The settings live in the hub's meta table (`GET` and `POST
 /autopilot`); a `autopilot.json` next to the database seeds them once.
 
+Each scan logs its token counts and cost to meta `scan:slack:cost` (last 20); the card's scan line shows the last
+scan's tokens. The prompt carries only chat summaries with messages in the last 2 days and asks from the last 7.
+
 Pushes: urgent asks are pushed in every mode. Away mode also pushes escalate-tier asks and asks from the never-answer
 list, which it never answers. Assist mode pushes every ask with a draft in a covered chat, with a Send reply action.
 Pushes go out in the Slack push hours (08:00 to 17:00 by default, weekdays only outside away mode) and wait for a running
@@ -55,10 +58,11 @@ The draft step gets three more outputs per ask: `tier`, `confidence` (0 to 1) an
 | Tier | Means | Assist mode | Away mode |
 | --- | --- | --- | --- |
 | A, answer | A question the wiki, FAQ or the thread itself answers: access, setup, where a doc is, how a thing works, a status I have already written down | push with Send / Skip | send when confidence >= 0.8 and at least one claim id it cites (`claims`, from `ask_context`) is still a live wiki claim, else tier B |
-| B, hold | Asks for a decision, an approval, a review, an estimate, my opinion, access I grant, or a meeting | push with Send / Skip of the draft | send one holding note per person per 3 days ("I'm away until X, <backup> covers this, I'll see it when back") and add a task |
+| B, hold | Asks for a decision, an approval, a review, an estimate, my opinion, access I grant, or a meeting | push with Send / Skip of the draft | send one holding note per person per 3 days, and push me each further ask inside those days ("I'm away until X, <backup> covers this, I'll see it when back") and add a task |
 | C, escalate | Production incident, a message from my manager (the `manager` setting) or the never-answer list (names match whole words, Slack user ids exactly), legal or HR, anything with "urgent" or "down", anything from outside the company | push now | push now, no reply |
 
-Never sent, whatever the tier: credentials or tokens, anything to a Slack Connect or external channel, a reply in a
+Never sent, whatever the tier: credentials or tokens, anything to a Slack Connect or external channel (the scan sets
+`external` on the ask, which escalates it), a reply in a
 thread where someone else already answered after the ask (the scan flags it, and the post step re-reads the thread and
 backs out if an answer came since), a reply to a bot, a second reply in the same thread (the replies row keeps a thread key; a follow-up in an answered
 thread is skipped and pushed to me instead), a

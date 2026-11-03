@@ -21,7 +21,9 @@ function modeLine(s: AutopilotState) {
 function scanLine(s: AutopilotState) {
   const h = s.scan;
   const last = !h ? 'Slack scan not set up' : h.error && (h.failed ?? 0) >= (h.ok ?? 0) ? `last scan ${when(h.failed!)} failed` : h.ok ? `last scan ${when(h.ok)}${h.counts ? `, ${h.counts.messages ?? 0} messages, ${h.counts.asks ?? 0} asks` : ''}` : 'no scan yet';
-  return `Checks every 15 min ${s.mode === 'away' ? 'every day until 22:00' : 'on weekdays'} · ${last}`;
+  const tokens = s.cost ? s.cost.input + s.cost.output + s.cost.cache_read + s.cost.cache_write : 0;
+  const cost = tokens ? ` · last scan ~${tokens >= 1000 ? `${Math.round(tokens / 1000)}k` : tokens} tokens` : '';
+  return `Checks every 15 min ${s.mode === 'away' ? 'every day until 22:00' : 'on weekdays'} · ${last}${cost}`;
 }
 
 function Fold({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: ReactNode }) {

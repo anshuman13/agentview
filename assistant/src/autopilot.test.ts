@@ -119,6 +119,17 @@ describe('afterScan', () => {
     expect(threadKey('https://x.slack.com/archives/C9/p1700000000123456')).toBe('C9/1700000000.123456');
   });
 
+  test('external asks escalate, and a second ask within 3 days of a holding note is pushed instead of silently skipped', async () => {
+    const now = at(22, 10);
+    const asks = [ask('u1', { external: true }), ask('u2', { from: 'Ann', tier: 'hold' }), ask('u3', { from: 'Ann', tier: 'hold' })];
+    const db = withAsks(asks, now);
+    posts.length = 0;
+    const r = await afterScan(db, away, ['ai-help'], asks, now, post);
+    expect(r).toEqual({ answered: [], held: ['Answer u2'], skipped: ['Answer u1', 'Answer u3'], followups: [askId(url('u3'))] });
+    expect(db.prepare("SELECT status, why FROM replies WHERE id = ?").get(askId(url('u3')))).toEqual({ status: 'skipped', why: 'second ask within 3 days of a holding note' });
+    expect(toPush('away', away, ['ai-help'], asks, r.followups).map((a) => a.title)).toEqual(['Answer u1', 'Answer u3']);
+  });
+
   test('a dry run logs instead of sending and leaves the task open', async () => {
     const now = at(22, 10);
     const db = withAsks([ask('u1')], now);

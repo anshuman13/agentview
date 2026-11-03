@@ -31,6 +31,7 @@ export const Ask = z.object({
   why: z.string().optional().describe('One line on the tier and confidence'),
   answered_by_other: z.boolean().optional().describe('True when someone other than me already answered it in the thread'),
   claims: z.array(z.string()).optional().describe('Ids of the wiki claims from ask_context the draft rests on'),
+  external: z.boolean().optional().describe('True when the channel is shared with another company (Slack Connect) or who asked is a guest or outside the company'),
 });
 // A commitment I made myself, like "I'll send it tomorrow".
 export const Said = z.object({
