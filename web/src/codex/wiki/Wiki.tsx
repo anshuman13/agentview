@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Guard } from '../../app/Guard';
 import '../../styles/features/wiki.css';
 import { useView } from '../view';
+import { REVIEW } from './shared';
 
 export { AskBar } from './AskBar';
 export { Feed } from './Feed';
@@ -10,8 +11,9 @@ export { SOURCE_ICON, shortDate } from './shared';
 
 const WikiIndex = lazy(() => import('./WikiIndex').then((m) => ({ default: m.WikiIndex })));
 const WikiPage = lazy(() => import('./WikiPage').then((m) => ({ default: m.WikiPage })));
+const ReviewMode = lazy(() => import('./ReviewMode').then((m) => ({ default: m.ReviewMode })));
 
 export function Wiki({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
-  return <Guard key={open ?? ''} retry><Suspense fallback={null}>{open ? <WikiPage id={open} /> : <WikiIndex onMenu={onMenu} />}</Suspense></Guard>;
+  return <Guard key={open ?? ''} retry><Suspense fallback={null}>{open === REVIEW ? <ReviewMode /> : open ? <WikiPage id={open} /> : <WikiIndex onMenu={onMenu} />}</Suspense></Guard>;
 }

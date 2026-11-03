@@ -470,3 +470,12 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .wk .mt-days > .mt-row + .mt-row::before { content: ''; position: absolute; top: 0; right: 0; left: calc(var(--sp-8) + 40px + var(--sp-7)); height: 1px; background: var(--border); }
 .wk .mt-list section > .ui-section .ui-section-head { padding: var(--sp-3) var(--sp-8); font-size: var(--type-footnote-size); font-weight: 400; }
 :is(.wk .mt-days, .as-scroll .mt-rows.ov-card) .mt-tile { background: var(--hover); }
+
+.wk-label-row { display: flex; align-items: center; gap: var(--sp-3); }
+.wk-mode-n { font-size: var(--fs-sm); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.wk-mode .wk-scroll { padding: var(--sp-6) var(--sp-8); }
+.wk-mode-card { max-width: 720px; margin: 0 auto; padding: var(--sp-8); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.wk-mode-text { margin: var(--sp-5) 0 0; font-size: var(--fs-3xl); line-height: var(--lh); color: var(--fg-strong); }
+.wk-mode-acts { display: flex; gap: var(--sp-4); max-width: 720px; width: 100%; margin: 0 auto; padding: var(--sp-5) var(--sp-8) calc(var(--sp-6) + env(safe-area-inset-bottom)); }
+.wk-mode-acts .btn { flex: 1; height: var(--touch); justify-content: center; font-size: var(--fs-lg); }
+.wk-mode .as-swipe-row { background: var(--bg); }

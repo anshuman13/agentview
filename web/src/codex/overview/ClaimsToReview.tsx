@@ -10,9 +10,9 @@ export function ClaimsToReview() {
   return (
     <section className="ov-follow">
       <div className="ov-follow-row">
-        <button className="ov-follow-text" onClick={() => setView({ list: 'wiki', open: null, person: null })}>
+        <button className="ov-follow-text" onClick={() => setView({ list: 'wiki', open: 'review', anchor: null, person: null })}>
           <span className="ov-t"><Icon name="check" small /> {n} wiki {n === 1 ? 'claim waits' : 'claims wait'} for you</span>
-          <span className="muted small">Approve or reject them in the wiki</span>
+          <span className="muted small">Approve or reject them one at a time</span>
         </button>
       </div>
     </section>

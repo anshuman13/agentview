@@ -6,7 +6,7 @@ import { Fold } from '../Fold';
 import { setView, showSnack } from '../view';
 import { ClaudeChip, SourceChip } from './Chips';
 import { PageTile } from './PageTile';
-import { shortDate } from './shared';
+import { REVIEW, shortDate } from './shared';
 
 function ReviewCard({ fact }: { fact: Fact }) {
   const { store, pages, facts, meetings } = useCodex();
@@ -160,7 +160,7 @@ export function ToReview({ facts }: { facts: Fact[] }) {
   const shown = all ? cards : cards.slice(0, cap);
   return (
     <section>
-      <div className="wk-label">To review · {reviewCount(pages, facts)}</div>
+      <div className="wk-label wk-label-row">To review · {reviewCount(pages, facts)}<span className="spacer" /><button className="wk-act" onClick={() => setView({ open: REVIEW, anchor: null })}><Icon name="checklist" small /> One at a time</button></div>
       <div className="wk-reviews">
         {shown}
         {!all && cards.length > shown.length && <button className="wk-more" onClick={() => setAll(true)}>Show {cards.length - shown.length} more</button>}

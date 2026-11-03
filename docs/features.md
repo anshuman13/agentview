@@ -157,7 +157,7 @@ the hub with the meeting's title, date and the words around the hit; offline the
 
 ### Wiki
 
-The wiki is built from claims with sources, which can be edited, contested and go through Review. The wiki start page shows the first 3 cards of To review (Show N more for the rest) and, in one closed
+The wiki is built from claims with sources, which can be edited, contested and go through Review. The wiki start page shows To review: one card per page with proposed claims (the first 3 claims and Read all N, Approve all or Reject all; a decided card stays in its slot as a stub while the list is open) and the first 3 loose claims (Show N more). The Overview row "N wiki claims wait for you" and the One at a time button open Review claims: one claim at a time with its page, sources, big Reject, Skip and Approve, "n of N", swipe right to approve and left to reject; a skipped claim comes back at the end. On a page, a proposed claim swipes the same way and a heading with 2 or more proposed claims gets Approve N. Decisions within 8 s share one Undo ("4 in a row"), and a batch of 5 or more keeps Undo up for 10 s. The start page also shows, in one closed
 fold, Needs a look: claims untouched for 90 days (Stale) and claims a later meeting decision may have changed (Maybe changed), unless a
 proposed replacement already waits in Review; each list shows 3 rows and +N more. Recently updated shows 5 rows and labels only contested ones. On
 desktop a claim shows Cite and Retire on hover or focus; the page header counts claims without the pending ones. For meetings and Slack channel decisions of the last two weeks the hub
