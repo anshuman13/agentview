@@ -327,6 +327,9 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .wk-reviews { display: grid; gap: var(--sp-4); max-width: 720px; }
 .wk-review .mt-action-kind em { font-style: normal; color: var(--fg-muted); }
 .wk-review .wk-claim-foot { margin-top: var(--sp-3); }
+.wk-review-peek { margin: 0; padding: 0 0 0 var(--sp-6); display: grid; gap: var(--sp-2); font-size: var(--fs-sm); color: var(--fg-muted); line-height: var(--lh); }
+.wk-review-peek li { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wk-decided { display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-muted); font-size: var(--fs-sm); }
 
 .mt-tasks { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); overflow: hidden; }
 .mt-task { display: flex; align-items: flex-start; min-width: 0; gap: var(--sp-5); padding: var(--sp-6) var(--sp-7); }

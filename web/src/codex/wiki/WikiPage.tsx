@@ -33,7 +33,9 @@ export function WikiPage({ id }: { id: string }) {
   const [shown, more] = useWindow(String(pid));
   const visible = useMemo(() => capGroups(groups, anchor || allFor === id ? Infinity : shown, 'claims'), [groups, shown, anchor, allFor, id]);
   const [showOlder, setShowOlder] = useState(false);
-  useEffect(() => setShowOlder(false), [id]);
+  // After Approve all or Reject all the banner stays as a note, so the claims below do not jump up under the finger.
+  const [decided, setDecided] = useState<string | null>(null);
+  useEffect(() => { setShowOlder(false); setDecided(null); }, [id]);
   // An anchor that arrives before the claims waits for them.
   const loaded = facts.length > 0;
   useEffect(() => {
@@ -81,14 +83,14 @@ export function WikiPage({ id }: { id: string }) {
                 <span>Updated {shortDate(Math.max(page.updated_at, st.updated))}</span>
                 {st.contested > 0 && <span className="wk-warn">{st.contested} contested</span>}
               </div>
-              {pending.length > 0 && (
+              {pending.length > 0 ? (
                 <div className="wk-pending">
                   <span>{page.state === 'proposed' ? 'New page with ' : ''}{pending.length} proposed {pending.length === 1 ? 'claim' : 'claims'}</span>
                   <span className="spacer" />
-                  <button className="btn" onClick={() => setConfirm({ title: `Reject ${plural(pending.length, 'claim')}?`, detail: page.title ?? '', action: 'Reject all', run: async () => review.reject(pending) })}>Reject all</button>
-                  <button className="btn primary" onClick={() => review.approve(pending)}><Icon name="check" small /> Approve all</button>
+                  <button className="btn" onClick={() => setConfirm({ title: `Reject ${plural(pending.length, 'claim')}?`, detail: page.title ?? '', action: 'Reject all', run: async () => { review.reject(pending); setDecided(`Rejected ${plural(pending.length, 'claim')}`); } })}>Reject all</button>
+                  <button className="btn primary" onClick={() => { review.approve(pending); setDecided(`Approved ${plural(pending.length, 'claim')}`); }}><Icon name="check" small /> Approve all</button>
                 </div>
-              )}
+              ) : decided && <div className="wk-pending wk-decided"><Icon name="check" small /> {decided}</div>}
               {visible.map((g) => (
                 <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
                   <h2>{g.heading}</h2>

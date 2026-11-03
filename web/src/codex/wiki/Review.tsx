@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { approveAllChanges, approveChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
@@ -72,15 +72,19 @@ function ReviewCard({ fact }: { fact: Fact }) {
   );
 }
 
+const BATCH = 5;
+const BATCH_MS = 10_000;
+
 // Reads pages and facts when a button is pressed, so a claim row does not re-render for every store change.
 export function useReview() {
   const store = useAssistantStore();
-  const run = (changes: { table: 'facts' | 'pages'; row: unknown; patch: unknown; undo: unknown }[], text: string) => {
+  // A batch gets a longer undo window than a single claim.
+  const run = (changes: { table: 'facts' | 'pages'; row: unknown; patch: unknown; undo: unknown }[], text: string, n: number) => {
     changes.forEach((c) => void store.editRow(c.table, c.row as never, c.patch as never));
-    showSnack(text, () => changes.forEach((c) => void store.editRow(c.table, c.row as never, c.undo as never)));
+    showSnack(text, () => changes.forEach((c) => void store.editRow(c.table, c.row as never, c.undo as never)), n >= BATCH ? BATCH_MS : undefined);
   };
   return {
-    approve: (list: Fact[]) => run(approveAllChanges(list, store.snapshot().pages, store.snapshot().facts), `Approved ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`),
+    approve: (list: Fact[]) => run(approveAllChanges(list, store.snapshot().pages, store.snapshot().facts), `Approved ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`, list.length),
     reject: (list: Fact[]) => {
       const { pages, facts } = store.snapshot();
       const page = pages.find((p) => list.length && p.id === list[0].page_id && p.profile === list[0].profile && p.state === 'proposed');
@@ -88,7 +92,7 @@ export function useReview() {
       run([
         ...list.map((f) => ({ table: 'facts' as const, row: f, patch: { state: 'rejected' }, undo: { state: 'proposed' } })),
         ...(rest ? [{ table: 'pages' as const, row: page, patch: { state: 'rejected' }, undo: { state: 'proposed' } }] : []),
-      ], `Rejected ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`);
+      ], `Rejected ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`, list.length);
     },
   };
 }
@@ -102,11 +106,11 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
       <PageTile page={page} />
       <div className="mt-action-title"><button className="wk-review-open" onClick={() => setView({ open: page.id, anchor: null })}>{page.title} <Icon name="chevron-right" small /></button></div>
       {page.summary && <div className="mt-action-body">{page.summary}</div>}
-      <div className="wk-meta">
-        <span>{list.length} {list.length === 1 ? 'claim' : 'claims'}</span>
-      </div>
+      <ul className="wk-review-peek">
+        {list.slice(0, PEEK).map((f) => <li key={f.profile + f.id}>{f.text}</li>)}
+      </ul>
       <div className="mt-action-foot">
-        <button className="wk-act" onClick={() => setView({ open: page.id, anchor: null })}><Icon name="book" small /> Read and edit</button>
+        <button className="wk-act" onClick={() => setView({ open: page.id, anchor: null })}><Icon name="book" small /> {list.length > PEEK ? `Read all ${list.length}` : 'Read and edit'}</button>
         <span className="spacer" />
         <button className="icon-btn mt-reject" title="Reject all" aria-label="Reject all" onClick={() => review.reject(list)}><Icon name="close" /></button>
         <button className="btn primary mt-approve" onClick={() => review.approve(list)}><Icon name="check" small /> Approve all</button>
@@ -115,24 +119,42 @@ function PageReview({ page, list }: { page: Page; list: Fact[] }) {
   );
 }
 
-const REVIEW_CAP = 3;
+const PEEK = 3;
+const LOOSE_CAP = 3;
 const LOOK_CAP = 3;
+
+// A card that was decided stays in its slot as a stub while the list is open, so the next card's buttons do not move under the finger.
+function Decided({ n }: { n: number }) {
+  return <div className="mt-action wk-review wk-decided"><Icon name="check" small /> {n} {n === 1 ? 'claim' : 'claims'} decided</div>;
+}
 
 export function ToReview({ facts }: { facts: Fact[] }) {
   const { pages } = useCodex();
   const { byPage, loose } = useMemo(() => reviewGroups(pages, facts), [pages, facts]);
   const [all, setAll] = useState(false);
-  if (!byPage.length && !loose.length) return null;
-  const cards = [
-    ...byPage.map(({ page, list }) => <PageReview key={page.profile + page.id} page={page} list={list} />),
-    ...loose.map((f) => <ReviewCard key={f.profile + f.id} fact={f} />),
-  ];
+  const order = useRef<Map<string, { n: number; page: boolean }>>(new Map());
+  const live = new Map<string, ReactNode>();
+  for (const { page, list } of byPage) {
+    const k = page.profile + page.id;
+    live.set(k, <PageReview key={k} page={page} list={list} />);
+    if (!order.current.has(k)) order.current.set(k, { n: list.length, page: true });
+  }
+  for (const f of loose) {
+    const k = f.profile + f.id;
+    live.set(k, <ReviewCard key={k} fact={f} />);
+    if (!order.current.has(k)) order.current.set(k, { n: 1, page: false });
+  }
+  if (!order.current.size) return null;
+  const slots = [...order.current].sort(([, a], [, b]) => Number(b.page) - Number(a.page));
+  const cards = slots.map(([k, { n }]) => live.get(k) ?? <Decided key={k} n={n} />);
+  const cap = slots.filter(([, s]) => s.page).length + LOOSE_CAP;
+  const shown = all ? cards : cards.slice(0, cap);
   return (
     <section>
       <div className="wk-label">To review · {reviewCount(pages, facts)}</div>
       <div className="wk-reviews">
-        {all ? cards : cards.slice(0, REVIEW_CAP)}
-        {!all && cards.length > REVIEW_CAP && <button className="wk-more" onClick={() => setAll(true)}>Show {cards.length - REVIEW_CAP} more</button>}
+        {shown}
+        {!all && cards.length > shown.length && <button className="wk-more" onClick={() => setAll(true)}>Show {cards.length - shown.length} more</button>}
       </div>
     </section>
   );

@@ -99,12 +99,12 @@ function announce(text: string) {
   el.textContent = '';
   setTimeout(() => (el.textContent = text), 100);
 }
-export function showSnack(text: string, undo?: () => void) {
+export function showSnack(text: string, undo?: () => void, ms = SNACK_MS) {
   snack = { text, undo, id: Date.now() };
   announce(undo ? `${text}. Undo available` : text);
   snackSubs.forEach((f) => f());
   clearTimeout(snackTimer);
-  snackTimer = setTimeout(hideSnack, SNACK_MS);
+  snackTimer = setTimeout(hideSnack, ms);
 }
 export const useSnack = () => useSyncExternalStore((f) => (snackSubs.add(f), () => snackSubs.delete(f)), () => snack);
 export const copyText = (text: string, done = 'Copied') => void navigator.clipboard.writeText(text).then(() => showSnack(done), () => showSnack('Copy failed'));
