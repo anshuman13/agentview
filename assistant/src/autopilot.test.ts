@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ANSWERED, afterScan, escalated, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { ANSWERED, afterScan, awayDigest, escalated, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
 import { askId, saveScan, threadKey } from './slackSave.js';
@@ -235,4 +235,22 @@ test('escalated matches whole names or exact user ids, and always the manager', 
   expect(escalated(c, 'U0ABC1234 fan')).toBe(false);
   expect(escalated(c, 'bo li')).toBe(true);
   expect(escalated({}, 'Mia')).toBe(false);
+});
+
+test('awayDigest writes one brief per away day from 17:00 with what was done, and pushes the counts once', async () => {
+  const now = at(22, 10);
+  const asks = [ask('u1'), ask('u2', { from: 'Ann', tier: 'hold' }), ask('u3', { from: 'Mia Berg' })];
+  const db = withAsks(asks, now);
+  await afterScan(db, away, ['ai-help'], asks, now, post);
+  const pushes: string[] = [];
+  const push = async (title: string, _s: string, body: string) => { pushes.push(`${title}: ${body}`); return true; };
+  expect(await awayDigest(db, away, at(22, 16), push)).toBeNull();
+  const text = await awayDigest(db, away, at(22, 17), push);
+  expect(text).toContain('Answered (1):');
+  expect(text).toContain('Held with a note (1):');
+  expect(text).toContain('Escalated to you (1):');
+  expect(text).toContain('Mia Berg in #ai-help: Answer u3');
+  expect(pushes).toEqual(['Away digest: 1 answered, 1 held with a note, 1 escalated to you, 0 skipped or failed']);
+  expect(await awayDigest(db, away, at(22, 18), push)).toBeNull();
+  expect(db.prepare("SELECT kind FROM briefs WHERE id = 'away:2026-12-22'").get()).toEqual({ kind: 'away' });
 });

@@ -1,6 +1,8 @@
 # Autopilot
 
-Status: the flag, the tiers, the send path, the Send reply push action, the usage job and the FAQ miner are built (3 Nov 2026); the ask card buttons, the away digest and the other checks are still plans.
+Status: the flag, the tiers, the send path, the ask card with Send, Edit and Skip, the FAQ miner, the voice learner, the
+"who does what" pass, the away digest, every-day away scans, claim-cited drafts, the manager setting, retries and the
+thread and external checks are built (4 Nov 2026); the draft model option and the other checks are still plans.
 
 Goal: the hub answers people on my behalf. Day to day it drafts and I approve from the phone; on vacation it answers
 the safe questions itself, holds the rest with an away note and tells me what matters. Everything it sends says it
@@ -89,9 +91,10 @@ assist mode since I pressed Send myself.
 4. **FAQ.** `POST /slack/faq?channel=ai-help&days=90` reads the channel's threads and proposes one claim per answered
    question on a "Support FAQ" page for Review, keyed by permalink so a rerun adds nothing twice (`assistant/src/faq.ts`).
    I approve them before the trip. `ask_context` already feeds live claims into drafts, so nothing else changes.
-5. **Away mode.** The scan sends tier A and B as above, at most 10 replies an hour and 40 a day, and writes a
-   17:00 digest to `briefs` (kind `away`): what it answered, what it held, what it escalated, with links. One push a
-   day with the counts. Meetings in the window get a decline with the note only if I enable `"decline": true`.
+5. **Away mode.** The scan sends tier A and B as above, at most 10 replies an hour and 40 a day, and at the first
+   scan from 17:00 writes the day's digest to `briefs` (kind `away`, `awayDigest`): what it answered, held, escalated
+   and skipped, with links. One push a day with the counts. `POST /slack/people` proposes "who owns what" claims on a
+   "Who does what" page from the hub's chat summaries and decisions of the last 30 days (`assistant/src/people.ts`). Meetings in the window get a decline with the note only if I enable `"decline": true`.
 6. **Dry run.** Run assist mode for a week before the trip. The run log shows how many drafts I sent unchanged, edited
    or skipped per tier. Tier A goes live in away mode only if 80% of its drafts went out unchanged.
 7. **Day-to-day offload** (after the trip, same machinery):

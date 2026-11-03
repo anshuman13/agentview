@@ -10,7 +10,7 @@ import { DRAFT_STEP, contextTool } from './draft.js';
 import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
-import { afterScan, autopilotConfig, awayLines, awayStart, escalateLines, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, awayDigest, awayLines, awayStart, escalateLines, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { noteCost, runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
@@ -220,6 +220,7 @@ async function slackOnce(db: Database) {
   const auto = r.mode === 'off' ? '' : `, autopilot ${r.mode}: ${r.replies.answered.length} answered, ${r.replies.held.length} held, ${r.replies.skipped.length} skipped`;
   console.log(`slack: ${r.chats} chats, ${r.messages} messages, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent${auto}`);
   await pushUrgent(db, c, toPush(r.mode, r.auto, c.channels, r.newAsks, r.replies.followups), r.mode);
+  await awayDigest(db, r.auto);
   return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said, ...(r.mode === 'away' ? { replied: r.replies.answered.length + r.replies.held.length } : {}) };
 }
 

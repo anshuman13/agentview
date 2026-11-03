@@ -287,6 +287,30 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
   return out;
 }
 
+const DIGEST_HOUR = 17;
+
+// Once per away day, at the first scan from 17:00: a brief (kind away) with what the hub answered, held, escalated and
+// skipped that day, with links, and one push with the counts. Returns the brief text, or null when none was due.
+export async function awayDigest(db: Database, c: AutopilotConfig, now = Date.now(), push = pushNtfy) {
+  if (modeOf(c, now) !== 'away' || new Date(now).getHours() < DIGEST_HOUR) return null;
+  const id = `away:${ymd(now)}`;
+  if (db.prepare('SELECT 1 FROM briefs WHERE profile = ? AND id = ?').get(PROFILE, id)) return null;
+  const from = new Date(now).setHours(0, 0, 0, 0);
+  const rows = db.prepare("SELECT r.id, r.who, r.chat, r.tier, r.status, r.url, r.why, i.title, i.source_url FROM replies r LEFT JOIN items i ON i.profile = r.profile AND i.id = r.id WHERE r.profile = ? AND COALESCE(r.sent_at, r.at) >= ? ORDER BY COALESCE(r.sent_at, r.at)").all(PROFILE, from) as { id: string; who: string | null; chat: string | null; tier: string | null; status: string; url: string | null; why: string | null; title: string | null; source_url: string | null }[];
+  const line = (r: (typeof rows)[number]) => `- ${r.who ?? '?'}${r.chat ? ` in ${r.chat}` : ''}: ${r.title ?? r.id}${r.why && r.status !== 'sent' && r.status !== 'dry' ? ` (${r.why})` : ''} ${r.url ?? r.source_url ?? ''}`.trimEnd();
+  const sent = (s: string) => s === 'sent' || s === 'dry';
+  const groups: [string, typeof rows][] = [
+    ['Answered', rows.filter((r) => sent(r.status) && r.tier === 'answer')],
+    ['Held with a note', rows.filter((r) => sent(r.status) && r.tier === 'hold')],
+    ['Escalated to you', rows.filter((r) => !sent(r.status) && (r.tier === 'escalate' || r.status === 'held'))],
+    ['Skipped or failed', rows.filter((r) => !sent(r.status) && r.tier !== 'escalate' && r.status !== 'held')],
+  ];
+  const text = [`Away day ${ymd(now)}${c.dry_run !== false ? ' (dry run)' : ''}`, ...groups.flatMap(([title, list]) => (list.length ? ['', `${title} (${list.length}):`, ...list.map(line)] : []))].join('\n');
+  applyChanges(db, [{ table: 'briefs', id, profile: PROFILE, updated_at: now, fields: { kind: 'away', text, from_at: from, to_at: now } }]);
+  await push('Away digest', '', groups.map(([title, list]) => `${list.length} ${title.toLowerCase()}`).join(', '), '');
+  return text;
+}
+
 // Send reply pressed on a push, or on the ask: posts the stored draft as my own reply (no marker) and closes the ask.
 // edited says I changed the draft before sending, for the sent-unchanged measure.
 export async function replyNow(db: Database, c: AutopilotConfig, id: string, now = Date.now(), post = postReply, edited = false) {
