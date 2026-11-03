@@ -91,14 +91,17 @@ export function WikiPage({ id }: { id: string }) {
                   <button className="btn primary" onClick={() => { review.approve(pending); setDecided(`Approved ${plural(pending.length, 'claim')}`); }}><Icon name="check" small /> Approve all</button>
                 </div>
               ) : decided && <div className="wk-pending wk-decided"><Icon name="check" small /> {decided}</div>}
-              {visible.map((g) => (
+              {visible.map((g) => {
+                const open = g.claims.filter((c) => c.fact.state === 'proposed').map((c) => c.fact);
+                return (
                 <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
-                  <h2>{g.heading}</h2>
+                  <h2>{g.heading}{open.length > 1 && <button className="wk-act wk-head-act" onClick={() => review.approve(open)}><Icon name="check" small /> Approve {open.length}</button>}</h2>
                   <ul className="wk-claims">
                     {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page.title ?? ''} flash={flash === fact.id} />)}
                   </ul>
                 </section>
-              ))}
+                );
+              })}
               <ShowMore shown={shown} total={total} onMore={more} />
               {older.length > 0 && (
                 <section className="wk-group wk-older">
