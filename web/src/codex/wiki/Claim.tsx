@@ -4,6 +4,7 @@ import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { showSnack } from '../view';
+import { Swipe } from '../Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
 import { useReview } from './Review';
 import { shortDate } from './shared';
@@ -43,40 +44,42 @@ export const Claim = memo(function Claim({ fact, old, page, flash }: { fact: Fac
   };
   return (
     <li className={`wk-claim${c ? ' contested' : ''}${proposed ? ' proposed' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
+      <Swipe onRight={proposed ? () => review.approve([fact]) : undefined} onLeft={proposed ? () => review.reject([fact]) : undefined} rightLabel="Approve" leftLabel="Reject" leftIcon="close">
       {editing ? (
-        <div className="wk-contest-form">
-          <textarea autoFocus rows={2} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') setEditing(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
-          <div className="wk-contest-btns">
-            <button className="btn" onClick={() => setEditing(false)}>Cancel</button>
-            <button className="btn primary" onClick={save}>Save</button>
+          <div className="wk-contest-form">
+            <textarea autoFocus rows={2} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') setEditing(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
+            <div className="wk-contest-btns">
+              <button className="btn" onClick={() => setEditing(false)}>Cancel</button>
+              <button className="btn primary" onClick={save}>Save</button>
+            </div>
           </div>
-        </div>
-      ) : <span className="wk-claim-text">{fact.text}</span>}
-      <span className="wk-claim-foot">
-        {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
-        {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
-        {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
-        <span className="spacer" />
-        <span className="wk-claim-acts">
-          {proposed ? (
-            <>
-              <span className="wk-proposed">Proposed</span>
-              <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => review.reject([fact])}><Icon name="close" small /></button>
-              <button className="icon-btn" title="Approve" aria-label="Approve" onClick={() => review.approve([fact])}><Icon name="check" small /></button>
-            </>
-          ) : (
-            <>
-              {!editing && <button className="icon-btn" title="Edit the claim text" aria-label="Edit the claim text" onClick={startEdit}><Icon name="edit" small /></button>}
-              <button className="icon-btn wk-hov" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
-              {fact.state === 'retired'
-                ? <button className="wk-act" title="Show this claim with the current ones again" onClick={() => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); }}><Icon name="history" small /> Restore</button>
-                : <button className="wk-act wk-hov" title="Move this claim to Older; Claude stops using it" onClick={() => { void store.editRow('facts', fact, { state: 'retired' }); showSnack('Claim retired', () => void store.editRow('facts', fact, { state: null })); }}><Icon name="archive" small /> Retire</button>}
-            </>
-          )}
-          {!proposed && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
+        ) : <span className="wk-claim-text">{fact.text}</span>}
+        <span className="wk-claim-foot">
+          {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
+          {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
+          {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
+          <span className="spacer" />
+          <span className="wk-claim-acts">
+            {proposed ? (
+              <>
+                <span className="wk-proposed">Proposed</span>
+                <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => review.reject([fact])}><Icon name="close" small /></button>
+                <button className="icon-btn" title="Approve" aria-label="Approve" onClick={() => review.approve([fact])}><Icon name="check" small /></button>
+              </>
+            ) : (
+              <>
+                {!editing && <button className="icon-btn" title="Edit the claim text" aria-label="Edit the claim text" onClick={startEdit}><Icon name="edit" small /></button>}
+                <button className="icon-btn wk-hov" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
+                {fact.state === 'retired'
+                  ? <button className="wk-act" title="Show this claim with the current ones again" onClick={() => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); }}><Icon name="history" small /> Restore</button>
+                  : <button className="wk-act wk-hov" title="Move this claim to Older; Claude stops using it" onClick={() => { void store.editRow('facts', fact, { state: 'retired' }); showSnack('Claim retired', () => void store.editRow('facts', fact, { state: null })); }}><Icon name="archive" small /> Retire</button>}
+              </>
+            )}
+            {!proposed && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
+          </span>
         </span>
-      </span>
+      </Swipe>
       {contesting && (
         <div className="wk-contest-form">
           <textarea autoFocus rows={2} value={note} aria-label="Why this claim is wrong" placeholder="What is wrong or out of date? Link a source if you have one." onChange={(e) => setNote(e.target.value)}

@@ -7,7 +7,7 @@ const SWIPE = 80;
 // A left swipe past this share of the row deletes instead of snoozing.
 const SWIPE_DELETE = 0.55;
 
-export function Swipe({ onRight, onLeft, leftLabel = 'Tomorrow', onDelete, children }: { onRight?: () => void; onLeft?: () => void; leftLabel?: string; onDelete?: () => void; children: React.ReactNode }) {
+export function Swipe({ onRight, onLeft, rightLabel = 'Done', leftLabel = 'Tomorrow', leftIcon = 'clock', onDelete, children }: { onRight?: () => void; onLeft?: () => void; rightLabel?: string; leftLabel?: string; leftIcon?: string; onDelete?: () => void; children: React.ReactNode }) {
   const [dx, setDx] = useState(0);
   const width = useRef(1);
   const deleting = !!onDelete && dx < 0 && (!onLeft || -dx > width.current * SWIPE_DELETE);
@@ -17,7 +17,7 @@ export function Swipe({ onRight, onLeft, leftLabel = 'Tomorrow', onDelete, child
   const reset = () => { from.current = null; moving.current = false; setDx(0); };
   return (
     <div className={`as-swipe${dx > 0 ? ' right' : dx < 0 ? (deleting ? ' left delete' : ' left') : ''}`}>
-      <div className="as-swipe-bg"><span><Icon name="check" /> Done</span>{deleting ? <span>Delete <Icon name="trash" /></span> : <span>{leftLabel} <Icon name="clock" /></span>}</div>
+      <div className="as-swipe-bg"><span><Icon name="check" /> {rightLabel}</span>{deleting ? <span>Delete <Icon name="trash" /></span> : <span>{leftLabel} <Icon name={leftIcon} /></span>}</div>
       <div
         className="as-swipe-row"
         style={{ transform: dx ? `translateX(${dx}px)` : undefined, transition: moving.current ? 'none' : undefined }}

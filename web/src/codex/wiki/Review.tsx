@@ -74,14 +74,23 @@ function ReviewCard({ fact }: { fact: Fact }) {
 
 const BATCH = 5;
 const BATCH_MS = 10_000;
+// Decisions within this gap of each other share one Undo, so a run of swipes can be taken back together.
+const RUN_MS = 8_000;
+let run_: { undos: (() => void)[]; n: number; at: number } = { undos: [], n: 0, at: 0 };
 
 // Reads pages and facts when a button is pressed, so a claim row does not re-render for every store change.
 export function useReview() {
   const store = useAssistantStore();
-  // A batch gets a longer undo window than a single claim.
   const run = (changes: { table: 'facts' | 'pages'; row: unknown; patch: unknown; undo: unknown }[], text: string, n: number) => {
     changes.forEach((c) => void store.editRow(c.table, c.row as never, c.patch as never));
-    showSnack(text, () => changes.forEach((c) => void store.editRow(c.table, c.row as never, c.undo as never)), n >= BATCH ? BATCH_MS : undefined);
+    const now = Date.now();
+    if (now - run_.at > RUN_MS) run_ = { undos: [], n: 0, at: now };
+    run_.undos.push(() => changes.forEach((c) => void store.editRow(c.table, c.row as never, c.undo as never)));
+    run_.n += n;
+    run_.at = now;
+    const all = run_;
+    const label = all.n > n ? `${text}, ${all.n} in a row` : text;
+    showSnack(label, () => { all.undos.reverse().forEach((u) => u()); run_ = { undos: [], n: 0, at: 0 }; }, all.n >= BATCH ? BATCH_MS : undefined);
   };
   return {
     approve: (list: Fact[]) => run(approveAllChanges(list, store.snapshot().pages, store.snapshot().facts), `Approved ${list.length} ${list.length === 1 ? 'claim' : 'claims'}`, list.length),

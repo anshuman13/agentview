@@ -323,6 +323,11 @@ li.contested .wk-feed-kind { color: var(--warn); }
   .wk-claims .wk-claim-foot > .wk-act { margin-block: -9px; }
   .wk-claim-acts { gap: var(--sp-5); }
   .wk-claim-acts .icon-btn, .wk-claims .wk-claim-acts .icon-btn { width: var(--touch-md); height: var(--touch-md); min-width: var(--touch-md); }
+  .wk-claims .wk-claim-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); margin: var(--sp-2) 0 0; min-height: var(--touch-md); }
+  .wk-claims .wk-src { display: inline-flex; height: 32px; padding: 0 var(--sp-4); margin: 0; border-radius: var(--radius-pill); background: var(--hover); text-decoration: none; max-width: 100%; }
+  .wk-claims .wk-src .codicon.icon { display: inline-block; }
+  .wk-claims .wk-claim-acts { margin-left: auto; }
+  .wk-claim .as-swipe-bg { padding: 0 var(--sp-4); }
 }
 
 .wk-reviews { display: grid; gap: var(--sp-4); max-width: 720px; }
