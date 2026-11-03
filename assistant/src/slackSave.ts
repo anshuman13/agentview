@@ -28,6 +28,7 @@ export const Ask = z.object({
   tier: z.enum(['answer', 'hold', 'escalate']).optional().describe('answer: the thread or ask_context fully answers it as a fact. hold: it needs my decision, approval, review, estimate, opinion, access I grant, or a meeting. escalate: an incident or outage, anything urgent, HR or legal, or someone outside the company.'),
   confidence: z.number().min(0).max(1).optional().describe('How sure you are that the draft is correct and complete, 0 to 1'),
   why: z.string().optional().describe('One line on the tier and confidence'),
+  answered_by_other: z.boolean().optional().describe('True when someone other than me already answered it in the thread'),
 });
 // A commitment I made myself, like "I'll send it tomorrow".
 export const Said = z.object({

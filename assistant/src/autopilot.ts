@@ -18,7 +18,7 @@ export type AutopilotConfig = { enabled?: boolean; dry_run?: boolean; away?: Awa
 export type Mode = 'off' | 'assist' | 'away';
 export const TIERS = ['answer', 'hold', 'escalate'] as const;
 export type Tier = (typeof TIERS)[number];
-export type NewAsk = { id: string; url: string; from: string; chat: string; title: string; quote: string; urgent: boolean; draft?: string; tier?: Tier; confidence?: number; why?: string };
+export type NewAsk = { id: string; url: string; from: string; chat: string; title: string; quote: string; urgent: boolean; draft?: string; tier?: Tier; confidence?: number; why?: string; answered_by_other?: boolean };
 type Reply = { status: string; who: string; mode: string; tier: string | null };
 
 export const HOUR_CAP = 10;
@@ -75,7 +75,7 @@ export function autopilotState(db: Database, now = Date.now()) {
 // ask with a draft in a covered chat, so Send reply is one tap.
 export function toPush(mode: Mode, c: AutopilotConfig, watched: string[], asks: NewAsk[]) {
   if (mode === 'away') return asks.filter((a) => a.urgent || a.tier === 'escalate' || escalated(c, a.from));
-  if (mode === 'assist') return asks.filter((a) => a.urgent || (a.draft?.trim() && channelAllowed(c, watched, a.chat)));
+  if (mode === 'assist') return asks.filter((a) => a.urgent || (a.draft?.trim() && !a.answered_by_other && channelAllowed(c, watched, a.chat)));
   return asks.filter((a) => a.urgent);
 }
 
@@ -132,15 +132,19 @@ export const underCaps = (db: Database, now: number) => sentCount(db, now - HOUR
 export const holdDue = (db: Database, who: string, now: number) =>
   !db.prepare("SELECT 1 FROM replies WHERE profile = ? AND status IN ('sent', 'dry') AND tier = 'hold' AND lower(who) = lower(?) AND sent_at > ?").get(PROFILE, who, now - HOLD_AGAIN);
 
-// Posts text as a thread reply under the ask's permalink with the work account's Slack connector and returns the permalink of the post.
+export const ANSWERED = 'answered';
+
+// Posts text as a thread reply under the ask's permalink with the work account's Slack connector and returns the permalink of
+// the post, or ANSWERED when a re-read of the thread shows someone else answered since the scan.
 export async function postReply(url: string, text: string) {
   let posted: string | null = null;
-  const done = tool('posted', 'Call once the message is posted.', { url: z.string().describe('Permalink of the message you posted') }, async (a) => {
+  const done = tool('posted', 'Call once the message is posted, or once you decided not to post.', { url: z.string().describe(`Permalink of the message you posted, or "${ANSWERED}" when someone else already answered`) }, async (a) => {
     posted = a.url;
     return { content: [{ type: 'text' as const, text: 'noted' }] };
   });
   const prompt = [
-    `Post the message below as a reply in the thread of ${url} with slack_send_message. The channel id is the path segment after /archives/, and the thread_ts is the p-number with a dot before its last 6 digits. Read the thread first only if you need its thread_ts. Post it exactly once, change nothing in the text, then call posted with the permalink and stop.`,
+    `Read the thread of ${url} with slack_read_thread. The channel id is the path segment after /archives/, and the thread_ts is the p-number with a dot before its last 6 digits. If a reply after that message, from someone other than its author, already answers it, do not post: call posted with "${ANSWERED}" and stop.`,
+    `Otherwise post the message below as a reply in that thread with slack_send_message, exactly once, changing nothing in the text, then call posted with the permalink and stop.`,
     '',
     text,
   ].join('\n');
@@ -149,14 +153,19 @@ export async function postReply(url: string, text: string) {
   return posted as string;
 }
 
-type Sent = { status: 'sent' | 'dry'; url: string | null };
+type Sent = { status: 'sent' | 'dry' | 'answered'; url: string | null };
 
 // Sends one reply, or logs it in a dry run, and notes it on the task; an answer closes the task, a holding note leaves it.
 export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: string; url: string; from: string; chat: string }, tier: Tier, text: string, now: number, post = postReply): Promise<Sent> {
   const dry = c.dry_run !== false;
   let url: string | null = null;
   try {
-    url = dry ? null : webUrl(await post(ask.url, text));
+    const r = dry ? null : await post(ask.url, text);
+    if (r === ANSWERED) {
+      db.prepare("UPDATE replies SET status = 'skipped', tier = ?, why = 'someone else answered' WHERE profile = ? AND id = ?").run(tier, PROFILE, ask.id);
+      return { status: 'answered', url: null };
+    }
+    url = r ? webUrl(r) : null;
   } catch (err) {
     db.prepare("UPDATE replies SET status = 'error', text = ?, why = ? WHERE profile = ? AND id = ?").run(text, String(err), PROFILE, ask.id);
     throw err;
@@ -191,17 +200,17 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
     const prev = reply(db, a.id);
     if (prev && prev.status !== 'held') continue;
     const tier: Tier = escalated(c, a.from) ? 'escalate' : (a.tier ?? 'hold');
-    if (tier === 'escalate' || !channelAllowed(c, watched, a.chat) || !underCaps(db, now)) {
+    if (a.answered_by_other || tier === 'escalate' || !channelAllowed(c, watched, a.chat) || !underCaps(db, now)) {
       out.skipped.push(a.title);
       continue;
     }
     try {
       if (tier === 'answer' && a.draft && (a.confidence ?? 0) >= min) {
-        await sendReply(db, c, a, 'answer', `${marker(c.away)} ${a.draft}`, now, post);
-        out.answered.push(a.title);
+        const r = await sendReply(db, c, a, 'answer', `${marker(c.away)} ${a.draft}`, now, post);
+        (r.status === 'answered' ? out.skipped : out.answered).push(a.title);
       } else if (holdDue(db, a.from, now)) {
-        await sendReply(db, c, a, 'hold', holdNote(c.away), now, post);
-        out.held.push(a.title);
+        const r = await sendReply(db, c, a, 'hold', holdNote(c.away), now, post);
+        (r.status === 'answered' ? out.skipped : out.held).push(a.title);
       } else out.skipped.push(a.title);
     } catch (err) {
       console.error(`autopilot: ${a.title}:`, err);
@@ -220,7 +229,7 @@ export async function replyNow(db: Database, c: AutopilotConfig, id: string, now
   const [from = '', chat = 'DM'] = (row.people ?? '').split(' · ');
   const r = await sendReply(db, c, { id, url: row.source_url, from, chat }, 'answer', row.draft.trim(), now, post);
   if (edited) db.prepare('UPDATE replies SET edited = 1 WHERE profile = ? AND id = ?').run(PROFILE, id);
-  if (r.status === 'dry') return r;
+  if (r.status !== 'sent') return r;
   applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Math.max(now, row.updated_at + 1), fields: { status: 'done' } }]);
   return r;
 }

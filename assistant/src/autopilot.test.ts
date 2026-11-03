@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { afterScan, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { ANSWERED, afterScan, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { askId, saveScan } from './slackSave.js';
 import { HOUR } from './time.js';
@@ -83,6 +83,17 @@ describe('afterScan', () => {
     expect(db.prepare("SELECT status FROM replies WHERE id = ?").get(askId(url('u4')))).toEqual({ status: 'held' });
     expect(holdDue(db, 'ann', now + HOUR)).toBe(false);
     expect(holdDue(db, 'ann', now + 4 * 24 * HOUR)).toBe(true);
+  });
+
+  test('skips an ask someone else answered, before and at posting time', async () => {
+    const now = at(22, 10);
+    const asks = [ask('u1', { answered_by_other: true }), ask('u2')];
+    const db = withAsks(asks, now);
+    const r = await afterScan(db, away, ['ai-help'], asks, now, async () => ANSWERED);
+    expect(r).toEqual({ answered: [], held: [], skipped: ['Answer u1', 'Answer u2'] });
+    expect(db.prepare("SELECT status, why FROM replies WHERE id = ?").get(askId(url('u2')))).toEqual({ status: 'skipped', why: 'someone else answered' });
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'suggested' });
+    expect(toPush('assist', {}, ['ai-help'], asks).map((a) => a.title)).toEqual(['Answer u2']);
   });
 
   test('a dry run logs instead of sending and leaves the task open', async () => {

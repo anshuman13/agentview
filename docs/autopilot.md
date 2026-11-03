@@ -58,7 +58,8 @@ The draft step gets three more outputs per ask: `tier`, `confidence` (0 to 1) an
 | C, escalate | Production incident, a message from my manager or a named list, legal or HR, anything with "urgent" or "down", anything from outside the company | push now | push now, no reply |
 
 Never sent, whatever the tier: credentials or tokens, anything to a Slack Connect or external channel, a reply in a
-thread where someone else already answered after the ask, a reply to a bot, a second reply in the same thread, a
+thread where someone else already answered after the ask (the scan flags it, and the post step re-reads the thread and
+backs out if an answer came since), a reply to a bot, a second reply in the same thread, a
 reply to a message older than when the mode turned on, mail (Gmail keeps its own vacation responder; the hub only
 drafts).
 

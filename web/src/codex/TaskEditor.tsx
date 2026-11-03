@@ -49,7 +49,7 @@ function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantStore; on
     try {
       const r = await store.sendReply(row.id, edited);
       haptic('success');
-      showSnack(r.status === 'dry' ? 'Dry run: the reply was noted on the ask, not sent' : 'Reply sent');
+      showSnack(r.status === 'dry' ? 'Dry run: the reply was noted on the ask, not sent' : r.status === 'answered' ? 'Not sent: someone already answered in the thread' : 'Reply sent');
     } catch (err) {
       showSnack(`Not sent: ${(err as Error).message}`);
     } finally {

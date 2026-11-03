@@ -10,7 +10,7 @@ const MAX = 3;
 const RECENT = 30 * DAY;
 
 export const DRAFT_DESC = 'A reply I could send, in my voice: 2 to 4 sentences in the language of the ask';
-export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask, and write draft from the thread and what ask_context returns. Do not promise dates or facts you do not know. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned.';
+export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask, and write draft from the thread and what ask_context returns. Do not promise dates or facts you do not know. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread.';
 
 // Current wiki claims and meeting decisions of the last 30 days that share at least two key words with the ask, best first.
 export function askContext(db: Database, ask: string, now = Date.now()) {
