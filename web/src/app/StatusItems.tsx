@@ -112,7 +112,7 @@ export function CacheItem() {
   const live = Boolean(cache) && cache!.at + cache!.ttlMs > now;
   useEffect(() => {
     if (!live) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => !document.hidden && setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [live]);
   if (!cache) return null;

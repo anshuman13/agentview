@@ -33,17 +33,29 @@ let state: State = {
 };
 
 const listeners = new Set<() => void>();
+// A hidden page renders nothing: streamed text would re-render the chat every 80 ms on a phone in a pocket.
+let stale = false;
 function set(patch: Partial<State> | ((s: State) => Partial<State>)) {
   const p = typeof patch === 'function' ? patch(state) : patch;
   state = { ...state, ...p };
-  for (const l of listeners) l();
+  setTitle();
+  if (document.hidden) stale = true;
+  else for (const l of listeners) l();
 }
 
-listeners.add(() => {
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !stale) return;
+    stale = false;
+    for (const l of listeners) l();
+  });
+}
+
+function setTitle() {
   const n = state.live.reduce((sum, c) => sum + (c.id === state.session.id ? state.pending.length : c.pending), 0);
   const title = n > 0 ? `(${n}) AgentView` : 'AgentView';
   if (document.title !== title) document.title = title;
-});
+}
 
 // crypto.randomUUID only exists on secure origins; the phone and other Macs load over plain http.
 const uid = () => crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');

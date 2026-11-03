@@ -67,7 +67,7 @@ export function FocusBar() {
   useEffect(() => {
     if (!f) return;
     setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => !document.hidden && setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [f]);
   if (!f) return null;
