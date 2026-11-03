@@ -1,6 +1,6 @@
 import type { Job, Run } from '../data/wiki';
 import { describe as group, expect, test } from 'vitest';
-import { describe, queued, parseSchedule, scheduleOf } from './Jobs';
+import { describe, queued, parseSchedule, scheduleOf } from './schedule';
 
 group('job schedules', () => {
   test('read back what the form writes', () => {

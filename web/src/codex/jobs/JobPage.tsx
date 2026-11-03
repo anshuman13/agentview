@@ -6,7 +6,7 @@ import { ShowMore, useWindow } from '../../ui/useWindow';
 import { setView, showSnack, useEscapeBack } from '../view';
 import { useMinute } from '../split';
 import { nextRun } from '../../../../shared/schedule';
-import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, parseSchedule, queued, runsOf, scheduleOf, useJobs } from './Jobs';
+import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, parseSchedule, queued, runsOf, scheduleOf, useJobs } from './schedule';
 import { Switch } from './Switch';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';

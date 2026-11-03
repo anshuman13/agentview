@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { parseSchedule, scheduleOf } from '../jobs/Jobs';
+import { parseSchedule, scheduleOf } from '../jobs/schedule';
 import { WEEKLY_DIGEST } from './presets';
 
 const HUB_SCHEDULE = /^(hourly|(daily|weekdays|weekly (sun|mon|tue|wed|thu|fri|sat)) ([01]?\d|2[0-3]):[0-5]\d)$/;
