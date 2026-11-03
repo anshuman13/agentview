@@ -4,6 +4,7 @@ import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
 import { summarizeSlack } from '../slack.js';
 import { mineFaq } from '../faq.js';
+import { learnVoice } from '../voice.js';
 import { acceptAsk } from '../slackSave.js';
 import { autopilotConfig, autopilotState, replyNow, saveAutopilot } from '../autopilot.js';
 import { errText } from '../../../shared/util.js';
@@ -58,6 +59,15 @@ export const taskRoutes: Routes = {
     if (!channel) return send(res, 400, { error: 'channel is required' });
     try {
       send(res, 200, await once(`faq:${channel}`, () => mineFaq(getDb(), channel, days)));
+    } catch (err) {
+      send(res, 502, { error: errText(err) });
+    }
+  },
+
+  // Learns how I write from my own Slack messages, for the drafts: POST /slack/voice.
+  'POST /slack/voice': async ({ res, getDb }) => {
+    try {
+      send(res, 200, await once('voice', () => learnVoice(getDb())));
     } catch (err) {
       send(res, 502, { error: errText(err) });
     }

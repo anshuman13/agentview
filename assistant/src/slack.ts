@@ -7,6 +7,7 @@ import { pushOrHold, pushQueued } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
+import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
 import { afterScan, autopilotConfig, awayLines, modeOf, toPush, type NewAsk } from './autopilot.js';
@@ -110,6 +111,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     'Only for DMs and channels with new messages, give an updated running summary, using the channel id. Leave out chats with no new messages and bot DMs. The previous summaries are below; keep what still matters and drop what is old. For a DM, set waiting when the other person sent the last message and I have not replied.',
     'Add an ask when a message clearly asks me to do, answer or decide something, puts a direct question to me, makes a request to me in a thread I am in, or asks me to review or approve something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     DRAFT_STEP,
+    ...voiceLines(db),
     ...extra,
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip messages that report something already done ("added now", "invited") or only give an opinion, promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,

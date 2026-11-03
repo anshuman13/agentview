@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { FAQ_PAGE, saveFaqs } from './faq.js';
+import { saveVoice, voiceLines } from './voice.js';
 
 test('answered questions become proposed claims on one FAQ page, once per permalink', () => {
   const db = openDb(':memory:');
@@ -12,4 +13,14 @@ test('answered questions become proposed claims on one FAQ page, once per permal
   expect(page).toEqual([{ id: expect.any(String), title: FAQ_PAGE, section: 'Support', state: 'proposed' }]);
   const claim = db.prepare('SELECT text, heading, state, page_id, added_by FROM facts WHERE profile = ?').get('work');
   expect(claim).toEqual({ text: 'How do I get a seat? Ask in the channel with your team name; Kim adds you within a day.', heading: 'Access', state: 'proposed', page_id: (page[0] as { id: string }).id, added_by: 'faq:ai-help' });
+});
+
+test('a learned voice feeds the draft step and proposes its traits once', () => {
+  const db = openDb(':memory:');
+  expect(voiceLines(db)).toEqual([]);
+  const v = { note: 'Short, direct, no greeting.', traits: ['I skip greetings.', 'I end with a question.'], examples: ['On it, back by 3.'] };
+  expect(saveVoice(db, v, 1)).toBe(2);
+  expect(saveVoice(db, v, 2)).toBe(0);
+  expect(voiceLines(db)).toEqual(['Write each draft the way I write: Short, direct, no greeting. Messages I wrote, for the tone: "On it, back by 3."']);
+  expect(db.prepare("SELECT COUNT(*) AS n FROM facts WHERE state = 'proposed' AND added_by = 'voice'").get()).toEqual({ n: 2 });
 });
