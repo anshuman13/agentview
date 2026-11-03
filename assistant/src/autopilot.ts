@@ -16,7 +16,8 @@ import { DAY, HOUR, ymd } from './time.js';
 // is pushed with a Send reply action. Inside the away window the hub answers tier A asks itself and sends one holding
 // note per person; dry_run logs what it would send instead of sending.
 export type Away = { from: string; to: string; backup?: string; note?: string };
-export type AutopilotConfig = { enabled?: boolean; dry_run?: boolean; away?: Away; escalate?: string[]; manager?: string; dms?: boolean; channels?: string[]; min_confidence?: number };
+export type AutopilotConfig = { enabled?: boolean; dry_run?: boolean; away?: Away; escalate?: string[]; manager?: string; dms?: boolean; channels?: string[]; min_confidence?: number; model?: DraftModel };
+export type DraftModel = 'sonnet' | 'opus';
 export type Mode = 'off' | 'assist' | 'away';
 export const TIERS = ['answer', 'hold', 'escalate'] as const;
 export type Tier = (typeof TIERS)[number];
@@ -54,6 +55,7 @@ export function saveAutopilot(db: Database, c: Record<string, unknown>): Autopil
     away: { from: DATE.test(from) ? from : '', to: DATE.test(to) ? to : '', backup: str(away.backup), note: str(away.note) },
     escalate: Array.isArray(c.escalate) ? c.escalate.map(str).filter(Boolean) : typeof c.escalate === 'string' ? c.escalate.split(',').map((x) => x.trim()).filter(Boolean) : [],
     manager: str(c.manager),
+    model: c.model === 'opus' ? 'opus' : 'sonnet',
     dms: c.dms !== false && c.dms !== 0,
     ...(Array.isArray(c.channels) ? { channels: c.channels.map(str).filter(Boolean) } : {}),
     min_confidence: typeof c.min_confidence === 'number' && c.min_confidence >= 0 && c.min_confidence <= 1 ? c.min_confidence : 0.8,
@@ -91,6 +93,9 @@ export function modeOf(c: AutopilotConfig, now = Date.now()): Mode {
   }
   return 'assist';
 }
+
+// The model for the scan and its drafts: the configured one in away mode, Sonnet otherwise.
+export const scanModel = (c: AutopilotConfig, now = Date.now()): DraftModel => (modeOf(c, now) === 'away' && c.model === 'opus' ? 'opus' : 'sonnet');
 
 // Midnight local at the start of the away window while it is on, else 0.
 export function awayStart(c: AutopilotConfig, now = Date.now()) {
@@ -173,8 +178,29 @@ export async function postReply(url: string, text: string) {
     text,
   ].join('\n');
   await run(prompt, 'haiku', [done], 8, () => posted != null, [`${SLACK}slack_send_message`, `${SLACK}slack_read_thread`]);
+  if (!posted) posted = await verifyPost(url, text);
   if (!posted) throw new Error('The reply was not posted');
   return posted as string;
+}
+
+// When the post run ended without calling posted, reads the thread once more: the message may have gone out anyway.
+async function verifyPost(url: string, text: string) {
+  let found: string | null = null;
+  const done = tool('found', 'Call once with what you found.', { url: z.string().describe('Permalink of the posted message, or "none"') }, async (a) => {
+    found = a.url === 'none' ? null : a.url;
+    return { content: [{ type: 'text' as const, text: 'noted' }] };
+  });
+  const prompt = [
+    `Read the thread of ${url} with slack_read_thread (channel id after /archives/, thread_ts is the p-number with a dot before its last 6 digits). If a reply there has exactly the text below, call found with its permalink; otherwise call found with "none". Do not post anything.`,
+    '',
+    text,
+  ].join('\n');
+  try {
+    await run(prompt, 'haiku', [done], 4, () => found != null, [`${SLACK}slack_read_thread`]);
+  } catch (err) {
+    console.error('autopilot verify:', err);
+  }
+  return found as string | null;
 }
 
 type Sent = { status: 'sent' | 'dry' | 'answered'; url: string | null };

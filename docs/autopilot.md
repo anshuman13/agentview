@@ -2,7 +2,7 @@
 
 Status: the flag, the tiers, the send path, the ask card with Send, Edit and Skip, the FAQ miner, the voice learner, the
 "who does what" pass, the away digest, every-day away scans, claim-cited drafts, the manager setting, retries and the
-thread and external checks are built (4 Nov 2026); the draft model option and the other checks are still plans.
+thread and external checks are built (4 Nov 2026); the other checks are still plans.
 
 Goal: the hub answers people on my behalf. Day to day it drafts and I approve from the phone; on vacation it answers
 the safe questions itself, holds the rest with an away note and tells me what matters. Everything it sends says it
@@ -41,6 +41,10 @@ answer, Needs you, Escalate, Failed), three at a time. The settings live in the 
 
 Each scan logs its token counts and cost to meta `scan:slack:cost` (last 20); the card's scan line shows the last
 scan's tokens. The prompt carries only chat summaries with messages in the last 2 days and asks from the last 7.
+
+The card's "Drafts while away by" chips pick Sonnet or Opus (`model` in the config); the scan runs on that model only in
+away mode, otherwise on Sonnet. A post run that ends without confirming is followed by one read of the thread, so a reply
+that did go out is logged as sent and not retried.
 
 Pushes: urgent asks are pushed in every mode. Away mode also pushes escalate-tier asks and asks from the never-answer
 list, which it never answers. Assist mode pushes every ask with a draft in a covered chat, with a Send reply action.

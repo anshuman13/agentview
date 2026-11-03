@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ANSWERED, afterScan, awayDigest, escalated, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { ANSWERED, afterScan, awayDigest, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
 import { askId, saveScan, threadKey } from './slackSave.js';
@@ -211,7 +211,7 @@ test('settings are cleaned on save and read back from the database', () => {
   const db = openDb(':memory:');
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual({});
   const c = saveAutopilot(db, { enabled: 1, away: { from: '2026-12-20', to: 'soon', backup: ' Kim ' }, escalate: 'Mia, , Bo', min_confidence: 2 });
-  expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], manager: '', dms: true, min_confidence: 0.8 });
+  expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], manager: '', model: 'sonnet', dms: true, min_confidence: 0.8 });
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual(c);
   expect(modeOf(c, at(22, 10))).toBe('assist');
   expect(autopilotState(db, at(22, 10)).texts).toBeNull();
@@ -253,4 +253,10 @@ test('awayDigest writes one brief per away day from 17:00 with what was done, an
   expect(pushes).toEqual(['Away digest: 1 answered, 1 held with a note, 1 escalated to you, 0 skipped or failed']);
   expect(await awayDigest(db, away, at(22, 18), push)).toBeNull();
   expect(db.prepare("SELECT kind FROM briefs WHERE id = 'away:2026-12-22'").get()).toEqual({ kind: 'away' });
+});
+
+test('scanModel uses Opus only when chosen and away', () => {
+  expect(scanModel({ ...away, model: 'opus' }, at(22, 10))).toBe('opus');
+  expect(scanModel({ ...away, model: 'opus' }, new Date(2026, 10, 2, 10).getTime())).toBe('sonnet');
+  expect(scanModel(away, at(22, 10))).toBe('sonnet');
 });

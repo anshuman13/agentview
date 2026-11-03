@@ -10,7 +10,7 @@ import { DRAFT_STEP, contextTool } from './draft.js';
 import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
-import { afterScan, autopilotConfig, awayDigest, awayLines, awayStart, escalateLines, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, awayDigest, awayLines, awayStart, escalateLines, scanModel, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { noteCost, runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
@@ -52,7 +52,7 @@ export type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools'
 // Stops as soon as done() says the work is saved, so the model does not spend turns repeating itself.
 export type Usage = { input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number };
 
-export async function run(prompt: string, model: 'haiku' | 'sonnet', tools: Tools, maxTurns: number, done = () => false, read = READ_TOOLS, onUsage?: (u: Usage) => void) {
+export async function run(prompt: string, model: 'haiku' | 'sonnet' | 'opus', tools: Tools, maxTurns: number, done = () => false, read = READ_TOOLS, onUsage?: (u: Usage) => void) {
   const account = ACCOUNT_OF[PROFILE];
   let result = '';
   for await (const m of ask(account, prompt, {
@@ -155,7 +155,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
     return { content: [{ type: 'text', text: 'saved' }] };
   });
   const prompt = scanPrompt(db, c, since, now, [...escalateLines(auto), ...awayLines(auto, now)]);
-  await run(prompt, 'sonnet', [save, contextTool(db, now)], 40, () => saved != null, READ_TOOLS, (u) => noteCost(db, 'slack', { at: now, ...u }));
+  await run(prompt, scanModel(auto, now), [save, contextTool(db, now)], 40, () => saved != null, READ_TOOLS, (u) => noteCost(db, 'slack', { at: now, ...u }));
   if (!saved) throw new Error('The scan did not save');
   keepChannelIds(db, c, saved);
   const { chats, added, urgent, said, messages, newAsks } = saveScan(db, saved, now);

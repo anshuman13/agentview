@@ -88,6 +88,9 @@ export function Autopilot() {
             <p>Urgent asks, incidents and people on the never-answer list are never answered for you. They are pushed to your phone between {hh(state.push?.from ?? 8)} and {hh(state.push?.to ?? 17)} {state.mode === 'away' ? ' every day' : ' on weekdays'}, after any meeting you are in.</p>
           </div>
           <label className="jb-auto-line"><span>Dry run: log replies, send nothing</span><Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} /></label>
+          <div className="jb-auto-line"><span>Drafts while away by</span><div className="jb-chips" role="group" aria-label="Draft model">
+            {(['sonnet', 'opus'] as const).map((m) => <button key={m} className={`jb-chip${(c.model ?? 'sonnet') === m ? ' on' : ''}`} aria-pressed={(c.model ?? 'sonnet') === m} onClick={() => void save({ model: m })}>{m === 'opus' ? 'Opus' : 'Sonnet'}</button>)}
+          </div></div>
           <Fold title={awayText} open={fold === 'away'} onToggle={() => toggle('away')}>
             <div className="jb-when">
               <input type="date" aria-label="Away from" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} onBlur={saveForm} />

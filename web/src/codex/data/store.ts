@@ -38,7 +38,7 @@ export interface AssistantStore {
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
 }
 
-export type AutopilotConfig = { enabled: boolean; dry_run: boolean; away: { from: string; to: string; backup: string; note: string }; escalate: string[]; manager: string; dms: boolean; channels?: string[]; min_confidence: number };
+export type AutopilotConfig = { enabled: boolean; dry_run: boolean; away: { from: string; to: string; backup: string; note: string }; escalate: string[]; manager: string; dms: boolean; channels?: string[]; min_confidence: number; model: 'sonnet' | 'opus' };
 export type SentReply = { status: 'sent' | 'dry' | 'answered'; url: string | null };
 export type AutopilotReply = { id: string; who: string | null; chat: string | null; tier: string | null; confidence: number | null; status: string; text: string | null; url: string | null; at: number };
 export type AutopilotState = { config: AutopilotConfig; mode: 'off' | 'assist' | 'away'; watched: string[]; covered: string[]; push: { from: number; to: number }; texts: { hold: string; marker: string } | null; scan: ScanHealth | null; cost: { at: number; input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number } | null; replies: AutopilotReply[] };
