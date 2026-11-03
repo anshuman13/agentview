@@ -7,7 +7,7 @@ import { pausedScans } from './claude.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 
 export type Counts = Record<string, number>;
-export type Scanner = { setUp(): boolean; paused(db: Database): Promise<boolean>; run(db: Database): Promise<Counts> };
+export type Scanner = { setUp(): boolean; paused(db: Database): Promise<boolean>; run(db: Database): Promise<Counts>; everyDay?(db: Database): boolean };
 export type ScanHealth = { scan: string; ok?: number; counts?: Counts; error?: string; failed?: number; stalled?: number; missing?: boolean };
 
 const key = (name: string) => `scan:${name}`;
@@ -53,13 +53,14 @@ export function backoff() {
   };
 }
 
-// Runs a set-up scan once per slot of `every` from 07:00 to 19:00 on weekdays, sooner after a failure, and skips it while paused.
+// Runs a set-up scan once per slot of `every` from 07:00 to 19:00 on weekdays (every day until 22:00 while everyDay says so),
+// sooner after a failure, and skips it while paused.
 export function startScan(name: string, s: Scanner, every: number, db: () => Database, tick = MIN) {
   let tried = 0;
   const retry = backoff();
   loop(name, tick, async () => {
     const now = Date.now();
-    if (!s.setUp() || !(workSlotDue(tried, every, now) || retry.due(now)) || (await s.paused(db()))) return;
+    if (!s.setUp() || !(workSlotDue(tried, every, now, s.everyDay?.(db()) ?? false) || retry.due(now)) || (await s.paused(db()))) return;
     tried = now;
     try {
       await s.run(db());

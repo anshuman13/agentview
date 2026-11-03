@@ -89,6 +89,11 @@ export function modeOf(c: AutopilotConfig, now = Date.now()): Mode {
   return 'assist';
 }
 
+// Midnight local at the start of the away window while it is on, else 0.
+export function awayStart(c: AutopilotConfig, now = Date.now()) {
+  return modeOf(c, now) === 'away' && c.away?.from ? new Date(`${c.away.from}T00:00:00`).getTime() : 0;
+}
+
 const pretty = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
 
 export const marker = (a: Away) => `(auto-reply from Anshuman's assistant: he is away until ${pretty(a.to)}${a.backup ? `, ${a.backup} covers meanwhile` : ''})`;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb, setMeta } from './db.js';
-import { scanDue, scanPrompt, sinceOf } from './slack.js';
+import { pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
 import { DAY } from './time.js';
 import { acceptAsk, askId, saveScan } from './slackSave.js';
 
@@ -147,6 +147,15 @@ test('reads every quarter hour on weekday working hours', () => {
   expect(scanDue(0, at(31, 10))).toBe(false);
 });
 
+test('away mode reads every day until 22:00 and pushes on weekends', () => {
+  expect(scanDue(0, at(31, 10), true)).toBe(true);
+  expect(scanDue(0, at(27, 21), true)).toBe(true);
+  expect(scanDue(0, at(27, 22), true)).toBe(false);
+  expect(pushHours({}, at(31, 10))).toBe(false);
+  expect(pushHours({}, at(31, 10), true)).toBe(true);
+  expect(pushHours({}, at(31, 18), true)).toBe(false);
+});
+
 describe('sinceOf', () => {
   test('slack:last 4 days back gives a 4 day window, capped at 7', () => {
     const db = openDb(':memory:');
@@ -155,5 +164,13 @@ describe('sinceOf', () => {
     expect(now - sinceOf(db, now)).toBe(4 * DAY);
     setMeta(db, 'slack:last', String(now - 20 * DAY));
     expect(now - sinceOf(db, now)).toBe(7 * DAY);
+  });
+
+  test('never reaches before the away start', () => {
+    const db = openDb(':memory:');
+    const now = at(28, 10);
+    setMeta(db, 'slack:last', String(now - 4 * DAY));
+    expect(sinceOf(db, now, now - DAY)).toBe(now - DAY);
+    expect(sinceOf(db, now, 0)).toBe(now - 4 * DAY);
   });
 });

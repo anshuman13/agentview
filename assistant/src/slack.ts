@@ -10,7 +10,7 @@ import { DRAFT_STEP, contextTool } from './draft.js';
 import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
-import { afterScan, autopilotConfig, awayLines, modeOf, toPush, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, awayLines, awayStart, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
@@ -29,19 +29,23 @@ export function slackConfig(file = path.join(DB_DIR, 'slack.json')): SlackConfig
   return typeof c?.me === 'string' && Array.isArray(c.channels) ? c : null;
 }
 
-// Reads happen every quarter hour from 07:00 to 19:00 on weekdays; pushes only inside the configured hours.
-export function scanDue(last: number, now = Date.now()) {
-  return workSlotDue(last, EVERY, now);
+// Reads happen every quarter hour from 07:00 to 19:00 on weekdays, and every day until 22:00 while I am away; pushes only
+// inside the configured hours, on weekdays unless I am away.
+export function scanDue(last: number, now = Date.now(), away = false) {
+  return workSlotDue(last, EVERY, now, away);
 }
 
-export function pushHours(c: { push?: { from: number; to: number } }, now = Date.now()) {
+export function pushHours(c: { push?: { from: number; to: number } }, now = Date.now(), away = false) {
   const { from, to } = c.push ?? { from: 8, to: 17 };
-  return inWeekHours(now, from, to);
+  return inWeekHours(now, from, to, away);
 }
 
-export function sinceOf(db: Database, now: number) {
-  return Math.max(Number(getMeta(db, 'slack:last') ?? 0), now - 7 * DAY);
+// Since the last scan, at most 7 days back, and never before the away window started, so a first away scan answers nothing older than the mode.
+export function sinceOf(db: Database, now: number, floor = 0) {
+  return Math.max(Number(getMeta(db, 'slack:last') ?? 0), now - 7 * DAY, floor);
 }
+
+const isAway = (db: Database, now = Date.now()) => modeOf(autopilotConfig(db), now) === 'away';
 
 export type Tools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
 
@@ -140,13 +144,13 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
 
 // One Haiku pass over my DMs, mentions and watched channels since the last pass.
 async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
-  const since = sinceOf(db, now);
+  const auto = autopilotConfig(db);
+  const since = sinceOf(db, now, awayStart(auto, now));
   let saved: ScanResult | null = null;
   const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), fulfilled: z.array(z.string()).describe('Permalinks of my open promises that I have since done, e.g. I posted the thing I promised'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  const auto = autopilotConfig(db);
   const prompt = scanPrompt(db, c, since, now, awayLines(auto, now));
   await run(prompt, 'sonnet', [save, contextTool(db, now)], 40, () => saved != null);
   if (!saved) throw new Error('The scan did not save');
@@ -158,8 +162,9 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
 }
 
 // In assist mode an ask with a draft gets a Send reply action and the draft in the body; otherwise only urgent asks are pushed.
-async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], assist = false, now = Date.now()) {
-  await pushQueued(db, 'slack:unpushed', urgent, pushHours(c, now), (a) => {
+async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], mode: Mode = 'off', now = Date.now()) {
+  const assist = mode === 'assist';
+  await pushQueued(db, 'slack:unpushed', urgent, pushHours(c, now, mode === 'away'), (a) => {
     const url = webUrl(a.url);
     const draft = assist && a.draft?.trim();
     const accept = `http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
@@ -211,7 +216,7 @@ async function slackOnce(db: Database) {
   const r = await scanSlack(db, c);
   const auto = r.mode === 'off' ? '' : `, autopilot ${r.mode}: ${r.replies.answered.length} answered, ${r.replies.held.length} held, ${r.replies.skipped.length} skipped`;
   console.log(`slack: ${r.chats} chats, ${r.messages} messages, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent${auto}`);
-  await pushUrgent(db, c, toPush(r.mode, r.auto, c.channels, r.newAsks), r.mode === 'assist');
+  await pushUrgent(db, c, toPush(r.mode, r.auto, c.channels, r.newAsks), r.mode);
   return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said, ...(r.mode === 'away' ? { replied: r.replies.answered.length + r.replies.held.length } : {}) };
 }
 
@@ -219,6 +224,7 @@ export const slackScan = {
   setUp: () => slackConfig() != null,
   paused: (db: Database) => scanPaused(db, ACCOUNT_OF[PROFILE], 'slack'),
   run: (db: Database) => runScan(db, 'slack', () => slackOnce(db)),
+  everyDay: (db: Database) => isAway(db),
 };
 
 export const startSlack = (db: () => Database) => startScan('slack', slackScan, EVERY, db);

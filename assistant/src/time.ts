@@ -2,14 +2,15 @@ export const MIN = 60_000;
 export const HOUR = 60 * MIN;
 export const DAY = 24 * HOUR;
 
-export function inWeekHours(now: number, from: number, to: number) {
+export function inWeekHours(now: number, from: number, to: number, everyDay = false) {
   const d = new Date(now);
-  return d.getDay() >= 1 && d.getDay() <= 5 && d.getHours() >= from && d.getHours() < to;
+  return (everyDay || (d.getDay() >= 1 && d.getDay() <= 5)) && d.getHours() >= from && d.getHours() < to;
 }
 
 // True once per slot of `every` ms from 07:00 to 19:00 on weekdays, when the last try came before the current slot.
-export function workSlotDue(last: number, every: number, now: number) {
-  return inWeekHours(now, 7, 19) && last < slotStart(now, every);
+// With everyDay the slots run 07:00 to 22:00 on all seven days.
+export function workSlotDue(last: number, every: number, now: number, everyDay = false) {
+  return inWeekHours(now, 7, everyDay ? 22 : 19, everyDay) && last < slotStart(now, every);
 }
 
 // The start of the slot of `every` ms (a divisor of an hour) that holds t, on the local clock, so half hours start at :00 and :30 in any time zone.

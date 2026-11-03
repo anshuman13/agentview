@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { afterScan, autopilotConfig, autopilotState, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { askId, saveScan } from './slackSave.js';
 import { HOUR } from './time.js';
@@ -147,4 +147,12 @@ test('settings are cleaned on save and read back from the database', () => {
   expect(autopilotState(db, at(22, 10)).texts).toBeNull();
   saveAutopilot(db, away);
   expect(autopilotState(db, at(22, 10)).texts?.hold).toBe('Hi, this is an auto-reply: Anshuman is away until 5 January and will see this when he is back. Kim covers for him meanwhile.');
+});
+
+test('awayStart is midnight of the first away day, only while away', () => {
+  const c: AutopilotConfig = { enabled: true, away: { from: '2026-10-26', to: '2026-10-30', backup: '', note: '' } };
+  const inside = new Date(2026, 9, 28, 10).getTime();
+  expect(awayStart(c, inside)).toBe(new Date(2026, 9, 26).getTime());
+  expect(awayStart(c, new Date(2026, 10, 2, 10).getTime())).toBe(0);
+  expect(awayStart({ enabled: true }, inside)).toBe(0);
 });

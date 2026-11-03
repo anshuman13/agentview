@@ -38,7 +38,9 @@ answer, Needs you, Escalate, Failed), three at a time. The settings live in the 
 
 Pushes: urgent asks are pushed in every mode. Away mode also pushes escalate-tier asks and asks from the never-answer
 list, which it never answers. Assist mode pushes every ask with a draft in a covered chat, with a Send reply action.
-Pushes go out in the Slack push hours (08:00 to 17:00 weekdays by default) and wait for a running meeting to end.
+Pushes go out in the Slack push hours (08:00 to 17:00 by default, weekdays only outside away mode) and wait for a running
+meeting to end. In away mode the scan runs every day from 07:00 to 22:00, and it never reads back past the first away day,
+so a first away scan answers nothing older than the mode.
 
 The switch on outside the away dates is assist mode; inside them it is away mode. Dry run, on by default, logs every reply
 the hub would send on the ask instead of sending it. The switch off is the kill switch. The scan reads the settings each

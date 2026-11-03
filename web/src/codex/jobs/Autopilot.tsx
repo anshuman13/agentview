@@ -21,7 +21,7 @@ function modeLine(s: AutopilotState) {
 function scanLine(s: AutopilotState) {
   const h = s.scan;
   const last = !h ? 'Slack scan not set up' : h.error && (h.failed ?? 0) >= (h.ok ?? 0) ? `last scan ${when(h.failed!)} failed` : h.ok ? `last scan ${when(h.ok)}${h.counts ? `, ${h.counts.messages ?? 0} messages, ${h.counts.asks ?? 0} asks` : ''}` : 'no scan yet';
-  return `Checks every 15 min on weekdays · ${last}`;
+  return `Checks every 15 min ${s.mode === 'away' ? 'every day until 22:00' : 'on weekdays'} · ${last}`;
 }
 
 function Fold({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: ReactNode }) {
@@ -83,7 +83,7 @@ export function Autopilot() {
                 <p className="muted small">Answers it writes itself start with {state.texts.marker}</p>
               </>
             ) : <p className="muted small">Set away dates below to see the holding note it would send.</p>}
-            <p>Urgent asks, incidents and people on the never-answer list are never answered for you. They are pushed to your phone between {hh(state.push?.from ?? 8)} and {hh(state.push?.to ?? 17)} on weekdays, after any meeting you are in.</p>
+            <p>Urgent asks, incidents and people on the never-answer list are never answered for you. They are pushed to your phone between {hh(state.push?.from ?? 8)} and {hh(state.push?.to ?? 17)} {state.mode === 'away' ? ' every day' : ' on weekdays'}, after any meeting you are in.</p>
           </div>
           <label className="jb-auto-line"><span>Dry run: log replies, send nothing</span><Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} /></label>
           <Fold title={awayText} open={fold === 'away'} onToggle={() => toggle('away')}>
