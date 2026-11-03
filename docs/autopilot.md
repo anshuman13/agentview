@@ -1,6 +1,6 @@
 # Autopilot
 
-Status: the flag, the tiers, the send path, the Send reply push action and the usage job are built (3 Nov 2026); the ask card buttons, the FAQ job, the away digest and the other checks are still plans.
+Status: the flag, the tiers, the send path, the Send reply push action, the usage job and the FAQ miner are built (3 Nov 2026); the ask card buttons, the away digest and the other checks are still plans.
 
 Goal: the hub answers people on my behalf. Day to day it drafts and I approve from the phone; on vacation it answers
 the safe questions itself, holds the rest with an away note and tells me what matters. Everything it sends says it
@@ -76,9 +76,9 @@ assist mode since I pressed Send myself.
 3. **Approve from the phone.** The push for a new ask grows Send and Skip actions, and the ask card in Tasks under
    "Is this yours?" shows the draft with Send, Edit and Skip. Send calls `send_reply`; Skip clears the draft. Edit
    opens the draft in the composer and sends on save.
-4. **FAQ.** A one-off job reads the last 90 days of `ai-help` and the other watched channels and proposes wiki
-   claims for Review under a "Support FAQ" page, one claim per question I answered. I approve them before the trip.
-   `ask_context` already feeds live claims into drafts, so nothing else changes.
+4. **FAQ.** `POST /slack/faq?channel=ai-help&days=90` reads the channel's threads and proposes one claim per answered
+   question on a "Support FAQ" page for Review, keyed by permalink so a rerun adds nothing twice (`assistant/src/faq.ts`).
+   I approve them before the trip. `ask_context` already feeds live claims into drafts, so nothing else changes.
 5. **Away mode.** The scan sends tier A and B as above, at most 10 replies an hour and 40 a day, and writes a
    17:00 digest to `briefs` (kind `away`): what it answered, what it held, what it escalated, with links. One push a
    day with the counts. Meetings in the window get a decline with the note only if I enable `"decline": true`.

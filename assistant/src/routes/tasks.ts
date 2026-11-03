@@ -3,6 +3,7 @@ import { once } from '../once.js';
 import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
 import { summarizeSlack } from '../slack.js';
+import { mineFaq } from '../faq.js';
 import { acceptAsk } from '../slackSave.js';
 import { autopilotConfig, autopilotState, replyNow, saveAutopilot } from '../autopilot.js';
 import { errText } from '../../../shared/util.js';
@@ -45,6 +46,18 @@ export const taskRoutes: Routes = {
     try {
       const r = await once('slack', () => summarizeSlack(getDb()));
       send(res, 200, { added: r.added.length });
+    } catch (err) {
+      send(res, 502, { error: errText(err) });
+    }
+  },
+
+  // Mines a support channel into proposed FAQ claims: POST /slack/faq?channel=name&days=90.
+  'POST /slack/faq': async ({ res, url, getDb }) => {
+    const channel = (url.searchParams.get('channel') ?? '').replace(/^#/, '');
+    const days = Number(url.searchParams.get('days') ?? 90) || 90;
+    if (!channel) return send(res, 400, { error: 'channel is required' });
+    try {
+      send(res, 200, await once(`faq:${channel}`, () => mineFaq(getDb(), channel, days)));
     } catch (err) {
       send(res, 502, { error: errText(err) });
     }

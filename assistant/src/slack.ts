@@ -76,7 +76,7 @@ const closedAsks = (db: Database, since: number) =>
 const tracked = (db: Database) =>
   db.prepare("SELECT id, title FROM items WHERE profile = ? AND deleted = 0 AND status IN ('open', 'suggested') AND COALESCE(source, '') NOT IN ('slack', 'calendar') ORDER BY updated_at DESC LIMIT 60").all(PROFILE) as { id: string; title: string }[];
 
-const channelIds = (db: Database): Record<string, string> => {
+export const channelIds = (db: Database): Record<string, string> => {
   try {
     return JSON.parse(getMeta(db, 'slack:channels') ?? '{}');
   } catch {
