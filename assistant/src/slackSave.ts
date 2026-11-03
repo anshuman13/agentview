@@ -29,6 +29,7 @@ export const Ask = z.object({
   confidence: z.number().min(0).max(1).optional().describe('How sure you are that the draft is correct and complete, 0 to 1'),
   why: z.string().optional().describe('One line on the tier and confidence'),
   answered_by_other: z.boolean().optional().describe('True when someone other than me already answered it in the thread'),
+  claims: z.array(z.string()).optional().describe('Ids of the wiki claims from ask_context the draft rests on'),
 });
 // A commitment I made myself, like "I'll send it tomorrow".
 export const Said = z.object({
@@ -55,6 +56,21 @@ export type ScanResult = { chats: (Omit<z.infer<typeof Chat>, 'new_messages'> & 
 
 // Permalinks come from the model, so only web links are stored or pushed; no comma or semicolon, which split ntfy actions.
 export const webUrl = (u: string | null | undefined) => (u && /^https?:\/\/[^\s,;]+$/i.test(u) ? u : null);
+
+// The thread a permalink belongs to: channel and thread_ts when it is a reply, else the message itself.
+export function threadKey(url: string) {
+  try {
+    const u = new URL(url);
+    const ts = u.searchParams.get('thread_ts');
+    const parts = u.pathname.split('/');
+    const channel = parts[parts.indexOf('archives') + 1] ?? '';
+    const last = parts[parts.length - 1] ?? '';
+    const m = /^p(\d{10})(\d{6})$/.exec(last);
+    return `${channel}/${ts ?? (m ? `${m[1]}.${m[2]}` : last)}`;
+  } catch {
+    return url;
+  }
+}
 
 export const askId = (url: string) => `slack:${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
 // My own promises keep the id of their source with this prefix, so the apps label them "You said".

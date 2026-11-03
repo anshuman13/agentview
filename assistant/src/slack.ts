@@ -216,7 +216,7 @@ async function slackOnce(db: Database) {
   const r = await scanSlack(db, c);
   const auto = r.mode === 'off' ? '' : `, autopilot ${r.mode}: ${r.replies.answered.length} answered, ${r.replies.held.length} held, ${r.replies.skipped.length} skipped`;
   console.log(`slack: ${r.chats} chats, ${r.messages} messages, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent${auto}`);
-  await pushUrgent(db, c, toPush(r.mode, r.auto, c.channels, r.newAsks), r.mode);
+  await pushUrgent(db, c, toPush(r.mode, r.auto, c.channels, r.newAsks, r.replies.followups), r.mode);
   return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said, ...(r.mode === 'away' ? { replied: r.replies.answered.length + r.replies.held.length } : {}) };
 }
 

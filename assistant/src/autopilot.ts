@@ -6,7 +6,8 @@ import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { run, slackConfig } from './slack.js';
 import { scanHealth } from './scan.js';
-import { PROFILE, webUrl } from './slackSave.js';
+import { PROFILE, threadKey, webUrl } from './slackSave.js';
+import { liveClaims } from './draft.js';
 import { applyChanges } from './sync.js';
 import { DAY, HOUR, ymd } from './time.js';
 
@@ -18,7 +19,7 @@ export type AutopilotConfig = { enabled?: boolean; dry_run?: boolean; away?: Awa
 export type Mode = 'off' | 'assist' | 'away';
 export const TIERS = ['answer', 'hold', 'escalate'] as const;
 export type Tier = (typeof TIERS)[number];
-export type NewAsk = { id: string; url: string; from: string; chat: string; title: string; quote: string; urgent: boolean; draft?: string; tier?: Tier; confidence?: number; why?: string; answered_by_other?: boolean };
+export type NewAsk = { id: string; url: string; from: string; chat: string; title: string; quote: string; urgent: boolean; draft?: string; tier?: Tier; confidence?: number; why?: string; answered_by_other?: boolean; claims?: string[] };
 type Reply = { status: string; who: string; mode: string; tier: string | null };
 
 export const HOUR_CAP = 10;
@@ -73,8 +74,8 @@ export function autopilotState(db: Database, now = Date.now()) {
 
 // Which new asks get a push: urgent ones always; in away mode also escalations, which it never answers; in assist mode every
 // ask with a draft in a covered chat, so Send reply is one tap.
-export function toPush(mode: Mode, c: AutopilotConfig, watched: string[], asks: NewAsk[]) {
-  if (mode === 'away') return asks.filter((a) => a.urgent || a.tier === 'escalate' || escalated(c, a.from));
+export function toPush(mode: Mode, c: AutopilotConfig, watched: string[], asks: NewAsk[], followups: string[] = []) {
+  if (mode === 'away') return asks.filter((a) => a.urgent || a.tier === 'escalate' || escalated(c, a.from) || followups.includes(a.id));
   if (mode === 'assist') return asks.filter((a) => a.urgent || (a.draft?.trim() && !a.answered_by_other && channelAllowed(c, watched, a.chat)));
   return asks.filter((a) => a.urgent);
 }
@@ -120,9 +121,13 @@ export function channelAllowed(c: AutopilotConfig, watched: string[], chat: stri
 const reply = (db: Database, id: string) => db.prepare('SELECT status, who, mode, tier FROM replies WHERE profile = ? AND id = ?').get(PROFILE, id) as Reply | null;
 
 export function recordAsks(db: Database, asks: NewAsk[], mode: Mode, now: number) {
-  const add = db.prepare('INSERT OR IGNORE INTO replies (profile, id, who, chat, tier, confidence, why, mode, status, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  for (const a of asks) add.run(PROFILE, a.id, a.from, a.chat, a.tier ?? null, a.confidence ?? null, a.why ?? null, mode, 'held', now);
+  const add = db.prepare('INSERT OR IGNORE INTO replies (profile, id, who, chat, tier, confidence, why, mode, status, at, claims, thread) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  for (const a of asks) add.run(PROFILE, a.id, a.from, a.chat, a.tier ?? null, a.confidence ?? null, a.why ?? null, mode, 'held', now, a.claims?.length ? JSON.stringify(a.claims) : null, threadKey(a.url));
 }
+
+// True when the hub already sent (or dry-ran) a reply in the thread of this ask, under another ask.
+export const threadReplied = (db: Database, a: { id: string; url: string }) =>
+  !!db.prepare("SELECT 1 FROM replies WHERE profile = ? AND id != ? AND thread = ? AND status IN ('sent', 'dry')").get(PROFILE, a.id, threadKey(a.url));
 
 export const sentCount = (db: Database, since: number) => (db.prepare("SELECT COUNT(*) AS n FROM replies WHERE profile = ? AND status IN ('sent', 'dry') AND sent_at > ?").get(PROFILE, since) as { n: number }).n;
 
@@ -185,12 +190,12 @@ export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: str
   return { status, url };
 }
 
-export type Outcome = { answered: string[]; held: string[]; skipped: string[] };
+export type Outcome = { answered: string[]; held: string[]; skipped: string[]; followups: string[] };
 
 // Away mode after a scan: answers tier A asks that have a sure draft, sends one holding note per person for the rest, and
 // never replies to an escalated person or outside the allowed channels. Returns what it did for the log.
 export async function afterScan(db: Database, c: AutopilotConfig, watched: string[], asks: NewAsk[], now = Date.now(), post = postReply): Promise<Outcome> {
-  const out: Outcome = { answered: [], held: [], skipped: [] };
+  const out: Outcome = { answered: [], held: [], skipped: [], followups: [] };
   const mode = modeOf(c, now);
   if (mode === 'off') return out;
   recordAsks(db, asks, mode, now);
@@ -199,7 +204,14 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
   for (const a of asks) {
     const prev = reply(db, a.id);
     if (prev && prev.status !== 'held') continue;
-    const tier: Tier = escalated(c, a.from) ? 'escalate' : (a.tier ?? 'hold');
+    if (threadReplied(db, a)) {
+      db.prepare("UPDATE replies SET status = 'skipped', why = 'follow-up in a thread it already answered' WHERE profile = ? AND id = ?").run(PROFILE, a.id);
+      out.followups.push(a.id);
+      out.skipped.push(a.title);
+      continue;
+    }
+    // A tier answer must rest on a claim that is still live; without one it is a hold.
+    const tier: Tier = escalated(c, a.from) ? 'escalate' : a.tier === 'answer' && !liveClaims(db, a.claims ?? []).length ? 'hold' : (a.tier ?? 'hold');
     if (a.answered_by_other || tier === 'escalate' || !channelAllowed(c, watched, a.chat) || !underCaps(db, now)) {
       out.skipped.push(a.title);
       continue;

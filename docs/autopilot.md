@@ -11,7 +11,8 @@ is an assistant, and every send is logged and reversible by me.
 - The work Slack scan reads DMs, mentions and the watched channels (including `ai-help`) every 15 minutes on
   weekdays and turns asks into suggested tasks, one per permalink ([assistant.md](assistant.md#slack-and-gmail-scans))
 - Each new ask gets a reply draft in my voice, with the thread and up to 3 wiki claims and 3 meeting decisions as
-  context (`assistant/src/draft.ts`, `ask_context`). Nothing is sent; Tasks shows Copy draft
+  context (`assistant/src/draft.ts`, `ask_context`); Support FAQ claims rank first on a tie, each claim comes with its id
+  and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there is one
 - Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs.ts`)
 - Pushes through ntfy can carry actions (Done, Snooze on a task)
 - The wiki holds approved claims; the wiki update pass proposes claims from Slack decisions
@@ -53,13 +54,14 @@ The draft step gets three more outputs per ask: `tier`, `confidence` (0 to 1) an
 
 | Tier | Means | Assist mode | Away mode |
 | --- | --- | --- | --- |
-| A, answer | A question the wiki, FAQ or the thread itself answers: access, setup, where a doc is, how a thing works, a status I have already written down | push with Send / Skip | send when confidence >= 0.8 and the claim it rests on is a live wiki claim, else tier B |
+| A, answer | A question the wiki, FAQ or the thread itself answers: access, setup, where a doc is, how a thing works, a status I have already written down | push with Send / Skip | send when confidence >= 0.8 and at least one claim id it cites (`claims`, from `ask_context`) is still a live wiki claim, else tier B |
 | B, hold | Asks for a decision, an approval, a review, an estimate, my opinion, access I grant, or a meeting | push with Send / Skip of the draft | send one holding note per person per 3 days ("I'm away until X, <backup> covers this, I'll see it when back") and add a task |
 | C, escalate | Production incident, a message from my manager or a named list, legal or HR, anything with "urgent" or "down", anything from outside the company | push now | push now, no reply |
 
 Never sent, whatever the tier: credentials or tokens, anything to a Slack Connect or external channel, a reply in a
 thread where someone else already answered after the ask (the scan flags it, and the post step re-reads the thread and
-backs out if an answer came since), a reply to a bot, a second reply in the same thread, a
+backs out if an answer came since), a reply to a bot, a second reply in the same thread (the replies row keeps a thread key; a follow-up in an answered
+thread is skipped and pushed to me instead), a
 reply to a message older than when the mode turned on, mail (Gmail keeps its own vacation responder; the hub only
 drafts).
 

@@ -1,13 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { ANSWERED, afterScan, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
-import { askId, saveScan } from './slackSave.js';
+import { applyChanges } from './sync.js';
+import { askId, saveScan, threadKey } from './slackSave.js';
 import { HOUR } from './time.js';
 
 const at = (d: number, h: number) => new Date(2026, 11, d, h).getTime();
 const url = (u: string) => (u.startsWith('http') ? u : `https://x.slack.com/archives/C1/${u}`);
 const away: AutopilotConfig = { enabled: true, dry_run: false, away: { from: '2026-12-20', to: '2027-01-05', backup: 'Kim' }, escalate: ['Mia'] };
-const ask = (u: string, over: Partial<NewAsk> = {}): NewAsk => ({ id: askId(url(u)), url: url(u), from: 'Per', chat: '#ai-help', title: `Answer ${u}`, quote: 'How?', urgent: false, draft: 'Use the guide.', tier: 'answer', confidence: 0.9, ...over });
+const ask = (u: string, over: Partial<NewAsk> = {}): NewAsk => ({ id: askId(url(u)), url: url(u), from: 'Per', chat: '#ai-help', title: `Answer ${u}`, quote: 'How?', urgent: false, draft: 'Use the guide.', tier: 'answer', confidence: 0.9, claims: ['f1'], ...over });
 const posts: string[] = [];
 const post = async (url: string, text: string) => {
   posts.push(`${url}: ${text}`);
@@ -15,6 +16,10 @@ const post = async (url: string, text: string) => {
 };
 const withAsks = (asks: NewAsk[], now: number) => {
   const db = openDb(':memory:');
+  applyChanges(db, [
+    { table: 'pages', id: 'p1', profile: 'work', updated_at: now, fields: { title: 'Guide', state: 'live' } },
+    { table: 'facts', id: 'f1', profile: 'work', updated_at: now, fields: { page_id: 'p1', text: 'The guide covers it.' } },
+  ]);
   saveScan(db, { chats: [], asks, answered: [] }, now);
   return db;
 };
@@ -57,7 +62,7 @@ describe('afterScan', () => {
     const now = at(10, 10);
     const db = withAsks([ask('u1')], now);
     posts.length = 0;
-    expect(await afterScan(db, {}, [], [ask('u1')], now, post)).toEqual({ answered: [], held: [], skipped: [] });
+    expect(await afterScan(db, {}, [], [ask('u1')], now, post)).toEqual({ answered: [], held: [], skipped: [], followups: [] });
     expect(db.prepare('SELECT COUNT(*) AS n FROM replies').get()).toEqual({ n: 0 });
     await afterScan(db, { enabled: true }, [], [ask('u1')], now, post);
     expect(db.prepare('SELECT status, tier, mode FROM replies').get()).toEqual({ status: 'held', tier: 'answer', mode: 'assist' });
@@ -90,10 +95,28 @@ describe('afterScan', () => {
     const asks = [ask('u1', { answered_by_other: true }), ask('u2')];
     const db = withAsks(asks, now);
     const r = await afterScan(db, away, ['ai-help'], asks, now, async () => ANSWERED);
-    expect(r).toEqual({ answered: [], held: [], skipped: ['Answer u1', 'Answer u2'] });
+    expect(r).toEqual({ answered: [], held: [], skipped: ['Answer u1', 'Answer u2'], followups: [] });
     expect(db.prepare("SELECT status, why FROM replies WHERE id = ?").get(askId(url('u2')))).toEqual({ status: 'skipped', why: 'someone else answered' });
     expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'suggested' });
     expect(toPush('assist', {}, ['ai-help'], asks).map((a) => a.title)).toEqual(['Answer u2']);
+  });
+
+  test('a tier answer with no live claim becomes a hold, and a second ask in an answered thread only pushes me', async () => {
+    const now = at(22, 10);
+    const asks = [ask('u1', { claims: ['gone'] }), ask('u2')];
+    const db = withAsks(asks, now);
+    posts.length = 0;
+    const r = await afterScan(db, away, ['ai-help'], asks, now, post);
+    expect(r).toEqual({ answered: ['Answer u2'], held: ['Answer u1'], skipped: [], followups: [] });
+    expect(db.prepare("SELECT tier, claims FROM replies WHERE id = ?").get(askId(url('u2')))).toEqual({ tier: 'answer', claims: '["f1"]' });
+    const follow = ask('u3', { url: `${url('u2')}?thread_ts=u2&cid=C1` });
+    saveScan(db, { chats: [], asks: [follow], answered: [] }, now + HOUR);
+    const r2 = await afterScan(db, away, ['ai-help'], [follow], now + HOUR, post);
+    expect(r2.skipped).toEqual(['Answer u3']);
+    expect(r2.followups).toEqual([follow.id]);
+    expect(toPush('away', away, ['ai-help'], [follow], r2.followups).map((a) => a.id)).toEqual([follow.id]);
+    expect(posts.length).toBe(2);
+    expect(threadKey('https://x.slack.com/archives/C9/p1700000000123456')).toBe('C9/1700000000.123456');
   });
 
   test('a dry run logs instead of sending and leaves the task open', async () => {
@@ -129,7 +152,7 @@ describe('afterScan', () => {
       return post(url, text);
     };
     const r = await afterScan(db, away, ['ai-help'], asks, now, flaky);
-    expect(r).toEqual({ answered: ['Answer u2'], held: [], skipped: ['Answer u1'] });
+    expect(r).toEqual({ answered: ['Answer u2'], held: [], skipped: ['Answer u1'], followups: [] });
     expect(db.prepare("SELECT status FROM replies WHERE id = ?").get(askId(url('u1')))).toEqual({ status: 'error' });
   });
 });
