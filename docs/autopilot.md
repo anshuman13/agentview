@@ -27,11 +27,18 @@ FAQ the drafts can lean on.
 | assist (daily) | me, one tap | nothing; every draft waits for Send or Skip |
 | away (vacation) | the hub | tier A answers and tier B holding notes; tier C only pushes me |
 
-The switch is the "Reply for me in Slack" card at the top of Jobs. Tapping the card shows what the scan watches and
-its last run, chips for DMs and each watched channel (tap to cover or uncover one; temp channels start uncovered), Dry
-run, the people never to answer, the away dates folded behind one line (dates, backup, an extra line for the holding
-note), and Seen: the last 15 asks with what was done (Replied, Would reply, Could answer, Needs you, Escalate, Failed). The settings live in
-the hub's meta table (`GET` and `POST /autopilot`); a `autopilot.json` next to the database seeds them once.
+The switch is the "Reply for me in Slack" card at the top of Jobs. Collapsed it shows the mode in one line ("Drafts only:
+you send every reply", "Away until 14 Nov: answers simple questions itself", with "Dry run" appended). Tapping it shows,
+in this order: three plain lines on when it replies, the exact holding note it will send (with the marker its own answers
+start with) and how urgent asks reach the phone; the Dry run switch; then three folds: the away dates (dates, backup, an
+extra line for the note), the coverage (chips for DMs and each watched channel, temp channels start uncovered, plus the
+scan's last run) and the people never to answer; then Seen, the last asks with what was done (Replied, Would reply, Could
+answer, Needs you, Escalate, Failed), three at a time. The settings live in the hub's meta table (`GET` and `POST
+/autopilot`); a `autopilot.json` next to the database seeds them once.
+
+Pushes: urgent asks are pushed in every mode. Away mode also pushes escalate-tier asks and asks from the never-answer
+list, which it never answers. Assist mode pushes every ask with a draft in a covered chat, with a Send reply action.
+Pushes go out in the Slack push hours (08:00 to 17:00 weekdays by default) and wait for a running meeting to end.
 
 The switch on outside the away dates is assist mode; inside them it is away mode. Dry run, on by default, logs every reply
 the hub would send on the ask instead of sending it. The switch off is the kill switch. The scan reads the settings each

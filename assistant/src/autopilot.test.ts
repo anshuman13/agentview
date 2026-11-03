@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { afterScan, autopilotConfig, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, autopilotState, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { askId, saveScan } from './slackSave.js';
 import { HOUR } from './time.js';
@@ -42,6 +42,14 @@ test('DMs and watched channels are allowed, temp channels and others are not', (
   expect(channelAllowed({}, watched, '#tmp-rollout')).toBe(false);
   expect(channelAllowed({}, watched, '#random')).toBe(false);
   expect(channelAllowed({ channels: ['random'] }, watched, '#random')).toBe(true);
+});
+
+test('urgent asks are always pushed; away mode also pushes escalations, assist mode every covered draft', () => {
+  const asks = [ask('u1'), ask('u2', { urgent: true, draft: undefined }), ask('u3', { tier: 'escalate' }), ask('u4', { from: 'Mia Berg' }), ask('u5', { chat: '#tmp-x' })];
+  const names = (xs: NewAsk[]) => xs.map((a) => a.title);
+  expect(names(toPush('off', away, ['ai-help'], asks))).toEqual(['Answer u2']);
+  expect(names(toPush('away', away, ['ai-help'], asks))).toEqual(['Answer u2', 'Answer u3', 'Answer u4']);
+  expect(names(toPush('assist', away, ['ai-help'], asks))).toEqual(['Answer u1', 'Answer u2', 'Answer u3', 'Answer u4']);
 });
 
 describe('afterScan', () => {
@@ -136,4 +144,7 @@ test('settings are cleaned on save and read back from the database', () => {
   expect(c).toEqual({ enabled: true, dry_run: true, away: { from: '2026-12-20', to: '', backup: 'Kim', note: '' }, escalate: ['Mia', 'Bo'], dms: true, min_confidence: 0.8 });
   expect(autopilotConfig(db, '/nonexistent/autopilot.json')).toEqual(c);
   expect(modeOf(c, at(22, 10))).toBe('assist');
+  expect(autopilotState(db, at(22, 10)).texts).toBeNull();
+  saveAutopilot(db, away);
+  expect(autopilotState(db, at(22, 10)).texts?.hold).toBe('Hi, this is an auto-reply: Anshuman is away until 5 January and will see this when he is back. Kim covers for him meanwhile.');
 });

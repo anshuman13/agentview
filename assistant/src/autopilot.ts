@@ -64,9 +64,19 @@ export type Logged = { id: string; who: string | null; chat: string | null; tier
 // The settings, the mode now, what the scan watches and its last run, and the last asks seen with what was done, for the Jobs page.
 export function autopilotState(db: Database, now = Date.now()) {
   const config = autopilotConfig(db);
-  const watched = slackConfig()?.channels ?? [];
+  const slack = slackConfig();
+  const watched = slack?.channels ?? [];
   const replies = db.prepare('SELECT id, who, chat, tier, confidence, status, text, url, COALESCE(sent_at, at) AS at FROM replies WHERE profile = ? ORDER BY COALESCE(sent_at, at) DESC LIMIT 15').all(PROFILE) as Logged[];
-  return { config, mode: modeOf(config, now), watched, covered: coveredChannels(config, watched), scan: scanHealth(db).find((h) => h.scan === 'slack') ?? null, replies };
+  const texts = config.away?.to ? { hold: holdNote(config.away), marker: marker(config.away) } : null;
+  return { config, mode: modeOf(config, now), watched, covered: coveredChannels(config, watched), push: slack?.push ?? { from: 8, to: 17 }, texts, scan: scanHealth(db).find((h) => h.scan === 'slack') ?? null, replies };
+}
+
+// Which new asks get a push: urgent ones always; in away mode also escalations, which it never answers; in assist mode every
+// ask with a draft in a covered chat, so Send reply is one tap.
+export function toPush(mode: Mode, c: AutopilotConfig, watched: string[], asks: NewAsk[]) {
+  if (mode === 'away') return asks.filter((a) => a.urgent || a.tier === 'escalate' || escalated(c, a.from));
+  if (mode === 'assist') return asks.filter((a) => a.urgent || (a.draft?.trim() && channelAllowed(c, watched, a.chat)));
+  return asks.filter((a) => a.urgent);
 }
 
 export function modeOf(c: AutopilotConfig, now = Date.now()): Mode {

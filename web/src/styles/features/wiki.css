@@ -402,6 +402,9 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .jb-chips { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
 .jb-chip { padding: 4px var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
 .jb-chip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--fg-strong); }
+.jb-auto-how { display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-sm); line-height: 1.45; }
+.jb-auto-how p { margin: 0; }
+.jb-auto-quote { margin: 0; padding: var(--sp-4) var(--sp-5); border-left: 2px solid var(--accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; background: var(--sunken); font-size: var(--fs-sm); line-height: 1.45; }
 .jb-auto-log { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-3); }
 .jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
 .jb-when { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }

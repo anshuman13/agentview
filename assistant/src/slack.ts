@@ -9,7 +9,7 @@ import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
-import { afterScan, autopilotConfig, awayLines, channelAllowed, modeOf, type NewAsk } from './autopilot.js';
+import { afterScan, autopilotConfig, awayLines, modeOf, toPush, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
@@ -209,8 +209,7 @@ async function slackOnce(db: Database) {
   const r = await scanSlack(db, c);
   const auto = r.mode === 'off' ? '' : `, autopilot ${r.mode}: ${r.replies.answered.length} answered, ${r.replies.held.length} held, ${r.replies.skipped.length} skipped`;
   console.log(`slack: ${r.chats} chats, ${r.messages} messages, ${r.asks} asks, ${r.said} promises, ${r.urgent.length} urgent${auto}`);
-  const assist = r.mode === 'assist';
-  await pushUrgent(db, c, assist ? r.newAsks.filter((a) => a.urgent || (a.draft?.trim() && channelAllowed(r.auto, c.channels, a.chat))) : r.urgent, assist);
+  await pushUrgent(db, c, toPush(r.mode, r.auto, c.channels, r.newAsks), r.mode === 'assist');
   return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said, ...(r.mode === 'away' ? { replied: r.replies.answered.length + r.replies.held.length } : {}) };
 }
 
