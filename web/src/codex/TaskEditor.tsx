@@ -1,12 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTaskDraft } from './taskEditor/draft';
+import { TagInput } from './taskEditor/TagInput';
 import { useAssistant } from './data';
 import { atTime } from './data/engine';
-import type { AssistantStore, Patch } from './data/store';
+import type { AssistantStore } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { Button, Chip, chipClass, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
-import { ago, fitHeight, reveal, safeHref, useOnUnmount } from '../ui/util';
+import { ago, fitHeight, reveal, safeHref } from '../ui/util';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
 import { clock, PickDue, PickTime } from './time';
@@ -81,9 +83,7 @@ export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantSt
 export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () => void; onAsk: (r: ItemRow) => void }) {
   const act = useActions();
   const { store, snap } = useAssistant();
-  const [title, setTitle] = useState(row.title ?? '');
-  const [text, setText] = useState(row.text ?? '');
-  const saved = useRef({ title: row.title ?? '', text: row.text ?? '' });
+  const { title, setTitle, text, setText, putTitle, putText, save, write, saving } = useTaskDraft(row, store);
   const [typed, setTyped] = useState<string | null>(null);
   const [snoozing, setSnoozing] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -109,41 +109,10 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     requestAnimationFrame(() => { const el = textRef.current; if (el) { el.focus(); el.setSelectionRange(next.length, next.length); } });
   };
   // Ticking a checklist line flips its box in the notes and saves at once.
-  const toggle = (n: number) => {
-    const next = toggleCheck(text, n);
-    setText(next);
-    haptic('tap');
-    if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; write({ text: next }); }
-  };
+  const toggle = (n: number) => { putText(toggleCheck(text, n)); haptic('tap'); };
   const cadence = cadenceOf(text, at);
-  const repeat = (c: Cadence) => {
-    if (c === 'custom') return;
-    const next = withRule(text, c === 'never' ? null : cadenceLine(c, at));
-    setText(next);
-    if (next !== saved.current.text) { saved.current = { ...saved.current, text: next }; write({ text: next.trim() ? next : null }); }
-  };
-  // The move waits for the last save, so the phone's store copies the saved title and notes to the other profile.
-  const saving = useRef<Promise<void>>(Promise.resolve());
-  const write = (patch: Patch) => { saving.current = store.update(row, patch); };
-  const pending = () => {
-    const patch: Patch = {};
-    if (title.trim() && title.trim() !== saved.current.title) patch.title = title.trim();
-    if (text !== saved.current.text) patch.text = text.trim() ? text : null;
-    return patch;
-  };
-  const save = () => {
-    const patch = pending();
-    if (!Object.keys(patch).length) return;
-    saved.current = { title: patch.title ?? saved.current.title, text };
-    write(patch);
-  };
-  useOnUnmount(save);
-  const addEstimate = (n: number) => {
-    const next = `${title.trim()} ~${minutesText(n)}`;
-    setTitle(next);
-    saved.current = { ...saved.current, title: next };
-    write({ title: next });
-  };
+  const repeat = (c: Cadence) => { if (c !== 'custom') putText(withRule(text, c === 'never' ? null : cadenceLine(c, at))); };
+  const addEstimate = (n: number) => putTitle(`${title.trim()} ~${minutesText(n)}`);
 
   const logTime = (n: number) => write({ spent: (Number(row.spent) || 0) + n });
 
@@ -167,6 +136,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   }, [onClose]);
 
   const other: Profile = row.profile === 'work' ? 'personal' : 'work';
+  // The move waits for the last save, so the phone's store copies the saved title and notes to the other profile.
   const move = () => {
     save();
     void saving.current.then(() => act.move(row, other));
@@ -280,9 +250,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         {(tags.length > 0 || tagging) && (
           <div className="as-tags">
             {tags.map((t) => <button key={t} className="as-tag" title={`Remove #${t}`} onClick={() => setTags(tags.filter((x) => x !== t))}>#{t} <Icon name="close" small /></button>)}
-            {tagging && <input autoFocus className="as-tag-input" placeholder="Tag" aria-label="New tag" enterKeyHint="done"
-              onKeyDown={(e) => { const v = e.currentTarget.value.replace(/^#/, '').trim().toLowerCase(); if ((e.key === 'Enter' || e.key === ' ') && v) { e.preventDefault(); setTags([...tags, v]); e.currentTarget.value = ''; } else if (e.key === 'Escape') setTagging(false); }}
-              onBlur={(e) => { const v = e.currentTarget.value.replace(/^#/, '').trim().toLowerCase(); if (v) setTags([...tags, v]); setTagging(false); }} />}
+            {tagging && <TagInput onAdd={(v) => setTags([...tags, v])} onClose={() => setTagging(false)} />}
           </div>
         )}
         <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Description" aria-label="Description" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onBlur={save} onFocus={reveal} />
