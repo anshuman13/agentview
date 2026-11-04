@@ -21,6 +21,7 @@ import { usePullRefresh } from '../usePullRefresh';
 import { useSnackTask } from '../useSnackTask';
 import { useMinute } from '../split';
 import '../../styles/features/wiki.css';
+import '../../styles/features/meetings.css';
 
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const TOPICS_KEY = 'agentview.meetingTopics';

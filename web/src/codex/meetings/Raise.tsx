@@ -7,6 +7,7 @@ import { Icon } from '../../ui/Icon';
 import { when } from '../time';
 import { openMeeting, showSnack } from '../view';
 import '../../styles/features/wiki.css';
+import '../../styles/features/meetings.css';
 
 export async function raise(store: AssistantStore, text: string, person: string, profile: Profile) {
   try {

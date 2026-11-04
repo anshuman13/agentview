@@ -11,6 +11,7 @@ import { dayLabel } from '../data/dates';
 import { copyText, openTask, setView, showSnack, useView } from '../view';
 import { buildReport, type DateRange, type StatusFilter } from './report';
 import '../../styles/features/wiki.css';
+import '../../styles/features/meetings.css';
 
 const CHATS = 8;
 const BRIEF_LINES = 8;

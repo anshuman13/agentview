@@ -7,6 +7,7 @@ import { useTranscriptHits } from './meetings/MeetingList';
 import { live } from './data/wiki';
 import { dayLabel } from './data/dates';
 import '../styles/features/wiki.css';
+import '../styles/features/meetings.css';
 
 function Hits({ label, group, open, onAll }: { label: string; group: Group; open: (h: Hit) => void; onAll: () => void }) {
   if (!group.total) return null;

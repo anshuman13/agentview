@@ -15,6 +15,7 @@ import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
 import { AddPoint, PointList, useMarkRaised } from './Raise';
 import { firstName, pointsOf } from '../data/points';
 import '../../styles/features/wiki.css';
+import '../../styles/features/meetings.css';
 
 const pill = (n: number) => (n > 0 ? <span className="mt-of">{n}</span> : null);
 

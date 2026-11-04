@@ -8,6 +8,7 @@ import { setView, useView } from '../view';
 import { usePullSync } from '../pullSync';
 import { useMinute } from '../split';
 import '../../styles/features/wiki.css';
+import '../../styles/features/meetings.css';
 import '../../styles/features/jobs.css';
 import { Autopilot } from './Autopilot';
 import { JobPage } from './JobPage';

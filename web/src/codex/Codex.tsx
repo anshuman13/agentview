@@ -26,6 +26,7 @@ import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
 import { Skeleton } from '../ui/Skeleton';
 import { prefetch } from '../app/lazy';
 import '../styles/features/assistant.css';
+import '../styles/features/overview.css';
 
 const TaskEditor = prefetch(() => import('./TaskEditor').then((m) => m.TaskEditor));
 const Wiki = prefetch(() => import('./wiki/Wiki').then((m) => m.Wiki));
