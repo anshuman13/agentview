@@ -34,14 +34,14 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
   private syncTouched = new Set<string>();
   private timer: ReturnType<typeof setInterval>;
-  private onVisible = () => document.visibilityState === 'visible' && this.syncNow();
+  private onVisible = () => document.visibilityState === 'visible' && this.syncSoon();
   private onHide = () => document.visibilityState === 'hidden' && this.flush();
   private onPageHide = () => this.flush();
 
   constructor() {
     super('ready');
     this.timer = setInterval(this.onVisible, SYNC_EVERY);
-    window.addEventListener('online', this.syncNow);
+    window.addEventListener('online', this.syncSoon);
     document.addEventListener('visibilitychange', this.onVisible);
     document.addEventListener('visibilitychange', this.onHide);
     window.addEventListener('pagehide', this.onPageHide);
@@ -49,7 +49,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   dispose() {
     clearInterval(this.timer);
-    window.removeEventListener('online', this.syncNow);
+    window.removeEventListener('online', this.syncSoon);
     document.removeEventListener('visibilitychange', this.onVisible);
     document.removeEventListener('visibilitychange', this.onHide);
     window.removeEventListener('pagehide', this.onPageHide);
@@ -149,7 +149,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   async unlock() {
-    await this.syncNow();
+    await this.syncSoon();
   }
 
   private countPending() {
@@ -268,7 +268,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   syncCalendar = async (fresh = 0) => {
     const data = await hub<{ changed?: number }>(`/api/assistant/calendar${fresh ? `?fresh=${fresh}` : ''}`, undefined, { method: 'POST' });
-    await this.syncNow();
+    await (data?.changed ? this.syncNow() : this.syncSoon());
     return Number(data?.changed ?? 0);
   };
 

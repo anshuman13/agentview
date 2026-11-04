@@ -59,19 +59,19 @@ export class LocalStore extends BaseStore implements AssistantStore {
   readonly kind = 'local';
   private unlocking: Promise<void> | null = null;
   private timer: ReturnType<typeof setInterval>;
-  private onVisible = () => document.visibilityState === 'visible' && this.syncNow();
+  private onVisible = () => document.visibilityState === 'visible' && this.syncSoon();
 
   constructor(private invoke: Invoke) {
     super('locked');
     this.set({ message: 'Locked' });
     this.timer = setInterval(this.onVisible, SYNC_EVERY);
-    window.addEventListener('online', this.syncNow);
+    window.addEventListener('online', this.syncSoon);
     document.addEventListener('visibilitychange', this.onVisible);
   }
 
   dispose() {
     clearInterval(this.timer);
-    window.removeEventListener('online', this.syncNow);
+    window.removeEventListener('online', this.syncSoon);
     document.removeEventListener('visibilitychange', this.onVisible);
   }
 
@@ -328,7 +328,7 @@ export class LocalStore extends BaseStore implements AssistantStore {
     const resp = await fetch(`${HUB}/calendar${fresh ? `?fresh=${fresh}` : ''}`, { method: 'POST', signal: AbortSignal.timeout(300000) });
     const data = await resp.json().catch(() => null);
     if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
-    await this.syncNow();
+    await (data?.changed ? this.syncNow() : this.syncSoon());
     return Number(data?.changed ?? 0);
   };
 

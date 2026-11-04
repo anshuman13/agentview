@@ -33,3 +33,17 @@ describe('syncNow', () => {
     expect(s.runs).toBe(2);
   });
 });
+
+describe('syncSoon', () => {
+  it('joins the running sync instead of adding one', async () => {
+    const s = new Fake();
+    const first = s.syncNow();
+    await tick();
+    const joined = s.syncSoon();
+    s.release.shift()!(true);
+    await Promise.all([first, joined]);
+    expect(s.runs).toBe(1);
+    await s.syncSoon();
+    expect(s.runs).toBe(2);
+  });
+});

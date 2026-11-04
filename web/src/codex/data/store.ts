@@ -26,6 +26,7 @@ export interface AssistantStore {
   move(row: ItemRow, profile: Profile, goal?: string | null): Promise<void>;
   editRow<K extends Table>(table: K, row: Tables[K], patch: Partial<Tables[K]>): Promise<void>;
   syncNow(): Promise<void>;
+  syncSoon(): Promise<void>;
   parse(text: string, profile: Profile): Promise<Parsed>;
   fetchTranscript(m: { profile: Profile; id: string }, instructions?: string): Promise<number>;
   syncCalendar(fresh?: number): Promise<number>;
@@ -97,6 +98,9 @@ export abstract class BaseStore {
   // Resolves true when it pushed or pulled any row.
   protected abstract syncOnce(): Promise<boolean>;
   protected abstract refresh(tables?: string[]): Promise<void>;
+
+  // For a foreground or online event, where no local change waits: joins the running sync instead of adding one.
+  syncSoon = (): Promise<void> => this.running ?? this.syncNow();
 
   // A call while a sync runs resolves after one more full sync, so it sees the changes made before the call.
   syncNow = (): Promise<void> => {
