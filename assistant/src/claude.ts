@@ -1,11 +1,52 @@
 import type { Database } from 'bun:sqlite';
 import { query, type Options } from '@anthropic-ai/claude-agent-sdk';
 import type { Account } from '../../shared/protocol.js';
-import { setMeta } from './db.js';
+import { getMeta, setMeta } from './db.js';
+import { DAY, ymd } from './time.js';
 import { configDir, guardLimit, limitedUntil, stopOnOverage, verifyLimit } from '../../server/src/agent/claude/accounts.js';
 
 // One run on the account, with no saved session or settings. It refuses at the usage limit and stops before extra usage.
 export const ASK_TIMEOUT_MS = 10 * 60_000;
+
+// Every hub run adds its cost per model to a day row in meta, spend:YYYY-MM-DD, kept 30 days.
+export type Spend = Record<string, { usd: number; tokens: number; runs: number }>;
+const SPEND_DAYS = 30;
+let ledger: Database | null = null;
+export const trackSpend = (db: Database) => ((ledger = db), db);
+const dayKey = (t: number) => `spend:${ymd(t)}`;
+type ModelUse = { inputTokens: number; outputTokens: number; cacheReadInputTokens: number; cacheCreationInputTokens: number; costUSD: number };
+
+export function recordSpend(db: Database, models: Record<string, ModelUse>, now = Date.now()) {
+  const key = dayKey(now);
+  const day: Spend = JSON.parse(getMeta(db, key) ?? '{}');
+  for (const [model, u] of Object.entries(models)) {
+    const row = (day[model] ??= { usd: 0, tokens: 0, runs: 0 });
+    row.usd += u.costUSD;
+    row.tokens += u.inputTokens + u.outputTokens + u.cacheReadInputTokens + u.cacheCreationInputTokens;
+    row.runs += 1;
+  }
+  setMeta(db, key, JSON.stringify(day));
+  db.prepare("DELETE FROM meta WHERE key LIKE 'spend:%' AND key < ?").run(dayKey(now - SPEND_DAYS * DAY));
+}
+
+// Today and the last 7 days, per model, most expensive first.
+export function spendSummary(db: Database, now = Date.now()) {
+  const sum = (days: number) => {
+    const by: Spend = {};
+    for (let i = 0; i < days; i++) {
+      const day: Spend = JSON.parse(getMeta(db, dayKey(now - i * DAY)) ?? '{}');
+      for (const [model, r] of Object.entries(day)) {
+        const row = (by[model] ??= { usd: 0, tokens: 0, runs: 0 });
+        row.usd += r.usd;
+        row.tokens += r.tokens;
+        row.runs += r.runs;
+      }
+    }
+    const models = Object.entries(by).map(([model, r]) => ({ model, ...r })).sort((a, b) => b.usd - a.usd);
+    return { usd: models.reduce((n, m) => n + m.usd, 0), models };
+  };
+  return { today: sum(1), week: sum(7) };
+}
 
 export async function* ask(account: Account, prompt: string, options: Options, timeoutMs = ASK_TIMEOUT_MS) {
   await verifyLimit(account);
@@ -22,6 +63,13 @@ export async function* ask(account: Account, prompt: string, options: Options, t
   try {
     for await (const m of query({ prompt, options: { persistSession: false, settingSources: [], ...options, abortController, env } })) {
       stopOnOverage(account, m);
+      if (m.type === 'result' && ledger && m.modelUsage) {
+        try {
+          recordSpend(ledger, m.modelUsage);
+        } catch (err) {
+          console.log(`spend: not recorded, ${String(err)}`);
+        }
+      }
       yield m;
     }
     if (timedOut) throw new Error(`Claude run timed out after ${Math.round(timeoutMs / 60_000)} min`);

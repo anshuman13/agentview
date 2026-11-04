@@ -2,6 +2,7 @@ import http from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { APP_ORIGINS, allowedHostHeader, allowedPeer, peerName } from '../../server/src/http/access.js';
 import { openDb } from './db.js';
+import { trackSpend } from './claude.js';
 import { ACCOUNT_OF, startCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
@@ -24,7 +25,7 @@ const ownHost = (host = '') => allowedHostHeader(host) || host === new URL(HUB_U
 
 let db: ReturnType<typeof openDb> | null = null;
 
-const getDb = () => (db ??= openDb());
+const getDb = () => (db ??= trackSpend(openDb()));
 
 // Only the phone app calls from a browser context; any other page (Origin or Sec-Fetch-Site set) could forge writes.
 export function fromAllowedPage(h: http.IncomingHttpHeaders) {

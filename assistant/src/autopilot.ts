@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { run, slackConfig } from './slack.js';
+import { spendSummary } from './claude.js';
 import { scanCosts, scanHealth } from './scan.js';
 import { NEEDS_ME, PROFILE, needsMe, threadKey, webUrl } from './slackSave.js';
 import { liveClaims } from './draft.js';
@@ -73,7 +74,7 @@ export function autopilotState(db: Database, now = Date.now()) {
   const watched = slack?.channels ?? [];
   const replies = db.prepare('SELECT id, who, chat, tier, confidence, status, text, url, COALESCE(sent_at, at) AS at FROM replies WHERE profile = ? ORDER BY COALESCE(sent_at, at) DESC LIMIT 15').all(PROFILE) as Logged[];
   const texts = config.away?.to ? { hold: holdNote(config.away), marker: marker(config.away) } : null;
-  return { config, mode: modeOf(config, now), watched, covered: coveredChannels(config, watched), push: slack?.push ?? { from: 8, to: 17 }, texts, scan: scanHealth(db).find((h) => h.scan === 'slack') ?? null, cost: scanCosts(db)[0] ?? null, replies };
+  return { config, mode: modeOf(config, now), watched, covered: coveredChannels(config, watched), push: slack?.push ?? { from: 8, to: 17 }, texts, scan: scanHealth(db).find((h) => h.scan === 'slack') ?? null, cost: scanCosts(db)[0] ?? null, spend: spendSummary(db, now), replies };
 }
 
 // Which new asks get a push: urgent ones always; in away mode also escalations, which it never answers; in assist mode every

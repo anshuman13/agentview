@@ -30,6 +30,17 @@ function scanLine(s: AutopilotState) {
   return `Checks every 15 min ${s.mode === 'away' ? 'every day until 22:00' : 'on weekdays'} · ${last}${cost}`;
 }
 
+const usd = (n: number) => `$${n < 10 ? n.toFixed(2) : Math.round(n)}`;
+const modelName = (m: string) => m.replace(/^claude-/, '').replace(/-\d{8}$/, '');
+
+// What the hub's own Claude runs (scans, drafts, jobs) cost, by model.
+function spendLine(s: AutopilotState) {
+  const w = s.spend?.week;
+  if (!w?.models.length) return '';
+  const by = w.models.map((m) => `${modelName(m.model)} ${usd(m.usd)}`).join(', ');
+  return `Hub Claude use: today ${usd(s.spend!.today.usd)} · 7 days ${usd(w.usd)} (${by})`;
+}
+
 function Fold({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: ReactNode }) {
   return (
     <>
@@ -125,6 +136,7 @@ export function Autopilot() {
             </div>
             <div className="muted small">{scanLine(state)}</div>
           </Fold>
+          {spendLine(state) && <div className="muted small">{spendLine(state)}</div>}
           <Fold title={c.escalate.length || c.manager ? `Never answers ${[...(c.manager ? [c.manager] : []), ...c.escalate].length === 1 ? (c.manager || c.escalate[0]) : `${c.escalate.length + (c.manager ? 1 : 0)} people`}` : 'Never answers: nobody yet'} open={fold === 'never'} onToggle={() => toggle('never')}>
             <input aria-label="Manager" placeholder="Your manager, name or Slack user id" value={form.manager} onChange={(e) => setForm({ ...form, manager: e.target.value })} onBlur={saveForm} />
             <input aria-label="Never answer" placeholder="Names or Slack user ids, comma separated" value={form.escalate} onChange={(e) => setForm({ ...form, escalate: e.target.value })} onBlur={saveForm} />

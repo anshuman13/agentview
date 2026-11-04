@@ -46,7 +46,8 @@ answer, Needs you, Escalate, Failed), three at a time. The settings live in the 
 /autopilot`); a `autopilot.json` next to the database seeds them once.
 
 Each scan logs its token counts and cost to meta `scan:slack:cost` (last 20); the card's scan line shows the last
-scan's tokens. The prompt carries only chat summaries with messages in the last 2 days and asks from the last 7.
+scan's tokens. Every hub Claude run (scans, drafts, sends, jobs) also adds its cost per model to a day row in meta
+`spend:YYYY-MM-DD` (kept 30 days), and the card shows today and the last 7 days by model. The prompt carries only chat summaries with messages in the last 2 days and asks from the last 7.
 
 The card's "Drafts while away by" chips pick Sonnet or Opus (`model` in the config); the scan runs on that model only in
 away mode, otherwise on Sonnet. A post run that ends without confirming is followed by one read of the thread, so a reply
