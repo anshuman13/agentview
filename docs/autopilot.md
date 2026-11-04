@@ -61,7 +61,9 @@ a failed send stays on the draft card with a Retry button and the next scan post
 closes. An ask the scan tiers hold or escalate (a decision, approval, review, something urgent) is tagged needs-you: its draft is
 a holding line, the push says "Needs you" and has no Send action, and the card shows "Needs your decision" with a quiet Send
 note. The Overview has a Reply queue: every Slack ask with a draft, the ones that need me first, then oldest first, each with
-Send, Edit and Skip in place. The morning brief lists the asks still open oldest first with who asked and the age, the ones
+Send, Edit and Skip in place. A tier answer that rests on a live wiki claim with confidence 0.8 or more is tagged faq: the
+queue row shows an "FAQ answer" badge, such asks sort right after the ones that need me, the push body says "FAQ answer, 90% sure"
+before the claim, and with two or more the queue has one "Send all N FAQ answers" button. The morning brief lists the asks still open oldest first with who asked and the age, the ones
 from yesterday or older under their own heading. At the first scan from 17:00 on a weekday the hub writes a day digest
 (`briefs` kind `day`, `dayDigest`): what I sent (and how many edited), what failed, what I skipped and what still waits, with
 links, and pushes the counts; the app shows it in the brief card. The switch off is the kill switch. The scan reads the settings each

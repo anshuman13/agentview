@@ -175,7 +175,8 @@ export function askPush(a: NewAsk, mode: Mode, cite = '') {
   const mine = needsMe(a.tier);
   const act = (label: string, path: string) => `http, ${label}, ${HUB_URL}/slack/${path}?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
   const main = draft && !mine ? act('Send reply', 'reply') : act('Make task', 'accept');
-  const body = draft ? `${a.quote}\n\n${mine ? 'Needs you' : 'Reply'}: ${draft}${cite ? `\n${cite}` : ''}` : a.quote;
+  const faq = a.tier === 'answer' && cite ? `FAQ answer${a.confidence ? `, ${Math.round(a.confidence * 100)}% sure` : ''}. ` : '';
+  const body = draft ? `${a.quote}\n\n${mine ? 'Needs you' : 'Reply'}: ${draft}${cite ? `\n${faq}${cite}` : ''}` : a.quote;
   return { title: `${mine && draft ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${main}; ${act('Skip', 'skip')}` };
 }
 

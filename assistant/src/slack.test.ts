@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { openDb, setMeta } from './db.js';
 import { askPush, pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
 import { DAY } from './time.js';
-import { acceptAsk, askId, saveScan, skipAsk } from './slackSave.js';
+import { acceptAsk, askId, askTags, saveScan, skipAsk } from './slackSave.js';
+import { applyChanges } from './sync.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
 // Each url gets its own topic, so asks are not taken for repeats of each other.
@@ -186,6 +187,7 @@ describe('askPush', () => {
     expect(p.actions).not.toContain('Make task');
     expect(p.actions.split(';').length).toBe(3);
     expect(askPush(base, 'assist', 'From Support FAQ: The guide covers it.').body).toContain('Reply: Yes, see the guide.\nFrom Support FAQ: The guide covers it.');
+    expect(askPush({ ...base, tier: 'answer', confidence: 0.9 }, 'assist', 'From Support FAQ: The guide covers it.').body).toContain('\nFAQ answer, 90% sure. From Support FAQ: The guide covers it.');
     const h = askPush({ ...base, tier: 'hold', draft: 'I will look at it today.' }, 'assist');
     expect(h.title).toBe('Needs you, Kim: Answer Kim');
     expect(h.actions).not.toContain('Send reply');
@@ -193,6 +195,18 @@ describe('askPush', () => {
     expect(h.actions).toContain('Skip');
     expect(h.body).toContain('Needs you: I will look at it today.');
     expect(askPush(base, 'away').actions).not.toContain('Send reply');
+  });
+
+  test('askTags marks a sure answer on a live claim as faq and a hold as needs-you', () => {
+    const db = openDb(':memory:');
+    applyChanges(db, [
+      { table: 'pages', id: 'p1', profile: 'work', updated_at: 1, fields: { title: 'Support FAQ', state: 'live' } },
+      { table: 'facts', id: 'f1', profile: 'work', updated_at: 1, fields: { page_id: 'p1', text: 'The guide covers it.' } },
+    ]);
+    expect(askTags(db, { tier: 'answer', confidence: 0.9, claims: ['f1'] })).toBe('faq');
+    expect(askTags(db, { tier: 'answer', confidence: 0.6, claims: ['f1'] })).toBeNull();
+    expect(askTags(db, { tier: 'answer', confidence: 0.9, claims: ['gone'] })).toBeNull();
+    expect(askTags(db, { tier: 'hold', confidence: 0.9, claims: ['f1'] })).toBe('needs-you');
   });
 
   test('skipAsk closes the ask, drops its draft and marks the reply skipped', () => {

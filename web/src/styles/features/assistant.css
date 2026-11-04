@@ -532,3 +532,5 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .ov-queue-row { display: grid; gap: var(--sp-3); }
 .ov-queue-head { all: unset; cursor: pointer; display: grid; gap: var(--sp-1); }
 .ov-queue .as-draft { margin-left: 0; }
+.ov-queue-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.ov-faq { margin-left: var(--sp-3); padding: 1px var(--sp-3); border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent-text); font-size: var(--type-caption-size); font-weight: 500; vertical-align: middle; }
