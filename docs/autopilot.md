@@ -12,9 +12,11 @@ is an assistant, and every send is logged and reversible by me.
 
 - The work Slack scan reads DMs, mentions and the watched channels (including `ai-help`) every 15 minutes on
   weekdays and turns asks into suggested tasks, one per permalink ([assistant.md](assistant.md#slack-and-gmail-scans))
-- Each new ask gets a reply draft in my voice, with the thread and up to 3 wiki claims and 3 meeting decisions as
-  context (`assistant/src/draft.ts`, `ask_context`); Support FAQ claims rank first on a tie, each claim comes with its id
-  and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there is one
+- Each new ask gets a reply draft in my voice, with the thread and up to 3 wiki claims, 3 decisions (meetings of the
+  last 30 days, Slack of the last 14 with their link) and 3 of my open tasks as context (`assistant/src/draft.ts`,
+  `ask_context`); a short ask matches on one key word, longer ones on two; Support FAQ claims rank first on a tie, each
+  claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there
+  is one
 - Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs.ts`)
 - Pushes through ntfy can carry actions (Done, Snooze on a task)
 - The wiki holds approved claims; the wiki update pass proposes claims from Slack decisions

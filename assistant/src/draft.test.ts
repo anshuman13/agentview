@@ -17,11 +17,20 @@ test('askContext keeps live claims and recent decisions that share two key words
     row('facts', 'f4', { page_id: 'p1', text: 'Invoices are in euros.' }),
     row('meetings', 'm1', { title: 'Billing sync', starts_at: now - 2 * 86400000, decisions: JSON.stringify(['Invoices export goes weekly from November']) }),
     row('meetings', 'm2', { title: 'Old sync', starts_at: now - 60 * 86400000, decisions: JSON.stringify(['Invoices export goes daily']) }),
+    row('items', 't1', { title: 'Fix the invoices export to finance', status: 'open', at: now + 86400000 }),
+    row('items', 't2', { title: 'Invoices export retry', status: 'done' }),
+    row('items', 't3', { title: 'Reply about the invoices export', status: 'open', source: 'slack' }),
   ]);
+  const slack = db.prepare('INSERT INTO slack_decisions (profile, id, text, channel, url, at) VALUES (?, ?, ?, ?, ?, ?)');
+  slack.run('work', 'd1', 'Finance gets the invoices export as CSV', 'billing', 'https://example.com/d1', now - 3 * 86400000);
+  slack.run('work', 'd2', 'Finance gets the invoices export as XLSX', 'billing', 'https://example.com/d2', now - 20 * 86400000);
   expect(askContext(db, 'Can you check why the invoices export to finance failed?', now)).toEqual({
     claims: [{ id: 'f1', line: 'Billing: Invoices export runs nightly to the finance bucket.', url: null }],
-    decisions: ['Invoices export goes weekly from November (Billing sync)'],
+    decisions: ['Finance gets the invoices export as CSV (#billing, 2026-10-25, see https://example.com/d1)', 'Invoices export goes weekly from November (Billing sync)'],
+    tasks: ['Fix the invoices export to finance, due 2026-10-29'],
   });
+  // A short ask matches on one key word.
+  expect(askContext(db, 'invoices?', now).claims.map((c) => c.id)).toEqual(['f1', 'f4']);
 });
 
 test('askContext ranks a Support FAQ claim first on a tie and keeps its link; liveClaims drops dead ids', () => {
