@@ -86,7 +86,7 @@ The draft step gets three more outputs per ask: `tier`, `confidence` (0 to 1) an
 Never sent, whatever the tier: credentials or tokens, anything to a Slack Connect or external channel (the scan sets
 `external` on the ask, which escalates it), a reply in a
 thread where someone else already answered after the ask (the scan flags it, and the post step re-reads the thread and
-backs out if an answer came since), a reply to a bot, a second reply in the same thread (the replies row keeps a thread key; a follow-up in an answered
+backs out if an answer came since, or if the asker withdrew or changed the ask: then the held draft stays with the note "thread changed since draft"), a reply to a bot, a second reply in the same thread (the replies row keeps a thread key; a follow-up in an answered
 thread is skipped and pushed to me instead), a
 reply to a message older than when the mode turned on, mail (Gmail keeps its own vacation responder; the hub only
 drafts).

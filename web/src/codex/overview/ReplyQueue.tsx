@@ -33,7 +33,7 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
     for (const r of faq) {
       try {
         const res = await store.sendReply(r.id, false, (r.draft ?? '').trim());
-        if (res.status !== 'answered') sent++;
+        if (res.status === 'sent' || res.status === 'dry') sent++;
       } catch {
         break;
       }

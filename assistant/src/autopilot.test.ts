@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ANSWERED, afterScan, awayDigest, dayDigest, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { ANSWERED, CHANGED, afterScan, awayDigest, dayDigest, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
 import { askId, saveScan, threadKey } from './slackSave.js';
@@ -99,6 +99,16 @@ describe('afterScan', () => {
     expect(db.prepare("SELECT status, why FROM replies WHERE id = ?").get(askId(url('u2')))).toEqual({ status: 'skipped', why: 'someone else answered' });
     expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'suggested' });
     expect(toPush('assist', {}, ['ai-help'], asks).map((a) => a.title)).toEqual(['Answer u2']);
+  });
+
+  test('keeps the ask open with a note when the thread changed since the draft', async () => {
+    const now = at(22, 10);
+    const asks = [ask('u1')];
+    const db = withAsks(asks, now);
+    const r = await afterScan(db, away, ['ai-help'], asks, now, async () => CHANGED);
+    expect(r).toEqual({ answered: [], held: [], skipped: ['Answer u1'], followups: [] });
+    expect(db.prepare('SELECT status, why FROM replies WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'held', why: 'thread changed since draft' });
+    expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'suggested' });
   });
 
   test('a tier answer with no live claim becomes a hold, and a second ask in an answered thread only pushes me', async () => {

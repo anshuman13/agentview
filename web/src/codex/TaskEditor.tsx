@@ -57,7 +57,7 @@ export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantSt
     try {
       const r = await store.sendReply(row.id, changed, text.trim());
       haptic('success');
-      showSnack(r.status === 'answered' ? 'Not sent: someone already answered in the thread' : 'Reply sent');
+      showSnack(r.status === 'answered' ? 'Not sent: someone already answered in the thread' : r.status === 'changed' ? 'Not sent: the thread changed since the draft' : 'Reply sent');
     } catch (err) {
       setError((err as Error).message);
     } finally {

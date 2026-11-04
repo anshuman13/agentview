@@ -162,17 +162,18 @@ export const holdDue = (db: Database, who: string, now: number) =>
   !db.prepare("SELECT 1 FROM replies WHERE profile = ? AND status IN ('sent', 'dry') AND tier = 'hold' AND lower(who) = lower(?) AND sent_at > ?").get(PROFILE, who, now - HOLD_AGAIN);
 
 export const ANSWERED = 'answered';
+export const CHANGED = 'changed';
 
 // Posts text as a thread reply under the ask's permalink with the work account's Slack connector and returns the permalink of
 // the post, or ANSWERED when a re-read of the thread shows someone else answered since the scan.
 export async function postReply(url: string, text: string) {
   let posted: string | null = null;
-  const done = tool('posted', 'Call once the message is posted, or once you decided not to post.', { url: z.string().describe(`Permalink of the message you posted, or "${ANSWERED}" when someone else already answered`) }, async (a) => {
+  const done = tool('posted', 'Call once the message is posted, or once you decided not to post.', { url: z.string().describe(`Permalink of the message you posted, "${ANSWERED}" when someone else already answered, or "${CHANGED}" when the thread moved on`) }, async (a) => {
     posted = a.url;
     return { content: [{ type: 'text' as const, text: 'noted' }] };
   });
   const prompt = [
-    `Read the thread of ${url} with slack_read_thread. The channel id is the path segment after /archives/, and the thread_ts is the p-number with a dot before its last 6 digits. If a reply after that message, from someone other than its author, already answers it, do not post: call posted with "${ANSWERED}" and stop.`,
+    `Read the thread of ${url} with slack_read_thread. The channel id is the path segment after /archives/, and the thread_ts is the p-number with a dot before its last 6 digits. If a reply after that message, from someone other than its author, already answers it, do not post: call posted with "${ANSWERED}" and stop. If the author has since withdrawn the ask, answered it themselves, or changed it so the message below no longer fits, do not post: call posted with "${CHANGED}" and stop.`,
     `Otherwise post the message below as a reply in that thread with slack_send_message, exactly once, changing nothing in the text, then call posted with the permalink and stop.`,
     '',
     text,
@@ -203,7 +204,7 @@ async function verifyPost(url: string, text: string) {
   return found as string | null;
 }
 
-type Sent = { status: 'sent' | 'dry' | 'answered'; url: string | null };
+type Sent = { status: 'sent' | 'dry' | 'answered' | 'changed'; url: string | null };
 
 // Sends one reply, or logs it in a dry run, and notes it on the task; an answer closes the task, a holding note leaves it.
 export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: string; url: string; from: string; chat: string }, tier: Tier, text: string, now: number, post = postReply): Promise<Sent> {
@@ -214,6 +215,11 @@ export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: str
     if (r === ANSWERED) {
       db.prepare("UPDATE replies SET status = 'skipped', tier = ?, why = 'someone else answered' WHERE profile = ? AND id = ?").run(tier, PROFILE, ask.id);
       return { status: 'answered', url: null };
+    }
+    // The ask is still open but the draft no longer fits: the held row says so, and the ask stays on the card.
+    if (r === CHANGED) {
+      db.prepare("UPDATE replies SET status = 'held', tier = ?, why = 'thread changed since draft' WHERE profile = ? AND id = ?").run(tier, PROFILE, ask.id);
+      return { status: 'changed', url: null };
     }
     url = r ? webUrl(r) : null;
   } catch (err) {
@@ -300,10 +306,10 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
     try {
       if (tier === 'answer' && a.draft && (a.confidence ?? 0) >= min) {
         const r = await sendReply(db, c, a, 'answer', `${marker(c.away)} ${a.draft}`, now, post);
-        (r.status === 'answered' ? out.skipped : out.answered).push(a.title);
+        (r.status === 'sent' || r.status === 'dry' ? out.answered : out.skipped).push(a.title);
       } else if (holdDue(db, a.from, now)) {
         const r = await sendReply(db, c, a, 'hold', holdNote(c.away), now, post);
-        (r.status === 'answered' ? out.skipped : out.held).push(a.title);
+        (r.status === 'sent' || r.status === 'dry' ? out.held : out.skipped).push(a.title);
       } else {
         db.prepare("UPDATE replies SET status = 'skipped', why = 'second ask within 3 days of a holding note' WHERE profile = ? AND id = ?").run(PROFILE, a.id);
         out.followups.push(a.id);
