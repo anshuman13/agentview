@@ -22,6 +22,16 @@ const Event = z.object({
 });
 type CalendarEvent = z.infer<typeof Event>;
 
+// The model copies the event link with slips in its eid, so it is rebuilt from the event id and the calendar it names.
+export function eventUrl(id: string, url?: string) {
+  const eid = url?.match(/eid=([^&]+)/)?.[1];
+  const cal = eid && Buffer.from(eid, 'base64').toString().split(' ')[1];
+  return cal ? `https://www.google.com/calendar/event?eid=${Buffer.from(`${id} ${cal}`).toString('base64url')}` : (url ?? null);
+}
+
+// One run names attendees and the next gives their emails, so the same number of people counts as no change.
+const samePeople = (old: unknown, people: string[]) => typeof old === 'string' && (JSON.parse(old) as string[]).length === people.length;
+
 // Upserts the events as meetings and removes calendar meetings in the window that are gone, unless they have notes.
 // A meeting removed here comes back when its event reappears; one you deleted stays deleted.
 export function saveMeetings(db: Database, profile: Profile, events: CalendarEvent[], from: number, to: number, now = Date.now()) {
@@ -31,7 +41,7 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
     .filter((e) => !Number.isNaN(Date.parse(e.start)) && !Number.isNaN(Date.parse(e.end)))
     .map((e) => ({
       table: 'meetings', id: `cal:${e.id}`, profile, updated_at: now,
-      fields: { title: e.title, starts_at: Date.parse(e.start), ends_at: Date.parse(e.end), people: JSON.stringify(e.people), calendar_url: e.url ?? null },
+      fields: { title: e.title, starts_at: Date.parse(e.start), ends_at: Date.parse(e.end), people: JSON.stringify(e.people), calendar_url: eventUrl(e.id, e.url) },
     }));
   const kept = new Set(all.map((c) => c.id));
   const back: string[] = [];
@@ -45,6 +55,7 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
         return true;
       }
     }
+    if (old && samePeople(old.people, JSON.parse(String(c.fields.people)))) c.fields.people = old.people as string;
     return !old || Object.entries(c.fields).some(([k, v]) => old[k] !== v);
   });
   const stale = db.prepare("SELECT id FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND starts_at >= ? AND starts_at < ? AND (notes IS NULL OR notes = '') AND (summary IS NULL OR summary = '')").all(profile, from, to) as { id: string }[];

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { importDue, lastImport, saveMeetings, syncCalendar } from './calendar.js';
+import { eventUrl, importDue, lastImport, saveMeetings, syncCalendar } from './calendar.js';
 
 const ev = (id: string, start: string) => ({ id, title: `M ${id}`, start, end: start.replace('T09', 'T10'), people: ['Kari'] });
 
@@ -27,6 +27,17 @@ describe('saveMeetings', () => {
     expect(saveMeetings(db, 'work', [a, b], from, to, 4)).toBe(1);
     expect(db.prepare('SELECT id, deleted FROM meetings ORDER BY id').all()).toEqual([{ id: 'cal:a', deleted: 0 }, { id: 'cal:b', deleted: 1 }]);
     expect(saveMeetings(db, 'work', [a, b], from, to, 5)).toBe(0);
+  });
+
+  it('ignores attendee names turned into emails and slips in the event link', () => {
+    const db = openDb(':memory:');
+    const from = Date.parse('2026-10-26T00:00:00Z'), to = from + 9 * 86400_000;
+    const url = `https://www.google.com/calendar/event?eid=${Buffer.from('a kari@example.com').toString('base64url')}`;
+    const a = { ...ev('a', '2026-10-27T09:00:00Z'), url };
+    expect(saveMeetings(db, 'work', [a], from, to, 1)).toBe(1);
+    expect(saveMeetings(db, 'work', [{ ...a, people: ['kari@example.com'], url: `${url}&ctz=UTC` }], from, to, 2)).toBe(0);
+    expect(saveMeetings(db, 'work', [{ ...a, people: ['Kari', 'Ola'] }], from, to, 3)).toBe(1);
+    expect(eventUrl('a', url)).toBe(url);
   });
 });
 
