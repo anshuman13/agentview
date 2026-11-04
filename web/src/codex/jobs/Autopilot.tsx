@@ -49,6 +49,11 @@ export function Autopilot() {
   const [all, setAll] = useState(false);
   const items = useAssistantTable('items');
   const waiting = useMemo(() => replyQueue(items).length, [items]);
+  // A held reply whose ask I closed or dismissed is no longer waiting on me.
+  const seen = (r: AutopilotReply) => {
+    const item = r.status === 'held' ? items.find((i) => i.id === r.id && i.source === 'slack') : null;
+    return item && item.status !== 'suggested' && item.status !== 'open' ? (item.status === 'dismissed' ? 'Dismissed' : 'Closed') : SEEN[r.status] ?? r.status;
+  };
   const [form, setForm] = useState({ from: '', to: '', backup: '', note: '', escalate: '', manager: '' });
   const load = (p: Promise<AutopilotState>) => p.then((s) => { setState(s); setForm({ ...s.config.away, escalate: s.config.escalate.join(', '), manager: s.config.manager ?? '' }); setError(''); }).catch((err) => setError((err as Error).message));
   useEffect(() => void load(store.autopilot()), [store]);
@@ -130,7 +135,7 @@ export function Autopilot() {
               <div className="muted small">Seen</div>
               {replies.map((r) => (
                 <button key={r.id} className="jb-run jb-seen" onClick={() => openAsk(r)}>
-                  <div className="wk-meta"><span>{SEEN[r.status] ?? r.status}</span><span>{r.who}{r.chat ? ` · ${r.chat}` : ''}</span><span>{when(r.at)}</span></div>
+                  <div className="wk-meta"><span>{seen(r)}</span><span>{r.who}{r.chat ? ` · ${r.chat}` : ''}</span><span>{when(r.at)}</span></div>
                   {r.text && <div className="jb-output">{r.text}</div>}
                 </button>
               ))}

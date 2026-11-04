@@ -21,7 +21,7 @@ const drafted = (r: ItemRow) => !!r.draft?.trim();
 // Slack asks with a reply draft, the ones that need me first, then FAQ answers, then oldest first, so a day's asks clear from one screen.
 // Needs-you asks the drafter left without a draft come last: I decide those in the thread.
 export const replyQueue = (review: ItemRow[]) => review
-  .filter((r) => r.source === 'slack' && r.status === 'suggested' && !r.deleted && (drafted(r) || mine(r)) && !isSaid(r))
+  .filter((r) => r.source === 'slack' && (r.status === 'suggested' || r.status === 'open') && !r.deleted && (drafted(r) || mine(r)) && !isSaid(r))
   .sort((a, b) => Number(drafted(b)) - Number(drafted(a)) || Number(mine(b)) - Number(mine(a)) || Number(isFaq(b)) - Number(isFaq(a)) || reviewedSince(a) - reviewedSince(b));
 
 function Undrafted({ row }: { row: ItemRow }) {
