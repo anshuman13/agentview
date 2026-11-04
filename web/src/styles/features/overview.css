@@ -29,6 +29,7 @@
 .ov-brief-head > .as-toggle { flex: 1; display: flex; }
 
 .ov-queue { display: grid; gap: var(--sp-4); }
+.ov-admin { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding: var(--sp-2) 0 var(--sp-4); }
 .ov-queue-row { display: grid; gap: var(--sp-3); }
 .ov-queue-head { all: unset; cursor: pointer; display: grid; gap: var(--sp-1); }
 .ov-queue .as-draft { margin-left: 0; }

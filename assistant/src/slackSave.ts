@@ -11,8 +11,10 @@ export const SURE = 0.8;
 // A tier answer the draft rests on a live wiki claim with high confidence: an FAQ answer I can send without reading.
 export const sureAnswer = (db: Database, a: { tier?: string | null; confidence?: number | null; claims?: string[] | null }) =>
   a.tier === 'answer' && (a.confidence ?? 0) >= SURE && liveClaims(db, a.claims ?? []).length > 0;
-export const askTags = (db: Database, a: { tier?: string | null; confidence?: number | null; claims?: string[] | null }) =>
-  [needsMe(a.tier) ? NEEDS_ME : '', sureAnswer(db, a) ? FAQ_TAG : ''].filter(Boolean).join(' ') || null;
+// Access and limit asks are tagged so the apps can batch them: I grant those in one sitting in an admin console.
+export const ADMIN_KINDS = ['access', 'limit'] as const;
+export const askTags = (db: Database, a: { tier?: string | null; confidence?: number | null; claims?: string[] | null; kind?: string | null }) =>
+  [needsMe(a.tier) ? NEEDS_ME : '', sureAnswer(db, a) ? FAQ_TAG : '', ADMIN_KINDS.find((k) => k === a.kind) ?? ''].filter(Boolean).join(' ') || null;
 import { applyChanges, type Change } from './sync.js';
 import { DAY, parseWhen } from './time.js';
 
@@ -43,6 +45,7 @@ export const Ask = z.object({
   answered_by_other: z.boolean().optional().describe('True when someone other than me already answered it in the thread'),
   claims: z.array(z.string()).optional().describe('Ids of the wiki claims from ask_context the draft rests on'),
   external: z.boolean().optional().describe('True when the channel is shared with another company (Slack Connect) or who asked is a guest or outside the company'),
+  kind: z.enum(['access', 'limit', 'other']).optional().describe('access: they want an invite, seat, account, plan move, connector or permission that I grant. limit: they want a higher usage or spend limit. other: anything else.'),
 });
 // A commitment I made myself, like "I'll send it tomorrow".
 export const Said = z.object({

@@ -18,6 +18,9 @@ is an assistant, and every send is logged and reversible by me.
   promised them) (`assistant/src/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; Support FAQ claims rank first on a tie, each
   claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there
   is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner; numbers, dates and names come verbatim from a claim or the thread, else the draft asks one precise question back; a claim older than 30 days is quoted "as of" its date; access, invite, seat and limit asks give the Support FAQ step first; a message with several questions gets the covered parts answered and names the part still to check; an ask to meet or talk gets one or two free half hours from my calendar over the next two working days (the free_slots tool), never an invented time
+- The scan gives each ask a kind; access asks (invites, seats, plan moves, permissions I grant) and limit asks are
+  tagged `access` or `limit`, and with two or more in the Reply queue a line offers Copy list, so I grant them in one
+  sitting in the admin console
 - When I edit or skip a draft the hub keeps the original; the first scan on a Monday (or `POST /slack/corrections`;
   needs 3 pairs) turns the differences into rules the drafter follows and proposes them on the How I
   write page (`assistant/src/corrections.ts`)

@@ -9,7 +9,7 @@ import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
 import { haptic } from '../../ui/haptic';
 import { ago } from '../../ui/util';
-import { openTask, showSnack } from '../view';
+import { copyText, openTask, showSnack } from '../view';
 import { useActions } from '../useActions';
 
 const mine = (r: ItemRow) => tagList(r.tags).includes('needs-you');
@@ -17,6 +17,9 @@ const mine = (r: ItemRow) => tagList(r.tags).includes('needs-you');
 export const isFaq = (r: ItemRow) => tagList(r.tags).includes('faq');
 
 const drafted = (r: ItemRow) => !!r.draft?.trim();
+// Invites, seats and limit bumps: I grant these in an admin console, so the queue offers them as one list.
+const admin = (r: ItemRow) => tagList(r.tags).some((t) => t === 'access' || t === 'limit');
+export const adminList = (rows: ItemRow[]) => rows.filter(admin).map((r) => `- ${r.people || 'Slack'}: ${r.title}${r.source_url ? ` ${r.source_url}` : ''}`).join('\n');
 
 // Slack asks with a reply draft, the ones that need me first, then FAQ answers, then oldest first, so a day's asks clear from one screen.
 // Needs-you asks the drafter left without a draft come last: I decide those in the thread.
@@ -55,6 +58,7 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
   const act = useActions();
   const [sending, setSending] = useState(false);
   const faq = rows.filter(isFaq);
+  const admins = rows.filter(admin).length;
   if (!rows.length) return null;
   // Posts every FAQ answer as it reads, one after the other, and reports how many went out.
   const sendAll = async () => {
@@ -75,6 +79,12 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
   return (
     <section>
       <SectionHead title="Reply queue" count={rows.length} action={faq.length >= 2 && <Button size="sm" icon={sending ? 'loading' : 'send'} disabled={sending} onClick={() => void sendAll()}>Send all {faq.length} FAQ answers</Button>} />
+      {admins >= 2 && (
+        <div className="ov-admin">
+          <span className="muted small">{admins} access and limit requests, to grant in one go</span>
+          <Button size="sm" icon="copy" onClick={() => copyText(adminList(rows), `Copied ${admins} requests`)}>Copy list</Button>
+        </div>
+      )}
       <div className="as-group ov-queue">
         {rows.map((r) => (
           <div key={r.profile + r.id} className="ov-queue-row">
