@@ -27,7 +27,8 @@ is an assistant, and every send is logged and reversible by me.
   about the freeze") is picked up by the next Slack scan (every 15 min on weekdays, every day when away) and becomes a
   one-off job named "Slack: ..." that runs on the mini with my memory and voice. It can read Slack, Gmail, the calendar
   and the web and add tasks, but not post to anyone; it drafts instead. Its answer is posted in the thread of my
-  message, starting "Assistant: ", or pushed when the post fails (`assistant/src/commands.ts`)
+  message, starting "Assistant: ", or pushed when the post fails (`assistant/src/commands.ts`). Between scans a Haiku
+  poll looks only for new commands every 5 minutes in scan hours (about $0.01 a poll), so a command waits minutes
 - Pushes through ntfy can carry actions (Done, Snooze on a task)
 - The wiki holds approved claims; the wiki update pass proposes claims from Slack decisions
 
@@ -53,7 +54,9 @@ answer, Needs you, Escalate, Failed), three at a time. The settings live in the 
 
 Each scan logs its token counts and cost to meta `scan:slack:cost` (last 20); the card's scan line shows the last
 scan's tokens. Every hub Claude run (scans, drafts, sends, jobs) also adds its cost per model to a day row in meta
-`spend:YYYY-MM-DD` (kept 30 days), and the card shows today and the last 7 days by model. The prompt carries only chat summaries with messages in the last 2 days and asks from the last 7.
+`spend:YYYY-MM-DD` (kept 30 days), and the card shows today and the last 7 days by model. A run that names its
+tools loads only the MCP servers they come from (all connectors were about 187k tokens a run), and a run stopped
+early is interrupted so its cost still arrives. The prompt carries only chat summaries with messages in the last 2 days and asks from the last 7.
 
 The card's "Drafts while away by" chips pick Sonnet or Opus (`model` in the config); the scan runs on that model only in
 away mode, otherwise on Sonnet. A post run that ends without confirming is followed by one read of the thread, so a reply

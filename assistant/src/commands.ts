@@ -1,5 +1,6 @@
 import type { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
+import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { ANSWERED, CHANGED, postReply } from './autopilot.js';
@@ -7,6 +8,12 @@ import { deleteMeta, getMeta, setMeta } from './db.js';
 import { PROFILE, webUrl } from './slackSave.js';
 import { applyChanges } from './sync.js';
 import { voiceLines } from './voice.js';
+import { run, slackConfig, type Usage } from './slack.js';
+import { DAY, MIN, slotStart, workSlotDue } from './time.js';
+import { loop } from './once.js';
+import { scanPaused } from './claude.js';
+import { ACCOUNT_OF } from './calendar.js';
+import { autopilotConfig, modeOf } from './autopilot.js';
 
 // A message I write to myself in Slack that starts with "bot" is a task for the hub: it runs once as a job on the mini
 // and the result is posted back in that thread.
@@ -61,4 +68,42 @@ export async function replyToCommand(db: Database, jobId: string, ok: boolean, o
     await notify('Slack command done, reply not posted', '', output.slice(0, 500), url).catch(() => {});
     console.error('command reply:', err);
   }
+}
+
+const SEARCH = 'mcp__claude_ai_Slack__slack_search_public_and_private';
+
+// A cheap Haiku pass between scans that only looks for new commands, so one waits minutes, not a quarter hour.
+export async function pollCommands(db: Database, me: string, now = Date.now(), onUsage?: (u: Usage) => void) {
+  const since = Math.max(Number(getMeta(db, 'cmd:last') ?? 0), now - DAY);
+  const unix = Math.floor(since / 1000);
+  let found: z.infer<typeof Command>[] | null = null;
+  const save = tool('save_commands', 'Save the commands you found. Call once.', { commands: z.array(Command) }, async (a) => {
+    found = a.commands;
+    return { content: [{ type: 'text' as const, text: 'saved' }] };
+  });
+  const prompt = [
+    `I am Slack user ${me}. Call slack_search_public_and_private once with keywords ["bot"], filters "is:dm", after="${unix}", sort "timestamp", include_context false. Do not send or change anything in Slack.`,
+    COMMAND_STEP,
+    'Then call save_commands once with them (an empty list when there are none) and stop.',
+  ].join('\n');
+  await run(prompt, 'haiku', [save], 4, () => found != null, [SEARCH], onUsage);
+  setMeta(db, 'cmd:last', String(now));
+  return queueCommands(db, found ?? [], now);
+}
+
+const POLL = 5 * MIN;
+
+// Every 5 minutes in the scan's hours, skipping the quarter hours the full Slack scan already covers.
+export function startCommands(db: () => Database) {
+  let tried = 0;
+  loop('commands', MIN, async () => {
+    const now = Date.now();
+    const c = slackConfig();
+    const away = modeOf(autopilotConfig(db()), now) === 'away';
+    if (!c || !workSlotDue(tried, POLL, now, away) || slotStart(now, POLL) === slotStart(now, 15 * MIN)) return;
+    tried = now;
+    if (await scanPaused(db(), ACCOUNT_OF[PROFILE], 'commands')) return;
+    const queued = await pollCommands(db(), c.me, now);
+    if (queued.length) console.log(`commands: ${queued.length} queued`);
+  });
 }

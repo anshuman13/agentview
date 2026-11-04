@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { APP_ORIGINS, allowedHostHeader, allowedPeer, peerName } from '../../server/src/http/access.js';
 import { openDb } from './db.js';
 import { trackSpend } from './claude.js';
+import { startCommands } from './commands.js';
 import { ACCOUNT_OF, startCalendar } from './calendar.js';
 import { startJobs } from './jobs.js';
 import { startReminders } from './remind.js';
@@ -103,6 +104,7 @@ async function start() {
     startTranscripts(getDb);
     startJobs(getDb);
     startSlack(getDb);
+    startCommands(getDb);
     startGmail(getDb);
     startStallWatch(getDb, { slack: slackScan.setUp, gmail: gmailScan.setUp, ...Object.fromEntries(Object.keys(ACCOUNT_OF).map((p) => [`calendar:${p}`, () => true])) });
   }
