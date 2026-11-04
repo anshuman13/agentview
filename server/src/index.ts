@@ -170,7 +170,7 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('vary', 'origin');
     if (req.method === 'OPTIONS') {
       res.writeHead(204, {
-        'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+        'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'access-control-allow-headers': 'content-type, last-event-id',
         'access-control-max-age': '600',
         ...(req.headers['access-control-request-private-network'] && { 'access-control-allow-private-network': 'true' }),
