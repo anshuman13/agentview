@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAssistant } from './data';
-import { atTime, errorText, hasDay, nextNine, parseWhen, stripWhen } from './data/engine';
+import { atTime, hasDay, nextNine, parseWhen, stripWhen } from './data/engine';
+import { captureTask } from './captureTask';
 import { isRepeat, parseRepeat } from './data/recur';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
-import { firstLine, readFlag, saveFlag } from '../ui/util';
-import { FILTER_LABEL, showSnack, useFocusBack, type Filter } from './view';
+import { firstLine, readFlag } from '../ui/util';
+import { FILTER_LABEL, useFocusBack, type Filter } from './view';
 import { useActions } from './useActions';
 import { clock, EVENING, MORNING, when } from './time';
 import { Swipe } from './Swipe';
@@ -93,17 +94,8 @@ export function AddTask({ day, today, filter, empty = false }: { day: number; to
     const w = rep ? null : parseWhen(typed);
     // A bare time like "3pm" in a later day's section means that day.
     const at = w?.at != null && day !== today && !hasDay(typed) ? new Date(day).setHours(new Date(w.at).getHours(), new Date(w.at).getMinutes(), 0, 0) : rep?.at ?? w?.at ?? (day === today ? null : new Date(day).setHours(9, 0, 0, 0));
-    try {
-      const row = await store.capture(rep ? `${rep.title}\n${rep.text}` : stripWhen(typed, w) || typed, 'task', profile, at);
-      setText('');
-      saveFlag('assistant-personal', profile === 'personal');
-      haptic('tap');
-      showSnack(at != null ? `Task · ${when(at)}` : 'Task · No time', () => void store.update(row, { deleted: 1 }));
-    } catch (err) {
-      showSnack(`Not saved: ${errorText(err)}`);
-    } finally {
-      busy.current = false;
-    }
+    if (await captureTask(store, rep ? `${rep.title}\n${rep.text}` : stripWhen(typed, w) || typed, profile, at)) setText('');
+    busy.current = false;
   };
   if (!on && day !== today) return <button ref={addButton} className="as-add-quiet" aria-label="Add task" title="Add task" onClick={() => setOn(true)}><Icon name="add" small /></button>;
   if (!on) return <button ref={addButton} className="as-add" onClick={() => setOn(true)}><Icon name="add" /> {empty ? 'Nothing today' : 'Add task'}</button>;

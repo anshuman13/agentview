@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useAssistantStore, useCodex } from './data';
 import type { Meeting } from './data/wiki';
 import { ask, askText } from './data/ask';
-import { SNOOZES, errorText, isQuestion, parseWhen, stripWhen } from './data/engine';
+import { SNOOZES, isQuestion, parseWhen, stripWhen } from './data/engine';
+import { captureTask } from './captureTask';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { touch } from '../app/touch';
 import { Voice, useDictation } from '../chat/Voice';
-import { readFlag, reveal, saveFlag } from '../ui/util';
-import { FILTER_LABEL, showSnack, type Filter } from './view';
+import { readFlag, reveal } from '../ui/util';
+import { FILTER_LABEL, type Filter } from './view';
 import { EVENING, PickTime, clock, muted, when } from './time';
 
 type Mode = 'task' | 'ask';
@@ -90,10 +91,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
   const reset = () => { setText(''); setMode(null); setNoWhen(false); setPick(null); setFresh(false); setProfile(null); setAsking(false); };
   const busy = useRef(false);
   const save = async (title: string, at: number | null) => {
-    const row = await store.capture(title, 'task', prof, at);
-    saveFlag('assistant-personal', prof === 'personal');
-    reset();
-    showSnack(at != null ? `Task · ${when(at)}` : 'Task · No time', () => void store.update(row, { deleted: 1 }));
+    if (await captureTask(store, title, prof, at)) reset();
   };
   // With no time in the text, the chips ask When? before the task is saved.
   const submit = async (at = due) => {
@@ -104,13 +102,8 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
     }
     if (at == null && !noWhen && !asking) return setAsking(true);
     busy.current = true;
-    try {
-      await save(stripWhen(text, w) || typed, at);
-    } catch (err) {
-      showSnack(`Not saved: ${errorText(err)}`);
-    } finally {
-      busy.current = false;
-    }
+    await save(stripWhen(text, w) || typed, at);
+    busy.current = false;
   };
   const cycle = () => setMode((x) => ((x ?? m) === 'task' ? 'ask' : 'task'));
   const MODE: Record<Mode, { icon: string; label: string }> = { task: { icon: 'pass', label: 'Task' }, ask: { icon: 'sparkle', label: 'Ask Claude' } };
