@@ -12,7 +12,8 @@ is an assistant, and every send is logged and reversible by me.
 
 - The work Slack scan reads DMs, mentions and the watched channels (including `ai-help`) every 15 minutes on
   weekdays and turns asks into suggested tasks, one per permalink ([assistant.md](assistant.md#slack-and-gmail-scans))
-- Each new ask gets a reply draft in my voice, with the thread and up to 3 wiki claims, 3 decisions (meetings of the
+- Each new ask gets a reply draft in my voice, as short as the ask allows (one line for a DM yes or no, the
+  answer or link first in a channel), with the thread and up to 3 wiki claims, 3 decisions (meetings of the
   last 30 days, Slack of the last 14 with their link) and 3 of my open tasks as context, plus an asker block (their role from Who does what, my last 3 replies to them, what I
   promised them) (`assistant/src/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; Support FAQ claims rank first on a tie, each
   claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there

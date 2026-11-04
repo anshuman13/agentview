@@ -22,7 +22,7 @@ const firstUrl = (sources: string | null) => {
   }
 };
 
-export const DRAFT_DESC = 'A reply I could send, in my voice: 2 to 4 sentences in the language of the ask';
+export const DRAFT_DESC = 'A reply I could send, in my voice and in the language of the ask, as short as the ask allows: a yes or no in a DM is one line, a channel answer gives the answer or the link first and then at most two sentences of context, never more than four sentences';
 export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask and the asker\'s name, and write draft from the thread and what ask_context returns. If I promised this person something, say where it stands; if I already answered this before, point to that answer instead of repeating it. Do not promise dates or facts you do not know. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread. In claims list the ids of the wiki claims the draft rests on, as ask_context gave them, and name them in why; a tier answer with no claim and nothing in the thread is a hold. For a hold the draft is one short line that says I will look at it or get back to them, not an answer. When the claim has a link, end the draft with "see <link>". When the answer is someone else\'s to give, name that person as Slack shows them (slack_read_user_profile for a bare <@U...> id) and tag them as <@id>; never guess an owner, and never write a raw id as a name.';
 
 // Current wiki claims, decisions of the last 30 days of meetings and 14 days of Slack, and my open tasks that share
