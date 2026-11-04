@@ -31,6 +31,7 @@ describe('sync', () => {
     const version = pullChanges(db, 0).version;
     expect(applyChanges(db, [ch({ updated_at: 500, fields: { title: 'Old' }, field_times: { title: 500 } })]).applied).toBe(0);
     expect(pullChanges(db, 0).version).toBe(version);
+    expect(pullChanges(db, version)).toEqual({ version, changes: [], hasMore: false });
   });
 
   it('a delete wins over later-applied edits that are not newer than it', () => {

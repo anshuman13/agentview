@@ -212,7 +212,10 @@ export function pullChanges(
   limit = 1000
 ): PullResult {
   // A device ahead of the hub, as after a restore from backup, would never see the rows written since, so it gets them all.
-  if (since > currentVersion(db)) since = 0;
+  const head = currentVersion(db);
+  if (since > head) since = 0;
+  // Most polls find nothing new, so they skip the table queries.
+  if (since === head) return { version: since, changes: [], hasMore: false };
   const allRows: Array<{ table: string; row: any }> = [];
 
   for (const table of Object.keys(TABLES)) {
