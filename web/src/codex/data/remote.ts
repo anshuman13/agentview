@@ -9,6 +9,7 @@ import type { Table, Tables } from './wiki';
 const SYNC_EVERY = 30000;
 const SAVE_DELAY = 500;
 const HUB_TIMEOUT = 30000;
+const SYNC_DELAY = 400;
 
 const call = (path: string, init?: RequestInit) => fetch(path, init);
 
@@ -32,11 +33,13 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   private writes = 0;
   private saveDue = false;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
+  private dirtyKeys = new Set<string>();
+  private syncTimer: ReturnType<typeof setTimeout> | undefined;
   private syncTouched = new Set<string>();
   private timer: ReturnType<typeof setInterval>;
   private onVisible = () => document.visibilityState === 'visible' && this.syncSoon();
-  private onHide = () => document.visibilityState === 'hidden' && this.flush();
-  private onPageHide = () => this.flush();
+  private onHide = () => document.visibilityState === 'hidden' && this.hide();
+  private onPageHide = () => this.hide();
 
   constructor() {
     super('ready');
@@ -53,6 +56,17 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     document.removeEventListener('visibilitychange', this.onVisible);
     document.removeEventListener('visibilitychange', this.onHide);
     window.removeEventListener('pagehide', this.onPageHide);
+    clearTimeout(this.syncTimer);
+    this.syncTimer = undefined;
+    this.flush();
+  }
+
+  private hide() {
+    if (this.syncTimer) {
+      clearTimeout(this.syncTimer);
+      this.syncTimer = undefined;
+      this.syncNow();
+    }
     this.flush();
   }
 
@@ -85,7 +99,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     if (!cached) return;
     for (const [table, rows] of Object.entries(cached.tables)) {
       const map = this.tables[table];
-      if (map) for (const row of rows) if (!map.has(rowKey(row))) map.set(rowKey(row), row);
+      if (map) for (const row of rows) if (!map.has(rowKey(row))) this.setRow(table, row);
     }
     this.since = cached.since;
     if (meta?.layout !== 2) {
@@ -104,6 +118,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.unsaved.set(table, set);
     this.saveDue = true;
     this.saveTimer ??= setTimeout(() => this.flush(), SAVE_DELAY);
+  }
+
+  private setRow(table: string, row: SyncRow) {
+    this.tables[table].set(rowKey(row), row);
+    this.dirtyKeys[row.dirty ? 'add' : 'delete'](`${table}:${rowKey(row)}`);
   }
 
   private flush() {
@@ -153,7 +172,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   private countPending() {
-    const pending = Object.values(this.tables).reduce((n, map) => n + [...map.values()].filter((r) => r.dirty).length, 0);
+    const pending = this.dirtyKeys.size;
     if (pending !== this.snapshot().sync.pending) this.setSync({ pending });
   }
 
@@ -184,7 +203,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         const map = this.tables[table];
         const now = map.get(rowKey(row));
         if (now && now.updated_at === row.updated_at && now.field_times === row.field_times) {
-          map.set(rowKey(row), { ...now, dirty: 0 });
+          this.setRow(table, { ...now, dirty: 0 });
           this.syncTouched.add(table);
           this.save(table, rowKey(row));
         }
@@ -204,7 +223,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   private applySynced(change: PulledChange) {
     const map = this.tables[change.table];
-    map.set(rowKey(change), toRow(mergeIncoming<SyncRow>(map.get(rowKey(change)) ?? null, change)));
+    this.setRow(change.table, toRow(mergeIncoming<SyncRow>(map.get(rowKey(change)) ?? null, change)));
     this.save(change.table, rowKey(change));
     this.syncTouched.add(change.table);
   }
@@ -228,10 +247,14 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   }
 
   private put(table: string, row: SyncRow) {
-    this.tables[table].set(rowKey(row), row);
+    this.setRow(table, row);
     this.save(table, rowKey(row));
     this.refresh([table]);
-    this.syncNow();
+    clearTimeout(this.syncTimer);
+    this.syncTimer = setTimeout(() => {
+      this.syncTimer = undefined;
+      this.syncNow();
+    }, SYNC_DELAY);
   }
 
   async capture(text: string, type: 'task' | 'note' | 'goal', profile: Profile, at: number | null = null, meeting: MeetingRef = null) {
@@ -248,7 +271,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     const now = Date.now();
     const key = rowKey({ profile, id: row.id });
     const current = this.rows.get(rowKey(row)) ?? row;
-    this.rows.set(key, moved(current, this.rows.get(key), profile, now, goal));
+    this.setRow('items', moved(current, this.rows.get(key), profile, now, goal));
     this.save('items', key);
     this.put('items', edited(current, { deleted: 1 }, now));
   }

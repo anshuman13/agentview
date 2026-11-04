@@ -84,6 +84,26 @@ type Internal = { since: number; save(table: string, ...keys: string[]): void; f
 
 const taskRow = (id: string) => ({ profile: 'work', id, version: 1, dirty: 0, updated_at: 1, field_times: '{}', title: id, status: 'open', deleted: 0 });
 
+describe('RemoteStore sync batching', () => {
+  it('syncs once for edits in a row and counts pending rows', async () => {
+    vi.useFakeTimers();
+    fakeIndexedDb([]);
+    fakeDom();
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (path: string) => (calls.push(path), { ok: true, json: async () => ({ changes: [], version: 1 }) }));
+    const store = await freshStore();
+    await vi.advanceTimersByTimeAsync(0);
+    calls.length = 0;
+    const rows = [await store.capture('a', 'task', 'work'), await store.capture('b', 'task', 'work')];
+    await store.update(rows[0], { title: 'x' });
+    expect(store.snapshot().sync.pending).toBe(2);
+    expect(calls).toEqual([]);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls.filter((c) => c.includes('/sync'))).toHaveLength(1);
+    store.dispose();
+  });
+});
+
 describe('RemoteStore save', () => {
   it('keeps the latest since when an earlier write is slower', async () => {
     const stored = fakeIndexedDb([30, 0]);
