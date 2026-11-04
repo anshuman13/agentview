@@ -151,8 +151,7 @@ startAttention(attentionSources, fixChat);
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://x');
-  const json = async (body: unknown, code = 200) => {
-    const text = JSON.stringify(body);
+  const jsonText = async (text: string, code = 200) => {
     if (text.length < 1024 || !/\bgzip\b/.test(String(req.headers['accept-encoding'] ?? ''))) {
       res.writeHead(code, { 'content-type': 'application/json' });
       return res.end(text);
@@ -161,6 +160,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(code, { 'content-type': 'application/json', 'content-encoding': 'gzip', vary: 'accept-encoding, origin' });
     res.end(out);
   };
+  const json = (body: unknown, code = 200) => jsonText(JSON.stringify(body), code);
   if (!allowedRequest(req.headers, requester(req))) return json({ error: 'Forbidden' }, 403);
   const app = appOrigin(req.headers, requester(req));
   if (app) {
@@ -179,7 +179,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (url.pathname.startsWith('/api/assistant/')) {
       const r = await assistantRoute(req.method ?? 'GET', url, () => readBody(req, 5_000_000));
-      return json(r.body, r.status);
+      return jsonText(r.text, r.status);
     }
     const liveCwds = [...chats.values()].map((c) => c.cwd);
     // Routes that need no chat still work while a chat switch leaves none open.
