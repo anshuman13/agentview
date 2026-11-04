@@ -1,13 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData } from './data';
 import { live, type Chat } from './data/wiki';
-import { atTime, errorText, nextNine } from './data/engine';
+import { atTime, errorText } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { atRisk, minutesText, type Span } from './data/plan';
 import { CAP, collapse, rankNeeds } from './data/needsYou';
 import { needsYou } from './summary/needsYou';
 import { ActionRow } from './meetings/ActionRow';
-import { UNROLL, unrollFor, useActions } from './useActions';
+import { useActions } from './useActions';
 import { ago, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
 import { Icon } from '../ui/Icon';
@@ -100,22 +100,8 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
   const act = useActions();
   const [showAll, setShowAll] = useState(false);
   if (!n.rows.length) return null;
-  const snooze = (r: ItemRow) => {
-    haptic('tap');
-    const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
-    void store.update(r, { at, ...unrollFor(at) }).then(() => showSnack(`Snoozed to ${when(at)}`));
-  };
-  const moveToday = (rows: ItemRow[]) => {
-    haptic('success');
-    const before = rows.map((r) => ({ r, at: r.at, rolls: r.rolls, rolled_from: r.rolled_from }));
-    for (const r of rows) {
-      const from = new Date(atTime(r.at) ?? now);
-      const t = new Date(now).setHours(from.getHours(), from.getMinutes(), 0, 0);
-      const at = t > now ? t : now;
-      void store.update(r, { at, ...UNROLL });
-    }
-    showSnack('Moved to today', () => before.forEach(({ r, ...prev }) => void store.update(r, prev)));
-  };
+  const snooze = (r: ItemRow) => { haptic('tap'); act.snoozeLater(r, now); };
+  const moveToday = (rows: ItemRow[]) => { haptic('success'); act.moveToToday(rows, now); };
   const taskRow = (r: ItemRow, label: string, note: string) => (
     <div key={r.profile + r.id} className="ov-follow-row">
       <button className="ov-follow-text" onClick={() => openTask(r)}>

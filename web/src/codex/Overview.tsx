@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { useAssistantStore, useAssistantData, useSyncGate } from './data';
+import { useAssistantData, useSyncGate } from './data';
 import { live, type Meeting } from './data/wiki';
 import { meetingTimeLeft } from './data/load';
-import { atTime, latestDigest, latestRunByJob, nextNine, staleTasks } from './data/engine';
+import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { plural } from '../ui/util';
 import { dayLabel } from './data/dates';
@@ -11,7 +11,7 @@ import { ClaimsToReview } from './overview/ClaimsToReview';
 import { ReplyQueue, replyQueue } from './overview/ReplyQueue';
 import { useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
-import { unrollFor, useActions } from './useActions';
+import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { GoalLines } from './Goals';
 import { standupText } from './data/review';
@@ -20,7 +20,7 @@ import { Capped, Fold } from './Fold';
 import { Icon } from '../ui/Icon';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
-import { copyText, openTask, setView, showSnack, useView } from './view';
+import { copyText, openTask, setView, useView } from './view';
 import { MeetingRow } from './meetings/MeetingList';
 import { clock, when } from './time';
 import { touch } from '../app/touch';
@@ -41,7 +41,6 @@ const firstLine = (text: string | null | undefined) => (text ?? '').split('\n').
 
 // The day at a glance: what needs me, the next meeting, today's meetings and tasks, with later items and job reports in folds.
 export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[]; onPrep: () => void }) {
-  const store = useAssistantStore();
   const act = useActions();
   const snap = useAssistantData();
   const { filter } = useView();
@@ -67,11 +66,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const follow = useFollowThrough();
   const touchRows = useKeepInTouch();
   const morning = new Date(now).getHours() < 11;
-  const snooze = (r: ItemRow) => {
-    haptic('tap');
-    const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
-    void store.update(r, { at, ...unrollFor(at) }).then(() => showSnack(`Snoozed to ${when(at)}`));
-  };
+  const snooze = (r: ItemRow) => { haptic('tap'); act.snoozeLater(r, now); };
   const risky = new Set(needs.rows.flatMap((n) => (n.kind === 'risk' ? [n.row.profile + n.row.id] : [])));
   const todo = dueToday.filter((r) => !risky.has(r.profile + r.id));
   // Meetings show here only when running or starting within two hours; the Meetings page has the rest.

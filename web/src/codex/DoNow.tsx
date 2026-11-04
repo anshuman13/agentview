@@ -1,12 +1,12 @@
 import { Fragment, useState } from 'react';
 import { useAssistantData, useAssistantStore } from './data';
-import { atTime, nextNine } from './data/engine';
+import { atTime } from './data/engine';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
 import { estimateMin, minutesText } from './data/plan';
 import { peopleOf } from './data/meetings';
 import { channelOf } from './taskSource';
-import { UNROLL, unrollFor, useActions } from './useActions';
+import { useActions } from './useActions';
 import type { useNeedsYou } from './NeedsYou';
 import { ago, plural, safeHref } from '../ui/util';
 import { Icon } from '../ui/Icon';
@@ -39,10 +39,7 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   const act = useActions();
   const [all, setAll] = useState(false);
   const done = (r: ItemRow) => () => { haptic('success'); act.done(r); };
-  const snooze = (r: ItemRow) => {
-    const at = nextNine(new Date(Math.max(atTime(r.at) ?? 0, now)), r.profile);
-    void store.update(r, { at, ...unrollFor(at) }).then(() => showSnack(`Snoozed to ${when(at)}`));
-  };
+  const snooze = (r: ItemRow) => act.snoozeLater(r, now);
   const task = (r: ItemRow, why: string, hot = false): Item => ({
     key: `t:${r.profile}:${r.id}`, icon: channelOf(r).icon ?? 'circle-large-outline', title: r.title ?? '(Untitled)', why, hot, priority: r.priority,
     open: () => openTask(r), act: { label: 'Done', run: done(r) }, done: () => snooze(r), doneLabel: 'Tomorrow', swipe: { done: done(r), later: () => snooze(r) },
@@ -59,7 +56,7 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
       case 'overdueAll': return {
         key: 'overdueAll', icon: 'warning', title: `Clear ${x.rows.length} overdue tasks`, why: x.rows.slice(0, 2).map((r) => r.title).join(', '), hot: true,
         open: () => setView({ list: 'tasks', open: null }),
-        act: { label: 'Move to today', run: () => { haptic('success'); for (const r of x.rows) void store.update(r, { at: Math.max(now, new Date(now).setHours(new Date(atTime(r.at) ?? now).getHours(), 0, 0, 0)), ...UNROLL }); showSnack('Moved to today'); } },
+        act: { label: 'Move to today', run: () => { haptic('success'); act.moveToToday(x.rows, now); } },
       };
       case 'risk': return task(x.row, `Due ${when(x.due, now)}, ${minutesText(x.short)} short between meetings`, true);
       case 'ask': return {

@@ -2,6 +2,7 @@ import { useAssistant } from './data';
 import { atTime, errorText, nextNine } from './data/engine';
 import { dayEnd } from './data/dates';
 import { nextRepeat } from './data/recur';
+import { snoozeLaterAt, todayAt } from './data/reschedule';
 import type { Patch } from './data/store';
 import type { ItemRow, Profile } from './data/sync';
 import { stopFocusFor } from './focus';
@@ -38,6 +39,14 @@ export function useActions() {
     },
     reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
     snooze: (r: ItemRow, at = nextNine(undefined, r.profile)) => change(r, { at, ...unrollFor(at) }, `Snoozed to ${when(at)}`),
+    // Tomorrow 09:00, or the next 09:00 after the due time when that is later.
+    snoozeLater: (r: ItemRow, now = Date.now()) => { const at = snoozeLaterAt(r.at, now, r.profile); change(r, { at, ...unrollFor(at) }, `Snoozed to ${when(at)}`); },
+    // Overdue tasks move to today at their own time of day with one undo for the lot.
+    moveToToday: (rows: ItemRow[], now = Date.now()) => {
+      const before = rows.map((r) => ({ r, at: r.at, rolls: r.rolls, rolled_from: r.rolled_from }));
+      for (const r of rows) void store.update(r, { at: todayAt(r.at, now), ...UNROLL });
+      showSnack('Moved to today', () => before.forEach(({ r, ...prev }) => void store.update(r, prev)));
+    },
     remove: (r: ItemRow) => {
       stopFocusFor(r);
       change(r, { deleted: 1 }, 'Deleted');

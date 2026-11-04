@@ -7,10 +7,22 @@ const SWIPE = 80;
 // A left swipe past this share of the row deletes instead of snoozing.
 const SWIPE_DELETE = 0.55;
 
+export type SwipeEnd = 'right' | 'left' | 'delete' | null;
+// What a finger lifted after dx px (of a row width px wide) fires. Delete needs a left swipe past the delete share
+// (or any left swipe when there is no left action); right needs its action, left needs its action.
+export function swipeEnd(dx: number, width: number, has: { right: boolean; left: boolean; delete: boolean }): SwipeEnd {
+  const deleting = has.delete && dx < 0 && (!has.left || -dx > width * SWIPE_DELETE);
+  if (dx > SWIPE) return has.right ? 'right' : null;
+  if (deleting && -dx > SWIPE) return 'delete';
+  if (dx < -SWIPE) return has.left ? 'left' : null;
+  return null;
+}
+
 export function Swipe({ onRight, onLeft, rightLabel = 'Done', leftLabel = 'Tomorrow', leftIcon = 'clock', onDelete, children }: { onRight?: () => void; onLeft?: () => void; rightLabel?: string; leftLabel?: string; leftIcon?: string; onDelete?: () => void; children: React.ReactNode }) {
   const [dx, setDx] = useState(0);
   const width = useRef(1);
-  const deleting = !!onDelete && dx < 0 && (!onLeft || -dx > width.current * SWIPE_DELETE);
+  const has = { right: !!onRight, left: !!onLeft, delete: !!onDelete };
+  const deleting = has.delete && dx < 0 && (!has.left || -dx > width.current * SWIPE_DELETE);
   const from = useRef<{ x: number; y: number } | null>(null);
   const moving = useRef(false);
   const swiped = useRef(false);
@@ -36,10 +48,8 @@ export function Swipe({ onRight, onLeft, rightLabel = 'Done', leftLabel = 'Tomor
         }}
         onPointerUp={() => {
           if (moving.current) { swiped.current = true; setTimeout(() => { swiped.current = false; }, 0); }
-          const fire = (f?: () => void) => { haptic('tap'); f?.(); };
-          if (moving.current && dx > SWIPE) fire(onRight);
-          else if (moving.current && deleting && -dx > SWIPE) fire(onDelete);
-          else if (moving.current && dx < -SWIPE) fire(onLeft);
+          const end = moving.current ? swipeEnd(dx, width.current, has) : null;
+          if (end) { haptic('tap'); ({ right: onRight, left: onLeft, delete: onDelete })[end]?.(); }
           reset();
         }}
         onPointerCancel={reset}
