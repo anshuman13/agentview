@@ -7,7 +7,7 @@ import { pushOrHold, pushQueued } from './hold.js';
 import { claimCite } from './draft.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
-import { DRAFT_STEP, contextTool } from './draft.js';
+import { DRAFT_STEP, contextTool, slotsTool } from './draft.js';
 import { correctionLines } from './corrections.js';
 import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
@@ -158,7 +158,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
     return { content: [{ type: 'text', text: 'saved' }] };
   });
   const prompt = scanPrompt(db, c, since, now, [...escalateLines(auto), ...awayLines(auto, now)]);
-  await run(prompt, scanModel(auto, now), [save, contextTool(db, now)], 40, () => saved != null, READ_TOOLS, (u) => noteCost(db, 'slack', { at: now, ...u }));
+  await run(prompt, scanModel(auto, now), [save, contextTool(db, now), slotsTool(db, now)], 40, () => saved != null, READ_TOOLS, (u) => noteCost(db, 'slack', { at: now, ...u }));
   if (!saved) throw new Error('The scan did not save');
   keepChannelIds(db, c, saved);
   const { chats, added, urgent, said, messages, newAsks } = saveScan(db, saved, now);

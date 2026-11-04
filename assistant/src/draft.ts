@@ -2,8 +2,10 @@ import type { Database } from 'bun:sqlite';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { keyWords } from '../../shared/claimMatch.js';
+import { workGaps, type Span } from '../../shared/plan.js';
+import { clock } from '../../shared/util.js';
 import { currentVersion, textList } from './db.js';
-import { DAY, ymd } from './time.js';
+import { DAY, addWorkdays, hm, localDate, ymd } from './time.js';
 
 const PROFILE = 'work' as const;
 const MAX = 3;
@@ -23,7 +25,7 @@ const firstUrl = (sources: string | null) => {
 };
 
 export const DRAFT_DESC = 'A reply I could send, in my voice and in the language of the ask, as short as the ask allows: a yes or no in a DM is one line, a channel answer gives the answer or the link first and then at most two sentences of context, never more than four sentences';
-export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask and the asker\'s name, and write draft from the thread and what ask_context returns. If I promised this person something, say where it stands; if I already answered this before, point to that answer instead of repeating it. Do not promise dates or facts you do not know. Numbers, dates and names come verbatim from a claim, a decision or the thread; with none, the tier is hold and the draft asks one precise question back instead of guessing. When a wiki line says "as of <date>", say so in the draft. When a message asks several things, answer the parts a claim or the thread covers, say which part you will check, and the tier is answer only when every part is covered. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread. In claims list the ids of the wiki claims the draft rests on, as ask_context gave them, and name them in why; a tier answer with no claim and nothing in the thread is a hold. For a hold the draft is one short line that says I will look at it or get back to them, not an answer. When the claim has a link, end the draft with "see <link>". When the answer is someone else\'s to give, name that person as Slack shows them (slack_read_user_profile for a bare <@U...> id) and tag them as <@id>; never guess an owner, and never write a raw id as a name.';
+export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask and the asker\'s name, and write draft from the thread and what ask_context returns. If I promised this person something, say where it stands; if I already answered this before, point to that answer instead of repeating it. Do not promise dates or facts you do not know. Numbers, dates and names come verbatim from a claim, a decision or the thread; with none, the tier is hold and the draft asks one precise question back instead of guessing. When a wiki line says "as of <date>", say so in the draft. When a message asks several things, answer the parts a claim or the thread covers, say which part you will check, and the tier is answer only when every part is covered. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread. In claims list the ids of the wiki claims the draft rests on, as ask_context gave them, and name them in why; a tier answer with no claim and nothing in the thread is a hold. For a hold the draft is one short line that says I will look at it or get back to them, not an answer. When the claim has a link, end the draft with "see <link>". When someone asks to meet, call or talk, call free_slots and offer one or two of its times with the day and hour, never a time it did not list. When the answer is someone else\'s to give, name that person as Slack shows them (slack_read_user_profile for a bare <@U...> id) and tag them as <@id>; never guess an owner, and never write a raw id as a name.';
 
 // Current wiki claims, decisions of the last 30 days of meetings and 14 days of Slack, and my open tasks that share
 // at least two key words with the ask (one when the ask has under four), best first; a Support FAQ claim wins a tie.
@@ -115,3 +117,38 @@ export function contextText({ claims, decisions, tasks, person }: ReturnType<typ
     ...(person?.promises.map((p) => `I promised them: ${p}`) ?? []),
   ].join('\n');
 }
+
+const HALF = 30 * 60_000;
+const WORK_START = 8;
+const WORK_END = 17;
+
+// Up to three free half hours over the next two working days, one per gap so they spread, as "Weekday YYYY-MM-DD HH:MM-HH:MM".
+export function slotLines(busy: Span[], now: number, max = 3) {
+  const d = new Date(now);
+  const weekday = d.getDay() >= 1 && d.getDay() <= 5;
+  const inHours = weekday && d.getHours() < WORK_END;
+  const first = inHours ? now : new Date(addWorkdays(now, 1)).setHours(WORK_START, 0, 0, 0);
+  const days = [first, new Date(addWorkdays(first, 1)).setHours(WORK_START, 0, 0, 0)];
+  const out: string[] = [];
+  for (const day of days) {
+    for (const [a, b] of workGaps(busy, day, WORK_START, WORK_END)) {
+      const start = Math.ceil(a / HALF) * HALF;
+      if (start + HALF > b) continue;
+      out.push(`${localDate(start)} ${clock(start)}-${clock(start + HALF)}`);
+      if (out.length >= max) return out;
+    }
+  }
+  return out;
+}
+
+export function freeSlots(db: Database, now = Date.now()) {
+  const busy = db.prepare('SELECT starts_at, ends_at FROM meetings WHERE profile = ? AND deleted = 0 AND ends_at > ? AND starts_at < ? AND ends_at - starts_at < ?').all(PROFILE, now, addWorkdays(now, 3), 20 * 3600_000) as { starts_at: number; ends_at: number }[];
+  return slotLines(busy.map((m) => [m.starts_at, m.ends_at] as Span), now);
+}
+
+export const slotsTool = (db: Database, now = Date.now()) =>
+  tool('free_slots', 'Free half hours in my calendar over the next two working days, for an ask to meet or talk.', {}, async () => {
+    const slots = freeSlots(db, now);
+    const text = [`Now it is ${localDate(now)} ${hm(now)} my time.`, ...(slots.length ? slots.map((s) => `Free: ${s}`) : ['No free half hour in the next two working days.'])].join('\n');
+    return { content: [{ type: 'text' as const, text }] };
+  });

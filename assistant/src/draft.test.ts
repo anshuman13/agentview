@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { openDb } from './db.js';
-import { askContext, contextText, liveClaims } from './draft.js';
+import { askContext, contextText, liveClaims, slotLines } from './draft.js';
 import { applyChanges } from './sync.js';
 
 const now = new Date(2026, 9, 28, 12).getTime();
@@ -73,4 +73,14 @@ test('askContext adds what I know about the asker', () => {
 test('contextText dates a claim older than 30 days', () => {
   const ctx = { claims: [{ id: 'f1', line: 'Billing: Invoices are in euros.', url: null, at: now - 40 * 86400000 }, { id: 'f2', line: 'Billing: Invoices export runs nightly.', url: 'https://example.com/x', at: now - 2 * 86400000 }], decisions: [], tasks: ['Fix the export'], person: undefined };
   expect(contextText(ctx, now)).toBe('Wiki [f1]: Billing: Invoices are in euros. (as of 2026-09-18)\nWiki [f2]: Billing: Invoices export runs nightly. (see https://example.com/x)\nMy task: Fix the export');
+});
+
+test('slotLines offers half hours around meetings over the next two working days', () => {
+  // Wednesday 28 Oct 2026, 12:00, with a meeting 12:00-13:00 and the afternoon 14:00-17:00 blocked.
+  const h = 3600000;
+  const slots = slotLines([[now, now + h], [now + 2 * h, now + 5 * h]], now);
+  expect(slots).toEqual(['Wednesday 2026-10-28 13:00-13:30', 'Thursday 2026-10-29 08:00-08:30']);
+  // Friday evening rolls to Monday.
+  const friday = new Date(2026, 9, 30, 18).getTime();
+  expect(slotLines([], friday)[0]).toBe('Monday 2026-11-02 08:00-08:30');
 });

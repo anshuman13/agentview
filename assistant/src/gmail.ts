@@ -7,7 +7,7 @@ import { scanPaused } from './claude.js';
 import { pushOrHold, pushQueued } from './hold.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
-import { DRAFT_DESC, DRAFT_STEP, contextTool } from './draft.js';
+import { DRAFT_DESC, DRAFT_STEP, contextTool, slotsTool } from './draft.js';
 import { HUB_URL, pushHours, run } from './slack.js';
 import { PROFILE, expireSuggested, saidId, seenItems, webUrl } from './slackSave.js';
 import { runScan, startScan } from './scan.js';
@@ -166,7 +166,7 @@ async function scanGmail(db: Database, c: GmailConfig, now = Date.now()) {
     ...(waiting.length ? ['My waiting list:', ...waiting.map((w) => `- ${w.thread} ${w.to}: ${w.subject}`), ''] : []),
     'Then call save_mail exactly once and stop. Do not use the em dash character.',
   ].join('\n');
-  await run(prompt, 'haiku', [save, contextTool(db, now)], 30, () => saved != null, READ_TOOLS);
+  await run(prompt, 'haiku', [save, contextTool(db, now), slotsTool(db, now)], 30, () => saved != null, READ_TOOLS);
   if (!saved) throw new Error('Haiku did not save the mail scan');
   const r = saveMail(db, saved, now);
   const left = saveWaiting(db, (saved as MailScan).waiting ?? [], (saved as MailScan).replied ?? [], now);
