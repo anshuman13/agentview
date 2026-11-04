@@ -5,6 +5,7 @@ import { isSaid, type ItemRow } from '../data/sync';
 import { tagList } from '../AddSheet';
 import { Draft } from '../TaskEditor';
 import { SectionHead } from '../Fold';
+import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
 import { haptic } from '../../ui/haptic';
 import { ago } from '../../ui/util';
@@ -15,10 +16,39 @@ const mine = (r: ItemRow) => tagList(r.tags).includes('needs-you');
 // The scan tags an answer that rests on a live wiki claim with high confidence as faq: safe to send without reading.
 export const isFaq = (r: ItemRow) => tagList(r.tags).includes('faq');
 
+const drafted = (r: ItemRow) => !!r.draft?.trim();
+
 // Slack asks with a reply draft, the ones that need me first, then FAQ answers, then oldest first, so a day's asks clear from one screen.
+// Needs-you asks the drafter left without a draft come last: I decide those in the thread.
 export const replyQueue = (review: ItemRow[]) => review
-  .filter((r) => r.source === 'slack' && r.status === 'suggested' && !!r.draft?.trim() && !isSaid(r))
-  .sort((a, b) => Number(mine(b)) - Number(mine(a)) || Number(isFaq(b)) - Number(isFaq(a)) || reviewedSince(a) - reviewedSince(b));
+  .filter((r) => r.source === 'slack' && r.status === 'suggested' && !r.deleted && (drafted(r) || mine(r)) && !isSaid(r))
+  .sort((a, b) => Number(drafted(b)) - Number(drafted(a)) || Number(mine(b)) - Number(mine(a)) || Number(isFaq(b)) - Number(isFaq(a)) || reviewedSince(a) - reviewedSince(b));
+
+function Undrafted({ row }: { row: ItemRow }) {
+  const store = useAssistantStore();
+  const [busy, setBusy] = useState(false);
+  const skip = async () => {
+    setBusy(true);
+    try {
+      await store.skipAsk(row.id);
+      haptic('tap');
+      showSnack('Skipped, no reply sent');
+    } catch (err) {
+      showSnack((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="as-draft">
+      <div className="as-draft-head"><Icon name="person" small /> Needs you: no draft, open the thread</div>
+      <div className="as-draft-bar">
+        {row.source_url && <Button size="sm" icon="link" onClick={() => window.open(row.source_url!, '_blank', 'noreferrer')}>Open</Button>}
+        <Button variant="quiet" size="sm" icon="close" disabled={busy} onClick={() => void skip()}>Skip</Button>
+      </div>
+    </div>
+  );
+}
 
 export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
   const store = useAssistantStore();
@@ -52,7 +82,7 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
               <span className="ov-t">{r.title}{isFaq(r) && <span className="ov-faq">FAQ answer</span>}</span>
               <span className="muted small">{r.people || 'Slack'} · {ago(reviewedSince(r))}</span>
             </button>
-            <Draft row={r} store={store} onEdit={(draft) => act.edit(r, { draft })} />
+            {drafted(r) ? <Draft row={r} store={store} onEdit={(draft) => act.edit(r, { draft })} /> : <Undrafted row={r} />}
           </div>
         ))}
       </div>

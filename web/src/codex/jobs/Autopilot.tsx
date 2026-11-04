@@ -1,21 +1,25 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { useAssistantStore } from '../data';
-import type { AutopilotConfig, AutopilotState } from '../data/store';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useAssistantStore, useAssistantTable } from '../data';
+import type { AutopilotConfig, AutopilotReply, AutopilotState } from '../data/store';
 import { clock } from '../time';
 import { dayLabel } from '../data/dates';
+import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Switch } from './Switch';
+import { replyQueue } from '../overview/ReplyQueue';
+import { openTask, setView } from '../view';
 
-const SEEN: Record<string, string> = { sent: 'Replied', dry: 'Would reply', error: 'Failed', answer: 'Could answer', hold: 'Needs you', escalate: 'Escalate' };
+const SEEN: Record<string, string> = { held: 'Waiting for you', sent: 'Sent', dry: 'Would have sent', error: 'Failed', skipped: 'Skipped' };
 const when = (t: number) => (t >= new Date().setHours(0, 0, 0, 0) ? clock(t) : dayLabel(t, true));
 const day = (d: string) => dayLabel(new Date(`${d}T00:00`).getTime(), true);
 const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
-function modeLine(s: AutopilotState) {
+function modeLine(s: AutopilotState, waiting: number) {
   const a = s.config.away;
   if (!s.config.enabled) return 'Off';
-  const line = s.mode === 'away' ? `Away until ${day(a.to)}: answers simple questions itself` : a.from && a.to ? `Drafts only until ${day(a.from)}, then away mode` : 'Drafts only: you send every reply';
-  return s.config.dry_run ? `${line} · Dry run` : line;
+  const line = s.mode === 'away' ? `Away until ${day(a.to)}` : a.from && a.to ? `Drafts only until ${day(a.from)}` : 'Drafts only';
+  const failed = s.replies.filter((r) => r.status === 'error').length;
+  return [line, waiting ? `${waiting} waiting for you` : '', failed ? `${failed} failed` : '', s.config.dry_run ? 'Dry run' : ''].filter(Boolean).join(' · ');
 }
 
 function scanLine(s: AutopilotState) {
@@ -43,6 +47,8 @@ export function Autopilot() {
   const [open, setOpen] = useState(false);
   const [fold, setFold] = useState<'away' | 'covers' | 'never' | null>(null);
   const [all, setAll] = useState(false);
+  const items = useAssistantTable('items');
+  const waiting = useMemo(() => replyQueue(items).length, [items]);
   const [form, setForm] = useState({ from: '', to: '', backup: '', note: '', escalate: '', manager: '' });
   const load = (p: Promise<AutopilotState>) => p.then((s) => { setState(s); setForm({ ...s.config.away, escalate: s.config.escalate.join(', '), manager: s.config.manager ?? '' }); setError(''); }).catch((err) => setError((err as Error).message));
   useEffect(() => void load(store.autopilot()), [store]);
@@ -61,33 +67,40 @@ export function Autopilot() {
   };
   const toggle = (f: typeof fold) => setFold(fold === f ? null : f);
   const dates = !!(c?.away.from && c.away.to);
-  const awayText = dates ? `Away ${day(c!.away.from)} to ${day(c!.away.to)}${c!.away.backup ? `, ${c!.away.backup} covers` : ''}` : 'Away dates: not set';
-  const replies = state ? (all ? state.replies : state.replies.slice(0, 3)) : [];
+  const awayText = dates ? `Away ${day(c!.away.from)} to ${day(c!.away.to)}${c!.away.backup ? `, ${c!.away.backup} covers` : ''}` : 'Set dates to turn on away mode';
+  const openAsk = (r: AutopilotReply) => {
+    const row = items.find((i) => i.id === r.id) ?? items.find((i) => !!r.url && i.source_url === r.url);
+    if (row) openTask(row);
+    else if (r.url) window.open(r.url, '_blank', 'noreferrer');
+  };
+  const replies = state ? (all ? state.replies : state.replies.slice(0, 5)) : [];
   return (
     <section className="mt-rows jb-auto" aria-label="Autopilot">
       <div className="mt-row jb-row" role="button" tabIndex={0} aria-expanded={open} onClick={() => setOpen(!open)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(!open); } }}>
         <span className="mt-body">
           <span className="mt-title">Reply for me in Slack</span>
-          <span className="wk-meta"><span>{error || (state ? modeLine(state) : 'Loading')}</span></span>
+          <span className="wk-meta"><span>{error || (state ? modeLine(state, waiting) : 'Loading')}</span></span>
         </span>
         {c && <Switch on={c.enabled} label="Reply for me in Slack" onChange={(on) => void save({ enabled: on })} />}
       </div>
       {open && state && c && (
         <div className="jb-auto-form">
           <div className="jb-auto-how">
-            <p>{dates
-              ? `From ${day(c.away.from)} to ${day(c.away.to)} it answers simple questions itself, only when the thread or your wiki already holds the answer, and sends each person one holding note. Outside those dates nothing goes out on its own.`
-              : 'Nothing goes out on its own. Each ask gets a draft pushed to your phone and you tap Send reply.'}</p>
-            {state.texts ? (
+            <div className="muted small">How it works</div>
+            {dates ? (
               <>
-                <p className="muted small">Holding note it will send</p>
-                <blockquote className="jb-auto-quote">{state.texts.hold}</blockquote>
-                <p className="muted small">Answers it writes itself start with {state.texts.marker}</p>
+                <p>{`From ${day(c.away.from)} to ${day(c.away.to)} it answers simple questions itself when the thread or your wiki has the answer, and sends one holding note${c.away.backup ? `, naming ${c.away.backup}` : ''}.`}</p>
+                <p>Urgent asks and people on the never-answer list always come to you.</p>
               </>
-            ) : <p className="muted small">Set away dates below to see the holding note it would send.</p>}
-            <p>Urgent asks, incidents and people on the never-answer list are never answered for you. They are pushed to your phone between {hh(state.push?.from ?? 8)} and {hh(state.push?.to ?? 17)} {state.mode === 'away' ? ' every day' : ' on weekdays'}, after any meeting you are in.</p>
+            ) : (
+              <>
+                <p>Each ask gets a draft. Send, Edit or Skip it from the Reply queue or the push.</p>
+                <p>Nothing goes out on its own.</p>
+              </>
+            )}
+            <Button size="sm" onClick={() => setView({ list: 'today', open: null, person: null })}>Open the Reply queue</Button>
           </div>
-          <label className="jb-auto-line"><span>Dry run: log replies, send nothing</span><Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} /></label>
+          <label className="jb-auto-line"><span>Dry run: logs what it would send, sends nothing. Your own Send always posts.</span><Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} /></label>
           <div className="jb-auto-line"><span>Drafts while away by</span><div className="jb-chips" role="group" aria-label="Draft model">
             {(['sonnet', 'opus'] as const).map((m) => <button key={m} className={`jb-chip${(c.model ?? 'sonnet') === m ? ' on' : ''}`} aria-pressed={(c.model ?? 'sonnet') === m} onClick={() => void save({ model: m })}>{m === 'opus' ? 'Opus' : 'Sonnet'}</button>)}
           </div></div>
@@ -116,12 +129,12 @@ export function Autopilot() {
             <div className="jb-auto-log">
               <div className="muted small">Seen</div>
               {replies.map((r) => (
-                <div key={r.id} className="jb-run">
-                  <div className="wk-meta"><span>{SEEN[r.status] ?? SEEN[r.tier ?? ''] ?? 'Seen'}</span><span>{r.who}{r.chat ? ` · ${r.chat}` : ''}</span><span>{when(r.at)}</span>{r.url && <a href={r.url} target="_blank" rel="noreferrer">Open</a>}</div>
+                <button key={r.id} className="jb-run jb-seen" onClick={() => openAsk(r)}>
+                  <div className="wk-meta"><span>{SEEN[r.status] ?? r.status}</span><span>{r.who}{r.chat ? ` · ${r.chat}` : ''}</span><span>{when(r.at)}</span></div>
                   {r.text && <div className="jb-output">{r.text}</div>}
-                </div>
+                </button>
               ))}
-              {!all && state.replies.length > 3 && <button className="btn sm" onClick={() => setAll(true)}>Show all {state.replies.length}</button>}
+              {!all && state.replies.length > 5 && <button className="btn sm" onClick={() => setAll(true)}>Show all {state.replies.length}</button>}
             </div>
           )}
         </div>
