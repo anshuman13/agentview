@@ -196,10 +196,11 @@ describe('afterScan', () => {
 describe('replyNow', () => {
   test('posts the stored draft as my own reply and closes the ask; nothing without a draft', async () => {
     const now = at(10, 10);
-    const db = withAsks([ask('u1'), ask('u2', { draft: undefined })], now);
+    const db = withAsks([ask('u1', { tier: 'hold', draft: 'Will look at it.' }), ask('u2', { draft: undefined })], now);
     posts.length = 0;
     expect(await replyNow(db, { enabled: true, dry_run: false }, askId(url('u1')), now, post)).toEqual({ status: 'sent', url: url('u1') + '/reply' });
-    expect(posts).toEqual([url('u1') + ': Use the guide.']);
+    expect(posts).toEqual([url('u1') + ': Will look at it.']);
+    expect(db.prepare('SELECT tier FROM replies WHERE id = ?').get(askId(url('u1')))).toEqual({ tier: 'hold' });
     expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'done' });
     expect(await replyNow(db, { enabled: true, dry_run: false }, askId(url('u1')), now, post)).toEqual({ status: 'sent', url: null });
     expect(await replyNow(db, { enabled: true, dry_run: false }, askId(url('u2')), now, post)).toBeNull();

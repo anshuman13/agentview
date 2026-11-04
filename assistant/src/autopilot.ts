@@ -6,7 +6,7 @@ import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { run, slackConfig } from './slack.js';
 import { scanCosts, scanHealth } from './scan.js';
-import { PROFILE, threadKey, webUrl } from './slackSave.js';
+import { NEEDS_ME, PROFILE, threadKey, webUrl } from './slackSave.js';
 import { liveClaims } from './draft.js';
 import { applyChanges } from './sync.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
@@ -373,12 +373,15 @@ export async function dayDigest(db: Database, c: AutopilotConfig, now = Date.now
 // Send, so it posts even in a dry run. text is the draft as edited on the phone, which may not have synced yet.
 // edited says I changed the draft before sending, for the sent-unchanged measure.
 export async function replyNow(db: Database, c: AutopilotConfig, id: string, now = Date.now(), post = postReply, edited = false, text?: string) {
-  const row = db.prepare("SELECT id, source_url, people, draft, updated_at FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND source = 'slack' AND status IN ('suggested', 'open')").get(PROFILE, id) as { id: string; source_url: string | null; people: string | null; draft: string | null; updated_at: number } | null;
-  if (reply(db, id)?.status === 'sent') return { status: 'sent' as const, url: null };
+  const row = db.prepare("SELECT id, source_url, people, draft, tags, updated_at FROM items WHERE profile = ? AND id = ? AND deleted = 0 AND source = 'slack' AND status IN ('suggested', 'open')").get(PROFILE, id) as { id: string; source_url: string | null; people: string | null; draft: string | null; tags: string | null; updated_at: number } | null;
+  const held = reply(db, id);
+  if (held?.status === 'sent') return { status: 'sent' as const, url: null };
   const draft = (text ?? row?.draft ?? '').trim();
   if (!row || !draft || !row.source_url) return null;
   const [from = '', chat = 'DM'] = (row.people ?? '').split(' · ');
-  const r = await sendReply(db, { ...c, dry_run: false }, { id, url: row.source_url, from, chat }, 'answer', draft, now, post);
+  // The scan's tier stays on the row, so the sent-unchanged measure can tell answers from holding notes.
+  const tier = TIERS.find((t) => t === held?.tier) ?? ((row.tags ?? '').split(' ').includes(NEEDS_ME) ? 'hold' : 'answer');
+  const r = await sendReply(db, { ...c, dry_run: false }, { id, url: row.source_url, from, chat }, tier, draft, now, post);
   if (edited) db.prepare('UPDATE replies SET edited = 1 WHERE profile = ? AND id = ?').run(PROFILE, id);
   if (r.status === 'sent' || r.status === 'answered') applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Math.max(now, row.updated_at + 1), fields: { status: 'done', ...(text !== undefined ? { draft } : {}) } }]);
   return r;

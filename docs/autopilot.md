@@ -16,7 +16,7 @@ is an assistant, and every send is logged and reversible by me.
   last 30 days, Slack of the last 14 with their link) and 3 of my open tasks as context (`assistant/src/draft.ts`,
   `ask_context`); a short ask matches on one key word, longer ones on two; Support FAQ claims rank first on a tie, each
   claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there
-  is one
+  is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner
 - Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs.ts`)
 - Pushes through ntfy can carry actions (Done, Snooze on a task)
 - The wiki holds approved claims; the wiki update pass proposes claims from Slack decisions
