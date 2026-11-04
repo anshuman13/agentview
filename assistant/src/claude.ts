@@ -48,29 +48,71 @@ export function spendSummary(db: Database, now = Date.now()) {
   return { today: sum(1), week: sum(7) };
 }
 
+// The MCP servers a run on the account loads, read once from the init message of a run stopped before any model call.
+const loaded = new Map<Account, Promise<string[]>>();
+function serversOf(account: Account, env: Record<string, string | undefined>) {
+  let p = loaded.get(account);
+  if (!p) {
+    p = (async () => {
+      const abortController = new AbortController();
+      try {
+        for await (const m of query({ prompt: 'init', options: { persistSession: false, settingSources: [], maxTurns: 1, abortController, env } })) {
+          if (m.type === 'system' && m.subtype === 'init') {
+            abortController.abort();
+            return [...new Set(m.tools.filter((t) => t.startsWith('mcp__')).map((t) => t.split('__')[1]))];
+          }
+        }
+      } catch {}
+      return [];
+    })();
+    p.then((s) => s.length || loaded.delete(account));
+    loaded.set(account, p);
+  }
+  return p;
+}
+
+// A run that names its tools loads only the MCP servers those tools come from; each connector costs its tool
+// definitions on every turn (Sentry alone is 73 tools). A run with canUseTool decides per call, so it keeps them all.
+async function unusedServers(account: Account, options: Options, env: Record<string, string | undefined>) {
+  if (!options.allowedTools || options.canUseTool) return [];
+  const used = new Set([...options.allowedTools.map((t) => t.split('__')[1]), ...Object.keys(options.mcpServers ?? {})]);
+  return (await serversOf(account, env)).filter((s) => !used.has(s)).map((s) => `mcp__${s}`);
+}
+
 export async function* ask(account: Account, prompt: string, options: Options, timeoutMs = ASK_TIMEOUT_MS) {
   await verifyLimit(account);
   guardLimit(account);
   const dir = configDir(account);
   // Scans need the claude.ai connectors from the first turn, so the run waits for them to connect.
   const env = { ...process.env, MCP_CONNECTION_NONBLOCKING: '0', ...options.env, ...(dir && { CLAUDE_CONFIG_DIR: dir }) };
+  const unused = await unusedServers(account, options, env);
   const abortController = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
     abortController.abort();
   }, timeoutMs);
+  const q = query({ prompt, options: { persistSession: false, settingSources: [], ...options, disallowedTools: [...(options.disallowedTools ?? []), ...unused], abortController, env } });
+  let ended = false;
+  const note = (m: { type: string }) => {
+    if (m.type !== 'result') return;
+    ended = true;
+    const usage = (m as { modelUsage?: Record<string, ModelUse> }).modelUsage;
+    if (!ledger || !usage) return;
+    try {
+      recordSpend(ledger, usage);
+    } catch (err) {
+      console.log(`spend: not recorded, ${String(err)}`);
+    }
+  };
   try {
-    for await (const m of query({ prompt, options: { persistSession: false, settingSources: [], ...options, abortController, env } })) {
-      stopOnOverage(account, m);
-      if (m.type === 'result' && ledger && m.modelUsage) {
-        try {
-          recordSpend(ledger, m.modelUsage);
-        } catch (err) {
-          console.log(`spend: not recorded, ${String(err)}`);
-        }
-      }
-      yield m;
+    // Read by hand, not with for await, so a caller that stops early does not close the run before its cost is known.
+    for (;;) {
+      const r = await q.next();
+      if (r.done) break;
+      stopOnOverage(account, r.value);
+      note(r.value);
+      yield r.value;
     }
     if (timedOut) throw new Error(`Claude run timed out after ${Math.round(timeoutMs / 60_000)} min`);
   } catch (err) {
@@ -78,7 +120,23 @@ export async function* ask(account: Account, prompt: string, options: Options, t
     throw err;
   } finally {
     clearTimeout(timer);
+    // A run stopped once its work was saved gets interrupted, and the result it then sends carries the cost.
+    if (!ended && !timedOut) await settle(q, note);
+    await q.return(undefined).catch(() => {});
   }
+}
+
+async function settle(q: ReturnType<typeof query>, note: (m: { type: string }) => void) {
+  const drain = async () => {
+    await q.interrupt();
+    for (;;) {
+      const r = await q.next();
+      if (r.done) return;
+      note(r.value);
+      if (r.value.type === 'result') return;
+    }
+  };
+  await Promise.race([drain().catch(() => {}), new Promise((r) => setTimeout(r, 10_000))]);
 }
 
 export type Paused = { scan: string; reason: string; until: number };

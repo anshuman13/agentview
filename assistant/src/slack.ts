@@ -62,6 +62,7 @@ export async function run(prompt: string, model: 'haiku' | 'sonnet' | 'opus', to
     model,
     maxTurns,
     cwd: os.tmpdir(),
+    tools: [],
     env: { ENABLE_TOOL_SEARCH: 'false' },
     ...(model === 'haiku' ? { thinking: { type: 'disabled' as const } } : { effort: 'medium' as const }),
     mcpServers: { codex: createSdkMcpServer({ name: 'codex', tools }) },
