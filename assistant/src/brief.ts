@@ -21,6 +21,7 @@ export type Brief = { title: string; text: string; empty: boolean };
 export const briefId = (now: number) => `morning:${ymd(now)}`;
 const dated = (t: { at: number | null }) => t.at != null && (t.at as unknown) !== '';
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const age = (ms: number) => (ms < DAY ? 'today' : plural(Math.floor(ms / DAY), 'day'));
 const top = <T extends Row>(rows: T[], tag: (r: T) => string = () => '') => [...rows.slice(0, TOP).map((r) => `- ${r.title ?? 'Untitled'}${tag(r)}`), ...(rows.length > TOP ? [`- +${rows.length - TOP} more`] : [])];
 
 // Open tasks due this week that will not fit in the free work time before they are due; tasks with a focus block ahead are covered.
@@ -43,9 +44,13 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const late = tasks.filter((t) => dated(t) && Number(t.at) < now).length;
   const due = tasks.filter(dated).length;
   const rolled = tasks.filter((t) => (t.rolls ?? 0) > 0).length;
-  const slack = db.prepare("SELECT id, title FROM items WHERE deleted = 0 AND profile = ? AND source = 'slack' AND status = 'suggested' ORDER BY updated_at DESC").all(profile) as (Row & { id: string })[];
-  const said = slack.filter((r) => r.id.startsWith('said:'));
-  const asks = slack.filter((r) => !said.includes(r));
+  const slack = db.prepare("SELECT i.id, i.title, i.people, COALESCE(r.at, i.updated_at) AS since FROM items i LEFT JOIN replies r ON r.profile = i.profile AND r.id = i.id WHERE i.deleted = 0 AND i.profile = ? AND i.source = 'slack' AND i.status = 'suggested' ORDER BY since").all(profile) as (Row & { id: string; people: string | null; since: number })[];
+  const said = slack.filter((r) => r.id.startsWith('said:')).reverse();
+  const asks = slack.filter((r) => !r.id.startsWith('said:'));
+  const older = asks.filter((a) => a.since < start);
+  const today = asks.filter((a) => a.since >= start);
+  const who = (a: (typeof asks)[number]) => (a.people ?? '').split(' · ')[0] || '?';
+  const askTag = (a: (typeof asks)[number]) => ` (${who(a)}, ${age(now - a.since)})`;
   const left = db.prepare("SELECT i.title, i.status, m.title AS meeting FROM items i JOIN meetings m ON m.profile = i.profile AND m.id = i.meeting_id WHERE i.deleted = 0 AND i.profile = ? AND i.status IN ('open', 'suggested') AND m.deleted = 0 AND m.starts_at >= ? AND m.starts_at < ? ORDER BY m.starts_at").all(profile, addWorkdays(start, -1), start) as (Row & { status: string; meeting: string | null })[];
 
   const lines: string[] = [];
@@ -58,7 +63,8 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   if (tasks.length) lines.push('', `Tasks · ${due} due today${tasks.length > due ? `, ${tasks.length - due} undated` : ''}${late ? `, ${late} overdue` : ''}${rolled ? `, ${rolled} rolled` : ''}`, ...top(tasks, (t) => `${dated(t) && Number(t.at) < now ? ' (overdue)' : ''}${t.rolls ? ` (rolled ${t.rolls}x)` : ''}`));
   const risk = riskCount(db, profile, now);
   if (risk) lines.push('', `At risk: ${plural(risk, 'task')}`);
-  if (asks.length) lines.push('', `Slack asks to review · ${asks.length}`, ...top(asks));
+  if (older.length) lines.push('', `Waiting from yesterday or older · ${older.length}`, ...top(older, askTag));
+  if (today.length) lines.push('', `Slack asks to review · ${today.length}`, ...top(today, askTag));
   if (said.length) lines.push('', `You said · ${said.length}`, ...top(said));
   if (left.length) lines.push('', `Still open from last workday · ${left.length}`, ...top(left, (a) => `${a.meeting ? ` (${a.meeting})` : ''}${a.status === 'suggested' ? ' (yours?)' : ''}`));
   return {

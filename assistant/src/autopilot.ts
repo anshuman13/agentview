@@ -273,7 +273,11 @@ export async function afterScan(db: Database, c: AutopilotConfig, watched: strin
   const mode = modeOf(c, now);
   if (mode === 'off') return out;
   recordAsks(db, asks, mode, now);
-  if (mode !== 'away' || !c.away) return out;
+  // In assist mode the only failed posts are Sends I pressed, so they retry for real even in a dry run.
+  if (mode !== 'away' || !c.away) {
+    if (mode === 'assist') out.answered.push(...(await retryFailed(db, { ...c, dry_run: false }, now, post, push)).answered);
+    return out;
+  }
   const again = await retryFailed(db, c, now, post, push);
   out.answered.push(...again.answered);
   out.held.push(...again.held);
@@ -334,6 +338,34 @@ export async function awayDigest(db: Database, c: AutopilotConfig, now = Date.no
   const text = [`Away day ${ymd(now)}${c.dry_run !== false ? ' (dry run)' : ''}`, ...groups.flatMap(([title, list]) => (list.length ? ['', `${title} (${list.length}):`, ...list.map(line)] : []))].join('\n');
   applyChanges(db, [{ table: 'briefs', id, profile: PROFILE, updated_at: now, fields: { kind: 'away', text, from_at: from, to_at: now } }]);
   await push('Away digest', '', groups.map(([title, list]) => `${list.length} ${title.toLowerCase()}`).join(', '), '');
+  return text;
+}
+
+// Once per weekday in assist mode, at the first scan from 17:00: a brief (kind day) with what I sent, skipped and left waiting
+// from the asks of that day, and one push with the counts. Nothing when the day had no asks.
+export async function dayDigest(db: Database, c: AutopilotConfig, now = Date.now(), push = pushNtfy) {
+  const d = new Date(now);
+  if (modeOf(c, now) !== 'assist' || d.getHours() < DIGEST_HOUR || d.getDay() === 0 || d.getDay() === 6) return null;
+  const id = `day:${ymd(now)}`;
+  if (db.prepare('SELECT 1 FROM briefs WHERE profile = ? AND id = ?').get(PROFILE, id)) return null;
+  const from = d.setHours(0, 0, 0, 0);
+  const rows = db.prepare("SELECT r.id, r.who, r.chat, r.status, r.url, r.why, COALESCE(r.edited, 0) AS edited, i.title, i.source_url, i.status AS item, i.draft, COALESCE(i.deleted, 0) AS gone FROM replies r LEFT JOIN items i ON i.profile = r.profile AND i.id = r.id WHERE r.profile = ? AND COALESCE(r.sent_at, r.at) >= ? ORDER BY COALESCE(r.sent_at, r.at)").all(PROFILE, from) as { id: string; who: string | null; chat: string | null; status: string; url: string | null; why: string | null; edited: number; title: string | null; source_url: string | null; item: string | null; draft: string | null; gone: number }[];
+  if (!rows.length) return null;
+  const line = (r: (typeof rows)[number]) => `- ${r.who ?? '?'}${r.chat ? ` in ${r.chat}` : ''}: ${r.title ?? r.id}${r.status === 'error' && r.why ? ` (${r.why})` : ''} ${r.url ?? r.source_url ?? ''}`.trimEnd();
+  const open = (r: (typeof rows)[number]) => !r.gone && (r.item === 'suggested' || r.item === 'open');
+  const sent = rows.filter((r) => r.status === 'sent' || r.status === 'dry');
+  const groups: [string, typeof rows][] = [
+    ['Sent', sent],
+    ['Failed', rows.filter((r) => r.status === 'error')],
+    ['Skipped', rows.filter((r) => r.status === 'skipped' || (r.status === 'held' && !open(r)))],
+    ['Waiting for you', rows.filter((r) => r.status === 'held' && open(r))],
+  ];
+  const edited = sent.filter((r) => r.edited).length;
+  const count = (title: string, n: number) => `${n} ${title.toLowerCase()}${title === 'Sent' && edited ? ` (${edited} edited)` : ''}`;
+  const summary = groups.flatMap(([title, list]) => (list.length ? [count(title, list.length)] : [])).join(', ');
+  const text = [`Today in Slack: ${summary}`, ...groups.flatMap(([title, list]) => (list.length ? ['', `${title} (${list.length}):`, ...list.map(line)] : []))].join('\n');
+  applyChanges(db, [{ table: 'briefs', id, profile: PROFILE, updated_at: now, fields: { kind: 'day', text, from_at: from, to_at: now } }]);
+  await push('Today', '', summary, '');
   return text;
 }
 

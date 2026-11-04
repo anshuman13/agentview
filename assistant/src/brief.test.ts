@@ -16,6 +16,7 @@ function seed() {
   item.run('t2', 'Call bank', 'capture', 'open', at(MON, 15), null);
   item.run('t3', 'Tomorrow', 'capture', 'open', at(MON + 1, 9), null);
   item.run('s1', 'Check the numbers', 'slack', 'suggested', null, null);
+  db.prepare('UPDATE items SET updated_at = ?, people = ? WHERE id = ?').run(at(MON - 3, 10), 'Per · #ai-help', 's1');
   item.run('said:s2', 'Send the slides', 'slack', 'suggested', null, null);
   item.run('x1', 'Share the plan', 'action', 'open', null, 'fri');
   item.run('x2', 'Done already', 'action', 'done', null, 'fri');
@@ -36,8 +37,8 @@ it('lists meetings, free time, tasks, Slack asks, my promises and actions left f
     '- Call bank',
     '- Share the plan',
     '',
-    'Slack asks to review · 1',
-    '- Check the numbers',
+    'Waiting from yesterday or older · 1',
+    '- Check the numbers (Per, 2 days)',
     '',
     'You said · 1',
     '- Send the slides',

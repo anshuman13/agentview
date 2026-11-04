@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ANSWERED, afterScan, awayDigest, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { ANSWERED, afterScan, awayDigest, dayDigest, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
 import { askId, saveScan, threadKey } from './slackSave.js';
@@ -264,6 +264,48 @@ test('awayDigest writes one brief per away day from 17:00 with what was done, an
   expect(pushes).toEqual(['Away digest: 1 answered, 1 held with a note, 1 escalated to you, 0 skipped or failed']);
   expect(await awayDigest(db, away, at(22, 18), push)).toBeNull();
   expect(db.prepare("SELECT kind FROM briefs WHERE id = 'away:2026-12-22'").get()).toEqual({ kind: 'away' });
+});
+
+test('a Send that failed in assist mode is posted again on the next scan', async () => {
+  const now = new Date(2026, 10, 4, 10).getTime();
+  const asks = [ask('r1')];
+  const db = withAsks(asks, now);
+  const assist: AutopilotConfig = { enabled: true };
+  await afterScan(db, assist, ['ai-help'], asks, now, post);
+  await expect(replyNow(db, assist, asks[0].id, now + 1, async () => { throw new Error('no connector'); })).rejects.toThrow('no connector');
+  expect(db.prepare("SELECT status FROM items WHERE id = ?").get(asks[0].id)).toEqual({ status: 'suggested' });
+  const before = posts.length;
+  const out = await afterScan(db, assist, ['ai-help'], [], now + 2, post);
+  expect(out.answered).toEqual(['Answer r1']);
+  expect(posts.length).toBe(before + 1);
+  expect(db.prepare("SELECT status FROM replies WHERE id = ?").get(asks[0].id)).toEqual({ status: 'sent' });
+  expect(db.prepare("SELECT status FROM items WHERE id = ?").get(asks[0].id)).toEqual({ status: 'done' });
+});
+
+test('dayDigest writes one brief per weekday in assist mode from 17:00 with sent, failed, skipped and waiting asks', async () => {
+  const now = new Date(2026, 10, 4, 10).getTime();
+  const h = (hour: number) => new Date(2026, 10, 4, hour).getTime();
+  const asks = [ask('d1'), ask('d2', { from: 'Ann' }), ask('d3', { from: 'Bo' }), ask('d4', { from: 'Cy' })];
+  const db = withAsks(asks, now);
+  const assist: AutopilotConfig = { enabled: true, dry_run: false };
+  await afterScan(db, assist, ['ai-help'], asks, now, post);
+  await replyNow(db, assist, asks[0].id, h(11), post, true);
+  await replyNow(db, assist, asks[1].id, h(12), async () => { throw new Error('no connector'); }).catch(() => null);
+  applyChanges(db, [{ table: 'items', id: asks[2].id, profile: 'work', updated_at: h(13), fields: { status: 'done' } }]);
+  const pushes: string[] = [];
+  const push = async (title: string, _s: string, body: string) => { pushes.push(`${title}: ${body}`); return true; };
+  expect(await dayDigest(db, assist, h(16), push)).toBeNull();
+  const text = await dayDigest(db, assist, h(17), push);
+  expect(text).toContain('Sent (1):');
+  expect(text).toContain('Failed (1):');
+  expect(text).toContain('Ann in #ai-help: Answer d2 (Error: no connector)');
+  expect(text).toContain('Skipped (1):');
+  expect(text).toContain('Waiting for you (1):');
+  expect(text).toContain('Cy in #ai-help: Answer d4');
+  expect(pushes).toEqual(['Today: 1 sent (1 edited), 1 failed, 1 skipped, 1 waiting for you']);
+  expect(await dayDigest(db, assist, h(18), push)).toBeNull();
+  expect(await dayDigest(withAsks([], now), assist, h(17), push)).toBeNull();
+  expect(db.prepare("SELECT kind FROM briefs WHERE id = 'day:2026-11-04'").get()).toEqual({ kind: 'day' });
 });
 
 test('scanModel uses Opus only when chosen and away', () => {

@@ -32,8 +32,8 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening its task page; goals with all linked tasks done drop off; more than 3 goals show +N more
 - For each profile with no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week, or Not now to hide the row for the week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
-  many tasks this week are at risk, Slack asks, Slack promises I made under You said, and meeting actions left from
-  the last workday. It shows as its title folded by default (open state kept per profile); opened it shows 3 lines with Show all, and it hides until tomorrow
+  many tasks this week are at risk, Slack asks oldest first with who and age (older than today under Waiting from yesterday or older), Slack promises I made under You said, and meeting actions left from
+  the last workday. The same card shows the hub's 17:00 day digest of Slack replies (sent, failed, skipped, waiting) and the away digest. It shows as its title folded by default (open state kept per profile); opened it shows 3 lines with Show all, and it hides until tomorrow
 - Meetings that ended in the last two hours with their first 3 open actions (suggested ones wait in Do now) (Open notes for N more), a follow-up draft to copy and the notes
 - A Plan strip of free gaps. A tap blocks time for a task due today on the calendar after you confirm the task, start,
   length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
