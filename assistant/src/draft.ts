@@ -23,12 +23,27 @@ const firstUrl = (sources: string | null) => {
 };
 
 export const DRAFT_DESC = 'A reply I could send, in my voice: 2 to 4 sentences in the language of the ask';
-export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask, and write draft from the thread and what ask_context returns. Do not promise dates or facts you do not know. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread. In claims list the ids of the wiki claims the draft rests on, as ask_context gave them, and name them in why; a tier answer with no claim and nothing in the thread is a hold. For a hold the draft is one short line that says I will look at it or get back to them, not an answer. When the claim has a link, end the draft with "see <link>". When the answer is someone else\'s to give, name that person as Slack shows them (slack_read_user_profile for a bare <@U...> id) and tag them as <@id>; never guess an owner, and never write a raw id as a name.';
+export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask and the asker\'s name, and write draft from the thread and what ask_context returns. If I promised this person something, say where it stands; if I already answered this before, point to that answer instead of repeating it. Do not promise dates or facts you do not know. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread. In claims list the ids of the wiki claims the draft rests on, as ask_context gave them, and name them in why; a tier answer with no claim and nothing in the thread is a hold. For a hold the draft is one short line that says I will look at it or get back to them, not an answer. When the claim has a link, end the draft with "see <link>". When the answer is someone else\'s to give, name that person as Slack shows them (slack_read_user_profile for a bare <@U...> id) and tag them as <@id>; never guess an owner, and never write a raw id as a name.';
 
 // Current wiki claims, decisions of the last 30 days of meetings and 14 days of Slack, and my open tasks that share
 // at least two key words with the ask (one when the ask has under four), best first; a Support FAQ claim wins a tie.
 // Claims carry their id and first source link so the draft can cite them.
-export function askContext(db: Database, ask: string, now = Date.now()) {
+const wholeWord = (name: string) => new RegExp(`(?<![\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu');
+
+function personContext(db: Database, from: string) {
+  const first = from.trim().split(/\s+/)[0] ?? '';
+  const re = wholeWord(first);
+  const role = (db.prepare("SELECT f.text FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND p.title = 'Who does what' AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND f.text IS NOT NULL ORDER BY f.updated_at DESC").all(PROFILE) as { text: string }[])
+    .map((r) => r.text).filter((t) => re.test(t)).slice(0, 2);
+  const replies = (db.prepare("SELECT text, COALESCE(sent_at, at) AS at FROM replies WHERE profile = ? AND who = ? AND status IN ('sent', 'dry') AND text IS NOT NULL ORDER BY COALESCE(sent_at, at) DESC LIMIT 3").all(PROFILE, from) as { text: string; at: number }[])
+    .map((r) => `${ymd(r.at)}: ${r.text.length > 140 ? r.text.slice(0, 140) : r.text}`);
+  const promises = (db.prepare("SELECT title, people, at FROM items WHERE profile = ? AND deleted = 0 AND id LIKE 'said:%' AND status IN ('open', 'suggested') AND title IS NOT NULL ORDER BY updated_at DESC").all(PROFILE) as { title: string; people: string | null; at: number | null }[])
+    .filter((r) => re.test(r.people ?? '') || re.test(r.title)).slice(0, 3)
+    .map((r) => `${r.title}${r.at ? `, due ${ymd(r.at)}` : ''}`);
+  return { role, replies, promises };
+}
+
+export function askContext(db: Database, ask: string, now = Date.now(), from = '') {
   const words = keyWords(ask);
   const need = words.size < 4 ? 1 : 2;
   const best = <T extends { hay: string; boost?: number }>(list: T[]) => list
@@ -51,6 +66,7 @@ export function askContext(db: Database, ask: string, now = Date.now()) {
     claims: best(claims.map((c) => ({ hay: `${c.title ?? ''} ${c.text}`, boost: c.title === FAQ_PAGE ? 0.5 : 0, id: c.id, line: `${c.title ? `${c.title}: ` : ''}${c.text}`, url: firstUrl(c.sources) }))).map(({ id, line, url }): Claim => ({ id, line, url })),
     decisions: best(decided).map((d) => d.line),
     tasks: best(tasks.map((t) => ({ hay: t.title, line: `${t.title}${t.at ? `, due ${ymd(t.at)}` : ''}${t.status === 'suggested' ? ', not accepted yet' : ''}` }))).map((t) => t.line),
+    person: from.trim() ? personContext(db, from) : undefined,
   };
 }
 
@@ -72,8 +88,8 @@ export function liveClaims(db: Database, ids: string[]) {
 }
 
 export const contextTool = (db: Database, now = Date.now()) =>
-  tool('ask_context', 'Wiki claims, decisions from meetings and Slack, and my open tasks that match an ask, for its reply draft. Each wiki line starts with the claim id to cite; a task line is the real state of something I am doing.', { ask: z.string().describe('The ask in its own words') }, async ({ ask }) => {
-    const { claims, decisions, tasks } = askContext(db, ask, now);
-    const text = [...claims.map((c) => `Wiki [${c.id}]: ${c.line}${c.url ? ` (see ${c.url})` : ''}`), ...decisions.map((d) => `Decided: ${d}`), ...tasks.map((t) => `My task: ${t}`)].join('\n');
+  tool('ask_context', 'Wiki claims, decisions from meetings and Slack, and my open tasks that match an ask, for its reply draft. Each wiki line starts with the claim id to cite; a task line is the real state of something I am doing.', { ask: z.string().describe('The ask in its own words'), from: z.string().optional().describe('The name of the person asking, as Slack shows it') }, async ({ ask, from }) => {
+    const { claims, decisions, tasks, person } = askContext(db, ask, now, from);
+    const text = [...claims.map((c) => `Wiki [${c.id}]: ${c.line}${c.url ? ` (see ${c.url})` : ''}`), ...decisions.map((d) => `Decided: ${d}`), ...tasks.map((t) => `My task: ${t}`), ...(person?.role.map((r) => `Asker: ${r}`) ?? []), ...(person?.replies.map((r) => { const i = r.indexOf(': '); return `I told them on ${r.slice(0, i)}: ${r.slice(i + 2)}`; }) ?? []), ...(person?.promises.map((p) => `I promised them: ${p}`) ?? [])].join('\n');
     return { content: [{ type: 'text' as const, text: text || 'Nothing matches.' }] };
   });

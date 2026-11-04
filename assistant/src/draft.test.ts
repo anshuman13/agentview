@@ -28,6 +28,7 @@ test('askContext keeps live claims and recent decisions that share two key words
     claims: [{ id: 'f1', line: 'Billing: Invoices export runs nightly to the finance bucket.', url: null }],
     decisions: ['Finance gets the invoices export as CSV (#billing, 2026-10-25, see https://example.com/d1)', 'Invoices export goes weekly from November (Billing sync)'],
     tasks: ['Fix the invoices export to finance, due 2026-10-29'],
+    person: undefined,
   });
   // A short ask matches on one key word.
   expect(askContext(db, 'invoices?', now).claims.map((c) => c.id)).toEqual(['f1', 'f4']);
@@ -47,4 +48,24 @@ test('askContext ranks a Support FAQ claim first on a tie and keeps its link; li
   expect(claims.map((c) => c.id)).toEqual(['f2', 'f1']);
   expect(claims[0].url).toBe('https://example.com/t');
   expect(liveClaims(db, ['f1', 'f3', 'nope'])).toEqual(['f1']);
+});
+
+test('askContext adds what I know about the asker', () => {
+  const db = openDb(':memory:');
+  const row = (table: string, id: string, fields: Record<string, unknown>) => ({ table, id, profile: 'work' as const, updated_at: now, fields });
+  applyChanges(db, [
+    row('pages', 'p1', { title: 'Who does what', state: 'live' }),
+    row('facts', 'f1', { page_id: 'p1', text: 'Mira owns the invoices export.' }),
+    row('facts', 'f2', { page_id: 'p1', text: 'Miranda owns the roadmap.' }),
+    row('items', 'said:s1', { title: 'Send Mira the export', status: 'open', source: 'slack', people: 'Mira Test · #billing', at: now + 86400000 }),
+    row('items', 'said:s2', { title: 'Send Miranda the plan', status: 'open', source: 'slack', people: 'Miranda Test · #billing' }),
+    row('items', 'said:s3', { title: 'Send Mira the old file', status: 'done', source: 'slack', people: 'Mira Test · #billing' }),
+  ]);
+  db.prepare('INSERT INTO replies (profile, id, who, chat, mode, status, at, text, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run('work', 'r1', 'Mira Test', '#billing', 'live', 'sent', now - 86400000, 'It runs nightly.', now - 86400000);
+  expect(askContext(db, 'invoices?', now, 'Mira Test').person).toEqual({
+    role: ['Mira owns the invoices export.'],
+    replies: ['2026-10-27: It runs nightly.'],
+    promises: ['Send Mira the export, due 2026-10-29'],
+  });
+  expect(askContext(db, 'invoices?', now).person).toBeUndefined();
 });
