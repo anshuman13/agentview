@@ -36,7 +36,9 @@ const dueLabel = (at: number | null) => {
 
 // The open task is a page: title and notes save when they lose focus or the task closes.
 // The reply draft of a Slack ask: Send posts it in the thread as me, Edit changes it first, Skip drops it.
-function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantStore; onEdit: (draft: string | null) => void }) {
+// An ask tagged needs-you by the scan is a decision or something urgent: the draft is a holding line and Send is quiet.
+export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantStore; onEdit: (draft: string | null) => void }) {
+  const mine = tagList(row.tags).includes('needs-you');
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(row.draft ?? '');
   const [edited, setEdited] = useState(false);
@@ -62,13 +64,13 @@ function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantStore; on
   };
   return (
     <div className="as-draft">
-      <div className="as-draft-head">Reply draft</div>
+      <div className="as-draft-head">{mine ? <><Icon name="person" small /> Needs your decision · holding note</> : 'Reply draft'}</div>
       {editing
         ? <textarea className="as-draft-text" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
         : <div className="as-draft-text">{row.draft}</div>}
       {error && <div className="as-draft-err">Not sent: {error}</div>}
       <div className="as-draft-bar">
-        <Button size="sm" icon={sending ? 'loading' : error ? 'refresh' : 'send'} disabled={sending} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : 'Send'}</Button>
+        <Button size="sm" variant={mine ? 'quiet' : undefined} icon={sending ? 'loading' : error ? 'refresh' : 'send'} disabled={sending} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : mine ? 'Send note' : 'Send'}</Button>
         {!editing && <Button variant="quiet" size="sm" icon="edit" onClick={() => setEditing(true)}>Edit</Button>}
         <Button variant="quiet" size="sm" icon="close" onClick={() => onEdit(null)}>Skip</Button>
       </div>

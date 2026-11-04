@@ -56,7 +56,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     const ranked = rankNeeds<Need>([
       s.overdue.map((row) => ({ kind: 'overdue', row, keys: [taskKey(row)] })),
       risk.map(({ task, short }) => ({ kind: 'risk', row: task.r, due: task.due, short, keys: [taskKey(task.r)] })),
-      s.review.map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
+      s.review.filter((row) => !(row.source === 'slack' && row.draft?.trim())).map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
       dms.map((chat) => ({ kind: 'dm', chat, keys: [`chat:${chat.profile}:${chat.id}`, ...urlKey(chat.url)] })),
       bullets.map((x) => ({ kind: 'slack', x, profile: brief!.profile, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
     ]);

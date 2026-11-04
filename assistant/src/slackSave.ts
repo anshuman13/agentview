@@ -2,6 +2,10 @@ import type { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { DRAFT_DESC } from './draft.js';
+
+// Tag on an ask the bot should not answer for me: it needs my decision or is urgent.
+export const NEEDS_ME = 'needs-you';
+export const needsMe = (tier?: string | null) => tier === 'hold' || tier === 'escalate';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, parseWhen } from './time.js';
 
@@ -127,7 +131,7 @@ export function saveScan(db: Database, r: ScanResult, now = Date.now()) {
     const people = `${a.from} · ${a.chat}`;
     if (answeredIds.has(id) || has.get(PROFILE, id) || changes.some((c) => c.id === id) || seen.known(id, a.title, people) || replied(a)) continue;
     seen.add(id, a.title, people);
-    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null } });
+    changes.push({ table: 'items', id, profile: PROFILE, updated_at: now, fields: { title: a.title.trim(), text: a.quote.trim(), source: 'slack', source_url: webUrl(a.url), people, at: null, status: 'suggested', draft: a.draft?.trim() || null, tags: needsMe(a.tier) ? NEEDS_ME : null } });
     added++;
     newAsks.push({ ...a, id });
     if (a.urgent) urgent.push({ ...a, id });

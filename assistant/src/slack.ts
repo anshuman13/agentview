@@ -11,7 +11,7 @@ import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
 import { afterScan, autopilotConfig, awayDigest, awayLines, awayStart, escalateLines, scanModel, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
-import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, saveScan, webUrl, type ScanResult } from './slackSave.js';
+import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, needsMe, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { noteCost, runScan, startScan } from './scan.js';
 import { applyChanges } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, workSlotDue } from './time.js';
@@ -165,15 +165,22 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
 }
 
 // In assist mode an ask with a draft gets a Send reply action and the draft in the body; otherwise only urgent asks are pushed.
+// The push for one ask. In assist mode a draft gets a one-tap Send reply, unless the ask needs me (a decision or something
+// urgent): then the title says so, the draft shows as a note and there is no Send.
+export function askPush(a: NewAsk, mode: Mode) {
+  const url = webUrl(a.url);
+  const draft = mode === 'assist' && a.draft?.trim();
+  const mine = needsMe(a.tier);
+  const accept = `http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
+  const send = draft && !mine ? `http, Send reply, ${HUB_URL}/slack/reply?id=${encodeURIComponent(a.id)}, method=POST, clear=true; ` : '';
+  const body = draft ? `${a.quote}\n\n${mine ? 'Needs you' : 'Reply'}: ${draft}` : a.quote;
+  return { title: `${mine && draft ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${send}${accept}` };
+}
+
 async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], mode: Mode = 'off', now = Date.now()) {
-  const assist = mode === 'assist';
   await pushQueued(db, 'slack:unpushed', urgent, pushHours(c, now, mode === 'away'), (a) => {
-    const url = webUrl(a.url);
-    const draft = assist && a.draft?.trim();
-    const accept = `http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-    const send = draft ? `http, Send reply, ${HUB_URL}/slack/reply?id=${encodeURIComponent(a.id)}, method=POST, clear=true; ` : '';
-    const body = draft ? `${a.quote}\n\nReply: ${draft}` : a.quote;
-    return pushOrHold(db, `${a.from}: ${a.title}`, a.chat, body, url ?? '', `${url ? `view, Open, ${url}; ` : ''}${send}${accept}`, now, a.id);
+    const p = askPush(a, mode);
+    return pushOrHold(db, p.title, a.chat, p.body, p.url, p.actions, now, a.id);
   });
 }
 

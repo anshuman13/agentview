@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb, setMeta } from './db.js';
-import { pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
+import { askPush, pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
 import { DAY } from './time.js';
 import { acceptAsk, askId, saveScan } from './slackSave.js';
 
@@ -172,5 +172,20 @@ describe('sinceOf', () => {
     setMeta(db, 'slack:last', String(now - 4 * DAY));
     expect(sinceOf(db, now, now - DAY)).toBe(now - DAY);
     expect(sinceOf(db, now, 0)).toBe(now - 4 * DAY);
+  });
+});
+
+describe('askPush', () => {
+  const base = { id: 'a1', url: 'https://x.slack.com/archives/C1/p1', from: 'Kim', chat: '#ai', title: 'Answer Kim', quote: 'Can you check?', urgent: false, draft: 'Yes, see the guide.' };
+  test('a draft in assist mode gets Send reply; a hold gets a Needs you title and no Send', () => {
+    const p = askPush(base, 'assist');
+    expect(p.title).toBe('Kim: Answer Kim');
+    expect(p.actions).toContain('Send reply');
+    expect(p.body).toContain('Reply: Yes, see the guide.');
+    const h = askPush({ ...base, tier: 'hold', draft: 'I will look at it today.' }, 'assist');
+    expect(h.title).toBe('Needs you, Kim: Answer Kim');
+    expect(h.actions).not.toContain('Send reply');
+    expect(h.body).toContain('Needs you: I will look at it today.');
+    expect(askPush(base, 'away').actions).not.toContain('Send reply');
   });
 });

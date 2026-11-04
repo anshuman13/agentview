@@ -8,6 +8,7 @@ import { plural } from '../ui/util';
 import { dayLabel } from './data/dates';
 import { Shutdown } from './Shutdown';
 import { ClaimsToReview } from './overview/ClaimsToReview';
+import { ReplyQueue, replyQueue } from './overview/ReplyQueue';
 import { useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
 import { unrollFor, useActions } from './useActions';
@@ -57,6 +58,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   }, [snap.jobs, snap.runs, filter, startOfDay]);
   const digest = useMemo(() => latestDigest(snap.items, filter), [snap.items, filter]);
   const needs = useNeedsYou(s, now);
+  const queue = useMemo(() => replyQueue(s.review), [s.review]);
   const stale = useMemo(() => {
     const late = new Set(s.overdue.map((r) => r.profile + r.id));
     const shownElsewhere = (r: ItemRow) => { const t = atTime(r.at); return t != null && t < s.endOfTomorrow; };
@@ -127,6 +129,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <GoalLines now={now} />
       <MorningBrief now={now} />
       <ClaimsToReview />
+      <ReplyQueue rows={queue} />
       <JustEnded meetings={s.meetingsToday} now={now} />
       {close && (
         <section>

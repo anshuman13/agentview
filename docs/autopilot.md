@@ -56,7 +56,10 @@ The switch on outside the away dates is assist mode; inside them it is away mode
 the hub would send on the ask instead of sending it. Send reply, pressed by me on the push or on the ask, posts even in a
 dry run: the app sends the draft as it reads on the phone with the request, so an edit made a moment ago is what goes out, and
 a failed send stays on the draft card with a Retry button. If someone answered the thread first, nothing is posted and the ask
-closes. The switch off is the kill switch. The scan reads the settings each
+closes. An ask the scan tiers hold or escalate (a decision, approval, review, something urgent) is tagged needs-you: its draft is
+a holding line, the push says "Needs you" and has no Send action, and the card shows "Needs your decision" with a quiet Send
+note. The Overview has a Reply queue: every Slack ask with a draft, the ones that need me first, then oldest first, each with
+Send, Edit and Skip in place. The switch off is the kill switch. The scan reads the settings each
 time, so no restart is needed. Sent and dry-run replies are in the hub-only `replies`
 table, one row per ask, with tier, confidence, the text and the permalink of the post.
 

@@ -527,3 +527,8 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 @media (hover: hover) { .assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row:hover { background: var(--hover); } }
 .assistant:not(.tasks) .as-section { padding: 0 var(--sp-8) var(--sp-3); border-bottom: 0; font-size: var(--type-footnote-size); font-weight: 400; line-height: var(--type-footnote-line); }
 .assistant:not(.tasks) .as-section:not(.late, .review, .next, .done, .later) { color: var(--fg-muted); }
+
+.ov-queue { display: grid; gap: var(--sp-4); }
+.ov-queue-row { display: grid; gap: var(--sp-3); }
+.ov-queue-head { all: unset; cursor: pointer; display: grid; gap: var(--sp-1); }
+.ov-queue .as-draft { margin-left: 0; }
