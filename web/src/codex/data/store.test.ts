@@ -43,7 +43,9 @@ describe('syncSoon', () => {
     s.release.shift()!(true);
     await Promise.all([first, joined]);
     expect(s.runs).toBe(1);
-    await s.syncSoon();
+    const next = s.syncSoon();
     expect(s.runs).toBe(2);
+    s.release.shift()!(true);
+    await next;
   });
 });
