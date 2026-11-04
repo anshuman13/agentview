@@ -6,7 +6,7 @@ import { summarizeSlack } from '../slack.js';
 import { learnPeople } from '../people.js';
 import { mineFaq } from '../faq.js';
 import { learnVoice } from '../voice.js';
-import { acceptAsk } from '../slackSave.js';
+import { acceptAsk, skipAsk } from '../slackSave.js';
 import { autopilotConfig, autopilotState, replyNow, saveAutopilot } from '../autopilot.js';
 import { errText } from '../../../shared/util.js';
 import { body, readJson, send, type Ctx, type Routes } from './http.js';
@@ -91,6 +91,10 @@ export const taskRoutes: Routes = {
   },
 
   'POST /slack/accept': accept('slack', 'Slack'),
+  'POST /slack/skip': ({ res, url, getDb }) => {
+    const ok = skipAsk(getDb(), url.searchParams.get('id') ?? '');
+    send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Slack task' });
+  },
   'POST /slack/reply': async ({ req, res, url, getDb }) => {
     const id = url.searchParams.get('id') ?? '';
     const edited = url.searchParams.get('edited') === '1';

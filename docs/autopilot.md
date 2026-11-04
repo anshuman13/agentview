@@ -47,7 +47,9 @@ away mode, otherwise on Sonnet. A post run that ends without confirming is follo
 that did go out is logged as sent and not retried.
 
 Pushes: urgent asks are pushed in every mode. Away mode also pushes escalate-tier asks and asks from the never-answer
-list, which it never answers. Assist mode pushes every ask with a draft in a covered chat, with a Send reply action.
+list, which it never answers. Assist mode pushes every ask with a draft in a covered chat, with a Send reply action: the body
+holds the quote, the draft and "From <page>: <claim>" for the claim it rests on; the actions are Open, Send reply (Make task
+for an ask that needs me) and Skip, which closes the ask with no reply (`POST /slack/skip`).
 Pushes go out in the Slack push hours (08:00 to 17:00 by default, weekdays only outside away mode) and wait for a running
 meeting to end. In away mode the scan runs every day from 07:00 to 22:00, and it never reads back past the first away day,
 so a first away scan answers nothing older than the mode.

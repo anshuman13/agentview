@@ -52,14 +52,28 @@ describe('reviewed asks', () => {
     const item = db.prepare("INSERT INTO items (id, profile, version, updated_at, title, status) VALUES (?, 'work', 1, 0, ?, 'suggested')");
     item.run('a', 'Ask A');
     item.run('b', 'Ask B');
-    await pushOrHold(db, 'Ask A', '#ai', 'q', '', '', at(28, 10, 10), 'a');
+    const pushes: { title: string; body: string; actions?: string }[] = [];
+    process.env.AGENTVIEW_NTFY = 'https://ntfy.test/t';
+    globalThis.fetch = (async (_url: unknown, init: RequestInit) => (pushes.push({ title: (init.headers as Record<string, string>).Title, body: String(init.body), actions: (init.headers as Record<string, string>).Actions }), new Response('ok'))) as unknown as typeof fetch;
+    await pushOrHold(db, 'Ask A', '#ai', 'q\n\nReply: yes', 'https://x', 'view, Open, https://x; http, Send reply, https://hub/slack/reply?id=a, method=POST, clear=true', at(28, 10, 10), 'a');
     await pushOrHold(db, 'Ask B', '#ai', 'q', '', '', at(28, 10, 20), 'b');
+    await pushOrHold(db, 'Ask U', '#ai', 'now', '', '', at(28, 10, 30), 'u', true);
+    expect(pushes.map((p) => p.title)).toEqual(['Ask U']);
     db.prepare("UPDATE items SET status = 'done' WHERE id = 'b'").run();
+    await flushHeld(db, at(28, 11, 1));
+    expect(pushes.slice(1)).toEqual([{ title: 'Ask A', body: '#ai\nq\n\nReply: yes', actions: 'view, Open, https://x; http, Send reply, https://hub/slack/reply?id=a, method=POST, clear=true' }]);
+    expect(heldPushes(db)).toEqual([]);
+  });
+
+  test('more than three held asks fold into one push after the meeting', async () => {
+    const db = openDb(':memory:');
+    db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at, people) VALUES ('m', 'work', 1, 0, 'Sync', ?, ?, '[\"a\"]')").run(at(28, 10), at(28, 11));
+    for (const n of [1, 2, 3, 4]) await pushOrHold(db, `Ask ${n}`, '#ai', 'q', '', '', at(28, 10, n), undefined);
     const pushes: { title: string; body: string }[] = [];
     process.env.AGENTVIEW_NTFY = 'https://ntfy.test/t';
     globalThis.fetch = (async (_url: unknown, init: RequestInit) => (pushes.push({ title: (init.headers as Record<string, string>).Title, body: String(init.body) }), new Response('ok'))) as unknown as typeof fetch;
     await flushHeld(db, at(28, 11, 1));
-    expect(pushes).toEqual([{ title: '1 urgent while you were in Sync', body: '- Ask A (#ai)' }]);
+    expect(pushes).toEqual([{ title: '4 urgent while you were in Sync', body: '- Ask 1 (#ai)\n- Ask 2 (#ai)\n- Ask 3 (#ai)\n- Ask 4 (#ai)' }]);
     expect(heldPushes(db)).toEqual([]);
   });
 });

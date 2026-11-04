@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { openDb, setMeta } from './db.js';
 import { askPush, pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
 import { DAY } from './time.js';
-import { acceptAsk, askId, saveScan } from './slackSave.js';
+import { acceptAsk, askId, saveScan, skipAsk } from './slackSave.js';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
 // Each url gets its own topic, so asks are not taken for repeats of each other.
@@ -182,10 +182,26 @@ describe('askPush', () => {
     expect(p.title).toBe('Kim: Answer Kim');
     expect(p.actions).toContain('Send reply');
     expect(p.body).toContain('Reply: Yes, see the guide.');
+    expect(p.actions).toContain('Skip, ');
+    expect(p.actions).not.toContain('Make task');
+    expect(p.actions.split(';').length).toBe(3);
+    expect(askPush(base, 'assist', 'From Support FAQ: The guide covers it.').body).toContain('Reply: Yes, see the guide.\nFrom Support FAQ: The guide covers it.');
     const h = askPush({ ...base, tier: 'hold', draft: 'I will look at it today.' }, 'assist');
     expect(h.title).toBe('Needs you, Kim: Answer Kim');
     expect(h.actions).not.toContain('Send reply');
+    expect(h.actions).toContain('Make task');
+    expect(h.actions).toContain('Skip');
     expect(h.body).toContain('Needs you: I will look at it today.');
     expect(askPush(base, 'away').actions).not.toContain('Send reply');
+  });
+
+  test('skipAsk closes the ask, drops its draft and marks the reply skipped', () => {
+    const db = openDb(':memory:');
+    db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, draft) VALUES ('a1', 'work', 1, 0, 'Answer Kim', 'slack', 'suggested', 'Yes.')").run();
+    db.prepare("INSERT INTO replies (profile, id, status, at) VALUES ('work', 'a1', 'held', 0)").run();
+    expect(skipAsk(db, 'a1', 5)).toBe(true);
+    expect(db.prepare('SELECT status, draft FROM items WHERE id = ?').get('a1')).toEqual({ status: 'done', draft: null });
+    expect(db.prepare('SELECT status FROM replies WHERE id = ?').get('a1')).toEqual({ status: 'skipped' });
+    expect(skipAsk(db, 'nope')).toBe(false);
   });
 });

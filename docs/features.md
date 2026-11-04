@@ -242,8 +242,9 @@ For a phone in the background, the same notifications can go to an [ntfy](https:
 until you set `AGENTVIEW_NTFY`, or `ntfy` in `~/.agentview/observe.json`, to a topic name or a full URL on your own
 server, then subscribe to it in the ntfy app. Tapping the push opens the chat. The assistant hub uses the same topic for meeting and task reminders and the 08:00 morning brief; it sends no reminders from 17:00 to 08:00, and tasks that fell due overnight go out with the first morning check, as does the nudge for a transcript that landed overnight. Tasks of one profile that come due in the same check go out as one "N work tasks due" (or personal) push (first 5 titles, then "+N more") with no Done or Snooze; a single due task keeps Done and Snooze. A meeting gets a heads-up only when there is something to prep (open actions of yours from the previous one, its decisions or open questions, or a calendar link); one that started up to 5 minutes ago still gets it ("starts now"), so an 08:00 meeting is covered. A job run pushes only when it fails or when the job's prompt asks for a push; a successful report shows in the Context fold only. Open tasks roll to today each day (a rolled evening task is caught up on weekday mornings only), but only weekday rolls count toward sending a task back to review after 3.
 Urgent Slack and Gmail asks that arrive while a calendar meeting runs (not all-day events, time blocks or
-events with no other attendees) are held
-and sent as one push, "N urgent while you were in <meeting>", within a minute after it ends. Asks you accepted
+events with no other attendees) are held; an ask the scan marks urgent goes out during the meeting anyway. Within a minute
+after it ends, up to 3 held asks go out one by one with their own Open, Send reply and Skip, more as one push "N urgent while
+you were in <meeting>". Asks you accepted
 or dismissed meanwhile are left out, and a queued push for an ask you already reviewed is dropped.
 
 A chat that runs for 15 minutes without sending anything is reported once the same way and gets a slow yellow dot

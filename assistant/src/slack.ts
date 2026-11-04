@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { pushOrHold, pushQueued } from './hold.js';
+import { claimCite } from './draft.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
@@ -166,21 +167,22 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
 
 // In assist mode an ask with a draft gets a Send reply action and the draft in the body; otherwise only urgent asks are pushed.
 // The push for one ask. In assist mode a draft gets a one-tap Send reply, unless the ask needs me (a decision or something
-// urgent): then the title says so, the draft shows as a note and there is no Send.
-export function askPush(a: NewAsk, mode: Mode) {
+// urgent): then the title says so, the draft shows as a note and Make task takes its place. cite names the claim the draft
+// rests on. Skip closes the ask from the push. ntfy allows three actions.
+export function askPush(a: NewAsk, mode: Mode, cite = '') {
   const url = webUrl(a.url);
   const draft = mode === 'assist' && a.draft?.trim();
   const mine = needsMe(a.tier);
-  const accept = `http, Make task, ${HUB_URL}/slack/accept?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
-  const send = draft && !mine ? `http, Send reply, ${HUB_URL}/slack/reply?id=${encodeURIComponent(a.id)}, method=POST, clear=true; ` : '';
-  const body = draft ? `${a.quote}\n\n${mine ? 'Needs you' : 'Reply'}: ${draft}` : a.quote;
-  return { title: `${mine && draft ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${send}${accept}` };
+  const act = (label: string, path: string) => `http, ${label}, ${HUB_URL}/slack/${path}?id=${encodeURIComponent(a.id)}, method=POST, clear=true`;
+  const main = draft && !mine ? act('Send reply', 'reply') : act('Make task', 'accept');
+  const body = draft ? `${a.quote}\n\n${mine ? 'Needs you' : 'Reply'}: ${draft}${cite ? `\n${cite}` : ''}` : a.quote;
+  return { title: `${mine && draft ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${main}; ${act('Skip', 'skip')}` };
 }
 
 async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], mode: Mode = 'off', now = Date.now()) {
   await pushQueued(db, 'slack:unpushed', urgent, pushHours(c, now, mode === 'away'), (a) => {
-    const p = askPush(a, mode);
-    return pushOrHold(db, p.title, a.chat, p.body, p.url, p.actions, now, a.id);
+    const p = askPush(a, mode, mode === 'assist' ? claimCite(db, a.claims) : '');
+    return pushOrHold(db, p.title, a.chat, p.body, p.url, p.actions, now, a.id, a.urgent);
   });
 }
 

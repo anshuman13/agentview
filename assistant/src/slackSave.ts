@@ -202,6 +202,15 @@ function saveDecisions(db: Database, list: z.infer<typeof Decided>[], now: numbe
   }
 }
 
+// Skip pressed on a push: the ask closes with no reply and its draft is dropped.
+export function skipAsk(db: Database, id: string, now = Date.now()) {
+  const row = db.prepare("SELECT 1 FROM items WHERE profile = ? AND id = ? AND source = 'slack' AND deleted = 0").get(PROFILE, id);
+  if (!row) return false;
+  applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done', draft: null } }]);
+  db.prepare("UPDATE replies SET status = 'skipped', why = 'skipped from the push' WHERE profile = ? AND id = ? AND status = 'held'").run(PROFILE, id);
+  return true;
+}
+
 export function acceptAsk(db: Database, id: string, source: 'slack' | 'gmail' = 'slack', now = Date.now()) {
   const row = db.prepare('SELECT 1 FROM items WHERE profile = ? AND id = ? AND source = ? AND deleted = 0').get(PROFILE, id, source);
   if (!row) return false;

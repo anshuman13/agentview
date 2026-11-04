@@ -44,6 +44,16 @@ export function askContext(db: Database, ask: string, now = Date.now()) {
   };
 }
 
+// One line naming the page and text of the first live claim among the given, for the push body; empty with none.
+export function claimCite(db: Database, ids: string[] = []) {
+  const live = liveClaims(db, ids);
+  if (!live.length) return '';
+  const row = db.prepare('SELECT f.text, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id WHERE f.profile = ? AND f.id = ?').get(PROFILE, live[0]) as { text: string; title: string | null } | null;
+  if (!row) return '';
+  const text = row.text.replace(/\s+/g, ' ').trim();
+  return `From ${row.title ?? 'the wiki'}: ${text.length > 140 ? `${text.slice(0, 139).trimEnd()}…` : text}`;
+}
+
 // Ids among the given that are live claims now, for the check before an answer goes out.
 export function liveClaims(db: Database, ids: string[]) {
   if (!ids.length) return [];
