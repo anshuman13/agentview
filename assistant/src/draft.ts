@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite';
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { keyWords } from '../../shared/claimMatch.js';
-import { textList } from './db.js';
+import { currentVersion, textList } from './db.js';
 import { DAY, ymd } from './time.js';
 
 const PROFILE = 'work' as const;
@@ -28,6 +28,21 @@ export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context w
 // Current wiki claims, decisions of the last 30 days of meetings and 14 days of Slack, and my open tasks that share
 // at least two key words with the ask (one when the ask has under four), best first; a Support FAQ claim wins a tie.
 // Claims carry their id and first source link so the draft can cite them.
+type ClaimWords = { id: string; hay: Set<string>; boost: number; line: string; url: string | null };
+const claimCache = new WeakMap<Database, { version: number; list: ClaimWords[] }>();
+
+function claimWords(db: Database) {
+  const version = currentVersion(db);
+  const hit = claimCache.get(db);
+  if (hit && hit.version === version) return hit.list;
+  const rows = db.prepare(
+    "SELECT f.id, f.text, f.sources, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND f.text IS NOT NULL",
+  ).all(PROFILE) as { id: string; text: string; sources: string | null; title: string | null }[];
+  const list = rows.map((c): ClaimWords => ({ id: c.id, hay: keyWords(`${c.title ?? ''} ${c.text}`), boost: c.title === FAQ_PAGE ? 0.5 : 0, line: `${c.title ? `${c.title}: ` : ''}${c.text}`, url: firstUrl(c.sources) }));
+  claimCache.set(db, { version, list });
+  return list;
+}
+
 const wholeWord = (name: string) => new RegExp(`(?<![\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu');
 
 function personContext(db: Database, from: string) {
@@ -46,26 +61,23 @@ function personContext(db: Database, from: string) {
 export function askContext(db: Database, ask: string, now = Date.now(), from = '') {
   const words = keyWords(ask);
   const need = words.size < 4 ? 1 : 2;
-  const best = <T extends { hay: string; boost?: number }>(list: T[]) => list
-    .map((x) => ({ x, n: [...keyWords(x.hay)].filter((w) => words.has(w)).length }))
+  const best = <T extends { hay: Set<string>; boost?: number }>(list: T[]) => list
+    .map((x) => ({ x, n: [...x.hay].filter((w) => words.has(w)).length }))
     .filter((r) => r.n >= need)
     .sort((a, b) => b.n + (b.x.boost ?? 0) - a.n - (a.x.boost ?? 0))
     .slice(0, MAX)
     .map((r) => r.x);
-  const claims = db.prepare(
-    "SELECT f.id, f.text, f.sources, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND f.text IS NOT NULL",
-  ).all(PROFILE) as { id: string; text: string; sources: string | null; title: string | null }[];
   const meetings = db.prepare("SELECT title, decisions FROM meetings WHERE profile = ? AND deleted = 0 AND starts_at BETWEEN ? AND ? AND decisions IS NOT NULL AND decisions NOT IN ('', '[]')").all(PROFILE, now - RECENT, now) as { title: string | null; decisions: string }[];
   const slack = db.prepare('SELECT text, channel, url, at FROM slack_decisions WHERE profile = ? AND at BETWEEN ? AND ? ORDER BY at DESC').all(PROFILE, now - SLACK_RECENT, now) as { text: string; channel: string; url: string; at: number }[];
   const tasks = db.prepare("SELECT title, at, status FROM items WHERE profile = ? AND deleted = 0 AND status IN ('open', 'suggested') AND COALESCE(source, '') NOT IN ('slack', 'calendar') AND title IS NOT NULL ORDER BY updated_at DESC LIMIT 200").all(PROFILE) as { title: string; at: number | null; status: string }[];
   const decided = [
-    ...meetings.flatMap((m) => textList(m.decisions).map((d) => ({ hay: d, line: `${d} (${m.title ?? 'meeting'})` }))),
-    ...slack.map((d) => ({ hay: d.text, line: `${d.text} (#${d.channel}, ${ymd(d.at)}, see ${d.url})` })),
+    ...meetings.flatMap((m) => textList(m.decisions).map((d) => ({ hay: keyWords(d), line: `${d} (${m.title ?? 'meeting'})` }))),
+    ...slack.map((d) => ({ hay: keyWords(d.text), line: `${d.text} (#${d.channel}, ${ymd(d.at)}, see ${d.url})` })),
   ];
   return {
-    claims: best(claims.map((c) => ({ hay: `${c.title ?? ''} ${c.text}`, boost: c.title === FAQ_PAGE ? 0.5 : 0, id: c.id, line: `${c.title ? `${c.title}: ` : ''}${c.text}`, url: firstUrl(c.sources) }))).map(({ id, line, url }): Claim => ({ id, line, url })),
+    claims: best(claimWords(db)).map(({ id, line, url }): Claim => ({ id, line, url })),
     decisions: best(decided).map((d) => d.line),
-    tasks: best(tasks.map((t) => ({ hay: t.title, line: `${t.title}${t.at ? `, due ${ymd(t.at)}` : ''}${t.status === 'suggested' ? ', not accepted yet' : ''}` }))).map((t) => t.line),
+    tasks: best(tasks.map((t) => ({ hay: keyWords(t.title), line: `${t.title}${t.at ? `, due ${ymd(t.at)}` : ''}${t.status === 'suggested' ? ', not accepted yet' : ''}` }))).map((t) => t.line),
     person: from.trim() ? personContext(db, from) : undefined,
   };
 }
