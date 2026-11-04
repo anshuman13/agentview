@@ -1,10 +1,13 @@
 import { lazy, useState, type ComponentType } from 'react';
 
-// Starts loading at once and renders without suspending once loaded, so a page's enter animation never follows a skeleton.
+// Loads when the browser is idle, or at once when the component renders first, and renders without suspending once loaded, so a page's enter animation never follows a skeleton.
 export function prefetch<P extends object>(load: () => Promise<ComponentType<P>>) {
   let ready: ComponentType<P> | undefined;
-  const p = load().then((c) => (ready = c));
-  const Lazy = lazy(() => p.then((c) => ({ default: c }))) as unknown as ComponentType<P>;
+  let p: Promise<ComponentType<P>> | undefined;
+  const start = () => (p ??= load().then((c) => (ready = c)));
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(start);
+  else setTimeout(start, 1500);
+  const Lazy = lazy(() => start().then((c) => ({ default: c }))) as unknown as ComponentType<P>;
   return function Prefetched(props: P) {
     const [C] = useState(() => ready ?? Lazy);
     return <C {...props} />;
