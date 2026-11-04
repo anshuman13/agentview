@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { openDb } from './db.js';
-import { askContext, liveClaims } from './draft.js';
+import { askContext, contextText, liveClaims } from './draft.js';
 import { applyChanges } from './sync.js';
 
 const now = new Date(2026, 9, 28, 12).getTime();
@@ -25,7 +25,7 @@ test('askContext keeps live claims and recent decisions that share two key words
   slack.run('work', 'd1', 'Finance gets the invoices export as CSV', 'billing', 'https://example.com/d1', now - 3 * 86400000);
   slack.run('work', 'd2', 'Finance gets the invoices export as XLSX', 'billing', 'https://example.com/d2', now - 20 * 86400000);
   expect(askContext(db, 'Can you check why the invoices export to finance failed?', now)).toEqual({
-    claims: [{ id: 'f1', line: 'Billing: Invoices export runs nightly to the finance bucket.', url: null }],
+    claims: [{ id: 'f1', line: 'Billing: Invoices export runs nightly to the finance bucket.', url: null, at: now }],
     decisions: ['Finance gets the invoices export as CSV (#billing, 2026-10-25, see https://example.com/d1)', 'Invoices export goes weekly from November (Billing sync)'],
     tasks: ['Fix the invoices export to finance, due 2026-10-29'],
     person: undefined,
@@ -68,4 +68,9 @@ test('askContext adds what I know about the asker', () => {
     promises: ['Send Mira the export, due 2026-10-29'],
   });
   expect(askContext(db, 'invoices?', now).person).toBeUndefined();
+});
+
+test('contextText dates a claim older than 30 days', () => {
+  const ctx = { claims: [{ id: 'f1', line: 'Billing: Invoices are in euros.', url: null, at: now - 40 * 86400000 }, { id: 'f2', line: 'Billing: Invoices export runs nightly.', url: 'https://example.com/x', at: now - 2 * 86400000 }], decisions: [], tasks: ['Fix the export'], person: undefined };
+  expect(contextText(ctx, now)).toBe('Wiki [f1]: Billing: Invoices are in euros. (as of 2026-09-18)\nWiki [f2]: Billing: Invoices export runs nightly. (see https://example.com/x)\nMy task: Fix the export');
 });

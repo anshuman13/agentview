@@ -17,7 +17,7 @@ is an assistant, and every send is logged and reversible by me.
   last 30 days, Slack of the last 14 with their link) and 3 of my open tasks as context, plus an asker block (their role from Who does what, my last 3 replies to them, what I
   promised them) (`assistant/src/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; Support FAQ claims rank first on a tie, each
   claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there
-  is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner
+  is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner; numbers, dates and names come verbatim from a claim or the thread, else the draft asks one precise question back; a claim older than 30 days is quoted "as of" its date; a message with several questions gets the covered parts answered and names the part still to check
 - When I edit or skip a draft the hub keeps the original; `POST /slack/corrections` (run it weekly, there is no
   scheduler yet; needs 3 pairs) turns the differences into rules the drafter follows and proposes them on the How I
   write page (`assistant/src/corrections.ts`)

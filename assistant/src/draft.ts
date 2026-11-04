@@ -11,7 +11,7 @@ const RECENT = 30 * DAY;
 const SLACK_RECENT = 14 * DAY;
 const FAQ_PAGE = 'Support FAQ';
 
-export type Claim = { id: string; line: string; url: string | null };
+export type Claim = { id: string; line: string; url: string | null; at: number };
 
 const firstUrl = (sources: string | null) => {
   try {
@@ -23,12 +23,12 @@ const firstUrl = (sources: string | null) => {
 };
 
 export const DRAFT_DESC = 'A reply I could send, in my voice and in the language of the ask, as short as the ask allows: a yes or no in a DM is one line, a channel answer gives the answer or the link first and then at most two sentences of context, never more than four sentences';
-export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask and the asker\'s name, and write draft from the thread and what ask_context returns. If I promised this person something, say where it stands; if I already answered this before, point to that answer instead of repeating it. Do not promise dates or facts you do not know. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread. In claims list the ids of the wiki claims the draft rests on, as ask_context gave them, and name them in why; a tier answer with no claim and nothing in the thread is a hold. For a hold the draft is one short line that says I will look at it or get back to them, not an answer. When the claim has a link, end the draft with "see <link>". When the answer is someone else\'s to give, name that person as Slack shows them (slack_read_user_profile for a bare <@U...> id) and tag them as <@id>; never guess an owner, and never write a raw id as a name.';
+export const DRAFT_STEP = 'For each new ask, read its thread, call ask_context with the words of the ask and the asker\'s name, and write draft from the thread and what ask_context returns. If I promised this person something, say where it stands; if I already answered this before, point to that answer instead of repeating it. Do not promise dates or facts you do not know. Numbers, dates and names come verbatim from a claim, a decision or the thread; with none, the tier is hold and the draft asks one precise question back instead of guessing. When a wiki line says "as of <date>", say so in the draft. When a message asks several things, answer the parts a claim or the thread covers, say which part you will check, and the tier is answer only when every part is covered. Set tier, confidence and why for each ask: confidence is high only when the draft rests on the thread or on what ask_context returned. Set answered_by_other when a reply from someone other than me already answers it in the thread. In claims list the ids of the wiki claims the draft rests on, as ask_context gave them, and name them in why; a tier answer with no claim and nothing in the thread is a hold. For a hold the draft is one short line that says I will look at it or get back to them, not an answer. When the claim has a link, end the draft with "see <link>". When the answer is someone else\'s to give, name that person as Slack shows them (slack_read_user_profile for a bare <@U...> id) and tag them as <@id>; never guess an owner, and never write a raw id as a name.';
 
 // Current wiki claims, decisions of the last 30 days of meetings and 14 days of Slack, and my open tasks that share
 // at least two key words with the ask (one when the ask has under four), best first; a Support FAQ claim wins a tie.
 // Claims carry their id and first source link so the draft can cite them.
-type ClaimWords = { id: string; hay: Set<string>; boost: number; line: string; url: string | null };
+type ClaimWords = { id: string; hay: Set<string>; boost: number; line: string; url: string | null; at: number };
 const claimCache = new WeakMap<Database, { version: number; list: ClaimWords[] }>();
 
 function claimWords(db: Database) {
@@ -36,9 +36,9 @@ function claimWords(db: Database) {
   const hit = claimCache.get(db);
   if (hit && hit.version === version) return hit.list;
   const rows = db.prepare(
-    "SELECT f.id, f.text, f.sources, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND f.text IS NOT NULL",
-  ).all(PROFILE) as { id: string; text: string; sources: string | null; title: string | null }[];
-  const list = rows.map((c): ClaimWords => ({ id: c.id, hay: keyWords(`${c.title ?? ''} ${c.text}`), boost: c.title === FAQ_PAGE ? 0.5 : 0, line: `${c.title ? `${c.title}: ` : ''}${c.text}`, url: firstUrl(c.sources) }));
+    "SELECT f.id, f.text, f.sources, COALESCE(f.at, f.updated_at) AS at, p.title FROM facts f JOIN pages p ON p.profile = f.profile AND p.id = f.page_id AND p.deleted = 0 AND COALESCE(p.state, 'live') = 'live' WHERE f.profile = ? AND f.deleted = 0 AND COALESCE(f.state, 'live') = 'live' AND (f.superseded_by IS NULL OR f.superseded_by = '') AND f.text IS NOT NULL",
+  ).all(PROFILE) as { id: string; text: string; sources: string | null; at: number; title: string | null }[];
+  const list = rows.map((c): ClaimWords => ({ id: c.id, hay: keyWords(`${c.title ?? ''} ${c.text}`), boost: c.title === FAQ_PAGE ? 0.5 : 0, line: `${c.title ? `${c.title}: ` : ''}${c.text}`, url: firstUrl(c.sources), at: c.at }));
   claimCache.set(db, { version, list });
   return list;
 }
@@ -75,7 +75,7 @@ export function askContext(db: Database, ask: string, now = Date.now(), from = '
     ...slack.map((d) => ({ hay: keyWords(d.text), line: `${d.text} (#${d.channel}, ${ymd(d.at)}, see ${d.url})` })),
   ];
   return {
-    claims: best(claimWords(db)).map(({ id, line, url }): Claim => ({ id, line, url })),
+    claims: best(claimWords(db)).map(({ id, line, url, at }): Claim => ({ id, line, url, at })),
     decisions: best(decided).map((d) => d.line),
     tasks: best(tasks.map((t) => ({ hay: keyWords(t.title), line: `${t.title}${t.at ? `, due ${ymd(t.at)}` : ''}${t.status === 'suggested' ? ', not accepted yet' : ''}` }))).map((t) => t.line),
     person: from.trim() ? personContext(db, from) : undefined,
@@ -101,7 +101,17 @@ export function liveClaims(db: Database, ids: string[]) {
 
 export const contextTool = (db: Database, now = Date.now()) =>
   tool('ask_context', 'Wiki claims, decisions from meetings and Slack, and my open tasks that match an ask, for its reply draft. Each wiki line starts with the claim id to cite; a task line is the real state of something I am doing.', { ask: z.string().describe('The ask in its own words'), from: z.string().optional().describe('The name of the person asking, as Slack shows it') }, async ({ ask, from }) => {
-    const { claims, decisions, tasks, person } = askContext(db, ask, now, from);
-    const text = [...claims.map((c) => `Wiki [${c.id}]: ${c.line}${c.url ? ` (see ${c.url})` : ''}`), ...decisions.map((d) => `Decided: ${d}`), ...tasks.map((t) => `My task: ${t}`), ...(person?.role.map((r) => `Asker: ${r}`) ?? []), ...(person?.replies.map((r) => { const i = r.indexOf(': '); return `I told them on ${r.slice(0, i)}: ${r.slice(i + 2)}`; }) ?? []), ...(person?.promises.map((p) => `I promised them: ${p}`) ?? [])].join('\n');
-    return { content: [{ type: 'text' as const, text: text || 'Nothing matches.' }] };
+    return { content: [{ type: 'text' as const, text: contextText(askContext(db, ask, now, from), now) || 'Nothing matches.' }] };
   });
+
+// The tool's answer, one line per fact; a claim older than 30 days carries its date so the draft can say "as of".
+export function contextText({ claims, decisions, tasks, person }: ReturnType<typeof askContext>, now: number) {
+  return [
+    ...claims.map((c) => `Wiki [${c.id}]: ${c.line}${now - c.at > RECENT ? ` (as of ${ymd(c.at)})` : ''}${c.url ? ` (see ${c.url})` : ''}`),
+    ...decisions.map((d) => `Decided: ${d}`),
+    ...tasks.map((t) => `My task: ${t}`),
+    ...(person?.role.map((r) => `Asker: ${r}`) ?? []),
+    ...(person?.replies.map((r) => { const i = r.indexOf(': '); return `I told them on ${r.slice(0, i)}: ${r.slice(i + 2)}`; }) ?? []),
+    ...(person?.promises.map((p) => `I promised them: ${p}`) ?? []),
+  ].join('\n');
+}
