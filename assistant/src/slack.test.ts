@@ -195,6 +195,11 @@ describe('askPush', () => {
     expect(h.actions).toContain('Skip');
     expect(h.body).toContain('Needs you: I will look at it today.');
     expect(askPush(base, 'away').actions).not.toContain('Send reply');
+    const e = askPush({ ...base, tier: 'hold', draft: '' }, 'assist');
+    expect(e.title).toBe('Needs you, Kim: Answer Kim');
+    expect(e.body).toBe('Can you check?');
+    expect(e.actions).toContain('Make task');
+    expect(e.actions).not.toContain('Send reply');
   });
 
   test('askTags marks a sure answer on a live claim as faq and a hold as needs-you', () => {

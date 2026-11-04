@@ -179,7 +179,7 @@ export function askPush(a: NewAsk, mode: Mode, cite = '') {
   const main = draft && !mine ? act('Send reply', 'reply') : act('Make task', 'accept');
   const faq = a.tier === 'answer' && cite ? `FAQ answer${a.confidence ? `, ${Math.round(a.confidence * 100)}% sure` : ''}. ` : '';
   const body = draft ? `${a.quote}\n\n${mine ? 'Needs you' : 'Reply'}: ${draft}${cite ? `\n${faq}${cite}` : ''}` : a.quote;
-  return { title: `${mine && draft ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${main}; ${act('Skip', 'skip')}` };
+  return { title: `${mine ? 'Needs you, ' : ''}${a.from}: ${a.title}`, body, url: url ?? '', actions: `${url ? `view, Open, ${url}; ` : ''}${main}; ${act('Skip', 'skip')}` };
 }
 
 async function pushUrgent(db: Database, c: SlackConfig, urgent: NewAsk[], mode: Mode = 'off', now = Date.now()) {

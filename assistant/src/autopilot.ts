@@ -6,7 +6,7 @@ import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { run, slackConfig } from './slack.js';
 import { scanCosts, scanHealth } from './scan.js';
-import { NEEDS_ME, PROFILE, threadKey, webUrl } from './slackSave.js';
+import { NEEDS_ME, PROFILE, needsMe, threadKey, webUrl } from './slackSave.js';
 import { liveClaims } from './draft.js';
 import { applyChanges } from './sync.js';
 import { pushNtfy } from '../../server/src/integrations/notify.js';
@@ -80,7 +80,7 @@ export function autopilotState(db: Database, now = Date.now()) {
 // ask with a draft in a covered chat, so Send reply is one tap.
 export function toPush(mode: Mode, c: AutopilotConfig, watched: string[], asks: NewAsk[], followups: string[] = []) {
   if (mode === 'away') return asks.filter((a) => a.urgent || a.tier === 'escalate' || escalated(c, a.from, a.from_id) || a.external || followups.includes(a.id));
-  if (mode === 'assist') return asks.filter((a) => a.urgent || (a.draft?.trim() && !a.answered_by_other && channelAllowed(c, watched, a.chat)));
+  if (mode === 'assist') return asks.filter((a) => a.urgent || ((a.draft?.trim() || needsMe(a.tier)) && !a.answered_by_other && channelAllowed(c, watched, a.chat)));
   return asks.filter((a) => a.urgent);
 }
 

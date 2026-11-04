@@ -55,6 +55,7 @@ test('urgent asks are always pushed; away mode also pushes escalations, assist m
   expect(names(toPush('off', away, ['ai-help'], asks))).toEqual(['Answer u2']);
   expect(names(toPush('away', away, ['ai-help'], asks))).toEqual(['Answer u2', 'Answer u3', 'Answer u4']);
   expect(names(toPush('assist', away, ['ai-help'], asks))).toEqual(['Answer u1', 'Answer u2', 'Answer u3', 'Answer u4']);
+  expect(names(toPush('assist', away, ['ai-help'], [ask('e1', { tier: 'hold', draft: '' }), ask('e2', { draft: '' })]))).toEqual(['Answer e1']);
 });
 
 describe('afterScan', () => {

@@ -17,7 +17,7 @@ is an assistant, and every send is logged and reversible by me.
   last 30 days, Slack of the last 14 with their link) and 3 of my open tasks as context, plus an asker block (their role from Who does what, my last 3 replies to them, what I
   promised them) (`assistant/src/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; Support FAQ claims rank first on a tie, each
   claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there
-  is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner; numbers, dates and names come verbatim from a claim or the thread, else the draft asks one precise question back; a claim older than 30 days is quoted "as of" its date; a message with several questions gets the covered parts answered and names the part still to check; an ask to meet or talk gets one or two free half hours from my calendar over the next two working days (the free_slots tool), never an invented time
+  is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner; numbers, dates and names come verbatim from a claim or the thread, else the draft asks one precise question back; a claim older than 30 days is quoted "as of" its date; access, invite, seat and limit asks give the Support FAQ step first; a message with several questions gets the covered parts answered and names the part still to check; an ask to meet or talk gets one or two free half hours from my calendar over the next two working days (the free_slots tool), never an invented time
 - When I edit or skip a draft the hub keeps the original; the first scan on a Monday (or `POST /slack/corrections`;
   needs 3 pairs) turns the differences into rules the drafter follows and proposes them on the How I
   write page (`assistant/src/corrections.ts`)
@@ -65,7 +65,7 @@ the hub would send on the ask instead of sending it. Send reply, pressed by me o
 dry run: the app sends the draft as it reads on the phone with the request, so an edit made a moment ago is what goes out, and
 a failed send stays on the draft card with a Retry button and the next scan posts it again (3 tries, then one push). If someone answered the thread first, nothing is posted and the ask
 closes. An ask the scan tiers hold or escalate (a decision, approval, review, something urgent) is tagged needs-you: its draft is
-a holding line, the push says "Needs you" and has no Send action, and the card shows "Needs your decision" with a quiet Send
+the concrete step I will take and when, or the one missing detail asked back, or empty (never only "will check, get back to you"); the push says "Needs you" and has no Send action, and the card shows "Needs your decision" with a quiet Send
 note. The Overview has a Reply queue: every Slack ask with a draft, the ones that need me first, then oldest first, each with
 Send, Edit and Skip in place. A tier answer that rests on a live wiki claim with confidence 0.8 or more is tagged faq: the
 queue row shows an "FAQ answer" badge, such asks sort right after the ones that need me, the push body says "FAQ answer, 90% sure"
