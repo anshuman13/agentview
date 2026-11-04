@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { correctionLines, correctionsPrompt, gatherPairs, learnCorrections, saveRules } from './corrections.js';
+import { correctionLines, correctionsDue, correctionsPrompt, gatherPairs, learnCorrections, saveRules } from './corrections.js';
 import { openDb, setMeta } from './db.js';
 import { DAY } from './time.js';
 
@@ -55,4 +55,12 @@ test('saveRules proposes each rule once on the How I write page', () => {
     { text: 'Name the owner.', heading: 'Corrections', state: 'proposed', added_by: 'corrections' },
   ]);
   expect(db.prepare("SELECT count(*) AS n FROM pages WHERE title = 'How I write'").get()).toEqual({ n: 1 });
+});
+
+test('correctionsDue fires on a Monday once a week', () => {
+  const monday = new Date(2026, 10, 2, 7, 5).getTime();
+  expect(correctionsDue(0, monday)).toBe(true);
+  expect(correctionsDue(monday - 7 * DAY, monday)).toBe(true);
+  expect(correctionsDue(monday - DAY, monday)).toBe(false);
+  expect(correctionsDue(0, monday + DAY)).toBe(false);
 });

@@ -12,6 +12,7 @@ import { voicePage } from './voice.js';
 const META = 'draft:rules';
 const MAX_RULES = 10;
 const MIN_PAIRS = 3;
+const LAST = 'corrections:last';
 
 export type Pair = { original: string; final: string | null; reason: string | null };
 
@@ -78,4 +79,19 @@ export async function learnCorrections(db: Database, now = Date.now()) {
   await run(correctionsPrompt(pairs), 'sonnet', [save], 5, () => rules != null);
   if (!rules) throw new Error('No rules were saved');
   return { pairs: pairs.length, rules: (rules as string[]).length, proposed: saveRules(db, rules, now) };
+}
+
+// Due at the first scan on a Monday, at most once a week.
+export const correctionsDue = (last: number, now: number) => new Date(now).getDay() === 1 && now - last >= 6 * DAY;
+
+// The weekly run from the scan loop; a failure is logged and the scan goes on.
+export async function weeklyCorrections(db: Database, now = Date.now()) {
+  if (!correctionsDue(Number(getMeta(db, LAST) ?? 0), now)) return;
+  setMeta(db, LAST, String(now));
+  try {
+    const r = await learnCorrections(db, now);
+    console.log(`corrections: ${r.pairs} pairs`);
+  } catch (err) {
+    console.error('corrections:', err);
+  }
 }

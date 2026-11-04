@@ -8,7 +8,7 @@ import { claimCite } from './draft.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool, slotsTool } from './draft.js';
-import { correctionLines } from './corrections.js';
+import { correctionLines, weeklyCorrections } from './corrections.js';
 import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
@@ -234,6 +234,7 @@ async function slackOnce(db: Database) {
   await pushUrgent(db, c, toPush(r.mode, r.auto, c.channels, r.newAsks, r.replies.followups), r.mode);
   await awayDigest(db, r.auto);
   await dayDigest(db, r.auto);
+  await weeklyCorrections(db);
   return { chats: r.chats, messages: r.messages, asks: r.asks, promises: r.said, ...(r.mode === 'away' ? { replied: r.replies.answered.length + r.replies.held.length } : {}) };
 }
 
