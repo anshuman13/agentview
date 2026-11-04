@@ -110,6 +110,8 @@ export function openDb(file: string = DB_PATH): Database {
   if (!replyCols.has('claims')) db.exec('ALTER TABLE replies ADD COLUMN claims TEXT');
   if (!replyCols.has('thread')) db.exec('ALTER TABLE replies ADD COLUMN thread TEXT');
   if (!replyCols.has('tries')) db.exec('ALTER TABLE replies ADD COLUMN tries INTEGER');
+  if (!replyCols.has('draft_text')) db.exec('ALTER TABLE replies ADD COLUMN draft_text TEXT');
+  if (!replyCols.has('skip_reason')) db.exec('ALTER TABLE replies ADD COLUMN skip_reason TEXT');
 
   for (const [tableName, dataColumns] of Object.entries(TABLES)) {
     db.exec(createTableSQL(tableName, dataColumns));

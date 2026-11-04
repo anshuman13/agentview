@@ -213,9 +213,9 @@ describe('askPush', () => {
     const db = openDb(':memory:');
     db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, draft) VALUES ('a1', 'work', 1, 0, 'Answer Kim', 'slack', 'suggested', 'Yes.')").run();
     db.prepare("INSERT INTO replies (profile, id, status, at) VALUES ('work', 'a1', 'held', 0)").run();
-    expect(skipAsk(db, 'a1', 5)).toBe(true);
+    expect(skipAsk(db, 'a1', 'too long', 5)).toBe(true);
     expect(db.prepare('SELECT status, draft FROM items WHERE id = ?').get('a1')).toEqual({ status: 'done', draft: null });
-    expect(db.prepare('SELECT status FROM replies WHERE id = ?').get('a1')).toEqual({ status: 'skipped' });
+    expect(db.prepare('SELECT status, why, draft_text, skip_reason FROM replies WHERE id = ?').get('a1')).toEqual({ status: 'skipped', why: 'skipped from the push', draft_text: 'Yes.', skip_reason: 'too long' });
     expect(skipAsk(db, 'nope')).toBe(false);
   });
 });

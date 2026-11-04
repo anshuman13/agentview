@@ -18,6 +18,8 @@ is an assistant, and every send is logged and reversible by me.
   promised them) (`assistant/src/draft.ts`, `ask_context`); a short ask matches on one key word, longer ones on two; Support FAQ claims rank first on a tie, each
   claim comes with its id and source link, and the draft cites the ids in `claims` and ends with "see <link>" when there
   is one; when the answer is someone else's to give, the draft names and tags them and never guesses an owner
+- When I edit or skip a draft the hub keeps the original; a weekly corrections run turns the differences into rules the
+  drafter follows and proposes them on the How I write page (`assistant/src/corrections.ts`)
 - Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs.ts`)
 - Pushes through ntfy can carry actions (Done, Snooze on a task)
 - The wiki holds approved claims; the wiki update pass proposes claims from Slack decisions

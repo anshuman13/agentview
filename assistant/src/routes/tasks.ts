@@ -5,6 +5,7 @@ import { parseTask } from '../parse.js';
 import { summarizeSlack } from '../slack.js';
 import { learnPeople } from '../people.js';
 import { mineFaq } from '../faq.js';
+import { learnCorrections } from '../corrections.js';
 import { learnVoice } from '../voice.js';
 import { acceptAsk, skipAsk } from '../slackSave.js';
 import { autopilotConfig, autopilotState, replyNow, saveAutopilot } from '../autopilot.js';
@@ -81,6 +82,15 @@ export const taskRoutes: Routes = {
     }
   },
 
+  // Turns my edits and skips of drafts into rules for the drafter: POST /slack/corrections.
+  'POST /slack/corrections': async ({ res, getDb }) => {
+    try {
+      send(res, 200, await once('corrections', () => learnCorrections(getDb())));
+    } catch (err) {
+      send(res, 502, { error: errText(err) });
+    }
+  },
+
   'GET /autopilot': ({ res, getDb }) => send(res, 200, autopilotState(getDb())),
   'POST /autopilot': async (c) => {
     const data = await body<Record<string, unknown>>(c, 20_000);
@@ -92,7 +102,7 @@ export const taskRoutes: Routes = {
 
   'POST /slack/accept': accept('slack', 'Slack'),
   'POST /slack/skip': ({ res, url, getDb }) => {
-    const ok = skipAsk(getDb(), url.searchParams.get('id') ?? '');
+    const ok = skipAsk(getDb(), url.searchParams.get('id') ?? '', url.searchParams.get('reason') ?? '');
     send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Slack task' });
   },
   'POST /slack/reply': async ({ req, res, url, getDb }) => {

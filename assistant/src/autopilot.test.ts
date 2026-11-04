@@ -223,7 +223,7 @@ describe('replyNow', () => {
     expect(await replyNow(db, { enabled: true, dry_run: true }, askId(url('u1')), now, post, true, 'Edited on the phone.')).toEqual({ status: 'sent', url: url('u1') + '/reply' });
     expect(posts).toEqual([url('u1') + ': Edited on the phone.']);
     expect(db.prepare('SELECT status, draft FROM items WHERE id = ?').get(askId(url('u1')))).toEqual({ status: 'done', draft: 'Edited on the phone.' });
-    expect(db.prepare('SELECT edited FROM replies WHERE id = ?').get(askId(url('u1')))).toEqual({ edited: 1 });
+    expect(db.prepare('SELECT edited, draft_text FROM replies WHERE id = ?').get(askId(url('u1')))).toEqual({ edited: 1, draft_text: 'Use the guide.' });
     expect(await replyNow(db, { enabled: true, dry_run: false }, askId(url('u2')), now, async () => ANSWERED)).toEqual({ status: 'answered', url: null });
     expect(db.prepare('SELECT status FROM items WHERE id = ?').get(askId(url('u2')))).toEqual({ status: 'done' });
   });

@@ -8,6 +8,7 @@ import { claimCite } from './draft.js';
 import { readJsonSync } from '../../server/src/json.js';
 import { DB_DIR, getMeta, setMeta } from './db.js';
 import { DRAFT_STEP, contextTool } from './draft.js';
+import { correctionLines } from './corrections.js';
 import { voiceLines } from './voice.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask, scanPaused } from './claude.js';
@@ -120,6 +121,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     'Add an ask when a message clearly asks me to do, answer or decide something, puts a direct question to me, makes a request to me in a thread I am in, or asks me to review or approve something, and I have not replied after it. Skip FYIs, chatter, bots, and anything already in my open asks or tracked tasks below.',
     DRAFT_STEP,
     ...voiceLines(db),
+    ...correctionLines(db),
     ...extra,
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip messages that report something already done ("added now", "invited") or only give an opinion, promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,

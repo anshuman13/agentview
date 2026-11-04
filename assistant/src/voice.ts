@@ -26,7 +26,7 @@ export function voiceLines(db: Database): string[] {
   }
 }
 
-function voicePage(db: Database, now: number) {
+export function voicePage(db: Database, now: number) {
   const row = db.prepare("SELECT id FROM pages WHERE profile = ? AND deleted = 0 AND lower(title) = lower(?) AND COALESCE(state, 'live') != 'rejected'").get(PROFILE, VOICE_PAGE) as { id: string } | null;
   if (row) return row.id;
   const id = crypto.randomUUID();

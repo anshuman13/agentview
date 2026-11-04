@@ -210,11 +210,11 @@ function saveDecisions(db: Database, list: z.infer<typeof Decided>[], now: numbe
 }
 
 // Skip pressed on a push: the ask closes with no reply and its draft is dropped.
-export function skipAsk(db: Database, id: string, now = Date.now()) {
-  const row = db.prepare("SELECT 1 FROM items WHERE profile = ? AND id = ? AND source = 'slack' AND deleted = 0").get(PROFILE, id);
+export function skipAsk(db: Database, id: string, reason = '', now = Date.now()) {
+  const row = db.prepare("SELECT draft FROM items WHERE profile = ? AND id = ? AND source = 'slack' AND deleted = 0").get(PROFILE, id) as { draft: string | null } | null;
   if (!row) return false;
   applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done', draft: null } }]);
-  db.prepare("UPDATE replies SET status = 'skipped', why = 'skipped from the push' WHERE profile = ? AND id = ? AND status = 'held'").run(PROFILE, id);
+  db.prepare("UPDATE replies SET status = 'skipped', why = 'skipped from the push', draft_text = ?, skip_reason = ? WHERE profile = ? AND id = ? AND status = 'held'").run(row.draft?.trim() || null, reason.trim() || null, PROFILE, id);
   return true;
 }
 

@@ -389,6 +389,8 @@ export async function replyNow(db: Database, c: AutopilotConfig, id: string, now
   const tier = TIERS.find((t) => t === held?.tier) ?? ((row.tags ?? '').split(' ').includes(NEEDS_ME) ? 'hold' : 'answer');
   const r = await sendReply(db, { ...c, dry_run: false }, { id, url: row.source_url, from, chat }, tier, draft, now, post);
   if (edited) db.prepare('UPDATE replies SET edited = 1 WHERE profile = ? AND id = ?').run(PROFILE, id);
+  // The draft as the scan wrote it, kept for the corrections run.
+  if (edited && row.draft && row.draft.trim() !== draft) db.prepare('UPDATE replies SET draft_text = ? WHERE profile = ? AND id = ? AND draft_text IS NULL').run(row.draft, PROFILE, id);
   if (r.status === 'sent' || r.status === 'answered') applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: Math.max(now, row.updated_at + 1), fields: { status: 'done', ...(text !== undefined ? { draft } : {}) } }]);
   return r;
 }
