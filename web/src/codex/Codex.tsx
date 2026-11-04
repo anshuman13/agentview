@@ -4,12 +4,15 @@ import '@fontsource-variable/geist-mono';
 import { useAssistant, useCodex, useSyncGate } from './data';
 import { reviewCount } from './data/wiki';
 import { ask, askText } from './data/ask';
-import { atTime, errorText, reviewedSince, split } from './data/engine';
+import { atTime, reviewedSince, split } from './data/engine';
+import { dayLabel, greeting, moveTo } from './days';
+import { SnackBar } from './SnackBar';
+import { useHubLifecycle } from './useHubLifecycle';
 import type { Patch } from './data/store';
 import { rowKey, type ItemRow } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { plural } from '../ui/util';
-import { FILTER_LABEL, hideSnack, setView, showSnack, useSnack, useSpotBack, useView, type Filter, type List } from './view';
+import { FILTER_LABEL, setView, showSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
 import { AddSheet } from './AddSheet';
@@ -32,28 +35,6 @@ const Meetings = prefetch(() => import('./meetings/Meetings').then((m) => m.Meet
 
 const DAY = 86400_000;
 
-function greeting(h = new Date().getHours()) {
-  return h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-}
-
-function dayLabel(at: number) {
-  const d = new Date(at);
-  const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
-  if (days === 1) return 'Tomorrow';
-  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
-function SnackBar() {
-  const s = useSnack();
-  if (!s) return null;
-  return (
-    <div className="as-snack" key={s.id}>
-      <span>{s.text}</span>
-      {s.undo && <button onClick={() => { s.undo!(); hideSnack(); }}>Undo</button>}
-    </div>
-  );
-}
-
 const UPCOMING_DAYS = 7;
 
 type Day = { key: string; label: string; day: number | null; rows: ItemRow[] };
@@ -64,17 +45,6 @@ const PARTS = ['Anytime', 'Morning', 'Afternoon', 'Evening'];
 const partOf = (r: ItemRow) => { const at = atTime(r.at); if (at == null) return 0; const h = new Date(at).getHours(); return h < 12 ? 1 : h < 17 ? 2 : 3; };
 const matches = (r: ItemRow, q: string) => [r.title, r.text, r.people].some((x) => x?.toLowerCase().includes(q));
 const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
-
-// The time on the new day keeps the time of day; a task with no time stays untimed today and gets 09:00 on another day.
-function moveTo(r: ItemRow, day: number, today: number) {
-  const at = atTime(r.at);
-  if (at != null && new Date(at).setHours(0, 0, 0, 0) === day) return undefined;
-  if (at == null) return day === today ? undefined : new Date(day).setHours(9, 0, 0, 0);
-  const t = new Date(at);
-  return new Date(day).setHours(t.getHours(), t.getMinutes(), 0, 0);
-}
-
-const CALENDAR_FRESH = 15 * 60_000;
 
 function SpotBack({ scroller }: { scroller: React.RefObject<HTMLElement | null> }) {
   useSpotBack(scroller, 'tasks');
@@ -90,7 +60,6 @@ export function Assistant() {
   const [adding, setAdding] = useState<boolean | number>(false);
   const [olderOpen, setOlderOpen] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
-  const [calError, setCalError] = useState('');
   const [query, setQuery] = useState<string | null>(null);
   // / on Tasks opens the search when nothing else has focus.
   useEffect(() => {
@@ -111,24 +80,8 @@ export function Assistant() {
   const ptr = usePullRefresh(scroller, () => store.syncNow(), view);
   useScrolledHeader(scroller, view);
 
-  useEffect(() => {
-    const shown = () => document.visibilityState === 'visible' && root.current?.offsetParent != null;
-    const retry = () => { if (shown()) store.unlock(); };
-    retry();
-    document.addEventListener('visibilitychange', retry);
-    window.addEventListener('assistant:shown', retry);
-    return () => { document.removeEventListener('visibilitychange', retry); window.removeEventListener('assistant:shown', retry); };
-  }, [store]);
-
-  // Opening the app imports the calendar unless the hub did within the last minutes.
   const ready = snap.phase === 'ready';
-  useEffect(() => {
-    if (!ready) return;
-    const run = () => document.visibilityState === 'visible' && store.syncCalendar(CALENDAR_FRESH).then(() => setCalError(''), (err) => setCalError(errorText(err)));
-    run();
-    document.addEventListener('visibilitychange', run);
-    return () => document.removeEventListener('visibilitychange', run);
-  }, [store, ready]);
+  const { calError, retryCalendar } = useHubLifecycle(store, ready, root);
 
   // An item moved to the other profile keeps its id, so the open task follows it.
   const current = list === 'tasks' && open ? snap.items.find((r) => rowKey(r) === open && !r.deleted) ?? snap.items.find((r) => r.id === open.slice(open.indexOf(':') + 1) && !r.deleted) : undefined;
@@ -269,7 +222,7 @@ export function Assistant() {
         {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}
       </header>
       {gate.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
-      {calError && <button className="as-error" onClick={() => store.syncCalendar().then(() => setCalError(''), (err) => setCalError(errorText(err)))}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
+      {calError && <button className="as-error" onClick={() => void retryCalendar()}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>

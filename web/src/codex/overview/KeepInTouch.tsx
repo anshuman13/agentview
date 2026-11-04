@@ -4,7 +4,7 @@ import { displayName } from '../data/meetings';
 import { keepInTouch, touchText, type Lapsed } from '../data/review';
 import { plural, save, stored } from '../../ui/util';
 import { dayLabel } from '../data/dates';
-import { Capped } from '../Fold';
+import { Capped, SectionHead } from '../Fold';
 import { Icon } from '../../ui/Icon';
 import { copyText, focusPast, setView, useView } from '../view';
 
@@ -46,7 +46,7 @@ export function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
   if (!shown.length) return null;
   return (
     <section ref={section}>
-      <div className="as-section">Keep in touch · {shown.length}</div>
+      <SectionHead title="Keep in touch" count={shown.length} />
       <div className="ov-follow" role="list" aria-label="Keep in touch" ref={list}>
         <Capped items={shown} render={(x, i) => (
           <div key={x.key} className="ov-follow-row wrap" role="listitem">

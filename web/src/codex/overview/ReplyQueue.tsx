@@ -4,6 +4,7 @@ import { reviewedSince } from '../data/engine';
 import { isSaid, type ItemRow } from '../data/sync';
 import { tagList } from '../AddSheet';
 import { Draft } from '../TaskEditor';
+import { SectionHead } from '../Fold';
 import { Button } from '../../ui/Button';
 import { haptic } from '../../ui/haptic';
 import { ago } from '../../ui/util';
@@ -43,10 +44,7 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
   };
   return (
     <section>
-      <div className="as-section ov-queue-top">
-        <span>Reply queue · {rows.length}</span>
-        {faq.length >= 2 && <Button size="sm" icon={sending ? 'loading' : 'send'} disabled={sending} onClick={() => void sendAll()}>Send all {faq.length} FAQ answers</Button>}
-      </div>
+      <SectionHead title="Reply queue" count={rows.length} action={faq.length >= 2 && <Button size="sm" icon={sending ? 'loading' : 'send'} disabled={sending} onClick={() => void sendAll()}>Send all {faq.length} FAQ answers</Button>} />
       <div className="as-group ov-queue">
         {rows.map((r) => (
           <div key={r.profile + r.id} className="ov-queue-row">

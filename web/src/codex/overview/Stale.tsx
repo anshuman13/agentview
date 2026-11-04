@@ -1,6 +1,6 @@
 import type { ItemRow } from '../data/sync';
 import { useActions } from '../useActions';
-import { Capped } from '../Fold';
+import { Capped, SectionHead } from '../Fold';
 import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
 import { openTask } from '../view';
@@ -10,7 +10,7 @@ export function Stale({ rows, now, snooze }: { rows: ItemRow[]; now: number; sno
   if (!rows.length) return null;
   return (
     <section>
-      <div className="as-section">Stale · {rows.length}</div>
+      <SectionHead title="Stale" count={rows.length} />
       <div className="ov-follow">
         <Capped items={rows} render={(r) => (
           <div key={r.profile + r.id} className="ov-follow-row">

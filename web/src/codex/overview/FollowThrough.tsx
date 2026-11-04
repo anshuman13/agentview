@@ -5,7 +5,7 @@ import type { ItemRow } from '../data/sync';
 import { save, stored } from '../../ui/util';
 import { dayLabel } from '../data/dates';
 import { useActions } from '../useActions';
-import { Capped } from '../Fold';
+import { Capped, SectionHead } from '../Fold';
 import { haptic } from '../../ui/haptic';
 import { focusPast, openMeeting, useView } from '../view';
 
@@ -40,7 +40,7 @@ export function FollowThrough({ f }: { f: ReturnType<typeof useFollowThrough> })
   if (!rows.length) return null;
   return (
     <section ref={section}>
-      <div className="as-section">Follow-through · {rows.length}</div>
+      <SectionHead title="Follow-through" count={rows.length} />
       <div className="ov-follow">
         <Capped items={rows} render={({ r, m }) => (
           <div key={r.profile + r.id} className="ov-follow-row">
