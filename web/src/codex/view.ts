@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
 import { useBack } from '../app/back';
 import { rowKey, type Profile } from './data/sync';
+import { errorText } from './data/engine';
 
 export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki';
 export type Filter = 'all' | Profile;
@@ -137,4 +138,15 @@ export function useFocusBack<T extends HTMLElement>(open: boolean) {
     was.current = open;
   }, [open]);
   return ref;
+}
+
+// Runs a change and reports a failure as "<failText>: <why>" in the snack; true when it went through.
+export async function attempt(task: () => Promise<unknown>, failText: string) {
+  try {
+    await task();
+    return true;
+  } catch (err) {
+    showSnack(`${failText}: ${errorText(err)}`);
+    return false;
+  }
 }

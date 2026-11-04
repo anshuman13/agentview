@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
-import { approveAllChanges, approveChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki';
+import { approveAllChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { Fold } from '../Fold';
 import { setView, showSnack } from '../view';
@@ -20,15 +20,9 @@ function ReviewCard({ fact }: { fact: Fact }) {
   const label = from
     ? meeting?.title ?? sourcesOf(fact).find((s) => s.kind === 'meeting')?.label ?? 'a meeting'
     : fact.added_by?.startsWith('slack:') ? sourcesOf(fact).find((s) => s.kind === 'slack')?.label ?? 'Slack' : null;
-  const approve = () => {
-    const changes = approveChanges(fact, pages, facts);
-    changes.forEach((c) => void store.editRow(c.table, c.row as never, c.patch as never));
-    showSnack('Approved', () => changes.forEach((c) => void store.editRow(c.table, c.row as never, c.undo as never)));
-  };
-  const reject = () => {
-    void store.editRow('facts', fact, { state: 'rejected' });
-    showSnack('Claim rejected', () => void store.editRow('facts', fact, { state: 'proposed' }));
-  };
+  const review = useReview();
+  const approve = () => review.approve([fact]);
+  const reject = () => review.reject([fact]);
   const save = () => {
     void store.editRow('facts', fact, { text: text.trim() || fact.text });
     setEditing(false);

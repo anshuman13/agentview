@@ -18,7 +18,7 @@ import { Load } from './Load';
 import { OpenQuestions } from './OpenQuestions';
 import { Week } from './Week';
 import { usePullRefresh } from '../usePullRefresh';
-import { useSnackTask } from './useSnackTask';
+import { useSnackTask } from '../useSnackTask';
 import { useMinute } from '../split';
 import '../../styles/features/wiki.css';
 

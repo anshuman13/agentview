@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useAssistantData, useAssistantStore } from './data';
 import { GOAL, MAX_GOALS, carryOver, goalProgress, goalsOf, linkedTo } from './data/goals';
 import { weekStart } from './data/dates';
-import { errorText } from './data/engine';
 import type { ItemRow, Profile } from './data/sync';
-import { openTask, showSnack, useView } from './view';
+import { attempt, openTask, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
 import { save, stored } from '../ui/util';
 
@@ -41,14 +40,8 @@ export function WeekGoals({ now }: { now: number }) {
     if (!t || adding.current || goals.length >= MAX_GOALS) return;
     adding.current = true;
     setText('');
-    try {
-      await store.capture(t, GOAL, profile, weekStart(now));
-    } catch (err) {
-      setText(t);
-      showSnack(`Goal not saved: ${errorText(err)}`);
-    } finally {
-      adding.current = false;
-    }
+    if (!(await attempt(() => store.capture(t, GOAL, profile, weekStart(now)), 'Goal not saved'))) setText(t);
+    adding.current = false;
   };
   return (
     <section className="mt-wk-sec">
@@ -101,13 +94,8 @@ export function GoalLines({ now }: { now: number }) {
   const carryAll = async () => {
     if (busy.current) return;
     busy.current = true;
-    try {
-      for (const g of carry) await store.capture(g.title ?? '', GOAL, g.profile, weekStart(now));
-    } catch (err) {
-      showSnack(`Not carried over: ${errorText(err)}`);
-    } finally {
-      busy.current = false;
-    }
+    await attempt(async () => { for (const g of carry) await store.capture(g.title ?? '', GOAL, g.profile, weekStart(now)); }, 'Not carried over');
+    busy.current = false;
   };
   const [more, setMore] = useState(false);
   const offer = carry.length > 0 && !skipped;

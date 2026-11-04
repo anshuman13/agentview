@@ -7,7 +7,7 @@ import { goalsOf } from './data/goals';
 import { atTime, errorText } from './data/engine';
 import { defaultBlock, estimateMin, fitBlock, focusTitle, minutesText, packDay, workGaps, type Span } from './data/plan';
 import { clock } from './time';
-import { showSnack, useView } from './view';
+import { attempt, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
 
 const hhmm = (n: number) => minutesText(Math.round(n / 60_000));
@@ -108,15 +108,11 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   const create = async () => {
     if (!task || !span || !pick?.title.trim()) return;
     setSaving(true);
-    try {
-      await store.blockTime(task, span[0], span[1], pick.title.trim());
+    if (await attempt(() => store.blockTime(task, span[0], span[1], pick.title.trim()), 'Not blocked')) {
       showSnack(`Blocked ${clock(span[0])}-${clock(span[1])} for ${task.title}`);
       setPick(null);
-    } catch (err) {
-      showSnack(`Not blocked: ${errorText(err)}`);
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
   const chips = [
     ...gaps.map((g) => ({ at: g[0], el: (

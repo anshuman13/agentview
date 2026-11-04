@@ -1,18 +1,13 @@
 import { useState } from 'react';
-import { errorText } from '../data/engine';
-import { showSnack } from '../view';
+import { attempt } from './view';
 
+// A busy flag around a change that reports its failure in the snack.
 export function useSnackTask() {
   const [busy, setBusy] = useState(false);
   const run = async (task: () => Promise<void>, failText: string) => {
     setBusy(true);
-    try {
-      await task();
-    } catch (err) {
-      showSnack(`${failText}: ${errorText(err)}`);
-    } finally {
-      setBusy(false);
-    }
+    await attempt(task, failText);
+    setBusy(false);
   };
   return [busy, run] as const;
 }
