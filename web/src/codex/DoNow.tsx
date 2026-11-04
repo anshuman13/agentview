@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { useAssistantData, useAssistantStore } from './data';
+import { useAssistantTable, useAssistantStore } from './data';
 import { atTime } from './data/engine';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
@@ -154,7 +154,7 @@ function Ahead({ next, now }: { next: Ahead; now: number }) {
   const meetMin = Math.round(ms.reduce((n, m) => n + Math.max(0, ((m.ends_at ?? m.starts_at!) - m.starts_at!) / 60000), 0));
   const flagged = ts.filter((r) => (r.priority ?? 0) >= 2).length;
   const start = new Date(atTime(ts[0].at)!).setHours(0, 0, 0, 0);
-  const brief = useAssistantData().briefs.find((b) => !b.deleted && b.kind === 'ahead' && b.from_at === start && b.text);
+  const brief = useAssistantTable('briefs').find((b) => !b.deleted && b.kind === 'ahead' && b.from_at === start && b.text);
   const stats: [string | number, string][] = [
     [ts.length, `${ts.length === 1 ? 'task' : 'tasks'}${est ? `, ${minutesText(est)}` : ''}`],
     [ms.length, `${ms.length === 1 ? 'meeting' : 'meetings'}${meetMin ? `, ${minutesText(meetMin)}` : ''}`],

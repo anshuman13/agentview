@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { blockId, isBlock } from '../../../shared/util';
 import { rowKey, type ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
-import { useAssistantData, useAssistantStore } from './data';
+import { useAssistantTable, useAssistantStore } from './data';
 import { goalsOf } from './data/goals';
 import { atTime, errorText } from './data/engine';
 import { defaultBlock, estimateMin, fitBlock, focusTitle, minutesText, packDay, workGaps, type Span } from './data/plan';
@@ -42,7 +42,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   const [pick, setPick] = useState<Pick | null>(null);
   const [plan, setPlan] = useState<Planned[] | null>(null);
   const [saving, setSaving] = useState(false);
-  const { items } = useAssistantData();
+  const items = useAssistantTable('items');
   const { filter } = useView();
   const goals = new Set(goalsOf(items, now, filter === 'all' ? undefined : filter).map(rowKey));
   const forGoal = (r: ItemRow) => !!r.goal && goals.has(`${r.profile}:${r.goal}`);

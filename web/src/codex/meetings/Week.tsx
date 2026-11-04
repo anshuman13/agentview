@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { useAssistantData } from '../data';
+import { useAssistantTable } from '../data';
 import { Icon } from '../../ui/Icon';
 import { dayLabel } from '../data/dates';
 import { hoursText, weekReview } from '../data/load';
@@ -26,7 +26,8 @@ function Section({ title, rows }: { title: string; rows: ReactNode[] }) {
 }
 
 export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fact[]; now: number }) {
-  const { items: all, briefs } = useAssistantData();
+  const all = useAssistantTable('items');
+  const briefs = useAssistantTable('briefs');
   const { filter } = useView();
   const items = useMemo(() => (filter === 'all' ? all : all.filter((i) => i.profile === filter)), [all, filter]);
   const r = useMemo(() => weekReview({ meetings, facts, items }, now), [meetings, facts, items, now]);

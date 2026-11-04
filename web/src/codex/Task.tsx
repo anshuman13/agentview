@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAssistant } from './data';
+import { useAssistantStore } from './data';
 import { atTime, hasDay, nextNine, parseWhen, stripWhen } from './data/engine';
 import { captureTask } from './captureTask';
 import { isRepeat, parseRepeat } from './data/recur';
@@ -30,7 +30,7 @@ const checklist = (s: string | null) => {
 // inDay: the row sits under its day and part-of-day headers, so it shows only an exact clock time.
 export function TaskRow({ row, onOpen, onGrab, lifted, inDay }: { row: ItemRow; onOpen: () => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean; inDay?: boolean }) {
   const act = useActions();
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const [showList, setShowList] = useState(false);
   const at = atTime(row.at);
   const now = Date.now();
@@ -73,7 +73,7 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay }: { row: ItemRow; 
 
 // A quick add at the end of a day: Enter saves and keeps the field open for the next task.
 export function AddTask({ day, today, filter, empty = false }: { day: number; today: number; filter: Filter; empty?: boolean }) {
-  const { store } = useAssistant();
+  const store = useAssistantStore();
   const [on, setOn] = useState(false);
   const addButton = useFocusBack<HTMLButtonElement>(on);
   const [text, setText] = useState('');

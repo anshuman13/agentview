@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAssistantData, useAssistantStore } from '../data';
+import { useAssistantTable, useAssistantStore } from '../data';
 import { Icon } from '../../ui/Icon';
 import { nextMonday, nudgeText, unanswered, waitingByPerson, weeklyReview } from '../data/review';
 import type { ItemRow } from '../data/sync';
@@ -22,7 +22,8 @@ function Group({ title, rows, children }: { title: string; rows: ItemRow[]; chil
 
 export function Review({ now }: { now: number }) {
   const store = useAssistantStore();
-  const { items: all, briefs } = useAssistantData();
+  const all = useAssistantTable('items');
+  const briefs = useAssistantTable('briefs');
   const { filter } = useView();
   const items = useMemo(() => (filter === 'all' ? all : all.filter((i) => i.profile === filter)), [all, filter]);
   const r = useMemo(() => weeklyReview(items, now), [items, now]);

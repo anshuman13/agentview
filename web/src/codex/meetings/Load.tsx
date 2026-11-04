@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Icon } from '../../ui/Icon';
-import { useAssistantData } from '../data';
+import { useAssistantTable } from '../data';
 import { hoursText, meetingLoad } from '../data/load';
 import { dayLabel } from '../data/dates';
 import { seriesAudit } from '../data/seriesAudit';
@@ -8,7 +8,7 @@ import { openMeeting } from '../view';
 import type { Meeting } from '../data/wiki';
 
 export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
-  const { items } = useAssistantData();
+  const items = useAssistantTable('items');
   const { weeks, people, series } = useMemo(() => meetingLoad(meetings, now, 4, items), [meetings, now, items]);
   const audit = useMemo(() => seriesAudit(meetings, items, now), [meetings, items, now]);
   const max = Math.max(...weeks.map((w) => w.hours), 1);

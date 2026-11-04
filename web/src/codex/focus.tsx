@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { assistantStore, useAssistantData } from './data';
+import { assistantStore, useAssistantTable } from './data';
 import type { ItemRow, Profile } from './data/sync';
 import { estimateMin, focusTitle, minutesText } from './data/plan';
 import { Icon } from '../ui/Icon';
@@ -62,7 +62,7 @@ const elapsed = (ms: number) => {
 // A slim bar over Codex while a focus timer runs: the task, the time so far against its estimate, and Stop.
 export function FocusBar() {
   const f = useFocus();
-  const { items } = useAssistantData();
+  const items = useAssistantTable('items');
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (!f) return;

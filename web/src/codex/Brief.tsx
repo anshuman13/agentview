@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAssistantData } from './data';
+import { useAssistantTable } from './data';
 import { save, stored } from '../ui/util';
 import { Fold } from './Fold';
 import { Icon } from '../ui/Icon';
@@ -24,10 +24,10 @@ function BriefBody({ rest }: { rest: string[] }) {
 
 // Today's morning brief from the hub, one per profile, and the day digest the hub writes at 17:00 (assist mode) or on an away day, shown for a day from the hub's midnight in any time zone, folded to its title by default: the header opens it, the cross hides it until tomorrow.
 export function MorningBrief({ now }: { now: number }) {
-  const snap = useAssistantData();
+  const all = useAssistantTable('briefs');
   const { filter } = useView();
   const [dismissed, setDismissed] = useState<string[]>(() => stored<string[]>(DISMISSED, []));
-  const briefs = snap.briefs.filter((b) => !b.deleted && (b.kind === 'morning' || b.kind === 'day' || b.kind === 'away') && b.from_at != null && now >= b.from_at && now - b.from_at < DAY && b.text && (filter === 'all' || b.profile === filter) && !dismissed.includes(b.profile + b.id))
+  const briefs = all.filter((b) => !b.deleted && (b.kind === 'morning' || b.kind === 'day' || b.kind === 'away') && b.from_at != null && now >= b.from_at && now - b.from_at < DAY && b.text && (filter === 'all' || b.profile === filter) && !dismissed.includes(b.profile + b.id))
     .sort((a, b) => Number(b.profile === 'work') - Number(a.profile === 'work'));
   if (!briefs.length) return null;
   const dismiss = (b: (typeof briefs)[number]) => {

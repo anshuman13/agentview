@@ -4,6 +4,7 @@ import { bundled } from '../../app/api';
 import { LocalStore, tauriInvoke } from './local';
 import { RemoteStore } from './remote';
 import type { AssistantStore, Snapshot } from './store';
+import type { Table } from './wiki';
 
 let store: AssistantStore | undefined;
 
@@ -52,6 +53,16 @@ const selectData = ({ sync: _sync, ...data }: Snapshot) => data;
 // The snapshot without sync status, so a sync tick that changes no data re-renders nobody.
 export function useAssistantData() {
   return useAssistantSelect(selectData, shallowEqual);
+}
+
+type Rows = 'items' | Table;
+const tableSelectors = new Map<Rows, (snap: Snapshot) => unknown>();
+
+// One table's rows, so a change in another table re-renders nobody here.
+export function useAssistantTable<K extends Rows>(table: K): Snapshot[K] {
+  let select = tableSelectors.get(table);
+  if (!select) tableSelectors.set(table, (select = (snap: Snapshot) => snap[table]));
+  return useAssistantSelect(select as (snap: Snapshot) => Snapshot[K]);
 }
 
 const selectGate = ({ sync }: Snapshot) => ({ error: sync.error, loading: sync.syncing && !sync.last });

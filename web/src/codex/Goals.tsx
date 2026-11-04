@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAssistantData, useAssistantStore } from './data';
+import { useAssistantTable, useAssistantStore } from './data';
 import { GOAL, MAX_GOALS, carryOver, goalProgress, goalsOf, linkedTo } from './data/goals';
 import { weekStart } from './data/dates';
 import type { ItemRow, Profile } from './data/sync';
@@ -28,7 +28,7 @@ function GoalInput({ row }: { row: ItemRow }) {
 // Up to three goals for the current week, on the Week view.
 export function WeekGoals({ now }: { now: number }) {
   const store = useAssistantStore();
-  const { items } = useAssistantData();
+  const items = useAssistantTable('items');
   const { filter } = useView();
   const [pick, setPick] = useState<Profile>('work');
   const profile = filter === 'all' ? pick : filter;
@@ -82,7 +82,7 @@ const CARRY_SKIPPED = 'codex.goalCarrySkipped';
 
 export function GoalLines({ now }: { now: number }) {
   const store = useAssistantStore();
-  const { items } = useAssistantData();
+  const items = useAssistantTable('items');
   const { filter } = useView();
   const scope = filter === 'all' ? undefined : filter;
   const goals = goalsOf(items, now, scope).filter((g) => { const p = goalProgress(items, g); return !p.total || p.done < p.total; });
@@ -117,7 +117,7 @@ export function GoalLines({ now }: { now: number }) {
 
 // Links a task to one of this week's goals of its profile.
 export function GoalPick({ row, onPick }: { row: ItemRow; onPick: (goal: string | null) => void }) {
-  const { items } = useAssistantData();
+  const items = useAssistantTable('items');
   const goals = goalsOf(items, Date.now(), row.profile);
   const linked = row.goal ? items.find((r) => r.profile === row.profile && r.id === row.goal && !r.deleted) : undefined;
   if (!goals.length && !linked) return null;
