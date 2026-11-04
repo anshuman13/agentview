@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { appendTo, ATTENTION_LABEL, type AttentionItem, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
 import { notify } from './notify';
-import { apiUrl } from './api';
+import { apiUrl, bundled } from './api';
 
 type UiState = {
   connected: boolean;
@@ -332,9 +332,16 @@ if (typeof document !== 'undefined') {
       connect();
     }
   }, 10_000);
+  let park: ReturnType<typeof setTimeout> | undefined;
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return void (hiddenAt = Date.now());
+    clearTimeout(park);
+    if (document.visibilityState !== 'visible') {
+      hiddenAt = Date.now();
+      // The phone app closes the stream in the background so pings and chat events stop waking it; it resumes from lastId.
+      if (bundled) park = setTimeout(() => { clearTimeout(retry); es?.close(); es = null; }, 10_000);
+      return;
+    }
     // Android drops the connection in the background while the WebView still reports it open.
-    if (hiddenAt && Date.now() - hiddenAt > 10_000) connect();
+    if (!es || (hiddenAt && Date.now() - hiddenAt > 10_000)) connect();
   });
 }
