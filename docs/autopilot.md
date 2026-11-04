@@ -21,7 +21,13 @@ is an assistant, and every send is logged and reversible by me.
 - When I edit or skip a draft the hub keeps the original; the first scan on a Monday (or `POST /slack/corrections`;
   needs 3 pairs) turns the differences into rules the drafter follows and proposes them on the How I
   write page (`assistant/src/corrections.ts`)
-- Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs.ts`)
+- Jobs run a prompt on a schedule with read-only tools plus the MCP tools the job lists (`assistant/src/jobs.ts`); every
+  job can call `ask_context` to read my wiki claims, decisions and open tasks
+- Slack commands: a message I write in my DM with myself that starts with "bot" ("bot, what did the infra channel decide
+  about the freeze") is picked up by the next Slack scan (every 15 min on weekdays, every day when away) and becomes a
+  one-off job named "Slack: ..." that runs on the mini with my memory and voice. It can read Slack, Gmail, the calendar
+  and the web and add tasks, but not post to anyone; it drafts instead. Its answer is posted in the thread of my
+  message, starting "Assistant: ", or pushed when the post fails (`assistant/src/commands.ts`)
 - Pushes through ntfy can carry actions (Done, Snooze on a task)
 - The wiki holds approved claims; the wiki update pass proposes claims from Slack decisions
 

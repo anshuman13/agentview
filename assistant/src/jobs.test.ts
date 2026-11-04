@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
 import { canRead, dropOrphanRuns, dueJobs, jobAllows, nextRun, runDue } from './jobs.js';
+import { queueCommands, replyToCommand } from './commands.js';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 
@@ -87,6 +88,27 @@ describe('runDue', () => {
     };
     await runDue(db, now, run, async () => true);
     expect((db.prepare("SELECT next_run_at FROM jobs WHERE id = 'a'").get() as { next_run_at: number }).next_run_at).toBe(now - 60_000);
+  });
+});
+
+describe('Slack commands', () => {
+  test('a command in my self-DM runs once as a job and its result is posted in its thread', async () => {
+    const db = openDb(':memory:');
+    const now = Date.now();
+    const dm = 'https://example.slack.com/archives/D012AB3CD/p1730700000000100';
+    // The scan that finds it started a while before the jobs tick.
+    const queued = queueCommands(db, [{ text: 'summarise the launch thread', url: dm }, { text: 'x', url: 'https://example.slack.com/archives/C0123/p1730700000000200' }], now - 60_000);
+    expect(queued.length).toBe(1);
+    expect(queueCommands(db, [{ text: 'summarise the launch thread', url: dm }], now)).toEqual([]);
+    const prompts: string[] = [];
+    const posts: [string, string][] = [];
+    const run = async (_db: unknown, job: { prompt: string | null }) => (prompts.push(job.prompt ?? ''), { result: 'Three points: a, b, c', added: [], notified: false });
+    const reply = (d: typeof db, id: string, ok: boolean, out: string) => replyToCommand(d, id, ok, out, async (url, text) => (posts.push([url, text]), 'posted'), async () => true);
+    await runDue(db, now, run, async () => true, reply);
+    await runDue(db, now + 60_000, run, async () => true, reply);
+    expect(prompts.length).toBe(1);
+    expect(prompts[0]).toContain('summarise the launch thread');
+    expect(posts).toEqual([[dm, 'Assistant: Three points: a, b, c']]);
   });
 });
 

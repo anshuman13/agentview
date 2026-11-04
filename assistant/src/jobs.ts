@@ -8,6 +8,8 @@ import { pushNtfy } from '../../server/src/integrations/notify.js';
 import { errText } from '../../shared/util.js';
 import { ACCOUNT_OF } from './calendar.js';
 import { ask } from './claude.js';
+import { contextTool } from './draft.js';
+import { replyToCommand } from './commands.js';
 import type { Profile } from './db.js';
 import { loop } from './once.js';
 import { applyChanges, type Change } from './sync.js';
@@ -73,7 +75,7 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
       ? `This runs on a schedule with no one watching. Only read, except with the tools this job allows: ${allow.names.join(', ')}.`
       : 'This runs on a schedule with no one watching. Only read: do not send, post, create or change anything outside Codex.',
     ...(browser ? ['The mcp__browser tools drive AgentView\'s own Chrome, which holds its own logins. Wait for a page to finish loading before you read it.'] : []),
-    'Use add_task for anything I need to act on, notify for anything I must see right away, and stop_job once its work is done for good. End with a short plain-text result for a phone notification. Do not use the em dash character.',
+    'Use ask_context to see what my wiki, meetings, Slack decisions and open tasks say about something. Use add_task for anything I need to act on, notify for anything I must see right away, and stop_job once its work is done for good. End with a short plain-text result for a phone notification. Do not use the em dash character.',
   ].join('\n');
   let result = '';
   for await (const m of ask(account, prompt, {
@@ -82,10 +84,10 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
     cwd: os.tmpdir(),
     tools: ['WebSearch', 'WebFetch'],
     mcpServers: {
-      codex: createSdkMcpServer({ name: 'codex', tools: [addTask, push, stop] }),
+      codex: createSdkMcpServer({ name: 'codex', tools: [addTask, push, stop, contextTool(db)] }),
       ...(browser ? { browser: { type: 'stdio' as const, command: 'npx', args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', `http://127.0.0.1:${PROFILE_PORT}`] } } : {}),
     },
-    allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task', 'mcp__codex__notify', 'mcp__codex__stop_job'],
+    allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task', 'mcp__codex__notify', 'mcp__codex__stop_job', 'mcp__codex__ask_context'],
     canUseTool: async (name, input) => (canRead(name) || allow.allows(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'This job can only read and use the tools it allows.' }),
   }, 20 * 60_000)) {
     if (m.type === 'result') {
@@ -116,7 +118,7 @@ function prune(db: Database, job: Job, now: number) {
   applyChanges(db, old.map((r) => ({ table: 'runs', id: r.id, profile: job.profile, deleted: true, updated_at: now, fields: { output: null } })));
 }
 
-export async function runDue(db: Database, now = Date.now(), run: typeof runJob = runJob, notify = pushNtfy) {
+export async function runDue(db: Database, now = Date.now(), run: typeof runJob = runJob, notify = pushNtfy, reply = replyToCommand) {
   for (const due of dueJobs(db, now)) {
     // An earlier job can run for minutes; skip or update this one if it was turned off, deleted or edited meanwhile.
     const live = db.prepare('SELECT prompt, tools, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; tools: string | null; next_run_at: number | null; field_times: string } | null;
@@ -150,6 +152,7 @@ export async function runDue(db: Database, now = Date.now(), run: typeof runJob 
     }
     applyChanges(db, changes);
     prune(db, job, done);
+    await reply(db, job.id, status === 'ok', output);
     if (status !== 'ok' || (!notified && /\b(push|notify)\b/i.test(job.prompt ?? ''))) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
   }
 }

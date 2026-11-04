@@ -15,6 +15,7 @@ import { ask, scanPaused } from './claude.js';
 import { afterScan, autopilotConfig, awayDigest, dayDigest, awayLines, awayStart, escalateLines, scanModel, modeOf, toPush, type Mode, type NewAsk } from './autopilot.js';
 import { Ask, Chat, Decided, Detail, PROFILE, Said, askId, needsMe, saveScan, webUrl, type ScanResult } from './slackSave.js';
 import { noteCost, runScan, startScan } from './scan.js';
+import { COMMAND_STEP, Command, queueCommands } from './commands.js';
 import { applyChanges } from './sync.js';
 import { DAY, MIN, inWeekHours, localDate, workSlotDue } from './time.js';
 
@@ -126,6 +127,7 @@ export function scanPrompt(db: Database, c: SlackConfig, since: number, now: num
     'In answered, list permalinks of the open asks below that I have replied to or that someone resolved.',
     `In said, add each new message of mine that commits me to do something ("I'll send it tomorrow", "will check and get back to you"). Skip messages that report something already done ("added now", "invited") or only give an opinion, promises I kept later in the same chat, and anything already in my tracked tasks. Today is ${localDate(now)}; set due only when I named a time.`,
     'In fulfilled, list permalinks of the open promises below that I have since done, for example when I posted what I promised.',
+    COMMAND_STEP,
     'In decisions, add each decision the new messages in the watched channels settle: a plan, owner, date, number or status the people there agreed on. Skip proposals, questions and chatter.',
     'In details, add a note when a new message gives more detail on one of the open asks or tracked tasks below: a date, a requirement, a link, a change of scope or who owns it. Use the id in brackets. Skip messages that only repeat the task.',
     '',
@@ -153,7 +155,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   const auto = autopilotConfig(db);
   const since = sinceOf(db, now, awayStart(auto, now));
   let saved: ScanResult | null = null;
-  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), fulfilled: z.array(z.string()).describe('Permalinks of my open promises that I have since done, e.g. I posted the thing I promised'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id') }, async (a) => {
+  const save = tool('save_scan', 'Save what you found. Call once at the end.', { chats: z.array(Chat), asks: z.array(Ask), answered: z.array(z.string()).describe('Permalinks from the open asks that I have since replied to or that are resolved'), fulfilled: z.array(z.string()).describe('Permalinks of my open promises that I have since done, e.g. I posted the thing I promised'), details: z.array(Detail).describe('New details on the open asks or tracked tasks below'), said: z.array(Said).describe('Things I promised to do in my own messages'), decisions: z.array(Decided).describe('Decisions made in the watched channels'), channels: z.array(z.object({ name: z.string(), id: z.string() })).describe('Every watched channel you read, by name without # and id'), commands: z.array(Command).optional().describe('Things I asked the bot to do in my DM with myself') }, async (a) => {
     saved = a;
     return { content: [{ type: 'text', text: 'saved' }] };
   });
@@ -163,6 +165,7 @@ async function scanSlack(db: Database, c: SlackConfig, now = Date.now()) {
   keepChannelIds(db, c, saved);
   const { chats, added, urgent, said, messages, newAsks } = saveScan(db, saved, now);
   setMeta(db, 'slack:last', String(now));
+  queueCommands(db, (saved as ScanResult).commands ?? [], now);
   const replies = await afterScan(db, auto, c.channels, newAsks, now);
   return { chats, messages, asks: added, said, urgent, newAsks, replies, mode: modeOf(auto, now), auto };
 }
