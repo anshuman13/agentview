@@ -64,6 +64,20 @@ export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantSt
       setSending(false);
     }
   };
+  // Skip closes the ask on the hub with no reply, so it leaves the queue and the corrections run sees the dropped draft.
+  const skip = async () => {
+    setSending(true);
+    setError('');
+    try {
+      await store.skipAsk(row.id);
+      haptic('tap');
+      showSnack('Skipped, no reply sent');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSending(false);
+    }
+  };
   return (
     <div className="as-draft">
       <div className="as-draft-head">{mine ? <><Icon name="person" small /> Needs your decision · holding note</> : 'Reply draft'}</div>
@@ -74,7 +88,7 @@ export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantSt
       <div className="as-draft-bar">
         <Button size="sm" variant={mine ? 'quiet' : undefined} icon={sending ? 'loading' : error ? 'refresh' : 'send'} disabled={sending} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : mine ? 'Send note' : 'Send'}</Button>
         {!editing && <Button variant="quiet" size="sm" icon="edit" onClick={() => setEditing(true)}>Edit</Button>}
-        <Button variant="quiet" size="sm" icon="close" onClick={() => onEdit(null)}>Skip</Button>
+        <Button variant="quiet" size="sm" icon="close" disabled={sending} onClick={() => void skip()}>Skip</Button>
       </div>
     </div>
   );

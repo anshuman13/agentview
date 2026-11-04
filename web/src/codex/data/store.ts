@@ -35,6 +35,7 @@ export interface AssistantStore {
   scanNow(name: 'slack' | 'gmail'): Promise<void>;
   autopilot(patch?: Partial<AutopilotConfig>): Promise<AutopilotState>;
   sendReply(id: string, edited: boolean, text?: string): Promise<SentReply>;
+  skipAsk(id: string): Promise<void>;
   searchTranscripts(query: string, profile?: Profile): Promise<TranscriptHit[]>;
   transcript(m: { profile: Profile; id: string }): Promise<string | null>;
 }

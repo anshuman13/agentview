@@ -210,6 +210,8 @@ type Sent = { status: 'sent' | 'dry' | 'answered' | 'changed'; url: string | nul
 export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: string; url: string; from: string; chat: string }, tier: Tier, text: string, now: number, post = postReply): Promise<Sent> {
   const dry = c.dry_run !== false;
   let url: string | null = null;
+  // The row exists before the post, so a failed post is kept for the retry and the digest.
+  db.prepare('INSERT OR IGNORE INTO replies (profile, id, who, chat, mode, status, at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(PROFILE, ask.id, ask.from, ask.chat, modeOf(c, now), 'held', now);
   try {
     const r = dry ? null : await post(ask.url, text);
     if (r === ANSWERED) {
@@ -227,7 +229,6 @@ export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: str
     throw err;
   }
   const status = dry ? 'dry' : 'sent';
-  db.prepare('INSERT OR IGNORE INTO replies (profile, id, who, chat, mode, status, at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(PROFILE, ask.id, ask.from, ask.chat, modeOf(c, now), 'held', now);
   db.prepare('UPDATE replies SET status = ?, tier = ?, text = ?, url = ?, sent_at = ? WHERE profile = ? AND id = ?').run(status, tier, text, url, now, PROFILE, ask.id);
   const row = db.prepare('SELECT text, updated_at FROM items WHERE profile = ? AND id = ? AND deleted = 0').get(PROFILE, ask.id) as { text: string | null; updated_at: number } | null;
   if (row) {

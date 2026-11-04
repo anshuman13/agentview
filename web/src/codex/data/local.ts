@@ -361,6 +361,13 @@ export class LocalStore extends BaseStore implements AssistantStore {
     return data as SentReply;
   };
 
+  skipAsk = async (id: string) => {
+    const resp = await fetch(`${HUB}/slack/skip?id=${encodeURIComponent(id)}`, { method: 'POST', signal: AbortSignal.timeout(20000) });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    await this.syncNow();
+  };
+
   autopilot = async (patch?: Partial<AutopilotConfig>) => {
     const resp = await fetch(`${HUB}/autopilot`, patch ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch), signal: AbortSignal.timeout(30000) } : { signal: AbortSignal.timeout(30000) });
     const data = await resp.json().catch(() => null);

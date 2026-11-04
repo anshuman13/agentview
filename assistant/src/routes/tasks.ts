@@ -2,7 +2,8 @@ import { isProfile } from '../db.js';
 import { once } from '../once.js';
 import { finishTask, snoozeTask } from '../remind.js';
 import { parseTask } from '../parse.js';
-import { summarizeSlack } from '../slack.js';
+import { HUB_URL, summarizeSlack } from '../slack.js';
+import { pushNtfy } from '../../../server/src/integrations/notify.js';
 import { learnPeople } from '../people.js';
 import { mineFaq } from '../faq.js';
 import { learnCorrections } from '../corrections.js';
@@ -102,7 +103,9 @@ export const taskRoutes: Routes = {
 
   'POST /slack/accept': accept('slack', 'Slack'),
   'POST /slack/skip': ({ res, url, getDb }) => {
-    const ok = skipAsk(getDb(), url.searchParams.get('id') ?? '', url.searchParams.get('reason') ?? '');
+    const id = url.searchParams.get('id') ?? '';
+    const ok = skipAsk(getDb(), id, url.searchParams.get('reason') ?? '');
+    console.log(`slack skip ${id}: ${ok ? 'skipped' : 'no such ask'}`);
     send(res, ok ? 200 : 404, ok ? { ok } : { error: 'No such Slack task' });
   },
   'POST /slack/reply': async ({ req, res, url, getDb }) => {
@@ -111,10 +114,30 @@ export const taskRoutes: Routes = {
     // A push action posts no body, the app posts the draft as it reads on the phone.
     const data = (await readJson(req, 20_000).catch(() => null)) as { text?: string } | null;
     const text = typeof data?.text === 'string' ? data.text : undefined;
+    const run = () => once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(getDb()), id, Date.now(), undefined, edited, text));
+    // The post takes longer than a push action waits, so a push gets 202 at once and the result comes as a second push.
+    if (text === undefined) {
+      send(res, 202, { ok: true });
+      run().then(
+        (r) => {
+          console.log(`slack reply ${id} (push): ${r?.status ?? 'no draft'}`);
+          if (r && r.status !== 'sent') void pushNtfy(r.status === 'answered' ? 'Not sent: someone answered first' : r.status === 'changed' ? 'Not sent: the thread changed' : 'Reply logged', '', '', r.url ?? '');
+          else if (r) void pushNtfy('Reply sent', '', '', r.url ?? '');
+          else void pushNtfy('Not sent: no draft for this ask', '', '', '');
+        },
+        (err) => {
+          console.error(`slack reply ${id} (push): ${errText(err)}`);
+          void pushNtfy('Reply not sent', '', errText(err), '', `http, Retry, ${HUB_URL}/slack/reply?id=${encodeURIComponent(id)}, method=POST, clear=true`);
+        },
+      );
+      return;
+    }
     try {
-      const r = await once(`reply:${id}`, () => replyNow(getDb(), autopilotConfig(getDb()), id, Date.now(), undefined, edited, text));
+      const r = await run();
+      console.log(`slack reply ${id}: ${r?.status ?? 'no draft'}`);
       send(res, r ? 200 : 404, r ?? { error: 'No Slack ask with a draft' });
     } catch (err) {
+      console.error(`slack reply ${id}: ${errText(err)}`);
       send(res, 502, { error: errText(err) });
     }
   },

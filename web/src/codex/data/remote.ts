@@ -318,6 +318,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     return r;
   };
 
+  skipAsk = async (id: string) => {
+    await hub(`/api/assistant/slack/skip?id=${encodeURIComponent(id)}`, undefined, { method: 'POST' });
+    await this.syncNow();
+  };
+
   autopilot = (patch?: Partial<AutopilotConfig>) => hub<AutopilotState>('/api/assistant/autopilot', patch, patch ? undefined : { method: 'GET' });
 
   searchTranscripts = async (query: string, profile?: Profile) => (await hub<{ hits?: TranscriptHit[] }>(`/api/assistant/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`)).hits ?? [];
