@@ -10,12 +10,14 @@ import '../styles/features/code.css';
 const Editor = lazy(() => import('./Editor').then((m) => ({ default: m.Editor })));
 const MarkdownDoc = lazy(() => import('./MarkdownDoc').then((m) => ({ default: m.MarkdownDoc })));
 
-function useFile(path: string | null, bump: unknown) {
+function useFile(path: string | null, bump: unknown, paused = false) {
   const [file, setFile] = useState<FileData | null>(null);
   const [tick, setTick] = useState(0);
+  const hold = useRef(paused);
+  hold.current = paused;
   useEffect(() => {
     const refresh = () => {
-      if (document.visibilityState === 'visible') setTick((n) => n + 1);
+      if (document.visibilityState === 'visible' && !hold.current) setTick((n) => n + 1);
     };
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
@@ -25,7 +27,7 @@ function useFile(path: string | null, bump: unknown) {
     };
   }, []);
   useEffect(() => {
-    if (!path) return;
+    if (!path || hold.current) return;
     let cancelled = false;
     fetch(api(`/api/file?path=${encodeURIComponent(path)}`))
       .then((r) => r.json())
@@ -41,7 +43,7 @@ function useFile(path: string | null, bump: unknown) {
       cancelled = true;
     };
   }, [path, bump, tick]);
-  return file?.path === path ? file : null;
+  return [file?.path === path ? file : null, () => setTick((n) => n + 1)] as const;
 }
 
 class Guard extends Component<{ children: ReactNode }, { error: boolean }> {
@@ -90,8 +92,17 @@ export function CodePane() {
   const [wrap, setWrap] = useState(false);
   const [preview, setPreview] = useState(true);
   const [changesOnly, setChangesOnly] = useState(true);
+  const [edit, setEdit] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState<'' | 'saving' | 'saved' | 'failed'>('');
   const viewRef = useRef<EditorView | null>(null);
-  const file = useFile(openFile, recent[0] === openFile ? recent : null);
+  const [file, reload] = useFile(openFile, recent[0] === openFile ? recent : null, edit && dirty);
+
+  useEffect(() => {
+    setEdit(false);
+    setDirty(false);
+    setSaving('');
+  }, [openFile]);
 
   useEffect(() => {
     const files = getOpenedChat() === chat ? getOpened() : recent.slice(0, 5).reverse();
@@ -104,7 +115,27 @@ export function CodePane() {
   const canDiff = Boolean(file?.original) && file?.original !== file?.content;
   const isDoc = /\.(md|markdown|mdx)$/i.test(openFile);
   const showDoc = preview && isDoc;
-  const diff = canDiff && mode === 'diff' && !showDoc;
+  const diff = canDiff && mode === 'diff' && !showDoc && !edit;
+  const canEdit = Boolean(file) && !file?.error && !file?.image && !file?.binary && !showDoc;
+
+  const saveText = async (text: string) => {
+    if (!openFile) return;
+    setSaving('saving');
+    try {
+      const r = await fetch(api(`/api/file?path=${encodeURIComponent(openFile)}`), { method: 'PUT', body: text });
+      if (!r.ok) throw new Error(await r.text());
+      setDirty(false);
+      setSaving('saved');
+      reload();
+      setTimeout(() => setSaving((s) => (s === 'saved' ? '' : s)), 1500);
+    } catch {
+      setSaving('failed');
+    }
+  };
+  const saveNow = () => {
+    const view = viewRef.current;
+    if (view) void saveText(view.state.doc.toString());
+  };
 
   const openInVsCode = () => {
     const view = viewRef.current;
@@ -121,6 +152,8 @@ export function CodePane() {
           {canDiff && <Toggle on={diff} icon="diff" title="Show the change against the last commit" onClick={() => { setPreview(false); setMode(diff ? 'file' : 'diff'); }} />}
           {diff && <Toggle on={changesOnly} icon="fold" title="Changes only" onClick={() => setChangesOnly(!changesOnly)} />}
           {!showDoc && <Toggle on={wrap} icon="word-wrap" title="Word wrap" onClick={() => setWrap(!wrap)} />}
+          {canEdit && <Toggle on={edit} icon="edit" title={edit ? 'Stop editing' : 'Edit this file'} onClick={() => { if (edit && dirty && !confirm('Drop the unsaved changes?')) return; setEdit(!edit); setDirty(false); setSaving(''); }} />}
+          {edit && (dirty || saving) && <button className="cd-btn cd-save" title="Save (Cmd+S)" disabled={saving === 'saving' || !dirty} onClick={saveNow}>{saving === 'saving' ? 'Saving' : saving === 'failed' ? 'Save failed' : saving === 'saved' ? 'Saved' : 'Save'}</button>}
           <Toggle on={follow} icon="eye" title="Follow Claude's edits" onClick={() => setUi({ follow: !follow })} />
           <Toggle icon="vscode" title="Open in VS Code" onClick={openInVsCode} />
         </div>
@@ -130,7 +163,7 @@ export function CodePane() {
       {file?.binary && <div className="cd-empty">Binary file</div>}
       {file && !file.error && !file.image && !file.binary && (
         <Guard key={`${file.path}:${showDoc}`}>
-          <Suspense fallback={null}>{showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} />}</Suspense>
+          <Suspense fallback={null}>{showDoc ? <MarkdownDoc path={file.path} text={file.content} /> : <Editor file={file} diff={diff} wrap={wrap} changesOnly={changesOnly} line={openLine} viewRef={viewRef} edit={edit} onDirty={setDirty} onSave={(t) => void saveText(t)} />}</Suspense>
         </Guard>
       )}
     </div>

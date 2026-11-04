@@ -12,6 +12,8 @@
 }
 @media (hover: hover) { .cd-btn:hover { background: var(--hover); color: var(--fg); } }
 .cd-btn.on { background: var(--accent-soft); color: var(--fg); }
+.cd-save { width: auto; padding: 0 var(--sp-3); font-size: var(--fs-sm); color: var(--fg); }
+.cd-save:disabled { opacity: 0.6; }
 
 .cd-editor { flex: 1; min-height: 0; overflow: hidden; }
 .cd-editor .cm-editor { height: 100%; background: var(--bg); color: var(--fg); }

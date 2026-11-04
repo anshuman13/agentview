@@ -1,4 +1,4 @@
-import { open, readFile, readdir, realpath, stat } from 'node:fs/promises';
+import { open, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { inside } from '../../../shared/util.js';
@@ -50,7 +50,7 @@ export async function listDir(cwd: string, rel: string) {
       : [],
   );
   return items
-    .map((i) => ({ name: i.name, dir: i.dir, hidden: HIDDEN.has(i.name) || ignored.has(i.path) }))
+    .map((i) => ({ name: i.name, dir: i.dir, hidden: HIDDEN.has(i.name) || (ignored.has(i.path) && !i.name.startsWith('.env')) }))
     .sort((a, b) => (a.dir !== b.dir ? (a.dir ? -1 : 1) : a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })));
 }
 
@@ -97,4 +97,13 @@ export async function readFileWithOriginal(cwd: string, rel: string) {
   const content = await readFile(abs, 'utf8').catch(() => '');
   const original = await git(path.dirname(abs), ['show', `HEAD:./${path.basename(abs)}`]).catch(() => '');
   return { path: rel, content, original };
+}
+
+// Saves an edit from the code pane: project files only, never through a credential folder, and never over a binary.
+export async function writeFileText(cwd: string, rel: string, content: string) {
+  if (path.isAbsolute(rel)) throw new Error('path outside project');
+  const abs = await viewPath(cwd, rel);
+  if (content.length > MAX_FILE) throw new Error('File too large to save');
+  await writeFile(abs, content, 'utf8');
+  return { path: rel, size: content.length };
 }

@@ -14,7 +14,7 @@ import { ntfyTopic, post } from './integrations/notify.js';
 import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
 import { emptyBin, listBin, removeSession, restoreSession } from './agent/claude/bin.js';
-import { CODEX_WORK, listDir, listFiles, readFileWithOriginal, readImage } from './workspace/files.js';
+import { CODEX_WORK, listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from './workspace/files.js';
 import { github } from './integrations/github.js';
 import { assistantRoute } from './integrations/assistant.js';
 import { attention, dismissAttention, onAttention, refreshAttention, startAttention } from './integrations/attention.js';
@@ -28,6 +28,8 @@ import type { AttentionItem, ClientMessage, LiveChat, ServerMessage } from '../.
 import { Ring, frame } from './http/stream.js';
 import { gz, serveWeb } from './http/web.js';
 import { readBody, savePaste } from './http/body.js';
+
+const MAX_FILE_BODY = 5_000_000;
 import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
 import { Host } from './host/client.js';
 import type { Hello } from './host/protocol.js';
@@ -275,6 +277,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/terms') return json(listTerminals(chat.id));
     if (url.pathname === '/api/files') return json(await listFiles(chat.cwd));
     if (url.pathname === '/api/dir') return json(await listDir(chat.cwd, url.searchParams.get('path') ?? ''));
+    if (url.pathname === '/api/file' && req.method === 'PUT') return json(await writeFileText(chat.cwd, url.searchParams.get('path') ?? '', await readBody(req, MAX_FILE_BODY)));
     if (url.pathname === '/api/file') return json(await readFileWithOriginal(chat.cwd, url.searchParams.get('path') ?? ''));
     if (url.pathname === '/api/image') {
       const img = await readImage(chat.cwd, url.searchParams.get('path') ?? '');

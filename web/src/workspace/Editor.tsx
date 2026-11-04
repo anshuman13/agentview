@@ -1,6 +1,7 @@
 import { useEffect, useRef, type MouseEvent, type MutableRefObject, type PointerEvent } from 'react';
 import { EditorState, type Extension } from '@codemirror/state';
-import { EditorView, lineNumbers } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers } from '@codemirror/view';
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { unifiedMergeView } from '@codemirror/merge';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
@@ -21,7 +22,7 @@ async function lang(path: string): Promise<Extension> {
 
 export type FileData = { path: string; content: string; original: string; image?: boolean; binary?: boolean; error?: string };
 
-type EditorProps = { file: FileData; diff: boolean; wrap: boolean; changesOnly: boolean; line?: number | null; viewRef: MutableRefObject<EditorView | null> };
+type EditorProps = { file: FileData; diff: boolean; wrap: boolean; changesOnly: boolean; line?: number | null; viewRef: MutableRefObject<EditorView | null>; edit?: boolean; onDirty?: (dirty: boolean) => void; onSave?: (text: string) => void };
 
 const PRESS_MS = 500;
 
@@ -32,9 +33,13 @@ function quoteLine(path: string, line: number, text: string) {
   window.dispatchEvent(new CustomEvent('agentview:focus'));
 }
 
-export function Editor({ file, diff, wrap, changesOnly, line, viewRef }: EditorProps) {
+export function Editor({ file, diff, wrap, changesOnly, line, viewRef, edit = false, onDirty, onSave }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
-  const scroll = useRef<{ path: string; top: number } | null>(null);
+  const scroll = useRef<{ path: string; top: number; head: number } | null>(null);
+  const save = useRef(onSave);
+  save.current = onSave;
+  const dirty = useRef(onDirty);
+  dirty.current = onDirty;
   const press = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> } | null>(null);
   const dark = isDark(useThemeName());
 
@@ -75,8 +80,9 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef }: EditorP
       if (cancelled) return;
       const extensions = [
         lineNumbers(),
-        EditorView.editable.of(false),
-        EditorState.readOnly.of(true),
+        EditorView.editable.of(edit),
+        EditorState.readOnly.of(!edit),
+        edit ? [history(), keymap.of([{ key: 'Mod-s', run: (v) => { save.current?.(v.state.doc.toString()); return true; } }, indentWithTab, ...defaultKeymap, ...historyKeymap]), EditorView.updateListener.of((u) => { if (u.docChanged) dirty.current?.(u.state.doc.toString() !== file.content); })] : [],
         EditorView.theme({}, { dark }),
         syntaxHighlighting(dark ? oneDarkHighlightStyle : defaultHighlightStyle),
         language,
@@ -89,17 +95,21 @@ export function Editor({ file, diff, wrap, changesOnly, line, viewRef }: EditorP
         // A review finding opens the file on its line.
         const l = view.state.doc.line(line);
         view.dispatch({ selection: { anchor: l.from, head: l.to }, effects: EditorView.scrollIntoView(l.from, { y: 'center' }) });
-      } else if (scroll.current?.path === file.path) view.scrollDOM.scrollTop = scroll.current.top;
+      } else if (scroll.current?.path === file.path) {
+        view.scrollDOM.scrollTop = scroll.current.top;
+        const head = Math.min(scroll.current.head, view.state.doc.length);
+        view.dispatch({ selection: { anchor: head } });
+      }
       viewRef.current = view;
     });
     return () => {
       cancelled = true;
       if (!view) return;
-      scroll.current = { path: file.path, top: view.scrollDOM.scrollTop };
+      scroll.current = { path: file.path, top: view.scrollDOM.scrollTop, head: view.state.selection.main.head };
       viewRef.current = null;
       view.destroy();
     };
-  }, [file, diff, wrap, changesOnly, dark, line]);
+  }, [file, diff, wrap, changesOnly, dark, line, edit]);
 
   return <div className="cd-editor" ref={host} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={release} onPointerCancel={release} onContextMenu={onContextMenu} />;
 }
