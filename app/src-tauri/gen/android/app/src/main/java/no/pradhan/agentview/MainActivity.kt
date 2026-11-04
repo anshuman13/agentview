@@ -122,6 +122,12 @@ class MainActivity : TauriActivity() {
     if (id >= 0) emit("notification-click", JSONObject().put("id", id))
   }
 
+  // Opening the app clears its notifications, so the launcher drops the unread dot on the icon.
+  override fun onResume() {
+    super.onResume()
+    getSystemService(NotificationManager::class.java).cancelAll()
+  }
+
   override fun onDestroy() {
     recognizer?.destroy()
     tts?.shutdown()
