@@ -214,7 +214,7 @@ export function skipAsk(db: Database, id: string, reason = '', now = Date.now())
   const row = db.prepare("SELECT draft FROM items WHERE profile = ? AND id = ? AND source = 'slack' AND deleted = 0").get(PROFILE, id) as { draft: string | null } | null;
   if (!row) return false;
   applyChanges(db, [{ table: 'items', id, profile: PROFILE, updated_at: now, fields: { status: 'done', draft: null } }]);
-  db.prepare("UPDATE replies SET status = 'skipped', why = 'skipped', draft_text = ?, skip_reason = ? WHERE profile = ? AND id = ? AND status = 'held'").run(row.draft?.trim() || null, reason.trim() || null, PROFILE, id);
+  db.prepare("UPDATE replies SET status = 'skipped', why = 'skipped', draft_text = ?, skip_reason = ? WHERE profile = ? AND id = ? AND status IN ('held', 'error')").run(row.draft?.trim() || null, reason.trim() || null, PROFILE, id);
   return true;
 }
 

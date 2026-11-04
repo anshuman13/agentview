@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { openDb, setMeta } from './db.js';
 import { askPush, pushHours, scanDue, scanPrompt, sinceOf } from './slack.js';
 import { DAY } from './time.js';
+import { failedReplies } from './autopilot.js';
 import { acceptAsk, askId, askTags, saveScan, skipAsk } from './slackSave.js';
 import { applyChanges } from './sync.js';
 
@@ -222,5 +223,14 @@ describe('askPush', () => {
     expect(db.prepare('SELECT status, draft FROM items WHERE id = ?').get('a1')).toEqual({ status: 'done', draft: null });
     expect(db.prepare('SELECT status, why, draft_text, skip_reason FROM replies WHERE id = ?').get('a1')).toEqual({ status: 'skipped', why: 'skipped', draft_text: 'Yes.', skip_reason: 'too long' });
     expect(skipAsk(db, 'nope')).toBe(false);
+  });
+
+  test('skipAsk stops the retry of a failed post', () => {
+    const db = openDb(':memory:');
+    db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, draft) VALUES ('a1', 'work', 1, 0, 'Answer Kim', 'slack', 'suggested', 'Yes.')").run();
+    db.prepare("INSERT INTO replies (profile, id, status, text, tries, at) VALUES ('work', 'a1', 'error', 'Yes.', 1, 0)").run();
+    skipAsk(db, 'a1', '', 5);
+    expect(db.prepare('SELECT status FROM replies WHERE id = ?').get('a1')).toEqual({ status: 'skipped' });
+    expect(failedReplies(db)).toEqual([]);
   });
 });

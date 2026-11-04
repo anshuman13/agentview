@@ -229,7 +229,7 @@ export async function sendReply(db: Database, c: AutopilotConfig, ask: { id: str
     throw err;
   }
   const status = dry ? 'dry' : 'sent';
-  db.prepare('UPDATE replies SET status = ?, tier = ?, text = ?, url = ?, sent_at = ? WHERE profile = ? AND id = ?').run(status, tier, text, url, now, PROFILE, ask.id);
+  db.prepare('UPDATE replies SET status = ?, tier = ?, text = ?, url = ?, sent_at = ?, why = NULL, tries = NULL WHERE profile = ? AND id = ?').run(status, tier, text, url, now, PROFILE, ask.id);
   const row = db.prepare('SELECT text, updated_at FROM items WHERE profile = ? AND id = ? AND deleted = 0').get(PROFILE, ask.id) as { text: string | null; updated_at: number } | null;
   if (row) {
     // The ask may have been saved this same millisecond, and a same-time edit loses.

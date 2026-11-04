@@ -121,7 +121,7 @@ export const taskRoutes: Routes = {
       run().then(
         (r) => {
           console.log(`slack reply ${id} (push): ${r?.status ?? 'no draft'}`);
-          if (r && r.status !== 'sent') void pushNtfy(r.status === 'answered' ? 'Not sent: someone answered first' : r.status === 'changed' ? 'Not sent: the thread changed' : 'Reply logged', '', '', r.url ?? '');
+          if (r && r.status !== 'sent') void pushNtfy(r.status === 'answered' ? 'Not sent: someone answered first' : 'Not sent: the thread changed', '', '', r.url ?? '');
           else if (r) void pushNtfy('Reply sent', '', '', r.url ?? '');
           else void pushNtfy('Not sent: no draft for this ask', '', '', '');
         },
