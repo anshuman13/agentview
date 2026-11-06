@@ -1,6 +1,6 @@
 import type { Job, Run } from '../data/wiki';
 import { describe as group, expect, test } from 'vitest';
-import { describe, queued, rowMeta, runMeta, parseSchedule, scheduleOf } from './schedule';
+import { canRunNow, describe, queued, rowMeta, runMeta, parseSchedule, scheduleOf } from './schedule';
 
 group('job schedules', () => {
   test('read back what the form writes', () => {
@@ -37,6 +37,19 @@ group('queued', () => {
     expect(queued(job, [run('running')], 200)).toBe(false);
     expect(queued(job, [], 50)).toBe(false);
     expect(queued({ ...job, next_run_at: null }, [], 200)).toBe(false);
+  });
+});
+
+group('canRunNow', () => {
+  const job = { id: 'j', profile: 'work', prompt: 'Go', next_run_at: null } as Job;
+  const run = (status: string) => ({ id: 'r', profile: 'work', job_id: 'j', status, deleted: 0 }) as Run;
+  test('blocked while running, queued or with a blank prompt', () => {
+    expect(canRunNow(job, [], 200)).toBe(true);
+    expect(canRunNow(job, [run('error')], 200)).toBe(true);
+    expect(canRunNow(job, [run('running')], 200)).toBe(false);
+    expect(canRunNow({ ...job, next_run_at: 100 }, [], 200)).toBe(false);
+    expect(canRunNow({ ...job, prompt: '  ' }, [], 200)).toBe(false);
+    expect(canRunNow({ ...job, prompt: null }, [], 200)).toBe(false);
   });
 });
 

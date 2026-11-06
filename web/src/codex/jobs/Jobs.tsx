@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, rowKey, type Profile } from '../data/sync';
-import type { Job } from '../data/wiki';
+import type { Job, Run } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
-import { firstLine, money } from '../../ui/util';
+import { Row } from '../../ui/Row';
+import { Button, IconButton } from '../../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
+import { money } from '../../ui/util';
 import { setView, useView } from '../view';
 import { usePullSync } from '../pullSync';
 import { useMinute } from '../split';
@@ -14,8 +17,36 @@ import '../../styles/features/meetings.css';
 import '../../styles/features/jobs.css';
 import { Autopilot } from './Autopilot';
 import { JobPage } from './JobPage';
-import { Switch } from './Switch';
-import { RunStatus, at, describe, rowMeta, runsOf, useJobs } from './schedule';
+import { canRunNow, describe, removeJob, rowMeta, runNow, runsOf, queued, useJobs } from './schedule';
+
+const jobState = (j: Job, runs: Run[], now: number) => {
+  const latest = runsOf(runs, j)[0]?.status;
+  return latest === 'running' ? ['Running', 'running'] : queued(j, runs, now) ? ['Queued', 'waiting'] : latest === 'error' ? ['Failed', 'waiting'] : !j.enabled ? ['Off', 'quiet'] : null;
+};
+
+type Jobs = ReturnType<typeof useJobs>;
+
+function JobActions({ j, runs, now, store, enable }: { j: Job; runs: Run[]; now: number; store: Jobs['store']; enable: Jobs['enable'] }) {
+  const [open, setOpen] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  const choose = (fn: () => void) => () => { setOpen(false); fn(); };
+  return (
+    <span className="jb-actions">
+      <Button size="sm" icon="play" disabled={!canRunNow(j, runs, now)} onClick={() => runNow(store, j)}>Run now</Button>
+      <span className="jb-more">
+        <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
+        {open && (
+          <Menu trigger={more} onClose={() => setOpen(false)}>
+            <MenuItem icon="edit" onClick={choose(() => setView({ open: rowKey(j) }))}>Edit</MenuItem>
+            <MenuItem icon={j.enabled ? 'circle-slash' : 'play'} onClick={choose(() => enable(j, !j.enabled))}>{j.enabled ? 'Disable' : 'Enable'}</MenuItem>
+            <MenuSeparator />
+            <MenuItem icon="trash" danger onClick={choose(() => removeJob(store, j))}>Delete</MenuItem>
+          </Menu>
+        )}
+      </span>
+    </span>
+  );
+}
 
 function JobsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
@@ -49,22 +80,19 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
         <div className="mt-list">
           <Autopilot />
           {jobs.length > 0 && (
-            <div className="mt-rows">
+            <div className="jb-list">
               {jobs.map((j) => {
                 const meta = rowMeta(j, runs, now);
-                const last = runsOf(runs, j)[0];
+                const state = jobState(j, runs, now);
                 return (
-                  <div key={rowKey(j)} role="button" tabIndex={0} className={`mt-row jb-row${j.enabled ? '' : ' off'}`} onClick={() => setView({ open: rowKey(j) })} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setView({ open: rowKey(j) }); } }}>
-                    <span className="mt-body">
-                      <span className="mt-title">{j.name || 'Untitled job'}{mixed && <span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work' : 'Personal'}</span>}</span>
-                      <span className="wk-meta">
-                        <span>{describe(j.schedule)}</span>
-                        {meta !== null && <span>{meta}</span>}
-                        {cost[j.id] > 0 && <span>7 days {money(cost[j.id])}</span>}
-                      </span>
-                      {last && <span className="jb-last"><RunStatus r={last} /> {last.status === 'running' ? 'Running now' : `${at(last.started_at ?? 0)}: ${firstLine(last.output) || 'No reply'}`}</span>}
-                    </span>
-                    <Switch on={!!j.enabled} label={`Run ${j.name ?? 'job'} on schedule`} onChange={(on) => enable(j, on)} />
+                  <div key={rowKey(j)} className={`jb-item${j.enabled ? '' : ' off'}`}>
+                    <Row
+                      title={j.name || 'Untitled job'}
+                      meta={[describe(j.schedule), meta?.startsWith('Next') && meta, cost[j.id] > 0 && `7 days ${money(cost[j.id])}`, mixed && (j.profile === 'work' ? 'Work' : 'Personal')].filter(Boolean).join(' · ')}
+                      trailing={state && <span className={`badge ${state[1]}`}>{state[0]}</span>}
+                      onClick={() => setView({ open: rowKey(j) })}
+                    />
+                    <JobActions j={j} runs={runs} now={now} store={store} enable={enable} />
                   </div>
                 );
               })}

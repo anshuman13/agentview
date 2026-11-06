@@ -4,10 +4,10 @@ import { Icon } from '../../ui/Icon';
 import { SearchedOutput } from '../../ui/SearchedOutput';
 import { Row } from '../../ui/Row';
 import { useOnUnmount } from '../../ui/util';
-import { copyText, setView, showSnack, useEscapeBack } from '../view';
+import { copyText, setView, useEscapeBack } from '../view';
 import { useMinute } from '../split';
 import { nextRun } from '../../../../shared/schedule';
-import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, parseSchedule, queued, runMeta, runsOf, scheduleOf, useJobs } from './schedule';
+import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, canRunNow, parseSchedule, queued, removeJob, runMeta, runNow, runsOf, scheduleOf, useJobs } from './schedule';
 import { Switch } from './Switch';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
@@ -71,16 +71,12 @@ export function JobPage({ j }: { j: Job }) {
     else if (sched.kind !== 'custom') void store.editRow('jobs', j, { schedule: `once ${new Date(Date.now() + 3_600_000).toLocaleDateString('sv')} ${n.time}`, next_run_at: null });
   };
   const list = runsOf(runs, j);
-  const running = list[0]?.status === 'running';
-  const isQueued = queued(j, runs, Date.now());
-  const runNow = () => {
-    void store.editRow('jobs', j, { next_run_at: Date.now() });
-    showSnack('Starts within a minute');
-  };
+  const now = Date.now();
+  const canRun = canRunNow({ ...j, prompt }, runs, now);
+  const isQueued = queued(j, runs, now);
   const remove = () => {
-    void store.editRow('jobs', j, { deleted: 1 });
+    removeJob(store, j);
     back();
-    showSnack(`Deleted ${j.name || 'job'}`, () => void store.editRow('jobs', j, { deleted: 0 }));
   };
   return (
     <div className="wk narrow">
@@ -88,7 +84,7 @@ export function JobPage({ j }: { j: Job }) {
         <button className="icon-btn" title="Back to jobs" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         <nav className="wk-crumbs"><button onClick={back}>Jobs</button></nav>
         <span className="spacer" />
-        <button className="btn sm" disabled={running || isQueued || !prompt.trim()} onClick={runNow}><Icon name="play" small /> Run now</button>
+        <button className="btn sm" disabled={!canRun} onClick={() => runNow(store, j)}><Icon name="play" small /> Run now</button>
         <button className="icon-btn" title="Delete job" aria-label="Delete job" onClick={remove}><Icon name="trash" /></button>
       </header>
       <div className="wk-scroll">

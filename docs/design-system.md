@@ -200,6 +200,8 @@ How much a list row may carry. The eye should find the one thing to do without r
   the rows. Two batch actions become a Menu on the header.
 - A Badge per row at most one, for state only (FAQ, Needs you, Failed). Badges are not labels for things the
   title already says.
+- Jobs rows follow this: one badge (Running, Queued, Failed, Off), a Run now Button sm, and a More menu with Edit,
+  Disable or Enable, Delete. No switch and no last-run line on the row.
 
 ### Status language
 - Outcomes are nouns in sentence case: Sent, Failed, Skipped, Waiting, Edited. Counts as "1 sent", "2 failed".

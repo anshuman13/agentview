@@ -1,9 +1,16 @@
 .jb-row { cursor: pointer; }
 .jb-presets { display: flex; gap: var(--sp-4); margin-top: var(--sp-6); }
 .ui-empty + .jb-presets { justify-content: center; margin-top: 0; }
-.jb-row.off .mt-title { color: var(--fg-muted); }
-.jb-last { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; font-size: var(--fs-sm); color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.jb-last .codicon.icon { font-size: 12px; flex: none; }
+.jb-list { border-radius: var(--shape-lg); background: var(--group-card); }
+.jb-item:first-child .ui-row { border-top-left-radius: var(--shape-lg); }
+.jb-item:last-child .ui-row { border-bottom-left-radius: var(--shape-lg); }
+.jb-item { display: flex; align-items: center; gap: var(--sp-3); padding-right: var(--list-pad); }
+.jb-item:not(:last-child) { border-bottom: var(--hairline); }
+.jb-item .ui-row { flex: 1; min-width: 0; width: auto; }
+.jb-item .ui-row::after { display: none; }
+.jb-item.off .ui-row-title { color: var(--fg-muted); }
+.jb-actions { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }
+.jb-more { position: relative; display: inline-flex; }
 .jb-switch { flex: none; width: 36px; height: 20px; padding: 2px; border: 0; border-radius: var(--radius-pill); background: var(--border-strong); cursor: pointer; transition: background var(--dur); }
 .jb-switch > span { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--fg-strong); transition: transform var(--dur); }
 .jb-switch.on { background: var(--accent); }
@@ -35,5 +42,5 @@
 .jb-run-body { padding: 0 var(--list-pad) var(--sp-6); }
 .jb-output { margin-top: var(--sp-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; color: var(--fg); }
 .jb-run-tools { display: flex; }
-.jb-row .as-prof, .mt-when .as-prof { font-size: var(--fs-xs); font-weight: 600; }
+.mt-when .as-prof { font-size: var(--fs-xs); font-weight: 600; }
 .jb-seen { display: block; width: 100%; border: 0; border-top: 1px solid var(--border); background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; }

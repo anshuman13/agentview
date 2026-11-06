@@ -4,7 +4,7 @@ import { clock } from '../time';
 import { dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { money } from '../../ui/util';
-import { useView } from '../view';
+import { showSnack, useView } from '../view';
 
 export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 export const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
@@ -43,6 +43,20 @@ export const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && 
 export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
 export const rowMeta = (j: Job, runs: Run[], now: number) => (queued(j, runs, now) ? 'Queued' : !j.enabled ? 'Off' : j.next_run_at ? `Next ${at(j.next_run_at)}` : null);
+
+export const canRunNow = (j: Job, runs: Run[], now: number) => !!j.prompt?.trim() && runsOf(runs, j)[0]?.status !== 'running' && !queued(j, runs, now);
+
+type Store = ReturnType<typeof useAssistantStore>;
+
+export function runNow(store: Store, j: Job) {
+  void store.editRow('jobs', j, { next_run_at: Date.now() });
+  showSnack('Starts within a minute');
+}
+
+export function removeJob(store: Store, j: Job) {
+  void store.editRow('jobs', j, { deleted: 1 });
+  showSnack(`Deleted ${j.name || 'job'}`, () => void store.editRow('jobs', j, { deleted: 0 }));
+}
 
 export function runMeta(r: Run) {
   if (r.status === 'running') return 'Running';
