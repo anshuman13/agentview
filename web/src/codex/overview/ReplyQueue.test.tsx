@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ItemRow } from '../data/sync';
-import { ReplyQueue } from './ReplyQueue';
+import { ReplyQueue, staleAsks } from './ReplyQueue';
 
+vi.mock('../data/engine', () => ({ reviewedSince: (r: { at?: number }) => r.at ?? 0, errorText: String }));
 vi.mock('../data', () => ({ useAssistantStore: () => ({}) }));
 vi.mock('../useActions', () => ({ useActions: () => ({}) }));
 
@@ -57,5 +58,24 @@ describe('ReplyQueue batch actions', () => {
 
   it('renders nothing for an empty queue', () => {
     expect(html([])).toBe('');
+  });
+});
+
+describe('staleAsks', () => {
+  const now = 10 * 86400_000;
+  const at = (id: string, days: number) => row(id, '', { at: now - days * 86400_000 } as Partial<ItemRow>);
+
+  it('keeps asks older than 3 days in order and counts exactly 3 as fresh', () => {
+    const rows = [at('a', 4), at('b', 3), at('c', 1), at('d', 9)];
+    expect(staleAsks(rows, now).map((r) => r.id)).toEqual(['a', 'd']);
+  });
+});
+
+describe('ReplyQueue filtered', () => {
+  it('shows the filter chip and one Dismiss all in place of the batch buttons', () => {
+    const h = renderToStaticMarkup(<ReplyQueue rows={[row('a', 'faq'), row('b', 'faq')]} filtered />);
+    expect(h).toContain('Older than 3 days');
+    expect(h).toContain('Dismiss all 2');
+    expect(h).not.toContain('Send all');
   });
 });

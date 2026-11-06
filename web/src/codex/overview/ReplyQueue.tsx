@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReplyHistory } from '../data/store';
 import { clearHistory, loadHistory } from '../replyHistory';
 import { useAssistantStore } from '../data';
-import { reviewedSince } from '../data/engine';
+import { errorText, reviewedSince } from '../data/engine';
 import { isSaid, type ItemRow } from '../data/sync';
 import { tagList } from '../AddSheet';
 import { SectionHead } from '../Fold';
-import { Button, IconButton } from '../../ui/Button';
+import { Button, Chip, IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { ago } from '../../ui/util';
@@ -28,6 +28,10 @@ export const adminList = (rows: ItemRow[]) => rows.filter(admin).map((r) => `- $
 export const replyQueue = (review: ItemRow[]) => review
   .filter((r) => r.source === 'slack' && (r.status === 'suggested' || r.status === 'open') && !r.deleted && (drafted(r) || mine(r)) && !isSaid(r))
   .sort((a, b) => Number(drafted(b)) - Number(drafted(a)) || Number(mine(b)) - Number(mine(a)) || Number(isFaq(b)) - Number(isFaq(a)) || reviewedSince(a) - reviewedSince(b));
+
+export const STALE_DAYS = 3;
+// Asks that have waited more than 3 days, in queue order.
+export const staleAsks = (rows: ItemRow[], now: number) => rows.filter((r) => now - reviewedSince(r) > STALE_DAYS * 86400_000);
 
 // The last replies sent to a person, so a draft stays consistent with what I already said.
 function HistoryLines({ data, error, who, retry }: { data: ReplyHistory | null; error: string; who: string; retry: () => void }) {
@@ -143,9 +147,10 @@ function Ask({ row }: { row: ItemRow }) {
   );
 }
 
-export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
+export function ReplyQueue({ rows, filtered = false, onClear }: { rows: ItemRow[]; filtered?: boolean; onClear?: () => void }) {
   const store = useAssistantStore();
   const [sending, setSending] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const faq = rows.filter(isFaq);
@@ -170,6 +175,19 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
     if (sent) haptic('success');
     showSnack(sent === faq.length ? `Sent ${sent} FAQ answers` : `Sent ${sent} of ${faq.length} FAQ answers`);
   };
+  // Dismissing keeps the drafts and sends nothing; one Undo restores each row that went through unless its status changed since.
+  const dismissAll = async () => {
+    setDismissing(true);
+    const results = await Promise.allSettled(rows.map((r) => store.update(r, { status: 'dismissed' })));
+    setDismissing(false);
+    const done = rows.filter((_, i) => results[i].status === 'fulfilled');
+    const failed = results.find((x): x is PromiseRejectedResult => x.status === 'rejected');
+    const undo = () => done.forEach((r) => {
+      const cur = store.snapshot().items.find((i) => i.profile === r.profile && i.id === r.id);
+      if (cur?.status === 'dismissed') void store.update(cur, { status: r.status });
+    });
+    showSnack(failed ? `Dismissed ${done.length} of ${rows.length}: ${errorText(failed.reason)}` : `${rows.length} dismissed`, done.length ? undo : undefined);
+  };
   const sendText = `Send all ${faq.length} FAQ answers`;
   const copyLabel = `Copy ${admins} access and limit requests`;
   const copyList = () => copyText(adminList(rows), `Copied ${admins} requests`);
@@ -189,9 +207,15 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
   ) : admins >= 2 ? (
     <Button size="sm" icon="copy" onClick={copyList}>{copyLabel}</Button>
   ) : null;
+  const dismiss = (
+    <span className="ov-queue-filter">
+      <Chip on size="sm" onClick={onClear}>Older than {STALE_DAYS} days</Chip>
+      <Button size="sm" icon={dismissing ? 'loading' : 'close'} disabled={dismissing} onClick={() => void dismissAll()}>Dismiss all {rows.length}</Button>
+    </span>
+  );
   return (
     <section>
-      <SectionHead id="reply-queue" title="Reply queue" count={rows.length} action={batch} />
+      <SectionHead id="reply-queue" title="Reply queue" count={rows.length} action={filtered ? dismiss : batch} />
       <div className="as-group ov-queue-group">
         {rows.map((r) => <Ask key={r.profile + r.id} row={r} />)}
       </div>

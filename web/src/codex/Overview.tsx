@@ -1,14 +1,15 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useSyncGate } from './data';
 import { live, type Meeting } from './data/wiki';
 import { meetingTimeLeft } from './data/load';
-import { atTime, latestDigest, latestRunByJob, staleTasks } from './data/engine';
+import { atTime, latestDigest, latestRunByJob, reviewedSince, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
-import { plural } from '../ui/util';
+import { ago, plural } from '../ui/util';
+import { Row } from '../ui/Row';
 import { dayLabel } from './data/dates';
 import { Shutdown } from './Shutdown';
 import { ClaimsToReview } from './overview/ClaimsToReview';
-import { ReplyQueue, replyQueue } from './overview/ReplyQueue';
+import { ReplyQueue, replyQueue, staleAsks, STALE_DAYS } from './overview/ReplyQueue';
 import { useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
 import { useActions } from './useActions';
@@ -59,6 +60,14 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const digest = useMemo(() => latestDigest(snap.items, filter), [snap.items, filter]);
   const needs = useNeedsYou(s, now);
   const queue = useMemo(() => replyQueue(s.review), [s.review]);
+  const [onlyStale, setOnlyStale] = useState(false);
+  const old = staleAsks(queue, now);
+  const filtered = onlyStale && old.length > 0;
+  useEffect(() => { if (onlyStale && !old.length) setOnlyStale(false); }, [onlyStale, old.length]);
+  const showOld = () => {
+    setOnlyStale(true);
+    requestAnimationFrame(() => document.getElementById('reply-queue')?.scrollIntoView({ block: 'start' }));
+  };
   const stale = useMemo(() => {
     const late = new Set(s.overdue.map((r) => r.profile + r.id));
     const shownElsewhere = (r: ItemRow) => { const t = atTime(r.at); return t != null && t < s.endOfTomorrow; };
@@ -126,7 +135,12 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <MorningBrief now={now} />
       <WeeklyReview now={now} />
       <ClaimsToReview />
-      <ReplyQueue rows={queue} />
+      {old.length > 0 && !filtered && (
+        <div className="as-group">
+          <Row title={`${plural(old.length, 'ask')} older than ${STALE_DAYS} days`} meta={`oldest ${ago(Math.min(...old.map(reviewedSince)))}`} trailing={<Icon name="chevron-right" small />} onClick={showOld} />
+        </div>
+      )}
+      <ReplyQueue rows={filtered ? old : queue} filtered={filtered} onClear={() => setOnlyStale(false)} />
       <JustEnded meetings={s.meetingsToday} now={now} />
       {close && (
         <section>

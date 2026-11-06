@@ -34,6 +34,7 @@
 .ov-digest-row { display: flex; align-items: center; padding-right: var(--list-pad); }
 .ov-digest-row > .ui-row { flex: 1; min-width: 0; }
 .ov-digest-row > .ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
+.ov-queue-filter { display: inline-flex; align-items: center; gap: var(--sp-3); }
 .ov-queue-group { overflow: visible; }
 .ov-queue-group > .ov-ask:first-child .ui-row { border-top-left-radius: 11px; }
 .ov-queue-group > .ov-ask:last-child .ui-row { border-bottom-left-radius: 11px; }
