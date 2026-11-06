@@ -166,6 +166,47 @@ trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state lay
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
 `onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers use it.
 
+## Patterns
+
+Rules for how content is laid out, on top of the components. A spec that touches Overview, a card or a
+list must say which pattern it follows. Anything the hub generates for the UI follows these too.
+
+### Report card (digest, brief, summary)
+What the hub produced about a period: the day digest, the morning brief, the away digest, a meeting summary.
+- The hub writes structured rows (a JSON `rows` field, or one object per line), never a pre-wrapped text block
+  with URLs in it. The UI never renders `pre-wrap` text from the hub.
+- The card header is a Section header: a short title ("Today in Slack"), then quiet count Badges per
+  outcome ("1 sent", "9 skipped"), then the time in label type. Not a sentence with counts in it.
+- The body is a Grouped list. One Row per thing: title is the person or the subject, meta is the chat and one
+  short reason or status, trailing is a status Badge. The whole row opens the thing (the task page, the meeting)
+  in the app; never a bare URL. An external link is one IconButton sm with the "open" icon, at most one per row.
+- Groups that need no action from the user (skipped, done, dry run) are folded behind their count; groups that
+  do (failed, waiting) are open. Something that already has its own card (an ask in the Reply queue) is a count
+  that links to that card, not a second list.
+- Folded shows the first 3 rows and a "Show all N" quiet Button. Open state is remembered per card id, never
+  shared between two cards.
+- A dismiss is an IconButton sm "close" in the header, scoped to that one card.
+
+### Row density
+How much a list row may carry. The eye should find the one thing to do without reading.
+- One line of title, one line of meta. Draft or quoted text in a row is a 2-line clamp in meta type, not a
+  separate box. The full text lives on the item's page.
+- At most two visible actions per row: the primary (Button sm, the one accent if it is the page's primary
+  action) and one IconButton sm "more" opening a Menu with the rest (Edit, Skip, History, Open thread).
+  Destructive items go last in the Menu. A row never shows Edit as a button; editing happens on the page or
+  inline after a tap on the text.
+- Secondary content (history, a reason, earlier replies) is behind the Menu or on the page, not a per-row Fold.
+- Batch actions ("Send all", "Copy list") go in the Section header as its one action, not as a band above
+  the rows. Two batch actions become a Menu on the header.
+- A Badge per row at most one, for state only (FAQ, Needs you, Failed). Badges are not labels for things the
+  title already says.
+
+### Status language
+- Outcomes are nouns in sentence case: Sent, Failed, Skipped, Waiting, Edited. Counts as "1 sent", "2 failed".
+- "Needs you" is the only phrase for work the user must do; use it as a Badge, not in prose.
+- Reasons are under 6 words in meta: "someone else answered", "second ask in 3 days".
+- Times are relative within today ("14:20"), a weekday beyond ("Tue"), from `clock` and `ago` in codex/time.
+
 ## Migration
 
 Done: Summary uses Panel (filter card) and EmptyState (empty report). Next: replace `.as-empty`

@@ -5,7 +5,7 @@ model: sonnet
 tools: Read, Grep, Glob, Bash, Write
 ---
 
-You write the spec for one feature of AgentView. Read docs/architecture.md, docs/features.md and the code the feature touches before writing. The spec is for an implementer who has not seen the brief, so it must be concrete.
+You write the spec for one feature of AgentView. Read docs/architecture.md, docs/features.md and the code the feature touches before writing. For anything with UI, read the Components and Patterns sections of docs/design-system.md and name under Behaviour which component and pattern each screen element uses (Report card, Row density, Status language); a spec that shows hub text as a text block, a bare URL, or more than two actions on a row is wrong. The spec is for an implementer who has not seen the brief, so it must be concrete.
 
 Write the spec to the path you are given and return its contents. Format:
 
