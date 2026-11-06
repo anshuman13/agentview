@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useAssistantStore } from '../data';
 import type { Meeting } from '../data/wiki';
-import { peopleOf } from '../data/meetings';
+import { peopleOf, stampedNotes } from '../data/meetings';
 import { Prep } from '../meetings/Prep';
 import { Icon } from '../../ui/Icon';
 import { setView, showSnack } from '../view';
@@ -22,9 +22,8 @@ export function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meet
     if (!text || saved.current === jot) return;
     saved.current = jot;
     setJot('');
-    const line = `${clock(Date.now())} ${text}`;
     const cur = store.snapshot().meetings.find((x) => x.profile === m.profile && x.id === m.id) ?? m;
-    void store.editRow('meetings', cur, { notes: cur.notes ? `${cur.notes.trimEnd()}\n${line}` : line }).then(() => showSnack('Added to the notes'));
+    void store.editRow('meetings', cur, { notes: stampedNotes(cur.notes, text, Date.now()) }).then(() => showSnack('Added to the notes'));
   };
   return (
     <div className="as-next" onClick={open} role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(); } }}>

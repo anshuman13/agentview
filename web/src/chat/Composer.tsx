@@ -3,16 +3,20 @@ import { api, getState, notice, prompt, queueNext, send, sinceHeard, steer, useS
 import { Icon } from '../ui/Icon';
 import { Confirm } from '../ui/Confirm';
 import { assistantStore } from '../codex/data';
+import { stampedNotes } from '../codex/data/meetings';
+import { showSnack } from '../codex/view';
+import { clock } from '../codex/time';
 import { Voice, useDictation } from './Voice';
 import { QuickPick } from '../ui/QuickPick';
 import { FileIcon } from '../workspace/FileIcon';
 import { toolId } from '../ops/mcpHelpers';
 import { touch } from '../app/touch';
 import { Hl, readFlag, wsUrl, plural, save, storedStrings } from '../ui/util';
+import type { Meeting } from '../codex/data/wiki';
 import { COMPACT_AT, PERMISSION_MODES, type ChatEvent } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { ChatSettings, useChatSettings, type Pick } from './ChatSettings';
-import { accept, addUse, append, buildHistory, contextPercent, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, sharedTask, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
+import { accept, addUse, append, buildHistory, contextPercent, currentMeeting, fileCache, filesEdited, ghostFor, rankCommands, rankFiles, readDraft, sharedTask, turnEnd, remember, repeatLabel, repeatPill, loopLabel, saveDraft, STORED_KEY, terminalId, triggerAt, uploadPaste, useLabel, withUses, type Use } from './composerLogic';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -187,6 +191,22 @@ export function Composer() {
     }
   };
 
+  const sharedMeeting = useMemo(() => (shared === null ? null : currentMeeting(assistantStore().snapshot().meetings, Date.now())), [shared === null]);
+  const addToNotes = async (raw: string, m: Meeting) => {
+    try {
+      const store = assistantStore();
+      const cur = store.snapshot().meetings.find((x) => x.profile === m.profile && x.id === m.id) ?? m;
+      const notes = stampedNotes(cur.notes, raw, Date.now());
+      if (!notes) return;
+      await store.editRow('meetings', cur, { notes });
+      if (store.snapshot().meetings.find((x) => x.profile === cur.profile && x.id === cur.id)?.notes !== notes) throw new Error('the notes did not change');
+      showSnack('Added to the notes');
+    } catch (err) {
+      notice(`Not saved: ${errText(err)}`);
+      setText((t) => append(t, `${raw} `));
+    }
+  };
+
   useEffect(() => {
     const shell = (window as { AgentViewShell?: { takeShared?: () => string } }).AgentViewShell;
     if (!shell?.takeShared) return;
@@ -292,11 +312,12 @@ export function Composer() {
       {shared !== null && (
         <Confirm
           title="Shared text"
-          detail={shared}
+          detail={sharedMeeting ? `${shared}\n\nMeeting: ${sharedMeeting.title}, ${clock(sharedMeeting.starts_at!)}` : shared}
           icon="add"
           neutral
           action="Add as task"
           cancel="Send to chat"
+          extra={sharedMeeting ? { label: 'Add to meeting notes', run: () => { sharedAdded.current = true; return addToNotes(shared, sharedMeeting); } } : undefined}
           run={() => { sharedAdded.current = true; return addShared(shared); }}
           onClose={() => {
             if (!sharedAdded.current) setText((t) => append(t, `${shared} `));

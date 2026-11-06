@@ -1,3 +1,4 @@
+import { clock } from '../../../../shared/util';
 import { dayLabel, dayStart } from './dates';
 import type { ItemRow, Profile } from './sync';
 import { decisionLog, factTime, listOf, live, matcher, othersOf, queryWords, rowMatcher, type Decision, type Fact, type Meeting } from './wiki';
@@ -323,4 +324,12 @@ export function filterMeetings(meetings: Meeting[], items: ItemRow[], chips: Mee
     if (chips.includes('Not recorded') && meetingState(m, now) !== 'missing') return false;
     return !series || series.has(m.profile + m.id);
   });
+}
+
+export function stampedNotes(notes: string | null | undefined, text: string, at: number) {
+  const t = text.trim();
+  if (!t) return null;
+  const [first, ...rest] = t.split('\n');
+  const line = [`${clock(at)} ${first}`, ...rest].join('\n');
+  return notes ? `${notes.trimEnd()}\n${line}` : line;
 }

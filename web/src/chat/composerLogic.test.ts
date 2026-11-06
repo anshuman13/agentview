@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { accept, addUse, buildHistory, filesEdited, ghostFor, rankCommands, rankFiles, remember, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
+import { stampedNotes } from '../codex/data/meetings';
+import type { Meeting } from '../codex/data/wiki';
+import { accept, addUse, currentMeeting, buildHistory, filesEdited, ghostFor, rankCommands, rankFiles, remember, sharedTask, terminalId, triggerAt, turnEnd, withUses } from './composerLogic';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;
@@ -170,5 +172,33 @@ describe('sharedTask', () => {
     const r = sharedTask('Call back tomorrow at 3pm https://example.com', now);
     expect(r.at).toBe(new Date(2026, 9, 31, 15, 0).getTime());
     expect(r.title).toBe('Call back https://example.com');
+  });
+});
+
+describe('currentMeeting', () => {
+  const now = new Date(2026, 0, 5, 10, 0).getTime();
+  const min = 60_000;
+  const m = (id: string, start: number, end: number | null): Meeting => ({ id, profile: 'work', title: id, starts_at: start, ends_at: end } as Meeting);
+  it('picks a running meeting, or one within 15 minutes', () => {
+    expect(currentMeeting([m('a', now - 10 * min, now + 20 * min)], now)?.id).toBe('a');
+    expect(currentMeeting([m('a', now + 10 * min, now + 40 * min)], now)?.id).toBe('a');
+  });
+  it('ignores far, ended, block and all-day meetings', () => {
+    expect(currentMeeting([m('a', now + 15 * min, now + 40 * min), m('b', now - 40 * min, now - 10 * min), m('block:c', now - min, now + min), m('d', now - min, null)], now)).toBeNull();
+  });
+  it('prefers the latest running start, then the soonest upcoming', () => {
+    expect(currentMeeting([m('a', now - 30 * min, now + 30 * min), m('b', now - 5 * min, now + 30 * min), m('c', now + 5 * min, now + 30 * min)], now)?.id).toBe('b');
+    expect(currentMeeting([m('a', now + 12 * min, now + 30 * min), m('b', now + 5 * min, now + 30 * min)], now)?.id).toBe('b');
+  });
+});
+
+describe('stampedNotes', () => {
+  const at = new Date(2026, 0, 5, 9, 5).getTime();
+  it('stamps the first line only and appends after existing notes', () => {
+    expect(stampedNotes(null, ' hi ', at)).toBe('09:05 hi');
+    expect(stampedNotes('old\n', 'a\nb', at)).toBe('old\n09:05 a\nb');
+  });
+  it('ignores blank text', () => {
+    expect(stampedNotes('old', '  \n', at)).toBeNull();
   });
 });

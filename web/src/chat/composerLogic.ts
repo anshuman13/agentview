@@ -3,7 +3,9 @@ import { match } from '../workspace/FileSwitcher';
 import { toolId } from '../ops/mcpHelpers';
 import { COMPACT_AT, MAX_GOAL_ROUNDS, type ChatEvent } from '../../../shared/protocol';
 import { apiUrl, fetchJson } from '../app/api';
-import { clock, span } from '../../../shared/util';
+import { clock, isBlock, span } from '../../../shared/util';
+import { timedMeetings } from '../../../shared/plan';
+import { live, type Meeting } from '../codex/data/wiki';
 
 type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
 
@@ -45,6 +47,13 @@ export function sharedTask(text: string, now = new Date()) {
   const typed = text.trim();
   const w = parseWhen(typed, now);
   return { title: stripWhen(typed, w) || typed, at: w?.at ?? null };
+}
+
+export function currentMeeting(meetings: Meeting[], now: number) {
+  const rows = timedMeetings(live(meetings)).filter((m) => !isBlock(m.id));
+  const running = rows.filter((m) => m.starts_at! <= now && now < m.ends_at!).sort((a, b) => b.starts_at! - a.starts_at!);
+  const soon = rows.filter((m) => m.starts_at! > now && m.starts_at! - now < 15 * 60_000).sort((a, b) => a.starts_at! - b.starts_at!);
+  return running[0] ?? soon[0] ?? null;
 }
 
 export const append = (text: string, add: string) => `${text}${text && !/\s$/.test(text) ? ' ' : ''}${add}`;

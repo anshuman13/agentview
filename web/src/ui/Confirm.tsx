@@ -11,10 +11,11 @@ export type ConfirmRequest = {
   cancel?: string;
   neutral?: boolean;
   input?: { value: string; placeholder: string };
+  extra?: { label: string; run: () => Promise<unknown> };
   run: (value: string) => Promise<unknown>;
 };
 
-export function Confirm({ title, detail, warning, action, icon, cancel, neutral, input, run, onClose }: ConfirmRequest & { onClose: () => void }) {
+export function Confirm({ title, detail, warning, action, icon, cancel, neutral, input, extra, run, onClose }: ConfirmRequest & { onClose: () => void }) {
   const ok = useRef<HTMLButtonElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(input?.value ?? '');
@@ -48,6 +49,7 @@ export function Confirm({ title, detail, warning, action, icon, cancel, neutral,
         </div>
         <div className="dialog-actions">
           <button onClick={onClose}>{cancel ?? 'Cancel'}</button>
+          {extra && <button onClick={() => { void extra.run(); onClose(); }}>{extra.label}</button>}
           <button ref={ok} className={input || neutral ? 'primary' : 'destructive'} disabled={Boolean(input && !value.trim())} onClick={go}>{action}</button>
         </div>
       </div>
