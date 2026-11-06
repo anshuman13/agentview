@@ -1,6 +1,6 @@
 import type { Job, Run } from '../data/wiki';
 import { describe as group, expect, test } from 'vitest';
-import { canRunNow, describe, queued, rowMeta, runMeta, parseSchedule, scheduleOf } from './schedule';
+import { canRunNow, describe, jobState, queued, rowMeta, runMeta, parseSchedule, scheduleOf } from './schedule';
 
 group('job schedules', () => {
   test('read back what the form writes', () => {
@@ -64,5 +64,17 @@ group('runMeta', () => {
     expect(runMeta(run({ cost: null }))).toBe('12 s');
     expect(runMeta(run({ cost: 0 }))).toBe('12 s');
     expect(runMeta(run({ status: 'running', finished_at: null }))).toBe('Running');
+  });
+});
+
+group('jobState', () => {
+  const job = { id: 'j', profile: 'work', enabled: 1, next_run_at: null } as Job;
+  const run = (status: string) => ({ id: 'r', job_id: 'j', profile: 'work', status, started_at: 1 }) as Run;
+  test('one badge in the order Running, Queued, Failed, Off', () => {
+    expect(jobState(job, [run('running')], 10)).toEqual(['Running', 'running']);
+    expect(jobState({ ...job, next_run_at: 5 }, [run('error')], 10)?.[0]).toBe('Queued');
+    expect(jobState(job, [run('error')], 10)?.[0]).toBe('Failed');
+    expect(jobState({ ...job, enabled: 0 }, [run('ok')], 10)?.[0]).toBe('Off');
+    expect(jobState(job, [run('ok')], 10)).toBeNull();
   });
 });

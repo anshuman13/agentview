@@ -3,12 +3,14 @@ import type { Job, Run } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { SearchedOutput } from '../../ui/SearchedOutput';
 import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
+import { Button, IconButton } from '../../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { useOnUnmount } from '../../ui/util';
 import { copyText, setView, useEscapeBack } from '../view';
 import { useMinute } from '../split';
 import { nextRun } from '../../../../shared/schedule';
-import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, canRunNow, parseSchedule, queued, removeJob, runMeta, runNow, runsOf, scheduleOf, useJobs } from './schedule';
-import { Switch } from './Switch';
+import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, runMeta, runNow, runsOf, scheduleOf, useJobs } from './schedule';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
@@ -23,10 +25,9 @@ function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query
     <div className="jb-run">
       <Row
         plain={!r.output}
-        leading={<RunStatus r={r} />}
         title={at(r.started_at ?? 0)}
         meta={meta || undefined}
-        trailing={<>{r.status === 'error' && <span className="badge">Failed</span>}{r.output && <Icon name={open ? 'chevron-down' : 'chevron-right'} small />}</>}
+        trailing={<><span className={`badge ${r.status === 'running' ? 'running' : r.status === 'ok' ? 'quiet' : 'waiting'}`}>{r.status === 'running' ? 'Running' : r.status === 'ok' ? 'Succeeded' : 'Failed'}</span>{r.output && <Icon name={open ? 'chevron-down' : 'chevron-right'} small />}</>}
         aria-expanded={r.output ? open : undefined}
         onClick={r.output ? () => setOpen(!open) : undefined}
       />
@@ -48,6 +49,9 @@ export function JobPage({ j }: { j: Job }) {
   const [tools, setTools] = useState(j.tools ?? '');
   const [custom, setCustom] = useState(j.schedule ?? '');
   const [query, setQuery] = useState('');
+  const [menu, setMenu] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
   useEffect(() => setQuery(''), [j.id]);
   useEffect(() => setName(j.name ?? ''), [j.name]);
   useEffect(() => setPrompt(j.prompt ?? ''), [j.prompt]);
@@ -73,27 +77,41 @@ export function JobPage({ j }: { j: Job }) {
   const list = runsOf(runs, j);
   const now = Date.now();
   const canRun = canRunNow({ ...j, prompt }, runs, now);
-  const isQueued = queued(j, runs, now);
+  const state = jobState(j, runs, now);
   const remove = () => {
     removeJob(store, j);
     back();
   };
+  const pick = (fn: () => void) => () => { setMenu(false); fn(); };
   return (
     <div className="wk narrow">
       <header className="wk-head">
         <button className="icon-btn" title="Back to jobs" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         <nav className="wk-crumbs"><button onClick={back}>Jobs</button></nav>
-        <span className="spacer" />
-        <button className="btn sm" disabled={!canRun} onClick={() => runNow(store, j)}><Icon name="play" small /> Run now</button>
-        <button className="icon-btn" title="Delete job" aria-label="Delete job" onClick={remove}><Icon name="trash" /></button>
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          <input className="wk-title jb-name" value={name} placeholder="Job name" aria-label="Job name" onChange={(e) => setName(e.target.value)} onBlur={save} />
-          <div className="wk-meta mt-when">
-            <span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work account' : 'Personal account'}</span>
-            {isQueued && <span>Queued</span>}
-          </div>
+          <input ref={nameInput} className="wk-title jb-name" value={name} placeholder="Job name" aria-label="Job name" onChange={(e) => setName(e.target.value)} onBlur={save} />
+          <Section
+            label={j.profile === 'work' ? 'Work account' : 'Personal account'}
+            action={
+              <span className="jb-actions">
+                {state && <span className={`badge ${state[1]}`}>{state[0]}</span>}
+                <Button size="sm" variant="filled" icon="play" disabled={!canRun} onClick={() => runNow(store, j)}>Run now</Button>
+                <span className="jb-more">
+                  <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+                  {menu && (
+                    <Menu trigger={more} onClose={() => setMenu(false)}>
+                      <MenuItem icon="edit" onClick={pick(() => { nameInput.current?.focus(); nameInput.current?.select(); })}>Edit</MenuItem>
+                      <MenuItem icon={j.enabled ? 'circle-slash' : 'play'} onClick={pick(() => enable(j, !j.enabled))}>{j.enabled ? 'Disable' : 'Enable'}</MenuItem>
+                      <MenuSeparator />
+                      <MenuItem icon="trash" danger onClick={pick(remove)}>Delete</MenuItem>
+                    </Menu>
+                  )}
+                </span>
+              </span>
+            }
+          />
           <section className="mt-sec">
             <h2>When</h2>
             <div className="jb-when">
@@ -107,7 +125,6 @@ export function JobPage({ j }: { j: Job }) {
               )}
               {sched.kind === 'custom' && <input className="jb-custom" value={custom} aria-label="Custom schedule" aria-invalid={!customOk} placeholder="*/15 0-8 * * 1-5" onChange={(e) => setCustom(e.target.value)} onBlur={saveCustom} onKeyDown={(e) => e.key === 'Enter' && saveCustom()} />}
               {sched.kind !== 'hourly' && sched.kind !== 'custom' && <input type="time" value={sched.time} aria-label="Time" onChange={(e) => e.target.value && setSchedule({ time: e.target.value })} />}
-              <span className="jb-on"><Switch on={!!j.enabled} label="Run on schedule" onChange={(on) => enable(j, on)} /></span>
             </div>
             {sched.kind === 'custom' && <div className="muted small">{customOk ? `Next ${at(nextRun(custom, Date.now())!)}. ` : 'This never runs. '}Use "once 2026-11-02 09:00" for one run, or a cron line: minute, hour, day, month, weekday.</div>}
           </section>

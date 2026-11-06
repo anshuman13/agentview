@@ -28,13 +28,14 @@
 .jb-auto-how p { margin: 0; }
 .jb-auto-quote { margin: 0; padding: var(--sp-4) var(--sp-5); border-left: 2px solid var(--accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; background: var(--sunken); font-size: var(--fs-sm); line-height: 1.45; }
 .jb-auto-log { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-3); }
+.mt-page > .ui-section { padding-right: 0; }
+.mt-page > .ui-section .ui-section-head { padding-left: 0; }
 .jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
 .jb-when { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
 .jb-when select, .jb-when input { flex: none; width: auto; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
 .jb-when .jb-custom { flex: 1 1 180px; font-family: var(--font-mono, monospace); }
 .jb-when .jb-custom[aria-invalid='true'] { border-color: var(--err); }
 .jb-tools { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-4) var(--sp-7); border-radius: 10px; font-size: 16px; }
-.jb-on { display: inline-flex; align-items: center; gap: var(--sp-4); margin-left: auto; font-size: var(--fs-md); color: var(--fg-muted); }
 .jb-prompt { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-6) var(--sp-7); border-radius: 10px; font-size: 16px; line-height: 1.5; }
 .jb-runs { overflow: hidden; border-radius: var(--shape-lg); background: var(--group-card); }
 .jb-run:last-child .ui-row::after { display: none; }
@@ -42,5 +43,4 @@
 .jb-run-body { padding: 0 var(--list-pad) var(--sp-6); }
 .jb-output { margin-top: var(--sp-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; color: var(--fg); }
 .jb-run-tools { display: flex; }
-.mt-when .as-prof { font-size: var(--fs-xs); font-weight: 600; }
 .jb-seen { display: block; width: 100%; border: 0; border-top: 1px solid var(--border); background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; }

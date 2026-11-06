@@ -2,7 +2,6 @@ import { useAssistantStore, useAssistantData } from '../data';
 import type { Job, Run } from '../data/wiki';
 import { clock } from '../time';
 import { dayLabel, dayStart } from '../data/dates';
-import { Icon } from '../../ui/Icon';
 import { money } from '../../ui/util';
 import { showSnack, useView } from '../view';
 
@@ -42,6 +41,11 @@ export const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && 
 
 export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
+export const jobState = (j: Job, runs: Run[], now: number) => {
+  const latest = runsOf(runs, j)[0]?.status;
+  return latest === 'running' ? ['Running', 'running'] : queued(j, runs, now) ? ['Queued', 'waiting'] : latest === 'error' ? ['Failed', 'waiting'] : !j.enabled ? ['Off', 'quiet'] : null;
+};
+
 export const rowMeta = (j: Job, runs: Run[], now: number) => (queued(j, runs, now) ? 'Queued' : !j.enabled ? 'Off' : j.next_run_at ? `Next ${at(j.next_run_at)}` : null);
 
 export const canRunNow = (j: Job, runs: Run[], now: number) => !!j.prompt?.trim() && runsOf(runs, j)[0]?.status !== 'running' && !queued(j, runs, now);
@@ -63,15 +67,6 @@ export function runMeta(r: Run) {
   const secs = r.finished_at && r.started_at ? Math.max(1, Math.round((r.finished_at - r.started_at) / 1000)) : 0;
   const dur = !secs ? '' : secs < 60 ? `${secs} s` : `${Math.floor(secs / 60)} min ${secs % 60} s`;
   return [dur, r.cost ? money(r.cost) : ''].filter(Boolean).join(' · ');
-}
-
-export function RunStatus({ r }: { r: Run }) {
-  const label = r.status === 'running' ? 'Running' : r.status === 'ok' ? 'Succeeded' : 'Failed';
-  return (
-    <span role="img" aria-label={label} title={label}>
-      {r.status === 'running' ? <Icon name="loading" small spin color="var(--accent)" /> : <Icon name={r.status === 'ok' ? 'check' : 'error'} small color={r.status === 'ok' ? 'var(--ok)' : 'var(--err)'} />}
-    </span>
-  );
 }
 
 export function useJobs() {

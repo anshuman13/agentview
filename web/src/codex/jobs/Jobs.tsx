@@ -17,12 +17,7 @@ import '../../styles/features/meetings.css';
 import '../../styles/features/jobs.css';
 import { Autopilot } from './Autopilot';
 import { JobPage } from './JobPage';
-import { canRunNow, describe, removeJob, rowMeta, runNow, runsOf, queued, useJobs } from './schedule';
-
-const jobState = (j: Job, runs: Run[], now: number) => {
-  const latest = runsOf(runs, j)[0]?.status;
-  return latest === 'running' ? ['Running', 'running'] : queued(j, runs, now) ? ['Queued', 'waiting'] : latest === 'error' ? ['Failed', 'waiting'] : !j.enabled ? ['Off', 'quiet'] : null;
-};
+import { canRunNow, describe, jobState, removeJob, rowMeta, runNow, useJobs } from './schedule';
 
 type Jobs = ReturnType<typeof useJobs>;
 
