@@ -14,12 +14,10 @@ import { rowKey, type ItemRow } from './data/sync';
 import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
-import { Button, IconButton } from '../ui/Button';
-import { Menu, MenuItem } from '../ui/Menu';
-import { standupFor } from './data/review';
+import { Button } from '../ui/Button';
 import { haptic } from '../ui/haptic';
 import { plural } from '../ui/util';
-import { FILTER_LABEL, copyText, setView, showSnack, useSpotBack, useView, type Filter, type List } from './view';
+import { FILTER_LABEL, setView, showSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
 import { AddSheet } from './AddSheet';
@@ -61,17 +59,6 @@ const pickable = (r: ItemRow) => !r.deleted && (r.status === 'open' || r.status 
 function SpotBack({ scroller }: { scroller: React.RefObject<HTMLElement | null> }) {
   useSpotBack(scroller, 'tasks');
   return null;
-}
-
-function TodayMenu({ onStandup }: { onStandup: () => void }) {
-  const [open, setOpen] = useState(false);
-  const more = useRef<HTMLButtonElement>(null);
-  return (
-    <span className="ov-more">
-      <IconButton ref={more} icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
-      {open && <Menu trigger={more} onClose={() => setOpen(false)}><MenuItem icon="copy" onClick={() => { setOpen(false); onStandup(); }}>Copy standup</MenuItem></Menu>}
-    </span>
-  );
 }
 
 export function Assistant() {
@@ -273,7 +260,6 @@ export function Assistant() {
           {list === 'today' && dayLine && <div className="as-dayline">{dayLine}</div>}
         </div>
         {list === 'today' && <FocusChip />}
-        {list === 'today' && <TodayMenu onStandup={() => copyText(standupFor(snap, s.overdue, dueToday, filter, Date.now()), 'Standup copied')} />}
         {list === 'tasks' && query == null && !picked && <button className="icon-btn" title="Select tasks" aria-label="Select tasks" onClick={() => setPicked(new Set())}><Icon name="tasklist" /></button>}
         {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
         {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}

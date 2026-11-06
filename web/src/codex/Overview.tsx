@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantData, useSyncGate } from './data';
 import { live, type Meeting } from './data/wiki';
 import { atTime, latestRunByJob, staleTasks } from './data/engine';
@@ -8,12 +8,15 @@ import { plural } from '../ui/util';
 import { Section } from '../ui/Section';
 import { Capped, Fold } from './Fold';
 import { Row } from '../ui/Row';
-import { Shutdown } from './Shutdown';
+import { IconButton } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
+import { Shutdown, wrapUpDue } from './Shutdown';
+import { standupFor } from './data/review';
 import { ReplyQueue, replyQueue, staleAsks } from './overview/ReplyQueue';
 import { NeedsYou, useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
 import { useActions } from './useActions';
-import { DayPlan, DRAG_TYPE } from './DayPlan';
+import { DayPlan, DRAG_TYPE, usePlanHint } from './DayPlan';
 import { TomorrowCard, useTomorrowCard } from './TomorrowCard';
 import { GoalLines } from './Goals';
 import { BriefReportCard, useBriefs } from './Brief';
@@ -23,7 +26,7 @@ import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
-import { openTask, setView, useView } from './view';
+import { copyText, openTask, setView, useView } from './view';
 import { clock, when } from './time';
 import { touch } from '../app/touch';
 import type { useSplit } from './split';
@@ -146,6 +149,30 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       meetings: live(snap.meetings).filter((m) => (filter === 'all' || m.profile === filter) && m.starts_at! >= day && m.starts_at! < after),
     };
   }, [quiet, s.later, s.endOfDay, snap.meetings, filter]);
+  const planHint = usePlanHint(s.busyToday, dueToday, s.overdue, now);
+  const [planRequest, setPlanRequest] = useState(0);
+  const [wrapShown, setWrapShown] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const choose = (fn: () => void) => () => { setMenuOpen(false); fn(); };
+  const showWrap = () => {
+    setWrapShown(true);
+    requestAnimationFrame(() => wrap.current?.scrollIntoView({ block: 'start' }));
+  };
+  const todayMenu = (
+    <span className="ov-more">
+      <IconButton ref={menuButton} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} />
+      {menuOpen && (
+        <Menu trigger={menuButton} onClose={() => setMenuOpen(false)}>
+          <MenuItem icon="sparkle" disabled={!!planHint} onClick={choose(() => setPlanRequest(planRequest + 1))}>Plan my day</MenuItem>
+          {planHint && <div className="ov-menu-hint">{planHint}</div>}
+          <MenuItem icon="copy" onClick={choose(() => copyText(standupFor(snap, s.overdue, dueToday, filter, Date.now()), 'Standup copied'))}>Copy standup</MenuItem>
+          {wrapUpDue([...s.overdue, ...dueToday], now) && <MenuItem icon="check-all" onClick={choose(showWrap)}>Wrap up</MenuItem>}
+        </Menu>
+      )}
+    </span>
+  );
   const card = useTomorrowCard(s, tomorrow, now);
   const tomorrowElsewhere = card.shown || !!nextUp?.tomorrow;
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (tomorrowElsewhere ? 0 : tomorrow.length);
@@ -164,11 +191,11 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       <NeedsYou n={needs} now={now} onShowOld={showOld} />
       <ReplyQueue rows={filtered ? old : queue} filtered={filtered} onClear={() => setOnlyStale(false)} />
       <div className="ov-block">
-        {todayShown && <Section label="Today" />}
+        {todayShown && <Section label="Today" action={todayMenu} />}
         <DoNow needs={needs} today={todo} nextUp={card.shown && nextUp?.tomorrow ? null : nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
-        <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} />
+        {wrapShown && <div ref={wrap}><Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} /></div>}
         {card.shown && <TomorrowCard s={s} tasks={tomorrow} now={now} hide={card.hide} />}
-        <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
+        <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} planRequest={planRequest} />
         <GoalLines now={now} />
       </div>
       {entries.length > 0 && (

@@ -14,6 +14,8 @@ import { when } from './time';
 
 const SHUTDOWN_HOUR = 16;
 
+export const wrapUpDue = (open: ItemRow[], now: number) => new Date(now).getHours() >= SHUTDOWN_HOUR && open.length > 0;
+
 // From 16:00 until midnight: one row with today's done and open counts and Move all; the header opens the first open tasks to move, snooze or drop.
 // One line saved to today's wrapup brief for the profile, shown first in the next morning brief; a draft left behind by a profile switch is saved first.
 function WrapNote({ profile, now }: { profile: Profile; now: number }) {
@@ -38,7 +40,7 @@ function WrapNote({ profile, now }: { profile: Profile; now: number }) {
 
 export function Shutdown({ open, done, now, profile }: { open: ItemRow[]; done: number; now: number; profile: Profile | 'all' }) {
   const store = useAssistantStore();
-  if (new Date(now).getHours() < SHUTDOWN_HOUR || !open.length) return null;
+  if (!wrapUpDue(open, now)) return null;
   const tomorrow = (r: ItemRow) => nextNine(new Date(now), r.profile);
   const change = (rs: ItemRow[], patch: Partial<ItemRow>, text: string) => {
     haptic('tap');

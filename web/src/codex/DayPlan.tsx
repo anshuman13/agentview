@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { blockId, isBlock } from '../../../shared/util';
 import { rowKey, type ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
@@ -10,7 +10,6 @@ import { clock } from './time';
 import { attempt, showSnack, useView } from './view';
 import { PlanPreview, usePlanFlow } from './PlanPreview';
 import type { Planned } from './planFlow';
-import { Icon } from '../ui/Icon';
 import { Chip } from '../ui/Button';
 
 const hhmm = (n: number) => minutesText(Math.round(n / 60_000));
@@ -23,6 +22,26 @@ const atClock = (day: number, text: string) => {
   const d = new Date(day);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m).getTime();
 };
+
+// Why Plan my day is unavailable: no free work time left, or no task to put in it; null when it can run.
+export const planHint = (gaps: number, tasks: number) => (!gaps ? 'No free time left in work hours' : !tasks ? 'No tasks due today to block time for' : null);
+
+// This week's goals as a set of keys, and the open tasks linked to them that are not already in the due or overdue lists.
+function useGoalTasks(open: ItemRow[], late: ItemRow[], now: number) {
+  const items = useAssistantTable('items');
+  const { filter } = useView();
+  const goals = new Set(goalsOf(items, now, filter === 'all' ? undefined : filter).map(rowKey));
+  const forGoal = (r: ItemRow) => !!r.goal && goals.has(`${r.profile}:${r.goal}`);
+  const listed = new Set([...late, ...open].map(rowKey));
+  return { forGoal, goalTasks: items.filter((r) => !r.deleted && r.status === 'open' && r.source !== 'calendar' && forGoal(r) && !listed.has(rowKey(r))) };
+}
+
+// The hint for the Plan my day menu item, from the same gaps and tasks the Plan strip chip uses.
+export function usePlanHint(meetings: Meeting[], open: ItemRow[], late: ItemRow[], now: number) {
+  const { goalTasks } = useGoalTasks(open, late, now);
+  const gaps = workGaps(timedMeetings(meetings).map((m) => [m.starts_at!, m.ends_at!] as Span), now);
+  return planHint(gaps.length, late.length + open.length + goalTasks.length);
+}
 
 const toMinute = (t: number) => Math.floor(t / 60_000) * 60_000;
 
@@ -39,16 +58,11 @@ function pickFor(gap: Span, r: ItemRow | undefined): Pick {
 
 // Today's free gaps in work hours from now, and planned estimates against the free time. A gap opens a form to block time for a task;
 // Plan my day previews blocks for all overdue and due tasks and creates them on Create.
-export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[]; open: ItemRow[]; late?: ItemRow[]; now: number }) {
+export function DayPlan({ meetings, open, late = [], now, planRequest = 0 }: { meetings: Meeting[]; open: ItemRow[]; late?: ItemRow[]; now: number; planRequest?: number }) {
   const store = useAssistantStore();
   const [pick, setPick] = useState<Pick | null>(null);
   const [saving, setSaving] = useState(false);
-  const items = useAssistantTable('items');
-  const { filter } = useView();
-  const goals = new Set(goalsOf(items, now, filter === 'all' ? undefined : filter).map(rowKey));
-  const forGoal = (r: ItemRow) => !!r.goal && goals.has(`${r.profile}:${r.goal}`);
-  const listed = new Set([...late, ...open].map(rowKey));
-  const goalTasks = items.filter((r) => !r.deleted && r.status === 'open' && r.source !== 'calendar' && forGoal(r) && !listed.has(rowKey(r)));
+  const { forGoal, goalTasks } = useGoalTasks(open, late, now);
   const timed = timedMeetings(meetings);
   const busy = timed.map((m) => [m.starts_at!, m.ends_at!] as Span);
   const blocks = timed.filter((m) => isBlock(m.id) && m.ends_at! > now);
@@ -62,6 +76,14 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   };
   const flow = usePlanFlow(pack);
   const { plan } = flow;
+  const hint = planHint(gaps.length, late.length + open.length + goalTasks.length);
+  const handled = useRef(planRequest);
+  useEffect(() => {
+    if (planRequest === handled.current) return;
+    handled.current = planRequest;
+    setPick(null);
+    flow.start();
+  }, [planRequest]);
   const planned = open.reduce((n, r) => n + (estimateMin(r.title) ?? 0), 0);
   if (!gaps.length && !planned && !blocks.length) return null;
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
@@ -98,16 +120,14 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
     ) })),
     ...blocks.map((m) => ({ at: m.starts_at!, el: <span key={m.profile + m.id} className="chip" title={m.title ?? ''}>{clock(m.starts_at!)}-{clock(m.ends_at!)} {m.title}</span> })),
   ].sort((a, b) => a.at - b.at);
-  if (!plan && !pick && !timed.some((m) => isBlock(m.id))) {
-    return gaps.length > 0 && (late.length || open.length || goalTasks.length) ? <div className="as-next-actions"><button className="btn sm" onClick={planDay}><Icon name="sparkle" small /> Plan my day</button></div> : null;
-  }
+  if (!plan && !pick && !timed.some((m) => isBlock(m.id))) return null;
   return (
     <section>
       <div className="as-section">Plan · {planned ? `planned ${minutesText(planned)} / ` : ''}free {hhmm(free)}</div>
       <div className="as-chips">
         {chips.map((c) => c.el)}
-        {!gaps.length && <span className="as-ctx">No free time left in work hours</span>}
-        {gaps.length > 0 && (late.length > 0 || open.length > 0 || goalTasks.length > 0) && <Chip on={!!plan} onClick={() => (plan ? flow.setPlan(null) : planDay())}>Plan my day</Chip>}
+        {!gaps.length && <span className="as-ctx">{planHint(0, 1)}</span>}
+        {!hint && <Chip on={!!plan} onClick={() => (plan ? flow.setPlan(null) : planDay())}>Plan my day</Chip>}
       </div>
       <PlanPreview flow={flow} day="today" />
       {pick && (
@@ -132,7 +152,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
               </div>
             </>
           ) : (
-            <span className="as-ctx">No tasks due today to block time for</span>
+            <span className="as-ctx">{planHint(1, 0)}</span>
           )}
         </div>
       )}

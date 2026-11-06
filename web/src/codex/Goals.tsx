@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantTable, useAssistantStore, useAssistantData } from './data';
-import { GOAL, MAX_GOALS, carryOver, goalAtRisk, goalProgress, goalsOf, linkedTo } from './data/goals';
+import { GOAL, MAX_GOALS, carryOver, goalAtRisk, goalProgress, goalsOf } from './data/goals';
 import { weekStart } from './data/dates';
 import { weekFreeMinutes, type Span } from './data/plan';
 import { live } from './data/wiki';
 import type { ItemRow, Profile } from './data/sync';
-import { attempt, openTask, openWeekGoals, showSnack, useView } from './view';
+import { attempt, openWeekGoals, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
 import { Button, Chip, chipClass } from '../ui/Button';
-import { save, stored } from '../ui/util';
+import { plural, save, stored } from '../ui/util';
 
 function GoalInput({ row }: { row: ItemRow }) {
   const store = useAssistantStore();
@@ -66,36 +66,11 @@ export function WeekGoals({ now }: { now: number }) {
   );
 }
 
-// One slim line per goal of this week with done of total linked tasks; a line expands to its open tasks.
-function GoalLine({ goal, items, risk }: { goal: ItemRow; items: ItemRow[]; risk: boolean }) {
-  const [open, setOpen] = useState(false);
-  const p = goalProgress(items, goal);
-  const tasks = linkedTo(items, goal).filter((r) => r.status === 'open');
-  return (
-    <div role="listitem">
-      <button className="gl-line" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon name={open ? 'chevron-down' : 'chevron-right'} small /> <span className="muted small">This week</span> <span className="ov-t">{goal.title}</span> <span className="muted small">{p.done}/{p.total}<span className="sr-only"> tasks done</span></span>{risk && <span className="gl-risk small">At risk</span>}
-        {p.total > 0 && <span className={`gl-bar${risk ? ' risk' : ''}`} aria-hidden="true"><span style={{ width: `${(p.done / p.total) * 100}%` }} /></span>}
-      </button>
-      {open && (tasks.length
-        ? <ul className="gl-tasks">{tasks.map((t) => <li key={t.id}><button className="ov-follow-text" onClick={() => openTask(t)}>{t.title}</button></li>)}</ul>
-        : <div className="muted small gl-tasks">No open tasks</div>)}
-    </div>
-  );
-}
-
-const GOALS_SHOWN = 3;
-const CARRY_SKIPPED = 'codex.goalCarrySkipped';
-
-export function GoalLines({ now }: { now: number }) {
-  const store = useAssistantStore();
-  const items = useAssistantTable('items');
+// Free work minutes left this week per profile, from its meetings.
+export function useWeekFree(now: number) {
   const { meetings } = useAssistantData();
-  const { filter } = useView();
-  const scope = filter === 'all' ? undefined : filter;
-  const goals = goalsOf(items, now, scope).filter((g) => { const p = goalProgress(items, g); return !p.total || p.done < p.total; });
   const minute = Math.floor(now / 60000);
-  const free = useMemo(() => {
+  return useMemo(() => {
     const out: Partial<Record<Profile, number>> = {};
     for (const p of ['work', 'personal'] as const) {
       const spans = live(meetings).filter((m) => m.profile === p && m.starts_at != null && m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < 20 * 3600_000).map((m) => [m.starts_at!, m.ends_at!] as Span);
@@ -103,6 +78,26 @@ export function GoalLines({ now }: { now: number }) {
     }
     return out;
   }, [meetings, minute]);
+}
+
+export const goalsMeta = (count: number, risk: number) => [plural(count, 'goal'), risk ? `${risk} at risk` : ''].filter(Boolean).join(' · ');
+
+// This week's unfinished goals, as the Goals row on Overview counts them, and how many are at risk.
+export function useGoalsCount(now: number) {
+  const items = useAssistantTable('items');
+  const { filter } = useView();
+  const free = useWeekFree(now);
+  const goals = goalsOf(items, now, filter === 'all' ? undefined : filter).filter((g) => { const p = goalProgress(items, g); return !p.total || p.done < p.total; });
+  return { count: goals.length, risk: goals.filter((g) => goalAtRisk(items, g, free[g.profile] ?? 0)).length };
+}
+
+const CARRY_SKIPPED = 'codex.goalCarrySkipped';
+
+export function GoalLines({ now }: { now: number }) {
+  const store = useAssistantStore();
+  const items = useAssistantTable('items');
+  const { filter } = useView();
+  const scope = filter === 'all' ? undefined : filter;
   const carry = carryOver(items, now, scope);
   const busy = useRef(false);
   const week = String(weekStart(now));
@@ -114,20 +109,14 @@ export function GoalLines({ now }: { now: number }) {
     await attempt(async () => { for (const g of carry) await store.capture(g.title ?? '', GOAL, g.profile, weekStart(now)); }, 'Not carried over');
     busy.current = false;
   };
-  const [more, setMore] = useState(false);
-  const offer = carry.length > 0 && !skipped;
-  if (!goals.length && !offer) return null;
+  if (!carry.length || skipped) return null;
   return (
     <section className="gl-lines" role="list" aria-label="Goals this week">
-      {(more ? goals : goals.slice(0, GOALS_SHOWN)).map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} risk={goalAtRisk(items, g, free[g.profile] ?? 0)} />)}
-      {goals.length > GOALS_SHOWN && <Chip quiet className="ov-more" onClick={() => setMore(!more)}>{more ? 'Show fewer' : `+${goals.length - GOALS_SHOWN} more`}</Chip>}
-      {offer && (
-        <div className="gl-line" role="listitem">
-          <span className="muted small">Carry over {carry.length} {carry.length === 1 ? 'goal' : 'goals'} from last week</span>
-          <Chip onClick={() => void carryAll()}>Carry over</Chip>
-          <Chip quiet onClick={skip}>Not now</Chip>
-        </div>
-      )}
+      <div className="gl-line" role="listitem">
+        <span className="muted small">Carry over {carry.length} {carry.length === 1 ? 'goal' : 'goals'} from last week</span>
+        <Chip onClick={() => void carryAll()}>Carry over</Chip>
+        <Chip quiet onClick={skip}>Not now</Chip>
+      </div>
     </section>
   );
 }

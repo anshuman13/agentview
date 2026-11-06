@@ -52,3 +52,6 @@
 .ov-ask-history { display: flex; flex-direction: column; }
 .ov-ask-err { color: var(--err); overflow-wrap: anywhere; }
 .ov-block:not(:has(> :not(.ui-section))) { display: none; }
+.ov-today > * + * { border-top: var(--hairline); }
+.ov-today > .ov-ask { border-bottom: 0; }
+.ov-menu-hint { padding: var(--sp-3) var(--sp-6); font-size: var(--type-meta-size); color: var(--fg-muted); }
