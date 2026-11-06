@@ -14,7 +14,8 @@ import { ntfyTopic, post } from './integrations/notify.js';
 import { cancelFocus, scheduleFocus } from './integrations/focus.js';
 import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
-import { emptyBin, listBin, removeSession, restoreSession } from './agent/claude/bin.js';
+import { emptyBin, listBin, restoreSession } from './agent/claude/bin.js';
+import { pinsRoute, removeChat } from './agent/claude/pins.js';
 import { CODEX_WORK, listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from './workspace/files.js';
 import { github } from './integrations/github.js';
 import { assistantRoute } from './integrations/assistant.js';
@@ -190,7 +191,11 @@ const server = http.createServer(async (req, res) => {
       const id = url.searchParams.get('id') ?? '';
       const open = bySession(id);
       if (open) await closeByUser(open);
-      return json(await removeSession(id, url.searchParams.has('purge')));
+      return json(await removeChat(id, url.searchParams.has('purge')));
+    }
+    if (url.pathname === '/api/sessions/pins') {
+      const r = await pinsRoute(req.method ?? 'GET', url.searchParams.get('id'));
+      return json(r.body, r.status);
     }
     if (url.pathname === '/api/sessions/bin' && req.method === 'DELETE') {
       await emptyBin();

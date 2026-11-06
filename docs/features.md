@@ -8,13 +8,14 @@
 - **Sidebar** (⌘B): Explorer, Source Control, GitHub Pull Requests, Sessions (open and recent chats) and Workspace (repos, chats, Paseo worktrees). In Workspace a repo with no live chat starts folded to its header, and a repo shows its 5 latest chats with Show more
 - **Side chat**: the split icon on a chat row in the Sessions view opens that chat in a second column with its
   own composer (`?beside=<chat id>` does the same); the arrow in its header moves it to the main column
+- **Pinned chats**: the pin icon on a chat row in the Sessions view keeps that chat in a Pinned group above the repos (newest pin first, also shown in Needs you while waiting). Pins are stored on the Mac in `~/.agentview/pins.json`, so every device sees them after its next reconnect or reload; deleting or binning a chat drops its pin
 - **Codex** (top of the activity bar): Overview, Tasks, Meetings, Jobs and Wiki, filtered by work or personal
   profile; see [Codex](#codex)
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
 - **Share to the app (Android)**: text or a link shared into AgentView asks "Add as task" (saved to Tasks, with a time read from the text) or "Send to chat" (appended to the composer).
 - **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; an open meeting action swipes right for Done and left to Not mine (Dismissed on Overview); pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs. The interval sync runs only while the app is visible. The tab bar shows a count only on Chat (waiting); Sessions (waiting elsewhere) and Agents (running) show a dot.
   The done and snooze buttons on Overview rows, Related chips and Remove goal have full-size tap targets
-- **Command palette** (⇧⌘P or F1): every view, tab, page, Codex list, model and mode as a searchable list
+- **Command palette** (⇧⌘P or F1): every view, tab, page, Codex list, model and mode as a searchable list; pinned chats are listed first as "Chat: <title>" and open that chat
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
   follows the system setting; `?theme=light` in the URL picks one
 

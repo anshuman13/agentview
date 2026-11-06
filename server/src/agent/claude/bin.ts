@@ -12,7 +12,7 @@ const save = async (list: BinnedSession[]) => {
 };
 // Each change reads and rewrites the file, so changes run one at a time.
 let lock: Promise<unknown> = Promise.resolve();
-const serial = <T>(f: () => Promise<T>): Promise<T> => {
+export const serial = <T>(f: () => Promise<T>): Promise<T> => {
   const run = lock.then(f, f);
   lock = run.catch(() => undefined);
   return run;

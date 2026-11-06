@@ -69,6 +69,13 @@ describe('groupByRepo', () => {
     expect(g[0].open.map((c) => c.id)).toEqual(['b', 'a']);
     expect(g[0].recent).toHaveLength(1);
   });
+  it('leaves pinned chats out, live or saved, even when waiting', () => {
+    const f = buildFolders([repo('shop')], [], []);
+    const g = groupByRepo([live('a', '/w/shop', { pending: 1 }), live('b', '/w/shop')], [chat('/w/shop', 1, 'c'), chat('/w/shop', 2, 'd')], f, '', new Set(['a', 'c']));
+    expect(g[0].open.map((c) => c.id)).toEqual(['b']);
+    expect(g[0].recent.map((c) => c.sessionId)).toEqual(['d']);
+    expect(g[0].waiting).toBe(0);
+  });
   it('filters by repo name or chat title', () => {
     const f = buildFolders([repo('shop'), repo('cafe')], [], []);
     const chats = [chat('/w/cafe', 2, 'fix login'), chat('/w/shop', 3, 'other')];

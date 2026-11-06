@@ -70,7 +70,8 @@
 .sessions .row.live .when:empty { display: none; }
 .sessions .needs { flex: none; max-height: 30%; border-bottom: 1px solid var(--border); padding-bottom: var(--sp-2); }
 .sessions .needs .group { margin-top: 0; color: var(--warn); display: flex; align-items: center; gap: var(--sp-3); }
-.sessions .needs .row.live { padding-left: var(--sp-4); }
+.sessions .needs .row.live, .sessions .needs .row.recent { padding-left: var(--sp-4); }
+.sessions .row.recent .repo { flex: none; color: var(--fg); }
 
 .sessions .row.live.two { height: auto; min-height: var(--touch-md); padding: var(--sp-2) 0 5px var(--sp-4); align-items: flex-start; }
 .sessions.chats .row.live.two { padding-left: var(--sp-12); }

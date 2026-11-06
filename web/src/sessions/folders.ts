@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiBase, apiUrl } from '../app/api';
-import { send } from '../app/store';
+import { notice, send, useStore } from '../app/store';
 import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
@@ -166,14 +166,36 @@ export function findHere(folders: Folder[], cwd: string) {
 const urgency = (c: LiveChat) => (c.pending ? 0 : c.running ? 1 : 2);
 export const byUrgency = (a: LiveChat, b: LiveChat) => urgency(a) - urgency(b) || b.lastActive - a.lastActive;
 
+export const PINS_URL = '/api/sessions/pins';
+
+// Pins live on the Mac, so every device reads the same list; it reloads whenever the stream reconnects.
+export function usePins() {
+  const connected = useStore((s) => s.ui.connected);
+  const [pins, setPins] = useState<string[]>([]);
+  const load = () => get(PINS_URL).then((x) => x && setPins(x));
+  useEffect(() => void load(), [connected]);
+  const toggle = async (id: string) => {
+    const on = pins.includes(id);
+    const r = await fetch(apiUrl(`${PINS_URL}?id=${encodeURIComponent(id)}`), { method: on ? 'DELETE' : 'POST' }).catch(() => null);
+    if (r?.ok) await load();
+    else notice(on ? 'Could not unpin the chat' : 'Could not pin the chat');
+  };
+  return { pins, toggle };
+}
+
 export type RepoGroup = { key: string; name: string; open: LiveChat[]; recent: SavedSession[]; last: number; running: number; waiting: number };
 
-export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter = '') {
+export const repoName = (folders: Folder[], cwd: string) => {
+  const key = findHere(folders, cwd).folder?.cwd ?? cwd;
+  return key.split('/').pop() || key;
+};
+
+export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter = '', pinned: ReadonlySet<string> = new Set()) {
   const q = filter.trim().toLowerCase();
   const m = new Map<string, RepoGroup>();
   const add = (cwd: string, title: string, last: number) => {
     const key = findHere(folders, cwd).folder?.cwd ?? cwd;
-    const name = key.split('/').pop() || key;
+    const name = repoName(folders, cwd);
     if (q && !name.toLowerCase().includes(q) && !title.toLowerCase().includes(q)) return null;
     let g = m.get(key);
     if (!g) m.set(key, (g = { key, name, open: [], recent: [], last: 0, running: 0, waiting: 0 }));
@@ -181,6 +203,7 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
     return g;
   };
   for (const c of live) {
+    if (c.sessionId && pinned.has(c.sessionId)) continue;
     const g = add(c.cwd, c.title, c.lastActive);
     if (!g) continue;
     g.open.push(c);
@@ -188,7 +211,7 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
     if (c.pending) g.waiting++;
   }
   const ids = new Set(live.map((c) => c.sessionId));
-  for (const s of chats) if (!ids.has(s.sessionId)) add(s.cwd, s.title, s.lastModified)?.recent.push(s);
+  for (const s of chats) if (!ids.has(s.sessionId) && !pinned.has(s.sessionId)) add(s.cwd, s.title, s.lastModified)?.recent.push(s);
   for (const g of m.values()) {
     g.open.sort(byUrgency);
     g.recent.sort((a, b) => b.lastModified - a.lastModified);

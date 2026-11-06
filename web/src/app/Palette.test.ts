@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCommands, matchCommand, rankCommands, remember } from './Palette';
+import { buildCommands, matchCommand, pinCommands, rankCommands, remember } from './Palette';
 
 const models = [{ value: 'claude-opus-4-1', displayName: 'Opus 4.1' }, { value: 'claude-sonnet-4-5', displayName: 'Sonnet 4.5' }];
 const cmds = buildCommands(models);
@@ -58,6 +58,25 @@ describe('rankCommands', () => {
   });
   it('offers the Codex views', () => {
     expect(ids(rankCommands(cmds, 'tasks', []))).toContain('codex:tasks');
+  });
+});
+
+describe('pinned chats', () => {
+  const pinned = pinCommands(['s2', 'gone', 's1'], [{ sessionId: 's1', title: 'Stop Claude' }], [{ sessionId: 's2', title: 'Fix login' }]);
+  const all = [...cmds, ...pinned];
+
+  it('lists chats that exist, capped at 20', () => {
+    expect(pinned.map((c) => c.id)).toEqual(['pin:s2', 'pin:s1']);
+    const many = Array.from({ length: 25 }, (_, i) => ({ sessionId: `s${i}`, title: `c${i}` }));
+    expect(pinCommands(many.map((c) => c.sessionId), [], many)).toHaveLength(20);
+  });
+
+  it('sorts before recent commands with an empty query', () => {
+    expect(ids(rankCommands(all, '', ['stop'], 14)).slice(0, 3)).toEqual(['pin:s2', 'pin:s1', 'stop']);
+  });
+
+  it('ranks above an equal match with a query', () => {
+    expect(ids(rankCommands(all, 'chat: stop claude', [])).slice(0, 2)).toEqual(['pin:s1', 'stop']);
   });
 });
 

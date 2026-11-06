@@ -9,7 +9,7 @@ import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, segmentOf, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
+import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
 const PAGE = 5;
 
@@ -257,7 +257,17 @@ export function OpenChats() {
   const close = (c: LiveChat) => closeChat(c, setAsk);
   const drop = (id: string) => () => setChats((l) => l.filter((x) => x.sessionId !== id));
   const removeLive = (c: LiveChat) => c.sessionId && setAsk(deleteChat({ sessionId: c.sessionId, title: c.title, lastModified: c.lastActive }, drop(c.sessionId), notice));
-  const groups = useMemo(() => groupByRepo(live, chats, folders, filter), [live, chats, folders, filter]);
+  const { pins, toggle: togglePin } = usePins();
+  const groups = useMemo(() => groupByRepo(live, chats, folders, filter, new Set(pins)), [live, chats, folders, filter, pins]);
+  const pinnedRows = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    return pins.flatMap((id) => {
+      const c = live.find((x) => x.sessionId === id);
+      const s = c ? undefined : chats.find((x) => x.sessionId === id);
+      const item = c ? { c, title: c.title, repo: repoName(folders, c.cwd) } : s ? { s, title: s.title, repo: repoName(folders, s.cwd) } : null;
+      return item && (!q || `${item.title} ${item.repo}`.toLowerCase().includes(q)) ? [item] : [];
+    });
+  }, [live, chats, folders, filter, pins]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
   const isOpen = (g: RepoGroup) => Boolean(filter) || !(collapsed[g.key] ?? !g.open.length);
   const toggle = (g: RepoGroup) => {
@@ -265,7 +275,11 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} onDelete={() => removeLive(c)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} onDelete={() => removeLive(c)} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
+
+  const savedRow = (s: SavedSession, repo?: string) => (
+    <SavedRow key={s.sessionId} s={s} repo={repo} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} onDelete={() => setAsk(deleteChat(s, drop(s.sessionId), notice))} onPin={() => togglePin(s.sessionId)} />
+  );
 
   useEffect(() => setOpening(null), [current]);
   // A failed or lost open never changes the current chat.
@@ -286,6 +300,12 @@ export function OpenChats() {
       <NeedsYou n={waiting.length}>
         {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
       </NeedsYou>
+      {pinnedRows.length > 0 && (
+        <div className="tree needs">
+          <div className="group">Pinned <span className="badge waiting">{pinnedRows.length}</span></div>
+          {pinnedRows.map((p) => (p.c ? row(p.c, p.repo) : savedRow(p.s!, p.repo)))}
+        </div>
+      )}
       <div className="tree">
         {groups.map((g) => (
           <div key={g.key}>
@@ -302,15 +322,7 @@ export function OpenChats() {
               </span>
             </div>
             {isOpen(g) && g.open.filter((c) => !c.pending).map((c) => row(c))}
-            {isOpen(g) && (full.has(g.key) || filter ? g.recent : g.recent.slice(0, RECENT)).map((s) => (
-              <div key={s.sessionId} className="row session recent" title={`${s.title}\n${s.cwd}`} {...pressable(() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); })}>
-                <span className="name">{opening === s.sessionId ? 'Opening… ' : ''}{s.title}</span>
-                <span className="when">{ago(s.lastModified)}</span>
-                <span className="acts">
-                  <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); setAsk(deleteChat(s, drop(s.sessionId), notice)); }}><Icon name="trash" small /></button>
-                </span>
-              </div>
-            ))}
+            {isOpen(g) && (full.has(g.key) || filter ? g.recent : g.recent.slice(0, RECENT)).map((s) => savedRow(s))}
             {isOpen(g) && !filter && g.recent.length > RECENT && (
               <div className="row more" {...pressable(() => flip(setFull, g.key))}>
                 {full.has(g.key) ? 'Show less' : `Show ${g.recent.length - RECENT} more`}
@@ -326,12 +338,30 @@ export function OpenChats() {
   );
 }
 
+function SavedRow({ s, repo, opening, pinned, onOpen, onDelete, onPin }: { s: SavedSession; repo?: string; opening: boolean; pinned: boolean; onOpen: () => void; onDelete: () => void; onPin: () => void }) {
+  return (
+    <div className="row session recent" title={`${s.title}\n${s.cwd}`} {...pressable(onOpen)}>
+      {repo && <span className="repo">{repo}</span>}
+      <span className="name">{opening ? 'Opening… ' : ''}{s.title}</span>
+      <span className="when">{ago(s.lastModified)}</span>
+      <span className="acts">
+        <PinButton pinned={pinned} onPin={onPin} />
+        <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Icon name="trash" small /></button>
+      </span>
+    </div>
+  );
+}
+
+function PinButton({ pinned, onPin }: { pinned: boolean; onPin: () => void }) {
+  return <button className="icon-btn" title={pinned ? 'Unpin chat' : 'Pin chat'} onClick={(e) => { e.stopPropagation(); onPin(); }}><Icon name={pinned ? 'pinned' : 'pin'} small /></button>;
+}
+
 function WaitingRows({ viewing, ask }: { viewing: string; ask: (r: ConfirmRequest) => void }) {
   const live = useStore((s) => s.live);
   return <>{live.filter((c) => c.pending).map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} onClose={() => closeChat(c, ask)} />)}</>;
 }
 
-function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveChat; repo?: string; selected: boolean; onClose: () => void; onDelete?: () => void; onBeside?: () => void }) {
+function LiveRow({ c, repo, selected, pinned, onClose, onDelete, onPin, onBeside }: { c: LiveChat; repo?: string; selected: boolean; pinned?: boolean; onClose: () => void; onDelete?: () => void; onPin?: () => void; onBeside?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const line = chatLine(c, events);
   const second = Boolean(line.text || line.edits);
@@ -354,6 +384,7 @@ function LiveRow({ c, repo, selected, onClose, onDelete, onBeside }: { c: LiveCh
       </span>
       <span className="acts">
         {onBeside && <button className="icon-btn desktop-only" title="Open beside the current chat" onClick={(e) => { e.stopPropagation(); onBeside(); }}><Icon name="split-horizontal" small /></button>}
+        {c.sessionId && onPin && <PinButton pinned={Boolean(pinned)} onPin={onPin} />}
         <button className="icon-btn" title="Close chat, keep the transcript" onClick={(e) => { e.stopPropagation(); onClose(); }}><Icon name="close" small /></button>
         {c.sessionId && onDelete && <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Icon name="trash" small /></button>}
       </span>

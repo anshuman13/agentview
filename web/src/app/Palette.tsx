@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getState, send, setUi, useStore } from './store';
 import { toggleNotify } from './notify';
-import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES } from '../../../shared/protocol';
+import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type SavedSession } from '../../../shared/protocol';
 import { Back } from './back';
 import { setView, type List } from '../codex/view';
 import { LISTS } from '../codex/nav';
+import { PINS_URL, get } from '../sessions/folders';
 import { Hl, command, listKeys, save, storedStrings } from '../ui/util';
 
-export type Command = { id: string; label: string; key?: string };
+export type Command = { id: string; label: string; key?: string; pinned?: boolean };
 export type Match = { score: number; hits: number[] };
 export type Row = { cmd: Command; hits: number[]; recent: boolean };
 
 const KEY = 'agentview.palette';
 const MAX_ROWS = 12;
+const MAX_PINNED = 20;
 
 const VIEWS = [
   ['explorer', 'Explorer'],
@@ -55,6 +57,15 @@ export function buildCommands(models: { value: string; displayName: string }[]):
   ];
 }
 
+export function pinCommands(pins: string[], live: { sessionId: string | null; title: string }[], saved: { sessionId: string; title: string }[]): Command[] {
+  return pins
+    .flatMap((id) => {
+      const title = live.find((c) => c.sessionId === id)?.title ?? saved.find((s) => s.sessionId === id)?.title;
+      return title ? [{ id: `pin:${id}`, label: `Chat: ${title}`, pinned: true }] : [];
+    })
+    .slice(0, MAX_PINNED);
+}
+
 const boundary = (lower: string, i: number) => i === 0 || !/[a-z0-9]/.test(lower[i - 1]);
 
 function matchWord(lower: string, w: string): Match | null {
@@ -94,11 +105,15 @@ export function matchCommand(label: string, query: string): Match | null {
 export function rankCommands(commands: Command[], query: string, recent: string[], max = MAX_ROWS): Row[] {
   const pos = new Map(recent.map((id, i) => [id, i]));
   const at = (cmd: Command) => pos.get(cmd.id) ?? Infinity;
+  const empty = !query.trim();
   const rows = commands.map((cmd) => ({ cmd, m: matchCommand(cmd.label, query) })).filter((r) => r.m) as { cmd: Command; m: Match }[];
   rows.sort((a, b) => {
+    const pa = Boolean(a.cmd.pinned), pb = Boolean(b.cmd.pinned);
+    if (empty && pa !== pb) return pa ? -1 : 1;
+    if (empty && pa) return 0;
     const ra = at(a.cmd), rb = at(b.cmd);
     if (isFinite(ra) !== isFinite(rb)) return ra - rb;
-    return b.m.score - a.m.score || (ra === rb ? 0 : ra - rb);
+    return b.m.score - a.m.score || (pa === pb ? 0 : pa ? -1 : 1) || (ra === rb ? 0 : ra - rb);
   });
   return rows.slice(0, max).map((r) => ({ cmd: r.cmd, hits: r.m.hits, recent: isFinite(at(r.cmd)) }));
 }
@@ -117,7 +132,10 @@ function perform(id: string) {
     if (add) requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event('tasks:add'))));
     return;
   }
-  if (kind === 'model') send({ type: 'set_model', model: arg });
+  if (kind === 'pin') {
+    const chat = getState().live.find((c) => c.sessionId === arg);
+    send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: arg });
+  } else if (kind === 'model') send({ type: 'set_model', model: arg });
   else if (kind === 'effort') send({ type: 'set_effort', effort: arg });
   else if (kind === 'mode') send({ type: 'set_permission_mode', mode: arg });
   else if (id === 'newChat') send({ type: 'new_session' });
@@ -138,13 +156,24 @@ function perform(id: string) {
 
 export function Palette() {
   const models = useStore((s) => s.session.models);
+  const live = useStore((s) => s.live);
+  const [fetched, setFetched] = useState<{ pins: string[]; saved: SavedSession[] }>({ pins: [], saved: [] });
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
   const [recent, setRecent] = useState(() => storedStrings(KEY));
   const list = useRef<HTMLUListElement>(null);
-  const commands = useMemo(() => buildCommands(models), [models]);
-  const rows = useMemo(() => rankCommands(commands, q, recent), [commands, q, recent]);
+  const pinned = useMemo(() => pinCommands(fetched.pins, live, fetched.saved), [fetched, live]);
+  const commands = useMemo(() => [...pinned, ...buildCommands(models)], [pinned, models]);
+  const rows = useMemo(() => rankCommands(commands, q, recent, MAX_ROWS + pinned.length), [commands, pinned, q, recent]);
+
+  useEffect(() => {
+    if (!open) return;
+    let stale = false;
+    setFetched({ pins: [], saved: [] });
+    void Promise.all([get(PINS_URL), get('/api/sessions')]).then(([pins, saved]) => !stale && pins && setFetched({ pins, saved: saved ?? [] }));
+    return () => { stale = true; };
+  }, [open]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -174,9 +203,11 @@ export function Palette() {
 
   const close = () => setOpen(false);
   const run = (cmd: Command) => {
-    const next = remember(recent, cmd.id);
-    setRecent(next);
-    save(KEY, next);
+    if (!cmd.pinned) {
+      const next = remember(recent, cmd.id);
+      setRecent(next);
+      save(KEY, next);
+    }
     close();
     perform(cmd.id);
   };
@@ -198,7 +229,8 @@ export function Palette() {
         </div>
         <ul ref={list} role="listbox">
           {rows.map((r, i) => {
-            const group = i === 0 && r.recent ? 'recently used' : !r.recent && rows[i - 1]?.recent ? 'other commands' : '';
+            const kind = (x: Row) => (x.cmd.pinned && !q.trim() ? 'pinned chats' : x.recent ? 'recently used' : 'other commands');
+            const group = kind(r) !== (rows[i - 1] ? kind(rows[i - 1]) : 'other commands') ? kind(r) : '';
             return (
               <li key={r.cmd.id} role="option" aria-selected={i === idx} className={i === idx ? 'active' : ''} onClick={() => run(r.cmd)}>
                 <span className="palette-label"><Hl text={r.cmd.label} hits={r.hits} /></span>
