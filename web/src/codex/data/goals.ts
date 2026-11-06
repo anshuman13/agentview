@@ -47,16 +47,16 @@ export const goalVerdict = (p: { done: number; total: number }) => (p.total > 0 
 
 export const GOAL_WEEKS = 8;
 
-// Goals of this week and the 7 before it, newest week first; weeks without goals are left out.
+// Goals of next week, this week and the 7 before it, newest week first; weeks without goals are left out.
 export function goalHistory(items: ItemRow[], now: number, profile?: Profile) {
   const d = new Date(weekStart(now));
   const out: { start: number; label: string; goals: ItemRow[] }[] = [];
-  for (let i = 0; i < GOAL_WEEKS; i++) {
+  for (let i = -1; i < GOAL_WEEKS; i++) {
     const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7 * i, 12);
     const goals = goalsOf(items, day.getTime(), profile);
     if (!goals.length) continue;
     const start = weekStart(day.getTime());
-    out.push({ start, goals, label: i === 0 ? 'This week' : i === 1 ? 'Last week' : `${day.toLocaleDateString('en-GB', { weekday: 'short' })} ${day.getDate()} ${day.toLocaleDateString('en-GB', { month: 'short' })}` });
+    out.push({ start, goals, label: i < 0 ? 'Next week' : i === 0 ? 'This week' : i === 1 ? 'Last week' : `${day.toLocaleDateString('en-GB', { weekday: 'short' })} ${day.getDate()} ${day.toLocaleDateString('en-GB', { month: 'short' })}` });
   }
   return out;
 }
@@ -64,6 +64,14 @@ export function goalHistory(items: ItemRow[], now: number, profile?: Profile) {
 // Why a goal cannot be reopened in this week, if it cannot.
 export function reopenBlock(items: ItemRow[], goal: ItemRow, now: number) {
   const mine = goalsOf(items, now, goal.profile);
+  if (mine.length >= MAX_GOALS) return 'full';
+  return mine.some((g) => titleKey(g.title) === titleKey(goal.title)) ? 'same' : null;
+}
+
+// Why a goal of this week cannot move to next week, if it cannot.
+export function moveBlock(items: ItemRow[], goal: ItemRow, now: number) {
+  const d = new Date(weekStart(now));
+  const mine = goalsOf(items, new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7).getTime(), goal.profile);
   if (mine.length >= MAX_GOALS) return 'full';
   return mine.some((g) => titleKey(g.title) === titleKey(goal.title)) ? 'same' : null;
 }

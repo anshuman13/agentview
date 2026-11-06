@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carryOver, goalAtRisk, goalHistory, goalVerdict, pruneDismissed, reopenBlock, reviewCarry, reviewWindow } from './goals';
+import { carryOver, goalAtRisk, goalHistory, goalVerdict, moveBlock, pruneDismissed, reopenBlock, reviewCarry, reviewWindow } from './goals';
 import { weekFreeMinutes, type Span } from './plan';
 import type { ItemRow } from './sync';
 
@@ -32,13 +32,17 @@ describe('goalHistory', () => {
   const mon = (weeksAgo: number) => new Date(2026, 9, 26 - 7 * weeksAgo).getTime();
   const g = (id: string, weeksAgo: number, o: Partial<ItemRow> = {}) => row({ id, title: id, status: 'goal', at: mon(weeksAgo), ...o });
 
-  it('lists 8 weeks newest first, skipping empty weeks, deleted goals and older goals', () => {
-    const items = [g('a', 0), g('b', 1), g('c', 3), g('d', 7), g('old', 8), g('gone', 2, { deleted: 1 })];
+  it('lists next week first, then this week and 7 past weeks, skipping empty weeks, deleted goals and older goals', () => {
+    const items = [g('n', -1), g('a', 0), g('b', 1), g('c', 3), g('d', 7), g('old', 8), g('far', -2), g('gone', 2, { deleted: 1 })];
     const weeks = goalHistory(items, now);
-    expect(weeks.map((w) => w.goals[0].id)).toEqual(['a', 'b', 'c', 'd']);
-    expect(weeks.map((w) => w.start)).toEqual([mon(0), mon(1), mon(3), mon(7)]);
-    expect(weeks.slice(0, 2).map((w) => w.label)).toEqual(['This week', 'Last week']);
-    expect(weeks[2].label).toBe('Mon 5 Oct');
+    expect(weeks.map((w) => w.goals[0].id)).toEqual(['n', 'a', 'b', 'c', 'd']);
+    expect(weeks.map((w) => w.start)).toEqual([mon(-1), mon(0), mon(1), mon(3), mon(7)]);
+    expect(weeks.slice(0, 3).map((w) => w.label)).toEqual(['Next week', 'This week', 'Last week']);
+    expect(weeks[3].label).toBe('Mon 5 Oct');
+  });
+
+  it('labels this week even when next week has no goals', () => {
+    expect(goalHistory([g('a', 0)], now).map((w) => w.label)).toEqual(['This week']);
   });
 
   it('respects the profile', () => {
@@ -63,6 +67,25 @@ describe('reopenBlock', () => {
   it('refuses a same-title goal, ignoring case and spacing', () => {
     expect(reopenBlock([old, mine('1', '  SHIP it ')], old, now)).toBe('same');
     expect(reopenBlock([old, mine('1', 'Ship it', { profile: 'personal' })], old, now)).toBeNull();
+  });
+});
+
+describe('moveBlock', () => {
+  const now = new Date(2026, 9, 28, 10).getTime();
+  const next = new Date(2026, 10, 2).getTime();
+  const cur = row({ id: 'c', title: 'Ship it', status: 'goal', at: new Date(2026, 9, 26).getTime() });
+  const nxt = (id: string, title: string, o: Partial<ItemRow> = {}) => row({ id, title, status: 'goal', at: next, ...o });
+
+  it('refuses when next week is full for its profile only', () => {
+    const full = [nxt('1', 'a'), nxt('2', 'b'), nxt('3', 'c')];
+    expect(moveBlock([cur, ...full], cur, now)).toBe('full');
+    expect(moveBlock([cur, ...full.map((r) => ({ ...r, profile: 'personal' as const }))], cur, now)).toBeNull();
+    expect(moveBlock([cur, ...full.slice(0, 2), nxt('4', 'd', { deleted: 1 })], cur, now)).toBeNull();
+  });
+
+  it('refuses a same-title goal, ignoring case and spacing', () => {
+    expect(moveBlock([cur, nxt('1', '  SHIP it ')], cur, now)).toBe('same');
+    expect(moveBlock([cur, nxt('1', 'Ship it', { profile: 'personal' })], cur, now)).toBeNull();
   });
 });
 
