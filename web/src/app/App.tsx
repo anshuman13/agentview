@@ -13,7 +13,7 @@ import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
 import { deepLink } from './deepLinks';
 import { isPage, pageOf, PageView, PAGES, type Page } from './pages';
-import { Brief, AgentsPane, FileSwitcher, Palette, OpenChats, RepoPicker, Sessions, AssistantNav, Assistant, FocusBar, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from './lazy';
+import { Brief, AgentsPane, FileSwitcher, Palette, Shortcuts, OpenChats, RepoPicker, Sessions, AssistantNav, Assistant, FocusBar, Explorer, Changes, GitHub, Terminal, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from './lazy';
 import { AppUpdate, Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { useTheme } from './theme';
@@ -403,6 +403,7 @@ export function App() {
       <Suspense fallback={null}>
         <FileSwitcher />
         <Palette />
+        <Shortcuts />
       </Suspense>
       {repoPicker && <Suspense fallback={null}><RepoPicker /></Suspense>}
       {phone && <Suspense fallback={null}><ConnectPopover onClose={() => setPhone(false)} /></Suspense>}

@@ -327,6 +327,8 @@ or a page puts focus back on what opened it.
 | ⌥⌘B | Toggle the task box |
 | ⌘J | Toggle the terminal |
 | ⌘E | Switch between file and browser |
+| ⌘I | Focus the assistant |
+| ? | Show the keyboard shortcuts (outside text fields) |
 | ⌘K | Clear the terminal |
 | Enter | Send; Shift+Enter for a new line |
 | Tab | Accept the suggested command or the ghost text |
@@ -338,6 +340,8 @@ or a page puts focus back on what opened it.
 | ⌘Enter | Commit in Source Control; run the query in Observe |
 | j / k | Move between tasks in Tasks; Enter or Space opens, Esc closes, x done (or back to open on a done task), s snooze, Delete removes |
 | n / | New task for today (opens Tasks from Overview or other Codex pages); search tasks (on Tasks) |
+
+The palette's Keyboard shortcuts command shows the same list.
 
 ## Keyboard and screen readers
 

@@ -34,3 +34,19 @@
   .palette-input input, .palette-prefix { font-size: var(--fs-2xl); }
   .palette li { height: var(--touch); font-size: var(--fs-lg); }
 }
+
+.shortcuts {
+  width: min(640px, calc(100vw - 16px)); max-height: min(80vh, 640px); max-height: min(80dvh, 640px); display: flex; flex-direction: column; overflow: hidden;
+  background: var(--raised); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: var(--shadow-md); outline: none;
+}
+.shortcuts h2 { flex: none; margin: 0; padding: var(--sp-6) var(--sp-8) var(--sp-4); font-size: var(--fs-lg); color: var(--fg); }
+.shortcuts-list { overflow: auto; overflow-x: hidden; padding: 0 var(--sp-8) var(--sp-6); }
+.shortcuts h3 { margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-xs); font-weight: 600; color: var(--fg-muted); text-transform: uppercase; }
+.shortcuts ul { list-style: none; margin: 0; padding: 0; }
+.shortcuts li { display: flex; align-items: baseline; gap: var(--sp-5); padding: var(--sp-2) 0; font-size: var(--fs-md); color: var(--fg); }
+.shortcuts kbd { flex: none; min-width: 96px; font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); }
+.shortcuts li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .shortcuts li { flex-direction: column; gap: var(--sp-1); }
+  .shortcuts kbd { min-width: 0; }
+}

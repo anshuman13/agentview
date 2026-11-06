@@ -49,6 +49,7 @@ export function buildCommands(models: { value: string; displayName: string }[]):
     { id: 'stop', label: 'Chat: Stop Claude' },
     { id: 'theme', label: 'Preferences: Toggle Theme' },
     { id: 'notify', label: 'Preferences: Toggle Notifications' },
+    { id: 'shortcuts', label: 'Keyboard shortcuts', key: '?' },
     { id: 'phone', label: 'Open on Phone' },
     { id: 'restart', label: 'Developer: Restart Server When Claude Is Idle' },
   ];
@@ -131,6 +132,7 @@ function perform(id: string) {
   else if (id === 'file') setUi({ switcherOpen: true });
   else if (id === 'repo') setUi({ repoPicker: true });
   else if (id === 'notify') toggleNotify();
+  else if (id === 'shortcuts') window.dispatchEvent(new Event('agentview:shortcuts'));
   window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
 }
 
