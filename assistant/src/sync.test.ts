@@ -106,6 +106,14 @@ describe('sync', () => {
   });
 });
 
+describe('snoozed_until', () => {
+  it('is a synced items column', () => {
+    expect(TABLES.items).toContain('snoozed_until');
+    applyChanges(db, [ch({ id: 'a', fields: { title: 'A', snoozed_until: 5000 }, field_times: { title: 1000, snoozed_until: 1000 } })]);
+    expect(item('a')?.fields.snoozed_until).toBe(5000);
+  });
+});
+
 describe('assignee', () => {
   it('is a synced items column that merges per field and leaves other items alone', () => {
     expect(TABLES.items).toContain('assignee');

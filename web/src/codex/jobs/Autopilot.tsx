@@ -60,7 +60,7 @@ export function Autopilot() {
   const [fold, setFold] = useState<'away' | 'covers' | 'never' | null>(null);
   const [all, setAll] = useState(false);
   const items = useAssistantTable('items');
-  const waiting = useMemo(() => replyQueue(items).length, [items]);
+  const waiting = useMemo(() => replyQueue(items, Date.now()).length, [items]);
   // A held reply whose ask I closed or dismissed is no longer waiting on me.
   const seen = (r: AutopilotReply) => {
     const item = r.status === 'held' ? items.find((i) => i.id === r.id && i.source === 'slack') : null;

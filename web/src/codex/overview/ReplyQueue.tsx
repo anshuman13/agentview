@@ -11,6 +11,7 @@ import { Menu, MenuItem } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { ago } from '../../ui/util';
 import { ymd } from '../data/dates';
+import { nextNine, SNOOZES } from '../data/when';
 import { copyText, openTask, showSnack } from '../view';
 import { useActions } from '../useActions';
 
@@ -25,13 +26,25 @@ export const adminList = (rows: ItemRow[]) => rows.filter(admin).map((r) => `- $
 
 // Slack asks with a reply draft, the ones that need me first, then FAQ answers, then oldest first, so a day's asks clear from one screen.
 // Needs-you asks the drafter left without a draft come last: I decide those in the thread.
-export const replyQueue = (review: ItemRow[]) => review
-  .filter((r) => r.source === 'slack' && (r.status === 'suggested' || r.status === 'open') && !r.deleted && (drafted(r) || mine(r)) && !isSaid(r))
+// A snoozed ask is left out until its time passes; a missing snoozed_until counts as not snoozed.
+export const replyQueue = (review: ItemRow[], now: number) => review
+  .filter((r) => r.source === 'slack' && (r.status === 'suggested' || r.status === 'open') && !r.deleted && (drafted(r) || mine(r)) && !isSaid(r) && !((r.snoozed_until ?? 0) > now))
   .sort((a, b) => Number(drafted(b)) - Number(drafted(a)) || Number(mine(b)) - Number(mine(a)) || Number(isFaq(b)) - Number(isFaq(a)) || reviewedSince(a) - reviewedSince(b));
 
 export const STALE_DAYS = 3;
 // Asks that have waited more than 3 days, in queue order.
 export const staleAsks = (rows: ItemRow[], now: number) => rows.filter((r) => now - reviewedSince(r) > STALE_DAYS * 86400_000);
+
+export function snoozeOptions(now: number, profile: ItemRow['profile']) {
+  const d = new Date(now);
+  const next = nextNine(d, profile);
+  const day = new Date(next).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return [
+    { label: SNOOZES[0].label, at: SNOOZES[0].at(d) },
+    ...(d.getHours() < 15 ? [{ label: 'Later today, 16:00', at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 16).getTime() }] : []),
+    { label: `Next workday, ${day} 09:00`, at: next },
+  ];
+}
 
 // The last replies sent to a person, so a draft stays consistent with what I already said.
 function HistoryLines({ data, error, who, retry }: { data: ReplyHistory | null; error: string; who: string; retry: () => void }) {
@@ -114,7 +127,7 @@ function Ask({ row }: { row: ItemRow }) {
         <button type="button" className="ui-row" onClick={() => openTask(row)}>
           <span className="ui-row-body">
             <span className="ui-row-title">{row.title}</span>
-            <span className="ui-row-meta">{row.people || 'Slack'} · {ago(reviewedSince(row))}</span>
+            <span className="ui-row-meta">{row.people || 'Slack'} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}</span>
           </span>
           {(needs || isFaq(row)) && <span className="ui-row-trail"><span className={`badge ${needs ? 'waiting' : 'quiet'}`}>{needs ? 'Needs you' : 'FAQ'}</span></span>}
         </button>
@@ -129,6 +142,7 @@ function Ask({ row }: { row: ItemRow }) {
                 {has && <MenuItem icon="edit" onClick={choose(() => setEditing(true))}>Edit</MenuItem>}
                 {has && row.people && <MenuItem icon="history" onClick={choose(toggleHistory)}>History</MenuItem>}
                 {has && row.source_url && <MenuItem icon="link" href={row.source_url} onClick={() => setMenu(false)}>Open thread</MenuItem>}
+                {snoozeOptions(Date.now(), row.profile).map((o) => <MenuItem key={o.label} icon="clock" disabled={busy} onClick={choose(() => act.snoozeAsk(row, o.at))}>{o.label}</MenuItem>)}
                 <MenuItem icon="close" disabled={busy} onClick={choose(() => void skip())}>Skip</MenuItem>
               </Menu>
             )}

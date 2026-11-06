@@ -53,6 +53,8 @@ export type ItemFields = {
   assignee?: string | null;
   // Minutes before the due time to remind; null is at the due time, -1 is no reminder.
   remind?: number | null;
+  // Epoch ms until which a Reply queue ask is hidden.
+  snoozed_until?: number | null;
 };
 
 export type ItemRow = ItemFields & {

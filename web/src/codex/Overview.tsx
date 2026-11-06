@@ -60,7 +60,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   }, [snap.jobs, snap.runs, filter, startOfDay]);
   const digest = useMemo(() => latestDigest(snap.items, filter), [snap.items, filter]);
   const needs = useNeedsYou(s, now);
-  const queue = useMemo(() => replyQueue(s.review), [s.review]);
+  const queue = useMemo(() => replyQueue(s.review, now), [s.review, now]);
   const [onlyStale, setOnlyStale] = useState(false);
   const old = staleAsks(queue, now);
   const filtered = onlyStale && old.length > 0;

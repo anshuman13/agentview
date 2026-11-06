@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ItemRow } from '../data/sync';
-import { ReplyQueue, staleAsks } from './ReplyQueue';
+import { ReplyQueue, replyQueue, snoozeOptions, staleAsks } from './ReplyQueue';
 
 vi.mock('../data/engine', () => ({ reviewedSince: (r: { at?: number }) => r.at ?? 0, errorText: String }));
 vi.mock('../data', () => ({ useAssistantStore: () => ({}) }));
@@ -77,5 +77,21 @@ describe('ReplyQueue filtered', () => {
     expect(h).toContain('Older than 3 days');
     expect(h).toContain('Dismiss all 2');
     expect(h).not.toContain('Send all');
+  });
+});
+
+describe('snooze', () => {
+  const now = new Date(2026, 10, 6, 10).getTime();
+  it('leaves out asks snoozed into the future and keeps past, null and missing ones', () => {
+    const ids = replyQueue([row('a', '', { snoozed_until: now + 1 }), row('b', '', { snoozed_until: now - 1 }), row('c', '', { snoozed_until: null }), row('d', '')], now).map((r) => r.id);
+    expect(ids.sort()).toEqual(['b', 'c', 'd']);
+  });
+
+  it('offers Monday 09:00 from a Friday work ask and the next day for personal, and drops Later today from 15:00', () => {
+    const fri = new Date(2026, 10, 6, 10).getTime();
+    expect(new Date(snoozeOptions(fri, 'work').at(-1)!.at).getDay()).toBe(1);
+    expect(new Date(snoozeOptions(fri, 'personal').at(-1)!.at).getDay()).toBe(6);
+    expect(snoozeOptions(fri, 'work').map((o) => o.label)).toContain('Later today, 16:00');
+    expect(snoozeOptions(new Date(2026, 10, 6, 15).getTime(), 'work').map((o) => o.label)).not.toContain('Later today, 16:00');
   });
 });
