@@ -50,6 +50,18 @@ describe('wiki', () => {
     expect(searchWiki(pages, facts, 'zeta').claims).toEqual([]);
   });
 
+  it('returns every live claim, retired ones too, and needs every word', () => {
+    const many = Array.from({ length: 60 }, (_, i) => fact(`m${i}`, 'p1', 'One', `alpha ${i}`));
+    expect(searchWiki(pages, many, 'alpha').claims).toHaveLength(60);
+    const mixed = [
+      fact('r1', 'p1', 'One', 'Omega retired', { state: 'retired' }),
+      fact('s0', 'p1', 'One', 'Omega old', { superseded_by: 's1' }),
+      fact('s1', 'p1', 'One', 'Omega new'),
+    ];
+    expect(searchWiki(pages, mixed, 'omega').claims.map((f) => f.id).sort()).toEqual(['r1', 's1']);
+    expect(searchWiki(pages, mixed, 'omega retired').claims.map((f) => f.id)).toEqual(['r1']);
+  });
+
   it('counts every proposed claim', () => {
     const more = [...facts, fact('g', 'p1', 'Two', 'Eta proposal', { state: 'proposed' }), fact('h', null as unknown as string, 'One', 'Memory proposal', { state: 'proposed' })];
     expect(reviewCount(pages, more)).toBe(3);

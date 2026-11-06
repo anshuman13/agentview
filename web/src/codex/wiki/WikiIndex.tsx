@@ -3,6 +3,7 @@ import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { currentClaim, factTime, live, newPage, NO_STATS, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { ShowMore, useWindow } from '../../ui/useWindow';
 import { setView, useFocusBack, useSpotBack } from '../view';
 import { AskBar } from './AskBar';
 import { Feed } from './Feed';
@@ -87,6 +88,7 @@ function NewPageCard({ section, sort }: { section: string; sort: number }) {
 
 function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[]; stats: Map<string | null, PageStats>; query: string }) {
   const r = useMemo(() => searchWiki(pages, facts, query), [pages, facts, query]);
+  const [n, more] = useWindow(query);
   const title = new Map(pages.map((p) => [p.id, p.title]));
   if (!r.pages.length && !r.claims.length) return <div className="wk-none">Nothing in the wiki matches “{query}”. Ask the wiki below to search Slack and Linear too.</div>;
   return (
@@ -101,13 +103,14 @@ function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[];
         <section>
           <div className="wk-label">Claims · {r.claims.length}</div>
           <div className="wk-hits">
-            {r.claims.map((f) => (
+            {r.claims.slice(0, n).map((f) => (
               <button key={f.profile + f.id} className="wk-hit" onClick={() => setView({ open: f.page_id ?? MEMORY, anchor: f.id })}>
                 <span className="wk-feed-page">{f.page_id ? title.get(f.page_id) : 'Memory'}</span>
                 <span className="wk-hit-text">{f.text}</span>
               </button>
             ))}
           </div>
+          <ShowMore shown={n} total={r.claims.length} onMore={more} />
         </section>
       )}
     </>

@@ -42,6 +42,15 @@ describe('search', () => {
     expect(r.tasks.total).toBe(12);
   });
 
+  it('caps wiki claims at 30 and returns them all when expanded', () => {
+    const facts = Array.from({ length: 60 }, (_, i) => fact(`w${i}`, 'p1', `Budget claim ${i}`));
+    const d = { ...data, facts, pages: [] };
+    const r = searchAll(d, 'budget');
+    expect(r.wiki.total).toBe(30);
+    expect(r.wiki.hits).toHaveLength(GROUP_CAP);
+    expect(searchAll(d, 'budget', ['wiki']).wiki.hits).toHaveLength(30);
+  });
+
   it('returns every hit for an expanded group', () => {
     const items = Array.from({ length: 12 }, (_, i) => item(`n${i}`, 'Budget note'));
     expect(searchAll({ ...data, items }, 'budget', ['tasks']).tasks.hits).toHaveLength(12);

@@ -9,6 +9,7 @@ import { searchMeetings } from './meetings';
 export { snippet };
 
 export const GROUP_CAP = 8;
+const WIKI_CLAIM_CAP = 30;
 
 export type Hit = { id: string; profile: string; title: string; snippet: string; page?: string | null; when?: string };
 export type Group = { hits: Hit[]; total: number };
@@ -29,7 +30,7 @@ export function searchAll(data: SearchData, query: string, expanded: string[] = 
   const found = searchWiki(data.pages, data.facts, query);
   const wiki = [
     ...found.pages.map((p) => (): Hit => ({ id: p.id, profile: p.profile, title: p.title || 'Untitled', snippet: snippet(words, p.summary), page: p.id })),
-    ...found.claims.map((f) => (): Hit => ({ id: f.id, profile: f.profile, title: snippet(words, f.text) || f.text || '', snippet: '', page: f.page_id })),
+    ...found.claims.slice(0, WIKI_CLAIM_CAP).map((f) => (): Hit => ({ id: f.id, profile: f.profile, title: snippet(words, f.text) || f.text || '', snippet: '', page: f.page_id })),
   ];
   const jobs = live(data.jobs).filter((j) => hitJob(j));
   return {

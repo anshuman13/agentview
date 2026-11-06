@@ -186,7 +186,7 @@ export function searchWiki(pages: Page[], facts: Fact[], query: string) {
   const current = currentClaim(facts);
   return {
     pages: live(pages).filter(hitPage),
-    claims: live(facts).filter((f) => current(f) && hitFact(f)).slice(0, 30),
+    claims: facts.filter((f) => !f.deleted && (f.state === 'retired' || ((f.state ?? 'live') === 'live' && current(f))) && hitFact(f)),
   };
 }
 
