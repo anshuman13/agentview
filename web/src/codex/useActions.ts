@@ -89,6 +89,7 @@ export function useActions() {
       if (d) showSnack(d.next ? `Done · next ${when(d.next.at)}` : 'Done', d.undo);
     },
     snoozeAsk: (r: ItemRow, until: number) => change(r, { snoozed_until: until }, `Snoozed to ${when(until)}`),
+    tomorrow: (r: ItemRow) => { const at = nextNine(undefined, r.profile); change(r, { at, ...UNROLL }, `Moved to ${when(at)}`); },
     reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
     snooze: (r: ItemRow, at = nextNine(undefined, r.profile)) => change(r, { at, ...unrollFor(at) }, `Snoozed to ${when(at)}`),
     // Tomorrow 09:00, or the next 09:00 after the due time when that is later.

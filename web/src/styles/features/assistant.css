@@ -305,15 +305,18 @@ button.as-ctx-btn { width: 100%; padding: 0; border: 0; background: transparent;
 .tasks .as-row.work:not(.checked) .as-check:not(.on), .tasks .as-row.work:not(.checked) .as-check:not(.on) .codicon.icon { color: var(--work); }
 .tasks .as-row.personal:not(.checked) .as-check:not(.on), .tasks .as-row.personal:not(.checked) .as-check:not(.on) .codicon.icon { color: var(--personal); }
 .tasks .as-row > .as-check { margin-right: calc(-1 * var(--sp-4)); }
-.tasks .as-title { font-size: var(--row-title); line-height: 20px; font-weight: 400; color: var(--fg-strong); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-.tasks .as-ctx { line-height: 18px; color: var(--fg-muted); }
-.tasks .as-meta { flex: none; display: flex; align-items: center; gap: var(--sp-3); font-size: var(--row-meta); line-height: 18px; color: var(--fg-faint); white-space: nowrap; }
-.tasks .as-meta:empty { display: none; }
-.tasks .as-meta > span { display: inline-flex; align-items: center; gap: var(--sp-2); }
-.tasks .as-meta > .as-due { color: var(--fg-muted); }
+.tasks .as-title { font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: 400; color: var(--fg-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tasks .as-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--type-label-size); line-height: var(--type-label-line); color: var(--meta-fg); }
 .tasks .as-meta > .as-due.today { color: var(--accent-text); }
-.tasks .as-meta > .as-list-done { color: var(--fg-faint); }
 .tasks .as-meta > .as-due.late { color: var(--err); }
+.tasks .as-row .as-ctx { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; white-space: normal; line-height: var(--type-label-line); }
+.tasks .as-row > .badge { flex: none; }
+.tasks .as-more { position: relative; flex: none; display: inline-flex; margin-right: var(--sp-2); }
+.tasks .as-swipe:has(.ui-menu) { overflow: visible; }
+@media (hover: hover) and (pointer: fine) {
+  .tasks .as-more { opacity: 0; }
+  .tasks .as-row:is(:hover, :focus-visible) .as-more, .tasks .as-more:focus-within { opacity: 1; }
+}
 .tasks .as-row.checked .as-title { color: var(--fg-muted); }
 .tasks .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
 .tasks .as-drop-line { margin-left: var(--tk-indent); }
@@ -404,8 +407,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-flag.p3 { color: var(--prio-high); }
 .as-flag.p2 { color: var(--prio-medium); }
 .as-flag.p1 { color: var(--prio-low); }
-.as-meta .as-flag { width: 14px; height: 14px; }
-.as-tag-meta { color: var(--accent-text); }
 .as-quick-flagwrap { position: relative; }
 .as-quick-flagwrap > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }
 .as-flag-item { color: var(--fg); }
@@ -448,14 +449,7 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-add-prof .prof-dot { width: 10px; height: 10px; margin: 0; }
 .as-add input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; box-shadow: none; }
 .as-add input:focus { outline: none; box-shadow: none; }
-.as-ctx > .as-list-done { color: var(--ok); }
-.as-list-btn { display: inline-flex; align-items: center; gap: var(--sp-2); margin: -8px; padding: 8px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .as-list { display: flex; flex-direction: column; margin-top: var(--sp-2); }
-.as-list button { display: flex; align-items: center; gap: var(--sp-3); min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; }
-.as-list button span { min-width: 0; overflow-wrap: anywhere; }
-.as-list button .codicon { flex: none; color: var(--fg-faint); }
-.as-list button.on { color: var(--fg-faint); text-decoration: line-through; }
-.as-list button.on .codicon { color: var(--ok); }
 .tasks .as-drop-empty { padding: var(--sp-5) var(--sp-7); }
 .tasks .as-target > .as-section { color: var(--accent-text); }
 .tasks .as-target > .as-list { border-color: var(--accent); }
