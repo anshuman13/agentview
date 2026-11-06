@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { ANSWERED, CHANGED, afterScan, awayDigest, dayDigest, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
+import { ANSWERED, CHANGED, afterScan, awayDigest, dayDigest, escalated, scanModel, autopilotConfig, autopilotState, awayStart, channelAllowed, holdDue, holdNote, replyHistory, marker, modeOf, replyNow, saveAutopilot, sendReply, toPush, underCaps, type AutopilotConfig, type NewAsk } from './autopilot.js';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
 import { askId, saveScan, threadKey } from './slackSave.js';
 import { HOUR } from './time.js';
+import { taskRoutes } from './routes/tasks.js';
 
 const at = (d: number, h: number) => new Date(2026, 11, d, h).getTime();
 const url = (u: string) => (u.startsWith('http') ? u : `https://x.slack.com/archives/C1/${u}`);
@@ -324,4 +325,32 @@ test('scanModel uses Opus only when chosen and away', () => {
   expect(scanModel({ ...away, model: 'opus' }, at(22, 10))).toBe('opus');
   expect(scanModel({ ...away, model: 'opus' }, new Date(2026, 10, 2, 10).getTime())).toBe('sonnet');
   expect(scanModel(away, at(22, 10))).toBe('sonnet');
+});
+
+describe('replyHistory', () => {
+  const put = (db: ReturnType<typeof openDb>, id: string, over: { who?: string; status?: string; text?: string; sent?: number }) =>
+    db.prepare('INSERT INTO replies (profile, id, who, status, text, at, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run('work', id, over.who ?? 'Per', over.status ?? 'sent', over.text ?? 'ok', 1, over.sent ?? 1);
+
+  test('keeps the last 3 sent or dry replies to the person, newest first, cut to the first line', () => {
+    const db = openDb(':memory:');
+    put(db, 'a', { sent: 10, text: 'one' });
+    put(db, 'b', { sent: 20, status: 'dry', text: 'two' });
+    put(db, 'c', { sent: 30, who: 'per', text: `first\nsecond` });
+    put(db, 'd', { sent: 40, text: 'x'.repeat(200) });
+    put(db, 'e', { sent: 50, status: 'draft', text: 'unsent' });
+    put(db, 'f', { sent: 60, who: 'Other', text: 'other' });
+    const r = replyHistory(db, 'PER');
+    expect(r.map((x) => x.at)).toEqual([40, 30, 20]);
+    expect(r[0]!.line).toBe(`${'x'.repeat(119)}…`);
+    expect(r[1]!.line).toBe('first');
+  });
+
+  test('an empty who gives an empty list', () => {
+    const db = openDb(':memory:');
+    expect(replyHistory(db, '')).toEqual([]);
+    const out: { status?: number; body?: string } = {};
+    const res = { writeHead: (s: number) => (out.status = s), end: (b: string) => (out.body = b) } as never;
+    void taskRoutes['GET /history']!({ req: {} as never, res, url: new URL('http://x/history'), device: 'd', getDb: () => db });
+    expect(out).toEqual({ status: 200, body: '{"replies":[]}' });
+  });
 });

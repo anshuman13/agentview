@@ -156,6 +156,16 @@ export const threadReplied = (db: Database, a: { id: string; url: string }) =>
 
 export const sentCount = (db: Database, since: number) => (db.prepare("SELECT COUNT(*) AS n FROM replies WHERE profile = ? AND status IN ('sent', 'dry') AND sent_at > ?").get(PROFILE, since) as { n: number }).n;
 
+// The last few replies sent to a person, newest first, each cut to its first line, for the history in the Reply queue.
+export const replyHistory = (db: Database, who: string) => {
+  if (!who.trim()) return [];
+  return (db.prepare("SELECT text, COALESCE(sent_at, at) AS at FROM replies WHERE profile = ? AND status IN ('sent', 'dry') AND lower(who) = lower(?) AND text IS NOT NULL ORDER BY COALESCE(sent_at, at) DESC LIMIT 3").all(PROFILE, who) as { text: string; at: number }[])
+    .map((r) => {
+      const line = (r.text.split('\n').find((l) => l.trim()) ?? '').trim();
+      return { at: r.at, line: line.length > 120 ? `${line.slice(0, 119).trimEnd()}…` : line };
+    });
+};
+
 export const underCaps = (db: Database, now: number) => sentCount(db, now - HOUR) < HOUR_CAP && sentCount(db, now - DAY) < DAY_CAP;
 
 // One holding note per person per 3 days.

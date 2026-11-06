@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import type { ReplyHistory } from '../data/store';
+import { clearHistory, loadHistory } from '../replyHistory';
 import { useAssistantStore } from '../data';
 import { reviewedSince } from '../data/engine';
 import { isSaid, type ItemRow } from '../data/sync';
 import { tagList } from '../AddSheet';
 import { Draft } from '../TaskEditor';
-import { SectionHead } from '../Fold';
+import { Fold, SectionHead } from '../Fold';
 import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
 import { haptic } from '../../ui/haptic';
 import { ago } from '../../ui/util';
+import { ymd } from '../data/dates';
 import { copyText, openTask, showSnack } from '../view';
 import { useActions } from '../useActions';
 
@@ -26,6 +29,31 @@ export const adminList = (rows: ItemRow[]) => rows.filter(admin).map((r) => `- $
 export const replyQueue = (review: ItemRow[]) => review
   .filter((r) => r.source === 'slack' && (r.status === 'suggested' || r.status === 'open') && !r.deleted && (drafted(r) || mine(r)) && !isSaid(r))
   .sort((a, b) => Number(drafted(b)) - Number(drafted(a)) || Number(mine(b)) - Number(mine(a)) || Number(isFaq(b)) - Number(isFaq(a)) || reviewedSince(a) - reviewedSince(b));
+
+// The last replies sent to a person, loaded when the fold first opens, so a draft stays consistent with what I already said.
+function History({ who }: { who: string }) {
+  const store = useAssistantStore();
+  const [data, setData] = useState<ReplyHistory | null>(null);
+  const [error, setError] = useState('');
+  const load = () => {
+    setError('');
+    loadHistory(store, who).then(setData, (err: Error) => setError(err.message));
+  };
+  const items = data?.replies;
+  return (
+    <Fold id={`history.${who}`} title="History" count={items?.length || undefined} remember={false} onOpen={() => { if (!data) load(); }}>
+      {error ? (
+        <div className="ov-history-row"><span className="muted small">{error}</span><Button size="sm" onClick={load}>Retry</Button></div>
+      ) : !items ? (
+        <span className="muted small">Loading</span>
+      ) : !items.length ? (
+        <span className="muted small">No replies sent to {who} yet</span>
+      ) : items.map((r, i) => (
+        <div key={i} className="ov-history-row"><span className="muted small">{ymd(r.at)}</span><span className="small">{r.line}</span></div>
+      ))}
+    </Fold>
+  );
+}
 
 function Undrafted({ row }: { row: ItemRow }) {
   const store = useAssistantStore();
@@ -67,7 +95,10 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
     for (const r of faq) {
       try {
         const res = await store.sendReply(r.id, false, (r.draft ?? '').trim());
-        if (res.status === 'sent' || res.status === 'dry') sent++;
+        if (res.status === 'sent' || res.status === 'dry') {
+          sent++;
+          clearHistory(r.people);
+        }
       } catch {
         break;
       }
@@ -92,6 +123,7 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
               <span className="ov-t">{r.title}{isFaq(r) && <span className="ov-faq">FAQ answer</span>}</span>
               <span className="muted small">{r.people || 'Slack'} · {ago(reviewedSince(r))}</span>
             </button>
+            {r.people && <History who={r.people} />}
             {drafted(r) ? <Draft row={r} store={store} onEdit={(draft) => act.edit(r, { draft })} /> : <Undrafted row={r} />}
           </div>
         ))}

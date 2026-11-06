@@ -9,7 +9,7 @@ import { mineFaq } from '../faq.js';
 import { learnCorrections } from '../corrections.js';
 import { learnVoice } from '../voice.js';
 import { acceptAsk, skipAsk } from '../slackSave.js';
-import { autopilotConfig, autopilotState, replyNow, saveAutopilot } from '../autopilot.js';
+import { autopilotConfig, autopilotState, replyHistory, replyNow, saveAutopilot } from '../autopilot.js';
 import { errText } from '../../../shared/util.js';
 import { body, readJson, send, type Ctx, type Routes } from './http.js';
 
@@ -93,6 +93,7 @@ export const taskRoutes: Routes = {
   },
 
   'GET /autopilot': ({ res, getDb }) => send(res, 200, autopilotState(getDb())),
+  'GET /history': ({ res, url, getDb }) => send(res, 200, { replies: replyHistory(getDb(), url.searchParams.get('who') ?? '') }),
   'POST /autopilot': async (c) => {
     const data = await body<Record<string, unknown>>(c, 20_000);
     if (!data) return;

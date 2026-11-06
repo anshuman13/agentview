@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type SentReply, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
+import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type ReplyHistory, type SentReply, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, errorText, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { TABLE_FIELDS, mergeIncoming } from './sync';
 import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
@@ -352,6 +352,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
     await this.syncNow();
     return Number(data?.added ?? 0);
   };
+
+  replyHistory = async (): Promise<ReplyHistory> => ({ replies: [] });
 
   sendReply = async (id: string, edited: boolean, text?: string) => {
     const resp = await fetch(`${HUB}/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(120000) });

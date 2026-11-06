@@ -1,4 +1,4 @@
-import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type SentReply, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
+import { BaseStore, WIKI_TABLES, transcriptOf, transcriptPath, type AssistantStore, type AutopilotConfig, type AutopilotState, type ReplyHistory, type SentReply, type MeetingRef, type Parsed, type Patch, type Snapshot, type TranscriptHit } from './store';
 import { edited, moved, newCapture, runSync, toRow, type Dirty } from './engine';
 import { doneCutoff } from './localRows';
 import { mergeIncoming, rowKey } from './sync';
@@ -311,6 +311,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     await hub(`/api/assistant/scan?name=${name}`, undefined, { method: 'POST', signal: AbortSignal.timeout(300000) });
     await this.syncNow();
   };
+
+  replyHistory = (who: string) => hub<ReplyHistory>(`/api/assistant/history?who=${encodeURIComponent(who)}`, undefined, { method: 'GET' });
 
   sendReply = async (id: string, edited: boolean, text?: string) => {
     const r = await hub<SentReply>(`/api/assistant/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { text }, { method: 'POST', signal: AbortSignal.timeout(120000) });

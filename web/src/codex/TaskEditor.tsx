@@ -9,6 +9,7 @@ import { Icon } from '../ui/Icon';
 import { Button, Chip, chipClass, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { ago, fitHeight, reveal, safeHref } from '../ui/util';
+import { clearHistory } from './replyHistory';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
 import { clock, PickDue, PickTime } from './time';
@@ -57,6 +58,7 @@ export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantSt
     setError('');
     try {
       const r = await store.sendReply(row.id, changed, text.trim());
+      if (r.status === 'sent' || r.status === 'dry') clearHistory(row.people);
       haptic('success');
       showSnack(r.status === 'answered' ? 'Not sent: someone already answered in the thread' : r.status === 'changed' ? 'Not sent: the thread changed since the draft' : 'Reply sent');
     } catch (err) {

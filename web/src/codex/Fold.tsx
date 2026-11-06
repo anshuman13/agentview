@@ -9,11 +9,11 @@ export function SectionHead({ title, count, action, className = '' }: { title: s
 }
 
 // A folded group: the header shows the title and count, and open or closed is remembered by id unless remember is false.
-export function Fold({ id, title, count, remember = true, action, children }: { id: string; title: string; count?: number; remember?: boolean; action?: ReactNode; children: ReactNode }) {
+export function Fold({ id, title, count, remember = true, action, onOpen, children }: { id: string; title: string; count?: number; remember?: boolean; action?: ReactNode; onOpen?: () => void; children: ReactNode }) {
   const key = `codex.fold.${id}`;
   const [open, setOpen] = useState(() => remember && stored<boolean>(key, false));
   if (count === 0) return null;
-  const toggle = () => { if (remember) save(key, !open); setOpen(!open); };
+  const toggle = () => { if (remember) save(key, !open); if (!open) onOpen?.(); setOpen(!open); };
   const head = (
     <button className="as-section as-toggle later" aria-expanded={open} onClick={toggle}>
       {title}{count ? <> <span>{count}</span></> : null} <Icon name={open ? 'chevron-up' : 'chevron-down'} small />
