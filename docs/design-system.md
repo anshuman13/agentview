@@ -206,6 +206,29 @@ How much a list row may carry. The eye should find the one thing to do without r
   Medium, none on done rows), the check as Done, a Needs you Badge on suggested tasks and one More Menu
   (Open, Snooze, Tomorrow, Move, Delete). The checklist is read and toggled on the task page.
 
+### Overview page
+The day at a glance on a phone. Five blocks in a fixed order, nothing else on the page. Each block is a Section
+header plus one Grouped list of Rows (Row density), at most 5 rows then "Show all N". A block with nothing in
+it is not rendered; there is no block-level empty state except the page's own "Nothing today".
+1. **Now**: only while a meeting runs or starts within 15 minutes: the Next card. Otherwise absent.
+2. **Needs you**: one list of everything waiting on the user, once each: overdue and at-risk tasks, asks and
+   promises to confirm, DMs, Slack bullets, actions from a meeting that ended in the last two hours (meta "Just
+   ended · <meeting>"), and one count row each for asks older than the stale limit and wiki claims to review.
+   Each row: one Badge at most, one primary Button sm, one More Menu. Header action: one batch action.
+3. **Reply queue**: the Report card already built; unchanged, after Needs you.
+4. **Today**: the ordered list of what to do next (meeting within two hours first, then flagged, then due
+   tasks), the first three numbered. Each row: Done (or Prep) as the button, More Menu with Focus, Tomorrow,
+   Snooze. The header carries one Menu: Plan my day (opens the Plan strip under the header), Copy standup, and
+   from 16:00 Wrap up (the Shutdown row). The last row is "Goals · N · 1 at risk" opening the Goals page; the
+   goal progress lines move there. No separate Meetings today section: meetings beyond two hours are on the
+   Meetings page.
+5. **Reports**: the newest report (morning brief before 11:00, day or away digest after 17:00, weekly review
+   from Friday 14:00) open as its Report card; every other report of the day is one Row (title, time, first
+   line) in a Reports list: job runs, the other briefs, Since last visit. A row opens the report's page.
+6. **Later**: one Fold, closed by default: the Tomorrow card, stale tasks, follow-through, keep in touch.
+Gone: the Context fold, the Slack summary row (the Summary page is in the nav), the standalone wiki-claims and
+stale-asks rows, the Meetings today section, the goal lines above the brief.
+
 ### Status language
 - Outcomes are nouns in sentence case: Sent, Failed, Skipped, Waiting, Edited. Counts as "1 sent", "2 failed".
 - "Needs you" is the only phrase for work the user must do; use it as a Badge, not in prose.
