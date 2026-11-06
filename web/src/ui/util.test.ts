@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ago, escapeHtml, markSegments, modelLabel, money, spendLines, weekPace } from './util';
+import { ago, escapeHtml, markSegments, matchLabel, modelLabel, money, spendLines, stepMatch, weekPace } from './util';
 
 describe('ago', () => {
   afterEach(() => vi.useRealTimers());
@@ -95,5 +95,20 @@ describe('markSegments', () => {
   });
   it('returns one plain piece for a blank query', () => {
     expect(markSegments('abc', [])).toEqual([{ text: 'abc', hit: false }]);
+  });
+});
+
+describe('matchLabel', () => {
+  it('words the count and caps it at 500', () => {
+    expect([0, 1, 2, 500, 501].map(matchLabel)).toEqual(['No matches', '1 match', '2 matches', '500 matches', '500+ matches']);
+  });
+});
+
+describe('stepMatch', () => {
+  it('wraps at both ends and starts from the first or last match', () => {
+    expect(stepMatch(-1, 1, 3)).toBe(0);
+    expect(stepMatch(-1, -1, 3)).toBe(2);
+    expect(stepMatch(2, 1, 3)).toBe(0);
+    expect(stepMatch(0, -1, 3)).toBe(2);
   });
 });

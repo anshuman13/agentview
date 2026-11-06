@@ -201,3 +201,16 @@ export function markSegments(text: string, words: string[]): { text: string; hit
   if (at < text.length) out.push({ text: text.slice(at), hit: false });
   return out;
 }
+
+const MATCH_CAP = 500;
+
+export function matchLabel(count: number): string {
+  if (!count) return 'No matches';
+  if (count > MATCH_CAP) return `${MATCH_CAP}+ matches`;
+  return `${count} ${count === 1 ? 'match' : 'matches'}`;
+}
+
+// The next current match from cur (-1 for none), wrapping at both ends.
+export function stepMatch(cur: number, dir: 1 | -1, count: number): number {
+  return cur < 0 && dir < 0 ? count - 1 : (cur + dir + count) % count;
+}

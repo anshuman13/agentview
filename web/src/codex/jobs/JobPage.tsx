@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Job, Run } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
-import { firstLine, markSegments, useOnUnmount } from '../../ui/util';
+import { SearchedOutput } from '../../ui/SearchedOutput';
+import { firstLine, useOnUnmount } from '../../ui/util';
 import { ShowMore, useWindow } from '../../ui/useWindow';
 import { copyText, setView, showSnack, useEscapeBack } from '../view';
-import { queryWords } from '../data/match';
 import { useMinute } from '../split';
 import { nextRun } from '../../../../shared/schedule';
 import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, parseSchedule, queued, runsOf, scheduleOf, useJobs } from './schedule';
@@ -16,39 +16,6 @@ function CopyOutput({ r }: { r: Run }) {
   return <button className="icon-btn" title="Copy output" aria-label="Copy output" onClick={() => copyText(r.output!, 'Output copied')}><Icon name="copy" small /></button>;
 }
 
-function SearchedOutput({ text, query, setQuery }: { text: string; query: string; setQuery: (q: string) => void }) {
-  const [cur, setCur] = useState(-1);
-  const box = useRef<HTMLDivElement>(null);
-  const segs = useMemo(() => markSegments(text, queryWords(query)), [text, query]);
-  const count = segs.filter((s) => s.hit).length;
-  const change = (q: string) => { setQuery(q); setCur(-1); };
-  const step = (dir: number) => {
-    if (!count) return;
-    const n = (cur + dir + count) % count;
-    setCur(n);
-    box.current?.querySelectorAll('mark')[n]?.scrollIntoView({ block: 'center' });
-  };
-  let k = -1;
-  return (
-    <>
-      <div className="jb-search-row">
-        <label className="jb-search">
-          <Icon name="search" small />
-          <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search output" onChange={(e) => change(e.target.value)} onKeyDown={(e) => {
-            if (e.key === 'Escape') { e.stopPropagation(); change(''); }
-            else if (e.key === 'Enter') { e.preventDefault(); step(e.shiftKey ? -1 : 1); }
-          }} />
-          {query && <button className="icon-btn" aria-label="Clear" onClick={() => change('')}><Icon name="close" small /></button>}
-        </label>
-        {query.trim() && <span className="muted small">{count ? `${count} ${count === 1 ? 'match' : 'matches'}` : 'No matches'}</span>}
-      </div>
-      <div className="jb-output" ref={box}>
-        {segs.map((s, i) => s.hit ? <mark key={i} className={++k === cur ? 'cur' : undefined}>{s.text}</mark> : s.text)}
-      </div>
-    </>
-  );
-}
-
 function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void }) {
   const [open, setOpen] = useState(false);
   const secs = r.finished_at && r.started_at ? <span>{Math.max(1, Math.round((r.finished_at - r.started_at) / 1000))} s</span> : null;
@@ -56,7 +23,7 @@ function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query
     return (
       <div className="jb-run">
         <div className="wk-meta"><span><RunStatus r={r} /> {at(r.started_at ?? 0)}</span>{secs}{r.output && <CopyOutput r={r} />}</div>
-        {r.output && <SearchedOutput text={r.output} query={query} setQuery={setQuery} />}
+        {r.output && <SearchedOutput text={r.output} query={query} setQuery={setQuery} label="Search output" className="jb-output" />}
       </div>
     );
   }
