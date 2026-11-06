@@ -28,14 +28,14 @@ export const listBin = (now = Date.now()) => serial(async () => {
   return kept;
 });
 
-export const removeSession = (id: string, purge: boolean) => serial(async () => {
+export const removeSession = (id: string, purge: boolean, archive = false) => serial(async () => {
   const info = await getSessionInfo(id);
   const list = await load();
   if (!info) {
     await save(list.filter((b) => b.sessionId !== id));
     return { purged: true };
   }
-  if (purge || Date.now() - info.lastModified > BIN_MS) {
+  if (purge || (!archive && Date.now() - info.lastModified > BIN_MS)) {
     await deleteSession(id, { dir: info.cwd });
     await save(list.filter((b) => b.sessionId !== id));
     return { purged: true };

@@ -1,10 +1,10 @@
 import path from 'node:path';
 import { readdir, stat } from 'node:fs/promises';
-import { listSessions as listAll, type ListSessionsOptions, type SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
+import { getSessionInfo, listSessions as listAll, renameSession, type ListSessionsOptions, type SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import type { SavedSession } from '../../../../shared/protocol.js';
 import { CLAUDE_DIR } from './history.js';
 
-export { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
+export { getSessionInfo };
 
 const statSig = (file: string) => stat(file).then((s) => `${s.ino}:${s.size}:${s.mtimeMs}`, () => '-');
 
@@ -41,3 +41,12 @@ export function savedSession(x: SDKSessionInfo): SavedSession {
   const firstPrompt = x.firstPrompt?.replace(/\s+/g, ' ').trim().slice(0, 300);
   return { sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified, ...(firstPrompt && { firstPrompt }) };
 }
+
+export const renameRoute = async (id: string | null, title: unknown): Promise<{ status: number; body: unknown }> => {
+  const text = typeof title === 'string' ? title.trim() : '';
+  if (!id || !text) return { status: 400, body: { error: 'id and title are required' } };
+  const info = await getSessionInfo(id);
+  if (!info) return { status: 404, body: { error: 'Session not found' } };
+  await renameSession(id, text, { dir: info.cwd });
+  return { status: 200, body: { ok: true } };
+};

@@ -19,8 +19,8 @@ export const unpin = (id: string) => serial(async () => {
   if (list.includes(id)) await writeJson(file(), list.filter((x) => x !== id), { pretty: true });
 });
 
-export const removeChat = async (id: string, purge: boolean) => {
-  const r = await removeSession(id, purge);
+export const removeChat = async (id: string, purge: boolean, archive = false) => {
+  const r = await removeSession(id, purge, archive);
   await unpin(id);
   return r;
 };

@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
-import { listSessions, savedSession } from './agent/claude/sessions.js';
+import { listSessions, renameRoute, savedSession } from './agent/claude/sessions.js';
 import { ntfyTopic, post } from './integrations/notify.js';
 import { cancelFocus, scheduleFocus } from './integrations/focus.js';
 import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
@@ -196,7 +196,14 @@ const server = http.createServer(async (req, res) => {
       const id = url.searchParams.get('id') ?? '';
       const open = bySession(id);
       if (open) await closeByUser(open);
-      return json(await removeChat(id, url.searchParams.has('purge')));
+      return json(await removeChat(id, url.searchParams.has('purge'), url.searchParams.has('archive')));
+    }
+    if (url.pathname === '/api/sessions/rename' && req.method === 'POST') {
+      const id = url.searchParams.get('id');
+      const title = JSON.parse(await readBody(req)).title;
+      const r = await renameRoute(id, title);
+      if (r.status === 200) host.notify({ op: 'rename', sessionId: id!, title: title.trim() });
+      return json(r.body, r.status);
     }
     if (url.pathname === '/api/sessions/pins') {
       const r = await pinsRoute(req.method ?? 'GET', url.searchParams.get('id'));

@@ -14,6 +14,7 @@ export type HostRequest =
   | { op: 'open'; sessionId: string }
   | { op: 'new'; cwd: string; from: string; fork?: string }
   | { op: 'close'; id: string }
+  | { op: 'rename'; sessionId: string; title: string }
   | { op: 'ask'; cwd: string; prompt: string; from?: string; fresh?: boolean }
   | { op: 'mcp_add'; id: string; name: string }
   | { op: 'mcp_login'; id: string; name: string }

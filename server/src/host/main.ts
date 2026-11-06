@@ -389,6 +389,14 @@ async function handle(req: HostRequest): Promise<unknown> {
       return (await newChat(req.cwd, get(req.from), req.fork)).id;
     case 'close':
       return closeByUser(get(req.id));
+    case 'rename': {
+      const chat = bySession(req.sessionId);
+      if (chat) {
+        chat.title = req.title;
+        broadcastLive();
+      }
+      return;
+    }
     case 'ask':
       return prompt(req.cwd, req.prompt, req.from, req.fresh);
     case 'mcp_add': {

@@ -52,7 +52,6 @@
 .sessions .row.group-row { margin-top: var(--sp-3); }
 .sessions .row.group-row .count { margin-left: auto; padding-right: var(--sp-5); font-weight: 400; text-transform: none; }
 
-.sessions .dot { margin: 0 var(--sp-1); }
 
 .sessions .row.live { padding-left: var(--sp-4); gap: var(--sp-3); }
 .sessions.chats .row:is(.live, .recent) { padding-left: var(--sp-12); gap: var(--sp-3); }
@@ -76,24 +75,17 @@
 .sessions .row.live.two { height: auto; min-height: var(--touch-md); padding: var(--sp-2) 0 5px var(--sp-4); align-items: flex-start; }
 .sessions.chats .row.live.two { padding-left: var(--sp-12); }
 .sessions .needs .row.live.two { padding-left: var(--sp-4); }
-.sessions .row.live.two > .dot { margin-top: 7px; }
-.sessions .row.live.two > .mark { flex: none; display: inline-flex; width: var(--sp-6); justify-content: center; margin: var(--sp-1) 0 0; color: var(--ok); }
 .sessions .row.live.two > .acts { margin-top: var(--sp-1); }
 .sessions .lines { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: var(--line-sm); }
 .sessions .lines :is(.l1, .l2) { display: flex; align-items: baseline; min-width: 0; }
 .sessions .lines .l1 { gap: var(--sp-3); }
 .sessions .lines .l1 .repo { flex: none; font-weight: 600; color: var(--fg); }
 .sessions .lines .l1 .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg); }
-.sessions .row.live.selected .lines .l1 .name { color: var(--fg-strong); }
 .sessions .lines .l1 .when { flex: none; margin: 0; padding: 0 var(--sp-5) 0 0; min-width: 0; font-size: var(--fs-xs); color: var(--fg-faint); }
 .sessions .lines .l2 { gap: var(--sp-4); font-size: var(--fs-sm); color: var(--fg-muted); }
 .sessions .lines .l2 .sub { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sessions .lines .l2 .sub.fixing { flex: 0 1 auto; white-space: nowrap; color: var(--accent-text); }
-.sessions .lines .l2 .edits { flex: none; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
-.sessions .lines .l2 .edits { padding-right: var(--sp-5); }
-.sessions .lines .l2 .edits .add { color: var(--diff-add); }
-.sessions .lines .l2 .edits .del { color: var(--diff-del); }
-.sessions .row.live.two:has(.acts):hover .l2 :is(.edits, .gh-state) { display: none; }
+.sessions .row.live.two:has(.acts):hover .l2 .gh-state { display: none; }
 .gh-state { flex: none; display: inline-flex; align-items: center; gap: var(--sp-3); padding-right: var(--sp-5); font-size: var(--fs-xs); }
 
 .sessions.chats .row.project .acts { display: inline-flex; margin-left: 0; }
@@ -131,3 +123,11 @@
   .sessions .lines .l2 { font-size: var(--fs-md); }
   .sessions.workspace .row.repo-row.two { min-height: var(--touch-sm); align-items: center; }
 }
+
+.chat-row { display: flex; align-items: center; padding-right: var(--list-pad); }
+.chat-row > .ui-row { flex: 1; min-width: 0; padding-left: var(--sp-12); }
+.chat-row > .ui-row[aria-current='true'] { --state: var(--state-hover); }
+.sessions .needs .chat-row > .ui-row { padding-left: var(--sp-4); }
+.chat-row .chat-add { color: var(--diff-add); }
+.chat-row .chat-del { color: var(--diff-del); }
+.chat-rename { width: 100%; min-width: 0; }

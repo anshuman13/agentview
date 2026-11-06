@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { apiUrl } from '../app/api';
 import { api, embedded, notice, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
+import { Row } from '../ui/Row';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
 import { ATTENTION_LABEL, type AttentionItem, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
@@ -9,7 +12,7 @@ import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { byUrgency, chatFinder, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, renameChat, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
 const PAGE = 5;
 
@@ -50,6 +53,7 @@ export function Sessions() {
   const cwd = useStore((s) => s.session.cwd);
   const lastSystem = useStore((s) => { const e = s.events[s.events.length - 1]; return e?.kind === 'system' ? e.id : null; });
   const { folders, chats, setTrees, setChats } = useWorkspace(current + cwd);
+  const { pins, toggle: togglePin } = usePins();
   const liveKey = useStore((s) => s.live.map((c) => c.cwd).join('\n'));
   const waitingCount = useStore((s) => s.live.reduce((n, c) => n + (c.pending ? 1 : 0), 0));
   const [filter, setFilter] = useState('');
@@ -215,7 +219,7 @@ export function Sessions() {
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
       <NeedsYou n={waitingCount}>
-        <WaitingRows viewing={viewing} ask={setAsk} />
+        <WaitingRows viewing={viewing} ask={setAsk} pins={pins} togglePin={togglePin} setChats={setChats} />
       </NeedsYou>
       <div className="side-switch">
         {(['work', 'personal'] as const).map((k) => (
@@ -254,9 +258,7 @@ export function OpenChats() {
   const [full, setFull] = useState<Set<string>>(new Set());
   const [opening, setOpening] = useState<string | null>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
-  const close = (c: LiveChat) => closeChat(c, setAsk);
-  const drop = (id: string) => () => setChats((l) => l.filter((x) => x.sessionId !== id));
-  const removeLive = (c: LiveChat) => c.sessionId && setAsk(deleteChat({ sessionId: c.sessionId, title: c.title, lastModified: c.lastActive }, drop(c.sessionId), notice));
+  const actions = chatActions(setChats, setAsk);
   const { pins, toggle: togglePin } = usePins();
   const groups = useMemo(() => groupByRepo(live, chats, folders, filter, new Set(pins)), [live, chats, folders, filter, pins]);
   const pinnedRows = useMemo(() => {
@@ -275,10 +277,10 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} onClose={() => close(c)} onDelete={() => removeLive(c)} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} actions={actions} ask={setAsk} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
 
   const savedRow = (s: SavedSession, repo?: string) => (
-    <SavedRow key={s.sessionId} s={s} repo={repo} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} onDelete={() => setAsk(deleteChat(s, drop(s.sessionId), notice))} onPin={() => togglePin(s.sessionId)} />
+    <SavedRow key={s.sessionId} s={s} repo={repo} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={() => togglePin(s.sessionId)} />
   );
 
   useEffect(() => setOpening(null), [current]);
@@ -338,58 +340,115 @@ export function OpenChats() {
   );
 }
 
-function SavedRow({ s, repo, opening, pinned, onOpen, onDelete, onPin }: { s: SavedSession; repo?: string; opening: boolean; pinned: boolean; onOpen: () => void; onDelete: () => void; onPin: () => void }) {
+type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
+type Actions = { rename: (id: string, title: string) => void; archive: (s: { sessionId: string; title: string }) => void };
+
+const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Actions => ({
+  rename: async (id, title) => {
+    if (await renameChat(id, title)) setChats((l) => l.map((x) => (x.sessionId === id ? { ...x, title } : x)));
+  },
+  archive: (s) => ask(archiveChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), notice)),
+});
+
+function RenameInput({ value, onSave, onCancel }: { value: string; onSave: (title: string) => void; onCancel: () => void }) {
+  const [text, setText] = useState(value);
+  const done = useRef(false);
+  const finish = (save: boolean) => {
+    if (done.current) return;
+    done.current = true;
+    if (save) onSave(text.trim());
+    else onCancel();
+  };
   return (
-    <div className="row session recent" title={`${s.title}\n${s.cwd}`} {...pressable(onOpen)}>
-      {repo && <span className="repo">{repo}</span>}
-      <span className="name">{opening ? 'Opening… ' : ''}{s.title}</span>
-      <span className="when">{ago(s.lastModified)}</span>
-      <span className="acts">
-        <PinButton pinned={pinned} onPin={onPin} />
-        <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Icon name="trash" small /></button>
-      </span>
+    <input
+      className="chat-rename"
+      autoFocus
+      maxLength={120}
+      aria-label="Chat title"
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={() => finish(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') finish(true);
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          finish(false);
+        }
+      }}
+    />
+  );
+}
+
+type ChatRowProps = {
+  sessionId?: string;
+  title: string;
+  opening?: boolean;
+  meta: ReactNode;
+  badge?: 'running' | 'waiting';
+  selected?: boolean;
+  pinned?: boolean;
+  actions: Actions;
+  onOpen: () => void;
+  onPin?: () => void;
+  onBeside?: () => void;
+  onClose?: () => void;
+};
+
+function ChatRow({ sessionId, title, opening, meta, badge, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
+  const [menu, setMenu] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  const pick = (act: () => void) => () => { setMenu(false); act(); };
+  if (renaming) {
+    const save = (t: string) => {
+      setRenaming(false);
+      if (t && t !== title) actions.rename(sessionId!, t);
+    };
+    return <div className="chat-row"><Row plain title={<RenameInput value={title} onSave={save} onCancel={() => setRenaming(false)} />} /></div>;
+  }
+  return (
+    <div className="chat-row">
+      <Row title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} trailing={badge && <span className={`badge ${badge}`}>{badge === 'running' ? 'Running' : 'Needs you'}</span>} onClick={onOpen} />
+      <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+      {menu && (
+        <Menu trigger={more} onClose={() => setMenu(false)}>
+          {sessionId && onPin && <MenuItem icon={pinned ? 'pinned' : 'pin'} onClick={pick(onPin)}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>}
+          <MenuItem icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>
+          {onBeside && <MenuItem icon="split-horizontal" className="desktop-only" onClick={pick(onBeside)}>Open beside</MenuItem>}
+          {onClose && <MenuItem icon="close" onClick={pick(onClose)}>Close chat</MenuItem>}
+          <MenuSeparator />
+          <MenuItem icon="archive" danger disabled={!sessionId} onClick={pick(() => actions.archive({ sessionId: sessionId!, title }))}>Archive</MenuItem>
+        </Menu>
+      )}
     </div>
   );
 }
 
-function PinButton({ pinned, onPin }: { pinned: boolean; onPin: () => void }) {
-  return <button className="icon-btn" title={pinned ? 'Unpin chat' : 'Pin chat'} onClick={(e) => { e.stopPropagation(); onPin(); }}><Icon name={pinned ? 'pinned' : 'pin'} small /></button>;
+const metaLine = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ');
+
+function SavedRow({ s, repo, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: () => void }) {
+  return <ChatRow sessionId={s.sessionId} title={s.title} opening={opening} meta={metaLine(repo, ago(s.lastModified))} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
-function WaitingRows({ viewing, ask }: { viewing: string; ask: (r: ConfirmRequest) => void }) {
+function WaitingRows({ viewing, ask, pins, togglePin, setChats }: { viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; togglePin: (id: string) => void; setChats: SetChats }) {
   const live = useStore((s) => s.live);
-  return <>{live.filter((c) => c.pending).map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} onClose={() => closeChat(c, ask)} />)}</>;
+  const actions = chatActions(setChats, ask);
+  return <>{live.filter((c) => c.pending).map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} />)}</>;
 }
 
-function LiveRow({ c, repo, selected, pinned, onClose, onDelete, onPin, onBeside }: { c: LiveChat; repo?: string; selected: boolean; pinned?: boolean; onClose: () => void; onDelete?: () => void; onPin?: () => void; onBeside?: () => void }) {
+function LiveRow({ c, repo, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; repo?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: () => void; onBeside?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const line = chatLine(c, events);
-  const second = Boolean(line.text || line.edits);
-  const state = c.pending ? 'Needs you' : c.stalled ? 'No activity for 15 minutes' : c.running ? c.status : 'Idle';
-  return (
-    <div className={`row session live ${second ? 'two' : ''} ${selected ? 'selected' : ''}`} title={`${c.title}\n${c.cwd}\n${state}`} {...pressable(() => { if (!selected) send({ type: 'view', id: c.id }); })}>
-      {line.done ? <span className="mark"><Icon name="pass" small /></span> : <span className={`dot ${c.pending ? 'waiting' : c.stalled ? 'stalled' : c.running ? 'running' : 'idle'}`} />}
-      <span className="lines">
-        <span className="l1">
-          {repo && <span className="repo">{repo}</span>}
-          <span className="name">{c.title}</span>
-          <span className="when">{c.pending ? 'needs you' : c.stalled ? 'quiet' : c.running ? '' : ago(c.lastActive)}</span>
-        </span>
-        {second && (
-          <span className="l2">
-            <span className="sub">{line.text}</span>
-            {line.edits && <span className="edits"><span className="add">+{line.edits.add}</span> <span className="del">-{line.edits.del}</span></span>}
-          </span>
-        )}
-      </span>
-      <span className="acts">
-        {onBeside && <button className="icon-btn desktop-only" title="Open beside the current chat" onClick={(e) => { e.stopPropagation(); onBeside(); }}><Icon name="split-horizontal" small /></button>}
-        {c.sessionId && onPin && <PinButton pinned={Boolean(pinned)} onPin={onPin} />}
-        <button className="icon-btn" title="Close chat, keep the transcript" onClick={(e) => { e.stopPropagation(); onClose(); }}><Icon name="close" small /></button>
-        {c.sessionId && onDelete && <button className="icon-btn" title="Delete chat" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Icon name="trash" small /></button>}
-      </span>
-    </div>
+  const state = c.pending ? ago(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : ago(c.lastActive);
+  const meta = (
+    <>
+      {metaLine(repo, state)}
+      {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
+    </>
   );
+  const badge = c.pending ? 'waiting' : c.running && !c.stalled ? 'running' : undefined;
+  return <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} meta={meta} badge={badge} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />;
 }
 
 const PR_KINDS = new Set<AttentionItem['kind']>(['review', 'ci', 'changes', 'ready', 'stale']);

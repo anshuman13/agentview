@@ -141,6 +141,14 @@ export const closeChat = (c: LiveChat, ask: (r: ConfirmRequest) => void) =>
 
 const refreshBin = () => window.dispatchEvent(new Event('agentview:bin'));
 
+const removeRequest = (id: string, query: string, onDone: () => void, onError: (e: string) => void) => async () => {
+  const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(id)}${query}`), { method: 'DELETE' }).catch(() => null);
+  if (!r?.ok) return onError((await r?.json().catch(() => null))?.error ?? 'Could not delete the chat');
+  invalidateWorkspace();
+  onDone();
+  refreshBin();
+};
+
 export const deleteChat = (s: { sessionId: string; title: string; lastModified: number }, onDone: () => void, onError: (e: string) => void, purge = false): ConfirmRequest => {
   const forever = purge || Date.now() - s.lastModified > BIN_MS;
   return {
@@ -148,15 +156,24 @@ export const deleteChat = (s: { sessionId: string; title: string; lastModified: 
     detail: s.title,
     warning: forever ? 'The transcript is removed permanently.' : 'You can restore it from the bin for 24 hours.',
     action: 'Delete',
-    run: async () => {
-      const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(s.sessionId)}${purge ? '&purge' : ''}`), { method: 'DELETE' }).catch(() => null);
-      if (!r?.ok) return onError((await r?.json().catch(() => null))?.error ?? 'Could not delete the chat');
-      invalidateWorkspace();
-      onDone();
-      refreshBin();
-    },
+    run: removeRequest(s.sessionId, purge ? '&purge' : '', onDone, onError),
   };
 };
+
+export const archiveChat = (s: { sessionId: string; title: string }, onDone: () => void, onError: (e: string) => void): ConfirmRequest => ({
+  title: 'Archive this chat?',
+  detail: s.title,
+  warning: 'You can restore it from the bin for 24 hours.',
+  action: 'Archive',
+  run: removeRequest(s.sessionId, '&archive', onDone, onError),
+});
+
+export async function renameChat(sessionId: string, title: string) {
+  const r = await fetch(apiUrl(`/api/sessions/rename?id=${encodeURIComponent(sessionId)}`), { method: 'POST', body: JSON.stringify({ title }) }).catch(() => null);
+  if (!r?.ok) notice('Could not rename the chat');
+  else invalidateWorkspace();
+  return Boolean(r?.ok);
+}
 
 export function findHere(folders: Folder[], cwd: string) {
   const folder = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)));
