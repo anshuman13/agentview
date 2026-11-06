@@ -135,7 +135,7 @@ const SERIES_NOISE = new RegExp(`\\([^)]*\\d[^)]*\\)|\\d{4}-\\d{2}-\\d{2}|\\b${M
 export const seriesTitle = (t: string | null) => (t ?? '').toLowerCase().replace(SERIES_NOISE, ' ').replace(/\s+/g, ' ').trim();
 
 const seriesTitles = new WeakMap<Meeting, string>();
-const seriesTitleOf = (m: Meeting) => {
+export const seriesTitleOf = (m: Meeting) => {
   let title = seriesTitles.get(m);
   if (title === undefined) {
     title = seriesTitle(m.title);
@@ -184,6 +184,20 @@ export function inSeries(meetings: Meeting[]) {
   }
   seriesMembers.set(meetings, out);
   return out;
+}
+
+export const seriesKey = (profile: string, title: string) => profile + '\n' + title;
+export const parseSeriesKey = (key: string) => {
+  const i = key.indexOf('\n');
+  return { profile: key.slice(0, i), title: key.slice(i + 1) };
+};
+
+// The meetings of one series page: live, same profile and series title, in a series, started by now. Newest first.
+export function seriesMeetings(meetings: Meeting[], profile: string, title: string, now = Date.now()) {
+  const inside = inSeries(meetings);
+  return live(meetings)
+    .filter((m) => m.profile === profile && inside.has(m.profile + m.id) && m.starts_at! <= now && seriesTitleOf(m) === title)
+    .sort((a, b) => b.starts_at! - a.starts_at!);
 }
 
 // What this meeting repeats from the previous one in its series: decisions made again and questions still being asked.

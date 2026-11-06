@@ -2,18 +2,20 @@ import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObjec
 import { useBack } from '../app/back';
 import { rowKey, type Profile } from './data/sync';
 import { errorText } from './data/engine';
+import { seriesKey, seriesTitleOf } from './data/meetings';
+import type { Meeting } from './data/wiki';
 
 export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki';
 export type Filter = 'all' | Profile;
 export const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
 // The list, filter and open page, meeting or task are shared by the sidebar on desktop and the drawer on the phone.
-export type View = { list: List; filter: Filter; open: string | null; anchor: string | null; person: string | null };
+export type View = { list: List; filter: Filter; open: string | null; anchor: string | null; person: string | null; series: string | null };
 
-let view: View = { list: 'today', filter: 'all', open: null, anchor: null, person: null };
+let view: View = { list: 'today', filter: 'all', open: null, anchor: null, person: null, series: null };
 const subs = new Set<() => void>();
 
-const depth = (v: View) => (v.open ? 1 : 0) + (v.person ? 1 : 0);
+const depth = (v: View) => (v.open ? 1 : 0) + (v.person ? 1 : 0) + (v.series ? 1 : 0);
 
 // The entry a page was opened from in a list, so going back focuses it again at the same scroll position.
 type Spot = { list: List; scroll: number; index: number; text: string };
@@ -76,8 +78,9 @@ export function setViewAt(patch: Partial<View>, selector: string) {
   requestAnimationFrame(find);
 }
 type MeetingRef = { profile: string; id: string };
-export const openMeeting = (m: MeetingRef) => setView({ list: 'meetings', open: rowKey(m), person: null });
-export const openTask = (t: MeetingRef) => setView({ list: 'tasks', open: rowKey(t), person: null });
+export const openMeeting = (m: MeetingRef) => setView({ list: 'meetings', open: rowKey(m), person: null, series: null });
+export const openTask = (t: MeetingRef) => setView({ list: 'tasks', open: rowKey(t), person: null, series: null });
+export const openSeries = (m: Meeting) => setView({ list: 'meetings', series: seriesKey(m.profile, seriesTitleOf(m)), person: null });
 export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => view);
 
 // Snackbar with Undo, one at a time.

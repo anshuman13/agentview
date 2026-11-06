@@ -186,3 +186,6 @@
 .mt-person-head { display: flex; align-items: center; gap: var(--sp-6); }
 .mt-person-head .mt-avatars > span { width: 36px; height: 36px; font-size: 13px; }
 .mt-topic-new { margin-left: var(--sp-2); padding: 0 var(--sp-2); border-radius: var(--radius-pill); background: var(--hover); color: var(--fg-strong); font-size: var(--fs-xs); }
+.mt-series-chip { margin-top: var(--sp-4); }
+.mt-series-from { margin: 0 0 var(--sp-4) var(--sp-5); font-size: var(--fs-xs); color: var(--fg-muted); }
+.mt-log-item.muted .mt-log-text { color: var(--fg-muted); }

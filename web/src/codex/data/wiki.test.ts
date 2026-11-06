@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
 import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, RETIRE_AFTER, pageClaims, pageStats, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
-import { actionCount, briefFor, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesRepeats, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
+import { actionCount, briefFor, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -249,6 +249,15 @@ describe('seriesOf', () => {
   it('marks only meetings with a matching partner as in a series', () => {
     const all = [mtg('a', '1:1 Oct 1', 100, { people: 'Ola' }), mtg('b', '1:1 Oct 8', 200, { people: 'Ola' }), mtg('c', '1:1 Oct 9', 300, { people: 'Kari' }), mtg('d', 'Retro', 400, { people: 'Ola' }), mtg('e', '1:1', 500, { people: 'Ola', profile: 'personal' })];
     expect([...inSeries(all)].sort()).toEqual(['worka', 'workb']);
+  });
+
+  it('lists live past members of one profile and title, newest first, merging disjoint guests', () => {
+    const all = [
+      mtg('a', '1:1 Oct 1', 100, { people: 'Ola' }), mtg('b', '1:1 Oct 8', 300, { people: 'Kari' }), mtg('c', '1:1', 200, { people: 'Ola' }), mtg('d', '1:1', 50, { people: 'Kari' }),
+      mtg('future', '1:1', 900, { people: 'Ola' }), mtg('gone', '1:1', 250, { people: 'Ola', deleted: 1 }), mtg('p', '1:1', 150, { people: 'Ola', profile: 'personal' }),
+      mtg('lone', 'Retro', 100, { people: 'Ola' }), mtg('other', '1:1 sync', 120, { people: 'Ola' }),
+    ];
+    expect(seriesMeetings(all, 'work', seriesTitle('1:1'), 500).map((x) => x.id)).toEqual(['b', 'c', 'a', 'd']);
   });
 });
 

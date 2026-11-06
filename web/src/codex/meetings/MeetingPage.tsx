@@ -5,13 +5,13 @@ import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
 import { rowKey, type ItemRow } from '../data/sync';
 import { listOf, othersOf, type Meeting } from '../data/wiki';
-import { actionCount, actionsOf, displayName, meetingState, peopleOf, pinsOf, seriesOf } from '../data/meetings';
+import { actionCount, actionsOf, displayName, meetingState, peopleOf, pinsOf, seriesMeetings, seriesOf, seriesTitleOf } from '../data/meetings';
 import { clock, when } from '../time';
 import { useMinute } from '../split';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
-import { copyText, setView, useEscapeBack } from '../view';
+import { copyText, openSeries, setView, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
 import { Fold } from '../Fold';
 import { ActionRow, confirmAll } from './ActionRow';
@@ -107,6 +107,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const state = meetingState(m, now);
   const transcript = useTranscript(m, state === 'done');
   const talkers = useMemo(() => (transcript?.text ? talkTime(transcript.text).length : 0), [transcript?.text]);
+  const family = useMemo(() => seriesMeetings(meetings, m.profile, seriesTitleOf(m), now), [meetings, m, now]);
   const back = () => setView({ open: null });
   useEscapeBack(back);
   const day = m.starts_at ? new Date(m.starts_at).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) : '';
@@ -123,6 +124,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
       <div className="wk-scroll">
         <article className="mt-page">
           <h1 className="wk-title">{m.title}</h1>
+          {family.length >= 2 && <button className="chip pill mt-series-chip" title="Open the whole series" onClick={() => openSeries(m)}>{family[0].title} · {family.length}</button>}
           <div className="wk-meta mt-when">
             <span>{day}</span>
             {m.starts_at && <span>{clock(m.starts_at)}{m.ends_at ? `–${clock(m.ends_at)}` : ''}</span>}
