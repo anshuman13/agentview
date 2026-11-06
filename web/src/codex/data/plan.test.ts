@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { afterNextMeeting, atRisk, defaultBlock, estimateMin, fitBlock, nextFreeSlot, packDay, suggestEstimate, takeEstimate, timedMeetings, weekFreeMinutes, withEstimate, workGaps } from './plan';
+import { afterNextMeeting, atRisk, defaultBlock, estimateMin, fitBlock, freeMinutes, nextFreeSlot, packDay, suggestEstimate, takeEstimate, timedMeetings, weekFreeMinutes, withEstimate, workGaps } from './plan';
 import { parseWhen, stripWhen } from './engine';
 import { parseRepeat } from './recur';
 import { goalProgress, goalsOf } from './goals';
 import type { ItemRow } from './sync';
+import { createPlanned, packUnblocked, type Planned } from '../planFlow';
 
 const at = (h: number, m = 0) => new Date(2026, 9, 30, h, m).getTime();
 
@@ -193,5 +194,43 @@ describe('snooze targets', () => {
     expect(nextFreeSlot([], at(12, 1))).toBe(at(12, 10));
     expect(nextFreeSlot([m([8], [17])], at(9))).toBeNull();
     expect(nextFreeSlot([], at(16, 50))).toBeNull();
+  });
+});
+
+describe('tomorrow plan', () => {
+  const day = at(0);
+  const m = (a: number[], b: number[]): [number, number] => [at(a[0], a[1] ?? 0), at(b[0], b[1] ?? 0)];
+  it('counts free minutes around meetings and blocks', () => {
+    expect(freeMinutes([], day)).toBe(540);
+    expect(freeMinutes([m([10], [11])], day)).toBe(480);
+    expect(freeMinutes([m([8], [8, 50]), m([9], [17])], day)).toBe(0);
+    expect(freeMinutes([m([8], [16, 50])], day)).toBe(0);
+  });
+  it('packs around a meeting by due then list order, skips blocked tasks and leaves out what fits nowhere', () => {
+    const row = (id: string, title: string, d: number | null) => ({ profile: 'work', id, title, at: d } as unknown as ItemRow);
+    const gaps = workGaps([m([8, 30], [16, 30])], day);
+    const tasks = [row('1', 'late', at(15)), row('2', 'big ~2h', at(9)), row('3', 'first', at(9)), row('4', 'second', null), row('5', 'blocked', at(9, 30))];
+    const out = packUnblocked(tasks, [{ profile: 'work', id: 'block:5' }], gaps);
+    expect(out.map((p) => [p.task.id, p.span[0]])).toEqual([['3', at(8)], ['1', at(16, 30)]]);
+  });
+});
+
+describe('createPlanned', () => {
+  const task = (id: string) => ({ profile: 'work', id } as ItemRow);
+  const plan: Planned[] = [{ task: task('a'), span: [1, 2] }, { task: task('b'), span: [3, 4] }];
+  it('returns the new plan when packing again differs', async () => {
+    const block = async () => {};
+    const res = await createPlanned(plan, () => [plan[0]], block);
+    expect(res).toEqual({ kind: 'changed', plan: [plan[0]] });
+  });
+  it('blocks every task when the plan is unchanged', async () => {
+    const made: string[] = [];
+    const res = await createPlanned(plan, () => plan, async (p) => { made.push(p.task.id); });
+    expect(res).toEqual({ kind: 'created', made: 2 });
+    expect(made).toEqual(['a', 'b']);
+  });
+  it('keeps the remaining plan after a failure', async () => {
+    const res = await createPlanned(plan, () => plan, async (p) => { if (p.task.id === 'b') throw new Error('no'); });
+    expect(res).toMatchObject({ kind: 'failed', made: 1, left: [plan[1]] });
   });
 });

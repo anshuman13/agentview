@@ -14,6 +14,7 @@ import { useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
+import { TomorrowCard, useTomorrowCard } from './TomorrowCard';
 import { GoalLines } from './Goals';
 import { standupText } from './data/review';
 import { MorningBrief } from './Brief';
@@ -125,9 +126,11 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       meetings: live(snap.meetings).filter((m) => (filter === 'all' || m.profile === filter) && m.starts_at! >= day && m.starts_at! < after),
     };
   }, [quiet, s.later, s.endOfDay, snap.meetings, filter]);
-  const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (nextUp?.tomorrow ? 0 : tomorrow.length);
+  const card = useTomorrowCard(s, tomorrow, now);
+  const tomorrowElsewhere = card.shown || !!nextUp?.tomorrow;
+  const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (tomorrowElsewhere ? 0 : tomorrow.length);
   const loading = useSyncGate().loading && !snap.items.length;
-  const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp;
+  const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp && !card.shown;
   if (loading) return <Skeleton />;
   return (
     <>
@@ -148,8 +151,9 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           <NextCard m={close} then={s.then && soon(s.then) ? s.then : undefined} carried={s.carried} onPrep={onPrep} />
         </section>
       )}
-      <DoNow needs={needs} today={todo} nextUp={nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
+      <DoNow needs={needs} today={todo} nextUp={card.shown && nextUp?.tomorrow ? null : nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} />
+      {card.shown && <TomorrowCard s={s} tasks={tomorrow} now={now} hide={card.hide} />}
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
       {morning && (
         <div className="as-next-actions">
@@ -169,7 +173,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         <Stale rows={stale} now={now} snooze={snooze} />
         <FollowThrough f={follow} />
         <KeepInTouch k={touchRows} />
-        {!nextUp?.tomorrow && tomorrow.length > 0 && (
+        {!tomorrowElsewhere && tomorrow.length > 0 && (
           <section>
             <div className="as-section later">Tomorrow</div>
             {tomorrow.length > 0 && shown(tomorrow)}

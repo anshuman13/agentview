@@ -74,6 +74,9 @@ export function workGaps(busy: Span[], now: number, startHour = 8, endHour = 17)
   return freeGaps(busy, Math.max(now, open), close);
 }
 
+// Free work minutes on the day of day (08:00-17:00 local) around busy spans, gaps under 15 minutes dropped.
+export const freeMinutes = (busy: Span[], day: number, startHour = 8, endHour = 17) => Math.round(workGaps(busy, day, startHour, endHour).reduce((n, [a, b]) => n + (b - a), 0) / 60_000);
+
 const SLOT = 5 * 60_000;
 const DEFAULT_MIN = 30;
 export const taskMin = (title: string | null) => estimateMin(title) ?? DEFAULT_MIN;

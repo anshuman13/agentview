@@ -4,17 +4,18 @@ import { rowKey, type ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
 import { useAssistantTable, useAssistantStore } from './data';
 import { goalsOf } from './data/goals';
-import { atTime, errorText } from './data/engine';
+import { atTime } from './data/engine';
 import { defaultBlock, estimateMin, fitBlock, focusTitle, minutesText, packDay, timedMeetings, workGaps, type Span } from './data/plan';
 import { clock } from './time';
 import { attempt, showSnack, useView } from './view';
+import { PlanPreview, usePlanFlow } from './PlanPreview';
+import type { Planned } from './planFlow';
 import { Icon } from '../ui/Icon';
 
 const hhmm = (n: number) => minutesText(Math.round(n / 60_000));
 export const DRAG_TYPE = 'application/x-codex-item';
 
 type Pick = { end: number; key: string; start: string; minutes: number; title: string };
-type Planned = { task: ItemRow; span: Span };
 
 const atClock = (day: number, text: string) => {
   const [h, m] = text.split(':').map(Number);
@@ -40,7 +41,6 @@ function pickFor(gap: Span, r: ItemRow | undefined): Pick {
 export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[]; open: ItemRow[]; late?: ItemRow[]; now: number }) {
   const store = useAssistantStore();
   const [pick, setPick] = useState<Pick | null>(null);
-  const [plan, setPlan] = useState<Planned[] | null>(null);
   const [saving, setSaving] = useState(false);
   const items = useAssistantTable('items');
   const { filter } = useView();
@@ -52,6 +52,15 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   const busy = timed.map((m) => [m.starts_at!, m.ends_at!] as Span);
   const blocks = timed.filter((m) => isBlock(m.id) && m.ends_at! > now);
   const gaps = workGaps(busy, now);
+  // Packs the open tasks without a block, or only those in keep, into the free time left from this moment; tasks for this week's
+  // goals, due or not, go first.
+  const pack = (keep?: Set<string>): Planned[] => {
+    const blocked = new Set(blocks.map((m) => `${m.profile}:${m.id}`));
+    const tasks = [...late, ...open, ...goalTasks].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`) && (!keep || keep.has(rowKey(r)))).map((r) => ({ title: r.title, due: atTime(r.at), goal: forGoal(r), r }));
+    return packDay(tasks, workGaps(busy, Date.now())).map((p) => ({ task: p.task.r, span: p.span }));
+  };
+  const flow = usePlanFlow(pack);
+  const { plan } = flow;
   const planned = open.reduce((n, r) => n + (estimateMin(r.title) ?? 0), 0);
   if (!gaps.length && !planned && !blocks.length) return null;
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
@@ -67,43 +76,9 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
     e.preventDefault();
     choose(gap, r);
   };
-  // Packs the open tasks without a block, or only those in keep, into the free time left from this moment; tasks for this week's
-  // goals, due or not, go first.
-  const pack = (keep?: Set<string>): Planned[] => {
-    const blocked = new Set(blocks.map((m) => `${m.profile}:${m.id}`));
-    const tasks = [...late, ...open, ...goalTasks].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`) && (!keep || keep.has(rowKey(r)))).map((r) => ({ title: r.title, due: atTime(r.at), goal: forGoal(r), r }));
-    return packDay(tasks, workGaps(busy, Date.now())).map((p) => ({ task: p.task.r, span: p.span }));
-  };
   const planDay = () => {
     setPick(null);
-    setPlan(pack());
-  };
-  const leaveOut = (p: Planned) => setPlan(pack(new Set((plan ?? []).filter((x) => x !== p).map((x) => rowKey(x.task)))));
-  const createPlan = async () => {
-    if (!plan?.length) return;
-    // Tasks done since the preview drop out and past time is not used; a changed plan is shown again before anything is created.
-    const fresh = pack(new Set(plan.map((p) => rowKey(p.task))));
-    const same = fresh.length === plan.length && fresh.every((p, i) => rowKey(p.task) === rowKey(plan[i].task) && p.span[0] === plan[i].span[0] && p.span[1] === plan[i].span[1]);
-    if (!same) {
-      setPlan(fresh);
-      showSnack('The plan changed, check it and Create again');
-      return;
-    }
-    setSaving(true);
-    let made = 0;
-    try {
-      for (const p of plan) {
-        await store.blockTime(p.task, p.span[0], p.span[1], focusTitle(p.task.title));
-        made++;
-      }
-      showSnack(`Blocked time for ${made} task${made === 1 ? '' : 's'}`);
-      setPlan(null);
-    } catch (err) {
-      showSnack(`Blocked ${made} of ${plan.length}, then stopped: ${errorText(err)}`);
-      setPlan(plan.slice(made));
-    } finally {
-      setSaving(false);
-    }
+    flow.start();
   };
   const create = async () => {
     if (!task || !span || !pick?.title.trim()) return;
@@ -116,7 +91,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   };
   const chips = [
     ...gaps.map((g) => ({ at: g[0], el: (
-      <button key={`g${g[0]}`} className={`as-chip${pick?.end === g[1] ? ' on' : ''}`} title="Block time for a task" onClick={() => { setPlan(null); if (pick?.end === g[1]) setPick(null); else choose(g); }} onDragOver={(e) => e.dataTransfer.types.includes(DRAG_TYPE) && e.preventDefault()} onDrop={drop(g)}>
+      <button key={`g${g[0]}`} className={`as-chip${pick?.end === g[1] ? ' on' : ''}`} title="Block time for a task" onClick={() => { flow.setPlan(null); if (pick?.end === g[1]) setPick(null); else choose(g); }} onDragOver={(e) => e.dataTransfer.types.includes(DRAG_TYPE) && e.preventDefault()} onDrop={drop(g)}>
         {clock(g[0])}-{clock(g[1])}
       </button>
     ) })),
@@ -131,26 +106,9 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
       <div className="as-chips">
         {chips.map((c) => c.el)}
         {!gaps.length && <span className="as-ctx">No free time left in work hours</span>}
-        {gaps.length > 0 && (late.length > 0 || open.length > 0 || goalTasks.length > 0) && <button className={`as-chip${plan ? ' on' : ''}`} onClick={() => (plan ? setPlan(null) : planDay())}>Plan my day</button>}
+        {gaps.length > 0 && (late.length > 0 || open.length > 0 || goalTasks.length > 0) && <button className={`as-chip${plan ? ' on' : ''}`} onClick={() => (plan ? flow.setPlan(null) : planDay())}>Plan my day</button>}
       </div>
-      {plan && (
-        <div className="ov-card dp-block">
-          {plan.length ? plan.map((p) => (
-            <div key={rowKey(p.task)} className="dp-when">
-              <span className="muted small">{clock(p.span[0])}-{clock(p.span[1])}</span>
-              <span className="ov-t">{p.task.title}</span>
-              <span className="spacer" />
-              <button className="icon-btn" title="Leave out" aria-label={`Leave out ${p.task.title}`} onClick={() => leaveOut(p)}><Icon name="close" small /></button>
-            </div>
-          )) : <span className="as-ctx">No task fits in today's free time</span>}
-          <div className="dp-when">
-            <span className="muted small">{plan.length ? 'Creates one "Focus:" event per task, no attendees' : ''}</span>
-            <span className="spacer" />
-            <button className="btn sm" onClick={() => setPlan(null)}>Cancel</button>
-            <button className="btn sm primary" disabled={saving || !plan.length} onClick={() => void createPlan()}>{saving ? 'Creating' : 'Create'}</button>
-          </div>
-        </div>
-      )}
+      <PlanPreview flow={flow} day="today" />
       {pick && (
         <div className="ov-card dp-block">
           {open.length ? (

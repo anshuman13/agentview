@@ -53,6 +53,7 @@ export function useSplit() {
       ...sharedSplit(snap.items, filter, now), next, then: today[1], carried, endOfDay, endOfTomorrow,
       meetingsToday: all.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay).sort(byStart),
       busyToday: rows.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay),
+      busyTomorrow: rows.filter((m) => m.starts_at! >= endOfDay && m.starts_at! < endOfTomorrow),
       meetingsTomorrow: all.filter((m) => m.starts_at! >= endOfDay && m.starts_at! < endOfTomorrow).sort(byStart),
       nextLater: today.find((m) => m !== next && m.starts_at! > now) ?? ahead.find((m) => m.starts_at! >= endOfDay),
     };
