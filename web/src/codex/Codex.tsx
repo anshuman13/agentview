@@ -5,6 +5,7 @@ import { useAssistant, useCodex, useSyncGate } from './data';
 import { reviewCount } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { atTime, reviewedSince, split } from './data/engine';
+import { taskMatches } from './data/match';
 import { dayLabel, greeting, moveTo } from './days';
 import { SnackBar } from './SnackBar';
 import { useHubLifecycle } from './useHubLifecycle';
@@ -44,7 +45,6 @@ const ranked = (rs: ItemRow[]) => [...rs].sort((a, b) => (a.rank ?? 1e15) - (b.r
 // A day's tasks split by part of the day; tasks without a time come first.
 const PARTS = ['Anytime', 'Morning', 'Afternoon', 'Evening'];
 const partOf = (r: ItemRow) => { const at = atTime(r.at); if (at == null) return 0; const h = new Date(at).getHours(); return h < 12 ? 1 : h < 17 ? 2 : 3; };
-const matches = (r: ItemRow, q: string) => [r.title, r.text, r.people].some((x) => x?.toLowerCase().includes(q));
 const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
 
 function SpotBack({ scroller }: { scroller: React.RefObject<HTMLElement | null> }) {
@@ -238,7 +238,7 @@ export function Assistant() {
         {list === 'tasks' && query?.trim() && (() => {
           const q = query.trim().toLowerCase();
           const seen = new Set<string>();
-          const found = [...s.overdue, ...days.flatMap((d) => d.rows), ...s.review, ...s.doneToday].filter((r) => matches(r, q) && !seen.has(r.profile + r.id) && seen.add(r.profile + r.id));
+          const found = [...s.overdue, ...days.flatMap((d) => d.rows), ...s.review, ...s.doneToday].filter((r) => taskMatches(r, q) && !seen.has(r.profile + r.id) && seen.add(r.profile + r.id));
           return (
             <section>
               <div className="as-section">Results <span>{found.length}</span></div>

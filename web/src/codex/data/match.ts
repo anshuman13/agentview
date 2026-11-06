@@ -1,3 +1,5 @@
+import type { ItemRow } from './sync';
+
 // Word matching for the search boxes: every word of the query must appear in the row's text.
 export const queryWords = (query: string) => query.toLowerCase().split(/\s+/).filter(Boolean);
 export const matcher = (words: string[]) => (...texts: (string | null | undefined)[]) => {
@@ -15,4 +17,10 @@ export const rowMatcher = <R extends object>(words: string[], fields: string, te
   let hay = byFields.get(fields);
   if (hay === undefined) byFields.set(fields, (hay = texts(r).join(' ').toLowerCase()));
   return words.every((w) => hay.includes(w));
+};
+
+export const taskMatches = (r: ItemRow, q: string) => {
+  if ([r.title, r.text, r.people].some((x) => x?.toLowerCase().includes(q))) return true;
+  const tag = (q.startsWith('#') ? q.slice(1) : q).trim();
+  return !!tag && !!r.tags && r.tags.split(/\s+/).some((t) => t.includes(tag));
 };

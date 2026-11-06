@@ -99,7 +99,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
   the Description notes, and the checklist as subtask rows ending in "Add subtask", which appends a "- [ ] " line. A sticky bottom bar has the
   repeat and focus buttons; an existing estimate shows as muted text under the notes
 - Swiping left names the day the task moves to, and Snooze offers Today for a task due on a later day
-- Search (or /) filters tasks by title, notes and people, Overdue has Move to today with one undo, and tasks not
+- Search (or /) filters tasks by title, notes, people and tags, Overdue has Move to today with one undo, and tasks not
   dragged into an order sort by due time
 - Focus timer: Start on an open task shows a bar over Codex with the task, the time so far against its estimate, and
   Stop. Stop adds the whole minutes to the task's time spent, shown as a chip on the task, with an undo. Marking the
