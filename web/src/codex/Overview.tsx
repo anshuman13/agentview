@@ -4,7 +4,6 @@ import { live, type Meeting } from './data/wiki';
 import { atTime, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { dayLabel } from './data/dates';
-import { plural } from '../ui/util';
 import { Section } from '../ui/Section';
 import { Capped, Fold } from './Fold';
 import { Row } from '../ui/Row';
@@ -25,6 +24,8 @@ import { pickReports, type ReportEntry } from './data/reports';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { Skeleton } from '../ui/Skeleton';
+import { EmptyState } from '../ui/Panel';
+import { AddSheet } from './AddSheet';
 import { haptic } from '../ui/haptic';
 import { copyText, openTask, setView, useView } from './view';
 import { clock, when } from './time';
@@ -176,9 +177,16 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const card = useTomorrowCard(s, tomorrow, now);
   const tomorrowElsewhere = card.shown || !!nextUp?.tomorrow;
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (tomorrowElsewhere ? 0 : tomorrow.length);
-  const todayShown = todo.length > 0 || !!next || !!nextUp || card.shown;
+  const todayShown = todo.length > 0 || !!next || card.shown;
   const loading = useSyncGate().loading && !snap.items.length;
-  const empty = !loading && !entries.length && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp && !card.shown;
+  const empty = !loading && !close && !needs.rows.length && !queue.length && !todayShown && !s.overdue.length && !dueToday.length;
+  const [adding, setAdding] = useState(false);
+  const nextHint = () => {
+    const task = s.later.filter((r) => atTime(r.at) != null).sort((a, b) => atTime(a.at)! - atTime(b.at)!)[0];
+    const meeting = s.nextLater;
+    if (task && (!meeting || atTime(task.at)! < meeting.starts_at!)) return `Next: ${when(atTime(task.at)!)} ${task.title}`;
+    return meeting ? `Next: ${when(meeting.starts_at!)} ${meeting.title}` : 'Nothing planned. Add a task to start the day.';
+  };
   if (loading) return <Skeleton />;
   return (
     <>
@@ -190,9 +198,12 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       )}
       <NeedsYou n={needs} now={now} onShowOld={showOld} />
       <ReplyQueue rows={filtered ? old : queue} filtered={filtered} onClear={() => setOnlyStale(false)} />
+      {empty && (
+        <EmptyState size="md" icon="pass" title="Nothing today" hint={nextHint()} action={<Button variant="primary" size="sm" onClick={() => setAdding(true)}>New task</Button>} />
+      )}
       <div className="ov-block">
-        {todayShown && <Section label="Today" action={todayMenu} />}
-        <DoNow needs={needs} today={todo} nextUp={card.shown && nextUp?.tomorrow ? null : nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
+        {(todayShown || (!empty && !!nextUp)) && <Section label="Today" action={todayMenu} />}
+        <DoNow needs={needs} today={todo} nextUp={empty || (card.shown && nextUp?.tomorrow) ? null : nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
         {wrapShown && <div ref={wrap}><Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} /></div>}
         {card.shown && <TomorrowCard s={s} tasks={tomorrow} now={now} hide={card.hide} />}
         <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} planRequest={planRequest} />
@@ -223,12 +234,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         )}
       </Fold>
       </div>
-      {empty && (
-        <div className="ov-empty muted small">
-          <div>{s.doneToday.length ? `All clear. ${plural(s.doneToday.length, 'task')} done today.` : 'Nothing today'}</div>
-          {s.nextLater && <div>Next: {when(s.nextLater.starts_at!)} {s.nextLater.title}</div>}
-        </div>
-      )}
+      {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}
     </>
   );
 }

@@ -212,7 +212,10 @@ How much a list row may carry. The eye should find the one thing to do without r
 ### Overview page
 The day at a glance on a phone. Five blocks in a fixed order, nothing else on the page. Each block is a Section
 header plus one Grouped list of Rows (Row density), at most 5 rows then "Show all N". A block with nothing in
-it is not rendered; there is no block-level empty state except the page's own "Nothing today".
+it is not rendered. When Now, Needs you, Reply queue and Today are all empty, the page shows one EmptyState md
+(icon pass, "Nothing today") in the Today slot: the hint names the next day with a meeting or a task ("Next: <when> <title>",
+or "Nothing planned. Add a task to start the day.") and one primary New task Button sm opens the add sheet. Reports and
+Later still render below it.
 1. **Now**: only while a meeting runs or starts within 15 minutes: the Next card. Otherwise absent.
 2. **Needs you**: one list of everything waiting on the user, once each: overdue and at-risk tasks, asks and
    promises to confirm, DMs, Slack bullets, actions from a meeting that ended in the last two hours (meta "Just
