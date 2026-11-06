@@ -133,7 +133,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         </section>
       )}
       <DoNow needs={needs} today={todo} nextUp={nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
-      <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} />
+      <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} />
       <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
       {morning && (
         <div className="as-next-actions">

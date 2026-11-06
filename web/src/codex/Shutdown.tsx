@@ -1,7 +1,10 @@
-import { useAssistantStore } from './data';
+import { useEffect, useRef, useState } from 'react';
+import { useAssistantStore, useAssistantTable } from './data';
+import { normaliseNote, planNoteWrite, wrapNoteId, wrapNoteProfile } from './data/wrapNote';
+import { ymd } from './data/dates';
 import { UNROLL, unrollFor } from './useActions';
 import { SNOOZES, nextNine } from './data/engine';
-import type { ItemRow } from './data/sync';
+import type { ItemRow, Profile } from './data/sync';
 import { plural } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import { Capped, Fold } from './Fold';
@@ -12,7 +15,28 @@ import { when } from './time';
 const SHUTDOWN_HOUR = 16;
 
 // From 16:00 until midnight: one row with today's done and open counts and Move all; the header opens the first open tasks to move, snooze or drop.
-export function Shutdown({ open, done, now }: { open: ItemRow[]; done: number; now: number }) {
+// One line saved to today's wrapup brief for the profile, shown first in the next morning brief; a draft left behind by a profile switch is saved first.
+function WrapNote({ profile, now }: { profile: Profile; now: number }) {
+  const store = useAssistantStore();
+  const rows = useAssistantTable('briefs');
+  const id = wrapNoteId(now);
+  const existing = rows.find((b) => b.profile === profile && b.id === id && !b.deleted);
+  const [draft, setDraft] = useState(existing?.text ?? '');
+  const latest = useRef({ rows, draft, last: existing?.text ?? '' });
+  latest.current.rows = rows;
+  latest.current.draft = draft;
+  const save = () => {
+    const l = latest.current;
+    if (normaliseNote(l.draft) === l.last) return;
+    l.last = normaliseNote(l.draft);
+    const w = planNoteWrite(l.rows.find((b) => b.profile === profile && b.id === id), l.draft, profile, Date.now());
+    if (w) void store.editRow('briefs', w.row, w.patch);
+  };
+  useEffect(() => save, []);
+  return <input className="as-input" value={draft} maxLength={400} placeholder="Note for tomorrow" aria-label="Note for tomorrow" onChange={(e) => setDraft(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === 'Enter' && save()} />;
+}
+
+export function Shutdown({ open, done, now, profile }: { open: ItemRow[]; done: number; now: number; profile: Profile | 'all' }) {
   const store = useAssistantStore();
   if (new Date(now).getHours() < SHUTDOWN_HOUR || !open.length) return null;
   const tomorrow = (r: ItemRow) => nextNine(new Date(now), r.profile);
@@ -48,6 +72,7 @@ export function Shutdown({ open, done, now }: { open: ItemRow[]; done: number; n
       </Fold>
       <div className="ov-follow">
         <button className="ov-follow-row ov-follow-text" onClick={() => moveAll()}>Move all to tomorrow</button>
+        <div className="ov-follow-row"><WrapNote key={`${wrapNoteProfile(profile)}:${ymd(now)}`} profile={wrapNoteProfile(profile)} now={now} /></div>
       </div>
     </>
   );

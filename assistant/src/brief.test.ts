@@ -126,3 +126,57 @@ it('sums up the next day with work only when nothing is due today, and again onl
   expect(await runAhead(db, at(MON, 20), write)).toBeNull();
   expect(prompts).toHaveLength(1);
 });
+
+const note = (db: ReturnType<typeof openDb>, id: string, text: string, from: number, deleted = 0) =>
+  db.prepare("INSERT INTO briefs (id, profile, version, updated_at, deleted, kind, text, from_at, to_at) VALUES (?, 'work', 1, 0, ?, 'wrapup', ?, ?, ?)").run(id, deleted, text, from, from + 1000);
+const FRI = MON - 3;
+
+it('starts the brief with the note from the last workday through Sunday', () => {
+  const plain = buildBrief(seed(), 'work', at(MON, 8)).text;
+  const db = seed();
+  note(db, 'wrapup:fri', 'start with the invoice', at(FRI, 0));
+  expect(buildBrief(db, 'work', at(MON, 8)).text).toBe(`Yesterday you noted: start with the invoice\n\n${plain}`);
+  note(db, 'wrapup:sun', 'newer', at(MON - 1, 0));
+  expect(buildBrief(db, 'work', at(MON, 8)).text.startsWith('Yesterday you noted: newer\n\nMeetings · 2')).toBe(true);
+  const skip = seed();
+  note(skip, 'wrapup:gone', 'deleted', at(FRI, 0), 1);
+  note(skip, 'wrapup:today', 'today', at(MON, 0));
+  note(skip, 'wrapup:old', 'old', at(FRI - 1, 0));
+  expect(buildBrief(skip, 'work', at(MON, 8)).text).toBe(plain);
+  const free = openDb(':memory:');
+  note(free, 'wrapup:fri', 'x', at(FRI, 0));
+  note(free, 'wrapup:sun', 'y', at(MON - 1, 0));
+  expect(buildBrief(free, 'work', at(MON, 8)).text.startsWith('Yesterday you noted: y\n\nFree ')).toBe(true);
+});
+
+it('does not make a brief from a note alone', () => {
+  const db = openDb(':memory:');
+  note(db, 'wrapup:fri', 'x', at(FRI, 0));
+  expect(buildBrief(db, 'work', at(MON, 8)).empty).toBe(true);
+});
+
+it('stores the note as the first line after the title and keeps later notes out', async () => {
+  const db = seed();
+  note(db, 'wrapup:fri', 'start with the invoice', at(FRI, 0));
+  let pushed = 0;
+  const push = async () => (pushed++, true);
+  await runBriefs(db, at(MON, 8), push);
+  const stored = () => (db.prepare('SELECT text FROM briefs WHERE id = ?').get(briefId(at(MON, 8))) as { text: string }).text;
+  expect(stored().startsWith('Today: 2 meetings, 2 tasks\nYesterday you noted: start with the invoice\n\nMeetings · 2')).toBe(true);
+  const before = stored();
+  note(db, 'wrapup:mon', 'later', at(MON, 0));
+  await runBriefs(db, at(MON, 9), push);
+  expect(stored()).toBe(before);
+  expect(pushed).toBe(1);
+});
+
+it('prunes wrapup rows past 60 days only', async () => {
+  const db = seed();
+  note(db, 'wrapup:new', 'keep', at(MON - 10, 0));
+  note(db, 'wrapup:old', 'drop', at(MON, 0) - 70 * 86400_000);
+  await runBriefs(db, at(MON, 8), async () => true);
+  expect(db.prepare("SELECT id, deleted, text FROM briefs WHERE kind = 'wrapup' ORDER BY id").all()).toEqual([
+    { id: 'wrapup:new', deleted: 0, text: 'keep' },
+    { id: 'wrapup:old', deleted: 1, text: null },
+  ]);
+});

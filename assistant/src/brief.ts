@@ -32,7 +32,7 @@ function riskCount(db: Database, profile: Profile, now: number) {
   return atRisk(tasks, busy.map((m) => [m.starts_at, m.ends_at] as Span), now).length;
 }
 
-// Today's meetings and free time, tasks due, overdue or without a date, tasks at risk this week, Slack asks to review, Slack promises of mine and meeting actions left from the last workday.
+// The note left at the last wrap-up, today's meetings and free time, tasks due, overdue or without a date, tasks at risk this week, Slack asks to review, Slack promises of mine and meeting actions left from the last workday.
 export function buildBrief(db: Database, profile: Profile, now = Date.now()): Brief {
   const start = new Date(now).setHours(0, 0, 0, 0);
   const end = new Date(now).setHours(24, 0, 0, 0);
@@ -52,8 +52,9 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const who = (a: (typeof asks)[number]) => (a.people ?? '').split(' · ')[0] || '?';
   const askTag = (a: (typeof asks)[number]) => ` (${who(a)}, ${age(now - a.since)})`;
   const left = db.prepare("SELECT i.title, i.status, m.title AS meeting FROM items i JOIN meetings m ON m.profile = i.profile AND m.id = i.meeting_id WHERE i.deleted = 0 AND i.profile = ? AND i.status IN ('open', 'suggested') AND m.deleted = 0 AND m.starts_at >= ? AND m.starts_at < ? ORDER BY m.starts_at").all(profile, addWorkdays(start, -1), start) as (Row & { status: string; meeting: string | null })[];
+  const noted = db.prepare("SELECT text FROM briefs WHERE deleted = 0 AND profile = ? AND kind = 'wrapup' AND text <> '' AND from_at >= ? AND from_at < ? ORDER BY from_at DESC LIMIT 1").get(profile, addWorkdays(start, -1), start) as { text: string } | null;
 
-  const lines: string[] = [];
+  const lines: string[] = noted ? [`Yesterday you noted: ${noted.text}`, ''] : [];
   if (meetings.length) {
     lines.push(`Meetings · ${meetings.length}`);
     for (const m of meetings) lines.push(`${timed.includes(m) ? `${clock(m.starts_at)}-${clock(m.ends_at!)}` : 'All day'} ${m.title ?? 'Meeting'}`);
@@ -74,9 +75,9 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   };
 }
 
-// Morning, Slack and ahead briefs past the keep window are no longer shown; their rows stay behind for sync without the text.
+// Morning, Slack, ahead and wrap-up briefs past the keep window are no longer shown; their rows stay behind for sync without the text.
 function pruneBriefs(db: Database, now = Date.now()) {
-  const old = db.prepare("SELECT id, profile FROM briefs WHERE deleted = 0 AND kind IN ('morning', 'slack', 'ahead') AND to_at < ?").all(now - KEEP) as { id: string; profile: Profile }[];
+  const old = db.prepare("SELECT id, profile FROM briefs WHERE deleted = 0 AND kind IN ('morning', 'slack', 'ahead', 'wrapup') AND to_at < ?").all(now - KEEP) as { id: string; profile: Profile }[];
   applyChanges(db, old.map((b) => ({ table: 'briefs', id: b.id, profile: b.profile, deleted: true, updated_at: now, fields: { text: null } })));
 }
 

@@ -1,6 +1,7 @@
 /* Overview cards: follow-through, groups, reply queue. */
 .ov-follow { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: var(--fs-md); overflow: hidden; }
 .ov-follow-row { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-5) var(--sp-7); }
+.ov-follow-row > .as-input { flex: 1; min-width: 0; }
 .ov-follow-row + .ov-follow-row, .ov-follow > .as-swipe + :is(.as-swipe, .ov-follow-row), .ov-follow > .ov-follow-row + .as-swipe { border-top: 1px solid var(--border); }
 .ov-follow .as-swipe-row { background: var(--surface); }
 .ov-needs > * + * { border-top: 1px solid var(--border); }
