@@ -35,7 +35,7 @@ export function rowKey(e: React.KeyboardEvent<HTMLElement>, row: ItemRow, onOpen
   }
 }
 
-// With nothing focused, j or k on Tasks focuses the first task; n, from anywhere outside a field, starts a task for today.
+// With nothing focused, j or k on Tasks focuses the first task, or on Overview the first Reply queue ask; n, from anywhere outside a field, starts a task for today.
 document.addEventListener('keydown', (e) => {
   if ((e.key !== 'j' && e.key !== 'k' && e.key !== 'n') || e.metaKey || e.ctrlKey || e.altKey) return;
   const at = document.activeElement;
@@ -51,7 +51,8 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (at && at !== document.body) return;
-  const first = document.querySelector<HTMLElement>('.tasks [data-row]');
+  const tasks = document.querySelector<HTMLElement>('.tasks [data-row]');
+  const first = tasks?.offsetParent != null ? tasks : document.querySelector<HTMLElement>('[data-reply-row]');
   if (first?.offsetParent == null) return;
   e.preventDefault();
   first.focus();

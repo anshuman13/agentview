@@ -7,7 +7,7 @@ import { isSaid, type ItemRow } from '../data/sync';
 import { tagList } from '../AddSheet';
 import { SectionHead } from '../Fold';
 import { Button, Chip, IconButton } from '../../ui/Button';
-import { Menu, MenuItem } from '../../ui/Menu';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { ago } from '../../ui/util';
 import { ymd } from '../data/dates';
@@ -60,6 +60,43 @@ function HistoryLines({ data, error, who, retry }: { data: ReplyHistory | null; 
       ) : items.map((r, i) => <span key={i} className="muted small">{ymd(r.at)} · {r.line}</span>)}
     </div>
   );
+}
+
+const askRows = () => [...document.querySelectorAll<HTMLElement>('[data-reply-row]')];
+
+// Keys on a focused ask: j/k or arrows move, s sends the draft, x skips; Enter opens through the button's own click.
+// Returns the pending send or skip so the caller can move focus once the ask leaves the queue.
+export function askKey(e: React.KeyboardEvent<HTMLElement>, a: { has: boolean; busy: boolean; send: () => Promise<void>; skip: () => Promise<void> }) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
+  if (step) {
+    const rows = askRows();
+    rows[rows.indexOf(e.currentTarget) + step]?.focus();
+    e.preventDefault();
+    return;
+  }
+  const run = e.key === 's' && a.has ? a.send : e.key === 'x' ? a.skip : null;
+  if (!run) return;
+  e.preventDefault();
+  if (!a.busy) return run();
+}
+
+// When the ask leaves the queue after a send or skip, focus moves to its neighbour; a failed send keeps focus on the row.
+function focusAfter(el: HTMLElement, done: Promise<void>) {
+  const rows = askRows();
+  const i = rows.indexOf(el);
+  const own = el.dataset.replyRow;
+  const next = (rows[i + 1] ?? rows[i - 1])?.dataset.replyRow;
+  if (!next) return;
+  void done.then(() => {
+    let tries = 0;
+    const move = () => {
+      const now = askRows();
+      if (!now.some((r) => r.dataset.replyRow === own)) now.find((r) => r.dataset.replyRow === next)?.focus();
+      else if (++tries < 20) requestAnimationFrame(move);
+    };
+    requestAnimationFrame(move);
+  });
 }
 
 function Ask({ row }: { row: ItemRow }) {
@@ -121,10 +158,14 @@ function Ask({ row }: { row: ItemRow }) {
       setBusy(false);
     }
   };
+  const key = (e: React.KeyboardEvent<HTMLElement>) => {
+    const done = askKey(e, { has, busy, send, skip });
+    if (done) focusAfter(e.currentTarget, done);
+  };
   return (
     <div className="ov-ask">
       <div className="ov-ask-line">
-        <button type="button" className="ui-row" onClick={() => openTask(row)}>
+        <button type="button" className="ui-row" data-reply-row={row.profile + row.id} onClick={() => openTask(row)} onKeyDown={key}>
           <span className="ui-row-body">
             <span className="ui-row-title">{row.title}</span>
             <span className="ui-row-meta">{row.people || 'Slack'} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}</span>
@@ -206,13 +247,16 @@ export function ReplyQueue({ rows, filtered = false, onClear }: { rows: ItemRow[
   const copyLabel = `Copy ${admins} access and limit requests`;
   const copyList = () => copyText(adminList(rows), `Copied ${admins} requests`);
   const both = faq.length >= 2 && admins >= 2;
-  const batch = both ? (
+  const fine = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const batch = both || (fine && !filtered) ? (
     <span className="ov-more">
       <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} disabled={sending} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>
-          <MenuItem icon={sending ? 'loading' : 'send'} spin={sending} disabled={sending} onClick={() => { setMenu(false); void sendAll(); }}>{sendText}</MenuItem>
-          <MenuItem icon="copy" onClick={() => { setMenu(false); copyList(); }}>{copyLabel}</MenuItem>
+          {faq.length >= 2 && <MenuItem icon={sending ? 'loading' : 'send'} spin={sending} disabled={sending} onClick={() => { setMenu(false); void sendAll(); }}>{sendText}</MenuItem>}
+          {admins >= 2 && <MenuItem icon="copy" onClick={() => { setMenu(false); copyList(); }}>{copyLabel}</MenuItem>}
+          {fine && (faq.length >= 2 || admins >= 2) && <MenuSeparator />}
+          {fine && <MenuItem disabled>j k move, Enter open, s send, x skip</MenuItem>}
         </Menu>
       )}
     </span>

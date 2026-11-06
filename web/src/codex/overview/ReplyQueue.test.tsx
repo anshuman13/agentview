@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ItemRow } from '../data/sync';
-import { ReplyQueue, replyQueue, snoozeOptions, staleAsks } from './ReplyQueue';
+import { askKey, ReplyQueue, replyQueue, snoozeOptions, staleAsks } from './ReplyQueue';
 
 vi.mock('../data/engine', () => ({ reviewedSince: (r: { at?: number }) => r.at ?? 0, errorText: String }));
 vi.mock('../data', () => ({ useAssistantStore: () => ({}) }));
@@ -93,5 +93,39 @@ describe('snooze', () => {
     expect(new Date(snoozeOptions(fri, 'personal').at(-1)!.at).getDay()).toBe(6);
     expect(snoozeOptions(fri, 'work').map((o) => o.label)).toContain('Later today, 16:00');
     expect(snoozeOptions(new Date(2026, 10, 6, 15).getTime(), 'work').map((o) => o.label)).not.toContain('Later today, 16:00');
+  });
+});
+
+describe('askKey', () => {
+  const key = (k: string, extra = {}) => ({ key: k, metaKey: false, ctrlKey: false, altKey: false, preventDefault: vi.fn(), ...extra }) as unknown as React.KeyboardEvent<HTMLElement>;
+  const setup = (a: Partial<{ has: boolean; busy: boolean }> = {}) => {
+    const send = vi.fn(async () => {});
+    const skip = vi.fn(async () => {});
+    return { send, skip, a: { has: true, busy: false, send, skip, ...a } };
+  };
+
+  it('s sends a drafted ask and x skips', () => {
+    const t = setup();
+    expect(askKey(key('s'), t.a)).toBeDefined();
+    expect(askKey(key('x'), t.a)).toBeDefined();
+    expect(t.send).toHaveBeenCalledTimes(1);
+    expect(t.skip).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores s without a draft but still skips on x', () => {
+    const t = setup({ has: false });
+    expect(askKey(key('s'), t.a)).toBeUndefined();
+    askKey(key('x'), t.a);
+    expect(t.send).not.toHaveBeenCalled();
+    expect(t.skip).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing while busy or with a modifier held', () => {
+    const t = setup({ busy: true });
+    askKey(key('s'), t.a);
+    askKey(key('x'), t.a);
+    askKey(key('x', { metaKey: true }), setup().a);
+    expect(t.send).not.toHaveBeenCalled();
+    expect(t.skip).not.toHaveBeenCalled();
   });
 });
