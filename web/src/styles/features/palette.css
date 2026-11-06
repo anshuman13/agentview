@@ -17,6 +17,9 @@
 }
 @media (hover: hover) { .palette li:hover { background: var(--hover); } }
 .palette li.active { background: var(--accent-soft); }
+.palette li.palette-item { height: auto; padding: 0; white-space: normal; }
+.palette-item .ui-row { cursor: inherit; }
+.palette-item .ui-row::after { display: none; }
 .palette-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .palette-label b { color: var(--accent-text); font-weight: 600; }
 .palette-key, .palette-group { flex: none; color: var(--fg-faint); font-size: var(--fs-xs); }

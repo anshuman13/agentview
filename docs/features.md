@@ -15,7 +15,7 @@
 - **Share to the app (Android)**: text or a link shared into AgentView asks "Add as task" (saved to Tasks, with a time read from the text), "Send to chat" (appended to the composer), or, when a meeting is running or starts within 15 minutes, "Add to meeting notes" (a time-stamped line in that meeting's notes).
 - **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; an open meeting action swipes right for Done and left to Not mine (Dismissed on Overview); pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs. The interval sync runs only while the app is visible. The tab bar shows a count only on Chat (waiting); Sessions (waiting elsewhere) and Agents (running) show a dot.
   The done and snooze buttons on Overview rows, Related chips and Remove goal have full-size tap targets
-- **Command palette** (⇧⌘P or F1): every view, tab, page, Codex list, model and mode as a searchable list; pinned chats are listed first as "Chat: <title>" and open that chat
+- **Command palette** (⇧⌘P or F1): every view, tab, page, Codex list, model and mode as a searchable list; pinned chats are listed first as "Chat: <title>" and open that chat; it also opens tasks, meetings and wiki pages by title, with the last five opened there first
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
   follows the system setting; `?theme=light` in the URL picks one
 

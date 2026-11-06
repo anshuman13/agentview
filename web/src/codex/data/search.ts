@@ -19,13 +19,15 @@ type SearchData = { items: ItemRow[]; meetings: Meeting[]; facts: Fact[]; pages:
 // Builds hits only for the rows shown, since a short query can match thousands of rows.
 const group = <T,>(rows: T[], hit: (r: T) => Hit, all = false): Group => ({ hits: (all ? rows : rows.slice(0, GROUP_CAP)).map(hit), total: rows.length });
 
+export const isTask = (r: ItemRow) => !r.deleted && !['dismissed', POINT, RAISED, GOAL].includes(r.status ?? '');
+
 export function searchAll(data: SearchData, query: string, expanded: string[] = []): Results {
   const words = queryWords(query);
   const none = { hits: [], total: 0 };
   if (!words.length) return { tasks: none, meetings: none, wiki: none, jobs: none, total: 0 };
   const hitItem = rowMatcher<SearchData['items'][number]>(words, 'item', (r) => [r.title, r.text, r.people, r.source]);
   const hitJob = rowMatcher<Job>(words, 'job', (j) => [j.name, j.prompt]);
-  const tasks = data.items.filter((r) => !r.deleted && !['dismissed', POINT, RAISED, GOAL].includes(r.status ?? '') && hitItem(r));
+  const tasks = data.items.filter((r) => isTask(r) && hitItem(r));
   const meetings = searchMeetings(live(data.meetings), query).sort((a, b) => (b.starts_at ?? 0) - (a.starts_at ?? 0));
   const found = searchWiki(data.pages, data.facts, query);
   const wiki = [

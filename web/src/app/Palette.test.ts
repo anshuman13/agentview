@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCommands, matchCommand, pinCommands, rankCommands, remember } from './Palette';
+import { buildCommands, itemKey, matchCommand, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, type PaletteItem } from './Palette';
 
 const models = [{ value: 'claude-opus-4-1', displayName: 'Opus 4.1' }, { value: 'claude-sonnet-4-5', displayName: 'Sonnet 4.5' }];
 const cmds = buildCommands(models);
@@ -84,5 +84,49 @@ describe('remember', () => {
   it('moves the id to the front, dedupes and caps the list', () => {
     expect(remember(['a', 'b', 'c'], 'b')).toEqual(['b', 'a', 'c']);
     expect(remember(['a', 'b'], 'c', 2)).toEqual(['c', 'a']);
+  });
+});
+
+describe('palette items', () => {
+  const base = { version: 1, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 };
+  const data = {
+    items: [
+      { ...base, id: 't1', profile: 'work', title: 'Ship report', text: 'body', status: 'open' },
+      { ...base, id: 't2', profile: 'work', title: 'Ship dismissed', status: 'dismissed' },
+      { ...base, id: 't3', profile: 'work', title: 'Ship deleted', status: 'open', deleted: 1 },
+      { ...base, id: 't4', profile: 'personal', title: null, text: 'Ship done text', status: 'done' },
+    ],
+    meetings: [
+      { ...base, id: 'm1', profile: 'work', title: 'Ship sync', starts_at: 1, state: null },
+      { ...base, id: 'block:1', profile: 'work', title: 'Ship block', starts_at: 1, state: null },
+      { ...base, id: 'm2', profile: 'work', title: 'Ship gone', starts_at: 1, state: null, deleted: 1 },
+    ],
+    pages: [{ ...base, id: 'p1', profile: 'work', title: null, state: null }],
+  } as unknown as Parameters<typeof paletteItems>[0];
+  const items = paletteItems(data);
+
+  it('lists live tasks, meetings without blocks and pages', () => {
+    expect(items.map(itemKey)).toEqual(['task:work:t1', 'task:personal:t4', 'meeting:work:m1', 'wiki:work:p1']);
+    expect(items.map((i) => i.title)).toEqual(['Ship report', 'Ship done text', 'Ship sync', 'Untitled']);
+  });
+
+  it('matches titles only', () => {
+    expect(rankItems(items, 'body', [])).toEqual([]);
+  });
+
+  it('puts recent matches first, then best match, and caps at 8', () => {
+    expect(rankItems(items, 'ship', ['meeting:work:m1']).map((r) => r.item.id)[0]).toBe('m1');
+    const many: PaletteItem[] = Array.from({ length: 12 }, (_, i) => ({ kind: 'task', profile: 'work', id: `x${i}`, title: `Task ${i}`, at: null }));
+    expect(rankItems(many, 'task', [])).toHaveLength(8);
+  });
+
+  it('lists recent items in order, skipping gone ones, capped at 5', () => {
+    expect(recentItems(items, ['gone', 'wiki:work:p1', 'task:work:t1']).map((r) => r.item.id)).toEqual(['p1', 't1']);
+    const keys = items.map(itemKey);
+    expect(recentItems(items, [...keys, ...keys], 3)).toHaveLength(3);
+  });
+
+  it('dedupes stored item keys', () => {
+    expect(remember(['a', 'b', 'c'], 'c', 5)).toEqual(['c', 'a', 'b']);
   });
 });
