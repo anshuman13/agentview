@@ -5,12 +5,17 @@ import { errorText } from './data/engine';
 import { seriesKey, seriesTitleOf } from './data/meetings';
 import type { Meeting } from './data/wiki';
 
-export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki';
+export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki' | 'goals';
 export type Filter = 'all' | Profile;
 export const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
 // The list, filter and open page, meeting or task are shared by the sidebar on desktop and the drawer on the phone.
 export type View = { list: List; filter: Filter; open: string | null; anchor: string | null; person: string | null; series: string | null; tag: string | null };
+
+// The list open before the current one (never goals), so Back from the goals page lands there.
+let prevList: List = 'today';
+let fromWeek = false;
+let weekReturn = false;
 
 let view: View = { list: 'today', filter: 'all', open: null, anchor: null, person: null, series: null, tag: null };
 const subs = new Set<() => void>();
@@ -60,12 +65,35 @@ export function focusPast(section: Element | null) {
 export const setView = (patch: Partial<View>) => {
   const next = { ...view, ...patch };
   if (next.list !== view.list && patch.tag === undefined) next.tag = null;
-  if (next.list !== view.list) spot = null;
+  if (next.list !== view.list) {
+    spot = null;
+    if (view.list === 'goals') fromWeek = false;
+    else prevList = view.list;
+  }
   else if (!depth(view) && depth(next)) saveSpot(view.list);
   document.documentElement.dataset.nav = depth(next) > depth(view) ? 'push' : depth(next) < depth(view) ? 'pop' : 'switch';
   view = next;
   subs.forEach((f) => f());
 };
+export function openWeekGoals() {
+  setView({ list: 'goals' });
+  fromWeek = true;
+}
+export function openWeek() {
+  weekReturn = true;
+  setView({ list: 'meetings' });
+}
+export const previousList = () => prevList;
+export function leaveGoals() {
+  weekReturn = fromWeek && prevList === 'meetings';
+  setView({ list: prevList });
+}
+// True once after Back from the goals page opened in Week, so Meetings starts on Week.
+export function takeWeekReturn() {
+  const w = weekReturn;
+  weekReturn = false;
+  return w;
+}
 // Switch to a list, then scroll the first new element matching the selector to the top once it renders.
 export function setViewAt(patch: Partial<View>, selector: string) {
   const before = new Set(document.querySelectorAll(selector));

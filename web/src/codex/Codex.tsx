@@ -39,6 +39,7 @@ const TaskEditor = prefetch(() => import('./TaskEditor').then((m) => m.TaskEdito
 const Wiki = prefetch(() => import('./wiki/Wiki').then((m) => m.Wiki));
 const Jobs = prefetch(() => import('./jobs/Jobs').then((m) => m.Jobs));
 const Summary = prefetch(() => import('./summary/Summary').then((m) => m.Summary));
+const GoalsPage = prefetch(() => import('./GoalsPage').then((m) => m.GoalsPage));
 const Meetings = prefetch(() => import('./meetings/Meetings').then((m) => m.Meetings));
 
 const DAY = 86400_000;
@@ -152,7 +153,7 @@ export function Assistant() {
   if (list === 'tasks' && tag) return <TagPage tag={tag} />;
 
   if (list !== 'today' && list !== 'tasks') {
-    const Page = { wiki: Wiki, meetings: Meetings, jobs: Jobs, summary: Summary }[list];
+    const Page = { wiki: Wiki, meetings: Meetings, jobs: Jobs, summary: Summary, goals: GoalsPage }[list];
     return (
       <div className="assistant wide" ref={root}>
         <Suspense fallback={<Skeleton />}><Page onMenu={() => setDrawer(true)} /></Suspense>

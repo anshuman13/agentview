@@ -12,7 +12,7 @@ import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { save, stored, storedStrings } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
+import { openMeeting, setView, showSnack, takeWeekReturn, useSpotBack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
@@ -179,7 +179,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const [active, setActive] = useState<string[]>([]);
   const [seen, setSeen] = useState(() => stored<Record<string, number>>(SEEN_KEY, {}));
   const [chips, setChips] = useState(() => MEETING_CHIPS.filter((c) => storedStrings(CHIPS_KEY).includes(c)));
-  const [mode, setMode] = useState<'' | 'log' | 'load' | 'week'>('');
+  const [mode, setMode] = useState<'' | 'log' | 'load' | 'week'>(() => (takeWeekReturn() ? 'week' : ''));
   const changeTopics = (next: string[]) => {
     setTopics(next);
     setActive((a) => a.filter((t) => next.includes(t)));

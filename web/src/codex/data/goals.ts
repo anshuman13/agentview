@@ -45,13 +45,36 @@ export function carryOver(items: ItemRow[], now: number, profile?: Profile): Ite
 
 export const goalVerdict = (p: { done: number; total: number }) => (p.total > 0 && p.done === p.total ? 'Done' : 'Missed');
 
+export const GOAL_WEEKS = 8;
+
+// Goals of this week and the 7 before it, newest week first; weeks without goals are left out.
+export function goalHistory(items: ItemRow[], now: number, profile?: Profile) {
+  const d = new Date(weekStart(now));
+  const out: { start: number; label: string; goals: ItemRow[] }[] = [];
+  for (let i = 0; i < GOAL_WEEKS; i++) {
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7 * i, 12);
+    const goals = goalsOf(items, day.getTime(), profile);
+    if (!goals.length) continue;
+    const start = weekStart(day.getTime());
+    out.push({ start, goals, label: i === 0 ? 'This week' : i === 1 ? 'Last week' : `${day.toLocaleDateString('en-GB', { weekday: 'short' })} ${day.getDate()} ${day.toLocaleDateString('en-GB', { month: 'short' })}` });
+  }
+  return out;
+}
+
+// Why a goal cannot be reopened in this week, if it cannot.
+export function reopenBlock(items: ItemRow[], goal: ItemRow, now: number) {
+  const mine = goalsOf(items, now, goal.profile);
+  if (mine.length >= MAX_GOALS) return 'full';
+  return mine.some((g) => titleKey(g.title) === titleKey(goal.title)) ? 'same' : null;
+}
+
 // The weekly review shows from Friday 14:00 local through Sunday.
 export function reviewWindow(now: number) {
   const d = new Date(now);
   return d.getDay() === 6 || d.getDay() === 0 || (d.getDay() === 5 && d.getHours() >= 14);
 }
 
-const titleKey = (t: string | null) => (t ?? '').trim().toLowerCase();
+export const titleKey = (t: string | null) => (t ?? '').trim().toLowerCase();
 
 // Missed goals of this week that next week can still take: titles to create, how many the limit leaves out, and which control the card shows.
 export function reviewCarry(items: ItemRow[], now: number, profile: Profile) {

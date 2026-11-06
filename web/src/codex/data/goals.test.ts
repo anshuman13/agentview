@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carryOver, goalAtRisk, goalVerdict, pruneDismissed, reviewCarry, reviewWindow } from './goals';
+import { carryOver, goalAtRisk, goalHistory, goalVerdict, pruneDismissed, reopenBlock, reviewCarry, reviewWindow } from './goals';
 import { weekFreeMinutes, type Span } from './plan';
 import type { ItemRow } from './sync';
 
@@ -24,6 +24,45 @@ describe('carryOver', () => {
     const cur = row({ id: 'g4', status: 'goal', at: new Date(2026, 9, 26).getTime() });
     expect(carryOver([...goals, ...tasks, cur], now, 'work')).toEqual([]);
     expect(carryOver([...goals, ...tasks, cur], now).map((g) => g.id)).toEqual(['g3']);
+  });
+});
+
+describe('goalHistory', () => {
+  const now = new Date(2026, 9, 28, 10).getTime();
+  const mon = (weeksAgo: number) => new Date(2026, 9, 26 - 7 * weeksAgo).getTime();
+  const g = (id: string, weeksAgo: number, o: Partial<ItemRow> = {}) => row({ id, title: id, status: 'goal', at: mon(weeksAgo), ...o });
+
+  it('lists 8 weeks newest first, skipping empty weeks, deleted goals and older goals', () => {
+    const items = [g('a', 0), g('b', 1), g('c', 3), g('d', 7), g('old', 8), g('gone', 2, { deleted: 1 })];
+    const weeks = goalHistory(items, now);
+    expect(weeks.map((w) => w.goals[0].id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(weeks.map((w) => w.start)).toEqual([mon(0), mon(1), mon(3), mon(7)]);
+    expect(weeks.slice(0, 2).map((w) => w.label)).toEqual(['This week', 'Last week']);
+    expect(weeks[2].label).toBe('Mon 5 Oct');
+  });
+
+  it('respects the profile', () => {
+    const items = [g('a', 1), g('b', 2, { profile: 'personal' })];
+    expect(goalHistory(items, now, 'personal').map((w) => w.goals[0].id)).toEqual(['b']);
+  });
+});
+
+describe('reopenBlock', () => {
+  const now = new Date(2026, 9, 28, 10).getTime();
+  const cur = new Date(2026, 9, 26).getTime();
+  const old = row({ id: 'o', title: 'Ship it', status: 'goal', at: new Date(2026, 9, 19).getTime() });
+  const mine = (id: string, title: string, o: Partial<ItemRow> = {}) => row({ id, title, status: 'goal', at: cur, ...o });
+
+  it('refuses at the goal limit of its own profile only', () => {
+    const full = [mine('1', 'a'), mine('2', 'b'), mine('3', 'c')];
+    expect(reopenBlock([old, ...full], old, now)).toBe('full');
+    expect(reopenBlock([old, ...full.map((r) => ({ ...r, profile: 'personal' as const }))], old, now)).toBeNull();
+    expect(reopenBlock([old, ...full.slice(0, 2), mine('4', 'd', { deleted: 1 })], old, now)).toBeNull();
+  });
+
+  it('refuses a same-title goal, ignoring case and spacing', () => {
+    expect(reopenBlock([old, mine('1', '  SHIP it ')], old, now)).toBe('same');
+    expect(reopenBlock([old, mine('1', 'Ship it', { profile: 'personal' })], old, now)).toBeNull();
   });
 });
 

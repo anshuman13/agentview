@@ -5,8 +5,9 @@ import { weekStart } from './data/dates';
 import { weekFreeMinutes, type Span } from './data/plan';
 import { live } from './data/wiki';
 import type { ItemRow, Profile } from './data/sync';
-import { attempt, openTask, showSnack, useView } from './view';
+import { attempt, openTask, openWeekGoals, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
 import { save, stored } from '../ui/util';
 
 function GoalInput({ row }: { row: ItemRow }) {
@@ -47,7 +48,10 @@ export function WeekGoals({ now }: { now: number }) {
   };
   return (
     <section className="mt-wk-sec">
-      <div className="mt-load-head">Goals this week ({goals.length}/{MAX_GOALS})</div>
+      <div className="gl-head">
+        <div className="mt-load-head">Goals this week ({goals.length}/{MAX_GOALS})</div>
+        <Button size="sm" variant="plain" onClick={openWeekGoals}>All goals</Button>
+      </div>
       {goals.length > 0 && <div role="list" aria-label="Goals">{goals.map((g) => <GoalInput key={g.profile + g.id} row={g} />)}</div>}
       {filter === 'all' && (
         <select className="as-chip quiet" value={pick} aria-label="Goal profile" onChange={(e) => setPick(e.target.value as Profile)}>

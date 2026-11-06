@@ -545,3 +545,10 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .tasks .as-row.selected .as-check.picked, .tasks .as-row.selected .as-check.picked .codicon.icon { color: var(--accent); }
 .as-bulk { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--tk-pad, var(--sp-8)); border-top: 1px solid var(--border); background: var(--raised); }
 .as-bulk-n { margin-right: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+.gl-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+.gl-hist { position: relative; }
+.gl-hist-row { display: flex; align-items: center; padding-right: var(--list-pad); }
+.gl-hist-row > .ui-row { flex: 1; min-width: 0; }
+.gl-hist-row > .ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
+.gl-hist > .gl-bar { display: block; margin: 0 var(--list-pad) var(--sp-4); }
+.gl-hist > .gl-tasks { margin-bottom: var(--sp-4); }
