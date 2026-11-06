@@ -1,11 +1,17 @@
 import { Icon } from '../../ui/Icon';
+import { Chip } from '../../ui/Button';
 import { safeHref } from '../../ui/util';
 import type { Source } from '../data/wiki';
 import { SOURCE_ICON } from './shared';
 
+const KIND: Record<Source['kind'], string> = { slack: 'Slack', linear: 'Linear', pr: 'PR', doc: 'Doc', meeting: 'Meeting' };
+
 export function SourceChip({ s }: { s: Source }) {
-  const body = <><Icon name={SOURCE_ICON[s.kind]} small /> <span className="wk-src-text">{s.label}</span></>;
-  return s.url ? <a className="wk-src" href={safeHref(s.url)} target="_blank" rel="noreferrer">{body}</a> : <span className="wk-src">{body}</span>;
+  const href = safeHref(s.url);
+  const name = KIND[s.kind];
+  const label = `${name}: ${s.label}`;
+  if (href) return <Chip size="sm" quiet icon={SOURCE_ICON[s.kind]} href={href} target="_blank" rel="noopener noreferrer" title={s.label} aria-label={label}>{name}</Chip>;
+  return <span className="chip" title={s.label} aria-label={label}><Icon name={SOURCE_ICON[s.kind]} small /> {name}</span>;
 }
 
 export function ClaudeChip({ chat }: { chat: string }) {

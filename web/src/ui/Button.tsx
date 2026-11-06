@@ -40,21 +40,22 @@ export function IconButton({ icon, label, size = 'md', on, small, spin, classNam
   );
 }
 
-export function Chip({ on, late, tone, quiet, size = 'md', icon, className, type = 'button', children, ...rest }: Native & {
+export function Chip({ on, late, tone, quiet, size = 'md', icon, className, type = 'button', href, target, rel, children, ...rest }: Native & {
   on?: boolean;
   late?: boolean;
   tone?: Tone;
   quiet?: boolean;
   size?: Size;
   icon?: string;
+  href?: string;
+  target?: string;
+  rel?: string;
   children?: ReactNode;
 }) {
-  return (
-    <button type={type} className={cx('chip', 'chip-btn', size === 'sm' && 'chip-sm', on && 'on', late && 'late', tone && `chip-${tone}`, quiet && 'chip-quiet', className)} {...rest}>
-      {icon && <Icon name={icon} small />}
-      {children}
-    </button>
-  );
+  const cls = cx('chip', 'chip-btn', size === 'sm' && 'chip-sm', on && 'on', late && 'late', tone && `chip-${tone}`, quiet && 'chip-quiet', className);
+  const body = <>{icon && <Icon name={icon} small />}{children}</>;
+  if (href) return <a className={cls} href={href} target={target} rel={rel} title={rest.title} aria-label={rest['aria-label']}>{body}</a>;
+  return <button type={type} className={cls} {...rest}>{body}</button>;
 }
 
 export const chipClass = ({ on, late, tone, quiet }: { on?: boolean; late?: boolean; tone?: Tone; quiet?: boolean }) => cx('chip', 'chip-btn', on && 'on', late && 'late', tone && `chip-${tone}`, quiet && 'chip-quiet');

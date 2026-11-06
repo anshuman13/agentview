@@ -115,7 +115,7 @@ Old names still work: primary is filled, secondary (default) is gray, quiet is p
 is `--accent-text`. 28 / 36px, 44px on touch (Material 48dp target, sized to iOS 44pt).
 
 ### Chip
-`<Chip on late size icon>`; `.chip.chip-btn`. Filters and quick picks (Material filter chip).
+`<Chip on late size icon href>`; `.chip.chip-btn`. Filters and quick picks (Material filter chip). With `href` (plus `target`, `rel`) it renders an `<a>` with the same classes, for chips that open a link.
 Height `--size-2xl`, padding `--sp-4`, label type, `--shape-md`. Quiet: `--fg-muted`, no fill.
 On: `--fg` over `--accent-soft`. Late: `--danger`. Static `.chip` is a read-only tag.
 

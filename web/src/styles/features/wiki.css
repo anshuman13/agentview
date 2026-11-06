@@ -111,6 +111,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .wk-claim-text { margin: 0; }
 .wk-claims .wk-claim-foot { display: inline; margin-left: var(--sp-3); font-size: var(--fs-sm); color: var(--fg-faint); }
 .wk-claims .wk-claim-foot > * { vertical-align: baseline; }
+.wk-claims .wk-claim-foot > .chip { margin-right: var(--sp-3); vertical-align: middle; }
 .wk-claims .wk-src { display: inline; height: auto; padding: 0; margin-right: var(--sp-3); border-radius: 0; background: none; color: var(--fg-muted); text-decoration: underline dotted var(--fg-faint); text-underline-offset: 2px; }
 .wk-claims .wk-src .codicon.icon { display: none; }
 @media (hover: hover) { .wk-claims a.wk-src:hover { background: none; color: var(--fg); } }
@@ -118,7 +119,6 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .wk-claims .wk-claim-acts .icon-btn, .wk-claims .wk-act { width: auto; min-width: 22px; height: 22px; }
 .wk-claim-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-3); margin-top: var(--sp-4); font-size: var(--fs-sm); color: var(--fg-faint); }
 .wk-src { display: inline-flex; align-items: center; gap: var(--sp-2); height: 22px; padding: 0 var(--sp-4); border-radius: var(--radius-pill); background: var(--hover); color: var(--fg-muted); text-decoration: none; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.wk-src-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .wk-src .codicon.icon { font-size: 12px; }
 @media (hover: hover) { a.wk-src:hover { color: var(--fg); background: var(--border-strong); } }
 .wk-mentions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-right: var(--sp-3); vertical-align: middle; }
@@ -206,6 +206,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
   .wk-claim-acts { gap: var(--sp-5); }
   .wk-claim-acts .icon-btn, .wk-claims .wk-claim-acts .icon-btn { width: var(--touch-md); height: var(--touch-md); min-width: var(--touch-md); }
   .wk-claims .wk-claim-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); margin: var(--sp-2) 0 0; min-height: var(--touch-md); }
+  .wk-claims .wk-claim-foot > .chip { margin: 0; }
   .wk-claims .wk-src { display: inline-flex; height: 32px; padding: 0 var(--sp-4); margin: 0; border-radius: var(--radius-pill); background: var(--hover); text-decoration: none; max-width: 100%; }
   .wk-claims .wk-src .codicon.icon { display: inline-block; }
   .wk-claims .wk-claim-acts { margin-left: auto; }
