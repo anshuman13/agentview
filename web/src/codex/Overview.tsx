@@ -10,7 +10,7 @@ import { dayLabel } from './data/dates';
 import { Shutdown } from './Shutdown';
 import { ClaimsToReview } from './overview/ClaimsToReview';
 import { ReplyQueue, replyQueue, staleAsks, STALE_DAYS } from './overview/ReplyQueue';
-import { useNeedsYou } from './NeedsYou';
+import { NeedsYou, useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
@@ -151,6 +151,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           <NextCard m={close} then={s.then && soon(s.then) ? s.then : undefined} carried={s.carried} onPrep={onPrep} />
         </section>
       )}
+      <NeedsYou n={needs} now={now} />
       <DoNow needs={needs} today={todo} nextUp={card.shown && nextUp?.tomorrow ? null : nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
       <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} />
       {card.shown && <TomorrowCard s={s} tasks={tomorrow} now={now} hide={card.hide} />}

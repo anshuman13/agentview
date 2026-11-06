@@ -10,7 +10,10 @@ import { ActionRow } from './meetings/ActionRow';
 import { useActions } from './useActions';
 import { ago, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
-import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
+import { MenuItem } from '../ui/Menu';
+import { Section } from '../ui/Section';
+import { CardRow } from './overview/CardRow';
 import { haptic } from '../ui/haptic';
 import { openTask, setView, showSnack, useView } from './view';
 import { when } from './time';
@@ -96,73 +99,59 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
 }
 
 export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: number }) {
-  const store = useAssistantStore();
   const act = useActions();
   const [showAll, setShowAll] = useState(false);
   if (!n.rows.length) return null;
   const snooze = (r: ItemRow) => { haptic('tap'); act.snoozeLater(r, now); };
   const moveToday = (rows: ItemRow[]) => { haptic('success'); act.moveToToday(rows, now); };
-  const taskRow = (r: ItemRow, label: string, note: string) => (
-    <div key={r.profile + r.id} className="ov-follow-row">
-      <button className="ov-follow-text" onClick={() => openTask(r)}>
-        <span className="ov-t">{r.title}</span>
-        <span className="muted small">{label}{note}</span>
-      </button>
-      <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
-      <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
-    </div>
+  const taskRow = (r: ItemRow, badge: { label: string; tone: 'waiting' | 'quiet' }, note: string) => (
+    <CardRow key={r.profile + r.id} title={r.title} meta={note} badge={badge} onOpen={() => openTask(r)}
+      action={{ icon: 'check', label: 'Done', run: () => { haptic('success'); act.done(r); } }}
+      menu={(choose) => <MenuItem icon="clock" onClick={choose(() => snooze(r))}>Snooze to next 09:00</MenuItem>} />
   );
+  const needs = { label: 'Needs you', tone: 'waiting' } as const;
+  const slackLink = (url: string | null | undefined, choose: (fn: () => void) => () => void) => safeHref(url) && <MenuItem icon="link" href={safeHref(url)!} onClick={choose(() => undefined)}>Open in Slack</MenuItem>;
   const rowOf = (x: Need) => {
     switch (x.kind) {
-      case 'overdue': return taskRow(x.row, 'Overdue', atTime(x.row.at) != null ? ` · due ${when(atTime(x.row.at)!, now)}` : '');
-      case 'overdueAll': return (
-        <div key="overdue" className="ov-follow-row">
-          <button className="ov-follow-text" onClick={() => setView({ list: 'tasks', open: null })}>
-            <span className="ov-t">{x.rows.length} overdue</span>
-            <span className="muted small">Open Tasks to go through them</span>
-          </button>
-          <button className="ov-check" aria-label={`Move ${x.rows.length} overdue tasks to today`} title="Move all to today" onClick={() => moveToday(x.rows)}><Icon name="arrow-right" small /></button>
-        </div>
-      );
-      case 'risk': return taskRow(x.row, 'At risk', ` · due ${when(x.due, now)} · ${minutesText(x.short)} short`);
+      case 'overdue': return taskRow(x.row, { label: 'Overdue', tone: 'waiting' }, atTime(x.row.at) != null ? `due ${when(atTime(x.row.at)!, now)}` : '');
+      case 'overdueAll': return <CardRow key="overdue" title={`${x.rows.length} overdue`} meta="Open Tasks to go through them" badge={{ label: 'Overdue', tone: 'waiting' }} onOpen={() => setView({ list: 'tasks', open: null })} />;
+      case 'risk': return taskRow(x.row, { label: 'At risk', tone: 'quiet' }, `due ${when(x.due, now)} · ${minutesText(x.short)} short`);
       case 'ask': return <ActionRow key={x.row.profile + x.row.id} row={x.row} />;
       case 'dm': {
         const c = x.chat;
         return (
-          <div key={c.profile + c.id} className="ov-follow-row wrap">
-            <button className="ov-follow-text" onClick={() => setView({ person: c.name })}>
-              <span className="ov-t">{c.name}</span>
-              <span className="muted small">DM · {c.last_at ? `${ago(c.last_at, ' ago')} · ` : ''}{c.summary}</span>
-            </button>
-            {safeHref(c.url) && <a className="btn btn-sm btn-gray" href={safeHref(c.url)} target="_blank" rel="noreferrer" aria-label={`Open the DM with ${c.name} in Slack`}>Open in Slack</a>}
-            <button className="btn btn-sm btn-gray" aria-label={`Make a task to reply to ${c.name}`} onClick={() => n.chatTask(c)}>Task</button>
-            <button className="btn btn-sm btn-gray" aria-label={`Dismiss ${c.name}`} onClick={() => n.hideChat(c)}>Dismiss</button>
-          </div>
+          <CardRow key={c.profile + c.id} title={c.name} meta={`DM · ${c.last_at ? `${ago(c.last_at, ' ago')} · ` : ''}${c.summary ?? ''}`} badge={needs} onOpen={() => setView({ person: c.name })}
+            action={{ icon: 'close', label: `Dismiss ${c.name}`, run: () => n.hideChat(c) }}
+            menu={(choose) => (
+              <>
+                <MenuItem icon="add" onClick={choose(() => n.chatTask(c))}>Make a task</MenuItem>
+                {slackLink(c.url, choose)}
+              </>
+            )} />
         );
       }
       case 'slack':
         return (
-          <div key={x.keys[0]} className="ov-follow-row">
-            <a className="ov-follow-text" href={x.x.url ?? undefined} target="_blank" rel="noreferrer">
-              <span className="ov-t">{x.x.title}</span>
-              <span className="muted small">Slack{x.x.why ? ` · ${x.x.why}` : ''}</span>
-            </a>
-            <button className="btn btn-sm btn-gray" aria-label={`Make ${x.x.title} a task`} onClick={() => n.bulletTask(x.x, x.profile)}>Task</button>
-            <button className="btn btn-sm btn-gray" aria-label={`Mark ${x.x.title} handled`} onClick={() => n.hideBullet(x.x)}>Done</button>
-          </div>
+          <CardRow key={x.keys[0]} title={x.x.title} meta={`Slack${x.x.why ? ` · ${x.x.why}` : ''}`} badge={needs} onOpen={() => setView({ list: 'summary', open: null })}
+            action={{ icon: 'close', label: `Dismiss ${x.x.title}`, run: () => n.hideBullet(x.x) }}
+            menu={(choose) => (
+              <>
+                <MenuItem icon="add" onClick={choose(() => n.bulletTask(x.x, x.profile))}>Make a task</MenuItem>
+                {slackLink(x.x.url, choose)}
+              </>
+            )} />
         );
     }
   };
+  const collapsed = n.rows.find((x) => x.kind === 'overdueAll');
   return (
     <section>
-      <div className="as-section late">Needs you · {n.rows.length}</div>
-      <div className="ov-follow ov-needs">
+      <Section label="Needs you" count={n.rows.length}
+        action={collapsed?.kind === 'overdueAll' && <Button variant="quiet" size="sm" onClick={() => moveToday(collapsed.rows)}>Move {collapsed.rows.length} overdue to today</Button>} />
+      <div className="as-group ov-queue-group">
         {(showAll ? n.rows : n.rows.slice(0, CAP)).map(rowOf)}
         {!showAll && n.rows.length > CAP && (
-          <div className="ov-follow-row">
-            <span className="ov-follow-text" />
-            <button className="btn btn-sm btn-gray" onClick={() => setShowAll(true)}>Show {n.rows.length - CAP} more</button>
-          </div>
+          <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setShowAll(true)}>Show {n.rows.length - CAP} more</Button></div></div>
         )}
       </div>
     </section>

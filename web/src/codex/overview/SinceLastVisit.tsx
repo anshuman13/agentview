@@ -3,10 +3,10 @@ import { useAssistantData } from '../data';
 import { sinceLastVisit } from '../data/load';
 import { resolvedQuestions } from '../meetings/OpenQuestions';
 import { plural, save, stored } from '../../ui/util';
-import { focusPast, useView } from '../view';
+import { focusPast, setView, useView } from '../view';
+import { CardRow } from './CardRow';
 
 const LAST_VISIT = 'codex.lastVisit';
-
 
 // Meetings, decisions, new claims and open questions since the last dismissal; the first visit only records the time.
 export function SinceLastVisit() {
@@ -39,11 +39,8 @@ export function SinceLastVisit() {
   };
   return (
     <section ref={section}>
-      <div className="ov-follow">
-        <div className="ov-follow-row">
-          <span className="ov-follow-text">Since you were last here: {parts.join(', ')}</span>
-          <button className="btn btn-sm btn-gray" onClick={dismiss}>Dismiss</button>
-        </div>
+      <div className="as-group ov-queue-group">
+        <CardRow title="Since you were last here" meta={parts.join(', ')} onOpen={() => setView({ list: 'meetings', open: null })} action={{ icon: 'close', label: 'Dismiss', run: dismiss }} />
       </div>
     </section>
   );

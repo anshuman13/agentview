@@ -7,7 +7,6 @@
 .ov-follow-row > .as-input { flex: 1; min-width: 0; }
 .ov-follow-row + .ov-follow-row, .ov-follow > .as-swipe + :is(.as-swipe, .ov-follow-row), .ov-follow > .ov-follow-row + .as-swipe { border-top: 1px solid var(--border); }
 .ov-follow .as-swipe-row { background: var(--surface); }
-.ov-needs > * + * { border-top: 1px solid var(--border); }
 .ov-follow-text { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; text-decoration: none; }
 .ov-check { flex: none; display: grid; place-items: center; width: 32px; height: 32px; margin: -6px 0 -6px -8px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--fg-faint); cursor: pointer; }
 .ov-check:last-child { margin: -6px -8px -6px 0; }

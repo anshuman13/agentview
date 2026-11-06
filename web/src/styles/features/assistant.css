@@ -535,7 +535,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
   content: ''; position: absolute; top: 0; right: 0; left: var(--sp-8); height: 1px; background: var(--border);
 }
 .assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row + .mt-row::before { left: calc(var(--sp-8) + 40px + var(--sp-7)); }
-.assistant:not(.tasks) .as-scroll .ov-needs > * + * { border-top: 0; }
 @media (hover: hover) { .assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row:hover { background: var(--hover); } }
 .assistant:not(.tasks) .as-section { padding: 0 var(--sp-8) var(--sp-3); border-bottom: 0; font-size: var(--type-footnote-size); font-weight: 400; line-height: var(--type-footnote-line); }
 .assistant:not(.tasks) .as-section:not(.late, .review, .next, .done, .later) { color: var(--fg-muted); }

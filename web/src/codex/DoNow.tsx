@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { useAssistantTable, useAssistantStore } from './data';
+import { useAssistantTable } from './data';
 import { atTime } from './data/engine';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
@@ -8,11 +8,10 @@ import { peopleOf } from './data/meetings';
 import { channelOf } from './taskSource';
 import { useActions } from './useActions';
 import type { useNeedsYou } from './NeedsYou';
-import { ago, plural, safeHref } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import { haptic } from '../ui/haptic';
-import { openMeeting, openTask, setView, showSnack } from './view';
-import { clock, when } from './time';
+import { openMeeting, openTask } from './view';
+import { clock } from './time';
 import { Flag } from './AddSheet';
 import { Swipe } from './Swipe';
 import { FOCUS_MINUTES, isFocused, startFocus, stopFocus, useFocus } from './focus';
@@ -26,8 +25,7 @@ const MORE = 5;
 // Higher first: a priority flag lifts a task above Slack, an untouched day of lateness adds a little.
 const rankTask = (r: ItemRow, now: number) => (r.priority ?? 0) * 10 + Math.min(5, Math.max(0, Math.floor((now - (atTime(r.at) ?? now)) / 86400_000)));
 
-// One list of what to do next, in order: the meeting about to start, flagged tasks, what needs me on Slack and in tasks,
-// then today's tasks. The top three are numbered with one action each; the rest follow in a short list.
+// One list of what to do next, in order: the meeting about to start, flagged tasks, then today's tasks. The top three are numbered with one action each; the rest follow in a short list.
 export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   needs: ReturnType<typeof useNeedsYou>;
   today: ItemRow[];
@@ -36,7 +34,6 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   now: number;
   onPrep: () => void;
 }) {
-  const store = useAssistantStore();
   const act = useActions();
   const [all, setAll] = useState(false);
   const timer = useFocus();
@@ -49,41 +46,8 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   const timeOf = (r: ItemRow) => { const t = atTime(r.at); return t != null && new Date(t).getHours() + new Date(t).getMinutes() > 0 && t > now ? `at ${clock(t)}` : ''; };
   const prio = (r: ItemRow) => (['', 'Low priority', 'Medium priority', 'High priority'][r.priority ?? 0] ?? '');
 
-  const fromNeeds: Item[] = needs.rows.map((x) => {
-    switch (x.kind) {
-      case 'overdue': {
-        const t = atTime(x.row.at);
-        return task(x.row, [t != null ? `Overdue, was due ${when(t, now)}` : 'Overdue', prio(x.row)].filter(Boolean).join(' · '), true);
-      }
-      case 'overdueAll': return {
-        key: 'overdueAll', icon: 'warning', title: `Clear ${x.rows.length} overdue tasks`, why: x.rows.slice(0, 2).map((r) => r.title).join(', '), hot: true,
-        open: () => setView({ list: 'tasks', open: null }),
-        act: { label: 'Move to today', run: () => { haptic('success'); act.moveToToday(x.rows, now); } },
-      };
-      case 'risk': return task(x.row, `Due ${when(x.due, now)}, ${minutesText(x.short)} short between meetings`, true);
-      case 'ask': return {
-        key: `a:${x.row.profile}:${x.row.id}`, icon: channelOf(x.row).icon ?? 'question', title: x.row.title ?? '(Untitled)', why: `Is this yours? · ${x.row.people || channelOf(x.row).label}`,
-        open: () => openTask(x.row), act: { label: 'Mine', run: () => { haptic('success'); void store.update(x.row, { status: 'open' }); showSnack('Added to Today'); } },
-        done: () => void store.update(x.row, { status: 'dismissed' }), doneLabel: 'Not mine',
-      };
-      case 'dm': {
-        const c = x.chat;
-        return {
-          key: `d:${c.profile}:${c.id}`, icon: 'comment-discussion', title: `Reply to ${c.name ?? 'a DM'}`, why: [c.last_at && `waiting ${ago(c.last_at)}`, c.summary].filter(Boolean).join(' · '), hot: true,
-          open: () => setView({ person: c.name }), act: safeHref(c.url) ? { label: 'Reply', href: safeHref(c.url) } : { label: 'Task', run: () => needs.chatTask(c) },
-          done: () => needs.hideChat(c), doneLabel: 'Handled',
-        };
-      }
-      case 'slack': return {
-        key: x.keys[0], icon: 'comment', title: x.x.why || x.x.title, why: x.x.why ? `${x.x.title} · Slack` : 'Slack',
-        open: () => { if (x.x.url) window.open(x.x.url, '_blank', 'noreferrer'); },
-        act: x.x.url ? { label: 'Reply', href: x.x.url } : { label: 'Task', run: () => needs.bulletTask(x.x, x.profile) },
-        done: () => needs.hideBullet(x.x), doneLabel: 'Handled',
-      };
-    }
-  });
-  const seen = new Set(fromNeeds.map((i) => i.key));
-  const todays = [...today].filter((r) => !seen.has(`t:${r.profile}:${r.id}`)).sort((a, b) => rankTask(b, now) - rankTask(a, now) || (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0))
+  const seen = new Set(needs.rows.flatMap((x) => x.keys).filter((k) => k.startsWith('task:')).map((k) => k.slice(5)));
+  const todays = [...today].filter((r) => !seen.has(`${r.profile}:${r.id}`)).sort((a, b) => rankTask(b, now) - rankTask(a, now) || (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0))
     .map((r) => task(r, [timeOf(r) || 'Today', prio(r), r.people].filter(Boolean).join(' · ')));
   const flagged = todays.filter((i) => (i.priority ?? 0) >= 2);
   const meetingItem: Item[] = meeting ? [{
@@ -91,7 +55,7 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
     why: [meeting.starts_at! <= now ? 'Now' : `In ${Math.max(1, Math.round((meeting.starts_at! - now) / 60000))} min`, peopleOf(meeting).slice(0, 2).join(', ')].filter(Boolean).join(' · '),
     open: () => openMeeting(meeting), act: { label: 'Prep', run: onPrep },
   }] : [];
-  const items = [...meetingItem, ...flagged, ...fromNeeds, ...todays.filter((i) => !flagged.includes(i))];
+  const items = [...meetingItem, ...flagged, ...todays.filter((i) => !flagged.includes(i))];
   const ahead = nextUp && !todays.length && !meeting ? <Ahead next={nextUp} now={now} /> : null;
   if (!items.length) return ahead;
   const rest = items.slice(TOP);

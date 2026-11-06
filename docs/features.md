@@ -51,10 +51,9 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - Later and Context on Overview are rows of one grouped card that open in place
 - Under the Overview greeting, one line with the meetings left, tasks due and overdue count today, or Nothing due today (Weekend, nothing due today on Saturday and Sunday)
 - Do now: one ranked list of what to work on, top of the page. The order is: the next meeting when it starts within two hours (Prep),
-  tasks due today flagged High or Medium, then Needs you (overdue tasks, at-risk tasks due by Friday that do not fit the free
-  work time, asks and promises to confirm, Slack DMs waiting on me, the latest Slack summary's "Needs you" bullets, each once,
-  three or more overdue collapsing into Clear N overdue with Move to today), then the rest of today's tasks by priority and
-  time. The first card, when it is an open task, has a Focus button. With nothing to do today it sums up the next day with tasks instead of listing them: a few sentences on what to get
+  tasks due today flagged High or Medium, then the rest of today's tasks by priority and
+  time. Needs you is its own card above Do now (overdue tasks, at-risk tasks due by Friday that do not fit the free work time, asks and promises to confirm,
+  Slack DMs waiting on me, the latest Slack summary's "Needs you" bullets, each once, three or more overdue collapsing into one row with Move N overdue to today in the header), and Do now leaves those out. The first card, when it is an open task, has a Focus button. With nothing to do today it sums up the next day with tasks instead of listing them: a few sentences on what to get
   done that day, which the hub writes with Haiku when nothing work is open today (again when that day's tasks or meetings
   change, at most hourly), then big counts (tasks with estimated time, meetings with their time, first meeting) and a Start
   with row for the top task, in one card under that day's name. On a weekend with things to do the list is titled When you
@@ -63,7 +62,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   about to start) with the thing to do, why and its source, and one action: Done (or Tomorrow) for tasks, Reply (or Handled)
   for Slack and DMs, Mine (or Not mine) for asks. The rest follow under Then with one action each (task rows also swipe right for Done, left for Tomorrow), 5 shown, Show N more
 - A meeting starting within 15 minutes or running shows its full card under Now above Do now, with prep, a note field and the room mic toggle
-- Later (folded, count in the header, state remembered): Stale (tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, oldest first, with a check and a clock), the follow-through card (meeting actions still open after a week: Task, Done, Dismiss), Keep in touch and tomorrow's tasks; hidden when empty. Every list of more than 5 rows in Later and the task lists shows +N more that expands in place, then Show fewer. All folds use one header, Title N, and the meeting page folds (Unassigned, Others took, Not mine) start closed each visit
+- Later (folded, count in the header, state remembered): Stale (tasks untouched for 14 days that are not overdue, meeting actions or due by tomorrow, oldest first, with a check and a clock), the follow-through card (meeting actions still open after a week, one row each with Dismiss and a More menu with Make a task and Mark done, plus Dismiss all N with Undo), Keep in touch and tomorrow's tasks; hidden when empty. Every list of more than 5 rows in Later and the task lists shows +N more that expands in place, then Show fewer. All folds use one header, Title N, and the meeting page folds (Unassigned, Others took, Not mine) start closed each visit
 - The next 3 meetings still ahead today with the meeting time left (+N more opens Meetings), and a field on the next meeting's card that adds a
   timestamped line to its notes
 - From 17:00 a Tomorrow card follows Wrap up: tomorrow's meetings and tasks (5 shown, +N more), counts, free work time, and Plan tomorrow (not on weekends), which previews and creates Focus blocks for tomorrow's unblocked tasks like Plan my day; close hides it until the next day. While it shows, Later and Do now leave out their Tomorrow blocks
