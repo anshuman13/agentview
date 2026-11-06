@@ -2,14 +2,15 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantData, useAssistantStore, useCodex } from '../data';
 import { newId, rowKey } from '../data/sync';
 import { live, queryWords, rowMatcher, type Fact, type Meeting } from '../data/wiki';
-import { actionCount, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type Question } from '../data/meetings';
+import { MEETING_CHIPS, actionCount, filterMeetings, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type MeetingChip, type Question } from '../data/meetings';
 import { clock, when } from '../time';
 import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
-import { IconButton } from '../../ui/Button';
+import { Button, Chip, IconButton } from '../../ui/Button';
+import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
-import { save, stored } from '../../ui/util';
+import { save, stored, storedStrings } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { openMeeting, setView, showSnack, useSpotBack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
@@ -25,6 +26,7 @@ import '../../styles/features/meetings.css';
 
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const TOPICS_KEY = 'agentview.meetingTopics';
+const CHIPS_KEY = 'agentview.meetingFilters';
 const SEEN_KEY = 'agentview.meetingTopicsSeen';
 
 export function Avatars({ people, max = 3 }: { people: string[]; max?: number }) {
@@ -167,6 +169,7 @@ function TopicTimeline({ topic, meetings, facts }: { topic: string; meetings: Me
 
 export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const { meetings, facts, store } = useCodex();
+  const snap = useAssistantData();
   const pullRef = useRef<HTMLDivElement>(null);
   const ptr = usePullRefresh(pullRef, () => Promise.all([store.syncNow(), store.syncCalendar()]), true);
   useSpotBack(pullRef, 'meetings');
@@ -175,6 +178,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const [topics, setTopics] = useState(() => stored<string[]>(TOPICS_KEY, []).filter((t) => typeof t === 'string'));
   const [active, setActive] = useState<string[]>([]);
   const [seen, setSeen] = useState(() => stored<Record<string, number>>(SEEN_KEY, {}));
+  const [chips, setChips] = useState(() => MEETING_CHIPS.filter((c) => storedStrings(CHIPS_KEY).includes(c)));
   const [mode, setMode] = useState<'' | 'log' | 'load' | 'week'>('');
   const changeTopics = (next: string[]) => {
     setTopics(next);
@@ -200,6 +204,10 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     save(SEEN_KEY, rest);
     changeTopics(topics.filter((x) => x !== t));
   };
+  const setFilters = (next: MeetingChip[]) => {
+    setChips(next);
+    save(CHIPS_KEY, next);
+  };
   const toggle = (t: string) => {
     if (!active.includes(t)) markSeen(t);
     setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
@@ -207,19 +215,20 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const now = useMinute();
   const said = useTranscriptHits(query);
   const found = useMemo(() => {
-    const tracked = active.length ? mine.filter((m) => trackedTopics(m, active).length) : mine;
+    const filtered = filterMeetings(mine, snap.items, chips, now);
+    const tracked = active.length ? filtered.filter((m) => trackedTopics(m, active).length) : filtered;
     return searchMeetings(tracked, query, said);
-  }, [mine, query, active, said]);
+  }, [mine, snap.items, chips, now, query, active, said]);
   const groups = useMemo(() => groupMeetings(found, now), [found, now]);
   const total = useMemo(() => groups.reduce((n, g) => n + g.rows.length, 0), [groups]);
-  const [shown, more] = useWindow(`${filter}|${query}|${active.join(',')}`);
+  const [shown, more] = useWindow(`${filter}|${query}|${active.join(',')}|${chips.join(',')}`);
   const visible = useMemo(() => capGroups(groups, shown, 'rows'), [groups, shown]);
   const takeNotes = () => {
     const t = Date.now();
     const id = newId();
     const row: Meeting = {
       id, profile: filter === 'personal' ? 'personal' : 'work', version: 0, updated_at: t, deleted: 0, dirty: 1, field_times: '{}',
-      title: 'Notes', starts_at: t, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: '', summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
+      title: 'Notes', starts_at: t, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: '', summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null,
     };
     void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
     setView({ open: rowKey(row) });
@@ -250,10 +259,13 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className="wk-scroll" ref={pullRef}>
         {mode === 'log' ? <Decisions meetings={mine} /> : mode === 'load' ? <Load meetings={mine} now={now} /> : mode === 'week' ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-list">
+          <div className="mt-chips" role="group" aria-label="Filters">
+            {MEETING_CHIPS.map((c) => <Chip key={c} on={chips.includes(c)} aria-pressed={chips.includes(c)} onClick={() => setFilters(chips.includes(c) ? chips.filter((x) => x !== c) : MEETING_CHIPS.filter((x) => x === c || chips.includes(x)))}>{c}</Chip>)}
+          </div>
           <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
             onAdd={addTopic} onRemove={removeTopic} />
           {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
-          {!query && <Upcoming meetings={mine} now={now} />}
+          {!query && !chips.length && <Upcoming meetings={mine} now={now} />}
           {!query && visible.length > 0 && <div className="mt-up-head">Earlier</div>}
           {visible.map((g) => (
             <section key={g.label}>
@@ -262,7 +274,8 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
             </section>
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />
-          {!groups.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
+          {!groups.length && chips.length > 0 && <EmptyState size="md" icon="calendar" title="No meetings match" hint="Try fewer filters" action={<Button size="sm" onClick={() => setFilters([])}>Clear filters</Button>} />}
+          {!groups.length && !chips.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
         </div>}
       </div>
     </div>

@@ -162,6 +162,8 @@ The header has one segmented control, Decisions (the log, filtered by person), L
   tasks and sent mail with no reply after 3 workdays, with Copy nudge and Open. The decision log, Week (with Waiting
   on) and person pages copy as Markdown
 
+Four chips above the topics (Mine for meetings I organise, With actions, Not recorded, Series) narrow the past list together with search and topics, hide Upcoming while on, and are remembered per device; Mine fills from the next calendar import on, so older meetings never match it.
+
 Saved topics filter the list, show a timeline of matching meetings, decisions and claims, and count what is new since
 you last looked. Topics and person pages list questions the meetings left open until you resolve them. Meeting search
 also asks the hub, which keeps each transcript's text, and shows the words around a hit in the transcript; a

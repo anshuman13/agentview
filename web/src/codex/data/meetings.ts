@@ -306,3 +306,21 @@ export function topicTimeline(topic: string, meetings: Meeting[], facts: Fact[],
   ].filter((e) => e.at <= now).sort((a, b) => b.at - a.at);
   return { entries: entries.slice(0, max), fresh: entries.filter((e) => e.at > since).length };
 }
+
+export const MEETING_CHIPS = ['Mine', 'With actions', 'Not recorded', 'Series'] as const;
+export type MeetingChip = (typeof MEETING_CHIPS)[number];
+
+// Past meetings that pass every chip that is on; no chips keeps them all.
+export function filterMeetings(meetings: Meeting[], items: ItemRow[], chips: MeetingChip[], now = Date.now()) {
+  if (!chips.length) return meetings;
+  const series = chips.includes('Series') ? inSeries(meetings) : null;
+  return meetings.filter((m) => {
+    if (chips.includes('Mine') && m.organizer_me !== 1) return false;
+    if (chips.includes('With actions')) {
+      const c = actionCount(items, m);
+      if (!(c.total > c.done || c.review > 0)) return false;
+    }
+    if (chips.includes('Not recorded') && meetingState(m, now) !== 'missing') return false;
+    return !series || series.has(m.profile + m.id);
+  });
+}

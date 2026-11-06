@@ -34,6 +34,7 @@ export type Meeting = Common & {
   tries: number | null;
   room: string | null;
   room_me: number | null;
+  organizer_me: number | null;
   others: string | null;
 };
 

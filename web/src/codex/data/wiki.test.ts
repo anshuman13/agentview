@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
 import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, RETIRE_AFTER, pageClaims, pageStats, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
-import { actionCount, briefFor, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
+import { actionCount, briefFor, filterMeetings, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -94,7 +94,7 @@ describe('meetings', () => {
   const now = new Date(2026, 9, 25, 12).getTime();
   const at = (days: number, hour: number) => new Date(2026, 9, 25 + days, hour).getTime();
   const meeting = (id: string, starts_at: number): Meeting => ({
-    ...common(id), title: id, starts_at, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
+    ...common(id), title: id, starts_at, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null,
   });
   const action = (id: string, meeting_id: string, status: string): ItemRow => ({
     ...common(id), meeting_id, title: id, text: null, source: 'action', source_url: null, people: null, at: null, status, rolls: null, rolled_from: null, rank: null,
@@ -149,7 +149,7 @@ describe('meetings', () => {
 describe('people', () => {
   const meeting = (id: string, startsAt: number, people: string, others: unknown[] = []): Meeting => ({
     ...common(id), title: id, starts_at: startsAt, ends_at: null, people, calendar_url: null, recorded_ms: null, notes: null, summary: null,
-    decisions: null, transcript: null, tries: null, room: null, room_me: null, others: JSON.stringify(others),
+    decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: JSON.stringify(others),
   });
   const ms = [
     meeting('old', 1, 'Ada Lovelace, Bob Ray', [{ who: 'Ada Lovelace', what: 'Send the draft' }, { who: 'Bob Ray', what: 'Book a room' }]),
@@ -183,7 +183,7 @@ describe('people', () => {
 
 describe('priorWith', () => {
   const mtg = (id: string, title: string, startsAt: number, extra: Partial<Meeting> = {}): Meeting => ({
-    ...common(id), title, starts_at: startsAt, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null, ...extra,
+    ...common(id), title, starts_at: startsAt, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null, ...extra,
   });
   const task = (id: string, meetingId: string, status: string): ItemRow => ({
     ...common(id), title: id, text: null, source: 'meeting', source_url: null, people: null, at: null, status, meeting_id: meetingId, rolls: null, rolled_from: null, rank: null,
@@ -221,7 +221,7 @@ describe('priorWith', () => {
 
 describe('seriesOf', () => {
   const mtg = (id: string, title: string, startsAt: number, extra: Partial<Meeting> = {}): Meeting => ({
-    ...common(id), title, starts_at: startsAt, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null, ...extra,
+    ...common(id), title, starts_at: startsAt, ends_at: null, people: null, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null, ...extra,
   });
   const ids = (m: Meeting, all: Meeting[]) => seriesOf([...all, m], m).map((x) => x.id);
   const four = 'Ola, Kari, Per, Eva';
@@ -263,7 +263,7 @@ describe('seriesOf', () => {
 
 describe('briefFor', () => {
   const mtg = (people: string | null, title = 'Planning'): Meeting => ({
-    ...common('next'), title, starts_at: 1000, ends_at: null, people, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
+    ...common('next'), title, starts_at: 1000, ends_at: null, people, calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null,
   });
   const task = (id: string, title: string, extra: Partial<ItemRow> = {}): ItemRow => ({
     ...common(id), title, text: null, source: 'manual', source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...extra,
@@ -305,7 +305,7 @@ describe('briefFor', () => {
 
 describe('seriesRepeats', () => {
   it('lists decisions made again and questions asked again since the previous meeting', () => {
-    const base = { title: 'Planning', ends_at: null, people: null, calendar_url: null, recorded_ms: null, transcript: null, tries: null, room: null, room_me: null, others: null, notes: null };
+    const base = { title: 'Planning', ends_at: null, people: null, calendar_url: null, recorded_ms: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null, notes: null };
     const prev: Meeting = { ...common('p'), ...base, starts_at: 10, decisions: '["Ship Friday","Hire one"]', summary: 'Who owns QA? Budget is fine.' };
     const m: Meeting = { ...common('m'), ...base, starts_at: 20, decisions: '["ship friday ","Cut scope"]', summary: 'Still: who owns QA? What about docs?' };
     expect(seriesRepeats(m, prev)).toEqual({ decisions: ['ship friday '], questions: ['Still: who owns QA?'] });
@@ -315,7 +315,7 @@ describe('seriesRepeats', () => {
 describe('openQuestions', () => {
   it('pulls questions from sentences and from a Questions list, skipping other lines', () => {
     const m: Meeting = {
-      ...common('q1'), title: 'Planning', starts_at: 10, ends_at: null, people: null, calendar_url: null, recorded_ms: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, others: null,
+      ...common('q1'), title: 'Planning', starts_at: 10, ends_at: null, people: null, calendar_url: null, recorded_ms: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null,
       summary: 'Talked pricing. Who owns the rollout?\nAll agreed.',
       notes: '## Questions\n- Budget for Q3\n\n## Next\n- Ship it\nWhen is the review?',
     };
@@ -364,5 +364,32 @@ describe('capped', () => {
   it('keeps 3 rows and counts the rest', () => {
     expect(capped([1, 2, 3, 4])).toEqual({ shown: [1, 2, 3], more: 1 });
     expect(capped([1, 2])).toEqual({ shown: [1, 2], more: 0 });
+  });
+});
+
+describe('filterMeetings', () => {
+  const m = (id: string, title: string, startsAt: number, extra: Partial<Meeting> = {}): Meeting => ({
+    ...common(id), title, starts_at: startsAt, ends_at: startsAt + 1, people: '["Kari"]', calendar_url: null, recorded_ms: null, notes: null, summary: null, decisions: null, transcript: null, tries: null, room: null, room_me: null, organizer_me: null, others: null, ...extra,
+  });
+  const task = (id: string, meetingId: string, status: string): ItemRow => ({
+    ...common(id), title: id, text: null, source: 'meeting', source_url: null, people: null, at: null, status, meeting_id: meetingId, rolls: null, rolled_from: null, rank: null,
+  });
+  const list = [
+    m('cal:a', 'Sync', 10, { organizer_me: 1 }),
+    m('cal:b', 'Sync', 20, { organizer_me: 0, transcript: 'missing' }),
+    m('cal:c', 'Solo', 30, { transcript: 'waiting' }),
+  ];
+  const items = [task('t1', 'cal:a', 'open'), task('t2', 'cal:c', 'done')];
+  const ids = (chips: Parameters<typeof filterMeetings>[2]) => filterMeetings(list, items, chips, 1000).map((x) => x.id);
+  it('keeps what each chip describes', () => {
+    expect(ids([])).toEqual(['cal:a', 'cal:b', 'cal:c']);
+    expect(ids(['Mine'])).toEqual(['cal:a']);
+    expect(ids(['With actions'])).toEqual(['cal:a']);
+    expect(ids(['Not recorded'])).toEqual(['cal:b']);
+    expect(ids(['Series'])).toEqual(['cal:a', 'cal:b']);
+  });
+  it('intersects chips', () => {
+    expect(ids(['Series', 'Not recorded'])).toEqual(['cal:b']);
+    expect(ids(['Mine', 'Not recorded'])).toEqual([]);
   });
 });

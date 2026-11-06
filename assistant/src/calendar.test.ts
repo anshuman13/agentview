@@ -41,6 +41,21 @@ describe('saveMeetings', () => {
   });
 });
 
+describe('saveMeetings organizer', () => {
+  it('stores the organiser, keeps it on null and counts a change as an update', () => {
+    const db = openDb(':memory:');
+    const from = Date.parse('2026-10-26T00:00:00Z'), to = from + 9 * 86400_000;
+    const a = ev('a', '2026-10-27T09:00:00Z');
+    const mine = () => db.prepare("SELECT organizer_me AS o FROM meetings WHERE id = 'cal:a'").get();
+    saveMeetings(db, 'work', [{ ...a, organizer: true }], from, to, 1);
+    expect(mine()).toEqual({ o: 1 });
+    expect(saveMeetings(db, 'work', [{ ...a, organizer: null }], from, to, 2)).toBe(0);
+    expect(mine()).toEqual({ o: 1 });
+    expect(saveMeetings(db, 'work', [{ ...a, organizer: false }], from, to, 3)).toBe(1);
+    expect(mine()).toEqual({ o: 0 });
+  });
+});
+
 describe('syncCalendar', () => {
   it('reports failed profiles and records the import only for the others', async () => {
     const db = openDb(':memory:');
