@@ -22,6 +22,6 @@ For each result with `passed: true`:
 4. `git pull -q --rebase origin main && git push -q`.
 5. Remove the worktree: `git worktree remove --force <path>` and `git branch -D anshuman/build/<slug>`.
 
-For `approved: false` or `passed: false`: leave the worktree, put the slug, the last reviewer issues or tester fixes in the summary for the user, and move on. Do not hand-fix inside the loop; either rerun with a sharper brief or do it yourself in a separate turn.
+A spec the reviewer never approved still gets built, with the open issues passed to the implementer as notes. For `passed: false`: leave the worktree, put the slug and the tester's fixes in the summary for the user, and move on. Do not hand-fix inside the loop; either rerun with a sharper brief or do it yourself in a separate turn.
 
 Finish with set_status: done lists what merged, important lists what did not pass and why.

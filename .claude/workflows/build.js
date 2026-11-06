@@ -39,7 +39,7 @@ async function spec(f) {
   let review = null
   for (let round = 1; round <= specRounds; round++) {
     review = await agent(
-      `Review this spec for AgentView, found at ${path}:\n\n${text}`,
+      `Review round ${round} of ${specRounds}. Spec for AgentView, found at ${path}:\n\n${text}`,
       { label: `review:${f.slug}#${round}`, phase: 'Spec', agentType: 'spec-reviewer', schema: REVIEW })
     if (!review || review.verdict === 'approve') break
     log(`${f.slug}: spec round ${round} revise (${review.issues.length} issues)`)
@@ -47,13 +47,15 @@ async function spec(f) {
       `Feature brief: ${f.brief}\n\nYour spec at ${path} was reviewed. Fix every issue below, rewrite the file and return its full contents.\n\nIssues:\n- ${review.issues.join('\n- ')}`,
       { label: `pm:${f.slug}#${round + 1}`, phase: 'Spec', agentType: 'pm' })
   }
-  return { ...f, path, spec: text, approved: review?.verdict === 'approve', issues: review?.issues ?? [] }
+  const issues = review?.issues ?? []
+  if (review && review.verdict !== 'approve') log(`${f.slug}: building with ${issues.length} open reviewer notes`)
+  return { ...f, path, spec: text, approved: true, notes: issues }
 }
 
 async function build(s) {
-  if (!s.approved) return { ...s, built: false, reason: `spec not approved: ${s.issues.join('; ')}` }
+  const notes = s.notes.length ? `\n\nReviewer notes (apply where they make the spec clearer):\n- ${s.notes.join('\n- ')}` : ''
   let impl = await agent(
-    `Implement this spec. Branch name: anshuman/build/${s.slug}.\n\n${s.spec}`,
+    `Implement this spec. Branch name: anshuman/build/${s.slug}.\n\n${s.spec}${notes}`,
     { label: `impl:${s.slug}`, phase: 'Build', agentType: 'implementer', isolation: 'worktree' })
   let test = null
   for (let round = 1; round <= buildRounds; round++) {
@@ -71,6 +73,6 @@ async function build(s) {
 
 const results = await pipeline(features, spec, build)
 return results.filter(Boolean).map(r => ({
-  slug: r.slug, path: r.path, approved: r.approved, built: r.built,
-  passed: r.test?.verdict === 'pass', impl: r.impl, report: r.test?.report, reason: r.reason,
+  slug: r.slug, path: r.path, notes: r.notes,
+  passed: r.test?.verdict === 'pass', impl: r.impl, report: r.test?.report, fixes: r.test?.fixes,
 }))

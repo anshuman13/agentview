@@ -32,6 +32,7 @@ Only things the code cannot answer. Prefer picking a sensible default and statin
 ```
 
 Rules:
+- Under 40 lines. No test recipes, scratch hub setup or code snippets: the implementer and tester know how to test; you say what must be true.
 - Small. One feature, one diff a reviewer reads in ten minutes. Split and say so if the brief is bigger.
 - Match existing patterns: reuse the store, hub job, shared types and design tokens the code already has. Name them.
 - No new dependencies unless the brief demands one.
