@@ -127,6 +127,9 @@ export function priorWith(meeting: Meeting, meetings: Meeting[], items: ItemRow[
     .map((m) => ({ meeting: m, decisions: listOf(m.decisions), open: actionsOf(items, m).filter((r) => r.status === 'open') }));
 }
 
+// The first `max` rows and how many were left out.
+export const capped = <T,>(rows: T[], max = 3) => ({ shown: rows.slice(0, max), more: Math.max(0, rows.length - max) });
+
 const MONTH = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?';
 const SERIES_NOISE = new RegExp(`\\([^)]*\\d[^)]*\\)|\\d{4}-\\d{2}-\\d{2}|\\b${MONTH}\\s*\\d{1,2}\\b|\\b\\d{1,2}\\s*${MONTH}|#\\s*\\d+|\\b\\d+\\b`, 'g');
 export const seriesTitle = (t: string | null) => (t ?? '').toLowerCase().replace(SERIES_NOISE, ' ').replace(/\s+/g, ' ').trim();

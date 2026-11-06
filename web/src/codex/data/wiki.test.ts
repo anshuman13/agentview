@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
 import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, RETIRE_AFTER, pageClaims, pageStats, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
-import { actionCount, briefFor, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesRepeats, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
+import { actionCount, briefFor, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesRepeats, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -348,5 +348,12 @@ describe('staleFacts', () => {
     const meeting = { ...common('m'), title: 'Hiring sync', starts_at: 190 * day, summary: null, decisions: null } as unknown as Meeting;
     expect(staleFacts(fs, ps, [], now).map((f) => f.id)).toEqual(['old', 'hire']);
     expect(staleFacts(fs, ps, [meeting], now).map((f) => f.id)).toEqual(['old']);
+  });
+});
+
+describe('capped', () => {
+  it('keeps 3 rows and counts the rest', () => {
+    expect(capped([1, 2, 3, 4])).toEqual({ shown: [1, 2, 3], more: 1 });
+    expect(capped([1, 2])).toEqual({ shown: [1, 2], more: 0 });
   });
 });

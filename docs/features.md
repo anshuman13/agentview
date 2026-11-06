@@ -137,7 +137,7 @@ template last used for the series. A meeting without a transcript is a quiet, mu
 
 The page of an upcoming or running meeting has a Prep section: points to raise with its attendees (each with a Raised tick), what
 they took on last time (earlier meetings of the same profile with the same title or a shared attendee, up to 8 people), my open actions, open questions, and Copy agenda, which copies all of it as a Markdown
-checklist without a model call. Raise on a decision or an open task, and the field on a person page, save a point for
+checklist without a model call. On the card, Last time lists up to 3 open actions and 3 decisions per meeting (+N more), open questions show their meeting's day, and tasks about an attendee are one line each (up to 3 per person); every line is a button that opens its meeting or task. Raise on a decision or an open task, and the field on a person page, save a point for
 the next meeting with that person (picked from the meeting's attendees and recent ones); a point waits for the first
 meeting with them after it was raised and counts as raised once that meeting ends. Points stay out of Search.
 
