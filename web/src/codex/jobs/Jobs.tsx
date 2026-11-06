@@ -44,7 +44,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
             <div className="mt-rows">
               {jobs.map((j) => {
                 const meta = rowMeta(j, runs, now);
-                const last =runsOf(runs, j)[0];
+                const last = runsOf(runs, j)[0];
                 return (
                   <div key={rowKey(j)} role="button" tabIndex={0} className={`mt-row jb-row${j.enabled ? '' : ' off'}`} onClick={() => setView({ open: rowKey(j) })} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setView({ open: rowKey(j) }); } }}>
                     <span className="mt-body">

@@ -17,7 +17,7 @@ export const SNOOZES: { label: string; at: (now: Date, profile?: Profile) => num
   { label: 'Next week', at: (now) => at(now, ((8 - now.getDay()) % 7) || 7, 9) },
 ];
 
-const DATE_RE = /\b(today|tomorrow|tmrw|next week|(?:on )?(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?)\b/i;
+const DATE_RE = /\b(today|tomorrow|tmrw|next week|end of (?:the )?week|eow|(?:on )?next (?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?|(?:on )?(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?)\b/i;
 // True when the text names a day or a relative time, not only a time of day.
 export const hasDay = (text: string) => DATE_RE.test(text) || REL_RE.test(text);
 const PART_RE = /\b(?:this |in the )?(morning|noon|lunch|afternoon|evening|tonight)\b/i;
@@ -26,6 +26,17 @@ const REL_RE = /\b(?:in\s+(an?|one|half an?|\d+)\s*(minutes?|mins?|m|hours?|hrs?
 const PARTS: Record<string, number> = { morning: 9, noon: 12, lunch: 12, afternoon: 14, evening: 19, tonight: 19 };
 const UNIT: Record<string, number> = { m: 60_000, h: 3600_000 };
 const DAY_UNIT: Record<string, number> = { d: 1, w: 7 };
+
+const clock = (t: RegExpExecArray, hint: number | null) => {
+  let h = Number(t[1]);
+  const minute = Number(t[2] ?? 0);
+  if (h > 23 || minute > 59) return null;
+  const ampm = t[3]?.toLowerCase();
+  if (ampm === 'pm' && h < 12) h += 12;
+  if (ampm === 'am' && h === 12) h = 0;
+  if (!ampm && hint != null && hint >= 12 && h < 12) h += 12;
+  return { h, minute };
+};
 
 export type Span = [number, number];
 export type When = { at: number | null; spans: Span[] };
@@ -42,20 +53,39 @@ export function parseWhen(text: string, now = new Date()): When | null {
     const amount = /^half/i.test(n) ? 0.5 : /^(an?|one)$/i.test(n) ? 1 : Number(n);
     const key = unit === 'm' || unit.startsWith('min') ? 'm' : unit[0];
     const target = new Date(now);
-    if (key in DAY_UNIT && Number.isInteger(amount * DAY_UNIT[key])) target.setDate(target.getDate() + amount * DAY_UNIT[key]);
+    const spans = [span(r)];
+    if (key in DAY_UNIT && Number.isInteger(amount * DAY_UNIT[key])) {
+      target.setDate(target.getDate() + amount * DAY_UNIT[key]);
+      const rest = text.slice(r.index + r[0].length);
+      const t = TIME_RE.exec(rest);
+      if (t && (t[2] || t[3] || /^(at|kl)/i.test(t[0])) && rest.slice(0, t.index).trim() === '') {
+        const c = clock(t, null);
+        if (!c) return null;
+        spans.push(span(t, r.index + r[0].length));
+        return { at: new Date(target.getFullYear(), target.getMonth(), target.getDate(), c.h, c.minute).getTime(), spans };
+      }
+    }
     else if (key in DAY_UNIT) target.setTime(now.getTime() + amount * DAY_UNIT[key] * 86_400_000);
     else target.setTime(now.getTime() + amount * UNIT[key]);
-    return { at: Math.ceil(target.getTime() / 60_000) * 60_000, spans: [span(r)] };
+    return { at: Math.ceil(target.getTime() / 60_000) * 60_000, spans };
   }
   const d = DATE_RE.exec(text);
   const p = PART_RE.exec(text);
   let days: number | null = null;
+  let eow = false;
   let hour: number | null = p ? PARTS[p[1].toLowerCase()] : null;
   if (d) {
     const w = d[1].toLowerCase().replace(/^on /, '');
     if (w === 'today') days = 0;
     else if (w === 'tomorrow' || w === 'tmrw') days = 1;
     else if (w === 'next week') days = ((8 - now.getDay()) % 7) || 7;
+    else if (w === 'eow' || w.startsWith('end of')) {
+      eow = true;
+      days = now.getDay() === 0 ? -2 : 5 - now.getDay();
+    } else if (w.startsWith('next ')) {
+      const i = WEEKDAYS.findIndex((n) => n.startsWith(w.slice(5, 8)));
+      days = (((8 - now.getDay()) % 7) || 7) + ((i + 6) % 7);
+    }
     else {
       const i = WEEKDAYS.findIndex((n) => n.startsWith(w.slice(0, 3)));
       days = ((i - now.getDay() + 7) % 7) || 7;
@@ -70,15 +100,15 @@ export function parseWhen(text: string, now = new Date()): When | null {
   const spans: Span[] = [d, p].filter((m): m is RegExpExecArray => !!m).map((m) => span(m));
   let minute = 0;
   if (timed && t) {
-    let h = Number(t[1]);
-    minute = Number(t[2] ?? 0);
-    if (h > 23 || minute > 59) return null;
-    const ampm = t[3]?.toLowerCase();
-    if (ampm === 'pm' && h < 12) h += 12;
-    if (ampm === 'am' && h === 12) h = 0;
-    if (!ampm && hour != null && hour >= 12 && h < 12) h += 12;
-    hour = h;
+    const c = clock(t, hour);
+    if (!c) return null;
+    hour = c.h;
+    minute = c.minute;
     spans.push(span(t, offset));
+  }
+  if (eow) {
+    hour ??= 17;
+    if (at(now, days ?? 0, hour, minute) <= now.getTime()) days = (days ?? 0) + 7;
   }
   if (hour == null) {
     if (days === 0) return { at: null, spans };

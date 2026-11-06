@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { edited, isQuestion, latestDigest, latestRunByJob, moved, newCapture, nextNine, parseWhen, split, splitTitle, staleTasks, stripWhen } from './engine';
+import { edited, hasDay, isQuestion, latestDigest, latestRunByJob, moved, newCapture, nextNine, parseWhen, split, splitTitle, staleTasks, stripWhen } from './engine';
 import { rowToChange, type ItemRow } from './sync';
 
 const now = new Date(2026, 9, 26, 17, 3, 20);
 const local = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m).getTime();
-const read = (s: string) => {
-  const w = parseWhen(s, now);
+const read = (s: string, at = now) => {
+  const w = parseWhen(s, at);
   return { at: w?.at, title: stripWhen(s, w) };
 };
 
@@ -35,6 +35,59 @@ describe('parseWhen', () => {
     expect(read('call at 10pm').at).toBe(local(26, 22));
     expect(read('standup 9').at).toBeUndefined();
     expect(read('call at 9').at).toBe(local(27, 9));
+  });
+
+  it('reads next weekday', () => {
+    expect(read('call bank next tue')).toEqual({ at: local(34, 9), title: 'call bank' });
+    expect(read('tue').at).toBe(local(27, 9));
+    expect(read('next tue', new Date(2026, 9, 31, 12)).at).toBe(local(34, 9));
+    expect(read('next tue', new Date(2026, 10, 1, 12)).at).toBe(local(34, 9));
+    expect(read('next mon', new Date(2026, 10, 1, 12)).at).toBe(local(33, 9));
+    expect(read('next mon', new Date(2026, 9, 30, 12)).at).toBe(local(33, 9));
+    expect(read('next monday').at).toBe(local(33, 9));
+    expect(read('next sun').at).toBe(local(39, 9));
+    expect(read('next tue', new Date(2026, 9, 27, 10)).at).toBe(local(34, 9));
+    expect(read('call on next tue')).toEqual({ at: local(34, 9), title: 'call' });
+    expect(read('finish by next tue')).toEqual({ at: local(34, 9), title: 'finish by' });
+    expect(read('prep slides next tue 3pm')).toEqual({ at: local(34, 15), title: 'prep slides' });
+    expect(read('next tue at 15:30').at).toBe(local(34, 15, 30));
+    expect(read('next tue morning').at).toBe(local(34, 9));
+    expect(read('next tue 25:00').at).toBeUndefined();
+    expect(hasDay('prep next tue')).toBe(true);
+    expect(hasDay('report end of week')).toBe(true);
+  });
+
+  it('reads end of week', () => {
+    expect(read('end of week').at).toBe(local(30, 17));
+    expect(read('report eow')).toEqual({ at: local(30, 17), title: 'report' });
+    expect(read('end of the week').at).toBe(local(30, 17));
+    expect(read('end of week 3pm').at).toBe(local(30, 15));
+    expect(read('end of week morning').at).toBe(local(30, 9));
+    for (const d of [new Date(2026, 9, 30, 18), new Date(2026, 9, 31, 12), new Date(2026, 10, 1, 12)]) expect(read('end of week', d).at).toBe(local(37, 17));
+    const fri16 = new Date(2026, 9, 30, 16);
+    expect(read('end of week', fri16).at).toBe(local(30, 17));
+    expect(read('end of week 3pm', fri16).at).toBe(local(37, 15));
+    expect(read('end of week morning', new Date(2026, 9, 30, 10)).at).toBe(local(37, 9));
+    expect(read('end of week 3pm', new Date(2026, 9, 30, 10)).at).toBe(local(30, 15));
+  });
+
+  it('reads a time after a day span', () => {
+    expect(read('report in 3 days 3pm')).toEqual({ at: local(29, 15), title: 'report' });
+    expect(read('pay rent in 2 days').at).toBe(local(28, 17, 4));
+    expect(read('in a week 3pm').at).toBe(local(33, 15));
+    expect(read('x in 3 days morning')).toEqual({ at: local(29, 17, 4), title: 'x morning' });
+    expect(read('x in 3 days 5 items')).toEqual({ at: local(29, 17, 4), title: 'x 5 items' });
+    expect(read('call in 2 hours 3pm')).toEqual({ at: local(26, 19, 4), title: 'call 3pm' });
+    expect(read('water plants in half a day 3pm')).toEqual({ at: local(27, 5, 4), title: 'water plants 3pm' });
+    expect(read('x in 3 days 15:30')).toEqual({ at: local(29, 15, 30), title: 'x' });
+    expect(read('x in 3 days at 25:00').at).toBeUndefined();
+    expect(read('x in 3 days 25:00').at).toBeUndefined();
+    expect(read('next tue in 3 days')).toEqual({ at: local(29, 17, 4), title: 'next tue' });
+    expect(read('next week').at).toBe(local(33, 9));
+  });
+
+  it('leaves other text alone', () => {
+    for (const s of ['next', 'end of the month', 'eowyn', 'buy 3 days of food']) expect(read(s)).toEqual({ at: undefined, title: s });
   });
 
   it('reads parts of the day', () => {

@@ -83,7 +83,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 - Each day (Today, then Mon 2 Nov and so on) splits its tasks under small Anytime, Morning (before 12:00), Afternoon (before 17:00) and Evening headers with counts, keeping the manual order inside each
 - Closed task rows are calm like TickTick: a check circle coloured by profile (blue Work, magenta Personal), the title (up to two lines), and on the right only an exact time such as 14:30 (none for the 09:00 and 19:00 slots, Nd late in red for overdue) with the repeat icon and checklist count when they apply; the source, people, Replied and the estimate show on the task page. Notes keep a preview line
 - Today ends with an Add task button and later days with a small + (its dot switches between work and personal when both are shown), which takes times like
-  "friday 10" and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
+  "friday 10" (also "next tue 3pm", "end of week" or "eow" for Friday 17:00, and "in 3 days 3pm") and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day
 - On the phone a round blue + floats at the bottom right of Tasks, like TickTick. A tap opens a quick-add sheet with the title, a description,
   a date button, a Work/Personal toggle (when both are shown) and send; Enter or send saves and keeps the sheet open for the next task.
   Typed times like "friday 10" still work when no date is picked. The flag sets High, Medium or Low priority, the tag button
