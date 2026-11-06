@@ -8,6 +8,7 @@ import { withEstimate } from './data/plan';
 import type { Profile } from './data/sync';
 import { Back } from '../app/back';
 import { Icon } from '../ui/Icon';
+import { Menu } from '../ui/Menu';
 import { haptic } from '../ui/haptic';
 import { readFlag } from '../ui/util';
 import { useSheetDrag } from '../ui/useSheetDrag';
@@ -139,6 +140,7 @@ export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: n
   const dictate = useDictation(title, setTitle);
   const busy = useRef(false);
   const field = useRef<HTMLInputElement>(null);
+  const flagBtn = useRef<HTMLButtonElement>(null);
   const profile: Profile = filter !== 'all' ? filter : picked ?? (readFlag('assistant-personal', false) ? 'personal' : 'work');
   const typed = title.trim();
   const add = async () => {
@@ -171,11 +173,11 @@ export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: n
               <Icon name="calendar" />{pick && <span>{pick.at == null ? 'Today' : cap(when(pick.at))}</span>}{pick && pick.cadence !== 'never' && <Icon name="sync" small />}{pick?.remind != null && <Icon name={pick.remind < 0 ? 'bell-slash' : 'bell'} small />}
             </button>
             <span className="as-quick-flagwrap">
-              <button className={`as-quick-tool${priority ? ' on' : ''}`} aria-label="Priority" aria-expanded={flagging} onMouseDown={(e) => e.preventDefault()} onClick={() => setFlagging(!flagging)}><Flag priority={priority} /></button>
+              <button ref={flagBtn} className={`as-quick-tool${priority ? ' on' : ''}`} aria-label="Priority" aria-haspopup="menu" aria-expanded={flagging} onMouseDown={(e) => e.preventDefault()} onClick={() => setFlagging(!flagging)}><Flag priority={priority} /></button>
               {flagging && (
-                <span className="as-quick-pop" role="menu">
-                  {PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={p === priority} onMouseDown={(e) => e.preventDefault()} onClick={() => { setPriority(p); setFlagging(false); haptic('tap'); }}><Flag priority={p} />{l} priority</button>)}
-                </span>
+                <Menu trigger={flagBtn} className="as-tt-menu" onClose={() => setFlagging(false)}>
+                  {PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={p === priority} className="ui-menu-item as-flag-item" onClick={() => { setPriority(p); setFlagging(false); haptic('tap'); field.current?.focus(); }}><Flag priority={p} /><span>{l} priority</span></button>)}
+                </Menu>
               )}
             </span>
             <button className="as-quick-tool" aria-label="Tag" onMouseDown={(e) => e.preventDefault()} onClick={() => { setTitle((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}#`); field.current?.focus(); }}><Icon name="tag" /></button>

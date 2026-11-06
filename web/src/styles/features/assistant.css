@@ -407,9 +407,9 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-meta .as-flag { width: 14px; height: 14px; }
 .as-tag-meta { color: var(--accent-text); }
 .as-quick-flagwrap { position: relative; }
-.as-quick-pop { position: absolute; bottom: calc(100% + var(--sp-4)); left: 0; z-index: var(--z-popover); display: flex; flex-direction: column; min-width: 220px; padding: var(--sp-4) 0; border-radius: var(--radius-sheet); background: var(--raised); box-shadow: var(--shadow-md); }
-.as-quick-pop button, .as-flag-item { display: flex; align-items: center; gap: var(--sp-6); min-height: var(--touch); padding: 0 var(--sp-8); border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--type-body-size); text-align: left; cursor: pointer; }
-.as-quick-pop button[aria-checked='true'], .as-flag-item[aria-checked='true'] { color: var(--accent-text); }
+.as-quick-flagwrap > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }
+.as-flag-item { color: var(--fg); }
+.as-flag-item[aria-checked='true'] { color: var(--accent-text); }
 .as-tt-flag { width: var(--touch); height: var(--touch); }
 .as-tags { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-4); }
 .as-tag { display: inline-flex; align-items: center; gap: var(--sp-2); height: 28px; padding: 0 var(--sp-2) 0 var(--sp-5); border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent-text); font-size: var(--type-subheadline-size); }

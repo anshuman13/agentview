@@ -128,7 +128,7 @@ Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0
 `--sp-4`, body type, `--shape-sm`, state layers as buttons. Danger item last, in `--danger`.
 `<Menu trigger onClose>` with `<MenuItem icon danger href>` and `<MenuSeparator>` (web/src/ui/Menu.tsx,
 components/menus.css). Arrow keys, Home and End move, Esc closes and refocuses the trigger, a press
-outside closes. Status: built; the task page menu uses it, cp-pop stays (it is a listbox).
+outside closes. Status: built; every menu uses it. cp-pop stays (it is a listbox), and `.as-menu` is the drawer hamburger button, not a menu.
 
 ### Row
 Height `--row-h` 40px (`--touch` on coarse pointers), padding `--list-pad`. Leading check or
@@ -209,7 +209,7 @@ How much a list row may carry. The eye should find the one thing to do without r
 
 ## Migration
 
-Done: Summary uses Panel (filter card), and every empty list or report uses EmptyState (the old
-`.as-empty` and `.empty-state` styles are gone). Chips are done: as-chip, cp-chip, mcp-chip and ag-chip use Chip, which takes `tone` (`work`, `personal`, `accent`) and `quiet` (dashed, faint). `mt-add` stays a form, since it is an input row, and uses Chip tokens (height, radius, accent-soft on focus). Next: move the remaining menus (as-menu) to Menu.
+Done: Summary uses Panel (filter card), every empty list or report uses EmptyState (the old
+`.as-empty` and `.empty-state` styles are gone), and the menus use Menu. Chips are done: as-chip, cp-chip, mcp-chip and ag-chip use Chip, which takes `tone` (`work`, `personal`, `accent`) and `quiet` (dashed, faint). `mt-add` stays a form, since it is an input row, and uses Chip tokens (height, radius, accent-soft on focus).
 
 As of 31 Oct 2026 the light and dark themes use Apple's iOS system colours: white or black page, #F2F2F7 or #1C1C1E for cards and chrome, systemBlue accent and work, systemPurple personal, and Apple's Increase Contrast hues for status text in light. Meeting and knowledge icons are neutral.
