@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
-import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, RETIRE_AFTER, pageClaims, pageStats, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { actionCount, briefFor, filterMeetings, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -80,6 +80,27 @@ describe('wiki', () => {
     const groups = pageClaims(dated, 'p1', now);
     expect(groups.map((g) => g.claims.map((c) => c.fact.id))).toEqual([['x3'], ['x2', 'x1']]);
     expect(olderClaims(dated, 'p1', now).map((f) => f.id)).toEqual(['x5', 'x4']);
+  });
+
+  it('lists only live aged claims to confirm, and a confirmed one leaves Older', () => {
+    const now = 10 * RETIRE_AFTER;
+    const old = now - RETIRE_AFTER - 1;
+    const dated = [
+      fact('s1', 'p1', 'One', 'Aged', { at: old }),
+      fact('s2', 'p1', 'One', 'Retired', { at: old, state: 'retired' }),
+      fact('s3', 'p1', 'One', 'Proposed', { at: old, state: 'proposed' }),
+      fact('s4', 'p1', 'One', 'No date', { at: 0 }),
+      fact('s5', 'p1', 'One', 'Recent', { at: now - 10 }),
+      fact('s6', 'p1', 'One', 'No date', { at: null as unknown as number }),
+      fact('s7', 'p1', 'One', 'Replaced', { at: old, superseded_by: 's1' }),
+    ];
+    expect(staleClaims(dated, 'p1', now).map((f) => f.id)).toEqual(['s1']);
+    const confirmed = dated.map((f) => (f.id === 's1' ? { ...f, at: now } : f));
+    expect(staleClaims(confirmed, 'p1', now)).toEqual([]);
+    expect(olderClaims(confirmed, 'p1', now).map((f) => f.id)).toEqual(['s2']);
+    const stale = (rows: Fact[]) => staleFacts(rows, pages, [], now).map((f) => f.id);
+    expect(stale(dated)).toContain('s1');
+    expect(stale(confirmed)).not.toContain('s1');
   });
 
   it('matches every word in pages and current claims', () => {

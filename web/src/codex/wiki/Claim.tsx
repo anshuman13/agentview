@@ -1,9 +1,10 @@
-import { memo, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import { useAssistantStore } from '../data';
 import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki';
 import type { Mentions } from '../data/mentions';
 import { dayLabel } from '../data/dates';
-import { Chip } from '../../ui/Button';
+import { Button, Chip, IconButton } from '../../ui/Button';
+import { Menu, MenuItem } from '../../ui/Menu';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { openMeeting, openTask, showSnack } from '../view';
@@ -12,7 +13,7 @@ import { ClaudeChip, SourceChip } from './Chips';
 import { useReview } from './Review';
 import { shortDate } from './shared';
 
-export const Claim = memo(function Claim({ fact, old, page, flash, mentions }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions }) {
+export const Claim = memo(function Claim({ fact, old, page, flash, mentions, stale }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions; stale?: boolean }) {
   const store = useAssistantStore();
   const review = useReview();
   const proposed = fact.state === 'proposed';
@@ -21,6 +22,8 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions }: {
   const [editing, setEditing] = useState(false);
   const [moreMentions, setMoreMentions] = useState(false);
   const [draft, setDraft] = useState('');
+  const [menu, setMenu] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
   const c = contestOf(fact);
   const startEdit = () => { setDraft(fact.text ?? ''); setEditing(true); };
   const save = () => {
@@ -46,6 +49,13 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions }: {
     const text = `${page}: ${fact.text}${srcs.length ? ` (${srcs.join(', ')}${fact.at ? `, ${shortDate(fact.at)}` : ''})` : ''}`;
     navigator.clipboard?.writeText(text).then(() => showSnack('Claim copied'), () => showSnack('Could not copy'));
   };
+  const confirm = () => {
+    const prev = fact.at;
+    void store.editRow('facts', fact, { at: Date.now() });
+    showSnack('Claim confirmed', () => void store.editRow('facts', fact, { at: prev }));
+  };
+  const retire = () => { void store.editRow('facts', fact, { state: 'retired' }); showSnack('Claim retired', () => void store.editRow('facts', fact, { state: null })); };
+  const pick = (act: () => void) => () => { setMenu(false); act(); };
   return (
     <li className={`wk-claim${c ? ' contested' : ''}${proposed ? ' proposed' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
       <Swipe onRight={proposed ? () => review.approve([fact]) : undefined} onLeft={proposed ? () => review.reject([fact]) : undefined} rightLabel="Approve" leftLabel="Reject" leftIcon="close">
@@ -73,10 +83,26 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions }: {
             </span>
           )}
           {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
+          {stale && <span className="chip">Still true?</span>}
           {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
           <span className="spacer" />
           <span className="wk-claim-acts">
-            {proposed ? (
+            {stale ? (
+              <>
+                <Button variant="tinted" size="sm" onClick={confirm}>Confirm</Button>
+                <span className="wk-stale-more">
+                  <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+                  {menu && (
+                    <Menu trigger={more} onClose={() => setMenu(false)}>
+                      {!editing && <MenuItem icon="edit" onClick={pick(startEdit)}>Edit</MenuItem>}
+                      <MenuItem icon="link" onClick={pick(cite)}>Cite</MenuItem>
+                      {!c && !contesting && <MenuItem icon="report" onClick={pick(() => setContesting(true))}>Contest</MenuItem>}
+                      <MenuItem icon="archive" danger onClick={pick(retire)}>Retire</MenuItem>
+                    </Menu>
+                  )}
+                </span>
+              </>
+            ) : proposed ? (
               <>
                 <span className="wk-proposed">Proposed</span>
                 <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => review.reject([fact])}><Icon name="close" small /></button>
@@ -88,10 +114,10 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions }: {
                 <button className="icon-btn wk-hov" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
                 {fact.state === 'retired'
                   ? <button className="wk-act" title="Show this claim with the current ones again" onClick={() => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); }}><Icon name="history" small /> Restore</button>
-                  : <button className="wk-act wk-hov" title="Move this claim to Older; Claude stops using it" onClick={() => { void store.editRow('facts', fact, { state: 'retired' }); showSnack('Claim retired', () => void store.editRow('facts', fact, { state: null })); }}><Icon name="archive" small /> Retire</button>}
+                  : <button className="wk-act wk-hov" title="Move this claim to Older; Claude stops using it" onClick={retire}><Icon name="archive" small /> Retire</button>}
               </>
             )}
-            {!proposed && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
+            {!proposed && !stale && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
           </span>
         </span>
       </Swipe>

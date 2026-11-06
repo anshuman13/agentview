@@ -146,6 +146,9 @@ export function olderClaims(facts: Fact[], pageId: string | null, now = Date.now
     .sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
 }
 
+// Live claims in Older only because they are past RETIRE_AFTER: the ones to confirm.
+export const staleClaims = (facts: Fact[], pageId: string | null, now = Date.now()) => olderClaims(facts, pageId, now).filter((f) => f.state !== 'retired');
+
 export const factTime = (f: Fact) => Math.max(f.at ?? 0, contestOf(f)?.at ?? 0, f.updated_at);
 
 export type PageStats = { claims: number; contested: number; updated: number };

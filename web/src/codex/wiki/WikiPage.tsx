@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantTable, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
-import { olderClaims, pageClaims, pageStats, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
+import { olderClaims, pageClaims, staleClaims, pageStats, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
 import { mentionsOf, type Mentions } from '../data/mentions';
 import { hasLiveClaims, wikiMarkdown } from '../data/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
@@ -32,6 +32,7 @@ export function WikiPage({ id }: { id: string }) {
   const review = useReview();
   const groups = useMemo(() => pageClaims(facts, pid), [facts, pid]);
   const older = useMemo(() => olderClaims(facts, pid), [facts, pid]);
+  const stale = useMemo(() => new Set(staleClaims(facts, pid).map((f) => f.id)), [facts, pid]);
   const total = useMemo(() => groups.reduce((n, g) => n + g.claims.length, 0), [groups]);
   const [shown, more] = useWindow(String(pid));
   const visible = useMemo(() => capGroups(groups, anchor || allFor === id ? Infinity : shown, 'claims'), [groups, shown, anchor, allFor, id]);
@@ -116,9 +117,10 @@ export function WikiPage({ id }: { id: string }) {
                 <section className="wk-group wk-older">
                   <button className="wk-older-head" onClick={() => setShowOlder((v) => !v)} aria-expanded={showOlder}>
                     <Icon name={showOlder ? 'chevron-down' : 'chevron-right'} small /> Older · {older.length}
+                    {stale.size > 0 && <span className="badge quiet">{stale.size} to confirm</span>}
                     <span>Retired or over 90 days old. Claude does not use these.</span>
                   </button>
-                  {showOlder && <ul className="wk-claims">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page.title ?? ''} flash={flash === f.id} />)}</ul>}
+                  {showOlder && <ul className="wk-claims">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page.title ?? ''} flash={flash === f.id} stale={stale.has(f.id)} />)}</ul>}
                 </section>
               )}
               {!groups.length && !older.length && <div className="wk-none">No claims yet. They appear here as meetings, Slack threads and issues mention {page.title}.</div>}
