@@ -22,6 +22,7 @@ import { Composer, prepText } from './AskBar';
 import { AddSheet } from './AddSheet';
 import { AddTask, TaskRow, UNROLL, useActions } from './Task';
 import { Overview, Review } from './Overview';
+import { WeekStrip } from './WeekStrip';
 import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
 import { useDrag, type Drop } from './drag';
@@ -179,6 +180,15 @@ export function Assistant() {
   for (const d of days) d.rows = d.day == null ? ranked(d.rows) : ranked(d.rows).sort((a, b) => partOf(a) - partOf(b));
   const tomorrow = new Date(now).setHours(24, 0, 0, 0);
   if (drag && !days.some((d) => d.day === tomorrow)) days.splice(1, 0, { key: String(tomorrow), label: 'Tomorrow', day: tomorrow, rows: [] });
+  const chips = Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(now).setHours(24 * i, 0, 0, 0);
+    const g = days.find((d) => (i === 0 ? d.key === 'today' : d.key === String(day)));
+    return { key: g?.key ?? String(day), day, count: g ? g.rows.filter((r) => r.status !== 'done' && !r.deleted).length : 0 };
+  });
+  const jump = (key: string) => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    scroller.current?.querySelector(`[data-day="${key}"]`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  };
   // Dropping sets the order of the day's rows and moves the task to that day.
   function dropRow(row: ItemRow, d: Drop) {
     const target = days.find((x) => x.key === d.section);
@@ -219,7 +229,7 @@ export function Assistant() {
     );
   };
   const section = (d: Day) => (d.rows.length > 0 || drag || d.key === 'today') && (
-    <section key={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
+    <section key={d.key} data-day={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
       <div className={`as-section${d.key === 'today' ? '' : ' later'}`}>{d.label} {d.rows.length > 0 && <span>{d.rows.length}</span>}</div>
       {rows(d.rows, d.key, d.day != null, d.day != null)}
       {d.day != null && !drag && !picked && <AddTask day={d.day} today={startOfDay} filter={filter} />}
@@ -249,6 +259,7 @@ export function Assistant() {
         {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
         {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}
       </header>
+      {list === 'tasks' && ready && query == null && !picked && <WeekStrip chips={chips} today={startOfDay} onJump={jump} />}
       {gate.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
       {calError && <button className="as-error" onClick={() => void retryCalendar()}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 

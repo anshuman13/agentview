@@ -281,6 +281,15 @@ select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-
 .assistant.tasks { --tk-pad: var(--sp-16); --tk-indent: 30px; max-width: calc(732px + 2 * var(--tk-pad)); container: tasks / inline-size; }
 .tasks .as-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
 .tasks .as-head h1 { font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
+.as-week { flex: none; display: flex; gap: var(--sp-2); padding: 0 var(--tk-pad) var(--sp-4); }
+.as-week-chip { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: var(--sp-3) 0; border: 0; border-radius: var(--radius-md); font: inherit; color: var(--fg-strong); background: transparent; cursor: pointer; }
+.as-week-chip.today { background: var(--accent); color: var(--on-accent); }
+.as-week-chip.zero { opacity: 0.45; cursor: default; }
+.as-week-dow { font-size: var(--fs-xs); text-transform: uppercase; }
+.as-week-num { font-size: var(--fs-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.as-week-count { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; opacity: 0.8; }
+.as-week-dot { position: absolute; top: var(--sp-2); right: var(--sp-2); width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--warn); }
+@media (hover: hover) { .as-week-chip:not(.today, .zero):hover { background: var(--hover); } }
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
 .tasks .as-scroll { padding: var(--sp-4) var(--tk-pad) var(--sp-16); gap: var(--sp-8); }
 .tasks .as-scroll section { gap: var(--sp-2); }

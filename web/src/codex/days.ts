@@ -22,3 +22,14 @@ export function moveTo(r: Pick<ItemRow, 'at'>, day: number, today: number) {
   const t = new Date(at);
   return new Date(day).setHours(t.getHours(), t.getMinutes(), 0, 0);
 }
+
+export const HEAVY_MEETINGS = 3;
+export const HEAVY_HOURS = 4;
+
+// True when the day has 3 or more meetings or 4 or more hours of them; a meeting with no end counts no hours. Meetings are already filtered by profile and focus blocks.
+export function heavyDay(meetings: { starts_at: number | null; ends_at: number | null }[], day: number) {
+  const end = new Date(day).setHours(24, 0, 0, 0);
+  const on = meetings.filter((m) => m.starts_at != null && m.starts_at >= day && m.starts_at < end);
+  const ms = on.reduce((n, m) => n + (m.ends_at != null ? Math.max(0, m.ends_at - m.starts_at!) : 0), 0);
+  return on.length >= HEAVY_MEETINGS || ms >= HEAVY_HOURS * 3600000;
+}
