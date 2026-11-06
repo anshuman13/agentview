@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { olderClaims, pageClaims, pageStats, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
+import { hasLiveClaims, wikiMarkdown } from '../data/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { setView, useEscapeBack, useView } from '../view';
+import { copyText, setView, useEscapeBack, useView } from '../view';
 import { AskBar } from './AskBar';
 import { Claim } from './Claim';
 import { PageTile } from './PageTile';
@@ -68,6 +69,7 @@ export function WikiPage({ id }: { id: string }) {
         <button className="icon-btn" title="Back to the wiki" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         <nav className="wk-crumbs"><button onClick={back}>Wiki</button>{section && <><Icon name="chevron-right" small /><span>{section}</span></>}</nav>
         <span className="spacer" />
+        {page && hasLiveClaims(groups) && <button className="btn sm" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={() => copyText(wikiMarkdown(page.title, groups))}><Icon name="copy" small /> Copy</button>}
       </header>
       <div className="wk-scroll">
         {!page ? (
