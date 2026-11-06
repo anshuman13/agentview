@@ -113,7 +113,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 - Search (or /) filters tasks by title, notes, people and tags, Overdue has Move to today with one undo, and tasks not
   dragged into an order sort by due time
 - Focus timer: Start on an open task shows a bar over Codex with the task, the time so far against its estimate, and
-  Stop. Stop adds the whole minutes to the task's time spent, shown as a chip on the task, with an undo, and logs the session (start and length) in the task page's Time log fold (closed by default, newest first, a Remove per session that lowers the time spent with an undo, and an "Earlier or added by hand" line for time not in a session; the +15m, +30m and +1h chips log no session). Marking the
+  Stop. Stop adds the whole minutes to the task's time spent, shown as a chip on the task, with an undo, and logs the session (start and length) in the task page's Time log fold (closed by default, newest first, a Remove per session that lowers the time spent with an undo, and an "Earlier or added by hand" line for time not in a session; the +15m, +30m and +1h chips log no session). A History fold under it (closed, newest first) lists when the status, due date and assignee last changed, one row each with the current value and the time. Marking the
   focused task done or deleting it stops the timer and logs the time the same way. One timer
   runs at a time and survives a reload. The first Do now card, when it is an open task, has Focus, which starts a 25 minute
   timer (Stop while it runs): the bar counts down, a chip in the Overview header shows the time left and opens the task, and

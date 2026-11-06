@@ -25,6 +25,7 @@ import { Check } from './TaskCheck';
 import { afterNextMeeting, estimateMin, minutesText, nextFreeSlot, suggestEstimate, timedMeetings, type Span } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 import { parseLog, removeSession } from './data/timeLog';
+import { historyOf, historyTime } from './data/history';
 import { Fold } from './Fold';
 import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip, RelatedToTask } from './Related';
@@ -204,6 +205,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const logTime = (n: number) => write({ spent: (Number(row.spent) || 0) + n });
   const spent = Number(row.spent) || 0;
   const sessions = parseLog(row.time_log).sort((a, b) => b.at - a.at);
+  const history = historyOf(row);
   const byHand = spent - sessions.reduce((n, s) => n + s.min, 0);
   const removeTime = (id: string, min: number) => {
     if (snap.phase !== 'ready') return showSnack('Unlock Codex to remove the time');
@@ -418,6 +420,11 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
               </div>
             ))}
             {byHand > 0 && <div className="as-tt-log-rest"><span>Earlier or added by hand: {minutesText(byHand)}</span></div>}
+          </div>
+        </Fold>
+        <Fold id="task-history" title="History" count={history.length} remember={false}>
+          <div className="as-tt-hist">
+            {history.map((h) => <Row key={h.field} disabled title={h.title} meta={historyTime(h.at)} />)}
           </div>
         </Fold>
       </div>

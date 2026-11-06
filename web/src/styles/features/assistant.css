@@ -362,6 +362,7 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-tt-log > div { display: flex; align-items: center; gap: var(--sp-6); min-height: 32px; }
 .as-tt-log > div > span:first-child { flex: 1; }
 .as-tt-log-rest { color: var(--fg-faint); }
+.as-tt-hist > .ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
 .as-page .as-edit-checks { margin: 0; gap: var(--sp-2); }
 .as-page .as-edit-checks [role=checkbox], .as-page .as-sub-input { min-height: 40px; font-size: var(--fs-2xl); }
 .as-page .as-edit-read { margin-left: 0; width: 100%; min-height: var(--sp-24); font-size: var(--fs-2xl); }
