@@ -12,6 +12,7 @@
 :is(.mt-rows, .mt-days) .mt-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 :is(.mt-rows, .mt-days) .mt-title .as-prof { margin-left: var(--sp-4); }
 .mt-said { font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+.sr-said .ui-row-meta { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
 .mt-item { position: relative; display: flex; align-items: center; padding-right: var(--list-pad); }
 .mt-item > .ui-row { flex: 1; min-width: 0; }
 .mt-item:last-child > .ui-row::after { display: none; }

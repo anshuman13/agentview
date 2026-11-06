@@ -8,7 +8,7 @@ import { peopleOf, sameName, searchMeetings } from './meetings';
 
 export { snippet };
 
-export const GROUP_CAP = 8;
+export const GROUP_CAP = 5;
 const WIKI_CLAIM_CAP = 30;
 
 export type Hit = { id: string; profile: string; title: string; snippet: string; page?: string | null; when?: string };

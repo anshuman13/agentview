@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from './data';
 import { GROUP_CAP, searchAll, type Group, type Hit } from './data/search';
+import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
+import { Row } from '../ui/Row';
+import { Section } from '../ui/Section';
 import { openMeeting, openTask, setView, useView } from './view';
 import { useTranscriptHits } from './meetings/MeetingList';
 import { live } from './data/wiki';
@@ -10,22 +13,17 @@ import { dayLabel } from './data/dates';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 
-function Hits({ label, group, open, onAll }: { label: string; group: Group; open: (h: Hit) => void; onAll: () => void }) {
+function Hits({ label, group, open, onAll, said }: { label: string; group: Group; open: (h: Hit) => void; onAll: () => void; said?: boolean }) {
   if (!group.total) return null;
   return (
     <section>
-      <div className="as-section">{label} · {group.total}</div>
+      <Section label={label} count={group.total} />
       <div className="mt-days">
         {group.hits.map((h) => (
-          <button key={h.profile + h.id} className="mt-row" onClick={() => open(h)}>
-            <span className="mt-body">
-              <span className="mt-title">{h.title}<span className={`as-prof ${h.profile}`}>{h.profile === 'work' ? 'Work' : 'Personal'}</span></span>
-              {(h.when || h.snippet) && <span className="wk-meta">{h.when && <span>{h.when}</span>}{h.snippet && <span>{h.snippet}</span>}</span>}
-            </span>
-          </button>
+          <Row key={h.profile + h.id} className={said ? 'sr-said' : undefined} title={h.title} meta={[h.profile === 'work' ? 'Work' : 'Personal', h.when, h.snippet].filter(Boolean).join(' \u00b7 ')} onClick={() => open(h)} />
         ))}
       </div>
-      {group.total > group.hits.length && <button className="btn sm" onClick={onAll}>Show {group.total - group.hits.length} more</button>}
+      {group.total > group.hits.length && <Button variant="quiet" size="sm" onClick={onAll}>Show all {group.total}</Button>}
     </section>
   );
 }
@@ -63,7 +61,7 @@ export function Search({ onMenu }: { onMenu: () => void }) {
           <input autoFocus type="search" enterKeyHint="search" value={query} placeholder="Search tasks, meetings, transcripts, wiki and jobs" aria-label="Search" onChange={(e) => setQuery(e.target.value)} />
           <Hits label="Tasks and notes" group={r.tasks} onAll={more('tasks')} open={(h) => (h.page ? openMeeting({ profile: h.profile, id: h.page }) : openTask(h))} />
           <Hits label="Meetings" group={r.meetings} onAll={more('meetings')} open={openMeeting} />
-          <Hits label="Transcripts" group={transcripts} onAll={more('transcripts')} open={openMeeting} />
+          <Hits label="Transcripts" group={transcripts} said onAll={more('transcripts')} open={openMeeting} />
           <Hits label="Wiki" group={r.wiki} onAll={more('wiki')} open={(h) => setView({ list: 'wiki', open: h.page ?? null, anchor: null })} />
           <Hits label="Jobs" group={r.jobs} onAll={more('jobs')} open={(h) => setView({ list: 'jobs', open: key(h) })} />
           {query.trim() && !r.total && !transcripts.total && <EmptyState size="sm" icon="search" title="No matches." />}

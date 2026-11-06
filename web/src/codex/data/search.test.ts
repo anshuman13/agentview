@@ -38,7 +38,8 @@ describe('search', () => {
   it('caps a group and reports its total', () => {
     const items = Array.from({ length: 12 }, (_, i) => item(`n${i}`, 'Budget note'));
     const r = searchAll({ ...data, items }, 'budget');
-    expect(r.tasks.hits).toHaveLength(GROUP_CAP);
+    expect(GROUP_CAP).toBe(5);
+    expect(r.tasks.hits).toHaveLength(5);
     expect(r.tasks.total).toBe(12);
   });
 
