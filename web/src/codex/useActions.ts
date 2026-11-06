@@ -1,4 +1,6 @@
 import { useAssistant } from './data';
+import type { AssistantStore } from './data/store';
+import { plural } from '../ui/util';
 import { atTime, errorText, nextNine } from './data/engine';
 import { dayEnd } from './data/dates';
 import { nextRepeat } from './data/recur';
@@ -15,6 +17,65 @@ export const unrollFor = (at: number | null | undefined, now = Date.now()) => (a
 
 const capturing = new Set<string>();
 
+type BulkStore = Pick<AssistantStore, 'update' | 'capture' | 'snapshot'>;
+export type BulkKind = 'done' | 'tomorrow' | 'snooze' | 'delete';
+const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
+
+// Marks one task done, creating its next repeat; null when that repeat is already being created.
+function markDone(store: BulkStore, r: ItemRow) {
+  stopFocusFor(r);
+  const next = nextRepeat(r, Date.now(), store.snapshot().items);
+  if (!next) {
+    void store.update(r, { status: 'done' });
+    return { next, undo: () => void store.update(r, { status: r.status }) };
+  }
+  const key = r.profile + r.id;
+  if (capturing.has(key)) return null;
+  capturing.add(key);
+  const made = store.capture(`${next.title}\n${next.text}`, 'task', r.profile, next.at).catch((err) => (showSnack(`Next repeat not created: ${errorText(err)}`), null));
+  void Promise.allSettled([made, store.update(r, { status: 'done' })]).then(() => capturing.delete(key));
+  return {
+    next,
+    undo: () => {
+      void store.update(r, { status: r.status });
+      void made.then((n) => n && store.update(n, { deleted: 1 }));
+    },
+  };
+}
+
+// One action on every selected task with one snack and one undo. Undo skips a row that was changed since.
+export function bulkApply(store: BulkStore, rows: ItemRow[], kind: BulkKind, now = Date.now()) {
+  const applied: { r: ItemRow; patch: Patch; undo: (cur: ItemRow) => void }[] = [];
+  for (const r of rows) {
+    if (kind === 'done') {
+      const d = markDone(store, r);
+      if (d) applied.push({ r, patch: { status: 'done' }, undo: d.undo });
+      continue;
+    }
+    const at = kind === 'tomorrow' ? nextNine(new Date(now), r.profile) : snoozeLaterAt(r.at, now, r.profile);
+    const patch: Patch = kind === 'delete' ? { deleted: 1 } : { at, ...(kind === 'tomorrow' ? UNROLL : unrollFor(at, now)) };
+    if (kind === 'delete') stopFocusFor(r);
+    const before = Object.fromEntries(Object.keys(patch).map((k) => [k, r[k as keyof ItemRow]])) as Patch;
+    void store.update(r, patch);
+    applied.push({ r, patch, undo: (cur) => void store.update(cur, before) });
+  }
+  const n = applied.length;
+  if (!n) return;
+  const text = {
+    done: `Done ${plural(n, 'task')}`,
+    tomorrow: `Moved ${plural(n, 'task')} to ${when(nextNine(new Date(now), rows[0].profile), now)}`,
+    snooze: `Snoozed ${plural(n, 'task')}`,
+    delete: `Deleted ${plural(n, 'task')}`,
+  }[kind];
+  showSnack(text, () => {
+    const items = store.snapshot().items;
+    for (const { r, patch, undo } of applied) {
+      const cur = items.find((x) => sameRow(x, r));
+      if (cur && Object.entries(patch).every(([k, v]) => (cur[k as keyof ItemRow] ?? null) === (v ?? null))) undo(cur);
+    }
+  });
+}
+
 export function useActions() {
   const { store } = useAssistant();
   const change = (r: ItemRow, patch: Patch, text: string) => {
@@ -24,18 +85,8 @@ export function useActions() {
   };
   return {
     done: (r: ItemRow) => {
-      stopFocusFor(r);
-      const next = nextRepeat(r, Date.now(), store.snapshot().items);
-      if (!next) return change(r, { status: 'done' }, 'Done');
-      const key = r.profile + r.id;
-      if (capturing.has(key)) return;
-      capturing.add(key);
-      const made = store.capture(`${next.title}\n${next.text}`, 'task', r.profile, next.at).catch((err) => (showSnack(`Next repeat not created: ${errorText(err)}`), null));
-      void Promise.allSettled([made, store.update(r, { status: 'done' })]).then(() => capturing.delete(key));
-      showSnack(`Done · next ${when(next.at)}`, () => {
-        void store.update(r, { status: r.status });
-        void made.then((n) => n && store.update(n, { deleted: 1 }));
-      });
+      const d = markDone(store, r);
+      if (d) showSnack(d.next ? `Done · next ${when(d.next.at)}` : 'Done', d.undo);
     },
     reopen: (r: ItemRow) => change(r, { status: 'open' }, 'Moved back to Today'),
     snooze: (r: ItemRow, at = nextNine(undefined, r.profile)) => change(r, { at, ...unrollFor(at) }, `Snoozed to ${when(at)}`),
@@ -47,6 +98,7 @@ export function useActions() {
       for (const r of rows) void store.update(r, { at: todayAt(r.at, now), ...UNROLL });
       showSnack('Moved to today', () => before.forEach(({ r, ...prev }) => void store.update(r, prev)));
     },
+    bulk: (rows: ItemRow[], kind: BulkKind) => bulkApply(store, rows, kind),
     remove: (r: ItemRow) => {
       stopFocusFor(r);
       change(r, { deleted: 1 }, 'Deleted');

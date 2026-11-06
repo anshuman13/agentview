@@ -19,11 +19,13 @@ function locate(x: number, y: number, key: string, attr: string): Drop | null {
   return { section: el.dataset.drop!, index: i < 0 ? rows.length : i };
 }
 
-// A mouse drags once it moves; a finger drags after holding still, so swipes and scrolling keep working.
-export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: React.RefObject<HTMLElement | null>, attr = 'row') {
+// A mouse drags once it moves; a finger drags after holding still, so swipes and scrolling keep working. A finger released after the hold without moving calls onHold instead of dropping.
+export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: React.RefObject<HTMLElement | null>, attr = 'row', onHold?: (item: T) => void) {
   const [drag, setDrag] = useState<Drag<T> | null>(null);
   const drop = useRef(onDrop);
   drop.current = onDrop;
+  const hold = useRef(onHold);
+  hold.current = onHold;
 
   const start = (item: T, key: string, title: string) => (e: React.PointerEvent) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button, a, input, textarea')) return;
@@ -32,6 +34,7 @@ export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: Reac
     const y0 = e.clientY;
     let pos = { x: x0, y: y0 };
     let on = false;
+    let moved = false;
     let frame = 0;
     const show = () => setDrag({ item, key, title, ...pos, over: locate(pos.x, pos.y, key, attr) });
     const scroll = () => {
@@ -50,6 +53,7 @@ export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: Reac
     };
     const timer = touch ? setTimeout(begin, HOLD) : undefined;
     const move = (x: number, y: number, ev: Event) => {
+      if (Math.hypot(x - x0, y - y0) >= SLOP) moved = true;
       if (!on) {
         if (Math.hypot(x - x0, y - y0) < SLOP) return;
         if (touch) return stop();
@@ -81,7 +85,8 @@ export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: Reac
       setTimeout(() => window.removeEventListener('click', quiet, { capture: true }), 400);
       const over = locate(pos.x, pos.y, key, attr);
       setDrag(null);
-      if (over) drop.current(item, over);
+      if (touch && !moved && hold.current) hold.current(item);
+      else if (over) drop.current(item, over);
     };
     const cancel = () => { stop(); if (on) { active = false; setDrag(null); } };
     window.addEventListener(moveEv, onMove, { passive: false });

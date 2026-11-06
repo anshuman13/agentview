@@ -11,7 +11,10 @@ import { SnackBar } from './SnackBar';
 import { useHubLifecycle } from './useHubLifecycle';
 import type { Patch } from './data/store';
 import { rowKey, type ItemRow } from './data/sync';
+import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
+import { haptic } from '../ui/haptic';
 import { plural } from '../ui/util';
 import { FILTER_LABEL, setView, showSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { when } from './time';
@@ -46,6 +49,7 @@ const ranked = (rs: ItemRow[]) => [...rs].sort((a, b) => (a.rank ?? 1e15) - (b.r
 const PARTS = ['Anytime', 'Morning', 'Afternoon', 'Evening'];
 const partOf = (r: ItemRow) => { const at = atTime(r.at); if (at == null) return 0; const h = new Date(at).getHours(); return h < 12 ? 1 : h < 17 ? 2 : 3; };
 const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
+const pickable = (r: ItemRow) => !r.deleted && (r.status === 'open' || r.status === 'suggested');
 
 function SpotBack({ scroller }: { scroller: React.RefObject<HTMLElement | null> }) {
   useSpotBack(scroller, 'tasks');
@@ -74,9 +78,26 @@ export function Assistant() {
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, [list]);
+  // Selection mode: the keys of the chosen tasks, or null when off.
+  const [picked, setPicked] = useState<Set<string> | null>(null);
+  useEffect(() => setPicked(null), [list, filter, query != null]);
+  useEffect(() => {
+    if (!picked) return;
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setPicked(null);
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [!!picked]);
+  useEffect(() => {
+    const live = new Set(snap.items.filter(pickable).map((r) => r.profile + r.id));
+    setPicked((p) => (p && [...p].some((k) => !live.has(k)) ? new Set([...p].filter((k) => live.has(k))) : p));
+  }, [snap.items]);
   const scroller = useRef<HTMLDivElement>(null);
   const act = useActions();
-  const { drag, start } = useDrag<ItemRow>((row, d) => dropRow(row, d), scroller);
+  const { drag, start } = useDrag<ItemRow>((row, d) => dropRow(row, d), scroller, 'row', (row) => {
+    if (!pickable(row)) return;
+    haptic('tap');
+    setPicked(new Set([row.profile + row.id]));
+  });
   const view = list === 'today' || list === 'tasks';
   const ptr = usePullRefresh(scroller, () => store.syncNow(), view);
   useScrolledHeader(scroller, view);
@@ -171,6 +192,9 @@ export function Assistant() {
     });
     if (at !== undefined) showSnack(`Moved to ${target.label}`, () => act.edit(row, { at: row.at, rank: row.rank, rolls: row.rolls, rolled_from: row.rolled_from }));
   }
+  const toggle = (k: string) => setPicked((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
+  const chosen = picked ? snap.items.filter((r) => pickable(r) && picked.has(r.profile + r.id)) : [];
+  const bulk = (kind: BulkKind) => { act.bulk(chosen, kind); setPicked(null); };
   const rows = (rs: ItemRow[], key?: string, droppable = true, parts = false) => {
     const over = key && droppable && drag?.over?.section === key ? drag.over.index : -1;
     const shown = rs.filter((r) => r.profile + r.id !== drag?.key);
@@ -184,7 +208,7 @@ export function Assistant() {
             <Fragment key={k}>
               {part && <div className="as-part">{PARTS[partOf(r)]} <span>{part}</span></div>}
               {line && <div className="as-drop-line" />}
-              <TaskRow row={r} inDay={parts} onOpen={() => setView({ open: rowKey(r) })} onGrab={key ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
+              <TaskRow row={r} inDay={parts} picking={!!picked} selected={picked?.has(k)} onOpen={() => picked ? pickable(r) && toggle(k) : setView({ open: rowKey(r) })} onGrab={key ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
             </Fragment>
           );
         })}
@@ -197,7 +221,7 @@ export function Assistant() {
     <section key={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
       <div className={`as-section${d.key === 'today' ? '' : ' later'}`}>{d.label} {d.rows.length > 0 && <span>{d.rows.length}</span>}</div>
       {rows(d.rows, d.key, d.day != null, d.day != null)}
-      {d.day != null && !drag && <AddTask day={d.day} today={startOfDay} filter={filter} />}
+      {d.day != null && !drag && !picked && <AddTask day={d.day} today={startOfDay} filter={filter} />}
     </section>
   );
   const fresh = s.review.filter((r) => now - reviewedSince(r) < DAY);
@@ -219,6 +243,7 @@ export function Assistant() {
           <h1>{heading}</h1>
           {list === 'today' && dayLine && <div className="as-dayline">{dayLine}</div>}
         </div>
+        {list === 'tasks' && query == null && !picked && <button className="icon-btn" title="Select tasks" aria-label="Select tasks" onClick={() => setPicked(new Set())}><Icon name="tasklist" /></button>}
         {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
         {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}
       </header>
@@ -250,7 +275,7 @@ export function Assistant() {
           <>
             {s.overdue.length > 0 && (
               <section>
-                <div className="as-section late">Overdue <span>{s.overdue.length}</span><button className="as-section-btn" onClick={moveOverdue}>Move to today</button></div>
+                <div className="as-section late">Overdue <span>{s.overdue.length}</span>{!picked && <button className="as-section-btn" onClick={moveOverdue}>Move to today</button>}</div>
                 {rows(s.overdue, 'overdue', false)}
               </section>
             )}
@@ -278,13 +303,22 @@ export function Assistant() {
             )}
           </>
         )}
-        {list === 'tasks' && query == null && !drag && <button className="as-fab" aria-label="Add task" title="Add task" onClick={() => setAdding(true)} onContextMenu={(e) => { e.preventDefault(); setAdding(Date.now()); }}><Icon name="add" /></button>}
+        {list === 'tasks' && query == null && !drag && !picked && <button className="as-fab" aria-label="Add task" title="Add task" onClick={() => setAdding(true)} onContextMenu={(e) => { e.preventDefault(); setAdding(Date.now()); }}><Icon name="add" /></button>}
       </div>
       {list === 'tasks' && <SpotBack scroller={scroller} />}
 
       {drag && <div className="as-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}>{drag.title || '(Untitled)'}</div>}
       <SnackBar />
-      <Composer items={snap.items} next={s.next} filter={filter} />
+      {picked ? (
+        <div className="as-bulk" role="toolbar" aria-label="Selected tasks">
+          <span className="as-bulk-n">{picked.size} selected</span>
+          <Button variant="tinted" size="sm" disabled={!chosen.length} onClick={() => bulk('done')}>Done</Button>
+          <Button variant="gray" size="sm" disabled={!chosen.length} onClick={() => bulk('tomorrow')}>Move to tomorrow</Button>
+          <Button variant="gray" size="sm" disabled={!chosen.length} onClick={() => bulk('snooze')}>Snooze</Button>
+          <Button variant="danger" size="sm" disabled={!chosen.length} onClick={() => bulk('delete')}>Delete</Button>
+          <Button variant="plain" size="sm" onClick={() => setPicked(null)}>Cancel</Button>
+        </div>
+      ) : <Composer items={snap.items} next={s.next} filter={filter} />}
       {adding !== false && <AddSheet filter={filter} voice={typeof adding === 'number' ? adding : undefined} onClose={() => setAdding(false)} />}
       {drawerSheet}
     </div>

@@ -100,6 +100,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
   the Description notes, and the checklist as subtask rows ending in "Add subtask", which adds a line inline; rows drag (or Alt+Arrow) to reorder. A sticky bottom bar has the
   repeat and focus buttons; an existing estimate shows as muted text under the notes
 - Swiping left names the day the task moves to, and Snooze offers Today for a task due on a later day
+- Select (header button, or on touch holding a row and releasing without moving) starts selection mode on Tasks: a tap toggles open tasks (done rows and notes cannot be picked), swipe, drag, + and Move to today are off, and a bar shows N selected with Done, Move to tomorrow, Snooze (later of tomorrow 09:00 and the next 09:00 after the due time), Delete and Cancel. Each action applies to all selected, shows one snack and has one Undo that skips rows edited since (for Done on a repeating task it also deletes the new occurrence). Esc, Cancel, switching list or filter and opening search leave the mode
 - Search (or /) filters tasks by title, notes, people and tags, Overdue has Move to today with one undo, and tasks not
   dragged into an order sort by due time
 - Focus timer: Start on an open task shows a bar over Codex with the task, the time so far against its estimate, and

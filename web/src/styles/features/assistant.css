@@ -509,3 +509,9 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 @media (hover: hover) { .assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row:hover { background: var(--hover); } }
 .assistant:not(.tasks) .as-section { padding: 0 var(--sp-8) var(--sp-3); border-bottom: 0; font-size: var(--type-footnote-size); font-weight: 400; line-height: var(--type-footnote-line); }
 .assistant:not(.tasks) .as-section:not(.late, .review, .next, .done, .later) { color: var(--fg-muted); }
+
+.as-row.selected { background: var(--accent-soft); }
+.as-row.selected .as-check { color: var(--accent); }
+.tasks .as-row.selected .as-check.picked, .tasks .as-row.selected .as-check.picked .codicon.icon { color: var(--accent); }
+.as-bulk { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--tk-pad, var(--sp-8)); border-top: 1px solid var(--border); background: var(--raised); }
+.as-bulk-n { margin-right: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
