@@ -1,5 +1,5 @@
 import { clock } from '../../../../shared/util';
-import { dayLabel, dayStart } from './dates';
+import { dayEnd, dayLabel, dayStart } from './dates';
 import type { ItemRow, Profile } from './sync';
 import { decisionLog, factTime, listOf, live, matcher, othersOf, queryWords, rowMatcher, type Decision, type Fact, type Meeting } from './wiki';
 
@@ -237,6 +237,20 @@ export function meetingState(m: Meeting, now = Date.now()): MeetingState {
   if (m.transcript === 'missing') return 'missing';
   if (m.transcript === 'done' || (!m.transcript && m.summary)) return 'done';
   return 'waiting';
+}
+
+// The row's one state badge: Live while it runs, Recorded for a past meeting with a recording or a finished transcript.
+export function meetingBadge(m: Meeting, now: number) {
+  const end = m.ends_at ?? m.starts_at!;
+  if (m.starts_at! <= now && end > now) return 'Live';
+  return end <= now && (m.recorded_ms || meetingState(m, now) === 'done') ? 'Recorded' : null;
+}
+
+// The row's meta line: time (with the weekday beyond today unless noDay), room, then the number of people.
+export function meetingMeta(m: Meeting, now: number, noDay?: boolean) {
+  const n = peopleOf(m).length;
+  const time = `${!noDay && m.starts_at! >= dayEnd(now) ? `${dayLabel(m.starts_at!, true)}, ` : ''}${clock(m.starts_at!)}${m.ends_at ? ` - ${clock(m.ends_at)}` : ''}`;
+  return [time, m.room, n > 0 && `${n} ${n === 1 ? 'person' : 'people'}`].filter(Boolean).join(' · ');
 }
 
 // Meetings whose title, people, notes, summary or decisions hold every word, and those the hub found in the

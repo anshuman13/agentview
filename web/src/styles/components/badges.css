@@ -16,11 +16,11 @@
 .chip.pill { border-radius: var(--radius-pill); }
 .chip.sm { font-size: var(--fs-2xs); line-height: 15px; }
 .chip.agent { --tone: var(--agent); color: var(--tone); border-color: color-mix(in srgb, var(--tone) 50%, transparent); }
-:is(.chip, .mt-count).st-err { --tone: var(--err); }
-:is(.chip, .mt-count).st-warn { --tone: var(--warn); }
-:is(.chip, .mt-count).st-ok { --tone: var(--ok); }
-:is(.chip, .mt-count).st-run { --tone: var(--accent-text); }
-:is(.chip, .mt-count):is(.st-err, .st-warn, .st-ok, .st-run) { color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }
+.chip.st-err { --tone: var(--err); }
+.chip.st-warn { --tone: var(--warn); }
+.chip.st-ok { --tone: var(--ok); }
+.chip.st-run { --tone: var(--accent-text); }
+.chip:is(.st-err, .st-warn, .st-ok, .st-run) { color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }
 button.chip { cursor: pointer; }
 @media (hover: hover) { button.chip:hover { color: var(--fg); background: var(--hover); } }
 

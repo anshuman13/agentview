@@ -2,17 +2,18 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantData, useAssistantStore, useCodex } from '../data';
 import { newId, rowKey } from '../data/sync';
 import { live, queryWords, rowMatcher, type Fact, type Meeting } from '../data/wiki';
-import { MEETING_CHIPS, actionCount, filterMeetings, groupMeetings, meetingState, openQuestions, peopleOf, searchMeetings, topicTimeline, trackedTopics, type MeetingChip, type Question } from '../data/meetings';
-import { clock, when } from '../time';
+import { MEETING_CHIPS, filterMeetings, groupMeetings, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics, type MeetingChip, type Question } from '../data/meetings';
+import { when } from '../time';
 import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
+import { Menu, MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
-import { save, stored, storedStrings } from '../../ui/util';
+import { safeHref, save, stored, storedStrings } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { openMeeting, setView, showSnack, takeWeekReturn, useSpotBack, useView } from '../view';
+import { openMeeting, openMeetingNotes, setView, showSnack, takeWeekReturn, useSpotBack, useView } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
@@ -40,15 +41,6 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
   );
 }
 
-// The badge says where the meeting is: coming up, waiting for its transcript, or what it left for me.
-const Badge = memo(function Badge({ m, now, review, total, done }: { m: Meeting; now: number; review: number; total: number; done: number }) {
-  const state = meetingState(m, now);
-  if (state === 'missing') return <span className="mt-count muted" title="No transcript was found for this meeting">No transcript</span>;
-  if (review > 0) return <span className="mt-count st-warn" title="Suggested actions to keep or dismiss">{review} to review</span>;
-  if (total > done) return <span className="mt-count" title="My actions done"><Icon name="circle-large-outline" small /> {done} of {total}</span>;
-  return null;
-});
-
 const NO_HITS = new Map<string, string>();
 
 // What the hub finds in the transcripts of the filter's profiles for the query, by profile:id with a snippet; empty until it answers.
@@ -74,30 +66,29 @@ export function useTranscriptHits(query: string) {
 }
 
 export const MeetingRow = memo(function MeetingRow({ m, now, said, noDay }: { m: Meeting; now: number; said?: string; noDay?: boolean }) {
-  const snap = useAssistantData();
-  const count = actionCount(snap.items, m);
-  return <MeetingRowView m={m} now={now} said={said} noDay={noDay} review={count.review} total={count.total} done={count.done} />;
-});
-
-const MeetingRowView = memo(function MeetingRowView({ m, now, said, noDay, review, total, done }: { m: Meeting; now: number; said?: string; noDay?: boolean; review: number; total: number; done: number }) {
-  const people = useMemo(() => peopleOf(m), [m]);
-  const live = m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now;
-  const soon = !live && m.starts_at! > now && m.starts_at! - now < 3 * 3600_000;
-  const mins = Math.round((m.starts_at! - now) / 60000);
+  const [menu, setMenu] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  const badge = meetingBadge(m, now);
+  const calendar = m.id.startsWith('cal:') ? safeHref(m.calendar_url) : undefined;
+  const pick = (act: () => void) => () => { setMenu(false); act(); };
   return (
-    <button className={`mt-row${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`} onClick={() => openMeeting(m)}>
-      <span className="mt-tile"><Icon name={m.id.startsWith('cal:') ? 'calendar' : 'edit'} /></span>
-      <span className="mt-body">
-        <span className="mt-title"><ProfileDot profile={m.profile} />{m.title}{live && <span className="mt-badge live">Now</span>}{soon && <span className="mt-badge">in {mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`}</span>}</span>
-        {said && <span className="mt-said" title="From the transcript">{said}</span>}
+    <div className={`mt-item${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`}>
+      <Row
+        title={<><ProfileDot profile={m.profile} />{m.title}</>}
+        meta={said ? <span className="mt-said" title="From the transcript">{said}</span> : meetingMeta(m, now, noDay)}
+        trailing={badge && <span className={`badge${badge === 'Live' ? ' running' : ' quiet'}`}>{badge}</span>}
+        onClick={() => openMeeting(m)}
+      />
+      <span className="mt-more">
+        <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+        {menu && (
+          <Menu trigger={more} onClose={() => setMenu(false)}>
+            {calendar && <MenuItem icon="calendar" href={calendar} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
+            <MenuItem icon="edit" onClick={pick(() => openMeetingNotes(m))}>Notes</MenuItem>
+          </Menu>
+        )}
       </span>
-      <Badge m={m} now={now} review={review} total={total} done={done} />
-      <Avatars people={people} />
-      <span className="mt-span">
-        {!noDay && m.starts_at! >= dayEnd(now) && `${dayLabel(m.starts_at!, true)}, `}
-        {clock(m.starts_at!)}{m.ends_at ? ` - ${clock(m.ends_at)}` : ''}
-      </span>
-    </button>
+    </div>
   );
 });
 

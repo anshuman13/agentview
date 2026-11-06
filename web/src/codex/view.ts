@@ -108,6 +108,14 @@ export function setViewAt(patch: Partial<View>, selector: string) {
 }
 type MeetingRef = { profile: string; id: string };
 export const openMeeting = (m: MeetingRef) => setView({ list: 'meetings', open: rowKey(m), person: null, series: null, tag: null });
+// The meeting whose notes field takes focus when its page opens from the row's Notes item; the page clears it.
+let notesFor: string | null = null;
+export const openMeetingNotes = (m: MeetingRef) => {
+  notesFor = rowKey(m);
+  openMeeting(m);
+};
+export const notesFocusFor = (key: string) => notesFor === key;
+export const clearNotesFocus = () => { notesFor = null; };
 export const openTask = (t: MeetingRef) => setView({ list: 'tasks', open: rowKey(t), person: null, series: null, tag: null });
 export const openSeries = (m: Meeting) => setView({ list: 'meetings', series: seriesKey(m.profile, seriesTitleOf(m)), person: null, tag: null });
 export const openTag = (tag: string) => setView({ list: 'tasks', tag, open: null, person: null, series: null });

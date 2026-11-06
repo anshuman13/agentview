@@ -205,6 +205,9 @@ How much a list row may carry. The eye should find the one thing to do without r
 - Tasks as built: a Tasks row is the title, a meta line (due, then Repeats, checklist count, up to 2 tags, High or
   Medium, none on done rows), the check as Done, a Needs you Badge on suggested tasks and one More Menu
   (Open, Snooze, Tomorrow, Move, Delete). The checklist is read and toggled on the task page.
+- Meetings as built: a meeting row is the title with the profile dot, a meta line (time with the weekday beyond today,
+  room, N people), at most one Badge (Live, Recorded) and one More Menu (Open calendar, Notes). No avatars, tile or
+  count badges; a transcript hit replaces the meta as a 2-line clamp.
 
 ### Overview page
 The day at a glance on a phone. Five blocks in a fixed order, nothing else on the page. Each block is a Section

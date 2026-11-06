@@ -231,8 +231,6 @@ button.as-ctx-btn { width: 100%; padding: 0; border: 0; background: transparent;
 /* Overview */
 /* The empty line hides when any Today block other than the standup button rendered above it. */
 .as-scroll > :not(.ov-empty, .as-next-actions) ~ .ov-empty { display: none; }
-.ov-card .mt-row.past .mt-title { color: var(--fg-muted); }
-.ov-card .mt-avatars { display: none; }
 .ov-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .gl-lines { display: flex; flex-direction: column; gap: var(--sp-2); }
 .gl-line { display: flex; align-items: baseline; gap: var(--sp-3); white-space: nowrap; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; max-width: 100%; }
@@ -508,13 +506,10 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-editor:has(.assistant:not(.tasks, .wide, .locked)) { background: var(--group-page); }
 .assistant:not(.tasks) .as-scroll :is(.ov-follow, .mt-rows.ov-card) { border: 0; border-radius: var(--shape-lg); background: var(--group-card); }
 .assistant:not(.tasks) .as-scroll .ov-follow-row { position: relative; min-height: var(--touch); padding: var(--sp-4) var(--sp-8); }
-.assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row { position: relative; min-height: var(--touch); padding: var(--sp-4) var(--sp-8); }
-.assistant:not(.tasks) .as-scroll :is(.ov-follow-row, .mt-rows.ov-card > .mt-row) + :is(.ov-follow-row, .mt-row) { border-top: 0; }
-.assistant:not(.tasks) .as-scroll :is(.ov-follow-row, .mt-rows.ov-card > .mt-row) + :is(.ov-follow-row, .mt-row)::before {
+.assistant:not(.tasks) .as-scroll .ov-follow-row + .ov-follow-row { border-top: 0; }
+.assistant:not(.tasks) .as-scroll .ov-follow-row + .ov-follow-row::before {
   content: ''; position: absolute; top: 0; right: 0; left: var(--sp-8); height: 1px; background: var(--border);
 }
-.assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row + .mt-row::before { left: calc(var(--sp-8) + 40px + var(--sp-7)); }
-@media (hover: hover) { .assistant:not(.tasks) .as-scroll .mt-rows.ov-card > .mt-row:hover { background: var(--hover); } }
 .assistant:not(.tasks) .as-section { padding: 0 var(--sp-8) var(--sp-3); border-bottom: 0; font-size: var(--type-footnote-size); font-weight: 400; line-height: var(--type-footnote-line); }
 .assistant:not(.tasks) .as-section:not(.late, .review, .next, .done, .later) { color: var(--fg-muted); }
 

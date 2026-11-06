@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
+import { dayLabel } from './dates';
+import { clock } from '../../../../shared/util';
 import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
-import { actionCount, briefFor, filterMeetings, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
+import { actionCount, briefFor, filterMeetings, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingBadge, meetingMeta, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -147,6 +149,22 @@ describe('meetings', () => {
   it('leaves actions assigned to others out of the counts', () => {
     const actions = [{ ...action('a1', 'm', 'open'), assignee: 'Ada Lovelace' }, { ...action('a2', 'm', 'done'), assignee: 'Ada Lovelace' }, { ...action('a3', 'm', 'open'), assignee: null }, { ...action('a4', 'm', 'done'), assignee: '' }, { ...action('a5', 'm', 'suggested'), assignee: 'Ada Lovelace' }];
     expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1, unassigned: 0, dismissed: 0 });
+  });
+
+  it('builds the row meta line and state badge', () => {
+    const m = (patch: Partial<Meeting>) => ({ ...meeting('cal:x', at(0, 9)), ends_at: at(0, 10), ...patch });
+    const time = `${clock(at(0, 9))} - ${clock(at(0, 10))}`;
+    expect(meetingMeta(m({}), now)).toBe(time);
+    expect(meetingMeta(m({ room: 'Room 4', people: 'Ada, Bo' }), now)).toBe(`${time} · Room 4 · 2 people`);
+    expect(meetingMeta(m({ people: 'Ada' }), now)).toBe(`${time} · 1 person`);
+    const next = m({ starts_at: at(1, 9), ends_at: at(1, 10) });
+    expect(meetingMeta(next, now)).toContain(dayLabel(at(1, 9), true));
+    expect(meetingMeta(next, now, true)).toBe(time);
+    expect(meetingBadge(m({ ends_at: at(0, 13) }), now)).toBe('Live');
+    expect(meetingBadge(m({ recorded_ms: 60000 }), now)).toBe('Recorded');
+    expect(meetingBadge(m({ summary: 'x' }), now)).toBe('Recorded');
+    expect(meetingBadge(m({}), now)).toBeNull();
+    expect(meetingBadge(m({ starts_at: at(0, 13), ends_at: at(0, 14), recorded_ms: 1 }), now)).toBeNull();
   });
 
   it('tells where a meeting is between the calendar and its transcript', () => {

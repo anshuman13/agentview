@@ -11,7 +11,7 @@ import { useMinute } from '../split';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
-import { copyText, openSeries, setView, useEscapeBack } from '../view';
+import { clearNotesFocus, copyText, notesFocusFor, openSeries, setView, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
 import { Fold } from '../Fold';
 import { ActionRow, confirmAll } from './ActionRow';
@@ -67,9 +67,10 @@ function StateLine({ m, now }: { m: Meeting; now: number }) {
 }
 
 function Notes({ m }: { m: Meeting }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(() => notesFocusFor(rowKey(m)));
   const [fresh] = useState(!m.notes);
   const box = useRef<HTMLDivElement>(null);
+  useEffect(clearNotesFocus, []);
   useEffect(() => { if (editing) box.current?.querySelector('textarea')?.focus(); }, [editing]);
   if (!m.notes && !editing) return <button className="mt-pending mt-add-notes" onClick={() => setEditing(true)}><Icon name="add" small /> Add notes</button>;
   return (
