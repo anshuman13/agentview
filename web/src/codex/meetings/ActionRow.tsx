@@ -8,6 +8,7 @@ import { PickTime, when } from '../time';
 import { Icon } from '../../ui/Icon';
 import { haptic } from '../../ui/haptic';
 import { copyText, showSnack } from '../view';
+import { Swipe } from '../Swipe';
 import { safeHref } from '../../ui/util';
 import { UNROLL } from '../useActions';
 
@@ -42,7 +43,8 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
   const at = atTime(row.at);
   const accept = () => change({ status: 'open', ...((row.rolls ?? 0) >= STALE_ROLLS && UNROLL) }, 'Added to Today');
   const dismiss = () => change({ status: 'dismissed' }, 'Moved to Not mine');
-  const suggestedRows = () => [...document.querySelectorAll<HTMLElement>('.mt-task.suggested')];
+  const check = () => { haptic(done ? 'tap' : 'success'); change({ status: done ? 'open' : 'done' }, done ? 'Moved back to Today' : 'Done'); };
+  const suggestedRows =() => [...document.querySelectorAll<HTMLElement>('.mt-task.suggested')];
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     const el = e.currentTarget;
@@ -68,10 +70,10 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
     };
     requestAnimationFrame(move);
   };
-  return (
+  const el = (
     <div className={`mt-task ${status}`} {...(status === 'suggested' && { tabIndex: 0, onKeyDown })}>
       {mine && (
-        <button className={`as-check${done ? ' on' : ''}`} title={done ? 'Not done' : 'Done'} aria-label={done ? 'Not done' : 'Done'} onClick={() => { haptic(done ? 'tap' : 'success'); change({ status: done ? 'open' : 'done' }, done ? 'Moved back to Today' : 'Done'); }}>
+        <button className={`as-check${done ? ' on' : ''}`} title={done ? 'Not done' : 'Done'} aria-label={done ? 'Not done' : 'Done'} onClick={check}>
           <Icon name={done ? 'pass-filled' : 'circle-large-outline'} />
         </button>
       )}
@@ -99,4 +101,6 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
       {status === 'dismissed' && <button className="btn sm" onClick={() => change({ status: 'suggested' }, 'Back to review')}>Restore</button>}
     </div>
   );
+  if (status !== 'open') return el;
+  return <Swipe onRight={check} onLeft={() => change({ status: 'dismissed' }, meeting ? 'Moved to Not mine' : 'Dismissed')} leftLabel="Dismiss" leftIcon="close">{el}</Swipe>;
 }

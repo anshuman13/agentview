@@ -123,7 +123,8 @@
 
 .mt-tasks { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); overflow: hidden; }
 .mt-task { display: flex; align-items: flex-start; min-width: 0; gap: var(--sp-5); padding: var(--sp-6) var(--sp-7); }
-.mt-task + .mt-task { border-top: 1px solid var(--border); }
+.mt-task + .mt-task, .mt-tasks > .as-swipe + :is(.as-swipe, .mt-task), .mt-tasks > .mt-task + .as-swipe { border-top: 1px solid var(--border); }
+.mt-tasks .as-swipe:is(.right, .left) .as-swipe-row { background: var(--raised); }
 .mt-task.suggested:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .mt-task.done .mt-hov { display: none; }
 @media (hover: hover) { .mt-task:not(:hover):not(:focus-within) :is(.mt-hov, .mt-date.empty) { opacity: 0; } }
