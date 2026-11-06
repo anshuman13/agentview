@@ -27,6 +27,7 @@ import { AssistantNav, LISTS } from './nav';
 import { useDrag, type Drop } from './drag';
 import { Back } from '../app/back';
 import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
+import { FocusChip } from './focus';
 import { Skeleton } from '../ui/Skeleton';
 import { prefetch } from '../app/lazy';
 import '../styles/features/assistant.css';
@@ -243,6 +244,7 @@ export function Assistant() {
           <h1>{heading}</h1>
           {list === 'today' && dayLine && <div className="as-dayline">{dayLine}</div>}
         </div>
+        {list === 'today' && <FocusChip />}
         {list === 'tasks' && query == null && !picked && <button className="icon-btn" title="Select tasks" aria-label="Select tasks" onClick={() => setPicked(new Set())}><Icon name="tasklist" /></button>}
         {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
         {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}

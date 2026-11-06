@@ -52,7 +52,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   tasks due today flagged High or Medium, then Needs you (overdue tasks, at-risk tasks due by Friday that do not fit the free
   work time, asks and promises to confirm, Slack DMs waiting on me, the latest Slack summary's "Needs you" bullets, each once,
   three or more overdue collapsing into Clear N overdue with Move to today), then the rest of today's tasks by priority and
-  time. With nothing to do today it sums up the next day with tasks instead of listing them: a few sentences on what to get
+  time. The first card, when it is an open task, has a Focus button. With nothing to do today it sums up the next day with tasks instead of listing them: a few sentences on what to get
   done that day, which the hub writes with Haiku when nothing work is open today (again when that day's tasks or meetings
   change, at most hourly), then big counts (tasks with estimated time, meetings with their time, first meeting) and a Start
   with row for the top task, in one card under that day's name. On a weekend with things to do the list is titled When you
@@ -106,7 +106,10 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 - Focus timer: Start on an open task shows a bar over Codex with the task, the time so far against its estimate, and
   Stop. Stop adds the whole minutes to the task's time spent, shown as a chip on the task, with an undo. Marking the
   focused task done or deleting it stops the timer and logs the time the same way. One timer
-  runs at a time and survives a reload
+  runs at a time and survives a reload. The first Do now card, when it is an open task, has Focus, which starts a 25 minute
+  timer (Stop while it runs): the bar counts down, a chip in the Overview header shows the time left and opens the task, and
+  the server sends one push (ntfy, when set) at the end. At zero the bar reads Time's up with Log 25m and Discard; nothing
+  is logged automatically, and an expired timer shows the same after a reload. A timed focus logs at most 25 minutes
 - An open task without a "~30m" estimate in its title gets one suggested as a chip: the average time spent on at least
   two done tasks whose titles share half their words, rounded to 5 minutes. A tap adds it to the title
 - A Repeat menu on an open task sets Never, Daily, Weekdays, Weekly (its due weekday) or Monthly (its due day) by writing or removing the "Repeats:" first line of the notes; other rules show as Custom.

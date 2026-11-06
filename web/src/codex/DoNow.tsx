@@ -15,9 +15,10 @@ import { openMeeting, openTask, setView, showSnack } from './view';
 import { clock, when } from './time';
 import { Flag } from './AddSheet';
 import { Swipe } from './Swipe';
+import { FOCUS_MINUTES, isFocused, startFocus, stopFocus, useFocus } from './focus';
 
 type Act = { label: string; run?: () => void; href?: string };
-type Item = { key: string; swipe?: { done: () => void; later: () => void }; icon: string; title: string; why: string; hot?: boolean; priority?: number | null; open: () => void; act: Act; done?: () => void; doneLabel?: string };
+type Item = { key: string; swipe?: { done: () => void; later: () => void }; icon: string; title: string; why: string; hot?: boolean; priority?: number | null; open: () => void; act: Act; done?: () => void; doneLabel?: string; focus?: ItemRow };
 
 const TOP = 3;
 const MORE = 5;
@@ -38,10 +39,11 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
   const store = useAssistantStore();
   const act = useActions();
   const [all, setAll] = useState(false);
+  const timer = useFocus();
   const done = (r: ItemRow) => () => { haptic('success'); act.done(r); };
   const snooze = (r: ItemRow) => act.snoozeLater(r, now);
   const task = (r: ItemRow, why: string, hot = false): Item => ({
-    key: `t:${r.profile}:${r.id}`, icon: channelOf(r).icon ?? 'circle-large-outline', title: r.title ?? '(Untitled)', why, hot, priority: r.priority,
+    key: `t:${r.profile}:${r.id}`, icon: channelOf(r).icon ?? 'circle-large-outline', title: r.title ?? '(Untitled)', why, hot, priority: r.priority, focus: r,
     open: () => openTask(r), act: { label: 'Done', run: done(r) }, done: () => snooze(r), doneLabel: 'Tomorrow', swipe: { done: done(r), later: () => snooze(r) },
   });
   const timeOf = (r: ItemRow) => { const t = atTime(r.at); return t != null && new Date(t).getHours() + new Date(t).getMinutes() > 0 && t > now ? `at ${clock(t)}` : ''; };
@@ -111,6 +113,9 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
               <div className="fc-why"><Icon name={i.icon} small />{i.priority ? <Flag priority={i.priority} /> : null}<span>{i.why}</span></div>
               <div className="fc-acts">
                 {button(i)}
+                {n === 0 && i.focus && (isFocused(timer, i.focus)
+                  ? <button className="btn btn-sm btn-plain" onClick={(e) => { e.stopPropagation(); stopFocus(); }}>Stop</button>
+                  : <button className="btn btn-sm btn-plain" onClick={(e) => { e.stopPropagation(); startFocus(i.focus!, FOCUS_MINUTES); }}>Focus</button>)}
                 {i.done && <button className="btn btn-sm btn-plain" onClick={(e) => { e.stopPropagation(); i.done!(); }}>{i.doneLabel}</button>}
               </div>
             </div>

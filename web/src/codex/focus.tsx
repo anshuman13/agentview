@@ -2,12 +2,14 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { assistantStore, useAssistantTable } from './data';
 import type { ItemRow, Profile } from './data/sync';
 import { estimateMin, focusTitle, minutesText } from './data/plan';
+import { apiUrl, fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { save, stored } from '../ui/util';
-import { showSnack } from './view';
+import { openTask, showSnack } from './view';
 
 // One focus timer at a time, kept in this browser so it survives a reload.
-type Focus = { profile: Profile; id: string; title: string | null; start: number };
+type Focus = { profile: Profile; id: string; title: string | null; start: number; end?: number };
+const LENGTH = 25;
 const KEY = 'codex-focus';
 const subs = new Set<() => void>();
 let cached: { raw: string | null; value: Focus | null } = { raw: null, value: null };
@@ -30,26 +32,56 @@ const subscribe = (f: () => void) => {
 export const useFocus = () => useSyncExternalStore(subscribe, read);
 export const isFocused = (f: Focus | null, r: ItemRow) => f?.profile === r.profile && f.id === r.id;
 
-// Stopping adds the whole elapsed minutes to the task's spent minutes.
-export function stopFocus() {
+// The server sends one push when a timed focus ends. Offline, the timer still works without it.
+const push = (method: 'POST' | 'DELETE', body?: { title: string | null; end: number }) =>
+  void fetchJson(apiUrl('/api/focus'), { method, ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}) }).catch(() => {});
+
+// Stopping adds the whole elapsed minutes to the task's spent minutes, at most 25 for a timed focus. False when the hub is locked.
+function finish() {
   const f = read();
-  if (!f) return;
+  if (!f) return true;
   const store = assistantStore();
-  if (store.snapshot().phase !== 'ready') return showSnack('Unlock Codex to log the time');
+  if (store.snapshot().phase !== 'ready') return showSnack('Unlock Codex to log the time'), false;
   write(null);
-  const min = Math.round((Date.now() - f.start) / 60_000);
+  const min = Math.min(Math.round((Date.now() - f.start) / 60_000), f.end ? LENGTH : Infinity);
   const row = store.snapshot().items.find((r) => r.profile === f.profile && r.id === f.id && !r.deleted);
   if (!row || min < 1) return showSnack(min < 1 ? 'Under a minute, not logged' : 'Task gone, time not logged');
   const before = row.spent ?? null;
   void store.update(row, { spent: (Number(before) || 0) + min });
   showSnack(`Logged ${minutesText(min)}`, () => void store.update(row, { spent: before }));
+  return true;
+}
+
+export function stopFocus() {
+  if (finish()) push('DELETE');
+}
+
+export function discardFocus() {
+  write(null);
+  push('DELETE');
 }
 
 export const stopFocusFor = (r: ItemRow) => { if (isFocused(read(), r)) stopFocus(); };
 
-export function startFocus(r: ItemRow) {
-  stopFocus();
-  write({ profile: r.profile, id: r.id, title: r.title, start: Date.now() });
+export function startFocus(r: ItemRow, minutes?: number) {
+  finish();
+  const start = Date.now();
+  const end = minutes ? start + minutes * 60_000 : undefined;
+  write({ profile: r.profile, id: r.id, title: r.title, start, ...(end ? { end } : {}) });
+  if (end) push('POST', { title: r.title, end }); else push('DELETE');
+}
+
+export const FOCUS_MINUTES = LENGTH;
+
+function useNow(on: boolean) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (!on) return;
+    setNow(Date.now());
+    const t = setInterval(() => !document.hidden && setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [on]);
+  return now;
 }
 
 const elapsed = (ms: number) => {
@@ -63,18 +95,25 @@ const elapsed = (ms: number) => {
 export function FocusBar() {
   const f = useFocus();
   const items = useAssistantTable('items');
-  const [now, setNow] = useState(Date.now);
-  useEffect(() => {
-    if (!f) return;
-    setNow(Date.now());
-    const t = setInterval(() => !document.hidden && setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [f]);
+  const now = useNow(Boolean(f));
   if (!f) return null;
   const row = items.find((r) => r.profile === f.profile && r.id === f.id);
   const title = row?.title ?? f.title;
   const est = estimateMin(title);
   const ms = now - f.start;
+  if (f.end) {
+    const left = f.end - now;
+    return (
+      <div className={`as-focus ${f.profile}`} role="region" aria-label="Focus timer">
+        <div className="as-focus-fill" style={{ width: `${Math.min(100, (ms / (LENGTH * 60_000)) * 100)}%` }} />
+        <Icon name="watch" small />
+        <span className="as-focus-title">{focusTitle(title).slice(7) || '(Untitled)'}</span>
+        {left > 0
+          ? <><span className="as-focus-time" role="timer">{elapsed(left)}</span><button className="btn sm" aria-label="Stop the focus timer" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button></>
+          : <><span className="as-focus-time over">Time's up</span><button className="btn sm" onClick={stopFocus}>Log {LENGTH}m</button><button className="btn sm" onClick={discardFocus}>Discard</button></>}
+      </div>
+    );
+  }
   const pct = est ? Math.min(100, (ms / (est * 60_000)) * 100) : 0;
   const over = est != null && ms > est * 60_000;
   return (
@@ -86,4 +125,13 @@ export function FocusBar() {
       <button className="btn sm" aria-label="Stop the focus timer" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button>
     </div>
   );
+}
+
+// The time left in a timed focus, in the Overview header; it opens the task.
+export function FocusChip() {
+  const f = useFocus();
+  const now = useNow(Boolean(f?.end));
+  if (!f?.end) return null;
+  const title = focusTitle(f.title).slice(7) || '(Untitled)';
+  return <button className="as-focus-chip" onClick={() => openTask(f)}><Icon name="watch" small /><span role="timer" aria-label={title}>{elapsed(f.end - now)}</span></button>;
 }

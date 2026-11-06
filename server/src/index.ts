@@ -11,6 +11,7 @@ import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerm
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
 import { listSessions } from './agent/claude/sessions.js';
 import { ntfyTopic, post } from './integrations/notify.js';
+import { cancelFocus, scheduleFocus } from './integrations/focus.js';
 import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
 import type { McpServerDef } from './integrations/mcpClient.js';
 import { emptyBin, listBin, removeSession, restoreSession } from './agent/claude/bin.js';
@@ -253,6 +254,15 @@ const server = http.createServer(async (req, res) => {
       const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
       const binned = new Set(bin.map((b) => b.sessionId));
       return json(list.filter((x) => !binned.has(x.sessionId)).map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
+    }
+    if (url.pathname === '/api/focus' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req));
+      const r = scheduleFocus(body?.title, body?.end);
+      return 'error' in r ? json(r, 400) : json(r);
+    }
+    if (url.pathname === '/api/focus' && req.method === 'DELETE') {
+      cancelFocus();
+      return json({ ok: true });
     }
     if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
     if (url.pathname === '/api/repos') return json(await listRepos());
