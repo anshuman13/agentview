@@ -3,14 +3,15 @@ import { getState, send, setUi, useStore } from './store';
 import { toggleNotify } from './notify';
 import { EFFORT_LABEL, EFFORT_LEVELS, PERMISSION_MODES, type SavedSession } from '../../../shared/protocol';
 import { Back } from './back';
-import { openMeeting, openTask, setView, type List } from '../codex/view';
-import { assistantStore } from '../codex/data';
-import { isTask } from '../codex/data/search';
+import { openMeeting, openSearch, openTask, setView, useView, type Filter, type List } from '../codex/view';
+import { assistantStore, codexMeetings } from '../codex/data';
+import { isTask, searchAll } from '../codex/data/search';
 import { live } from '../codex/data/wiki';
 import type { Snapshot } from '../codex/data/store';
 import { rowKey } from '../codex/data/sync';
 import { clock } from '../codex/time';
 import { isBlock } from '../../../shared/util';
+import { Icon } from '../ui/Icon';
 import { Row as UiRow } from '../ui/Row';
 import { LISTS } from '../codex/nav';
 import { PINS_URL, get } from '../sessions/folders';
@@ -146,6 +147,11 @@ export function paletteItems(data: Pick<Snapshot, 'items' | 'meetings' | 'pages'
   ];
 }
 
+export function seeAllCount(data: Pick<Snapshot, 'items' | 'meetings' | 'facts' | 'pages' | 'jobs'>, filter: Filter, q: string): number {
+  const keep = <T extends { profile: string }>(rows: T[]) => rows.filter((x) => filter === 'all' || x.profile === filter);
+  return searchAll({ items: keep(data.items), meetings: keep(codexMeetings(data.meetings)), facts: keep(data.facts), pages: keep(data.pages), jobs: keep(data.jobs) }, q).total;
+}
+
 export function recentItems(items: PaletteItem[], recent: string[], max = MAX_RECENT_ITEMS): ItemHit[] {
   const byKey = new Map(items.map((i) => [itemKey(i), i]));
   return recent.flatMap((k) => byKey.get(k) ?? []).slice(0, max).map((item) => ({ item, hits: [] }));
@@ -209,9 +215,10 @@ function perform(id: string) {
   window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id } }));
 }
 
-type Entry = { row: Row } | { item: ItemHit };
+type Entry = { row: Row } | { item: ItemHit } | { all: number };
 
 const entryGroup = (e: Entry, blank: boolean) => {
+  if ('all' in e) return '';
   if ('item' in e) return blank ? 'Recently opened' : 'Items';
   return e.row.cmd.pinned && blank ? 'pinned chats' : e.row.recent ? 'recently used' : 'other commands';
 };
@@ -233,9 +240,15 @@ export function Palette() {
   const items = useMemo(() => (open ? paletteItems(assistantStore().snapshot()) : []), [open]);
   const blank = !q.trim();
   const itemRows = useMemo(() => (blank ? recentItems(items, recentOpened) : rankItems(items, q, recentOpened)), [items, q, blank, recentOpened]);
+  const { filter } = useView();
+  const total = useMemo(() => {
+    const snap = assistantStore().snapshot();
+    return open && !blank && snap.phase === 'ready' ? seeAllCount(snap, filter, q) : 0;
+  }, [open, blank, filter, q]);
+  const all: Entry[] = total > 0 ? [{ all: total }] : [];
   const entries: Entry[] = blank
     ? [...itemRows.map((h) => ({ item: h })), ...rows.map((r) => ({ row: r }))]
-    : [...rows.map((r) => ({ row: r })), ...itemRows.map((h) => ({ item: h }))];
+    : [...rows.map((r) => ({ row: r })), ...itemRows.map((h) => ({ item: h })), ...all];
 
   useEffect(() => {
     if (!open) return;
@@ -289,7 +302,12 @@ export function Palette() {
     close();
     openItem(i);
   };
-  const enter = (e?: Entry) => e && ('row' in e ? run(e.row.cmd) : runItem(e.item.item));
+  const runAll = () => {
+    close();
+    openSearch(q);
+    command('assistant');
+  };
+  const enter = (e?: Entry) => e && ('row' in e ? run(e.row.cmd) : 'all' in e ? runAll() : runItem(e.item.item));
 
   return (
     <div className="overlay" onClick={close}>
@@ -311,6 +329,13 @@ export function Palette() {
             const label = entryGroup(e, blank);
             const group = label !== (entries[i - 1] ? entryGroup(entries[i - 1], blank) : 'other commands') ? label : '';
             const active = { role: 'option', 'aria-selected': i === idx, className: i === idx ? 'active' : '' } as const;
+            if ('all' in e) {
+              return (
+                <li key="see-all" {...active} className={`${active.className} palette-item`} onClick={runAll}>
+                  <UiRow plain title={`See all ${e.all} results`} meta={`"${q.trim()}"`} trailing={<Icon name="chevron-right" />} />
+                </li>
+              );
+            }
             if ('item' in e) {
               const { item, hits } = e.item;
               return (

@@ -80,7 +80,7 @@ export function useSyncStatus() {
 
 // Meetings without time blocks, filtered once per meetings array for every caller.
 const withoutBlocks = new WeakMap<Snapshot['meetings'], Snapshot['meetings']>();
-const codexMeetings = (all: Snapshot['meetings']) => {
+export const codexMeetings = (all: Snapshot['meetings']) => {
   let out = withoutBlocks.get(all);
   if (!out) withoutBlocks.set(all, (out = all.filter((m) => !isBlock(m.id))));
   return out;

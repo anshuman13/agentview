@@ -4,7 +4,7 @@ import { GOAL, MAX_GOALS, goalHistory, goalProgress, goalsOf, goalVerdict, linke
 import { weekStart } from './data/dates';
 import { atTime } from './data/engine';
 import type { ItemRow } from './data/sync';
-import { attempt, leaveGoals, openTask, openWeek, previousList, showSnack, useEscapeBack, useView } from './view';
+import { attempt, leaveOverlay, openTask, openWeek, previousList, showSnack, useEscapeBack, useView } from './view';
 import { useMinute } from './split';
 import { LISTS } from './nav';
 import { Button, IconButton } from '../ui/Button';
@@ -76,7 +76,7 @@ export function GoalsPage() {
   const now = useMinute();
   const weeks = useMemo(() => goalHistory(items, now, filter === 'all' ? undefined : filter), [items, now, filter]);
   const busy = useRef(false);
-  useEscapeBack(leaveGoals);
+  useEscapeBack(leaveOverlay);
   const reopen = async (g: ItemRow) => {
     if (busy.current) return;
     busy.current = true;
@@ -102,9 +102,9 @@ export function GoalsPage() {
   return (
     <div className="wk narrow">
       <header className="wk-head">
-        <IconButton icon="arrow-left" label="Back" onClick={leaveGoals} />
+        <IconButton icon="arrow-left" label="Back" onClick={leaveOverlay} />
         <div className="as-title-wrap">
-          <button className="as-crumb" onClick={leaveGoals}>{LISTS.find((l) => l.id === previousList())?.label}</button>
+          <button className="as-crumb" onClick={leaveOverlay}>{LISTS.find((l) => l.id === previousList())?.label}</button>
           <h1>{LISTS.find((l) => l.id === 'goals')!.label}</h1>
         </div>
       </header>

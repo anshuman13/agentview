@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCommands, itemKey, matchCommand, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, type PaletteItem } from './Palette';
+import { buildCommands, itemKey, matchCommand, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type PaletteItem } from './Palette';
 
 const models = [{ value: 'claude-opus-4-1', displayName: 'Opus 4.1' }, { value: 'claude-sonnet-4-5', displayName: 'Sonnet 4.5' }];
 const cmds = buildCommands(models);
@@ -128,5 +128,41 @@ describe('palette items', () => {
 
   it('dedupes stored item keys', () => {
     expect(remember(['a', 'b', 'c'], 'c', 5)).toEqual(['c', 'a', 'b']);
+  });
+});
+
+describe('seeAllCount', () => {
+  const base = { deleted: 0, created_at: 0, updated_at: 0 };
+  const data = {
+    items: [
+      { ...base, id: 't1', profile: 'work', title: 'Plan', text: 'zebra in the notes', status: 'open' },
+      { ...base, id: 't2', profile: 'personal', title: 'Buy food', text: 'zebra', status: 'open' },
+    ],
+    meetings: [
+      { ...base, id: 'm1', profile: 'work', title: 'Sync', summary: 'zebra count', starts_at: 1, state: null },
+      { ...base, id: 'block:t1', profile: 'work', title: 'zebra block', starts_at: 1, state: null },
+    ],
+    facts: [],
+    pages: [],
+    jobs: [{ ...base, id: 'j1', profile: 'work', name: 'Digest', prompt: 'list each zebra' }],
+  } as unknown as Parameters<typeof seeAllCount>[0];
+
+  it('counts tasks, meetings and jobs matching the query', () => {
+    expect(seeAllCount(data, 'all', 'zebra')).toBe(4);
+  });
+
+  it('is 0 without a match or with a blank query', () => {
+    expect(seeAllCount(data, 'all', 'giraffe')).toBe(0);
+    expect(seeAllCount(data, 'all', '  ')).toBe(0);
+  });
+
+  it('respects the profile filter', () => {
+    expect(seeAllCount(data, 'personal', 'zebra')).toBe(1);
+    expect(seeAllCount(data, 'work', 'zebra')).toBe(3);
+  });
+
+  it('counts wiki facts', () => {
+    const withFact = { ...data, pages: [{ ...base, id: 'p1', profile: 'work', title: 'Animals', summary: '', state: null }], facts: [{ ...base, id: 'f1', profile: 'work', page_id: 'p1', text: 'The zebra is striped', state: null }] } as unknown as Parameters<typeof seeAllCount>[0];
+    expect(seeAllCount(withFact, 'all', 'zebra')).toBeGreaterThan(4);
   });
 });

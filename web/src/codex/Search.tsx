@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from './data';
 import { GROUP_CAP, searchAll, type Group, type Hit } from './data/search';
-import { Button } from '../ui/Button';
-import { Icon } from '../ui/Icon';
+import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
-import { openMeeting, openTask, setView, useView } from './view';
+import { leaveOverlay, openMeeting, openTask, setView, takeSearchQuery, useEscapeBack, useView } from './view';
 import { useTranscriptHits } from './meetings/MeetingList';
 import { live } from './data/wiki';
 import { dayLabel } from './data/dates';
@@ -28,11 +27,12 @@ function Hits({ label, group, open, onAll, said }: { label: string; group: Group
   );
 }
 
-export function Search({ onMenu }: { onMenu: () => void }) {
+export function Search() {
   const snap = useAssistantData();
   const { meetings } = useCodex();
   const { filter } = useView();
-  const [query, setQuery] = useState('');
+  useEscapeBack(leaveOverlay, { inField: true });
+  const [query, setQuery] = useState(takeSearchQuery);
   const [expanded, setExpanded] = useState<string[]>([]);
   useEffect(() => setExpanded([]), [query]);
   const more = (g: string) => () => setExpanded((e) => [...e, g]);
@@ -53,7 +53,7 @@ export function Search({ onMenu }: { onMenu: () => void }) {
   return (
     <div className="wk narrow">
       <header className="wk-head">
-        <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
+        <IconButton icon="arrow-left" label="Back" onClick={leaveOverlay} />
         <h1>Search</h1>
       </header>
       <div className="wk-scroll">

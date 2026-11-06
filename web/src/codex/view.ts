@@ -5,14 +5,14 @@ import { errorText } from './data/engine';
 import { seriesKey, seriesTitleOf } from './data/meetings';
 import type { Meeting } from './data/wiki';
 
-export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki' | 'goals';
+export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki' | 'goals' | 'search';
 export type Filter = 'all' | Profile;
 export const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', personal: 'Personal' };
 
 // The list, filter and open page, meeting or task are shared by the sidebar on desktop and the drawer on the phone.
 export type View = { list: List; filter: Filter; open: string | null; anchor: string | null; person: string | null; series: string | null; tag: string | null };
 
-// The list open before the current one (never goals), so Back from the goals page lands there.
+// The list open before the current one (never goals or search), so Back from either page lands there.
 let prevList: List = 'today';
 let fromWeek = false;
 let weekReturn = false;
@@ -67,7 +67,7 @@ export const setView = (patch: Partial<View>) => {
   if (next.list !== view.list && patch.tag === undefined) next.tag = null;
   if (next.list !== view.list) {
     spot = null;
-    if (view.list === 'goals') fromWeek = false;
+    if (view.list === 'goals' || view.list === 'search') fromWeek = false;
     else prevList = view.list;
   }
   else if (!depth(view) && depth(next)) saveSpot(view.list);
@@ -84,9 +84,23 @@ export function openWeek() {
   setView({ list: 'meetings' });
 }
 export const previousList = () => prevList;
-export function leaveGoals() {
+export function leaveOverlay() {
   weekReturn = fromWeek && prevList === 'meetings';
   setView({ list: prevList });
+}
+// The query handed to Search by openSearch; seq changes on every call so a mounted Search restarts with it.
+let searchQuery = '';
+let searchSeq = 0;
+export function openSearch(query: string) {
+  searchQuery = query;
+  searchSeq++;
+  setView({ list: 'search', open: null, person: null, series: null, tag: null });
+}
+export const searchRun = () => searchSeq;
+export function takeSearchQuery() {
+  const q = searchQuery;
+  searchQuery = '';
+  return q;
 }
 // True once after Back from the goals page opened in Week, so Meetings starts on Week.
 export function takeWeekReturn() {
@@ -155,13 +169,13 @@ export function hideSnack() {
   snackSubs.forEach((f) => f());
 }
 
-// Escape (unless a field has focus) and the phone back button go back from a wiki page or meeting.
-export function useEscapeBack(back: () => void) {
+// Escape (unless a field has focus, or inField is set) and the phone back button go back from a wiki page or meeting.
+export function useEscapeBack(back: () => void, { inField = false } = {}) {
   useBack(back);
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
-      if (e.key !== 'Escape' || e.defaultPrevented || el?.closest('input, textarea, [contenteditable]')) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || (!inField && el?.closest('input, textarea, [contenteditable]'))) return;
       back();
     };
     window.addEventListener('keydown', k);
