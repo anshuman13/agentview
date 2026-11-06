@@ -84,12 +84,12 @@ describe('runDue', () => {
     applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: now - 3_600_000, fields: { name: 'A', schedule: 'daily 09:00', prompt: 'x', enabled: 1, next_run_at: now - 1 } }]);
     const run = async () => {
       applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: now - 60_000, fields: { next_run_at: now - 60_000 } }]);
-      return { result: 'done', added: [], notified: false };
+      return { result: 'done', added: [], notified: false, cost: null };
     };
     await runDue(db, now, run, async () => true);
     expect((db.prepare("SELECT next_run_at FROM jobs WHERE id = 'a'").get() as { next_run_at: number }).next_run_at).toBe(now - 60_000);
   });
-  const ok = async () => (await new Promise((r) => setTimeout(r, 5)), { result: 'done', added: [], notified: false });
+  const ok = async () => (await new Promise((r) => setTimeout(r, 5)), { result: 'done', added: [], notified: false, cost: null });
   const reply = async (_db: unknown, _jobId: string, _ok: boolean, _output: string) => {};
   const seed = (enabled: number) => {
     const db = openDb(':memory:');
@@ -117,6 +117,12 @@ describe('runDue', () => {
     expect(db.prepare('SELECT status, output FROM runs').all()).toEqual([{ status: 'error', output: 'boom' }]);
     expect(titles.length).toBe(1);
     expect(titles[0].endsWith('failed')).toBe(true);
+    expect(db.prepare('SELECT cost FROM runs').all()).toEqual([{ cost: null }]);
+  });
+  test('a run stores the cost its job reports', async () => {
+    const { db, now } = seed(1);
+    await runDue(db, now, async () => ({ result: 'done', added: [], notified: false, cost: 0.04 }), async () => true, reply);
+    expect(db.prepare('SELECT cost FROM runs').all()).toEqual([{ cost: 0.04 }]);
   });
 });
 
@@ -131,7 +137,7 @@ describe('Slack commands', () => {
     expect(queueCommands(db, [{ text: 'summarise the launch thread', url: dm }], now)).toEqual([]);
     const prompts: string[] = [];
     const posts: [string, string][] = [];
-    const run = async (_db: unknown, job: { prompt: string | null }) => (prompts.push(job.prompt ?? ''), { result: 'Three points: a, b, c', added: [], notified: false });
+    const run = async (_db: unknown, job: { prompt: string | null }) => (prompts.push(job.prompt ?? ''), { result: 'Three points: a, b, c', added: [], notified: false, cost: null });
     const reply = (d: typeof db, id: string, ok: boolean, out: string) => replyToCommand(d, id, ok, out, async (url, text) => (posts.push([url, text]), 'posted'), async () => true);
     await runDue(db, now, run, async () => true, reply);
     await runDue(db, now + 60_000, run, async () => true, reply);

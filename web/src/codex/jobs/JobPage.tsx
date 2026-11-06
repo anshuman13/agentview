@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Job, Run } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { SearchedOutput } from '../../ui/SearchedOutput';
-import { firstLine, useOnUnmount } from '../../ui/util';
-import { ShowMore, useWindow } from '../../ui/useWindow';
+import { Row } from '../../ui/Row';
+import { useOnUnmount } from '../../ui/util';
 import { copyText, setView, showSnack, useEscapeBack } from '../view';
 import { useMinute } from '../split';
 import { nextRun } from '../../../../shared/schedule';
-import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, parseSchedule, queued, runsOf, scheduleOf, useJobs } from './schedule';
+import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, parseSchedule, queued, runMeta, runsOf, scheduleOf, useJobs } from './schedule';
 import { Switch } from './Switch';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
@@ -17,24 +17,25 @@ function CopyOutput({ r }: { r: Run }) {
 }
 
 function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const secs = r.finished_at && r.started_at ? <span>{Math.max(1, Math.round((r.finished_at - r.started_at) / 1000))} s</span> : null;
-  if (latest) {
-    return (
-      <div className="jb-run">
-        <div className="wk-meta"><span><RunStatus r={r} /> {at(r.started_at ?? 0)}</span>{secs}{r.output && <CopyOutput r={r} />}</div>
-        {r.output && <SearchedOutput text={r.output} query={query} setQuery={setQuery} label="Search output" className="jb-output" />}
-      </div>
-    );
-  }
+  const [open, setOpen] = useState(latest);
+  const meta = runMeta(r);
   return (
     <div className="jb-run">
-      <button className="jb-run-head" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <RunStatus r={r} />
-        <span>{at(r.started_at ?? 0)}</span>
-        {!open && <span className="jb-run-line">{firstLine(r.output)}</span>}
-      </button>
-      {open && r.output && <><div className="jb-run-tools"><CopyOutput r={r} /></div><div className="jb-output">{r.output}</div></>}
+      <Row
+        plain={!r.output}
+        leading={<RunStatus r={r} />}
+        title={at(r.started_at ?? 0)}
+        meta={meta || undefined}
+        trailing={<>{r.status === 'error' && <span className="badge">Failed</span>}{r.output && <Icon name={open ? 'chevron-down' : 'chevron-right'} small />}</>}
+        aria-expanded={r.output ? open : undefined}
+        onClick={r.output ? () => setOpen(!open) : undefined}
+      />
+      {open && r.output && (
+        <div className="jb-run-body">
+          <div className="jb-run-tools"><CopyOutput r={r} /></div>
+          {latest ? <SearchedOutput text={r.output} query={query} setQuery={setQuery} label="Search output" className="jb-output" /> : <div className="jb-output">{r.output}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -42,7 +43,6 @@ function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query
 export function JobPage({ j }: { j: Job }) {
   useMinute();
   const { runs, store, enable } = useJobs();
-  const [shown, more] = useWindow(j.id, 5);
   const [name, setName] = useState(j.name ?? '');
   const [prompt, setPrompt] = useState(j.prompt ?? '');
   const [tools, setTools] = useState(j.tools ?? '');
@@ -127,8 +127,7 @@ export function JobPage({ j }: { j: Job }) {
           </section>
           <section className="mt-sec">
             <h2>Runs</h2>
-            {list.slice(0, shown).map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} />)}
-            <ShowMore shown={shown} total={list.length} onMore={more} />
+            {list.length > 0 && <div className="jb-runs">{list.slice(0, 10).map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} />)}</div>}
             {!list.length && <div className="muted small">Not run yet.</div>}
           </section>
         </article>

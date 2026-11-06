@@ -2,13 +2,14 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 
-export function Row({ leading, title, meta, trailing, lines = 1, href, className, ...rest }: Omit<ComponentPropsWithoutRef<'button'>, 'title' | 'children'> & {
+export function Row({ leading, title, meta, trailing, lines = 1, href, plain, className, ...rest }: Omit<ComponentPropsWithoutRef<'button'>, 'title' | 'children'> & {
   leading?: ReactNode;
   title: ReactNode;
   meta?: ReactNode;
   trailing?: ReactNode;
   lines?: 1 | 2;
   href?: string;
+  plain?: boolean;
 }) {
   const cls = cx('ui-row', !!leading && 'has-lead', className);
   const body = (
@@ -21,6 +22,7 @@ export function Row({ leading, title, meta, trailing, lines = 1, href, className
       {trailing && <span className="ui-row-trail">{trailing}</span>}
     </>
   );
+  if (plain) return <div className={cls}>{body}</div>;
   if (href) return <a className={cls} href={href} target="_blank" rel="noreferrer">{body}</a>;
   return <button type="button" className={cls} {...rest}>{body}</button>;
 }

@@ -78,6 +78,7 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
     'Use ask_context to see what my wiki, meetings, Slack decisions and open tasks say about something. Use add_task for anything I need to act on, notify for anything I must see right away, and stop_job once its work is done for good. End with a short plain-text result for a phone notification. Do not use the em dash character.',
   ].join('\n');
   let result = '';
+  let cost: number | null = null;
   for await (const m of ask(account, prompt, {
     model: 'sonnet',
     maxTurns: 30,
@@ -93,9 +94,10 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
     if (m.type === 'result') {
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();
+      cost = m.total_cost_usd;
     }
   }
-  return { result, added, notified };
+  return { result, added, notified, cost };
 }
 
 // Fills in the next run of enabled jobs that have none and returns the jobs that are due. A job that is off has a next
@@ -132,16 +134,18 @@ export async function runDue(db: Database, now = Date.now(), run: typeof runJob 
     let status = 'ok';
     let output = '';
     let notified = false;
+    let cost: number | null = null;
     try {
       const { result, added, ...r } = await run(db, job, notify);
       notified = r.notified;
+      cost = r.cost;
       output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';
     } catch (err) {
       status = 'error';
       output = errText(err);
     }
     const done = Date.now();
-    const changes: Change[] = [{ table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output } }];
+    const changes: Change[] = [{ table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output, cost } }];
     // An edit made during the run (Off, a new schedule, Run now) set next_run_at itself, so it is kept. Its field time
     // comes from the client's clock, so only whether it changed is compared.
     const cur = db.prepare('SELECT schedule, enabled, field_times FROM jobs WHERE id = ? AND profile = ?').get(job.id, job.profile) as { schedule: string | null; enabled: number | null; field_times: string } | null;

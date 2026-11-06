@@ -3,6 +3,7 @@ import type { Job, Run } from '../data/wiki';
 import { clock } from '../time';
 import { dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
+import { money } from '../../ui/util';
 import { useView } from '../view';
 
 export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -42,6 +43,13 @@ export const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && 
 export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
 export const rowMeta = (j: Job, runs: Run[], now: number) => (queued(j, runs, now) ? 'Queued' : !j.enabled ? 'Off' : j.next_run_at ? `Next ${at(j.next_run_at)}` : null);
+
+export function runMeta(r: Run) {
+  if (r.status === 'running') return 'Running';
+  const secs = r.finished_at && r.started_at ? Math.max(1, Math.round((r.finished_at - r.started_at) / 1000)) : 0;
+  const dur = !secs ? '' : secs < 60 ? `${secs} s` : `${Math.floor(secs / 60)} min ${secs % 60} s`;
+  return [dur, r.cost ? money(r.cost) : ''].filter(Boolean).join(' · ');
+}
 
 export function RunStatus({ r }: { r: Run }) {
   const label = r.status === 'running' ? 'Running' : r.status === 'ok' ? 'Succeeded' : 'Failed';
