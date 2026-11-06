@@ -185,3 +185,9 @@ export function standupText(items: ItemRow[], meetings: Meeting[], plan: ItemRow
     section('Blocked', waiting),
   ].join('\n\n');
 }
+
+// The standup for the profile filter, from the overdue and due-today tasks of the Overview.
+export const standupFor = (snap: { items: ItemRow[]; meetings: Meeting[] }, overdue: ItemRow[], dueToday: ItemRow[], filter: 'all' | Profile, now: number) => {
+  const mine = <T extends { profile: Profile }>(rows: T[]) => rows.filter((r) => filter === 'all' || r.profile === filter);
+  return standupText(mine(snap.items), mine(liveRows(snap.meetings)), [...overdue, ...dueToday], now);
+};

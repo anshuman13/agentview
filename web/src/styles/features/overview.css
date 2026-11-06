@@ -51,3 +51,4 @@
 .ov-ask-edit { width: 100%; padding: 0; border: 0; background: transparent; color: var(--on-surface); font: inherit; resize: vertical; }
 .ov-ask-history { display: flex; flex-direction: column; }
 .ov-ask-err { color: var(--err); overflow-wrap: anywhere; }
+.ov-block:not(:has(> :not(.ui-section))) { display: none; }

@@ -1,40 +1,35 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useSyncGate } from './data';
 import { live, type Meeting } from './data/wiki';
-import { meetingTimeLeft } from './data/load';
-import { atTime, latestDigest, latestRunByJob, reviewedSince, staleTasks } from './data/engine';
+import { atTime, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
-import { ago, plural } from '../ui/util';
-import { Row } from '../ui/Row';
 import { dayLabel } from './data/dates';
+import { plural } from '../ui/util';
+import { Section } from '../ui/Section';
+import { Capped, Fold } from './Fold';
+import { Row } from '../ui/Row';
 import { Shutdown } from './Shutdown';
-import { ClaimsToReview } from './overview/ClaimsToReview';
-import { ReplyQueue, replyQueue, staleAsks, STALE_DAYS } from './overview/ReplyQueue';
+import { ReplyQueue, replyQueue, staleAsks } from './overview/ReplyQueue';
 import { NeedsYou, useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { TomorrowCard, useTomorrowCard } from './TomorrowCard';
 import { GoalLines } from './Goals';
-import { standupText } from './data/review';
 import { MorningBrief } from './Brief';
 import { WeeklyReview } from './WeeklyReview';
-import { Capped, Fold } from './Fold';
 import { Icon } from '../ui/Icon';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
-import { copyText, openTask, setView, useView } from './view';
-import { MeetingRow } from './meetings/MeetingList';
+import { openTask, setView, useView } from './view';
 import { clock, when } from './time';
 import { touch } from '../app/touch';
 import type { useSplit } from './split';
 import { NextCard } from './overview/NextCard';
 import { FollowThrough, useFollowThrough } from './overview/FollowThrough';
 import { KeepInTouch, useKeepInTouch } from './overview/KeepInTouch';
-import { JustEnded } from './overview/JustEnded';
 import { SinceLastVisit } from './overview/SinceLastVisit';
 import { Stale } from './overview/Stale';
-import { Chip } from '../ui/Button';
 
 export { Review } from './overview/Review';
 
@@ -59,7 +54,6 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       return r ? [{ j, r }] : [];
     });
   }, [snap.jobs, snap.runs, filter, startOfDay]);
-  const digest = useMemo(() => latestDigest(snap.items, filter), [snap.items, filter]);
   const needs = useNeedsYou(s, now);
   const queue = useMemo(() => replyQueue(s.review, now), [s.review, now]);
   const [onlyStale, setOnlyStale] = useState(false);
@@ -87,12 +81,6 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   // A meeting starting within 15 minutes or running gets the full card; one later in the two hours is a line in Do now.
   const close = next && next.starts_at! - now < 15 * 60_000 ? next : null;
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && soon(m));
-  const fit = (x: { profile: string; deleted?: unknown }) => !x.deleted && (filter === 'all' || x.profile === filter);
-  const slack = snap.chats.some(fit) || snap.briefs.some((b) => fit(b) && b.kind === 'slack');
-  const standup = () => copyText(standupText(snap.items.filter((r) => filter === 'all' || r.profile === filter), live(snap.meetings).filter((m) => filter === 'all' || m.profile === filter), [...s.overdue, ...dueToday], Date.now()), 'Standup copied');
-  const contextCount = reports.length + (digest ? 1 : 0) + (slack ? 1 : 0) + (morning ? 0 : 1);
-  const left = meetingTimeLeft(s.meetingsToday, now, s.endOfDay);
-  const leftText = left >= 60 ? `${Math.floor(left / 60)}h${left % 60 ? String(left % 60).padStart(2, '0') : ''}` : `${left} min`;
   const drag = !touch();
   const dueAt = (r: ItemRow) => {
     const t = atTime(r.at);
@@ -130,46 +118,39 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const card = useTomorrowCard(s, tomorrow, now);
   const tomorrowElsewhere = card.shown || !!nextUp?.tomorrow;
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (tomorrowElsewhere ? 0 : tomorrow.length);
+  const todayShown = todo.length > 0 || !!next || !!nextUp || card.shown;
   const loading = useSyncGate().loading && !snap.items.length;
-  const empty = !loading && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp && !card.shown;
+  const empty = !loading && !reports.length && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp && !card.shown;
   if (loading) return <Skeleton />;
   return (
     <>
-      <GoalLines now={now} />
-      <MorningBrief now={now} />
-      <WeeklyReview now={now} />
-      <ClaimsToReview />
-      {old.length > 0 && !filtered && (
-        <div className="as-group">
-          <Row title={`${plural(old.length, 'ask')} older than ${STALE_DAYS} days`} meta={`oldest ${ago(Math.min(...old.map(reviewedSince)))}`} trailing={<Icon name="chevron-right" small />} onClick={showOld} />
-        </div>
-      )}
-      <ReplyQueue rows={filtered ? old : queue} filtered={filtered} onClear={() => setOnlyStale(false)} />
-      <JustEnded meetings={s.meetingsToday} now={now} />
       {close && (
         <section>
-          <div className="as-section next">Now</div>
+          <Section label="Now" />
           <NextCard m={close} then={s.then && soon(s.then) ? s.then : undefined} carried={s.carried} onPrep={onPrep} />
         </section>
       )}
-      <NeedsYou n={needs} now={now} />
-      <DoNow needs={needs} today={todo} nextUp={card.shown && nextUp?.tomorrow ? null : nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
-      <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} />
-      {card.shown && <TomorrowCard s={s} tasks={tomorrow} now={now} hide={card.hide} />}
-      <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
-      {morning && (
-        <div className="as-next-actions">
-          <button className="btn btn-sm btn-gray" onClick={standup}><Icon name="copy" small /> Copy standup</button>
-        </div>
-      )}
-      {morning && <SinceLastVisit />}
-      {upcoming.length > 0 && (
-        <section>
-          <div className="as-section">Meetings today · {upcoming.length}{left > 0 && <span title="Meeting time left today, including the next one"> · {leftText} left</span>}</div>
-          <div className="mt-rows ov-card">{upcoming.slice(0, 3).map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
-          {upcoming.length > 3 && <Chip quiet className="ov-more" onClick={() => setView({ list: 'meetings', open: null })}>+{upcoming.length - 3} more</Chip>}
-        </section>
-      )}
+      <NeedsYou n={needs} now={now} onShowOld={showOld} />
+      <ReplyQueue rows={filtered ? old : queue} filtered={filtered} onClear={() => setOnlyStale(false)} />
+      <div className="ov-block">
+        {todayShown && <Section label="Today" />}
+        <DoNow needs={needs} today={todo} nextUp={card.shown && nextUp?.tomorrow ? null : nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
+        <Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} />
+        {card.shown && <TomorrowCard s={s} tasks={tomorrow} now={now} hide={card.hide} />}
+        <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
+        <GoalLines now={now} />
+      </div>
+      <div className="ov-block">
+        <Section label="Reports" />
+        <MorningBrief now={now} />
+        <WeeklyReview now={now} />
+        {morning && <SinceLastVisit />}
+        {reports.length > 0 && (
+          <div className="as-group">
+            {reports.map(({ j, r }) => <Row key={j.profile + j.id} title={j.name} meta={`${clock(r.started_at!)} · ${firstLine(r.output)}`} onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })} />)}
+          </div>
+        )}
+      </div>
       <div className="ov-group">
       <Fold id="later" title="Later" count={laterCount}>
         <Stale rows={stale} now={now} snooze={snooze} />
@@ -179,43 +160,6 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           <section>
             <div className="as-section later">Tomorrow</div>
             {tomorrow.length > 0 && shown(tomorrow)}
-          </section>
-        )}
-      </Fold>
-      <Fold id="context" title="Context" count={contextCount}>
-        {!morning && (
-          <div className="ov-follow">
-            <div className="ov-follow-row">
-              <button className="ov-follow-text" onClick={standup}>
-                <span className="ov-t"><Icon name="copy" small /> Copy standup</span>
-              </button>
-            </div>
-          </div>
-        )}
-        {slack && (
-          <div className="ov-follow">
-            <div className="ov-follow-row">
-              <button className="ov-follow-text" onClick={() => setView({ list: 'summary', open: null })}>
-                <span className="ov-t">Slack summary <span className="muted small">Each chat and a summary on demand</span></span>
-              </button>
-            </div>
-          </div>
-        )}
-        {reports.length > 0 && (
-          <div className="ov-follow">
-            {reports.map(({ j, r }) => (
-              <div key={j.profile + j.id} className="ov-follow-row">
-                <button className="ov-follow-text" onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })}>
-                  <span className="ov-t">{j.name} <span className="muted small">{clock(r.started_at!)} · {firstLine(r.output)}</span></span>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        {digest && (
-          <section>
-            <div className="as-section">{digest.title} · {dayLabel(digest.updated_at, true)}</div>
-            <div className="ov-report">{digest.text}</div>
           </section>
         )}
       </Fold>

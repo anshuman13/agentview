@@ -1,21 +1,24 @@
 import { useMemo, useRef, useState } from 'react';
-import { useAssistantStore, useAssistantData } from './data';
-import { live, type Chat } from './data/wiki';
-import { atTime, errorText } from './data/engine';
+import { useAssistantStore, useAssistantData, useCodex } from './data';
+import { live, proposals, type Chat, type Meeting } from './data/wiki';
+import { atTime, errorText, reviewedSince } from './data/engine';
+import { actionsOf } from './data/meetings';
+import { followUpText } from './data/meetingMarkdown';
 import type { ItemRow } from './data/sync';
 import { atRisk, minutesText, type Span } from './data/plan';
 import { CAP, collapse, rankNeeds } from './data/needsYou';
 import { needsYou } from './summary/needsYou';
 import { ActionRow } from './meetings/ActionRow';
 import { useActions } from './useActions';
-import { ago, safeHref, save, stored } from '../ui/util';
+import { ago, plural, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
 import { Button } from '../ui/Button';
 import { MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
 import { CardRow } from './overview/CardRow';
+import { replyQueue, staleAsks, STALE_DAYS } from './overview/ReplyQueue';
 import { haptic } from '../ui/haptic';
-import { openTask, setView, showSnack, useView } from './view';
+import { copyText, openMeeting, openTask, setView, showSnack, useView } from './view';
 import { when } from './time';
 import type { useSplit } from './split';
 
@@ -31,7 +34,12 @@ type Need =
   | { kind: 'risk'; row: ItemRow; due: number; short: number; keys: string[] }
   | { kind: 'ask'; row: ItemRow; keys: string[]; marks: string[] }
   | { kind: 'dm'; chat: Chat; keys: string[] }
-  | { kind: 'slack'; x: Bullet; profile: Chat['profile']; keys: string[] };
+  | { kind: 'slack'; x: Bullet; profile: Chat['profile']; keys: string[] }
+  | { kind: 'justEnded'; row: ItemRow; meeting: Meeting; actions: ItemRow[]; keys: string[] }
+  | { kind: 'staleAsks'; count: number; oldest: number; keys: string[] }
+  | { kind: 'wiki'; count: number; keys: string[] };
+
+const JUST_ENDED_MS = 2 * 3600_000;
 
 const taskKey = (r: ItemRow) => `task:${r.profile}:${r.id}`;
 const bulletKey = (x: Bullet) => x.url ?? x.title;
@@ -40,6 +48,7 @@ const bulletKey = (x: Bullet) => x.url ?? x.title;
 export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   const store = useAssistantStore();
   const snap = useAssistantData();
+  const { facts } = useCodex();
   const { filter } = useView();
   const [waitDone, setWaitDone] = useState<string[]>(() => stored<string[]>(WAIT_HANDLED, []));
   const [slackDone, setSlackDone] = useState<string[]>(() => stored<string[]>(SLACK_HANDLED, []));
@@ -56,15 +65,24 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     const dms = live(snap.chats).filter((c) => c.kind === 'dm' && c.waiting === 1 && (filter === 'all' || c.profile === filter) && !waitDone.includes(waitKey(c))).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
     const brief = snap.briefs.filter((b) => !b.deleted && b.kind === 'slack' && (filter === 'all' || b.profile === filter)).sort((a, b) => (b.to_at ?? 0) - (a.to_at ?? 0))[0];
     const bullets = brief?.text ? needsYou(brief.text).filter((x) => !slackDone.includes(bulletKey(x))) : [];
+    const ended = s.meetingsToday.filter((m) => m.ends_at != null && m.ends_at <= minute * 60000 && minute * 60000 - m.ends_at < JUST_ENDED_MS);
+    const old = staleAsks(replyQueue(s.review, minute * 60000), minute * 60000);
+    const claims = proposals(facts).length;
     const ranked = rankNeeds<Need>([
       s.overdue.map((row) => ({ kind: 'overdue', row, keys: [taskKey(row)] })),
       risk.map(({ task, short }) => ({ kind: 'risk', row: task.r, due: task.due, short, keys: [taskKey(task.r)] })),
       s.review.filter((row) => !(row.source === 'slack' && row.draft?.trim())).map((row) => ({ kind: 'ask', row, keys: [taskKey(row)], marks: urlKey(row.source_url) })),
       dms.map((chat) => ({ kind: 'dm', chat, keys: [`chat:${chat.profile}:${chat.id}`, ...urlKey(chat.url)] })),
       bullets.map((x) => ({ kind: 'slack', x, profile: brief!.profile, keys: urlKey(x.url).length ? urlKey(x.url) : [`slack:${x.title}`] })),
+      ended.flatMap((meeting) => {
+        const actions = actionsOf(snap.items, meeting).filter((r) => r.status === 'open');
+        return actions.map((row) => ({ kind: 'justEnded', row, meeting, actions, keys: [taskKey(row)] }));
+      }),
+      old.length ? [{ kind: 'staleAsks', count: old.length, oldest: Math.min(...old.map(reviewedSince)), keys: ['stale-asks'] }] : [],
+      claims ? [{ kind: 'wiki', count: claims, keys: ['wiki-claims'] }] : [],
     ]);
     return collapse<Need>(ranked, (x) => x.kind === 'overdue', 3, (xs) => ({ kind: 'overdueAll', rows: xs.flatMap((x) => (x.kind === 'overdue' ? [x.row] : [])), keys: [] }));
-  }, [snap.meetings, snap.chats, snap.briefs, filter, s, minute, waitDone, slackDone]);
+  }, [snap.meetings, snap.chats, snap.briefs, snap.items, facts, filter, s, minute, waitDone, slackDone]);
   const hideChat = (c: Chat) => {
     const next = [...stored<string[]>(WAIT_HANDLED, []).filter((k) => live(snap.chats).some((r) => waitKey(r) === k)), waitKey(c)];
     setWaitDone(next);
@@ -98,7 +116,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   return { rows, hideChat, hideBullet, chatTask, bulletTask };
 }
 
-export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: number }) {
+export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsYou>; now: number; onShowOld: () => void }) {
   const act = useActions();
   const [showAll, setShowAll] = useState(false);
   if (!n.rows.length) return null;
@@ -109,6 +127,7 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
       action={{ icon: 'check', label: 'Done', run: () => { haptic('success'); act.done(r); } }}
       menu={(choose) => <MenuItem icon="clock" onClick={choose(() => snooze(r))}>Snooze to next 09:00</MenuItem>} />
   );
+  const openReview = () => setView({ list: 'wiki', open: 'review', anchor: null, person: null });
   const needs = { label: 'Needs you', tone: 'waiting' } as const;
   const slackLink = (url: string | null | undefined, choose: (fn: () => void) => () => void) => safeHref(url) && <MenuItem icon="link" href={safeHref(url)!} onClick={choose(() => undefined)}>Open in Slack</MenuItem>;
   const rowOf = (x: Need) => {
@@ -117,6 +136,19 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
       case 'overdueAll': return <CardRow key="overdue" title={`${x.rows.length} overdue`} meta="Open Tasks to go through them" badge={{ label: 'Overdue', tone: 'waiting' }} onOpen={() => setView({ list: 'tasks', open: null })} />;
       case 'risk': return taskRow(x.row, { label: 'At risk', tone: 'quiet' }, `due ${when(x.due, now)} · ${minutesText(x.short)} short`);
       case 'ask': return <ActionRow key={x.row.profile + x.row.id} row={x.row} />;
+      case 'justEnded': {
+        const m = x.meeting;
+        return (
+          <ActionRow key={x.row.profile + x.row.id} row={x.row} meta={`Just ended · ${m.title}`} extraItems={(close) => (
+            <>
+              <MenuItem icon="mail" onClick={close(() => copyText(followUpText(m, x.actions), 'Follow-up copied'))}>Copy follow-up</MenuItem>
+              <MenuItem icon="edit" onClick={close(() => openMeeting(m))}>Notes</MenuItem>
+            </>
+          )} />
+        );
+      }
+      case 'staleAsks': return <CardRow key="stale-asks" title={`${plural(x.count, 'ask')} older than ${STALE_DAYS} days`} meta={`oldest ${ago(x.oldest)}`} onOpen={onShowOld} />;
+      case 'wiki': return <CardRow key="wiki-claims" title={`${x.count} wiki ${x.count === 1 ? 'claim waits' : 'claims wait'} for you`} meta="Review one at a time" onOpen={openReview} action={{ icon: 'check', label: 'Review', run: openReview }} />;
       case 'dm': {
         const c = x.chat;
         return (
@@ -151,7 +183,7 @@ export function NeedsYou({ n, now }: { n: ReturnType<typeof useNeedsYou>; now: n
       <div className="as-group ov-queue-group">
         {(showAll ? n.rows : n.rows.slice(0, CAP)).map(rowOf)}
         {!showAll && n.rows.length > CAP && (
-          <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setShowAll(true)}>Show {n.rows.length - CAP} more</Button></div></div>
+          <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setShowAll(true)}>Show all {n.rows.length}</Button></div></div>
         )}
       </div>
     </section>

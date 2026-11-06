@@ -43,7 +43,7 @@ const Pop = ({ anchor, children }: { anchor: RefObject<HTMLElement | null>; chil
 
 // An action from a meeting: a title, a meta line, one button for its status and a kebab with the rest. Suggested ones
 // are kept (Today) or dismissed (Not mine, by swipe or n); unassigned ones can be taken; dismissed ones restored.
-export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting }) {
+export function ActionRow({ row, meeting, meta: metaText, extraItems }: { row: ItemRow; meeting?: Meeting; meta?: string; extraItems?: (close: (f: () => void) => () => void) => ReactNode }) {
   const store = useAssistantStore();
   const act = useActions();
   const [menu, setMenu] = useState<'more' | 'assign' | 'snooze' | null>(null);
@@ -95,7 +95,7 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
   const mark = (on: boolean) => on && <Icon name="check" small />;
   const late = status === 'open' && at != null && at < Date.now();
   const badge = status === 'suggested' ? 'Needs you' : late ? 'Overdue' : done ? 'Done' : '';
-  const meta = [(status === 'open' || status === 'suggested') && at != null && when(at), cur && firstName(displayName(cur)), row.text].filter(Boolean).join(' · ');
+  const meta = metaText ?? [(status === 'open' || status === 'suggested') && at != null && when(at), cur && firstName(displayName(cur)), row.text].filter(Boolean).join(' · ');
   const primary = {
     open: ['Done', check],
     done: ['Not done', check],
@@ -119,6 +119,7 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
           {menu && <Pop anchor={kebab}>
             {menu === 'more' && (
               <Menu trigger={kebab} onClose={() => setMenu(null)}>
+                {extraItems?.(close)}
                 {meeting && status === 'open' && <MenuItem onClick={() => setMenu('assign')}>Assign</MenuItem>}
                 {snoozable && <MenuItem onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
                 <MenuItem onClick={close(() => openTask(row))}>Edit</MenuItem>

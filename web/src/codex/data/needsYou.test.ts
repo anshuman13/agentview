@@ -11,6 +11,15 @@ describe('rankNeeds', () => {
   });
 });
 
+describe('rankNeeds count rows', () => {
+  it('puts just-ended actions, stale asks and wiki claims last, once each, and skips empty groups', () => {
+    const n = (id: string, ...keys: string[]) => ({ id, keys });
+    const out = rankNeeds([[n('overdue', 'task:1')], [n('dm', 'chat:1')], [n('ended1', 'task:1'), n('ended2', 'task:2')], [n('stale', 'stale-asks')], [n('wiki', 'wiki-claims')]]);
+    expect(out.map((x) => x.id)).toEqual(['overdue', 'dm', 'ended2', 'stale', 'wiki']);
+    expect(rankNeeds([[n('dm', 'chat:1')], [], []]).map((x) => x.id)).toEqual(['dm']);
+  });
+});
+
 describe('collapse', () => {
   it('merges the picked entries into one at the first place from min up', () => {
     const one = (xs: string[]) => xs.join('+');
