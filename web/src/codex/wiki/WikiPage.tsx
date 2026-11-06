@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useCodex } from '../data';
+import { useAssistantTable, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { olderClaims, pageClaims, pageStats, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
+import { mentionsOf, type Mentions } from '../data/mentions';
 import { hasLiveClaims, wikiMarkdown } from '../data/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
@@ -19,7 +20,8 @@ const NO_OLD: Fact[] = [];
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 export function WikiPage({ id }: { id: string }) {
-  const { pages, facts } = useCodex();
+  const { pages, facts, meetings } = useCodex();
+  const items = useAssistantTable('items');
   const { anchor } = useView();
   const [flash, setFlash] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
@@ -33,6 +35,11 @@ export function WikiPage({ id }: { id: string }) {
   const total = useMemo(() => groups.reduce((n, g) => n + g.claims.length, 0), [groups]);
   const [shown, more] = useWindow(String(pid));
   const visible = useMemo(() => capGroups(groups, anchor || allFor === id ? Infinity : shown, 'claims'), [groups, shown, anchor, allFor, id]);
+  const mentions = useMemo(() => {
+    const out = new Map<string, Mentions>();
+    if (pid && page?.title) for (const g of visible) for (const { fact } of g.claims) if (fact.state !== 'proposed') out.set(fact.profile + fact.id, mentionsOf({ items, meetings }, fact, page.title));
+    return out;
+  }, [visible, items, meetings, pid, page?.title]);
   const [showOlder, setShowOlder] = useState(false);
   // After Approve all or Reject all the banner stays as a note, so the claims below do not jump up under the finger.
   const [decided, setDecided] = useState<string | null>(null);
@@ -99,7 +106,7 @@ export function WikiPage({ id }: { id: string }) {
                 <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
                   <h2>{g.heading}{open.length > 1 && <button className="wk-act wk-head-act" onClick={() => review.approve(open)}><Icon name="check" small /> Approve {open.length}</button>}</h2>
                   <ul className="wk-claims">
-                    {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page.title ?? ''} flash={flash === fact.id} />)}
+                    {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page.title ?? ''} flash={flash === fact.id} mentions={mentions.get(fact.profile + fact.id)} />)}
                   </ul>
                 </section>
                 );

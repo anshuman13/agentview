@@ -1,21 +1,25 @@
 import { memo, useState } from 'react';
 import { useAssistantStore } from '../data';
 import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki';
+import type { Mentions } from '../data/mentions';
+import { dayLabel } from '../data/dates';
+import { Chip } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
-import { showSnack } from '../view';
+import { openMeeting, openTask, showSnack } from '../view';
 import { Swipe } from '../Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
 import { useReview } from './Review';
 import { shortDate } from './shared';
 
-export const Claim = memo(function Claim({ fact, old, page, flash }: { fact: Fact; old: Fact[]; page: string; flash: boolean }) {
+export const Claim = memo(function Claim({ fact, old, page, flash, mentions }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions }) {
   const store = useAssistantStore();
   const review = useReview();
   const proposed = fact.state === 'proposed';
   const [contesting, setContesting] = useState(false);
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
+  const [moreMentions, setMoreMentions] = useState(false);
   const [draft, setDraft] = useState('');
   const c = contestOf(fact);
   const startEdit = () => { setDraft(fact.text ?? ''); setEditing(true); };
@@ -57,6 +61,17 @@ export const Claim = memo(function Claim({ fact, old, page, flash }: { fact: Fac
         ) : <span className="wk-claim-text">{fact.text}</span>}
         <span className="wk-claim-foot">
           {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
+          {mentions && mentions.shown.length > 0 && (
+            <span className="wk-mentions">
+              {(moreMentions ? [...mentions.shown, ...mentions.rest] : mentions.shown).map((m) => (
+                <Chip key={m.kind + m.id} size="sm" icon={m.kind === 'task' ? 'checklist' : 'calendar'} title={m.title} onClick={() => (m.kind === 'task' ? openTask(m) : openMeeting(m))}>
+                  <span className="wk-mention-title">{m.title}</span>
+                  {m.at != null && <span className="wk-mention-day">{dayLabel(m.at)}</span>}
+                </Chip>
+              ))}
+              {!moreMentions && mentions.rest.length > 0 && <Chip size="sm" className="wk-mention-more" onClick={() => setMoreMentions(true)}>+{mentions.rest.length} more</Chip>}
+            </span>
+          )}
           {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
           {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
           <span className="spacer" />

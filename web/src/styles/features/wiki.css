@@ -121,6 +121,9 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .wk-src-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .wk-src .codicon.icon { font-size: 12px; }
 @media (hover: hover) { a.wk-src:hover { color: var(--fg); background: var(--border-strong); } }
+.wk-mentions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-right: var(--sp-3); vertical-align: middle; }
+.wk-mention-title { max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-mention-day, .wk-mention-more { color: var(--fg-faint); }
 .wk-claim-date { margin-left: var(--sp-2); }
 
 .wk-claim.contested .wk-claim-text { text-decoration: underline wavy color-mix(in srgb, var(--warn) 60%, transparent); text-underline-offset: 4px; }
