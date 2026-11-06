@@ -17,3 +17,20 @@ test('spend adds up per model by day, sums today and 7 days, and drops days past
   expect(s.week.models[0].tokens).toBe(300);
   expect(getMeta(db, 'spend:2026-09-26')).toBeNull();
 });
+
+test('job spend adds up per job id, sums 7 days, and drops days past 30', () => {
+  const db = openDb(':memory:');
+  const now = new Date(2026, 10, 5, 12).getTime();
+  recordSpend(db, { a: use(0.3), b: use(0.1) }, now - 40 * DAY, 'old');
+  recordSpend(db, { a: use(0.2) }, now - 8 * DAY, 'stale');
+  recordSpend(db, { a: use(0.2) }, now - 3 * DAY, 'j1');
+  recordSpend(db, { a: use(0.3), b: use(0.1) }, now, 'j1');
+  recordSpend(db, { a: use(0.5) }, now);
+  const s = spendSummary(db, now);
+  expect(s.week.jobs.j1).toBeCloseTo(0.6);
+  expect(Object.keys(s.week.jobs)).toEqual(['j1']);
+  expect(JSON.parse(getMeta(db, 'jobspend:2026-11-05')!).j1.runs).toBe(1);
+  expect(getMeta(db, 'jobspend:2026-09-26')).toBeNull();
+  expect(getMeta(db, 'jobspend:2026-10-28')).not.toBeNull();
+  expect(spendSummary(openDb(':memory:'), now).week.jobs).toEqual({});
+});

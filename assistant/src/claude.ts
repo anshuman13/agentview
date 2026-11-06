@@ -14,9 +14,11 @@ const SPEND_DAYS = 30;
 let ledger: Database | null = null;
 export const trackSpend = (db: Database) => ((ledger = db), db);
 const dayKey = (t: number) => `spend:${ymd(t)}`;
+const jobKey = (t: number) => `jobspend:${ymd(t)}`;
+type JobSpend = Record<string, { usd: number; runs: number }>;
 type ModelUse = { inputTokens: number; outputTokens: number; cacheReadInputTokens: number; cacheCreationInputTokens: number; costUSD: number };
 
-export function recordSpend(db: Database, models: Record<string, ModelUse>, now = Date.now()) {
+export function recordSpend(db: Database, models: Record<string, ModelUse>, now = Date.now(), jobId?: string) {
   const key = dayKey(now);
   const day: Spend = JSON.parse(getMeta(db, key) ?? '{}');
   for (const [model, u] of Object.entries(models)) {
@@ -26,10 +28,18 @@ export function recordSpend(db: Database, models: Record<string, ModelUse>, now 
     row.runs += 1;
   }
   setMeta(db, key, JSON.stringify(day));
+  if (jobId) {
+    const jobs: JobSpend = JSON.parse(getMeta(db, jobKey(now)) ?? '{}');
+    const row = (jobs[jobId] ??= { usd: 0, runs: 0 });
+    row.usd += Object.values(models).reduce((n, u) => n + u.costUSD, 0);
+    row.runs += 1;
+    setMeta(db, jobKey(now), JSON.stringify(jobs));
+  }
   db.prepare("DELETE FROM meta WHERE key LIKE 'spend:%' AND key < ?").run(dayKey(now - SPEND_DAYS * DAY));
+  db.prepare("DELETE FROM meta WHERE key LIKE 'jobspend:%' AND key < ?").run(jobKey(now - SPEND_DAYS * DAY));
 }
 
-// Today and the last 7 days, per model, most expensive first.
+// Today and the last 7 days, per model, most expensive first; the week also has USD per job id.
 export function spendSummary(db: Database, now = Date.now()) {
   const sum = (days: number) => {
     const by: Spend = {};
@@ -45,7 +55,12 @@ export function spendSummary(db: Database, now = Date.now()) {
     const models = Object.entries(by).map(([model, r]) => ({ model, ...r })).sort((a, b) => b.usd - a.usd);
     return { usd: models.reduce((n, m) => n + m.usd, 0), models };
   };
-  return { today: sum(1), week: sum(7) };
+  const jobs: Record<string, number> = {};
+  for (let i = 0; i < 7; i++) {
+    const day: JobSpend = JSON.parse(getMeta(db, jobKey(now - i * DAY)) ?? '{}');
+    for (const [id, r] of Object.entries(day)) jobs[id] = (jobs[id] ?? 0) + r.usd;
+  }
+  return { today: sum(1), week: { ...sum(7), jobs } };
 }
 
 // The MCP servers a run on the account loads, read once from the init message of a run stopped before any model call.
@@ -79,7 +94,7 @@ async function unusedServers(account: Account, options: Options, env: Record<str
   return (await serversOf(account, env)).filter((s) => !used.has(s)).map((s) => `mcp__${s}`);
 }
 
-export async function* ask(account: Account, prompt: string, options: Options, timeoutMs = ASK_TIMEOUT_MS) {
+export async function* ask(account: Account, prompt: string, options: Options, timeoutMs = ASK_TIMEOUT_MS, jobId?: string) {
   await verifyLimit(account);
   guardLimit(account);
   const dir = configDir(account);
@@ -100,7 +115,7 @@ export async function* ask(account: Account, prompt: string, options: Options, t
     const usage = (m as { modelUsage?: Record<string, ModelUse> }).modelUsage;
     if (!ledger || !usage) return;
     try {
-      recordSpend(ledger, usage);
+      recordSpend(ledger, usage, Date.now(), jobId);
     } catch (err) {
       console.log(`spend: not recorded, ${String(err)}`);
     }

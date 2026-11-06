@@ -45,7 +45,7 @@ export type AutopilotConfig = { enabled: boolean; dry_run: boolean; away: { from
 export type ReplyHistory = { replies: { at: number; line: string }[] };
 export type SentReply = { status: 'sent' | 'dry' | 'answered' | 'changed'; url: string | null };
 export type AutopilotReply = { id: string; who: string | null; chat: string | null; tier: string | null; confidence: number | null; status: string; text: string | null; url: string | null; at: number };
-export type AutopilotState = { config: AutopilotConfig; mode: 'off' | 'assist' | 'away'; watched: string[]; covered: string[]; push: { from: number; to: number }; texts: { hold: string; marker: string } | null; scan: ScanHealth | null; cost: { at: number; input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number } | null; spend?: { today: HubSpend; week: HubSpend }; replies: AutopilotReply[] };
+export type AutopilotState = { config: AutopilotConfig; mode: 'off' | 'assist' | 'away'; watched: string[]; covered: string[]; push: { from: number; to: number }; texts: { hold: string; marker: string } | null; scan: ScanHealth | null; cost: { at: number; input: number; output: number; cache_read: number; cache_write: number; usd: number; turns: number } | null; spend?: { today: HubSpend; week: HubSpend & { jobs?: Record<string, number> } }; replies: AutopilotReply[] };
 export type HubSpend = { usd: number; models: { model: string; usd: number; tokens: number; runs: number }[] };
 
 export const transcriptPath = (m: { profile: Profile; id: string }) => `/transcript?profile=${m.profile}&id=${encodeURIComponent(m.id)}`;

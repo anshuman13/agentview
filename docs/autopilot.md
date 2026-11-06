@@ -57,7 +57,7 @@ answer, Needs you, Escalate, Failed), three at a time. The settings live in the 
 
 Each scan logs its token counts and cost to meta `scan:slack:cost` (last 20); the card's scan line shows the last
 scan's tokens. Every hub Claude run (scans, drafts, sends, jobs) also adds its cost per model to a day row in meta
-`spend:YYYY-MM-DD` (kept 30 days), and the card shows today and the last 7 days by model. A run that names its
+`spend:YYYY-MM-DD` (kept 30 days), and the card shows today and the last 7 days by model, plus the 7-day total for jobs. A job run also adds its cost to `jobspend:YYYY-MM-DD` by job id (kept 30 days). A run that names its
 tools loads only the MCP servers they come from (all connectors were about 187k tokens a run), and a run stopped
 early is interrupted so its cost still arrives. The prompt carries only chat summaries with messages in the last 2 days and asks from the last 7.
 

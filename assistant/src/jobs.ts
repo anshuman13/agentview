@@ -89,7 +89,7 @@ async function runJob(db: Database, job: Job, notify = pushNtfy) {
     },
     allowedTools: ['WebSearch', 'WebFetch', 'mcp__codex__add_task', 'mcp__codex__notify', 'mcp__codex__stop_job', 'mcp__codex__ask_context'],
     canUseTool: async (name, input) => (canRead(name) || allow.allows(name) ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'This job can only read and use the tools it allows.' }),
-  }, 20 * 60_000)) {
+  }, 20 * 60_000, job.id)) {
     if (m.type === 'result') {
       if (m.subtype !== 'success') throw new Error(`Ended with ${m.subtype}`);
       result = m.result.trim();

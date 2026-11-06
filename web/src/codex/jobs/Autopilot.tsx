@@ -38,7 +38,8 @@ function spendLine(s: AutopilotState) {
   const w = s.spend?.week;
   if (!w?.models.length) return '';
   const by = w.models.map((m) => `${modelName(m.model)} ${usd(m.usd)}`).join(', ');
-  return `Hub Claude use: today ${usd(s.spend!.today.usd)} · 7 days ${usd(w.usd)} (${by})`;
+  const jobs = Object.values(w.jobs ?? {}).reduce((n, v) => n + v, 0);
+  return `Hub Claude use: today ${usd(s.spend!.today.usd)} · 7 days ${usd(w.usd)} (${by})${jobs > 0 ? ` · jobs ${usd(jobs)}` : ''}`;
 }
 
 function Fold({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: ReactNode }) {

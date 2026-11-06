@@ -1,9 +1,10 @@
+import { useEffect, useState } from 'react';
 import { useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, rowKey, type Profile } from '../data/sync';
 import type { Job } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
-import { firstLine } from '../../ui/util';
+import { firstLine, money } from '../../ui/util';
 import { setView, useView } from '../view';
 import { usePullSync } from '../pullSync';
 import { useMinute } from '../split';
@@ -19,6 +20,12 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
   useMinute();
   const { jobs, runs, store, filter, enable } = useJobs();
+  const [cost, setCost] = useState<Record<string, number>>({});
+  useEffect(() => {
+    let live = true;
+    store.autopilot().then((s) => live && setCost(s.spend?.week.jobs ?? {}), () => {});
+    return () => { live = false; };
+  }, [store]);
   const now = Date.now();
   const mixed = new Set(jobs.map((j) => j.profile)).size > 1;
   const add = (preset?: JobPreset) => {
@@ -52,6 +59,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
                       <span className="wk-meta">
                         <span>{describe(j.schedule)}</span>
                         {meta !== null && <span>{meta}</span>}
+                        {cost[j.id] > 0 && <span>7 days {money(cost[j.id])}</span>}
                       </span>
                       {last && <span className="jb-last"><RunStatus r={last} /> {last.status === 'running' ? 'Running now' : `${at(last.started_at ?? 0)}: ${firstLine(last.output) || 'No reply'}`}</span>}
                     </span>
