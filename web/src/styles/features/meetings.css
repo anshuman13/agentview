@@ -142,6 +142,8 @@
 @media (hover: hover) { .mt-no:hover { background: color-mix(in srgb, var(--err) 26%, transparent); } }
 .mt-date { display: inline-flex; align-items: center; gap: var(--sp-2); height: 22px; padding: 0 var(--sp-4); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
 @media (hover: hover) { .mt-date:hover { border-color: var(--accent); color: var(--accent-text); } }
+.mt-who { position: relative; display: inline-flex; }
+.mt-who .ui-menu { right: auto; left: 0; }
 .mt-date.late { border-color: transparent; background: color-mix(in srgb, var(--err) 8%, transparent); color: var(--err); }
 .mt-task .as-ctx > .as-pick + span::before { display: none; }
 .mt-task .btn.sm { flex: none; align-self: center; }

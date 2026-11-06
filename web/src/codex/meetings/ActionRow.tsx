@@ -1,11 +1,15 @@
+import { useRef, useState } from 'react';
 import { useAssistantStore } from '../data';
 import { atTime } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
 import { draftFor } from '../data/meetingMarkdown';
+import { displayName, peopleOf } from '../data/meetings';
+import { firstName } from '../data/points';
 import type { ItemRow } from '../data/sync';
 import type { Meeting } from '../data/wiki';
 import { PickTime, when } from '../time';
 import { Icon } from '../../ui/Icon';
+import { Menu, MenuItem } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { copyText, showSnack } from '../view';
 import { Swipe } from '../Swipe';
@@ -26,6 +30,32 @@ export function confirmAll(store: AssistantStore, rows: ItemRow[]) {
 export function dismissAll(store: AssistantStore, rows: ItemRow[]) {
   for (const r of rows) void store.update(r, { status: 'dismissed' });
   showSnack(`${rows.length} dismissed`, () => rows.forEach((r) => void store.update(r, { status: r.status })));
+}
+
+function Assignee({ row, meeting, change }: { row: ItemRow; meeting: Meeting; change: (patch: Patch, text: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const cur = row.assignee || null;
+  const names = peopleOf(meeting);
+  const pick = (who: string | null) => {
+    setOpen(false);
+    if (who === cur) return;
+    change({ assignee: who }, who ? `Assigned to ${firstName(displayName(who))}` : 'Assigned to me');
+  };
+  const mark = (on: boolean) => on && <Icon name="check" small />;
+  return (
+    <span className="mt-who">
+      <button ref={btn} className={`mt-date${cur ? '' : ' mt-hov'}`} title={cur ? `Assigned to ${displayName(cur)}` : 'Assign'} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {cur ? firstName(displayName(cur)) : 'Me'}
+      </button>
+      {open && (
+        <Menu trigger={btn} onClose={() => setOpen(false)}>
+          <MenuItem aria-checked={!cur} onClick={() => pick(null)}>{mark(!cur)}Me</MenuItem>
+          {(cur && !names.includes(cur) ? [cur, ...names] : names).map((n) => <MenuItem key={n} aria-checked={n === cur} onClick={() => pick(n)}>{mark(n === cur)}{displayName(n)}</MenuItem>)}
+        </Menu>
+      )}
+    </span>
+  );
 }
 
 // An action from a meeting. Suggested ones are kept (Today) or dismissed (Not mine, on the meeting); unassigned ones
@@ -84,6 +114,7 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
             <PickTime className={`mt-date${at != null && at < Date.now() ? ' late' : ''}${at == null ? ' empty' : ''}`} value={at} title={at != null ? `${at < Date.now() ? 'Overdue' : 'Due'} ${when(at)}, set a date` : 'Set a date'} label={at != null ? when(at) : 'Date'}
               onPick={(t) => change({ at: t }, `Due ${when(t)}`)} />
           )}
+          {meeting && status === 'open' && <Assignee row={row} meeting={meeting} change={change} />}
           {row.text && <span className="mt-task-why">{row.text}</span>}
         </div>
       </div>

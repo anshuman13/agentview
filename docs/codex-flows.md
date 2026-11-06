@@ -57,7 +57,7 @@ Cut: the Notes, Done and Upcoming lists. A dated task stays on Today under its d
 | Dismiss | ✗ is never a delete. It moves to "Not mine" on the meeting page, with an undo toast |
 | Schedule | Removed from Today. The Next card says "then 14:00 1:1 Kim"; the rest is in Upcoming |
 | Meetings list | Past only. The future belongs to Today and Upcoming |
-| Counts | "x of y" counts accepted actions only; suggested shown separately as amber "N to review" |
+| Counts | "x of y" counts accepted actions only, leaving out those assigned to another attendee (chip on the open row); suggested shown separately as amber "N to review" |
 | Push | Only when there is something to act on. Tapping it opens the meeting page. "Nothing for you" is a muted list badge |
 | Calendar | Sync on app open plus every 30 min, 07:00 to 19:00 |
 | Morning brief | Weekdays at 08:00 the hub writes a brief per profile with no model call: today's meetings and free time 08:00-17:00, tasks due and overdue (top 5), an "At risk: N tasks" line when tasks this week will not fit in the free work time before they are due, Slack asks to review, Slack promises of mine under "You said" and meeting actions still open from the last workday. It syncs to the phone and pushes "Today: N meetings, M tasks" once a day, skipping a profile with nothing on and a hub that starts after 11:00. The apps show it for 24 hours from the hub's midnight, in any time zone |

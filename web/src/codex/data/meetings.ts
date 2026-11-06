@@ -53,6 +53,7 @@ function actionCounts(items: ItemRow[]) {
       const k = `${r.profile}:${r.meeting_id}`;
       let c = out.get(k);
       if (!c) out.set(k, (c = { ...NO_ACTIONS }));
+      if (r.assignee && (r.status === 'open' || r.status === 'done')) continue;
       if (r.status === 'open') c.total++;
       else if (r.status === 'done') {
         c.total++;

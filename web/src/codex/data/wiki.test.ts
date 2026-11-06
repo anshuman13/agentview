@@ -123,6 +123,11 @@ describe('meetings', () => {
     expect(trackedTopics(m, [])).toEqual([]);
   });
 
+  it('leaves actions assigned to others out of the counts', () => {
+    const actions = [{ ...action('a1', 'm', 'open'), assignee: 'Ada Lovelace' }, { ...action('a2', 'm', 'done'), assignee: 'Ada Lovelace' }, { ...action('a3', 'm', 'open'), assignee: null }, { ...action('a4', 'm', 'done'), assignee: '' }, { ...action('a5', 'm', 'suggested'), assignee: 'Ada Lovelace' }];
+    expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1, unassigned: 0, dismissed: 0 });
+  });
+
   it('tells where a meeting is between the calendar and its transcript', () => {
     const cal = (patch: Partial<Meeting>) => ({ ...meeting('cal:x', at(0, 9)), ends_at: at(0, 10), ...patch });
     expect(meetingState(cal({ starts_at: at(0, 13), ends_at: at(0, 14) }), now)).toBe('upcoming');

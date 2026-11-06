@@ -48,6 +48,7 @@ export type ItemFields = {
   priority?: number | null;
   // Space-separated tag names, without the #.
   tags?: string | null;
+  assignee?: string | null;
   // Minutes before the due time to remind; null is at the due time, -1 is no reminder.
   remind?: number | null;
 };

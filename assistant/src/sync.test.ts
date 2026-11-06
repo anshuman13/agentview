@@ -106,6 +106,18 @@ describe('sync', () => {
   });
 });
 
+describe('assignee', () => {
+  it('is a synced items column that merges per field and leaves other items alone', () => {
+    expect(TABLES.items).toContain('assignee');
+    applyChanges(db, [ch({ id: 'a', fields: { title: 'A', meeting_id: 'm' }, field_times: { title: 1000, meeting_id: 1000 } }), ch({ id: 'b', fields: { title: 'B' }, field_times: { title: 1000 } })]);
+    applyChanges(db, [ch({ id: 'a', updated_at: 2000, fields: { assignee: 'Ada Lovelace' }, field_times: { assignee: 2000 } })]);
+    expect(item('a')?.fields).toMatchObject({ title: 'A', assignee: 'Ada Lovelace' });
+    applyChanges(db, [ch({ id: 'a', updated_at: 3000, fields: { assignee: null }, field_times: { assignee: 3000 } })]);
+    expect(item('a')?.fields.assignee).toBeNull();
+    expect(item('b')?.fields.assignee ?? null).toBeNull();
+  });
+});
+
 describe('openDb', () => {
   it('adds new columns to an existing table', () => {
     fs.mkdirSync(process.env.AGENTVIEW_LIMITS_DIR!, { recursive: true });
