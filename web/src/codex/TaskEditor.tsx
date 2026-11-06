@@ -8,6 +8,8 @@ import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { Button, Chip, chipClass, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
+import { Row } from '../ui/Row';
+import { Section } from '../ui/Section';
 import { ago, fitHeight, reveal, safeHref } from '../ui/util';
 import { clearHistory } from './replyHistory';
 import { copyText, FILTER_LABEL, openTag, setView, showSnack } from './view';
@@ -29,6 +31,7 @@ import { caretLine, RelatedStrip, RelatedToTask } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
 import { addCheck, checkItems, moveCheck, noteView, toggleCheck } from './taskChecklist';
 import { live } from './data/wiki';
+import { LINK_LIMIT, linkDomain, linkPath, linksIn, linkTitle } from './data/links';
 import { dayEnd, dayStart } from './data/dates';
 import { useDrag } from './drag';
 import { md } from '../chat/md';
@@ -98,6 +101,31 @@ export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantSt
         {!editing && <Button variant="quiet" size="sm" icon="edit" onClick={() => setEditing(true)}>Edit</Button>}
         <Button variant="quiet" size="sm" icon="close" disabled={sending} onClick={() => void skip()}>Skip</Button>
       </div>
+    </div>
+  );
+}
+
+function LinkRow({ url }: { url: string }) {
+  const [title, setTitle] = useState<string | null>(null);
+  useEffect(() => {
+    let current = true;
+    void linkTitle(url).then((t) => { if (current) setTitle(t); });
+    return () => { current = false; };
+  }, [url]);
+  return <Row href={url} title={title ?? linkDomain(url)} meta={title ? linkDomain(url) : linkPath(url) || undefined} trailing={<Icon name="link-external" small />} />;
+}
+
+// The URLs in the notes as readable rows, from the text as typed.
+function Links({ text }: { text: string }) {
+  const [all, setAll] = useState(false);
+  const urls = useMemo(() => linksIn(text, Infinity), [text]);
+  if (!urls.length) return null;
+  const shown = all ? urls : urls.slice(0, LINK_LIMIT);
+  return (
+    <div className="as-links">
+      <Section label="Links" count={urls.length} />
+      <div className="as-links-list">{shown.map((u) => <LinkRow key={u} url={u} />)}</div>
+      {urls.length > LINK_LIMIT && <Button variant="quiet" size="sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `+${urls.length - LINK_LIMIT} more`}</Button>}
     </div>
   );
 }
@@ -352,6 +380,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )}
+        <Links text={text} />
         {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
         <RelatedToTask row={row} />
         <div className="as-edit-checks" data-drop="checks">

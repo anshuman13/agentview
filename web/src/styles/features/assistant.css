@@ -151,6 +151,9 @@ button.as-ctx-btn { width: 100%; padding: 0; border: 0; background: transparent;
 .as-edit-text { min-height: 40px; margin-left: 38px; width: calc(100% - 38px) !important; font-size: var(--fs-md) !important; line-height: var(--lh-normal, 1.5); color: var(--fg-muted) !important; white-space: pre-wrap; overflow-wrap: anywhere; }
 .as-edit-read { margin-left: 38px; width: calc(100% - 38px); font-size: var(--fs-md); line-height: var(--lh-normal, 1.5); color: var(--fg); cursor: text; overflow-wrap: anywhere; }
 .as-edit-text:focus { color: var(--fg) !important; }
+.as-links { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); }
+.as-links-list { display: flex; flex-direction: column; align-self: stretch; border-radius: 12px; background: var(--group-card); overflow: hidden; }
+.as-links-list > .ui-row + .ui-row { border-top: 1px solid var(--border); }
 .as-edit-checks { display: flex; flex-direction: column; margin: calc(-1 * var(--sp-2)) 0 0 30px; }
 .as-edit-checks [role=checkbox] { display: flex; align-items: center; gap: var(--sp-3); min-height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; user-select: none; }
 .as-edit-checks [role=checkbox] .codicon { color: var(--fg-faint); }

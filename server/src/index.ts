@@ -22,6 +22,7 @@ import { assistantRoute } from './integrations/assistant.js';
 import { attention, dismissAttention, onAttention, refreshAttention, startAttention } from './integrations/attention.js';
 import { dismissFinding, getFindings } from './session/findings.js';
 import { deployRoute } from './integrations/deploy.js';
+import { linkTitleRoute } from './integrations/linkTitle.js';
 import { gitRoute } from './workspace/git.js';
 import { observe } from './integrations/observe.js';
 import { otherMacs, thisMac } from './http/macs.js';
@@ -184,6 +185,10 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/assistant/')) {
       const r = await assistantRoute(req.method ?? 'GET', url, () => readBody(req, 5_000_000));
       return jsonText(r.text, r.status);
+    }
+    if (url.pathname === '/api/link-title') {
+      const r = await linkTitleRoute(url);
+      return json(r.body, r.status);
     }
     const liveCwds = [...chats.values()].map((c) => c.cwd);
     // Routes that need no chat still work while a chat switch leaves none open.
