@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Job, Run } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
-import { firstLine, useOnUnmount } from '../../ui/util';
+import { firstLine, markSegments, useOnUnmount } from '../../ui/util';
 import { ShowMore, useWindow } from '../../ui/useWindow';
-import { setView, showSnack, useEscapeBack } from '../view';
+import { copyText, setView, showSnack, useEscapeBack } from '../view';
+import { queryWords } from '../data/match';
 import { useMinute } from '../split';
 import { nextRun } from '../../../../shared/schedule';
 import { DAYS, DAY_NAMES, KINDS, type Kind, RunStatus, at, parseSchedule, queued, runsOf, scheduleOf, useJobs } from './schedule';
@@ -11,14 +12,51 @@ import { Switch } from './Switch';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
-function RunRow({ r, latest }: { r: Run; latest: boolean }) {
+function CopyOutput({ r }: { r: Run }) {
+  return <button className="icon-btn" title="Copy output" aria-label="Copy output" onClick={() => copyText(r.output!, 'Output copied')}><Icon name="copy" small /></button>;
+}
+
+function SearchedOutput({ text, query, setQuery }: { text: string; query: string; setQuery: (q: string) => void }) {
+  const [cur, setCur] = useState(-1);
+  const box = useRef<HTMLDivElement>(null);
+  const segs = useMemo(() => markSegments(text, queryWords(query)), [text, query]);
+  const count = segs.filter((s) => s.hit).length;
+  const change = (q: string) => { setQuery(q); setCur(-1); };
+  const step = (dir: number) => {
+    if (!count) return;
+    const n = (cur + dir + count) % count;
+    setCur(n);
+    box.current?.querySelectorAll('mark')[n]?.scrollIntoView({ block: 'center' });
+  };
+  let k = -1;
+  return (
+    <>
+      <div className="jb-search-row">
+        <label className="jb-search">
+          <Icon name="search" small />
+          <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search output" onChange={(e) => change(e.target.value)} onKeyDown={(e) => {
+            if (e.key === 'Escape') { e.stopPropagation(); change(''); }
+            else if (e.key === 'Enter') { e.preventDefault(); step(e.shiftKey ? -1 : 1); }
+          }} />
+          {query && <button className="icon-btn" aria-label="Clear" onClick={() => change('')}><Icon name="close" small /></button>}
+        </label>
+        {query.trim() && <span className="muted small">{count ? `${count} ${count === 1 ? 'match' : 'matches'}` : 'No matches'}</span>}
+      </div>
+      <div className="jb-output" ref={box}>
+        {segs.map((s, i) => s.hit ? <mark key={i} className={++k === cur ? 'cur' : undefined}>{s.text}</mark> : s.text)}
+      </div>
+    </>
+  );
+}
+
+function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void }) {
   const [open, setOpen] = useState(false);
   const secs = r.finished_at && r.started_at ? <span>{Math.max(1, Math.round((r.finished_at - r.started_at) / 1000))} s</span> : null;
   if (latest) {
     return (
       <div className="jb-run">
-        <div className="wk-meta"><span><RunStatus r={r} /> {at(r.started_at ?? 0)}</span>{secs}</div>
-        {r.output && <div className="jb-output">{r.output}</div>}
+        <div className="wk-meta"><span><RunStatus r={r} /> {at(r.started_at ?? 0)}</span>{secs}{r.output && <CopyOutput r={r} />}</div>
+        {r.output && <SearchedOutput text={r.output} query={query} setQuery={setQuery} />}
       </div>
     );
   }
@@ -29,7 +67,7 @@ function RunRow({ r, latest }: { r: Run; latest: boolean }) {
         <span>{at(r.started_at ?? 0)}</span>
         {!open && <span className="jb-run-line">{firstLine(r.output)}</span>}
       </button>
-      {open && r.output && <div className="jb-output">{r.output}</div>}
+      {open && r.output && <><div className="jb-run-tools"><CopyOutput r={r} /></div><div className="jb-output">{r.output}</div></>}
     </div>
   );
 }
@@ -42,6 +80,8 @@ export function JobPage({ j }: { j: Job }) {
   const [prompt, setPrompt] = useState(j.prompt ?? '');
   const [tools, setTools] = useState(j.tools ?? '');
   const [custom, setCustom] = useState(j.schedule ?? '');
+  const [query, setQuery] = useState('');
+  useEffect(() => setQuery(''), [j.id]);
   useEffect(() => setName(j.name ?? ''), [j.name]);
   useEffect(() => setPrompt(j.prompt ?? ''), [j.prompt]);
   useEffect(() => setTools(j.tools ?? ''), [j.tools]);
@@ -120,7 +160,7 @@ export function JobPage({ j }: { j: Job }) {
           </section>
           <section className="mt-sec">
             <h2>Runs</h2>
-            {list.slice(0, shown).map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} />)}
+            {list.slice(0, shown).map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} />)}
             <ShowMore shown={shown} total={list.length} onMore={more} />
             {!list.length && <div className="muted small">Not run yet.</div>}
           </section>

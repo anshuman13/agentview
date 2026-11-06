@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ago, escapeHtml, modelLabel, money, spendLines, weekPace } from './util';
+import { ago, escapeHtml, markSegments, modelLabel, money, spendLines, weekPace } from './util';
 
 describe('ago', () => {
   afterEach(() => vi.useRealTimers());
@@ -73,5 +73,27 @@ describe('spend', () => {
 
   it('returns nothing without spend', () => {
     expect(spendLines([undefined, { today: {}, week: {} }], models)).toEqual([]);
+  });
+});
+
+describe('markSegments', () => {
+  const hits = (t: string, w: string[]) => markSegments(t, w).filter((s) => s.hit).map((s) => s.text);
+  it('matches every case of a word', () => {
+    expect(hits('Alpha alpha ALPHA', ['alpha'])).toEqual(['Alpha', 'alpha', 'ALPHA']);
+  });
+  it('matches several words and keeps the text unchanged', () => {
+    const segs = markSegments('one two three', ['one', 'three']);
+    expect(hits('one two three', ['one', 'three'])).toEqual(['one', 'three']);
+    expect(segs.map((s) => s.text).join('')).toBe('one two three');
+  });
+  it('merges overlapping and touching words into one piece', () => {
+    expect(hits('abcd', ['ab', 'bc'])).toEqual(['abc']);
+    expect(hits('abcd', ['ab', 'cd'])).toEqual(['abcd']);
+  });
+  it('matches regex characters literally', () => {
+    expect(hits('f(x) * 2', ['(', '*'])).toEqual(['(', '*']);
+  });
+  it('returns one plain piece for a blank query', () => {
+    expect(markSegments('abc', [])).toEqual([{ text: 'abc', hit: false }]);
   });
 });

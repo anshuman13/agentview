@@ -177,3 +177,27 @@ export function spendLines(spends: Array<Spend | undefined>, models: Array<{ val
     "Today is the Mac's day",
   ];
 }
+
+// Splits text into plain and matched pieces for the words of a query, ignoring case. Overlapping or touching matches merge into one piece.
+export function markSegments(text: string, words: string[]): { text: string; hit: boolean }[] {
+  if (!words.length) return [{ text, hit: false }];
+  const out: { text: string; hit: boolean }[] = [];
+  const ranges: [number, number][] = [];
+  const lower = text.toLowerCase();
+  for (const w of words) for (let i = lower.indexOf(w); i >= 0; i = lower.indexOf(w, i + 1)) ranges.push([i, i + w.length]);
+  ranges.sort((a, b) => a[0] - b[0]);
+  let at = 0;
+  const merged: [number, number][] = [];
+  for (const [s, e] of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+    else merged.push([s, e]);
+  }
+  for (const [s, e] of merged) {
+    if (s > at) out.push({ text: text.slice(at, s), hit: false });
+    out.push({ text: text.slice(s, e), hit: true });
+    at = e;
+  }
+  if (at < text.length) out.push({ text: text.slice(at), hit: false });
+  return out;
+}
