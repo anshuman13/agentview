@@ -128,27 +128,14 @@
 .mt-task + .mt-task, .mt-tasks > .as-swipe + :is(.as-swipe, .mt-task), .mt-tasks > .mt-task + .as-swipe { border-top: 1px solid var(--border); }
 .mt-tasks .as-swipe:is(.right, .left) .as-swipe-row { background: var(--raised); }
 .mt-task.suggested:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.mt-task.done .mt-hov { display: none; }
-@media (hover: hover) { .mt-task:not(:hover):not(:focus-within) :is(.mt-hov, .mt-date.empty) { opacity: 0; } }
-.mt-task .as-check { margin: -4px -4px 0 -6px; }
 .mt-task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
-.mt-task-title { font-size: var(--fs-lg); font-weight: 500; color: var(--fg-strong); line-height: var(--lh-snug); }
+.mt-task-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-lg); font-weight: 500; color: var(--fg-strong); line-height: var(--lh-snug); }
+.mt-task-meta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-size: var(--row-meta); color: var(--fg-muted); }
+.mt-task-act { flex: none; display: flex; align-items: center; gap: var(--sp-3); align-self: center; }
+.mt-more { display: inline-flex; }
+.mt-pop { position: fixed; width: 0; height: 0; z-index: var(--z-popover); }
+.mt-pop.up > .ui-menu { top: auto; bottom: 100%; }
 .mt-task.done .mt-task-title { color: var(--fg-faint); text-decoration: line-through; }
-.mt-task .as-ctx { flex-wrap: wrap; white-space: normal; min-width: 0; }
-.mt-task-why { color: var(--fg-muted); }
-.mt-task-pick { flex: none; display: flex; align-items: center; gap: var(--sp-3); }
-.mt-yes, .mt-no { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 8px; cursor: pointer; }
-.mt-yes { background: var(--ok-soft, color-mix(in srgb, var(--ok) 16%, transparent)); color: var(--ok); }
-.mt-no { background: var(--err-soft, color-mix(in srgb, var(--err) 16%, transparent)); color: var(--err); }
-@media (hover: hover) { .mt-yes:hover { background: color-mix(in srgb, var(--ok) 26%, transparent); } }
-@media (hover: hover) { .mt-no:hover { background: color-mix(in srgb, var(--err) 26%, transparent); } }
-.mt-date { display: inline-flex; align-items: center; gap: var(--sp-2); height: 22px; padding: 0 var(--sp-4); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
-@media (hover: hover) { .mt-date:hover { border-color: var(--accent); color: var(--accent-text); } }
-.mt-who { position: relative; display: inline-flex; }
-.mt-who .ui-menu { right: auto; left: 0; }
-.mt-date.late { border-color: transparent; background: color-mix(in srgb, var(--err) 8%, transparent); color: var(--err); }
-.mt-task .as-ctx > .as-pick + span::before { display: none; }
-.mt-task .btn.sm { flex: none; align-self: center; }
 .mt-task.dismissed .mt-task-title, .mt-task.unassigned .mt-task-title { color: var(--fg-muted); }
 .mt-state { display: flex; align-items: center; gap: var(--sp-5); margin-top: var(--sp-10); padding: var(--sp-5) var(--sp-7); border-radius: 12px; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--fg); font-size: var(--fs-md); }
 .mt-state.done { background: color-mix(in srgb, var(--ok) 10%, transparent); }
@@ -176,8 +163,6 @@
 .mt-add input { flex: 1; min-width: 0; height: var(--touch-sm); border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-lg); outline: 0; }
 .mt-raise { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
 .mt-decisions .mt-raise, .mt-decisions .wk-act { margin-left: var(--sp-3); vertical-align: middle; }
-.mt-task .as-ctx > .mt-task-why { flex: 1 1 100%; display: block; min-width: 0; overflow-wrap: anywhere; }
-.mt-task .as-ctx > .mt-task-why::before { display: none; }
 
 /* Person view */
 .mt-person { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }

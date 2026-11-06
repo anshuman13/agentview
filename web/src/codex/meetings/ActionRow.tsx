@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { useAssistantStore } from '../data';
 import { atTime } from '../data/engine';
 import type { AssistantStore, Patch } from '../data/store';
@@ -8,13 +9,15 @@ import { firstName } from '../data/points';
 import type { ItemRow } from '../data/sync';
 import type { Meeting } from '../data/wiki';
 import { PickTime, when } from '../time';
+import { snoozeText, snoozes } from '../AskBar';
 import { Icon } from '../../ui/Icon';
-import { Menu, MenuItem } from '../../ui/Menu';
+import { Button, IconButton } from '../../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
-import { copyText, showSnack } from '../view';
+import { copyText, openTask, showSnack } from '../view';
 import { Swipe } from '../Swipe';
 import { safeHref } from '../../ui/util';
-import { UNROLL } from '../useActions';
+import { UNROLL, useActions } from '../useActions';
 
 // Matches STALE in assistant/src/rollover.ts: at this many rolls a task goes back to review.
 const STALE_ROLLS = 3;
@@ -32,43 +35,25 @@ export function dismissAll(store: AssistantStore, rows: ItemRow[]) {
   showSnack(`${rows.length} dismissed`, () => rows.forEach((r) => void store.update(r, { status: r.status })));
 }
 
-function Assignee({ row, meeting, change }: { row: ItemRow; meeting: Meeting; change: (patch: Patch, text: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const btn = useRef<HTMLButtonElement>(null);
-  const cur = row.assignee || null;
-  const names = peopleOf(meeting);
-  const pick = (who: string | null) => {
-    setOpen(false);
-    if (who === cur) return;
-    change({ assignee: who }, who ? `Assigned to ${firstName(displayName(who))}` : 'Assigned to me');
-  };
-  const mark = (on: boolean) => on && <Icon name="check" small />;
-  return (
-    <span className="mt-who">
-      <button ref={btn} className={`mt-date${cur ? '' : ' mt-hov'}`} title={cur ? `Assigned to ${displayName(cur)}` : 'Assign'} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {cur ? firstName(displayName(cur)) : 'Me'}
-      </button>
-      {open && (
-        <Menu trigger={btn} onClose={() => setOpen(false)}>
-          <MenuItem aria-checked={!cur} onClick={() => pick(null)}>{mark(!cur)}Me</MenuItem>
-          {(cur && !names.includes(cur) ? [cur, ...names] : names).map((n) => <MenuItem key={n} aria-checked={n === cur} onClick={() => pick(n)}>{mark(n === cur)}{displayName(n)}</MenuItem>)}
-        </Menu>
-      )}
-    </span>
-  );
-}
+const Pop = ({ anchor, children }: { anchor: RefObject<HTMLElement | null>; children: ReactNode }) => {
+  const r = anchor.current!.getBoundingClientRect();
+  const up = r.bottom + 320 > window.innerHeight && r.top > window.innerHeight - r.bottom;
+  return createPortal(<div className={up ? 'mt-pop up' : 'mt-pop'} style={{ top: up ? r.top : r.bottom, right: window.innerWidth - r.right }}>{children}</div>, document.body);
+};
 
-// An action from a meeting. Suggested ones are kept (Today) or dismissed (Not mine, on the meeting); unassigned ones
-// can be taken; dismissed ones restored. Each open one has a date chip.
+// An action from a meeting: a title, a meta line, one button for its status and a kebab with the rest. Suggested ones
+// are kept (Today) or dismissed (Not mine, by swipe or n); unassigned ones can be taken; dismissed ones restored.
 export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting }) {
   const store = useAssistantStore();
+  const act = useActions();
+  const [menu, setMenu] = useState<'more' | 'assign' | 'snooze' | null>(null);
+  const kebab = useRef<HTMLButtonElement>(null);
   const change = (patch: Patch, text: string) => {
     const before = Object.fromEntries(Object.keys(patch).map((k) => [k, row[k as keyof ItemRow]])) as Patch;
     void store.update(row, patch);
     showSnack(text, () => void store.update(row, before));
   };
   const status = row.status ?? '';
-  const mine = status === 'open' || status === 'done';
   const done = status === 'done';
   const at = atTime(row.at);
   const accept = () => change({ status: 'open', ...((row.rolls ?? 0) >= STALE_ROLLS && UNROLL) }, 'Added to Today');
@@ -100,36 +85,66 @@ export function ActionRow({ row, meeting }: { row: ItemRow; meeting?: Meeting })
     };
     requestAnimationFrame(move);
   };
+  const cur = row.assignee || null;
+  const names = meeting ? peopleOf(meeting) : [];
+  const pickWho = (who: string | null) => {
+    setMenu(null);
+    if (who === cur) return;
+    change({ assignee: who }, who ? `Assigned to ${firstName(displayName(who))}` : 'Assigned to me');
+  };
+  const mark = (on: boolean) => on && <Icon name="check" small />;
+  const late = status === 'open' && at != null && at < Date.now();
+  const badge = status === 'suggested' ? 'Needs you' : late ? 'Overdue' : done ? 'Done' : '';
+  const meta = [(status === 'open' || status === 'suggested') && at != null && when(at), cur && firstName(displayName(cur)), row.text].filter(Boolean).join(' · ');
+  const primary = {
+    open: ['Done', check],
+    done: ['Not done', check],
+    suggested: ['Mine', accept],
+    unassigned: ['Take it', () => change({ status: 'open' }, 'Added to Today')],
+    dismissed: ['Restore', () => change({ status: 'suggested' }, 'Back to review')],
+  }[status] as [string, () => void] | undefined;
+  const close = (f: () => void) => () => { setMenu(null); f(); };
+  const snoozable = status === 'open' || status === 'suggested';
   const el = (
     <div className={`mt-task ${status}`} {...(status === 'suggested' && { tabIndex: 0, onKeyDown })}>
-      {mine && (
-        <button className={`as-check${done ? ' on' : ''}`} title={done ? 'Not done' : 'Done'} aria-label={done ? 'Not done' : 'Done'} onClick={check}>
-          <Icon name={done ? 'pass-filled' : 'circle-large-outline'} />
-        </button>
-      )}
       <div className="mt-task-body">
         <div className="mt-task-title">{row.title}</div>
-        <div className="as-ctx">
-          {(status === 'open' || status === 'suggested') && (
-            <PickTime className={`mt-date${at != null && at < Date.now() ? ' late' : ''}${at == null ? ' empty' : ''}`} value={at} title={at != null ? `${at < Date.now() ? 'Overdue' : 'Due'} ${when(at)}, set a date` : 'Set a date'} label={at != null ? when(at) : 'Date'}
-              onPick={(t) => change({ at: t }, `Due ${when(t)}`)} />
-          )}
-          {meeting && status === 'open' && <Assignee row={row} meeting={meeting} change={change} />}
-          {row.text && <span className="mt-task-why">{row.text}</span>}
-        </div>
+        {meta && <div className="mt-task-meta">{meta}</div>}
       </div>
-      {meeting && mine && !done && <a className="icon-btn mt-hov" title="New Linear issue" aria-label="New Linear issue" href={linearIssue(row, meeting)} target="_blank" rel="noreferrer"><Icon name="issues" small /></a>}
-      {!meeting && row.source_url && <a className="icon-btn" title="Open source" aria-label="Open source" href={safeHref(row.source_url)} target="_blank" rel="noreferrer"><Icon name="link-external" small /></a>}
-      {!meeting && row.draft && <button className="icon-btn" title="Copy draft" aria-label="Copy draft" onClick={() => copyText(row.draft!)}><Icon name="copy" small /></button>}
-      {meeting && <button className="icon-btn mt-hov" title="Copy as message" aria-label="Copy as message" onClick={() => copyText(draftFor(row, meeting))}><Icon name="copy" small /></button>}
-      {status === 'suggested' && (
-        <div className="mt-task-pick">
-          <button className="mt-no" title="Not mine" aria-label="Not mine" onClick={dismiss}><Icon name="close" small /></button>
-          <button className="mt-yes" title="Mine, add to Today" aria-label="Mine, add to Today" onClick={accept}><Icon name="check" small /></button>
-        </div>
-      )}
-      {status === 'unassigned' && <button className="btn sm" onClick={() => change({ status: 'open' }, 'Added to Today')}>Take it</button>}
-      {status === 'dismissed' && <button className="btn sm" onClick={() => change({ status: 'suggested' }, 'Back to review')}>Restore</button>}
+      <div className="mt-task-act">
+        {badge && <span className="badge quiet">{badge}</span>}
+        {primary && <Button size="sm" onClick={primary[1]}>{primary[0]}</Button>}
+        <span className="mt-more">
+          <IconButton ref={kebab} icon="kebab-horizontal" size="sm" small label="More" aria-haspopup="menu" aria-expanded={menu != null} onClick={() => setMenu(menu === 'more' ? null : 'more')} />
+          {menu && <Pop anchor={kebab}>
+            {menu === 'more' && (
+              <Menu trigger={kebab} onClose={() => setMenu(null)}>
+                {meeting && status === 'open' && <MenuItem onClick={() => setMenu('assign')}>Assign</MenuItem>}
+                {snoozable && <MenuItem onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
+                <MenuItem onClick={close(() => openTask(row))}>Edit</MenuItem>
+                {meeting && status === 'open' && <MenuItem href={linearIssue(row, meeting)} onClick={() => setMenu(null)}>New Linear issue</MenuItem>}
+                {meeting && <MenuItem onClick={close(() => copyText(draftFor(row, meeting)))}>Copy as message</MenuItem>}
+                {!meeting && row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(null)}>Open source</MenuItem>}
+                {!meeting && row.draft && <MenuItem onClick={close(() => copyText(row.draft!))}>Copy draft</MenuItem>}
+                <MenuSeparator />
+                <MenuItem danger onClick={close(() => act.remove(row))}>Delete</MenuItem>
+              </Menu>
+            )}
+            {menu === 'assign' && (
+              <Menu trigger={kebab} onClose={() => setMenu(null)}>
+                <MenuItem aria-checked={!cur} onClick={() => pickWho(null)}>{mark(!cur)}Me</MenuItem>
+                {(cur && !names.includes(cur) ? [cur, ...names] : names).map((n) => <MenuItem key={n} aria-checked={n === cur} onClick={() => pickWho(n)}>{mark(n === cur)}{displayName(n)}</MenuItem>)}
+              </Menu>
+            )}
+            {menu === 'snooze' && (
+              <Menu trigger={kebab} onClose={() => setMenu(null)}>
+                {snoozes().map((s) => <MenuItem key={s.label} onClick={close(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</MenuItem>)}
+                <PickTime className="ui-menu-item" label="Pick date" value={at} onPick={(t) => close(() => act.snooze(row, t))()} />
+              </Menu>
+            )}
+          </Pop>}
+        </span>
+      </div>
     </div>
   );
   if (status !== 'open') return el;
