@@ -9,18 +9,18 @@ const dateOf = (m: Meeting) => (m.starts_at ? ymd(m.starts_at) : '');
 const first = (name: string) => name.split(/\s+/)[0] ?? name;
 
 export const hasContent = (m: Meeting, actions: ItemRow[]) =>
-  Boolean(m.summary?.trim()) || listOf(m.decisions).length > 0 || mine(actions).length > 0;
+  Boolean(m.summary?.trim()) || listOf(m.decisions).length > 0 || actions.some((a) => a.status === 'open');
 
 export function toMarkdown(m: Meeting, actions: ItemRow[]) {
   const date = dateOf(m);
   const people = peopleOf(m);
   const decisions = listOf(m.decisions);
-  const todo = mine(actions);
+  const todo = actions.filter((a) => a.status === 'open');
   const out = [`# ${m.title ?? 'Meeting'}${date ? ` (${date})` : ''}`];
   if (people.length) out.push(`Attendees: ${people.join(', ')}`);
   if (m.summary?.trim()) out.push(`## Summary\n\n${m.summary.trim()}`);
   if (decisions.length) out.push(`## Decisions\n\n${decisions.map((d) => `- ${d}`).join('\n')}`);
-  if (todo.length) out.push(`## Actions\n\n${todo.map((a) => `- [${a.status === 'done' ? 'x' : ' '}] ${a.title ?? ''}`).join('\n')}`);
+  if (todo.length) out.push(`## Actions\n\n${todo.map((a) => `- [ ] ${a.title ?? ''}`).join('\n')}`);
   return out.join('\n\n') + '\n';
 }
 

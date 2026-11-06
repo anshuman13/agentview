@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agendaMarkdown, decisionsMarkdown, followUpText, personMarkdown, toMarkdown } from './meetingMarkdown';
+import { agendaMarkdown, decisionsMarkdown, followUpText, hasContent, personMarkdown, toMarkdown } from './meetingMarkdown';
 import type { ItemRow } from './sync';
 import type { Decision, Meeting } from './wiki';
 import type { Question } from './meetings';
@@ -16,6 +16,31 @@ describe('toMarkdown', () => {
     expect(md).toContain('## Summary');
     expect(md).toContain('## Decisions\n\n- Ship in November');
     expect(md).toContain('## Actions');
+  });
+
+  it('omits empty sections', () => {
+    expect(toMarkdown(meeting({ decisions: null }), [])).not.toContain('## Decisions');
+  });
+
+  it('lists only open actions as unchecked boxes', () => {
+    const md = toMarkdown(meeting(), [action('Send notes', 'open'), action('Book room', 'done'), action('Old idea', 'dismissed'), action('Maybe call', 'suggested')]);
+    expect(md).toContain('- [ ] Send notes');
+    for (const gone of ['Book room', 'Old idea', 'Maybe call', '[x]']) expect(md).not.toContain(gone);
+  });
+
+  it('drops an action once it is done', () => {
+    const a = action('Send notes', 'open');
+    expect(toMarkdown(meeting(), [a])).toContain('Send notes');
+    a.status = 'done';
+    expect(toMarkdown(meeting(), [a])).not.toContain('Send notes');
+  });
+});
+
+describe('hasContent', () => {
+  it('needs a summary, a decision or an open action', () => {
+    const bare = meeting({ summary: null, decisions: null });
+    expect(hasContent(bare, [action('Book room', 'done')])).toBe(false);
+    expect(hasContent(bare, [action('Send notes', 'open')])).toBe(true);
   });
 });
 

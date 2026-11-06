@@ -82,7 +82,7 @@ function CopyButtons({ m, actions }: { m: Meeting; actions: ItemRow[] }) {
   if (!hasContent(m, actions)) return null;
   return (
     <>
-      <button className="icon-btn" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={() => copyText(toMarkdown(m, actions))}><Icon name="copy" /></button>
+      <button className="btn sm" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={() => copyText(toMarkdown(m, actions))}><Icon name="copy" small /> Copy</button>
       <button className="icon-btn" title="Copy a follow-up draft" aria-label="Copy a follow-up draft" onClick={() => copyText(followUpText(m, actions), 'Follow-up copied')}><Icon name="mail" /></button>
     </>
   );
