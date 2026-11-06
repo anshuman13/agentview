@@ -4,6 +4,7 @@ import { parseWhen, stripWhen } from './data/engine';
 import { captureTask } from './captureTask';
 import { cadenceLine, parseRepeat, withRule, type Cadence } from './data/recur';
 import { pad } from './data/dates';
+import { withEstimate } from './data/plan';
 import type { Profile } from './data/sync';
 import { Back } from '../app/back';
 import { Icon } from '../ui/Icon';
@@ -147,7 +148,7 @@ export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: n
     const rep = pick ? null : parseRepeat(plain);
     const w = pick || rep ? null : parseWhen(plain);
     const at = pick ? pick.at : rep?.at ?? w?.at ?? null;
-    const name = (rep ? rep.title : stripWhen(plain, w) || plain) || typed;
+    const name = withEstimate((rep ? rep.title : stripWhen(plain, w) || plain) || typed);
     const rule = pick && pick.cadence !== 'never' && pick.cadence !== 'custom' ? cadenceLine(pick.cadence, at) : null;
     const body = rep ? withRule(notes.trim(), rep.text) : withRule(notes.trim(), rule);
     const extra = { ...(priority && { priority }), ...(tags.length && { tags: tags.join(' ') }), ...(pick?.remind != null && { remind: pick.remind }) };

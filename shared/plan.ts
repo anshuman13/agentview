@@ -11,6 +11,29 @@ export function estimateMin(title: string | null) {
   return n > 0 ? n : null;
 }
 
+const U_MIN = 'm|mins?|minutes?';
+const DUR_RE = new RegExp(`(?<![\\p{L}\\d.,])~?\\s*(?:(\\d+(?:[.,]\\d+)?)\\s*(?:h|hrs?|hours?)(?:\\s*(\\d+)\\s*(?:${U_MIN}))?|(\\d+(?:[.,]\\d+)?)\\s*(?:${U_MIN}))(?![\\p{L}\\d])`, 'giu');
+
+// Moves a typed duration like "30m" or "1.5h" out of a title. Only the last token counts.
+export function takeEstimate(title: string) {
+  const none = { title, minutes: null as number | null };
+  const all = [...title.matchAll(DUR_RE)];
+  const m = all[all.length - 1];
+  if (!m) return none;
+  const num = (x: string) => Number(x.replace(',', '.'));
+  const minutes = Math.round(m[3] != null ? num(m[3]) : num(m[1]) * 60 + (m[2] != null ? Number(m[2]) : 0));
+  const before = title.slice(0, m.index);
+  const after = title.slice(m.index + m[0].length);
+  if (minutes <= 0 || /\b(?:in|every|for|about)\s*$/i.test(before) || /^\s*(?:from now|later|ago)\b/i.test(after)) return none;
+  const rest = `${before} ${after}`.replace(/\s+/g, ' ').trim();
+  return rest && estimateMin(rest) == null ? { title: rest, minutes } : none;
+}
+
+export function withEstimate(title: string) {
+  const { title: rest, minutes } = takeEstimate(title);
+  return minutes == null ? title : `${rest} ~${minutesText(minutes)}`;
+}
+
 const words = (title: string | null) => new Set((title ?? '').replace(EST_RE, '').toLowerCase().match(/\p{L}{3,}|\d+/gu) ?? []);
 
 // The average actual minutes of done tasks whose titles share at least half their words with title, rounded to 5 minutes;

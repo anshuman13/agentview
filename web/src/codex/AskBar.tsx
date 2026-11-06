@@ -3,6 +3,7 @@ import { useAssistantStore, useCodex } from './data';
 import type { Meeting } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { SNOOZES, isQuestion, parseWhen, stripWhen } from './data/engine';
+import { withEstimate } from './data/plan';
 import { captureTask } from './captureTask';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
@@ -102,7 +103,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
     }
     if (at == null && !noWhen && !asking) return setAsking(true);
     busy.current = true;
-    await save(stripWhen(text, w) || typed, at);
+    await save(withEstimate(stripWhen(text, w) || typed), at);
     busy.current = false;
   };
   const cycle = () => setMode((x) => ((x ?? m) === 'task' ? 'ask' : 'task'));

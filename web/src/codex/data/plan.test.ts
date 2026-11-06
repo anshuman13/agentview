@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { atRisk, defaultBlock, estimateMin, fitBlock, packDay, suggestEstimate, workGaps } from './plan';
+import { atRisk, defaultBlock, estimateMin, fitBlock, packDay, suggestEstimate, takeEstimate, withEstimate, workGaps } from './plan';
+import { parseWhen, stripWhen } from './engine';
+import { parseRepeat } from './recur';
 import { goalProgress, goalsOf } from './goals';
 import type { ItemRow } from './sync';
 
@@ -107,5 +109,47 @@ describe('atRisk', () => {
   });
   it('is empty on the weekend', () => {
     expect(atRisk([{ title: 'Slides', due: mon(5, 9) }], [], mon(5, 8))).toEqual([]);
+  });
+});
+
+describe('takeEstimate', () => {
+  const take = (t: string) => {
+    const r = takeEstimate(t);
+    return [r.title, r.minutes];
+  };
+  it('moves a typed duration out of the title', () => {
+    expect(take('write doc 30m')).toEqual(['write doc', 30]);
+    expect(take('x 1h')).toEqual(['x', 60]);
+    expect(take('x ~2h')).toEqual(['x', 120]);
+    expect(take('x 1.5h')).toEqual(['x', 90]);
+    expect(take('x 1,5h')).toEqual(['x', 90]);
+    expect(take('x 1h30m')).toEqual(['x', 90]);
+    expect(take('x 1h 30m')).toEqual(['x', 90]);
+    expect(take('x 45 min')).toEqual(['x', 45]);
+    expect(take('x 0.5h')).toEqual(['x', 30]);
+  });
+  it('uses only the last token and skips zero', () => {
+    expect(take('a 10m b 20m')).toEqual(['a 10m b', 20]);
+    expect(take('x 0m')).toEqual(['x 0m', null]);
+    expect(take('x 0.2m')).toEqual(['x 0.2m', null]);
+  });
+  it('leaves text that is not an estimate', () => {
+    for (const t of ['fix ~30m 2h', 'call in 2 hours', 'every 2h', '2 hours ago', '30m', 'buy 5 mangoes', 'a 10m b in 20m', 'in 2h later']) expect(take(t)).toEqual([t, null]);
+  });
+  it('appends the canonical form', () => {
+    expect(withEstimate('write doc 1.5h')).toBe('write doc ~1h30');
+    expect(withEstimate('plan 30m')).toBe('plan ~30m');
+    expect(withEstimate('x ~2h')).toBe('x ~2h');
+    expect(withEstimate('buy milk')).toBe('buy milk');
+  });
+  it('runs after repeat and date parsing', () => {
+    const now = new Date(2026, 10, 6, 9);
+    const rep = parseRepeat('gym every monday 30m', now)!;
+    expect(withEstimate(rep.title)).toBe('gym ~30m');
+    const t = 'call bank friday 10 30m';
+    const w = parseWhen(t, now)!;
+    expect(withEstimate(stripWhen(t, w))).toBe('call bank ~30m');
+    expect(new Date(w.at!).getDay()).toBe(5);
+    expect(new Date(w.at!).getHours()).toBe(10);
   });
 });
