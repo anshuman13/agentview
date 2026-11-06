@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
-import { currentClaim, factTime, live, newPage, NO_STATS, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
+import { currentClaim, factTime, live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { MenuItem, MenuSeparator } from '../../ui/Menu';
+import { Section } from '../../ui/Section';
 import { ShowMore, useWindow } from '../../ui/useWindow';
-import { setView, useFocusBack, useSpotBack } from '../view';
+import { CardRow } from '../overview/CardRow';
+import { setView, showSnack, useFocusBack, useSpotBack } from '../view';
 import { AskBar } from './AskBar';
 import { Feed } from './Feed';
 import { Notes } from './Notes';
@@ -61,6 +64,32 @@ function PageCard({ page, stats }: { page: Page; stats: Map<string | null, PageS
         <span title="Claims">{plural(st.claims, 'claim')}</span>
       </span>
     </button>
+  );
+}
+
+function PageRow({ page, stats, proposed }: { page: Page; stats: Map<string | null, PageStats>; proposed: Set<string | null> }) {
+  const store = useAssistantStore();
+  const st = stats.get(page.id) ?? NO_STATS;
+  const open = () => setView({ open: page.id, anchor: null });
+  const archive = () => {
+    void store.editRow('pages', page, { state: 'retired' });
+    showSnack(`Archived ${page.title}`, () => void store.editRow('pages', page, { state: null }));
+  };
+  return (
+    <CardRow
+      leading={<PageTile page={page} />}
+      title={page.title}
+      meta={`${page.section || 'Pages'} · ${plural(st.claims, 'claim')} · updated ${shortDate(Math.max(page.updated_at, st.updated))}`}
+      badge={needsReview(page, proposed) ? { label: 'Needs review', tone: 'waiting' } : undefined}
+      onOpen={open}
+      menu={(choose) => (
+        <>
+          <MenuItem icon="file" onClick={choose(open)}>Open</MenuItem>
+          <MenuSeparator />
+          <MenuItem icon="archive" danger onClick={choose(archive)}>Archive</MenuItem>
+        </>
+      )}
+    />
   );
 }
 
@@ -138,6 +167,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const overview = useMemo(() => live(pages).find((p) => p.section === 'overview'), [pages]);
   const groups = useMemo(() => sections(pages), [pages]);
   const stats = useMemo(() => statsByPage(facts), [facts]);
+  const proposed = useMemo(() => proposedPageIds(facts), [facts]);
   return (
     <div className="wk">
       <header className="wk-head">
@@ -160,9 +190,16 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
                 {overview && <Overview page={overview} facts={facts} pages={pages} />}
                 {(groups.length ? groups : [{ name: 'Pages', pages: [] as Page[] }]).map((s, i) => (
                   <section key={s.name}>
-                    <div className="wk-label">{s.name}</div>
+                    {s.pages.length > 0 && (
+                      <>
+                        <Section label={s.name} count={s.pages.length} />
+                        <div className="as-group ov-queue-group">
+                          {s.pages.map((p) => <PageRow key={p.profile + p.id} page={p} stats={stats} proposed={proposed} />)}
+                        </div>
+                      </>
+                    )}
+                    {!s.pages.length && <div className="wk-label">{s.name}</div>}
                     <div className="wk-cards">
-                      {s.pages.map((p) => <PageCard key={p.profile + p.id} page={p} stats={stats} />)}
                       {i === 0 && <MemoryCard stats={stats} />}
                       <NewPageCard section={s.name} sort={Math.max(0, ...s.pages.map((p) => p.sort ?? 0)) + 1} />
                     </div>

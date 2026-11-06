@@ -198,7 +198,7 @@ How much a list row may carry. The eye should find the one thing to do without r
 - Secondary content (history, a reason, earlier replies) is behind the Menu or on the page, not a per-row Fold.
 - Batch actions ("Send all", "Copy list") go in the Section header as its one action, not as a band above
   the rows. Two batch actions become a Menu on the header.
-- A Badge per row at most one, for state only (FAQ, Needs you, Failed). Badges are not labels for things the
+- A Badge per row at most one, for state only (FAQ, Needs you, Failed, Needs review on a wiki page row, which has only a More menu with Open and Archive). Badges are not labels for things the
   title already says.
 - Jobs rows follow this: one badge (Running, Queued, Failed, Off), a Run now Button sm, and a More menu with Edit,
   Disable or Enable, Delete. No switch and no last-run line on the row.

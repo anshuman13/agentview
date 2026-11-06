@@ -169,6 +169,11 @@ export function statsByPage(facts: Fact[]) {
   return out;
 }
 
+// Pages with a proposed claim waiting, built once per render.
+export const proposedPageIds = (facts: Fact[]) => new Set(facts.filter((f) => !f.deleted && f.state === 'proposed' && f.page_id).map((f) => f.page_id));
+
+export const needsReview = (page: Page, proposed: Set<string | null>) => page.state === 'proposed' || proposed.has(page.id);
+
 export const pageStats = (facts: Fact[], pageId: string | null) => statsByPage(facts).get(pageId) ?? NO_STATS;
 
 import { queryWords, rowMatcher } from './match';
