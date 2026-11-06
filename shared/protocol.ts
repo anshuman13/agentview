@@ -224,6 +224,7 @@ export type SavedSession = {
   cwd: string;
   gitBranch: string | null;
   lastModified: number;
+  firstPrompt?: string;
 };
 
 export const COMPACT_AT = 200_000;

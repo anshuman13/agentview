@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFolders, findHere, groupByRepo, groupByKind, segmentOf, staleKeys } from './folders';
+import { buildFolders, chatFinder, findHere, groupByRepo, groupByKind, segmentOf, staleKeys } from './folders';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
@@ -81,6 +81,27 @@ describe('groupByRepo', () => {
     const chats = [chat('/w/cafe', 2, 'fix login'), chat('/w/shop', 3, 'other')];
     expect(groupByRepo([], chats, f, 'sho').map((x) => x.name)).toEqual(['shop']);
     expect(groupByRepo([], chats, f, 'LOGIN')[0].recent.map((c) => c.title)).toEqual(['fix login']);
+  });
+});
+
+describe('chat search', () => {
+  const live = (id: string, sessionId: string | null = null): LiveChat => ({ id, sessionId, cwd: '/w/shop', title: id, running: false, pending: 0, status: '', lastActive: 1 });
+  const saved: SavedSession[] = [{ ...chat('/w/shop', 1, 's1'), title: 'Billing', firstPrompt: 'Fix the Invoice rounding' }];
+  const f = buildFolders([repo('shop')], [], []);
+  const names = (q: string, l: LiveChat[] = [], c = saved) => groupByRepo(l, c, f, q).flatMap((g) => [...g.open.map((x) => x.id), ...g.recent.map((x) => x.sessionId)]);
+  it('matches words in the first prompt, split across fields, ignoring case', () => {
+    expect(names('invoice')).toEqual(['s1']);
+    expect(names('BILLING rounding')).toEqual(['s1']);
+    expect(names('invoice nothing')).toEqual([]);
+    expect(names('  ')).toEqual(['s1']);
+  });
+  it('does not match a saved chat without a first prompt on it', () => {
+    expect(names('invoice', [], [{ ...saved[0], firstPrompt: undefined }])).toEqual([]);
+  });
+  it('finds a live chat through its saved copy only when it has a sessionId', () => {
+    expect(names('invoice', [live('a', 's1')])).toEqual(['a']);
+    expect(chatFinder('invoice', saved).match('b', null, 'shop')).toBe(false);
+    expect(chatFinder('invoice', saved).match('b', 's1', 'shop')).toBe(true);
   });
 });
 

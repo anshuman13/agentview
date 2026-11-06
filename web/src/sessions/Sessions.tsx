@@ -9,12 +9,12 @@ import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { byUrgency, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
+import { byUrgency, chatFinder, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
 
 const PAGE = 5;
 
 function FilterInput({ value, set }: { value: string; set: (v: string) => void }) {
-  return <input placeholder="Filter repos and sessions" value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && set('')} />;
+  return <input placeholder="Search repos and chats" value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && set('')} />;
 }
 
 export function FolderPicker({ onClose }: { onClose: () => void }) {
@@ -49,7 +49,7 @@ export function Sessions() {
   const current = useStore((s) => s.session.sessionId);
   const cwd = useStore((s) => s.session.cwd);
   const lastSystem = useStore((s) => { const e = s.events[s.events.length - 1]; return e?.kind === 'system' ? e.id : null; });
-  const { folders, setTrees, setChats } = useWorkspace(current + cwd);
+  const { folders, chats, setTrees, setChats } = useWorkspace(current + cwd);
   const liveKey = useStore((s) => s.live.map((c) => c.cwd).join('\n'));
   const waitingCount = useStore((s) => s.live.reduce((n, c) => n + (c.pending ? 1 : 0), 0));
   const [filter, setFilter] = useState('');
@@ -73,15 +73,15 @@ export function Sessions() {
   const here = findHere(folders, cwd).folder?.cwd;
 
   const shown = useMemo(() => {
-    const f = filter.toLowerCase();
-    if (!f) return folders;
+    const find = chatFinder(filter, chats);
+    if (!find.active) return folders;
     return folders.flatMap((d): Folder[] => {
-      if (`${d.name} ${d.repo?.branch ?? ''}`.toLowerCase().includes(f)) return [d];
-      const chats = d.chats.filter((s) => `${s.title} ${s.gitBranch ?? ''}`.toLowerCase().includes(f));
-      const trees = d.trees.filter((w) => w.name.toLowerCase().includes(f));
-      return chats.length || trees.length ? [{ ...d, chats, trees, hit: true }] : [];
+      if (find.match(d.name, undefined, d.repo?.branch)) return [d];
+      const kept = d.chats.filter((s) => find.match(s.title, s.sessionId, d.name, s.gitBranch));
+      const trees = d.trees.filter((w) => find.match(w.name, undefined));
+      return kept.length || trees.length ? [{ ...d, chats: kept, trees, hit: true }] : [];
     });
-  }, [folders, filter]);
+  }, [folders, chats, filter]);
 
   const open = (id: string) => {
     if (id === current) return;
@@ -260,12 +260,12 @@ export function OpenChats() {
   const { pins, toggle: togglePin } = usePins();
   const groups = useMemo(() => groupByRepo(live, chats, folders, filter, new Set(pins)), [live, chats, folders, filter, pins]);
   const pinnedRows = useMemo(() => {
-    const q = filter.trim().toLowerCase();
+    const find = chatFinder(filter, chats);
     return pins.flatMap((id) => {
       const c = live.find((x) => x.sessionId === id);
       const s = c ? undefined : chats.find((x) => x.sessionId === id);
       const item = c ? { c, title: c.title, repo: repoName(folders, c.cwd) } : s ? { s, title: s.title, repo: repoName(folders, s.cwd) } : null;
-      return item && (!q || `${item.title} ${item.repo}`.toLowerCase().includes(q)) ? [item] : [];
+      return item && (!find.active || find.match(item.title, id, item.repo)) ? [item] : [];
     });
   }, [live, chats, folders, filter, pins]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);

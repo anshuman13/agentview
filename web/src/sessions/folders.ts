@@ -5,6 +5,7 @@ import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { inside } from '../../../shared/util';
+import { matcher, queryWords } from '../codex/data/match';
 
 export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
 
@@ -190,13 +191,27 @@ export const repoName = (folders: Folder[], cwd: string) => {
   return key.split('/').pop() || key;
 };
 
+// A chat matches when every word of the query is in its title, repo or extra texts, or in the title or first prompt of its saved copy.
+export function chatFinder(filter: string, chats: SavedSession[]) {
+  const words = queryWords(filter);
+  const match = matcher(words);
+  const saved = new Map(chats.map((s) => [s.sessionId, s]));
+  return {
+    active: words.length > 0,
+    match: (title: string, sessionId: string | null | undefined, ...texts: (string | null | undefined)[]) => {
+      const s = sessionId ? saved.get(sessionId) : undefined;
+      return match(title, s?.title, s?.firstPrompt, ...texts);
+    },
+  };
+}
+
 export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter = '', pinned: ReadonlySet<string> = new Set()) {
-  const q = filter.trim().toLowerCase();
+  const find = chatFinder(filter, chats);
   const m = new Map<string, RepoGroup>();
-  const add = (cwd: string, title: string, last: number) => {
+  const add = (cwd: string, title: string, sessionId: string | null, last: number) => {
     const key = findHere(folders, cwd).folder?.cwd ?? cwd;
     const name = repoName(folders, cwd);
-    if (q && !name.toLowerCase().includes(q) && !title.toLowerCase().includes(q)) return null;
+    if (find.active && !find.match(title, sessionId, name)) return null;
     let g = m.get(key);
     if (!g) m.set(key, (g = { key, name, open: [], recent: [], last: 0, running: 0, waiting: 0 }));
     g.last = Math.max(g.last, last);
@@ -204,14 +219,14 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
   };
   for (const c of live) {
     if (c.sessionId && pinned.has(c.sessionId)) continue;
-    const g = add(c.cwd, c.title, c.lastActive);
+    const g = add(c.cwd, c.title, c.sessionId, c.lastActive);
     if (!g) continue;
     g.open.push(c);
     if (c.running) g.running++;
     if (c.pending) g.waiting++;
   }
   const ids = new Set(live.map((c) => c.sessionId));
-  for (const s of chats) if (!ids.has(s.sessionId) && !pinned.has(s.sessionId)) add(s.cwd, s.title, s.lastModified)?.recent.push(s);
+  for (const s of chats) if (!ids.has(s.sessionId) && !pinned.has(s.sessionId)) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent.push(s);
   for (const g of m.values()) {
     g.open.sort(byUrgency);
     g.recent.sort((a, b) => b.lastModified - a.lastModified);

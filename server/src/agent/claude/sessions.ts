@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { readdir, stat } from 'node:fs/promises';
 import { listSessions as listAll, type ListSessionsOptions, type SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
+import type { SavedSession } from '../../../../shared/protocol.js';
 import { CLAUDE_DIR } from './history.js';
 
 export { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
@@ -34,4 +35,9 @@ export async function listSessions(opts: ListSessionsOptions = {}) {
   cache.set(key, { sig, list });
   list.catch(() => cache.get(key)?.list === list && cache.delete(key));
   return list;
+}
+
+export function savedSession(x: SDKSessionInfo): SavedSession {
+  const firstPrompt = x.firstPrompt?.replace(/\s+/g, ' ').trim().slice(0, 300);
+  return { sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified, ...(firstPrompt && { firstPrompt }) };
 }

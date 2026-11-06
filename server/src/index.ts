@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
-import { listSessions } from './agent/claude/sessions.js';
+import { listSessions, savedSession } from './agent/claude/sessions.js';
 import { ntfyTopic, post } from './integrations/notify.js';
 import { cancelFocus, scheduleFocus } from './integrations/focus.js';
 import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
@@ -258,7 +258,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/sessions') {
       const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
       const binned = new Set(bin.map((b) => b.sessionId));
-      return json(list.filter((x) => !binned.has(x.sessionId)).map((x) => ({ sessionId: x.sessionId, title: x.summary, cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified })));
+      return json(list.filter((x) => !binned.has(x.sessionId)).map(savedSession));
     }
     if (url.pathname === '/api/focus' && req.method === 'POST') {
       const body = JSON.parse(await readBody(req));
