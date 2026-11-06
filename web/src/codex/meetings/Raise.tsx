@@ -14,8 +14,10 @@ export async function raise(store: AssistantStore, text: string, person: string,
     const row = await store.capture(text, 'note', profile);
     await store.update(row, { status: POINT, source: 'raise', people: person });
     showSnack(`Raise with ${firstName(person)} next time`, () => void store.update(row, { deleted: 1 }));
+    return true;
   } catch {
     showSnack('Not saved');
+    return false;
   }
 }
 

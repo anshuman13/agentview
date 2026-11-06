@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { useAssistantData } from '../data';
+import { useAssistantData, useAssistantStore } from '../data';
+import { firstName, pointsOf } from '../data/points';
+import { raise } from '../meetings/Raise';
 import { displayName } from '../data/meetings';
 import { keepInTouch, touchText, type Lapsed } from '../data/review';
 import { plural, save, stored } from '../../ui/util';
@@ -30,10 +32,24 @@ export function useKeepInTouch() {
   return { shown, dismiss };
 }
 
+function TouchNote({ x }: { x: Lapsed }) {
+  const store = useAssistantStore();
+  const [text, setText] = useState('');
+  const save = async () => {
+    const t = text.trim();
+    if (t && await raise(store, t, x.name, x.profile)) setText('');
+  };
+  return (
+    <input className="ov-follow-note" value={text} placeholder="Talk about next time" aria-label={`Note for ${x.name}`} enterKeyHint="done"
+      onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void save(); }} />
+  );
+}
+
 export function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
   const list = useRef<HTMLDivElement>(null);
   const section = useRef<HTMLElement>(null);
   const { shown } = k;
+  const { items } = useAssistantData();
   const dismiss = (x: Lapsed, i: number) => {
     k.dismiss(x);
     // Focus the person that moved into this row, or the one above when the last went.
@@ -48,16 +64,22 @@ export function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
     <section ref={section}>
       <SectionHead title="Keep in touch" count={shown.length} />
       <div className="ov-follow" role="list" aria-label="Keep in touch" ref={list}>
-        <Capped items={shown} render={(x, i) => (
+        <Capped items={shown} render={(x, i) => {
+          const points = pointsOf(items, x.name);
+          const next = points.length ? `Next: ${points[points.length - 1].title}${points.length > 1 ? ` +${points.length - 1}` : ''}` : '';
+          return (
           <div key={x.key} className="ov-follow-row wrap" role="listitem">
             <button className="ov-follow-text" onClick={() => setView({ person: x.name })}>
               <span className="ov-t">{displayName(x.name)}</span>
               <span className="muted small">last {dayLabel(x.last)} · usually every {plural(Math.max(1, Math.round(x.gap / 86400000)), 'day')}</span>
+              {next && <span className="muted small ov-follow-next">{next}</span>}
             </button>
             <button className="btn btn-sm btn-gray" aria-label={`Copy a nudge to ${x.name}`} onClick={() => copyText(touchText(x.name), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
             <button className="btn btn-sm btn-gray" aria-label={`Dismiss ${x.name}`} onClick={() => dismiss(x, i)}>Dismiss</button>
+            <TouchNote x={x} />
           </div>
-        )} />
+          );
+        }} />
       </div>
     </section>
   );

@@ -74,7 +74,9 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
   1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person
   page and has Copy nudge and Dismiss, which hides the person until the next contact. On a narrow screen the buttons
-  wrap below the name
+  wrap below the name. Each row has a one-line field, "Talk about next time": Enter saves the text as a Raise point for
+  that person (so it shows on Prep for their next meeting), the field clears for another, and the row meta shows
+  "Next: <latest note>" with +N for more
 
 ### Tasks
 

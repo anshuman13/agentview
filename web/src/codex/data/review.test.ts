@@ -64,6 +64,14 @@ describe('keepInTouch', () => {
     expect(rows.map((r) => [r.name, Math.round(r.gap / DAY)])).toEqual([['Ada', 7]]);
     expect(keepInTouch(weekly('Ada', 21), [], [], now, [rows[0].key])).toEqual([]);
   });
+
+  it('carries the profile of the latest contact', () => {
+    const now = new Date(2026, 9, 30, 12).getTime();
+    const DAY = 86400000;
+    const meeting = (id: string, profile: string, daysAgo: number) => ({ id: `cal:${id}`, profile, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0, title: '1:1', people: 'Ada', starts_at: now - daysAgo * DAY, ends_at: now - daysAgo * DAY + 1800000 }) as unknown as Meeting;
+    const rows = keepInTouch([meeting('a', 'personal', 40), meeting('b', 'personal', 33), meeting('c', 'work', 26), meeting('d', 'personal', 50)], [], [], now);
+    expect(rows.map((r) => r.profile)).toEqual(['work']);
+  });
 });
 
 describe('standupText', () => {
