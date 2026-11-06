@@ -27,6 +27,8 @@ describe('visibleRows', () => {
     expect(visibleRows(g, false).length).toBe(3);
     expect(visibleRows(g, true).length).toBe(9);
     expect(visibleRows({ ...g, open: true }, false).length).toBe(9);
+    expect(visibleRows({ ...g, open: true }, false, true).length).toBe(3);
+    expect(visibleRows({ ...g, open: true }, true, true).length).toBe(9);
   });
 });
 

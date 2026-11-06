@@ -30,7 +30,6 @@ export function parseDigest(kind: 'day' | 'away', json: string | null): { groups
   };
 }
 
-// A group that is open by default shows every row; a folded one shows the first 3 until Show all.
 // The rows of a morning brief as groups in display order plus the waiting and ask rows, or null when the JSON is missing, invalid or empty.
 export function parseBrief(json: string | null): { groups: DigestGroup<BriefRow>[]; waiting: BriefRow[] } | null {
   let rows: unknown;
@@ -43,4 +42,5 @@ export function parseBrief(json: string | null): { groups: DigestGroup<BriefRow>
   };
 }
 
-export const visibleRows = <R>(g: DigestGroup<R>, all: boolean) => (g.open || all ? g.rows : g.rows.slice(0, FOLDED_ROWS));
+// A group that is open by default shows every row unless capOpen; a folded one shows the first 3 until Show all.
+export const visibleRows = <R>(g: DigestGroup<R>, all: boolean, capOpen = false) => ((g.open && !capOpen) || all ? g.rows : g.rows.slice(0, FOLDED_ROWS));

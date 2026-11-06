@@ -66,8 +66,6 @@
 .as-row.checked .as-title { color: var(--fg-faint); text-decoration: line-through; }
 .as-ctx { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; overflow: hidden; font-size: var(--row-meta); color: var(--meta-fg); white-space: nowrap; }
 .as-ctx:empty { display: none; }
-button.as-ctx-btn { width: 100%; padding: 0; border: 0; background: transparent; font: inherit; font-size: var(--row-meta); text-align: left; cursor: pointer; }
-@media (hover: hover) { button.as-ctx-btn:hover { color: var(--fg); } }
 .as-ctx > span { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }
 .as-ctx > span + span::before { content: "·"; margin-right: var(--sp-1); color: var(--fg-faint); }
 .as-ctx > :is(.as-people, .as-quote) { flex: 0 1 auto; min-width: 0; display: block; overflow: hidden; text-overflow: ellipsis; }
@@ -92,7 +90,6 @@ button.as-ctx-btn { width: 100%; padding: 0; border: 0; background: transparent;
 .as-next-head { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); color: var(--accent-text); font-weight: 600; }
 .as-next-title { font-size: var(--fs-2xl); font-weight: 600; }
 .as-ctx-list { display: flex; flex-direction: column; gap: var(--sp-2); }
-.as-ctx-list > .btn { align-self: flex-start; }
 .as-next .wk-claims { padding-left: var(--sp-8); }
 .as-next .wk-claim { font-size: var(--fs-md); line-height: var(--line-md); }
 .as-next-jot { width: 100%; margin-top: var(--sp-4); padding: var(--sp-3) var(--sp-5); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; font-size: var(--fs-md); }

@@ -12,12 +12,12 @@ import { visibleRows, type DigestGroup, type DigestRow } from './digest';
 
 type Parsed = { groups: DigestGroup[]; waiting: DigestRow[] };
 
-export function GroupList<R>({ brief, group, render }: { brief: Brief; group: DigestGroup<R>; render: (row: R) => ReactNode }) {
-  const key = `codex.digestFold.${brief.profile}:${brief.id}:${group.outcome}`;
+export function GroupList<R>({ brief, foldKey, capOpen, group, render }: { brief?: Brief; foldKey?: string; capOpen?: boolean; group: DigestGroup<R>; render: (row: R) => ReactNode }) {
+  const key = foldKey ?? `codex.digestFold.${brief!.profile}:${brief!.id}:${group.outcome}`;
   const [open, setOpen] = useState(() => stored<boolean>(key, group.open));
   const [all, setAll] = useState(false);
   const toggle = () => { save(key, !open); setOpen(!open); };
-  const rows = visibleRows(group, all);
+  const rows = visibleRows(group, all, capOpen);
   return (
     <>
       <Section label={group.label} count={group.rows.length} open={open} onToggle={toggle} />

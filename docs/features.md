@@ -141,8 +141,8 @@ follow-up draft, an action copies as a message or opens a prefilled Linear issue
 template last used for the series. A meeting without a transcript is a quiet, muted "No transcript" (Retry and Dismiss on its page); the hub tries 8 times, or 2 when the previous meeting of the same title had none.
 
 The page of an upcoming or running meeting has a Prep section: points to raise with its attendees (each with a Raised tick), what
-they took on last time (earlier meetings of the same profile with the same title or a shared attendee, up to 8 people), my open actions, open questions, and Copy agenda, which copies all of it as a Markdown
-checklist without a model call. On the card, Last time lists up to 3 open actions and 3 decisions per meeting (+N more), open questions show their meeting's day, and tasks about an attendee are one line each (up to 3 per person); every line is a button that opens its meeting or task. Raise on a decision or an open task, and the field on a person page, save a point for
+they took on last time (earlier meetings of the same profile with the same title or a shared attendee, up to 8 people), my open actions, open questions, and Copy agenda (all of it, uncapped) as a Markdown
+checklist without a model call. The Prep card (and section) has a "Prep" header with a count badge per kind and a Copy agenda button, then one group per kind: Open actions, Decisions (folded), Open questions and Tasks. Each group shows its first 3 rows and "Show all N"; a row is one title line and one meta line (meeting and day, or the person for a task) and opens its meeting or task. Fold state is kept per meeting. Raise on a decision or an open task, and the field on a person page, save a point for
 the next meeting with that person (picked from the meeting's attendees and recent ones); a point waits for the first
 meeting with them after it was raised and counts as raised once that meeting ends. Points stay out of Search.
 

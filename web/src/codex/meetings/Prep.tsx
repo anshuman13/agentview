@@ -1,19 +1,24 @@
-import { Fragment, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { dayLabel } from '../data/dates';
 import { agendaMarkdown } from '../data/meetingMarkdown';
 import { pointsFor, theirActions } from '../data/points';
 import { type Meeting } from '../data/wiki';
-import { briefFor, capped, openQuestions, priorWith, questionKey } from '../data/meetings';
-import { Icon } from '../../ui/Icon';
+import { briefFor, openQuestions, priorWith, questionKey } from '../data/meetings';
+import { IconButton } from '../../ui/Button';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
+import { GroupList } from '../overview/DigestCard';
+import type { DigestGroup } from '../overview/digest';
 import { copyText, openMeeting, openTask } from '../view';
 import { resolvedQuestions } from './OpenQuestions';
 import { PointList, useMarkRaised } from './Raise';
 
-// What to know before a meeting: points to raise with its people, earlier meetings with their decisions and open
-// actions, what the attendees took on, open questions, open tasks about its people and related claims. Renders
-// nothing without any of these.
-const go = (open: () => void) => (e: { stopPropagation: () => void }) => { e.stopPropagation(); open(); };
+// What to know before a meeting: open actions, decisions and open questions of earlier meetings with its people, open
+// tasks about them, points to raise, what the attendees took on and related claims. Renders nothing without any of these.
+type Line = { title: string; meta: string; open: () => void };
+
+const count = (n: number, one: string) => (n ? [`${n} ${one}${n === 1 ? '' : 's'}`] : []);
 
 export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
   const snap = useAssistantData();
@@ -26,44 +31,49 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
   const questions = useMemo(
     () => {
       const resolved = new Set(resolvedQuestions());
-      return openQuestions(meetings).filter((q) => !resolved.has(questionKey(q)) && prior.some((p) => p.meeting.id === q.meeting.id && p.meeting.profile === q.profile)).slice(0, 3);
+      return openQuestions(meetings).filter((q) => !resolved.has(questionKey(q)) && prior.some((p) => p.meeting.id === q.meeting.id && p.meeting.profile === q.profile));
     },
     [meetings, prior],
   );
   if (!points.length && !prior.length && !questions.length && !brief.tasks.length && !brief.claims.length) return null;
+  const meta = (meeting: Meeting) => `${meeting.title} · ${dayLabel(meeting.starts_at!)}`;
+  const actions: Line[] = prior.flatMap(({ meeting, open }) => open.map((r) => ({ title: r.title ?? '', meta: meta(meeting), open: () => openMeeting(meeting) })));
+  const decisions: Line[] = prior.flatMap(({ meeting, decisions: ds }) => ds.map((d, i) => ({ title: d.split('\n')[0], meta: meta(meeting), open: () => openMeeting(meeting) })));
+  const asked: Line[] = questions.map((q) => ({ title: q.text, meta: meta(q.meeting), open: () => openMeeting(q.meeting) }));
+  const tasks: Line[] = brief.tasks.flatMap(({ person, items }) => items.map((r) => ({ title: r.title ?? '', meta: person, open: () => openTask(r) })));
+  const groups: DigestGroup<Line>[] = [
+    { outcome: 'actions', label: 'Open actions', open: true, rows: actions },
+    { outcome: 'decisions', label: 'Decisions', open: false, rows: decisions },
+    { outcome: 'questions', label: 'Open questions', open: true, rows: asked },
+    { outcome: 'tasks', label: 'Tasks', open: true, rows: tasks },
+  ].filter((g) => g.rows.length);
   const copy = () => {
     const mine = [...prior.flatMap((p) => p.open), ...brief.tasks.flatMap((t) => t.items)].map((r) => r.title ?? '');
     copyText(agendaMarkdown(m, { points, actions: [...new Set([...theirs, ...mine])], questions: questions.map((q) => q.text) }));
   };
-  const body = (
-    <>
+  const badges = [
+    ...(actions.length ? [`${actions.length} open`] : []),
+    ...count(decisions.length, 'decision'),
+    ...count(asked.length, 'question'),
+    ...count(tasks.length, 'task'),
+  ];
+  return (
+    <div className={section ? 'mt-sec' : undefined} onClick={(e) => e.stopPropagation()}>
+      <Section label="Prep" action={(
+        <span className="ov-digest-head">
+          {badges.map((b) => <span key={b} className="badge quiet">{b}</span>)}
+          <IconButton icon="copy" label="Copy agenda" size="sm" onClick={copy} />
+        </span>
+      )} />
+      <div className="ov-group">
+        {groups.map((g) => (
+          <GroupList key={g.outcome} foldKey={`codex.prepFold.${m.profile}:${m.id}:${g.outcome}`} capOpen group={g} render={(r) => <Row title={r.title} meta={r.meta} onClick={r.open} />} />
+        ))}
+      </div>
       {points.length > 0 && (
-        <div className="as-ctx-list" onClick={(e) => e.stopPropagation()}>
+        <div className="as-ctx-list">
           <div className="muted small">To raise</div>
           <PointList points={points} meeting={false} />
-        </div>
-      )}
-      {prior.length > 0 && (
-        <div className="as-ctx-list">
-          <div className="muted small">Last time</div>
-          {prior.map(({ meeting, decisions, open: openActions }) => {
-            const open = go(() => openMeeting(meeting));
-            const acts = capped(openActions);
-            const decs = capped(decisions);
-            const more = acts.more + decs.more;
-            return (
-              <Fragment key={meeting.profile + meeting.id}>
-                <button className="as-ctx as-ctx-btn" onClick={open}>
-                  <span>{meeting.title}</span>
-                  <span>{dayLabel(meeting.starts_at!)}</span>
-                  {openActions.length > 0 && <span className="as-due late">{openActions.length} open</span>}
-                </button>
-                {acts.shown.map((r) => <button key={r.id} className="as-ctx as-ctx-btn" onClick={open}><span className="as-quote">{r.title}</span></button>)}
-                {decs.shown.map((d) => <button key={d} className="as-ctx as-ctx-btn" onClick={open}><span className="as-quote">{d.split('\n')[0]}</span></button>)}
-                {more > 0 && <button className="as-ctx as-ctx-btn" onClick={open}><span>+{more} more</span></button>}
-              </Fragment>
-            );
-          })}
         </div>
       )}
       {theirs.length > 0 && (
@@ -72,31 +82,11 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
           {theirs.map((t) => <div key={t} className="as-ctx"><span className="as-quote">{t}</span></div>)}
         </div>
       )}
-      {questions.length > 0 && (
+      {brief.claims.length > 0 && (
         <div className="as-ctx-list">
-          <div className="muted small">Open questions</div>
-          {questions.map((q) => (
-            <button key={q.profile + q.text} className="as-ctx as-ctx-btn" onClick={go(() => openMeeting(q.meeting))}>
-              <span className="as-quote">{q.text}</span>
-              <span>{dayLabel(q.meeting.starts_at!)}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {(brief.tasks.length > 0 || brief.claims.length > 0) && (
-        <div className="as-ctx-list">
-          {brief.tasks.flatMap(({ person, items }) => capped(items).shown.map((r, i) => (
-            <button key={person + r.id} className="as-ctx as-ctx-btn" onClick={go(() => openTask(r))}>
-              <span>{person}</span>
-              {i === 0 && <span className="as-due late">{items.length} open</span>}
-              <span className="as-quote">{r.title}</span>
-            </button>
-          )))}
           {brief.claims.map((f) => <div key={f.profile + f.id} className="as-ctx"><span className="as-quote">{f.text}</span></div>)}
         </div>
       )}
-      <div className="as-ctx-list"><button className="btn sm" onClick={(e) => { e.stopPropagation(); copy(); }}><Icon name="copy" small /> Copy agenda</button></div>
-    </>
+    </div>
   );
-  return section ? <section className="mt-sec"><h2>Prep</h2>{body}</section> : body;
 }
