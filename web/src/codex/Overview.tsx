@@ -34,6 +34,7 @@ import { KeepInTouch, useKeepInTouch } from './overview/KeepInTouch';
 import { JustEnded } from './overview/JustEnded';
 import { SinceLastVisit } from './overview/SinceLastVisit';
 import { Stale } from './overview/Stale';
+import { Chip } from '../ui/Button';
 
 export { Review } from './overview/Review';
 
@@ -166,7 +167,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         <section>
           <div className="as-section">Meetings today · {upcoming.length}{left > 0 && <span title="Meeting time left today, including the next one"> · {leftText} left</span>}</div>
           <div className="mt-rows ov-card">{upcoming.slice(0, 3).map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div>
-          {upcoming.length > 3 && <button className="as-chip quiet ov-more" onClick={() => setView({ list: 'meetings', open: null })}>+{upcoming.length - 3} more</button>}
+          {upcoming.length > 3 && <Chip quiet className="ov-more" onClick={() => setView({ list: 'meetings', open: null })}>+{upcoming.length - 3} more</Chip>}
         </section>
       )}
       <div className="ov-group">

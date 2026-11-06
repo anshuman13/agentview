@@ -11,6 +11,7 @@ import { attempt, showSnack, useView } from './view';
 import { PlanPreview, usePlanFlow } from './PlanPreview';
 import type { Planned } from './planFlow';
 import { Icon } from '../ui/Icon';
+import { Chip } from '../ui/Button';
 
 const hhmm = (n: number) => minutesText(Math.round(n / 60_000));
 export const DRAG_TYPE = 'application/x-codex-item';
@@ -91,11 +92,11 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   };
   const chips = [
     ...gaps.map((g) => ({ at: g[0], el: (
-      <button key={`g${g[0]}`} className={`as-chip${pick?.end === g[1] ? ' on' : ''}`} title="Block time for a task" onClick={() => { flow.setPlan(null); if (pick?.end === g[1]) setPick(null); else choose(g); }} onDragOver={(e) => e.dataTransfer.types.includes(DRAG_TYPE) && e.preventDefault()} onDrop={drop(g)}>
+      <Chip key={`g${g[0]}`} on={pick?.end === g[1]} title="Block time for a task" onClick={() => { flow.setPlan(null); if (pick?.end === g[1]) setPick(null); else choose(g); }} onDragOver={(e) => e.dataTransfer.types.includes(DRAG_TYPE) && e.preventDefault()} onDrop={drop(g)}>
         {clock(g[0])}-{clock(g[1])}
-      </button>
+      </Chip>
     ) })),
-    ...blocks.map((m) => ({ at: m.starts_at!, el: <span key={m.profile + m.id} className="as-chip on" title={m.title ?? ''}>{clock(m.starts_at!)}-{clock(m.ends_at!)} {m.title}</span> })),
+    ...blocks.map((m) => ({ at: m.starts_at!, el: <span key={m.profile + m.id} className="chip" title={m.title ?? ''}>{clock(m.starts_at!)}-{clock(m.ends_at!)} {m.title}</span> })),
   ].sort((a, b) => a.at - b.at);
   if (!plan && !pick && !timed.some((m) => isBlock(m.id))) {
     return gaps.length > 0 && (late.length || open.length || goalTasks.length) ? <div className="as-next-actions"><button className="btn sm" onClick={planDay}><Icon name="sparkle" small /> Plan my day</button></div> : null;
@@ -106,7 +107,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
       <div className="as-chips">
         {chips.map((c) => c.el)}
         {!gaps.length && <span className="as-ctx">No free time left in work hours</span>}
-        {gaps.length > 0 && (late.length > 0 || open.length > 0 || goalTasks.length > 0) && <button className={`as-chip${plan ? ' on' : ''}`} onClick={() => (plan ? flow.setPlan(null) : planDay())}>Plan my day</button>}
+        {gaps.length > 0 && (late.length > 0 || open.length > 0 || goalTasks.length > 0) && <Chip on={!!plan} onClick={() => (plan ? flow.setPlan(null) : planDay())}>Plan my day</Chip>}
       </div>
       <PlanPreview flow={flow} day="today" />
       {pick && (

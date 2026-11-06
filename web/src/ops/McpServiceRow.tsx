@@ -1,3 +1,4 @@
+import { Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { plural, rowKey, shortName, stateOf, usageText, type Group, type Row, type Service, type Usage } from './mcpHelpers';
 
@@ -14,9 +15,9 @@ export function ServiceRow({ service, sel, usageOf, onPick, group, onGroup, onHi
           const u = usageOf(row);
           const title = `${row.name} · ${label}${row.tools?.length ? ` · ${plural(row.tools.length, 'tool')}` : ''}${u ? ` · ${usageText(u)}` : ''}`;
           return (
-            <button key={rowKey(row)} data-row={rowKey(row)} className={`mcp-chip ${tone} ${rowKey(row) === sel ? 'selected' : ''}`} title={title} onClick={() => onPick(rowKey(row))}>
+            <Chip key={rowKey(row)} size="sm" data-row={rowKey(row)} on={rowKey(row) === sel} late={tone === 'bad'} className={tone === 'warn' ? 'st-warn' : undefined} title={title} onClick={() => onPick(rowKey(row))}>
               <span className={`dot ${tone}`} />{variant || label}
-            </button>
+            </Chip>
           );
         })}
       </div>

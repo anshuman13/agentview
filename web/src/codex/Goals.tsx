@@ -7,7 +7,7 @@ import { live } from './data/wiki';
 import type { ItemRow, Profile } from './data/sync';
 import { attempt, openTask, openWeekGoals, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
-import { Button } from '../ui/Button';
+import { Button, Chip, chipClass } from '../ui/Button';
 import { save, stored } from '../ui/util';
 
 function GoalInput({ row }: { row: ItemRow }) {
@@ -54,7 +54,7 @@ export function WeekGoals({ now }: { now: number }) {
       </div>
       {goals.length > 0 && <div role="list" aria-label="Goals">{goals.map((g) => <GoalInput key={g.profile + g.id} row={g} />)}</div>}
       {filter === 'all' && (
-        <select className="as-chip quiet" value={pick} aria-label="Goal profile" onChange={(e) => setPick(e.target.value as Profile)}>
+        <select className={chipClass({ quiet: true })} value={pick} aria-label="Goal profile" onChange={(e) => setPick(e.target.value as Profile)}>
           <option value="work">Work</option>
           <option value="personal">Personal</option>
         </select>
@@ -120,12 +120,12 @@ export function GoalLines({ now }: { now: number }) {
   return (
     <section className="gl-lines" role="list" aria-label="Goals this week">
       {(more ? goals : goals.slice(0, GOALS_SHOWN)).map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} risk={goalAtRisk(items, g, free[g.profile] ?? 0)} />)}
-      {goals.length > GOALS_SHOWN && <button className="as-chip quiet ov-more" onClick={() => setMore(!more)}>{more ? 'Show fewer' : `+${goals.length - GOALS_SHOWN} more`}</button>}
+      {goals.length > GOALS_SHOWN && <Chip quiet className="ov-more" onClick={() => setMore(!more)}>{more ? 'Show fewer' : `+${goals.length - GOALS_SHOWN} more`}</Chip>}
       {offer && (
         <div className="gl-line" role="listitem">
           <span className="muted small">Carry over {carry.length} {carry.length === 1 ? 'goal' : 'goals'} from last week</span>
-          <button className="as-chip" onClick={() => void carryAll()}>Carry over</button>
-          <button className="as-chip quiet" onClick={skip}>Not now</button>
+          <Chip onClick={() => void carryAll()}>Carry over</Chip>
+          <Chip quiet onClick={skip}>Not now</Chip>
         </div>
       )}
     </section>
@@ -140,7 +140,7 @@ export function GoalPick({ row, onPick }: { row: ItemRow; onPick: (goal: string 
   if (!goals.length && !linked) return null;
   const options = linked && !goals.includes(linked) ? [linked, ...goals] : goals;
   return (
-    <select className={`as-chip${linked ? '' : ' quiet'}`} value={linked?.id ?? ''} aria-label="Goal" onChange={(e) => onPick(e.target.value || null)}>
+    <select className={chipClass({ quiet: !linked })} value={linked?.id ?? ''} aria-label="Goal" onChange={(e) => onPick(e.target.value || null)}>
       <option value="">No goal</option>
       {options.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
     </select>

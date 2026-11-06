@@ -3,7 +3,7 @@ import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
-import { Button } from '../../ui/Button';
+import { Button, Chip } from '../../ui/Button';
 import { EmptyState, Panel } from '../../ui/Panel';
 import { ago, safeHref } from '../../ui/util';
 import { clock } from '../time';
@@ -95,7 +95,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
             <section className="sm-brief">
               <div className="wk-meta"><span>Sonnet summary</span><span>{dayLabel(brief.from_at ?? 0, true)} {clock(brief.from_at ?? 0)} to {clock(brief.to_at ?? 0)}</span></div>
               <Markdown text={allBrief || !longBrief ? brief.text : head(briefLines)} />
-              {longBrief && <button className="as-chip quiet ov-more" onClick={() => setAllBrief(!allBrief)}>{allBrief ? 'Show less' : 'Show all'}</button>}
+              {longBrief && <Chip quiet className="ov-more" onClick={() => setAllBrief(!allBrief)}>{allBrief ? 'Show less' : 'Show all'}</Chip>}
             </section>
           )}
           {chats.length > 0 && (
@@ -110,7 +110,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
                   </span>
                 </a>
               ))}
-              {chats.length > CHATS && <button className="as-chip quiet ov-more" onClick={() => setAllChats(!allChats)}>{allChats ? 'Show less' : `Show ${chats.length - CHATS} more`}</button>}
+              {chats.length > CHATS && <Chip quiet className="ov-more" onClick={() => setAllChats(!allChats)}>{allChats ? 'Show less' : `Show ${chats.length - CHATS} more`}</Chip>}
             </div>
           )}
           {!chats.length && !brief?.text && <div className="as-empty"><Icon name="comment-discussion" /><div>Nothing read yet.</div><div className="muted small">Slack is read every 15 minutes on weekdays from 07 to 19.</div></div>}

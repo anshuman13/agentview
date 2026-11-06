@@ -28,15 +28,7 @@
 .mcp-row.skeleton { height: var(--size-xl); margin-bottom: var(--sp-1); background: var(--hover); animation: shimmer var(--pulse) var(--ease) infinite; }
 .mcp-row-name { flex: none; width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding: 0; font-weight: 600; color: var(--fg); background: none; border: 0; }
 .mcp-chips { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.mcp-chip {
-  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--size-sm); padding: 0 var(--sp-4); font-family: var(--mono); font-size: var(--fs-xs);
-  color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-round);
-}
-@media (hover: hover) { .mcp-chip:hover { border-color: var(--border-strong); } }
-.mcp-chip.bad { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, var(--border)); }
-.mcp-chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
-.mcp-chip.off { color: var(--fg-muted); }
-.mcp-chip.selected { border-color: var(--accent); background: var(--accent-soft); }
+.mcp-chips .chip.chip-btn { font-family: var(--mono); font-size: var(--fs-xs); }
 .mcp-row-use { flex: none; font-size: var(--fs-xs); color: var(--link); }
 .mcp-row-use.bad { color: var(--err); }
 .mcp-row-move { flex: none; width: var(--size-sm); height: var(--size-sm); opacity: 0; }

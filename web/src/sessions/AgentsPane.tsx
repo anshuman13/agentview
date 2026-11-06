@@ -1,5 +1,6 @@
 import { send, useStore } from '../app/store';
 import { Back } from '../app/back';
+import { Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { Markdown } from '../chat/Chat';
 import { Row } from '../chat/Transcript';
@@ -21,9 +22,9 @@ export function AgentsChip() {
   const text = [running && `${running} running`, done && `${done} done`].filter(Boolean).join(', ');
   const short = [running, done].filter(Boolean).join(' / ');
   return (
-    <button className={`chip outline pill ag-chip ${running ? 'agent' : ''}`} title={`Show the agents: ${text}`} aria-label={text} onClick={() => openAgent()}>
+    <Chip className={running ? 'agent' : undefined} title={`Show the agents: ${text}`} aria-label={text} onClick={() => openAgent()}>
       <Icon name={running ? 'loading' : 'hubot'} small spin={running > 0} /> <span className="chip-full">{text}</span><span className="chip-short">{short}</span>
-    </button>
+    </Chip>
   );
 }
 

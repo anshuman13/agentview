@@ -61,7 +61,8 @@ button.link { background: transparent; border: 0; padding: 0; color: var(--link)
 
 /* State layers: a tint of the content colour over the fill, 8% hover, 10% focus, 12% pressed. */
 .icon-btn, .chip.chip-btn { --fill: transparent; }
-.chip.chip-btn.on { --fill: var(--accent-soft); }
+.chip.chip-btn.on, .chip.chip-btn.chip-accent { --fill: var(--accent-soft); }
+.chip.chip-btn.chip-accent.on { --fill: var(--accent-fill); }
 :is(.btn.btn-filled, .btn.btn-tinted, .btn.btn-gray, .btn.btn-plain, .btn.btn-danger, .icon-btn, .chip.chip-btn) {
   --state: 0%;
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);

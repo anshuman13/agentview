@@ -32,6 +32,12 @@ button.chip { cursor: pointer; }
 .chip.chip-btn.chip-sm { height: var(--control-sm); }
 .chip.chip-btn.on { color: var(--fg); }
 .chip.chip-btn.late { color: var(--err); }
+.chip.chip-btn.chip-work { color: var(--work); }
+.chip.chip-btn.chip-personal { color: var(--personal); }
+.chip.chip-btn.chip-accent { color: var(--accent-text); }
+.chip.chip-btn.chip-accent.on { color: var(--on-accent); }
+.chip.chip-btn.chip-quiet { color: var(--fg-faint); border: 1px dashed var(--border-strong); }
+select.chip.chip-btn { max-width: 14rem; text-overflow: ellipsis; }
 @media (hover: hover) { .chip.chip-btn:hover { color: var(--fg); } .chip.chip-btn.late:hover { color: var(--err); } }
 @media (pointer: coarse) { .chip.chip-btn { min-height: var(--touch-sm); } }
 

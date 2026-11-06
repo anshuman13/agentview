@@ -158,8 +158,8 @@
 .mt-talk-5 { background: var(--border-strong); }
 .mt-others { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sp-4); font-size: var(--fs-lg); color: var(--fg-muted); }
 .mt-others b { color: var(--fg-strong); font-weight: 600; margin-right: var(--sp-2); }
-.mt-add { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-5); padding: 0 var(--sp-7); min-height: var(--touch-sm); border: 1px dashed var(--border-strong); border-radius: 12px; color: var(--fg-faint); }
-.mt-add:focus-within { border-style: solid; border-color: var(--accent); }
+.mt-add { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-5); padding: 0 var(--sp-7); min-height: var(--size-2xl); border-radius: var(--radius-md); background: var(--border); color: var(--fg-faint); }
+.mt-add:focus-within { background: var(--accent-soft); }
 .mt-add input { flex: 1; min-width: 0; height: var(--touch-sm); border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-lg); outline: 0; }
 .mt-raise { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
 .mt-decisions .mt-raise, .mt-decisions .wk-act { margin-left: var(--sp-3); vertical-align: middle; }

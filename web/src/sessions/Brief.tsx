@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { send, setUi, useStore } from '../app/store';
+import { Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { BlockedCard, Pending } from '../chat/Pending';
@@ -27,9 +28,9 @@ function InboxChip() {
   const n = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
   if (!n) return null;
   return (
-    <button className="chip pill st-warn ag-chip" title={`Show what needs you: ${n} waiting`} aria-label={`${n} waiting`} onClick={() => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'view:chats' } }))}>
+    <Chip className="st-warn" title={`Show what needs you: ${n} waiting`} aria-label={`${n} waiting`} onClick={() => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'view:chats' } }))}>
       <Icon name="inbox" small /> {n}<span className="chip-full"> waiting</span>
-    </button>
+    </Chip>
   );
 }
 

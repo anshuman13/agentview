@@ -104,19 +104,12 @@ button.as-ctx-btn { width: 100%; padding: 0; border: 0; background: transparent;
 
 .as-composer { flex: none; display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-8) var(--sp-8); }
 .as-chips { display: flex; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; }
-.as-chip { flex: none; height: var(--size-xl); padding: 0 var(--sp-6); display: inline-flex; align-items: center; gap: var(--sp-3); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); font-size: var(--fs-sm); white-space: nowrap; }
-@media (hover: hover) { .as-chip:hover { color: var(--fg); border-color: var(--border-card); } }
-.as-chip.on { color: var(--fg); background: var(--accent-soft); border-color: transparent; }
 .dp-block { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-4); padding: var(--sp-6); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .dp-block select, .dp-block input { min-width: 0; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
 .dp-block input[type='number'] { width: 72px; }
 .dp-when { display: flex; align-items: center; gap: var(--sp-4); }
 .dp-when > .muted:has(+ .ov-t), .dp-when > input + .muted { flex: none; font-variant-numeric: tabular-nums; }
 .dp-when > input[type='time'] { flex: 1; }
-.as-chip.work { color: var(--work); border-color: color-mix(in srgb, var(--work) 45%, transparent); }
-.as-chip.personal { color: var(--personal); border-color: color-mix(in srgb, var(--personal) 45%, transparent); }
-.as-chip.when, .as-chip.time { color: var(--accent-text); border-color: transparent; background: var(--accent-soft); }
-.as-chip.when.on { color: var(--on-accent); background: var(--accent-fill); }
 .as-pick { position: relative; flex: none; display: inline-flex; }
 .as-pick input { position: absolute; inset: 0; width: 100%; opacity: 0; pointer-events: none; }
 .as-pick select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
@@ -167,10 +160,6 @@ button.as-ctx-btn { width: 100%; padding: 0; border: 0; background: transparent;
 .as-edit-meta, .as-edit-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); margin-left: 38px; }
 .as-edit-meta .as-pick > button { display: inline-flex; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .as-edit-due { display: inline-flex; align-items: center; }
-.as-chip.quiet { color: var(--fg-faint); border-style: dashed; }
-.as-chip.late { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, transparent); }
-.as-chip.static { border-color: transparent; padding: 0 var(--sp-2); }
-a.as-chip { text-decoration: none; }
 .as-chip-x { display: grid; place-items: center; width: 28px; height: 28px; border: 0; background: transparent; color: var(--fg-faint); cursor: pointer; }
 .as-edit-ago { margin-left: auto; font-size: var(--fs-sm); color: var(--fg-faint); }
 .as-edit-actions .spacer { flex: 1; }
@@ -224,7 +213,6 @@ a.as-chip { text-decoration: none; }
   .as-check { width: var(--touch); height: var(--touch); margin: -6px 0 -6px -6px; }
   .as-check .codicon.icon { font-size: 22px; }
   .as-composer { padding: var(--sp-3) var(--sp-6) var(--sp-6); }
-  .as-chip { height: var(--touch-sm); font-size: var(--fs-md); }
   .as-card textarea, .as-mirror { font-size: var(--fs-2xl); }
   .as-snack { bottom: 140px; }
   .as-edit-actions .btn { height: var(--touch-sm); }
@@ -258,7 +246,6 @@ a.as-chip { text-decoration: none; }
 .gl-tasks { margin: var(--sp-2) 0 0 var(--sp-6); padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sp-2); }
 .gl-row { display: flex; align-items: center; gap: var(--sp-3); }
 .gl-input { flex: 1; min-width: 0; padding: var(--sp-3) var(--sp-5); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; font-size: var(--fs-md); }
-select.as-chip { max-width: 14rem; text-overflow: ellipsis; font: inherit; font-size: var(--fs-sm); }
 /* Do now: the top three as numbered cards with one action each, hot ones (late, waiting, about to start) marked red. */
 .fc-top { display: flex; flex-direction: column; gap: var(--sp-4); margin: 0; padding: 0; list-style: none; }
 .fc-item { display: flex; gap: var(--sp-6); padding: var(--sp-7) var(--sp-8); border-radius: 12px; background: var(--group-card); cursor: pointer; }

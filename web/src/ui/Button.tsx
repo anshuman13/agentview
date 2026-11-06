@@ -5,6 +5,7 @@ type Native = Omit<ComponentPropsWithRef<'button'>, 'children'>;
 type Size = 'sm' | 'md';
 type Variant = 'filled' | 'tinted' | 'gray' | 'plain' | 'danger';
 type LegacyVariant = 'primary' | 'secondary' | 'quiet';
+type Tone = 'work' | 'personal' | 'accent';
 
 const variants: Record<LegacyVariant, Variant> = { primary: 'filled', secondary: 'gray', quiet: 'plain' };
 
@@ -39,19 +40,21 @@ export function IconButton({ icon, label, size = 'md', on, small, spin, classNam
   );
 }
 
-export function Chip({ on, late, size = 'md', icon, className, type = 'button', children, ...rest }: Native & {
+export function Chip({ on, late, tone, quiet, size = 'md', icon, className, type = 'button', children, ...rest }: Native & {
   on?: boolean;
   late?: boolean;
+  tone?: Tone;
+  quiet?: boolean;
   size?: Size;
   icon?: string;
   children?: ReactNode;
 }) {
   return (
-    <button type={type} className={cx('chip', 'chip-btn', size === 'sm' && 'chip-sm', on && 'on', late && 'late', className)} {...rest}>
+    <button type={type} className={cx('chip', 'chip-btn', size === 'sm' && 'chip-sm', on && 'on', late && 'late', tone && `chip-${tone}`, quiet && 'chip-quiet', className)} {...rest}>
       {icon && <Icon name={icon} small />}
       {children}
     </button>
   );
 }
 
-export const chipClass = ({ on, late }: { on?: boolean; late?: boolean }) => cx('chip', 'chip-btn', on && 'on', late && 'late');
+export const chipClass = ({ on, late, tone, quiet }: { on?: boolean; late?: boolean; tone?: Tone; quiet?: boolean }) => cx('chip', 'chip-btn', on && 'on', late && 'late', tone && `chip-${tone}`, quiet && 'chip-quiet');

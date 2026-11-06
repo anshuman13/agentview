@@ -7,6 +7,7 @@ import { withEstimate } from './data/plan';
 import { captureTask } from './captureTask';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
+import { Chip, chipClass } from '../ui/Button';
 import { touch } from '../app/touch';
 import { Voice, useDictation } from '../chat/Voice';
 import { readFlag, reveal } from '../ui/util';
@@ -114,27 +115,27 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
       <div className="as-chips" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('button') && document.activeElement === area.current) e.preventDefault(); }}>
         {typed ? (
           <>
-            <button className="as-chip on" title="A task or a question for Claude" onClick={cycle}><Icon name={MODE[m].icon} small /> {MODE[m].label}</button>
-            {m === 'ask' && <button className={`as-chip${fresh ? ' on' : ''}`} title="Ask in today's Codex chat or start a new one" onClick={() => setFresh((f) => !f)}><Icon name={fresh ? 'add' : 'comment-discussion'} small /> {fresh ? 'New chat' : "Today's chat"}</button>}
-            {m !== 'ask' && <button className={`as-chip ${prof}`} title="Work or personal" onClick={() => setProfile(prof === 'work' ? 'personal' : 'work')}>{FILTER_LABEL[prof]}</button>}
+            <Chip on icon={MODE[m].icon} title="A task or a question for Claude" onClick={cycle}>{MODE[m].label}</Chip>
+            {m === 'ask' && <Chip on={fresh} icon={fresh ? 'add' : 'comment-discussion'} title="Ask in today's Codex chat or start a new one" onClick={() => setFresh((f) => !f)}>{fresh ? 'New chat' : "Today's chat"}</Chip>}
+            {m !== 'ask' && <Chip tone={prof} title="Work or personal" onClick={() => setProfile(prof === 'work' ? 'personal' : 'work')}>{FILTER_LABEL[prof]}</Chip>}
             {m === 'task' && asking && !dated ? (
               <>
                 <span className="as-ask">When?</span>
-                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => void submit(s.at(new Date(), prof))}><Icon name="clock" small /> {snoozeText(s, new Date(), prof)}</button>)}
-                <button className="as-chip" onClick={() => void submit(null)}>No time</button>
-                <PickTime className="as-chip time" onPick={(t) => void submit(t)} />
+                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <Chip key={s.label} tone="accent" icon="clock" onClick={() => void submit(s.at(new Date(), prof))}>{snoozeText(s, new Date(), prof)}</Chip>)}
+                <Chip onClick={() => void submit(null)}>No time</Chip>
+                <PickTime className={chipClass({ tone: 'accent' })} onPick={(t) => void submit(t)} />
               </>
             ) : m === 'task' && (dated ? (
-              <button className="as-chip when on" title="Remove the time" onClick={() => { setPick(null); setNoWhen(true); }}><Icon name="clock" small /> {due != null ? when(due) : 'Today'} <Icon name="close" small /></button>
+              <Chip tone="accent" on title="Remove the time" onClick={() => { setPick(null); setNoWhen(true); }}><Icon name="clock" small /> {due != null ? when(due) : 'Today'} <Icon name="close" small /></Chip>
             ) : (
               <>
-                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <button key={s.label} className="as-chip time" onClick={() => setPick(s.at(new Date(), prof))}><Icon name="clock" small /> {snoozeText(s, new Date(), prof)}</button>)}
-                <PickTime className="as-chip time" onPick={setPick} />
+                {snoozes().filter((s) => QUICK.includes(s.label)).map((s) => <Chip key={s.label} tone="accent" icon="clock" onClick={() => setPick(s.at(new Date(), prof))}>{snoozeText(s, new Date(), prof)}</Chip>)}
+                <PickTime className={chipClass({ tone: 'accent' })} onPick={setPick} />
               </>
             ))}
           </>
         ) : (
-          recipes(next).map((r) => <button key={r.label} className="as-chip" onClick={() => ask(askText(r.q, items, undefined, meetings), prof)}><Icon name="sparkle" small /> {r.label}</button>)
+          recipes(next).map((r) => <Chip key={r.label} icon="sparkle" onClick={() => ask(askText(r.q, items, undefined, meetings), prof)}>{r.label}</Chip>)
         )}
       </div>
       <div className="cp-card as-card">

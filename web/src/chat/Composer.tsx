@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { api, getState, notice, prompt, queueNext, send, sinceHeard, steer, useStore } from '../app/store';
+import { Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { Confirm } from '../ui/Confirm';
 import { assistantStore } from '../codex/data';
@@ -367,9 +368,9 @@ export function Composer() {
           </button>
         )}
         <div className="cp-foot">
-          <button className={`cp-pill cp-chip${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Loop on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
+          <Chip className={`cp-mode${loop.on ? ' loop' : ''}`} title={`${modeInfo.detail} (Shift+Tab to switch mode)${loop.on ? `. Loop on, up to ${loop.max} ${loop.max === 1 ? 'round' : 'rounds'}` : ''}`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
             <Icon name={modeInfo.icon} small /><span>{shortModel}{effort && ` · ${effortName}`} · {modeInfo.label}</span>{loop.on && <Icon name="sync" small />}<Icon name="chevron-down" small />
-          </button>
+          </Chip>
           <span className="cp-spacer" />
           {servers.length > 0 && (
             <button className={`icon-btn mcp${uses.length ? ' on' : ''}`} title="Ask Claude to use an MCP server or tool" aria-label="Use an MCP server" onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })}>

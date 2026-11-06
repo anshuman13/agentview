@@ -7,6 +7,7 @@ import { Fold } from './Fold';
 import { Icon } from '../ui/Icon';
 import { save, stored } from '../ui/util';
 import { attempt, useView } from './view';
+import { Chip } from '../ui/Button';
 
 const DISMISSED = 'codex.weeklyReviewDismissed';
 const today = (now: number) => { const d = new Date(now); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
@@ -37,7 +38,7 @@ function Card({ profile, now, title, onHide }: { profile: Profile; now: number; 
         })}
         <div className="gl-line"><span>Tasks done this week</span><span className="muted small">{rev.done.length}</span></div>
         <div className="gl-line"><span>Meeting hours</span><span className="muted small">{hoursText(rev.hours)}</span></div>
-        {plan.state === 'carry' && <div className="gl-line"><button className="as-chip" onClick={() => void carry()}>Carry over</button>{limit}</div>}
+        {plan.state === 'carry' && <div className="gl-line"><Chip onClick={() => void carry()}>Carry over</Chip>{limit}</div>}
         {plan.state === 'carried' && <div className="gl-line"><span className="muted small">Carried over {plan.carried}</span>{limit}</div>}
         {plan.state === 'full' && <div className="gl-line">{limit}</div>}
       </div>

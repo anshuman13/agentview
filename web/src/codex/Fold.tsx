@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { save, stored } from '../ui/util';
 import { Icon } from '../ui/Icon';
+import { Chip } from '../ui/Button';
 
 // The header line of an overview card: title, count and an optional control on the right.
 export function SectionHead({ title, count, action, className = '', id }: { title: string; count?: number; action?: ReactNode; className?: string; id?: string }) {
@@ -35,7 +36,7 @@ export function Capped<T>({ items, render, limit = SHOWN }: { items: T[]; render
   return (
     <>
       {(more ? items : items.slice(0, limit)).map(render)}
-      {items.length > limit && <button className="as-chip quiet ov-more" onClick={() => setMore(!more)}>{more ? 'Show fewer' : `+${items.length - limit} more`}</button>}
+      {items.length > limit && <Chip quiet className="ov-more" onClick={() => setMore(!more)}>{more ? 'Show fewer' : `+${items.length - limit} more`}</Chip>}
     </>
   );
 }
