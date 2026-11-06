@@ -22,6 +22,8 @@ import { sourceOf } from './taskSource';
 import { Check } from './TaskCheck';
 import { afterNextMeeting, estimateMin, minutesText, nextFreeSlot, suggestEstimate, timedMeetings, type Span } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
+import { parseLog, removeSession } from './data/timeLog';
+import { Fold } from './Fold';
 import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip, RelatedToTask } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
@@ -166,6 +168,15 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const addEstimate = (n: number) => putTitle(`${title.trim()} ~${minutesText(n)}`);
 
   const logTime = (n: number) => write({ spent: (Number(row.spent) || 0) + n });
+  const spent = Number(row.spent) || 0;
+  const sessions = parseLog(row.time_log).sort((a, b) => b.at - a.at);
+  const byHand = spent - sessions.reduce((n, s) => n + s.min, 0);
+  const removeTime = (id: string, min: number) => {
+    if (snap.phase !== 'ready') return showSnack('Unlock Codex to remove the time');
+    const before = { spent: row.spent ?? null, time_log: row.time_log ?? null };
+    void store.update(row, removeSession(row.time_log, row.spent, id));
+    showSnack(`Removed ${minutesText(min)}`, () => void store.update(row, before));
+  };
 
   useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text]);
   // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
@@ -339,7 +350,19 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
           <Button variant="quiet" size="sm" icon="add" className="as-tt-add" onMouseDown={(e) => e.preventDefault()} onClick={() => setAdding(true)}>Add subtask</Button>
         </div>
         {row.draft && row.source === 'slack' && (row.status === 'suggested' || row.status === 'open') && <Draft row={row} store={store} onEdit={(draft) => act.edit(row, { draft })} />}
-        {(row.people || row.updated_at || estimate != null) && <div className="as-tt-fine">{estimate != null && <span>~{minutesText(estimate)}</span>}{row.people && <span>{row.people}</span>}<span>{ago(row.updated_at, ' ago')}</span></div>}
+        {(row.people || row.updated_at || estimate != null || spent > 0) && <div className="as-tt-fine">{estimate != null && <span>~{minutesText(estimate)}</span>}{spent > 0 && <span>{minutesText(spent)} spent</span>}{row.people && <span>{row.people}</span>}<span>{ago(row.updated_at, ' ago')}</span></div>}
+        <Fold id="time-log" title="Time log" count={sessions.length}>
+          <div className="as-tt-log">
+            {sessions.map((s) => (
+              <div key={s.id}>
+                <span>{new Date(s.at).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })} {clock(s.at)}</span>
+                <span>{minutesText(s.min)}</span>
+                <Button variant="quiet" size="sm" icon="close" aria-label={`Remove ${minutesText(s.min)}`} onClick={() => removeTime(s.id, s.min)}>Remove</Button>
+              </div>
+            ))}
+            {byHand > 0 && <div className="as-tt-log-rest"><span>Earlier or added by hand: {minutesText(byHand)}</span></div>}
+          </div>
+        </Fold>
       </div>
       <div className="as-tt-bar">
         {row.status === 'open' && (

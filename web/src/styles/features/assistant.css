@@ -353,6 +353,10 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-tt-fine { display: flex; gap: var(--sp-6); margin-left: 38px; font-size: var(--fs-xs, var(--fs-sm)); color: var(--fg-faint); }
 .as-tt-fine span:last-child { margin-left: auto; }
 .as-tt-fine span:first-child:not(:last-child) { margin-left: 0; }
+.as-tt-log { display: flex; flex-direction: column; gap: var(--sp-2); font-size: var(--fs-sm); }
+.as-tt-log > div { display: flex; align-items: center; gap: var(--sp-6); min-height: 32px; }
+.as-tt-log > div > span:first-child { flex: 1; }
+.as-tt-log-rest { color: var(--fg-faint); }
 .as-page .as-edit-checks { margin: 0; gap: var(--sp-2); }
 .as-page .as-edit-checks [role=checkbox], .as-page .as-sub-input { min-height: 40px; font-size: var(--fs-2xl); }
 .as-page .as-edit-text { margin-left: 0; width: 100% !important; min-height: var(--sp-24); font-size: var(--fs-2xl) !important; }

@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { assistantStore, useAssistantTable } from './data';
 import type { ItemRow, Profile } from './data/sync';
 import { estimateMin, focusTitle, minutesText } from './data/plan';
+import { appendSession } from './data/timeLog';
 import { apiUrl, fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { save, stored } from '../ui/util';
@@ -46,9 +47,9 @@ function finish() {
   const min = Math.min(Math.round((Date.now() - f.start) / 60_000), f.end ? LENGTH : Infinity);
   const row = store.snapshot().items.find((r) => r.profile === f.profile && r.id === f.id && !r.deleted);
   if (!row || min < 1) return showSnack(min < 1 ? 'Under a minute, not logged' : 'Task gone, time not logged');
-  const before = row.spent ?? null;
-  void store.update(row, { spent: (Number(before) || 0) + min });
-  showSnack(`Logged ${minutesText(min)}`, () => void store.update(row, { spent: before }));
+  const before = { spent: row.spent ?? null, time_log: row.time_log ?? null };
+  void store.update(row, { spent: (Number(before.spent) || 0) + min, time_log: appendSession(before.time_log, { id: String(f.start), at: f.start, min }) });
+  showSnack(`Logged ${minutesText(min)}`, () => void store.update(row, before));
   return true;
 }
 

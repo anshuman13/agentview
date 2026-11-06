@@ -43,6 +43,8 @@ export type ItemFields = {
   rank: number | null;
   draft?: string | null;
   spent?: number | null;
+  // JSON list of focus sessions {id, at, min}.
+  time_log?: string | null;
   goal?: string | null;
   // 0 none, 1 low, 2 medium, 3 high.
   priority?: number | null;
