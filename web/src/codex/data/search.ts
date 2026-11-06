@@ -4,7 +4,7 @@ import { POINT, RAISED } from './points';
 import { keyWords } from '../../../../shared/claimMatch';
 import { GOAL } from './goals';
 import { currentClaim, isOld, live, rowMatcher, queryWords, searchWiki, type Fact, type Job, type Meeting, type Page } from './wiki';
-import { searchMeetings } from './meetings';
+import { peopleOf, sameName, searchMeetings } from './meetings';
 
 export { snippet };
 
@@ -84,5 +84,29 @@ export function related(data: RelatedData, text: string, profile: string, skip: 
   for (const idx of all) for (const w of words) for (const r of idx.get(w) ?? []) if (r.profile === profile) n.set(r, (n.get(r) ?? 0) + 1);
   const out: Related[] = [];
   for (const [r, c] of n) if (c >= 2 && !skip.includes(r.id) && !(r.kind === 'meeting' && r.at > now)) out.push(r);
+  return out.sort((a, b) => n.get(b)! - n.get(a)! || b.at - a.at).slice(0, max);
+}
+
+const peopleList = (s: string | null | undefined) => [...new Set((s ?? '').split(',').map((p) => p.trim()).filter(Boolean))];
+
+// Past meetings and Slack chats of the saved task's profile: two shared title key words, or one plus a shared person. Most shared first, then newest (meeting start, Slack updated_at).
+export function relatedToTask(data: { items: ItemRow[]; meetings: Meeting[] }, task: Pick<ItemRow, 'id' | 'profile' | 'title' | 'people'>, now = Date.now(), max = 5): Related[] {
+  const words = keyWords(task.title ?? '');
+  if (!words.size) return [];
+  const n = new Map<Related, number>();
+  for (const idx of [indexOf(data.meetings, meetingEntries), indexOf(data.items, slackEntries)]) for (const w of words) for (const r of idx.get(w) ?? []) if (r.profile === task.profile) n.set(r, (n.get(r) ?? 0) + 1);
+  const mine = peopleList(task.people);
+  const actions = new Set(data.items.filter((r) => r.meeting_id).map((r) => r.profile + r.id));
+  const byId = new Map<string, string[]>();
+  if (mine.length) {
+    for (const m of data.meetings) byId.set('meeting' + m.profile + m.id, peopleOf(m));
+    for (const r of data.items) byId.set('slack' + r.profile + r.id, peopleList(r.people));
+  }
+  const out: Related[] = [];
+  for (const [r, c] of n) {
+    if (r.id === task.id && r.kind === 'slack') continue;
+    if (r.kind === 'meeting' ? r.at > now : actions.has(r.profile + r.id)) continue;
+    if (c >= 2 || mine.some((p) => (byId.get(r.kind + r.profile + r.id) ?? []).some((q) => sameName(p, q)))) out.push(r);
+  }
   return out.sort((a, b) => n.get(b)! - n.get(a)! || b.at - a.at).slice(0, max);
 }

@@ -22,7 +22,7 @@ import { Check } from './TaskCheck';
 import { estimateMin, minutesText, suggestEstimate } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 import { GoalPick } from './Goals';
-import { caretLine, RelatedStrip } from './Related';
+import { caretLine, RelatedStrip, RelatedToTask } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
 import { addCheck, checkItems, moveCheck, toggleCheck } from './taskChecklist';
 import { useDrag } from './drag';
@@ -302,6 +302,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         )}
         <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Description" aria-label="Description" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onBlur={save} onFocus={reveal} />
         {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
+        <RelatedToTask row={row} />
         <div className="as-edit-checks" data-drop="checks">
           {checks.map((c, i) => (
             <Fragment key={i}>

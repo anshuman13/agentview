@@ -490,6 +490,11 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-related { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin: var(--sp-2) 0; }
 .as-edit .as-related { margin-left: 38px; }
 .as-related-item { display: contents; }
+.as-related-list { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: var(--sp-2); }
+.as-related-list .as-related-item { display: block; min-width: 0; }
+.as-related-list .as-related-hit { display: flex; width: 100%; }
+.as-related-list .as-related-title { flex: 0 1 auto; min-width: 0; max-width: none; }
+.as-related-list .as-related-when { flex: none; margin-left: auto; }
 .as-related-hit { display: inline-flex; align-items: center; gap: var(--sp-2); max-width: 100%; padding: 2px var(--sp-4); border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); text-decoration: none; cursor: pointer; }
 @media (hover: hover) { .as-related-hit:hover { color: var(--fg); border-color: var(--border-strong); } }
 .as-related-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28ch; }

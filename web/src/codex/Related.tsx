@@ -1,6 +1,7 @@
+import type { ItemRow } from './data/sync';
 import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from './data';
-import { related, type Related as Hit } from './data/search';
+import { related, relatedToTask, type Related as Hit } from './data/search';
 import { dayLabel } from './data/dates';
 import { Icon } from '../ui/Icon';
 import { safeHref } from '../ui/util';
@@ -41,6 +42,25 @@ export function RelatedStrip({ text, profile, skip = '' }: { text: string; profi
           ? <a className="as-related-hit" href={safeHref(h.url)} target="_blank" rel="noreferrer" onMouseDown={keep}>{body}</a>
           : <button className="as-related-hit" onMouseDown={keep}
             onClick={leave(() => (h.kind === 'meeting' ? openMeeting(h) : setView({ list: 'wiki', open: h.page ?? MEMORY, anchor: h.id, person: null })))}>{body}</button>}</span>;
+      })}
+    </div>
+  );
+}
+
+// Past meetings and Slack chats that touched the saved task, shown without typing.
+export function RelatedToTask({ row }: { row: ItemRow }) {
+  const snap = useAssistantData();
+  const { meetings } = useCodex();
+  const { id, profile, title, people } = row;
+  const hits = useMemo(() => relatedToTask({ items: snap.items, meetings }, { id, profile, title, people }), [id, profile, title, people, snap.items, meetings]);
+  if (!hits.length) return null;
+  return (
+    <div className="as-related as-related-list" role="list" aria-label="Related">
+      {hits.map((h) => {
+        const body = <><Icon name={ICON[h.kind]} small /><span className="sr-only">{KIND[h.kind]}: </span><span className="as-related-title">{h.title}</span>{h.kind === 'meeting' && h.at > 0 && <span className="as-related-when">{dayLabel(h.at)}</span>}</>;
+        return <span key={h.kind + h.id} role="listitem" className="as-related-item">{h.kind === 'slack'
+          ? <a className="as-related-hit" href={safeHref(h.url)} target="_blank" rel="noreferrer" onMouseDown={keep}>{body}</a>
+          : <button className="as-related-hit" onMouseDown={keep} onClick={leave(() => openMeeting(h))}>{body}</button>}</span>;
       })}
     </div>
   );

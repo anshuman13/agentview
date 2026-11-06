@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GROUP_CAP, related, searchAll, snippet } from './search';
+import { GROUP_CAP, related, relatedToTask, searchAll, snippet } from './search';
 import type { ItemRow } from './sync';
 import type { Fact, Job, Meeting, Page } from './wiki';
 
@@ -76,5 +76,31 @@ describe('search', () => {
     expect(got.map((h) => `${h.kind}:${h.id}`)).toEqual(['wiki:f1', 'meeting:m2', 'slack:s1']);
     expect(related(rel, 'gateway rate limit requests', 'work', ['f1', 'm2']).map((h) => h.id)).toEqual(['s1', 'm1']);
     expect(related(rel, 'gateway', 'work')).toEqual([]);
+  });
+
+  it('relates a task to meetings and Slack chats by title words and people', () => {
+    const slack = { source: 'slack', source_url: 'https://chat.example/x' };
+    const task = { id: 't', profile: 'work' as const, title: 'Gateway migration', people: 'Ann Lee, Bo Ek' };
+    const data = {
+      meetings: [
+        meeting('m1', 'Gateway migration sync', { starts_at: 5 }),
+        meeting('m2', 'Gateway migration', { starts_at: 9 }),
+        meeting('m3', 'Gateway migration', { starts_at: Date.now() + 1e9 }),
+        meeting('m4', 'Gateway migration', { starts_at: 7, profile: 'personal' }),
+        meeting('m5', 'Gateway lunch', { starts_at: 6, people: 'bo ek' }),
+      ],
+      items: [
+        item('t', 'Gateway migration', slack),
+        item('s1', 'Gateway lunch', { ...slack, people: 'Ann Lee,Cy Do' }),
+        item('s2', 'Gateway lunch', { ...slack, people: 'Cy Do' }),
+        item('s3', 'Gateway migration plan', slack),
+        item('s4', 'Gateway migration', { ...slack, deleted: 1 }),
+        item('s5', 'Gateway migration', { ...slack, meeting_id: 'm1' }),
+      ],
+    };
+    expect(relatedToTask(data, task).map((h) => h.id)).toEqual(['m2', 'm1', 's3', 'm5', 's1']);
+    expect(relatedToTask(data, { ...task, people: null }).map((h) => h.id)).toEqual(['m2', 'm1', 's3']);
+    const many = { meetings: Array.from({ length: 8 }, (_, i) => meeting(`x${i}`, 'Gateway migration', { starts_at: i + 1 })), items: [] };
+    expect(relatedToTask(many, task).map((h) => h.id)).toEqual(['x7', 'x6', 'x5', 'x4', 'x3']);
   });
 });
