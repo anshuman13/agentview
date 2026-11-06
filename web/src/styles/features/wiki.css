@@ -90,15 +90,15 @@ li.contested .wk-feed-kind { color: var(--warn); }
 }
 
 /* Page */
-.wk-crumbs { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-md); color: var(--fg-faint); }
-.wk-crumbs button { border: 0; background: transparent; padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-sm); color: var(--fg-muted); font: inherit; cursor: pointer; }
-@media (hover: hover) { .wk-crumbs button:hover { background: var(--hover); color: var(--fg); } }
-@container wk (max-width: 520px) { .wk-head > .icon-btn + .wk-crumbs { display: none; } }
 .wk-doc { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); display: grid; grid-template-columns: minmax(0, 640px) 200px; justify-content: space-between; gap: var(--sp-24); align-items: start; }
 .wk-article { min-width: 0; }
 .wk-title { margin: 0; font-size: var(--fs-5xl); line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; color: var(--fg-strong); }
 .wk-lede { margin: var(--sp-8) 0 0; font-size: var(--fs-xl); line-height: 24px; color: var(--fg); }
-.wk-page-meta { order: -1; margin: 0 0 var(--sp-8); padding: var(--sp-4) var(--sp-6); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--mono); font-size: var(--fs-xs); }
+.wk-head > .ui-section { flex: 1; min-width: 0; padding-right: 0; }
+.wk-head .as-tt-actions { flex-wrap: nowrap; }
+.wk-rename { width: 100%; min-width: 0; border: 0; border-bottom: 1px solid var(--border-strong); background: transparent; color: inherit; font: inherit; outline: 0; }
+.wk-chips { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-6); }
+.wk-chips .chip { pointer-events: none; }
 .wk-article { display: flex; flex-direction: column; }
 .wk-group { margin-top: var(--sp-12); scroll-margin-top: var(--sp-8); }
 .wk-group h2 { display: flex; align-items: center; gap: var(--sp-4); margin: 0 0 var(--sp-3); font-size: 17px; line-height: 24px; font-weight: 600; color: var(--fg-strong); }

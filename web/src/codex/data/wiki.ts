@@ -187,6 +187,14 @@ export function newPage(title: string, section: string, sort: number, profile: P
   };
 }
 
+export function newFact(text: string, pageId: string | null, profile: Profile = 'work', now = Date.now()): Fact {
+  return {
+    id: newId(), profile, version: 0, updated_at: now, deleted: 0, dirty: 1,
+    field_times: JSON.stringify({ text: now, page_id: now, at: now, state: now, added_by: now }),
+    text, item_id: null, superseded_by: null, page_id: pageId, heading: null, sources: null, at: now, contested: null, state: 'proposed', replaces: null, added_by: 'you',
+  };
+}
+
 // Pages whose title or summary match every word, then current claims that do.
 export function searchWiki(pages: Page[], facts: Fact[], query: string) {
   const words = queryWords(query);

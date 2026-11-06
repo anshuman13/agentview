@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
 import { dayLabel } from './dates';
 import { clock } from '../../../../shared/util';
-import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, proposedPageIds, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { actionCount, briefFor, filterMeetings, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingBadge, meetingMeta, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -28,6 +28,13 @@ describe('wiki', () => {
     expect(needsReview(pages[0], proposed)).toBe(true);
     expect(needsReview(pages[1], proposed)).toBe(false);
     expect(needsReview({ ...pages[1], state: 'proposed' }, proposed)).toBe(true);
+  });
+
+  it('proposes a claim on the page in the given profile, or on Memory with no page', () => {
+    const f = newFact('Beta ships Friday', 'p1', 'personal', 5);
+    expect(f).toMatchObject({ text: 'Beta ships Friday', page_id: 'p1', profile: 'personal', state: 'proposed', added_by: 'you', at: 5, sources: null, dirty: 1 });
+    expect(newFact('Loose', null, 'work', 5).page_id).toBeNull();
+    expect(pageClaims([f], 'p1')[0].claims[0].fact.state).toBe('proposed');
   });
 
   it('groups current claims by heading and keeps the ones they replaced', () => {

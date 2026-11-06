@@ -1,20 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useAssistantTable, useCodex } from '../data';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAssistantStore, useAssistantTable, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
-import { olderClaims, pageClaims, staleClaims, pageStats, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
+import { olderClaims, pageClaims, staleClaims, pageStats, newFact, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
 import { mentionsOf, type Mentions } from '../data/mentions';
 import { hasLiveClaims, wikiMarkdown } from '../data/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
-import { Button } from '../../ui/Button';
+import { Button, Chip, IconButton } from '../../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
+import { Section } from '../../ui/Section';
 import { EmptyState } from '../../ui/Panel';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
-import { copyText, setView, useEscapeBack, useView } from '../view';
+import { copyText, setView, showSnack, useEscapeBack, useView } from '../view';
 import { AskBar } from './AskBar';
 import { Claim } from './Claim';
 import { PageTile } from './PageTile';
 import { useReview } from './Review';
-import { MEMORY, SOURCE_ICON, memoryPage, shortDate } from './shared';
+import { MEMORY, REVIEW, SOURCE_ICON, memoryPage, shortDate } from './shared';
 import { plural } from '../../ui/util';
 
 const SOURCE_NAME: Record<Source['kind'], [string, string]> = { meeting: ['meeting', 'meetings'], slack: ['Slack thread', 'Slack threads'], linear: ['Linear issue', 'Linear issues'], pr: ['pull request', 'pull requests'], doc: ['doc', 'docs'] };
@@ -24,7 +26,13 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 export function WikiPage({ id }: { id: string }) {
   const { pages, facts, meetings } = useCodex();
   const items = useAssistantTable('items');
-  const { anchor } = useView();
+  const store = useAssistantStore();
+  const { anchor, filter } = useView();
+  const [menu, setMenu] = useState(false);
+  const moreBtn = useRef<HTMLButtonElement>(null);
+  const cancelled = useRef(false);
+  const [proposing, setProposing] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   // A cited claim may sit past the window, so a page opened at an anchor shows every claim.
@@ -46,7 +54,7 @@ export function WikiPage({ id }: { id: string }) {
   const [showOlder, setShowOlder] = useState(false);
   // After Approve all or Reject all the banner stays as a note, so the claims below do not jump up under the finger.
   const [decided, setDecided] = useState<string | null>(null);
-  useEffect(() => { setShowOlder(false); setDecided(null); }, [id]);
+  useEffect(() => { setShowOlder(false); setDecided(null); setMenu(false); setProposing(null); setRenaming(null); }, [id]);
   // An anchor that arrives before the claims waits for them.
   const loaded = facts.length > 0;
   useEffect(() => {
@@ -72,14 +80,59 @@ export function WikiPage({ id }: { id: string }) {
   }, [groups]);
   const back = () => setView({ open: null, anchor: null });
   useEscapeBack(back);
-  const section = page?.section === 'overview' ? null : page?.section;
+  const section = page?.section === 'overview' || !pid ? null : page?.section;
+  const propose = () => {
+    const text = proposing?.trim();
+    setProposing(null);
+    if (!text || !page) return;
+    const fact = newFact(text, pid, pid ? page.profile : filter === 'personal' ? 'personal' : 'work');
+    void store.editRow('facts', fact, {});
+    showSnack('Claim proposed', () => void store.editRow('facts', fact, { deleted: 1 }));
+  };
+  const rename = () => {
+    const title = renaming?.trim();
+    setRenaming(null);
+    if (cancelled.current) return;
+    cancelled.current = true;
+    if (!title || !page || title === page.title) return;
+    const prev = page.title;
+    void store.editRow('pages', page, { title });
+    showSnack('Renamed', () => void store.editRow('pages', page, { title: prev }));
+  };
+  const archive = () => {
+    if (!page) return;
+    void store.editRow('pages', page, { state: 'retired' });
+    showSnack(`Archived ${page.title}`, () => void store.editRow('pages', page, { state: null }));
+    back();
+  };
+  const pick = (run: () => void) => () => { setMenu(false); run(); };
   return (
     <div className="wk">
       <header className="wk-head">
         <button className="icon-btn" title="Back to the wiki" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
-        <nav className="wk-crumbs"><button onClick={back}>Wiki</button>{section && <><Icon name="chevron-right" small /><span>{section}</span></>}</nav>
-        <span className="spacer" />
-        {page && hasLiveClaims(groups) && <button className="btn sm" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={() => copyText(wikiMarkdown(page.title, groups))}><Icon name="copy" small /> Copy</button>}
+        {page && (
+          <Section
+            label={renaming === null ? page.title : <input autoFocus className="wk-rename" aria-label="Page title" value={renaming} onChange={(e) => setRenaming(e.target.value)} onFocus={(e) => e.target.select()} onBlur={rename}
+              onKeyDown={(e) => { if (e.key === 'Enter') rename(); if (e.key === 'Escape') { e.stopPropagation(); cancelled.current = true; setRenaming(null); } }} />}
+            action={
+              <span className="as-tt-actions">
+                <Button size="sm" variant="filled" icon="add" onClick={() => setProposing((v) => v ?? '')}>Propose claim</Button>
+                <span className="wk-stale-more">
+                  <IconButton ref={moreBtn} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+                  {menu && (
+                    <Menu trigger={moreBtn} onClose={() => setMenu(false)}>
+                      {pid && <MenuItem icon="edit" onClick={pick(() => { cancelled.current = false; setRenaming(page.title ?? ''); })}>Rename</MenuItem>}
+                      {pending.length > 0 && <MenuItem icon="checklist" onClick={pick(() => setView({ open: REVIEW, anchor: null }))}>Review</MenuItem>}
+                      {hasLiveClaims(groups) && <MenuItem icon="copy" onClick={pick(() => copyText(wikiMarkdown(page.title, groups)))}>Copy as Markdown</MenuItem>}
+                      {pid && <MenuSeparator />}
+                      {pid && <MenuItem icon="archive" danger onClick={pick(archive)}>Archive</MenuItem>}
+                    </Menu>
+                  )}
+                </span>
+              </span>
+            }
+          />
+        )}
       </header>
       <div className="wk-scroll">
         {!page ? (
@@ -87,14 +140,24 @@ export function WikiPage({ id }: { id: string }) {
         ) : (
           <div className="wk-doc">
             <article className="wk-article">
-              {pid && <PageTile page={page} />}
-              <h1 className="wk-title">{page.title}</h1>
-              {page.summary && <p className="wk-lede">{page.summary}</p>}
-              <div className="wk-meta wk-page-meta">
-                <span>{plural(st.claims, 'claim')}</span>
-                <span>Updated {shortDate(Math.max(page.updated_at, st.updated))}</span>
-                {st.contested > 0 && <span className="wk-warn">{st.contested} contested</span>}
+              <div className="wk-chips">
+                {section && <Chip quiet tabIndex={-1}>{section}</Chip>}
+                <Chip quiet tabIndex={-1}>{plural(st.claims, 'claim')}</Chip>
+                {st.updated > 0 && <Chip quiet tabIndex={-1}>Updated {shortDate(Math.max(page.updated_at, st.updated))}</Chip>}
+                {st.contested > 0 && <Chip quiet late tabIndex={-1}>{st.contested} contested</Chip>}
               </div>
+              {proposing !== null && (
+                <div className="wk-contest-form">
+                  <textarea autoFocus rows={2} value={proposing} aria-label="Claim" onChange={(e) => setProposing(e.target.value)}
+                    onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') { e.stopPropagation(); setProposing(null); } if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) propose(); }} />
+                  <div className="wk-contest-btns">
+                    <button className="btn" onClick={() => setProposing(null)}>Cancel</button>
+                    <button className="btn primary" onClick={propose}>Save</button>
+                  </div>
+                </div>
+              )}
+              {pid && <PageTile page={page} />}
+              {page.summary && <p className="wk-lede">{page.summary}</p>}
               {pending.length > 0 ? (
                 <div className="wk-pending">
                   <span>{page.state === 'proposed' ? 'New page with ' : ''}{pending.length} proposed {pending.length === 1 ? 'claim' : 'claims'}</span>
