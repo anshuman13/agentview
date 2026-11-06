@@ -3,7 +3,7 @@ import { apiUrl, bundled, useApiBase } from './api';
 import { send, useStore } from './store';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { Icon } from '../ui/Icon';
-import { command, save, stored, weekPace } from '../ui/util';
+import { command, save, spendLines, stored, weekPace } from '../ui/util';
 import { useMcpHealth } from '../ops/mcpShown';
 
 export function AppUpdate() {
@@ -76,6 +76,8 @@ export function UsageItem() {
   const running = useStore((s) => s.session.running);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
+  const live = useStore((s) => s.live);
+  const models = useStore((s) => s.session.models);
   if (!usage) return null;
   const { fiveHour, week } = usage;
   const at = (t: number | null) => (t ? new Date(t).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'unknown');
@@ -90,7 +92,7 @@ export function UsageItem() {
     pace !== null && `Even pace (100/7 a day): ${pace}% by now`,
     advice && (other && running ? `${advice} once Claude stops` : other ? `${advice}. Click to switch` : advice),
     !(ahead && other && !running) && 'Click to read usage again (needs an open Claude process)',
-  ].filter(Boolean).join('\n');
+  ].filter(Boolean).concat(spendLines(live.map((c) => c.spend), models)).join('\n');
   const warn = ahead || Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
   const body = (
     <>

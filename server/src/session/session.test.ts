@@ -809,4 +809,17 @@ describe('event index', () => {
     expect(s.eventById('t-new')).toBe(s.state.events.at(-1));
   });
 
+  it('records the session model on each result', async () => {
+    const { s, result } = fakeSession();
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), setModel: vi.fn(async () => {}), applyFlagSettings: vi.fn(async () => {}), setPermissionMode: vi.fn(async () => {}) } });
+    const modelOf = () => (s.state.events.filter((e) => e.kind === 'result').at(-1) as { model?: string | null }).model;
+    s.state.session.model = null;
+    result('r1');
+    expect(modelOf()).toBeNull();
+    s.state.session.model = 'a';
+    await s.setModel('b');
+    result('r2');
+    expect(modelOf()).toBe('b');
+  });
+
 });

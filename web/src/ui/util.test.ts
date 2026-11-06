@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ago, escapeHtml, weekPace } from './util';
+import { ago, escapeHtml, modelLabel, money, spendLines, weekPace } from './util';
 
 describe('ago', () => {
   afterEach(() => vi.useRealTimers());
@@ -32,5 +32,46 @@ describe('weekPace', () => {
 describe('escapeHtml', () => {
   it('escapes markup and quotes', () => {
     expect(escapeHtml('<a href="x">&</a>')).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;');
+  });
+});
+
+describe('spend', () => {
+  const models = [{ value: 'opus', displayName: 'Opus' }];
+
+  it('formats money', () => {
+    expect(money(0.004)).toBe('<$0.01');
+    expect(money(0)).toBe('$0.00');
+    expect(money(0.005)).toBe('$0.01');
+    expect(money(12.4)).toBe('$12');
+  });
+
+  it('labels models', () => {
+    expect(modelLabel('opus', models)).toBe('Opus');
+    expect(modelLabel('claude-opus-4-1-20250805', models)).toBe('opus-4-1');
+    expect(modelLabel('Unknown', models)).toBe('Unknown');
+  });
+
+  it('sums, sorts and totals spend lines', () => {
+    const lines = spendLines(
+      [
+        { today: { opus: 1 }, week: { opus: 1, b: 1, a: 1, tiny: 0.001 } },
+        undefined,
+        { today: {}, week: { opus: 1.5, tiny: 0.001 } },
+      ],
+      models,
+    );
+    expect(lines).toEqual([
+      'Spend',
+      'Opus: today $1.00, 7 days $2.50',
+      'a: today $0.00, 7 days $1.00',
+      'b: today $0.00, 7 days $1.00',
+      'Total: today $1.00, 7 days $4.50',
+      'Counts chats open on the Mac since the host last started',
+      "Today is the Mac's day",
+    ]);
+  });
+
+  it('returns nothing without spend', () => {
+    expect(spendLines([undefined, { today: {}, week: {} }], models)).toEqual([]);
   });
 });

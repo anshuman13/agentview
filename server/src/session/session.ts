@@ -644,7 +644,7 @@ export class AgentSession implements AgentHost {
     }
     this.lastResult = r.ok ? r.text : '';
     this.lastError = !r.ok || Boolean(r.isError);
-    this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now() });
+    this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: this.state.session.model });
     const goal = this.state.session.repeat;
     if (goal?.goal && goalMet(this.lastResult)) this.repeater.set(null, `Goal met after ${goal.round} ${goal.round === 1 ? 'check' : 'checks'}: ${goal.goal}`);
     this.turnEnded();

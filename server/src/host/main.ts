@@ -13,7 +13,7 @@ import { notifyAway, notifyStall, stallWatch } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
 import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
-import { chatCost } from '../../../shared/cost.js';
+import { chatCost, costByModel } from '../../../shared/cost.js';
 import { replyLine, sumEdits } from '../../../shared/edits.js';
 import { errText } from '../../../shared/util.js';
 import { sendWhenChanged } from './changed.js';
@@ -92,6 +92,7 @@ const agentsRunning = (chat: AgentSession) => chat.state.events.filter((e) => e.
 function summary(chat: AgentSession): LiveChat {
   const s = chat.state;
   const firstPrompt = s.events.find((e) => e.kind === 'user');
+  const spend = costByModel(s.events, new Date().setHours(0, 0, 0, 0), Date.now());
   return {
     id: chat.id,
     sessionId: s.session.sessionId,
@@ -104,6 +105,7 @@ function summary(chat: AgentSession): LiveChat {
     lastActive: lastActive(chat),
     mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,
     cost: chatCost(s.events),
+    ...(Object.keys(spend.week).length > 0 && { spend }),
     stalled: stalls.stalled(chat.id),
     last: replyLine(s.events),
     edits: editsOf(chat),

@@ -142,3 +142,38 @@ export function weekPace(resetsAt: number, now = Date.now()) {
 
 // The phone keyboard covers the lower half, so a focused field moves into view once it is up.
 export const reveal = (e: { currentTarget: HTMLElement }) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
+
+export const money = (n: number) => (n > 0 && n < 0.005 ? '<$0.01' : n < 10 ? `$${n.toFixed(2)}` : `$${Math.round(n)}`);
+
+export const modelLabel = (id: string, models: Array<{ value: string; displayName: string }>) =>
+  models.find((m) => m.value === id)?.displayName ?? id.replace(/^claude-/, '').replace(/-\d{8}$/, '');
+
+type Spend = { today: Record<string, number>; week: Record<string, number> };
+
+export function spendLines(spends: Array<Spend | undefined>, models: Array<{ value: string; displayName: string }>) {
+  const sums = new Map<string, { today: number; week: number }>();
+  for (const sp of spends) {
+    if (!sp) continue;
+    for (const w of ['today', 'week'] as const) {
+      for (const [m, v] of Object.entries(sp[w])) {
+        const cur = sums.get(m) ?? { today: 0, week: 0 };
+        cur[w] += v;
+        sums.set(m, cur);
+      }
+    }
+  }
+  if (!sums.size) return [];
+  const all = [...sums.entries()];
+  const total = all.reduce((t, [, v]) => ({ today: t.today + v.today, week: t.week + v.week }), { today: 0, week: 0 });
+  const rows = all
+    .filter(([, v]) => v.today >= 0.005 || v.week >= 0.005)
+    .map(([m, v]) => ({ label: modelLabel(m, models), ...v }))
+    .sort((a, b) => b.week - a.week || a.label.localeCompare(b.label));
+  return [
+    'Spend',
+    ...rows.map((r) => `${r.label}: today ${money(r.today)}, 7 days ${money(r.week)}`),
+    `Total: today ${money(total.today)}, 7 days ${money(total.week)}`,
+    'Counts chats open on the Mac since the host last started',
+    "Today is the Mac's day",
+  ];
+}

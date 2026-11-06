@@ -173,7 +173,7 @@ Claude reports progress through a `set_status` tool added to every chat: current
 and notes. The timeline shows one card per prompt: Claude's final reply, the files changed with line counts,
 commands run and the first error of each failed one, commits, subagents, these notes and the steps behind them.
 A finished card ends with the turn's cost and how long it took; a chat row in the Sessions view shows the chat's
-cost so far. Switch to the transcript for every message and step in order.
+cost so far. The status bar usage tooltip adds a Spend block with today's and the last 7 days' cost per model across the chats open on the Mac (today is the Mac's day, and a team-mode chat counts under its session model). Spend from before a host restart is not counted, since history reloaded from the CLI transcript has no cost, and a chat past the event cap is approximate because trimming old events counts the first kept total again. Switch to the transcript for every message and step in order.
 
 - Sending while Claude works stops whatever it is doing, including an open permission or question, and continues
   with your message

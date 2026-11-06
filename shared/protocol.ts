@@ -49,7 +49,7 @@ export type ChatEvent =
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number; parent?: string }
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number; parent?: string; agent?: string }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number; parent?: string; stopped?: boolean }
-  | { id: string; kind: 'result'; text: string; costUsd: number; isError: boolean; at: number }
+  | { id: string; kind: 'result'; text: string; costUsd: number; isError: boolean; at: number; model?: string | null }
   | { id: string; kind: 'system'; text: string; at: number }
   | { id: string; kind: 'status'; text: string; at: number }
   | { id: string; kind: 'plan'; next: string[]; at: number }
@@ -186,6 +186,7 @@ export type LiveChat = {
   last?: string;
   edits?: { add: number; del: number };
   cost?: number;
+  spend?: { today: Record<string, number>; week: Record<string, number> };
   pr?: number;
 };
 
