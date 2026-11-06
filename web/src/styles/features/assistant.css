@@ -148,11 +148,15 @@
 .as-edit-text { min-height: 40px; margin-left: 38px; width: calc(100% - 38px) !important; font-size: var(--fs-md) !important; line-height: var(--lh-normal, 1.5); color: var(--fg-muted) !important; white-space: pre-wrap; overflow-wrap: anywhere; }
 .as-edit-text:focus { color: var(--fg) !important; }
 .as-edit-checks { display: flex; flex-direction: column; margin: calc(-1 * var(--sp-2)) 0 0 30px; }
-.as-edit-checks button { display: flex; align-items: center; gap: var(--sp-3); min-height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; }
-.as-edit-checks button .codicon { color: var(--fg-faint); }
-.as-edit-checks button.on { color: var(--fg-faint); text-decoration: line-through; }
-.as-edit-checks button.on .codicon { color: var(--ok); }
-@media (hover: hover) { .as-edit-checks button:hover { background: var(--hover); } }
+.as-edit-checks [role=checkbox] { display: flex; align-items: center; gap: var(--sp-3); min-height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; user-select: none; }
+.as-edit-checks [role=checkbox] .codicon { color: var(--fg-faint); }
+.as-edit-checks [role=checkbox].on { color: var(--fg-faint); text-decoration: line-through; }
+.as-edit-checks [role=checkbox].on .codicon { color: var(--ok); }
+.as-edit-checks [role=checkbox].lifted { opacity: 0.35; }
+@media (hover: hover) { .as-edit-checks [role=checkbox]:hover { background: var(--hover); } }
+.as-check-gap { position: relative; height: 0; }
+.as-check-gap::before { content: ''; position: absolute; left: var(--sp-2); right: var(--sp-2); top: -1px; height: 2px; border-radius: 1px; background: var(--accent); }
+.as-sub-input { min-height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); outline: none; }
 .as-edit-meta, .as-edit-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); margin-left: 38px; }
 .as-edit-meta .as-pick > button { display: inline-flex; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .as-edit-due { display: inline-flex; align-items: center; }
@@ -333,7 +337,7 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-tt-fine span:last-child { margin-left: auto; }
 .as-tt-fine span:first-child:not(:last-child) { margin-left: 0; }
 .as-page .as-edit-checks { margin: 0; gap: var(--sp-2); }
-.as-page .as-edit-checks button { min-height: 40px; font-size: var(--fs-2xl); }
+.as-page .as-edit-checks [role=checkbox], .as-page .as-sub-input { min-height: 40px; font-size: var(--fs-2xl); }
 .as-page .as-edit-text { margin-left: 0; width: 100% !important; min-height: var(--sp-24); font-size: var(--fs-2xl) !important; }
 .as-page .as-tt-fine { margin: var(--sp-12) 0 0; }
 .as-page .as-tt-top .chip-btn { font-size: var(--fs-lg); }

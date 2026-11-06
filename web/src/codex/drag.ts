@@ -11,16 +11,16 @@ let active = false;
 export const isDragging = () => active;
 
 // The drop section under the point and the index among its rows, leaving out the dragged row.
-function locate(x: number, y: number, key: string): Drop | null {
+function locate(x: number, y: number, key: string, attr: string): Drop | null {
   const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-drop]');
   if (!el) return null;
-  const rows = [...el.querySelectorAll<HTMLElement>('[data-row]')].filter((r) => r.dataset.row !== key);
+  const rows = [...el.querySelectorAll<HTMLElement>(`[data-${attr}]`)].filter((r) => r.dataset[attr] !== key);
   const i = rows.findIndex((r) => { const b = r.getBoundingClientRect(); return y < b.top + b.height / 2; });
   return { section: el.dataset.drop!, index: i < 0 ? rows.length : i };
 }
 
 // A mouse drags once it moves; a finger drags after holding still, so swipes and scrolling keep working.
-export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: React.RefObject<HTMLElement | null>) {
+export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: React.RefObject<HTMLElement | null>, attr = 'row') {
   const [drag, setDrag] = useState<Drag<T> | null>(null);
   const drop = useRef(onDrop);
   drop.current = onDrop;
@@ -33,7 +33,7 @@ export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: Reac
     let pos = { x: x0, y: y0 };
     let on = false;
     let frame = 0;
-    const show = () => setDrag({ item, key, title, ...pos, over: locate(pos.x, pos.y, key) });
+    const show = () => setDrag({ item, key, title, ...pos, over: locate(pos.x, pos.y, key, attr) });
     const scroll = () => {
       const box = scroller.current?.getBoundingClientRect();
       if (box) {
@@ -79,7 +79,7 @@ export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: Reac
       active = false;
       window.addEventListener('click', quiet, { capture: true, once: true });
       setTimeout(() => window.removeEventListener('click', quiet, { capture: true }), 400);
-      const over = locate(pos.x, pos.y, key);
+      const over = locate(pos.x, pos.y, key, attr);
       setDrag(null);
       if (over) drop.current(item, over);
     };

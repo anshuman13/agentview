@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTaskDraft } from './taskEditor/draft';
 import { TagInput } from './taskEditor/TagInput';
 import { useAssistant } from './data';
@@ -24,7 +24,8 @@ import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
-import { checkItems, toggleCheck } from './taskChecklist';
+import { addCheck, checkItems, moveCheck, toggleCheck } from './taskChecklist';
+import { useDrag } from './drag';
 import { Flag, PRIORITIES, REMINDS, tagList } from './AddSheet';
 
 const dueLabel = (at: number | null) => {
@@ -117,10 +118,42 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const suggested = useMemo(() => (row.status === 'open' && estimateMin(title) == null ? suggestEstimate(title, snap.items.filter((r) => !r.deleted && r.profile === row.profile)) : null), [row.status, row.profile, title, snap.items]);
   const checks = checkItems(text);
   const estimate = estimateMin(title);
-  const addSubtask = () => {
-    const next = `${text}${text && !text.endsWith('\n') ? '\n' : ''}- [ ] `;
-    setText(next);
-    requestAnimationFrame(() => { const el = textRef.current; if (el) { el.focus(); el.setSelectionRange(next.length, next.length); } });
+  const [adding, setAdding] = useState(false);
+  const subRef = useRef<HTMLInputElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const addSub = () => {
+    const el = subRef.current;
+    if (!el) return;
+    const label = el.value;
+    el.value = '';
+    if (label.trim()) putText(addCheck(text, label));
+  };
+  const reorder = (from: number, to: number) => {
+    const next = moveCheck(text, from, to);
+    if (next === text) return false;
+    putText(next);
+    return true;
+  };
+  const { drag, start } = useDrag<number>((from, d) => { if (d.section === 'checks') reorder(from, d.index); }, scroller, 'sub');
+  const over = drag?.over?.section === 'checks' ? drag.over.index : -1;
+  const gap = <div key="gap" className="as-check-gap" />;
+  const subKey = (e: React.KeyboardEvent, i: number) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(i); }
+    else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      const to = e.key === 'ArrowUp' ? i - 1 : i + 1;
+      if (reorder(i, to)) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-sub="${to}"]`)?.focus());
+    }
+  };
+  const subInputKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      if (!e.metaKey && !e.ctrlKey) e.preventDefault();
+      addSub();
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      e.currentTarget.value = '';
+      setAdding(false);
+    }
   };
   // Ticking a checklist line flips its box in the notes and saves at once.
   const toggle = (n: number) => { putText(toggleCheck(text, n)); haptic('tap'); };
@@ -178,7 +211,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       <header className="wk-head">
         <button className="icon-btn" title="Back to tasks" aria-label="Back" onClick={onClose}><Icon name="arrow-left" /></button>
       </header>
-      <div className="wk-scroll">
+      <div className="wk-scroll" ref={scroller}>
     <div className={`as-edit ${row.profile}`} ref={box} data-no-swipe>
       <div className="as-tt-top">
         <Check row={row} onDone={onClose} />
@@ -269,13 +302,28 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         )}
         <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Description" aria-label="Description" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onBlur={save} onFocus={reveal} />
         {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
-        <div className="as-edit-checks">
+        <div className="as-edit-checks" data-drop="checks">
           {checks.map((c, i) => (
-            <button key={i} role="checkbox" aria-checked={c.done} className={c.done ? 'on' : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => toggle(i)}>
-              <Icon name={c.done ? 'pass-filled' : 'circle-large-outline'} small /> <span>{c.label || '(empty)'}</span>
-            </button>
+            <Fragment key={i}>
+              {drag && i !== drag.item && over === i - (i > drag.item ? 1 : 0) && gap}
+              <div
+                role="checkbox"
+                aria-checked={c.done}
+                tabIndex={0}
+                data-sub={i}
+                className={[c.done && 'on', drag?.item === i && 'lifted'].filter(Boolean).join(' ') || undefined}
+                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={checks.length > 1 ? start(i, String(i), c.label) : undefined}
+                onClick={() => toggle(i)}
+                onKeyDown={(e) => subKey(e, i)}
+              >
+                <Icon name={c.done ? 'pass-filled' : 'circle-large-outline'} small /> <span>{c.label || '(empty)'}</span>
+              </div>
+            </Fragment>
           ))}
-          <Button variant="quiet" size="sm" icon="add" className="as-tt-add" onMouseDown={(e) => e.preventDefault()} onClick={addSubtask}>Add subtask</Button>
+          {drag && over === checks.length - 1 && gap}
+          {adding && <input ref={subRef} className="as-sub-input" autoFocus aria-label="New subtask" placeholder="Subtask" enterKeyHint="done" onKeyDown={subInputKey} onBlur={() => { addSub(); setAdding(false); }} />}
+          <Button variant="quiet" size="sm" icon="add" className="as-tt-add" onMouseDown={(e) => e.preventDefault()} onClick={() => setAdding(true)}>Add subtask</Button>
         </div>
         {row.draft && row.source === 'slack' && (row.status === 'suggested' || row.status === 'open') && <Draft row={row} store={store} onEdit={(draft) => act.edit(row, { draft })} />}
         {(row.people || row.updated_at || estimate != null) && <div className="as-tt-fine">{estimate != null && <span>~{minutesText(estimate)}</span>}{row.people && <span>{row.people}</span>}<span>{ago(row.updated_at, ' ago')}</span></div>}
