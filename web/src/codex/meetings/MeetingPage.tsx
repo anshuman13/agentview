@@ -68,12 +68,13 @@ function StateLine({ m, now }: { m: Meeting; now: number }) {
 
 function Notes({ m }: { m: Meeting }) {
   const [editing, setEditing] = useState(false);
+  const [fresh] = useState(!m.notes);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => { if (editing) box.current?.querySelector('textarea')?.focus(); }, [editing]);
   if (!m.notes && !editing) return <button className="mt-pending mt-add-notes" onClick={() => setEditing(true)}><Icon name="add" small /> Add notes</button>;
   return (
     <div ref={box} onBlur={(e) => { if (e.target instanceof HTMLTextAreaElement && !e.target.value) setEditing(false); }}>
-      <MeetingNotes key={rowKey(m)} m={m} />
+      <MeetingNotes key={rowKey(m)} m={m} templates={fresh} />
     </div>
   );
 }

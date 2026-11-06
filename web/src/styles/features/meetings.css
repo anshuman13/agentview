@@ -90,6 +90,7 @@
 @media (hover: hover) { .mt-notes:hover { background: color-mix(in srgb, var(--hover) 60%, transparent); } }
 .mt-notes:focus { border-color: var(--border-strong); background: var(--wk-card); }
 .mt-notes::placeholder { color: var(--fg-faint); }
+.mt-templates { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-4); }
 .mt-summary { margin: 0; font-family: var(--font-doc); font-size: 16px; line-height: 1.7; color: var(--fg-muted); }
 .mt-pending { margin: 0; font-size: var(--fs-lg); color: var(--fg-faint); font-style: italic; }
 .mt-add-notes { display: inline-flex; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: transparent; font-family: inherit; font-style: normal; cursor: pointer; }
