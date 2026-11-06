@@ -5,14 +5,15 @@ import { hoursText, weekReview } from './data/load';
 import type { Profile } from './data/sync';
 import { Fold } from './Fold';
 import { Icon } from '../ui/Icon';
-import { save, stored } from '../ui/util';
+import { plural, save, stored } from '../ui/util';
+import { reviewStart } from './data/reports';
 import { attempt, useView } from './view';
 import { Chip } from '../ui/Button';
 
 const DISMISSED = 'codex.weeklyReviewDismissed';
 const today = (now: number) => { const d = new Date(now); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
 
-function Card({ profile, now, title, onHide }: { profile: Profile; now: number; title: string; onHide: () => void }) {
+export function WeeklyReviewCard({ profile, now, title, onHide }: { profile: Profile; now: number; title: string; onHide: () => void }) {
   const { items: all, meetings } = useAssistantData();
   const store = useAssistantStore();
   const busy = useRef(false);
@@ -46,19 +47,26 @@ function Card({ profile, now, title, onHide }: { profile: Profile; now: number; 
   );
 }
 
-// From Friday 14:00 through Sunday: this week's goals as Done or Missed, tasks done and meeting hours per profile, with a Carry over of the Missed goals into next week.
-export function WeeklyReview({ now }: { now: number }) {
+export type WeeklyReport = { key: string; at: number; profile: Profile; summary: string };
+
+// From Friday 14:00 through Sunday: this week's goals as Done or Missed, tasks done and meeting hours per profile, with a Carry over of the Missed goals into next week. A profile with no goals and no done tasks has no review.
+export function useWeeklyReviews(now: number) {
   const { filter } = useView();
+  const { items: all, meetings } = useAssistantData();
   const day = today(now);
   const [hidden, setHidden] = useState<string[]>(() => pruneDismissed(stored<string[]>(DISMISSED, []), day));
-  if (!reviewWindow(now)) return null;
-  const profiles: Profile[] = filter === 'all' ? ['work', 'personal'] : [filter];
   const hide = (p: Profile) => {
     const next = [...pruneDismissed(hidden, day), `${p}:${day}`];
     setHidden(next);
     save(DISMISSED, next);
   };
-  return profiles.filter((p) => !hidden.includes(`${p}:${day}`)).map((p) => (
-    <Card key={p} profile={p} now={now} title={`Weekly review${filter === 'all' ? ` · ${p}` : ''}`} onHide={() => hide(p)} />
-  ));
+  const profiles: Profile[] = filter === 'all' ? ['work', 'personal'] : [filter];
+  const reports = !reviewWindow(now) ? [] : profiles.filter((p) => !hidden.includes(`${p}:${day}`)).flatMap((profile): WeeklyReport[] => {
+    const rev = weekReview({ items: all.filter((r) => r.profile === profile), meetings: meetings.filter((m) => m.profile === profile), facts: [] }, now);
+    const goals = goalsOf(all, now, profile);
+    if (!goals.length && !rev.done.length) return [];
+    const met = goals.filter((g) => goalVerdict(goalProgress(all, g)) === 'Done').length;
+    return [{ key: `${profile}:${day}`, at: reviewStart(now), profile, summary: `${met}/${goals.length} goals done, ${plural(rev.done.length, 'task')} done` }];
+  });
+  return { reports, hide };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAssistantData, useSyncGate } from './data';
 import { live, type Meeting } from './data/wiki';
 import { atTime, latestRunByJob, staleTasks } from './data/engine';
@@ -16,9 +16,11 @@ import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { TomorrowCard, useTomorrowCard } from './TomorrowCard';
 import { GoalLines } from './Goals';
-import { MorningBrief } from './Brief';
-import { WeeklyReview } from './WeeklyReview';
+import { BriefReportCard, useBriefs } from './Brief';
+import { WeeklyReviewCard, useWeeklyReviews } from './WeeklyReview';
+import { pickReports, type ReportEntry } from './data/reports';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
 import { Skeleton } from '../ui/Skeleton';
 import { haptic } from '../ui/haptic';
 import { openTask, setView, useView } from './view';
@@ -28,12 +30,13 @@ import type { useSplit } from './split';
 import { NextCard } from './overview/NextCard';
 import { FollowThrough, useFollowThrough } from './overview/FollowThrough';
 import { KeepInTouch, useKeepInTouch } from './overview/KeepInTouch';
-import { SinceLastVisit } from './overview/SinceLastVisit';
+import { useSinceLastVisit } from './overview/SinceLastVisit';
 import { Stale } from './overview/Stale';
 
 export { Review } from './overview/Review';
 
 type Split = ReturnType<typeof useSplit>;
+type ReportItem = ReportEntry & { title: string; meta: string; open: () => void; card?: ReactNode };
 
 const firstLine = (text: string | null | undefined) => (text ?? '').split('\n').find((l) => l.trim())?.trim() ?? '';
 
@@ -72,6 +75,34 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const follow = useFollowThrough();
   const touchRows = useKeepInTouch();
   const morning = new Date(now).getHours() < 11;
+  const briefs = useBriefs(now);
+  const weekly = useWeeklyReviews(now);
+  const since = useSinceLastVisit();
+  const [opened, setOpened] = useState<string | null>(null);
+  const [closed, setClosed] = useState<string[]>([]);
+  const [allRows, setAllRows] = useState(false);
+  const all = filter === 'all';
+  const closeCard = (key: string, hide: () => void) => { hide(); setClosed((c) => [...c, key]); };
+  const entries: ReportItem[] = [
+    ...briefs.reports.map((b): ReportItem => ({
+      key: b.key, at: b.at, candidate: true, open: () => setOpened(b.key),
+      title: `${b.brief.text}${all ? ` · ${b.brief.profile}` : ''}`, meta: `${clock(b.at)} · ${b.first}`,
+      card: <BriefReportCard key={b.key} report={b} showProfile={all} onDismiss={() => closeCard(b.key, () => briefs.dismiss(b.key))} />,
+    })),
+    ...weekly.reports.map((w): ReportItem => {
+      const title = `Weekly review${all ? ` · ${w.profile}` : ''}`;
+      return {
+        key: w.key, at: w.at, candidate: true, open: () => setOpened(w.key), title, meta: `Fri 14:00 · ${w.summary}`,
+        card: <WeeklyReviewCard key={w.key} profile={w.profile} now={now} title={title} onHide={() => closeCard(w.key, () => weekly.hide(w.profile))} />,
+      };
+    }),
+    ...reports.map(({ j, r }): ReportItem => ({
+      key: `job:${j.profile}${j.id}`, at: r.started_at!, candidate: false, title: j.name ?? j.id, meta: `${clock(r.started_at!)} · ${firstLine(r.output)}`,
+      open: () => setView({ list: 'jobs', open: `${j.profile}:${j.id}` }),
+    })),
+    ...(morning && since.meta ? [{ key: 'since', at: now, candidate: false, title: 'Since you were last here', meta: since.meta, open: since.open }] : []),
+  ];
+  const picked = pickReports(entries, opened, closed, allRows);
   const snooze = (r: ItemRow) => { haptic('tap'); act.snoozeLater(r, now); };
   const risky = new Set(needs.rows.flatMap((n) => (n.kind === 'risk' ? [n.row.profile + n.row.id] : [])));
   const todo = dueToday.filter((r) => !risky.has(r.profile + r.id));
@@ -120,7 +151,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const laterCount = stale.length + follow.rows.length + touchRows.shown.length + (tomorrowElsewhere ? 0 : tomorrow.length);
   const todayShown = todo.length > 0 || !!next || !!nextUp || card.shown;
   const loading = useSyncGate().loading && !snap.items.length;
-  const empty = !loading && !reports.length && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp && !card.shown;
+  const empty = !loading && !entries.length && !needs.rows.length && !s.overdue.length && !dueToday.length && !s.review.length && !next && !upcoming.length && !tomorrow.length && !nextUp && !card.shown;
   if (loading) return <Skeleton />;
   return (
     <>
@@ -140,17 +171,18 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         <DayPlan meetings={s.busyToday} open={dueToday} late={s.overdue} now={now} />
         <GoalLines now={now} />
       </div>
-      <div className="ov-block">
-        <Section label="Reports" />
-        <MorningBrief now={now} />
-        <WeeklyReview now={now} />
-        {morning && <SinceLastVisit />}
-        {reports.length > 0 && (
-          <div className="as-group">
-            {reports.map(({ j, r }) => <Row key={j.profile + j.id} title={j.name} meta={`${clock(r.started_at!)} · ${firstLine(r.output)}`} onClick={() => setView({ list: 'jobs', open: `${j.profile}:${j.id}` })} />)}
-          </div>
-        )}
-      </div>
+      {entries.length > 0 && (
+        <div className="ov-block">
+          <Section label="Reports" />
+          {picked.card?.card}
+          {picked.rows.length > 0 && (
+            <div className="as-group">
+              {picked.rows.map((e) => <Row key={e.key} title={e.title} meta={e.meta} onClick={e.open} />)}
+            </div>
+          )}
+          {picked.total > picked.rows.length && <Button variant="quiet" size="sm" className="ov-more" onClick={() => setAllRows(true)}>Show all {picked.total}</Button>}
+        </div>
+      )}
       <div className="ov-group">
       <Fold id="later" title="Later" count={laterCount}>
         <Stale rows={stale} now={now} snooze={snooze} />
