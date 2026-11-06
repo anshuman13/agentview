@@ -29,7 +29,7 @@ import { historyOf, historyTime } from './data/history';
 import { Fold } from './Fold';
 import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip, RelatedToTask } from './Related';
-import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
+import { cadenceLine, cadenceOf, skipTarget, withRule, type Cadence } from './data/recur';
 import { addCheck, checkItems, moveCheck, noteView, toggleCheck } from './taskChecklist';
 import { live } from './data/wiki';
 import { LINK_LIMIT, linkDomain, linkPath, linksIn, linkTitle } from './data/links';
@@ -251,6 +251,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     const busy = timedMeetings(live(snap.meetings).filter((m) => m.profile === row.profile && m.starts_at != null && m.starts_at >= dayStart(now) && m.starts_at < dayEnd(now))).map((m) => [m.starts_at!, m.ends_at!] as Span);
     return ([['After next meeting', afterNextMeeting(busy, now)], ['Next free slot', nextFreeSlot(busy, now)]] as const).flatMap(([label, t]) => (t == null ? [] : [[label, t] as const]));
   };
+  const skipAt = row.status === 'open' && at != null ? skipTarget(row, Date.now()) : null;
   const timed = row.status === 'open' || row.status === 'suggested' || at != null;
   // Haiku fixes a quick or dictated task into a clear title and notes, and sets the time if the text says one.
   const tidy = async () => {
@@ -279,7 +280,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         <Check row={row} onDone={onClose} />
         {timed && (
           <span className="as-tt-due">
-            <PickDue className={chipClass({ late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={(t) => t !== at && act.due(row, t)} remind={row.remind ?? null} onRemind={(r) => act.edit(row, { remind: r })}>
+            <PickDue className={chipClass({ late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={(t) => t !== at && act.due(row, t)} remind={row.remind ?? null} onRemind={(r) => act.edit(row, { remind: r })} skipAt={skipAt} onSkip={() => skipAt != null && act.skip(row, skipAt)}>
               <Icon name="calendar" small /> {dueLabel(at)}{row.remind != null && at != null && <Icon name={row.remind < 0 ? 'bell-slash' : 'bell'} small />}
             </PickDue>
             {at != null && <IconButton icon="close" small label="Clear due time" onClick={() => act.due(row, null)} />}

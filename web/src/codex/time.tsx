@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DateSheet } from './AddSheet';
 import { Icon } from '../ui/Icon';
+import { Menu, MenuItem } from '../ui/Menu';
 import { dayLabel, pad, ymd } from './data/dates';
 
 // Times are picked as a part of the day, not a minute.
@@ -76,8 +77,8 @@ export function PickTime({ className, value, onPick, label = 'Pick time', title 
 
 const localDateTime = (t: number) => { const d = new Date(t); return `${ymd(t)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 
-// Text that opens the device's date and time picker; clearing the picker clears the time.
-export function PickDue({ className, value, onPick, remind, onRemind, children }: { className?: string; value: number | null; onPick: (at: number | null) => void; remind?: number | null; onRemind?: (r: number | null) => void; children: React.ReactNode }) {
+// Text that opens the device's date and time picker, or with skipAt a menu of skip and the picker; clearing the picker clears the time.
+export function PickDue({ className, value, onPick, remind, onRemind, skipAt, onSkip, children }: { className?: string; value: number | null; onPick: (at: number | null) => void; remind?: number | null; onRemind?: (r: number | null) => void; skipAt?: number | null; onSkip?: () => void; children: React.ReactNode }) {
   const input = useRef<HTMLInputElement>(null);
   const pick = useRef(onPick);
   pick.current = onPick;
@@ -91,6 +92,8 @@ export function PickDue({ className, value, onPick, remind, onRemind, children }
     return () => el.removeEventListener('change', change);
   }, []);
   const [sheet, setSheet] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const chip = useRef<HTMLButtonElement>(null);
   const open = () => {
     if (matchMedia('(pointer: coarse)').matches) return setSheet(true);
     const el = input.current!;
@@ -99,7 +102,13 @@ export function PickDue({ className, value, onPick, remind, onRemind, children }
   };
   return (
     <span className={`as-pick ${className ?? ''}`}>
-      <button type="button" onClick={open}>{children}</button>
+      <button ref={chip} type="button" aria-haspopup={skipAt != null ? 'menu' : undefined} aria-expanded={skipAt != null ? menu : undefined} onClick={skipAt != null ? () => setMenu(!menu) : open}>{children}</button>
+      {menu && skipAt != null && (
+        <Menu trigger={chip} onClose={() => setMenu(false)}>
+          <MenuItem onClick={() => { setMenu(false); onSkip?.(); }}>Skip this one · {when(skipAt, Date.now(), true)}</MenuItem>
+          <MenuItem onClick={() => { setMenu(false); open(); }}>Pick date and time…</MenuItem>
+        </Menu>
+      )}
       <input ref={input} type="datetime-local" tabIndex={-1} aria-hidden />
       {sheet && <DateSheet value={{ at: value, cadence: 'never', remind }} reminder={!!onRemind} onDone={(p) => { if (p.at !== value) onPick(p.at); if (onRemind && (p.remind ?? null) !== (remind ?? null)) onRemind(p.remind ?? null); }} onClose={() => setSheet(false)} />}
     </span>

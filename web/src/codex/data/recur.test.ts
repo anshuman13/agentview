@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cadenceLine, cadenceOf, nextRepeat, parseRepeat, withRule } from './recur';
+import { cadenceLine, cadenceOf, nextRepeat, parseRepeat, skipTarget, withRule } from './recur';
 import type { ItemRow } from './sync';
 
 const d = (y: number, mo: number, day: number, h = 9, mi = 0) => new Date(y, mo, day, h, mi).getTime();
@@ -70,5 +70,26 @@ describe('repeat rule line', () => {
     expect(cadenceOf('Repeats: every friday 09:00', at)).toBe('custom');
     expect(cadenceOf('Repeats: whenever', at)).toBe('custom');
     expect(cadenceOf('Notes', at)).toBe('never');
+  });
+});
+
+describe('skipTarget', () => {
+  const now = d(2026, 9, 30, 10);
+  it('moves one occurrence on from a future due time', () => {
+    expect(skipTarget(row('Repeats: every day 09:00', d(2026, 10, 3)), now)).toBe(d(2026, 10, 4));
+    expect(skipTarget(row('Repeats: every tuesday 09:00', d(2026, 10, 3)), now)).toBe(d(2026, 10, 10));
+  });
+  it('sends Friday to Monday', () => {
+    expect(skipTarget(row('Repeats: every weekday 09:00', d(2026, 10, 6)), now)).toBe(d(2026, 10, 9));
+  });
+  it('clamps a month day to the end of a short month', () => {
+    expect(skipTarget(row('Repeats: every month on the 31st 09:00', d(2026, 9, 31)), d(2026, 9, 31, 12))).toBe(d(2026, 10, 30));
+  });
+  it('jumps an overdue task to the first occurrence after now', () => {
+    expect(skipTarget(row('Repeats: every day 09:00', d(2026, 9, 1)), now)).toBe(d(2026, 9, 31));
+  });
+  it('is null for an unreadable rule or a plain task', () => {
+    expect(skipTarget(row('Repeats: sometimes', d(2026, 10, 3)), now)).toBeNull();
+    expect(skipTarget(row('Water the plants', d(2026, 10, 3)), now)).toBeNull();
   });
 });

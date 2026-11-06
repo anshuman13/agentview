@@ -105,6 +105,7 @@ export function useActions() {
       change(r, { deleted: 1 }, 'Deleted');
     },
     toTask: (r: ItemRow) => change(r, { status: 'open', ...unrollFor(atTime(r.at)) }, 'Moved to Today'),
+    skip: (r: ItemRow, at: number) => change(r, { at, ...unrollFor(at) }, `Skipped · next ${when(at)}`),
     due: (r: ItemRow, at: number | null) => change(r, { at, ...unrollFor(at) }, at == null ? 'Due time cleared' : `Due ${when(at)}`),
     edit: (r: ItemRow, patch: Patch) => void store.update(r, patch),
     move: (r: ItemRow, to: Profile) => store.move(r, to).then(() => showSnack(`Moved to ${FILTER_LABEL[to]}`, () => {

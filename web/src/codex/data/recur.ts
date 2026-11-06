@@ -101,14 +101,18 @@ export function cadenceOf(text: string | null, at: number | null): Cadence {
   return r.dom === d.getDate() || (d.getDate() === new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() && r.dom >= d.getDate()) ? 'monthly' : 'custom';
 }
 
-// The row to create when a repeating task is done, or null. Skips a copy that already exists.
-export function nextRepeat(row: ItemRow, now: number, rows: ItemRow[] = []): { title: string; text: string; at: number } | null {
+// The first rule time after the later of the due time and now, or null. Skipping makes no copy, so no duplicate check.
+export function skipTarget(row: ItemRow, now: number) {
   if (!row.text || !isRepeat(row.text)) return null;
   const m = RULE_RE.exec(row.text.split('\n')[0]);
   const r = m && read(m, new Date(now));
-  if (!r) return null;
-  const at = nextAfter(r, Math.max(atTime(row.at) ?? now, now));
+  return r ? nextAfter(r, Math.max(atTime(row.at) ?? now, now)) : null;
+}
+
+// The row to create when a repeating task is done, or null. Skips a copy that already exists.
+export function nextRepeat(row: ItemRow, now: number, rows: ItemRow[] = []): { title: string; text: string; at: number } | null {
+  const at = skipTarget(row, now);
   if (at == null) return null;
   if (rows.some((x) => x.profile === row.profile && x.id !== row.id && !x.deleted && x.status === 'open' && x.title === row.title && x.text === row.text && atTime(x.at) === at)) return null;
-  return { title: row.title ?? '', text: row.text, at };
+  return { title: row.title ?? '', text: row.text!, at };
 }

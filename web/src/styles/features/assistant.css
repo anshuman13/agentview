@@ -552,3 +552,4 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .gl-hist-row > .ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
 .gl-hist > .gl-bar { display: block; margin: 0 var(--list-pad) var(--sp-4); }
 .gl-hist > .gl-tasks { margin-bottom: var(--sp-4); }
+.as-pick > .ui-menu { right: auto; left: 0; white-space: nowrap; }
