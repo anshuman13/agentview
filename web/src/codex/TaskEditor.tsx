@@ -10,7 +10,7 @@ import { Button, Chip, chipClass, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { ago, fitHeight, reveal, safeHref } from '../ui/util';
 import { clearHistory } from './replyHistory';
-import { copyText, FILTER_LABEL, setView, showSnack } from './view';
+import { copyText, FILTER_LABEL, openTag, setView, showSnack } from './view';
 import { useActions } from './useActions';
 import { clock, PickDue, PickTime } from './time';
 import { snoozeText, snoozes } from './AskBar';
@@ -319,7 +319,12 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         </div>
         {(tags.length > 0 || tagging) && (
           <div className="as-tags">
-            {tags.map((t) => <button key={t} className="as-tag" title={`Remove #${t}`} onClick={() => setTags(tags.filter((x) => x !== t))}>#{t} <Icon name="close" small /></button>)}
+            {tags.map((t) => (
+              <span key={t} className="as-tag">
+                <button title={`Open #${t}`} onClick={() => openTag(t)}>#{t}</button>
+                <IconButton icon="close" label={`Remove #${t}`} small onClick={() => setTags(tags.filter((x) => x !== t))} />
+              </span>
+            ))}
             {tagging && <TagInput onAdd={(v) => setTags([...tags, v])} onClose={() => setTagging(false)} />}
           </div>
         )}

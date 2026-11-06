@@ -420,8 +420,11 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-quick-pop button[aria-checked='true'], .as-flag-item[aria-checked='true'] { color: var(--accent-text); }
 .as-tt-flag { width: var(--touch); height: var(--touch); }
 .as-tags { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-4); }
-.as-tag { display: inline-flex; align-items: center; gap: var(--sp-2); height: 28px; padding: 0 var(--sp-5); border: 0; border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent-text); font: inherit; font-size: var(--type-subheadline-size); cursor: pointer; }
+.as-tag { display: inline-flex; align-items: center; gap: var(--sp-2); height: 28px; padding: 0 var(--sp-2) 0 var(--sp-5); border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent-text); font-size: var(--type-subheadline-size); }
+.as-tag > button { border: 0; padding: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.as-tag .icon-btn { width: 24px; height: 24px; color: inherit; }
 .as-tag .codicon { opacity: 0.6; }
+.as-crumb { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-subheadline); cursor: pointer; }
 .as-tag-input { width: 120px; height: 28px; padding: 0 var(--sp-5); border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--fg); font: inherit; font-size: var(--type-subheadline-size); }
 .as-tag-input:focus { outline: none; border-color: var(--accent); }
 .as-date-head { display: flex; align-items: center; height: var(--touch); margin: 0 calc(-1 * var(--sp-4)); }

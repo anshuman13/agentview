@@ -94,7 +94,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
   Typed times like "friday 10" still work when no date is picked. The flag sets High, Medium or Low priority, the tag button
   starts a #tag in the title (each #word becomes a tag), and the mic dictates the title; a long press on the + opens the sheet already listening
 - Tasks have a priority (a red, orange or blue flag on the row), tags (shown as #tag on the row) and a reminder. On the task page the flag
-  next to More sets the priority, the tag button adds tags (tap one to remove it), and the reminder is in the date sheet on the phone and
+  next to More sets the priority, the tag button adds tags (tap a tag to list its open tasks in both profiles, its x removes it), and the reminder is in the date sheet on the phone and
   in More on desktop: on time (the default), 5 or 30 minutes, 1 hour or 1 day early, or none. The hub pushes the reminder at that time
 - On the phone, picking a date (from the quick add or a task's date chip) opens a date sheet: Today, Tomorrow, Next Monday and This evening
   pick at once; otherwise a day in the month view, an optional time, a reminder and (in quick add) a repeat, then the check to confirm

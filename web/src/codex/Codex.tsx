@@ -20,6 +20,7 @@ import { FILTER_LABEL, setView, showSnack, useSpotBack, useView, type Filter, ty
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
 import { AddSheet } from './AddSheet';
+import { TagPage } from './TagPage';
 import { AddTask, TaskRow, UNROLL, useActions } from './Task';
 import { Overview, Review } from './Overview';
 import { WeekStrip } from './WeekStrip';
@@ -60,7 +61,7 @@ function SpotBack({ scroller }: { scroller: React.RefObject<HTMLElement | null> 
 
 export function Assistant() {
   const { store, snap } = useAssistant();
-  const { list, filter, open } = useView();
+  const { list, filter, open, tag } = useView();
   const s = useSplit();
   const root = useRef<HTMLDivElement>(null);
   const [drawer, setDrawer] = useState(false);
@@ -147,6 +148,8 @@ export function Assistant() {
       </div>
     );
   }
+
+  if (list === 'tasks' && tag) return <TagPage tag={tag} />;
 
   if (list !== 'today' && list !== 'tasks') {
     const Page = { wiki: Wiki, meetings: Meetings, jobs: Jobs, summary: Summary }[list];
