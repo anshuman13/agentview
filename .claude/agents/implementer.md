@@ -19,6 +19,13 @@ While coding:
 - Keep docs in step when the feature changes what docs/features.md, docs/autopilot.md or docs/assistant.md describe.
 - Public repo: no work names, people, channels or internal systems anywhere in the diff.
 
+Before the checks, read your own diff (`git diff`) as the reviewer who will merge it, and fix what you would flag:
+- A helper, hook, selector, CSS rule or type that already exists and does what you reimplemented: use it.
+- The same lines in two callers: one function.
+- A name a reader would misread, or that breaks the naming the file uses.
+- Logic in a component that belongs in the data layer the file already has (or the reverse), an export with one caller, a parameter every caller passes the same value for.
+- Dead branches, checks for cases that cannot happen, an abstraction with one use, a line that needs a second read.
+
 Checks, from the worktree root, before committing. Run those for every package you touched plus assistant whenever shared/ or server/src changed:
 - `npx tsc --noEmit -p web`, `npx tsc --noEmit -p server`, `npx tsc --noEmit -p assistant`
 - `cd web && npx vitest run`, `cd server && npx vitest run`, `cd assistant && bun test`

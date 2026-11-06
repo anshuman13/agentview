@@ -3,7 +3,7 @@ export const meta = {
   description: 'For each feature brief: pm writes a spec, reviewer approves it, implementer builds it in a worktree, tester checks it; loops until pass or out of rounds',
   phases: [
     { title: 'Spec', detail: 'pm writes, spec-reviewer approves (up to 3 rounds)' },
-    { title: 'Build', detail: 'implementer in a worktree, tester verifies (up to 3 rounds), code-reviewer for reuse and readability' },
+    { title: 'Build', detail: 'implementer in a worktree, tester verifies (up to 3 rounds)' },
   ],
 }
 
@@ -29,15 +29,6 @@ const TEST = {
     fixes: { type: 'array', items: { type: 'string' }, description: 'what the implementer must change, one per fail' },
   },
   required: ['verdict', 'report', 'fixes'],
-}
-
-const REVIEW_CODE = {
-  type: 'object',
-  properties: {
-    verdict: { type: 'string', enum: ['clean', 'changes'] },
-    issues: { type: 'array', items: { type: 'string' }, description: 'file:line, what is wrong, what to write instead' },
-  },
-  required: ['verdict', 'issues'],
 }
 
 async function spec(f) {
@@ -77,24 +68,11 @@ async function build(s) {
       `Your implementation of this spec failed testing. Work in the same worktree and branch as before (see your earlier result), apply the fixes, rerun the checks, amend the commit and return the updated result.\n\nSpec:\n${s.spec}\n\nYour earlier result:\n${impl}\n\nTester report:\n${test.report}\n\nFixes required:\n- ${test.fixes.join('\n- ')}`,
       { label: `impl:${s.slug}#${round + 1}`, phase: 'Build', agentType: 'implementer' })
   }
-  if (test?.verdict !== 'pass') return { ...s, built: true, impl, test }
-  const review = await agent(
-    `Review the implementation commit for reuse and readability.\n\nSpec:\n${s.spec}\n\nImplementer result:\n${impl}`,
-    { label: `code:${s.slug}`, phase: 'Build', agentType: 'code-reviewer', schema: REVIEW_CODE })
-  if (review && review.verdict !== 'clean' && review.issues.length) {
-    log(`${s.slug}: code review ${review.issues.length} issues`)
-    impl = await agent(
-      `Your implementation passed testing. A code review asks for these changes; apply them in the same worktree and branch, keep behaviour the same, rerun the checks, amend the commit and return the updated result.\n\nYour earlier result:\n${impl}\n\nChanges:\n- ${review.issues.join('\n- ')}`,
-      { label: `impl:${s.slug}#review`, phase: 'Build', agentType: 'implementer' })
-    test = await agent(
-      `Spec:\n${s.spec}\n\nImplementer result:\n${impl}`,
-      { label: `test:${s.slug}#final`, phase: 'Build', agentType: 'tester', schema: TEST })
-  }
-  return { ...s, built: true, impl, test, review }
+  return { ...s, built: true, impl, test }
 }
 
 const results = await pipeline(features, spec, build)
 return results.filter(Boolean).map(r => ({
   slug: r.slug, path: r.path, notes: r.notes,
-  passed: r.test?.verdict === 'pass', impl: r.impl, report: r.test?.report, fixes: r.test?.fixes, codeIssues: r.review?.issues,
+  passed: r.test?.verdict === 'pass', impl: r.impl, report: r.test?.report, fixes: r.test?.fixes,
 }))
