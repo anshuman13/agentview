@@ -37,6 +37,7 @@ button.chip, a.chip-btn { cursor: pointer; }
 .chip.chip-btn.chip-accent { color: var(--accent-text); }
 .chip.chip-btn.chip-accent.on { color: var(--on-accent); }
 .chip.chip-btn.chip-quiet { color: var(--fg-faint); border: 1px dashed var(--border-strong); }
+.chip.chip-btn.chip-quiet.late { color: var(--err); }
 select.chip.chip-btn { max-width: 14rem; text-overflow: ellipsis; }
 @media (hover: hover) { .chip.chip-btn:hover { color: var(--fg); } .chip.chip-btn.late:hover { color: var(--err); } }
 @media (pointer: coarse) { .chip.chip-btn { min-height: var(--touch-sm); } }

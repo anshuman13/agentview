@@ -95,13 +95,13 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
   a date button, a Work/Personal toggle (when both are shown) and send; Enter or send saves and keeps the sheet open for the next task.
   Typed times like "friday 10" still work when no date is picked. The flag sets High, Medium or Low priority, the tag button
   starts a #tag in the title (each #word becomes a tag), and the mic dictates the title; a long press on the + opens the sheet already listening
-- Tasks have a priority (a red, orange or blue flag on the row), tags (shown as #tag on the row) and a reminder. On the task page the flag
-  next to More sets the priority, the tag button adds tags (tap a tag to list its open tasks in both profiles, its x removes it), and the reminder is in the date sheet on the phone and
+- Tasks have a priority (a red, orange or blue flag on the row), tags (shown as #tag on the row) and a reminder. On the task page the priority chip
+  sets the priority, the Add tag chip adds tags (the x on a tag chip removes it), and the reminder is in the date sheet on the phone and
   in More on desktop: on time (the default), 5 or 30 minutes, 1 hour or 1 day early, or none. The hub pushes the reminder at that time
 - On the phone, picking a date (from the quick add or a task's date chip) opens a date sheet: Today, Tomorrow, Next Monday and This evening
   pick at once; otherwise a day in the month view, an optional time, a reminder and (in quick add) a repeat, then the check to confirm
 - Rows with "- [ ]" checklist lines in the notes show how many are ticked as text in the meta line; the list is read and ticked on the task page
-- The task page is laid out like TickTick's task detail (the header has only Back). A top row has the check circle, coloured blue for Work and magenta for Personal, the due chip ("Today 10:00", "Tomorrow", "Mon 3 Nov" or "Date"). On an open repeating task with a due time the chip opens a menu: "Skip this one · Tue 09:00" moves the same task to the next occurrence after the later of its due time and now (one Undo, nothing marked done), and "Pick date and time…" opens the picker.
+- The task page is laid out like TickTick's task detail (the header has only Back). A Section header shows the live title ("Untitled" when empty) with a filled Done button ("Not done" on a done task, none on a note) and a More menu (Snooze, Tomorrow, Move, then the rest, Clear due time, Delete). A chip row under it holds the due chip ("Today 10:00", "Tomorrow", "Mon 3 Nov" or "No due"; shown on open and suggested tasks and on any task with a due time), the priority chip, a chip per tag and Add tag. On an open repeating task with a due time the chip opens a menu: "Skip this one · Tue 09:00" moves the same task to the next occurrence after the later of its due time and now (one Undo, nothing marked done), and "Pick date and time…" opens the picker.
   The row also has a "..." menu (Add estimate, Log time with +15m, +30m and +1h, Goal, Open meeting, source link, Snooze, Tidy, Make task, Copy draft, Raise, Move, Ask Claude, Delete). The body is a large title,
   the Description notes, and the checklist as subtask rows ending in "Add subtask", which adds a line inline; rows drag (or Alt+Arrow) to reorder. A sticky bottom bar has the
   repeat and focus buttons; an existing estimate shows as muted text under the notes

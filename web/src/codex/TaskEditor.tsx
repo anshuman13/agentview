@@ -12,7 +12,7 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { ago, fitHeight, reveal, safeHref } from '../ui/util';
 import { clearHistory } from './replyHistory';
-import { copyText, FILTER_LABEL, openTag, setView, showSnack } from './view';
+import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
 import { clock, PickDue, PickTime } from './time';
 import { snoozeText, snoozes } from './AskBar';
@@ -21,7 +21,6 @@ import { haptic } from '../ui/haptic';
 import { recentPeople } from './data/points';
 import { RaiseWith } from './meetings/Raise';
 import { sourceOf } from './taskSource';
-import { Check } from './TaskCheck';
 import { afterNextMeeting, estimateMin, minutesText, nextFreeSlot, suggestEstimate, timedMeetings, type Span } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 import { parseLog, removeSession } from './data/timeLog';
@@ -39,7 +38,7 @@ import { md } from '../chat/md';
 import { Flag, PRIORITIES, REMINDS, tagList } from './AddSheet';
 
 const dueLabel = (at: number | null) => {
-  if (at == null) return 'Date';
+  if (at == null) return 'No due';
   const d = new Date(at);
   const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
   const time = d.getHours() || d.getMinutes() ? clock(at) : '';
@@ -276,29 +275,12 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
       </header>
       <div className="wk-scroll" ref={scroller}>
     <div className={`as-edit ${row.profile}`} ref={box} data-no-swipe>
-      <div className="as-tt-top">
-        <Check row={row} onDone={onClose} />
-        {timed && (
-          <span className="as-tt-due">
-            <PickDue className={chipClass({ late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={(t) => t !== at && act.due(row, t)} remind={row.remind ?? null} onRemind={(r) => act.edit(row, { remind: r })} skipAt={skipAt} onSkip={() => skipAt != null && act.skip(row, skipAt)}>
-              <Icon name="calendar" small /> {dueLabel(at)}{row.remind != null && at != null && <Icon name={row.remind < 0 ? 'bell-slash' : 'bell'} small />}
-            </PickDue>
-            {at != null && <IconButton icon="close" small label="Clear due time" onClick={() => act.due(row, null)} />}
-          </span>
-        )}
-        <span className="spacer" />
-        {row.status !== 'note' && (
+      <Section label={title.trim() || 'Untitled'} action={
+        <span className="as-tt-actions">
+          {row.status === 'done' && <Button size="sm" variant="gray" icon="check" onClick={() => act.reopen(row)}>Not done</Button>}
+          {row.status !== 'done' && row.status !== 'note' && <Button size="sm" variant="filled" icon="check" onClick={then(() => { haptic('success'); act.done(row); })}>Done</Button>}
           <div className="as-tt-more">
-            <button ref={flagBtn} className="icon-btn as-tt-flag" aria-label="Priority" title="Priority" aria-haspopup="menu" aria-expanded={flagging} onClick={() => setFlagging(!flagging)}><Flag priority={row.priority} /></button>
-            {flagging && (
-              <Menu trigger={flagBtn} className="as-tt-menu" onClose={() => setFlagging(false)}>
-                {PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={(row.priority ?? 0) === p} className="ui-menu-item as-flag-item" onClick={() => { setFlagging(false); haptic('tap'); act.edit(row, { priority: p || null }); }}><Flag priority={p} /><span>{l} priority</span></button>)}
-              </Menu>
-            )}
-          </div>
-        )}
-        <div className="as-tt-more">
-          <IconButton ref={moreBtn} icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSnoozing(false); }} />
+            <IconButton ref={moreBtn} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu(!menu); setSnoozing(false); }} />
           {menu && (
             <Menu key={snoozing ? 'snooze' : 'main'} trigger={moreBtn} className="as-tt-menu" onClose={() => { setMenu(false); setSnoozing(false); }}>
               {snoozing ? (
@@ -313,6 +295,9 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
                 </>
               ) : (
                 <>
+                  {row.status === 'open' && <MenuItem onClick={() => setSnoozing(true)} icon="clock">Snooze</MenuItem>}
+                  {row.status === 'open' && <MenuItem onClick={then(() => act.tomorrow(row))} icon="calendar">Tomorrow</MenuItem>}
+                  <MenuItem onClick={() => { setMenu(false); move(); }} icon="arrow-swap">Move to {FILTER_LABEL[other]}</MenuItem>
                   {suggested != null && <MenuItem title="Add this estimate, from similar done tasks" onClick={() => { setMenu(false); addEstimate(suggested); }} icon="add">Add estimate ~{minutesText(suggested)}</MenuItem>}
                   {(row.status === 'open' || row.status === 'done') && (
                     <>
@@ -331,18 +316,45 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
                   {row.meeting_id && <MenuItem onClick={then(() => setView({ list: 'meetings', open: `${row.profile}:${row.meeting_id}` }))} icon="record">Open meeting</MenuItem>}
                   {row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(false)} icon={src.icon}>{row.meeting_id ? 'Transcript' : src.label}</MenuItem>}
                   {row.status === 'note' && <MenuItem onClick={then(() => act.toTask(row))} icon="check">Make task</MenuItem>}
-                  {row.status === 'open' && <MenuItem onClick={() => setSnoozing(true)} icon="clock">Snooze</MenuItem>}
                   {row.status === 'open' && <MenuItem disabled={tidying} onClick={() => { setMenu(false); void tidy(); }} icon={tidying ? 'loading' : 'wand'} spin={tidying}>Tidy</MenuItem>}
                   {row.draft && <MenuItem onClick={() => { setMenu(false); copyText(row.draft!); }} icon="copy">Copy draft</MenuItem>}
                   {row.status === 'open' && <RaiseWith className="ui-menu-item" text={title} profile={row.profile} people={recentPeople(snap.meetings, row.profile, snap.meetings.find((m) => m.profile === row.profile && m.id === row.meeting_id))} />}
-                  <MenuItem onClick={() => { setMenu(false); move(); }} icon="arrow-swap">Move to {FILTER_LABEL[other]}</MenuItem>
                   <MenuItem onClick={then(() => onAsk(row))} icon="sparkle">Ask Claude</MenuItem>
+                  {at != null && <MenuItem onClick={() => { setMenu(false); act.due(row, null); }} icon="close">Clear due time</MenuItem>}
                   <MenuItem danger onClick={then(() => act.remove(row))} icon="trash">Delete</MenuItem>
                 </>
               )}
             </Menu>
           )}
         </div>
+        </span>
+      } />
+      <div className="as-tags">
+        {timed && (
+          <PickDue className={chipClass({ quiet: true, late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={(t) => t !== at && act.due(row, t)} remind={row.remind ?? null} onRemind={(r) => act.edit(row, { remind: r })} skipAt={skipAt} onSkip={() => skipAt != null && act.skip(row, skipAt)}>
+            <Icon name="calendar" small /> {dueLabel(at)}{row.remind != null && at != null && <Icon name={row.remind < 0 ? 'bell-slash' : 'bell'} small />}
+          </PickDue>
+        )}
+        {row.status !== 'note' && (
+          <>
+            <Chip ref={flagBtn} quiet on={!!row.priority} aria-label="Priority" title="Priority" aria-haspopup="menu" aria-expanded={flagging} onClick={() => setFlagging(!flagging)}>
+              <Flag priority={row.priority} /> {PRIORITIES.find(([p]) => p === row.priority)?.[1] ?? 'None'}
+            </Chip>
+            {flagging && (
+              <Menu trigger={flagBtn} className="as-tt-menu" onClose={() => setFlagging(false)}>
+                {PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={(row.priority ?? 0) === p} className="ui-menu-item as-flag-item" onClick={() => { setFlagging(false); haptic('tap'); act.edit(row, { priority: p || null }); }}><Flag priority={p} /><span>{l} priority</span></button>)}
+              </Menu>
+            )}
+          </>
+        )}
+        {tags.map((t) => (
+          <span key={t} className={chipClass({ quiet: true })}>
+            #{t}
+            <IconButton icon="close" label={`Remove #${t}`} small onClick={() => setTags(tags.filter((x) => x !== t))} />
+          </span>
+        ))}
+        {tagging && <TagInput onAdd={(v) => setTags([...tags, v])} onClose={() => setTagging(false)} />}
+        {!tagging && row.status !== 'note' && <Chip quiet icon="tag" onClick={() => setTagging(true)}>Add tag</Chip>}
       </div>
       <div className="as-tt-body">
         <div className="as-edit-top">
@@ -360,17 +372,6 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); textRef.current?.focus(); } }}
           />
         </div>
-        {(tags.length > 0 || tagging) && (
-          <div className="as-tags">
-            {tags.map((t) => (
-              <span key={t} className="as-tag">
-                <button title={`Open #${t}`} onClick={() => openTag(t)}>#{t}</button>
-                <IconButton icon="close" label={`Remove #${t}`} small onClick={() => setTags(tags.filter((x) => x !== t))} />
-              </span>
-            ))}
-            {tagging && <TagInput onAdd={(v) => setTags([...tags, v])} onClose={() => setTagging(false)} />}
-          </div>
-        )}
         {showArea && <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Description" aria-label="Description" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onFocus={(e) => { setEditing(true); reveal(e); }} onBlur={() => { setEditing(false); save(); }} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.currentTarget.blur(); } }} />}
         {!showArea && view && (
           <div
@@ -443,7 +444,6 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             </select>
           </label>
         )}
-        {row.status !== 'note' && <IconButton icon="tag" label="Add tag" title="Add tag" onClick={() => setTagging(true)} />}
         <span className="spacer" />
         {row.status === 'open' && (focused
           ? <IconButton icon="debug-stop" on label="Stop" title="Stop the focus timer" onClick={stopFocus} />
