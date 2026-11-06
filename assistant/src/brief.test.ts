@@ -155,19 +155,60 @@ it('does not make a brief from a note alone', () => {
   expect(buildBrief(db, 'work', at(MON, 8)).empty).toBe(true);
 });
 
-it('stores the note as the first line after the title and keeps later notes out', async () => {
+it('stores only the title line as text and the note as the first row, and keeps later notes out', async () => {
   const db = seed();
   note(db, 'wrapup:fri', 'start with the invoice', at(FRI, 0));
   let pushed = 0;
   const push = async () => (pushed++, true);
   await runBriefs(db, at(MON, 8), push);
-  const stored = () => (db.prepare('SELECT text FROM briefs WHERE id = ?').get(briefId(at(MON, 8))) as { text: string }).text;
-  expect(stored().startsWith('Today: 2 meetings, 2 tasks\nYesterday you noted: start with the invoice\n\nMeetings · 2')).toBe(true);
+  const stored = () => db.prepare('SELECT text, rows FROM briefs WHERE id = ?').get(briefId(at(MON, 8))) as { text: string; rows: string };
+  expect(stored().text).toBe('Today: 2 meetings, 2 tasks');
+  expect(JSON.parse(stored().rows)[0]).toEqual({ section: 'note', title: 'start with the invoice', meta: 'Yesterday you noted', item: '', meeting: '' });
   const before = stored();
   note(db, 'wrapup:mon', 'later', at(MON, 0));
   await runBriefs(db, at(MON, 9), push);
-  expect(stored()).toBe(before);
+  expect(stored()).toEqual(before);
   expect(pushed).toBe(1);
+});
+
+it('returns rows per section with meta, targets and a 20 row cap, and keeps the push text', async () => {
+  const db = seed();
+  note(db, 'wrapup:fri', 'start with the invoice', at(FRI, 0));
+  db.prepare("UPDATE items SET rolls = 3 WHERE id = 't2'").run();
+  db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, people) VALUES ('s9', 'work', 1, ?, 'Fresh ask', 'slack', 'suggested', 'Ann · #a')").run(at(MON, 7));
+  db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, meeting_id) VALUES ('x3', 'work', 1, 0, 'Maybe mine', 'action', 'suggested', 'fri')").run();
+  const b = buildBrief(db, 'work', at(MON, 8));
+  const of = (name: string) => b.rows.filter((r) => r.section === name).map(({ section, ...r }) => r);
+  const none = { item: '', meeting: '' };
+  expect(of('note')).toEqual([{ title: 'start with the invoice', meta: 'Yesterday you noted', ...none }]);
+  expect(of('meetings')).toEqual([{ title: 'Standup', meta: '09:00-09:30', item: '', meeting: 'a' }, { title: 'Review', meta: '13:00-14:00', item: '', meeting: 'b' }]);
+  expect(of('plan')).toEqual([{ title: 'Free 7h30', meta: '08:00-09:00, 09:30-13:00, 14:00-17:00', ...none }]);
+  expect(of('tasks').map((r) => [r.item, r.meta])).toEqual([['t1', 'overdue'], ['t2', 'rolled 3x'], ['x1', '']]);
+  expect(of('waiting')).toEqual([{ title: 'Check the numbers', meta: 'Per, 2 days', item: 's1', meeting: '' }]);
+  expect(of('asks')).toEqual([{ title: 'Fresh ask', meta: 'Ann, today', item: 's9', meeting: '' }]);
+  expect(of('said')).toEqual([{ title: 'Send the slides', meta: '', item: 'said:s2', meeting: '' }]);
+  expect(of('left').map((r) => [r.item, r.meta])).toEqual([['x1', 'Planning'], ['x3', 'Planning, yours?']]);
+  expect(b.text).toBe(buildBrief(db, 'work', at(MON, 8)).text);
+  const many = db.prepare("INSERT INTO items (id, profile, version, updated_at, title, source, status, at) VALUES (?, 'work', 1, 0, ?, 'capture', 'open', ?)");
+  for (let i = 0; i < 25; i++) many.run(`m${i}`, `Task ${i}`, at(MON, 10));
+  expect(buildBrief(db, 'work', at(MON, 8)).rows.filter((r) => r.section === 'tasks')).toHaveLength(20);
+});
+
+it('writes no brief for an empty day and none twice', async () => {
+  const db = openDb(':memory:');
+  expect(await runBriefs(db, at(MON, 8), async () => true)).toEqual([]);
+  expect(db.prepare('SELECT COUNT(*) AS n FROM briefs').get()).toEqual({ n: 0 });
+  const full = seed();
+  await runBriefs(full, at(MON, 8), async () => true);
+  await runBriefs(full, at(MON, 9), async () => true);
+  expect(full.prepare("SELECT COUNT(*) AS n FROM briefs WHERE kind = 'morning'").get()).toEqual({ n: 1 });
+});
+
+it('prunes the rows of an old morning brief with its text', async () => {
+  const db = seed();
+  db.prepare("INSERT INTO briefs (id, profile, version, updated_at, kind, text, rows, from_at, to_at) VALUES ('morning:old', 'work', 1, 0, 'morning', 'x', '[{}]', ?, ?)").run(at(MON, 0) - 70 * 86400_000, at(MON, 0) - 70 * 86400_000);
+  await runBriefs(db, at(MON, 8), async () => true);
+  expect(db.prepare("SELECT deleted, text, rows FROM briefs WHERE id = 'morning:old'").get()).toEqual({ deleted: 1, text: null, rows: null });
 });
 
 it('prunes wrapup rows past 60 days only', async () => {

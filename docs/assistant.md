@@ -54,7 +54,7 @@ usage the same way chats do (see [features.md](features.md#personal-and-work-cla
 | actions | Proposed Slack messages and Linear issues from a meeting; synced but unused, since meeting actions are items with `meeting_id` |
 | jobs, runs | Scheduled jobs and their run history; a day after a job is deleted its runs are deleted too |
 | chats | Slack channels and DMs the scan read, each with a running summary |
-| briefs | Morning briefs (kind `morning`), Slack summaries (`slack`) and the unanswered sent mail list (`waiting`) |
+| briefs | Morning briefs (kind `morning`, title line in `text`, one JSON `rows` entry per line: `section, title, meta, item, meeting`), Slack summaries (`slack`) and the unanswered sent mail list (`waiting`) |
 | people, links, embeddings | Planned: people merged across sources, item links and vectors; nothing fills them yet |
 
 ## Slack and Gmail scans

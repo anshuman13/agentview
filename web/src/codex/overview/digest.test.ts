@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDigest, visibleRows } from './digest';
+import { parseBrief, parseDigest, visibleRows } from './digest';
 
 const row = (outcome: string, i = 0) => ({ id: `${outcome}${i}`, who: 'Ann', chat: '#a', outcome, reason: '', edited: false, url: '' });
 const json = (...rows: object[]) => JSON.stringify(rows);
@@ -27,5 +27,23 @@ describe('visibleRows', () => {
     expect(visibleRows(g, false).length).toBe(3);
     expect(visibleRows(g, true).length).toBe(9);
     expect(visibleRows({ ...g, open: true }, false).length).toBe(9);
+  });
+});
+
+describe('parseBrief', () => {
+  const b = (section: string, i = 0) => ({ section, title: `${section}${i}`, meta: '', item: '', meeting: '' });
+  it('groups sections in order with Meetings, Plan and Tasks open and the rest folded', () => {
+    const d = parseBrief(json(b('left'), b('tasks'), b('note'), b('plan'), b('meetings'), b('said'), b('waiting'), b('asks')))!;
+    expect(d.groups.map((g) => [g.outcome, g.open])).toEqual([['note', false], ['meetings', true], ['plan', true], ['tasks', true], ['said', false], ['left', false]]);
+    expect(d.waiting.map((r) => r.section)).toEqual(['waiting', 'asks']);
+  });
+  it('shows the first 3 rows of a folded group', () => {
+    const d = parseBrief(json(...Array.from({ length: 5 }, (_, i) => b('left', i))))!;
+    expect(visibleRows(d.groups[0], false).length).toBe(3);
+  });
+  it('is null for invalid, empty or missing rows', () => {
+    expect(parseBrief('{oops')).toBeNull();
+    expect(parseBrief('[]')).toBeNull();
+    expect(parseBrief(null)).toBeNull();
   });
 });

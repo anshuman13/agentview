@@ -12,16 +12,19 @@ import { ACCOUNT_OF } from './calendar.js';
 
 const PROFILES: Profile[] = ['work', 'personal'];
 const TOP = 5;
+const ROWS = 20;
 const LONG = 20 * 3600_000;
 const KEEP = 60 * DAY;
 
 type Row = { title: string | null };
-export type Brief = { title: string; text: string; empty: boolean };
+export type BriefRow = { section: string; title: string; meta: string; item: string; meeting: string };
+export type Brief = { title: string; text: string; rows: BriefRow[]; empty: boolean };
 
 export const briefId = (now: number) => `morning:${ymd(now)}`;
 const dated = (t: { at: number | null }) => t.at != null && (t.at as unknown) !== '';
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const age = (ms: number) => (ms < DAY ? 'today' : plural(Math.floor(ms / DAY), 'day'));
+const section = (name: string, rows: Partial<BriefRow>[]) => rows.slice(0, ROWS).map((r) => ({ title: '', meta: '', item: '', meeting: '', ...r, section: name }));
 const top = <T extends Row>(rows: T[], tag: (r: T) => string = () => '') => [...rows.slice(0, TOP).map((r) => `- ${r.title ?? 'Untitled'}${tag(r)}`), ...(rows.length > TOP ? [`- +${rows.length - TOP} more`] : [])];
 
 // Open tasks due this week that will not fit in the free work time before they are due; tasks with a focus block ahead are covered.
@@ -40,7 +43,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const meetings = busy.filter((m) => !isBlock(m.id) && (m.ends_at ?? m.starts_at) >= now);
   const timed = busy.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), now);
-  const tasks = db.prepare("SELECT title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND (at IS NULL OR at = '' OR CAST(at AS INTEGER) < ?) ORDER BY at IS NULL OR at = '', CAST(at AS INTEGER)").all(profile, end) as (Row & { at: number | null; rolls: number | null })[];
+  const tasks = db.prepare("SELECT id, title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting') AND (at IS NULL OR at = '' OR CAST(at AS INTEGER) < ?) ORDER BY at IS NULL OR at = '', CAST(at AS INTEGER)").all(profile, end) as (Row & { id: string; at: number | null; rolls: number | null })[];
   const late = tasks.filter((t) => dated(t) && Number(t.at) < now).length;
   const due = tasks.filter(dated).length;
   const rolled = tasks.filter((t) => (t.rolls ?? 0) > 0).length;
@@ -51,13 +54,14 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const today = asks.filter((a) => a.since >= start);
   const who = (a: (typeof asks)[number]) => (a.people ?? '').split(' · ')[0] || '?';
   const askTag = (a: (typeof asks)[number]) => ` (${who(a)}, ${age(now - a.since)})`;
-  const left = db.prepare("SELECT i.title, i.status, m.title AS meeting FROM items i JOIN meetings m ON m.profile = i.profile AND m.id = i.meeting_id WHERE i.deleted = 0 AND i.profile = ? AND i.status IN ('open', 'suggested') AND m.deleted = 0 AND m.starts_at >= ? AND m.starts_at < ? ORDER BY m.starts_at").all(profile, addWorkdays(start, -1), start) as (Row & { status: string; meeting: string | null })[];
+  const left = db.prepare("SELECT i.id, i.title, i.status, m.title AS meeting FROM items i JOIN meetings m ON m.profile = i.profile AND m.id = i.meeting_id WHERE i.deleted = 0 AND i.profile = ? AND i.status IN ('open', 'suggested') AND m.deleted = 0 AND m.starts_at >= ? AND m.starts_at < ? ORDER BY m.starts_at").all(profile, addWorkdays(start, -1), start) as (Row & { id: string; status: string; meeting: string | null })[];
   const noted = db.prepare("SELECT text FROM briefs WHERE deleted = 0 AND profile = ? AND kind = 'wrapup' AND text <> '' AND from_at >= ? AND from_at < ? ORDER BY from_at DESC LIMIT 1").get(profile, addWorkdays(start, -1), start) as { text: string } | null;
 
+  const span = (m: (typeof meetings)[number]) => (timed.includes(m) ? `${clock(m.starts_at)}-${clock(m.ends_at!)}` : 'All day');
   const lines: string[] = noted ? [`Yesterday you noted: ${noted.text}`, ''] : [];
   if (meetings.length) {
     lines.push(`Meetings · ${meetings.length}`);
-    for (const m of meetings) lines.push(`${timed.includes(m) ? `${clock(m.starts_at)}-${clock(m.ends_at!)}` : 'All day'} ${m.title ?? 'Meeting'}`);
+    for (const m of meetings) lines.push(`${span(m)} ${m.title ?? 'Meeting'}`);
   }
   const free = gaps.reduce((n, [a, b]) => n + b - a, 0);
   lines.push(gaps.length ? `Free ${minutesText(Math.round(free / 60_000))}: ${gaps.map(([a, b]) => `${clock(a)}-${clock(b)}`).join(', ')}` : 'No free time 08:00-17:00');
@@ -68,9 +72,24 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   if (today.length) lines.push('', `Slack asks to review · ${today.length}`, ...top(today, askTag));
   if (said.length) lines.push('', `You said · ${said.length}`, ...top(said));
   if (left.length) lines.push('', `Still open from last workday · ${left.length}`, ...top(left, (a) => `${a.meeting ? ` (${a.meeting})` : ''}${a.status === 'suggested' ? ' (yours?)' : ''}`));
+  const orUntitled = (r: Row) => r.title ?? 'Untitled';
+  const rows = [
+    ...section('note', noted ? [{ title: noted.text, meta: 'Yesterday you noted' }] : []),
+    ...section('meetings', meetings.map((m) => ({ title: m.title ?? 'Meeting', meta: span(m), meeting: m.id }))),
+    ...section('plan', [
+      gaps.length ? { title: `Free ${minutesText(Math.round(free / 60_000))}`, meta: gaps.map(([a, b]) => `${clock(a)}-${clock(b)}`).join(', ') } : { title: 'No free time 08:00-17:00' },
+      ...(risk ? [{ title: `${plural(risk, 'task')} at risk` }] : []),
+    ]),
+    ...section('tasks', tasks.map((t) => ({ title: orUntitled(t), item: t.id, meta: [dated(t) && Number(t.at) < now ? 'overdue' : '', t.rolls ? `rolled ${t.rolls}x` : ''].filter(Boolean).join(', ') }))),
+    ...section('waiting', older.map((a) => ({ title: orUntitled(a), item: a.id, meta: `${who(a)}, ${age(now - a.since)}` }))),
+    ...section('asks', today.map((a) => ({ title: orUntitled(a), item: a.id, meta: `${who(a)}, ${age(now - a.since)}` }))),
+    ...section('said', said.map((a) => ({ title: orUntitled(a), item: a.id }))),
+    ...section('left', left.map((a) => ({ title: orUntitled(a), item: a.id, meta: [a.meeting, a.status === 'suggested' ? 'yours?' : ''].filter(Boolean).join(', ') }))),
+  ];
   return {
     title: `Today: ${plural(meetings.length, 'meeting')}, ${plural(due, 'task')}`,
     text: lines.join('\n'),
+    rows,
     empty: !meetings.length && !due && !risk && !slack.length && !left.length,
   };
 }
@@ -78,7 +97,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
 // Morning, Slack, ahead and wrap-up briefs past the keep window are no longer shown; their rows stay behind for sync without the text.
 function pruneBriefs(db: Database, now = Date.now()) {
   const old = db.prepare("SELECT id, profile FROM briefs WHERE deleted = 0 AND kind IN ('morning', 'slack', 'ahead', 'wrapup') AND to_at < ?").all(now - KEEP) as { id: string; profile: Profile }[];
-  applyChanges(db, old.map((b) => ({ table: 'briefs', id: b.id, profile: b.profile, deleted: true, updated_at: now, fields: { text: null } })));
+  applyChanges(db, old.map((b) => ({ table: 'briefs', id: b.id, profile: b.profile, deleted: true, updated_at: now, fields: { text: null, rows: null } })));
 }
 
 // Weekdays from 08:00 until 17:00 each profile with something on gets one brief stored for the phone and one push; a failed
@@ -96,7 +115,7 @@ export async function runBriefs(db: Database, now = Date.now(), push = pushNtfy)
     if (b.empty) continue;
     setMeta(db, key, String(now));
     if (!db.prepare('SELECT 1 FROM briefs WHERE profile = ? AND id = ?').get(profile, id)) {
-      applyChanges(db, [{ table: 'briefs', id, profile, updated_at: now, fields: { kind: 'morning', text: `${b.title}\n${b.text}`, from_at: new Date(now).setHours(0, 0, 0, 0), to_at: now } }]);
+      applyChanges(db, [{ table: 'briefs', id, profile, updated_at: now, fields: { kind: 'morning', text: b.title, rows: JSON.stringify(b.rows), from_at: new Date(now).setHours(0, 0, 0, 0), to_at: now } }]);
     }
     if (await push(b.title, profile === 'work' ? 'Work' : 'Personal', b.text, '').catch(() => false)) sent.push(profile);
     else deleteMeta(db, key);

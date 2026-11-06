@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { useAssistantTable } from '../data';
 import { rowKey } from '../data/sync';
 import type { Brief } from '../data/wiki';
@@ -12,7 +12,7 @@ import { visibleRows, type DigestGroup, type DigestRow } from './digest';
 
 type Parsed = { groups: DigestGroup[]; waiting: DigestRow[] };
 
-function GroupList({ brief, group, items }: { brief: Brief; group: DigestGroup; items: Set<string> }) {
+export function GroupList<R>({ brief, group, render }: { brief: Brief; group: DigestGroup<R>; render: (row: R) => ReactNode }) {
   const key = `codex.digestFold.${brief.profile}:${brief.id}:${group.outcome}`;
   const [open, setOpen] = useState(() => stored<boolean>(key, group.open));
   const [all, setAll] = useState(false);
@@ -21,29 +21,28 @@ function GroupList({ brief, group, items }: { brief: Brief; group: DigestGroup; 
   return (
     <>
       <Section label={group.label} count={group.rows.length} open={open} onToggle={toggle} />
-      {open && rows.map((r) => {
-        const exists = items.has(rowKey({ profile: brief.profile, id: r.id }));
-        const badge = r.outcome === 'failed' ? 'Failed' : r.outcome === 'escalated' ? 'Needs you' : r.outcome === 'sent' && r.edited ? 'Edited' : '';
-        return (
-          <div key={r.id} className="ov-digest-row">
-            <Row className={exists ? '' : 'inert'} disabled={!exists} title={r.who || 'Slack'} meta={[r.chat, r.reason].filter(Boolean).join(' · ')} trailing={badge && <span className="badge quiet">{badge}</span>} onClick={() => openTask({ profile: brief.profile, id: r.id })} />
-            {r.url && <IconButton icon="link-external" label="Open" size="sm" onClick={() => window.open(r.url, '_blank', 'noreferrer')} />}
-          </div>
-        );
-      })}
+      {open && rows.map((r, i) => <Fragment key={i}>{render(r)}</Fragment>)}
       {open && !all && rows.length < group.rows.length && <Button variant="quiet" size="sm" className="ov-more" onClick={() => setAll(true)}>Show all {group.rows.length}</Button>}
     </>
   );
 }
 
+// How many of the given item ids are still suggested or open in the brief's profile.
+export function useWaiting(brief: Brief, ids: string[]) {
+  const itemRows = useAssistantTable('items');
+  return ids.filter((id) => {
+    const item = itemRows.find((i) => i.profile === brief.profile && i.id === id);
+    return item && !item.deleted && (item.status === 'suggested' || item.status === 'open');
+  }).length;
+}
+
+export const WaitingLine = ({ count }: { count: number }) => count > 0 && <Button variant="quiet" size="sm" className="ov-more" onClick={() => document.getElementById('reply-queue')?.scrollIntoView({ block: 'start' })}>{count} waiting</Button>;
+
 // The day or away digest as a report card: counts in the header, one folded or open list per outcome, and a link to the Reply queue for what still waits.
 export function DigestCard({ brief, digest, showProfile, onDismiss }: { brief: Brief; digest: Parsed; showProfile: boolean; onDismiss: () => void }) {
   const itemRows = useAssistantTable('items');
   const items = useMemo(() => new Set(itemRows.filter((r) => !r.deleted).map(rowKey)), [itemRows]);
-  const waiting = digest.waiting.filter((r) => {
-    const item = itemRows.find((i) => i.profile === brief.profile && i.id === r.id);
-    return item && !item.deleted && (item.status === 'suggested' || item.status === 'open');
-  }).length;
+  const waiting = useWaiting(brief, digest.waiting.map((r) => r.id));
   return (
     <section className="ov-digest">
       <Section label={`${brief.text}${showProfile ? ` · ${brief.profile}` : ''}`} action={(
@@ -54,8 +53,19 @@ export function DigestCard({ brief, digest, showProfile, onDismiss }: { brief: B
         </span>
       )} />
       <div className="ov-group">
-        {digest.groups.map((g) => <GroupList key={g.outcome} brief={brief} group={g} items={items} />)}
-        {waiting > 0 && <Button variant="quiet" size="sm" className="ov-more" onClick={() => document.getElementById('reply-queue')?.scrollIntoView({ block: 'start' })}>{waiting} waiting</Button>}
+        {digest.groups.map((g) => (
+          <GroupList key={g.outcome} brief={brief} group={g} render={(r) => {
+            const exists = items.has(rowKey({ profile: brief.profile, id: r.id }));
+            const badge = r.outcome === 'failed' ? 'Failed' : r.outcome === 'escalated' ? 'Needs you' : r.outcome === 'sent' && r.edited ? 'Edited' : '';
+            return (
+              <div className="ov-digest-row">
+                <Row className={exists ? '' : 'inert'} disabled={!exists} title={r.who || 'Slack'} meta={[r.chat, r.reason].filter(Boolean).join(' · ')} trailing={badge && <span className="badge quiet">{badge}</span>} onClick={() => openTask({ profile: brief.profile, id: r.id })} />
+                {r.url && <IconButton icon="link-external" label="Open" size="sm" onClick={() => window.open(r.url, '_blank', 'noreferrer')} />}
+              </div>
+            );
+          }} />
+        ))}
+        <WaitingLine count={waiting} />
       </div>
     </section>
   );
