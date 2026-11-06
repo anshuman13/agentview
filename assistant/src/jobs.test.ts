@@ -89,6 +89,35 @@ describe('runDue', () => {
     await runDue(db, now, run, async () => true);
     expect((db.prepare("SELECT next_run_at FROM jobs WHERE id = 'a'").get() as { next_run_at: number }).next_run_at).toBe(now - 60_000);
   });
+  const ok = async () => (await new Promise((r) => setTimeout(r, 5)), { result: 'done', added: [], notified: false });
+  const reply = async (_db: unknown, _jobId: string, _ok: boolean, _output: string) => {};
+  const seed = (enabled: number) => {
+    const db = openDb(':memory:');
+    const now = Date.now();
+    applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: 1, fields: { name: 'A', schedule: 'daily 09:00', prompt: 'x', enabled, next_run_at: now - 1 } }]);
+    return { db, now };
+  };
+  const state = (db: ReturnType<typeof openDb>) => db.prepare("SELECT enabled, next_run_at FROM jobs WHERE id = 'a'").get();
+  test('an enabled job keeps its schedule after Run now', async () => {
+    const { db, now } = seed(1);
+    await runDue(db, now, ok, async () => true, reply);
+    expect(state(db)).toEqual({ enabled: 1, next_run_at: nextRun('daily 09:00', Date.now()) });
+  });
+  test('a disabled job runs once and stays off', async () => {
+    const { db, now } = seed(0);
+    await runDue(db, now, ok, async () => true, reply);
+    expect(state(db)).toEqual({ enabled: 0, next_run_at: null });
+    expect(db.prepare('SELECT status FROM runs').all()).toEqual([{ status: 'ok' }]);
+  });
+  test('a failed run is saved as an error and notified', async () => {
+    const { db, now } = seed(1);
+    const titles: string[] = [];
+    const boom = async () => { await new Promise((r) => setTimeout(r, 5)); throw new Error('boom'); };
+    await runDue(db, now, boom, async (t: string) => (titles.push(t), true), reply);
+    expect(db.prepare('SELECT status, output FROM runs').all()).toEqual([{ status: 'error', output: 'boom' }]);
+    expect(titles.length).toBe(1);
+    expect(titles[0].endsWith('failed')).toBe(true);
+  });
 });
 
 describe('Slack commands', () => {

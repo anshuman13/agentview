@@ -13,12 +13,13 @@ import '../../styles/features/jobs.css';
 import { Autopilot } from './Autopilot';
 import { JobPage } from './JobPage';
 import { Switch } from './Switch';
-import { RunStatus, at, describe, queued, runsOf, useJobs } from './schedule';
+import { RunStatus, at, describe, rowMeta, runsOf, useJobs } from './schedule';
 
 function JobsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
   useMinute();
   const { jobs, runs, store, filter, enable } = useJobs();
+  const now = Date.now();
   const mixed = new Set(jobs.map((j) => j.profile)).size > 1;
   const add = (preset?: JobPreset) => {
     const t = Date.now();
@@ -42,14 +43,15 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
           {jobs.length > 0 && (
             <div className="mt-rows">
               {jobs.map((j) => {
-                const last = runsOf(runs, j)[0];
+                const meta = rowMeta(j, runs, now);
+                const last =runsOf(runs, j)[0];
                 return (
                   <div key={rowKey(j)} role="button" tabIndex={0} className={`mt-row jb-row${j.enabled ? '' : ' off'}`} onClick={() => setView({ open: rowKey(j) })} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setView({ open: rowKey(j) }); } }}>
                     <span className="mt-body">
                       <span className="mt-title">{j.name || 'Untitled job'}{mixed && <span className={`as-prof ${j.profile}`}>{j.profile === 'work' ? 'Work' : 'Personal'}</span>}</span>
                       <span className="wk-meta">
                         <span>{describe(j.schedule)}</span>
-                        {!j.enabled ? <span>Off</span> : queued(j, runs, Date.now()) ? <span>Queued</span> : j.next_run_at ? <span>Next {at(j.next_run_at)}</span> : null}
+                        {meta !== null && <span>{meta}</span>}
                       </span>
                       {last && <span className="jb-last"><RunStatus r={last} /> {last.status === 'running' ? 'Running now' : `${at(last.started_at ?? 0)}: ${firstLine(last.output) || 'No reply'}`}</span>}
                     </span>

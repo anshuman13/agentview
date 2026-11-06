@@ -1,6 +1,6 @@
 import type { Job, Run } from '../data/wiki';
 import { describe as group, expect, test } from 'vitest';
-import { describe, queued, parseSchedule, scheduleOf } from './schedule';
+import { describe, queued, rowMeta, parseSchedule, scheduleOf } from './schedule';
 
 group('job schedules', () => {
   test('read back what the form writes', () => {
@@ -12,6 +12,19 @@ group('job schedules', () => {
     expect(describe('weekly fri 16:00')).toBe('Fridays at 16:00');
     expect(describe('daily 9:05')).toBe('Every day at 09:05');
     expect(describe('hourly')).toBe('Every hour');
+  });
+});
+
+group('rowMeta', () => {
+  const job = { id: 'j', profile: 'work', enabled: 1, next_run_at: null } as Job;
+  test('queued shows Queued on or off, off shows Off', () => {
+    expect(rowMeta({ ...job, enabled: 0, next_run_at: 100 }, [], 200)).toBe('Queued');
+    expect(rowMeta({ ...job, enabled: 0 }, [], 200)).toBe('Off');
+    expect(rowMeta({ ...job, next_run_at: 100 }, [], 200)).toBe('Queued');
+  });
+  test('an enabled job shows its next run when set', () => {
+    expect(rowMeta({ ...job, next_run_at: 5000 }, [], 200)).toMatch(/^Next /);
+    expect(rowMeta(job, [], 200)).toBeNull();
   });
 });
 

@@ -41,6 +41,8 @@ export const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && 
 
 export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
+export const rowMeta = (j: Job, runs: Run[], now: number) => (queued(j, runs, now) ? 'Queued' : !j.enabled ? 'Off' : j.next_run_at ? `Next ${at(j.next_run_at)}` : null);
+
 export function RunStatus({ r }: { r: Run }) {
   const label = r.status === 'running' ? 'Running' : r.status === 'ok' ? 'Succeeded' : 'Failed';
   return (
