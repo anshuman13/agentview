@@ -88,6 +88,9 @@ Desktop (main column ≥ 880px wide)
   card for an upcoming meeting, Talk time, earlier meetings of the series, My notes, then folded Unassigned, Others
   took, Not mine and the Transcript. Talk time is a bar of the top five speakers' share of words ("Name: text" lines
   or a name line before its text), with the action and decision counts.
+- Series page (`web/src/codex/meetings/SeriesPage.tsx`): a Section header with the series title, Open next (the soonest
+  upcoming meeting, hidden when none) and a More menu (Open calendar, Notes template cycles the series' pick), then
+  chips for the cadence (median gap of past occurrences, none when irregular) and N people, open actions and occurrences.
 - Meeting actions are tasks (`items` rows with `meeting_id`). A row has a date chip, Copy as message and a New Linear
   issue link; a suggested one has Not mine (✕) and Mine (✓).
 - The composer at the bottom asks about the meeting.

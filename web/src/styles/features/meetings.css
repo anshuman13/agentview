@@ -20,6 +20,7 @@
 /* An open menu may extend past the card edge. */
 :is(.mt-days, .mt-rows):has(.ui-menu) { overflow: visible !important; }
 .mt-more { position: relative; flex: none; display: inline-flex; }
+.mt-series-more { position: relative; flex: none; display: inline-flex; }
 @media (hover: hover) and (pointer: fine) {
   .mt-more { opacity: 0; }
   .mt-item:is(:hover, :focus-within) .mt-more, .mt-more:focus-within { opacity: 1; }

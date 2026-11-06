@@ -347,3 +347,27 @@ export function stampedNotes(notes: string | null | undefined, text: string, at:
   const line = [`${clock(at)} ${first}`, ...rest].join('\n');
   return notes ? `${notes.trimEnd()}\n${line}` : line;
 }
+
+const CADENCES: [number, number, string][] = [[0, 2, 'Daily'], [5, 9, 'Weekly'], [12, 16, 'Every 2 weeks'], [26, 35, 'Monthly']];
+
+// The usual gap between consecutive occurrences, or null when it is irregular or there is only one.
+export function cadenceOf(members: Meeting[]) {
+  const times = members.map((m) => m.starts_at!).sort((a, b) => a - b);
+  const gaps = times.slice(1).map((t, i) => (t - times[i]) / 86400000).sort((a, b) => a - b);
+  if (!gaps.length) return null;
+  const mid = gaps.length >> 1;
+  const days = Math.round(gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2);
+  return CADENCES.find(([lo, hi]) => days >= lo && days <= hi)?.[2] ?? null;
+}
+
+// The distinct people across the occurrences of a series.
+export const seriesPeople = (members: Meeting[]) =>
+  members.flatMap(peopleOf).reduce<string[]>((all, p) => (all.some((q) => sameName(p, q)) ? all : [...all, p]), []);
+
+// The soonest upcoming meeting of a series page.
+export function nextInSeries(meetings: Meeting[], profile: string, title: string, now = Date.now()) {
+  const inside = inSeries(meetings);
+  return live(meetings)
+    .filter((m) => m.profile === profile && inside.has(m.profile + m.id) && m.starts_at! > now && seriesTitleOf(m) === title)
+    .sort((a, b) => a.starts_at! - b.starts_at!)[0];
+}

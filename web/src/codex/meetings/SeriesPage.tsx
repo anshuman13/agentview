@@ -1,15 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { dayLabel } from '../data/dates';
-import { meetingState, parseSeriesKey, seriesMeetings } from '../data/meetings';
+import { cadenceOf, meetingState, nextInSeries, parseSeriesKey, seriesMeetings, seriesPeople } from '../data/meetings';
+import { NOTES_TEMPLATES, notesTemplateChips, rememberNotesTemplate, type NotesTemplate } from '../data/notesTemplates';
 import type { ItemRow } from '../data/sync';
 import { listOf, type Meeting } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
-import { plural } from '../../ui/util';
+import { Button, IconButton } from '../../ui/Button';
+import { Menu, MenuItem } from '../../ui/Menu';
+import { Section } from '../../ui/Section';
+import { plural, safeHref } from '../../ui/util';
 import { clock } from '../time';
 import { useMinute } from '../split';
 import { Capped } from '../Fold';
-import { openMeeting, setView, useEscapeBack } from '../view';
+import { openMeeting, setView, showSnack, useEscapeBack } from '../view';
 import { ActionRow } from './ActionRow';
 import '../../styles/features/meetings.css';
 
@@ -28,6 +32,20 @@ export function SeriesPage({ series }: { series: string }) {
     for (const r of snap.items) if (!r.deleted && r.status === 'open' && r.profile === profile && r.meeting_id) byMeeting.get(r.meeting_id)?.push(r);
     return [...members].reverse().flatMap((m) => byMeeting.get(m.id)!.sort((a, b) => a.updated_at - b.updated_at).map((r) => ({ m, r })));
   }, [members, snap.items, profile]);
+  const next = useMemo(() => nextInSeries(meetings, profile, title, now), [meetings, profile, title, now]);
+  const cadence = useMemo(() => cadenceOf(members), [members]);
+  const people = useMemo(() => seriesPeople(members), [members]);
+  const [menu, setMenu] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  const calendar = safeHref(next?.calendar_url || members[0]?.calendar_url);
+  const cycleTemplate = () => {
+    const keys = Object.keys(NOTES_TEMPLATES) as NotesTemplate[];
+    const current = notesTemplateChips(members[0]).find((c) => c.selected)?.key ?? 'one_on_one';
+    const pick = keys[(keys.indexOf(current) + 1) % keys.length];
+    rememberNotesTemplate(members[0], pick);
+    setMenu(false);
+    showSnack(`Notes template: ${NOTES_TEMPLATES[pick].label}`);
+  };
   const openCount = (m: Meeting) => open.filter((x) => x.m === m).length;
   return (
     <div className="wk narrow">
@@ -39,8 +57,23 @@ export function SeriesPage({ series }: { series: string }) {
         <article className="mt-page">
           {!members.length ? <h1 className="wk-title">No meetings</h1> : (
             <>
-              <h1 className="wk-title">{members[0].title}</h1>
-              <div className="wk-meta mt-when"><span>{plural(members.length, 'meeting')}, {plural(open.length, 'open action')}</span></div>
+              <Section label={members[0].title} action={(
+                <>
+                  {next && <Button variant="filled" size="sm" onClick={() => openMeeting(next)}>Open next</Button>}
+                  <span className="mt-series-more"><IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+                    {menu && (
+                      <Menu trigger={more} onClose={() => setMenu(false)}>
+                        {calendar && <MenuItem icon="calendar" href={calendar} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
+                        <MenuItem icon="edit" onClick={cycleTemplate}>Notes template</MenuItem>
+                      </Menu>
+                    )}
+                  </span>
+                </>
+              )} />
+              <div className="mt-chips">
+                {cadence && <span className="chip">{cadence}</span>}
+                {people.length > 0 && <span className="chip">{people.length === 1 ? '1 person' : `${people.length} people`}</span>}
+              </div>
               <section className="mt-sec">
                 <h2>Open across the series</h2>
                 {open.length ? <div className="mt-tasks"><Capped items={open} render={({ m, r }) => (
