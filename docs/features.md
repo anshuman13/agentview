@@ -147,7 +147,7 @@ the next meeting with that person (picked from the meeting's attendees and recen
 meeting with them after it was raised and counts as raised once that meeting ends. Points stay out of Search.
 
 A person page starts with what waits outside meetings: the first line of their Slack DM summary (full text on hover) with Open in Slack,
-one "Waiting on you" list of what they asked you and what you promised them in Slack or Gmail (each item once, so two asks from one message both show, each with its age and a Done check that clears it), and your sent mail to them with no reply, then their open tasks (with a Done check, included when the page is copied as Markdown). Below come their
+one "Waiting on you" list of what they asked you and what you promised them in Slack or Gmail (each item once, so two asks from one message both show, each a row with its source and age, a Needs you badge when suggested, a Done button and a More menu with Open and the Slack or Gmail source), and your sent mail to them with no reply, then their open tasks (rows like the Tasks list with a Done check and a More menu, all included when the page is copied as Markdown). Waiting on you, open tasks and meetings each show their first 5 rows and a "Show all N" button, folded again on reload or for another person. Below come their
 commitments (hidden when there are none), the points to raise with them (included when the page is copied as Markdown), pinned text, meetings and
 wiki claims that name them. A section shows its count whenever it has rows.
 

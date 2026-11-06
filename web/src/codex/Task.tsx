@@ -29,6 +29,32 @@ const checklist = (s: string | null) => {
   return { items, done: items.filter((c) => c.done).length, total: items.length };
 };
 
+const lateDays = (at: number, now: number) => Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY);
+
+// The due text of an open task row: Nd late, the day and time, or only the time when the row sits under its day (inDay). None for notes, done rows, undated tasks and the 09:00 and 19:00 slots.
+export function dueText(row: ItemRow, now: number, inDay?: boolean) {
+  const at = atTime(row.at);
+  if (at == null || row.status === 'note' || row.status === 'done') return null;
+  const late = lateDays(at, now);
+  const slot = new Date(at).getMinutes() === 0 && [MORNING, EVENING].includes(new Date(at).getHours());
+  return late > 0 ? `${late}d late` : !inDay ? when(at, now) : slot ? null : clock(at);
+}
+
+// The menu items of an open task: Open, Snooze, Tomorrow, Move to the other profile and Delete.
+export function taskMenu(row: ItemRow, act: ReturnType<typeof useActions>, choose: (fn: () => void) => () => void, onOpen: () => void) {
+  const later = nextNine(new Date(Math.max(atTime(row.at) ?? 0, Date.now())), row.profile);
+  const other: Profile = row.profile === 'work' ? 'personal' : 'work';
+  return (
+    <>
+      <MenuItem icon="arrow-right" onClick={choose(onOpen)}>Open</MenuItem>
+      <MenuItem icon="clock" onClick={choose(() => act.snooze(row, later))}>Snooze</MenuItem>
+      <MenuItem icon="calendar" onClick={choose(() => act.tomorrow(row))}>Tomorrow</MenuItem>
+      <MenuItem icon="arrow-swap" onClick={choose(() => void act.move(row, other))}>Move to {FILTER_LABEL[other]}</MenuItem>
+      <MenuItem icon="trash" danger onClick={choose(() => act.remove(row))}>Delete</MenuItem>
+    </>
+  );
+}
+
 // inDay: the row sits under its day and part-of-day headers, so it shows only an exact clock time.
 // picking: selection mode, where a tap on a selectable row calls onOpen to toggle it and selected shows it chosen.
 export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected }: { row: ItemRow; onOpen: () => void; onGrab?: (e: React.PointerEvent) => void; lifted?: boolean; inDay?: boolean; picking?: boolean; selected?: boolean }) {
@@ -40,14 +66,12 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
   const isDone = row.status === 'done';
   const isNote = row.status === 'note';
   const pickable = !isDone && !isNote;
-  const late = at != null ? Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / DAY) : 0;
-  const slot = at != null && new Date(at).getMinutes() === 0 && [MORNING, EVENING].includes(new Date(at).getHours());
-  const due = at == null || isNote || isDone ? null : late > 0 ? `${late}d late` : !inDay ? when(at, now) : slot ? null : clock(at);
+  const late = at != null ? lateDays(at, now) : 0;
+  const due = dueText(row, now, inDay);
   const list = checklist(row.text);
   const preview = isRepeat(row.text) ? '' : firstLine(row.text);
   const extras = [isRepeat(row.text) && 'Repeats', list.total > 0 && `${list.done}/${list.total}`, ...tagList(row.tags).slice(0, 2).map((t) => `#${t}`), !isDone && row.priority === 3 && 'High', !isDone && row.priority === 2 && 'Medium'].filter(Boolean).join(' · ');
   const later = nextNine(new Date(Math.max(at ?? 0, now)), row.profile);
-  const other: Profile = row.profile === 'work' ? 'personal' : 'work';
   const choose = (fn: () => void) => () => { setMenu(false); fn(); };
   const body = (
     <div className={`as-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}${selected ? ' selected' : ''}`} data-row={row.profile + row.id} onPointerDown={picking ? undefined : (e) => { if (!(e.target as Element).closest('.as-more')) onGrab?.(e); }} onClick={picking && !pickable ? undefined : onOpen} role="button" aria-pressed={picking && pickable ? !!selected : undefined} tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && (picking ? (pickable && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())) : rowKey(e, row, onOpen, act))}>
@@ -69,12 +93,13 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
           <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
           {menu && (
             <Menu trigger={more} onClose={() => setMenu(false)}>
-              <MenuItem icon="arrow-right" onClick={choose(onOpen)}>Open</MenuItem>
-              {isDone && <MenuItem icon="discard" onClick={choose(() => act.reopen(row))}>Not done</MenuItem>}
-              {pickable && <MenuItem icon="clock" onClick={choose(() => act.snooze(row, later))}>Snooze</MenuItem>}
-              {pickable && <MenuItem icon="calendar" onClick={choose(() => act.tomorrow(row))}>Tomorrow</MenuItem>}
-              {pickable && <MenuItem icon="arrow-swap" onClick={choose(() => void act.move(row, other))}>Move to {FILTER_LABEL[other]}</MenuItem>}
-              <MenuItem icon="trash" danger onClick={choose(() => act.remove(row))}>Delete</MenuItem>
+              {pickable ? taskMenu(row, act, choose, onOpen) : (
+                <>
+                  <MenuItem icon="arrow-right" onClick={choose(onOpen)}>Open</MenuItem>
+                  {isDone && <MenuItem icon="discard" onClick={choose(() => act.reopen(row))}>Not done</MenuItem>}
+                  <MenuItem icon="trash" danger onClick={choose(() => act.remove(row))}>Delete</MenuItem>
+                </>
+              )}
             </Menu>
           )}
         </span>

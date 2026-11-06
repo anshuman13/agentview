@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useAssistantData, useCodex } from '../data';
 import { personMarkdown } from '../data/meetingMarkdown';
 import { claimsMentioning } from '../data/wiki';
@@ -6,6 +6,11 @@ import { commitmentsOf, meetingsOf, nameOf, openQuestions, peopleOf, pinsOf, que
 import { PinList } from './Pins';
 import { useActions } from '../useActions';
 import { Icon } from '../../ui/Icon';
+import { Button } from '../../ui/Button';
+import { MenuItem } from '../../ui/Menu';
+import { Section } from '../../ui/Section';
+import { CardRow } from '../overview/CardRow';
+import { dueText, taskMenu } from '../Task';
 import { copyText, openMeeting, openTask, setView, useEscapeBack } from '../view';
 import { ago, plural, safeHref } from '../../ui/util';
 import { openTasksOf, personInbox, unanswered } from '../data/review';
@@ -19,42 +24,68 @@ import '../../styles/features/meetings.css';
 
 const pill = (n: number) => (n > 0 ? <span className="mt-of">{n}</span> : null);
 
-function Asks({ title, rows }: { title: string; rows: ItemRow[] }) {
+const FIRST = 5;
+const firstRows = <T,>(rows: T[], all: boolean) => (all ? rows : rows.slice(0, FIRST));
+
+// The rows of one list in an as-group: the first five, then Show all N. Folds again when another person opens.
+function Group<T>({ rows, name, row }: { rows: T[]; name: string; row: (r: T) => ReactNode }) {
+  const [shownFor, setShownFor] = useState<string | null>(null);
+  const all = shownFor === name;
+  return (
+    <div className="as-group">
+      {firstRows(rows, all).map(row)}
+      {rows.length > FIRST && !all && <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setShownFor(name)}>Show all {rows.length}</Button></div></div>}
+    </div>
+  );
+}
+
+function Asks({ name, rows }: { name: string; rows: ItemRow[] }) {
   const act = useActions();
   if (!rows.length) return null;
   return (
     <section className="mt-sec">
-      <h2>{title}{pill(rows.length)}</h2>
-      <ul className="wk-claims">
-        {rows.map((r) => (
-          <li key={r.profile + r.id} className="wk-claim">
-            <span className="wk-claim-text">{r.title}</span>
-            <span className="wk-claim-foot">
-              {r.source === 'gmail' ? 'Gmail' : 'Slack'}{r.status === 'suggested' ? ' · to review' : ''} · {ago(r.updated_at, ' ago')}
-              {safeHref(r.source_url) && <> · <a className="mt-person" href={safeHref(r.source_url)} target="_blank" rel="noreferrer">Open</a></>}
-              <button className="wk-act" title="Done" onClick={() => act.done(r)}><Icon name="check" small /> Done</button>
-            </span>
-          </li>
-        ))}
-      </ul>
+      <Section label="Waiting on you" count={rows.length} />
+      <Group rows={rows} name={name} row={(r) => {
+        const href = safeHref(r.source_url);
+        const gmail = r.source === 'gmail';
+        return (
+          <CardRow
+            key={r.profile + r.id}
+            title={r.title || '(Untitled)'}
+            meta={`${gmail ? 'Gmail' : 'Slack'} · ${ago(r.updated_at, ' ago')}`}
+            badge={r.status === 'suggested' ? { label: 'Needs you', tone: 'waiting' } : undefined}
+            onOpen={() => openTask(r)}
+            button={{ label: 'Done', run: () => act.done(r) }}
+            menu={(choose) => (
+              <>
+                <MenuItem icon="arrow-right" onClick={choose(() => openTask(r))}>Open</MenuItem>
+                {href && <MenuItem icon="link" href={href} onClick={choose(() => undefined)}>Open in {gmail ? 'Gmail' : 'Slack'}</MenuItem>}
+              </>
+            )}
+          />
+        );
+      }} />
     </section>
   );
 }
 
-function OpenTasks({ rows }: { rows: ItemRow[] }) {
+function OpenTasks({ name, rows }: { name: string; rows: ItemRow[] }) {
   const act = useActions();
   if (!rows.length) return null;
+  const now = Date.now();
   return (
     <section className="mt-sec">
-      <h2>Open tasks{pill(rows.length)}</h2>
-      <ul className="wk-claims">
-        {rows.map((r) => (
-          <li key={r.profile + r.id} className="wk-claim">
-            <span className="wk-claim-text"><button className="mt-person" onClick={() => openTask(r)}>{r.title || '(Untitled)'}</button></span>
-            <span className="wk-claim-foot"><button className="wk-act" title="Done" onClick={() => act.done(r)}><Icon name="check" small /> Done</button></span>
-          </li>
-        ))}
-      </ul>
+      <Section label="Open tasks" count={rows.length} />
+      <Group rows={rows} name={name} row={(r) => (
+        <CardRow
+          key={r.profile + r.id}
+          title={r.title || '(Untitled)'}
+          meta={dueText(r, now)}
+          onOpen={() => openTask(r)}
+          action={{ icon: 'check', label: 'Done', run: () => act.done(r) }}
+          menu={(choose) => taskMenu(r, act, choose, () => openTask(r))}
+        />
+      )} />
     </section>
   );
 }
@@ -113,7 +144,7 @@ export function Person({ name }: { name: string }) {
               </div>
             </section>
           )}
-          <Asks title="Waiting on you" rows={waiting} />
+          <Asks name={name} rows={waiting} />
           {inbox.mail.length > 0 && (
             <section className="mt-sec">
               <h2>Unanswered mail{pill(inbox.mail.length)}</h2>
@@ -128,7 +159,7 @@ export function Person({ name }: { name: string }) {
             </section>
           )}
 
-          <OpenTasks rows={tasks} />
+          <OpenTasks name={name} rows={tasks} />
 
           {commitments.length > 0 && (
             <section className="mt-sec">
@@ -160,8 +191,8 @@ export function Person({ name }: { name: string }) {
           )}
 
           <section className="mt-sec">
-            <h2>Meetings</h2>
-            {mine.length > 0 ? <div className="mt-rows">{mine.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />)}</div> : <p className="mt-pending">No meetings.</p>}
+            <Section label="Meetings" count={mine.length || undefined} />
+            {mine.length > 0 ? <Group rows={mine} name={name} row={(m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />} /> : <p className="mt-pending">No meetings.</p>}
           </section>
 
           {claims.length > 0 && (

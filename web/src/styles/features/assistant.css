@@ -41,6 +41,7 @@
 .as-group .as-swipe:is(.right, .left) .as-swipe-row { background: var(--raised); }
 
 .as-group { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); overflow: hidden; }
+.as-group:has(.ui-menu) { overflow: visible; }
 .as-group > .mt-row + .mt-row { border-top: 1px solid var(--border); }
 
 /* Task lists are flat rows with hairlines, like Things and Reminders. */
