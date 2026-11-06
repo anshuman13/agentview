@@ -6,6 +6,8 @@ import { mentionsOf, type Mentions } from '../data/mentions';
 import { hasLiveClaims, wikiMarkdown } from '../data/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
+import { Button } from '../../ui/Button';
+import { EmptyState } from '../../ui/Panel';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { copyText, setView, useEscapeBack, useView } from '../view';
 import { AskBar } from './AskBar';
@@ -81,7 +83,7 @@ export function WikiPage({ id }: { id: string }) {
       </header>
       <div className="wk-scroll">
         {!page ? (
-          <div className="as-empty"><Icon name="book" /><div>This page is gone.</div><button className="btn" onClick={back}>Back to the wiki</button></div>
+          <EmptyState size="sm" icon="book" title="This page is gone." action={<Button size="sm" onClick={back}>Back to the wiki</Button>} />
         ) : (
           <div className="wk-doc">
             <article className="wk-article">

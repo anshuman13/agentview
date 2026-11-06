@@ -113,7 +113,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
               {chats.length > CHATS && <Chip quiet className="ov-more" onClick={() => setAllChats(!allChats)}>{allChats ? 'Show less' : `Show ${chats.length - CHATS} more`}</Chip>}
             </div>
           )}
-          {!chats.length && !brief?.text && <div className="as-empty"><Icon name="comment-discussion" /><div>Nothing read yet.</div><div className="muted small">Slack is read every 15 minutes on weekdays from 07 to 19.</div></div>}
+          {!chats.length && !brief?.text && <EmptyState size="md" icon="comment-discussion" title="Nothing read yet." hint="Slack is read every 15 minutes on weekdays from 07 to 19." />}
         </div>
       </div>
     </div>

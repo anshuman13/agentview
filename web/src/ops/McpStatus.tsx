@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { McpServer } from '../../../shared/protocol';
 import { getState, send, notice, api, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
+import { EmptyState } from '../ui/Panel';
 import { ago, save, stored, useTick } from '../ui/util';
 import { post } from './mcpActions';
 import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, merge, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
@@ -114,11 +115,7 @@ export function McpPage() {
           <div className="mcp-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="mcp-row skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
         )}
         {probed !== null && rows.length === 0 && (
-          <div className="mcp-empty">
-            <Icon name="plug" />
-            <div className="empty-title">No MCP servers yet</div>
-            <div className="muted">Add one with <code>claude mcp add</code> or connect one on claude.ai, then check again.</div>
-          </div>
+          <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint={<>Add one with <code>claude mcp add</code> or connect one on claude.ai, then check again.</>} />
         )}
         {(['work', 'personal'] as Group[]).map((g) => {
           const mine = shown.filter((s) => groupOf(s.variants[0].row) === g);

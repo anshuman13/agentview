@@ -10,9 +10,7 @@
   margin: 0 0 var(--sp-8); padding: var(--sp-4) var(--sp-6); display: flex; gap: var(--sp-3); align-items: center; color: var(--err);
   background: color-mix(in srgb, var(--err) 12%, transparent); border: 1px solid color-mix(in srgb, var(--err) 40%, transparent); border-radius: var(--radius-sm);
 }
-.mcp-empty { margin: 60px auto; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); text-align: center; }
-.mcp-empty > .codicon.icon { font-size: var(--icon-hero); color: var(--fg-faint); margin-bottom: var(--sp-4); }
-:is(.mcp-empty, .mcp-kv) code { font-family: var(--mono); font-size: var(--fs-xs); padding: 1px var(--sp-2); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-xs); }
+:is(.mcp-kv, .ui-empty-hint) code { font-family: var(--mono); font-size: var(--fs-xs); padding: 1px var(--sp-2); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-xs); }
 
 .mcp-section { margin-bottom: var(--sp-12); }
 .mcp-group-head { display: flex; align-items: baseline; gap: var(--sp-4); margin-bottom: var(--sp-5); padding-bottom: var(--sp-3); font-size: var(--fs-lg); font-weight: 600; border-bottom: 1px solid var(--border); }

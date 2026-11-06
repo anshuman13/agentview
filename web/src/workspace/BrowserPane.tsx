@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
+import { EmptyState } from '../ui/Panel';
 import { readFlag, saveFlag, wsUrl } from '../ui/util';
 
 type Tab = { id: string; title: string; url: string };
@@ -208,11 +210,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           onContextMenu={(e) => e.preventDefault()}
         />
         {!hasFrame && (
-          <div className="empty-state">
-            <Icon name="globe" />
-            <div className="empty-title">{tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'}</div>
-            <div className="muted small">Chrome only draws the tab that is in front. Pick a tab above to bring it forward.</div>
-          </div>
+          <EmptyState size="md" icon="globe" title={tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'} hint="Chrome only draws the tab that is in front. Pick a tab above to bring it forward." />
         )}
         <textarea ref={kbd} className="chrome-kbd" aria-label="Type into the page" autoCapitalize="off" autoComplete="off" spellCheck={false} onKeyDown={onKey} onInput={onText} onPaste={(e) => { e.preventDefault(); send({ t: 'text', text: e.clipboardData.getData('text') }); }} />
       </div>
@@ -235,36 +233,35 @@ function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
   if (state.state === 'connecting') {
     return (
       <div className="browser-pane">
-        <div className="empty-state">
-          <Icon name="loading" spin />
-          <div className="empty-title">Connecting to Chrome</div>
-          {!state.own && <div className="muted small">If Chrome asks to allow remote debugging, click Allow.</div>}
-        </div>
+        <EmptyState size="md" icon="loading" title="Connecting to Chrome" hint={state.own ? undefined : 'If Chrome asks to allow remote debugging, click Allow.'} />
       </div>
     );
   }
   const fda = state.reason === 'nofda';
   return (
     <div className="browser-pane">
-      <div className="empty-state chrome-setup">
-        <Icon name="globe" />
-        <div className="empty-title">Show your Chrome here</div>
-        <div className="muted small">{state.own && state.reason === 'nochrome' ? 'The AgentView Chrome is not running.' : (REASONS[state.reason] ?? state.reason)}</div>
-        {state.reason !== 'server' && (
-          <button className="primary" onClick={() => { setAsked(true); onSetup(); }}>
+      <EmptyState
+        size="md"
+        icon="globe"
+        title="Show your Chrome here"
+        hint={<>
+          <div>{state.own && state.reason === 'nochrome' ? 'The AgentView Chrome is not running.' : (REASONS[state.reason] ?? state.reason)}</div>
+          {asked && (
+            <div>
+              {state.own
+                ? 'AgentView opens its own Chrome window and connects on its own.'
+                : fda
+                ? 'If AgentView is already in the Full Disk Access list, select it and remove it with the minus button. Then drag AgentView from the Finder window into the list and turn it on. AgentView connects on its own; if it does not, quit and reopen it from the menu bar.'
+                : 'In the Chrome tab that opened, tick "Allow remote debugging for this browser instance", then click Allow. AgentView connects on its own.'}
+            </div>
+          )}
+        </>}
+        action={state.reason !== 'server' ? (
+          <Button variant="primary" size="sm" onClick={() => { setAsked(true); onSetup(); }}>
             {fda ? 'Open Full Disk Access settings' : 'Connect Chrome'}
-          </button>
-        )}
-        {asked && (
-          <div className="muted small">
-            {state.own
-              ? 'AgentView opens its own Chrome window and connects on its own.'
-              : fda
-              ? 'If AgentView is already in the Full Disk Access list, select it and remove it with the minus button. Then drag AgentView from the Finder window into the list and turn it on. AgentView connects on its own; if it does not, quit and reopen it from the menu bar.'
-              : 'In the Chrome tab that opened, tick "Allow remote debugging for this browser instance", then click Allow. AgentView connects on its own.'}
-          </div>
-        )}
-      </div>
+          </Button>
+        ) : undefined}
+      />
     </div>
   );
 }

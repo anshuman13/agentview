@@ -39,8 +39,6 @@
 @media (hover: hover) { .as-dismiss-all:hover { background: color-mix(in srgb, var(--fg-muted) 12%, transparent); } }
 .as-group > .mt-task + .mt-task, .as-group > .as-swipe + :is(.as-swipe, .mt-task), .as-group > .mt-task + .as-swipe { border-top: 1px solid var(--border); }
 .as-group .as-swipe:is(.right, .left) .as-swipe-row { background: var(--raised); }
-.as-empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); padding: var(--sp-24) var(--sp-8); text-align: center; font-size: var(--fs-xl); }
-.as-empty > .codicon.icon { font-size: 28px; width: 64px; height: 64px; display: grid; place-items: center; border-radius: var(--radius-round); color: var(--accent-text); background: var(--accent-soft); margin-bottom: var(--sp-4); }
 
 .as-group { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); overflow: hidden; }
 .as-group > .mt-row + .mt-row { border-top: 1px solid var(--border); }
@@ -462,7 +460,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .tasks .as-target > .as-section { color: var(--accent-text); }
 .tasks .as-target > .as-list { border-color: var(--accent); }
 .tasks .as-composer { padding: var(--sp-4) var(--tk-pad) var(--sp-10); }
-.tasks .as-empty { padding: var(--sp-16) var(--sp-8); }
 
 @media (max-width: 900px) {
   .assistant.tasks { --tk-pad: var(--sp-8); --tk-indent: 42px; }

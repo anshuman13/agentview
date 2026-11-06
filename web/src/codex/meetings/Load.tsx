@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { useAssistantTable } from '../data';
 import { hoursText, meetingLoad } from '../data/load';
 import { dayLabel } from '../data/dates';
@@ -14,7 +15,7 @@ export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const max = Math.max(...weeks.map((w) => w.hours), 1);
   const recorded = weeks.reduce((n, w) => n + w.recorded, 0);
   const total = recorded + weeks.reduce((n, w) => n + w.unrecorded, 0);
-  if (!total) return <div className="as-empty"><Icon name="calendar" /><div>No meetings in the last 4 weeks.</div></div>;
+  if (!total) return <EmptyState size="sm" icon="calendar" title="No meetings in the last 4 weeks." />;
   return (
     <div className="mt-load">
       <div className="mt-load-weeks">

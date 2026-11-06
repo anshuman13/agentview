@@ -275,7 +275,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />
           {!groups.length && chips.length > 0 && <EmptyState size="md" icon="calendar" title="No meetings match" hint="Try fewer filters" action={<Button size="sm" onClick={() => setFilters([])}>Clear filters</Button>} />}
-          {!groups.length && !chips.length && <div className="as-empty"><Icon name="calendar" /><div>{query ? 'No meetings match.' : 'No past meetings yet.'}</div><div className="muted small">{query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'}</div></div>}
+          {!groups.length && !chips.length && <EmptyState size="md" icon="calendar" title={query ? 'No meetings match.' : 'No past meetings yet.'} hint={query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'} />}
         </div>}
       </div>
     </div>

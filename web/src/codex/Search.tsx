@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAssistantData, useCodex } from './data';
 import { GROUP_CAP, searchAll, type Group, type Hit } from './data/search';
 import { Icon } from '../ui/Icon';
+import { EmptyState } from '../ui/Panel';
 import { openMeeting, openTask, setView, useView } from './view';
 import { useTranscriptHits } from './meetings/MeetingList';
 import { live } from './data/wiki';
@@ -65,7 +66,7 @@ export function Search({ onMenu }: { onMenu: () => void }) {
           <Hits label="Transcripts" group={transcripts} onAll={more('transcripts')} open={openMeeting} />
           <Hits label="Wiki" group={r.wiki} onAll={more('wiki')} open={(h) => setView({ list: 'wiki', open: h.page ?? null, anchor: null })} />
           <Hits label="Jobs" group={r.jobs} onAll={more('jobs')} open={(h) => setView({ list: 'jobs', open: key(h) })} />
-          {query.trim() && !r.total && !transcripts.total && <div className="as-empty"><Icon name="search" /><div>No matches.</div></div>}
+          {query.trim() && !r.total && !transcripts.total && <EmptyState size="sm" icon="search" title="No matches." />}
         </div>
       </div>
     </div>

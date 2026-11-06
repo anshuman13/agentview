@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiBase, bundled } from './api';
-import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
+import { EmptyState } from '../ui/Panel';
 import { useMacName } from './macName';
 import { connect, useStore } from './store';
 
@@ -16,17 +17,9 @@ export function useUnreachable() {
   return late;
 }
 
-export function Unreachable({ onMacs }: { onMacs: () => void }) {
+export function Unreachable() {
   const name = useMacName() || apiBase().replace(/^https?:\/\//, '');
   return (
-    <div className="empty-state">
-      <Icon name="plug" />
-      <div className="empty-title">Can't reach {name}</div>
-      <div className="muted small">NetBird must be connected and AgentView running on that Mac.</div>
-      <div className="unreachable-actions">
-        <button className="btn" onClick={connect}>Retry</button>
-        <button className="btn" onClick={onMacs}>Choose a Mac</button>
-      </div>
-    </div>
+    <EmptyState size="md" icon="plug" title={`Can't reach ${name}`} hint="NetBird must be connected and AgentView running on that Mac." action={<Button size="sm" onClick={connect}>Retry</Button>} />
   );
 }

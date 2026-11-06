@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
+import { EmptyState } from '../ui/Panel';
 import { Block, Findings } from './Findings';
 import { Markdown } from '../chat/Chat';
 import { FileIcon } from '../workspace/FileIcon';
@@ -57,12 +58,7 @@ function Problem({ error }: { error: string }) {
   const setup = SETUP.find((s) => s.test.test(error));
   if (!setup) return <div className="gh-error" role="alert"><Icon name="error" small /> {error}</div>;
   return (
-    <div className="empty-state">
-      <Icon name={setup.icon} />
-      <div className="empty-title">{setup.title}</div>
-      <div className="muted small">{setup.text}</div>
-      {setup.cmd && <pre className="gh-cmd">{setup.cmd}</pre>}
-    </div>
+    <EmptyState size="md" icon={setup.icon} title={setup.title} hint={<>{setup.text}{setup.cmd && <pre className="gh-cmd">{setup.cmd}</pre>}</>} />
   );
 }
 

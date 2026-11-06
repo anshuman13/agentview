@@ -4,6 +4,7 @@ import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, rowKey, type Profile } from '../data/sync';
 import type { Job } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { firstLine, money } from '../../ui/util';
 import { setView, useView } from '../view';
 import { usePullSync } from '../pullSync';
@@ -69,7 +70,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
               })}
             </div>
           )}
-          {!jobs.length && <div className="as-empty"><Icon name="history" /><div>No jobs yet.</div><div className="muted small">A job runs a prompt on a schedule, can add tasks, and sends you the result.</div></div>}
+          {!jobs.length && <EmptyState size="md" icon="history" title="No jobs yet." hint="A job runs a prompt on a schedule, can add tasks, and sends you the result." />}
           {!jobs.length && <div className="jb-presets"><button className="btn sm" onClick={() => add(WEEKLY_DIGEST)}><Icon name="sparkle" small /> Weekly digest</button></div>}
         </div>
       </div>

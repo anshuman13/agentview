@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAssistantTable, useAssistantStore } from '../data';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { nextMonday, nudgeText, unanswered, waitingByPerson, weeklyReview } from '../data/review';
 import type { ItemRow } from '../data/sync';
 import type { Patch } from '../data/store';
@@ -61,7 +62,7 @@ export function Review({ now }: { now: number }) {
           ))}
         </section>
       )}
-      {empty && <div className="as-empty"><Icon name="calendar" /><div>Nothing to review.</div></div>}
+      {empty && <EmptyState size="sm" icon="calendar" title="Nothing to review." />}
     </>
   );
 }

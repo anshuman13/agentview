@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCodex } from '../data';
 import { chatOf, proposals, sourcesOf, type Fact } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { Button } from '../../ui/Button';
+import { EmptyState } from '../../ui/Panel';
 import { setView, useEscapeBack } from '../view';
 import { Swipe } from '../Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
@@ -40,7 +42,7 @@ export function ReviewMode() {
       </header>
       <div className="wk-scroll">
         {!fact ? (
-          <div className="as-empty"><Icon name="check" /><div>{total ? 'All claims reviewed.' : 'Nothing waits for review.'}</div><button className="btn" onClick={back}>Back to the wiki</button></div>
+          <EmptyState size="sm" icon="check" title={total ? 'All claims reviewed.' : 'Nothing waits for review.'} action={<Button size="sm" onClick={back}>Back to the wiki</Button>} />
         ) : (
           <Swipe onRight={() => review.approve([fact])} onLeft={() => review.reject([fact])} rightLabel="Approve" leftLabel="Reject" leftIcon="close">
             <article className="wk-mode-card" key={key(fact)}>

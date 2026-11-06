@@ -2,6 +2,7 @@ import { send, useStore } from '../app/store';
 import { Back } from '../app/back';
 import { Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
+import { EmptyState } from '../ui/Panel';
 import { Markdown } from '../chat/Chat';
 import { Row } from '../chat/Transcript';
 import { copyText } from '../codex/view';
@@ -37,11 +38,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
 
   if (!agents.length) {
     return (
-      <div className="empty-state">
-        <Icon name="hubot" />
-        <div className="empty-title">No agents yet</div>
-        <div className="muted small">Sub-agents Claude starts in this chat show up here, with their prompt, steps and report.</div>
-      </div>
+      <EmptyState size="md" icon="hubot" title="No agents yet" hint="Sub-agents Claude starts in this chat show up here, with their prompt, steps and report." />
     );
   }
 

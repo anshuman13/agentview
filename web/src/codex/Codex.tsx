@@ -13,6 +13,7 @@ import type { Patch } from './data/store';
 import { rowKey, type ItemRow } from './data/sync';
 import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
+import { EmptyState } from '../ui/Panel';
 import { Button } from '../ui/Button';
 import { haptic } from '../ui/haptic';
 import { plural } from '../ui/util';
@@ -284,7 +285,7 @@ export function Assistant() {
           return (
             <section>
               <div className="as-section">Results <span>{found.length}</span></div>
-              {found.length ? rows(found, undefined, false) : <div className="as-empty muted small">No task matches.</div>}
+              {found.length ? rows(found, undefined, false) : <EmptyState size="sm" title="No task matches." />}
             </section>
           );
         })()}
@@ -306,11 +307,7 @@ export function Assistant() {
             )}
             {days.slice(1).map(section)}
             {loading ? <Skeleton /> : empty && (
-              <div className="as-empty">
-                <Icon name="pass" />
-                <div>All clear.</div>
-                <div className="muted small">{nextLater ? `Next: ${when(nextLater.starts_at!)} ${nextLater.title}` : 'Type a task below, like “call the bank tomorrow 9”.'}</div>
-              </div>
+              <EmptyState size="md" icon="pass" title="All clear" hint={nextLater ? `Next: ${when(nextLater.starts_at!)} ${nextLater.title}` : 'Type a task below, like “call the bank tomorrow 9”.'} />
             )}
             {s.doneToday.length > 0 && (
               <section>

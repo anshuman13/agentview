@@ -5,6 +5,7 @@ import { FileIcon } from '../workspace/FileIcon';
 import { ChangesBadge } from '../workspace/gitStatus';
 import { GitHubBadge } from '../ops/pulls';
 import { Icon } from '../ui/Icon';
+import { EmptyState } from '../ui/Panel';
 import { command, pressable, save, stored } from '../ui/util';
 import { haptic } from '../ui/haptic';
 import { slideFrom, useTabSwipe } from './tabSwipe';
@@ -362,13 +363,9 @@ export function App() {
           <div className={`editor browser ${active === 'browser' ? 'shown' : ''}`}>{active === 'browser' && <Suspense fallback={<Loading />}><BrowserPane onEmpty={() => setEditor('file')} /></Suspense>}</div>
           {page && <PageView key={page} page={page} shown={active === page} project={project ?? 'this repo'} />}
           <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Suspense fallback={null}><FocusBar /></Suspense><Suspense fallback={<Loading />}><Assistant /></Suspense></Guard>}</div>
-          <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable onMacs={() => setMacs(true)} />}</div>
+          <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
-            <div className="empty-state">
-              <Icon name="files" />
-              <div className="empty-title">No file open</div>
-              <div className="muted small">Pick a file in the Explorer{touch() ? '' : ' or press ⌘P'}. Files Claude edits open here.</div>
-            </div>
+            <EmptyState size="md" icon="files" title="No file open" hint={`Pick a file in the Explorer${touch() ? '' : ' or press ⌘P'}. Files Claude edits open here.`} />
           </div>
           <div className="panel" style={terminal ? { height: termH } : undefined}>
             {terminal && <div className="panel-sash" onPointerDown={startTermResize} />}

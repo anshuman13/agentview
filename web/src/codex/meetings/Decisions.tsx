@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { decisionsMarkdown } from '../data/meetingMarkdown';
 import { decisionLog, type Meeting } from '../data/wiki';
 import { decisionsWith, peopleOf } from '../data/meetings';
@@ -30,7 +31,7 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
           <span className="mt-log-from">{d.meeting.title || 'Meeting'} · {when(d.at)}</span>
         </button>
       ))}
-      {!rows.length && <div className="as-empty"><Icon name="check" /><div>{who ? 'No decisions with this person.' : 'No decisions yet.'}</div><div className="muted small">Decisions come from the meeting summaries.</div></div>}
+      {!rows.length && <EmptyState size="sm" icon="check" title={who ? 'No decisions with this person.' : 'No decisions yet.'} hint="Decisions come from the meeting summaries." />}
     </div>
   );
 }

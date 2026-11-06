@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useAssistantTable } from '../data';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { dayLabel } from '../data/dates';
 import { hoursText, weekReview } from '../data/load';
 import { unanswered, waitingByPerson } from '../data/review';
@@ -81,7 +82,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
           </button>
         );
       })} />
-      {empty && <div className="as-empty"><Icon name="calendar" /><div>Nothing this week yet.</div></div>}
+      {empty && <EmptyState size="sm" icon="calendar" title="Nothing this week yet." />}
       </>}
     </div>
   );

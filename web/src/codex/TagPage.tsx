@@ -3,6 +3,7 @@ import { useAssistant } from './data';
 import { tagTasks } from './data/tagTasks';
 import { rowKey } from './data/sync';
 import { Icon } from '../ui/Icon';
+import { EmptyState } from '../ui/Panel';
 import { plural } from '../ui/util';
 import { setView, useEscapeBack } from './view';
 import { TaskRow } from './Task';
@@ -28,7 +29,7 @@ export function TagPage({ tag }: { tag: string }) {
           <div className="as-list">
             {rows.map((r) => <TaskRow key={r.profile + r.id} row={r} onOpen={() => setView({ open: rowKey(r) })} />)}
           </div>
-        ) : <div className="as-empty muted small">No open tasks with #{tag}</div>}
+        ) : <EmptyState size="sm" title={`No open tasks with #${tag}`} />}
       </div>
       <SnackBar />
     </div>

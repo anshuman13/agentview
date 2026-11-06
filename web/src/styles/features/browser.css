@@ -10,17 +10,12 @@
 .frame-host { position: relative; flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: center; overflow: hidden; background: var(--sunken); }
 .chrome-frame { max-width: 100%; max-height: 100%; touch-action: none; user-select: none; cursor: default; }
 .chrome-kbd { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; resize: none; font-size: var(--fs-2xl); }
-.chrome-setup ol { margin: var(--sp-2) 0 var(--sp-4); padding-left: 18px; text-align: left; line-height: var(--lh-loose); }
-.chrome-setup code { padding: 1px var(--sp-2); border-radius: var(--radius-sm); background: var(--sunken); }
-.chrome-setup .link { margin-left: var(--sp-3); }
 
 @media (max-width: 900px) {
   .browser-bar { height: var(--touch); }
   .browser-bar .tab-pick { max-width: 110px; }
   .browser-bar .icon-btn, .browser-bar select { height: var(--size-2xl); min-width: var(--size-2xl); }
   .browser-bar input.url { height: var(--size-2xl); font-size: var(--fs-2xl); }
-  .chrome-setup button.primary { min-height: var(--touch); }
-  .chrome-setup button.link { min-height: var(--touch-sm); }
   body.browser-full :is(.tabbar, .browser-bar, .editor-group > .tabs) { display: none !important; }
   body.browser-full .body { height: 100%; }
   .browser-exit {
