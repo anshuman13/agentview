@@ -27,10 +27,11 @@ import { Fold } from './Fold';
 import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip, RelatedToTask } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
-import { addCheck, checkItems, moveCheck, toggleCheck } from './taskChecklist';
+import { addCheck, checkItems, moveCheck, noteView, toggleCheck } from './taskChecklist';
 import { live } from './data/wiki';
 import { dayEnd, dayStart } from './data/dates';
 import { useDrag } from './drag';
+import { md } from '../chat/md';
 import { Flag, PRIORITIES, REMINDS, tagList } from './AddSheet';
 
 const dueLabel = (at: number | null) => {
@@ -105,6 +106,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const act = useActions();
   const { store, snap } = useAssistant();
   const { title, setTitle, text, setText, putTitle, putText, save, write, saving } = useTaskDraft(row, store);
+  const [editing, setEditing] = useState(false);
   const [typed, setTyped] = useState<string | null>(null);
   const [snoozing, setSnoozing] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -123,6 +125,10 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const focused = isFocused(useFocus(), row);
   const suggested = useMemo(() => (row.status === 'open' && estimateMin(title) == null ? suggestEstimate(title, snap.items.filter((r) => !r.deleted && r.profile === row.profile)) : null), [row.status, row.profile, title, snap.items]);
   const checks = checkItems(text);
+  const view = noteView(text);
+  const showArea = editing || !text.trim();
+  const html = useMemo(() => (view ? (md.parse(view, { async: false }) as string) : ''), [view]);
+  const editNotes = () => setEditing(true);
   const estimate = estimateMin(title);
   const [adding, setAdding] = useState(false);
   const subRef = useRef<HTMLInputElement>(null);
@@ -178,7 +184,13 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     showSnack(`Removed ${minutesText(min)}`, () => void store.update(row, before));
   };
 
-  useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text]);
+  useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text, showArea]);
+  useEffect(() => {
+    const el = textRef.current;
+    if (!editing || !el || document.activeElement === el) return;
+    el.focus({ preventScroll: true });
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [editing]);
   // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
   useEffect(() => { if (matchMedia('(hover: hover)').matches) titleRef.current?.focus({ preventScroll: true }); }, []);
   // Closing by key or button puts focus back on the task's row.
@@ -328,7 +340,18 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             {tagging && <TagInput onAdd={(v) => setTags([...tags, v])} onClose={() => setTagging(false)} />}
           </div>
         )}
-        <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Description" aria-label="Description" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onBlur={save} onFocus={reveal} />
+        {showArea && <textarea ref={textRef} className="as-edit-text" rows={1} value={text} placeholder="Description" aria-label="Description" onChange={(e) => { setText(e.target.value); setTyped(caretLine(e.target)); }} onFocus={(e) => { setEditing(true); reveal(e); }} onBlur={() => { setEditing(false); save(); }} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.currentTarget.blur(); } }} />}
+        {!showArea && view && (
+          <div
+            className="as-edit-read md"
+            role="button"
+            tabIndex={0}
+            aria-label="Edit description"
+            onClick={(e) => { if (!(e.target as HTMLElement).closest('a') && !getSelection()?.toString()) editNotes(); }}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); editNotes(); } }}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        )}
         {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
         <RelatedToTask row={row} />
         <div className="as-edit-checks" data-drop="checks">

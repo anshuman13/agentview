@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { addCheck, checkItems, moveCheck, toggleCheck } from './taskChecklist';
+import { addCheck, checkItems, moveCheck, noteView, toggleCheck } from './taskChecklist';
 
 it('flips only the nth checklist line', () => {
   const text = 'Plan\n- [ ] a\n* [x] b\n  - [ ] c [x]';
@@ -24,4 +24,9 @@ it('adds a subtask after the last checklist line', () => {
   expect(addCheck('Plan\n', 'x')).toBe('Plan\n- [ ] x');
   expect(addCheck('- [ ] a\n- [x] b\nnote', 'x')).toBe('- [ ] a\n- [x] b\n- [ ] x\nnote');
   expect(addCheck('Plan', '  ')).toBe('Plan');
+});
+
+it('leaves the checklist and repeat lines out of the read view', () => {
+  expect(noteView('Repeats: every monday 09:00\n# Plan\n- [ ] a\ntext\n* [x] b\n\nend')).toBe('# Plan\ntext\n\nend');
+  expect(noteView('Repeats: every day 09:00\n- [ ] a\n- [x] b')).toBe('');
 });

@@ -149,6 +149,7 @@ button.as-ctx-btn { width: 100%; padding: 0; border: 0; background: transparent;
 .as-edit textarea:focus { outline: none; box-shadow: none; }
 .as-edit-title { flex: 1; min-width: 0; padding-top: 6px !important; font-size: var(--fs-lg) !important; font-weight: 600 !important; line-height: 20px; }
 .as-edit-text { min-height: 40px; margin-left: 38px; width: calc(100% - 38px) !important; font-size: var(--fs-md) !important; line-height: var(--lh-normal, 1.5); color: var(--fg-muted) !important; white-space: pre-wrap; overflow-wrap: anywhere; }
+.as-edit-read { margin-left: 38px; width: calc(100% - 38px); font-size: var(--fs-md); line-height: var(--lh-normal, 1.5); color: var(--fg); cursor: text; overflow-wrap: anywhere; }
 .as-edit-text:focus { color: var(--fg) !important; }
 .as-edit-checks { display: flex; flex-direction: column; margin: calc(-1 * var(--sp-2)) 0 0 30px; }
 .as-edit-checks [role=checkbox] { display: flex; align-items: center; gap: var(--sp-3); min-height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); text-align: left; cursor: pointer; user-select: none; }
@@ -232,6 +233,7 @@ a.as-chip { text-decoration: none; }
   .assistant:has(.as-edit :focus, .as-add.on :focus) .as-composer { display: none; }
   .as-edit-title { font-size: var(--fs-xl) !important; line-height: 24px; padding-top: 10px !important; }
   .as-edit-text { font-size: var(--fs-lg) !important; }
+  .as-edit-read { font-size: var(--fs-lg); }
   .as-nav button { height: var(--touch); font-size: var(--fs-xl); }
 }
 
@@ -359,6 +361,7 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-tt-log-rest { color: var(--fg-faint); }
 .as-page .as-edit-checks { margin: 0; gap: var(--sp-2); }
 .as-page .as-edit-checks [role=checkbox], .as-page .as-sub-input { min-height: 40px; font-size: var(--fs-2xl); }
+.as-page .as-edit-read { margin-left: 0; width: 100%; min-height: var(--sp-24); font-size: var(--fs-2xl); }
 .as-page .as-edit-text { margin-left: 0; width: 100% !important; min-height: var(--sp-24); font-size: var(--fs-2xl) !important; }
 .as-page .as-tt-fine { margin: var(--sp-12) 0 0; }
 .as-page .as-tt-top .chip-btn { font-size: var(--fs-lg); }

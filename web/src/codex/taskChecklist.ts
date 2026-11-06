@@ -1,3 +1,5 @@
+import { withRule } from './data/recur';
+
 export const CHECK_RE = /^\s*[-*] \[([ xX])\](.*)$/gm;
 
 const LINE_RE = new RegExp(CHECK_RE.source, 'm');
@@ -31,3 +33,6 @@ export const moveCheck = (text: string, from: number, to: number) => {
   slots.forEach((i, k) => { lines[i] = moved[k]; });
   return lines.join('\n');
 };
+
+// The notes as the read view shows them: the checklist and the repeat rule live in their own controls.
+export const noteView = (text: string) => withRule(text, null).split('\n').filter((l) => !LINE_RE.test(l)).join('\n').trim();
