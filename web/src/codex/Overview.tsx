@@ -16,6 +16,7 @@ import { DayPlan, DRAG_TYPE } from './DayPlan';
 import { GoalLines } from './Goals';
 import { standupText } from './data/review';
 import { MorningBrief } from './Brief';
+import { WeeklyReview } from './WeeklyReview';
 import { Capped, Fold } from './Fold';
 import { Icon } from '../ui/Icon';
 import { Skeleton } from '../ui/Skeleton';
@@ -123,6 +124,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     <>
       <GoalLines now={now} />
       <MorningBrief now={now} />
+      <WeeklyReview now={now} />
       <ClaimsToReview />
       <ReplyQueue rows={queue} />
       <JustEnded meetings={s.meetingsToday} now={now} />

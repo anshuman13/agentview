@@ -42,3 +42,37 @@ export function carryOver(items: ItemRow[], now: number, profile?: Profile): Ite
     return !p.total || p.done < p.total;
   });
 }
+
+export const goalVerdict = (p: { done: number; total: number }) => (p.total > 0 && p.done === p.total ? 'Done' : 'Missed');
+
+// The weekly review shows from Friday 14:00 local through Sunday.
+export function reviewWindow(now: number) {
+  const d = new Date(now);
+  return d.getDay() === 6 || d.getDay() === 0 || (d.getDay() === 5 && d.getHours() >= 14);
+}
+
+const titleKey = (t: string | null) => (t ?? '').trim().toLowerCase();
+
+// Missed goals of this week that next week can still take: titles to create, how many the limit leaves out, and which control the card shows.
+export function reviewCarry(items: ItemRow[], now: number, profile: Profile) {
+  const d = new Date(weekStart(now));
+  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7).getTime();
+  const nextGoals = goalsOf(items, next, profile);
+  const have = new Set(nextGoals.map((g) => titleKey(g.title)));
+  const seen = new Set<string>();
+  const missed = goalsOf(items, now, profile).filter((g) => {
+    const k = titleKey(g.title);
+    if (!k || seen.has(k) || goalVerdict(goalProgress(items, g)) !== 'Missed') return false;
+    seen.add(k);
+    return true;
+  });
+  const room = Math.max(0, MAX_GOALS - nextGoals.length);
+  const pending = missed.filter((g) => !have.has(titleKey(g.title)));
+  const carried = missed.length - pending.length;
+  const left = Math.max(0, pending.length - room);
+  const state = pending.length > 0 && room > 0 ? 'carry' : carried > 0 ? 'carried' : pending.length > 0 ? 'full' : 'none';
+  return { next, titles: pending.slice(0, room).map((g) => (g.title ?? '').trim()), left, carried, state } as const;
+}
+
+// Dismissal entries are profile:date; entries of other dates are dropped.
+export const pruneDismissed = (entries: string[], today: string) => entries.filter((e) => e.endsWith(`:${today}`));
