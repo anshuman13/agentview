@@ -81,7 +81,7 @@
 
 .as-scroll.dragging { cursor: grabbing; }
 @media (hover: hover) { .as-scroll.dragging .as-row:hover { background: transparent; } }
-.as-target > .as-section { color: var(--accent-text); border-color: var(--accent); }
+.as-target > .ui-section .ui-section-head { color: var(--accent-text); }
 .as-drop-line { height: 2px; margin: -1px 0 -1px 36px; border-radius: 1px; background: var(--accent); position: relative; z-index: 1; }
 .as-drop-empty { padding: var(--sp-5) 36px; font-size: var(--fs-sm); color: var(--fg-faint); }
 .as-target .as-drop-empty { color: var(--accent-text); }
@@ -262,13 +262,6 @@
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
 .tasks .as-scroll { padding: var(--sp-4) var(--tk-pad) var(--sp-16); gap: var(--sp-8); }
 .tasks .as-scroll section { gap: var(--sp-2); }
-.tasks .as-section { padding: var(--sp-3) 0; border-bottom: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--fg-muted); }
-.tasks .as-section > span { font-size: var(--fs-xs); font-weight: 400; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
-.tasks .as-section.later, .tasks .as-section.done { color: var(--fg-muted); }
-.tasks .as-section.late { color: var(--err); }
-.tasks .as-section.late > span { color: var(--err); }
-.tasks .as-section.review { color: var(--warn); }
-.tasks .as-section.review > span { color: var(--warn); }
 .tasks .as-toggle { align-items: center; width: 100%; border: 0; font-family: inherit; cursor: pointer; }
 @media (hover: hover) { .tasks .as-toggle:hover { color: var(--fg); } }
 .tasks .as-toggle.done { color: var(--fg-faint); }
@@ -340,8 +333,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-search { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-4); padding: 0 var(--sp-2) 0 var(--sp-5); min-height: 44px; border: 1px solid var(--border-card); border-radius: 12px; background: var(--surface); color: var(--fg-muted); }
 .as-search input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); box-shadow: none; }
 .as-search input:focus { outline: none; box-shadow: none; }
-.as-section-btn { margin-left: auto; padding: var(--sp-2) var(--sp-3); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--accent-text); font: inherit; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
-@media (hover: hover) { .as-section-btn:hover { background: var(--hover); } }
 .as-add { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 44px; margin-top: var(--sp-2); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); font: inherit; font-size: var(--fs-md); cursor: pointer; text-align: left; }
 @media (hover: hover) { button.as-add:hover { color: var(--accent-text); } }
 .as-add-quiet { display: flex; align-items: center; justify-content: center; width: 32px; min-height: 32px; margin: var(--sp-1) 0 0 var(--sp-4); padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); opacity: 0.6; cursor: pointer; }
@@ -423,7 +414,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-add input:focus { outline: none; box-shadow: none; }
 .as-list { display: flex; flex-direction: column; margin-top: var(--sp-2); }
 .tasks .as-drop-empty { padding: var(--sp-5) var(--sp-7); }
-.tasks .as-target > .as-section { color: var(--accent-text); }
 .tasks .as-target > .as-list { border-color: var(--accent); }
 .tasks .as-composer { padding: var(--sp-4) var(--tk-pad) var(--sp-10); }
 

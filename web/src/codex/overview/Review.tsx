@@ -2,6 +2,8 @@ import { useAssistantStore } from '../data';
 import { isSaid, type ItemRow } from '../data/sync';
 import { channelOf } from '../taskSource';
 import { Icon } from '../../ui/Icon';
+import { Button } from '../../ui/Button';
+import { Section } from '../../ui/Section';
 import { setView } from '../view';
 import { ActionRow, confirmAll, dismissAll } from '../meetings/ActionRow';
 
@@ -20,8 +22,8 @@ export function Review({ rows }: { rows: ItemRow[] }) {
   return groups.map((g) => (
     <section key={g[0].profile + groupOf(g[0])}>
       {g[0].meeting_id
-        ? <button className="as-section review as-toggle" onClick={() => setView({ list: 'meetings', open: `${g[0].profile}:${g[0].meeting_id}` })}>Is this yours? · {g[0].people || 'Meeting'}</button>
-        : <div className="as-section review">{isSaid(g[0]) ? 'You said' : 'Is this yours?'} · {channelOf(g[0]).label}</div>}
+        ? <Section label={`Is this yours? · ${g[0].people || 'Meeting'}`} action={<Button variant="quiet" size="sm" onClick={() => setView({ list: 'meetings', open: `${g[0].profile}:${g[0].meeting_id}` })}>Open meeting</Button>} />
+        : <Section label={`${isSaid(g[0]) ? 'You said' : 'Is this yours?'} · ${channelOf(g[0]).label}`} />}
       <div className="as-group">
         {g.map((r) => <ActionRow key={r.profile + r.id} row={r} />)}
         {g.length > 1 && <button className="as-confirm-all" onClick={() => confirmAll(store, g)}><Icon name="check-all" small /> Confirm all {g.length}</button>}

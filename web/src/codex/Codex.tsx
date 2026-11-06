@@ -15,6 +15,7 @@ import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Button } from '../ui/Button';
+import { Section } from '../ui/Section';
 import { haptic } from '../ui/haptic';
 import { plural } from '../ui/util';
 import { FILTER_LABEL, searchRun, setView, showSnack, useSpotBack, useView, type Filter, type List } from './view';
@@ -236,7 +237,7 @@ export function Assistant() {
   };
   const section = (d: Day) => (d.rows.length > 0 || drag || d.key === 'today') && (
     <section key={d.key} data-day={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
-      <div className={`as-section${d.key === 'today' ? '' : ' later'}`}>{d.label} {d.rows.length > 0 && <span>{d.rows.length}</span>}</div>
+      <Section label={d.label} count={d.rows.length || undefined} />
       {rows(d.rows, d.key, d.day != null, d.day != null)}
       {d.day != null && !drag && !picked && <AddTask day={d.day} today={startOfDay} filter={filter} />}
     </section>
@@ -285,7 +286,7 @@ export function Assistant() {
           const found = [...s.overdue, ...days.flatMap((d) => d.rows), ...s.review, ...s.doneToday].filter((r) => taskMatches(r, q) && !seen.has(r.profile + r.id) && seen.add(r.profile + r.id));
           return (
             <section>
-              <div className="as-section">Results <span>{found.length}</span></div>
+              <Section label="Results" count={found.length} />
               {found.length ? rows(found, undefined, false) : <EmptyState size="sm" title="No task matches." />}
             </section>
           );
@@ -294,7 +295,7 @@ export function Assistant() {
           <>
             {s.overdue.length > 0 && (
               <section>
-                <div className="as-section late">Overdue <span>{s.overdue.length}</span>{!picked && <button className="as-section-btn" onClick={moveOverdue}>Move to today</button>}</div>
+                <Section label="Overdue" count={s.overdue.length} action={!picked && <Button variant="quiet" size="sm" onClick={moveOverdue}>Move all to today</Button>} />
                 {rows(s.overdue, 'overdue', false)}
               </section>
             )}
@@ -302,7 +303,7 @@ export function Assistant() {
             <Review rows={fresh} />
             {older.length > 0 && (
               <section>
-                <button className="as-section review as-toggle" onClick={() => setOlderOpen((v) => !v)}>Older to review <span>{older.length}</span> <Icon name={olderOpen ? 'chevron-up' : 'chevron-down'} small /></button>
+                <Section label="Older to review" count={older.length} open={olderOpen} onToggle={() => setOlderOpen((v) => !v)} />
                 {olderOpen && <Review rows={older} />}
               </section>
             )}
@@ -312,7 +313,7 @@ export function Assistant() {
             )}
             {s.doneToday.length > 0 && (
               <section>
-                <button className="as-section done as-toggle" onClick={() => setDoneOpen((v) => !v)}>Done today <span>{s.doneToday.length}</span> <Icon name={doneOpen ? 'chevron-up' : 'chevron-down'} small /></button>
+                <Section label="Done" count={s.doneToday.length} open={doneOpen} onToggle={() => setDoneOpen((v) => !v)} action={doneOpen && <Button variant="quiet" size="sm" onClick={() => act.bulk(s.doneToday, 'clear')}>Clear</Button>} />
                 {doneOpen && rows(s.doneToday)}
               </section>
             )}

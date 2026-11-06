@@ -68,4 +68,15 @@ describe('bulkApply', () => {
     expect(items.map((r) => r.status)).toEqual(['open', 'open']);
     expect(made[0].deleted).toBe(1);
   });
+
+  it('clear soft-deletes every row with one snack and undo restores them', () => {
+    const items = [row('a', { status: 'done' }), row('b', { status: 'done' })];
+    const { store } = stub(items);
+    bulkApply(store, [...items], 'clear');
+    expect(items.map((r) => r.deleted)).toEqual([1, 1]);
+    expect(snacks).toHaveLength(1);
+    expect(snacks[0].text).toBe('Cleared 2');
+    snacks[0].undo!();
+    expect(items.map((r) => r.deleted)).toEqual([0, 0]);
+  });
 });

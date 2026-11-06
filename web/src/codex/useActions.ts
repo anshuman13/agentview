@@ -18,7 +18,7 @@ export const unrollFor = (at: number | null | undefined, now = Date.now()) => (a
 const capturing = new Set<string>();
 
 type BulkStore = Pick<AssistantStore, 'update' | 'capture' | 'snapshot'>;
-export type BulkKind = 'done' | 'tomorrow' | 'snooze' | 'delete';
+export type BulkKind = 'done' | 'tomorrow' | 'snooze' | 'delete' | 'clear';
 const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
 
 // Marks one task done, creating its next repeat; null when that repeat is already being created.
@@ -53,8 +53,9 @@ export function bulkApply(store: BulkStore, rows: ItemRow[], kind: BulkKind, now
       continue;
     }
     const at = kind === 'tomorrow' ? nextNine(new Date(now), r.profile) : snoozeLaterAt(r.at, now, r.profile);
-    const patch: Patch = kind === 'delete' ? { deleted: 1 } : { at, ...(kind === 'tomorrow' ? UNROLL : unrollFor(at, now)) };
-    if (kind === 'delete') stopFocusFor(r);
+    const removes = kind === 'delete' || kind === 'clear';
+    const patch: Patch = removes ? { deleted: 1 } : { at, ...(kind === 'tomorrow' ? UNROLL : unrollFor(at, now)) };
+    if (removes) stopFocusFor(r);
     const before = Object.fromEntries(Object.keys(patch).map((k) => [k, r[k as keyof ItemRow]])) as Patch;
     void store.update(r, patch);
     applied.push({ r, patch, undo: (cur) => void store.update(cur, before) });
@@ -66,6 +67,7 @@ export function bulkApply(store: BulkStore, rows: ItemRow[], kind: BulkKind, now
     tomorrow: `Moved ${plural(n, 'task')} to ${when(nextNine(new Date(now), rows[0].profile), now)}`,
     snooze: `Snoozed ${plural(n, 'task')}`,
     delete: `Deleted ${plural(n, 'task')}`,
+    clear: `Cleared ${n}`,
   }[kind];
   showSnack(text, () => {
     const items = store.snapshot().items;
