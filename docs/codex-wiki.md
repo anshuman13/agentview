@@ -81,8 +81,10 @@ Desktop (main column ≥ 880px wide)
 
 - List: search (titles, people, notes, summaries, decisions, and transcript text on the hub with a snippet of the hit),
   an Upcoming strip that steps through days with meetings, then past meetings grouped by day.
-- Meeting page (`web/src/codex/meetings/MeetingPage.tsx`): back, title, date and time, people, "Recorded 46 min",
-  link to the calendar. Sections: My actions, To review (with Confirm all), Summary (AI), Pinned, Decisions, the prep
+- Meeting page (`web/src/codex/meetings/MeetingPage.tsx`): back, a Section header with the title, one button (Join
+  while live with a calendar link, else Notes) and a More menu (Open calendar, Copy follow-up, Copy as Markdown, Read
+  again, Delete notes with Undo), then chips for time, room, "Recorded 46 min", N people and the series, and the
+  people as links. Sections: My actions, To review (with Confirm all), Summary (AI), Pinned, Decisions, the prep
   card for an upcoming meeting, Talk time, earlier meetings of the series, My notes, then folded Unassigned, Others
   took, Not mine and the Transcript. Talk time is a bar of the top five speakers' share of words ("Name: text" lines
   or a name line before its text), with the action and decision counts.

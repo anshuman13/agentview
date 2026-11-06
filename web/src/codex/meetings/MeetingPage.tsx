@@ -8,14 +8,16 @@ import { listOf, othersOf, type Meeting } from '../data/wiki';
 import { actionCount, actionsOf, displayName, meetingState, peopleOf, pinsOf, seriesMeetings, seriesOf, seriesTitleOf } from '../data/meetings';
 import { clock, when } from '../time';
 import { useMinute } from '../split';
+import { Button, Chip, IconButton } from '../../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
+import { Section } from '../../ui/Section';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
 import { Voice, useDictation } from '../../chat/Voice';
-import { clearNotesFocus, copyText, notesFocusFor, openSeries, setView, useEscapeBack } from '../view';
+import { clearNotesFocus, copyText, notesFocusFor, openSeries, setView, showSnack, useEscapeBack } from '../view';
 import { AskBar } from '../wiki/Wiki';
 import { Fold } from '../Fold';
 import { ActionRow, confirmAll } from './ActionRow';
-import { Avatars } from './MeetingList';
 import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
 import { RaiseWith } from './Raise';
@@ -23,7 +25,7 @@ import { recentPeople } from '../data/points';
 import { MeetingNotes } from './MeetingNotes';
 import { Series } from './Series';
 import { talkTime } from '../data/talkTime';
-import { RoomMic, SummaryFormat, TalkTime, Transcript, TranscriptButton, useTranscript } from './Transcript';
+import { RoomMic, SummaryFormat, TalkTime, Transcript, TranscriptButton, readable, useRead, useTranscript } from './Transcript';
 
 const ORDER: Record<string, number> = { open: 0, done: 1 };
 
@@ -66,8 +68,7 @@ function StateLine({ m, now }: { m: Meeting; now: number }) {
   );
 }
 
-function Notes({ m }: { m: Meeting }) {
-  const [editing, setEditing] = useState(() => notesFocusFor(rowKey(m)));
+function Notes({ m, editing, setEditing }: { m: Meeting; editing: boolean; setEditing: (on: boolean) => void }) {
   const [fresh] = useState(!m.notes);
   const box = useRef<HTMLDivElement>(null);
   useEffect(clearNotesFocus, []);
@@ -77,16 +78,6 @@ function Notes({ m }: { m: Meeting }) {
     <div ref={box} onBlur={(e) => { if (e.target instanceof HTMLTextAreaElement && !e.target.value) setEditing(false); }}>
       <MeetingNotes key={rowKey(m)} m={m} templates={fresh} />
     </div>
-  );
-}
-
-function CopyButtons({ m, actions }: { m: Meeting; actions: ItemRow[] }) {
-  if (!hasContent(m, actions)) return null;
-  return (
-    <>
-      <button className="btn sm" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={() => copyText(toMarkdown(m, actions))}><Icon name="copy" small /> Copy</button>
-      <button className="icon-btn" title="Copy a follow-up draft" aria-label="Copy a follow-up draft" onClick={() => copyText(followUpText(m, actions), 'Follow-up copied')}><Icon name="mail" /></button>
-    </>
   );
 }
 
@@ -112,27 +103,62 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const family = useMemo(() => seriesMeetings(meetings, m.profile, seriesTitleOf(m), now), [meetings, m, now]);
   const back = () => setView({ open: null });
   useEscapeBack(back);
-  const day = m.starts_at ? new Date(m.starts_at).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+  const [menu, setMenu] = useState(false);
+  const [editing, setEditing] = useState(() => notesFocusFor(rowKey(m)));
+  const more = useRef<HTMLButtonElement>(null);
+  const notesBox = useRef<HTMLElement>(null);
+  const { busy: reading, read } = useRead(m);
+  const link = m.calendar_url ? safeHref(m.calendar_url) : '';
+  const copyable = hasContent(m, all);
+  const canRead = state === 'done' && readable(m);
+  const canMenu = !!link || copyable || canRead || !!m.notes;
+  const takeNotes = () => {
+    setEditing(true);
+    notesBox.current?.scrollIntoView({ block: 'center' });
+    notesBox.current?.querySelector('textarea')?.focus();
+  };
+  const deleteNotes = () => {
+    const previous = m.notes;
+    void store.editRow('meetings', m, { notes: '' });
+    setEditing(false);
+    showSnack('Notes deleted', () => void store.editRow('meetings', m, { notes: previous }));
+  };
+  const time = m.starts_at ? `${new Date(m.starts_at).toLocaleDateString([], { weekday: 'short' })} ${clock(m.starts_at)}${m.ends_at ? `-${clock(m.ends_at)}` : ''}` : '';
   return (
     <div className="wk narrow">
       <header className="wk-head">
         <button className="icon-btn" title="Back to meetings" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
         <nav className="wk-crumbs"><button onClick={back}>Meetings</button></nav>
-        <span className="spacer" />
-        <CopyButtons m={m} actions={all} />
-        {state === 'done' && <TranscriptButton m={m} label="Read again" />}
-        {m.calendar_url && <a className="btn sm" href={safeHref(m.calendar_url)} target="_blank" rel="noreferrer"><Icon name="calendar" small /> Calendar</a>}
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          <h1 className="wk-title">{m.title}</h1>
-          {family.length >= 2 && <button className="chip pill mt-series-chip" title="Open the whole series" onClick={() => openSeries(m)}>{family[0].title} · {family.length}</button>}
-          <div className="wk-meta mt-when">
-            <span>{day}</span>
-            {m.starts_at && <span>{clock(m.starts_at)}{m.ends_at ? `–${clock(m.ends_at)}` : ''}</span>}
-            {m.recorded_ms ? <span><Icon name="record" small /> Recorded {Math.round(m.recorded_ms / 60000)} min</span> : null}
+          <Section label={m.title || 'Untitled'} action={(
+            <>
+              {state === 'live' && link
+                ? <a className="btn btn-filled btn-sm" href={link} target="_blank" rel="noreferrer"><Icon name="device-camera-video" small />Join</a>
+                : <Button variant="filled" size="sm" icon="edit" onClick={takeNotes}>Notes</Button>}
+              {canMenu && <span className="mt-more"><IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+              {menu && (
+                <Menu trigger={more} onClose={() => setMenu(false)}>
+                  {link && <MenuItem icon="calendar" href={link} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
+                  {copyable && <MenuItem icon="mail" onClick={() => { setMenu(false); copyText(followUpText(m, all), 'Follow-up copied'); }}>Copy follow-up</MenuItem>}
+                  {copyable && <MenuItem icon="copy" onClick={() => { setMenu(false); copyText(toMarkdown(m, all)); }}>Copy as Markdown</MenuItem>}
+                  {canRead && <MenuItem icon={reading ? 'loading' : 'sync'} spin={reading} disabled={reading} onClick={() => { setMenu(false); void read(); }}>{reading ? 'Reading' : 'Read again'}</MenuItem>}
+                  {m.notes && <MenuSeparator />}
+                  {m.notes && <MenuItem icon="trash" danger onClick={() => { setMenu(false); deleteNotes(); }}>Delete notes</MenuItem>}
+                </Menu>
+              )}
+              </span>}
+            </>
+          )} />
+          <div className="mt-chips">
+            {time && <span className="chip">{time}</span>}
+            {m.room && <span className="chip">{m.room}</span>}
+            {m.recorded_ms ? <span className="chip">Recorded {Math.round(m.recorded_ms / 60000)} min</span> : null}
+            {people.length > 0 && <span className="chip">{people.length === 1 ? '1 person' : `${people.length} people`}</span>}
+            {family.length >= 2 && <Chip title="Open the whole series" onClick={() => openSeries(m)}>{family[0].title} · {family.length}</Chip>}
           </div>
-          {people.length > 0 && <div className="mt-people"><Avatars people={people} max={5} /><span>{people.slice(0, 3).map((p, i) => <span key={p}>{i > 0 && ', '}<button className="mt-person" onClick={() => setView({ person: p })}>{displayName(p)}</button></span>)}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
+          {people.length > 0 && <div className="mt-people"><span>{people.slice(0, 3).map((p, i) => <span key={p}>{i > 0 && ', '}<button className="mt-person" onClick={() => setView({ person: p })}>{displayName(p)}</button></span>)}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
           <StateLine m={m} now={now} />
           <RoomMic m={m} />
 
@@ -179,9 +205,9 @@ export function MeetingPage({ m }: { m: Meeting }) {
             <Series m={m} prior={prior} />
           </Fold>
 
-          <section className="mt-sec">
+          <section className="mt-sec" ref={notesBox}>
             <h2>My notes</h2>
-            <Notes m={m} />
+            <Notes m={m} editing={editing} setEditing={setEditing} />
           </section>
 
           <Fold id="meeting-unassigned" remember={false} title="Unassigned" count={count.unassigned}>

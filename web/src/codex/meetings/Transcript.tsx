@@ -63,7 +63,7 @@ export function Transcript({ got }: { got: { text: string | null; error?: string
 }
 
 // A calendar meeting that has started has a transcript to read.
-const readable = (m: Meeting) => m.id.startsWith('cal:') && !!m.starts_at && m.starts_at <= Date.now();
+export const readable = (m: Meeting) => m.id.startsWith('cal:') && !!m.starts_at && m.starts_at <= Date.now();
 
 export function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) {
   const store = useAssistantStore();
@@ -83,13 +83,18 @@ export function SummaryFormat({ m, series }: { m: Meeting; series: Meeting[] }) 
   );
 }
 
-export function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
+export function useRead(m: Meeting) {
   const store = useAssistantStore();
   const [busy, run] = useSnackTask();
-  if (!readable(m)) return null;
   const read = () => run(async () => {
     showSnack((await store.fetchTranscript(m)) ? 'Read the transcript' : 'No transcript found yet');
   }, 'Transcript sync failed');
+  return { busy, read };
+}
+
+export function TranscriptButton({ m, label }: { m: Meeting; label: string }) {
+  const { busy, read } = useRead(m);
+  if (!readable(m)) return null;
   return (
     <button className="btn sm mt-sync" disabled={busy} title="Read the transcript: summary and actions" onClick={read}>
       <Icon name={busy ? 'loading' : 'sync'} small spin={busy} /> {busy ? 'Reading' : label}

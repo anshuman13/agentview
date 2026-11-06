@@ -76,9 +76,9 @@
 /* Meeting page */
 .mt-page { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }
 .mt-when { margin-top: var(--sp-6); font-size: var(--fs-md); }
-.mt-people { display: flex; align-items: center; gap: var(--sp-5); margin-top: var(--sp-8); font-size: var(--fs-md); color: var(--fg-muted); }
-.mt-people .mt-avatars { display: flex; }
-.mt-people .mt-avatars > span { border-color: var(--bg); }
+.mt-people { padding: 0 var(--list-pad); margin-top: var(--sp-4); font-size: var(--fs-md); color: var(--fg-muted); }
+.mt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: 0 var(--list-pad); }
+.mt-more { position: relative; }
 .mt-sec { margin-top: var(--sp-20); }
 .mt-sec h2 { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-6); font-size: var(--fs-xl); font-weight: 600; color: var(--fg-strong); }
 .mt-sec h2 .codicon.icon { font-size: 12px; color: var(--fg-faint); }
@@ -170,6 +170,5 @@
 .mt-person-head { display: flex; align-items: center; gap: var(--sp-6); }
 .mt-person-head .mt-avatars > span { width: 36px; height: 36px; font-size: 13px; }
 .mt-topic-new { margin-left: var(--sp-2); padding: 0 var(--sp-2); border-radius: var(--radius-pill); background: var(--hover); color: var(--fg-strong); font-size: var(--fs-xs); }
-.mt-series-chip { margin-top: var(--sp-4); }
 .mt-series-from { margin: 0 0 var(--sp-4) var(--sp-5); font-size: var(--fs-xs); color: var(--fg-muted); }
 .mt-log-item.muted .mt-log-text { color: var(--fg-muted); }
