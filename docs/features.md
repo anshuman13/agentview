@@ -29,7 +29,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 
 ### Overview
 
-- One line per weekly goal with done/total of the tasks linked to it; a line expands to its open tasks, each opening its task page; goals with all linked tasks done drop off; more than 3 goals show +N more
+- One line per weekly goal with done/total of the tasks linked to it and a thin progress bar; a goal whose open tasks' estimates (or 30 minutes each), summed, exceed the free work time left this week (today from now through Friday, 08:00-17:00, minus that profile's meetings and focus blocks; none on the weekend) is marked At risk; a line expands to its open tasks, each opening its task page; goals with all linked tasks done drop off; more than 3 goals show +N more
 - For each profile with no goals this week and unfinished goals last week, a row offers Carry over to copy their titles and profiles into this week, or Not now to hide the row for the week
 - The morning brief the hub writes from 08:00 to 17:00 on weekdays (once a day, late if the hub was down): today's meetings and free time, tasks due, overdue, undated and rolled over, how
   many tasks this week are at risk, Slack asks oldest first with who and age (older than today under Waiting from yesterday or older), Slack promises I made under You said, and meeting actions left from

@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { useAssistantTable, useAssistantStore } from './data';
-import { GOAL, MAX_GOALS, carryOver, goalProgress, goalsOf, linkedTo } from './data/goals';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAssistantTable, useAssistantStore, useAssistantData } from './data';
+import { GOAL, MAX_GOALS, carryOver, goalAtRisk, goalProgress, goalsOf, linkedTo } from './data/goals';
 import { weekStart } from './data/dates';
+import { weekFreeMinutes, type Span } from './data/plan';
+import { live } from './data/wiki';
 import type { ItemRow, Profile } from './data/sync';
 import { attempt, openTask, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
@@ -61,14 +63,15 @@ export function WeekGoals({ now }: { now: number }) {
 }
 
 // One slim line per goal of this week with done of total linked tasks; a line expands to its open tasks.
-function GoalLine({ goal, items }: { goal: ItemRow; items: ItemRow[] }) {
+function GoalLine({ goal, items, risk }: { goal: ItemRow; items: ItemRow[]; risk: boolean }) {
   const [open, setOpen] = useState(false);
   const p = goalProgress(items, goal);
   const tasks = linkedTo(items, goal).filter((r) => r.status === 'open');
   return (
     <div role="listitem">
       <button className="gl-line" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon name={open ? 'chevron-down' : 'chevron-right'} small /> <span className="muted small">This week</span> <span className="ov-t">{goal.title}</span> <span className="muted small">{p.done}/{p.total}<span className="sr-only"> tasks done</span></span>
+        <Icon name={open ? 'chevron-down' : 'chevron-right'} small /> <span className="muted small">This week</span> <span className="ov-t">{goal.title}</span> <span className="muted small">{p.done}/{p.total}<span className="sr-only"> tasks done</span></span>{risk && <span className="gl-risk small">At risk</span>}
+        {p.total > 0 && <span className={`gl-bar${risk ? ' risk' : ''}`} aria-hidden="true"><span style={{ width: `${(p.done / p.total) * 100}%` }} /></span>}
       </button>
       {open && (tasks.length
         ? <ul className="gl-tasks">{tasks.map((t) => <li key={t.id}><button className="ov-follow-text" onClick={() => openTask(t)}>{t.title}</button></li>)}</ul>
@@ -83,9 +86,19 @@ const CARRY_SKIPPED = 'codex.goalCarrySkipped';
 export function GoalLines({ now }: { now: number }) {
   const store = useAssistantStore();
   const items = useAssistantTable('items');
+  const { meetings } = useAssistantData();
   const { filter } = useView();
   const scope = filter === 'all' ? undefined : filter;
   const goals = goalsOf(items, now, scope).filter((g) => { const p = goalProgress(items, g); return !p.total || p.done < p.total; });
+  const minute = Math.floor(now / 60000);
+  const free = useMemo(() => {
+    const out: Partial<Record<Profile, number>> = {};
+    for (const p of ['work', 'personal'] as const) {
+      const spans = live(meetings).filter((m) => m.profile === p && m.starts_at != null && m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < 20 * 3600_000).map((m) => [m.starts_at!, m.ends_at!] as Span);
+      out[p] = weekFreeMinutes(spans, minute * 60000);
+    }
+    return out;
+  }, [meetings, minute]);
   const carry = carryOver(items, now, scope);
   const busy = useRef(false);
   const week = String(weekStart(now));
@@ -102,7 +115,7 @@ export function GoalLines({ now }: { now: number }) {
   if (!goals.length && !offer) return null;
   return (
     <section className="gl-lines" role="list" aria-label="Goals this week">
-      {(more ? goals : goals.slice(0, GOALS_SHOWN)).map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} />)}
+      {(more ? goals : goals.slice(0, GOALS_SHOWN)).map((g) => <GoalLine key={g.profile + g.id} goal={g} items={items} risk={goalAtRisk(items, g, free[g.profile] ?? 0)} />)}
       {goals.length > GOALS_SHOWN && <button className="as-chip quiet ov-more" onClick={() => setMore(!more)}>{more ? 'Show fewer' : `+${goals.length - GOALS_SHOWN} more`}</button>}
       {offer && (
         <div className="gl-line" role="listitem">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atRisk, defaultBlock, estimateMin, fitBlock, packDay, suggestEstimate, takeEstimate, withEstimate, workGaps } from './plan';
+import { atRisk, defaultBlock, estimateMin, fitBlock, packDay, suggestEstimate, takeEstimate, weekFreeMinutes, withEstimate, workGaps } from './plan';
 import { parseWhen, stripWhen } from './engine';
 import { parseRepeat } from './recur';
 import { goalProgress, goalsOf } from './goals';
@@ -151,5 +151,19 @@ describe('takeEstimate', () => {
     expect(withEstimate(stripWhen(t, w))).toBe('call bank ~30m');
     expect(new Date(w.at!).getDay()).toBe(5);
     expect(new Date(w.at!).getHours()).toBe(10);
+  });
+});
+
+describe('weekFreeMinutes', () => {
+  const mon = (h: number, m = 0) => new Date(2026, 10, 2, h, m).getTime();
+  it('sums work gaps from now through Friday', () => {
+    expect(weekFreeMinutes([], mon(9))).toBe(2640);
+  });
+  it('is 0 on Saturday and Sunday', () => {
+    expect(weekFreeMinutes([], new Date(2026, 10, 7, 9).getTime())).toBe(0);
+    expect(weekFreeMinutes([], new Date(2026, 10, 8, 9).getTime())).toBe(0);
+  });
+  it('subtracts a meeting by its overlap with work hours', () => {
+    expect(weekFreeMinutes([[mon(16), mon(19)]], mon(9))).toBe(2640 - 60);
   });
 });

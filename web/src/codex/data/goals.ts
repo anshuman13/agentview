@@ -1,5 +1,6 @@
 import { weekStart } from './dates';
 import { atTime } from './engine';
+import { taskMin } from './plan';
 import { madeAt, type ItemRow, type Profile } from './sync';
 
 // A weekly goal is an item with status 'goal' whose at is a time in its week, stored as that week's Monday 00:00; a task links to one by its goal field.
@@ -22,6 +23,12 @@ export const linkedTo = (items: ItemRow[], goal: ItemRow) =>
 export function goalProgress(items: ItemRow[], goal: ItemRow) {
   const tasks = linkedTo(items, goal);
   return { done: tasks.filter((r) => r.status === 'done').length, total: tasks.length };
+}
+
+// A goal is at risk when its open tasks' estimates, summed, exceed the free work minutes left this week.
+export function goalAtRisk(items: ItemRow[], goal: ItemRow, freeMin: number) {
+  const need = linkedTo(items, goal).filter((r) => r.status === 'open').reduce((n, r) => n + taskMin(r.title), 0);
+  return need > freeMin;
 }
 
 // Last week's goals not fully done, for each profile that has none this week yet.

@@ -76,7 +76,7 @@ export function workGaps(busy: Span[], now: number, startHour = 8, endHour = 17)
 
 const SLOT = 5 * 60_000;
 const DEFAULT_MIN = 30;
-const taskMin = (title: string | null) => estimateMin(title) ?? DEFAULT_MIN;
+export const taskMin = (title: string | null) => estimateMin(title) ?? DEFAULT_MIN;
 const toSlot = (t: number) => Math.ceil(t / SLOT) * SLOT;
 
 // A block in the gap from start, minutes long, cut at the gap end; null when start is outside the gap or under 5 minutes are left.
@@ -112,14 +112,27 @@ export function packDay<T extends { title: string | null; due: number | null; go
   return out;
 }
 
+// Work gaps for each remaining workday from now through Friday, and the days left after today; null on Saturday and Sunday.
+function weekGaps(busy: Span[], now: number, startHour: number, endHour: number) {
+  const d = new Date(now);
+  const days = 5 - d.getDay();
+  if (d.getDay() === 0 || days < 0) return null;
+  const day = (i: number, h = 0) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + i, h).getTime();
+  return { days, day, gaps: Array.from({ length: days + 1 }, (_, i) => workGaps(busy, Math.max(now, day(i)), startHour, endHour)).flat() };
+}
+
+// Free work minutes from now through Friday, 0 on the weekend.
+export function weekFreeMinutes(busy: Span[], now: number, startHour = 8, endHour = 17) {
+  const w = weekGaps(busy, now, startHour, endHour);
+  return w ? Math.round(w.gaps.reduce((n, [a, b]) => n + (b - a), 0) / 60_000) : 0;
+}
+
 // Tasks due by the end of this week's Friday whose estimates, summed in due order, exceed the free work time before their
 // due time; overdue tasks count as due at 17:00 today. short is the missing minutes.
 export function atRisk<T extends { title: string | null; due: number }>(tasks: T[], busy: Span[], now: number, startHour = 8, endHour = 17): { task: T; short: number }[] {
-  const d = new Date(now);
-  const days = 5 - d.getDay();
-  if (d.getDay() === 0 || days < 0) return [];
-  const day = (i: number, h = 0) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + i, h).getTime();
-  const gaps = Array.from({ length: days + 1 }, (_, i) => workGaps(busy, Math.max(now, day(i)), startHour, endHour)).flat();
+  const w = weekGaps(busy, now, startHour, endHour);
+  if (!w) return [];
+  const { days, day, gaps } = w;
   const freeBy = (t: number) => Math.round(gaps.reduce((n, [a, b]) => n + Math.max(0, Math.min(b, t) - a), 0) / 60_000);
   const close = day(0, endHour);
   const due = tasks
