@@ -109,7 +109,7 @@ export function ReplyQueue({ rows }: { rows: ItemRow[] }) {
   };
   return (
     <section>
-      <SectionHead title="Reply queue" count={rows.length} action={faq.length >= 2 && <Button size="sm" icon={sending ? 'loading' : 'send'} disabled={sending} onClick={() => void sendAll()}>Send all {faq.length} FAQ answers</Button>} />
+      <SectionHead id="reply-queue" title="Reply queue" count={rows.length} action={faq.length >= 2 && <Button size="sm" icon={sending ? 'loading' : 'send'} disabled={sending} onClick={() => void sendAll()}>Send all {faq.length} FAQ answers</Button>} />
       {admins >= 2 && (
         <div className="ov-admin">
           <span className="muted small">{admins} access and limit requests, to grant in one go</span>

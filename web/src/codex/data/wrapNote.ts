@@ -18,6 +18,6 @@ export function planNoteWrite(existing: Brief | undefined, input: string, profil
   if (live && existing.text === text) return null;
   if (existing) return { row: existing, patch: { text, to_at: now, deleted: 0 } };
   const from_at = dayStart(now);
-  const row: Brief = { id: wrapNoteId(now), profile, version: 0, updated_at: now, deleted: 0, field_times: '{}', dirty: 1, kind: 'wrapup', text: null, from_at, to_at: null };
+  const row: Brief = { id: wrapNoteId(now), profile, version: 0, updated_at: now, deleted: 0, field_times: '{}', dirty: 1, kind: 'wrapup', text: null, rows: null, from_at, to_at: null };
   return { row, patch: { kind: 'wrapup', text, from_at, to_at: now } };
 }

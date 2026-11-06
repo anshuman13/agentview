@@ -84,8 +84,8 @@ Send, Edit and Skip in place and a History fold that loads the last 3 replies se
 queue row shows an "FAQ answer" badge, such asks sort right after the ones that need me, the push body says "FAQ answer, 90% sure"
 before the claim, and with two or more the queue has one "Send all N FAQ answers" button. The morning brief lists the asks still open oldest first with who asked and the age, the ones
 from yesterday or older under their own heading. At the first scan from 17:00 on a weekday the hub writes a day digest
-(`briefs` kind `day`, `dayDigest`): what I sent (and how many edited), what failed, what I skipped and what still waits, with
-links, and pushes the counts; the app shows it in the brief card. The switch off is the kill switch. The scan reads the settings each
+(`briefs` kind `day`, `dayDigest`): what I sent (and how many edited), what failed, what I skipped and what still waits, as JSON `rows`
+(`id, who, chat, outcome, reason, edited, url`, reason cut to 6 words), and pushes the counts; Overview shows it as a Report card. The switch off is the kill switch. The scan reads the settings each
 time, so no restart is needed. Sent and dry-run replies are in the hub-only `replies`
 table, one row per ask, with tier, confidence, the text and the permalink of the post.
 
@@ -129,7 +129,7 @@ assist mode since I pressed Send myself.
    I approve them before the trip. `ask_context` already feeds live claims into drafts, so nothing else changes.
 5. **Away mode.** The scan sends tier A and B as above, at most 10 replies an hour and 40 a day, and at the first
    scan from 17:00 writes the day's digest to `briefs` (kind `away`, `awayDigest`): what it answered, held, escalated
-   and skipped, with links. One push a day with the counts. `POST /slack/people` proposes "who owns what" claims on a
+   and skipped, as the same JSON `rows`. One push a day with the counts. `POST /slack/people` proposes "who owns what" claims on a
    "Who does what" page from the hub's chat summaries and decisions of the last 30 days (`assistant/src/people.ts`). Meetings in the window get a decline with the note only if I enable `"decline": true`.
 6. **Dry run.** Run assist mode for a week before the trip. The run log shows how many drafts I sent unchanged, edited
    or skipped per tier. Tier A goes live in away mode only if 80% of its drafts went out unchanged.

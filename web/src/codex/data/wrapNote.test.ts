@@ -3,7 +3,7 @@ import { normaliseNote, planNoteWrite, wrapNoteId, wrapNoteProfile } from './wra
 import type { Brief } from './wiki';
 
 const now = new Date(2026, 10, 6, 17, 30).getTime();
-const base: Brief = { id: 'wrapup:2026-11-06', profile: 'work', version: 1, updated_at: now, deleted: 0, field_times: '{}', dirty: 0, kind: 'wrapup', text: 'start with the invoice', from_at: new Date(2026, 10, 6).getTime(), to_at: now };
+const base: Brief = { id: 'wrapup:2026-11-06', profile: 'work', version: 1, updated_at: now, deleted: 0, field_times: '{}', dirty: 0, kind: 'wrapup', text: 'start with the invoice', rows: null, from_at: new Date(2026, 10, 6).getTime(), to_at: now };
 
 it('uses the local date and work for All', () => {
   expect(wrapNoteId(now)).toBe('wrapup:2026-11-06');

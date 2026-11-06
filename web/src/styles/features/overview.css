@@ -37,3 +37,7 @@
 .ov-queue-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
 .ov-history-row { display: flex; align-items: baseline; gap: var(--sp-4); }
 .ov-faq { margin-left: var(--sp-3); padding: 1px var(--sp-3); border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent-text); font-size: var(--type-caption-size); font-weight: 500; vertical-align: middle; }
+.ov-digest-head { display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--type-label-size); color: var(--on-surface-muted); }
+.ov-digest-row { display: flex; align-items: center; padding-right: var(--list-pad); }
+.ov-digest-row > .ui-row { flex: 1; min-width: 0; }
+.ov-digest-row > .ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
