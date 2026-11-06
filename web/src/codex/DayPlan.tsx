@@ -5,7 +5,7 @@ import type { Meeting } from './data/wiki';
 import { useAssistantTable, useAssistantStore } from './data';
 import { goalsOf } from './data/goals';
 import { atTime, errorText } from './data/engine';
-import { defaultBlock, estimateMin, fitBlock, focusTitle, minutesText, packDay, workGaps, type Span } from './data/plan';
+import { defaultBlock, estimateMin, fitBlock, focusTitle, minutesText, packDay, timedMeetings, workGaps, type Span } from './data/plan';
 import { clock } from './time';
 import { attempt, showSnack, useView } from './view';
 import { Icon } from '../ui/Icon';
@@ -48,7 +48,7 @@ export function DayPlan({ meetings, open, late = [], now }: { meetings: Meeting[
   const forGoal = (r: ItemRow) => !!r.goal && goals.has(`${r.profile}:${r.goal}`);
   const listed = new Set([...late, ...open].map(rowKey));
   const goalTasks = items.filter((r) => !r.deleted && r.status === 'open' && r.source !== 'calendar' && forGoal(r) && !listed.has(rowKey(r)));
-  const timed = meetings.filter((m) => m.starts_at != null && m.ends_at != null && m.ends_at > m.starts_at && new Date(m.ends_at).getTime() - m.starts_at < 20 * 3600_000);
+  const timed = timedMeetings(meetings);
   const busy = timed.map((m) => [m.starts_at!, m.ends_at!] as Span);
   const blocks = timed.filter((m) => isBlock(m.id) && m.ends_at! > now);
   const gaps = workGaps(busy, now);

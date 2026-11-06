@@ -79,6 +79,34 @@ const DEFAULT_MIN = 30;
 export const taskMin = (title: string | null) => estimateMin(title) ?? DEFAULT_MIN;
 const toSlot = (t: number) => Math.ceil(t / SLOT) * SLOT;
 
+// Meetings with a start and an end after it, under 20 hours long; all-day events drop out.
+export function timedMeetings<T extends { starts_at: number | null; ends_at: number | null }>(meetings: T[]) {
+  return meetings.filter((m) => m.starts_at != null && m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < 20 * 3600_000);
+}
+
+const closeOf = (now: number, endHour: number) => { const d = new Date(now); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), endHour).getTime(); };
+
+// The end of the meeting running now (or the next one today), extended through meetings starting before it ends, rounded up
+// to 5 minutes; null when none is left or the result is at the end of work hours or later.
+export function afterNextMeeting(busy: Span[], now: number, endHour = 17) {
+  const sorted = [...busy].sort((a, b) => a[0] - b[0]);
+  const first = sorted.find(([a, b]) => a <= now && now < b) ?? sorted.find(([a]) => a > now);
+  if (!first) return null;
+  let end = first[1];
+  for (const [a, b] of sorted) if (a > first[0] && a <= end) end = Math.max(end, b);
+  const at = toSlot(end);
+  return at < closeOf(now, endHour) ? at : null;
+}
+
+// The start of the first work gap with 15 minutes left after now + 5 minutes, rounded up to 5 minutes; null when there is none.
+export function nextFreeSlot(busy: Span[], now: number, endHour = 17) {
+  for (const [a, b] of workGaps(busy, now, 8, endHour)) {
+    const start = toSlot(Math.max(a, now + SLOT));
+    if (b - start >= MIN_GAP * 60_000) return start;
+  }
+  return null;
+}
+
 // A block in the gap from start, minutes long, cut at the gap end; null when start is outside the gap or under 5 minutes are left.
 export function fitBlock([from, to]: Span, start: number, minutes: number): Span | null {
   if (start < from || start >= to || !(minutes > 0)) return null;

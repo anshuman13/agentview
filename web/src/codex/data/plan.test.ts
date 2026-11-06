@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atRisk, defaultBlock, estimateMin, fitBlock, packDay, suggestEstimate, takeEstimate, weekFreeMinutes, withEstimate, workGaps } from './plan';
+import { afterNextMeeting, atRisk, defaultBlock, estimateMin, fitBlock, nextFreeSlot, packDay, suggestEstimate, takeEstimate, timedMeetings, weekFreeMinutes, withEstimate, workGaps } from './plan';
 import { parseWhen, stripWhen } from './engine';
 import { parseRepeat } from './recur';
 import { goalProgress, goalsOf } from './goals';
@@ -165,5 +165,33 @@ describe('weekFreeMinutes', () => {
   });
   it('subtracts a meeting by its overlap with work hours', () => {
     expect(weekFreeMinutes([[mon(16), mon(19)]], mon(9))).toBe(2640 - 60);
+  });
+});
+
+describe('snooze targets', () => {
+  const m = (a: number[], b: number[]): [number, number] => [at(a[0], a[1] ?? 0), at(b[0], b[1] ?? 0)];
+  it('drops all-day events from timed meetings', () => {
+    const rows = [{ starts_at: at(14), ends_at: at(15) }, { starts_at: at(0), ends_at: at(0) + 24 * 3600_000 }, { starts_at: at(9), ends_at: null }];
+    expect(timedMeetings(rows)).toEqual([rows[0]]);
+  });
+  it('ends after the meeting, through back-to-back ones', () => {
+    expect(afterNextMeeting([m([14], [15])], at(13, 30))).toBe(at(15));
+    expect(afterNextMeeting([m([13], [14]), m([14], [14, 32])], at(13, 30))).toBe(at(14, 35));
+  });
+  it('uses the running meeting before a later one', () => {
+    expect(afterNextMeeting([m([13], [14]), m([16], [16, 30])], at(13, 30))).toBe(at(14));
+  });
+  it('returns null with no meeting left or a target at 17:00', () => {
+    expect(afterNextMeeting([m([9], [10])], at(13))).toBeNull();
+    expect(afterNextMeeting([m([16], [17])], at(13))).toBeNull();
+  });
+  it('finds the first free slot of 15 minutes', () => {
+    expect(nextFreeSlot([m([13, 45], [14, 30]), m([14, 30], [15])], at(13, 30))).toBe(at(15));
+    expect(nextFreeSlot([m([13], [14])], at(12))).toBe(at(12, 5));
+  });
+  it('clips the slot start to now plus 5 minutes and returns null with no gap', () => {
+    expect(nextFreeSlot([], at(12, 1))).toBe(at(12, 10));
+    expect(nextFreeSlot([m([8], [17])], at(9))).toBeNull();
+    expect(nextFreeSlot([], at(16, 50))).toBeNull();
   });
 });

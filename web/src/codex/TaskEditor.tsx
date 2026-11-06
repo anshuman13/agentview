@@ -20,12 +20,14 @@ import { recentPeople } from './data/points';
 import { RaiseWith } from './meetings/Raise';
 import { sourceOf } from './taskSource';
 import { Check } from './TaskCheck';
-import { estimateMin, minutesText, suggestEstimate } from './data/plan';
+import { afterNextMeeting, estimateMin, minutesText, nextFreeSlot, suggestEstimate, timedMeetings, type Span } from './data/plan';
 import { isFocused, startFocus, stopFocus, useFocus } from './focus';
 import { GoalPick } from './Goals';
 import { caretLine, RelatedStrip, RelatedToTask } from './Related';
 import { cadenceLine, cadenceOf, withRule, type Cadence } from './data/recur';
 import { addCheck, checkItems, moveCheck, toggleCheck } from './taskChecklist';
+import { live } from './data/wiki';
+import { dayEnd, dayStart } from './data/dates';
 import { useDrag } from './drag';
 import { Flag, PRIORITIES, REMINDS, tagList } from './AddSheet';
 
@@ -191,6 +193,11 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
     void saving.current.then(() => act.move(row, other));
   };
   const then = (f: () => void) => () => { save(); f(); onClose(); };
+  const freeTimes = () => {
+    const now = Date.now();
+    const busy = timedMeetings(live(snap.meetings).filter((m) => m.profile === row.profile && m.starts_at != null && m.starts_at >= dayStart(now) && m.starts_at < dayEnd(now))).map((m) => [m.starts_at!, m.ends_at!] as Span);
+    return ([['After next meeting', afterNextMeeting(busy, now)], ['Next free slot', nextFreeSlot(busy, now)]] as const).flatMap(([label, t]) => (t == null ? [] : [[label, t] as const]));
+  };
   const timed = row.status === 'open' || row.status === 'suggested' || at != null;
   // Haiku fixes a quick or dictated task into a clear title and notes, and sets the time if the text says one.
   const tidy = async () => {
@@ -244,7 +251,10 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
                 <>
                   <MenuItem onClick={() => setSnoozing(false)} icon="arrow-left">Snooze</MenuItem>
                   {at != null && at >= new Date().setHours(24, 0, 0, 0) && <MenuItem onClick={then(() => act.due(row, null))}>Today</MenuItem>}
-                  {snoozes().map((s) => <MenuItem key={s.label} onClick={then(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</MenuItem>)}
+                  {snoozes().flatMap((s) => [
+                    <MenuItem key={s.label} onClick={then(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</MenuItem>,
+                    ...(s.label === 'In 3 hours' ? freeTimes().map(([label, t]) => <MenuItem key={label} onClick={then(() => act.snooze(row, t))}>{label} · {clock(t)}</MenuItem>) : []),
+                  ])}
                   <PickTime className="ui-menu-item" value={at} onPick={(t) => then(() => act.snooze(row, t))()} />
                 </>
               ) : (
