@@ -138,11 +138,12 @@ describe('LocalStore', () => {
     vi.stubGlobal('window', target);
     vi.stubGlobal('document', { ...target, visibilityState: 'visible' });
     const { LocalStore } = await import('./local');
+    const timers = vi.getTimerCount();
     const store = new LocalStore((async () => null) as never);
-    expect(listeners.size).toBe(2);
+    const added = listeners.size;
     store.dispose();
-    expect(listeners.size).toBe(0);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(listeners.size).toBe(added - 2);
+    expect(vi.getTimerCount()).toBe(timers);
   });
 
   it('pulls everything again when a synced table is new', async () => {

@@ -4,8 +4,8 @@ import { hubDebug } from './hubDebug';
 import { Settings, SettingsView, versionText } from './Settings';
 
 vi.hoisted(() => {
-  vi.stubGlobal('window', {});
-  vi.stubGlobal('document', { documentElement: { dataset: {} } });
+  vi.stubGlobal('window', { addEventListener() {} });
+  vi.stubGlobal('document', { documentElement: { dataset: {} }, addEventListener() {} });
 });
 
 describe('versionText', () => {

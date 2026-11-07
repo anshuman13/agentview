@@ -214,3 +214,14 @@ export function matchLabel(count: number): string {
 export function stepMatch(cur: number, dir: 1 | -1, count: number): number {
   return cur < 0 && dir < 0 ? count - 1 : (cur + dir + count) % count;
 }
+
+export async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+  const area = document.createElement('textarea');
+  area.value = text;
+  document.body.appendChild(area);
+  area.select();
+  const ok = document.execCommand('copy');
+  area.remove();
+  if (!ok) throw new Error('copy failed');
+}

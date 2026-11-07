@@ -6,6 +6,7 @@ import { seriesKey, seriesTitleOf } from './data/meetings';
 import type { Meeting } from './data/wiki';
 import { clearScroll, saveScroll, takeScroll } from './scrollStore';
 import { PHONE } from '../ui/Menu';
+import { copyText as copyToClipboard } from '../ui/util';
 
 export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki' | 'goals' | 'search';
 export type Filter = 'all' | Profile;
@@ -166,7 +167,7 @@ export function showSnack(text: string, undo?: () => void, ms = SNACK_MS) {
   snackTimer = setTimeout(hideSnack, ms);
 }
 export const useSnack = () => useSyncExternalStore((f) => (snackSubs.add(f), () => snackSubs.delete(f)), () => snack);
-export const copyText = (text: string, done = 'Copied') => void navigator.clipboard.writeText(text).then(() => showSnack(done), () => showSnack('Copy failed'));
+export const copyText = (text: string, done = 'Copied') => void copyToClipboard(text).then(() => showSnack(done), () => showSnack('Copy failed'));
 export function hideSnack() {
   snack = null;
   snackSubs.forEach((f) => f());

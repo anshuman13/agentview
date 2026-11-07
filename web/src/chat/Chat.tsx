@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import type { Token } from './md';
+import { copyText } from '../ui/util';
 
 export { Composer } from './Composer';
 
@@ -14,17 +15,6 @@ function useMd() {
     if (!m) void loading.then(setM);
   }, [m]);
   return m;
-}
-
-function copyText(text: string) {
-  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
-  const area = document.createElement('textarea');
-  area.value = text;
-  document.body.appendChild(area);
-  area.select();
-  const ok = document.execCommand('copy');
-  area.remove();
-  return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
 }
 
 function onCopy(e: MouseEvent<HTMLDivElement>) {
