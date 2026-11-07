@@ -1,8 +1,7 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
-import { Back } from '../../app/back';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
@@ -20,8 +19,8 @@ import { PageTile } from './PageTile';
 import { NeedsLook, ToReview } from './Review';
 import { usePullSync } from '../pullSync';
 import { MEMORY, shortDate } from './shared';
-import { plural, useEscape } from '../../ui/util';
-import { useSheetDrag } from '../../ui/useSheetDrag';
+import { plural } from '../../ui/util';
+import { Sheet } from '../../ui/Sheet';
 
 const SECTION_ORDER = ['Teams', 'Projects', 'People', 'Practices'];
 
@@ -135,20 +134,6 @@ function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[];
   );
 }
 
-function WikiSheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
-  const sheet = useSheetDrag(true, onClose);
-  useEscape(sheet.close);
-  return (
-    <div className="as-sheet-overlay" ref={sheet.overlay} onClick={sheet.close}>
-      <Back close={onClose} />
-      <div className="as-sheet" ref={sheet.sheet} role="dialog" aria-label={label} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" {...sheet.handle} />
-        {children}
-      </div>
-    </div>
-  );
-}
-
 export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
   useSpotBack(pull.ref, 'wiki');
@@ -211,11 +196,11 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
         </div>
       </div>
       {sheet && (
-        <WikiSheet label={sheet} onClose={() => setSheet(null)}>
+        <Sheet label={sheet} onClose={() => setSheet(null)}>
           {sheet === 'Feed' && <Feed pages={pages} facts={facts} />}
           {sheet === 'Notes' && <Notes query="" />}
           {sheet === 'Ask' && <AskBar placeholder="Ask the wiki" onAsk={(q) => { const ok = ask(wikiAskText(q, pages, facts), 'work'); if (ok) setSheet(null); return ok; }} />}
-        </WikiSheet>
+        </Sheet>
       )}
     </div>
   );

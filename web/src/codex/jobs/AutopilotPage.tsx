@@ -1,14 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { useAssistantStore, useAssistantTable } from '../data';
 import type { AutopilotConfig, AutopilotReply, AutopilotState } from '../data/store';
-import { Back } from '../../app/back';
 import { Badge, type BadgeSpec } from '../../ui/Badge';
 import { Button, Chip, IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
-import { useEscape, useReturnFocus } from '../../ui/util';
-import { useSheetDrag } from '../../ui/useSheetDrag';
+import { useReturnFocus } from '../../ui/util';
+import { Sheet } from '../../ui/Sheet';
 import { openTask, setView, useEscapeBack } from '../view';
 import { focusRowOnReturn } from './Autopilot';
 import { activityValue, awayValue, coversValue, day, modelValue, neverValue, spendLine, when } from './autopilotRows';
@@ -17,20 +16,6 @@ import { Switch } from './Switch';
 const SEEN: Record<string, BadgeSpec> = { held: { status: 'waiting', label: 'Needs you', reason: 'Waiting for you' }, sent: { status: 'sent' }, dry: { status: 'skipped', reason: 'Would have sent' }, error: { status: 'failed' }, skipped: { status: 'skipped' } };
 
 type Which = 'info' | 'away' | 'covers' | 'never' | 'model' | 'activity';
-
-function Sheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
-  const sheet = useSheetDrag(true, onClose);
-  useEscape(sheet.close);
-  return (
-    <div className="as-sheet-overlay" ref={sheet.overlay} onClick={sheet.close}>
-      <Back close={onClose} />
-      <div className="as-sheet" ref={sheet.sheet} role="dialog" aria-label={label} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" {...sheet.handle} />
-        {children}
-      </div>
-    </div>
-  );
-}
 
 // Today's replies with what was done, the first 5 until all are asked for, and what the hub's Claude cost.
 function ActivitySheet({ state, onClose }: { state: AutopilotState; onClose: () => void }) {

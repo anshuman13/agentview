@@ -6,12 +6,11 @@ import { cadenceLine, parseRepeat, withRule, type Cadence } from './data/recur';
 import { pad } from './data/dates';
 import { withEstimate } from './data/plan';
 import type { Profile } from './data/sync';
-import { Back } from '../app/back';
 import { Icon } from '../ui/Icon';
 import { Menu } from '../ui/Menu';
 import { haptic } from '../ui/haptic';
 import { readFlag } from '../ui/util';
-import { useSheetDrag } from '../ui/useSheetDrag';
+import { Sheet } from '../ui/Sheet';
 import { FILTER_LABEL, type Filter } from './view';
 import { ProfileDot } from './ProfileDot';
 import { Voice, useDictation } from '../chat/Voice';
@@ -49,7 +48,6 @@ const REPEATS: [Cadence, string][] = [['never', 'None'], ['daily', 'Daily'], ['w
 
 // TickTick's date sheet: quick days, a month, then time and repeat rows.
 export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value: Pick; cadence?: boolean; reminder?: boolean; onDone: (p: Pick) => void; onClose: () => void }) {
-  const sheet = useSheetDrag(true, onClose);
   const today = startOf(Date.now());
   const [day, setDay] = useState(value.at == null ? today : startOf(value.at));
   const [time, setTime] = useState<string | null>(value.at != null && hasTime(value.at) ? `${pad(new Date(value.at).getHours())}:${pad(new Date(value.at).getMinutes())}` : null);
@@ -72,64 +70,59 @@ export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value
   const cells = [...Array(lead).fill(null), ...Array.from({ length: count }, (_, i) => new Date(m.getFullYear(), m.getMonth(), i + 1).getTime())];
   const shift = (n: number) => setMonth(new Date(m.getFullYear(), m.getMonth() + n, 1).getTime());
   return (
-    <div className="as-sheet-overlay" ref={sheet.overlay} onClick={sheet.close}>
-      <Back close={onClose} />
-      <div className="as-sheet as-date" ref={sheet.sheet} role="dialog" aria-label="Date" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" {...sheet.handle} />
-        <div className="as-date-head">
-          <button className="icon-btn" aria-label="Cancel" onClick={sheet.close}><Icon name="close" /></button>
-          <span>Date</span>
-          <button className="icon-btn as-date-ok" aria-label="Done" onClick={() => done()}><Icon name="check" /></button>
-        </div>
-        <div className="as-date-quick">
-          {quick.map(([icon, label, f]) => <button key={label} onClick={f}><Icon name={icon} /><span>{label}</span></button>)}
-        </div>
-        <div className="as-date-month">
-          <span>{m.toLocaleDateString([], { month: 'long', year: m.getFullYear() === now.getFullYear() ? undefined : 'numeric' })}</span>
-          <button className="icon-btn" aria-label="Previous month" onClick={() => shift(-1)}><Icon name="chevron-left" /></button>
-          <button className="icon-btn" aria-label="Next month" onClick={() => shift(1)}><Icon name="chevron-right" /></button>
-        </div>
-        <div className="as-date-grid" role="grid">
-          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <span key={i} className="as-date-dow">{d}</span>)}
-          {cells.map((t, i) => t == null ? <span key={i} /> : (
-            <button key={i} className={`${t === day ? 'on' : ''}${t === today ? ' today' : ''}${t < today ? ' past' : ''}`} aria-pressed={t === day} aria-label={new Date(t).toDateString()} onClick={() => { haptic('tap'); setDay(t); }}>{new Date(t).getDate()}</button>
-          ))}
-        </div>
-        <div className="as-date-rows">
-          <label className="as-date-row">
-            <Icon name="clock" /><span>Time</span>
-            <em>{time ?? 'None'}</em>
-            {time ? <button className="icon-btn" aria-label="Clear time" onClick={(e) => { e.preventDefault(); setTime(null); }}><Icon name="close" small /></button> : <Icon name="chevron-right" small />}
-            <input ref={timeInput} type="time" value={time ?? ''} onChange={(e) => setTime(e.target.value || null)} onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* opens on focus */ } }} />
-          </label>
-          {reminder && (
-            <label className="as-date-row">
-              <Icon name="bell" /><span>Reminder</span>
-              <em>{remindLabel(remind)}</em><Icon name="chevron-right" small />
-              <select value={String(remind)} aria-label="Reminder" onChange={(e) => setRemind(e.target.value === 'null' ? null : Number(e.target.value))}>
-                {REMINDS.map(([v, l]) => <option key={l} value={String(v)}>{l}</option>)}
-              </select>
-            </label>
-          )}
-          {cadence && (
-            <label className="as-date-row">
-              <Icon name="sync" /><span>Repeat</span>
-              <em>{REPEATS.find(([c]) => c === repeat)?.[1] ?? 'Custom'}</em><Icon name="chevron-right" small />
-              <select value={repeat} aria-label="Repeat" onChange={(e) => setRepeat(e.target.value as Cadence)}>
-                {REPEATS.map(([c, l]) => <option key={c} value={c}>{l}</option>)}
-              </select>
-            </label>
-          )}
-        </div>
+    <Sheet label="Date" onClose={onClose} className="as-date">
+      <div className="as-date-head">
+        <button className="icon-btn" aria-label="Cancel" onClick={onClose}><Icon name="close" /></button>
+        <span>Date</span>
+        <button className="icon-btn as-date-ok" aria-label="Done" onClick={() => done()}><Icon name="check" /></button>
       </div>
-    </div>
+      <div className="as-date-quick">
+        {quick.map(([icon, label, f]) => <button key={label} onClick={f}><Icon name={icon} /><span>{label}</span></button>)}
+      </div>
+      <div className="as-date-month">
+        <span>{m.toLocaleDateString([], { month: 'long', year: m.getFullYear() === now.getFullYear() ? undefined : 'numeric' })}</span>
+        <button className="icon-btn" aria-label="Previous month" onClick={() => shift(-1)}><Icon name="chevron-left" /></button>
+        <button className="icon-btn" aria-label="Next month" onClick={() => shift(1)}><Icon name="chevron-right" /></button>
+      </div>
+      <div className="as-date-grid" role="grid">
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <span key={i} className="as-date-dow">{d}</span>)}
+        {cells.map((t, i) => t == null ? <span key={i} /> : (
+          <button key={i} className={`${t === day ? 'on' : ''}${t === today ? ' today' : ''}${t < today ? ' past' : ''}`} aria-pressed={t === day} aria-label={new Date(t).toDateString()} onClick={() => { haptic('tap'); setDay(t); }}>{new Date(t).getDate()}</button>
+        ))}
+      </div>
+      <div className="as-date-rows">
+        <label className="as-date-row">
+          <Icon name="clock" /><span>Time</span>
+          <em>{time ?? 'None'}</em>
+          {time ? <button className="icon-btn" aria-label="Clear time" onClick={(e) => { e.preventDefault(); setTime(null); }}><Icon name="close" small /></button> : <Icon name="chevron-right" small />}
+          <input ref={timeInput} type="time" value={time ?? ''} onChange={(e) => setTime(e.target.value || null)} onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* opens on focus */ } }} />
+        </label>
+        {reminder && (
+          <label className="as-date-row">
+            <Icon name="bell" /><span>Reminder</span>
+            <em>{remindLabel(remind)}</em><Icon name="chevron-right" small />
+            <select value={String(remind)} aria-label="Reminder" onChange={(e) => setRemind(e.target.value === 'null' ? null : Number(e.target.value))}>
+              {REMINDS.map(([v, l]) => <option key={l} value={String(v)}>{l}</option>)}
+            </select>
+          </label>
+        )}
+        {cadence && (
+          <label className="as-date-row">
+            <Icon name="sync" /><span>Repeat</span>
+            <em>{REPEATS.find(([c]) => c === repeat)?.[1] ?? 'Custom'}</em><Icon name="chevron-right" small />
+            <select value={repeat} aria-label="Repeat" onChange={(e) => setRepeat(e.target.value as Cadence)}>
+              {REPEATS.map(([c, l]) => <option key={c} value={c}>{l}</option>)}
+            </select>
+          </label>
+        )}
+      </div>
+    </Sheet>
   );
 }
 
 // TickTick's quick add: a bottom sheet with title, description, date and list, and a send button.
 export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: number; onClose: () => void }) {
   const { store } = useAssistant();
-  const sheet = useSheetDrag(true, onClose);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [pick, setPick] = useState<Pick | null>(null);
@@ -162,36 +155,33 @@ export function AddSheet({ filter, voice, onClose }: { filter: Filter; voice?: n
   };
   return (
     <>
-      <div className="as-sheet-overlay" ref={sheet.overlay} onClick={sheet.close}>
-        {!dating && <Back close={onClose} />}
-        <div className="as-sheet as-quick" ref={sheet.sheet} role="dialog" aria-label="New task" onClick={(e) => e.stopPropagation()} data-no-swipe>
-          <input ref={field} autoFocus className="as-quick-title" value={title} placeholder="What would you like to do?" aria-label="New task" enterKeyHint="send"
-            onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void add(); }} />
-          <input className="as-quick-notes" value={notes} placeholder="Description" aria-label="Description" onChange={(e) => setNotes(e.target.value)} />
-          <div className="as-quick-bar">
-            <button className={`as-quick-tool${pick ? ' on' : ''}`} aria-label="Date" onMouseDown={(e) => e.preventDefault()} onClick={() => setDating(true)}>
-              <Icon name="calendar" />{pick && <span>{pick.at == null ? 'Today' : cap(when(pick.at))}</span>}{pick && pick.cadence !== 'never' && <Icon name="sync" small />}{pick?.remind != null && <Icon name={pick.remind < 0 ? 'bell-slash' : 'bell'} small />}
-            </button>
-            <span className="as-quick-flagwrap">
-              <button ref={flagBtn} className={`as-quick-tool${priority ? ' on' : ''}`} aria-label="Priority" aria-haspopup="menu" aria-expanded={flagging} onMouseDown={(e) => e.preventDefault()} onClick={() => setFlagging(!flagging)}><Flag priority={priority} /></button>
-              {flagging && (
-                <Menu trigger={flagBtn} className="as-tt-menu" onClose={() => setFlagging(false)}>
-                  {PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={p === priority} className="ui-menu-item as-flag-item" onClick={() => { setPriority(p); setFlagging(false); haptic('tap'); field.current?.focus(); }}><Flag priority={p} /><span>{l} priority</span></button>)}
-                </Menu>
-              )}
-            </span>
-            <button className="as-quick-tool" aria-label="Tag" onMouseDown={(e) => e.preventDefault()} onClick={() => { setTitle((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}#`); field.current?.focus(); }}><Icon name="tag" /></button>
-            {filter === 'all' && (
-              <button className="as-quick-tool" aria-label={`List: ${FILTER_LABEL[profile]}`} onMouseDown={(e) => e.preventDefault()} onClick={() => setPicked(profile === 'work' ? 'personal' : 'work')}>
-                <ProfileDot profile={profile} /><span>{FILTER_LABEL[profile]}</span>
-              </button>
+      <Sheet label="New task" onClose={onClose} className="as-quick" active={!dating} noSwipe>
+        <input ref={field} autoFocus className="as-quick-title" value={title} placeholder="What would you like to do?" aria-label="New task" enterKeyHint="send"
+          onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void add(); }} />
+        <input className="as-quick-notes" value={notes} placeholder="Description" aria-label="Description" onChange={(e) => setNotes(e.target.value)} />
+        <div className="as-quick-bar">
+          <button className={`as-quick-tool${pick ? ' on' : ''}`} aria-label="Date" onMouseDown={(e) => e.preventDefault()} onClick={() => setDating(true)}>
+            <Icon name="calendar" />{pick && <span>{pick.at == null ? 'Today' : cap(when(pick.at))}</span>}{pick && pick.cadence !== 'never' && <Icon name="sync" small />}{pick?.remind != null && <Icon name={pick.remind < 0 ? 'bell-slash' : 'bell'} small />}
+          </button>
+          <span className="as-quick-flagwrap">
+            <button ref={flagBtn} className={`as-quick-tool${priority ? ' on' : ''}`} aria-label="Priority" aria-haspopup="menu" aria-expanded={flagging} onMouseDown={(e) => e.preventDefault()} onClick={() => setFlagging(!flagging)}><Flag priority={priority} /></button>
+            {flagging && (
+              <Menu trigger={flagBtn} className="as-tt-menu" onClose={() => setFlagging(false)}>
+                {PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={p === priority} className="ui-menu-item as-flag-item" onClick={() => { setPriority(p); setFlagging(false); haptic('tap'); field.current?.focus(); }}><Flag priority={p} /><span>{l} priority</span></button>)}
+              </Menu>
             )}
-            <span className="spacer" />
-            <span className="as-quick-voice"><Voice onText={dictate} autoStart={voice} /></span>
-            <button className="as-quick-send" aria-label="Add task" disabled={!typed} onMouseDown={(e) => e.preventDefault()} onClick={() => void add()}><Icon name="send" /></button>
-          </div>
+          </span>
+          <button className="as-quick-tool" aria-label="Tag" onMouseDown={(e) => e.preventDefault()} onClick={() => { setTitle((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}#`); field.current?.focus(); }}><Icon name="tag" /></button>
+          {filter === 'all' && (
+            <button className="as-quick-tool" aria-label={`List: ${FILTER_LABEL[profile]}`} onMouseDown={(e) => e.preventDefault()} onClick={() => setPicked(profile === 'work' ? 'personal' : 'work')}>
+              <ProfileDot profile={profile} /><span>{FILTER_LABEL[profile]}</span>
+            </button>
+          )}
+          <span className="spacer" />
+          <span className="as-quick-voice"><Voice onText={dictate} autoStart={voice} /></span>
+          <button className="as-quick-send" aria-label="Add task" disabled={!typed} onMouseDown={(e) => e.preventDefault()} onClick={() => void add()}><Icon name="send" /></button>
         </div>
-      </div>
+      </Sheet>
       {dating && <DateSheet value={pick ?? { at: null, cadence: 'never' }} cadence reminder onDone={setPick} onClose={() => { setDating(false); field.current?.focus(); }} />}
     </>
   );

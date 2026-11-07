@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import type { Run } from '../data/wiki';
-import { Back } from '../../app/back';
 import { Badge } from '../../ui/Badge';
 import { Icon } from '../../ui/Icon';
 import { Row } from '../../ui/Row';
 import { Section, sectionCount } from '../../ui/Section';
 import { SearchedOutput } from '../../ui/SearchedOutput';
-import { useEscape } from '../../ui/util';
-import { useSheetDrag } from '../../ui/useSheetDrag';
+import { Sheet } from '../../ui/Sheet';
 import { copyText } from '../view';
 import { at, runMeta } from './schedule';
 
@@ -47,19 +45,13 @@ export function RunsRow({ latest, onOpen }: { latest?: Run; onOpen: () => void }
 
 // The 10 latest runs of a job in a bottom sheet; the latest starts open with the output search.
 export function RunsSheet({ runs, query, setQuery, onClose }: { runs: Run[]; query: string; setQuery: (q: string) => void; onClose: () => void }) {
-  const sheet = useSheetDrag(true, onClose);
-  useEscape(sheet.close);
   const shown = runs.slice(0, 10);
   return (
-    <div className="as-sheet-overlay" ref={sheet.overlay} onClick={sheet.close}>
-      <Back close={onClose} />
-      <div className="as-sheet" ref={sheet.sheet} role="dialog" aria-label="Runs" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" {...sheet.handle} />
-        <Section label="Runs" count={sectionCount(shown.length)} />
-        <div className="as-group">
-          {shown.map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} />)}
-        </div>
+    <Sheet label="Runs" onClose={onClose}>
+      <Section label="Runs" count={sectionCount(shown.length)} />
+      <div className="as-group">
+        {shown.map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} />)}
       </div>
-    </div>
+    </Sheet>
   );
 }

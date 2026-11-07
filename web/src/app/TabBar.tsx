@@ -1,12 +1,11 @@
 import { Suspense, useRef } from 'react';
-import { Back } from './back';
 import { setUi, useStore } from './store';
 import { unreadCount } from '../sessions/folders';
 import { AgentsBadge } from '../sessions/AgentsBadge';
 import { ChangesBadge } from '../workspace/gitStatus';
 import { GitHubBadge } from '../ops/pulls';
 import { Icon } from '../ui/Icon';
-import { useSheetDrag } from '../ui/useSheetDrag';
+import { Sheet } from '../ui/Sheet';
 import { AssistantBadge } from './lazy';
 import { PAGES, type Page } from './pages';
 import { canNotify, toggleNotify, useNotify } from './notify';
@@ -85,56 +84,51 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
   const cwd = useStore((s) => s.session.cwd);
   const notifying = useNotify();
   const mcp = useMcpHealth();
-  const sheet = useSheetDrag(open, onClose);
   if (!open) return null;
   const act = (f: () => void) => () => { onClose(); f(); };
   return (
-    <div className="more-sheet-overlay mobile-only" ref={sheet.overlay} onClick={sheet.close}>
-      <Back close={onClose} />
-      <div className="more-sheet" ref={sheet.sheet} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" {...sheet.handle} />
-        <div className="more-status">
-          <button className="more-project" title={`${cwd}\nStart a chat in another repo`} onClick={act(() => setUi({ repoPicker: true }))}>
-            <Icon name="folder" small /><span>{project}</span>
+    <Sheet label="More" onClose={onClose} className="more-sheet" overlayClassName="more-sheet-overlay mobile-only">
+      <div className="more-status">
+        <button className="more-project" title={`${cwd}\nStart a chat in another repo`} onClick={act(() => setUi({ repoPicker: true }))}>
+          <Icon name="folder" small /><span>{project}</span>
+        </button>
+        {canNotify && (
+          <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
+            <Icon name={notifying ? 'bell' : 'bell-slash'} />
           </button>
-          {canNotify && (
-            <button className="icon-btn" title={notifying ? 'Turn off notifications' : 'Notify me when Claude finishes or needs you'} onClick={toggleNotify}>
-              <Icon name={notifying ? 'bell' : 'bell-slash'} />
-            </button>
-          )}
-          <button className="icon-btn" title={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme}><Icon name="color-mode" /></button>
-        </div>
-        <button className={tab === 'code' ? 'active' : ''} onClick={() => goTab('code')}>
-          <Icon name="files" /><span>Files</span>
-        </button>
-        <button className={tab === 'browser' ? 'active' : ''} onClick={() => goTab('browser')}>
-          <Icon name="globe" /><span>Browser</span>
-        </button>
-        <button className={tab === 'term' ? 'active' : ''} onClick={() => goTab('term')}>
-          <Icon name="terminal" /><span>Terminal</span>
-        </button>
-        <button className={tab === 'repos' && view === 'changes' ? 'active' : ''} onClick={() => goSide('changes')}>
-          <Icon name="source-control" /><span>Source Control</span><ChangesBadge />
-        </button>
-        <button className={tab === 'repos' && view === 'github' ? 'active' : ''} onClick={() => goSide('github')}>
-          <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
-        </button>
-        <span className="more-label">Tools</span>
-        {PAGES.map((p) => (
-          <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
-            <Icon name={p.icon} />
-            <span>{p.title}</span>
-            {p.id === 'mcp' && mcp.total > 0 && <span className="more-meta"><span className={`dot ${mcp.dot}`} /> {mcp.ok}/{mcp.total}</span>}
-          </button>
-        ))}
-        <span className="more-divider" />
-        <button onClick={act(onMacs)}>
-          <Icon name="vm" /><span>{macName || 'Macs'}</span><span className="more-meta">switch</span>
-        </button>
-        <button onClick={act(() => window.dispatchEvent(new Event('agentview:palette')))}>
-          <Icon name="terminal-cmd" /><span>Command Palette</span>
-        </button>
+        )}
+        <button className="icon-btn" title={`Theme: ${THEME_NAMES[theme]}. Tap to switch`} onClick={toggleTheme}><Icon name="color-mode" /></button>
       </div>
-    </div>
+      <button className={tab === 'code' ? 'active' : ''} onClick={() => goTab('code')}>
+        <Icon name="files" /><span>Files</span>
+      </button>
+      <button className={tab === 'browser' ? 'active' : ''} onClick={() => goTab('browser')}>
+        <Icon name="globe" /><span>Browser</span>
+      </button>
+      <button className={tab === 'term' ? 'active' : ''} onClick={() => goTab('term')}>
+        <Icon name="terminal" /><span>Terminal</span>
+      </button>
+      <button className={tab === 'repos' && view === 'changes' ? 'active' : ''} onClick={() => goSide('changes')}>
+        <Icon name="source-control" /><span>Source Control</span><ChangesBadge />
+      </button>
+      <button className={tab === 'repos' && view === 'github' ? 'active' : ''} onClick={() => goSide('github')}>
+        <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
+      </button>
+      <span className="more-label">Tools</span>
+      {PAGES.map((p) => (
+        <button key={p.id} className={showing === p.id && tab === 'code' ? 'active' : ''} onClick={act(() => openPage(p.id))}>
+          <Icon name={p.icon} />
+          <span>{p.title}</span>
+          {p.id === 'mcp' && mcp.total > 0 && <span className="more-meta"><span className={`dot ${mcp.dot}`} /> {mcp.ok}/{mcp.total}</span>}
+        </button>
+      ))}
+      <span className="more-divider" />
+      <button onClick={act(onMacs)}>
+        <Icon name="vm" /><span>{macName || 'Macs'}</span><span className="more-meta">switch</span>
+      </button>
+      <button onClick={act(() => window.dispatchEvent(new Event('agentview:palette')))}>
+        <Icon name="terminal-cmd" /><span>Command Palette</span>
+      </button>
+    </Sheet>
   );
 }

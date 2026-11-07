@@ -166,6 +166,9 @@ Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0
 components/menus.css). Arrow keys, Home and End move, typing a letter focuses the next item starting with it (repeats cycle, a multi-letter buffer resets after 700ms), Esc closes and refocuses the trigger, a press
 outside closes. At max-width 480px the Menu is a bottom sheet portaled to the body (`--scrim` backdrop that closes it, 44px items, top radius `--radius-sheet`, `--safe-bottom` padding); the popover stays above 480px. Status: built; every menu uses it. cp-pop stays (it is a listbox), and `.as-menu` is the drawer hamburger button, not a menu.
 
+### Sheet
+`<Sheet label onClose className? overlayClassName? active? noSwipe?>` (web/src/ui/Sheet.tsx) is the bottom sheet. It provides the overlay (scrim, backdrop click closes with the slide-out), the drag handle, the Back entry, Escape and the `role="dialog"` card with `aria-label={label}`; children follow the handle. `className` is appended to `as-sheet`; `overlayClassName` replaces `as-sheet-overlay` (the More sheet uses `more-sheet-overlay mobile-only`). Mount it only while open (`{open && <Sheet>}`). Escape and Back close only the topmost active Sheet, one per press. A sheet that stays mounted under another passes `active={false}` so it registers neither (quick add under the date sheet). `noSwipe` sets `data-no-swipe`. New sheets use Sheet instead of copying the overlay, handle and dialog markup.
+
 ### Row
 Height `--row-h` 40px (`--touch` on coarse pointers), padding `--list-pad`. Leading check or
 icon, title in body type one line with ellipsis, meta in label type `--meta-fg`, trailing

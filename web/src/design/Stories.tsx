@@ -10,6 +10,7 @@ import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { EmptyState, Panel } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
+import { Sheet } from '../ui/Sheet';
 import { blockLink, designSearch, parseDesignQuery, type Width } from './url';
 
 const sizes = ['sm', 'md', 'lg'] as const;
@@ -41,6 +42,25 @@ function Block({ name, children }: { name: string; children: ReactNode }) {
         <div className="ds-block">{children}</div>
       </div>
     </Guard>
+  );
+}
+
+function SheetStory() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open sheet</Button>
+      {open && (
+        <Sheet label="Sample sheet" onClose={() => setOpen(false)}>
+          <Section label="Sample" />
+          <div className="as-group">
+            <Row plain title="First row" meta="Sample" />
+            <Row plain title="Second row" meta="Sample" />
+            <Row plain title="Third row" meta="Sample" />
+          </div>
+        </Sheet>
+      )}
+    </>
   );
 }
 
@@ -142,6 +162,9 @@ function Stories() {
       <Block name="Menu">
         <Story label="trigger, sheet on phone width"><MenuStory /></Story>
         <Story label="focused"><div className="ds-focus"><MenuItem>Focused item</MenuItem></div></Story>
+      </Block>
+      <Block name="Sheet">
+        <Story label="trigger, closes on Escape, Back or backdrop"><SheetStory /></Story>
       </Block>
       <Block name="Row">
         <Panel padding="sm">
