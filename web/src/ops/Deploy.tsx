@@ -17,10 +17,14 @@ import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 
 const short = (sha: string) => sha.slice(0, 7);
+const pendingLatest = (env: DeployEnv) => {
+  const l = env.latest;
+  return l?.state && l.state !== 'inactive' && !(l.id === env.deployed?.id && l.state === 'success') ? l : null;
+};
 const stateBadge = (env: DeployEnv) => {
-  const state = env.latest?.state;
-  if (!state || state === 'inactive' || (env.latest!.id === env.deployed?.id && state === 'success')) return null;
-  return state === 'success' ? <Badge status="done" reason="Deployed" /> : state === 'failure' || state === 'error' ? <Badge status="failed" /> : <Badge status="running" reason="Deploying" />;
+  const l = pendingLatest(env);
+  if (!l) return null;
+  return l.state === 'success' ? <Badge status="done" reason="Deployed" /> : l.state === 'failure' || l.state === 'error' ? <Badge status="failed" reason={l.description || undefined} /> : <Badge status="running" reason={l.description || 'Deploying'} />;
 };
 
 const jobs = createStore<Record<string, DeployJob | null>>({});
@@ -47,6 +51,7 @@ function EnvRow({ env, s, onDeploy, onRollback }: { env: DeployEnv; s: DeploySta
   const btn = useRef<HTMLButtonElement>(null);
   const run = (f: () => void) => () => { setMenu(false); f(); };
   const d = env.deployed;
+  const latest = pendingLatest(env);
   const meta = d ? `${d.ref || s.head.branch} · ${ago(d.at, ' ago')}${d.by ? ` by ${d.by}` : ''}${d.sha === s.head.sha ? ' · HEAD' : ''}` : 'Nothing deployed';
   return (
     <Row plain title={env.label} meta={meta} trailing={
@@ -59,6 +64,7 @@ function EnvRow({ env, s, onDeploy, onRollback }: { env: DeployEnv; s: DeploySta
             <Menu trigger={btn} onClose={() => setMenu(false)}>
               <MenuItem onClick={run(() => onDeploy())}>Deploy a branch or commit...</MenuItem>
               {d && <MenuItem href={`https://github.com/${s.repo}/commit/${d.sha}`} onClick={() => setMenu(false)}>Open {short(d.sha)} on GitHub</MenuItem>}
+              {latest?.url && <MenuItem href={latest.url} onClick={() => setMenu(false)}>Open the latest deploy</MenuItem>}
               <MenuItem disabled={!env.rollbackTo} title={env.rollbackTo ? undefined : 'No earlier deploy to roll back to'} onClick={run(onRollback)}>Roll back</MenuItem>
             </Menu>
           )}
