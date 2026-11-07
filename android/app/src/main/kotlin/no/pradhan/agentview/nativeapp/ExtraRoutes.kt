@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,18 +40,18 @@ fun ExtraContent(
         route == "meetings" -> MeetingsListPage(st, profile, now, chips, decisions, onChip, openMeeting)
         route.startsWith("meeting:") -> {
             val m = st.meetings.firstOrNull { it.key == key && !it.deleted }
-            if (m == null) Empty("This meeting is gone") else MeetingPage(hub, st, m, now, actions, openMeeting, { push("person:$it") }, onTask)
+            if (m == null) EmptyState("This meeting is gone") else MeetingPage(hub, st, m, now, actions, openMeeting, { push("person:$it") }, onTask)
         }
         route.startsWith("person:") -> PersonPage(st, key, now, openMeeting, { p, id -> push("wiki:$p:$id") }, onTask)
         route == "wiki" -> WikiIndexPage(st, profile, now, { push("wiki:${it.key}") }, { f -> claimRoute(f)?.let(push) })
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == key && !it.deleted }
-            if (p == null) Empty("This page is gone") else WikiPageView(st, p, now)
+            if (p == null) EmptyState("This page is gone") else WikiPageView(st, p, now)
         }
         route == "jobs" -> JobsListPage(hub, st, profile, now) { push("job:${it.key}") }
         else -> {
             val j = st.jobs.firstOrNull { it.key == key && !it.deleted }
-            if (j == null) Empty("This job is gone") else JobPageView(hub, st, j, now)
+            if (j == null) EmptyState("This job is gone") else JobPageView(hub, st, j, now)
         }
     }
 }
@@ -60,13 +59,13 @@ fun ExtraContent(
 @Composable
 fun ExtraMenu(route: String, hub: Hub, profile: String?, now: Long, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, onDecisions: () -> Unit, push: (String) -> Unit, close: () -> Unit) {
     if (route != "meetings") return
-    DropdownMenuItem(text = { Text("Decisions") }, leadingIcon = if (decisions) { { Icon(Icons.Filled.Check, null) } } else null, onClick = { close(); onDecisions() })
-    DropdownMenuItem(text = { Text("Take notes") }, onClick = {
+    MenuItem("Decisions", { close(); onDecisions() }, checked = decisions)
+    MenuItem("Take notes", {
         close()
         val row = newNotes(if (profile == PERSONAL) PERSONAL else WORK, now)
         if (hub.codex.add(row)) push("meeting:${row.key}")
     })
     MEETING_CHIPS.forEach { c ->
-        DropdownMenuItem(text = { Text(c) }, leadingIcon = if (c in chips) { { Icon(Icons.Filled.Check, null) } } else null, onClick = { close(); onChip(c) })
+        MenuItem(c, { close(); onChip(c) }, checked = c in chips)
     }
 }

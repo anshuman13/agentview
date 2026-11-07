@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,28 +9,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,8 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -99,23 +92,33 @@ fun App(hub: Hub) {
     val shownChat = state.live.firstOrNull { it.id == state.shownId }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snack) },
+        containerColor = if (route == Tab.Codex.route && !more) av.groupPage else av.bg,
+        contentColor = av.fg,
+        snackbarHost = { SnackHost(snack) },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                Tab.entries.forEach { t ->
-                    val badge = when (t) {
-                        Tab.Chat -> shownChat?.pending ?: 0
-                        Tab.Sessions -> state.live.filter { it.id != state.shownId }.sumOf { it.pending }
-                        else -> 0
-                    }
-                    NavigationBarItem(
-                        selected = route == t.route && !more,
-                        onClick = { more = false; nav.goTab(t.route) },
-                        icon = { BadgedBox(badge = { if (badge > 0) Badge { Text("$badge") } }) { Icon(icon(t), null) } },
-                        label = { Text(t.label) },
+            Column {
+                HorizontalDivider(color = av.border, thickness = Tokens.hairline)
+                NavigationBar(containerColor = av.surface) {
+                    val colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = av.fg, selectedTextColor = av.fg, indicatorColor = av.surface,
+                        unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
                     )
+                    Tab.entries.forEach { t ->
+                        val badge = when (t) {
+                            Tab.Chat -> shownChat?.pending ?: 0
+                            Tab.Sessions -> state.live.filter { it.id != state.shownId }.sumOf { it.pending }
+                            else -> 0
+                        }
+                        NavigationBarItem(
+                            selected = route == t.route && !more,
+                            onClick = { more = false; nav.goTab(t.route) },
+                            icon = { BadgedBox(badge = { if (badge > 0) Badge("$badge", BadgeTone.Waiting) }) { Icon(icon(t), null, Modifier.size(Tokens.iconLg)) } },
+                            label = { Text(t.label, style = Type.label) },
+                            colors = colors,
+                        )
+                    }
+                    NavigationBarItem(selected = more || inMore, onClick = { more = true }, icon = { Icon(Icons.Filled.Menu, null, Modifier.size(Tokens.iconLg)) }, label = { Text("More", style = Type.label) }, colors = colors)
                 }
-                NavigationBarItem(selected = more || inMore, onClick = { more = true }, icon = { Icon(Icons.Filled.Menu, null) }, label = { Text("More") })
             }
         },
     ) { pad ->
@@ -136,40 +139,27 @@ fun App(hub: Hub) {
 
     if (more) {
         val go = { r: String -> more = false; nav.navigate(r) { launchSingleTop = true } }
-        ModalBottomSheet(onDismissRequest = { more = false }) {
-            Column(Modifier.padding(bottom = Sp.s8)) {
-                MORE_TOOLS.forEach { SheetRow(it.label) { go("more/${it.route}") } }
-                Text("Tools", Modifier.padding(horizontal = Sp.s8, vertical = Sp.s4), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                MORE_PAGES.forEach { SheetRow(it.label) { go("more/${it.route}") } }
-                SheetRow("Mac address") { go(ORIGIN_ROUTE) }
-            }
+        Sheet(onDismiss = { more = false }, padded = false, full = false) {
+            MORE_TOOLS.forEach { ListRow(it.label, onClick = { go("more/${it.route}") }) }
+            SectionHeader("Tools")
+            MORE_PAGES.forEach { ListRow(it.label, onClick = { go("more/${it.route}") }) }
+            ListRow("Mac address", onClick = { go(ORIGIN_ROUTE) })
         }
     }
-}
-
-@Composable
-private fun SheetRow(label: String, onClick: () -> Unit) {
-    Text(label, Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = Sp.s8, vertical = Sp.s6), style = MaterialTheme.typography.bodyLarge)
 }
 
 @Composable
 private fun OfflineBanner(onRetry: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = Sp.s8), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("Offline. Trying to reconnect...", color = av.warn, style = MaterialTheme.typography.labelMedium)
-        TextButton(onClick = onRetry) { Text("Retry") }
+    Row(Modifier.fillMaxWidth().background(av.warnSoft).padding(start = Tokens.listPad, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("Offline. Trying to reconnect...", color = av.warn, style = Type.subheadline)
+        Button("Retry", onRetry, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Placeholder(title: String, onBack: (() -> Unit)? = null) {
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text(title) },
-            navigationIcon = { if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-        )
-        Box(Modifier.fillMaxSize().padding(Sp.s12), contentAlignment = Alignment.Center) {
-            Text("$title is not built yet.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        PageHeader(title, onBack)
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { EmptyState("$title is not built yet.", small = false) }
     }
 }

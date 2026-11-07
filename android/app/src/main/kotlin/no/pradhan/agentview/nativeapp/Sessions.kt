@@ -12,24 +12,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,19 +28,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.ui.draw.rotate
 
 private const val RECENT = 5
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val state by hub.store.state.collectAsState()
@@ -133,27 +117,23 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("Sessions") },
-            actions = { IconButton(onClick = { hub.refreshWorkspace(force = true) }) { Icon(Icons.Filled.Refresh, "Refresh") } },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = av.bg),
-        )
-        SearchField(filter) { filter = it }
+        PageHeader("Sessions") { IconBtn(Icons.Filled.Refresh, "Refresh", { hub.refreshWorkspace(force = true) }) }
+        SearchField(filter, { filter = it }, "Search repos and sessions")
         if (live.isEmpty() && ws.saved.isEmpty()) {
-            Text(if (connected) "No sessions yet" else "Waiting for the server. Check the Mac address.", Modifier.padding(Sp.s8), color = av.fgMuted)
+            EmptyState(if (connected) "No sessions yet" else "Waiting for the server", if (connected) null else "Check the Mac address.")
             return@Column
         }
         if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty()) {
-            Text(if (filter.isNotBlank()) "No repo or session matches" else "No sessions yet", Modifier.padding(Sp.s8), color = av.fgMuted)
+            EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No sessions yet")
             return@Column
         }
         LazyColumn(Modifier.fillMaxSize()) {
             if (waiting.isNotEmpty()) {
-                item(key = "needs-head") { SectionHead("Needs you", waiting.size, av.warn) }
+                item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
                 items(waiting.size, key = { "needs-${waiting[it].id}" }) { Box { liveRow(waiting[it], folderName(folderKey(waiting[it].cwd, ws.repos, ws.trees))) } }
             }
             if (pinned.isNotEmpty()) {
-                item(key = "pinned-head") { SectionHead("Pinned", pinned.size, av.fgMuted) }
+                item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
                 items(pinned.size, key = { "pin-${pinned[it].first?.id ?: pinned[it].second?.sessionId}" }) { i ->
                     val (c, s) = pinned[i]
                     val repo = folderName(folderKey(c?.cwd ?: s!!.cwd, ws.repos, ws.trees))
@@ -170,12 +150,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                     items(recent.size, key = { "r-${recent[it].sessionId}" }) { Box { savedRow(recent[it]) } }
                     if (filter.isBlank() && g.recent.size > RECENT) item(key = "m-${g.key}") {
                         val all = g.key in full
-                        Text(
-                            if (all) "Show less" else "Show ${g.recent.size - RECENT} more",
-                            Modifier.fillMaxWidth().clickable { if (all) full.remove(g.key) else full.add(g.key) }.padding(start = Sp.s12, top = Sp.s5, bottom = Sp.s5),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = av.fgMuted,
-                        )
+                        Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.sp12), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     }
                 }
             }
@@ -190,87 +165,49 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit)
 
 @Composable
-private fun SearchField(value: String, onChange: (String) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = Sp.s6, vertical = Sp.s2).background(av.surface, RoundedCornerShape(10.dp)).padding(horizontal = Sp.s5).heightIn(min = 40.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Sp.s4),
-    ) {
-        Icon(Icons.Filled.Search, null, Modifier.size(18.dp), tint = av.fgMuted)
-        Box(Modifier.weight(1f)) {
-            if (value.isEmpty()) Text("Search repos and sessions", style = MaterialTheme.typography.bodySmall, color = av.fgFaint)
-            BasicTextField(value, onChange, Modifier.fillMaxWidth(), singleLine = true, textStyle = MaterialTheme.typography.bodySmall.copy(color = av.fg), cursorBrush = SolidColor(av.accent))
-        }
-        if (value.isNotEmpty()) Icon(Icons.Filled.Close, "Clear", Modifier.size(18.dp).clickable { onChange("") }, tint = av.fgMuted)
-    }
-}
-
-@Composable
-private fun SectionHead(label: String, count: Int, color: Color) {
-    Row(Modifier.fillMaxWidth().padding(start = Sp.s8, end = Sp.s8, top = Sp.s6, bottom = Sp.s2), horizontalArrangement = Arrangement.spacedBy(Sp.s4), verticalAlignment = Alignment.CenterVertically) {
-        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.SemiBold, letterSpacing = androidx.compose.ui.unit.TextUnit(0.5f, androidx.compose.ui.unit.TextUnitType.Sp))
-        Text("$count", style = MaterialTheme.typography.labelSmall, color = color)
-    }
-}
-
-@Composable
 private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, onToggle: () -> Unit) {
     val glance = groupGlance(g, seen)
-    Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).heightIn(min = Sp.touch).padding(horizontal = Sp.s8), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
-        Text(if (open) "⌄" else "›", color = av.fgMuted, modifier = Modifier.size(16.dp))
-        Text(g.name, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).heightIn(min = Tokens.touch).padding(horizontal = Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon).rotate(if (open) 90f else 0f), tint = av.fgMuted)
+        Text(g.name, Modifier.weight(1f), style = Type.headline, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (open) {
-            if (g.running > 0) Count(g.running, av.accentText)
-            if (g.waiting > 0) Count(g.waiting, av.warn)
-            Text("${g.open.count { it.pending == 0 } + g.recent.size}", style = MaterialTheme.typography.labelMedium, color = av.fgMuted)
+            if (g.running > 0) Badge("${g.running}", BadgeTone.Running)
+            if (g.waiting > 0) Badge("${g.waiting}", BadgeTone.Waiting)
+            Badge("${g.open.count { it.pending == 0 } + g.recent.size}", BadgeTone.Quiet)
         } else {
-            if (glance.running > 0) Count(glance.running, av.accentText)
-            if (glance.needs > 0) Count(glance.needs, av.warn)
-            if (glance.unread > 0) Count(glance.unread, av.fgMuted)
-            if (glance.last > 0) Text(since(glance.last), style = MaterialTheme.typography.labelSmall, color = av.fgFaint)
+            if (glance.running > 0) Badge("${glance.running}", BadgeTone.Running)
+            if (glance.needs > 0) Badge("${glance.needs}", BadgeTone.Waiting)
+            if (glance.unread > 0) Badge("${glance.unread}", BadgeTone.Quiet)
+            if (glance.last > 0) RowLabel(since(glance.last), av.fgFaint)
         }
     }
-}
-
-@Composable
-private fun Count(n: Int, color: Color) {
-    Text("$n", Modifier.background(color.copy(alpha = 0.18f), CircleShape).padding(horizontal = Sp.s4, vertical = 1.dp), style = MaterialTheme.typography.labelSmall, color = color)
 }
 
 @Composable
 private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, muted: Boolean = false) {
-    var menu by remember { mutableStateOf(false) }
     val dot = when (state) {
-        ChatState.Needs -> av.warn
-        ChatState.Failed -> av.err
-        ChatState.Running -> av.accentText
-        ChatState.Done -> av.accentText
-        null -> Color.Transparent
+        ChatState.Needs -> DotState.Warn
+        ChatState.Failed -> DotState.Bad
+        ChatState.Running -> DotState.Running
+        ChatState.Done -> DotState.Busy
+        null -> null
     }
-    Row(
-        Modifier.fillMaxWidth().background(if (selected) av.surface else Color.Transparent).clickable(onClick = onClick).heightIn(min = 52.dp).padding(start = Sp.s8, top = Sp.s3, bottom = Sp.s3),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Sp.s5),
-    ) {
-        Box(Modifier.size(8.dp).background(dot, CircleShape))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyMedium, color = if (muted) av.fgMuted else av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(meta, style = MaterialTheme.typography.labelMedium, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        when (state) {
-            ChatState.Needs -> Text("Needs you", style = MaterialTheme.typography.labelSmall, color = av.warn)
-            ChatState.Failed -> Text("Failed", style = MaterialTheme.typography.labelSmall, color = av.err)
-            ChatState.Running -> Text("Running", style = MaterialTheme.typography.labelSmall, color = av.accentText)
-            else -> {}
-        }
-        Box {
-            IconButton(onClick = { menu = true }, Modifier.size(Sp.touch)) { Icon(Icons.Filled.MoreVert, "More", Modifier.size(20.dp), tint = av.fgMuted) }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                if (actions.canPin) DropdownMenuItem(text = { Text(if (actions.pinned) "Unpin" else "Pin") }, onClick = { menu = false; actions.onPin() })
-                if (actions.canPin) DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; actions.onRename() })
-                actions.onClose?.let { close -> DropdownMenuItem(text = { Text("Close chat") }, onClick = { menu = false; close() }) }
-                if (actions.canPin) { HorizontalDivider(color = av.border); DropdownMenuItem(text = { Text("Archive", color = av.err) }, onClick = { menu = false; actions.onArchive() }) }
+    ListRow(
+        title, meta, lines = 1, muted = muted, selected = selected, onClick = onClick,
+        leading = { if (dot != null) StatusDot(dot) },
+        trailing = {
+            when (state) {
+                ChatState.Needs -> RowLabel("Needs you", av.warn)
+                ChatState.Failed -> RowLabel("Failed", av.err)
+                ChatState.Running -> RowLabel("Running", av.accentText)
+                else -> {}
             }
-        }
-    }
+            MoreButton { close ->
+                if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", { close(); actions.onPin() })
+                if (actions.canPin) MenuItem("Rename", { close(); actions.onRename() })
+                actions.onClose?.let { c -> MenuItem("Close chat", { close(); c() }) }
+                if (actions.canPin) { MenuSeparator(); MenuItem("Archive", { close(); actions.onArchive() }, danger = true) }
+            }
+        },
+    )
 }

@@ -18,26 +18,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -51,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -73,8 +61,8 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
     if (chosen == null) {
         androidx.compose.material3.DatePickerDialog(
             onDismissRequest = onDismiss,
-            confirmButton = { TextButton(onClick = { picker.selectedDateMillis?.let { day = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() } }) { Text("Next") } },
-            dismissButton = { TextButton(onClick = { onPick(null); onDismiss() }) { Text("No due") } },
+            confirmButton = { Button("Next", { picker.selectedDateMillis?.let { day = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
+            dismissButton = { Button("No due", { onPick(null); onDismiss() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
         ) { DatePicker(picker) }
         return
     }
@@ -83,13 +71,13 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
         onDismissRequest = onDismiss,
         title = { Text(dayLabel(atHour(chosen, 12))) },
         text = { TimePicker(time) },
-        confirmButton = { TextButton(onClick = { onPick(atHour(chosen, time.hour, time.minute)); onDismiss() }) { Text("Set") } },
+        confirmButton = { Button("Set", { onPick(atHour(chosen, time.hour, time.minute)); onDismiss() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
         dismissButton = {
-            TextButton(onClick = {
+            Button("No time", {
                 val t = atHour(chosen, MORNING)
                 onPick(if (dayStart(t) == dayStart(now)) null else t)
                 onDismiss()
-            }) { Text("No time") }
+            }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         },
     )
 }
@@ -108,31 +96,33 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, onD
         if (text != (latest.text ?: "")) patch["text"] = text.trim().ifEmpty { null }
         if (patch.isNotEmpty()) actions.edit(latest, patch)
     }
-    ModalBottomSheet(onDismissRequest = { commit(); onDismiss() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.verticalScroll(rememberScrollState()).imePadding().navigationBarsPadding().padding(horizontal = Sp.s8, vertical = Sp.s4), verticalArrangement = Arrangement.spacedBy(Sp.s6)) {
-            OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("Title") })
-            OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text("Notes") }, minLines = 3)
-            Text("Due", style = MaterialTheme.typography.labelLarge, color = av.fgMuted)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
-                AssistChip(onClick = { pickDue = true }, label = { Text(dueLabel(row.at, now)) }, leadingIcon = { Icon(Icons.Filled.DateRange, null) })
-                if (row.at != null) AssistChip(onClick = { actions.due(row, null) }, label = { Text("Clear") })
+    Sheet(onDismiss = { commit(); onDismiss() }) {
+        Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+            FieldLabel("Title")
+            TextField(title, { title = it }, placeholder = "Title", style = Type.headline.copy(fontSize = Tokens.fs3xl))
+            FieldLabel("Notes")
+            TextField(text, { text = it }, placeholder = "Notes", minLines = 3)
+            FieldLabel("Due")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                Chip(dueLabel(row.at, now), { pickDue = true }, icon = Icons.Filled.DateRange, on = row.at != null, late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open", quiet = row.at == null)
+                if (row.at != null) Chip("Clear", { actions.due(row, null) })
             }
-            Text("Snooze", style = MaterialTheme.typography.labelLarge, color = av.fgMuted)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
+            FieldLabel("Snooze")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 SNOOZES.forEach { s ->
                     val at = s.at(now, row.profile)
-                    AssistChip(onClick = { actions.snooze(row, at) }, label = { Text("${s.label} · ${whenText(at, now)}") })
+                    Chip("${s.label} · ${whenText(at, now)}", { actions.snooze(row, at) })
                 }
             }
-            Text("Priority", style = MaterialTheme.typography.labelLarge, color = av.fgMuted)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
-                PRIORITIES.forEach { (p, label) -> FilterChip(row.priority == p, { actions.edit(row, mapOf("priority" to p)) }, { Text(label) }) }
+            FieldLabel("Priority")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                PRIORITIES.forEach { (p, label) -> Chip(label, { actions.edit(row, mapOf("priority" to p)) }, on = row.priority == p) }
             }
-            Text("Tags", style = MaterialTheme.typography.labelLarge, color = av.fgMuted)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
+            FieldLabel("Tags")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 val tags = tagList(row.tags)
                 tags.forEach { t ->
-                    AssistChip(onClick = { actions.edit(row, mapOf("tags" to tags.filter { it != t }.joinToString(" ").ifEmpty { null })) }, label = { Text("#$t") }, trailingIcon = { Icon(Icons.Filled.Close, "Remove #$t", Modifier.padding(0.dp)) })
+                    Chip("#$t", { actions.edit(row, mapOf("tags" to tags.filter { it != t }.joinToString(" ").ifEmpty { null })) }, trailingIcon = Icons.Filled.Close, trailingLabel = "Remove #$t")
                 }
             }
             fun addTag() {
@@ -140,29 +130,28 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, onD
                 tag = ""
                 if (t.isNotEmpty()) actions.edit(row, mapOf("tags" to (tagList(row.tags) + t).distinct().joinToString(" ")))
             }
-            OutlinedTextField(tag, { tag = it }, Modifier.fillMaxWidth(), label = { Text("Add a tag") }, singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { addTag() }))
+            TextField(tag, { tag = it }, placeholder = "Add a tag", singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { addTag() }))
             val goals = remember(items, row.profile, now) { goalsOf(items, now, row.profile) }
             val linked = row.goal?.let { g -> items.firstOrNull { it.profile == row.profile && it.id == g && !it.deleted } }
             if (goals.isNotEmpty() || linked != null) {
-                Text("Goal", style = MaterialTheme.typography.labelLarge, color = av.fgMuted)
+                FieldLabel("Goal")
                 var open by remember { mutableStateOf(false) }
                 Column {
-                    OutlinedButton(onClick = { open = true }) { Text(linked?.title ?: "No goal") }
-                    DropdownMenu(open, { open = false }) {
-                        DropdownMenuItem(text = { Text("No goal") }, onClick = { open = false; actions.edit(row, mapOf("goal" to null)) })
+                    Chip(linked?.title ?: "No goal", { open = true }, on = linked != null, quiet = linked == null, trailingIcon = Icons.Filled.ArrowDropDown)
+                    Menu(open, { open = false }) {
+                        MenuItem("No goal", { open = false; actions.edit(row, mapOf("goal" to null)) })
                         (if (linked != null && linked !in goals) listOf(linked) + goals else goals).forEach { g ->
-                            DropdownMenuItem(text = { Text(g.title ?: "") }, onClick = { open = false; actions.edit(row, mapOf("goal" to g.id)) })
+                            MenuItem(g.title ?: "", { open = false; actions.edit(row, mapOf("goal" to g.id)) })
                         }
                     }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
-                if (row.status == "done") OutlinedButton(onClick = { actions.reopen(row) }) { Text("Not done") }
-                else if (row.status == "open") Button(onClick = { commit(); actions.done(row); onDismiss() }) { Text("Done") }
-                OutlinedButton(onClick = { actions.move(row, if (row.profile == WORK) PERSONAL else WORK) }) { Text("Move to ${profileLabel(if (row.profile == WORK) PERSONAL else WORK)}") }
-                TextButton(onClick = { actions.delete(row); onDismiss() }) { Text("Delete", color = av.err) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                if (row.status == "done") Button("Not done", { actions.reopen(row) })
+                else if (row.status == "open") Button("Done", { commit(); actions.done(row); onDismiss() }, variant = ButtonVariant.Filled)
+                Button("Move to ${profileLabel(if (row.profile == WORK) PERSONAL else WORK)}", { actions.move(row, if (row.profile == WORK) PERSONAL else WORK) })
+                Button("Delete", { actions.delete(row); onDismiss() }, variant = ButtonVariant.Danger)
             }
-            Spacer(Modifier.padding(bottom = Sp.s8))
         }
     }
     if (pickDue) DueDialog(row.at, now, { actions.due(row, it) }, { pickDue = false })
@@ -194,19 +183,19 @@ fun AddSheet(hub: Hub, profile: String?, now: Long, onDismiss: () -> Unit, onAdd
             }
         }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.imePadding().navigationBarsPadding().padding(horizontal = Sp.s8, vertical = Sp.s4), verticalArrangement = Arrangement.spacedBy(Sp.s6)) {
-            OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth().focusRequester(focus), placeholder = { Text("What would you like to do?") }, singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { add() }))
-            OutlinedTextField(notes, { notes = it }, Modifier.fillMaxWidth(), placeholder = { Text("Description") }, minLines = 2)
+    Sheet(onDismiss) {
+        Column(Modifier.imePadding().padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+            TextField(title, { title = it }, Modifier.focusRequester(focus), placeholder = "What would you like to do?", singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { add() }))
+            TextField(notes, { notes = it }, placeholder = "Description", minLines = 2)
             val hint = listOfNotNull(parsed.at?.let { "Due ${whenText(it, now)}" }, parsed.repeat?.substringAfter("Repeats: "), parsed.tags.takeIf { it.isNotEmpty() }?.joinToString(" ") { "#$it" }).joinToString(" · ")
-            if (hint.isNotEmpty()) Text(hint, style = MaterialTheme.typography.labelMedium, color = av.accentText)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(Sp.s4), verticalArrangement = Arrangement.spacedBy(Sp.s2)) {
-                AssistChip(onClick = { pickDue = true }, label = { Text(if (picked) dueLabel(due, now) else "Date") }, leadingIcon = { Icon(Icons.Filled.DateRange, null) })
-                AssistChip(onClick = { priority = (priority + 3) % 4 }, label = { Text("Priority: ${priorityLabel(priority)}") })
-                if (profile == null) AssistChip(onClick = { target = if (target == WORK) PERSONAL else WORK }, label = { Text(profileLabel(target)) })
+            if (hint.isNotEmpty()) Text(hint, style = Type.subheadline, color = av.accentText)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+                Chip(if (picked) dueLabel(due, now) else "Date", { pickDue = true }, icon = Icons.Filled.DateRange, on = picked, quiet = !picked)
+                Chip("Priority: ${priorityLabel(priority)}", { priority = (priority + 3) % 4 }, on = priority > 0)
+                if (profile == null) Chip(profileLabel(target), { target = if (target == WORK) PERSONAL else WORK }, tone = if (target == WORK) ChipTone.Work else ChipTone.Personal)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Button(onClick = { add() }, enabled = parsed.title.isNotEmpty()) { Icon(Icons.AutoMirrored.Filled.Send, null); Text("  Add task") }
+                Button("Add task", { add() }, variant = ButtonVariant.Filled, icon = Icons.AutoMirrored.Filled.Send, enabled = parsed.title.isNotEmpty())
             }
         }
     }
@@ -229,11 +218,10 @@ fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Ca
 @Composable
 fun NeedsSheet(needs: List<Need>, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onDismiss: () -> Unit) {
     var all by remember { mutableStateOf(setOf<String>()) }
-    @OptIn(ExperimentalMaterial3Api::class)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = Sp.s8)) {
+    Sheet(onDismiss, padded = false) {
+        Column(Modifier.verticalScroll(rememberScrollState())) {
             val groups = listOf("Tasks" to needs.filter { it.isTask }, "Asks" to needs.filter { !it.isTask }).filter { it.second.isNotEmpty() }
-            if (groups.isEmpty()) Empty("Nothing needs you")
+            if (groups.isEmpty()) EmptyState("Nothing needs you")
             groups.forEach { (label, rows) ->
                 SectionHeader(label, rows.size.toString())
                 val shown = if (label in all) rows else rows.take(NEEDS_CAP)
@@ -242,7 +230,7 @@ fun NeedsSheet(needs: List<Need>, now: Long, actions: TaskActions, hub: Hub, onO
                         if (i > 0) Hairline()
                         NeedRow(n, now, actions, hub, onOpen)
                     }
-                    if (shown.size < rows.size) { Hairline(); PlainRow("Show all ${rows.size}", onClick = { all = all + label }) }
+                    if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
                 }
             }
         }
@@ -252,13 +240,13 @@ fun NeedsSheet(needs: List<Need>, now: Long, actions: TaskActions, hub: Hub, onO
 @Composable
 private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit) {
     when (n) {
-        is Need.Overdue -> PlainRow(n.row.title ?: "", n.row.at?.let { "Overdue · due ${whenText(it, now)}" }, leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
-            trailing = { MoreButton { close -> DropdownMenuItem(text = { Text("Snooze to next 09:00") }, onClick = { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
-        is Need.OverdueAll -> PlainRow("${n.rows.size} overdue", "Move them all to today", trailing = { TextButton(onClick = { actions.moveToToday(n.rows) }) { Text("Move to today") } })
-        is Need.JustEnded -> PlainRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
-        is Need.Ask -> PlainRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · "), onClick = { onOpen(n.row) },
-            trailing = { Row { TextButton(onClick = { actions.dismiss(n.row) }) { Text("Dismiss", color = av.fgMuted) }; TextButton(onClick = { actions.accept(n.row) }) { Text("Add") } } })
-        is Need.Dm -> PlainRow(n.chat.str("name") ?: "DM", "DM · ${n.chat.str("summary") ?: ""}",
-            trailing = { TextButton(onClick = { hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) }) { Text("Make task") } })
+        is Need.Overdue -> ListRow(n.row.title ?: "", n.row.at?.let { "Overdue · due ${whenText(it, now)}" }, leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
+            trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
+        is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
+        is Need.JustEnded -> ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
+        is Need.Ask -> ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · "), onClick = { onOpen(n.row) },
+            trailing = { Row { Button("Dismiss", { actions.dismiss(n.row) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm); Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } })
+        is Need.Dm -> ListRow(n.chat.str("name") ?: "DM", "DM · ${n.chat.str("summary") ?: ""}",
+            trailing = { Button("Make task", { hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
     }
 }

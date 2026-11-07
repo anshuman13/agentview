@@ -16,9 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -35,14 +33,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun inlineText(inlines: List<Inline>): AnnotatedString {
     val c = av
-    val code = SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, background = c.surface)
-    val link = TextLinkStyles(SpanStyle(color = c.accentText))
+    val code = SpanStyle(fontFamily = FontFamily.Monospace, fontSize = Geometry.mono, background = c.hover)
+    val link = TextLinkStyles(SpanStyle(color = c.link))
     return remember(inlines, c) {
         buildAnnotatedString {
             fun walk(list: List<Inline>) {
@@ -69,35 +65,35 @@ fun Markdown(text: String, modifier: Modifier = Modifier) {
 
 @Composable
 private fun MdBlocks(blocks: List<MdBlock>, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(Sp.s4)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         for (b in blocks) MdBlockView(b)
     }
 }
 
 @Composable
 private fun MdBlockView(b: MdBlock) {
-    val body = MaterialTheme.typography.bodyMedium
+    val body = Type.body.copy(color = av.fg)
     when (b) {
         is MdBlock.Para -> Text(inlineText(b.inlines), style = body)
         is MdBlock.Heading -> Text(
             inlineText(b.inlines),
-            style = if (b.level <= 1) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(top = Sp.s3),
+            style = (if (b.level <= 1) Type.title.copy(fontSize = Tokens.fs3xl) else Type.headline).copy(color = av.fg),
+            modifier = Modifier.padding(top = Tokens.sp3),
         )
         is MdBlock.Code -> CodeBlock(b.text, b.lang)
         is MdBlock.Quote -> Row(Modifier.height(IntrinsicSize.Min)) {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(av.border))
-            MdBlocks(b.blocks, Modifier.padding(start = Sp.s4))
+            Box(Modifier.width(Geometry.bar).fillMaxHeight().background(av.borderStrong))
+            MdBlocks(b.blocks, Modifier.padding(start = Tokens.sp4))
         }
-        is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Sp.s1)) {
+        is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
             b.items.forEachIndexed { n, item ->
                 Row {
-                    Text(if (b.ordered) "${b.start + n}." else "•", style = body, color = av.fgMuted, modifier = Modifier.width(24.dp).padding(start = Sp.s2))
+                    Text(if (b.ordered) "${b.start + n}." else "•", style = body, color = av.fgMuted, modifier = Modifier.width(Geometry.leadWidth).padding(start = Tokens.sp2))
                     MdBlocks(item, Modifier.weight(1f))
                 }
             }
         }
-        MdBlock.Rule -> HorizontalDivider(color = av.border)
+        MdBlock.Rule -> HorizontalDivider(color = av.border, thickness = Tokens.hairline)
         is MdBlock.Table -> TableView(b)
     }
 }
@@ -105,18 +101,17 @@ private fun MdBlockView(b: MdBlock) {
 @Composable
 fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
     val clip = LocalClipboardManager.current
-    Column(modifier.fillMaxWidth().background(av.surface, RoundedCornerShape(4.dp)).border(BorderStroke(1.dp, av.border), RoundedCornerShape(4.dp))) {
-        Row(Modifier.fillMaxWidth().padding(start = Sp.s5, end = Sp.s5, top = Sp.s2), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(lang, style = MaterialTheme.typography.labelSmall, color = av.fgFaint)
-            Text("Copy", style = MaterialTheme.typography.labelSmall, color = av.accentText, modifier = Modifier.clickable { clip.setText(AnnotatedString(text)) })
+    Column(modifier.well(av)) {
+        Row(Modifier.fillMaxWidth().padding(start = Tokens.sp5, end = Tokens.sp5, top = Tokens.sp2), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(lang, style = Type.footnote, color = av.fgFaint)
+            Text("Copy", style = Type.footnote, color = av.accentText, modifier = Modifier.clickable { clip.setText(AnnotatedString(text)) })
         }
         Text(
             text,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-            lineHeight = 18.sp,
+            style = Mono,
+            color = av.fg,
             softWrap = false,
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Sp.s5, vertical = Sp.s4),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.sp5, vertical = Tokens.sp4),
         )
     }
 }
@@ -131,9 +126,9 @@ private fun TableView(t: MdBlock.Table) {
                 for (c in 0 until cols) {
                     Text(
                         inlineText(row.getOrElse(c) { emptyList() }),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Type.subheadline.copy(color = av.fg),
                         fontWeight = if (r == 0 && t.header.isNotEmpty()) FontWeight.SemiBold else null,
-                        modifier = Modifier.width(140.dp).border(BorderStroke(0.5.dp, av.border)).padding(horizontal = Sp.s4, vertical = Sp.s2),
+                        modifier = Modifier.width(Geometry.tableCell).border(BorderStroke(Tokens.hairline, av.border)).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2),
                     )
                 }
             }

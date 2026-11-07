@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,22 +19,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
@@ -116,7 +110,7 @@ fun CodexScreen(hub: Hub) {
     BackHandler(enabled = sub || searching) { back() }
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().background(av.groupPage)) {
         Column(Modifier.fillMaxSize()) {
             CodexTopBar(
                 title = when {
@@ -131,21 +125,21 @@ fun CodexScreen(hub: Hub) {
                 filter = filterKey, onFilter = hub::setCodexFilter,
                 onSearch = if (route == null && (page == "overview" || page == "tasks")) { { page = "tasks"; searching = true } } else null,
                 menu = if (route != null) (if (route == "meetings") { close -> ExtraMenu(route, hub, profile, now, chips, decisions, onChip, { decisions = !decisions }, push, close) } else null) else { close ->
-                    DropdownMenuItem(text = { Text("Goals") }, onClick = { close(); page = "goals" })
-                    DropdownMenuItem(text = { Text("Search everything") }, onClick = { close(); page = "search" })
-                    DropdownMenuItem(text = { Text("Meetings") }, onClick = { close(); push("meetings") })
-                    DropdownMenuItem(text = { Text("Wiki") }, onClick = { close(); push("wiki") })
-                    DropdownMenuItem(text = { Text("Jobs") }, onClick = { close(); push("jobs") })
+                    MenuItem("Goals", { close(); page = "goals" })
+                    MenuItem("Search everything", { close(); page = "search" })
+                    MenuItem("Meetings", { close(); push("meetings") })
+                    MenuItem("Wiki", { close(); push("wiki") })
+                    MenuItem("Jobs", { close(); push("jobs") })
                 },
             )
-            if (!sub) Row(Modifier.padding(horizontal = Sp.s6), horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
-                FilterChip(page == "overview", { page = "overview" }, { Text("Overview") })
-                FilterChip(page == "tasks", { page = "tasks" }, { Text("Tasks") })
+            if (!sub) Row(Modifier.padding(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                Chip("Overview", { page = "overview" }, on = page == "overview")
+                Chip("Tasks", { page = "tasks" }, on = page == "tasks")
             }
-            st.error?.let { Text("Sync failed: $it. Tap to retry.", Modifier.fillMaxWidth().clickable { refresh() }.padding(Sp.s8), style = MaterialTheme.typography.labelMedium, color = av.warn) }
+            st.error?.let { Text("Sync failed: $it. Tap to retry.", Modifier.fillMaxWidth().clickable { refresh() }.padding(Tokens.sp8), style = Type.subheadline, color = av.warn) }
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
                 when {
-                    !st.loaded -> Empty("Loading Codex...")
+                    !st.loaded -> EmptyState("Loading Codex...")
                     route != null -> ExtraContent(route, hub, st, profile, now, actions, chips, decisions, onChip, push) { editKey = it.key }
                     page == "overview" -> OverviewPage(hub, st, profile, now, actions, { editKey = it.key }, { needsOpen = true }, { page = "goals" }, { adding = true }, { push("meeting:${it.key}") })
                     page == "tasks" -> TasksPage(st, profile, now, actions, searching, query, { query = it }, { editKey = it.key }, { page = "tag:$it" })
@@ -156,12 +150,11 @@ fun CodexScreen(hub: Hub) {
             }
             if (page == "overview" && route == null && st.loaded) AskBar(hub, st, profile)
         }
-        if (route == null && page != "goals" && page != "search") FloatingActionButton(
-            onClick = { adding = true },
-            Modifier.align(Alignment.BottomEnd).padding(end = Sp.s8, bottom = if (page == "overview") 88.dp else Sp.s8),
-            containerColor = av.accent, contentColor = androidx.compose.ui.graphics.Color.White,
-        ) { Icon(Icons.Filled.Add, "Add task") }
-        SnackbarHost(snack, Modifier.align(Alignment.BottomCenter))
+        if (route == null && page != "goals" && page != "search") Fab(
+            Icons.Filled.Add, "Add task", { adding = true },
+            Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp8, bottom = if (page == "overview") Geometry.fab + Tokens.sp16 else Tokens.sp8),
+        )
+        SnackHost(snack, Modifier.align(Alignment.BottomCenter))
     }
 
     editing?.let { row -> EditorSheet(row, st.items, now, actions) { editKey = null } }
@@ -176,19 +169,17 @@ fun CodexScreen(hub: Hub) {
 
 @Composable
 private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String, onFilter: (String) -> Unit, onSearch: (() -> Unit)?, menu: (@Composable (() -> Unit) -> Unit)?) {
-    Row(Modifier.fillMaxWidth().padding(start = Sp.s4, end = Sp.s2).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (back != null) IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-        Text(title, Modifier.weight(1f).padding(start = if (back == null) Sp.s4 else 0.dp), style = MaterialTheme.typography.titleLarge, maxLines = 1)
+    PageHeader(title, back) {
         var open by remember { mutableStateOf(false) }
         Box {
-            TextButton(onClick = { open = true }) { Text(if (filter == "all") "All" else profileLabel(filter)) }
-            androidx.compose.material3.DropdownMenu(open, { open = false }) {
+            Chip(if (filter == "all") "All" else profileLabel(filter), { open = true }, tone = when (filter) { WORK -> ChipTone.Work; PERSONAL -> ChipTone.Personal; else -> ChipTone.Default }, trailingIcon = Icons.Filled.ArrowDropDown)
+            Menu(open, { open = false }) {
                 listOf("all" to "All", WORK to "Work", PERSONAL to "Personal").forEach { (k, label) ->
-                    DropdownMenuItem(text = { Text(label) }, onClick = { open = false; onFilter(k) })
+                    MenuItem(label, { open = false; onFilter(k) }, checked = filter == k)
                 }
             }
         }
-        if (onSearch != null) IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, "Search tasks") }
+        if (onSearch != null) IconBtn(Icons.Filled.Search, "Search tasks", onSearch)
         if (menu != null) MoreButton { close -> menu(close) }
     }
 }
@@ -204,10 +195,10 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
             text = ""
         }
     }
-    Row(Modifier.fillMaxWidth().padding(horizontal = Sp.s6, vertical = Sp.s3), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(text, { text = it }, Modifier.weight(1f), placeholder = { Text("Ask Codex about your day") }, singleLine = true,
+    Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp6, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
+        TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Ask Codex about your day", singleLine = true, pill = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
-        IconButton(onClick = { send() }, enabled = text.isNotBlank()) { Icon(Icons.AutoMirrored.Filled.Send, "Send") }
+        IconBtn(Icons.AutoMirrored.Filled.Send, "Send", { send() }, enabled = text.isNotBlank(), on = text.isNotBlank())
     }
 }
 
@@ -231,7 +222,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                 Group {
                     mt.next?.let { MeetingRow(it, now, upNext = true) { onMeeting(it) } }
                     if (mt.next != null && task != null) Hairline()
-                    task?.let { PlainRow(it.title ?: "", it.at?.let { a -> clock(a) }, onClick = { onOpen(it) }, trailing = { TextButton(onClick = { actions.done(it) }) { Text("Done") } }) }
+                    task?.let { ListRow(it.title ?: "", it.at?.let { a -> clock(a) }, onClick = { onOpen(it) }, trailing = { Button("Done", { actions.done(it) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
                 }
             } else {
                 val later = s.later.filter { it.at != null }.minByOrNull { it.at!! }
@@ -240,51 +231,51 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                     mt.nextLater != null -> "Next: ${whenText(mt.nextLater.startsAt!!, now)} ${mt.nextLater.title}"
                     else -> "Nothing planned. Add a task to start the day."
                 }
-                Empty("Nothing today", hint)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { TextButton(onClick = onAdd) { Text("New task") } }
+                EmptyState("Nothing today", hint)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { Button("New task", onAdd, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
             }
             if (needs.isNotEmpty()) {
-                Group(Modifier.padding(top = Sp.s6)) { PlainRow("Needs you", onClick = onNeeds, trailing = { Text("${needs.size}  ›", style = MaterialTheme.typography.labelLarge, color = av.warn, modifier = Modifier.padding(end = Sp.s6)) }) }
+                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Text("${needs.size}  ›", style = Type.callout, color = av.warn, modifier = Modifier.padding(end = Tokens.sp6)) }) }
             }
         }
         if (rows.isNotEmpty()) {
-            item { SectionHeader("Today", action = doneCount(s.doneToday.size, today.openCount)?.let { t -> { Text(t, style = MaterialTheme.typography.labelMedium, color = av.fgFaint, modifier = Modifier.padding(end = Sp.s4)) } }) }
+            item { SectionHeader("Today", action = doneCount(s.doneToday.size, today.openCount)?.let { t -> { Text(t, style = Type.subheadline, color = av.fgFaint, modifier = Modifier.padding(end = Tokens.sp4)) } }) }
             val shown = if (all) rows else rows.take(TODAY_SHOWN)
             item {
                 Group {
                     shown.forEachIndexed { i, (_, m, r) ->
                         if (i > 0) Hairline()
                         if (m != null) MeetingRow(m, now, upNext = false) { onMeeting(m) }
-                        else if (r != null) PlainRow(
+                        else if (r != null) ListRow(
                             r.title ?: "", if (r in today.late) null else r.at?.let { clock(it) },
                             leading = { CheckCircle(false, "Mark ${r.title} done") { actions.done(r) } },
                             trailing = {
-                                if (r in today.late) Text("Overdue", style = MaterialTheme.typography.labelSmall, color = av.err)
+                                if (r in today.late) RowLabel("Overdue", av.err)
                                 MoreButton { close ->
-                                    DropdownMenuItem(text = { Text("Snooze to tomorrow") }, onClick = { close(); actions.snoozeLater(r) })
-                                    DropdownMenuItem(text = { Text("Open") }, onClick = { close(); onOpen(r) })
+                                    MenuItem("Snooze to tomorrow", { close(); actions.snoozeLater(r) })
+                                    MenuItem("Open", { close(); onOpen(r) })
                                 }
                             },
                             onClick = { onOpen(r) },
                         )
                     }
                 }
-                if (rows.size > shown.size) TextButton(onClick = { all = true }, Modifier.padding(start = Sp.s4)) { Text("Show all ${rows.size}") }
+                if (rows.size > shown.size) Button("Show all ${rows.size}", { all = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
         }
         if (goals.isNotEmpty()) {
-            item { SectionHeader("Goals this week", action = { TextButton(onClick = onGoals) { Text("All goals") } }) }
+            item { SectionHeader("Goals this week", action = { Button("All goals", onGoals, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             item {
                 Group {
                     goals.forEachIndexed { i, g ->
                         if (i > 0) Hairline()
                         val p = goalProgress(st.items, g)
-                        PlainRow(g.title ?: "", if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet", onClick = onGoals)
+                        ListRow(g.title ?: "", if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet", onClick = onGoals)
                     }
                 }
             }
         }
-        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 96.dp)) }
+        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Geometry.fab + Tokens.sp20)) }
     }
 }
 
@@ -293,7 +284,7 @@ private fun MeetingRow(m: Row, now: Long, upNext: Boolean, onClick: () -> Unit) 
     val live = isLive(m, now)
     val soon = joinMinutes(m, now)
     val meta = if (upNext) listOfNotNull(countdown(m, now), meetingMeta(m, now)).joinToString(" · ") else if (soon != null) "Starts in $soon min" else clock(m.startsAt!!)
-    PlainRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = { if (live) Text("Live", style = MaterialTheme.typography.labelSmall, color = av.ok, modifier = Modifier.padding(end = Sp.s4)) })
+    ListRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = { if (live) RowLabel("Live", av.ok) })
 }
 
 @Composable
@@ -309,36 +300,35 @@ private fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Task
     val older = s.review.filter { now - it.statusTime >= DAY_MS }
     LazyColumn(Modifier.fillMaxSize()) {
         if (searching) item {
-            OutlinedTextField(query, setQuery, Modifier.fillMaxWidth().padding(horizontal = Sp.s6), placeholder = { Text("Search tasks") }, singleLine = true,
-                trailingIcon = { IconButton(onClick = { setQuery("") }) { Icon(Icons.Filled.Close, "Clear") } })
+            SearchField(query, setQuery, "Search tasks")
         }
         if (searching && query.isNotBlank()) {
             item { SectionHeader("Results", hit.size.toString()) }
-            if (hit.isEmpty()) item { Empty("No task matches") } else item { Group { hit.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
+            if (hit.isEmpty()) item { EmptyState("No task matches") } else item { Group { hit.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
             return@LazyColumn
         }
         if (tags.isNotEmpty() && !searching) item {
-            androidx.compose.foundation.lazy.LazyRow(Modifier.padding(vertical = Sp.s2), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Sp.s6), horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
-                items(tags) { t -> androidx.compose.material3.AssistChip(onClick = { onTag(t) }, label = { Text("#$t") }) }
+            androidx.compose.foundation.lazy.LazyRow(Modifier.padding(vertical = Tokens.sp2), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                items(tags) { t -> Chip("#$t", { onTag(t) }) }
             }
         }
         if (s.overdue.isNotEmpty()) {
-            item { SectionHeader("Overdue", s.overdue.size.toString(), action = { TextButton(onClick = { actions.moveToToday(s.overdue) }) { Text("Move all to today") } }) }
+            item { SectionHeader("Overdue", s.overdue.size.toString(), action = { Button("Move all to today", { actions.moveToToday(s.overdue) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             item { Group { s.overdue.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
         }
         days.firstOrNull()?.takeIf { it.rows.isNotEmpty() }?.let { d -> daySection(d, now, actions, showProfile, onOpen) }
         reviewSection("Needs you", fresh, now, actions, showProfile, onOpen)
         if (older.isNotEmpty()) {
-            item { SectionHeader("Older to review", older.size.toString(), action = { TextButton(onClick = { olderOpen = !olderOpen }) { Text(if (olderOpen) "Hide" else "Show") } }) }
+            item { SectionHeader("Older to review", older.size.toString(), action = { Button(if (olderOpen) "Hide" else "Show", { olderOpen = !olderOpen }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             if (olderOpen) reviewSection(null, older, now, actions, showProfile, onOpen)
         }
         days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, showProfile, onOpen) }
-        if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && s.review.isEmpty()) item { Empty("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
+        if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && s.review.isEmpty()) item { EmptyState("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
         if (s.doneToday.isNotEmpty()) {
-            item { SectionHeader("Done", s.doneToday.size.toString(), action = { TextButton(onClick = { doneOpen = !doneOpen }) { Text(if (doneOpen) "Hide" else "Show") } }) }
+            item { SectionHeader("Done", s.doneToday.size.toString(), action = { Button(if (doneOpen) "Hide" else "Show", { doneOpen = !doneOpen }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             if (doneOpen) item { Group { s.doneToday.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
         }
-        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 88.dp)) }
+        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Geometry.fab + Tokens.sp16)) }
     }
 }
 
@@ -354,8 +344,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: 
         Group {
             rows.forEachIndexed { i, r ->
                 if (i > 0) Hairline()
-                PlainRow(r.title ?: "", listOfNotNull(r.people?.takeIf { it.isNotEmpty() }, if (showProfile) profileLabel(r.profile) else null).joinToString(" · "), onClick = { onOpen(r) },
-                    trailing = { Row { TextButton(onClick = { actions.dismiss(r) }) { Text("Dismiss", color = av.fgMuted) }; TextButton(onClick = { actions.accept(r) }) { Text("Add") } } })
+                ListRow(r.title ?: "", listOfNotNull(r.people?.takeIf { it.isNotEmpty() }, if (showProfile) profileLabel(r.profile) else null).joinToString(" · "), onClick = { onOpen(r) },
+                    trailing = { Row { Button("Dismiss", { actions.dismiss(r) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm); Button("Add", { actions.accept(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } })
             }
         }
     }
@@ -366,7 +356,7 @@ private fun TagPage(st: CodexState, tag: String, now: Long, actions: TaskActions
     val rows = remember(st.items, tag) { tagTasks(st.items, tag) }
     LazyColumn(Modifier.fillMaxSize()) {
         item { SectionHeader("#$tag", rows.size.toString()) }
-        if (rows.isEmpty()) item { Empty("No open tasks with #$tag") }
+        if (rows.isEmpty()) item { EmptyState("No open tasks with #$tag") }
         else item { Group { rows.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
     }
 }
@@ -375,7 +365,7 @@ private fun TagPage(st: CodexState, tag: String, now: Long, actions: TaskActions
 private fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit) {
     val weeks = remember(st.items, profile, now / 60_000) { goalHistory(st.items, now, profile) }
     LazyColumn(Modifier.fillMaxSize()) {
-        if (weeks.isEmpty()) item { Empty("No goals yet", "Weekly goals are set on the web, in Meetings > Week") }
+        if (weeks.isEmpty()) item { EmptyState("No goals yet", "Weekly goals are set on the web, in Meetings > Week") }
         weeks.forEach { w ->
             item { SectionHeader(w.label) }
             w.goals.forEach { g ->
@@ -383,16 +373,16 @@ private fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Task
                 val p = goalProgress(st.items, g)
                 val blocked = if (w.start == weekStart(now)) moveBlock(st.items, g, now) else null
                 item {
-                    Group(Modifier.padding(bottom = Sp.s4)) {
-                        PlainRow(g.title ?: "", (if (profile == null) "${profileLabel(g.profile)} · " else "") + if (p.total > 0) "${p.done}/${p.total}" else "No tasks yet", trailing = {
+                    Group(Modifier.padding(bottom = Tokens.sp4)) {
+                        ListRow(g.title ?: "", (if (profile == null) "${profileLabel(g.profile)} · " else "") + if (p.total > 0) "${p.done}/${p.total}" else "No tasks yet", trailing = {
                             MoreButton { close ->
-                                if (w.start == weekStart(now)) DropdownMenuItem(text = { Text(blocked ?: "Move to next week") }, enabled = blocked == null, onClick = {
+                                if (w.start == weekStart(now)) MenuItem(blocked ?: "Move to next week", {
                                     close()
                                     val at = dayPlus(weekStart(now), 7)
                                     val old = g.at
                                     if (hub.codex.update(g, mapOf("at" to at))) actions.undoable("Moved to next week") { hub.codex.update(g, mapOf("at" to old)) }
-                                })
-                                DropdownMenuItem(text = { Text("Delete", color = av.err) }, onClick = { close(); actions.delete(g) })
+                                }, enabled = blocked == null)
+                                MenuItem("Delete", { close(); actions.delete(g) }, danger = true)
                             }
                         })
                         tasks.forEach { t -> Hairline(); TaskRowView(t, now, actions, false, onOpen = { onOpen(t) }) }
@@ -408,14 +398,14 @@ private fun SearchPage(st: CodexState, profile: String?, onOpen: (Row) -> Unit) 
     var query by rememberSaveable { mutableStateOf("") }
     val hits = remember(st.items, st.meetings, profile, query) { searchAll(st.items, st.meetings, query, profile) }
     LazyColumn(Modifier.fillMaxSize()) {
-        item { OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = Sp.s6), placeholder = { Text("Search tasks and meetings") }, singleLine = true) }
+        item { SearchField(query, { query = it }, "Search tasks and meetings") }
         fun section(label: String, list: List<Hit>, open: ((Row) -> Unit)?) {
             if (list.isEmpty()) return
             item { SectionHeader(label, list.size.toString()) }
-            item { Group { list.take(30).forEachIndexed { i, h -> if (i > 0) Hairline(); PlainRow(h.title, listOf(profileLabel(h.row.profile), h.snippet).filter { it.isNotEmpty() }.joinToString(" · "), onClick = open?.let { o -> { o(h.row) } }) } } }
+            item { Group { list.take(30).forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(h.title, listOf(profileLabel(h.row.profile), h.snippet).filter { it.isNotEmpty() }.joinToString(" · "), onClick = open?.let { o -> { o(h.row) } }) } } }
         }
         section("Tasks and notes", hits.tasks, onOpen)
         section("Meetings", hits.meetings, null)
-        if (query.isNotBlank() && hits.total == 0) item { Empty("No matches") }
+        if (query.isNotBlank() && hits.total == 0) item { EmptyState("No matches") }
     }
 }

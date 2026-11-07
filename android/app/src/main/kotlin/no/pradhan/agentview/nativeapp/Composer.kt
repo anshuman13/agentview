@@ -25,11 +25,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,28 +41,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
-private enum class Sheet { Mode, Model, Effort }
+private enum class Picker { Mode, Model, Effort }
 
 @Composable
 fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean) {
     var text by remember(chatId) { mutableStateOf(TextFieldValue(hub.draft(chatId))) }
     var dismissed by remember(chatId) { mutableStateOf("") }
-    var sheet by remember { mutableStateOf<Sheet?>(null) }
+    var sheet by remember { mutableStateOf<Picker?>(null) }
     var uploading by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
@@ -101,95 +98,78 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     }
     val pct = contextPercent(session?.context)
 
-    Column(Modifier.fillMaxWidth().background(av.bg)) {
-        if (suggestions.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = 280.dp).background(av.surface).verticalScroll(rememberScrollState())) {
-            for (c in suggestions) Column(
-                Modifier.fillMaxWidth().clickable {
-                    val r = acceptSuggestion(text.text, trigger!!.start, text.selection.end, "/${c.name}")
+    val c = av
+    val card = RoundedCornerShape(Tokens.radius)
+    Column(Modifier.fillMaxWidth().background(c.bg).padding(start = Tokens.sp4, end = Tokens.sp4, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+        if (suggestions.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = Geometry.imageMax).well(c).verticalScroll(rememberScrollState())) {
+            for (s in suggestions) Column(
+                Modifier.fillMaxWidth().heightIn(min = Tokens.touchMd).clickable {
+                    val r = acceptSuggestion(text.text, trigger!!.start, text.selection.end, "/${s.name}")
                     set(TextFieldValue(r.first, TextRange(r.second)))
-                }.padding(horizontal = Sp.s8, vertical = Sp.s4),
+                }.padding(horizontal = Tokens.sp6, vertical = Tokens.sp3),
             ) {
-                Text("/${c.name}", fontFamily = FontFamily.Monospace, fontSize = 14.sp)
-                if (c.description.isNotEmpty()) Text(c.description, style = MaterialTheme.typography.labelSmall, color = av.fgMuted, maxLines = 1)
+                Text("/${s.name}", style = Mono.copy(fontSize = Tokens.fsLg), color = c.fg)
+                if (s.description.isNotEmpty()) Text(s.description, style = Type.footnote, color = c.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = Sp.s6, vertical = Sp.s2), horizontalArrangement = Arrangement.spacedBy(Sp.s4), verticalAlignment = Alignment.CenterVertically) {
-            Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default") { sheet = Sheet.Mode }
-            Chip(shortModel(modelName(session))) { sheet = Sheet.Model }
-            session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it) { sheet = Sheet.Effort } }
-            Box(Modifier.weight(1f))
-            if (uploading > 0) Text("Uploading", style = MaterialTheme.typography.labelSmall, color = av.fgFaint)
-            if (pct != null && pct >= 50) Text("$pct%", style = MaterialTheme.typography.labelSmall, color = if (pct >= 75) av.warn else av.fgFaint)
-            if (running && typed) Text("Stop and send", style = MaterialTheme.typography.labelMedium, color = av.accentText, modifier = Modifier.clickable { submit(true) }.padding(vertical = Sp.s3, horizontal = Sp.s2))
-        }
-        Row(Modifier.fillMaxWidth().padding(start = Sp.s2, end = Sp.s4, bottom = Sp.s4), verticalAlignment = Alignment.Bottom) {
-            IconButton(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, modifier = Modifier.size(Sp.touch)) { Icon(Icons.Filled.Add, "Attach image", tint = av.fgMuted) }
-            Box(
-                Modifier.weight(1f).heightIn(min = Sp.touch).background(av.surface, RoundedCornerShape(22.dp)).border(BorderStroke(1.dp, av.border), RoundedCornerShape(22.dp)).padding(horizontal = Sp.s7, vertical = Sp.s5),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                BasicTextField(
-                    value = text,
-                    onValueChange = { set(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = av.fg),
-                    cursorBrush = SolidColor(av.accent),
-                    maxLines = 6,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    decorationBox = { inner ->
-                        if (text.text.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = av.fgFaint, maxLines = 1)
+        Column(Modifier.fillMaxWidth().clip(card).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), card)) {
+            BasicTextField(
+                value = text,
+                onValueChange = { set(it) },
+                modifier = Modifier.fillMaxWidth().padding(start = Tokens.sp6, end = Tokens.sp6, top = Tokens.sp5, bottom = Tokens.sp1),
+                textStyle = Type.body.copy(fontSize = Tokens.fsLg, lineHeight = Tokens.lineMd, color = c.fg),
+                cursorBrush = SolidColor(c.accent),
+                maxLines = 6,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                decorationBox = { inner ->
+                    Box(Modifier.heightIn(min = Tokens.sp16)) {
+                        if (text.text.isEmpty()) Text(placeholder, style = Type.body.copy(fontSize = Tokens.fsLg, lineHeight = Tokens.lineMd), color = c.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         inner()
-                    },
-                )
-            }
-            if (running && !typed) {
-                IconButton(onClick = hub::interrupt, modifier = Modifier.size(Sp.touch)) {
-                    Box(Modifier.size(14.dp).background(av.err, RoundedCornerShape(2.dp)))
+                    }
+                },
+            )
+            Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+                IconBtn(Icons.Filled.Add, "Attach image", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
+                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+                    Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode }, trailingIcon = Icons.Filled.ArrowDropDown)
+                    Chip(shortModel(modelName(session)), { sheet = Picker.Model }, trailingIcon = Icons.Filled.ArrowDropDown)
+                    session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it, { sheet = Picker.Effort }, trailingIcon = Icons.Filled.ArrowDropDown) }
                 }
-            } else {
-                IconButton(onClick = { submit(false) }, enabled = typed && uploading == 0, modifier = Modifier.size(Sp.touch)) {
-                    Icon(Icons.AutoMirrored.Filled.Send, if (running) "Queue" else "Send", tint = if (typed && uploading == 0) av.accentText else av.fgFaint)
-                }
+                if (uploading > 0) RowLabel("Uploading", c.fgFaint)
+                if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
+                if (running && typed) Button("Stop and send", { submit(true) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                val canSend = typed && uploading == 0
+                if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp4 + Tokens.sp1).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
+                else SendCircle(if (running) "Queue" else "Send", canSend, { submit(false) }) { Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(Tokens.iconSm), tint = if (canSend) c.sunken else c.fgFaint) }
             }
         }
     }
 
     when (sheet) {
-        Sheet.Mode -> PickerSheet("Permission mode", PERMISSION_MODES.map { Choice(it, MODES[it]?.label ?: it, MODES[it]?.detail ?: "") }, session?.permissionMode ?: "default", { hub.setMode(it) }) { sheet = null }
-        Sheet.Model -> PickerSheet("Select model", (session?.models ?: emptyList()).map { Choice(it.value, it.displayName, it.description) }, if (session?.team == true) "team" else session?.model, { hub.setModel(it) }) { sheet = null }
-        Sheet.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { sheet = null }
+        Picker.Mode -> PickerSheet("Permission mode", PERMISSION_MODES.map { Choice(it, MODES[it]?.label ?: it, MODES[it]?.detail ?: "") }, session?.permissionMode ?: "default", { hub.setMode(it) }) { sheet = null }
+        Picker.Model -> PickerSheet("Select model", (session?.models ?: emptyList()).map { Choice(it.value, it.displayName, it.description) }, if (session?.team == true) "team" else session?.model, { hub.setModel(it) }) { sheet = null }
+        Picker.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { sheet = null }
         null -> {}
     }
 }
 
 @Composable
-private fun Chip(label: String, onClick: () -> Unit) {
-    Text(
-        "$label ▾",
-        Modifier.background(av.surface, RoundedCornerShape(999.dp)).clickable(onClick = onClick).padding(horizontal = Sp.s5, vertical = Sp.s3),
-        style = MaterialTheme.typography.labelMedium,
-        color = av.fgMuted,
-        maxLines = 1,
-    )
+private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, glyph: @Composable () -> Unit) {
+    Box(Modifier.size(Tokens.touch).clickable(enabled = enabled, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(Tokens.sizeXl).clip(CircleShape).background(if (enabled) av.fg else av.hover), contentAlignment = Alignment.Center) { glyph() }
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PickerSheet(title: String, items: List<Choice>, current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = av.surface) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = Sp.s8)) {
-            Text(title, Modifier.padding(horizontal = Sp.s8, vertical = Sp.s4), style = MaterialTheme.typography.labelMedium, color = av.fgMuted)
-            for (c in items) Row(
-                Modifier.fillMaxWidth().clickable { onPick(c.value); onDismiss() }.padding(horizontal = Sp.s8, vertical = Sp.s5).heightIn(min = Sp.touch),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Sp.s6),
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(c.label, style = MaterialTheme.typography.bodyLarge)
-                    if (c.detail.isNotEmpty()) Text(c.detail, style = MaterialTheme.typography.labelMedium, color = av.fgMuted)
-                }
-                if (c.value == current) Box(Modifier.size(8.dp).background(av.accentText, CircleShape))
-            }
+    Sheet(onDismiss, padded = false, full = false) {
+        Column(Modifier.verticalScroll(rememberScrollState())) {
+            SectionHeader(title)
+            for (c in items) ListRow(
+                c.label, c.detail,
+                onClick = { onPick(c.value); onDismiss() },
+                trailing = if (c.value == current) { { Icon(Icons.Filled.Check, "Selected", Modifier.size(Tokens.icon), tint = av.accentText) } } else null,
+            )
         }
     }
 }
