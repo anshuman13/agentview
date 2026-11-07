@@ -195,6 +195,7 @@ What the hub produced about a period: the day digest, the morning brief, the awa
 
 ### Row density
 How much a list row may carry. The eye should find the one thing to do without reading.
+The phone behaviours below are summarised in [Phone](features.md#phone).
 - One line of title, one line of meta. Draft or quoted text in a row is a 2-line clamp in meta type, not a
   separate box. The full text lives on the item's page.
 - At most two visible actions per row: the primary (Button sm, the one accent if it is the page's primary

@@ -12,11 +12,26 @@
   profile; see [Codex](#codex)
 - **Terminal** (bottom, ⌘J): a shell in the chat's folder
 - **Share to the app (Android)**: text or a link shared into AgentView asks "Add as task" (saved to Tasks, with a time read from the text), "Send to chat" (appended to the composer), or, when a meeting is running or starts within 15 minutes, "Add to meeting notes" (a time-stamped line in that meeting's notes).
-- **Phone**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side; an open meeting action swipes right for Done and left to Not mine (Dismissed on Overview); a right swipe from the left edge closes the open page or sheet; pulling down at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs. The interval sync runs only while the app is visible. An Offline and reconnecting badge shows after 2 s without the stream and hides on reconnect. The tab bar shows a count only on Chat (waiting); Sessions (waiting elsewhere) and Agents (running) show a dot. The launcher icon badge shows the Needs you count (up to 99) when the phone build has the badge plugin, and nothing on the web.
-  The done and snooze buttons on Overview rows, Related chips and Remove goal have full-size tap targets
 - **Command palette** (⇧⌘P or F1): every view, tab, page, Codex list, model and mode as a searchable list; pinned chats are listed first as "Chat: <title>" and open that chat; it also opens tasks, meetings and wiki pages by title, with the last five opened there first; a query also ends the list with a "See all N results" row (tasks and notes, meetings, wiki and jobs matching the query, under the Show filter) that opens Search with the query filled in
 - **Theme**: the color icon in the status bar cycles Graphite, Dark Modern and Light. With nothing chosen the page
   follows the system setting; `?theme=light` in the URL picks one
+
+## Phone
+
+At max-width 480px (900px where noted) the app is one column with a tab bar. Task-specific phone behaviour (the + button, quick-add sheet, date sheet, Select) is under Tasks; sharing into the app is under [Share to the app (Android)](#layout).
+
+- **Tabs**: a quick sideways swipe moves between the Codex, Chat, Sessions and Agents tabs, and the new tab slides in from its side. The tab bar shows a count only on Chat (waiting); Sessions (waiting elsewhere) and Agents (running) show a dot
+- **Launcher badge**: the launcher icon shows the Needs you count (up to 99) when the phone build has the badge plugin, and nothing on the web
+- **Sync**: the interval sync runs only while the app is visible
+- **Offline badge**: an Offline and reconnecting badge shows after 2 s without the stream and hides on reconnect
+- **Bottom-sheet menus**: a Menu opens as a bottom sheet at max-width 480px. A long press of 500ms on a row with a More menu opens it with a haptic tap; the kebab stays
+- **Section headers**: grouped Section headers on Overview (Today), Tasks and Meetings stick to the top while the list scrolls
+- **Pull to refresh**: at max-width 900px, pulling down 64px at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs
+- **Scroll restore**: Back from a task or meeting returns the list to its scroll position, kept per list and profile filter (Tasks and Meetings)
+- **Edge swipe back**: at max-width 900px, a right swipe of at least 70px from within 20px of the left edge closes the open page or sheet like Back. It does nothing on a list or inside a Row swipe, and is off in the Android app (Android 10 or later), where system gesture navigation owns the edge
+- **Keyboard inset**: `--kb-inset` holds the keyboard height (from 100px), so the New task and date sheets sit above the keyboard and the task page scrolls the focused field into view
+- **Meeting actions**: an open meeting action swipes right for Done and left to Not mine (Dismissed on Overview)
+- **Touch targets**: Rows, Section actions and Chips are 44px high at max-width 480px and on coarse pointers; the done and snooze buttons on Overview rows, Related chips and Remove goal have full-size tap targets
 
 ## Codex
 
