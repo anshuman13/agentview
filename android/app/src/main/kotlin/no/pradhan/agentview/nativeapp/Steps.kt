@@ -1,0 +1,160 @@
+package no.pradhan.agentview.nativeapp
+
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
+// Port of web/src/chat/steps.ts: the transcript items built from the flat event list.
+sealed interface Item {
+    val id: String
+
+    data class User(override val id: String, val text: String, val at: Long, val stopping: Boolean, val queued: Boolean) : Item
+    data class Phase(override val id: String, val text: String) : Item
+    data class Assistant(override val id: String, val text: String, val streaming: Boolean) : Item
+    data class System(override val id: String, val text: String) : Item
+    data class Step(override val id: String, val use: ChatEvent, val result: ChatEvent?) : Item
+    data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean) : Item
+    data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val steps: List<Item>) : Item
+    data class Blocked(override val id: String, val ev: ChatEvent) : Item
+}
+
+data class Label(val verb: String, val obj: String, val mono: Boolean = false, val cmd: String? = null)
+
+enum class Tone { Read, Edit, Run, Web, Mcp, Agent, Other }
+
+private val AGENT_TOOLS = setOf("Agent", "Task")
+private val DENIED = Regex("^(The user doesn't want to proceed|User denied this action|aborted\\b|Session closed|The user sent a new message instead|Claude exited before this was answered)")
+
+fun firstLine(text: String) = text.trim().lineSequence().firstOrNull() ?: ""
+fun JsonObject.s(k: String) = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: ""
+
+fun isDenied(result: ChatEvent?) = result != null && result.isError && DENIED.containsMatchIn(result.text.trim())
+
+fun relPath(p: String, cwd: String): String = when {
+    cwd.isEmpty() -> p
+    p == cwd -> "."
+    p.startsWith("$cwd/") -> p.substring(cwd.length + 1)
+    else -> p
+}
+
+fun duration(ms: Long): String = when {
+    ms < 1000 -> ""
+    ms < 60_000 -> "${Math.round(ms / 1000.0)}s"
+    ms < 3_600_000 -> "${Math.round(ms / 60_000.0)}m"
+    else -> "${Math.round(ms / 3_600_000.0)}h"
+}
+
+fun stepLabel(name: String, input: JsonObject, cwd: String = ""): Label {
+    fun rel(k: String) = relPath(input.s(k), cwd)
+    val inDir = if (input.s("path").isNotEmpty() && rel("path") != ".") rel("path") else ""
+    when (name) {
+        "Read" -> return Label("Read", rel("file_path"))
+        "Edit", "MultiEdit" -> return Label("Edited", rel("file_path"))
+        "NotebookEdit" -> return Label("Edited", rel("notebook_path"))
+        "Write" -> return Label("Wrote", rel("file_path"))
+        "Grep" -> return Label("Searched", "\"${input.s("pattern")}\" in ${inDir.ifEmpty { "the project" }}")
+        "Glob" -> return Label("Listed", if (inDir.isNotEmpty()) "$inDir/${input.s("pattern")}" else input.s("pattern"))
+        "LS" -> return Label("Listed", "${inDir.ifEmpty { "." }}/")
+        "Bash" -> return if (input.s("description").isNotEmpty()) Label("", input.s("description"), cmd = input.s("command")) else Label("Ran", firstLine(input.s("command")), mono = true)
+        "WebFetch" -> return Label("Fetched", input.s("url").replace(Regex("^https?://"), "").removeSuffix("/"))
+        "WebSearch" -> return Label("Searched the web for", "\"${input.s("query")}\"")
+        "Agent", "Task" -> return Label("Delegated", input.s("description"))
+        "SendMessage" -> return Label("Messaged agent", input.s("summary").ifEmpty { input.s("to") })
+        "TodoWrite" -> return Label("Updated", "the to-do list")
+        "AskUserQuestion" -> return Label("Asked", "you a question")
+        "Skill" -> return Label("Loaded", "the ${input.s("skill")} skill")
+        "ToolSearch" -> return Label("Looked up", "tools for \"${input.s("query")}\"")
+        "Advisor" -> return Label("Consulted", "the advisor")
+        "ExitPlanMode" -> return Label("Proposed", "a plan")
+        "EnterPlanMode" -> return Label("Entered", "plan mode")
+    }
+    if (name.startsWith("mcp__")) {
+        val parts = name.split("__")
+        return Label("Called", "${parts.drop(2).joinToString("__")} (${parts.getOrElse(1) { "" }})")
+    }
+    return Label("Used", name)
+}
+
+private val TONES = mapOf(
+    "Read" to Tone.Read, "Grep" to Tone.Read, "Glob" to Tone.Read, "LS" to Tone.Read, "ToolSearch" to Tone.Read,
+    "Edit" to Tone.Edit, "MultiEdit" to Tone.Edit, "Write" to Tone.Edit, "NotebookEdit" to Tone.Edit,
+    "Bash" to Tone.Run, "WebFetch" to Tone.Web, "WebSearch" to Tone.Web, "SendMessage" to Tone.Agent,
+)
+
+fun stepTone(name: String): Tone = TONES[name] ?: if (name.startsWith("mcp__")) Tone.Mcp else Tone.Other
+
+private val MORE = Regex("\\n… (\\d+) more lines$")
+
+private fun lines(v: String): Int {
+    if (v.isEmpty()) return 0
+    val m = MORE.find(v)
+    return v.split('\n').size - (if (v.endsWith("\n")) 1 else 0) + (if (m != null) m.groupValues[1].toInt() - 1 else 0)
+}
+
+// shared/edits.ts editCount: added and removed lines of an edit tool call, or null for other tools.
+fun editCount(name: String, input: JsonObject): Pair<Int, Int>? = when (name) {
+    "Write" -> lines(input.s("content")) to 0
+    "Edit" -> lines(input.s("new_string")) to lines(input.s("old_string"))
+    "MultiEdit" -> {
+        val edits = (input["edits"] as? JsonArray)?.mapNotNull { it as? JsonObject } ?: emptyList()
+        edits.sumOf { lines(it.s("new_string")) } to edits.sumOf { lines(it.s("old_string")) }
+    }
+    else -> null
+}
+
+fun chatCost(events: List<ChatEvent>): Double {
+    var last = 0.0
+    var total = 0.0
+    for (e in events) {
+        if (e.kind != "result" || e.costUsd <= 0) continue
+        total += if (e.costUsd >= last) e.costUsd - last else e.costUsd
+        last = e.costUsd
+    }
+    return total
+}
+
+fun buildTranscript(events: List<ChatEvent>): List<Item> {
+    val results = HashMap<String, ChatEvent>()
+    val children = HashMap<String, MutableList<ChatEvent>>()
+    val resumed = HashMap<String, Long>()
+    for (e in events) {
+        if (e.kind == "tool_result") results[e.toolUseId] = e
+        if (e.kind == "tool_use" && e.agent != null) resumed[e.agent] = e.at
+        val parent = if (e.kind == "tool_use" || e.kind == "tool_result" || e.kind == "assistant") e.parent else null
+        if (parent != null) children.getOrPut(parent) { mutableListOf() }.add(e)
+    }
+    return itemsFrom(events.filter { it.parent == null }, results, children, resumed)
+}
+
+private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, children: Map<String, List<ChatEvent>>, resumed: Map<String, Long>): List<Item> {
+    val items = mutableListOf<Item>()
+    for (e in events) {
+        when {
+            e.kind == "user" -> items += if (e.phase != null) Item.Phase(e.id, e.text) else Item.User(e.id, e.text, e.at, e.stopping, e.queued)
+            e.kind == "assistant" -> if (e.text.isNotBlank()) items += Item.Assistant(e.id, e.text, e.streaming)
+            e.kind == "system" -> items += Item.System(e.id, e.text)
+            e.kind == "blocked" -> items += Item.Blocked(e.id, e)
+            e.kind == "plan" -> items += Item.System(e.id, if (e.next.isNotEmpty()) "You changed the next steps (${e.next.size})" else "You cleared the next steps")
+            e.kind == "tool_use" && !e.name.endsWith("__set_status") -> {
+                val result = results[e.id]
+                val count = editCount(e.name, e.input)
+                val path = e.input.s("file_path")
+                if (e.name in AGENT_TOOLS) {
+                    val running = result == null || (resumed[e.id] ?: 0) > result.at
+                    items += Item.Agent(e.id, e, result, running, itemsFrom(children[e.id] ?: emptyList(), results, children, resumed))
+                } else if (count == null || path.isEmpty()) {
+                    items += Item.Step(e.id, e, result)
+                } else {
+                    val error = if (result?.isError == true) (if (isDenied(result)) "Denied" else firstLine(result.text)) else null
+                    val prev = items.lastOrNull()
+                    if (error == null && prev is Item.File && prev.path == path && prev.error == null) {
+                        items[items.lastIndex] = prev.copy(uses = prev.uses + e, add = prev.add + count.first, del = prev.del + count.second)
+                    } else {
+                        items += Item.File(e.id, path, if (error != null) 0 else count.first, if (error != null) 0 else count.second, listOf(e), error, isDenied(result))
+                    }
+                }
+            }
+        }
+    }
+    return items
+}
