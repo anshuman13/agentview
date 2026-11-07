@@ -16,7 +16,9 @@ import { PointList, useMarkRaised } from './Raise';
 
 // What to know before a meeting: open actions, decisions and open questions of earlier meetings with its people, open
 // tasks about them, points to raise, what the attendees took on and related claims. Renders nothing without any of these.
-type Line = { title: string; meta: string; open: () => void };
+type Line = { title: string; meta?: string; open?: () => void };
+
+const PLAIN = ['theirs', 'claims'];
 
 const count = (n: number, one: string) => (n ? [`${n} ${one}${n === 1 ? '' : 's'}`] : []);
 
@@ -46,6 +48,8 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
     { outcome: 'decisions', label: 'Decisions', open: false, rows: decisions },
     { outcome: 'questions', label: 'Open questions', open: true, rows: asked },
     { outcome: 'tasks', label: 'Tasks', open: true, rows: tasks },
+    { outcome: 'theirs', label: 'They took on', open: true, rows: theirs.map((t) => ({ title: t })) },
+    { outcome: 'claims', label: 'Related claims', open: true, rows: brief.claims.map((f) => ({ title: f.text ?? '' })) },
   ].filter((g) => g.rows.length);
   const copy = () => {
     const mine = [...prior.flatMap((p) => p.open), ...brief.tasks.flatMap((t) => t.items)].map((r) => r.title ?? '');
@@ -67,25 +71,14 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
       )} />
       <div className="ov-group">
         {groups.map((g) => (
-          <GroupList key={g.outcome} foldKey={`codex.prepFold.${m.profile}:${m.id}:${g.outcome}`} capOpen group={g} render={(r) => <Row title={r.title} meta={r.meta} onClick={r.open} />} />
+          <GroupList key={g.outcome} foldKey={`codex.prepFold.${m.profile}:${m.id}:${g.outcome}`} capOpen group={g} render={(r) => PLAIN.includes(g.outcome) ? <Row plain lines={2} title={r.title} /> : <Row title={r.title} meta={r.meta} onClick={r.open} />} />
         ))}
       </div>
       {points.length > 0 && (
-        <div className="as-ctx-list">
-          <div className="muted small">To raise</div>
+        <>
+          <Section label="To raise" count={points.length} />
           <PointList points={points} meeting={false} />
-        </div>
-      )}
-      {theirs.length > 0 && (
-        <div className="as-ctx-list">
-          <div className="muted small">They took on</div>
-          {theirs.map((t) => <div key={t} className="as-ctx"><span className="as-quote">{t}</span></div>)}
-        </div>
-      )}
-      {brief.claims.length > 0 && (
-        <div className="as-ctx-list">
-          {brief.claims.map((f) => <div key={f.profile + f.id} className="as-ctx"><span className="as-quote">{f.text}</span></div>)}
-        </div>
+        </>
       )}
     </div>
   );
