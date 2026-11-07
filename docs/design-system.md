@@ -269,8 +269,8 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
   the rows. Two batch actions become a Menu on the header.
 - A Badge per row at most one, for state only (Needs you, Failed, Needs review on a wiki page row, which has only a More menu with Open and Archive). Badges are not labels for things the
   title already says.
-- Jobs rows follow this: one badge (Running, Queued, Failed, Off, set by `jobState`), a Run now Button sm, and a More menu with Edit,
-  Disable or Enable, Delete. No switch and no last-run line on the row.
+- Jobs rows follow this: one badge (Running, Queued, Failed, Off, set by `jobState`), and a More menu with Run now, Edit,
+  Disable or Enable, Delete (long press opens it on phones). Meta is the schedule and next run only. No Run now button, no switch and no last-run line on the row.
 - On phones a list restores its scroll position when the user returns from an item page, keyed by route (list and profile filter), once per return. Tasks and Meetings.
 - Tasks as built: a Tasks row is the title, a meta line (due, then at most one of Repeats, checklist count, High or
   Medium; no tags, none on done rows), the check as Done, a Needs you Badge on suggested tasks and one More Menu

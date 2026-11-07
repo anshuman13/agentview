@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAssistantData } from '../data';
 import { WEEKLY_DIGEST, type JobPreset } from '../data/presets';
 import { newId, rowKey, type Profile } from '../data/sync';
@@ -6,9 +6,8 @@ import type { Job, Run } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
-import { Button, IconButton } from '../../ui/Button';
+import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
-import { money } from '../../ui/util';
 import { setView, useView } from '../view';
 import { usePullSync } from '../pullSync';
 import { useMinute } from '../split';
@@ -23,17 +22,26 @@ import { Badge } from '../../ui/Badge';
 
 type Jobs = ReturnType<typeof useJobs>;
 
-function JobActions({ j, runs, now, store, enable }: { j: Job; runs: Run[]; now: number; store: Jobs['store']; enable: Jobs['enable'] }) {
+export function JobRow({ j, runs, now, store, enable }: { j: Job; runs: Run[]; now: number; store: Jobs['store']; enable: Jobs['enable'] }) {
   const [open, setOpen] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const choose = (fn: () => void) => () => { setOpen(false); fn(); };
+  const meta = rowMeta(j, runs, now);
+  const state = jobState(j, runs, now);
   return (
-    <span className="jb-actions">
-      <Button size="sm" icon="play" disabled={!canRunNow(j, runs, now)} onClick={() => runNow(store, j)}>Run now</Button>
+    <div className={`ui-row-wrap${j.enabled ? '' : ' off'}`}>
+      <Row
+        title={j.name || 'Untitled job'}
+        meta={[describe(j.schedule), meta?.startsWith('Next') && meta].filter(Boolean).join(' · ')}
+        trailing={state && <Badge {...state} />}
+        onClick={() => setView({ open: rowKey(j) })}
+        onLongPress={() => setOpen(true)}
+      />
       <span className="jb-more">
         <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
         {open && (
           <Menu trigger={more} onClose={() => setOpen(false)}>
+            <MenuItem icon="play" disabled={!canRunNow(j, runs, now)} onClick={choose(() => runNow(store, j))}>Run now</MenuItem>
             <MenuItem icon="edit" onClick={choose(() => setView({ open: rowKey(j) }))}>Edit</MenuItem>
             <MenuItem icon={j.enabled ? 'circle-slash' : 'play'} onClick={choose(() => enable(j, !j.enabled))}>{j.enabled ? 'Disable' : 'Enable'}</MenuItem>
             <MenuSeparator />
@@ -41,7 +49,7 @@ function JobActions({ j, runs, now, store, enable }: { j: Job; runs: Run[]; now:
           </Menu>
         )}
       </span>
-    </span>
+    </div>
   );
 }
 
@@ -49,14 +57,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
   useMinute();
   const { jobs, runs, store, filter, enable } = useJobs();
-  const [cost, setCost] = useState<Record<string, number>>({});
-  useEffect(() => {
-    let live = true;
-    store.autopilot().then((s) => live && setCost(s.spend?.week.jobs ?? {}), () => {});
-    return () => { live = false; };
-  }, [store]);
   const now = Date.now();
-  const mixed = new Set(jobs.map((j) => j.profile)).size > 1;
   const add = (preset?: JobPreset) => {
     const t = Date.now();
     const profile: Profile = filter === 'personal' ? 'personal' : 'work';
@@ -78,21 +79,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
           <Autopilot />
           {jobs.length > 0 && (
             <div className="ui-group">
-              {jobs.map((j) => {
-                const meta = rowMeta(j, runs, now);
-                const state = jobState(j, runs, now);
-                return (
-                  <div key={rowKey(j)} className={`ui-row-wrap${j.enabled ? '' : ' off'}`}>
-                    <Row
-                      title={j.name || 'Untitled job'}
-                      meta={[describe(j.schedule), meta?.startsWith('Next') && meta, cost[j.id] > 0 && `7 days ${money(cost[j.id])}`, mixed && (j.profile === 'work' ? 'Work' : 'Personal')].filter(Boolean).join(' · ')}
-                      trailing={state && <Badge {...state} />}
-                      onClick={() => setView({ open: rowKey(j) })}
-                    />
-                    <JobActions j={j} runs={runs} now={now} store={store} enable={enable} />
-                  </div>
-                );
-              })}
+              {jobs.map((j) => <JobRow key={rowKey(j)} j={j} runs={runs} now={now} store={store} enable={enable} />)}
             </div>
           )}
           {!jobs.length && <EmptyState size="md" icon="history" title="No jobs yet" hint="A job runs a prompt on a schedule, can add tasks, and sends you the result" />}
