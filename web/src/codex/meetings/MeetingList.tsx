@@ -120,7 +120,7 @@ function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
           <div className="as-group">{rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} noDay />)}</div>
         </section>
       ))}
-      {!days.length && <div className="mt-up-none">Nothing on the calendar this week.</div>}
+      {!days.length && <EmptyState size="sm" icon="calendar" title="Nothing on the calendar this week" />}
     </>
   );
 }
@@ -272,7 +272,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />
           {!groups.length && chips.length > 0 && <EmptyState size="md" icon="calendar" title="No meetings match" hint="Try fewer filters" action={<Button size="sm" onClick={() => setFilters([])}>Clear filters</Button>} />}
-          {!groups.length && !chips.length && <EmptyState size="md" icon="calendar" title={query ? 'No meetings match.' : 'No past meetings yet.'} hint={query ? 'Search covers titles, people, notes, summaries, decisions and transcripts.' : 'Coming meetings are in Today and Upcoming.'} />}
+          {!groups.length && !chips.length && <EmptyState size="md" icon="calendar" title={query ? 'No meetings match' : 'No past meetings yet'} hint={query ? 'Search covers titles, people, notes, summaries, decisions and transcripts' : 'Coming meetings are in Today and Upcoming'} />}
         </div>}
       </div>
     </div>

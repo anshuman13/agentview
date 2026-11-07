@@ -20,6 +20,6 @@ export function useUnreachable() {
 export function Unreachable() {
   const name = useMacName() || apiBase().replace(/^https?:\/\//, '');
   return (
-    <EmptyState size="md" icon="plug" title={`Can't reach ${name}`} hint="NetBird must be connected and AgentView running on that Mac." action={<Button size="sm" onClick={connect}>Retry</Button>} />
+    <EmptyState size="md" icon="plug" title={`Can't reach ${name}`} hint="NetBird must be connected and AgentView running on that Mac" action={<Button size="sm" onClick={connect}>Retry</Button>} />
   );
 }

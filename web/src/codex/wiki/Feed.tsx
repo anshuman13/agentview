@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { contestOf, currentClaim, factTime, live, sourcesOf, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { ago } from '../../ui/util';
@@ -23,7 +24,7 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
     <aside className="wk-feed">
       <Section label="Recently updated" />
       <div className="as-group">
-        {!shown.length && <Row plain title="No claims yet." />}
+        {!shown.length && <EmptyState size="sm" icon="book" title="No claims yet" />}
         {shown.map(({ fact, kind, at }) => {
           const src = sourcesOf(fact)[0];
           const c = contestOf(fact);

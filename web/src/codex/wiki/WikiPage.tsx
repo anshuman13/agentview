@@ -136,7 +136,7 @@ export function WikiPage({ id }: { id: string }) {
       </header>
       <div className="wk-scroll">
         {!page ? (
-          <EmptyState size="sm" icon="book" title="This page is gone." action={<Button size="sm" onClick={back}>Back to the wiki</Button>} />
+          <EmptyState size="sm" icon="book" title="This page is gone" action={<Button size="sm" onClick={back}>Back to the wiki</Button>} />
         ) : (
           <div className="wk-doc">
             <article className="wk-article">
@@ -185,7 +185,7 @@ export function WikiPage({ id }: { id: string }) {
                   {showOlder && <ul className="wk-claims">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page.title ?? ''} flash={flash === f.id} stale={stale.has(f.id)} />)}</ul>}
                 </section>
               )}
-              {!groups.length && !older.length && <div className="wk-none">No claims yet. They appear here as meetings, Slack threads and issues mention {page.title}.</div>}
+              {!groups.length && !older.length && <EmptyState size="sm" icon="book" title="No claims yet" hint={`They appear here as meetings, Slack threads and issues mention ${page.title}`} />}
             </article>
             <aside className="wk-rail">
               {groups.length > 1 && (

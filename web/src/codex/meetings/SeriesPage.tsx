@@ -6,6 +6,7 @@ import { NOTES_TEMPLATES, notesTemplateChips, rememberNotesTemplate, type NotesT
 import type { ItemRow } from '../data/sync';
 import { listOf, type Meeting } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { Button, IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
@@ -56,7 +57,7 @@ export function SeriesPage({ series }: { series: string }) {
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          {!members.length ? <h1 className="wk-title">No meetings</h1> : (
+          {!members.length ? <EmptyState size="md" title="No meetings" /> : (
             <>
               <Section label={members[0].title} action={(
                 <>
@@ -82,7 +83,7 @@ export function SeriesPage({ series }: { series: string }) {
                     <ActionRow row={r} meeting={m} />
                     <button className="mt-person mt-series-from" onClick={() => openMeeting(m)}>{day(m)}</button>
                   </div>
-                )} /></div> : <p className="mt-pending">Nothing open</p>}
+                )} /></div> : <EmptyState size="sm" title="Nothing open" />}
               </section>
               <section className="mt-sec">
                 <Section label="Occurrences" count={members.length} />

@@ -91,7 +91,7 @@ export function Review({ now }: { now: number }) {
           </div>
         </section>
       )}
-      {empty && <EmptyState size="sm" icon="calendar" title="Nothing to review." />}
+      {empty && <EmptyState size="sm" icon="calendar" title="Nothing to review" />}
     </>
   );
 }

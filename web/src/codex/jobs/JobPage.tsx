@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Job, Run } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { SearchedOutput } from '../../ui/SearchedOutput';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
@@ -141,7 +142,7 @@ export function JobPage({ j }: { j: Job }) {
           <section className="mt-sec">
             <h2>Runs</h2>
             {list.length > 0 && <div className="jb-runs">{list.slice(0, 10).map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} />)}</div>}
-            {!list.length && <div className="muted small">Not run yet.</div>}
+            {!list.length && <EmptyState size="sm" title="Not run yet" />}
           </section>
         </article>
       </div>

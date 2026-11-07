@@ -3,6 +3,7 @@ import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { currentClaim, factTime, live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Section } from '../../ui/Section';
 import { ShowMore, useWindow } from '../../ui/useWindow';
@@ -119,7 +120,7 @@ function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[];
   const r = useMemo(() => searchWiki(pages, facts, query), [pages, facts, query]);
   const [n, more] = useWindow(query);
   const title = new Map(pages.map((p) => [p.id, p.title]));
-  if (!r.pages.length && !r.claims.length) return <div className="wk-none">Nothing in the wiki matches “{query}”. Ask the wiki below to search Slack and Linear too.</div>;
+  if (!r.pages.length && !r.claims.length) return <EmptyState size="sm" icon="search" title={`Nothing in the wiki matches “${query}”`} hint="Ask the wiki below to search Slack and Linear too" />;
   return (
     <>
       {r.pages.length > 0 && (

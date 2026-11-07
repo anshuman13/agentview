@@ -3,6 +3,7 @@ import { apiUrl } from '../app/api';
 import { api, embedded, notice, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
+import { EmptyState } from '../ui/Panel';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
@@ -237,7 +238,7 @@ export function Sessions() {
             {(filter || !shut.includes(g.kind)) && g.items.map(({ f, active }) => folderRows(f, active, g.icon))}
           </div>
         ))}
-        {!groups.length && <div className="hint">{filter ? 'No repo or chat matches.' : 'No repos here.'}</div>}
+        {!groups.length && <EmptyState size="sm" title={filter ? 'No repo or chat matches' : 'No repos here'} />}
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
@@ -332,7 +333,7 @@ export function OpenChats() {
             )}
           </div>
         ))}
-        {!groups.length && <div className="hint">{filter ? 'No repo or session matches.' : 'No sessions yet.'}</div>}
+        {!groups.length && <EmptyState size="sm" title={filter ? 'No repo or session matches' : 'No sessions yet'} />}
         <Bin ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}

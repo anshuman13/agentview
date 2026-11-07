@@ -147,7 +147,7 @@ export function Deploy() {
         </>
       } />
       {error && (error.includes('no Velo app')
-        ? <EmptyState size="sm" title="No Velo app here" hint="This repo has no .deploy/app.yaml." />
+        ? <EmptyState size="sm" title="No Velo app here" hint="This repo has no .deploy/app.yaml" />
         : <div className="deploy-error" role="alert"><Icon name="error" small /> {error}</div>)}
       {s && (
         <>

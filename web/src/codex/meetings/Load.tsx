@@ -16,7 +16,7 @@ export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const max = Math.max(...weeks.map((w) => w.hours), 1);
   const recorded = weeks.reduce((n, w) => n + w.recorded, 0);
   const total = recorded + weeks.reduce((n, w) => n + w.unrecorded, 0);
-  if (!total) return <EmptyState size="sm" icon="calendar" title="No meetings in the last 4 weeks." />;
+  if (!total) return <EmptyState size="sm" icon="calendar" title="No meetings in the last 4 weeks" />;
   return (
     <div className="mt-load">
       <div className="as-group">

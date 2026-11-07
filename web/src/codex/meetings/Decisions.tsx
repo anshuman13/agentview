@@ -31,7 +31,7 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
           {rows.map((d, i) => <Row key={`${d.meeting.profile}:${d.meeting.id}:${i}`} lines={2} title={d.text} meta={`${d.meeting.title || 'Meeting'} · ${when(d.at)}`} onClick={() => openMeeting(d.meeting)} />)}
         </div>
       )}
-      {!rows.length && <EmptyState size="sm" icon="check" title={who ? 'No decisions with this person.' : 'No decisions yet.'} hint="Decisions come from the meeting summaries." />}
+      {!rows.length && <EmptyState size="sm" icon="check" title={who ? 'No decisions with this person' : 'No decisions yet'} hint="Decisions come from the meeting summaries" />}
     </div>
   );
 }

@@ -74,7 +74,7 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
         const m = byKey.get(`${i.profile}:${i.meeting_id}`);
         return <Row key={i.profile + i.id} title={text(i.title)} meta={m && (m.title || 'Meeting')} onClick={() => m && openMeeting(m)} />;
       })} />
-      {empty && <EmptyState size="sm" icon="calendar" title="Nothing this week yet." />}
+      {empty && <EmptyState size="sm" icon="calendar" title="Nothing this week yet" />}
       </>}
     </div>
   );

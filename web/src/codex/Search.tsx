@@ -64,7 +64,7 @@ export function Search() {
           <Hits label="Transcripts" group={transcripts} said onAll={more('transcripts')} open={openMeeting} />
           <Hits label="Wiki" group={r.wiki} onAll={more('wiki')} open={(h) => setView({ list: 'wiki', open: h.page ?? null, anchor: null })} />
           <Hits label="Jobs" group={r.jobs} onAll={more('jobs')} open={(h) => setView({ list: 'jobs', open: key(h) })} />
-          {query.trim() && !r.total && !transcripts.total && <EmptyState size="sm" icon="search" title="No matches." />}
+          {query.trim() && !r.total && !transcripts.total && <EmptyState size="sm" icon="search" title="No matches" />}
         </div>
       </div>
     </div>

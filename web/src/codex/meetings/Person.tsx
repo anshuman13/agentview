@@ -6,6 +6,7 @@ import { commitmentsOf, meetingsOf, nameOf, openQuestions, peopleOf, pinsOf, que
 import { PinList } from './Pins';
 import { useActions } from '../useActions';
 import { Icon } from '../../ui/Icon';
+import { EmptyState } from '../../ui/Panel';
 import { AskRow } from '../../ui/AskRow';
 import { MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
@@ -193,7 +194,7 @@ export function Person({ name }: { name: string }) {
 
           <section className="mt-sec">
             <Section label="Meetings" count={mine.length || undefined} />
-            {mine.length > 0 ? <Group rows={mine} name={name} row={(m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />} /> : <p className="mt-pending">No meetings.</p>}
+            {mine.length > 0 ? <Group rows={mine} name={name} row={(m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />} /> : <EmptyState size="sm" title="No meetings" />}
           </section>
 
           {claims.length > 0 && (

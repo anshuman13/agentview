@@ -93,7 +93,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
               })}
             </div>
           )}
-          {!jobs.length && <EmptyState size="md" icon="history" title="No jobs yet." hint="A job runs a prompt on a schedule, can add tasks, and sends you the result." />}
+          {!jobs.length && <EmptyState size="md" icon="history" title="No jobs yet" hint="A job runs a prompt on a schedule, can add tasks, and sends you the result" />}
           {!jobs.length && <div className="jb-presets"><button className="btn sm" onClick={() => add(WEEKLY_DIGEST)}><Icon name="sparkle" small /> Weekly digest</button></div>}
         </div>
       </div>

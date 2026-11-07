@@ -83,7 +83,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
                   </div>
                 </div>
               ))}
-              {!report.groups.length && <EmptyState size="sm" icon="checklist" title="No tasks in this range" hint="Pick another date or status." />}
+              {!report.groups.length && <EmptyState size="sm" icon="checklist" title="No tasks in this range" hint="Pick another date or status" />}
               <Button size="sm" icon="copy" onClick={() => copyText(report.markdown)}>Copy</Button>
             </div>
             <Panel padding="sm" className="sm-filter">
@@ -121,7 +121,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
               </div>
             </div>
           ))}
-          {!chats.length && !brief?.text && <EmptyState size="md" icon="comment-discussion" title="Nothing read yet." hint="Slack is read every 15 minutes on weekdays from 07 to 19." />}
+          {!chats.length && !brief?.text && <EmptyState size="md" icon="comment-discussion" title="Nothing read yet" hint="Slack is read every 15 minutes on weekdays from 07 to 19" />}
         </div>
       </div>
     </div>

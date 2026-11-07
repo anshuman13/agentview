@@ -365,7 +365,7 @@ export function App() {
           <div className={`editor as-editor ${active === 'assistant' ? 'shown' : ''}`}>{seenAssistant && <Guard><Suspense fallback={null}><FocusBar /></Suspense><Suspense fallback={<Loading />}><Assistant /></Suspense></Guard>}</div>
           <div className={`editor ${active === 'offline' ? 'shown' : ''}`}>{unreachable && <Unreachable />}</div>
           <div className={`editor ${active === 'empty' ? 'shown' : ''}`}>
-            <EmptyState size="md" icon="files" title="No file open" hint={`Pick a file in the Explorer${touch() ? '' : ' or press ⌘P'}. Files Claude edits open here.`} />
+            <EmptyState size="md" icon="files" title="No file open" hint={`Pick a file in the Explorer${touch() ? '' : ' or press ⌘P'}. Files Claude edits open here`} />
           </div>
           <div className="panel" style={terminal ? { height: termH } : undefined}>
             {terminal && <div className="panel-sash" onPointerDown={startTermResize} />}

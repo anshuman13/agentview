@@ -17,7 +17,6 @@
   .ui-row:is(:hover, :focus-within) .mt-more, .mt-more:focus-within { opacity: 1; }
 }
 
-.mt-up-none { padding: var(--sp-5) 0; font-size: var(--fs-md); color: var(--fg-muted); }
 @container (max-width: 440px) { .mt-avatars { display: none; } }
 .mt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .mt-topics { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }

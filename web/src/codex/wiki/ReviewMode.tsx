@@ -42,7 +42,7 @@ export function ReviewMode() {
       </header>
       <div className="wk-scroll">
         {!fact ? (
-          <EmptyState size="sm" icon="check" title={total ? 'All claims reviewed.' : 'Nothing waits for review.'} action={<Button size="sm" onClick={back}>Back to the wiki</Button>} />
+          <EmptyState size="sm" icon="check" title={total ? 'All claims reviewed' : 'Nothing waits for review'} action={<Button size="sm" onClick={back}>Back to the wiki</Button>} />
         ) : (
           <Swipe onRight={() => review.approve([fact])} onLeft={() => review.reject([fact])} rightLabel="Approve" leftLabel="Reject" leftIcon="close">
             <article className="wk-mode-card" key={key(fact)}>

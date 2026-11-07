@@ -210,7 +210,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           onContextMenu={(e) => e.preventDefault()}
         />
         {!hasFrame && (
-          <EmptyState size="md" icon="globe" title={tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'} hint="Chrome only draws the tab that is in front. Pick a tab above to bring it forward." />
+          <EmptyState size="md" icon="globe" title={tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'} hint="Chrome only draws the tab that is in front. Pick a tab above to bring it forward" />
         )}
         <textarea ref={kbd} className="chrome-kbd" aria-label="Type into the page" autoCapitalize="off" autoComplete="off" spellCheck={false} onKeyDown={onKey} onInput={onText} onPaste={(e) => { e.preventDefault(); send({ t: 'text', text: e.clipboardData.getData('text') }); }} />
       </div>
@@ -233,7 +233,7 @@ function Connect({ state, onSetup }: { state: State; onSetup: () => void }) {
   if (state.state === 'connecting') {
     return (
       <div className="browser-pane">
-        <EmptyState size="md" icon="loading" title="Connecting to Chrome" hint={state.own ? undefined : 'If Chrome asks to allow remote debugging, click Allow.'} />
+        <EmptyState size="md" icon="loading" title="Connecting to Chrome" hint={state.own ? undefined : 'If Chrome asks to allow remote debugging, click Allow'} />
       </div>
     );
   }
