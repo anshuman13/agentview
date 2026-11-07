@@ -31,4 +31,12 @@ describe('assistantRoute', () => {
     expect(res.status).toBe(200);
     expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/history\?who=A%20B$/);
   });
+
+  it('forwards full on GET /changes', async () => {
+    const fetchMock = vi.fn(async () => new Response('{"changes":[]}', { headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await assistantRoute('GET', new URL('http://x/api/assistant/changes?since=5&full=1'), async () => '');
+    vi.unstubAllGlobals();
+    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/changes\?since=5&full=1$/);
+  });
 });

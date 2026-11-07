@@ -10,7 +10,7 @@ export async function assistantRoute(method: string, url: URL, body: () => Promi
   const route = url.pathname.slice('/api/assistant'.length);
   let target: string;
   let init: RequestInit = { signal: AbortSignal.timeout(30_000) };
-  if (route === '/changes' && method === 'GET') target = `/changes?since=${encodeURIComponent(url.searchParams.get('since') ?? '0')}`;
+  if (route === '/changes' && method === 'GET') target = `/changes?since=${encodeURIComponent(url.searchParams.get('since') ?? '0')}${url.searchParams.get('full') === '1' ? '&full=1' : ''}`;
   else if ((route === '/transcripts/search' || route === '/transcript') && method === 'GET') target = `${route}${url.search}`;
   else if (route === '/sync' && method === 'POST') {
     target = '/sync';
