@@ -332,7 +332,7 @@ Click one for its report, prompt and steps. On the phone it is a tab of its own.
 ## Deep links
 
 `?view=github` opens a sidebar view (explorer, changes, github, chats, sessions), `?page=observe` opens a page
-(observe, deploy, mcp), `?chat=<id>` opens a running chat and `?session=<id>` reopens a saved one. The parameters
+(observe, deploy, mcp, settings), `?chat=<id>` opens a running chat and `?session=<id>` reopens a saved one. The parameters
 are read once and removed from the address bar.
 
 ## Pages
@@ -346,6 +346,8 @@ A failing panel shows its error without affecting the others. With no panels, a 
 service's dashboards. The refresh button reloads the panels too.
 
 Observe's Settings section is a Section header (open by default only for a project with no saved config) with a JSON field and a Save button. The header shows a badge: Unsaved after an edit, Saved after a save, Failed with the error under the field when the JSON is invalid or the save fails. An edit made while saving is kept. Changing the project clears the badge.
+
+Settings is a page of its own (activity bar, More sheet, palette). Its About group holds a Design row that opens `/design`. The row shows in dev mode or when the hub runs with `ASSISTANT_DEBUG=1`; otherwise the page says there is nothing to set up.
 
 ## Shortcuts
 

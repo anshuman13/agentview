@@ -112,7 +112,7 @@ colour at 14% (`--warn-soft`); selected is `--accent-soft`.
 
 ## Components
 
-`/design` is the visual review of every primitive, in every state, at desktop and phone width. A new primitive in `web/src/ui` gets its story added in `web/src/design/Stories.tsx`. The URL carries the state: `/design?theme=light|dark&width=phone|desktop#<primitive>`, all three optional and unknown values ignored, for example `/design?theme=light&width=phone#chip`. A query theme is not saved as the app theme. Each Block has a link button that copies its URL. A Block's name lowercased is its anchor, so a new primitive's Block name is its anchor.
+`/design` is the visual review of every primitive, in every state, at desktop and phone width. It is opened from Settings, About, in dev mode or when the hub reports debug. A new primitive in `web/src/ui` gets its story added in `web/src/design/Stories.tsx`. The URL carries the state: `/design?theme=light|dark&width=phone|desktop#<primitive>`, all three optional and unknown values ignored, for example `/design?theme=light&width=phone#chip`. A query theme is not saved as the app theme. Each Block has a link button that copies its URL. A Block's name lowercased is its anchor, so a new primitive's Block name is its anchor.
 
 ### Button (iOS button styles)
 `<Button variant size icon>`; `.btn .btn-{variant} .btn-{size}`. Variants filled, tinted, gray, plain,

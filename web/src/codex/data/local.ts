@@ -21,7 +21,7 @@ declare global {
 
 export const tauriInvoke = () => window.__TAURI__?.core?.invoke ?? window.__TAURI_INTERNALS__?.invoke;
 
-const HUB = 'http://macmini.netbird.cloud:7790';
+export const HUB = 'http://macmini.netbird.cloud:7790';
 const SYNC_EVERY = 60000;
 // Edits to the removed sample meetings and pages were saved on the phone; cleared once, then everything is pulled again
 // because the clear also removed hub rows.

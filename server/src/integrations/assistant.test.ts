@@ -14,6 +14,15 @@ describe('applyHubChanges', () => {
 });
 
 describe('assistantRoute', () => {
+  it('forwards GET /debug to the hub', async () => {
+    const fetchMock = vi.fn(async () => new Response('{"debug":true}', { headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await assistantRoute('GET', new URL('http://x/api/assistant/debug'), async () => '');
+    vi.unstubAllGlobals();
+    expect(res.status).toBe(200);
+    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/debug$/);
+  });
+
   it('forwards GET /history with who encoded', async () => {
     const fetchMock = vi.fn(async () => new Response('{"replies":[]}', { headers: { 'content-type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);

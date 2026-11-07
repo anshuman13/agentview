@@ -38,6 +38,7 @@ export const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m
 export const Observe = lazy(() => import('../ops/Observe').then((m) => ({ default: m.Observe })));
 export const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default: m.Deploy })));
 export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ default: m.McpPage })));
+export const Settings = lazy(() => import('./Settings').then((m) => ({ default: m.Settings })));
 export const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
 export const MacsPopover = lazy(() => import('./MacsPopover').then((m) => ({ default: m.MacsPopover })));
 export const Loading = () => <div className="loading">Loading…</div>;

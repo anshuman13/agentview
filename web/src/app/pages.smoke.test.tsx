@@ -7,6 +7,7 @@ import { Meetings } from '../codex/meetings/Meetings';
 import { sharedSplit } from '../codex/split';
 import { setView } from '../codex/view';
 import { DesignPage } from '../design/Stories';
+import { Settings } from './Settings';
 
 vi.hoisted(() => {
   const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
@@ -58,6 +59,7 @@ describe('page smoke', () => {
     ['Tasks', tasks, (html) => expect(empties(html)).toBe(1)],
     ['Meetings', () => <Meetings onMenu={() => {}} />, (html) => expect(empties(html)).toBe(2)],
     ['Design', () => <DesignPage />, () => {}],
+    ['Settings', () => <Settings dev={false} debug={async () => false} />, (html) => expect(html).toContain('Loading')],
   ])('%s renders on an empty store', (_name, page, check) => {
     const html = renderToStaticMarkup(page());
     expect(html.length).toBeGreaterThan(0);

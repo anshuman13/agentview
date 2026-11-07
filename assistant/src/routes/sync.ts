@@ -17,6 +17,8 @@ export const syncRoutes: Routes = {
     send(res, 200, { ok: true, version });
   },
 
+  'GET /debug': ({ res }) => send(res, 200, { debug: process.env.ASSISTANT_DEBUG === '1' }),
+
   'POST /sync': async (c) => {
     try {
       const data = (await readJson(c.req, 5_000_000)) as { since: number; changes: Change[] };
