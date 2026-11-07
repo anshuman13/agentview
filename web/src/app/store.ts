@@ -115,9 +115,11 @@ export function presetChat(chat: string | null, sessionId: string | null) {
   set((s) => ({ session: { ...s.session, id: chat ?? s.session.id, sessionId: sessionId ?? s.session.sessionId } }));
 }
 
+export const subscribe = (l: () => void) => (listeners.add(l), () => { listeners.delete(l); });
+
 export function useStore<T>(selector: (s: State) => T): T {
   return useSyncExternalStore(
-    (l) => (listeners.add(l), () => listeners.delete(l)),
+    subscribe,
     () => selector(state),
   );
 }

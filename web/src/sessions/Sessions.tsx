@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { apiUrl } from '../app/api';
-import { api, embedded, notice, send, setUi, useStore } from '../app/store';
+import { api, embedded, getState, notice, send, setUi, subscribe, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -67,12 +67,6 @@ export function Sessions() {
   const waitingCount = useStore((s) => s.live.reduce((n, c) => n + (c.pending ? 1 : 0), 0));
   const [filter, setFilter] = useState('');
   const viewing = useStore((s) => s.session.id);
-  useEffect(() => {
-    if (pendingAgent?.chat !== viewing) return;
-    const { id } = pendingAgent;
-    pendingAgent = null;
-    setTimeout(() => openAgent(id), 0);
-  }, [viewing]);
   const [segment, setSegment] = useState(() => stored('agentview.workspace.segment', 'work'));
   const [shut, setShut] = useState<string[]>(() => stored('agentview.workspace.kinds', []));
   const [toggled, setToggled] = useState<Set<string>>(new Set());
@@ -245,12 +239,12 @@ const PEEK_MS = 8000;
 
 export function OpenChats() {
   const current = useStore((s) => s.session.sessionId);
-  const viewing = useStore((s) => s.session.id);
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
   const { folders, chats, setChats } = useWorkspace(current + cwd);
   const savedById = useMemo(() => new Map(chats.map((s) => [s.sessionId, s])), [chats]);
   const [filter, setFilter] = useState('');
+  const viewing = useStore((s) => s.session.id);
   const [collapsed, setCollapsed] = useState(() => stored<Record<string, boolean>>(KEY, {}));
   const [full, setFull] = useState<Set<string>>(new Set());
   const [opening, setOpening] = useState<string | null>(null);
@@ -577,7 +571,21 @@ function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin
 }
 
 const agentsOpen = new Set<string>();
-let pendingAgent: { chat: string; id: string } | null = null;
+let stopWaiting: (() => void) | null = null;
+
+// Opens an agent of another chat once the switch to that chat lands, after Brief resets its selection.
+function openAgentIn(chat: string, id: string) {
+  stopWaiting?.();
+  const stop = subscribe(() => {
+    if (getState().session.id !== chat) return;
+    stop();
+    stopWaiting = null;
+    setTimeout(() => openAgent(id), 0);
+  });
+  stopWaiting = stop;
+  setTimeout(() => { if (stopWaiting === stop) { stop(); stopWaiting = null; } }, 10_000);
+  send({ type: 'view', id: chat });
+}
 
 function LiveAgents({ c }: { c: LiveChat }) {
   const [open, setOpen] = useState(() => agentsOpen.has(c.id));
@@ -589,8 +597,7 @@ function LiveAgents({ c }: { c: LiveChat }) {
   };
   const pick = (id: string) => {
     if (c.id === viewing) return openAgent(id);
-    pendingAgent = { chat: c.id, id };
-    send({ type: 'view', id: c.id });
+    openAgentIn(c.id, id);
   };
   return <AgentsBlock agents={c.agentList!} open={open} onToggle={toggle} onOpen={pick} />;
 }
