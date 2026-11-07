@@ -111,6 +111,7 @@ object Geometry {
     val bar = 3.dp
     val subIndent = 7.dp
     val stroke = 1.5.dp
+    val spark = 120.dp
 }
 
 val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSm, lineHeight = Tokens.lineSm)

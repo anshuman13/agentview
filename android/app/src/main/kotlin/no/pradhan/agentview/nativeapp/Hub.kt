@@ -29,7 +29,7 @@ private val collapsedSer = MapSerializer(String.serializer(), Boolean.serializer
 class Hub(app: Application) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("agentview", 0)
     private val cid = UUID.randomUUID().toString()
-    private val http = OkHttpClient()
+    val client = OkHttpClient()
     val store = ChatStore()
 
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
@@ -39,9 +39,12 @@ class Hub(app: Application) : AndroidViewModel(app) {
     val link = MutableStateFlow<DeepLink?>(null)
     val workspace = MutableStateFlow(Workspace())
     val loadingEarlier = MutableStateFlow(false)
-    val api = Api({ origin.value }, http)
+    val api = Api({ origin.value }, client)
     val codex = CodexStore(viewModelScope, api::assistantChanges, api::assistantSync, { !readOnly }, { notice.value = it })
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
+
+    val writes = Writes(viewModelScope, { readOnly }, { notice.value = it })
+    val theme = MutableStateFlow(prefs.getString("theme", null) ?: "")
 
     // Set by the launch intent to check the screens without changing anything on the server beyond viewing a chat.
     @Volatile var readOnly = false
@@ -163,6 +166,20 @@ class Hub(app: Application) : AndroidViewModel(app) {
 
     fun close() = store.close()
 
+    fun setTheme(value: String) {
+        theme.value = value
+        prefs.edit().putString("theme", value).apply()
+    }
+
+    // The chat the workspace pages act on: the one on screen, else the server's last viewed chat.
+    val pageChat: String get() = store.state.value.shownId
+
+    suspend fun read(path: String): String = api.get(path, pageChat)
+
+    fun write(path: String, body: String, failure: String, done: (Boolean) -> Unit = {}) = writes.run(failure, { api.post(path, body, pageChat) }, done)
+
+    fun command(body: String) = post(body, store.wanted)
+
     fun closeChat(id: String) = post(closeCmd(id), id)
 
     // A message while Claude runs queues for its next step, or with `steer` stops it and sends now.
@@ -240,11 +257,11 @@ class Hub(app: Application) : AndroidViewModel(app) {
     suspend fun image(chat: String, path: String): ByteArray? = runCatching { api.image(chat, path) }.getOrNull()
 
     private fun post(body: String, chat: String, viewing: Boolean = false, done: ((Boolean) -> Unit)? = null) {
-        if (readOnly && !viewing) { notice.value = "Read-only check, nothing was sent"; done?.invoke(true); return }
+        if (readOnly && !viewing) { notice.value = READ_ONLY_SENT; done?.invoke(true); return }
         viewModelScope.launch(Dispatchers.IO) {
             val url = "${origin.value}/api/cmd?cid=$cid&chat=${enc(chat)}"
             val err = try {
-                http.newCall(Request.Builder().url(url).post(body.toRequestBody("application/json".toMediaType())).build()).execute().use { if (it.isSuccessful) null else "Server said ${it.code}" }
+                client.newCall(Request.Builder().url(url).post(body.toRequestBody("application/json".toMediaType())).build()).execute().use { if (it.isSuccessful) null else "Server said ${it.code}" }
             } catch (e: Exception) {
                 "Not connected, that did not reach the server"
             }

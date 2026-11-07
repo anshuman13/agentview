@@ -23,8 +23,8 @@ private val typography = Typography(
 )
 
 @Composable
-fun AgentViewTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+fun AgentViewTheme(theme: String = "", content: @Composable () -> Unit) {
+    val dark = when (theme) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
     val c = if (dark) DarkColors else LightColors
     val base = if (dark) darkColorScheme() else lightColorScheme()
     val scheme = base.copy(

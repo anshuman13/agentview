@@ -78,4 +78,9 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
     }
 
     suspend fun image(chat: String, path: String): ByteArray = call(url("/api/image?chat=${enc(chat)}&path=${enc(path)}"))
+
+    // Chat-scoped routes run in the chat's folder; without a chat the server uses the last viewed one.
+    private fun scoped(path: String, chat: String) = if (chat.isEmpty()) path else path + (if ('?' in path) "&" else "?") + "chat=${enc(chat)}"
+    suspend fun get(path: String, chat: String = ""): String = call(url(scoped(path, chat))).decodeToString()
+    suspend fun post(path: String, body: String, chat: String = ""): String = call(url(scoped(path, chat)).post(body.toRequestBody(json))).decodeToString()
 }
