@@ -106,7 +106,7 @@ private fun FileGroup(files: List<GitFile>, onOpen: (GitFile) -> Unit, menu: @Co
             val name = f.path.substringAfterLast('/')
             val letter = letterOf(f)
             ListRow(
-                name, parentOf(f.path).ifEmpty { null }, lines = 1, strike = f.status == "D",
+                name, parentOf(f.path).ifEmpty { null }, lines = 2, metaLines = 2, strike = f.status == "D",
                 leading = { FileTag(name) },
                 trailing = {
                     RowLabel(letter, letterColor(letter))

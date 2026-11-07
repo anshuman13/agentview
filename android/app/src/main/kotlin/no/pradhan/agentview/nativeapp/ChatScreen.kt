@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 
 data class StatusLine(val text: String, val tone: Tone2)
 enum class Tone2 { Running, Needs, Failed, Idle }
@@ -52,17 +55,15 @@ fun ChatScreen(hub: Hub) {
             live.title.ifBlank { "Untitled" },
             large = false,
             subtitle = {
-                Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-                    Text(
-                        status.text,
-                        style = Type.subheadline,
-                        color = when (status.tone) { Tone2.Running -> av.accentText; Tone2.Needs -> av.warn; Tone2.Failed -> av.err; Tone2.Idle -> av.fgMuted },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    costLabel(cost).takeIf { it.isNotEmpty() }?.let { Text("· $it", style = Type.subheadline, color = av.fgMuted) }
+                val toneColor = when (status.tone) { Tone2.Running -> av.accentText; Tone2.Needs -> av.warn; Tone2.Failed -> av.err; Tone2.Idle -> av.fgMuted }
+                val muted = av.fgMuted
+                val line = remember(status, cost, toneColor, muted) {
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = toneColor)) { append(status.text) }
+                        costLabel(cost).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = muted)) { append(" · $it") } }
+                    }
                 }
+                WordClamp(line, Type.subheadline, muted, 2)
             },
         ) {
             MoreButton { close ->
