@@ -3,6 +3,8 @@ package no.pradhan.agentview.nativeapp
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.time.LocalDate
+import kotlinx.serialization.Serializable
 
 // web/src/codex/data/ask.ts askText: the question with the open items and, by profile, the meetings the chat needs.
 private fun fmt(t: Long, pattern: String) = DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH).format(Instant.ofEpochMilli(t).atZone(codexZone))
@@ -38,3 +40,19 @@ fun askText(question: String, profile: String, items: List<Row>, about: Row? = n
         if (personal) "\nRead these events in Calendar for location and notes. Then use Calendar, Gmail and web search to suggest concrete alternatives near where I am, each with opening hours and travel time. Change the calendar only after I confirm." else null,
     ).joinToString("\n")
 }
+
+
+// One Codex chat per profile and Mac is reused for the day (web codex/data/ask.ts).
+@Serializable
+data class DailyChat(val day: String, val mac: String, val chat: String, val sessionId: String? = null)
+
+fun today(): String = LocalDate.now().toString()
+
+fun reusableDaily(d: DailyChat?, day: String, mac: String, fresh: Boolean = false): DailyChat? =
+    d?.takeIf { !fresh && it.day == day && it.mac == mac }
+
+fun openDaily(d: DailyChat?, live: List<LiveChat>): LiveChat? =
+    d?.let { r -> live.firstOrNull { it.id == r.chat || (r.sessionId != null && it.sessionId == r.sessionId) } }
+
+fun parseDaily(s: String?): DailyChat? = s?.let { runCatching { protocolJson.decodeFromString(DailyChat.serializer(), it) }.getOrNull() }
+fun encodeDaily(d: DailyChat) = protocolJson.encodeToString(DailyChat.serializer(), d)

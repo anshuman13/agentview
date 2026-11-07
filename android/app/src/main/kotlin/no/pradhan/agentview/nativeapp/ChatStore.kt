@@ -44,11 +44,18 @@ class ChatStore {
     var wanted = ""
         private set
 
+    private var switching = false
+
+    // The next init for a chat other than the wanted one is the answer to new_session or open_session.
+    fun expectSwitch() { switching = true }
+    fun cancelSwitch() { switching = false }
+
     fun handle(m: ServerMessage) {
         val s = state.value
         when (m) {
             is ServerMessage.Init -> {
-                if (wanted.isNotEmpty() && m.chatId != wanted) return
+                if (switching && m.chatId != wanted) { wanted = m.chatId; switching = false }
+                else if (wanted.isNotEmpty() && m.chatId != wanted) return
                 state.value = s.copy(shownId = m.chatId, events = m.events, earlier = m.earlier, settled = true, session = m.session, pending = m.pending)
             }
             is ServerMessage.Event -> {
@@ -109,6 +116,7 @@ class ChatStore {
 
     fun reset() {
         wanted = ""
+        switching = false
         cache.clear()
         state.value = StoreState()
     }

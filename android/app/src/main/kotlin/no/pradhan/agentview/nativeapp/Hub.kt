@@ -186,14 +186,27 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         post(viewCmd(id), id, viewing = true)
     }
 
-    // Opens a saved session; true once its live chat exists and is shown.
+    // Opens a saved session; true once its chat is shown.
     suspend fun openSaved(sessionId: String): Boolean {
         if (readOnly) { notice.value = READ_ONLY_OPEN; return false }
         markSeen(sessionId)
-        post(openSessionCmd(sessionId), store.wanted)
-        val chat = withTimeoutOrNull(20_000) { store.state.first { s -> s.live.any { it.sessionId == sessionId } } }?.live?.first { it.sessionId == sessionId } ?: return false
-        open(chat.id)
-        return true
+        val chat = store.state.value.live.firstOrNull { it.sessionId == sessionId }
+        if (chat != null) { open(chat.id); return true }
+        return switchTo(openSessionCmd(sessionId)) != null
+    }
+
+    // Sends a command that makes the server show another chat and waits for that chat's init.
+    private suspend fun switchTo(body: String): String? {
+        if (withTimeoutOrNull(10_000) { liveLoaded.first { it } } == null) return null
+        val from = store.wanted
+        store.expectSwitch()
+        post(body, from)
+        val s = withTimeoutOrNull(15_000) { store.state.first { s -> store.wanted != from && s.settled && s.shownId == store.wanted } }
+        if (s == null) { store.cancelSwitch(); return null }
+        saved[CHAT_KEY] = s.shownId
+        notifier.clear(s.shownId)
+        markSeen(s.session?.sessionId)
+        return s.shownId
     }
 
     fun resolveQuestion(q: Question, meetings: List<Row>, now: Long) {
@@ -212,31 +225,52 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         get() = prefs.getString("codexProfile", WORK) ?: WORK
         set(v) { prefs.edit().putString("codexProfile", v).apply() }
 
-    // Opens a new chat for the profile and sends the question in it, then shows the chat.
+    private var asking = false
+
+    // Sends the question to today's Codex chat for the profile on this Mac; the first question of the day opens a new chat.
     fun askCodex(question: String, profile: String) {
         if (readOnly) { notice.value = "Read-only check, nothing was sent"; return }
+        if (asking) return
+        asking = true
         viewModelScope.launch {
-            val chat = openNewChat(profile)
-            if (chat == null) { notice.value = "The Codex chat did not open, the question was not sent"; return@launch }
-            submit(question, false) { notice.value = "The question was not sent" }
-            link.value = DeepLink(chat = chat.id)
+            try {
+                val key = "codex-chat-$profile"
+                val mac = origin.value
+                val daily = reusableDaily(parseDaily(prefs.getString(key, null)), today(), mac)
+                val live = openDaily(daily, store.state.value.live)
+                val id = when {
+                    live != null -> showChat(live.id)
+                    daily?.sessionId != null -> switchTo(openSessionCmd(daily.sessionId))
+                    else -> switchTo(newSessionCmd(profile))
+                }
+                if (id == null) { notice.value = "The Codex chat did not open, the question was not sent"; return@launch }
+                submit(question, false) { notice.value = "The question was not sent" }
+                link.value = DeepLink(chat = id)
+                val sessionId = store.state.value.session?.sessionId ?: live?.sessionId ?: daily?.sessionId
+                prefs.edit().putString(key, encodeDaily(DailyChat(today(), mac, id, sessionId))).apply()
+                if (sessionId == null) launch { rememberSession(key, mac, id) }
+            } finally {
+                asking = false
+            }
         }
     }
 
-    private suspend fun openNewChat(profile: String? = null): LiveChat? {
-        if (withTimeoutOrNull(10_000) { liveLoaded.first { it } } == null) return null
-        val before = store.state.value.live.map { it.id }.toSet()
-        post(newSessionCmd(profile), store.wanted)
-        val chat = withTimeoutOrNull(15_000) { store.state.first { s -> s.live.any { it.id !in before } } }?.live?.first { it.id !in before }
-        if (chat != null) open(chat.id)
-        return chat
+    private suspend fun showChat(id: String): String? {
+        if (store.wanted != id) open(id)
+        return withTimeoutOrNull(15_000) { store.state.first { it.settled && it.shownId == id } }?.shownId
+    }
+
+    // A new chat gets its Claude session id after the first prompt; keep it so a closed chat can be reopened.
+    private suspend fun rememberSession(key: String, mac: String, chat: String) {
+        val sessionId = withTimeoutOrNull(60_000) { store.state.first { s -> s.live.any { it.id == chat && it.sessionId != null } } }?.live?.first { it.id == chat }?.sessionId ?: return
+        prefs.edit().putString(key, encodeDaily(DailyChat(today(), mac, chat, sessionId))).apply()
     }
 
     fun newChat() {
         if (readOnly) { notice.value = READ_ONLY_SENT; return }
         viewModelScope.launch {
-            val chat = openNewChat()
-            if (chat == null) notice.value = "The chat did not open" else link.value = DeepLink(chat = chat.id)
+            val id = switchTo(newSessionCmd())
+            if (id == null) notice.value = "The chat did not open" else link.value = DeepLink(chat = id)
         }
     }
 
