@@ -224,6 +224,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   // A phone coming back after its chat was idle-closed should get that chat back, not whatever was viewed last.
   const wanted = params.get('session');
   if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
+  client.send({ type: 'live', chats: [...chats.values()] });
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
 
@@ -269,6 +270,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   gate.attach(chat);
   const wanted = url.searchParams.get('session');
   if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
+  client.send({ type: 'live', chats: [...chats.values()] });
   client.send({ type: 'attention', items: attention() });
   if (restarting) client.send({ type: 'restarting' });
   // A named event, not a comment: the client hears it and can tell a dead link from a quiet one.
