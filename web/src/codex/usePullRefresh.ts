@@ -2,10 +2,21 @@ import { useEffect, useRef, type RefObject } from 'react';
 import { haptic } from '../ui/haptic';
 import { isDragging } from './drag';
 
-const TRIGGER = 64;
-const MAX = 120;
-const SLOP = 10;
+export const TRIGGER = 64;
+export const MAX = 120;
+export const SLOP = 10;
+export const HOLD = TRIGGER * 0.6;
 const phone = () => matchMedia('(max-width: 900px)').matches;
+
+export function classify(dx: number, dy: number, scrollTop: number): 'wait' | 'cancel' | 'pull' {
+  if (scrollTop > 0) return 'cancel';
+  if (Math.abs(dy) < SLOP && Math.abs(dx) < SLOP) return 'wait';
+  return dy <= 0 || Math.abs(dx) > dy ? 'cancel' : 'pull';
+}
+
+export const damp = (dy: number) => Math.min(MAX, Math.max(0, dy) * 0.5);
+
+export const shouldRefresh = (damped: number) => damped >= TRIGGER * 0.5;
 
 // Pull down from the top of a scroller to refresh. Attach the returned ref to an absolutely placed indicator; it is moved by style, so a pull does not re-render.
 export function usePullRefresh(scroller: RefObject<HTMLElement | null>, refresh: () => Promise<unknown>, on: unknown) {
@@ -32,21 +43,22 @@ export function usePullRefresh(scroller: RefObject<HTMLElement | null>, refresh:
       if (isDragging() || el.scrollTop > 0) { if (state === 'pull') settle(); else state = 'idle'; return; }
       const t = e.touches[0], y = t.clientY - y0;
       if (state === 'wait') {
-        if (Math.abs(y) < SLOP && Math.abs(t.clientX - x0) < SLOP) return;
-        if (y <= 0 || Math.abs(t.clientX - x0) > y) { state = 'idle'; return; }
+        const m = classify(t.clientX - x0, y, el.scrollTop);
+        if (m === 'wait') return;
+        if (m === 'cancel') { state = 'idle'; return; }
         state = 'pull';
       }
       if (e.cancelable) e.preventDefault();
-      dy = Math.min(MAX, Math.max(0, y) * 0.5);
+      dy = damp(y);
       show(dy);
     };
     const end = () => {
       if (state === 'wait') { state = 'idle'; return; }
       if (state !== 'pull') return;
-      if (dy < TRIGGER * 0.5) return settle();
+      if (!shouldRefresh(dy)) return settle();
       state = 'busy';
       haptic('tap');
-      show(TRIGGER * 0.6, 160);
+      show(HOLD, 160);
       i.classList.add('spin');
       void run.current().catch(() => {}).finally(() => { i.classList.remove('spin'); settle(); });
     };

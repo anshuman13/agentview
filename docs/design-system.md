@@ -200,6 +200,10 @@ How much a list row may carry. The eye should find the one thing to do without r
   Destructive items go last in the Menu. A row never shows Edit as a button; editing happens on the page or
   inline after a tap on the text.
 - Every Row, Section action and Chip has a 44px touch target at max-width 480px and on coarse pointers (`--touch`). Rows are 48px on desktop and at least 44px on touch; IconButtons and Chips keep their painted size and get a hit-area layer.
+- Pull to refresh: phone widths only (max-width 900px), at the top of the scroll container, on Overview, Tasks and
+  Meetings (Wiki and Jobs share the hook). The indicator is the floating `.as-ptr` spinner chip, not a Row. A pull
+  starts after 10px of downward, mostly vertical movement and refreshes at 64px of finger travel; shorter settles
+  back. No refresh on desktop.
 - Secondary content (history, a reason, earlier replies) is behind the Menu or on the page, not a per-row Fold.
 - Batch actions ("Send all", "Copy list") go in the Section header as its one action, not as a band above
   the rows. Two batch actions become a Menu on the header.
