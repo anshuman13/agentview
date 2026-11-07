@@ -4,6 +4,7 @@ import type http from 'node:http';
 
 export const NETBIRD = ['/opt/homebrew/bin/netbird', '/usr/local/bin/netbird'].find((p) => existsSync(p)) ?? 'netbird';
 const TTL = 15_000;
+const RETRY = 2_000;
 
 export type NetbirdPeer = { fqdn: string; netbirdIp?: string; netbirdIpv6?: string };
 export type NetbirdStatus = {
@@ -15,7 +16,7 @@ export type NetbirdStatus = {
   peers?: { details?: NetbirdPeer[] | null };
 };
 
-// Only this Mac and the peers NetBird lists may connect. The list comes from `netbird status --json`, refreshed every 15s.
+// Only this Mac and the peers NetBird lists may connect. The list comes from `netbird status --json`, refreshed every 15s, or after 2s following a failed fetch.
 let status: NetbirdStatus | null = null;
 let peers = new Set<string>();
 let fetched = 0;
@@ -32,13 +33,18 @@ export function canon(addr: string) {
 }
 
 export function loadStatus(json: string | null) {
-  fetched = Date.now();
+  let next: NetbirdStatus | null = null;
   try {
-    status = json ? (JSON.parse(json) as NetbirdStatus) : null;
-  } catch {
-    status = null;
+    next = json ? (JSON.parse(json) as NetbirdStatus) : null;
+  } catch {}
+  if (!next) {
+    // A failed fetch must not lock out peers that were listed a moment ago.
+    fetched = Date.now() - (TTL - RETRY);
+    return status;
   }
-  const all = status ? [status.netbirdIp, status.netbirdIpv6, ...(status.peers?.details ?? []).flatMap((p) => [p.netbirdIp, p.netbirdIpv6])] : [];
+  fetched = Date.now();
+  status = next;
+  const all = [status.netbirdIp, status.netbirdIpv6, ...(status.peers?.details ?? []).flatMap((p) => [p.netbirdIp, p.netbirdIpv6])];
   peers = new Set(all.filter((x): x is string => !!x).map(canon));
   return status;
 }

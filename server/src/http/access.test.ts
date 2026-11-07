@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { allowedPeer, allowedRequest, appOrigin, canon, loadStatus, requester } from './access.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { allowedPeer, allowedRequest, appOrigin, canon, loadStatus, peerName, requester } from './access.js';
 
 const status = JSON.stringify({
   daemonStatus: 'Connected',
@@ -14,6 +14,14 @@ const status = JSON.stringify({
 });
 
 beforeEach(() => loadStatus(status));
+
+async function freshAccess() {
+  vi.resetModules();
+  const execFile = vi.fn();
+  vi.doMock('node:child_process', () => ({ execFile, execFileSync: () => { throw new Error('no netbird'); } }));
+  const mod = await import('./access.js');
+  return { ...mod, execFile };
+}
 
 describe('allowedPeer', () => {
   it('accepts loopback and listed peers in any spelling', () => {
@@ -37,12 +45,55 @@ describe('allowedPeer', () => {
     expect(allowedPeer(undefined)).toBe(false);
   });
 
-  it('allows only loopback when NetBird is not running', () => {
+  it('allows only loopback when NetBird is not running', async () => {
+    const fresh = await freshAccess();
+    fresh.loadStatus(null);
+    expect(fresh.allowedPeer('127.0.0.1')).toBe(true);
+    expect(fresh.allowedPeer('100.102.26.124')).toBe(false);
+    fresh.loadStatus('not json');
+    expect(fresh.allowedPeer('100.102.26.124')).toBe(false);
+  });
+});
+
+describe('failed status fetch', () => {
+  it('keeps the listed peers', () => {
     loadStatus(null);
-    expect(allowedPeer('127.0.0.1')).toBe(true);
-    expect(allowedPeer('100.102.26.124')).toBe(false);
+    expect(allowedPeer('100.102.26.124')).toBe(true);
+    expect(peerName('100.102.26.124')).toBe('laptop');
     loadStatus('not json');
+    expect(allowedPeer('100.102.111.164')).toBe(true);
+  });
+
+  it('drops a peer once a later fetch no longer lists it', () => {
+    loadStatus(null);
+    loadStatus(JSON.stringify({ netbirdIp: '100.102.198.21', peers: { details: [{ fqdn: 'phone.netbird.cloud', netbirdIp: '100.102.111.164' }] } }));
+    expect(allowedPeer('100.102.111.164')).toBe(true);
     expect(allowedPeer('100.102.26.124')).toBe(false);
+  });
+
+  it('retries after 2s, and after 15s following a good fetch', async () => {
+    vi.useFakeTimers();
+    try {
+      const fresh = await freshAccess();
+      const calls = () => fresh.execFile.mock.calls.length;
+      fresh.loadStatus(null);
+      const before = calls();
+      void fresh.netbirdStatus();
+      expect(calls()).toBe(before);
+      vi.advanceTimersByTime(2000);
+      void fresh.netbirdStatus();
+      expect(calls()).toBe(before + 1);
+      fresh.execFile.mock.calls[before][3](null, status);
+      await Promise.resolve();
+      vi.advanceTimersByTime(14_000);
+      void fresh.netbirdStatus();
+      expect(calls()).toBe(before + 1);
+      vi.advanceTimersByTime(1000);
+      void fresh.netbirdStatus();
+      expect(calls()).toBe(before + 2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
