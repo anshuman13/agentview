@@ -52,7 +52,8 @@ private enum class Picker { Mode, Model, Effort }
 
 @Composable
 fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean) {
-    var text by remember(chatId) { mutableStateOf(TextFieldValue(hub.draft(chatId))) }
+    var text by remember(chatId) { mutableStateOf(hub.draft(chatId).let { TextFieldValue(it, TextRange(it.length)) }) }
+    val dictation = remember(chatId) { Dictation() }
     var dismissed by remember(chatId) { mutableStateOf("") }
     var sheet by remember { mutableStateOf<Picker?>(null) }
     var uploading by remember { mutableIntStateOf(0) }
@@ -83,7 +84,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
         val t = text.text
         if (t.isBlank() || uploading > 0) return
         set(TextFieldValue(""))
-        hub.submit(t, steer) { if (text.text.isBlank()) set(TextFieldValue(t, TextRange(t.length))) }
+        hub.submit(t, steer) { val back = restoreUnsent(text.text, t); set(TextFieldValue(back, TextRange(back.length))) }
     }
 
     val placeholder = when {
@@ -133,6 +134,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 }
                 if (uploading > 0) RowLabel("Uploading", c.fgFaint)
                 if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
+                VoiceButton({ spoken, final -> dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> set(TextFieldValue(t, TextRange(caret))) } }, { hub.notice.value = it })
                 if (running && typed) Button("Stop and send", { submit(true) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 val canSend = typed && uploading == 0
                 val haptic = LocalHapticFeedback.current

@@ -64,6 +64,9 @@ fun rankCommands(commands: List<CommandInfo>, query: String, limit: Int = MAX_RO
 fun acceptSuggestion(text: String, start: Int, caret: Int, insert: String): Pair<String, Int> =
     Pair("${text.substring(0, start)}$insert ${text.substring(caret)}", start + insert.length + 1)
 
+// The field after a send that did not go through: the unsent text goes back in front of anything typed since.
+fun restoreUnsent(current: String, sent: String) = if (current.isBlank()) sent else "$sent\n$current"
+
 fun appendWord(text: String, add: String) = "$text${if (text.isNotEmpty() && !text.last().isWhitespace()) " " else ""}$add"
 
 fun contextPercent(context: Long?): Int? = context?.let { minOf(100, Math.round(it.toDouble() / COMPACT_AT * 100).toInt()) }

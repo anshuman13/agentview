@@ -207,6 +207,8 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp6, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
             TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
+            val dictation = remember { Dictation() }
+            VoiceButton({ spoken, final -> dictation.apply(text, text.length, spoken, final)?.let { text = it.first } }, { hub.notice.value = it })
             IconBtn("send", "Send", { send() }, enabled = text.isNotBlank(), on = text.isNotBlank())
         }
     }
