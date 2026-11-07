@@ -326,6 +326,9 @@ fun Tag(text: String, status: Status = Status.Neutral, modifier: Modifier = Modi
 
 enum class BadgeTone { Default, Quiet, Waiting, Done, Failed, New, Running }
 
+@Composable
+fun Chevron() = Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.iconSm), tint = av.fgMuted)
+
 // Badge (web Badge): a small pill with a count or a status word.
 @Composable
 fun Badge(text: String, tone: BadgeTone = BadgeTone.Default, modifier: Modifier = Modifier) {

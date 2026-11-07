@@ -228,8 +228,9 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
     val hidden by hub.handled.collectAsState()
-    val needsTotal = remember(st, profile, now / 60_000, hidden) { needsCount(st, profile, now, hidden) }
-    val today = remember(st, profile, s, mt, hidden) { overviewToday(s, mt.next, now, riskKeys(needsList(st, profile, now, hidden))) }
+    val needs = remember(st, profile, now / 60_000, hidden) { needsList(st, profile, now, hidden) }
+    val needsTotal = needs.size + remember(s, profile, now / 60_000) { replyQueue(s.review, profile, now).size }
+    val today = remember(st, profile, s, mt, needs) { overviewToday(s, mt.next, now, riskKeys(needs)) }
     val others = mt.today.filter { it != mt.next && (it.endsAt ?: it.startsAt!!) > now }
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }
     var all by remember { mutableStateOf(false) }
@@ -257,7 +258,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { Button("New task", onAdd, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
             }
             if (needsTotal > 0) {
-                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Badge("$needsTotal", BadgeTone.Quiet); Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon), tint = av.fgMuted) }) }
+                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Badge("$needsTotal", BadgeTone.Quiet); Chevron() }) }
             }
         }
         if (rows.isNotEmpty()) {

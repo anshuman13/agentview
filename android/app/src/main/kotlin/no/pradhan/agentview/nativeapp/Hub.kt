@@ -59,7 +59,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     @Volatile var foreground = false
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
     val handled = MutableStateFlow(
-        (prefs.getString("handledOrder", null)?.split("\n")?.filter { it.isNotEmpty() } ?: prefs.getStringSet("handled", emptySet()).orEmpty().toList()).toCollection(LinkedHashSet()) as Set<String>,
+        prefs.getString("handledOrder", null)?.split("\n")?.filter { it.isNotEmpty() }?.toCollection(LinkedHashSet()) ?: emptySet(),
     )
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
@@ -86,7 +86,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     init {
         viewModelScope.launch {
             val minute = flow { while (true) { emit(Unit); delay(60_000) } }
-            combine(codex.state, minute, notifyOn, codexFilter, handled) { s, _, on, filter, hidden -> if (on) needsCount(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden) else 0 }
+            combine(codex.state, minute, notifyOn, codexFilter, handled) { s, _, on, filter, hidden -> if (on) needsList(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden).size else 0 }
                 .distinctUntilChanged().collect { notifier.badge(it) }
         }
     }

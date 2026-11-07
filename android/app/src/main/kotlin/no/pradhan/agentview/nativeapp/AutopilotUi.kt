@@ -65,7 +65,7 @@ fun AutopilotRow(hub: Hub, waiting: Int, onOpen: () -> Unit) {
 private enum class Which { Info, Away, Covers, Never, Model, Activity }
 
 @Composable
-private fun SettingRow(title: String, meta: String?, onClick: () -> Unit) = ListRow(title, meta, onClick = onClick, trailing = { Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon), tint = av.fgMuted) })
+private fun SettingRow(title: String, meta: String?, onClick: () -> Unit) = ListRow(title, meta, onClick = onClick, trailing = { Chevron() })
 
 @Composable
 fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, onTask: (Row) -> Unit) {
