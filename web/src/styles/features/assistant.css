@@ -266,6 +266,9 @@
 .tasks .as-toggle.done { color: var(--fg-faint); }
 .tasks section > .as-list { border: 0; border-radius: 0; background: transparent; }
 .tasks .as-list:empty { display: none; }
+.tasks .as-scroll .as-list.grouped { margin-top: 0; padding-left: var(--sp-4); border: 0; border-radius: var(--shape-lg); background: var(--group-card); overflow: hidden; }
+.tasks .as-scroll .as-list.grouped .as-row::after { left: calc(var(--tk-indent) + var(--sp-4)); }
+.tasks .as-scroll .as-list.grouped:has(.ui-menu) { overflow: visible; }
 .tasks .as-part { padding: var(--sp-4) 0 var(--sp-1) var(--tk-indent); font-size: var(--fs-xs); font-weight: 500; color: var(--fg-faint); }
 .tasks .as-part > span { font-variant-numeric: tabular-nums; }
 .tasks .as-row { min-height: 48px; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-radius: 0; }
