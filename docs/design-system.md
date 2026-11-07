@@ -18,6 +18,24 @@ layers, elevation levels, the shape scale, type roles and touch targets.
   colours on tasks and lists. Status colours mark state, always next to text or an icon.
 - Dense on desktop, roomy on touch: 28 and 36px controls with a pointer, 44px on coarse pointers.
 
+### Scandinavian rules (Nov 2026)
+The look to iterate towards: IKEA, Spotify and Nordic public-sector apps. Function first, little said, space
+does the grouping. Applied page by page in the declutter work; the Autopilot page is the reference.
+- One job per screen and one primary action. A page that does two things is two pages.
+- Say less: a row is a short title and its current value as meta ("Away", "Off"; "Covers", "DMs and 3
+  channels"). No sentences, no "how it works" prose and no hint paragraphs on the page; an explanation sits
+  behind one info IconButton that opens a sheet, and a field's hint is its placeholder.
+- Space, not boxes: groups are separated by whitespace and one hairline, never nested panels or borders.
+  Spacing stays on the 4px scale (`--sp-*`); the big gaps between groups are `--sp-6`.
+- Progressive disclosure: a settings row shows title and value and opens its editor on tap (a sheet on the
+  phone, inline on desktop). Forms are never open by default. Lists show at most 5 rows, then "Show all N".
+- Honest controls: a Switch only for on and off, Chips only for a pick from 2 to 5 values, a Field for
+  text. No decorative chips, no counts that nobody acts on, no numbers in a meta line unless they are the
+  value of the row.
+- Two type sizes per screen (body and meta); hierarchy comes from weight and space, not from more sizes.
+- Lagom: a screen holds 5 to 7 rows before anything folds. Related detail (activity, spend, logs) is one row
+  that opens a page of its own.
+
 ## Foundations
 
 ### Type roles (Apple iOS text styles)
