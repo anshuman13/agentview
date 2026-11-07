@@ -1,44 +1,51 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { hubDebug } from './hubDebug';
-import { Settings, SettingsView } from './Settings';
+import { Settings, SettingsView, versionText } from './Settings';
 
 vi.hoisted(() => {
   vi.stubGlobal('window', {});
 });
 
+describe('versionText', () => {
+  it('prefers the Tauri version, then the sha, then Unknown', () => {
+    expect(versionText('0.1.0+abc', 'def')).toBe('0.1.0+abc');
+    expect(versionText('', 'def')).toBe('def');
+    expect(versionText(undefined, 'def')).toBe('def');
+    expect(versionText('', '')).toBe('Unknown');
+  });
+});
+
 describe('SettingsView', () => {
-  it('shows Loading while the flag is pending, not the empty state', () => {
-    const html = renderToStaticMarkup(<SettingsView showDesign={undefined} />);
-    expect(html).toContain('Loading');
-    expect(html).not.toContain('ui-empty');
-  });
-
-  it('shows the empty state without the About group when the flag is false', () => {
-    const html = renderToStaticMarkup(<SettingsView showDesign={false} />);
-    expect(html).toContain('ui-empty');
-    expect(html).not.toContain('About');
-    expect(html).not.toContain('Design');
-  });
-
-  it('shows the Design row under About when allowed', () => {
-    const html = renderToStaticMarkup(<SettingsView showDesign />);
+  it('shows the App version row as a plain row without the Design row', () => {
+    const html = renderToStaticMarkup(<SettingsView version="abc123" />);
     expect(html).toContain('About');
-    expect(html).toContain('Design');
-    expect(html).toContain('Primitives and states');
+    expect(html).toContain('App version');
+    expect(html).toContain('abc123');
+    expect(html).not.toContain('Design');
     expect(html).not.toContain('ui-empty');
+    expect(html).not.toContain('<button');
+  });
+
+  it('shows the Design row under the App version row when allowed', () => {
+    const html = renderToStaticMarkup(<SettingsView showDesign version="abc123" />);
+    expect(html.indexOf('App version')).toBeLessThan(html.indexOf('Design'));
+    expect(html).toContain('Primitives and states');
   });
 });
 
 describe('Settings', () => {
-  it('shows the row at once in dev without asking the hub', () => {
+  it('shows the Design row at once in dev without asking the hub', () => {
     const debug = vi.fn(async () => false);
-    expect(renderToStaticMarkup(<Settings dev debug={debug} />)).toContain('Design');
+    expect(renderToStaticMarkup(<Settings dev debug={debug} appVersion={async () => ''} />)).toContain('Design');
     expect(debug).not.toHaveBeenCalled();
   });
 
-  it('shows Loading first outside dev', () => {
-    expect(renderToStaticMarkup(<Settings dev={false} debug={async () => true} />)).toContain('Loading');
+  it('shows the version, never Loading, outside dev while the flag is pending', () => {
+    const html = renderToStaticMarkup(<Settings dev={false} debug={async () => true} appVersion={async () => '0.1.0+abc'} />);
+    expect(html).toContain('App version');
+    expect(html).not.toContain('Loading');
+    expect(html).not.toContain('Design');
   });
 });
 

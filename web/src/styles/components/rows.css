@@ -15,6 +15,8 @@
 .ui-row.has-lead::after { left: calc(var(--list-pad) + var(--lead-w) + var(--sp-6)); }
 .ui-row:last-child::after { display: none; }
 .ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
+div.ui-row { cursor: default; }
+div.ui-row:is(:hover, :active) { --state: 0%; }
 .ui-row-wrap { --lead-w: 24px; position: relative; display: flex; align-items: center; padding-right: var(--list-pad); }
 .ui-row-wrap > .ui-row { flex: 1; min-width: 0; }
 .ui-row-wrap > .ui-row::after { display: none; }

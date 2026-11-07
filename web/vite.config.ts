@@ -1,9 +1,18 @@
+import { execSync } from 'node:child_process';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { allowedPeer, allowedRequest } from '../server/src/http/access.js';
+
+function buildSha() {
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return '';
+  }
+}
 
 function reloadOnlyOnChange(): Plugin {
   let changed = Date.now();
@@ -53,6 +62,7 @@ async function reloadWhenChanged(since) {
 
 export default defineConfig({
   base: './',
+  define: { __APP_SHA__: JSON.stringify(buildSha()) },
   plugins: [react(), reloadOnlyOnChange()],
   server: {
     port: 5173,

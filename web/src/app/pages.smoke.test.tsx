@@ -59,7 +59,7 @@ describe('page smoke', () => {
     ['Tasks', tasks, (html) => expect(empties(html)).toBe(1)],
     ['Meetings', () => <Meetings onMenu={() => {}} />, (html) => expect(empties(html)).toBe(2)],
     ['Design', () => <DesignPage />, () => {}],
-    ['Settings', () => <Settings dev={false} debug={async () => false} />, (html) => expect(html).toContain('Loading')],
+    ['Settings', () => <Settings dev={false} debug={async () => false} />, (html) => expect(html).toContain('App version')],
   ])('%s renders on an empty store', (_name, page, check) => {
     const html = renderToStaticMarkup(page());
     expect(html.length).toBeGreaterThan(0);

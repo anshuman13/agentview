@@ -315,7 +315,7 @@ service's dashboards. The refresh button reloads the panels too.
 
 Observe's Settings section is a Section header (open by default only for a project with no saved config) with a JSON field and a Save button. The header shows a badge: Unsaved after an edit, Saved after a save, Failed with the error under the field when the JSON is invalid or the save fails. An edit made while saving is kept. Changing the project clears the badge.
 
-Settings is a page of its own (activity bar, More sheet, palette). Its About group holds a Design row that opens `/design`. The row shows in dev mode or when the hub runs with `ASSISTANT_DEBUG=1`; otherwise the page says there is nothing to set up.
+Settings is a page of its own (activity bar, More sheet, palette). Its About group holds a Design row that opens `/design`. The row shows in dev mode or when the hub runs with `ASSISTANT_DEBUG=1`. Above it, a read-only App version row shows the app version in the phone app (`0.1.0+<sha>`) and the web build's short commit sha elsewhere, or "Unknown" when neither is available.
 
 ## Shortcuts
 
