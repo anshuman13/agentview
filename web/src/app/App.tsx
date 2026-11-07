@@ -10,6 +10,7 @@ import { command, pressable, save, stored } from '../ui/util';
 import { haptic } from '../ui/haptic';
 import { slideFrom, useTabSwipe } from './tabSwipe';
 import { useEdgeBack } from './edgeBack';
+import { useKeyboardInset } from './keyboardInset';
 import { Unreachable, useUnreachable } from './Unreachable';
 import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
@@ -267,6 +268,7 @@ export function App() {
   const goSide = (v: View) => { haptic(); setMore(false); setView(v); setTab('repos'); };
   const swipeTabs = [() => goTab('assistant'), () => goTab('chat'), () => goSide('chats'), () => goTab('agents')];
   useEdgeBack();
+  useKeyboardInset();
   useTabSwipe(more ? -1 : tab === 'assistant' ? 0 : tab === 'chat' ? 1 : inChats ? 2 : tab === 'agents' ? 3 : -1, swipeTabs.length, (i) => swipeTabs[i]());
   const reopen = (e: React.MouseEvent) => {
     const el = e.target as HTMLElement;

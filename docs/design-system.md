@@ -209,6 +209,10 @@ How much a list row may carry. The eye should find the one thing to do without r
 - Edge swipe back: phone widths only (max-width 900px). A right swipe from within 20px of the left edge, at least 70px
   and mostly horizontal, closes the topmost open page or sheet like the Back button. It does nothing on a list, inside
   a Row swipe or on desktop.
+- Keyboard inset: touch input at phone widths only (max-width 900px). `useKeyboardInset` writes the covered height of the
+  visual viewport to `--kb-inset` on the root once it is at least 100px, so URL bar changes are ignored. The New task
+  and date sheets pad their overlay by it and sit on top of the keyboard; the task page pads `.wk-scroll` and scrolls
+  the focused title, notes or Reply draft field into view. Unset on desktop and with the keyboard closed.
 - Secondary content (history, a reason, earlier replies) is behind the Menu or on the page, not a per-row Fold.
 - Batch actions ("Send all", "Copy list") go in the Section header as its one action, not as a band above
   the rows. Two batch actions become a Menu on the header.

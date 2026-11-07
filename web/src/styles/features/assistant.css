@@ -315,6 +315,10 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 /* Bottom sheets for quick add and dates, like TickTick: a card that rises from the bottom over a scrim. */
 .as-sheet-overlay { position: fixed; inset: 0; z-index: var(--z-sheet); display: flex; flex-direction: column; justify-content: flex-end; background: color-mix(in srgb, var(--scrim-strong) calc(var(--sheet-fade, 1) * 100%), transparent); }
 .as-sheet { display: flex; flex-direction: column; max-height: 92%; overflow-y: auto; padding: 0 var(--sp-8) calc(var(--sp-8) + var(--safe-bottom)); border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; background: var(--group-card); color: var(--fg); }
+@media (max-width: 900px) {
+  .as-sheet-overlay { padding-bottom: var(--kb-inset, 0px); }
+  .as-page .wk-scroll { padding-bottom: var(--kb-inset, 0px); }
+}
 @media (prefers-reduced-motion: no-preference) {
   .as-sheet-overlay { animation: as-sheet-fade var(--dur) var(--ease); }
   .as-sheet { animation: as-sheet-up 200ms ease-out; }

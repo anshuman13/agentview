@@ -93,7 +93,7 @@ export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantSt
     <div className="as-draft">
       <Section label={mine ? <><Icon name="person" small /> Needs your decision · holding note</> : 'Reply draft'} />
       {editing
-        ? <textarea className="as-draft-text" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
+        ? <textarea className="as-draft-text" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onFocus={reveal} onBlur={keep} />
         : <div className="as-draft-text">{row.draft}</div>}
       {error && <div className="as-draft-err">Not sent: {error}</div>}
       <div className="as-draft-bar">
