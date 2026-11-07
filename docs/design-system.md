@@ -112,12 +112,12 @@ Old names still work: primary is filled, secondary (default) is gray, quiet is p
 
 ### IconButton
 `<IconButton icon label size on>`; square, `--shape-md`, `--fg-muted`, `--fg` on hover, `.on`
-is `--accent-text`. 28 / 36px, 44px on touch (Material 48dp target, sized to iOS 44pt).
+is `--accent-text`. 28 / 36px, 44px on touch (Material 48dp target, sized to iOS 44pt). 44px hit area at max-width 480px.
 
 ### Chip
 `<Chip on late size icon href>`; `.chip.chip-btn`. Filters and quick picks (Material filter chip). With `href` (plus `target`, `rel`) it renders an `<a>` with the same classes, for chips that open a link.
 Height `--size-2xl`, padding `--sp-4`, label type, `--shape-md`. Quiet: `--fg-muted`, no fill.
-On: `--fg` over `--accent-soft`. Late: `--danger`. Static `.chip` is a read-only tag.
+On: `--fg` over `--accent-soft`. Late: `--danger`. Static `.chip` is a read-only tag. 44px hit area at max-width 480px.
 
 ### Field
 Fill `--sunken`, border `--border` (`--accent` on focus), `--shape-sm`, padding `--sp-2 --sp-4`,
@@ -162,7 +162,7 @@ inset to the text start. The Codex task lists, Goals, Search, Jobs and Summary (
 
 ### Section header
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
-trailing IconButton sm (a text Button sm plain is allowed too). Collapsible headers rotate a chevron; no fill, state layer on hover.
+trailing IconButton sm (a text Button sm plain is allowed too). 44px hit area at max-width 480px. Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
 `onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log, the MCP detail pane, every Fold, the report card and next-meeting card heads and the Week goals card use it.
 
@@ -195,6 +195,7 @@ How much a list row may carry. The eye should find the one thing to do without r
   action) and one IconButton sm "more" opening a Menu with the rest (Edit, Skip, History, Open thread).
   Destructive items go last in the Menu. A row never shows Edit as a button; editing happens on the page or
   inline after a tap on the text.
+- Every Row, Section action and Chip has a 44px touch target at max-width 480px and on coarse pointers (`--touch`). Rows are 48px on desktop and at least 44px on touch; IconButtons and Chips keep their painted size and get a hit-area layer.
 - Secondary content (history, a reason, earlier replies) is behind the Menu or on the page, not a per-row Fold.
 - Batch actions ("Send all", "Copy list") go in the Section header as its one action, not as a band above
   the rows. Two batch actions become a Menu on the header.

@@ -20,7 +20,7 @@ button.link { background: transparent; border: 0; padding: 0; color: var(--link)
 
 .icon-btn {
   width: var(--size-md); height: var(--size-md); padding: 0; flex: none; border: 0; border-radius: var(--radius-sm);
-  background: transparent; color: var(--fg-muted); display: inline-flex; align-items: center; justify-content: center;
+  position: relative; background: transparent; color: var(--fg-muted); display: inline-flex; align-items: center; justify-content: center;
 }
 @media (hover: hover) { .icon-btn:hover:not(:disabled) { color: var(--fg); } }
 .icon-btn:disabled { opacity: 0.4; cursor: default; }
@@ -82,4 +82,9 @@ button.link { background: transparent; border: 0; padding: 0; color: var(--link)
 @media (pointer: coarse) {
   .btn:is(.btn-sm, .btn-md)::after { content: ''; position: absolute; inset: min(0px, calc((100% - var(--touch)) / 2)) 0; }
   .icon-btn:is(.icon-btn-sm, .icon-btn-md) { width: var(--touch); height: var(--touch); }
+}
+@media (max-width: 480px) {
+  .btn:is(.btn-sm, .btn-md)::after { content: ''; position: absolute; inset: min(0px, calc((100% - var(--touch)) / 2)) 0; }
+  .icon-btn:is(.icon-btn-sm, .icon-btn-md)::after, .chip.chip-btn:not(select)::after { content: ''; position: absolute; inset: min(0px, calc((100% - var(--touch)) / 2)); }
+  select.chip.chip-btn { min-height: var(--touch); }
 }
