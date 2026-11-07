@@ -4,6 +4,7 @@ import { parseFrame } from '../http/body.js';
 import { OutputBuffer } from './outputBuffer.js';
 
 const MAX = 200_000;
+const TERM_GONE = 4404;
 type Term = { id: string; chat: string; name: string; proc: Bun.Subprocess; out: OutputBuffer; socks: Set<WebSocket> };
 const terms = new Map<string, Term>();
 let seq = 0;
@@ -33,7 +34,7 @@ export function createTerminal(chat: string, cwd: string) {
   void t.proc.exited.then(() => {
     t.out.dispose();
     terms.delete(t.id);
-    t.socks.forEach((ws) => ws.close());
+    t.socks.forEach((ws) => ws.close(TERM_GONE));
   });
   terms.set(t.id, t);
   return { id: t.id, name: t.name };
@@ -55,7 +56,7 @@ export const closeTerminals = (chat: string) => listTerminals(chat).forEach((t) 
 
 export function attachTerminal(ws: WebSocket, id: string) {
   const t = terms.get(id);
-  if (!t) return ws.close();
+  if (!t) return ws.close(TERM_GONE);
   const snap = t.out.snapshot();
   if (snap) ws.send(snap);
   t.socks.add(ws);

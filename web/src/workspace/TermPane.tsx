@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { touch } from '../app/touch';
 import { wsUrl } from '../ui/util';
+import { backoff, closeKind } from './termReconnect';
 
 // ANSI colours come from the theme tokens, so the terminal matches the app.
 function termTheme() {
@@ -41,7 +42,9 @@ export function Pane({ id, on, focus, clears, inputs, onGone }: { id: string; on
     const fit = new FitAddon();
     xt.loadAddon(fit);
     term.current = xt;
-    const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(id)}`));
+    let ws: WebSocket;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const delay = backoff();
     const send = (m: object) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(m));
     const clear = () => {
       xt.clear();
@@ -68,14 +71,27 @@ export function Pane({ id, on, focus, clears, inputs, onGone }: { id: string; on
       }
       return k !== 'k' && k !== 'j';
     });
-    ws.onopen = resize;
-    ws.onmessage = (e) => xt.write(e.data);
-    ws.onclose = () => gone.current();
+    const connect = (retry: boolean) => {
+      const sock = new WebSocket(wsUrl(`term=${encodeURIComponent(id)}`));
+      ws = sock;
+      sock.onopen = () => {
+        delay.reset();
+        if (retry) xt.reset();
+        resize();
+      };
+      sock.onmessage = (e) => xt.write(e.data);
+      sock.onclose = (e) => {
+        if (closeKind(e.code) === 'gone') gone.current();
+        else timer = setTimeout(() => connect(true), delay.next());
+      };
+    };
+    connect(false);
     xt.onData((d) => send({ t: 'i', d }));
     const ro = new ResizeObserver(resize);
     ro.observe(el);
     return () => {
       ro.disconnect();
+      clearTimeout(timer);
       ws.onclose = null;
       ws.close();
       window.removeEventListener('agentview:theme', retheme);
