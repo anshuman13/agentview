@@ -87,7 +87,7 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, onDismiss: () -> Unit) {
+fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, onRaise: (String) -> Unit, onDismiss: () -> Unit) {
     var title by remember(row.id) { mutableStateOf(row.title ?: "") }
     var text by remember(row.id) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
@@ -147,6 +147,12 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, onD
                             MenuItem(g.title ?: "", { open = false; actions.edit(row, mapOf("goal" to g.id)) })
                         }
                     }
+                }
+            }
+            if (raiseWith.isNotEmpty()) {
+                FieldLabel("Raise next time")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    raiseWith.forEach { p -> Chip("Raise with ${firstName(p)}", { onRaise(p) }) }
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -219,30 +225,38 @@ fun parseCapture(typed: String, pickedAt: Long?, picked: Boolean, now: Long): Ca
 }
 
 @Composable
-fun NeedsSheet(needs: List<Need>, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onDismiss: () -> Unit) {
+fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActions, replies: ReplyOps, hub: Hub, onOpen: (Row) -> Unit, onReview: () -> Unit, onDismiss: () -> Unit) {
     var all by remember { mutableStateOf(setOf<String>()) }
+    var onlyStale by remember { mutableStateOf(false) }
+    val old = staleAsks(queue, now)
+    val filtered = onlyStale && old.isNotEmpty()
+    LaunchedEffect(onlyStale, old.size) { if (onlyStale && old.isEmpty()) onlyStale = false }
+    LaunchedEffect(needs.size, queue.size) { if (needs.isEmpty() && queue.isEmpty()) onDismiss() }
     Sheet(onDismiss, padded = false) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
+            SectionHeader("Needs you", (needs.size + queue.size).toString())
             val groups = listOf("Tasks" to needs.filter { it.isTask }, "Asks" to needs.filter { !it.isTask }).filter { it.second.isNotEmpty() }
-            if (groups.isEmpty()) EmptyState("Nothing needs you")
             groups.forEach { (label, rows) ->
                 SectionHeader(label, rows.size.toString())
                 val shown = if (label in all) rows else rows.take(NEEDS_CAP)
                 Group {
                     shown.forEachIndexed { i, n ->
                         if (i > 0) Hairline()
-                        NeedRow(n, now, actions, hub, onOpen)
+                        NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview)
                     }
                     if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
                 }
             }
+            ReplySection(if (filtered) old else queue, filtered, { onlyStale = false }, now, actions, replies, onOpen)
         }
     }
 }
 
 @Composable
-private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit) {
+private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit, onStale: () -> Unit, onReview: () -> Unit) {
     when (n) {
+        is Need.StaleAsks -> ListRow("${n.count} ${if (n.count == 1) "ask" else "asks"} older than $STALE_DAYS days", "oldest ${agoText(n.oldest, now)}", onClick = onStale)
+        is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", onClick = onReview)
         is Need.Overdue -> ListRow(n.row.title ?: "", n.row.at?.let { "Overdue · due ${whenText(it, now)}" }, leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
             trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
         is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })

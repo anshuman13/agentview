@@ -44,6 +44,17 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
     fun restore(r: Row) = change(r, mapOf("status" to "suggested"), "Back to review")
     fun dismiss(r: Row) = change(r, mapOf("status" to "dismissed"), "Dismissed")
     fun undoable(text: String, undo: () -> Unit) = snack(text, undo)
+    fun say(text: String) = snack(text, null)
+    fun snoozeAsk(r: Row, until: Long) = change(r, mapOf("snoozed_until" to until), "Snoozed to ${whenText(until, now())}")
+
+    // Dismissing keeps the drafts and sends nothing; one undo restores each row whose status has not changed since.
+    fun dismissAll(rows: List<Row>) {
+        val done = rows.filter { store.update(it, mapOf("status" to "dismissed")) }
+        if (done.isEmpty()) return
+        snack("${done.size} dismissed") {
+            done.forEach { r -> val cur = store.current(r); if (cur.status == "dismissed") store.update(cur, mapOf("status" to r.status)) }
+        }
+    }
     fun edit(r: Row, patch: Map<String, Any?>) { store.update(r, patch) }
 
     // Overdue tasks move to today at their own time of day, with one undo for all of them.

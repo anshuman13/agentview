@@ -22,9 +22,11 @@ class ApiError(message: String, val code: Int = 0) : Exception(message)
 fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
 // The REST routes of server/src/http/routes.ts that the chat screens read and write.
-class Api(private val origin: () -> String, private val http: OkHttpClient = OkHttpClient()) {
-    private suspend fun call(req: Request.Builder): ByteArray = withContext(Dispatchers.IO) {
-        http.newCall(req.build()).execute().use { r ->
+class Api(private val origin: () -> String, private val http: OkHttpClient = OkHttpClient()) : AssistantRemote {
+    private val slow = http.newBuilder().readTimeout(120, java.util.concurrent.TimeUnit.SECONDS).build()
+
+    private suspend fun call(req: Request.Builder, client: OkHttpClient = http): ByteArray = withContext(Dispatchers.IO) {
+        client.newCall(req.build()).execute().use { r ->
             val body = r.body.bytes()
             if (!r.isSuccessful) {
                 val msg = runCatching { protocolJson.parseToJsonElement(body.decodeToString()).jsonObject["error"]?.jsonPrimitive?.contentOrNull }.getOrNull()
@@ -61,6 +63,16 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
     // web/src/codex/data/remote.ts: the assistant hub's rows are pulled by version and pushed as per-column changes.
     suspend fun assistantChanges(since: Long, full: Boolean): String = call(url("/api/assistant/changes?since=$since" + if (full) "&full=1" else "")).decodeToString()
     suspend fun assistantSync(body: String): String = call(url("/api/assistant/sync").post(body.toRequestBody(json))).decodeToString()
+
+    override suspend fun autopilot(patch: String?): String = call(url("/api/assistant/autopilot").let { if (patch == null) it else it.post(patch.toRequestBody(json)) }).decodeToString()
+    override suspend fun replyHistory(who: String): String = call(url("/api/assistant/history?who=${enc(who)}")).decodeToString()
+
+    override suspend fun sendReply(id: String, edited: Boolean, text: String?): String {
+        val body = buildJsonObject { if (text != null) put("text", text) }.toString().toRequestBody(json)
+        return call(url("/api/assistant/slack/reply?id=${enc(id)}" + if (edited) "&edited=1" else "").post(body), slow).decodeToString()
+    }
+
+    override suspend fun skipAsk(id: String) { call(url("/api/assistant/slack/skip?id=${enc(id)}").post("".toRequestBody())) }
 
     // The transcript text of a meeting stays on the hub; a meeting without stored text answers 404.
     suspend fun transcript(profile: String, id: String): String? = try {

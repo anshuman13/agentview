@@ -85,22 +85,28 @@ sealed class Need(val keys: List<String>) {
     class Ask(val row: Row) : Need(listOf("task:${row.key}"))
     class Dm(val chat: Row) : Need(listOf("chat:${chat.key}") + listOfNotNull(chat.str("url")?.let { "url:$it" }))
     class JustEnded(val row: Row, val meeting: Row) : Need(listOf("task:${row.key}"))
+    class StaleAsks(val count: Int, val oldest: Long) : Need(listOf("stale-asks"))
+    class Wiki(val count: Int) : Need(listOf("wiki-claims"))
 
     val isTask get() = this is Overdue || this is OverdueAll || this is JustEnded
 }
 
 // Each item once, in rank order: overdue tasks, asks to confirm, DMs waiting on me, then actions of meetings that just ended.
 // Three or more overdue tasks collapse into one entry.
-fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long): List<Need> {
+fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList()): List<Need> {
     val s = split(items, profile, now)
     val mt = meetingsOf(meetings, profile, now)
     val ended = mt.today.filter { it.endsAt != null && it.endsAt!! <= now && now - it.endsAt!! < JUST_ENDED_MS }
     val dms = chats.filter { !it.deleted && it.str("kind") == "dm" && it.long("waiting") == 1L && matchesProfile(profile, it) }.sortedByDescending { it.long("last_at") ?: 0L }
+    val old = staleAsks(replyQueue(s.review, null, now), now)
+    val claims = proposals(facts.filter { matchesProfile(profile, it) }).size
     val groups = listOf<List<Need>>(
         s.overdue.map { Need.Overdue(it) },
-        s.review.map { Need.Ask(it) },
+        s.review.filter { !(it.source == "slack" && drafted(it)) }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
         ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.map { Need.JustEnded(it, m) } },
+        if (old.isNotEmpty()) listOf(Need.StaleAsks(old.size, old.minOf { it.statusTime })) else emptyList(),
+        if (claims > 0) listOf(Need.Wiki(claims)) else emptyList(),
     )
     val seen = HashSet<String>()
     val ranked = groups.flatten().filter { n ->
