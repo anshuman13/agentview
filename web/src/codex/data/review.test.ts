@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRow } from './sync';
 import type { Meeting } from './wiki';
-import { openTasksOf, nextMonday, nudgeText, standupText, waitingByPerson, weeklyReview } from './review';
+import { openTasksOf, nextMonday, nudgeText, waitingByPerson, weeklyReview } from './review';
 import { weekStart } from './dates';
 
 const row = (o: Partial<ItemRow>): ItemRow => ({ id: 'x', profile: 'work', version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0, title: 't', text: null, source: null, source_url: null, people: null, at: null, status: 'open', meeting_id: null, rolls: null, rolled_from: null, rank: null, ...o });
@@ -51,30 +51,6 @@ describe('waitingByPerson', () => {
     const g = waitingByPerson([row({ id: '1', title: 'Waiting on Sara: contract', updated_at: now - 3 * 86400000 })], now, [{ thread: 't1', url: 'https://mail.example.test/t1', to: 'sara', subject: 'Budget', sent_at: now - 5 * 86400000 }]);
     expect(g.map((x) => [x.name, x.rows.map((y) => [y.title, y.days])])).toEqual([['Sara', [['Budget', 5], ['contract', 3]]]]);
     expect(nudgeText(g[0])).toBe('Hi Sara, a quick nudge on Budget; contract. Any update when you have a moment? Thanks!');
-  });
-});
-
-describe('standupText', () => {
-  it('lists the previous workday, the planned day and old waiting items', () => {
-    const fri = new Date(2026, 9, 30, 15).getTime();
-    const now = new Date(2026, 10, 2, 8, 30).getTime();
-    const at = (h: number) => new Date(2026, 10, 2, h).getTime();
-    const mtg = (id: string, title: string, start: number, end: number, decisions: string | null = null) =>
-      ({ id, profile: 'work', title, starts_at: start, ends_at: end, decisions, deleted: 0 }) as Meeting;
-    const items = [
-      row({ id: 'd', title: 'Send the report', status: 'done', field_times: JSON.stringify({ status: fri }) }),
-      row({ id: 's', title: 'Weekend chore', status: 'done', field_times: JSON.stringify({ status: fri + 86400000 }) }),
-      row({ id: 'w', title: 'Waiting on Ana: contract', updated_at: now - 5 * 86400000 }),
-      row({ id: 'n', title: 'Waiting on Bo: invoice', updated_at: now - 86400000 }),
-    ];
-    const meetings = [mtg('m1', 'Planning', fri, fri + 3600_000, '["Ship v2"]'), mtg('m2', 'Sync', at(9), at(10))];
-    const plan = [row({ id: 't', title: 'Write spec ~30m', at: at(12) })];
-    expect(standupText(items, meetings, plan, now)).toBe([
-      'Yesterday\n- Send the report\n- Decided: Ship v2 (Planning)',
-      'Today\n- 08:30 Write spec ~30m\n- 09:00 Sync',
-      'Blocked\n- Ana: contract (5 days)',
-    ].join('\n\n'));
-    expect(standupText([], [], [], now)).toBe('Yesterday\nNothing\n\nToday\nNothing\n\nBlocked\nNothing');
   });
 });
 

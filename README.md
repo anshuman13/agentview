@@ -38,8 +38,7 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
 - Observe (Grafana, Snowflake), Deploy and MCP server pages
 - Codex: Overview, Tasks, Meetings, Jobs and Wiki, synced with an assistant hub that scans Slack, Gmail, the calendar
   and meeting transcripts ([details](docs/features.md#codex)):
-  - Overview with the morning brief, a Plan strip and Plan my day, Copy standup, a card for what came in during the
-    last meeting, and Keep in touch
+  - Overview with Up next, Needs you and the Today list
   - Tasks with a focus timer, estimates suggested from similar done tasks, and up to 3 weekly goals
   - Person pages with their Slack DM summary, open asks, your promises and unanswered mail
   - Related wiki claims, meetings and Slack tasks shown while you write
