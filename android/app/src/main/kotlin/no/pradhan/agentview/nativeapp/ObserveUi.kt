@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,7 +43,7 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Observe", onBack, sub = info?.repo ?: picked.ifEmpty { null }) {
-            IconBtn(Icons.Filled.Refresh, "Refresh", { reload(); tick++ })
+            IconBtn("refresh", "Refresh", { reload(); tick++ })
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {

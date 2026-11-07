@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -39,7 +37,7 @@ fun PullsScreen(hub: Hub, onBack: () -> Unit) {
     val now = System.currentTimeMillis()
 
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "Pull Requests", onBack) { IconBtn(Icons.Filled.Refresh, "Refresh", { fresh = true; reload() }, enabled = !load.busy) }
+        WorkspaceHeader(hub, "Pull Requests", onBack) { IconBtn("refresh", "Refresh", { fresh = true; reload() }, enabled = !load.busy) }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 val problem = ghProblem(load.error)
@@ -106,12 +104,12 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "#${pr.number}", onBack, sub = pr.branch) {
             MoreButton { close ->
-                MenuItem("Open on GitHub", { close(); link(pr.url) })
+                MenuItem("Open on GitHub", "link-external", { close(); link(pr.url) })
                 MenuSeparator()
                 MERGE_METHODS.forEach { (m, label) ->
-                    MenuItem(if (m == "merge") "Merge with a merge commit" else "Merge: $label", { close(); confirm = "Merge #${pr.number} (${label.lowercase()})?" to { act("merge", "merge", mergeBody(m)) } }, enabled = busy.isEmpty())
+                    MenuItem(if (m == "merge") "Merge with a merge commit" else "Merge: $label", "git-merge", { close(); confirm = "Merge #${pr.number} (${label.lowercase()})?" to { act("merge", "merge", mergeBody(m)) } }, enabled = busy.isEmpty())
                 }
-                MenuItem("Check out ${pr.branch}", { close(); act("checkout", "checkout", "{}") }, enabled = busy.isEmpty())
+                MenuItem("Check out ${pr.branch}", "git-branch", { close(); act("checkout", "checkout", "{}") }, enabled = busy.isEmpty())
             }
         }
         PageBody {

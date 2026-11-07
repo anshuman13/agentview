@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,7 +36,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     fun run(action: String, body: String, done: () -> Unit = {}) = hub.write("/api/git/$action", body, "Could not $action") { if (it) done(); reload() }
 
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "Source Control", onBack) { IconBtn(Icons.Filled.Refresh, "Refresh", reload) }
+        WorkspaceHeader(hub, "Source Control", onBack) { IconBtn("refresh", "Refresh", reload) }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 item {
@@ -59,24 +57,24 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                 if (staged.isNotEmpty()) {
                     item {
                         SectionHeader("Staged Changes", staged.size.toString(), action = {
-                            MoreButton { close -> MenuItem("Unstage All Changes", { close(); run("unstage", pathsBody(staged)) }) }
+                            MoreButton { close -> MenuItem("Unstage All Changes", "remove", { close(); run("unstage", pathsBody(staged)) }) }
                         })
                     }
-                    item { FileGroup(staged, onOpen = { open = it.path }) { f, close -> MenuItem("Unstage Changes", { close(); run("unstage", pathsBody(listOf(f))) }) } }
+                    item { FileGroup(staged, onOpen = { open = it.path }) { f, close -> MenuItem("Unstage Changes", "remove", { close(); run("unstage", pathsBody(listOf(f))) }) } }
                 }
                 if (changes.isNotEmpty()) {
                     item {
                         SectionHeader("Changes", changes.size.toString(), action = {
                             MoreButton { close ->
-                                MenuItem("Stage All Changes", { close(); run("stage", pathsBody(changes)) })
-                                MenuItem("Discard All Changes", { close(); ask = changes }, danger = true)
+                                MenuItem("Stage All Changes", "add", { close(); run("stage", pathsBody(changes)) })
+                                MenuItem("Discard All Changes", "discard", { close(); ask = changes }, danger = true)
                             }
                         })
                     }
                     item {
                         FileGroup(changes, onOpen = { open = it.path }) { f, close ->
-                            MenuItem("Stage Changes", { close(); run("stage", pathsBody(listOf(f))) })
-                            MenuItem("Discard Changes", { close(); ask = listOf(f) }, danger = true)
+                            MenuItem("Stage Changes", "add", { close(); run("stage", pathsBody(listOf(f))) })
+                            MenuItem("Discard Changes", "discard", { close(); ask = listOf(f) }, danger = true)
                         }
                     }
                 }
@@ -111,7 +109,7 @@ private fun FileGroup(files: List<GitFile>, onOpen: (GitFile) -> Unit, menu: @Co
                 trailing = {
                     RowLabel(letter, letterColor(letter))
                     MoreButton { close ->
-                        MenuItem("Open File", { close(); onOpen(f) })
+                        MenuItem("Open File", "go-to-file", { close(); onOpen(f) })
                         menu(f, close)
                     }
                 },

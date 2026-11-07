@@ -58,8 +58,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.draw.rotate
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -329,7 +327,7 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
                 Modifier.weight(1f), style = Type.subheadline, color = av.fg, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             if (it.running) Button("Stop", { hub.stopTask(it.use.id) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
-            if (canOpen) Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.padding(horizontal = Tokens.sp3).size(Tokens.icon).rotate(if (open) 90f else 0f), tint = av.fgFaint)
+            if (canOpen) AvIcon("chevron-right", null, Tokens.icon, Modifier.padding(horizontal = Tokens.sp3).rotate(if (open) 90f else 0f), tint = av.fgFaint)
         }
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
             if (!open && it.steps.size > shown.size) Text("${it.steps.size - shown.size} earlier steps", Modifier.clickable { open = true }.padding(vertical = Tokens.sp2), style = Type.footnote, color = av.fgFaint)

@@ -13,7 +13,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.2.2"
+        versionName = "0.2.3"
     }
 
     buildTypes {
@@ -38,7 +38,6 @@ dependencies {
     implementation(bom)
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.12.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
@@ -64,4 +63,12 @@ tasks.register("generateTokens") {
     inputs.file(css)
     outputs.file(out)
     doLast { out.writeText(no.pradhan.agentview.tokens.TokenGen.generate(css.readText(), "no.pradhan.agentview.nativeapp")) }
+}
+
+tasks.register("generateIcons") {
+    val css = rootProject.file("../agentview/node_modules/@vscode/codicons/dist/codicon.css")
+    val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/Codicons.kt")
+    inputs.file(css)
+    outputs.file(out)
+    doLast { out.writeText(no.pradhan.agentview.tokens.IconGen.generate(css.readText(), "no.pradhan.agentview.nativeapp")) }
 }

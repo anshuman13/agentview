@@ -15,13 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarDuration
@@ -132,11 +125,11 @@ fun CodexScreen(hub: Hub) {
                 filter = filterKey, onFilter = hub::setCodexFilter,
                 onSearch = if (route == null && (page == "overview" || page == "tasks")) { { page = "tasks"; searching = true } } else null,
                 menu = if (route != null) (if (route == "meetings") { close -> ExtraMenu(route, hub, profile, now, chips, decisions, onChip, { decisions = !decisions }, push, close) } else null) else { close ->
-                    MenuItem("Goals", { close(); page = "goals" })
-                    MenuItem("Search everything", { close(); page = "search" })
-                    MenuItem("Meetings", { close(); push("meetings") })
-                    MenuItem("Wiki", { close(); push("wiki") })
-                    MenuItem("Jobs", { close(); push("jobs") })
+                    MenuItem("Goals", "target", { close(); page = "goals" })
+                    MenuItem("Search everything", "search", { close(); page = "search" })
+                    MenuItem("Meetings", "calendar", { close(); push("meetings") })
+                    MenuItem("Wiki", "book", { close(); push("wiki") })
+                    MenuItem("Jobs", "play", { close(); push("jobs") })
                 },
             )
             if (!sub) Row(Modifier.padding(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -158,7 +151,7 @@ fun CodexScreen(hub: Hub) {
             if (page == "overview" && route == null && st.loaded) AskBar(hub, st, profile)
         }
         if (route == null && page != "goals" && page != "search") Fab(
-            Icons.Filled.Add, "Add task", { adding = true },
+            "add", "Add task", { adding = true },
             Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp8, bottom = if (page == "overview") Tokens.fab + Tokens.sp16 else Tokens.sp8),
         )
         SnackHost(snack, Modifier.align(Alignment.BottomCenter))
@@ -184,14 +177,14 @@ private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String, onFi
     PageHeader(title, back) {
         var open by remember { mutableStateOf(false) }
         Box {
-            Chip(if (filter == "all") "All" else profileLabel(filter), { open = true }, tone = when (filter) { WORK -> ChipTone.Work; PERSONAL -> ChipTone.Personal; else -> ChipTone.Default }, trailingIcon = Icons.Filled.ArrowDropDown)
+            Chip(if (filter == "all") "All" else profileLabel(filter), { open = true }, tone = when (filter) { WORK -> ChipTone.Work; PERSONAL -> ChipTone.Personal; else -> ChipTone.Default }, trailingIcon = "chevron-down")
             Menu(open, { open = false }) {
                 listOf("all" to "All", WORK to "Work", PERSONAL to "Personal").forEach { (k, label) ->
-                    MenuItem(label, { open = false; onFilter(k) }, checked = filter == k)
+                    MenuItem(label, "filter", { open = false; onFilter(k) }, checked = filter == k)
                 }
             }
         }
-        if (onSearch != null) IconBtn(Icons.Filled.Search, "Search tasks", onSearch)
+        if (onSearch != null) IconBtn("search", "Search tasks", onSearch)
         if (menu != null) MoreButton { close -> menu(close) }
     }
 }
@@ -215,7 +208,7 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp6, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
             TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
-            IconBtn(Icons.AutoMirrored.Filled.Send, "Send", { send() }, enabled = text.isNotBlank(), on = text.isNotBlank())
+            IconBtn("send", "Send", { send() }, enabled = text.isNotBlank(), on = text.isNotBlank())
         }
     }
 }
@@ -273,8 +266,8 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                             trailing = {
                                 if (r in today.late) RowLabel("Overdue", av.err)
                                 MoreButton { close ->
-                                    MenuItem("Snooze to tomorrow", { close(); actions.snoozeLater(r) })
-                                    MenuItem("Open", { close(); onOpen(r) })
+                                    MenuItem("Snooze to tomorrow", "clock", { close(); actions.snoozeLater(r) })
+                                    MenuItem("Open", "arrow-right", { close(); onOpen(r) })
                                 }
                             },
                             onClick = { onOpen(r) },
@@ -413,16 +406,16 @@ private fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Task
                     Group(Modifier.padding(bottom = Tokens.sp4)) {
                         ListRow(g.title ?: "", (if (profile == null) "${profileLabel(g.profile)} · " else "") + if (p.total > 0) "${p.done}/${p.total}" else "No tasks yet", trailing = {
                             MoreButton { close ->
-                                MenuItem("Rename", { close(); renaming = g })
-                                if (thisWeek) MenuItem(blocked ?: "Move to next week", {
+                                MenuItem("Rename", "edit", { close(); renaming = g })
+                                if (thisWeek) MenuItem(blocked ?: "Move to next week", "arrow-right", {
                                     close()
                                     val at = dayPlus(weekStart(now), 7)
                                     val old = g.at
                                     if (goals.move(g, at)) actions.undoable("Moved to next week") { goals.move(g, old) }
                                 }, enabled = blocked == null)
-                                if (past) MenuItem(blocked ?: "Reopen this week", { close(); goals.reopen(g) }, enabled = blocked == null)
+                                if (past) MenuItem(blocked ?: "Reopen this week", "discard", { close(); goals.reopen(g) }, enabled = blocked == null)
                                 MenuSeparator()
-                                MenuItem("Delete", { close(); goals.remove(g) }, danger = true)
+                                MenuItem("Delete", "trash", { close(); goals.remove(g) }, danger = true)
                             }
                         })
                         tasks.forEach { t -> Hairline(); TaskRowView(t, now, actions, false, onOpen = { onOpen(t) }) }

@@ -11,8 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,9 +62,9 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Files", onBack) {
             MoreButton { close ->
-                MenuItem(if (showHidden) "Hide ignored files" else "Show ignored files", { close(); showHidden = !showHidden })
-                MenuItem("Refresh Explorer", { close(); refresh++ })
-                MenuItem("Collapse Folders", { close(); expanded = emptyList() })
+                MenuItem(if (showHidden) "Hide ignored files" else "Show ignored files", if (showHidden) "eye" else "eye-closed", { close(); showHidden = !showHidden })
+                MenuItem("Refresh Explorer", "refresh", { close(); refresh++ })
+                MenuItem("Collapse Folders", "collapse-all", { close(); expanded = emptyList() })
             }
         }
         PageBody {
@@ -83,7 +81,7 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
                         lines = 1,
                         muted = r.hidden,
                         leading = {
-                            if (r.dir) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon).rotate(if (isOpen) 90f else 0f), tint = av.fileFolder)
+                            if (r.dir) AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (isOpen) 90f else 0f), tint = av.fileFolder)
                             else FileTag(r.name)
                         },
                         onClick = {
@@ -116,11 +114,11 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, path.substringAfterLast('/'), onBack, sub = parentOf(path).ifEmpty { pageFolder(hub) }) {
             MoreButton { close ->
-                if (isDoc) MenuItem("Rendered document", { close(); preview = !showDoc }, checked = showDoc)
-                if (canDiff) MenuItem("Change against the last commit", { close(); preview = false; mode = if (diff) "file" else "diff" }, checked = diff)
-                if (diff) MenuItem("Changes only", { close(); changes = !changes }, checked = changes)
-                if (!showDoc) MenuItem("Word wrap", { close(); wrap = !wrap }, checked = wrap)
-                MenuItem("Reload", { close(); reload() })
+                if (isDoc) MenuItem("Rendered document", "preview", { close(); preview = !showDoc }, checked = showDoc)
+                if (canDiff) MenuItem("Change against the last commit", "diff", { close(); preview = false; mode = if (diff) "file" else "diff" }, checked = diff)
+                if (diff) MenuItem("Changes only", "filter", { close(); changes = !changes }, checked = changes)
+                if (!showDoc) MenuItem("Word wrap", "word-wrap", { close(); wrap = !wrap }, checked = wrap)
+                MenuItem("Reload", "refresh", { close(); reload() })
             }
         }
         Box(Modifier.fillMaxSize()) {

@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -112,7 +110,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Sessions") { IconBtn(Icons.Filled.Refresh, "Refresh", { hub.refreshWorkspace(force = true) }) }
+        PageHeader("Sessions") { IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
         SearchField(filter, { filter = it }, "Search repos and sessions")
         if (live.isEmpty() && ws.saved.isEmpty()) {
             EmptyState(if (connected) "No sessions yet" else "Waiting for the server", if (connected) null else "Check the Mac address.")
@@ -186,10 +184,10 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
                 null -> {}
             }
             MoreButton { close ->
-                if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", { close(); actions.onPin() })
-                if (actions.canPin) MenuItem("Rename", { close(); actions.onRename() })
-                actions.onClose?.let { c -> MenuItem("Close chat", { close(); c() }) }
-                if (actions.canPin) { MenuSeparator(); MenuItem("Archive", { close(); actions.onArchive() }, danger = true) }
+                if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", if (actions.pinned) "pinned" else "pin", { close(); actions.onPin() })
+                if (actions.canPin) MenuItem("Rename", "edit", { close(); actions.onRename() })
+                actions.onClose?.let { c -> MenuItem("Close chat", "close", { close(); c() }) }
+                if (actions.canPin) { MenuSeparator(); MenuItem("Archive", "archive", { close(); actions.onArchive() }, danger = true) }
             }
         },
     )

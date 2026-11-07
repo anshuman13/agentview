@@ -38,13 +38,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -84,11 +77,15 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -107,7 +104,7 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, large: Boolean = onB
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp2),
     ) {
-        if (onBack != null) IconBtn(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack, tint = av.fg)
+        if (onBack != null) IconBtn("arrow-left", "Back", onBack, tint = av.fg)
         Column(Modifier.weight(1f)) {
             Text(title, style = if (large) Type.title else Type.headline, color = av.fg, maxLines = 2, overflow = TextOverflow.Ellipsis)
             subtitle?.invoke()
@@ -125,7 +122,7 @@ fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, o
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Tokens.sp4),
         ) {
-            if (onToggle != null) Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon).rotate(if (open == true) 90f else 0f), tint = color)
+            if (onToggle != null) AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (open == true) 90f else 0f), tint = color)
             Text(label, style = style, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             if (count != null) Badge(count, BadgeTone.Quiet)
         }
@@ -230,7 +227,7 @@ fun Button(
     modifier: Modifier = Modifier,
     variant: ButtonVariant = ButtonVariant.Gray,
     size: ButtonSize = ButtonSize.Md,
-    icon: ImageVector? = null,
+    icon: String? = null,
     enabled: Boolean = true,
     fill: Boolean = false,
 ) {
@@ -255,18 +252,33 @@ fun Button(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(gap, Alignment.CenterHorizontally),
     ) {
-        if (icon != null) Icon(icon, null, Modifier.size(Tokens.iconSm), tint = fg)
+        if (icon != null) AvIcon(icon, null, Tokens.iconSm, tint = fg)
         Text(text, style = style, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
+// A codicon glyph (web Icon): drawn from the bundled font at a fixed size that ignores the font scale.
+@Composable
+fun AvIcon(name: String, desc: String? = null, size: Dp = Tokens.icon, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current) {
+    val code = Codicons.codepoints[name] ?: return
+    val px = with(LocalDensity.current) { size.toSp() }
+    Box(
+        modifier.size(size).then(if (desc != null) Modifier.semantics { contentDescription = desc } else Modifier.clearAndSetSemantics {}),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(String(Character.toChars(code)), style = TextStyle(fontFamily = CodiconFont, fontSize = px, lineHeight = px, color = tint), maxLines = 1, softWrap = false)
+    }
+}
+
+private val CodiconFont = FontFamily(Font(R.font.codicon))
+
 // Icon button (web IconButton): a muted glyph with a touch-sized target, accent when on.
 @Composable
-fun IconBtn(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, on: Boolean = false, enabled: Boolean = true, tint: Color? = null) {
+fun IconBtn(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, on: Boolean = false, enabled: Boolean = true, tint: Color? = null) {
     Box(
         modifier.size(Tokens.touch).clip(RoundedCornerShape(Tokens.radiusMd)).clickable(enabled = enabled, onClickLabel = label, onClick = onClick).alpha(if (enabled) 1f else 0.4f),
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, label, Modifier.size(Tokens.iconLg), tint = tint ?: if (on) av.accentText else av.fgMuted) }
+    ) { AvIcon(icon, label, Tokens.iconLg, tint = tint ?: if (on) av.accentText else av.fgMuted) }
 }
 
 enum class ChipTone { Default, Work, Personal, Accent }
@@ -281,8 +293,8 @@ fun Chip(
     late: Boolean = false,
     tone: ChipTone = ChipTone.Default,
     quiet: Boolean = false,
-    icon: ImageVector? = null,
-    trailingIcon: ImageVector? = null,
+    icon: String? = null,
+    trailingIcon: String? = null,
     trailingLabel: String? = null,
 ) {
     val c = av
@@ -308,9 +320,9 @@ fun Chip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
     ) {
-        if (icon != null) Icon(icon, null, Modifier.size(Tokens.iconSm), tint = fg)
+        if (icon != null) AvIcon(icon, null, Tokens.iconSm, tint = fg)
         Text(text, style = Type.footnote, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (trailingIcon != null) Icon(trailingIcon, trailingLabel, Modifier.size(Tokens.iconSm), tint = fg)
+        if (trailingIcon != null) AvIcon(trailingIcon, trailingLabel, Tokens.iconSm, tint = fg)
     }
 }
 
@@ -346,7 +358,7 @@ fun Tag(text: String, status: Status = Status.Neutral, modifier: Modifier = Modi
 enum class BadgeTone { Default, Quiet, Waiting, Done, Failed, New, Running }
 
 @Composable
-fun Chevron() = Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.iconSm), tint = av.fgMuted)
+fun Chevron() = AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
 
 // Badge (web Badge): a small pill with a count or a status word.
 @Composable
@@ -442,8 +454,8 @@ fun TextField(
 fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     TextField(
         value, onValueChange, modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), placeholder = placeholder, singleLine = true, pill = true,
-        leading = { Icon(Icons.Filled.Search, null, Modifier.size(Tokens.iconMd), tint = av.fgFaint) },
-        trailing = if (value.isNotEmpty()) { { IconBtn(Icons.Filled.Close, "Clear", { onValueChange("") }) } } else null,
+        leading = { AvIcon("search", null, Tokens.iconMd, tint = av.fgFaint) },
+        trailing = if (value.isNotEmpty()) { { IconBtn("close", "Clear", { onValueChange("") }) } } else null,
     )
 }
 
@@ -489,13 +501,13 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnSc
 }
 
 @Composable
-fun MenuItem(text: String, onClick: () -> Unit, danger: Boolean = false, enabled: Boolean = true, checked: Boolean = false, icon: ImageVector? = null) {
+fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = false, enabled: Boolean = true, checked: Boolean = false) {
     val color = if (danger) av.danger else av.fg
     DropdownMenuItem(
         text = { Text(text, style = Type.body) },
         onClick = onClick,
         enabled = enabled,
-        leadingIcon = if (checked) { { Icon(Icons.Filled.Check, null, Modifier.size(Tokens.icon)) } } else icon?.let { { Icon(it, null, Modifier.size(Tokens.icon)) } },
+        leadingIcon = { AvIcon(if (checked) "check" else icon, null, Tokens.icon) },
         colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color, disabledTextColor = color.copy(alpha = 0.5f)),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.sp6),
         modifier = Modifier.heightIn(min = Tokens.touch),
@@ -510,21 +522,21 @@ fun MenuSeparator() = HorizontalDivider(Modifier.padding(vertical = Tokens.sp2),
 fun MoreButton(label: String = "More", expanded: MutableState<Boolean> = remember { mutableStateOf(false) }, content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit) {
     var open by expanded
     Box {
-        IconBtn(Icons.Filled.MoreVert, label, { open = true })
+        IconBtn("kebab-vertical", label, { open = true })
         Menu(open, { open = false }) { content { open = false } }
     }
 }
 
 // Empty state (web EmptyState): optional round icon, title, muted hint and an action.
 @Composable
-fun EmptyState(title: String, hint: String? = null, icon: ImageVector? = null, small: Boolean = true, action: (@Composable () -> Unit)? = null) {
+fun EmptyState(title: String, hint: String? = null, icon: String? = null, small: Boolean = true, action: (@Composable () -> Unit)? = null) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = if (small) Tokens.sp12 else Tokens.sp24),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Tokens.sp2),
     ) {
         if (icon != null) Box(Modifier.padding(bottom = Tokens.sp2).size(if (small) Tokens.sp20 else Tokens.sp24).clip(CircleShape).background(av.hover), contentAlignment = Alignment.Center) {
-            Icon(icon, null, Modifier.size(if (small) Tokens.iconLg else Tokens.iconXl), tint = av.onSurfaceMuted)
+            AvIcon(icon, null, if (small) Tokens.iconLg else Tokens.iconXl, tint = av.onSurfaceMuted)
         }
         Text(title, style = Type.headline, color = av.onSurface, textAlign = TextAlign.Center)
         if (hint != null) Text(hint, Modifier.widthIn(max = Tokens.emptyHint), style = Type.body, color = av.onSurfaceMuted, textAlign = TextAlign.Center)
@@ -548,9 +560,9 @@ fun SnackHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
 
 // Floating add button (web .as-fab): accent circle with a medium shadow.
 @Composable
-fun Fab(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun Fab(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     androidx.compose.material3.Surface(onClick, modifier.size(Tokens.fab), shape = CircleShape, color = av.accent, contentColor = av.white, shadowElevation = Tokens.shadowMd) {
-        Box(contentAlignment = Alignment.Center) { Icon(icon, label, Modifier.size(Tokens.iconXl)) }
+        Box(contentAlignment = Alignment.Center) { AvIcon(icon, label, Tokens.iconXl) }
     }
 }
 

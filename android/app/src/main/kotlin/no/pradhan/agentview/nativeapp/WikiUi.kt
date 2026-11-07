@@ -8,13 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -113,18 +106,18 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
     val links = sourcesOf(f).drop(1).mapNotNull { s -> safeHref(s.url)?.let { s to it } }
     val menuContent: @Composable ColumnScope.(() -> Unit) -> Unit = { dismiss ->
         val pick = { act: () -> Unit -> { dismiss(); act() } }
-        MenuItem("Cite", pick {
+        MenuItem("Cite", "link", pick {
             val srcs = sourcesOf(f).map { it.label }
             val at = f.long("at")?.let { ", ${shortDate(it, now)}" } ?: ""
             clip.setText(AnnotatedString("$page: ${f.str("text") ?: ""}" + if (srcs.isNotEmpty()) " (${srcs.joinToString(", ")}$at)" else ""))
             actions.say("Claim copied")
-        }, icon = Icons.Filled.Share)
-        if (contest == null) MenuItem("Contest", pick { contesting = true }, icon = Icons.Filled.Warning)
-        else MenuItem("Resolve", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") }, icon = Icons.Filled.Check)
+        })
+        if (contest == null) MenuItem("Contest", "report", pick { contesting = true })
+        else MenuItem("Resolve", "check", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") })
         if (links.isNotEmpty()) MenuSeparator()
-        links.forEach { (s, href) -> MenuItem("${s.kindLabel}: ${s.label}", pick { uri.openUri(href) }, icon = Icons.Filled.Share) }
-        f.long("at")?.let { MenuSeparator(); MenuItem("${if (stale) "Still true? " else ""}Updated ${shortDate(it, now)}", {}, enabled = false, icon = Icons.Filled.DateRange) }
-        MenuItem(if (retired) "Restore" else "Retire", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired, icon = if (retired) Icons.Filled.Refresh else Icons.Filled.Lock)
+        links.forEach { (s, href) -> MenuItem("${s.kindLabel}: ${s.label}", s.icon, pick { uri.openUri(href) }) }
+        f.long("at")?.let { MenuSeparator(); MenuItem("${if (stale) "Still true? " else ""}Updated ${shortDate(it, now)}", "history", {}, enabled = false) }
+        MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)
     }
     Column {
         ListRow(f.str("text") ?: "", meta, onLongClick = if (proposed) null else ({ menu.value = true }), trailing = if (proposed) null else ({ MoreButton(expanded = menu, content = menuContent) }))

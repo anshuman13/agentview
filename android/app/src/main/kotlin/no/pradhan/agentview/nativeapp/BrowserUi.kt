@@ -53,8 +53,8 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         PageHeader("Browser", onBack, large = false, subtitle = tab?.let { { androidx.compose.material3.Text(it.title.ifEmpty { it.url }, style = Type.footnote, color = av.fgMuted, maxLines = 1) } }) {
             if (state.state == "on") MoreButton { close ->
-                MenuItem("Back", { close(); send("back") })
-                MenuItem("Reload", { close(); send("reload") })
+                MenuItem("Back", "arrow-left", { close(); send("back") })
+                MenuItem("Reload", "refresh", { close(); send("reload") })
             }
         }
         PageBody {

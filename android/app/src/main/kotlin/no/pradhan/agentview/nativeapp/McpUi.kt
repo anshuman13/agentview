@@ -117,9 +117,9 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, mcpShortName(r.name), onBack, sub = label) {
             MoreButton { close ->
-                MenuItem(if (hidden) "Show" else "Hide", { close(); setGroup(mcpHideKey(r), if (hidden) "shown" else "hidden") })
-                if (r.account == null) MenuItem("Move to ${if (group == "work") "Personal" else "Work"}", { close(); setGroup(mcpGroupKey(r), if (group == "work") "personal" else "work") })
-                if (url) MenuItem("Open URL", { close(); link(r.server.command) })
+                MenuItem(if (hidden) "Show" else "Hide", if (hidden) "eye" else "eye-closed", { close(); setGroup(mcpHideKey(r), if (hidden) "shown" else "hidden") })
+                if (r.account == null) MenuItem("Move to ${if (group == "work") "Personal" else "Work"}", "arrow-swap", { close(); setGroup(mcpGroupKey(r), if (group == "work") "personal" else "work") })
+                if (url) MenuItem("Open URL", "link-external", { close(); link(r.server.command) })
             }
         }
         PageBody {

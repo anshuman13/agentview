@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,8 +50,8 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Deploy", onBack, sub = s?.app) {
-            if (s != null && s.apps.size > 1) MoreButton("Switch app") { close -> s.apps.forEach { a -> MenuItem(a, { close(); app = a }, checked = a == s.app) } }
-            IconBtn(Icons.Filled.Refresh, "Refresh", reload)
+            if (s != null && s.apps.size > 1) MoreButton("Switch app") { close -> s.apps.forEach { a -> MenuItem(a, "rocket", { close(); app = a }, checked = a == s.app) } }
+            IconBtn("refresh", "Refresh", reload)
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
@@ -78,9 +76,9 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
                                     envBadge(env)?.let { (t, tone) -> Badge(t, tone) }
                                     Button("Deploy", { deploy(s.head.sha) }, size = ButtonSize.Sm)
                                     MoreButton { close ->
-                                        MenuItem("Deploy a branch or commit...", { close(); deploy(null) })
-                                        env.deployed?.let { d -> MenuItem("Open ${shortSha(d.sha)} on GitHub", { close(); link("https://github.com/${s.repo}/commit/${d.sha}") }) }
-                                        MenuItem("Roll back", {
+                                        MenuItem("Deploy a branch or commit...", "rocket", { close(); deploy(null) })
+                                        env.deployed?.let { d -> MenuItem("Open ${shortSha(d.sha)} on GitHub", "link-external", { close(); link("https://github.com/${s.repo}/commit/${d.sha}") }) }
+                                        MenuItem("Roll back", "discard", {
                                             close()
                                             val to = env.rollbackTo
                                             val d = env.deployed

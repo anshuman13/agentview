@@ -19,11 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -56,7 +51,7 @@ fun CheckCircle(done: Boolean, label: String, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     Box(Modifier.size(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }, contentAlignment = Alignment.Center) {
         Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.ok) else Modifier.border(Tokens.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
-            if (done) Icon(Icons.Filled.Check, null, Modifier.size(Tokens.iconSm), tint = av.onColor)
+            if (done) AvIcon("check", null, Tokens.iconSm, tint = av.onColor)
         }
     }
 }
@@ -127,8 +122,8 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
         backgroundContent = {
             val dir = state.dismissDirection
             Box(Modifier.fillMaxSize().background(if (dir == SwipeToDismissBoxValue.StartToEnd) av.ok else if (dir == SwipeToDismissBoxValue.EndToStart) av.warn else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = if (dir == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
-                if (dir == SwipeToDismissBoxValue.StartToEnd) Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Filled.Check, null, tint = av.onColor); Text("  Done", color = av.onColor, style = Type.callout) }
-                else if (dir == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("${whenText(later, now)}  ", color = av.onColor, style = Type.callout); Icon(Icons.Filled.DateRange, null, tint = av.onColor) }
+                if (dir == SwipeToDismissBoxValue.StartToEnd) Row(verticalAlignment = Alignment.CenterVertically) { AvIcon("check", null, Tokens.icon, tint = av.onColor); Text("  Done", color = av.onColor, style = Type.callout) }
+                else if (dir == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("${whenText(later, now)}  ", color = av.onColor, style = Type.callout); AvIcon("calendar", null, Tokens.icon, tint = av.onColor) }
             }
         },
         content = { body() },
@@ -139,13 +134,13 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
 fun TaskMenu(row: Row, show: Boolean, dismiss: () -> Unit, actions: TaskActions, onOpen: () -> Unit) {
     val other = if (row.profile == WORK) PERSONAL else WORK
     Menu(show, dismiss) {
-        MenuItem("Open", { dismiss(); onOpen() })
+        MenuItem("Open", "arrow-right", { dismiss(); onOpen() })
         if (row.status == "open") {
-            MenuItem("Snooze", { dismiss(); actions.snoozeLater(row) })
-            MenuItem("Tomorrow", { dismiss(); actions.tomorrow(row) })
+            MenuItem("Snooze", "clock", { dismiss(); actions.snoozeLater(row) })
+            MenuItem("Tomorrow", "calendar", { dismiss(); actions.tomorrow(row) })
         }
-        if (row.status == "done") MenuItem("Not done", { dismiss(); actions.reopen(row) })
-        MenuItem("Move to ${profileLabel(other)}", { dismiss(); actions.move(row, other) })
-        MenuItem("Delete", { dismiss(); actions.delete(row) }, danger = true, icon = Icons.Filled.Delete)
+        if (row.status == "done") MenuItem("Not done", "discard", { dismiss(); actions.reopen(row) })
+        MenuItem("Move to ${profileLabel(other)}", "arrow-swap", { dismiss(); actions.move(row, other) })
+        MenuItem("Delete", "trash", { dismiss(); actions.delete(row) }, danger = true)
     }
 }

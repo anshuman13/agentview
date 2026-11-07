@@ -11,12 +11,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -37,7 +31,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -48,11 +41,11 @@ import kotlinx.coroutines.delay
 
 private const val ORIGIN_ROUTE = "origin"
 
-private fun icon(t: Tab): ImageVector = when (t) {
-    Tab.Codex -> Icons.Filled.Star
-    Tab.Chat -> Icons.Filled.Email
-    Tab.Sessions -> Icons.AutoMirrored.Filled.List
-    Tab.Agents -> Icons.Filled.Face
+private fun icon(t: Tab): String = when (t) {
+    Tab.Codex -> "sparkle"
+    Tab.Chat -> "comment"
+    Tab.Sessions -> "comment-discussion"
+    Tab.Agents -> "hubot"
 }
 
 private fun NavHostController.goTab(route: String) = navigate(route) {
@@ -116,12 +109,12 @@ fun App(hub: Hub) {
                         NavigationBarItem(
                             selected = route == t.route && !more,
                             onClick = { more = false; nav.goTab(t.route) },
-                            icon = { BadgedBox(badge = { if (badge > 0) Badge("$badge", BadgeTone.Waiting) }) { Icon(icon(t), null, Modifier.size(Tokens.iconLg)) } },
+                            icon = { BadgedBox(badge = { if (badge > 0) Badge("$badge", BadgeTone.Waiting) }) { AvIcon(icon(t), null, Tokens.iconLg) } },
                             label = { Text(t.label, style = Type.label) },
                             colors = colors,
                         )
                     }
-                    NavigationBarItem(selected = more || inMore, onClick = { more = true }, icon = { Icon(Icons.Filled.Menu, null, Modifier.size(Tokens.iconLg)) }, label = { Text("More", style = Type.label) }, colors = colors)
+                    NavigationBarItem(selected = more || inMore, onClick = { more = true }, icon = { AvIcon("menu", null, Tokens.iconLg) }, label = { Text("More", style = Type.label) }, colors = colors)
                 }
             }
         },

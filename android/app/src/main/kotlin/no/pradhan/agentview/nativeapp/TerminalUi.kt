@@ -17,9 +17,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +47,7 @@ fun TerminalScreen(hub: Hub, onBack: () -> Unit) {
     val id = tabs.firstOrNull { it.id == active }?.id ?: tabs.lastOrNull()?.id
 
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "Terminal", onBack) { IconBtn(Icons.Filled.Refresh, "Refresh", reload) }
+        WorkspaceHeader(hub, "Terminal", onBack) { IconBtn("refresh", "Refresh", reload) }
         if (tabs.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
             tabs.forEach { t -> Chip(t.name.ifEmpty { "Terminal" }, { active = t.id }, on = t.id == id) }
         }
@@ -103,7 +100,7 @@ private fun TermView(hub: Hub, id: String, onGone: () -> Unit) {
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, autoCorrectEnabled = false),
                 keyboardActions = KeyboardActions(onSend = { send(input + "\r"); input = "" }),
             )
-            IconBtn(Icons.AutoMirrored.Filled.Send, "Send", { send(input + "\r"); input = "" })
+            IconBtn("send", "Send", { send(input + "\r"); input = "" })
         }
     }
 }

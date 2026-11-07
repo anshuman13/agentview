@@ -24,7 +24,7 @@ fun Findings(hub: Hub, target: String, onOpen: ((Finding) -> Unit)? = null) {
                 trailing = {
                     Button("Fix", { hub.askClaude(findingFixPrompt(f)) }, size = ButtonSize.Sm)
                     MoreButton { close ->
-                        MenuItem("Dismiss", { close(); hub.write("/api/findings/dismiss", dismissBody(target, f), "Could not dismiss the finding", ::parseFindings) { r -> if (r != null) hub.setFindings(target, r) } })
+                        MenuItem("Dismiss", "close", { close(); hub.write("/api/findings/dismiss", dismissBody(target, f), "Could not dismiss the finding", ::parseFindings) { r -> if (r != null) hub.setFindings(target, r) } })
                     }
                 },
                 onClick = onOpen?.let { { it(f) } },

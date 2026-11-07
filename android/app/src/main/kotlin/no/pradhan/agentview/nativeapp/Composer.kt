@@ -22,11 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
@@ -131,11 +126,11 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 },
             )
             Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-                IconBtn(Icons.Filled.Add, "Attach image", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
+                IconBtn("add", "Attach image", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
                 Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-                    Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode }, trailingIcon = Icons.Filled.ArrowDropDown)
-                    Chip(shortModel(modelName(session)), { sheet = Picker.Model }, trailingIcon = Icons.Filled.ArrowDropDown)
-                    session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it, { sheet = Picker.Effort }, trailingIcon = Icons.Filled.ArrowDropDown) }
+                    Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode }, trailingIcon = "chevron-down")
+                    Chip(shortModel(modelName(session)), { sheet = Picker.Model }, trailingIcon = "chevron-down")
+                    session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it, { sheet = Picker.Effort }, trailingIcon = "chevron-down") }
                 }
                 if (uploading > 0) RowLabel("Uploading", c.fgFaint)
                 if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
@@ -143,7 +138,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 val canSend = typed && uploading == 0
                 val haptic = LocalHapticFeedback.current
                 if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp5).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
-                else SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); submit(false) }) { Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(Tokens.iconSm), tint = if (canSend) c.sunken else c.fgFaint) }
+                else SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); submit(false) }) { AvIcon("send", null, Tokens.iconSm, tint = if (canSend) c.sunken else c.fgFaint) }
             }
         }
     }
@@ -170,7 +165,7 @@ private fun PickerSheet(title: String, items: List<Choice>, current: String?, on
         for (c in items) ListRow(
             c.label, c.detail,
             onClick = { onPick(c.value); onDismiss() },
-            trailing = if (c.value == current) { { Icon(Icons.Filled.Check, "Selected", Modifier.size(Tokens.icon), tint = av.accentText) } } else null,
+            trailing = if (c.value == current) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null,
         )
     }
 }

@@ -41,6 +41,7 @@ fun statsByPage(facts: List<Row>): Map<String?, PageStats> {
 }
 
 class Source(val kind: String, val label: String, val url: String?) {
+    val icon get() = when (kind) { "slack" -> "comment-discussion"; "linear" -> "issues"; "pr" -> "git-pull-request"; "doc" -> "file"; else -> "calendar" }
     val kindLabel get() = when (kind) { "slack" -> "Slack"; "linear" -> "Linear"; "pr" -> "PR"; "doc" -> "Doc"; "meeting" -> "Meeting"; else -> kind }
 }
 

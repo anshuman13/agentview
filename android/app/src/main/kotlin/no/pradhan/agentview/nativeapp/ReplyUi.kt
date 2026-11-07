@@ -34,8 +34,8 @@ fun ReplySection(rows: List<Row>, filtered: Boolean, onClear: () -> Unit, now: L
                 Button("Dismiss all ${rows.size}", { actions.dismissAll(rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
             faq.size >= 2 && admins >= 2 -> MoreButton { close ->
-                MenuItem(sendText, { close(); sendAll() }, enabled = !sending)
-                MenuItem(copyText, { close(); copy() })
+                MenuItem(sendText, "send", { close(); sendAll() }, enabled = !sending)
+                MenuItem(copyText, "copy", { close(); copy() })
             }
             faq.size >= 2 -> Button(sendText, { sendAll() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !sending)
             admins >= 2 -> Button(copyText, copy, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
@@ -90,11 +90,11 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
                 if (has) Button(if (error.isNotEmpty()) "Retry" else if (needs) "Send note" else "Send", { send() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !busy)
                 else if (link != null) Button("Open", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 MoreButton { close ->
-                    if (has) MenuItem("Edit", { close(); editing = true })
-                    if (has && row.people != null) MenuItem("History", { close(); showHistory = !showHistory })
-                    if (has && link != null) MenuItem("Open thread", { close(); uri.openUri(link) })
-                    snoozeOptions(now, row.profile).forEach { o -> MenuItem(o.label, { close(); actions.snoozeAsk(row, o.at) }, enabled = !busy) }
-                    MenuItem("Skip", { close(); busy = true; replies.skip(row) { busy = false } }, enabled = !busy)
+                    if (has) MenuItem("Edit", "edit", { close(); editing = true })
+                    if (has && row.people != null) MenuItem("History", "history", { close(); showHistory = !showHistory })
+                    if (has && link != null) MenuItem("Open thread", "link", { close(); uri.openUri(link) })
+                    snoozeOptions(now, row.profile).forEach { o -> MenuItem(o.label, "clock", { close(); actions.snoozeAsk(row, o.at) }, enabled = !busy) }
+                    MenuItem("Skip", "close", { close(); busy = true; replies.skip(row) { busy = false } }, enabled = !busy)
                 }
             },
         )

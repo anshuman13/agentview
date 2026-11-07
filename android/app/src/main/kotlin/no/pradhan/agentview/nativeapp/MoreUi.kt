@@ -13,8 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -38,7 +36,7 @@ fun RaiseButton(text: String, people: List<String>, onRaise: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         Button("Raise", { open = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        Menu(open, { open = false }) { people.forEach { p -> MenuItem("Raise with ${firstName(p)}", { open = false; onRaise(p) }) } }
+        Menu(open, { open = false }) { people.forEach { p -> MenuItem("Raise with ${firstName(p)}", "comment", { open = false; onRaise(p) }) } }
     }
 }
 
@@ -49,7 +47,7 @@ fun PointList(points: List<Row>, meetings: List<Row>, now: Long, person: Boolean
             if (i > 0) Hairline()
             val m = if (showMeeting) pointMeeting(r, meetings) else null
             ListRow((if (person) "${firstName(r.people ?: "")}: " else "") + (r.title ?: ""), m?.let { "${it.title} · ${whenText(it.startsAt!!, now, true)}" },
-                trailing = { Button("Raised", { ops.points.tick(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = Icons.Filled.Check) })
+                trailing = { Button("Raised", { ops.points.tick(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "check") })
         }
     }
 }
@@ -134,7 +132,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
         item {
             SectionHeader(members[0].title ?: "Meeting", action = {
                 if (next != null) Button("Open next", { onMeeting(next) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
-                if (calendar != null) MoreButton { close -> MenuItem("Open calendar", { close(); uri.openUri(calendar) }) }
+                if (calendar != null) MoreButton { close -> MenuItem("Open calendar", "calendar", { close(); uri.openUri(calendar) }) }
             })
             LRow(Modifier.padding(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 cadence?.let { Chip(it, null) }
@@ -181,7 +179,7 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
     SideEffect { if (fact == null && skipped.isNotEmpty()) skipped = emptyList() }
     val uri = LocalUriHandler.current
     if (fact == null) {
-        EmptyState(if (total > 0) "All claims reviewed" else "Nothing waits for review", icon = Icons.Filled.Check, action = { Button("Back to the wiki", onBack, size = ButtonSize.Sm) })
+        EmptyState(if (total > 0) "All claims reviewed" else "Nothing waits for review", icon = "check", action = { Button("Back to the wiki", onBack, size = ButtonSize.Sm) })
         return
     }
     val page = fact.str("page_id")?.let { id -> st.pages.firstOrNull { it.id == id && it.profile == fact.profile } }

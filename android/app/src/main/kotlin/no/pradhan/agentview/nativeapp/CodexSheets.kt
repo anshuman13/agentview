@@ -15,11 +15,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -106,7 +101,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
             TextField(text, { text = it }, placeholder = "Notes", minLines = 3)
             FieldLabel("Due")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Chip(dueLabel(row.at, now), { pickDue = true }, icon = Icons.Filled.DateRange, on = row.at != null, late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open", quiet = row.at == null)
+                Chip(dueLabel(row.at, now), { pickDue = true }, icon = "calendar", on = row.at != null, late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open", quiet = row.at == null)
                 if (row.at != null) Chip("Clear", { actions.due(row, null) })
             }
             FieldLabel("Snooze")
@@ -124,7 +119,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 val tags = tagList(row.tags)
                 tags.forEach { t ->
-                    Chip("#$t", { actions.edit(row, mapOf("tags" to tags.filter { it != t }.joinToString(" ").ifEmpty { null })) }, trailingIcon = Icons.Filled.Close, trailingLabel = "Remove #$t")
+                    Chip("#$t", { actions.edit(row, mapOf("tags" to tags.filter { it != t }.joinToString(" ").ifEmpty { null })) }, trailingIcon = "close", trailingLabel = "Remove #$t")
                 }
             }
             fun addTag() {
@@ -139,11 +134,11 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
                 FieldLabel("Goal")
                 var open by remember { mutableStateOf(false) }
                 Column {
-                    Chip(linked?.title ?: "No goal", { open = true }, on = linked != null, quiet = linked == null, trailingIcon = Icons.Filled.ArrowDropDown)
+                    Chip(linked?.title ?: "No goal", { open = true }, on = linked != null, quiet = linked == null, trailingIcon = "chevron-down")
                     Menu(open, { open = false }) {
-                        MenuItem("No goal", { open = false; actions.edit(row, mapOf("goal" to null)) })
+                        MenuItem("No goal", "close", { open = false; actions.edit(row, mapOf("goal" to null)) })
                         (if (linked != null && linked !in goals) listOf(linked) + goals else goals).forEach { g ->
-                            MenuItem(g.title ?: "", { open = false; actions.edit(row, mapOf("goal" to g.id)) })
+                            MenuItem(g.title ?: "", "target", { open = false; actions.edit(row, mapOf("goal" to g.id)) })
                         }
                     }
                 }
@@ -198,12 +193,12 @@ fun AddSheet(hub: Hub, profile: String?, now: Long, onDismiss: () -> Unit, onAdd
             val hint = listOfNotNull(parsed.at?.let { "Due ${whenText(it, now)}" }, parsed.repeat?.substringAfter("Repeats: "), parsed.tags.takeIf { it.isNotEmpty() }?.joinToString(" ") { "#$it" }).joinToString(" · ")
             if (hint.isNotEmpty()) Text(hint, style = Type.subheadline, color = av.accentText)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-                Chip(if (picked) dueLabel(due, now) else "Date", { pickDue = true }, icon = Icons.Filled.DateRange, on = picked, quiet = !picked)
+                Chip(if (picked) dueLabel(due, now) else "Date", { pickDue = true }, icon = "calendar", on = picked, quiet = !picked)
                 Chip("Priority: ${priorityLabel(priority)}", { priority = (priority + 3) % 4 }, on = priority > 0)
                 if (profile == null) Chip(profileLabel(target), { target = if (target == WORK) PERSONAL else WORK }, tone = if (target == WORK) ChipTone.Work else ChipTone.Personal)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Button("Add task", { add() }, variant = ButtonVariant.Filled, icon = Icons.AutoMirrored.Filled.Send, enabled = parsed.title.isNotEmpty())
+                Button("Add task", { add() }, variant = ButtonVariant.Filled, icon = "send", enabled = parsed.title.isNotEmpty())
             }
         }
     }
@@ -255,7 +250,7 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
         is Need.StaleAsks -> ListRow("${n.count} ${if (n.count == 1) "ask" else "asks"} older than $STALE_DAYS days", "oldest ${agoText(n.oldest, now)}", onClick = onStale)
         is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", onClick = onReview)
         is Need.Overdue -> ListRow(n.row.title ?: "", n.row.at?.let { "Overdue · due ${whenText(it, now)}" }, leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
-            trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
+            trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", "clock", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
         is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
         is Need.JustEnded -> ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
         is Need.Ask -> ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · ").atWord(), metaLines = 4, onClick = { onOpen(n.row) },
@@ -278,6 +273,6 @@ private fun NeedCard(title: String, meta: String, url: String?, onDismiss: () ->
     ListRow(title, meta.atWord(), metaLines = 4, onClick = onOpen, below = {
         Button("Dismiss", onDismiss, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
         Button("Make task", onTask, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-        if (url != null && url.startsWith("http")) MoreButton { close -> MenuItem("Open in Slack", { close(); uri.openUri(url) }) }
+        if (url != null && url.startsWith("http")) MoreButton { close -> MenuItem("Open in Slack", "link", { close(); uri.openUri(url) }) }
     })
 }

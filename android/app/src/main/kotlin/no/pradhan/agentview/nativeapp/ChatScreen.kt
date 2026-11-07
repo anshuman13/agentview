@@ -67,10 +67,10 @@ fun ChatScreen(hub: Hub) {
             },
         ) {
             MoreButton { close ->
-                MenuItem("Rename", { close(); dialog = "rename" }, enabled = sessionId != null)
-                MenuItem("Close chat", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
+                MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
+                MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
                 MenuSeparator()
-                MenuItem("Archive", { close(); dialog = "archive" }, danger = true, enabled = sessionId != null)
+                MenuItem("Archive", "archive", { close(); dialog = "archive" }, danger = true, enabled = sessionId != null)
             }
         }
         HorizontalDivider(color = av.border, thickness = Tokens.hairline)

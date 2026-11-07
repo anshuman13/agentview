@@ -11,8 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -136,9 +134,9 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = 
         if (late) RowLabel("Overdue", av.err)
         if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         if (status == "open" || status == "suggested" || status == "done") MoreButton { close ->
-            if (status != "done") MenuItem("Not mine", { close(); actions.dismiss(r) })
-            if (status == "open") MenuItem("Snooze", { close(); actions.snoozeLater(r) })
-            MenuItem("Delete", { close(); actions.delete(r) }, danger = true)
+            if (status != "done") MenuItem("Not mine", "circle-slash", { close(); actions.dismiss(r) })
+            if (status == "open") MenuItem("Snooze", "clock", { close(); actions.snoozeLater(r) })
+            MenuItem("Delete", "trash", { close(); actions.delete(r) }, danger = true)
         }
     })
 }
