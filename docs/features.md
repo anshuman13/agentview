@@ -70,11 +70,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 - Reply queue: each ask is one row with its title, person and age, a state badge (Needs you or FAQ), the draft clamped to 2 lines, and Send plus a More menu (Edit, History, Open thread, Snooze: In 1 hour, Later today 16:00 until 15:00, Next workday 09:00, then Skip). A snoozed ask leaves the queue and every count until its time passes (synced across devices, one Undo), then returns in queue order with "Snoozed" after its age. History shows the last 3 replies sent to that person (date and first line, newest first), loads when first opened and reloads after a reply to that person goes out. Send all FAQ answers and Copy access and limit requests sit in the section header. Asks older than 3 days also show as one row above the queue ("N asks older than 3 days", oldest age): tapping it filters the queue to them, with an Older than 3 days chip that clears the filter and Dismiss all N in place of the batch buttons. Dismiss all keeps the drafts, sends nothing and shows one Undo. On a desktop pointer an ask takes keys: j / k or arrows move between asks, Enter opens the task, s sends the draft, x skips (both ignored while that ask is busy), and focus moves to the next ask after one leaves; with nothing focused j or k focuses the first ask. The section header is then always a More menu (batch actions, then a disabled hint line with the keys), except in the filtered view.
 - Before 11:00, a card counting meetings, decisions, new claims and open questions since the last visit, until dismissed
 - Keep in touch: people I met or DMed on 3 or more days in the last 8 weeks whose time since the last contact is over
-  1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row opens the person
-  page and has Copy nudge and Dismiss, which hides the person until the next contact. On a narrow screen the buttons
-  wrap below the name. Each row has a one-line field, "Talk about next time": Enter saves the text as a Raise point for
-  that person (so it shows on Prep for their next meeting), the field clears for another, and the row meta shows
-  "Next: <latest note>" with +N for more
+  1.5 times their usual gap, most overdue first. Meetings with more than 8 people do not count. A row shows the name and "Last <day> · every N days", with Open (the person page) and Dismiss, which hides the person until the next contact. Over 5 people, Show all N expands the rest. Notes for a person are raised from their page
 
 ### Tasks
 

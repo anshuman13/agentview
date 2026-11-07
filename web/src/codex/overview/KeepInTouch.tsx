@@ -1,18 +1,18 @@
 import { useMemo, useRef, useState } from 'react';
-import { useAssistantData, useAssistantStore } from '../data';
-import { firstName, pointsOf } from '../data/points';
-import { raise } from '../meetings/Raise';
+import { useAssistantData } from '../data';
 import { displayName } from '../data/meetings';
-import { keepInTouch, touchText, type Lapsed } from '../data/review';
+import { keepInTouch, type Lapsed } from '../data/review';
 import { plural, save, stored } from '../../ui/util';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
+import { Button, IconButton } from '../../ui/Button';
 import { dayLabel } from '../data/dates';
-import { Capped, SectionHead } from '../Fold';
-import { Icon } from '../../ui/Icon';
-import { copyText, focusPast, setView, useView } from '../view';
+import { focusPast, setView, useView } from '../view';
 
 const TOUCH_DISMISSED = 'codex.keepInTouch';
+const SHOWN = 5;
 
-// People I usually meet or DM who have gone quiet for over 1.5x their usual gap: Copy nudge copies a short line, Dismiss hides them until the next contact.
+// People I usually meet or DM who have gone quiet for over 1.5x their usual gap: Dismiss hides them until the next contact.
 export function useKeepInTouch() {
   const snap = useAssistantData();
   const { filter } = useView();
@@ -32,29 +32,16 @@ export function useKeepInTouch() {
   return { shown, dismiss };
 }
 
-function TouchNote({ x }: { x: Lapsed }) {
-  const store = useAssistantStore();
-  const [text, setText] = useState('');
-  const save = async () => {
-    const t = text.trim();
-    if (t && await raise(store, t, x.name, x.profile)) setText('');
-  };
-  return (
-    <input className="ov-follow-note" value={text} placeholder="Talk about next time" aria-label={`Note for ${x.name}`} enterKeyHint="done"
-      onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void save(); }} />
-  );
-}
-
 export function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
   const list = useRef<HTMLDivElement>(null);
   const section = useRef<HTMLElement>(null);
+  const [all, setAll] = useState(false);
   const { shown } = k;
-  const { items } = useAssistantData();
   const dismiss = (x: Lapsed, i: number) => {
     k.dismiss(x);
     // Focus the person that moved into this row, or the one above when the last went.
     requestAnimationFrame(() => {
-      const people = list.current?.querySelectorAll<HTMLElement>('button.ov-follow-text');
+      const people = list.current?.querySelectorAll<HTMLElement>('button[data-open]');
       people?.[Math.min(i, people.length - 1)]?.focus();
     });
     focusPast(section.current);
@@ -62,24 +49,17 @@ export function KeepInTouch({ k }: { k: ReturnType<typeof useKeepInTouch> }) {
   if (!shown.length) return null;
   return (
     <section ref={section}>
-      <SectionHead title="Keep in touch" count={shown.length} />
-      <div className="ov-follow" role="list" aria-label="Keep in touch" ref={list}>
-        <Capped items={shown} render={(x, i) => {
-          const points = pointsOf(items, x.name);
-          const next = points.length ? `Next: ${points[points.length - 1].title}${points.length > 1 ? ` +${points.length - 1}` : ''}` : '';
-          return (
-          <div key={x.key} className="ov-follow-row wrap" role="listitem">
-            <button className="ov-follow-text" onClick={() => setView({ person: x.name })}>
-              <span className="ov-t">{displayName(x.name)}</span>
-              <span className="muted small">last {dayLabel(x.last)} · usually every {plural(Math.max(1, Math.round(x.gap / 86400000)), 'day')}</span>
-              {next && <span className="muted small ov-follow-next">{next}</span>}
-            </button>
-            <button className="btn btn-sm btn-gray" aria-label={`Copy a nudge to ${x.name}`} onClick={() => copyText(touchText(x.name), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
-            <button className="btn btn-sm btn-gray" aria-label={`Dismiss ${x.name}`} onClick={() => dismiss(x, i)}>Dismiss</button>
-            <TouchNote x={x} />
-          </div>
-          );
-        }} />
+      <Section label="Keep in touch" count={shown.length} />
+      <div className="as-group" ref={list}>
+        {(all ? shown : shown.slice(0, SHOWN)).map((x, i) => (
+          <Row key={x.key} plain title={displayName(x.name)}
+            meta={`Last ${dayLabel(x.last)} · every ${plural(Math.max(1, Math.round(x.gap / 86400000)), 'day')}`}
+            trailing={<>
+              <IconButton icon="arrow-right" size="sm" small label={`Open ${x.name}`} data-open onClick={() => setView({ person: x.name })} />
+              <IconButton icon="close" size="sm" small label={`Dismiss ${x.name}`} onClick={() => dismiss(x, i)} />
+            </>} />
+        ))}
+        {!all && shown.length > SHOWN && <Button variant="quiet" size="sm" onClick={() => setAll(true)}>Show all {shown.length}</Button>}
       </div>
     </section>
   );

@@ -148,7 +148,6 @@ export function keepInTouch(meetings: Meeting[], chats: Chat[], items: ItemRow[]
   return out.sort((a, b) => b.since / b.gap - a.since / a.gap || a.name.localeCompare(b.name));
 }
 
-export const touchText = (name: string) => `Hi ${displayName(name).split(' ')[0]}, it has been a while! Up for a quick catch-up this week?`;
 // The Monday to Friday day before now's day, as [start, end).
 function prevWorkday(now: number): Span {
   const d = new Date(dayStart(now));
