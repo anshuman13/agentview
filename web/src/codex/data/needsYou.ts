@@ -18,3 +18,11 @@ export function rankNeeds<T extends { keys: string[]; marks?: string[] }>(groups
     return true;
   });
 }
+
+const TASK_KINDS = ['overdue', 'overdueAll', 'risk', 'justEnded'];
+
+export function groupNeeds<T extends { kind: string }>(rows: T[]): { key: 'tasks' | 'asks'; label: string; rows: T[] }[] {
+  const tasks = rows.filter((x) => TASK_KINDS.includes(x.kind));
+  const asks = rows.filter((x) => !TASK_KINDS.includes(x.kind));
+  return [{ key: 'tasks' as const, label: 'Tasks', rows: tasks }, { key: 'asks' as const, label: 'Asks', rows: asks }].filter((g) => g.rows.length);
+}

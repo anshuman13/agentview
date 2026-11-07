@@ -6,7 +6,7 @@ import { actionsOf } from './data/meetings';
 import { followUpText } from './data/meetingMarkdown';
 import type { ItemRow } from './data/sync';
 import { atRisk, minutesText, type Span } from './data/plan';
-import { CAP, collapse, rankNeeds } from './data/needsYou';
+import { CAP, collapse, groupNeeds, rankNeeds } from './data/needsYou';
 import { needsYou } from './summary/needsYou';
 import { ActionRow } from './meetings/ActionRow';
 import { useActions } from './useActions';
@@ -15,7 +15,7 @@ import { blockId, isBlock } from '../../../shared/util';
 import { AskRow } from '../ui/AskRow';
 import { Button } from '../ui/Button';
 import { MenuItem } from '../ui/Menu';
-import { Section } from '../ui/Section';
+import { Section, sectionCount } from '../ui/Section';
 import { CardRow } from './overview/CardRow';
 import { replyQueue, staleAsks, STALE_DAYS } from './overview/ReplyQueue';
 import { haptic } from '../ui/haptic';
@@ -122,7 +122,7 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
 
 export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsYou>; now: number; onShowOld: () => void }) {
   const act = useActions();
-  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState<string[]>([]);
   if (!n.rows.length) return null;
   const snooze = (r: ItemRow) => { haptic('tap'); act.snoozeLater(r, now); };
   const moveToday = (rows: ItemRow[]) => { haptic('success'); act.moveToToday(rows, now); };
@@ -181,15 +181,22 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
   };
   const collapsed = n.rows.find((x) => x.kind === 'overdueAll');
   return (
-    <section>
-      <Section label="Needs you" count={n.rows.length}
-        action={collapsed?.kind === 'overdueAll' && <Button variant="quiet" size="sm" onClick={() => moveToday(collapsed.rows)}>Move {collapsed.rows.length} overdue to today</Button>} />
-      <div className="as-group ov-queue-group">
-        {(showAll ? n.rows : n.rows.slice(0, CAP)).map(rowOf)}
-        {!showAll && n.rows.length > CAP && (
-          <AskRow title={`Show all ${n.rows.length}`} onClick={() => setShowAll(true)} />
-        )}
-      </div>
-    </section>
+    <>
+      {groupNeeds(n.rows).map((g) => {
+        const all = expanded.includes(g.key);
+        return (
+          <section key={g.key}>
+            <Section label={g.label} count={sectionCount(g.rows.length)}
+              action={g.key === 'tasks' && collapsed?.kind === 'overdueAll' && <Button variant="quiet" size="sm" onClick={() => moveToday(collapsed.rows)}>Move {collapsed.rows.length} overdue to today</Button>} />
+            <div className="as-group ov-queue-group">
+              {(all ? g.rows : g.rows.slice(0, CAP)).map(rowOf)}
+              {!all && g.rows.length > CAP && (
+                <AskRow title={`Show all ${g.rows.length}`} onClick={() => setExpanded([...expanded, g.key])} />
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </>
   );
 }

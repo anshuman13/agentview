@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collapse, rankNeeds } from './needsYou';
+import { collapse, groupNeeds, rankNeeds } from './needsYou';
 
 describe('rankNeeds', () => {
   it('keeps group order and shows an item once, from its earliest group', () => {
@@ -26,5 +26,24 @@ describe('collapse', () => {
     const pick = (x: string) => x.startsWith('o');
     expect(collapse(['a', 'o1', 'b', 'o2', 'o3'], pick, 3, one)).toEqual(['a', 'o1+o2+o3', 'b']);
     expect(collapse(['a', 'o1', 'o2'], pick, 3, one)).toEqual(['a', 'o1', 'o2']);
+  });
+});
+
+describe('groupNeeds', () => {
+  const kinds = ['ask', 'overdue', 'dm', 'risk', 'staleAsks', 'justEnded', 'slack', 'wiki', 'overdueAll'];
+  const rows = kinds.map((kind, i) => ({ kind, i }));
+
+  it('puts Tasks before Asks and each kind in one group, keeping rank order', () => {
+    const groups = groupNeeds(rows);
+    expect(groups.map((g) => g.label)).toEqual(['Tasks', 'Asks']);
+    expect(groups[0].rows.map((x) => x.kind)).toEqual(['overdue', 'risk', 'justEnded', 'overdueAll']);
+    expect(groups[1].rows.map((x) => x.kind)).toEqual(['ask', 'dm', 'staleAsks', 'slack', 'wiki']);
+    expect(groups.reduce((n, g) => n + g.rows.length, 0)).toBe(rows.length);
+  });
+
+  it('omits empty groups', () => {
+    expect(groupNeeds([])).toEqual([]);
+    expect(groupNeeds([{ kind: 'dm' }]).map((g) => g.key)).toEqual(['asks']);
+    expect(groupNeeds([{ kind: 'risk' }]).map((g) => g.key)).toEqual(['tasks']);
   });
 });

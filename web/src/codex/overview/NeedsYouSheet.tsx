@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { ItemRow } from '../data/sync';
 import { Back } from '../../app/back';
+import { Section, sectionCount } from '../../ui/Section';
 import { useEscape } from '../../ui/util';
 import { useSheetDrag } from '../../ui/useSheetDrag';
 import { NeedsYou, type useNeedsYou } from '../NeedsYou';
 import { ReplyQueue, staleAsks } from './ReplyQueue';
 
-// The Needs you list then the Reply queue in a bottom sheet; "asks older than 3 days" narrows the queue to those asks.
+// Needs you total, then Tasks, Asks and Replies in a bottom sheet; "asks older than 3 days" narrows the queue to those asks.
 export function NeedsYouSheet({ needs, queue, now, onClose }: { needs: ReturnType<typeof useNeedsYou>; queue: ItemRow[]; now: number; onClose: () => void }) {
   const sheet = useSheetDrag(true, onClose);
   useEscape(sheet.close);
@@ -23,6 +24,7 @@ export function NeedsYouSheet({ needs, queue, now, onClose }: { needs: ReturnTyp
       <Back close={onClose} />
       <div className="as-sheet" ref={sheet.sheet} role="dialog" aria-label="Needs you" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" {...sheet.handle} />
+        <Section label="Needs you" count={sectionCount(needs.rows.length + queue.length)} />
         <NeedsYou n={needs} now={now} onShowOld={showOld} />
         <ReplyQueue rows={filtered ? old : queue} filtered={filtered} onClear={() => setOnlyStale(false)} />
       </div>

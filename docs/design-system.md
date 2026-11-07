@@ -273,8 +273,8 @@ me, what is left today. After the Skeleton while loading, a block with nothing i
    and one primary New task Button sm opens the add sheet.
 2. **Needs you**: shown only when the count is above zero. One button Row (Row density) titled "Needs you" with a
    quiet count Badge and a chevron, no actions. The count is the Needs you list plus the Reply queue. It opens a
-   sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) holding the Needs you list then the Reply queue
-   Report card; Esc, the scrim and the back gesture close it and focus returns to the row.
+   sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) with a Needs you Section header carrying the total,
+   then Tasks and Asks Sections over Grouped lists and the Replies Report card (empty groups have no header); Esc, the scrim and the back gesture close it and focus returns to the row.
 3. **Today**: Section header with a count Badge over one Grouped list of Rows in time order: the rest of today's
    meetings (title, time, a Live badge while it runs, no actions) and open tasks due today or overdue, overdue
    first (title, due time or a Late Badge, a leading check IconButton sm and one More IconButton sm with Snooze to

@@ -269,7 +269,7 @@ export function ReplyQueue({ rows, filtered = false, onClear }: { rows: ItemRow[
   );
   return (
     <section>
-      <SectionHead id="reply-queue" title="Reply queue" count={rows.length} action={filtered ? dismiss : batch} />
+      <SectionHead id="reply-queue" title="Replies" count={rows.length} action={filtered ? dismiss : batch} />
       <div className="as-group ov-queue-group">
         {rows.map((r) => <Ask key={r.profile + r.id} row={r} />)}
       </div>
