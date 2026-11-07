@@ -63,6 +63,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -82,6 +83,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -178,14 +180,8 @@ fun ListRow(
         Column(Modifier.weight(1f)) {
             val color = if (strike || muted) av.fgMuted else av.fg
             val deco = if (strike) TextDecoration.LineThrough else null
-            when (title) {
-                is AnnotatedString -> Text(title, style = Type.body, color = color, maxLines = lines, overflow = TextOverflow.Ellipsis, textDecoration = deco)
-                else -> Text(title.toString(), style = Type.body, color = color, maxLines = lines, overflow = TextOverflow.Ellipsis, textDecoration = deco)
-            }
-            if (!meta.isNullOrEmpty()) when (meta) {
-                is AnnotatedString -> Text(meta, style = Type.meta, color = av.metaFg, maxLines = metaLines, overflow = TextOverflow.Ellipsis)
-                else -> Text(meta.toString(), style = Type.meta, color = av.metaFg, maxLines = metaLines, overflow = TextOverflow.Ellipsis)
-            }
+            WordClamp(title.toAnnotated(), Type.body, color, lines, deco)
+            if (!meta.isNullOrEmpty()) WordClamp(meta.toAnnotated(), Type.meta, av.metaFg, metaLines, null)
             if (below != null) Row(Modifier.fillMaxWidth().padding(top = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
                 CompositionLocalProvider(LocalContentColor provides av.fgMuted) { below() }
             }
@@ -194,6 +190,21 @@ fun ListRow(
             CompositionLocalProvider(LocalContentColor provides av.fgMuted) { trailing() }
         }
     }
+}
+
+private fun CharSequence.toAnnotated() = this as? AnnotatedString ?: AnnotatedString(toString())
+
+// Clamped text that ends at a word boundary with an ellipsis instead of cutting a word.
+@Composable
+fun WordClamp(text: AnnotatedString, style: TextStyle, color: Color, maxLines: Int, deco: TextDecoration? = null) {
+    var end by remember(text, maxLines) { mutableIntStateOf(text.length) }
+    val shown = if (end >= text.length) text else buildAnnotatedString { append(text.subSequence(0, end)); append("\u2026") }
+    Text(shown, style = style, color = color, maxLines = maxLines, overflow = TextOverflow.Clip, textDecoration = deco, onTextLayout = { r ->
+        if (r.hasVisualOverflow && end > 0) {
+            val e = if (end >= text.length) r.getLineEnd(maxLines - 1, visibleEnd = true) else text.text.lastIndexOf(' ', end - 1).let { if (it > 0) it else end - 1 }
+            end = text.text.substring(0, e.coerceIn(0, text.length)).trimEnd().length
+        }
+    })
 }
 
 // Small status word at the end of a row, in a status colour.
