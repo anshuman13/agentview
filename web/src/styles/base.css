@@ -78,3 +78,7 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 
 .sheet-handle { flex: none; align-self: stretch; height: 24px; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
 .sheet-handle::before { content: ''; width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

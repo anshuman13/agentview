@@ -11,7 +11,7 @@ layers, elevation levels, the shape scale, type roles and touch targets.
 ## Principles
 
 - Calm: warm near-black and warm greys, no borders where spacing does the job, hover only under
-  `(hover: hover)`, short motion (`--dur`, 120ms).
+  `(hover: hover)`, short motion (`--dur`, 120ms; see Motion).
 - Content first: chrome is quiet grey; controls get louder only when they act or are selected.
 - One accent: `--accent` marks interaction (focus, selection, links, the one primary action).
 - Profile marks: Work blue (`--work`) and Personal magenta (`--personal`) are the only identity
@@ -75,6 +75,14 @@ hover `--state-hover` 8%, focus `--state-focus` 10% plus the 2px `--accent` ring
 `linear-gradient(color-mix(currentColor var(--state), transparent)), var(--fill)`. One rule
 covers every variant, works on any fill, and shows pressed feedback on touch. Disabled is 50%
 opacity with no layer.
+
+### Motion
+
+- Durations come from `--dur-fast`, `--dur` and the `--pulse*` tokens.
+- Every transition and animation is either inside `@media (prefers-reduced-motion: no-preference)` or covered by the global reduce override at the end of base.css, which sets `animation: none` and `transition: none` with `!important` on `*`, `*::before` and `*::after`. Do not weaken it (no `:not()` exceptions).
+- `scroll-behavior: smooth` needs a `no-preference` wrapper.
+- Information is never carried by motion alone: status dots, skeletons and spinners keep a static colour, icon or adjacent text.
+- `styles/motion.test.ts` enforces the override and the smooth-scroll rule.
 
 ## Colour roles (EUI semantic roles)
 
