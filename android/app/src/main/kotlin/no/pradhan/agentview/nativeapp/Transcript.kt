@@ -220,22 +220,18 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
                 if (state == "pending") CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint)
                 else Box(Modifier.size(Tokens.dot).background(if (state == "err") av.err else toneColor(stepTone(it.use.name)), CircleShape))
             }
-            Text(
+            WordClamp(
                 androidx.compose.ui.text.buildAnnotatedString {
                     if (label.verb.isNotEmpty()) withStyleColor(toneColor(stepTone(it.use.name))) { append(label.verb + " ") }
                     withStyleColor(av.fg, mono = label.mono) { append(label.obj) }
                 },
-                Modifier.weight(1f),
-                style = Type.subheadline,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = av.fgMuted,
+                Type.subheadline, av.fgMuted, 2, modifier = Modifier.weight(1f),
             )
             if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(start = Tokens.sp3))
         }
         if (!open) {
-            label.cmd?.let { Text("$ " + it.replace(Regex("\\s*\\n\\s*"), " ⏎ "), Modifier.padding(start = Tokens.leadWidth), style = Mono, color = av.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            if (state == "err") Text(firstLine(result!!.text).ifEmpty { "Failed" }, Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.err, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            label.cmd?.let { WordClamp(androidx.compose.ui.text.AnnotatedString("$ " + it.replace(Regex("\\s*\\n\\s*"), " ⏎ ")), Mono, av.fgFaint, 2, modifier = Modifier.padding(start = Tokens.leadWidth)) }
+            if (state == "err") Text(firstLine(result!!.text).ifEmpty { "Failed" }, Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.err, maxLines = 2)
             if (state == "denied") Text("Denied", Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.fgFaint)
         } else ToolDetail(it.use, result)
     }

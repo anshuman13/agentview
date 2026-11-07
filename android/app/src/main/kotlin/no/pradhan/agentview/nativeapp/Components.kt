@@ -197,11 +197,11 @@ private fun CharSequence.toAnnotated() = this as? AnnotatedString ?: AnnotatedSt
 
 // Clamped text that ends at a word boundary with an ellipsis instead of cutting a word.
 @Composable
-fun WordClamp(text: AnnotatedString, style: TextStyle, color: Color, maxLines: Int, deco: TextDecoration? = null) {
+fun WordClamp(text: AnnotatedString, style: TextStyle, color: Color, maxLines: Int, deco: TextDecoration? = null, modifier: Modifier = Modifier) {
     var end by remember(text, maxLines) { mutableIntStateOf(text.length) }
     val width = remember(text, maxLines) { IntArray(1) }
     val shown = if (end >= text.length) text else buildAnnotatedString { append(text.subSequence(0, end)); append("\u2026") }
-    Text(shown, style = style, color = color, maxLines = maxLines, overflow = TextOverflow.Clip, textDecoration = deco, onTextLayout = { r ->
+    Text(shown, modifier, style = style, color = color, maxLines = maxLines, overflow = TextOverflow.Clip, textDecoration = deco, onTextLayout = { r ->
         val w = r.layoutInput.constraints.maxWidth
         val grew = w > width[0] && width[0] > 0
         width[0] = w
