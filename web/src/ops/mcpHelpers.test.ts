@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, stateOf, toolId } from './mcpHelpers';
+import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, stateOf, toggleConnector, toolId } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -77,5 +77,17 @@ describe('stateOf', () => {
     expect(stateOf({ status: 'probing' })).toEqual(['waiting', 'Checking']);
     expect(stateOf({ status: 'needs-auth' })).toEqual(['skipped', 'OAuth via Claude']);
     expect(stateOf({ status: 'disabled' })).toEqual(['skipped', 'Disabled']);
+  });
+});
+
+describe('toggleConnector', () => {
+  it('adds, removes and keeps other entries in order', () => {
+    expect(toggleConnector('', 'browser')).toBe('browser');
+    expect(toggleConnector('foo, mcp__a__*', 'browser')).toBe('foo, mcp__a__*, browser');
+    expect(toggleConnector('foo, browser, bar', 'browser')).toBe('foo, bar');
+    expect(toggleConnector('browser', 'browser')).toBe('');
+  });
+  it('trims and drops duplicates and empty entries', () => {
+    expect(toggleConnector(' a ,, a , b ,', 'c')).toBe('a, b, c');
   });
 });

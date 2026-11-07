@@ -36,5 +36,5 @@ export function useMcpHealth() {
   const mcp = useShownMcp();
   const ok = mcp.filter((m) => m.status === 'connected').length;
   const dot = mcp.some((m) => MCP_BAD.includes(m.status)) ? 'bad' : ok ? 'ok' : 'off';
-  return { total: mcp.length, ok, dot };
+  return { total: mcp.length, ok, dot, servers: mcp };
 }

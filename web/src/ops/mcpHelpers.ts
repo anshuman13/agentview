@@ -26,6 +26,11 @@ export const scopeInfo = (id: string) => SCOPES.find((s) => s[0] === id) ?? [id,
 export const slug = (server: string) => server.replace(/[^A-Za-z0-9_-]/g, '_');
 export const toolId = (server: string, tool: string) => `mcp__${slug(server)}__${tool}`;
 
+export const toggleConnector = (tools: string, id: string) => {
+  const list = [...new Set(tools.split(',').map((t) => t.trim()).filter(Boolean))];
+  return (list.includes(id) ? list.filter((t) => t !== id) : [...list, id]).join(', ');
+};
+
 export type Row = McpServer & { live?: boolean; account?: string };
 export const rowKey = (r: Row) => (r.account ? `${r.account}:${r.name}` : r.name);
 

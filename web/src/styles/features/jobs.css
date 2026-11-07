@@ -19,7 +19,7 @@
 .jb-when select, .jb-when input { flex: none; width: auto; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
 .jb-when .jb-custom { flex: 1 1 180px; font-family: var(--font-mono, monospace); }
 .jb-when .jb-custom[aria-invalid='true'] { border-color: var(--err); }
-.jb-tools { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-4) var(--sp-7); border-radius: 10px; font-size: 16px; }
+.jb-tools { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin: var(--sp-4) 0; }
 .jb-prompt { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-6) var(--sp-7); border-radius: 10px; font-size: 16px; line-height: 1.5; }
 .jb-run:last-child .ui-row::after { display: none; }
 .jb-run .ui-row-trail { display: inline-flex; align-items: center; gap: var(--sp-3); }

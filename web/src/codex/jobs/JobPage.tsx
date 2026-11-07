@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Job } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { Section } from '../../ui/Section';
-import { Button, IconButton } from '../../ui/Button';
+import { Button, Chip, IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { useOnUnmount, useReturnFocus } from '../../ui/util';
 import { setView, useEscapeBack } from '../view';
@@ -11,6 +11,8 @@ import { nextRun } from '../../../../shared/schedule';
 import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, runNow, runsOf, scheduleOf, useJobs } from './schedule';
 import { Badge } from '../../ui/Badge';
 import { RunsRow, RunsSheet } from './RunsSheet';
+import { useMcpHealth } from '../../ops/mcpShown';
+import { scopeInfo, toggleConnector, toolId } from '../../ops/mcpHelpers';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
@@ -19,22 +21,22 @@ export function JobPage({ j }: { j: Job }) {
   const { runs, store, enable } = useJobs();
   const [name, setName] = useState(j.name ?? '');
   const [prompt, setPrompt] = useState(j.prompt ?? '');
-  const [tools, setTools] = useState(j.tools ?? '');
   const [custom, setCustom] = useState(j.schedule ?? '');
   const [query, setQuery] = useState('');
   const [runsOpen, setRunsOpen] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const { servers } = useMcpHealth();
+  const add = useRef<HTMLButtonElement>(null);
   const more = useRef<HTMLButtonElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
   useEffect(() => { setQuery(''); setRunsOpen(false); }, [j.id]);
   useEffect(() => setName(j.name ?? ''), [j.name]);
   useEffect(() => setPrompt(j.prompt ?? ''), [j.prompt]);
-  useEffect(() => setTools(j.tools ?? ''), [j.tools]);
   useEffect(() => setCustom(j.schedule ?? ''), [j.schedule]);
   const save = () => {
     if (name !== (j.name ?? '')) void store.editRow('jobs', j, { name: name.trim() || 'Untitled job' });
     if (prompt !== (j.prompt ?? '')) void store.editRow('jobs', j, { prompt });
-    if (tools.trim() !== (j.tools ?? '')) void store.editRow('jobs', j, { tools: tools.trim() || null });
   };
   const customOk = nextRun(custom, Date.now()) != null;
   const saveCustom = () => { if (customOk && custom.trim() !== j.schedule) void store.editRow('jobs', j, { schedule: custom.trim(), next_run_at: null }); };
@@ -57,6 +59,9 @@ export function JobPage({ j }: { j: Job }) {
     removeJob(store, j);
     back();
   };
+  const picked = (j.tools ?? '').split(',').map((t) => t.trim()).filter(Boolean);
+  const toggle = (id: string) => void store.editRow('jobs', j, { tools: toggleConnector(j.tools ?? '', id) || null });
+  const labelOf = (id: string) => (id === 'browser' ? 'Chrome' : servers.find((m) => toolId(m.name, '*') === id)?.name ?? id);
   const pick = (fn: () => void) => () => { setMenu(false); fn(); };
   return (
     <div className="wk narrow">
@@ -110,8 +115,17 @@ export function JobPage({ j }: { j: Job }) {
           </section>
           <section className="mt-sec">
             <h2>Allowed tools</h2>
-            <input className="jb-tools" value={tools} placeholder="browser, mcp__claude_ai_Slack__slack_send_message" aria-label="Allowed tools" onChange={(e) => setTools(e.target.value)} onBlur={save} />
-            <div className="muted small">Tools it may use beyond reading, with no one watching: browser for AgentView's own Chrome, or tool names, where * matches the rest.</div>
+            <Button ref={add} size="sm" icon="plug" aria-haspopup="menu" aria-expanded={adding} onClick={() => setAdding(!adding)}>Add connector</Button>
+            {adding && (
+              <Menu trigger={add} onClose={() => setAdding(false)}>
+                <MenuItem icon={picked.includes('browser') ? 'check' : undefined} onClick={() => { setAdding(false); toggle('browser'); }}>Chrome</MenuItem>
+                {servers.map((m) => (
+                  <MenuItem key={m.name} icon={picked.includes(toolId(m.name, '*')) ? 'check' : undefined} onClick={() => { setAdding(false); toggle(toolId(m.name, '*')); }}>{m.name} · {scopeInfo(m.scope ?? 'other')[1]}</MenuItem>
+                ))}
+              </Menu>
+            )}
+            {picked.length > 0 && <div className="jb-tools">{picked.map((id) => <Chip key={id} size="sm" icon="close" aria-label={`Remove ${labelOf(id)}`} onClick={() => toggle(id)}>{labelOf(id)}</Chip>)}</div>}
+            <div className="muted small">Connectors it may use beyond reading, with no one watching. Chrome is AgentView's own browser; a server lets it use every tool that server has.</div>
           </section>
           <div className="as-group" key={j.id}>
             <RunsRow latest={list[0]} onOpen={() => setRunsOpen(true)} />
