@@ -4,6 +4,7 @@ import { TABLE_FIELDS, mergeIncoming } from './sync';
 import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
+import { hub, LONG_TIMEOUT, QUICK_TIMEOUT, REPLY_TIMEOUT, SYNC_TIMEOUT } from './hubFetch';
 import { showSnack, snackParked } from '../view';
 
 type Invoke = <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
@@ -44,16 +45,7 @@ const SCHEMA = `${['items', ...WIKI_TABLES].map(table).join('\n')}
   CREATE TABLE IF NOT EXISTS sync_state (key TEXT PRIMARY KEY, value TEXT);
 `;
 
-async function post(since: number, changes: Change[], full?: boolean): Promise<Reply> {
-  const resp = await fetch(`${HUB}/sync`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ since, changes, full }),
-    signal: AbortSignal.timeout(30000),
-  });
-  if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}`);
-  return resp.json();
-}
+const post = (since: number, changes: Change[], full?: boolean) => hub<Reply>(`${HUB}/sync`, { since, changes, full }, SYNC_TIMEOUT);
 
 export class LocalStore extends BaseStore implements AssistantStore {
   readonly kind = 'local';
@@ -307,51 +299,28 @@ export class LocalStore extends BaseStore implements AssistantStore {
     await this.update(row, { deleted: 1 });
   };
 
-  parse = async (text: string, profile: Profile): Promise<Parsed> => {
-    const resp = await fetch(`${HUB}/parse`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile, text }), signal: AbortSignal.timeout(20000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
-    return data;
-  };
+  parse = (text: string, profile: Profile) => hub<Parsed>(`${HUB}/parse`, { profile, text }, QUICK_TIMEOUT);
 
   fetchTranscript = async (m: { profile: Profile; id: string }, instructions?: string) => {
-    const resp = await fetch(`${HUB}/transcripts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile: m.profile, id: m.id, instructions }),
-      signal: AbortSignal.timeout(300000),
-    });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    const data = await hub<{ saved?: number }>(`${HUB}/transcripts`, { profile: m.profile, id: m.id, instructions }, LONG_TIMEOUT);
     await this.syncNow();
     return Number(data?.saved ?? 0);
   };
 
   syncCalendar = async (fresh = 0) => {
-    const resp = await fetch(`${HUB}/calendar${fresh ? `?fresh=${fresh}` : ''}`, { method: 'POST', signal: AbortSignal.timeout(300000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    const data = await hub<{ changed?: number }>(`${HUB}/calendar${fresh ? `?fresh=${fresh}` : ''}`, undefined, LONG_TIMEOUT, 'POST');
     await (data?.changed ? this.syncNow() : this.syncSoon());
     return Number(data?.changed ?? 0);
   };
 
   blockTime = async (row: ItemRow, start: number, end: number, title: string) => {
     await this.syncNow();
-    const resp = await fetch(`${HUB}/calendar/block`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile: row.profile, id: row.id, start, end, title }),
-      signal: AbortSignal.timeout(120000),
-    });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    await hub(`${HUB}/calendar/block`, { profile: row.profile, id: row.id, start, end, title }, REPLY_TIMEOUT);
     await this.syncNow();
   };
 
   summarizeSlack = async () => {
-    const resp = await fetch(`${HUB}/slack/summary`, { method: 'POST', signal: AbortSignal.timeout(300000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    const data = await hub<{ added?: number }>(`${HUB}/slack/summary`, undefined, LONG_TIMEOUT, 'POST');
     await this.syncNow();
     return Number(data?.added ?? 0);
   };
@@ -359,40 +328,27 @@ export class LocalStore extends BaseStore implements AssistantStore {
   replyHistory = async (): Promise<ReplyHistory> => ({ replies: [] });
 
   sendReply = async (id: string, edited: boolean, text?: string) => {
-    const resp = await fetch(`${HUB}/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(120000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    const r = await hub<SentReply>(`${HUB}/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { text }, REPLY_TIMEOUT);
     await this.syncNow();
-    return data as SentReply;
+    return r;
   };
 
   skipAsk = async (id: string) => {
-    const resp = await fetch(`${HUB}/slack/skip?id=${encodeURIComponent(id)}`, { method: 'POST', signal: AbortSignal.timeout(20000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    await hub(`${HUB}/slack/skip?id=${encodeURIComponent(id)}`, undefined, QUICK_TIMEOUT, 'POST');
     await this.syncNow();
   };
 
-  autopilot = async (patch?: Partial<AutopilotConfig>) => {
-    const resp = await fetch(`${HUB}/autopilot`, patch ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch), signal: AbortSignal.timeout(30000) } : { signal: AbortSignal.timeout(30000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
-    return data as AutopilotState;
-  };
+  autopilot = (patch?: Partial<AutopilotConfig>) => hub<AutopilotState>(`${HUB}/autopilot`, patch, SYNC_TIMEOUT);
 
   scanNow = async (name: 'slack' | 'gmail') => {
-    const resp = await fetch(`${HUB}/scan?name=${name}`, { method: 'POST', signal: AbortSignal.timeout(300000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
+    await hub(`${HUB}/scan?name=${name}`, undefined, LONG_TIMEOUT, 'POST');
     await this.syncNow();
   };
 
   searchTranscripts = async (query: string, profile?: Profile) => {
-    const resp = await fetch(`${HUB}/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`, { signal: AbortSignal.timeout(20000) });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) throw new Error(data?.error || `Hub returned HTTP ${resp.status}`);
-    return (data?.hits ?? []) as TranscriptHit[];
+    const data = await hub<{ hits?: TranscriptHit[] }>(`${HUB}/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`, undefined, QUICK_TIMEOUT);
+    return data?.hits ?? [];
   };
 
-  transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await fetch(`${HUB}${transcriptPath(m)}`, { signal: AbortSignal.timeout(20000) }));
+  transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await fetch(`${HUB}${transcriptPath(m)}`, { signal: AbortSignal.timeout(QUICK_TIMEOUT) }));
 }

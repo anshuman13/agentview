@@ -5,22 +5,11 @@ import { mergeIncoming, rowKey } from './sync';
 import { COLUMNS, LEGACY_KEY, META_KEY, cacheOp, cacheWrite, rowId, rowRange, tableKey, type Cached } from './cache';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
+import { hub, LONG_TIMEOUT, QUICK_TIMEOUT, REPLY_TIMEOUT, SYNC_TIMEOUT } from './hubFetch';
 
 const SYNC_EVERY = 30000;
 const SAVE_DELAY = 500;
-const HUB_TIMEOUT = 30000;
 const SYNC_DELAY = 400;
-
-const call = (path: string, init?: RequestInit) => fetch(path, init);
-
-async function hub<T = Reply>(path: string, body?: unknown, init?: RequestInit): Promise<T> {
-  const post = body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
-  const resp = await call(path, { ...post, ...init });
-  const data = await resp.json().catch(() => null);
-  if (!resp.ok) throw new Error(data?.error || `Server returned HTTP ${resp.status}`);
-  return data;
-}
-
 
 export class RemoteStore extends BaseStore implements AssistantStore {
   readonly kind = 'remote';
@@ -199,7 +188,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         const tables = this.hubHasWiki() ? Object.keys(this.tables) : ['items'];
         return tables.flatMap((table) => [...this.tables[table].values()].filter((r) => r.dirty).map((row): Dirty => ({ table, row })));
       },
-      post: (since, changes: Change[], full) => (changes.length ? hub('/api/assistant/sync', { since, changes, full }, { signal: AbortSignal.timeout(HUB_TIMEOUT) }) : hub(`/api/assistant/changes?since=${since}${full ? '&full=1' : ''}`, undefined, { signal: AbortSignal.timeout(HUB_TIMEOUT) })),
+      post: (since, changes: Change[], full) => (changes.length ? hub<Reply>('/api/assistant/sync', { since, changes, full }, SYNC_TIMEOUT) : hub<Reply>(`/api/assistant/changes?since=${since}${full ? '&full=1' : ''}`, undefined, SYNC_TIMEOUT)),
       clean: async ({ table, row }) => {
         const map = this.tables[table];
         const now = map.get(rowKey(row));
@@ -284,7 +273,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
     this.put(table, edited(current, patch, Date.now()));
   };
 
-  parse = async (text: string, profile: Profile): Promise<Parsed> => hub<Parsed>('/api/assistant/parse', { profile, text }, { signal: AbortSignal.timeout(20000) });
+  parse = async (text: string, profile: Profile): Promise<Parsed> => hub<Parsed>('/api/assistant/parse', { profile, text }, QUICK_TIMEOUT);
 
   fetchTranscript = async (m: { profile: Profile; id: string }, instructions?: string) => {
     const data = await hub<{ saved?: number }>('/api/assistant/transcripts', { profile: m.profile, id: m.id, instructions });
@@ -293,44 +282,44 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   };
 
   syncCalendar = async (fresh = 0) => {
-    const data = await hub<{ changed?: number }>(`/api/assistant/calendar${fresh ? `?fresh=${fresh}` : ''}`, undefined, { method: 'POST' });
+    const data = await hub<{ changed?: number }>(`/api/assistant/calendar${fresh ? `?fresh=${fresh}` : ''}`, undefined, LONG_TIMEOUT, 'POST');
     await (data?.changed ? this.syncNow() : this.syncSoon());
     return Number(data?.changed ?? 0);
   };
 
   blockTime = async (row: ItemRow, start: number, end: number, title: string) => {
     await this.syncNow();
-    await hub('/api/assistant/calendar/block', { profile: row.profile, id: row.id, start, end, title }, { signal: AbortSignal.timeout(120000) });
+    await hub('/api/assistant/calendar/block', { profile: row.profile, id: row.id, start, end, title }, REPLY_TIMEOUT);
     await this.syncNow();
   };
 
   summarizeSlack = async () => {
-    const data = await hub<{ added?: number }>('/api/assistant/slack/summary', undefined, { method: 'POST' });
+    const data = await hub<{ added?: number }>('/api/assistant/slack/summary', undefined, LONG_TIMEOUT, 'POST');
     await this.syncNow();
     return Number(data?.added ?? 0);
   };
 
   scanNow = async (name: 'slack' | 'gmail') => {
-    await hub(`/api/assistant/scan?name=${name}`, undefined, { method: 'POST', signal: AbortSignal.timeout(300000) });
+    await hub(`/api/assistant/scan?name=${name}`, undefined, LONG_TIMEOUT, 'POST');
     await this.syncNow();
   };
 
-  replyHistory = (who: string) => hub<ReplyHistory>(`/api/assistant/history?who=${encodeURIComponent(who)}`, undefined, { method: 'GET' });
+  replyHistory = (who: string) => hub<ReplyHistory>(`/api/assistant/history?who=${encodeURIComponent(who)}`, undefined, SYNC_TIMEOUT);
 
   sendReply = async (id: string, edited: boolean, text?: string) => {
-    const r = await hub<SentReply>(`/api/assistant/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { text }, { method: 'POST', signal: AbortSignal.timeout(120000) });
+    const r = await hub<SentReply>(`/api/assistant/slack/reply?id=${encodeURIComponent(id)}${edited ? '&edited=1' : ''}`, { text }, REPLY_TIMEOUT);
     await this.syncNow();
     return r;
   };
 
   skipAsk = async (id: string) => {
-    await hub(`/api/assistant/slack/skip?id=${encodeURIComponent(id)}`, undefined, { method: 'POST' });
+    await hub(`/api/assistant/slack/skip?id=${encodeURIComponent(id)}`, undefined, SYNC_TIMEOUT, 'POST');
     await this.syncNow();
   };
 
-  autopilot = (patch?: Partial<AutopilotConfig>) => hub<AutopilotState>('/api/assistant/autopilot', patch, patch ? undefined : { method: 'GET' });
+  autopilot = (patch?: Partial<AutopilotConfig>) => hub<AutopilotState>('/api/assistant/autopilot', patch, SYNC_TIMEOUT);
 
   searchTranscripts = async (query: string, profile?: Profile) => (await hub<{ hits?: TranscriptHit[] }>(`/api/assistant/transcripts/search?q=${encodeURIComponent(query)}${profile ? `&profile=${profile}` : ''}`)).hits ?? [];
 
-  transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await call(`/api/assistant${transcriptPath(m)}`));
+  transcript = async (m: { profile: Profile; id: string }) => transcriptOf(await fetch(`/api/assistant${transcriptPath(m)}`));
 }
