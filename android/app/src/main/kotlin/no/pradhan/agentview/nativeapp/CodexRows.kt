@@ -21,6 +21,10 @@ val SYNCED_FIELDS = mapOf(
     "items" to ITEM_FIELDS,
     "meetings" to listOf("title", "starts_at", "ends_at", "people", "calendar_url", "recorded_ms", "notes", "summary", "decisions", "transcript", "tries", "room", "room_me", "organizer_me", "others"),
     "chats" to listOf("name", "kind", "url", "summary", "last_at", "waiting"),
+    "pages" to listOf("title", "section", "summary", "sort", "state"),
+    "facts" to listOf("text", "item_id", "superseded_by", "page_id", "heading", "sources", "at", "contested", "state", "replaces", "added_by"),
+    "jobs" to listOf("name", "schedule", "prompt", "enabled", "next_run_at", "tools"),
+    "runs" to listOf("job_id", "started_at", "finished_at", "status", "output", "cost"),
 )
 
 // A synced row of the hub (web/src/codex/data/sync.ts): the values by column and the time each column was last written.

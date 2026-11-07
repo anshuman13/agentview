@@ -17,7 +17,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLEncoder
 
-class ApiError(message: String) : Exception(message)
+class ApiError(message: String, val code: Int = 0) : Exception(message)
 
 fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
@@ -28,7 +28,7 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
             val body = r.body.bytes()
             if (!r.isSuccessful) {
                 val msg = runCatching { protocolJson.parseToJsonElement(body.decodeToString()).jsonObject["error"]?.jsonPrimitive?.contentOrNull }.getOrNull()
-                throw ApiError(msg ?: "Server said ${r.code}")
+                throw ApiError(msg ?: "Server said ${r.code}", r.code)
             }
             body
         }
@@ -61,6 +61,13 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
     // web/src/codex/data/remote.ts: the assistant hub's rows are pulled by version and pushed as per-column changes.
     suspend fun assistantChanges(since: Long, full: Boolean): String = call(url("/api/assistant/changes?since=$since" + if (full) "&full=1" else "")).decodeToString()
     suspend fun assistantSync(body: String): String = call(url("/api/assistant/sync").post(body.toRequestBody(json))).decodeToString()
+
+    // The transcript text of a meeting stays on the hub; a meeting without stored text answers 404.
+    suspend fun transcript(profile: String, id: String): String? = try {
+        protocolJson.parseToJsonElement(call(url("/api/assistant/transcript?profile=${enc(profile)}&id=${enc(id)}")).decodeToString()).jsonObject["text"]?.jsonPrimitive?.contentOrNull
+    } catch (e: ApiError) {
+        if (e.code == 404) null else throw e
+    }
 
     suspend fun earlier(chat: String, before: String, limit: Int = ROW_WINDOW): Pair<List<ChatEvent>, Int> =
         parseEarlier(call(url("/api/chat/events?chat=${enc(chat)}&before=${enc(before)}&limit=$limit")).decodeToString())

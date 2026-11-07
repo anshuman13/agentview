@@ -33,7 +33,7 @@ class CodexStoreTest {
 
     @Test fun pullsEveryPageAndKeepsOnlyTheSyncedTables() = runTest {
         val fake = Fake(mutableListOf(
-            reply(5, change("a", "one", "open", 100, 1), change("x", "wiki", "live", 100, 1, "pages"), more = true),
+            reply(5, change("a", "one", "open", 100, 1), change("x", "wiki", "live", 100, 1, "people"), more = true),
             reply(7, change("b", "two", "done", 200, 2), change("m", "Standup", "live", 100, 1, "meetings")),
         ))
         val s = store(this, fake)

@@ -23,6 +23,10 @@ data class CodexState(
     val items: List<Row> = emptyList(),
     val meetings: List<Row> = emptyList(),
     val chats: List<Row> = emptyList(),
+    val pages: List<Row> = emptyList(),
+    val facts: List<Row> = emptyList(),
+    val jobs: List<Row> = emptyList(),
+    val runs: List<Row> = emptyList(),
     val loaded: Boolean = false,
     val error: String? = null,
     val pending: Int = 0,
@@ -51,8 +55,9 @@ class CodexStore(
     }
 
     private fun publish(error: String? = state.value.error, loaded: Boolean = state.value.loaded) {
+        fun rows(t: String) = tables.getValue(t).values.toList()
         state.value = CodexState(
-            tables.getValue("items").values.toList(), tables.getValue("meetings").values.toList(), tables.getValue("chats").values.toList(),
+            rows("items"), rows("meetings"), rows("chats"), rows("pages"), rows("facts"), rows("jobs"), rows("runs"),
             loaded, error, tables.values.sumOf { t -> t.values.count { it.dirty } },
         )
     }
@@ -131,6 +136,14 @@ class CodexStore(
         publish()
         syncSoon()
         return row
+    }
+
+    fun add(row: Row): Boolean {
+        if (!writable()) return false
+        tables.getValue(row.table)[row.key] = row
+        publish()
+        syncSoon()
+        return true
     }
 
     fun move(row: Row, to: String): Boolean {
