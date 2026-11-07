@@ -16,6 +16,7 @@ import '../../styles/features/wiki.css';
 import '../../styles/features/meetings.css';
 import '../../styles/features/jobs.css';
 import { Autopilot } from './Autopilot';
+import { AutopilotPage } from './AutopilotPage';
 import { JobPage } from './JobPage';
 import { canRunNow, describe, jobState, removeJob, rowMeta, runNow, useJobs } from './schedule';
 import { Badge } from '../../ui/Badge';
@@ -106,6 +107,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
 export function Jobs({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
   const snap = useAssistantData();
+  if (open === 'autopilot') return <AutopilotPage />;
   const j = open ? snap.jobs.find((x) => !x.deleted && rowKey(x) === open) : undefined;
   if (j) return <JobPage j={j} />;
   return <JobsList onMenu={onMenu} />;

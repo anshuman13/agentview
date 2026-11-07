@@ -46,18 +46,19 @@ FAQ the drafts can lean on.
 | assist (daily) | me, one tap | nothing; every draft waits for Send or Skip |
 | away (vacation) | the hub | tier A answers and tier B holding notes; tier C only pushes me |
 
-The switch is the "Reply for me in Slack" card at the top of Jobs. Collapsed it shows the mode in one line ("Drafts only:
-you send every reply", "Away until 14 Nov: answers simple questions itself", with "Dry run" appended). Tapping it shows,
-in this order: three plain lines on when it replies, the exact holding note it will send (with the marker its own answers
-start with) and how urgent asks reach the phone; the Dry run switch; then three folds: the away dates (dates, backup, an
-extra line for the note), the coverage (chips for DMs and each watched channel, temp channels start uncovered, plus the
-scan's last run) and the people never to answer; then Seen, the last asks with what was done (Replied, Would reply, Could
-answer, Needs you, Escalate, Failed), three at a time. The settings live in the hub's meta table (`GET` and `POST
+The switch is the "Reply for me in Slack" row at the top of Jobs. It shows the mode in one line ("Drafts only", "Away
+until 14 Nov", with waiting, failed and "Dry run" appended) and a Switch; the Switch turns it on or off and a tap
+elsewhere opens its page. The page has Back, the title and an info button that opens a sheet with how it works and a
+button to the Reply queue. Below is one grouped list, each row a setting with its value: Away (the dates or Off),
+Covers (DMs and the watched channels), Never answers (the manager and the people listed), Model (Sonnet or Opus), Dry
+run (a Switch) and Activity (the last scan and the 7-day spend). Away, Covers, Never answers and Model open a sheet with
+only their fields; text fields save on blur and on closing the sheet, the chips save at once. Activity opens a sheet with
+Seen, the last asks with what was done (Replied, Would reply, Could answer, Needs you, Escalate, Failed), five at a
+time, and the spend by model. The settings live in the hub's meta table (`GET` and `POST
 /autopilot`); a `autopilot.json` next to the database seeds them once.
 
-Each scan logs its token counts and cost to meta `scan:slack:cost` (last 20); the card's scan line shows the last
-scan's tokens. Every hub Claude run (scans, drafts, sends, jobs) also adds its cost per model to a day row in meta
-`spend:YYYY-MM-DD` (kept 30 days), and the card shows today and the last 7 days by model, plus the 7-day total for jobs. A job run also adds its cost to `jobspend:YYYY-MM-DD` by job id (kept 30 days). A run that names its
+Each scan logs its token counts and cost to meta `scan:slack:cost` (last 20); the logged tokens are not shown on the page. Every hub Claude run (scans, drafts, sends, jobs) also adds its cost per model to a day row in meta
+`spend:YYYY-MM-DD` (kept 30 days), and the Activity sheet shows today and the last 7 days by model, plus the 7-day total for jobs. A job run also adds its cost to `jobspend:YYYY-MM-DD` by job id (kept 30 days). A run that names its
 tools loads only the MCP servers they come from (all connectors were about 187k tokens a run), and a run stopped
 early is interrupted so its cost still arrives. The prompt carries only chat summaries with messages in the last 2 days and asks from the last 7.
 
