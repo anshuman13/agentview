@@ -50,3 +50,13 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
 }
+
+android.sourceSets.getByName("test").kotlin.srcDir("../buildSrc/src/main/kotlin")
+
+tasks.register("generateTokens") {
+    val css = rootProject.file("../agentview/web/src/styles/tokens.css")
+    val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/Tokens.kt")
+    inputs.file(css)
+    outputs.file(out)
+    doLast { out.writeText(no.pradhan.agentview.tokens.TokenGen.generate(css.readText(), "no.pradhan.agentview.nativeapp")) }
+}
