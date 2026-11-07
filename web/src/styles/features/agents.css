@@ -17,7 +17,6 @@
 .ag-label { font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-muted); margin-bottom: var(--sp-3); }
 .ag-steps-list { font-size: var(--fs-md); line-height: var(--lh-relaxed); }
 .ag-steps-list > :is(.tr-assistant, .tr-file) { margin: var(--sp-3) 0; }
-.chip .chip-short { display: none; }
 .ag-back { display: none; align-self: flex-start; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: none; color: var(--link); font-size: var(--fs-sm); cursor: pointer; }
 
 .ag.stack { margin: 0 calc(-1 * var(--sp-6)); }
@@ -35,7 +34,3 @@
   .ag-back { display: inline-flex; min-height: var(--touch-md); padding: 0 var(--sp-2); font-size: var(--fs-lg); }
 }
 
-@media (max-width: 480px) {
-  .chip .chip-full { display: none; }
-  .chip .chip-short { display: inline; }
-}

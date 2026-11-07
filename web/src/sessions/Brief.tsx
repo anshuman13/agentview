@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { send, setUi, useStore } from '../app/store';
-import { Chip } from '../ui/Button';
+import { IconButton } from '../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { Icon } from '../ui/Icon';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { BlockedCard, Pending } from '../chat/Pending';
@@ -13,26 +14,15 @@ import { FileIcon } from '../workspace/FileIcon';
 import { relPath } from '../chat/steps';
 import { createTurnsBuilder, openFailures, type Turn } from '../chat/turns';
 import { markSeen, readSeen, recap, recapText } from '../chat/recap';
-import { AgentsChip, AgentsPane } from './AgentsPane';
+import { AgentsPane } from './AgentsPane';
 import { agentCounts, agentsOf, openAgent } from './agents';
 import { REVIEW_LOCAL } from '../ops/Findings';
-import { ago, plural, readFlag, saveFlag, useTick } from '../ui/util';
+import { ago, command, plural, readFlag, saveFlag, useTick } from '../ui/util';
 import { useMacName } from '../app/macName';
-import { UsageItem } from '../app/StatusItems';
+import { useUsage } from '../app/StatusItems';
 import { BIG_BRO, type PendingRequest } from '../../../shared/protocol';
 
 const SHOWN_TURNS = 5;
-
-// Items waiting outside this chat: other chats needing you plus the GitHub and deploy inbox.
-function InboxChip() {
-  const n = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
-  if (!n) return null;
-  return (
-    <Chip className="st-warn" title={`Show what needs you: ${n} waiting`} aria-label={`${n} waiting`} onClick={() => window.dispatchEvent(new CustomEvent('agentview:command', { detail: { id: 'view:chats' } }))}>
-      <Icon name="inbox" small /> {n}<span className="chip-full"> waiting</span>
-    </Chip>
-  );
-}
 
 function lastReplyOf(turns: Turn[]) {
   for (let i = turns.length - 1; i >= 0; i--) if (turns[i].reply) return turns[i].reply;
@@ -59,7 +49,11 @@ export function Brief() {
   const pick = (v: boolean) => { setFull(v); saveFlag('agentview.transcript', v); };
   const [adding, setAdding] = useState(false);
   const agents = useMemo(() => agentsOf(events), [events]);
-  const agentsRunning = agentCounts(agents).running;
+  const { running: agentsRunning, done: agentsDone } = agentCounts(agents);
+  const waitingElsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
+  const usage = useUsage();
+  const [more, setMore] = useState(false);
+  const moreBtn = useRef<HTMLButtonElement>(null);
   const [agentSel, setAgentSel] = useState<string | null>(null);
   const [showAgents, setShowAgents] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(() => readFlag('agentview.steps', !touch()));
@@ -71,6 +65,9 @@ export function Brief() {
   const from = all ? 0 : Math.max(0, turns.length - SHOWN_TURNS);
   const shown = turns.slice(from);
   const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
+  const hasActions = agents.length > 0 || showAgents || waitingElsewhere > 0 || Boolean(usage);
+  const hasMore = hasActions || Boolean(macName || extras);
+  const choose = (fn: () => void) => () => { setMore(false); fn(); };
   const setNext = (list: string[]) => send({ type: 'plan', next: list });
   const lastReply = lastReplyOf(turns);
   // After a usage limit the last prompt can be sent again when the limit resets.
@@ -153,15 +150,24 @@ export function Brief() {
             <span className="tl-view-label">{full ? 'Transcript' : 'Timeline'}</span>{!showAgents && <Icon name="arrow-swap" small />}
           </button>
           <span className="spacer" />
-          <span className="mobile-only"><AgentsChip /></span>
-          <InboxChip />
-          <span className="mobile-only mobile-usage"><UsageItem /></span>
-          {macName && <span className="mobile-only mac-here" title={macName}><Icon name="vm" small /><span className="mac-name">{macName}</span></span>}
-          {extras && <span className="extras">{extras}</span>}
-          {(agents.length > 0 || showAgents) && (
-            <button className={`tl-view tl-tab desktop-only ${showAgents ? 'active' : ''}`} title="Show the agents" onClick={() => { setShowAgents(true); if (showAgents) setAgentSel(null); }}>
-              Agents{agentsRunning > 0 ? <Icon name="loading" small spin /> : <span className="count">{agents.length}</span>}
-            </button>
+          {hasMore && (
+            <span className="tl-more">
+              <IconButton ref={moreBtn} size="sm" icon="kebab-horizontal" label="Chat details" aria-haspopup="menu" aria-expanded={more} onClick={() => setMore(!more)} />
+              {more && (
+                <Menu trigger={moreBtn} onClose={() => setMore(false)}>
+                  {(agents.length > 0 || showAgents) && (
+                    <MenuItem icon={agentsRunning ? 'loading' : 'hubot'} spin={agentsRunning > 0} onClick={choose(() => { setShowAgents(true); setAgentSel(null); })}>
+                      {showAgents ? 'Agents' : `Agents · ${[agentsRunning && `${agentsRunning} running`, agentsDone && `${agentsDone} done`].filter(Boolean).join(', ')}`}
+                    </MenuItem>
+                  )}
+                  {waitingElsewhere > 0 && <MenuItem icon="inbox" onClick={choose(() => command('view:chats'))}>{waitingElsewhere} waiting</MenuItem>}
+                  {usage && <MenuItem icon="pulse" onClick={choose(usage.onClick)}>Usage {usage.label}</MenuItem>}
+                  {(macName || extras) && hasActions && <MenuSeparator />}
+                  {macName && <MenuItem icon="vm" disabled>{macName}</MenuItem>}
+                  {extras && <MenuItem disabled>{extras}</MenuItem>}
+                </Menu>
+              )}
+            </span>
           )}
         </div>
         {since?.chat === sessionId && (
@@ -220,7 +226,7 @@ export function Brief() {
 const CLAUDE = <svg viewBox="0 0 16 16" width="12" height="12"><path d="M8 1.5v13M1.5 8h13M3.4 3.4l9.2 9.2M12.6 3.4l-9.2 9.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 const FILES_SHOWN = 6;
 
-function TurnCard({ turn, latest, live, cwd, pending }: { turn: Turn; latest: boolean; live: boolean; cwd: string; pending: PendingRequest[] }) {
+export function TurnCard({ turn, latest, live, cwd, pending }: { turn: Turn; latest: boolean; live: boolean; cwd: string; pending: PendingRequest[] }) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
   const when = turn.queued ? <span className="tl-state" title="Waiting for Claude's next step"><Icon name="clock" small /><button className="link tl-send-now" title="Stop Claude's current step and send this now" onClick={(e) => { e.stopPropagation(); send({ type: 'send_now', id: turn.id }); }}>Send now</button></span> : turn.stopping ? <span className="tl-state" title="Stopping the current step"><Icon name="loading" small spin /></span> : <span className="when" title={new Date(turn.at).toLocaleString()}>{time(turn.at)}</span>;
@@ -275,13 +281,24 @@ const rewindRequest = (turn: Turn): ConfirmRequest => ({
 function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: string; pending: PendingRequest[]; latest: boolean; settled: boolean }) {
   const [allFiles, setAllFiles] = useState(false);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
+  const [open, setOpen] = useState(false);
   const failed = openFailures(turn.commands);
   const refused = turn.commands.filter((c) => c.denied);
   const files = allFiles ? turn.files : turn.files.slice(0, FILES_SHOWN);
   const add = turn.files.reduce((n, f) => n + f.add, 0);
   const del = turn.files.reduce((n, f) => n + f.del, 0);
-  const any = pending.length || turn.blocked.length || turn.notes.length || turn.files.length || turn.commits.length || turn.commands.length || turn.agents.length;
+  const grouped = turn.files.length || turn.commits.length || turn.commands.length || turn.agents.length;
+  const any = pending.length || turn.blocked.length || turn.notes.length || grouped;
   if (!any) return null;
+  const delta = <><span className="add">+{add}</span> <span className="del">-{del}</span></>;
+  const cmdIssues = <>{failed.length > 0 && <span className="tc-bad">, {failed.length} failed</span>}{refused.length > 0 && <span className="tc-muted">, {refused.length} denied</span>}</>;
+  const summary = [
+    turn.files.length > 0 && <>{plural(turn.files.length, 'file')} {delta}</>,
+    turn.commits.length > 0 && plural(turn.commits.length, 'commit'),
+    turn.commands.length > 0 && <>{plural(turn.commands.length, 'command')}{cmdIssues}</>,
+    turn.agents.length > 0 && plural(turn.agents.length, 'agent'),
+  ].filter(Boolean);
+  const folded = settled && grouped && !open;
   return (
     <div className="tc-facts">
       {pending.map((p) => (
@@ -298,53 +315,63 @@ function Facts({ turn, cwd, pending, latest, settled }: { turn: Turn; cwd: strin
           ))}
         </ul>
       )}
-      {turn.files.length > 0 && (
-        <div className="tc-group">
-          <div className="tc-label">{plural(turn.files.length, 'file')} changed <span className="tr-count"><span className="add">+{add}</span> <span className="del">-{del}</span></span></div>
-          {files.map((f) => {
-            const rel = relPath(f.path, cwd);
-            const cut = rel.lastIndexOf('/');
-            const name = rel.slice(cut + 1);
-            return (
-              <button key={f.path} className="tc-file" title={rel} onClick={() => setUi({ openFile: rel, follow: false })}>
-                <FileIcon name={name} />
-                <span className="tr-path"><span className="tr-dir">{cut >= 0 ? rel.slice(0, cut + 1) : ''}</span>{name}</span>
-                <span className="tr-count"><span className="add">+{f.add}</span> <span className="del">-{f.del}</span></span>
-              </button>
-            );
-          })}
-          {turn.files.length > FILES_SHOWN && <button className="link" onClick={() => setAllFiles((v) => !v)}>{allFiles ? 'Show fewer' : `${turn.files.length - FILES_SHOWN} more`}</button>}
-          {latest && <button className="link" title="Claude reviews the working tree, findings show in the Changes view" onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>Review changes</button>}
-          {settled && <button className="link" title="Put the files back to how they were before this prompt" onClick={() => setAsk(rewindRequest(turn))}>Rewind files</button>}
-          {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
-        </div>
+      {settled && grouped && (
+        <button className="tc-facts-toggle" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
+          {summary.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}{part}</Fragment>)}
+        </button>
       )}
-      {turn.commits.length > 0 && (
-        <div className="tc-group">
-          {turn.commits.map((c) => (
-            <div key={c.hash} className="tc-commit" title={c.hash}><Icon name="git-commit" small /><code>{c.hash.slice(0, 7)}</code><span className="text">{c.subject}</span></div>
-          ))}
-        </div>
-      )}
-      {turn.commands.length > 0 && (
-        <div className="tc-group">
-          <div className="tc-label">Ran {plural(turn.commands.length, 'command')}{failed.length > 0 && <span className="tc-bad">, {failed.length} failed</span>}{refused.length > 0 && <span className="tc-muted">, {refused.length} denied</span>}</div>
-          {failed.map((c) => (
-            <div key={c.id} className="tc-fail" title={c.error}><span className="tc-cmd">{c.label}</span><span className="tc-err">{c.error}</span></div>
-          ))}
-          {refused.map((c) => (
-            <div key={c.id} className="tc-fail denied" title="You denied this command"><span className="tc-cmd">{c.label}</span><span className="tc-err">Denied</span></div>
-          ))}
-        </div>
-      )}
-      {turn.agents.length > 0 && (
-        <div className="tc-agents">
-          {turn.agents.map((a) => (
-            <button key={a.id} className={`tc-agent ${a.state}`} title={a.label} onClick={() => openAgent(a.id)}>
-              <i className="tr-ring" /><span className="name">{a.type === BIG_BRO ? `Fable: ${a.label}` : a.label}</span><span className="state">{a.state}</span>
-            </button>
-          ))}
-        </div>
+      {!folded && (
+        <>
+          {turn.files.length > 0 && (
+            <div className="tc-group">
+              <div className="tc-label">{plural(turn.files.length, 'file')} changed <span className="tr-count">{delta}</span></div>
+              {files.map((f) => {
+                const rel = relPath(f.path, cwd);
+                const cut = rel.lastIndexOf('/');
+                const name = rel.slice(cut + 1);
+                return (
+                  <button key={f.path} className="tc-file" title={rel} onClick={() => setUi({ openFile: rel, follow: false })}>
+                    <FileIcon name={name} />
+                    <span className="tr-path"><span className="tr-dir">{cut >= 0 ? rel.slice(0, cut + 1) : ''}</span>{name}</span>
+                    <span className="tr-count"><span className="add">+{f.add}</span> <span className="del">-{f.del}</span></span>
+                  </button>
+                );
+              })}
+              {turn.files.length > FILES_SHOWN && <button className="link" onClick={() => setAllFiles((v) => !v)}>{allFiles ? 'Show fewer' : `${turn.files.length - FILES_SHOWN} more`}</button>}
+              {latest && <button className="link" title="Claude reviews the working tree, findings show in the Changes view" onClick={() => send({ type: 'prompt', text: REVIEW_LOCAL })}>Review changes</button>}
+              {settled && <button className="link" title="Put the files back to how they were before this prompt" onClick={() => setAsk(rewindRequest(turn))}>Rewind files</button>}
+              {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
+            </div>
+          )}
+          {turn.commits.length > 0 && (
+            <div className="tc-group">
+              {turn.commits.map((c) => (
+                <div key={c.hash} className="tc-commit" title={c.hash}><Icon name="git-commit" small /><code>{c.hash.slice(0, 7)}</code><span className="text">{c.subject}</span></div>
+              ))}
+            </div>
+          )}
+          {turn.commands.length > 0 && (
+            <div className="tc-group">
+              <div className="tc-label">Ran {plural(turn.commands.length, 'command')}{cmdIssues}</div>
+              {failed.map((c) => (
+                <div key={c.id} className="tc-fail" title={c.error}><span className="tc-cmd">{c.label}</span><span className="tc-err">{c.error}</span></div>
+              ))}
+              {refused.map((c) => (
+                <div key={c.id} className="tc-fail denied" title="You denied this command"><span className="tc-cmd">{c.label}</span><span className="tc-err">Denied</span></div>
+              ))}
+            </div>
+          )}
+          {turn.agents.length > 0 && (
+            <div className="tc-agents">
+              {turn.agents.map((a) => (
+                <button key={a.id} className={`tc-agent ${a.state}`} title={a.label} onClick={() => openAgent(a.id)}>
+                  <i className="tr-ring" /><span className="name">{a.type === BIG_BRO ? `Fable: ${a.label}` : a.label}</span><span className="state">{a.state}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

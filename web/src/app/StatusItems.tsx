@@ -75,7 +75,7 @@ export function McpItem() {
   );
 }
 
-export function UsageItem() {
+export function useUsage() {
   const usage = useStore((s) => s.session.usage);
   const running = useStore((s) => s.session.running);
   const account = useStore((s) => s.session.account) ?? 'main';
@@ -98,17 +98,19 @@ export function UsageItem() {
     !(ahead && other && !running) && 'Click to read usage again (needs an open Claude process)',
   ].filter(Boolean).concat(spendLines(live.map((c) => c.spend), models)).join('\n');
   const warn = ahead || Math.max(fiveHour?.pct ?? 0, week?.pct ?? 0) >= 80;
-  const body = (
-    <>
+  const label = `${accounts.length > 1 ? `${ACCOUNT_LABEL[account]} ` : ''}${[week && `w${week.pct}`, fiveHour && `h${fiveHour.pct}`].filter(Boolean).join(' ')}`;
+  const onClick = () => send(ahead && other && !running ? { type: 'set_account', account: other } : { type: 'usage' });
+  return { title, warn, label, onClick };
+}
+
+export function UsageItem() {
+  const usage = useUsage();
+  if (!usage) return null;
+  return (
+    <button className={`item clickable${usage.warn ? ' warn' : ''}`} title={usage.title} onClick={usage.onClick}>
       <Icon name="pulse" small />
-      {accounts.length > 1 && `${ACCOUNT_LABEL[account]} `}
-      {[week && `w${week.pct}`, fiveHour && `h${fiveHour.pct}`].filter(Boolean).join(' ')}
-    </>
-  );
-  return ahead && other && !running ? (
-    <button className={`item clickable${warn ? ' warn' : ''}`} title={title} onClick={() => send({ type: 'set_account', account: other })}>{body}</button>
-  ) : (
-    <button className={`item clickable${warn ? ' warn' : ''}`} title={title} onClick={() => send({ type: 'usage' })}>{body}</button>
+      {usage.label}
+    </button>
   );
 }
 

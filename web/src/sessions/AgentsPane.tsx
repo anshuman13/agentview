@@ -21,19 +21,6 @@ const STATUS_LABEL: Record<AgentStatus, string> = { running: 'Running', done: 'D
 
 const took = (a: Agent, now: number) => elapsed((a.endedAt ?? now) - a.startedAt);
 
-export function AgentsChip() {
-  const agents = useAgents();
-  if (!agents.length) return null;
-  const { running, done } = agentCounts(agents);
-  const text = [running && `${running} running`, done && `${done} done`].filter(Boolean).join(', ');
-  const short = [running, done].filter(Boolean).join(' / ');
-  return (
-    <Chip className={running ? 'agent' : undefined} title={`Show the agents: ${text}`} aria-label={text} onClick={() => openAgent()}>
-      <Icon name={running ? 'loading' : 'hubot'} small spin={running > 0} /> <span className="chip-full">{text}</span><span className="chip-short">{short}</span>
-    </Chip>
-  );
-}
-
 export function AgentsPane({ selected, onSelect, stack }: { selected: string | null; onSelect: (id: string | null) => void; stack?: boolean }) {
   const agents = useAgents();
   const cwd = useStore((s) => s.session.cwd);
