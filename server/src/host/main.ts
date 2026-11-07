@@ -288,8 +288,8 @@ async function restore() {
       console.error(`could not reopen chat ${s.sessionId}: ${errText(err)}`);
       return null;
     });
-    unrestored = unrestored.filter((u) => u !== s);
     if (!chat) return;
+    unrestored = unrestored.filter((u) => u !== s);
     if (s.crons.length) chat.restoreCrons(s.crons);
     if (s.repeat) chat.resumeRepeat(s.repeat);
     if (s.stopped) chat.resumeStopped(s.stopped);
