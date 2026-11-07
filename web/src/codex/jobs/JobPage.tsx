@@ -1,47 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Job, Run } from '../data/wiki';
+import type { Job } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
-import { EmptyState } from '../../ui/Panel';
-import { SearchedOutput } from '../../ui/SearchedOutput';
-import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { Button, IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
-import { useOnUnmount } from '../../ui/util';
-import { copyText, setView, useEscapeBack } from '../view';
+import { useOnUnmount, useReturnFocus } from '../../ui/util';
+import { setView, useEscapeBack } from '../view';
 import { useMinute } from '../split';
 import { nextRun } from '../../../../shared/schedule';
-import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, runMeta, runNow, runsOf, scheduleOf, useJobs } from './schedule';
+import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, runNow, runsOf, scheduleOf, useJobs } from './schedule';
 import { Badge } from '../../ui/Badge';
+import { RunsRow, RunsSheet } from './RunsSheet';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
-
-function CopyOutput({ r }: { r: Run }) {
-  return <button className="icon-btn" title="Copy output" aria-label="Copy output" onClick={() => copyText(r.output!, 'Output copied')}><Icon name="copy" small /></button>;
-}
-
-function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query: string; setQuery: (q: string) => void }) {
-  const [open, setOpen] = useState(latest);
-  const meta = runMeta(r);
-  return (
-    <div className="jb-run">
-      <Row
-        plain={!r.output}
-        title={at(r.started_at ?? 0)}
-        meta={meta || undefined}
-        trailing={<><Badge status={r.status === 'running' ? 'running' : r.status === 'ok' ? 'done' : 'failed'} reason={r.status === 'ok' ? 'Succeeded' : undefined} />{r.output && <Icon name={open ? 'chevron-down' : 'chevron-right'} small />}</>}
-        aria-expanded={r.output ? open : undefined}
-        onClick={r.output ? () => setOpen(!open) : undefined}
-      />
-      {open && r.output && (
-        <div className="jb-run-body">
-          <div className="jb-run-tools"><CopyOutput r={r} /></div>
-          {latest ? <SearchedOutput text={r.output} query={query} setQuery={setQuery} label="Search output" className="jb-output" /> : <div className="jb-output">{r.output}</div>}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function JobPage({ j }: { j: Job }) {
   useMinute();
@@ -51,10 +22,11 @@ export function JobPage({ j }: { j: Job }) {
   const [tools, setTools] = useState(j.tools ?? '');
   const [custom, setCustom] = useState(j.schedule ?? '');
   const [query, setQuery] = useState('');
+  const [runsOpen, setRunsOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
-  useEffect(() => setQuery(''), [j.id]);
+  useEffect(() => { setQuery(''); setRunsOpen(false); }, [j.id]);
   useEffect(() => setName(j.name ?? ''), [j.name]);
   useEffect(() => setPrompt(j.prompt ?? ''), [j.prompt]);
   useEffect(() => setTools(j.tools ?? ''), [j.tools]);
@@ -68,7 +40,8 @@ export function JobPage({ j }: { j: Job }) {
   const saveCustom = () => { if (customOk && custom.trim() !== j.schedule) void store.editRow('jobs', j, { schedule: custom.trim(), next_run_at: null }); };
   useOnUnmount(save);
   const back = () => setView({ open: null });
-  useEscapeBack(back);
+  useEscapeBack(runsOpen ? () => {} : back);
+  useReturnFocus(runsOpen);
   const sched = parseSchedule(j.schedule);
   const setSchedule = (p: Partial<typeof sched>) => {
     const n = { ...sched, ...p };
@@ -140,13 +113,12 @@ export function JobPage({ j }: { j: Job }) {
             <input className="jb-tools" value={tools} placeholder="browser, mcp__claude_ai_Slack__slack_send_message" aria-label="Allowed tools" onChange={(e) => setTools(e.target.value)} onBlur={save} />
             <div className="muted small">Tools it may use beyond reading, with no one watching: browser for AgentView's own Chrome, or tool names, where * matches the rest.</div>
           </section>
-          <section className="mt-sec">
-            <h2>Runs</h2>
-            {list.length > 0 && <div className="jb-runs">{list.slice(0, 10).map((r, i) => <RunRow key={r.id} r={r} latest={i === 0} query={query} setQuery={setQuery} />)}</div>}
-            {!list.length && <EmptyState size="sm" title="Not run yet" />}
-          </section>
+          <div className="as-group" key={j.id}>
+            <RunsRow latest={list[0]} onOpen={() => setRunsOpen(true)} />
+          </div>
         </article>
       </div>
+      {runsOpen && <RunsSheet runs={list} query={query} setQuery={setQuery} onClose={() => setRunsOpen(false)} />}
     </div>
   );
 }

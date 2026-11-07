@@ -280,6 +280,8 @@ me, what is left today. After the Skeleton while loading, a block with nothing i
    first (title, due time or a Late Badge, a leading check IconButton sm and one More IconButton sm with Snooze to
    tomorrow and Open). Seven rows, then a "Show all N" quiet Button sm that expands in place. From the first task done today the header's action slot holds a quiet "N of M done" Badge (Badge progress exception); it is absent at N = 0.
 
+Job runs: a job page shows run history from one Row (Row density) inside a Grouped list, titled Runs, with the last run's time and Badge and a chevron; it opens a sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) of the 10 latest runs, and focus returns to the row on close.
+
 Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` > `.wk-scroll` > `.mt-page` and add no wrapper, padding or background of their own. Their Page hero, the MCP grid and the GitHub detail keep their own layout. Agents keeps its fixed sidebar and takes only Row density and Grouped list styling.
 
 ### Status language

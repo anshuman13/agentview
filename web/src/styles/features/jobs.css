@@ -21,7 +21,6 @@
 .jb-when .jb-custom[aria-invalid='true'] { border-color: var(--err); }
 .jb-tools { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-4) var(--sp-7); border-radius: 10px; font-size: 16px; }
 .jb-prompt { display: block; width: 100%; margin-bottom: var(--sp-4); padding: var(--sp-6) var(--sp-7); border-radius: 10px; font-size: 16px; line-height: 1.5; }
-.jb-runs { overflow: hidden; border-radius: var(--shape-lg); background: var(--group-card); }
 .jb-run:last-child .ui-row::after { display: none; }
 .jb-run .ui-row-trail { display: inline-flex; align-items: center; gap: var(--sp-3); }
 .jb-run-body { padding: 0 var(--list-pad) var(--sp-6); }
