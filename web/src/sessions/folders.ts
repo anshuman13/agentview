@@ -141,7 +141,7 @@ export const closeChat = (c: LiveChat, ask: (r: ConfirmRequest) => void) =>
 
 const refreshBin = () => window.dispatchEvent(new Event('agentview:bin'));
 
-const removeRequest = (id: string, query: string, onDone: () => void, onError: (e: string) => void) => async () => {
+export const removeRequest = (id: string, query: string, onDone: () => void, onError: (e: string) => void) => async () => {
   const r = await fetch(apiUrl(`/api/sessions?id=${encodeURIComponent(id)}${query}`), { method: 'DELETE' }).catch(() => null);
   if (!r?.ok) return onError((await r?.json().catch(() => null))?.error ?? 'Could not delete the chat');
   invalidateWorkspace();
@@ -167,6 +167,14 @@ export const archiveChat = (s: { sessionId: string; title: string }, onDone: () 
   action: 'Archive',
   run: removeRequest(s.sessionId, '&archive', onDone, onError),
 });
+
+export const chatSwipe = (pinned: boolean, live?: LiveChat) => ({ right: pinned ? 'unpin' : 'pin', left: live && (live.running || live.pending) ? null : 'archive' }) as const;
+
+export async function restoreChat(id: string) {
+  const r = await fetch(apiUrl(`/api/sessions/restore?id=${encodeURIComponent(id)}`), { method: 'POST' }).catch(() => null);
+  if (r?.ok) refreshBin();
+  return Boolean(r?.ok);
+}
 
 export type RenameEvent = 'Enter' | 'Escape' | 'blur';
 
@@ -199,13 +207,13 @@ export function usePins() {
   const [pins, setPins] = useState<string[]>([]);
   const load = () => get(PINS_URL).then((x) => x && setPins(x));
   useEffect(() => void load(), [connected]);
-  const toggle = async (id: string) => {
-    const on = pins.includes(id);
-    const r = await fetch(apiUrl(`${PINS_URL}?id=${encodeURIComponent(id)}`), { method: on ? 'DELETE' : 'POST' }).catch(() => null);
+  const setPin = async (id: string, on: boolean) => {
+    const r = await fetch(apiUrl(`${PINS_URL}?id=${encodeURIComponent(id)}`), { method: on ? 'POST' : 'DELETE' }).catch(() => null);
     if (r?.ok) await load();
-    else notice(on ? 'Could not unpin the chat' : 'Could not pin the chat');
+    else notice(on ? 'Could not pin the chat' : 'Could not unpin the chat');
+    return Boolean(r?.ok);
   };
-  return { pins, toggle };
+  return { pins, setPin };
 }
 
 export type RepoGroup = { key: string; name: string; open: LiveChat[]; recent: SavedSession[]; last: number; running: number; waiting: number };

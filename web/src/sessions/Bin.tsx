@@ -5,7 +5,7 @@ import { Icon } from '../ui/Icon';
 import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type BinnedSession } from '../../../shared/protocol';
 import { pressable } from '../ui/util';
-import { deleteChat, get } from './folders';
+import { deleteChat, get, restoreChat } from './folders';
 
 export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRestore: (b: BinnedSession) => void }) {
   const [list, setList] = useState<BinnedSession[]>([]);
@@ -18,8 +18,7 @@ export function Bin({ ask, onRestore }: { ask: (r: ConfirmRequest) => void; onRe
   }, []);
   if (!list.length) return null;
   const restore = async (b: BinnedSession) => {
-    const r = await fetch(apiUrl(`/api/sessions/restore?id=${encodeURIComponent(b.sessionId)}`), { method: 'POST' }).catch(() => null);
-    if (!r?.ok) return notice('Could not restore the chat');
+    if (!(await restoreChat(b.sessionId))) return notice('Could not restore the chat');
     setList((l) => l.filter((x) => x.sessionId !== b.sessionId));
     onRestore(b);
   };

@@ -14,8 +14,10 @@ import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RenameEvent, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RenameEvent, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
+import { Swipe } from '../codex/Swipe';
+import { showSnack } from '../codex/view';
 
 const PAGE = 5;
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -57,7 +59,7 @@ export function Sessions() {
   const cwd = useStore((s) => s.session.cwd);
   const lastSystem = useStore((s) => { const e = s.events[s.events.length - 1]; return e?.kind === 'system' ? e.id : null; });
   const { folders, chats, setTrees, setChats } = useWorkspace(current + cwd);
-  const { pins, toggle: togglePin } = usePins();
+  const { pins, setPin } = usePins();
   const liveKey = useStore((s) => s.live.map((c) => c.cwd).join('\n'));
   const waitingCount = useStore((s) => s.live.reduce((n, c) => n + (c.pending ? 1 : 0), 0));
   const [filter, setFilter] = useState('');
@@ -223,7 +225,7 @@ export function Sessions() {
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
       <NeedsYou n={waitingCount}>
-        <WaitingRows viewing={viewing} ask={setAsk} pins={pins} togglePin={togglePin} setChats={setChats} />
+        <WaitingRows viewing={viewing} ask={setAsk} pins={pins} setPin={setPin} setChats={setChats} />
       </NeedsYou>
       <div className="side-switch">
         {(['work', 'personal'] as const).map((k) => (
@@ -265,7 +267,7 @@ export function OpenChats() {
   const [opening, setOpening] = useState<string | null>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const actions = chatActions(setChats, setAsk);
-  const { pins, toggle: togglePin } = usePins();
+  const { pins, setPin } = usePins();
   const pinSet = useMemo(() => new Set(pins), [pins]);
   const allGroups = useMemo(() => groupByRepo(live, chats, folders, '', pinSet), [live, chats, folders, pinSet]);
   const snapshot = useRef<{ id: string; keys: string[] } | null>(null);
@@ -336,10 +338,10 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} pinned={pins.includes(c.sessionId ?? '')} onPin={(on) => setPin(c.sessionId!, on)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
 
   const savedRow = (s: SavedSession, repo?: string) => (
-    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={() => togglePin(s.sessionId)} />
+    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={(on) => setPin(s.sessionId, on)} />
   );
 
   useEffect(() => setOpening(null), [current]);
@@ -416,13 +418,26 @@ function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }
 }
 
 type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
-type Actions = { rename: (id: string, title: string) => void; archive: (s: { sessionId: string; title: string }) => void };
+type Pin = (on: boolean) => Promise<boolean>;
+type Actions = {
+  rename: (id: string, title: string) => void;
+  archive: (s: { sessionId: string; title: string }) => void;
+  archiveNow: (s: SavedSession, pinned: boolean, pin: Pin) => void;
+};
 
 const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Actions => ({
   rename: async (id, title) => {
     if (await renameChat(id, title)) setChats((l) => l.map((x) => (x.sessionId === id ? { ...x, title } : x)));
   },
   archive: (s) => ask(archiveChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), notice)),
+  archiveNow: (s, pinned, pin) => removeRequest(s.sessionId, '&archive', () => {
+    setChats((l) => l.filter((x) => x.sessionId !== s.sessionId));
+    showSnack('Archived', async () => {
+      if (!(await restoreChat(s.sessionId))) return notice('Could not restore the chat');
+      setChats((l) => [s, ...l]);
+      if (pinned) await pin(true);
+    });
+  }, notice)(),
 });
 
 function RenameInput({ value, onSave, onCancel }: { value: string; onSave: (title: string) => void; onCancel: () => void }) {
@@ -459,6 +474,9 @@ function RenameInput({ value, onSave, onCancel }: { value: string; onSave: (titl
 type ChatRowProps = {
   sessionId?: string;
   title: string;
+  cwd: string;
+  lastModified: number;
+  live?: LiveChat;
   opening?: boolean;
   meta: ReactNode;
   state: ChatState | null;
@@ -466,14 +484,14 @@ type ChatRowProps = {
   pinned?: boolean;
   actions: Actions;
   onOpen: () => void;
-  onPin?: () => void;
+  onPin?: Pin;
   onBeside?: () => void;
   onClose?: () => void;
 };
 
 const BADGE = { needs: 'waiting', failed: 'failed', running: 'running', done: 'done' } as const;
 
-function ChatRow({ sessionId, title, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
+function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
@@ -494,13 +512,18 @@ function ChatRow({ sessionId, title, opening, meta, state, selected, pinned, act
     };
     return <div className="chat-row"><Row plain title={<RenameInput value={title} onSave={save} onCancel={() => setRenaming(false)} />} /></div>;
   }
-  return (
+  const swipe = chatSwipe(!!pinned, live);
+  const swipePin = async () => {
+    const on = swipe.right === 'pin';
+    if (await onPin!(on)) showSnack(on ? 'Pinned' : 'Unpinned', () => void onPin!(!on));
+  };
+  const row = (
     <div className="chat-row">
       <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />} onClick={onOpen} onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined} onLongPress={sessionId ? () => setRenaming(true) : undefined} />
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>
-          {sessionId && onPin && <MenuItem icon={pinned ? 'pinned' : 'pin'} onClick={pick(onPin)}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>}
+          {sessionId && onPin && <MenuItem icon={pinned ? 'pinned' : 'pin'} onClick={pick(() => void onPin(!pinned))}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>}
           <MenuItem icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>
           {onBeside && <MenuItem icon="split-horizontal" className="desktop-only" onClick={pick(onBeside)}>Open beside</MenuItem>}
           {onClose && <MenuItem icon="close" onClick={pick(onClose)}>Close chat</MenuItem>}
@@ -509,6 +532,19 @@ function ChatRow({ sessionId, title, opening, meta, state, selected, pinned, act
         </Menu>
       )}
     </div>
+  );
+  if (!sessionId || !onPin) return row;
+  return (
+    <Swipe
+      rightLabel={swipe.right === 'pin' ? 'Pin' : 'Unpin'}
+      rightIcon={swipe.right === 'pin' ? 'pin' : 'pinned'}
+      onRight={swipePin}
+      leftLabel="Archive"
+      leftIcon="archive"
+      onLeft={swipe.left ? () => actions.archiveNow({ sessionId, title, cwd, gitBranch: null, lastModified }, !!pinned, onPin) : undefined}
+    >
+      {row}
+    </Swipe>
   );
 }
 
@@ -519,18 +555,18 @@ const branchOf = (saved?: string | null, repoBranch?: string) => {
   return isDefault(b) ? undefined : b;
 };
 
-function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: () => void }) {
+function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
   const seen = useStore((x) => x.seen);
-  return <ChatRow sessionId={s.sessionId} title={s.title} opening={opening} meta={metaLine(repo, branchOf(s.gitBranch, branch), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
+  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={metaLine(repo, branchOf(s.gitBranch, branch), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
-function WaitingRows({ viewing, ask, pins, togglePin, setChats }: { viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; togglePin: (id: string) => void; setChats: SetChats }) {
+function WaitingRows({ viewing, ask, pins, setPin, setChats }: { viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
   const live = useStore((s) => s.live);
   const actions = chatActions(setChats, ask);
-  return <>{live.filter((c) => c.pending).map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} />)}</>;
+  return <>{live.filter((c) => c.pending).map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.includes(c.sessionId ?? '')} onPin={(on) => setPin(c.sessionId!, on)} />)}</>;
 }
 
-function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: SavedSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: () => void; onBeside?: () => void }) {
+function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: SavedSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: Pin; onBeside?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const seen = useStore((s) => s.seen);
   const line = chatLine(c, events);
@@ -541,7 +577,7 @@ function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
   );
-  return <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} meta={meta} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />;
+  return <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={meta} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />;
 }
 
 const PR_KINDS = new Set<AttentionItem['kind']>(['review', 'ci', 'changes', 'ready', 'stale']);

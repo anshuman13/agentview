@@ -18,7 +18,7 @@ export function swipeEnd(dx: number, width: number, has: { right: boolean; left:
   return null;
 }
 
-export function Swipe({ onRight, onLeft, rightLabel = 'Done', leftLabel = 'Tomorrow', leftIcon = 'clock', onDelete, children }: { onRight?: () => void; onLeft?: () => void; rightLabel?: string; leftLabel?: string; leftIcon?: string; onDelete?: () => void; children: React.ReactNode }) {
+export function Swipe({ onRight, onLeft, rightLabel = 'Done', rightIcon = 'check', leftLabel = 'Tomorrow', leftIcon = 'clock', onDelete, children }: { onRight?: () => void; onLeft?: () => void; rightLabel?: string; rightIcon?: string; leftLabel?: string; leftIcon?: string; onDelete?: () => void; children: React.ReactNode }) {
   const [dx, setDx] = useState(0);
   const width = useRef(1);
   const has = { right: !!onRight, left: !!onLeft, delete: !!onDelete };
@@ -29,7 +29,7 @@ export function Swipe({ onRight, onLeft, rightLabel = 'Done', leftLabel = 'Tomor
   const reset = () => { from.current = null; moving.current = false; setDx(0); };
   return (
     <div className={`as-swipe${dx > 0 ? ' right' : dx < 0 ? (deleting ? ' left delete' : ' left') : ''}`}>
-      <div className="as-swipe-bg"><span><Icon name="check" /> {rightLabel}</span>{deleting ? <span>Delete <Icon name="trash" /></span> : <span>{leftLabel} <Icon name={leftIcon} /></span>}</div>
+      <div className="as-swipe-bg"><span><Icon name={rightIcon} /> {rightLabel}</span>{deleting ? <span>Delete <Icon name="trash" /></span> : <span>{leftLabel} <Icon name={leftIcon} /></span>}</div>
       <div
         className="as-swipe-row"
         style={{ transform: dx ? `translateX(${dx}px)` : undefined, transition: moving.current ? 'none' : undefined }}
