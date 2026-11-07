@@ -66,7 +66,7 @@ class FoldersTest {
             recent += saved("s", "/", at = 10)
             last = 10
         }
-        assertEquals(Glance(1, 1, 1, 10), groupGlance(g, mapOf("s" to 1L)))
+        assertEquals(Glance(1, 1, 1), groupGlance(g, mapOf("s" to 1L)))
     }
 
     @Test

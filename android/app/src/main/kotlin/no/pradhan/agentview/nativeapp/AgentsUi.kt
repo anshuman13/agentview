@@ -37,7 +37,7 @@ fun AgentsScreen(hub: Hub) {
     val title = st.live.firstOrNull { it.id == st.shownId }?.title
 
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Agents", subtitle = title?.let { { Text(it, style = Type.footnote, color = av.fgMuted, maxLines = 1) } })
+        PageHeader("Agents", subtitle = title?.let { { WordClamp(androidx.compose.ui.text.AnnotatedString(it), Type.footnote, av.fgMuted, 2) } })
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 when {

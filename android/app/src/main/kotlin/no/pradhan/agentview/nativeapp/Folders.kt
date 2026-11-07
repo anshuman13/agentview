@@ -57,7 +57,6 @@ class RepoGroup(val key: String, val name: String) {
     val open = mutableListOf<LiveChat>()
     val recent = mutableListOf<SavedSession>()
     var last = 0L
-    var running = 0
     var waiting = 0
 }
 
@@ -90,7 +89,6 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = ""): List<
         if (c.sessionId != null && c.sessionId in pinned) continue
         val g = add(c.cwd, c.title, c.sessionId, c.lastActive) ?: continue
         g.open += c
-        if (c.running) g.running++
         if (c.pending > 0) g.waiting++
     }
     val ids = live.mapNotNull { it.sessionId }.toSet()
@@ -116,7 +114,7 @@ fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<Pair<L
     }
 }
 
-data class Glance(val running: Int, val needs: Int, val unread: Int, val last: Long)
+data class Glance(val running: Int, val needs: Int, val unread: Int)
 
 fun groupGlance(g: RepoGroup, seen: Map<String, Long>): Glance {
     var running = 0
@@ -132,7 +130,7 @@ fun groupGlance(g: RepoGroup, seen: Map<String, Long>): Glance {
     }
     g.open.forEach { count(chatState(it, null, seen)) }
     g.recent.forEach { count(chatState(null, it, seen)) }
-    return Glance(running, needs, unread, g.last)
+    return Glance(running, needs, unread)
 }
 
 fun since(t: Long, now: Long = System.currentTimeMillis()): String {

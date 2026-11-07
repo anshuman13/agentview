@@ -125,7 +125,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 decorationBox = { inner ->
                     Box(Modifier.heightIn(min = Tokens.sp16)) {
-                        if (text.text.isEmpty()) Text(placeholder, style = Type.body.copy(fontSize = Tokens.fsLg, lineHeight = Tokens.lineMd), color = c.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body.copy(fontSize = Tokens.fsLg, lineHeight = Tokens.lineMd), c.fgFaint, 2)
                         inner()
                     }
                 },
