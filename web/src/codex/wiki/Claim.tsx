@@ -4,6 +4,7 @@ import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki';
 import type { Mentions } from '../data/mentions';
 import { dayLabel } from '../data/dates';
 import { Button, Chip, IconButton } from '../../ui/Button';
+import { Section } from '../../ui/Section';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
@@ -133,11 +134,7 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
       )}
       {c && (
         <div className="wk-contest">
-          <div className="wk-contest-head">
-            <Icon name="warning" small /> Contested by {c.by} · {ago(c.at, ' ago')}
-            <span className="spacer" />
-            <button className="wk-act" title="The claim is right, or the agent has replaced it" onClick={resolve}><Icon name="check" small /> Resolve</button>
-          </div>
+          <Section label={`Contested by ${c.by} · ${ago(c.at, ' ago')}`} action={<Button size="sm" icon="check" title="The claim is right, or the agent has replaced it" onClick={resolve}>Resolve</Button>} />
           {c.note && <div className="wk-contest-note">{c.note}</div>}
         </div>
       )}

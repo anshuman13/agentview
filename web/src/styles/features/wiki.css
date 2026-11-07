@@ -115,7 +115,6 @@
 .wk-claim.contested .wk-claim-text { text-decoration: underline wavy color-mix(in srgb, var(--warn) 60%, transparent); text-underline-offset: 4px; }
 .wk-claim.contested::marker { color: var(--warn); }
 .wk-contest { margin-top: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-2); }
-.wk-contest-head { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); font-weight: 600; color: var(--warn); }
 .wk-contest-note { font-size: var(--fs-lg); line-height: var(--lh); color: var(--fg-muted); }
 
 .wk-old { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2) var(--sp-5); margin-top: var(--sp-5); padding-left: var(--sp-6); border-left: 2px solid var(--border); font-size: var(--fs-lg); line-height: var(--lh); }
@@ -151,7 +150,6 @@
 .wk-claim-acts .icon-btn { width: 26px; height: 26px; }
 .wk-act { display: inline-flex; align-items: center; gap: var(--sp-2); height: 26px; padding: 0 var(--sp-5); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
 @media (hover: hover) { .wk-act:hover { background: var(--hover); color: var(--fg); } }
-.wk-contest-head .wk-act { color: var(--fg-muted); font-weight: 500; }
 .wk-contest-form { margin-top: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); }
 .wk-contest-form textarea { width: 100%; resize: vertical; min-height: 64px; padding: var(--sp-5) var(--sp-6); border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border-strong)); border-radius: var(--radius-md); background: var(--raised); color: var(--fg); font: inherit; font-size: var(--fs-lg); line-height: var(--lh); outline: 0; }
 .wk-contest-btns { display: flex; justify-content: flex-end; gap: var(--sp-4); }
@@ -234,11 +232,12 @@
 
 /* Older: retired and aged claims, folded under a rule, in muted text. */
 .wk-older { margin-top: var(--sp-20); padding-top: var(--sp-8); border-top: 1px dashed var(--border-strong); }
-.wk-older-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); padding: 0; border: 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-xl); font-weight: 600; cursor: pointer; text-align: left; }
-.wk-older-head span { font-size: var(--fs-sm); font-weight: 400; color: var(--fg-faint); }
-.wk-older-head .badge { font-size: var(--fs-2xs); }
 .wk-stale-more { position: relative; display: inline-flex; }
 .wk-claim .as-swipe { overflow: visible; }
+.wk-contest .ui-section, .wk-older .ui-section { padding-right: 0; }
+.wk-contest .ui-section-head, .wk-older .ui-section-head { padding-left: 0; }
+.wk-older .ui-section-label { display: inline-flex; align-items: center; gap: var(--sp-4); }
+.wk-older-hint { margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--fg-faint); }
 .wk-older .wk-claims { margin-top: var(--sp-6); }
 .wk-older .wk-claim { color: var(--fg-muted); }
 
