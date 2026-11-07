@@ -25,7 +25,7 @@ import androidx.compose.ui.text.withStyle
 private fun pageRoute(r: Row) = "${r.profile}:${r.id}"
 
 @Composable
-fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit) {
+fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val pages = remember(st.pages, profile) { st.pages.filter { matchesProfile(profile, it) } }
     val facts = remember(st.facts, profile) { st.facts.filter { matchesProfile(profile, it) } }
@@ -49,6 +49,11 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> 
                 item { Group { hits.claims.take(30).forEachIndexed { i, f -> if (i > 0) Hairline(); ListRow(f.str("text") ?: "", f.str("page_id")?.let { titles[it] } ?: "Memory", onClick = { onClaim(f) }) } } }
             }
             return@LazyColumn
+        }
+        val waiting = proposals(facts).size
+        if (waiting > 0) {
+            item { SectionHeader("To review", waiting.toString(), action = { Button("One at a time", onReview, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+            item { Group { ListRow("$waiting ${if (waiting == 1) "claim waits" else "claims wait"} for you", "Approve, skip or reject each", onClick = onReview) } }
         }
         overview?.let { o ->
             item { Group(Modifier.padding(top = Tokens.sp6)) { ListRow(o.title ?: "Overview", o.str("summary")?.let { firstLine(it) }, onClick = { onOpen(o) }) } }

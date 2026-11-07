@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,7 +45,8 @@ private fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boole
 }
 
 @Composable
-fun MeetingsListPage(st: CodexState, profile: String?, now: Long, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, onOpen: (Row) -> Unit) {
+fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, onOpen: (Row) -> Unit) {
+    val resolved by hub.resolvedQuestions.collectAsState()
     var query by rememberSaveable { mutableStateOf("") }
     var shown by rememberSaveable(query, chips.joinToString(), decisions) { mutableIntStateOf(PAGE_SIZE) }
     val minute = now / 60_000
@@ -54,6 +56,8 @@ fun MeetingsListPage(st: CodexState, profile: String?, now: Long, chips: Set<Str
     val coming = remember(mine, minute) { comingDays(mine, now) }
     val log = remember(mine) { decisionLog(mine) }
     val showProfile = profile == null
+    val questions = remember(mine, resolved, minute) { visibleQuestions(openQuestions(mine, now), resolved) }
+    var allQuestions by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxWidth()) {
         if (decisions) {
             item { SectionHeader("Decisions", log.size.toString()) }
@@ -78,6 +82,13 @@ fun MeetingsListPage(st: CodexState, profile: String?, now: Long, chips: Set<Str
             }
         }
         if (query.isEmpty() && chips.isEmpty()) {
+            if (questions.isNotEmpty()) {
+                item { SectionHeader("Open questions", questions.size.toString()) }
+                item {
+                    QuestionList(if (allQuestions) questions else questions.take(3), now, onOpen) { hub.resolveQuestion(it, mine, now) }
+                    if (!allQuestions && questions.size > 3) Button("Show all ${questions.size}", { allQuestions = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                }
+            }
             coming.forEach { g ->
                 item { SectionHeader(g.label, g.rows.size.toString()) }
                 item { Group { g.rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, noDay = true) { onOpen(m) } } } }
@@ -103,7 +114,7 @@ fun MeetingsListPage(st: CodexState, profile: String?, now: Long, chips: Set<Str
 }
 
 @Composable
-private fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions) {
+fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = null) {
     val status = r.status ?: ""
     val at = r.at
     val late = status == "open" && at != null && at < now
@@ -111,6 +122,7 @@ private fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions) {
         if ((status == "open" || status == "suggested") && at != null) whenText(at, now) else null,
         r.str("assignee")?.takeIf { it.isNotEmpty() }?.let { displayName(it).substringBefore(' ') },
         firstLine(r.text).ifEmpty { null },
+        from,
     ).joinToString(" · ")
     val primary: Pair<String, () -> Unit>? = when (status) {
         "open" -> "Done" to { actions.done(r) }
@@ -168,8 +180,10 @@ private fun Fold(label: String, count: Int, open: Boolean, onToggle: () -> Unit)
     SectionHeader(label, count.toString(), action = { Button(if (open) "Hide" else "Show", onToggle, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
 }
 
+private class PrepData(val prior: List<Prior>, val brief: Brief, val points: List<Row>, val theirs: List<String>, val questions: List<Question>)
+
 @Composable
-fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onTask: (Row) -> Unit) {
+fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onSeries: (String) -> Unit, onTask: (Row) -> Unit) {
     val state = meetingState(m, now)
     val all = remember(st.items, m.key) { actionsOf(st.items, m) }
     val mine = all.filter { it.status == "open" || it.status == "done" }.sortedBy { if (it.status == "open") 0 else 1 }
@@ -181,9 +195,18 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     val link = safeHref(m.str("calendar_url"))
     val uri = LocalUriHandler.current
     val isCal = m.id.startsWith("cal:")
-    val prep: Pair<List<Prior>, Brief>? = remember(st.meetings, st.items, st.facts, m.key, now / 60_000) {
-        if ((state == MState.Upcoming || state == MState.Live) && !isSolo(m)) Pair(priorWith(m, st.meetings, st.items), briefFor(m, st.items, st.facts)) else null
+    val resolved by hub.resolvedQuestions.collectAsState()
+    val prep: PrepData? = remember(st.meetings, st.items, st.facts, m.key, now / 60_000, resolved) {
+        if ((state == MState.Upcoming || state == MState.Live) && !isSolo(m)) {
+            val prior = priorWith(m, st.meetings, st.items)
+            PrepData(prior, briefFor(m, st.items, st.facts), pointsFor(m, st.items, st.meetings), theirActions(m, prior.map { it.meeting }),
+                visibleQuestions(openQuestions(st.meetings, now), resolved).filter { q -> prior.any { it.meeting.id == q.meeting.id && it.meeting.profile == q.profile } })
+        } else null
     }
+    val pins = remember(st.items, m.key) { pinsOf(st.items, listOf(m)) }
+    val family = remember(st.meetings, m.key, now / 60_000) { seriesMeetings(st.meetings, m.profile, seriesTitle(m.title), now) }
+    val raiseTo = remember(st.meetings, m.key, now / 60_000) { recentPeople(st.meetings, m.profile, m, now) }
+    var pinning by rememberSaveable(m.key) { mutableStateOf(false) }
     var more by rememberSaveable(m.key) { mutableStateOf(false) }
     var unassignedOpen by rememberSaveable(m.key) { mutableStateOf(false) }
     var notMineOpen by rememberSaveable(m.key) { mutableStateOf(false) }
@@ -212,26 +235,37 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             item { SectionHeader("To review", review.size.toString(), action = { if (review.size > 1) Button("Confirm all", { review.forEach { actions.edit(it, mapOf("status" to "open")) }; actions.undoable("${review.size} added to Today") { review.forEach { r -> actions.edit(r, mapOf("status" to "suggested")) } } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             actionGroup(review, m, now, actions)
         }
-        item { SectionHeader("Summary") }
+        item { SectionHeader("Summary", action = if (!m.str("summary").isNullOrEmpty()) { { Button("Pin", { pinning = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } } else null) }
         item {
             val summary = m.str("summary")
             if (!summary.isNullOrEmpty()) Markdown(summary, Modifier.padding(horizontal = Tokens.sp8))
             else Pending(if (state == MState.Missing) "No summary without a transcript." else "Written from the transcript after the meeting.")
         }
+        if (pins.isNotEmpty()) {
+            item { SectionHeader("Pinned", pins.size.toString()) }
+            item { PinList(pins, ops) }
+        }
         if (decisions.isNotEmpty()) {
             item { SectionHeader("Decisions") }
-            item { Column(Modifier.padding(horizontal = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) { decisions.forEach { Text("•  $it", style = Type.body, color = av.fg) } } }
+            item { Group { decisions.forEachIndexed { i, d -> if (i > 0) Hairline(); ListRow(d, lines = 4, trailing = { RaiseButton(d, raiseTo) { p -> ops.points.raise(d, p, m.profile) } }) } } }
         }
-        prep?.let { (prior, brief) ->
-            val open = prior.flatMap { p -> p.open.map { (it.title ?: "") to "${p.meeting.title} · ${dayLabel(p.meeting.startsAt!!)}" } }
-            val ds = prior.flatMap { p -> p.decisions.map { it.lineSequence().first() to "${p.meeting.title} · ${dayLabel(p.meeting.startsAt!!)}" } }
-            val tasks = brief.tasks.flatMap { (person, rows) -> rows.map { it to person } }
-            if (open.isNotEmpty() || ds.isNotEmpty() || tasks.isNotEmpty() || brief.claims.isNotEmpty()) {
+        prep?.let { pr ->
+            val meta = { x: Row -> "${x.title} · ${dayLabel(x.startsAt!!)}" }
+            val groups = listOf(
+                DigestGroup("actions", "Open actions", pr.prior.flatMap { p -> p.open.map { DigestLine(it.title ?: "", meta(p.meeting)) { onMeeting(p.meeting) } } }, true),
+                DigestGroup("decisions", "Decisions", pr.prior.flatMap { p -> p.decisions.map { DigestLine(it.lineSequence().first(), meta(p.meeting)) { onMeeting(p.meeting) } } }, false),
+                DigestGroup("questions", "Open questions", pr.questions.map { q -> DigestLine(q.text, meta(q.meeting)) { onMeeting(q.meeting) } }, true),
+                DigestGroup("tasks", "Tasks", pr.brief.tasks.flatMap { (person, rows) -> rows.map { r -> DigestLine(r.title ?: "", person) { onTask(r) } } }, true),
+                DigestGroup("theirs", "They took on", pr.theirs.map { DigestLine(it) }, true),
+                DigestGroup("claims", "Related claims", pr.brief.claims.map { DigestLine(it.str("text") ?: "") }, true),
+            ).filter { it.rows.isNotEmpty() }
+            if (groups.isNotEmpty() || pr.points.isNotEmpty()) {
                 item { SectionHeader("Prep") }
-                if (open.isNotEmpty()) { item { Pending("Open actions") }; item { Group { open.forEachIndexed { i, (t, meta) -> if (i > 0) Hairline(); ListRow(t, meta) } } } }
-                if (ds.isNotEmpty()) { item { Pending("Decisions") }; item { Group { ds.forEachIndexed { i, (t, meta) -> if (i > 0) Hairline(); ListRow(t, meta) } } } }
-                if (tasks.isNotEmpty()) { item { Pending("Tasks") }; item { Group { tasks.forEachIndexed { i, (r, person) -> if (i > 0) Hairline(); ListRow(r.title ?: "", person, onClick = { onTask(r) }) } } } }
-                if (brief.claims.isNotEmpty()) { item { Pending("Related claims") }; item { Group { brief.claims.forEachIndexed { i, f -> if (i > 0) Hairline(); ListRow(f.str("text") ?: "") } } } }
+                groups.forEach { g -> item(key = "prep-${g.outcome}") { GroupList("prep:${m.key}:${g.outcome}", g, capOpen = true, plain = g.outcome == "theirs" || g.outcome == "claims") } }
+                if (pr.points.isNotEmpty()) {
+                    item { SectionHeader("To raise", pr.points.size.toString()) }
+                    item { PointList(pr.points, st.meetings, now, person = true, showMeeting = false, ops = ops) }
+                }
             }
         }
         item { SectionHeader("My notes") }
@@ -249,6 +283,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
                         }
                     }))
             }
+            if (family.size >= 2) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Series · ${family.size}", family[0].title, onClick = { onSeries(seriesKeyOf(m)) }) } }
             if (people.isNotEmpty()) {
                 item { SectionHeader("People", people.size.toString()) }
                 item { Group { people.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(displayName(p), onClick = { onPerson(p) }) } } }
@@ -280,10 +315,11 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
+    if (pinning) PinSheet(m, ops) { pinning = false }
 }
 
 @Composable
-fun PersonPage(st: CodexState, name: String, now: Long, onMeeting: (Row) -> Unit, onWikiPage: (String, String) -> Unit, onTask: (Row) -> Unit) {
+fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps, onMeeting: (Row) -> Unit, onWikiPage: (String, String) -> Unit, onTask: (Row) -> Unit) {
     val mine = remember(st.meetings, name) { meetingsWith(st.meetings, name) }
     val shown = remember(st.meetings, name) { nameOf(st.meetings, name) }
     val email = if ('@' in name) name.trim() else mine.flatMap { peopleOf(it) }.firstOrNull { '@' in it && sameName(it, name) }
@@ -292,6 +328,10 @@ fun PersonPage(st: CodexState, name: String, now: Long, onMeeting: (Row) -> Unit
     val tasks = remember(st.items, name) { st.items.filter { !it.deleted && it.status == "open" && matchesWords(listOf(name.lowercase()), it.title, it.text, it.people) } }
     val titles = remember(st.pages) { st.pages.associate { it.id to it.title } }
     var all by rememberSaveable(name) { mutableStateOf(false) }
+    val points = remember(st.items, name) { pointsOf(st.items, name) }
+    val pins = remember(st.items, mine) { pinsOf(st.items, mine) }
+    val resolved by hub.resolvedQuestions.collectAsState()
+    val questions = remember(mine, resolved, now / 60_000) { visibleQuestions(openQuestions(mine, now), resolved) }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             Text(shown, Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
@@ -304,6 +344,17 @@ fun PersonPage(st: CodexState, name: String, now: Long, onMeeting: (Row) -> Unit
         if (commitments.isNotEmpty()) {
             item { SectionHeader("Commitments", commitments.size.toString()) }
             item { Group { commitments.forEachIndexed { i, c -> if (i > 0) Hairline(); ListRow(c.what, c.meeting.title, onClick = { onMeeting(c.meeting) }) } } }
+        }
+        item { SectionHeader("Raise with ${firstName(shown)}", points.size.toString()) }
+        if (points.isNotEmpty()) item { PointList(points, st.meetings, now, person = false, showMeeting = true, ops = ops) }
+        item { AddPoint(name, mine.firstOrNull()?.profile ?: WORK, ops) }
+        if (questions.isNotEmpty()) {
+            item { SectionHeader("Open questions", questions.size.toString()) }
+            item { QuestionList(questions, now, onMeeting) { hub.resolveQuestion(it, mine, now) } }
+        }
+        if (pins.isNotEmpty()) {
+            item { SectionHeader("Pinned", pins.size.toString()) }
+            item { PinList(pins, ops) { r -> mine.firstOrNull { it.profile == r.profile && it.id == r.meetingId }?.let(onMeeting) } }
         }
         item { SectionHeader("Meetings", mine.size.toString()) }
         if (mine.isEmpty()) item { EmptyState("No meetings") }

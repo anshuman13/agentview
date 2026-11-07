@@ -57,6 +57,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val shared = MutableStateFlow<SharedItem?>(null)
     val addTask = MutableStateFlow(false)
     @Volatile var foreground = false
+    val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
     val writes = Writes(viewModelScope, { readOnly }, { notice.value = it })
@@ -182,6 +183,12 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         val chat = withTimeoutOrNull(20_000) { store.state.first { s -> s.live.any { it.sessionId == sessionId } } }?.live?.first { it.sessionId == sessionId } ?: return false
         open(chat.id)
         return true
+    }
+
+    fun resolveQuestion(q: Question, meetings: List<Row>, now: Long) {
+        val next = withResolved(resolvedQuestions.value, q, meetings, now)
+        resolvedQuestions.value = next
+        prefs.edit().putString("questionsResolved", encodeResolved(next)).apply()
     }
 
     fun setCodexFilter(value: String) {

@@ -20,6 +20,9 @@ fun routeTitle(route: String, st: CodexState): String = when {
     route == "meetings" -> "Meetings"
     route.startsWith("meeting:") -> "Meeting"
     route.startsWith("person:") -> "Person"
+    route.startsWith("series:") -> "Series"
+    route == "review" -> "Review claims"
+    route == "autopilot" -> "Reply for me in Slack"
     route == "wiki" -> "Wiki"
     route.startsWith("wiki:") -> st.pages.firstOrNull { it.key == keyOf(route) }?.title ?: "Wiki"
     route == "jobs" -> "Jobs"
@@ -32,23 +35,26 @@ fun claimRoute(f: Row): String? = f.str("page_id")?.ifEmpty { null }?.let { "wik
 @Composable
 fun ExtraContent(
     route: String, hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions,
-    chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, push: (String) -> Unit, onTask: (Row) -> Unit,
+    ops: CodexOps, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, push: (String) -> Unit, pop: () -> Unit, onReplies: () -> Unit, onTask: (Row) -> Unit,
 ) {
     val key = keyOf(route)
     val openMeeting = { m: Row -> push("meeting:${m.key}") }
     when {
-        route == "meetings" -> MeetingsListPage(st, profile, now, chips, decisions, onChip, openMeeting)
+        route == "meetings" -> MeetingsListPage(hub, st, profile, now, chips, decisions, onChip, openMeeting)
         route.startsWith("meeting:") -> {
             val m = st.meetings.firstOrNull { it.key == key && !it.deleted }
-            if (m == null) EmptyState("This meeting is gone") else MeetingPage(hub, st, m, now, actions, openMeeting, { push("person:$it") }, onTask)
+            if (m == null) EmptyState("This meeting is gone") else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask)
         }
-        route.startsWith("person:") -> PersonPage(st, key, now, openMeeting, { p, id -> push("wiki:$p:$id") }, onTask)
-        route == "wiki" -> WikiIndexPage(st, profile, now, { push("wiki:${it.key}") }, { f -> claimRoute(f)?.let(push) })
+        route.startsWith("series:") -> SeriesPage(st, key, now, actions, openMeeting)
+        route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
+        route == "autopilot" -> AutopilotPage(hub, st, now, onReplies)
+        route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { p, id -> push("wiki:$p:$id") }, onTask)
+        route == "wiki" -> WikiIndexPage(st, profile, now, { push("wiki:${it.key}") }, { f -> claimRoute(f)?.let(push) }, { push("review") })
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == key && !it.deleted }
             if (p == null) EmptyState("This page is gone") else WikiPageView(st, p, now)
         }
-        route == "jobs" -> JobsListPage(hub, st, profile, now) { push("job:${it.key}") }
+        route == "jobs" -> JobsListPage(hub, st, profile, now, { push("autopilot") }) { push("job:${it.key}") }
         else -> {
             val j = st.jobs.firstOrNull { it.key == key && !it.deleted }
             if (j == null) EmptyState("This job is gone") else JobPageView(hub, st, j, now)

@@ -77,14 +77,20 @@ fun CodexScreen(hub: Hub) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val actions = remember(hub) {
-        TaskActions(hub.codex, { text, undo ->
+    val say = remember(hub) {
+        { text: String, undo: (() -> Unit)? ->
             scope.launch {
                 snack.currentSnackbarData?.dismiss()
                 val r = snack.showSnackbar(text, if (undo != null) "Undo" else null, duration = SnackbarDuration.Short)
                 if (r == SnackbarResult.ActionPerformed) undo?.invoke()
             }
-        })
+            Unit
+        }
+    }
+    val actions = remember(hub) { TaskActions(hub.codex, say) }
+    val ops = remember(hub) { CodexOps(PointActions(hub.codex, say), GoalActions(hub.codex, say), ReviewOps(hub.codex, say), ReplyOps(hub.api, hub.writes, hub.codex, say)) }
+    LaunchedEffect(st.items, st.meetings, now / 60_000) {
+        if (!hub.readOnly) endedPoints(st.items, st.meetings, now).forEach { hub.codex.update(it, mapOf("status" to RAISED)) }
     }
     val owner = LocalLifecycleOwner.current
     val origin by hub.origin.collectAsState()
@@ -141,10 +147,10 @@ fun CodexScreen(hub: Hub) {
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
                 when {
                     !st.loaded -> EmptyState("Loading Codex...")
-                    route != null -> ExtraContent(route, hub, st, profile, now, actions, chips, decisions, onChip, push) { editKey = it.key }
+                    route != null -> ExtraContent(route, hub, st, profile, now, actions, ops, chips, decisions, onChip, push, { routeText = popRoute(routeText) }, { routeText = popRoute(routeText); needsOpen = true }) { editKey = it.key }
                     page == "overview" -> OverviewPage(hub, st, profile, now, actions, { editKey = it.key }, { needsOpen = true }, { page = "goals" }, { adding = true }, { push("meeting:${it.key}") })
                     page == "tasks" -> TasksPage(st, profile, now, actions, searching, query, { query = it }, { editKey = it.key }, { page = "tag:$it" })
-                    page == "goals" -> GoalsPage(st, profile, now, actions, hub, { editKey = it.key })
+                    page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, { editKey = it.key })
                     page == "search" -> SearchPage(st, profile, { editKey = it.key })
                     else -> TagPage(st, page.removePrefix("tag:"), now, actions, profile == null, { editKey = it.key })
                 }
@@ -158,13 +164,18 @@ fun CodexScreen(hub: Hub) {
         SnackHost(snack, Modifier.align(Alignment.BottomCenter))
     }
 
-    editing?.let { row -> EditorSheet(row, st.items, now, actions) { editKey = null } }
+    editing?.let { row ->
+        val from = st.meetings.firstOrNull { it.profile == row.profile && it.id == row.meetingId }
+        val people = if (row.status == "open") remember(st.meetings, row.key, now / 60_000) { recentPeople(st.meetings, row.profile, from, now) } else emptyList()
+        EditorSheet(row, st.items, now, actions, people, { p -> ops.points.raise(row.title ?: "", p, row.profile) }) { editKey = null }
+    }
     if (adding) AddSheet(hub, profile, now, { adding = false }) { added ->
         scope.launch { snack.currentSnackbarData?.dismiss(); snack.showSnackbar("Task · $added", duration = SnackbarDuration.Short) }
     }
     if (needsOpen) {
-        val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now) }
-        NeedsSheet(needs, now, actions, hub, { needsOpen = false; editKey = it.key }) { needsOpen = false }
+        val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now, st.facts) }
+        val queue = remember(st.items, profile, now / 60_000) { replyQueue(st.items, profile, now) }
+        NeedsSheet(needs, queue, now, actions, ops.replies, hub, { needsOpen = false; editKey = it.key }, { needsOpen = false; push("review") }) { needsOpen = false }
     }
 }
 
@@ -196,10 +207,16 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
             text = ""
         }
     }
-    Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp6, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
-        TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Ask Codex about your day", singleLine = true, pill = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
-        IconBtn(Icons.AutoMirrored.Filled.Send, "Send", { send() }, enabled = text.isNotBlank(), on = text.isNotBlank())
+    val recipes = remember(text) { matchRecipes(DEFAULT_RECIPES, text) }
+    Column {
+        if (recipes.isNotEmpty()) Group(Modifier.padding(horizontal = Tokens.sp6)) {
+            recipes.forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title, onClick = { text = r.text }) }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp6, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
+            TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
+            IconBtn(Icons.AutoMirrored.Filled.Send, "Send", { send() }, enabled = text.isNotBlank(), on = text.isNotBlank())
+        }
     }
 }
 
@@ -207,7 +224,8 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
 private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onGoals: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit) {
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
-    val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now) }
+    val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now, st.facts) }
+    val waiting = remember(st.items, profile, now / 60_000) { replyQueue(st.items, profile, now).size }
     val today = remember(s, mt) { overviewToday(s, mt.next, now) }
     val others = mt.today.filter { it != mt.next && (it.endsAt ?: it.startsAt!!) > now }
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }
@@ -235,8 +253,8 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                 EmptyState("Nothing today", hint)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { Button("New task", onAdd, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
             }
-            if (needs.isNotEmpty()) {
-                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Text("${needs.size}  ›", style = Type.callout, color = av.warn, modifier = Modifier.padding(end = Tokens.sp6)) }) }
+            if (needs.size + waiting > 0) {
+                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Text("${needs.size + waiting}  ›", style = Type.callout, color = av.warn, modifier = Modifier.padding(end = Tokens.sp6)) }) }
             }
         }
         if (rows.isNotEmpty()) {
@@ -363,27 +381,46 @@ private fun TagPage(st: CodexState, tag: String, now: Long, actions: TaskActions
 }
 
 @Composable
-private fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, hub: Hub, onOpen: (Row) -> Unit) {
+private fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, goals: GoalActions, onOpen: (Row) -> Unit) {
     val weeks = remember(st.items, profile, now / 60_000) { goalHistory(st.items, now, profile) }
+    var renaming by remember { mutableStateOf<Row?>(null) }
+    var text by rememberSaveable { mutableStateOf("") }
+    var pick by rememberSaveable { mutableStateOf(WORK) }
+    val target = profile ?: pick
+    val full = remember(st.items, target, now / 60_000) { goalsOf(st.items, now, target).size >= MAX_GOALS }
+    val add = { if (goals.add(text, target)) text = "" }
     LazyColumn(Modifier.fillMaxSize()) {
-        if (weeks.isEmpty()) item { EmptyState("No goals yet", "Weekly goals are set on the web, in Meetings > Week") }
+        if (!full) item {
+            if (profile == null) Row(Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                Chip("Work", { pick = WORK }, on = pick == WORK, tone = ChipTone.Work)
+                Chip("Personal", { pick = PERSONAL }, on = pick == PERSONAL, tone = ChipTone.Personal)
+            }
+            TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), singleLine = true, placeholder = "Add a goal for this week",
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
+        }
+        if (weeks.isEmpty()) item { EmptyState("No goals yet", "Add up to $MAX_GOALS goals for this week above") }
         weeks.forEach { w ->
             item { SectionHeader(w.label) }
             w.goals.forEach { g ->
                 val tasks = goalTasks(st.items, g)
                 val p = goalProgress(st.items, g)
-                val blocked = if (w.start == weekStart(now)) moveBlock(st.items, g, now) else null
+                val thisWeek = w.start == weekStart(now)
+                val past = w.start < weekStart(now)
+                val blocked = if (thisWeek) moveBlock(st.items, g, now) else if (past) reopenBlock(st.items, g, now) else null
                 item {
                     Group(Modifier.padding(bottom = Tokens.sp4)) {
                         ListRow(g.title ?: "", (if (profile == null) "${profileLabel(g.profile)} · " else "") + if (p.total > 0) "${p.done}/${p.total}" else "No tasks yet", trailing = {
                             MoreButton { close ->
-                                if (w.start == weekStart(now)) MenuItem(blocked ?: "Move to next week", {
+                                MenuItem("Rename", { close(); renaming = g })
+                                if (thisWeek) MenuItem(blocked ?: "Move to next week", {
                                     close()
                                     val at = dayPlus(weekStart(now), 7)
                                     val old = g.at
-                                    if (hub.codex.update(g, mapOf("at" to at))) actions.undoable("Moved to next week") { hub.codex.update(g, mapOf("at" to old)) }
+                                    if (goals.move(g, at)) actions.undoable("Moved to next week") { goals.move(g, old) }
                                 }, enabled = blocked == null)
-                                MenuItem("Delete", { close(); actions.delete(g) }, danger = true)
+                                if (past) MenuItem(blocked ?: "Reopen this week", { close(); goals.reopen(g) }, enabled = blocked == null)
+                                MenuSeparator()
+                                MenuItem("Delete", { close(); goals.remove(g) }, danger = true)
                             }
                         })
                         tasks.forEach { t -> Hairline(); TaskRowView(t, now, actions, false, onOpen = { onOpen(t) }) }
@@ -392,6 +429,7 @@ private fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Task
             }
         }
     }
+    renaming?.let { g -> TextDialog("Rename goal", g.title ?: "", "Save", { goals.rename(g, it) }, { renaming = null }, maxLength = 120) }
 }
 
 @Composable
