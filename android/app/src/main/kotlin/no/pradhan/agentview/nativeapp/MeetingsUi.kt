@@ -176,7 +176,7 @@ private fun NotesField(hub: Hub, m: Row) {
     LaunchedEffect(remote) { if (!dirty) text = remote }
     LaunchedEffect(text) { if (dirty) { delay(NOTES_SAVE_MS); flush() } }
     DisposableEffect(m.key) { onDispose { flush() } }
-    TextField(text, { text = it; dirty = true }, Modifier.padding(horizontal = Tokens.sp6), minLines = 3,
+    TextField(text, { text = it; dirty = true }, Modifier.padding(horizontal = Tokens.listPad), minLines = 3,
         placeholder = "Write your notes. They stay yours; the summary is written separately.")
 }
 
@@ -342,7 +342,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
         item { SectionHeader("More", open = more, onToggle = { more = !more }) }
         if (more) {
             item {
-                TextField(newAction, { newAction = it }, Modifier.padding(horizontal = Tokens.sp6), singleLine = true, placeholder = "Add an action",
+                TextField(newAction, { newAction = it }, Modifier.padding(horizontal = Tokens.listPad), singleLine = true, placeholder = "Add an action",
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
                         val t = newAction.trim()

@@ -131,7 +131,7 @@ fun CodexScreen(hub: Hub) {
                     MenuItem("Jobs", "history", { close(); push("jobs") })
                 },
             )
-            if (!sub) Row(Modifier.padding(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            if (!sub) Row(Modifier.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Chip("Overview", { page = "overview" }, on = page == "overview")
                 Chip("Tasks", { page = "tasks" }, on = page == "tasks")
             }
@@ -201,10 +201,10 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
     }
     val recipes = remember(text) { matchRecipes(DEFAULT_RECIPES, text) }
     Column {
-        if (recipes.isNotEmpty()) Group(Modifier.padding(horizontal = Tokens.sp6)) {
+        if (recipes.isNotEmpty()) Group {
             recipes.forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title, onClick = { text = r.text }) }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp6, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
             TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
             val dictation = remember { Dictation() }
@@ -387,11 +387,11 @@ private fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Task
     val add = { if (goals.add(text, target)) text = "" }
     LazyColumn(Modifier.fillMaxSize()) {
         if (!full) item {
-            if (profile == null) Row(Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            if (profile == null) Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 Chip("Work", { pick = WORK }, on = pick == WORK, tone = ChipTone.Work)
                 Chip("Personal", { pick = PERSONAL }, on = pick == PERSONAL, tone = ChipTone.Personal)
             }
-            TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), singleLine = true, placeholder = "Add a goal for this week",
+            TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), singleLine = true, placeholder = "Add a goal for this week",
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
         }
         if (weeks.isEmpty()) item { EmptyState("No goals yet", "Add up to $MAX_GOALS goals for this week above") }

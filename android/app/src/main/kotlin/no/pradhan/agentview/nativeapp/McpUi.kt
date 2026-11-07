@@ -125,7 +125,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (r.live) item {
-                    Row(Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                         if (r.status == "failed" || r.status == "needs-auth") Button("Reconnect in chat", { hub.command(mcpReconnectCmd(r.name)) }, size = ButtonSize.Sm)
                         if (r.status == "disabled") Button("Enable", { hub.command(mcpToggleCmd(r.name, true)) }, size = ButtonSize.Sm)
                         else Button("Disable for this chat", { hub.command(mcpToggleCmd(r.name, false)) }, size = ButtonSize.Sm)

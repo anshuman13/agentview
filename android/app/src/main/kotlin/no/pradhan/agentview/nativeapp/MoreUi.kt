@@ -59,7 +59,7 @@ fun AddPoint(person: String, profile: String, ops: CodexOps) {
         val t = text.trim()
         if (t.isNotEmpty() && ops.points.raise(t, person, profile)) text = ""
     }
-    TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), singleLine = true, placeholder = if ('@' in person) "Raise a point" else "Raise with ${firstName(person)}",
+    TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), singleLine = true, placeholder = if ('@' in person) "Raise a point" else "Raise with ${firstName(person)}",
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
 }
 
@@ -134,7 +134,7 @@ fun SeriesPage(st: CodexState, key: String, now: Long, actions: TaskActions, onM
                 if (next != null) Button("Open next", { onMeeting(next) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
                 if (calendar != null) MoreButton { close -> MenuItem("Open calendar", "calendar", { close(); uri.openUri(calendar) }) }
             })
-            LRow(Modifier.padding(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            LRow(Modifier.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 cadence?.let { Chip(it, null) }
                 if (people.isNotEmpty()) Chip(if (people.size == 1) "1 person" else "${people.size} people", null)
             }

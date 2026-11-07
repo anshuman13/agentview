@@ -204,7 +204,7 @@ private fun ObserveSettings(hub: Hub, info: ObserveInfo, onSaved: () -> Unit) {
             else -> null
         })
         if (!open) return@Column
-        Column(Modifier.padding(horizontal = Tokens.sp6), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Column(Modifier.padding(horizontal = Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             TextField(draft, { draft = it; state = "unsaved"; error = "" }, minLines = 8, style = Mono)
             if (error.isNotEmpty()) Text(error, style = Type.subheadline, color = av.err)
             Text("Grafana MCP: ${if (info.grafanaServer) "found in ~/.claude.json" else "missing from ~/.claude.json"}", style = Type.footnote, color = av.fgMuted)

@@ -138,10 +138,11 @@ fun App(hub: Hub) {
     if (more) {
         val go = { r: String -> more = false; nav.navigate(r) { launchSingleTop = true } }
         Sheet(onDismiss = { more = false }, padded = false, full = false) {
-            MORE_TOOLS.forEach { ListRow(it.label, onClick = { go("more/${it.route}") }) }
+            val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
+            MORE_TOOLS.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }) }
             SectionHeader("Tools")
-            MORE_PAGES.forEach { ListRow(it.label, onClick = { go("more/${it.route}") }) }
-            ListRow("Mac address", onClick = { go(ORIGIN_ROUTE) })
+            MORE_PAGES.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }) }
+            ListRow("Mac address", leading = icon("device-desktop"), onClick = { go(ORIGIN_ROUTE) })
         }
     }
 }

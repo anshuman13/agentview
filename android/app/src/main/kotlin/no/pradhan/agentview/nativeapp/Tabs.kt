@@ -7,20 +7,20 @@ enum class Tab(val route: String, val label: String) {
     Agents("agents", "Agents"),
 }
 
-class MoreItem(val route: String, val label: String)
+class MoreItem(val route: String, val label: String, val icon: String)
 
 val MORE_TOOLS = listOf(
-    MoreItem("files", "Files"),
-    MoreItem("browser", "Browser"),
-    MoreItem("terminal", "Terminal"),
-    MoreItem("changes", "Source Control"),
-    MoreItem("github", "Pull Requests"),
+    MoreItem("files", "Files", "files"),
+    MoreItem("browser", "Browser", "globe"),
+    MoreItem("terminal", "Terminal", "terminal"),
+    MoreItem("changes", "Source Control", "source-control"),
+    MoreItem("github", "Pull Requests", "github"),
 )
 val MORE_PAGES = listOf(
-    MoreItem("observe", "Observe"),
-    MoreItem("deploy", "Deploy"),
-    MoreItem("mcp", "MCP Servers"),
-    MoreItem("settings", "Settings"),
+    MoreItem("observe", "Observe", "pulse"),
+    MoreItem("deploy", "Deploy", "rocket"),
+    MoreItem("mcp", "MCP Servers", "plug"),
+    MoreItem("settings", "Settings", "settings-gear"),
 )
 
 fun routeFor(link: DeepLink): String? = when {

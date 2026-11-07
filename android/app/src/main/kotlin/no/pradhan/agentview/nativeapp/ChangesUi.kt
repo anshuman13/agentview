@@ -46,7 +46,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                     }
                 }
                 item {
-                    Column(Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    Column(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                         TextField(message, { message = it }, placeholder = "Message${status?.branch?.let { " (commit on $it)" } ?: ""}", minLines = 1, maxLines = 6)
                         Button("Commit", { run("commit", commitBody(message)) { message = "" } }, variant = ButtonVariant.Filled, enabled = staged.isNotEmpty() && message.isNotBlank(), fill = true)
                         Button("Write message with Claude", { hub.askClaude(DRAFT_PROMPT) }, variant = ButtonVariant.Plain, enabled = staged.isNotEmpty(), fill = true)
