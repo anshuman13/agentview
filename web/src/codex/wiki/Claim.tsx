@@ -3,15 +3,15 @@ import { useAssistantStore } from '../data';
 import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki';
 import type { Mentions } from '../data/mentions';
 import { dayLabel } from '../data/dates';
-import { Button, Chip, IconButton } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
-import { Menu, MenuItem } from '../../ui/Menu';
-import { ago } from '../../ui/util';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
+import { ago, safeHref } from '../../ui/util';
 import { copyText, openMeeting, openTask, showSnack } from '../view';
 import { Swipe } from '../Swipe';
-import { ClaudeChip, SourceChip } from './Chips';
+import { KIND, SourceChip } from './Chips';
 import { useReview } from './Review';
-import { actionsFor, shortDate, type ClaimButton, type ClaimMenuItem } from './shared';
+import { actionsFor, SOURCE_ICON, shortDate, type ClaimButton, type ClaimMenuItem } from './shared';
 
 export const Claim = memo(function Claim({ fact, old, page, flash, mentions, stale }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions; stale?: boolean }) {
   const store = useAssistantStore();
@@ -20,7 +20,6 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
   const [contesting, setContesting] = useState(false);
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
-  const [moreMentions, setMoreMentions] = useState(false);
   const [draft, setDraft] = useState('');
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
@@ -58,6 +57,10 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
   const { buttons, menu: items } = actionsFor(fact, { stale, editing, contesting });
   const restore = () => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); };
   const pick = (act: () => void) => () => { setMenu(false); act(); };
+  const chat = chatOf(fact);
+  const sources = sourcesOf(fact);
+  const extra = sources.slice(1).filter((s) => safeHref(s.url));
+  const mentioned = mentions ? [...mentions.shown, ...mentions.rest] : [];
   const menuItem: Record<ClaimMenuItem, ReactNode> = {
     edit: <MenuItem key="edit" icon="edit" onClick={pick(startEdit)}>Edit</MenuItem>,
     cite: <MenuItem key="cite" icon="link" onClick={pick(cite)}>Cite</MenuItem>,
@@ -73,14 +76,31 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
     more: (
       <span key="more" className="wk-stale-more">
         <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-        {menu && <Menu trigger={more} onClose={() => setMenu(false)}>{items.map((i) => menuItem[i])}</Menu>}
+        {menu && (
+          <Menu trigger={more} onClose={() => setMenu(false)}>
+            {items.slice(0, -1).map((i) => menuItem[i])}
+            {extra.length > 0 && <MenuSeparator />}
+            {extra.map((s, i) => <MenuItem key={i} icon={SOURCE_ICON[s.kind]} href={safeHref(s.url)} onClick={() => setMenu(false)}>{KIND[s.kind]}: {s.label}</MenuItem>)}
+            {mentioned.length > 0 && <MenuSeparator />}
+            {mentioned.map((m) => (
+              <MenuItem key={m.kind + m.id} icon={m.kind === 'task' ? 'checklist' : 'calendar'} onClick={pick(() => (m.kind === 'task' ? openTask(m) : openMeeting(m)))}>
+                {m.title}{m.at != null && ` ${dayLabel(m.at)}`}
+              </MenuItem>
+            ))}
+            {chat && <MenuSeparator />}
+            {chat && <MenuItem icon="sparkle" href={`/?session=${encodeURIComponent(chat)}`} onClick={() => setMenu(false)}>Open Claude chat</MenuItem>}
+            {fact.at != null && <MenuSeparator />}
+            {fact.at != null && <MenuItem icon="history" disabled>{stale ? 'Still true? ' : ''}Updated {shortDate(fact.at)}</MenuItem>}
+            {items.slice(-1).map((i) => menuItem[i])}
+          </Menu>
+        )}
       </span>
     ),
   };
   return (
     <li className={`wk-item${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
       <Swipe onRight={proposed ? () => review.approve([fact]) : undefined} onLeft={proposed ? () => review.reject([fact]) : undefined} rightLabel="Approve" leftLabel="Reject" leftIcon="close">
-        <Row plain lines={2}
+        <Row plain lines={2} onLongPress={items.length ? () => setMenu(true) : undefined}
           title={editing ? (
             <span className="wk-contest-form">
               <textarea autoFocus rows={2} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
@@ -95,21 +115,7 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
             <>
               {proposed && <span>Proposed</span>}
               {c && <span>Contested by {c.by} - {ago(c.at, ' ago')}</span>}
-              {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
-              {mentions && mentions.shown.length > 0 && (
-                <span className="wk-mentions">
-                  {(moreMentions ? [...mentions.shown, ...mentions.rest] : mentions.shown).map((m) => (
-                    <Chip key={m.kind + m.id} size="sm" icon={m.kind === 'task' ? 'checklist' : 'calendar'} title={m.title} onClick={() => (m.kind === 'task' ? openTask(m) : openMeeting(m))}>
-                      <span className="wk-mention-title">{m.title}</span>
-                      {m.at != null && <span className="wk-mention-day">{dayLabel(m.at)}</span>}
-                    </Chip>
-                  ))}
-                  {!moreMentions && mentions.rest.length > 0 && <Chip size="sm" className="wk-mention-more" onClick={() => setMoreMentions(true)}>+{mentions.rest.length} more</Chip>}
-                </span>
-              )}
-              {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
-              {stale && <span className="chip">Still true?</span>}
-              {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
+              {sources[0] && <SourceChip s={sources[0]} />}
             </>
           )}
           trailing={buttons.map((b) => button[b])} />

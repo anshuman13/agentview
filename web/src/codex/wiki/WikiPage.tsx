@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantTable, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
-import { olderClaims, pageClaims, staleClaims, pageStats, newFact, proposals, sourcesOf, type Fact, type Source } from '../data/wiki';
+import { olderClaims, pageClaims, staleClaims, newFact, proposals, type Fact } from '../data/wiki';
 import { mentionsOf, type Mentions } from '../data/mentions';
 import { hasLiveClaims, wikiMarkdown } from '../data/wikiMarkdown';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
-import { Button, Chip, IconButton } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Section, sectionCount } from '../../ui/Section';
+import { Sheet } from '../../ui/Sheet';
 import { EmptyState } from '../../ui/Panel';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { copyText, setView, showSnack, useEscapeBack, useView } from '../view';
@@ -16,10 +17,9 @@ import { AskBar } from './AskBar';
 import { Claim } from './Claim';
 import { PageTile } from './PageTile';
 import { useReview } from './Review';
-import { MEMORY, REVIEW, SOURCE_ICON, memoryPage, shortDate } from './shared';
+import { MEMORY, REVIEW, memoryPage } from './shared';
 import { plural } from '../../ui/util';
 
-const SOURCE_NAME: Record<Source['kind'], [string, string]> = { meeting: ['meeting', 'meetings'], slack: ['Slack thread', 'Slack threads'], linear: ['Linear issue', 'Linear issues'], pr: ['pull request', 'pull requests'], doc: ['doc', 'docs'] };
 const NO_OLD: Fact[] = [];
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -29,6 +29,7 @@ export function WikiPage({ id }: { id: string }) {
   const store = useAssistantStore();
   const { anchor, filter } = useView();
   const [menu, setMenu] = useState(false);
+  const [asking, setAsking] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const cancelled = useRef(false);
   const [proposing, setProposing] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function WikiPage({ id }: { id: string }) {
   const [showOlder, setShowOlder] = useState(false);
   // After Approve all or Reject all the banner stays as a note, so the claims below do not jump up under the finger.
   const [decided, setDecided] = useState<string | null>(null);
-  useEffect(() => { setShowOlder(false); setDecided(null); setMenu(false); setProposing(null); setRenaming(null); }, [id]);
+  useEffect(() => { setShowOlder(false); setDecided(null); setMenu(false); setAsking(false); setProposing(null); setRenaming(null); }, [id]);
   // An anchor that arrives before the claims waits for them.
   const loaded = facts.length > 0;
   useEffect(() => {
@@ -72,15 +73,8 @@ export function WikiPage({ id }: { id: string }) {
     return () => clearTimeout(t);
   }, [flash, showOlder]);
   const pending = useMemo(() => proposals(facts).filter((f) => (f.page_id ?? null) === pid), [facts, pid]);
-  const st = useMemo(() => pageStats(facts, pid), [facts, pid]);
-  const counts = useMemo(() => {
-    const n = new Map<Source['kind'], Set<string>>();
-    for (const g of groups) for (const { fact } of g.claims) for (const s of sourcesOf(fact)) n.set(s.kind, (n.get(s.kind) ?? new Set()).add(s.label));
-    return [...n].map(([kind, set]) => ({ kind, n: set.size }));
-  }, [groups]);
   const back = () => setView({ open: null, anchor: null });
   useEscapeBack(back);
-  const section = page?.section === 'overview' || !pid ? null : page?.section;
   const propose = () => {
     const text = proposing?.trim();
     setProposing(null);
@@ -121,6 +115,7 @@ export function WikiPage({ id }: { id: string }) {
                   <IconButton ref={moreBtn} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
                   {menu && (
                     <Menu trigger={moreBtn} onClose={() => setMenu(false)}>
+                      {pid && <MenuItem icon="sparkle" onClick={pick(() => setAsking(true))}>Ask</MenuItem>}
                       {pid && <MenuItem icon="edit" onClick={pick(() => { cancelled.current = false; setRenaming(page.title ?? ''); })}>Rename</MenuItem>}
                       {pending.length > 0 && <MenuItem icon="checklist" onClick={pick(() => setView({ open: REVIEW, anchor: null }))}>Review</MenuItem>}
                       {hasLiveClaims(groups) && <MenuItem icon="copy" onClick={pick(() => copyText(wikiMarkdown(page.title, groups)))}>Copy as Markdown</MenuItem>}
@@ -140,12 +135,6 @@ export function WikiPage({ id }: { id: string }) {
         ) : (
           <div className="wk-doc">
             <article className="wk-article">
-              <div className="wk-chips">
-                {section && <Chip quiet tabIndex={-1}>{section}</Chip>}
-                <Chip quiet tabIndex={-1}>{plural(st.claims, 'claim')}</Chip>
-                {st.updated > 0 && <Chip quiet tabIndex={-1}>Updated {shortDate(Math.max(page.updated_at, st.updated))}</Chip>}
-                {st.contested > 0 && <Chip quiet late tabIndex={-1}>{st.contested} contested</Chip>}
-              </div>
               {proposing !== null && (
                 <div className="wk-contest-form">
                   <textarea autoFocus rows={2} value={proposing} aria-label="Claim" onChange={(e) => setProposing(e.target.value)}
@@ -187,25 +176,15 @@ export function WikiPage({ id }: { id: string }) {
               )}
               {!groups.length && !older.length && <EmptyState size="sm" icon="book" title="No claims yet" hint={`They appear here as meetings, Slack threads and issues mention ${page.title}`} />}
             </article>
-            <aside className="wk-rail">
-              {groups.length > 1 && (
-                <div className="wk-rail-block">
-                  <div className="wk-label">On this page</div>
-                  {groups.map((g) => <a key={g.heading} href={`#h-${slug(g.heading)}`} onClick={(e) => { e.preventDefault(); document.getElementById(`h-${slug(g.heading)}`)?.scrollIntoView({ behavior: 'smooth' }); }}>{g.heading}</a>)}
-                </div>
-              )}
-              {counts.length > 0 && (
-                <div className="wk-rail-block">
-                  <div className="wk-label">Sources</div>
-                  {counts.map(({ kind, n }) => <span key={kind} className="wk-rail-src"><Icon name={SOURCE_ICON[kind]} small /> {n} {SOURCE_NAME[kind][n === 1 ? 0 : 1]}</span>)}
-                </div>
-              )}
-            </aside>
           </div>
         )}
       </div>
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
-      {page && pid && <AskBar placeholder={`Ask about ${page.title}`} onAsk={(q) => ask(wikiAskText(q, pages, facts, id), page.profile)} />}
+      {asking && page && (
+        <Sheet label="Ask" onClose={() => { setAsking(false); moreBtn.current?.focus(); }}>
+          <AskBar placeholder={`Ask about ${page.title}`} onAsk={(q) => { const ok = ask(wikiAskText(q, pages, facts, id), page.profile); if (ok) setAsking(false); return ok; }} />
+        </Sheet>
+      )}
     </div>
   );
 }
