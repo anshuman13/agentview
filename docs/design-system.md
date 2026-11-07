@@ -267,7 +267,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | as-links-list | - | Grouped list | Done |
 | as-list | - | Grouped list | Done |
 | as-next-head | none | Report card | Done |
-| as-row | codex/Task.tsx (goal tasks already use Row) | Row | Partial |
+| as-row | codex/Task.tsx | Row | Done |
 | as-swipe-row | codex/Swipe.tsx | keep: layout (swipe gesture container) | Keep |
 | as-tt-menu-row | codex/TaskEditor.tsx | keep: layout (row inside a Menu) | Keep |
 | deploy-log-head | none | Section header | Done |
@@ -296,7 +296,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | ov-digest-head | none | Report card | Done |
 | ov-digest-row | none | Report card | Done |
 | ov-follow-row | codex/Overview.tsx | Row | Done |
-| sm-line | codex/summary/Summary.tsx | Row | Todo |
+| sm-line | codex/summary/Summary.tsx | Row | Done |
 | wk-contest-head | none | Section header | Done |
 | wk-feed-head | none | Section header | Done |
 | wk-feed-list | none | Grouped list | Done |

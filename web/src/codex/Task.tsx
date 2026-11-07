@@ -6,6 +6,7 @@ import { isRepeat, parseRepeat } from './data/recur';
 import { withEstimate } from './data/plan';
 import type { ItemRow, Profile } from './data/sync';
 import { Icon } from '../ui/Icon';
+import { Row } from '../ui/Row';
 import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { firstLine, readFlag } from '../ui/util';
@@ -73,38 +74,41 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
   const extras = [isRepeat(row.text) && 'Repeats', list.total > 0 && `${list.done}/${list.total}`, ...tagList(row.tags).slice(0, 2).map((t) => `#${t}`), !isDone && row.priority === 3 && 'High', !isDone && row.priority === 2 && 'Medium'].filter(Boolean).join(' · ');
   const later = nextNine(new Date(Math.max(at ?? 0, now)), row.profile);
   const choose = (fn: () => void) => () => { setMenu(false); fn(); };
+  const quote = isNote && !list.total && !row.people && !/^https?:\/\/\S+$/.test(preview) ? preview : '';
+  const meta = due || extras ? (
+    <>
+      {due && <span className={at! < now ? 'as-due late' : late === 0 ? 'as-due today' : 'as-due'}>{due}{at! < now && late <= 0 && <span className="sr-only"> overdue</span>}</span>}
+      {due && extras && ' · '}
+      {extras}
+    </>
+  ) : quote;
   const body = (
-    <div className={`as-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}${selected ? ' selected' : ''}`} data-row={row.profile + row.id} onPointerDown={picking ? undefined : (e) => { if (!(e.target as Element).closest('.as-more')) onGrab?.(e); }} onClick={picking && !pickable ? undefined : onOpen} role="button" aria-pressed={picking && pickable ? !!selected : undefined} tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && (picking ? (pickable && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())) : rowKey(e, row, onOpen, act))}>
-      {picking && !isNote ? <span className={`as-check${isDone ? ' on' : selected ? ' picked' : ''}`}><Icon name={selected || isDone ? 'pass-filled' : 'circle-large-outline'} /></span> : <Check row={row} />}
-      <div className="as-body">
-        <div className="as-title">{row.title || '(Untitled)'}</div>
-        {(due || extras) && (
-          <div className="as-meta">
-            {due && <span className={at! < now ? 'as-due late' : late === 0 ? 'as-due today' : 'as-due'}>{due}{at! < now && late <= 0 && <span className="sr-only"> overdue</span>}</span>}
-            {due && extras && ' · '}
-            {extras}
-          </div>
-        )}
-        {isNote && !list.total && !row.people && preview && !/^https?:\/\/\S+$/.test(preview) && <div className="as-ctx"><span className="as-quote">{preview}</span></div>}
-      </div>
-      {row.status === 'suggested' && <span className="badge waiting">Needs you</span>}
-      {!picking && (
-        <span className="as-more" onClick={(e) => e.stopPropagation()}>
-          <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-          {menu && (
-            <Menu trigger={more} onClose={() => setMenu(false)}>
-              {pickable ? taskMenu(row, act, choose, onOpen) : (
-                <>
-                  <MenuItem icon="arrow-right" onClick={choose(onOpen)}>Open</MenuItem>
-                  {isDone && <MenuItem icon="discard" onClick={choose(() => act.reopen(row))}>Not done</MenuItem>}
-                  <MenuItem icon="trash" danger onClick={choose(() => act.remove(row))}>Delete</MenuItem>
-                </>
+    <Row plain className={`tk-row ${row.profile}${isDone ? ' checked' : ''}${lifted ? ' lifted' : ''}${selected ? ' selected' : ''}`} data-row={row.profile + row.id} onPointerDown={picking ? undefined : (e) => { if (!(e.target as Element).closest('.as-more')) onGrab?.(e); }} onClick={picking && !pickable ? undefined : onOpen} role="button" aria-pressed={picking && pickable ? !!selected : undefined} tabIndex={0} onKeyDown={(e) => e.target === e.currentTarget && (picking ? (pickable && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())) : rowKey(e, row, onOpen, act))}
+      leading={picking && !isNote ? <span className={`as-check${isDone ? ' on' : selected ? ' picked' : ''}`}><Icon name={selected || isDone ? 'pass-filled' : 'circle-large-outline'} /></span> : <Check row={row} />}
+      title={row.title || '(Untitled)'}
+      meta={meta}
+      trailing={(row.status === 'suggested' || !picking) && (
+        <>
+          {row.status === 'suggested' && <span className="badge waiting">Needs you</span>}
+          {!picking && (
+            <span className="as-more" onClick={(e) => e.stopPropagation()}>
+              <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+              {menu && (
+                <Menu trigger={more} onClose={() => setMenu(false)}>
+                  {pickable ? taskMenu(row, act, choose, onOpen) : (
+                    <>
+                      <MenuItem icon="arrow-right" onClick={choose(onOpen)}>Open</MenuItem>
+                      {isDone && <MenuItem icon="discard" onClick={choose(() => act.reopen(row))}>Not done</MenuItem>}
+                      <MenuItem icon="trash" danger onClick={choose(() => act.remove(row))}>Delete</MenuItem>
+                    </>
+                  )}
+                </Menu>
               )}
-            </Menu>
+            </span>
           )}
-        </span>
+        </>
       )}
-    </div>
+    />
   );
   if (picking) return <Swipe>{body}</Swipe>;
   if (isNote || isDone) return <Swipe onDelete={() => act.remove(row)}>{body}</Swipe>;

@@ -73,12 +73,14 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
         <div className="mt-list">
           <div className="sm-report">
             <div className="sm-body">
-              <h2>{report.title}</h2>
+              <Section label={report.title} />
               {report.groups.map((g) => (
-                <section key={g.name}>
-                  <h3>{g.name}</h3>
-                  <ul>{g.lines.map((l) => <li key={l.row.profile + l.row.id}><button className="sm-line" onClick={() => openTask(l.row)}>[{dayLabel(l.at)}] {l.text}</button></li>)}</ul>
-                </section>
+                <div key={g.name} className="sm-group">
+                  <Section label={g.name} count={g.lines.length} />
+                  <div className="as-group">
+                    {g.lines.map((l) => <Row key={l.row.profile + l.row.id} title={l.text} meta={dayLabel(l.at)} onClick={() => openTask(l.row)} />)}
+                  </div>
+                </div>
               ))}
               {!report.groups.length && <EmptyState size="sm" icon="checklist" title="No tasks in this range" hint="Pick another date or status." />}
               <Button size="sm" icon="copy" onClick={() => copyText(report.markdown)}>Copy</Button>
