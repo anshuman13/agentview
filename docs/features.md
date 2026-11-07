@@ -25,6 +25,7 @@ At max-width 480px (900px where noted) the app is one column with a tab bar. Tas
 - **Sync**: the interval sync runs only while the app is visible
 - **Offline badge**: an Offline and reconnecting badge shows after 2 s without the stream and hides on reconnect
 - **Bottom-sheet menus**: a Menu opens as a bottom sheet at max-width 480px. A long press of 500ms on a row with a More menu opens it with a haptic tap; the kebab stays
+- **Swipe undo**: every row swipe that completes, snoozes, moves or deletes shows one snack with Undo for 5 s; a newer swipe replaces it, so only the latest can be undone
 - **Section headers**: grouped Section headers on Overview (Today), Tasks and Meetings stick to the top while the list scrolls
 - **Pull to refresh**: at max-width 900px, pulling down 64px at the top of Overview, Tasks, Meetings, Wiki or Jobs syncs
 - **Scroll restore**: Back from a task or meeting returns the list to its scroll position, kept per list and profile filter (Tasks and Meetings)

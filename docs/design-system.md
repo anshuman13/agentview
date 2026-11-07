@@ -203,6 +203,7 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
   Destructive items go last in the Menu. A row never shows Edit as a button; editing happens on the page or
   inline after a tap on the text.
 - Every Row, Section action and Chip has a 44px touch target at max-width 480px and on coarse pointers (`--touch`). Rows are 48px on desktop and at least 44px on touch; IconButtons and Chips keep their painted size and get a hit-area layer.
+- Swipe actions: a Row swipe that completes, snoozes, moves or deletes shows the one snack with Undo for 5 s (`showSnack` with an undo, never a bare write); only the latest swipe can be undone. A swipe action added to a Row ships with its Undo.
 - Long press menu: phone widths only (max-width 480px), touch only. Holding a row 500ms with under 10px of movement
   gives a haptic tap and opens the row's More menu as the bottom sheet; the click after release is swallowed. Only rows
   that have a More menu take it, and the kebab stays as the visible action.

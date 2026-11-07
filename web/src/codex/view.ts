@@ -155,6 +155,7 @@ export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => sub
 const SNACK_MS = 5000;
 type Snack = { text: string; undo?: () => void; id: number };
 let snack: Snack | null = null;
+let snackId = 0;
 const snackSubs = new Set<() => void>();
 let snackTimer: ReturnType<typeof setTimeout> | undefined;
 // A persistent status region so a screen reader hears each snack, even a repeat of the last one.
@@ -172,7 +173,7 @@ function announce(text: string) {
   setTimeout(() => (el.textContent = text), 100);
 }
 export function showSnack(text: string, undo?: () => void, ms = SNACK_MS) {
-  snack = { text, undo, id: Date.now() };
+  snack = { text, undo, id: ++snackId };
   announce(undo ? `${text}. Undo available` : text);
   snackSubs.forEach((f) => f());
   clearTimeout(snackTimer);
