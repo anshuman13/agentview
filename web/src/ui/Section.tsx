@@ -18,7 +18,7 @@ export function Section({ label, count, action, open, onToggle }: {
   return (
     <div className="ui-section">
       {onToggle ? <button type="button" className="ui-section-head" aria-expanded={open} onClick={onToggle}>{head}</button> : <div className="ui-section-head">{head}</div>}
-      {action}
+      {action && <span className="ui-section-actions">{action}</span>}
     </div>
   );
 }

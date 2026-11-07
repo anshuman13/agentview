@@ -32,22 +32,18 @@ export function BriefCard({ brief, parsed, showProfile, onDismiss }: { brief: Br
   return (
     <section className="ov-digest">
       <Section label={`${brief.text}${showProfile ? ` · ${profile}` : ''}`} action={(
-        <span className="ov-digest-head">
+        <>
           {counted(parsed.groups, 'meetings', 'meeting')}
           {counted(parsed.groups, 'tasks', 'task')}
           <span>{clock(brief.to_at ?? brief.from_at!)}</span>
           <IconButton icon="close" label="Hide until tomorrow" size="sm" onClick={onDismiss} />
-        </span>
+        </>
       )} />
       <div className="ov-group">
         {parsed.groups.map((g) => (
           <GroupList key={g.outcome} brief={brief} group={g} render={(r) => {
             const onClick = target(r);
-            return (
-              <div className="ov-digest-row">
-                <Row disabled={!onClick} title={r.title} meta={r.meta} onClick={onClick} />
-              </div>
-            );
+            return <Row disabled={!onClick} title={r.title} meta={r.meta} onClick={onClick} />;
           }} />
         ))}
         <WaitingLine count={waiting} />

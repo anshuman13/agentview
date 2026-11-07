@@ -14,6 +14,13 @@
 .ui-row::after { content: ''; position: absolute; right: 0; bottom: 0; left: var(--list-pad); border-bottom: var(--hairline); }
 .ui-row.has-lead::after { left: calc(var(--list-pad) + var(--lead-w) + var(--sp-6)); }
 .ui-row:last-child::after { display: none; }
+.ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
+.ui-row-wrap { --lead-w: 24px; position: relative; display: flex; align-items: center; padding-right: var(--list-pad); }
+.ui-row-wrap > .ui-row { flex: 1; min-width: 0; }
+.ui-row-wrap > .ui-row::after { display: none; }
+.ui-row-wrap::after { content: ''; position: absolute; right: 0; bottom: 0; left: var(--list-pad); border-bottom: var(--hairline); }
+.ui-row-wrap:has(> .ui-row.has-lead)::after { left: calc(var(--list-pad) + var(--lead-w) + var(--sp-6)); }
+.ui-row-wrap:last-child::after { display: none; }
 .ui-row-lead { flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--lead-w); color: var(--on-surface-muted); }
 .ui-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ui-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: anywhere; }

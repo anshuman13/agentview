@@ -46,11 +46,11 @@ export function DigestCard({ brief, digest, showProfile, onDismiss }: { brief: B
   return (
     <section className="ov-digest">
       <Section label={`${brief.text}${showProfile ? ` · ${brief.profile}` : ''}`} action={(
-        <span className="ov-digest-head">
+        <>
           {digest.groups.map((g) => <span key={g.outcome} className="badge quiet">{g.rows.length} {g.outcome}</span>)}
           <span>{clock(brief.to_at ?? brief.from_at!)}</span>
           <IconButton icon="close" label="Hide until tomorrow" size="sm" onClick={onDismiss} />
-        </span>
+        </>
       )} />
       <div className="ov-group">
         {digest.groups.map((g) => (
@@ -58,10 +58,8 @@ export function DigestCard({ brief, digest, showProfile, onDismiss }: { brief: B
             const exists = items.has(rowKey({ profile: brief.profile, id: r.id }));
             const badge = r.outcome === 'failed' ? 'Failed' : r.outcome === 'escalated' ? 'Needs you' : r.outcome === 'sent' && r.edited ? 'Edited' : '';
             return (
-              <div className="ov-digest-row">
-                <Row className={exists ? '' : 'inert'} disabled={!exists} title={r.who || 'Slack'} meta={[r.chat, r.reason].filter(Boolean).join(' · ')} trailing={badge && <span className="badge quiet">{badge}</span>} onClick={() => openTask({ profile: brief.profile, id: r.id })} />
-                {r.url && <IconButton icon="link-external" label="Open" size="sm" onClick={() => window.open(r.url, '_blank', 'noreferrer')} />}
-              </div>
+              <Row className={exists ? '' : 'inert'} disabled={!exists} title={r.who || 'Slack'} meta={[r.chat, r.reason].filter(Boolean).join(' · ')} trailing={badge && <span className="badge quiet">{badge}</span>} onClick={() => openTask({ profile: brief.profile, id: r.id })}
+                action={r.url && <IconButton icon="link-external" label="Open" size="sm" onClick={() => window.open(r.url, '_blank', 'noreferrer')} />} />
             );
           }} />
         ))}

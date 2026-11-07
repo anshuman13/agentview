@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { save, stored } from '../ui/util';
-import { Icon } from '../ui/Icon';
+import { Section } from '../ui/Section';
 import { Chip } from '../ui/Button';
 
 // The header line of an overview card: title, count and an optional control on the right.
@@ -15,14 +15,9 @@ export function Fold({ id, title, count, remember = true, action, onOpen, childr
   const [open, setOpen] = useState(() => remember && stored<boolean>(key, false));
   if (count === 0) return null;
   const toggle = () => { if (remember) save(key, !open); if (!open) onOpen?.(); setOpen(!open); };
-  const head = (
-    <button className="as-section as-toggle later" aria-expanded={open} onClick={toggle}>
-      {title}{count ? <> <span>{count}</span></> : null} <Icon name={open ? 'chevron-up' : 'chevron-down'} small />
-    </button>
-  );
   return (
     <section>
-      {action ? <div className="ov-brief-head">{head}{action}</div> : head}
+      <Section label={title} count={count} open={open} onToggle={toggle} action={action} />
       {open && <div className="ov-fold">{children}</div>}
     </section>
   );

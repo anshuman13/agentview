@@ -60,10 +60,10 @@ export function Prep({ m, section }: { m: Meeting; section?: boolean }) {
   return (
     <div className={section ? 'mt-sec' : undefined} onClick={(e) => e.stopPropagation()}>
       <Section label="Prep" action={(
-        <span className="ov-digest-head">
+        <>
           {badges.map((b) => <span key={b} className="badge quiet">{b}</span>)}
           <IconButton icon="copy" label="Copy agenda" size="sm" onClick={copy} />
-        </span>
+        </>
       )} />
       <div className="ov-group">
         {groups.map((g) => (

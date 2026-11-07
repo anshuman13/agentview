@@ -15,3 +15,4 @@ button.ui-section-head:active { --state: var(--state-press); }
 .ui-section-head > .codicon { transition: transform var(--dur) var(--ease); }
 .ui-section-head[aria-expanded='true'] > .codicon { transform: rotate(90deg); }
 .ui-section-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-section-actions { display: inline-flex; align-items: center; gap: var(--sp-4); font-size: var(--type-label-size); line-height: var(--type-label-line); color: var(--fg-muted); }

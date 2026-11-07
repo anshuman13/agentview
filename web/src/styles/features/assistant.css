@@ -83,7 +83,6 @@
 .as-ghost { position: fixed; left: 0; top: 0; z-index: var(--z-raised); max-width: 70vw; margin: -64px 0 0 -40px; padding: var(--sp-4) var(--sp-6); border-radius: var(--radius-md); background: var(--raised); border: 1px solid var(--accent); box-shadow: var(--shadow-lg); font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 
 .as-next { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-7) var(--sp-8); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--raised)), var(--raised)); cursor: pointer; }
-.as-next-head { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); color: var(--accent-text); font-weight: 600; }
 .as-next-title { font-size: var(--fs-2xl); font-weight: 600; }
 .as-ctx-list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .as-next .wk-claims { padding-left: var(--sp-8); }
@@ -206,7 +205,7 @@
   .as-card textarea, .as-mirror { font-size: var(--fs-2xl); }
   .as-snack { bottom: 140px; }
   .as-edit-actions .btn { height: var(--touch-sm); }
-  :is(.ov-brief-head, .dp-when, .gl-row) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
+  :is(.ui-section-actions, .dp-when, .gl-row) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   /* While a task field has the keyboard, the composer gives its room to the task. */
   .assistant:has(.as-edit :focus, .as-add.on :focus) .as-composer { display: none; }
   .as-edit-title { font-size: var(--fs-xl) !important; line-height: 24px; padding-top: 10px !important; }

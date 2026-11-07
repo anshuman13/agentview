@@ -4,6 +4,7 @@ import type { Meeting } from '../data/wiki';
 import { peopleOf, stampedNotes } from '../data/meetings';
 import { Prep } from '../meetings/Prep';
 import { Icon } from '../../ui/Icon';
+import { Section } from '../../ui/Section';
 import { setView, showSnack } from '../view';
 import { clock } from '../time';
 
@@ -27,7 +28,7 @@ export function NextCard({ m, then, carried, onPrep }: { m: Meeting; then?: Meet
   };
   return (
     <div className="as-next" onClick={open} role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(); } }}>
-      <div className="as-next-head"><Icon name="calendar" small /> {clock(m.starts_at!)} <span className="muted">· {mins <= 0 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`}</span></div>
+      <Section label="Next" action={<><span>{clock(m.starts_at!)}</span><span>{mins <= 0 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`}</span></>} />
       <div className="as-next-title">{m.title}</div>
       {(people.length > 0 || carried > 0) && (
         <div className="as-ctx">
