@@ -122,19 +122,13 @@
 }
 
 .mt-tasks { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); overflow: hidden; }
-.mt-task { display: flex; align-items: flex-start; min-width: 0; gap: var(--sp-5); padding: var(--sp-6) var(--sp-7); }
-.mt-task + .mt-task, .mt-tasks > .as-swipe + :is(.as-swipe, .mt-task), .mt-tasks > .mt-task + .as-swipe { border-top: 1px solid var(--border); }
+.mt-tasks > .as-swipe + :is(.as-swipe, .ui-row) { border-top: 1px solid var(--border); }
 .mt-tasks .as-swipe:is(.right, .left) .as-swipe-row { background: var(--raised); }
-.mt-task.suggested:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.mt-task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
-.mt-task-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-lg); font-weight: 500; color: var(--fg-strong); line-height: var(--lh-snug); }
-.mt-task-meta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-size: var(--row-meta); color: var(--fg-muted); }
-.mt-task-act { flex: none; display: flex; align-items: center; gap: var(--sp-3); align-self: center; }
 .mt-more { display: inline-flex; }
 .mt-pop { position: fixed; width: 0; height: 0; z-index: var(--z-popover); }
 .mt-pop.up > .ui-menu { top: auto; bottom: 100%; }
-.mt-task.done .mt-task-title { color: var(--fg-faint); text-decoration: line-through; }
-.mt-task.dismissed .mt-task-title, .mt-task.unassigned .mt-task-title { color: var(--fg-muted); }
+.mt-act.done .ui-row-title { color: var(--fg-faint); text-decoration: line-through; }
+.mt-act.dismissed .ui-row-title, .mt-act.unassigned .ui-row-title { color: var(--fg-muted); }
 .mt-state { display: flex; align-items: center; gap: var(--sp-5); margin-top: var(--sp-10); padding: var(--sp-5) var(--sp-7); border-radius: 12px; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--fg); font-size: var(--fs-md); }
 .mt-state.done { background: color-mix(in srgb, var(--ok) 10%, transparent); }
 .mt-state.missing { background: color-mix(in srgb, var(--err) 8%, transparent); color: var(--err); }

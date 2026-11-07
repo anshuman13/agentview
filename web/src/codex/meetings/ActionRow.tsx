@@ -12,6 +12,7 @@ import { PickTime, when } from '../time';
 import { snoozeText, snoozes } from '../AskBar';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
+import { Row } from '../../ui/Row';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { copyText, openTask, showSnack } from '../view';
@@ -57,10 +58,10 @@ export function ActionRow({ row, meeting, meta: metaText, extraItems }: { row: I
   const done = status === 'done';
   const at = atTime(row.at);
   const accept = () => change({ status: 'open', ...((row.rolls ?? 0) >= STALE_ROLLS && UNROLL) }, 'Added to Today');
-  const dismiss = () => change({ status: 'dismissed' }, 'Moved to Not mine');
+  const dismiss = () => change({ status: 'dismissed' }, meeting ? 'Moved to Not mine' : 'Dismissed');
   const check = () => { haptic(done ? 'tap' : 'success'); change({ status: done ? 'open' : 'done' }, done ? 'Moved back to Today' : 'Done'); };
-  const suggestedRows =() => [...document.querySelectorAll<HTMLElement>('.mt-task.suggested')];
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const suggestedRows =() => [...document.querySelectorAll<HTMLElement>('.mt-act.suggested')];
+  const onKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     if (e.target !== e.currentTarget || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     const el = e.currentTarget;
     const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
@@ -106,48 +107,48 @@ export function ActionRow({ row, meeting, meta: metaText, extraItems }: { row: I
   const close = (f: () => void) => () => { setMenu(null); f(); };
   const snoozable = status === 'open' || status === 'suggested';
   const el = (
-    <div className={`mt-task ${status}`} {...(status === 'suggested' && { tabIndex: 0, onKeyDown })}>
-      <div className="mt-task-body">
-        <div className="mt-task-title">{row.title}</div>
-        {meta && <div className="mt-task-meta">{meta}</div>}
-      </div>
-      <div className="mt-task-act">
+    <Row
+      plain
+      className={`mt-act ${status}`}
+      {...(status === 'suggested' && { tabIndex: 0, onKeyDown })}
+      title={row.title}
+      meta={meta}
+      trailing={<>
         {badge && <span className="badge quiet">{badge}</span>}
         {primary && <Button size="sm" onClick={primary[1]}>{primary[0]}</Button>}
-        <span className="mt-more">
-          <IconButton ref={kebab} icon="kebab-horizontal" size="sm" small label="More" aria-haspopup="menu" aria-expanded={menu != null} onClick={() => setMenu(menu === 'more' ? null : 'more')} />
-          {menu && <Pop anchor={kebab}>
-            {menu === 'more' && (
-              <Menu trigger={kebab} onClose={() => setMenu(null)}>
-                {extraItems?.(close)}
-                {meeting && status === 'open' && <MenuItem onClick={() => setMenu('assign')}>Assign</MenuItem>}
-                {snoozable && <MenuItem onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
-                <MenuItem onClick={close(() => openTask(row))}>Edit</MenuItem>
-                {meeting && status === 'open' && <MenuItem href={linearIssue(row, meeting)} onClick={() => setMenu(null)}>New Linear issue</MenuItem>}
-                {meeting && <MenuItem onClick={close(() => copyText(draftFor(row, meeting)))}>Copy as message</MenuItem>}
-                {!meeting && row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(null)}>Open source</MenuItem>}
-                {!meeting && row.draft && <MenuItem onClick={close(() => copyText(row.draft!))}>Copy draft</MenuItem>}
-                <MenuSeparator />
-                <MenuItem danger onClick={close(() => act.remove(row))}>Delete</MenuItem>
-              </Menu>
-            )}
-            {menu === 'assign' && (
-              <Menu trigger={kebab} onClose={() => setMenu(null)}>
-                <MenuItem aria-checked={!cur} onClick={() => pickWho(null)}>{mark(!cur)}Me</MenuItem>
-                {(cur && !names.includes(cur) ? [cur, ...names] : names).map((n) => <MenuItem key={n} aria-checked={n === cur} onClick={() => pickWho(n)}>{mark(n === cur)}{displayName(n)}</MenuItem>)}
-              </Menu>
-            )}
-            {menu === 'snooze' && (
-              <Menu trigger={kebab} onClose={() => setMenu(null)}>
-                {snoozes().map((s) => <MenuItem key={s.label} onClick={close(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</MenuItem>)}
-                <PickTime className="ui-menu-item" label="Pick date" value={at} onPick={(t) => close(() => act.snooze(row, t))()} />
-              </Menu>
-            )}
-          </Pop>}
-        </span>
-      </div>
-    </div>
+        <IconButton ref={kebab} icon="kebab-horizontal" size="sm" small label="More" aria-haspopup="menu" aria-expanded={menu != null} onClick={() => setMenu(menu === 'more' ? null : 'more')} />
+        {menu && <Pop anchor={kebab}>
+          {menu === 'more' && (
+            <Menu trigger={kebab} onClose={() => setMenu(null)}>
+              {extraItems?.(close)}
+              {snoozable && <MenuItem onClick={close(dismiss)}>Not mine</MenuItem>}
+              {meeting && status === 'open' && <MenuItem onClick={() => setMenu('assign')}>Assign</MenuItem>}
+              {snoozable && <MenuItem onClick={() => setMenu('snooze')}>Snooze</MenuItem>}
+              <MenuItem onClick={close(() => openTask(row))}>Edit</MenuItem>
+              {meeting && status === 'open' && <MenuItem href={linearIssue(row, meeting)} onClick={() => setMenu(null)}>New Linear issue</MenuItem>}
+              {meeting && <MenuItem onClick={close(() => copyText(draftFor(row, meeting)))}>Copy as message</MenuItem>}
+              {!meeting && row.source_url && <MenuItem href={safeHref(row.source_url)} onClick={() => setMenu(null)}>Open source</MenuItem>}
+              {!meeting && row.draft && <MenuItem onClick={close(() => copyText(row.draft!))}>Copy draft</MenuItem>}
+              <MenuSeparator />
+              <MenuItem danger onClick={close(() => act.remove(row))}>Delete</MenuItem>
+            </Menu>
+          )}
+          {menu === 'assign' && (
+            <Menu trigger={kebab} onClose={() => setMenu(null)}>
+              <MenuItem aria-checked={!cur} onClick={() => pickWho(null)}>{mark(!cur)}Me</MenuItem>
+              {(cur && !names.includes(cur) ? [cur, ...names] : names).map((n) => <MenuItem key={n} aria-checked={n === cur} onClick={() => pickWho(n)}>{mark(n === cur)}{displayName(n)}</MenuItem>)}
+            </Menu>
+          )}
+          {menu === 'snooze' && (
+            <Menu trigger={kebab} onClose={() => setMenu(null)}>
+              {snoozes().map((s) => <MenuItem key={s.label} onClick={close(() => act.snooze(row, s.at(new Date(), row.profile)))}>{snoozeText(s, new Date(), row.profile)}</MenuItem>)}
+              <PickTime className="ui-menu-item" label="Pick date" value={at} onPick={(t) => close(() => act.snooze(row, t))()} />
+            </Menu>
+          )}
+        </Pop>}
+      </>}
+    />
   );
   if (status !== 'open') return el;
-  return <Swipe onRight={check} onLeft={() => change({ status: 'dismissed' }, meeting ? 'Moved to Not mine' : 'Dismissed')} leftLabel="Dismiss" leftIcon="close">{el}</Swipe>;
+  return <Swipe onRight={check} onLeft={dismiss} leftLabel="Dismiss" leftIcon="close">{el}</Swipe>;
 }

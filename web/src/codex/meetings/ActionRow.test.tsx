@@ -23,7 +23,7 @@ describe('ActionRow', () => {
     const h = render('open', { assignee: 'Ada Lovelace' }, m);
     expect(h).toContain('>Ada<');
     expect(h).not.toContain('mt-date');
-    expect(render('open', {}, m)).not.toContain('mt-task-meta');
+    expect(render('open', {}, m)).not.toContain('ui-row-meta');
   });
 
   it('shows at most one badge, for state only', () => {

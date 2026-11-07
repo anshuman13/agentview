@@ -22,7 +22,7 @@ export function Row({ leading, title, meta, trailing, lines = 1, href, plain, cl
       {trailing && <span className="ui-row-trail">{trailing}</span>}
     </>
   );
-  if (plain) return <div className={cls}>{body}</div>;
+  if (plain) return <div className={cls} {...(rest as ComponentPropsWithoutRef<'div'>)}>{body}</div>;
   if (href) return <a className={cls} href={href} target="_blank" rel="noreferrer">{body}</a>;
   return <button type="button" className={cls} {...rest}>{body}</button>;
 }

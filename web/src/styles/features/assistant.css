@@ -37,7 +37,7 @@
 @media (hover: hover) { .as-confirm-all:hover { background: color-mix(in srgb, var(--ok) 16%, transparent); } }
 .as-dismiss-all { display: flex; align-items: center; justify-content: center; gap: var(--sp-3); min-height: var(--touch-sm); border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-md); cursor: pointer; }
 @media (hover: hover) { .as-dismiss-all:hover { background: color-mix(in srgb, var(--fg-muted) 12%, transparent); } }
-.as-group > .mt-task + .mt-task, .as-group > .as-swipe + :is(.as-swipe, .mt-task), .as-group > .mt-task + .as-swipe { border-top: 1px solid var(--border); }
+.as-group > .as-swipe + :is(.as-swipe, .ui-row) { border-top: 1px solid var(--border); }
 .as-group .as-swipe:is(.right, .left) .as-swipe-row { background: var(--raised); }
 
 .as-group { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); overflow: hidden; }

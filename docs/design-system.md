@@ -136,7 +136,7 @@ icon, title in body type one line with ellipsis, meta in label type `--meta-fg`,
 IconButton sm or Chip shown on hover. Hairline only between groups.
 `<Row leading title meta trailing lines href onClick>` (web/src/ui/Row.tsx, components/rows.css): 48px
 minimum, title clamps to 1 or 2 lines, a hairline under each row starts at the title, state layers
-as buttons, a button or (with href) a link. Status: built; the topic timeline in Meetings uses it.
+as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). Status: built; the topic timeline and meeting actions in Meetings use it.
 
 ### Panel (EuiPanel)
 `<Panel title action padding>`; `.ui-panel`. Elevation 1 on `--surface`, `--shape-lg`.
