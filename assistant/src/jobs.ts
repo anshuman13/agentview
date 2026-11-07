@@ -11,7 +11,7 @@ import { ask } from './claude.js';
 import { contextTool } from './draft.js';
 import { replyToCommand } from './commands.js';
 import type { Profile } from './db.js';
-import { loop } from './once.js';
+import { loop, serial } from './once.js';
 import { applyChanges, type Change } from './sync.js';
 import { DAY, HOUR, MIN } from './time.js';
 import { nextRun } from '../../shared/schedule.js';
@@ -145,7 +145,9 @@ async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof
   let notified = false;
   let cost: number | null = null;
   try {
-    const { result, added, ...r } = await run(db, job, notify);
+    // Two jobs on AgentView's one Chrome would fight over its tabs, so browser jobs take turns.
+    const go = () => run(db, job, notify);
+    const { result, added, ...r } = await (jobAllows(job.tools).browser ? serial('job-browser', go) : go());
     notified = r.notified;
     cost = r.cost;
     output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';

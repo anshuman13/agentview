@@ -162,6 +162,21 @@ describe('runDue', () => {
       expect(started.length).toBe(3);
       expect(peak).toBe(2);
     });
+    test('browser jobs take turns', async () => {
+      const { db, now } = seedMany(['a', 'b']);
+      applyChanges(db, ['a', 'b'].map((id) => ({ table: 'jobs', id, profile: 'work' as const, updated_at: 2, fields: { tools: 'browser' } })));
+      let flying = 0;
+      let peak = 0;
+      const run = async () => {
+        peak = Math.max(peak, ++flying);
+        await new Promise((r) => setTimeout(r, 10));
+        flying--;
+        return finish();
+      };
+      await runDue(db, now, run as never, async () => true, reply);
+      expect(statuses(db)).toEqual([{ id: 'a', status: 'ok' }, { id: 'b', status: 'ok' }]);
+      expect(peak).toBe(1);
+    });
     test('a hung job does not hold back the others, and runDue waits for it', async () => {
       const { db, now } = seedMany(['a', 'b', 'c']);
       const hang = gate();
