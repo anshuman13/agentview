@@ -271,8 +271,8 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | as-swipe-row | codex/Swipe.tsx | keep: layout (swipe gesture container) | Keep |
 | as-tt-menu-row | codex/TaskEditor.tsx | keep: layout (row inside a Menu) | Keep |
 | deploy-log-head | ops/Deploy.tsx (rest of the pane uses Row) | Section header | Partial |
-| ex-head | workspace/Explorer.tsx | Section header | Todo |
-| ex-row, ex-section-row | app/App.tsx, workspace/Explorer.tsx | Row | Todo |
+| ex-head | - | Section header | Done |
+| ex-row, ex-section-row | - | Row | Done |
 | gh-head | none | Section header | Done |
 | gh-item | none | Row | Done |
 | gh-line | none | Row | Done |

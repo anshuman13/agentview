@@ -3,6 +3,11 @@ import { api, setUi, useStore } from '../app/store';
 import { findHere, useWorkspace } from '../sessions/folders';
 import { setOpened, useOpened } from './opened';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
+import { EmptyState } from '../ui/Panel';
+import { Row as UiRow } from '../ui/Row';
+import { Section } from '../ui/Section';
 import { pressable, save, stored } from '../ui/util';
 import { touch } from '../app/touch';
 import { FileIcon } from './FileIcon';
@@ -25,6 +30,8 @@ function ExplorerView({ cwd }: { cwd: string }) {
   const recent = useStore((s) => s.recentFiles);
   const opened = useOpened();
   const [picking, setPicking] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
   const here = findHere(useWorkspace(cwd).folders, cwd);
   const [dirs, setDirs] = useState<Record<string, Entry[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(stored(`explorer.expanded:${cwd}`, [])));
@@ -128,86 +135,95 @@ function ExplorerView({ cwd }: { cwd: string }) {
 
   return (
     <div className="explorer ex">
-      <div className="ex-section-row">
-        <button className="ex-section" onClick={() => setEditorsOpen(!editorsOpen)}>
-          <Icon name={editorsOpen ? 'chevron-down' : 'chevron-right'} small />
-          <span>Open Editors</span>
-        </button>
-        {opened.length > 0 && (
-          <button className="icon-btn" title="Close All Editors" onClick={() => { setOpened([]); setUi({ openFile: null, follow: false }); }}>
-            <Icon name="close-all" small />
-          </button>
-        )}
-      </div>
+      <Section
+        label="Open Editors"
+        count={opened.length || undefined}
+        open={editorsOpen}
+        onToggle={() => setEditorsOpen(!editorsOpen)}
+        action={opened.length > 0 && <IconButton icon="close-all" label="Close All Editors" size="sm" small onClick={() => { setOpened([]); setUi({ openFile: null, follow: false }); }} />}
+      />
       {editorsOpen && (
         <div className="ex-editors">
-          {opened.length === 0 && <div className="ex-empty">Files you open or Claude edits show here</div>}
-          {opened.map((f) => (
-            <div key={f} className={`ex-row${f === openFile ? ' selected' : ''}`} title={f} aria-current={f === openFile || undefined} {...pressable(() => setUi({ openFile: f, follow: false }))}>
-              <button className="ex-close" title="Close" aria-label={`Close ${f.split('/').pop()}`} onClick={(e) => {
-                e.stopPropagation();
-                const row = e.currentTarget.parentElement;
-                ((row?.nextElementSibling ?? row?.previousElementSibling) as HTMLElement | null | undefined)?.focus();
-                close(f);
-              }}>
-                <Icon name="close" small />
-              </button>
-              <FileIcon name={f} />
-              <span className={`ex-name${recent.includes(f) ? ' changed' : ''}`}>{f.split('/').pop()}</span>
-              <span className="ex-dir">{parentOf(f)}</span>
-            </div>
-          ))}
+          {opened.length === 0 && <EmptyState size="sm" title="No open files" hint="Files you open or Claude edits show here" />}
+          {opened.map((f) => {
+            const name = f.split('/').pop();
+            return (
+              <UiRow
+                key={f}
+                plain
+                aria-current={f === openFile || undefined}
+                data-path={f}
+                leading={<FileIcon name={f} />}
+                title={<span title={f} className={`ex-name${recent.includes(f) ? ' changed' : ''}`}>{name}</span>}
+                meta={parentOf(f)}
+                trailing={
+                  <IconButton icon="close" label={`Close ${name}`} title="Close" size="sm" small onClick={(e) => {
+                    e.stopPropagation();
+                    const row = e.currentTarget.closest('.ui-row');
+                    ((row?.nextElementSibling ?? row?.previousElementSibling) as HTMLElement | null | undefined)?.focus();
+                    close(f);
+                  }} />
+                }
+                {...pressable(() => setUi({ openFile: f, follow: false }))}
+              />
+            );
+          })}
         </div>
       )}
-      <div className="ex-head">
-        <button className="folder-switch" title={`${cwd}\nSwitch worktree or chat`} onClick={() => setPicking(true)}>
-          <Icon name={here.tree ? 'git-branch' : 'repo'} small />
-          <span className="folder-name">{here.folder?.name ?? (cwd ? cwd.split('/').pop() : 'Files')}</span>
-          <span className="folder-branch">{here.label}</span>
-          <Icon name="chevron-down" small />
-        </button>
-        <span className="ex-actions">
-          <button className="icon-btn" title={touch() ? 'Go to File' : 'Go to File (⌘P)'} onClick={() => setUi({ switcherOpen: true })}>
-            <Icon name="search" small />
-          </button>
-          <button className={`icon-btn${showHidden ? ' on' : ''}`} title={showHidden ? 'Hide ignored files' : 'Show ignored files'} onClick={() => setShowHidden(!showHidden)}>
-            <Icon name={showHidden ? 'eye' : 'eye-closed'} small />
-          </button>
-          <button className="icon-btn" title="Refresh Explorer" onClick={() => refresh()}>
-            <Icon name="refresh" small />
-          </button>
-          <button className="icon-btn" title="Collapse Folders in Explorer" onClick={() => setExpanded(new Set())}>
-            <Icon name="collapse-all" small />
-          </button>
-        </span>
-      </div>
+      <Section
+        label="Files"
+        action={
+          <>
+            <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" small aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+            {menu && (
+              <Menu trigger={more} onClose={() => setMenu(false)}>
+                <MenuItem icon="search" onClick={() => { setMenu(false); setUi({ switcherOpen: true }); }}>Go to File{!touch() && <span className="ex-kbd">⌘P</span>}</MenuItem>
+                <MenuItem icon={showHidden ? 'eye' : 'eye-closed'} onClick={() => { setMenu(false); setShowHidden(!showHidden); }}>{showHidden ? 'Hide ignored files' : 'Show ignored files'}</MenuItem>
+                <MenuItem icon="refresh" onClick={() => { setMenu(false); refresh(); }}>Refresh Explorer</MenuItem>
+                <MenuItem icon="collapse-all" onClick={() => { setMenu(false); setExpanded(new Set()); }}>Collapse Folders</MenuItem>
+              </Menu>
+            )}
+          </>
+        }
+      />
+      <UiRow
+        className="ex-folder"
+        leading={<Icon name={here.tree ? 'git-branch' : 'repo'} small />}
+        title={<span title={`${cwd}\nSwitch worktree or chat`}>{here.folder?.name ?? (cwd ? cwd.split('/').pop() : 'Files')}</span>}
+        meta={here.label}
+        trailing={<Icon name="chevron-down" small />}
+        onClick={() => setPicking(true)}
+      />
       {picking && <Suspense fallback={null}><FolderPicker onClose={() => setPicking(false)} /></Suspense>}
       <div className="ex-tree" ref={tree} tabIndex={0} role="tree" aria-label="Files" aria-activedescendant={selAt >= 0 ? `${treeId}-${selAt}` : undefined} onKeyDown={onKey}>
         {rows.map((r, i) => {
           const open = r.dir && expanded.has(r.path);
           const changed = !r.dir && recent.includes(r.path);
           return (
-            <div
+            <UiRow
               key={r.path}
+              plain
               id={`${treeId}-${i}`}
               role="treeitem"
               aria-level={r.depth + 1}
               aria-expanded={r.dir ? open : undefined}
               aria-selected={r.path === sel}
               data-path={r.path}
-              className={`ex-row${r.path === sel ? ' selected' : ''}${r.hidden ? ' ignored' : ''}`}
+              className={r.hidden ? 'ignored' : undefined}
               style={{ paddingLeft: 8 + r.depth * 8 }}
-              title={r.path}
+              leading={
+                <>
+                  <span className="ex-guides">{Array.from({ length: r.depth }, (_, k) => <span key={k} />)}</span>
+                  <span className="ex-twistie">
+                    {r.dir && <Icon name={open && !dirs[r.path] ? 'loading' : open ? 'chevron-down' : 'chevron-right'} spin={open && !dirs[r.path]} small />}
+                  </span>
+                  <FileIcon name={r.name} dir={r.dir} open={open} />
+                </>
+              }
+              title={<span title={r.path} className={`ex-name${changed ? ' changed' : ''}`}>{r.name}</span>}
+              trailing={changed && <span className="ex-m">M</span>}
               onClick={() => { setSel(r.path); activate(r); }}
-            >
-              <span className="ex-guides">{Array.from({ length: r.depth }, (_, k) => <span key={k} />)}</span>
-              <span className="ex-twistie">
-                {r.dir && <Icon name={open && !dirs[r.path] ? 'loading' : open ? 'chevron-down' : 'chevron-right'} spin={open && !dirs[r.path]} small />}
-              </span>
-              <FileIcon name={r.name} dir={r.dir} open={open} />
-              <span className={`ex-name${changed ? ' changed' : ''}`}>{r.name}</span>
-              {changed && <span className="ex-m">M</span>}
-            </div>
+            />
           );
         })}
       </div>

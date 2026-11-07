@@ -2,69 +2,32 @@
 .mobile-explorer-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .mobile-explorer .editor { display: none; }
 
-.folder-switch {
-  width: 100%; height: var(--size-lg); flex: none; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-5) 0 var(--sp-6);
-  background: transparent; border: 0; border-radius: 0; text-align: left; font-size: var(--fs-sm); font-weight: 600; color: var(--fg);
-}
-@media (hover: hover) { .folder-switch:hover { background: var(--hover); } }
-.folder-switch .folder-name { flex: none; }
-.folder-switch .folder-branch { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; color: var(--fg-muted); }
-
 .ex { font-size: var(--fs-md); }
-.ex-head { display: flex; align-items: center; flex: none; }
-.ex-head .folder-switch { flex: 1; width: auto; min-width: 0; }
-.ex-actions { display: inline-flex; gap: 1px; padding-right: var(--sp-3); visibility: hidden; }
-.ex-actions:focus-within { visibility: visible; }
-@media (hover: hover) { .ex:hover .ex-actions { visibility: visible; } }
-.ex-actions .icon-btn { width: var(--size-row); height: var(--size-row); }
-.ex-actions .icon-btn.on { color: var(--fg); }
-@media (hover: none) { .ex-actions { visibility: visible; } }
-
-.ex button.ex-section {
-  height: var(--size-row); flex: none; display: flex; align-items: center; gap: var(--sp-1); padding: 0 0 0 var(--sp-1); width: 100%;
-  background: transparent; border: 0; border-radius: 0; color: var(--fg); text-align: left;
-  font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide);
-}
-@media (hover: hover) { .ex button.ex-section:hover { background: transparent; } }
-.ex-section-row { display: flex; align-items: center; flex: none; padding-right: var(--sp-1); }
-.ex-section-row .icon-btn { width: var(--size-row); height: var(--size-row); flex: none; visibility: hidden; }
-@media (hover: hover) { .ex-section-row:hover .icon-btn { visibility: visible; } }
-@media (hover: none) { .ex-section-row .icon-btn { visibility: visible; } }
+.ex > .ui-section { position: relative; flex: none; }
+.ex-kbd { margin-left: auto; color: var(--fg-muted); }
+.ex-folder { flex: none; }
 .ex-editors { flex: none; max-height: 30%; overflow: auto; border-bottom: 1px solid var(--border); padding-bottom: var(--sp-1); }
-.ex-editors .ex-row { padding-left: var(--sp-2); }
-.ex-empty { padding: var(--sp-1) var(--sp-4) var(--sp-2); color: var(--fg-muted); font-size: var(--fs-sm); }
-.ex-close { width: var(--icon); height: var(--icon); padding: 0; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); visibility: hidden; color: var(--fg-muted); }
-@media (hover: hover) { .ex-close:hover { background: var(--hover); color: var(--fg); } }
-.ex-row:hover .ex-close, .ex-row.selected .ex-close, .ex-row:focus-within .ex-close { visibility: visible; }
-.ex-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-muted); font-size: var(--fs-sm); }
+.ex-editors .ui-row[aria-current='true'] { --state: var(--state-hover); }
 
 .ex-tree { flex: 1; overflow: auto; outline: none; padding-bottom: var(--sp-4); }
-.ex-row {
-  position: relative; height: var(--size-row); display: flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-4);
-  cursor: pointer; white-space: nowrap; color: var(--fg); user-select: none;
-}
-.ex-row.selected { background: var(--hover); }
-@media (hover: hover) { .ex-row:hover { background: var(--hover); } }
-.ex-tree:focus .ex-row.selected { background: var(--accent-soft); color: var(--fg); outline: 1px solid var(--accent); outline-offset: -1px; }
-.ex-row .icon { color: var(--fg-muted); }
-.ex-row.ignored { color: var(--fg-muted); }
-.ex-row.ignored .icon { opacity: 0.7; }
+.ex-tree .ui-row { min-height: var(--size-row); height: var(--size-row); gap: var(--sp-2); padding-top: 0; padding-bottom: 0; padding-right: var(--sp-4); font-size: var(--fs-md); line-height: normal; user-select: none; }
+.ex-tree .ui-row::after { display: none; }
+.ex-tree .ui-row-lead { width: auto; gap: var(--sp-2); }
+.ex-tree .ui-row[aria-selected='true'] { --state: var(--state-hover); }
+.ex-tree:focus .ui-row[aria-selected='true'] { background: var(--accent-soft); outline: 1px solid var(--accent); outline-offset: -1px; }
+.ex-tree .ui-row.ignored { color: var(--fg-muted); }
+.ex-tree .ui-row.ignored .icon { opacity: 0.7; }
 .ex-guides { position: absolute; left: var(--sp-8); top: 0; bottom: 0; display: flex; pointer-events: none; }
 .ex-guides > span { width: var(--sp-4); border-left: 1px solid transparent; }
 @media (hover: hover) { .ex-tree:is(:hover, :focus) .ex-guides > span { border-color: var(--border-strong); } }
 .ex-twistie { width: var(--icon); flex: none; display: inline-flex; justify-content: center; color: var(--fg-muted); }
 .ex-twistie .icon { color: inherit; }
-.ex-name { overflow: hidden; text-overflow: ellipsis; flex: none; max-width: 100%; }
-.ex-tree .ex-name { flex: 1; min-width: 0; }
 .ex-name.changed { color: var(--modified); }
 .ex-m { color: var(--modified); font-size: var(--fs-xs); flex: none; padding-left: var(--sp-2); }
 
+@media (pointer: coarse) {
+  .ex-tree .ui-row { min-height: var(--touch-md); height: var(--touch-md); }
+}
 @media (max-width: 900px) {
-  .folder-switch { height: var(--touch); }
-  .ex-row, .ex button.ex-section { height: var(--touch-md); }
-  .ex-close { visibility: visible; width: var(--touch-sm); height: var(--touch-sm); }
-  .ex-editors .ex-row { padding-left: 0; }
-  .ex-actions { gap: 0; padding-right: var(--sp-2); }
-  .ex-actions .icon-btn { width: var(--touch-md); height: var(--touch-md); }
-  .ex-row .ex-twistie { width: var(--size-md); }
+  .ex-tree .ex-twistie { width: var(--size-md); }
 }

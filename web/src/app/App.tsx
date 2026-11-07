@@ -268,8 +268,8 @@ export function App() {
   useTabSwipe(more ? -1 : tab === 'assistant' ? 0 : tab === 'chat' ? 1 : inChats ? 2 : tab === 'agents' ? 3 : -1, swipeTabs.length, (i) => swipeTabs[i]());
   const reopen = (e: React.MouseEvent) => {
     const el = e.target as HTMLElement;
-    const row = el.closest<HTMLElement>('.ex-row');
-    if (row && !el.closest('.ex-close') && row.title === openFile) setBrowse(false);
+    const row = el.closest<HTMLElement>('[data-path]');
+    if (row && !el.closest('button') && row.dataset.path === openFile) setBrowse(false);
   };
 
   if (embedded) {
