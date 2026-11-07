@@ -128,7 +128,7 @@ Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0
 `--sp-4`, body type, `--shape-sm`, state layers as buttons. Danger item last, in `--danger`.
 `<Menu trigger onClose>` with `<MenuItem icon danger href>` and `<MenuSeparator>` (web/src/ui/Menu.tsx,
 components/menus.css). Arrow keys, Home and End move, Esc closes and refocuses the trigger, a press
-outside closes. Status: built; every menu uses it. cp-pop stays (it is a listbox), and `.as-menu` is the drawer hamburger button, not a menu.
+outside closes. At max-width 480px the Menu is a bottom sheet portaled to the body (`--scrim` backdrop that closes it, 44px items, top radius `--radius-sheet`, `--safe-bottom` padding); the popover stays above 480px. Status: built; every menu uses it. cp-pop stays (it is a listbox), and `.as-menu` is the drawer hamburger button, not a menu.
 
 ### Row
 Height `--row-h` 40px (`--touch` on coarse pointers), padding `--list-pad`. Leading check or

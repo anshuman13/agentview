@@ -19,3 +19,15 @@
 .ui-menu-item.danger { color: var(--danger); }
 .ui-menu-sep { height: 0; margin: var(--sp-2) 0; border-top: var(--hairline); }
 @media (pointer: coarse) { .ui-menu-item { min-height: var(--touch); } }
+.ui-menu-backdrop { position: fixed; inset: 0; z-index: var(--z-sheet); background-color: var(--scrim); }
+.ui-menu.sheet {
+  position: fixed; top: auto; right: 0; bottom: 0; left: 0; z-index: calc(var(--z-sheet) + 1); min-width: 0; max-height: 80%; overflow-y: auto;
+  padding: var(--sp-2) var(--sp-2) calc(var(--sp-2) + var(--safe-bottom)); border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; background: var(--raised); box-shadow: var(--elev-3);
+}
+.ui-menu.sheet .ui-menu-item { min-height: var(--touch); }
+@keyframes ui-sheet-up { from { transform: translateY(100%); } }
+@keyframes ui-sheet-fade { from { background-color: transparent; } }
+@media (prefers-reduced-motion: no-preference) {
+  .ui-menu.sheet { animation: ui-sheet-up var(--dur) var(--ease); }
+  .ui-menu-backdrop { animation: ui-sheet-fade var(--dur) var(--ease); }
+}

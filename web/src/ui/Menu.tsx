@@ -1,8 +1,19 @@
-import { useEffect, useRef, type ComponentPropsWithoutRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { Children, useEffect, useRef, useSyncExternalStore, type ComponentPropsWithoutRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 
 const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 const FOCUSABLE = 'button:not(:disabled), a[href], select:not(:disabled)';
+const PHONE = '(max-width: 480px)';
+
+const subscribePhone = (cb: () => void) => {
+  const mq = matchMedia(PHONE);
+  mq.addEventListener('change', cb);
+  return () => mq.removeEventListener('change', cb);
+};
+const usePhone = () => useSyncExternalStore(subscribePhone, () => matchMedia(PHONE).matches, () => false);
+
+export const menuClass = (phone: boolean, className?: string) => cx('ui-menu', phone && 'sheet', className);
 
 export function Menu({ trigger, onClose, className, children }: {
   trigger: RefObject<HTMLElement | null>;
@@ -10,6 +21,7 @@ export function Menu({ trigger, onClose, className, children }: {
   className?: string;
   children?: ReactNode;
 }) {
+  const phone = usePhone();
   const box = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
@@ -17,7 +29,18 @@ export function Menu({ trigger, onClose, className, children }: {
     box.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
     const away = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (!box.current?.contains(t) && !trigger.current?.contains(t)) close.current();
+      if (box.current?.contains(t) || trigger.current?.contains(t)) return;
+      close.current();
+      if (!(t as Element).classList?.contains('ui-menu-backdrop')) return;
+      const swallow = (ev: MouseEvent) => {
+        clearTimeout(timer);
+        document.removeEventListener('click', swallow, true);
+        if (!trigger.current?.contains(ev.target as Node)) return;
+        ev.stopPropagation();
+        ev.preventDefault();
+      };
+      const timer = setTimeout(() => document.removeEventListener('click', swallow, true), 400);
+      document.addEventListener('click', swallow, true);
     };
     const esc = (e: globalThis.KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -41,11 +64,14 @@ export function Menu({ trigger, onClose, className, children }: {
     const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
     items[next].focus();
   };
-  return (
-    <div ref={box} role="menu" className={cx('ui-menu', className)} onKeyDown={move}>
+  if (Children.toArray(children).length === 0) return null;
+  const menu = (
+    <div ref={box} role="menu" className={menuClass(phone, className)} onKeyDown={move}>
       {children}
     </div>
   );
+  if (!phone) return menu;
+  return createPortal(<><div className="ui-menu-backdrop" />{menu}</>, document.body);
 }
 
 type Item = {
