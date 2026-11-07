@@ -273,7 +273,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
         item { SectionHeader("More", action = { Button(if (more) "Hide" else "Show", { more = !more }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
         if (more) {
             item {
-                TextField(newAction, { newAction = it }, Modifier.padding(horizontal = Tokens.sp6), singleLine = true, placeholder = "Add an action, like “send the slides friday”",
+                TextField(newAction, { newAction = it }, Modifier.padding(horizontal = Tokens.sp6), singleLine = true, placeholder = "Add an action",
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
                         val t = newAction.trim()

@@ -5,7 +5,7 @@ const val POINT = "point"
 const val RAISED = "raised"
 
 private fun isPoint(r: Row) = !r.deleted && r.status == POINT && !r.people.isNullOrBlank()
-fun firstName(name: String) = name.trim().split(Regex("\\s+")).firstOrNull()?.ifEmpty { null } ?: name
+fun firstName(name: String) = if ('@' in name) name.substringBefore('@').substringBefore('.').replaceFirstChar { it.uppercase() } else name.trim().split(Regex("\\s+")).firstOrNull()?.ifEmpty { null } ?: name
 
 // The first meeting with the point's person that starts after the point was raised.
 fun pointMeeting(point: Row, meetings: List<Row>): Row? {
