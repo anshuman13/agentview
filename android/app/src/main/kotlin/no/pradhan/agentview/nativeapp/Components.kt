@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -468,7 +470,7 @@ fun Sheet(onDismiss: () -> Unit, padded: Boolean = true, full: Boolean = true, c
             }
         },
     ) {
-        Column(Modifier.navigationBarsPadding().padding(start = if (padded) Tokens.sp8 else 0.dp, end = if (padded) Tokens.sp8 else 0.dp, bottom = Tokens.sp8), content = content)
+        Column(Modifier.navigationBarsPadding().verticalScroll(rememberScrollState()).padding(start = if (padded) Tokens.sp8 else 0.dp, end = if (padded) Tokens.sp8 else 0.dp, bottom = Tokens.sp8), content = content)
     }
 }
 

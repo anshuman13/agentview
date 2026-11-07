@@ -31,7 +31,8 @@ class PagesLogicTest {
         assertEquals(FileHue.Gray, fileHue("notes"))
         assertEquals("kt", fileTag("app/Hub.kt"))
         assertEquals("git", fileTag(".gitignore"))
-        assertEquals("mak", fileTag("Makefile"))
+        assertEquals("make", fileTag("Makefile"))
+        assertEquals("json", fileTag("package.json"))
         assertEquals("This file is outside the project folder", fileError("path outside project"))
         assertEquals(FileData("a", "b"), parseFile("""{"content":"a","original":"b"}"""))
     }

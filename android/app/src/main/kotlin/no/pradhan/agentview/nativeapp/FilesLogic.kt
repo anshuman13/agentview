@@ -77,7 +77,10 @@ fun fileHue(name: String): FileHue {
 fun fileTag(name: String): String {
     val base = name.substringAfterLast('/')
     val ext = base.substringAfterLast('.', "")
-    return (if (ext.isNotEmpty() && base.indexOf('.') > 0) ext else base.trimStart('.')).take(3).lowercase()
+    val tag = (if (ext.isNotEmpty() && base.indexOf('.') > 0) ext else base.trimStart('.')).lowercase()
+    return TAG_ALIASES[tag] ?: tag.take(4)
 }
+
+private val TAG_ALIASES = mapOf("markdown" to "md", "makefile" to "make", "license" to "law", "dockerfile" to "dock", "gitignore" to "git", "gitattributes" to "git", "editorconfig" to "cfg", "prettierrc" to "cfg", "eslintrc" to "cfg", "npmrc" to "cfg", "nvmrc" to "cfg")
 
 fun isMarkdown(path: String) = Regex("\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE).containsMatchIn(path)
