@@ -143,7 +143,9 @@ function derivedUsage(sub: SessionMessage[], startedAt: number, endedAt: number 
 
 export const workflowName = (input: unknown) => {
   const i = (input ?? {}) as Record<string, unknown>;
-  return [i.name, i.workflow].find((v): v is string => typeof v === 'string' && v.trim() !== '') ?? 'Workflow';
+  const meta = typeof i.script === 'string' ? i.script.match(/name:\s*['"]([^'"]+)['"]/)?.[1] : undefined;
+  const file = typeof i.scriptPath === 'string' ? i.scriptPath.split('/').pop()?.replace(/\.[cm]?js$/, '') : undefined;
+  return [i.name, i.workflow, meta, file].find((v): v is string => typeof v === 'string' && v.trim() !== '') ?? 'Workflow';
 };
 
 function workflowEvents(run: WorkflowRun, group: string, callAt: number): ChatEvent[] {

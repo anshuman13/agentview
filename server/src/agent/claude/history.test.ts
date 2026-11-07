@@ -67,6 +67,8 @@ describe('workflow runs', () => {
   it('names the group from the call input', () => {
     expect(workflowName({ name: 'build' })).toBe('build');
     expect(workflowName({ workflow: 'ship' })).toBe('ship');
-    expect(workflowName({ scriptPath: 'x' })).toBe('Workflow');
+    expect(workflowName({ scriptPath: '/a/.claude/workflows/native.js' })).toBe('native');
+    expect(workflowName({ script: "export const meta = { name: 'batch-ab', description: 'x' }" })).toBe('batch-ab');
+    expect(workflowName({})).toBe('Workflow');
   });
 });
