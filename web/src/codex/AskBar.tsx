@@ -66,6 +66,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
   const [fresh, setFresh] = useState(false);
   const [voice, setVoice] = useState(0);
   const [asking, setAsking] = useState(false);
+  const [focused, setFocused] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
   const dictate = useDictation(text, setText);
 
@@ -112,7 +113,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
 
   return (
     <div className="as-composer">
-      <div className="as-chips" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('button') && document.activeElement === area.current) e.preventDefault(); }}>
+      {(typed || focused) && <div className="as-chips" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('button') && document.activeElement === area.current) e.preventDefault(); }}>
         {typed ? (
           <>
             <Chip on icon={MODE[m].icon} title="A task or a question for Claude" onClick={cycle}>{MODE[m].label}</Chip>
@@ -137,7 +138,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
         ) : (
           recipes(next).map((r) => <Chip key={r.label} icon="sparkle" onClick={() => ask(askText(r.q, items, undefined, meetings), prof)}>{r.label}</Chip>)
         )}
-      </div>
+      </div>}
       <div className="cp-card as-card">
         <div className="as-input">
           {w && pick == null && <div className="as-mirror" aria-hidden>{marked(text, w.spans)}</div>}
@@ -147,7 +148,8 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
             value={text}
             placeholder="Add a task or ask anything"
             aria-label="Add a task or ask anything"
-            onFocus={reveal}
+            onFocus={(e) => { setFocused(true); reveal(e); }}
+            onBlur={() => setFocused(false)}
             onChange={(e) => { setText(e.target.value); if (!e.target.value.trim()) { setAsking(false); setNoWhen(false); setPick(null); } }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && (!touch() || e.metaKey || e.ctrlKey)) { e.preventDefault(); void submit(); } }}
           />
