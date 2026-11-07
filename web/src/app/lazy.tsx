@@ -41,3 +41,4 @@ export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ defa
 export const ConnectPopover = lazy(() => import('./ConnectPopover').then((m) => ({ default: m.ConnectPopover })));
 export const MacsPopover = lazy(() => import('./MacsPopover').then((m) => ({ default: m.MacsPopover })));
 export const Loading = () => <div className="loading">Loading…</div>;
+export const DesignPage = lazy(() => import('../design/Stories').then((m) => ({ default: m.DesignPage })));

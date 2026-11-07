@@ -1,10 +1,13 @@
 /// <reference types="vite/client" />
+import { Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../styles/index.css';
-import { App } from './App';
 import { Guard } from './Guard';
 import { touch } from './touch';
 import { api } from './store';
+import { DesignPage } from './lazy';
+
+const App = lazy(() => import('./App').then((m) => ({ default: m.App })));
 
 if (touch()) window.addEventListener('focusout', () => window.scrollTo(0, 0));
 
@@ -33,4 +36,4 @@ if (import.meta.hot) {
   import.meta.hot.on('vite:ws:disconnect', () => log('vite ws lost'));
 }
 
-createRoot(document.getElementById('root')!).render(<Guard><App /></Guard>);
+createRoot(document.getElementById('root')!).render(<Guard><Suspense fallback={null}>{location.pathname === '/design' ? <DesignPage /> : <App />}</Suspense></Guard>);

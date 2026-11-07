@@ -96,6 +96,8 @@ colour at 14% (`--warn-soft`); selected is `--accent-soft`.
 
 ## Components
 
+`/design` is the visual review of every primitive, in every state, at desktop and phone width. A new primitive in `web/src/ui` gets its story added in `web/src/design/Stories.tsx`.
+
 ### Button (iOS button styles)
 `<Button variant size icon>`; `.btn .btn-{variant} .btn-{size}`. Variants filled, tinted, gray, plain,
 danger; sizes sm 28px and md 34px (capsule, `--radius-pill`), lg 50px (12px radius, 17px semibold).
