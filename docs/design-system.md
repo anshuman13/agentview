@@ -247,3 +247,65 @@ Done: Summary uses Panel (filter card), every empty list or report uses EmptySta
 `.as-empty` and `.empty-state` styles are gone), and the menus use Menu. Chips are done: as-chip, cp-chip, mcp-chip and ag-chip use Chip, which takes `tone` (`work`, `personal`, `accent`) and `quiet` (dashed, faint). `mt-add` stays a form, since it is an input row, and uses Chip tokens (height, radius, accent-soft on focus).
 
 As of 31 Oct 2026 the light and dark themes use Apple's iOS system colours: white or black page, #F2F2F7 or #1C1C1E for cards and chrome, systemBlue accent and work, systemPurple personal, and Apple's Increase Contrast hues for status text in light. Meeting and knowledge icons are neutral.
+
+### Migration status
+
+Custom list-row and header classes still in web/src. Todo means no use has been migrated yet. Partial means the class is gone from some files but still used in the files named. Done means the class is gone from TSX and CSS. Keep means it stays, with the reason under Replace with. Files are relative to web/src.
+
+| Class | Files | Replace with | Status |
+| --- | --- | --- | --- |
+| ag-head | sessions/AgentsPane.tsx | Section header | Todo |
+| ag-list, ag-row | sessions/AgentsPane.tsx | Row | Todo |
+| ag-steps-list | sessions/AgentsPane.tsx | keep: layout (step list inside one card) | Keep |
+| as-ctx-list | codex/meetings/Prep.tsx | Grouped list | Todo |
+| as-date-head, as-date-row, as-date-rows | codex/AddSheet.tsx | keep: layout (date picker form rows in a sheet) | Keep |
+| as-dayline | codex/Codex.tsx | Section header | Todo |
+| as-draft-head | codex/TaskEditor.tsx | Section header | Todo |
+| as-drop-line | codex/Codex.tsx | keep: layout (drag insertion marker) | Keep |
+| as-flag-item | codex/AddSheet.tsx, codex/TaskEditor.tsx | keep: layout (toggle chip in a form) | Keep |
+| as-head | codex/Codex.tsx, codex/TagPage.tsx | Section header | Todo |
+| as-links-list | codex/TaskEditor.tsx | Grouped list | Todo |
+| as-list | codex/Codex.tsx, codex/TagPage.tsx | Grouped list | Todo |
+| as-next-head | codex/overview/NextCard.tsx | Report card | Todo |
+| as-row | codex/Task.tsx (goal tasks already use Row) | Row | Partial |
+| as-swipe-row | codex/Swipe.tsx | keep: layout (swipe gesture container) | Keep |
+| as-tt-menu-row | codex/TaskEditor.tsx | keep: layout (row inside a Menu) | Keep |
+| deploy-log-head | ops/Deploy.tsx (rest of the pane uses Row) | Section header | Partial |
+| ex-head | workspace/Explorer.tsx | Section header | Todo |
+| ex-row, ex-section-row | app/App.tsx, workspace/Explorer.tsx | Row | Todo |
+| gh-head | ops/GitHub.tsx | Section header | Todo |
+| gh-item | ops/Findings.tsx, ops/GitHub.tsx | Row | Todo |
+| gh-line | ops/GitHub.tsx | Row | Todo |
+| gh-list | ops/GitHub.tsx | Grouped list | Todo |
+| mcp-detail-head, mcp-tools-head | ops/McpDetail.tsx (service list already uses Section and Row) | Section header | Partial |
+| mcp-item | ops/McpServiceRow.tsx | Row | Partial |
+| mt-fold-head | codex/meetings/Transcript.tsx (no CSS rule) | Section header | Todo |
+| mt-item | codex/meetings/MeetingList.tsx | Row | Todo |
+| mt-list | codex/GoalsPage.tsx, codex/Search.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/summary/Summary.tsx | Grouped list | Todo |
+| mt-load-head | codex/Goals.tsx, codex/meetings/Load.tsx, codex/meetings/Review.tsx, codex/meetings/Week.tsx | Section header | Todo |
+| mt-load-row | codex/meetings/Load.tsx | Row | Todo |
+| mt-log-item | codex/meetings/Decisions.tsx, codex/meetings/Load.tsx, codex/meetings/Review.tsx, codex/meetings/Series.tsx, codex/meetings/SeriesPage.tsx, codex/meetings/Week.tsx | Row | Todo |
+| mt-person-head | codex/meetings/Person.tsx | Section header | Todo |
+| mt-row | CSS only | Row (delete the unused rule) | Todo |
+| mt-rows | codex/PlanPreview.tsx | Grouped list | Todo |
+| mt-series-list | codex/meetings/Series.tsx, codex/meetings/SeriesPage.tsx | Grouped list | Todo |
+| mt-up-head | codex/meetings/MeetingList.tsx | Section header | Todo |
+| obs-head, obs-subhead | ops/Observe.tsx | Section header | Todo |
+| ov-ask-line | codex/DoNow.tsx, codex/NeedsYou.tsx, codex/WeeklyReview.tsx, codex/meetings/Person.tsx, codex/overview/CardRow.tsx, codex/overview/ReplyQueue.tsx, codex/summary/Summary.tsx | Row | Todo |
+| ov-brief-head | codex/Fold.tsx | Section header | Todo |
+| ov-digest-head | codex/meetings/Prep.tsx, codex/overview/BriefCard.tsx, codex/overview/DigestCard.tsx | Report card | Todo |
+| ov-digest-row | codex/overview/BriefCard.tsx, codex/overview/DigestCard.tsx | Report card | Todo |
+| ov-follow-row | codex/Overview.tsx | Row | Todo |
+| sm-line | codex/summary/Summary.tsx | Row | Todo |
+| wk-contest-head | codex/wiki/Claim.tsx | Section header | Todo |
+| wk-feed-head | codex/wiki/Feed.tsx | Section header | Todo |
+| wk-feed-list | codex/wiki/Feed.tsx, codex/wiki/Review.tsx | Grouped list | Todo |
+| wk-head, wk-head-act | codex/GoalsPage.tsx, codex/Search.tsx, codex/TaskEditor.tsx, codex/jobs/JobPage.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/meetings/MeetingPage.tsx, codex/meetings/Person.tsx, codex/meetings/SeriesPage.tsx, codex/summary/Summary.tsx, codex/wiki/ReviewMode.tsx, codex/wiki/WikiIndex.tsx, codex/wiki/WikiPage.tsx | keep: layout (page title bar with actions, not a list header) | Keep |
+| wk-label-row | codex/wiki/Review.tsx | Row | Todo |
+| wk-older-head | codex/wiki/WikiPage.tsx | Section header | Todo |
+
+No hits: cp-* and the other listed prefixes have no class with these suffixes beyond the rows above.
+
+Audited 7 Nov 2026 with `grep -rhoE "(^|[^a-z0-9-])(mt|ov|as|gh|wk|ex|ag|obs|sm|cp|mcp|deploy)-[a-z0-9-]*(row|head|header|line|dayline|list|item)s?(-[a-z0-9]+)?" web/src | sort | uniq -c`, then `grep -rlE "(^|[^a-z0-9-])<class>([^a-z0-9-]|$)" web/src --include="*.tsx"` per class for Files.
+
+Each migration commit updates its row in the same diff.
