@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp
 
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,24 +70,25 @@ private fun TermView(hub: Hub, id: String, onGone: () -> Unit) {
     val screen = remember(id) { TermScreen() }
     var version by remember(id) { mutableIntStateOf(0) }
     val origin by hub.origin.collectAsState()
+    val list = rememberLazyListState()
+    val follow = remember(id) { booleanArrayOf(true) }
     val socket = remember(id, origin) {
         val main = Handler(Looper.getMainLooper())
         LiveSocket(hub.client, "${wsOrigin(origin)}/ws?term=${enc(id)}",
-            onText = { t -> main.post { screen.write(t); version++ } },
+            onText = { t -> main.post { follow[0] = !list.canScrollForward; screen.write(t); version++ } },
             onOpen = { screen.reset(); version++ },
             onGone = onGone,
         )
     }
     DisposableEffect(socket) { socket.open(); onDispose { socket.close() } }
     val lines = remember(version) { screen.lines() }
-    val list = rememberLazyListState()
-    LaunchedEffect(lines.size, version) { if (lines.isNotEmpty()) list.scrollToItem(lines.lastIndex) }
+    LaunchedEffect(lines.size, version) { if (follow[0] && lines.isNotEmpty()) list.scrollToItem(lines.lastIndex) }
     var input by rememberSaveable(id) { mutableStateOf("") }
     val scroll = rememberScrollState()
     fun send(data: String) { if (hub.writes.allowed()) socket.send(termInput(data)) }
 
     Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        Box(Modifier.weight(1f).fillMaxWidth().background(av.surface)) {
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = Tokens.sp4), state = list) {
                 items(lines) { l -> Text(termText(l), Modifier.horizontalScroll(scroll), style = Mono, color = av.fg, softWrap = false) }
             }
