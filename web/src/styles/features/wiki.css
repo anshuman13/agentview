@@ -15,7 +15,7 @@
 .wk-warn { color: var(--warn) !important; }
 
 /* Index */
-.wk-index { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--sp-24); align-items: start; }
+.wk-index { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }
 .wk-main { display: flex; flex-direction: column; gap: var(--sp-20); min-width: 0; }
 .wk-main section { display: flex; flex-direction: column; gap: var(--sp-6); }
 
@@ -39,7 +39,7 @@
 .wk-flag .codicon.icon { font-size: 12px; }
 
 /* Recently updated */
-.wk-feed { position: sticky; top: 0; display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+.wk-feed { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 .wk-feed-page { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--fg-muted); }
 
 /* Ask */
@@ -53,11 +53,6 @@
 .wk-recipes { position: absolute; left: var(--wk-pad); right: var(--wk-pad); bottom: calc(100% - var(--sp-4)); margin: 0; padding: var(--sp-2); list-style: none; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--raised); box-shadow: var(--shadow-md); z-index: 5; }
 .wk-recipes li { padding: var(--sp-4) var(--sp-6); border-radius: var(--radius-sm); color: var(--fg); font-size: var(--fs-md); cursor: pointer; }
 .wk-recipes li.on { background: var(--hover); }
-
-@container (max-width: 880px) {
-  .wk-index { grid-template-columns: minmax(0, 1fr); gap: var(--sp-20); }
-  .wk-feed { position: static; }
-}
 
 @media (max-width: 900px) {
   .wk { --wk-pad: var(--sp-8); }

@@ -267,7 +267,7 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
 - Secondary content (history, a reason, earlier replies) is behind the Menu or on the page, not a per-row Fold.
 - Batch actions ("Send all", "Copy list") go in the Section header as its one action, not as a band above
   the rows. Two batch actions become a Menu on the header.
-- A Badge per row at most one, for state only (Needs you, Failed, Needs review on a wiki page row, which has only a More menu with Open and Archive). Badges are not labels for things the
+- A Badge per row at most one, for state only (Needs you, Failed, Needs review on a wiki page row, which has only the title, the badge and a More menu with Open and Archive). Badges are not labels for things the
   title already says.
 - Jobs rows follow this: one badge (Running, Queued, Failed, Off, set by `jobState`), and a More menu with Run now, Edit,
   Disable or Enable, Delete (long press opens it on phones). Meta is the schedule and next run only. No Run now button, no switch and no last-run line on the row.

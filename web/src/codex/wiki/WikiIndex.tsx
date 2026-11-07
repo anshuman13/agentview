@@ -1,11 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
-import { currentClaim, factTime, live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
+import { live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
+import { Back } from '../../app/back';
 import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
+import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
-import { MenuItem, MenuSeparator } from '../../ui/Menu';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Section, sectionCount } from '../../ui/Section';
 import { ShowMore, useWindow } from '../../ui/useWindow';
 import { CardRow } from '../overview/CardRow';
@@ -17,7 +20,8 @@ import { PageTile } from './PageTile';
 import { NeedsLook, ToReview } from './Review';
 import { usePullSync } from '../pullSync';
 import { MEMORY, shortDate } from './shared';
-import { plural } from '../../ui/util';
+import { plural, useEscape } from '../../ui/util';
+import { useSheetDrag } from '../../ui/useSheetDrag';
 
 const SECTION_ORDER = ['Teams', 'Projects', 'People', 'Practices'];
 
@@ -30,22 +34,13 @@ function sections(pages: Page[]) {
   return names.map((name) => ({ name, pages: rest.filter((p) => (p.section || 'Pages') === name).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)) }));
 }
 
-function Overview({ page, facts, pages }: { page: Page; facts: Fact[]; pages: Page[] }) {
-  const current = useMemo(() => live(facts).filter(currentClaim(facts)), [facts]);
-  const contested = current.filter((f) => f.contested).length;
-  const updated = Math.max(page.updated_at, ...current.map(factTime));
+export function Overview({ page }: { page: Page }) {
   return (
     <button className="wk-overview" onClick={() => setView({ open: page.id, anchor: null })}>
       <span className="wk-overview-mark"><Icon name="organization" /></span>
       <span className="wk-overview-body">
         <span className="wk-overview-title">{page.title}</span>
         <span className="wk-overview-summary">{page.summary}</span>
-        <span className="wk-meta">
-          <span>{plural(live(pages).length, 'page')}</span>
-          <span>{plural(current.length, 'claim')}</span>
-          {contested > 0 && <span className="wk-warn">{contested} contested</span>}
-          <span>updated {shortDate(updated)}</span>
-        </span>
       </span>
       <Icon name="chevron-right" />
     </button>
@@ -69,9 +64,8 @@ function PageCard({ page, stats }: { page: Page; stats: Map<string | null, PageS
   );
 }
 
-function PageRow({ page, stats, proposed }: { page: Page; stats: Map<string | null, PageStats>; proposed: Set<string | null> }) {
+export function PageRow({ page, proposed }: { page: Page; proposed: Set<string | null> }) {
   const store = useAssistantStore();
-  const st = stats.get(page.id) ?? NO_STATS;
   const open = () => setView({ open: page.id, anchor: null });
   const archive = () => {
     void store.editRow('pages', page, { state: 'retired' });
@@ -81,7 +75,6 @@ function PageRow({ page, stats, proposed }: { page: Page; stats: Map<string | nu
     <CardRow
       leading={<PageTile page={page} />}
       title={page.title}
-      meta={`${page.section || 'Pages'} · ${plural(st.claims, 'claim')} · updated ${shortDate(Math.max(page.updated_at, st.updated))}`}
       badge={needsReview(page, proposed) ? { status: 'waiting', label: 'Needs you', reason: 'Needs review' } : undefined}
       onOpen={open}
       menu={(choose) => (
@@ -95,24 +88,21 @@ function PageRow({ page, stats, proposed }: { page: Page; stats: Map<string | nu
   );
 }
 
-function NewPageCard({ section, sort }: { section: string; sort: number }) {
+function NewPageField({ sort, onDone }: { sort: number; onDone: () => void }) {
   const store = useAssistantStore();
-  const [title, setTitle] = useState<string | null>(null);
-  const card = useFocusBack<HTMLButtonElement>(title !== null);
+  const [title, setTitle] = useState('');
   const create = () => {
-    const t = title?.trim();
-    setTitle(null);
+    const t = title.trim();
+    onDone();
     if (!t) return;
-    const page = newPage(t, section, sort);
+    const page = newPage(t, 'Pages', sort);
     void store.editRow('pages', page, {});
     setView({ open: page.id, anchor: null });
   };
-  if (title === null) return <button ref={card} className="wk-card wk-new" onClick={() => setTitle('')}><Icon name="add" /> New page</button>;
   return (
     <div className="wk-card wk-new editing">
       <input autoFocus enterKeyHint="done" value={title} placeholder="Page title" aria-label="Page title" onChange={(e) => setTitle(e.target.value)} onBlur={create}
-        onKeyDown={(e) => { if (e.key === 'Enter') create(); if (e.key === 'Escape') setTitle(null); }} />
-      <span className="wk-card-summary">Claims about it are added as meetings, Slack and Linear mention it.</span>
+        onKeyDown={(e) => { if (e.key === 'Enter') create(); if (e.key === 'Escape') onDone(); }} />
     </div>
   );
 }
@@ -145,16 +135,17 @@ function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[];
   );
 }
 
-function MemoryCard({ stats }: { stats: Map<string | null, PageStats> }) {
-  const st = stats.get(null) ?? NO_STATS;
-  if (!st.claims) return null;
+function WikiSheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  const sheet = useSheetDrag(true, onClose);
+  useEscape(sheet.close);
   return (
-    <button className="wk-card" onClick={() => setView({ open: MEMORY, anchor: null })}>
-      <span className="wk-tile amber"><Icon name="lightbulb" /></span>
-      <span className="wk-card-title">Memory</span>
-      <span className="wk-card-summary">What Claude remembers outside the pages.</span>
-      <span className="wk-card-foot"><span>{shortDate(st.updated)}</span><span className="spacer" /><span>{plural(st.claims, 'claim')}</span></span>
-    </button>
+    <div className="as-sheet-overlay" ref={sheet.overlay} onClick={sheet.close}>
+      <Back close={onClose} />
+      <div className="as-sheet" ref={sheet.sheet} role="dialog" aria-label={label} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" {...sheet.handle} />
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -163,10 +154,18 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   useSpotBack(pull.ref, 'wiki');
   const { pages, facts } = useCodex();
   const [query, setQuery] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [sheet, setSheet] = useState<'Feed' | 'Notes' | 'Ask' | null>(null);
+  const add = useFocusBack<HTMLButtonElement>(adding);
+  const more = useFocusBack<HTMLButtonElement>(sheet !== null);
   const overview = useMemo(() => live(pages).find((p) => p.section === 'overview'), [pages]);
   const groups = useMemo(() => sections(pages), [pages]);
   const stats = useMemo(() => statsByPage(facts), [facts]);
   const proposed = useMemo(() => proposedPageIds(facts), [facts]);
+  const sort = Math.max(0, ...(groups.find((g) => g.name === 'Pages')?.pages ?? []).map((p) => p.sort ?? 0)) + 1;
+  const choose = (s: 'Feed' | 'Notes' | 'Ask') => () => { setMenu(false); setSheet(s); };
+  const newPageButton = <Button size="sm" variant="tinted" onClick={() => setAdding(true)}>New page</Button>;
   return (
     <div className="wk">
       <header className="wk-head">
@@ -178,41 +177,46 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
           <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search the wiki" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
           {query && <button className="icon-btn" aria-label="Clear" onClick={() => setQuery('')}><Icon name="close" small /></button>}
         </label>
+        <IconButton ref={add} size="sm" icon="add" label="New page" disabled={adding} onClick={() => setAdding(true)} />
+        <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+        {menu && (
+          <Menu trigger={more} onClose={() => setMenu(false)}>
+            <MenuItem icon="history" onClick={choose('Feed')}>Feed</MenuItem>
+            <MenuItem icon="note" onClick={choose('Notes')}>Notes</MenuItem>
+            <MenuItem icon="sparkle" onClick={choose('Ask')}>Ask</MenuItem>
+          </Menu>
+        )}
       </header>
       {pull.indicator}
       <div className="wk-scroll" ref={pull.ref}>
         <div className="wk-index">
           <div className="wk-main">
+            {adding && <NewPageField sort={sort} onDone={() => setAdding(false)} />}
             {query.trim() ? <><Results pages={pages} facts={facts} stats={stats} query={query} /><Notes query={query} /></> : (
               <>
                 <ToReview facts={facts} />
-                {overview && <Overview page={overview} facts={facts} pages={pages} />}
-                {(groups.length ? groups : [{ name: 'Pages', pages: [] as Page[] }]).map((s, i) => (
+                {overview && <Overview page={overview} />}
+                {groups.length ? groups.map((s) => (
                   <section key={s.name}>
-                    {s.pages.length > 0 && (
-                      <>
-                        <Section label={s.name} count={s.pages.length} />
-                        <div className="as-group ov-queue-group">
-                          {s.pages.map((p) => <PageRow key={p.profile + p.id} page={p} stats={stats} proposed={proposed} />)}
-                        </div>
-                      </>
-                    )}
-                    {!s.pages.length && <Section label={s.name} />}
-                    <div className="wk-cards">
-                      {i === 0 && <MemoryCard stats={stats} />}
-                      <NewPageCard section={s.name} sort={Math.max(0, ...s.pages.map((p) => p.sort ?? 0)) + 1} />
+                    <Section label={s.name} count={s.pages.length} />
+                    <div className="as-group ov-queue-group">
+                      {s.pages.map((p) => <PageRow key={p.profile + p.id} page={p} proposed={proposed} />)}
                     </div>
                   </section>
-                ))}
+                )) : !adding && <EmptyState size="sm" icon="book" title="No pages yet" action={newPageButton} />}
                 <NeedsLook />
-                <Notes query="" />
               </>
             )}
           </div>
-          <Feed pages={pages} facts={facts} />
         </div>
       </div>
-      <AskBar placeholder="Ask the wiki" onAsk={(q) => ask(wikiAskText(q, pages, facts), 'work')} />
+      {sheet && (
+        <WikiSheet label={sheet} onClose={() => setSheet(null)}>
+          {sheet === 'Feed' && <Feed pages={pages} facts={facts} />}
+          {sheet === 'Notes' && <Notes query="" />}
+          {sheet === 'Ask' && <AskBar placeholder="Ask the wiki" onAsk={(q) => { const ok = ask(wikiAskText(q, pages, facts), 'work'); if (ok) setSheet(null); return ok; }} />}
+        </WikiSheet>
+      )}
     </div>
   );
 }

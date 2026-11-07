@@ -8,7 +8,7 @@ import { Badge, type BadgeSpec } from '../../ui/Badge';
 // A second click of a double tap on the button or action is ignored.
 export function CardRow({ title, meta, leading, badge, onOpen, button, action, menu }: {
   title: ReactNode;
-  meta: ReactNode;
+  meta?: ReactNode;
   leading?: ReactNode;
   badge?: BadgeSpec;
   onOpen: () => void;
