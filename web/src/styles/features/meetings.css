@@ -140,3 +140,7 @@
 .mt-occ.muted .ui-row-title { color: var(--fg-muted); }
 .mt-sec .as-group > .ui-row:last-child::after { display: none; }
 .mt-sec .as-group > .ov-more { margin: var(--sp-3) var(--sp-5); }
+
+@media (max-width: 480px) {
+  .mt-page-list > section > .ui-section { position: sticky; top: 0; z-index: var(--z-raised); background: var(--group-page); }
+}

@@ -255,7 +255,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       </header>
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className="wk-scroll" ref={pullRef}>
-        {mode === 'log' ? <Decisions meetings={mine} /> : mode === 'load' ? <Load meetings={mine} now={now} /> : mode === 'week' ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-page">
+        {mode === 'log' ? <Decisions meetings={mine} /> : mode === 'load' ? <Load meetings={mine} now={now} /> : mode === 'week' ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-page mt-page-list">
           <div className="mt-chips" role="group" aria-label="Filters">
             {MEETING_CHIPS.map((c) => <Chip key={c} on={chips.includes(c)} aria-pressed={chips.includes(c)} onClick={() => setFilters(chips.includes(c) ? chips.filter((x) => x !== c) : MEETING_CHIPS.filter((x) => x === c || chips.includes(x)))}>{c}</Chip>)}
           </div>

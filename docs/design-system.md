@@ -166,7 +166,7 @@ inset to the text start. The Codex task lists, Goals, Search, Jobs and Summary (
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm (a text Button sm plain is allowed too). 44px hit area at max-width 480px. Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
-`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log, the MCP detail pane, every Fold, the report card and next-meeting card heads and the Week goals card use it.
+`onToggle` the header is a button with `aria-expanded`. At max-width 480px a header that heads a group in Tasks, Meetings or the Today block is sticky at the top of its scroll container, opaque `--bg`, `--z-raised`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log, the MCP detail pane, every Fold, the report card and next-meeting card heads and the Week goals card use it.
 
 ## Patterns
 

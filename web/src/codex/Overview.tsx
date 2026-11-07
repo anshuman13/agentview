@@ -188,7 +188,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
       {empty && (
         <EmptyState size="md" icon="pass" title="Nothing today" hint={nextHint()} action={<Button variant="primary" size="sm" onClick={() => setAdding(true)}>New task</Button>} />
       )}
-      <div className="ov-block">
+      <div className="ov-block ov-block-today">
         {(todayShown || (!empty && !!nextUp)) && <Section label="Today" action={todayMenu} />}
         <DoNow needs={needs} today={todo} nextUp={empty || (card.shown && nextUp?.tomorrow) ? null : nextUp} meeting={close ? null : next} now={now} onPrep={onPrep} />
         {wrapShown && <div ref={wrap}><Shutdown open={[...s.overdue, ...dueToday]} done={s.doneToday.length} now={now} profile={filter} /></div>}

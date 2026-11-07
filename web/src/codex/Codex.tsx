@@ -287,7 +287,7 @@ export function Assistant() {
           const seen = new Set<string>();
           const found = [...s.overdue, ...days.flatMap((d) => d.rows), ...s.review, ...s.doneToday].filter((r) => taskMatches(r, q) && !seen.has(r.profile + r.id) && seen.add(r.profile + r.id));
           return (
-            <section>
+            <section className="as-results">
               <Section label="Results" count={found.length} />
               {found.length ? rows(found, undefined, false) : <EmptyState size="sm" title="No task matches" />}
             </section>
