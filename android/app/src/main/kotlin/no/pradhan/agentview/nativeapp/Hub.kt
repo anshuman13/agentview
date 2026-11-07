@@ -15,7 +15,7 @@ import java.net.URLEncoder
 import java.util.UUID
 
 // Same default as the Tauri phone app (web/src/app/api.ts MAC_URL).
-const val DEFAULT_ORIGIN = "http://anshumans-macbook-pro.netbird.cloud:7777"
+const val DEFAULT_ORIGIN = "http://macmini.netbird.cloud:7777"
 
 class Hub(app: Application) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("agentview", 0)
