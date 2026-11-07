@@ -170,4 +170,14 @@ describe('markSeen', () => {
     expect(getState().seen['s-a']).toBeGreaterThan(0);
     expect(seenPosts()).toHaveLength(1);
   });
+
+  it('sends a command to the chat it names, not the one on screen', () => {
+    live('a', 'b');
+    init('a', rows('a', 1));
+    view('b');
+    send({ type: 'retry' }, 'b');
+    const cmds = fetchMock.mock.calls.map(([u]) => String(u)).filter((u) => u.includes('/api/cmd'));
+    expect(cmds[0]).toContain('chat=a');
+    expect(cmds[1]).toContain('chat=b');
+  });
 });

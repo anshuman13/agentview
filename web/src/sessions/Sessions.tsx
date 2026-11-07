@@ -522,7 +522,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
   const retry = () => {
     setRetrying(true);
     send({ type: 'view', id: live!.id });
-    send({ type: 'retry' });
+    send({ type: 'retry' }, live!.id);
   };
   const swipe = chatSwipe(!!pinned, live);
   const swipePin = async () => {

@@ -187,9 +187,9 @@ const cid = uid();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // A command is one POST; a network failure retries and returns false, a server error shows up as a notice and returns null.
-async function post(m: ClientMessage, tries = 1): Promise<boolean | null> {
+async function post(m: ClientMessage, tries = 1, chat = state.session.id): Promise<boolean | null> {
   // Built once: the chat in it is the target, so a retry after a chat switch still lands in the chat it was made for.
-  const url = api(`/api/cmd?cid=${cid}`);
+  const url = apiUrl(`/api/cmd?cid=${cid}&chat=${encodeURIComponent(chat)}`);
   for (let i = 0; i < tries; i++) {
     try {
       const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m), signal: AbortSignal.timeout(10_000) });
@@ -210,11 +210,12 @@ async function post(m: ClientMessage, tries = 1): Promise<boolean | null> {
   return false;
 }
 
-export function send(m: ClientMessage) {
+// A command for a chat other than the one on screen names it, since a view sent just before may not have landed yet.
+export function send(m: ClientMessage, chat?: string) {
   if (m.type === 'view') showCached(m.id);
   if (m.type === 'open_session') markSeen(m.sessionId);
   else if (m.type === 'view') markSeen(state.live.find((c) => c.id === m.id)?.sessionId);
-  void post(m, 2).then((ok) => ok === false && notice('Not connected, that did not reach the server'));
+  void post(m, 2, chat).then((ok) => ok === false && notice('Not connected, that did not reach the server'));
   return true;
 }
 
