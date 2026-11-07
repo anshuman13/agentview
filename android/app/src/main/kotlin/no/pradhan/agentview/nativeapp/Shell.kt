@@ -128,9 +128,9 @@ fun App(hub: Hub) {
                 composable(Tab.Codex.route) { CodexScreen(hub) }
                 composable(Tab.Chat.route) { ChatScreen(hub) }
                 composable(Tab.Sessions.route) { SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
-                composable(Tab.Agents.route) { Placeholder("Agents") }
+                composable(Tab.Agents.route) { AgentsScreen(hub) }
                 (MORE_TOOLS + MORE_PAGES).forEach { m ->
-                    composable("more/${m.route}") { Placeholder(m.label, onBack = { nav.popBackStack() }) }
+                    composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
                 }
                 composable(ORIGIN_ROUTE) { Column(Modifier.fillMaxSize()) { OriginScreen(hub, onDone = { nav.popBackStack() }) } }
             }
@@ -157,9 +157,14 @@ private fun OfflineBanner(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun Placeholder(title: String, onBack: (() -> Unit)? = null) {
-    Column(Modifier.fillMaxSize()) {
-        PageHeader(title, onBack)
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { EmptyState("$title is not built yet.", small = false) }
-    }
+private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) = when (m.route) {
+    "files" -> FilesScreen(hub, onBack)
+    "changes" -> ChangesScreen(hub, onBack)
+    "github" -> PullsScreen(hub, onBack)
+    "terminal" -> TerminalScreen(hub, onBack)
+    "browser" -> BrowserScreen(hub, onBack)
+    "observe" -> ObserveScreen(hub, onBack)
+    "deploy" -> DeployScreen(hub, onBack)
+    "mcp" -> McpScreen(hub, onBack)
+    else -> SettingsScreen(hub, onBack, onOrigin)
 }

@@ -130,7 +130,7 @@ private fun JumpButton(modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat)
         is Item.Phase -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
