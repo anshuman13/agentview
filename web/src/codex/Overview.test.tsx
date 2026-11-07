@@ -46,6 +46,8 @@ describe('Overview', () => {
     expect(html).toContain('Up next');
     expect(html).toContain('Standup');
     expect(html).toContain('2 people');
+    expect(html).toContain('Starts in 30 min');
+    expect(html).not.toContain('Live');
     expect(html).toContain('>Prep<');
     expect(html).toContain('>Today<');
     expect(html.match(/Review/g)).toHaveLength(1);
@@ -64,6 +66,12 @@ describe('Overview', () => {
       expect(out).not.toContain('Starts in');
       expect(out).not.toContain('>Join<');
     }
+  });
+
+  it('shows the Ends in countdown and Live badge on a running Up next meeting', () => {
+    const html = render({ next: meeting('r', 'Standup', at(-10)), meetingsToday: [] });
+    expect(html).toContain('Ends in 20 min');
+    expect(html).toContain('Live');
   });
 
   it('puts the first task due today in Up next with Done when no meeting is left, and overdue tasks only in Today', () => {

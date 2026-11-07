@@ -241,6 +241,18 @@ export function meetingMeta(m: Meeting, now: number, noDay?: boolean) {
   return [time, m.room, n > 0 && `${n} ${n === 1 ? 'person' : 'people'}`].filter(Boolean).join(' · ');
 }
 
+const span = (ms: number) => {
+  const min = Math.ceil(ms / 60000);
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${min % 60 ? ` ${min % 60}m` : ''}`;
+};
+
+// How long until the meeting starts, or until it ends while it runs; null when neither is known.
+export function countdown(m: Meeting, now: number) {
+  if (m.starts_at! > now) return m.starts_at! - now < 60000 ? 'Starts now' : `Starts in ${span(m.starts_at! - now)}`;
+  if (!m.ends_at || m.ends_at <= now) return null;
+  return `Ends in ${span(m.ends_at - now)}`;
+}
+
 // Meetings whose title, people, notes, summary or decisions hold every word, and those the hub found in the
 // transcript text (said, by profile:id).
 export function searchMeetings<M extends Meeting>(meetings: M[], query: string, said?: ReadonlyMap<string, string>) {

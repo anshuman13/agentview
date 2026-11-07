@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { cadenceOf, nextInSeries, seriesPeople } from './meetings';
+import { cadenceOf, countdown, nextInSeries, seriesPeople } from './meetings';
 import type { Meeting } from './wiki';
 
 const DAY = 86400000;
@@ -38,4 +38,17 @@ it('counts a person once across occurrences', () => {
   const members = [meeting('a', now, { people: 'Ann, Bo' }), meeting('b', now - DAY, { people: 'ann, Cy' }), meeting('c', now - 2 * DAY, { people: 'Bo' })];
   expect(seriesPeople(members)).toHaveLength(3);
   expect(seriesPeople([])).toEqual([]);
+});
+
+it('counts down to the start, then to the end while it runs', () => {
+  const MIN = 60000;
+  const m = meeting('c', now + 30 * MIN, { ends_at: now + 90 * MIN });
+  expect(countdown(m, now)).toBe('Starts in 30 min');
+  expect(countdown(m, now + 40 * MIN)).toBe('Ends in 50 min');
+  expect(countdown(m, now - 95 * MIN)).toBe('Starts in 2h 5m');
+  expect(countdown(m, now - 30 * MIN + 1)).toBe('Starts in 1h');
+  expect(countdown(m, now + 30 * MIN - 30000)).toBe('Starts now');
+  expect(countdown(m, now + 90 * MIN - 30000)).toBe('Ends in 1 min');
+  expect(countdown(m, now + 90 * MIN)).toBeNull();
+  expect(countdown(meeting('d', now), now + MIN)).toBeNull();
 });

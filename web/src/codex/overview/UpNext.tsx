@@ -1,8 +1,9 @@
 import { useRef, useState, type MouseEvent } from 'react';
 import type { Meeting } from '../data/wiki';
-import { meetingMeta } from '../data/meetings';
+import { countdown, meetingBadge, meetingMeta } from '../data/meetings';
 import { atTime } from '../data/engine';
 import type { ItemRow } from '../data/sync';
+import { Badge } from '../../ui/Badge';
 import { Button, IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
@@ -27,11 +28,12 @@ export function UpNext({ meeting, task, now, onPrep }: { meeting?: Meeting; task
       <Section label="Up next" />
       <div className="as-group">
         {meeting && (
-          <Row plain role="button" tabIndex={0} title={meeting.title} meta={meetingMeta(meeting, now)}
+          <Row plain role="button" tabIndex={0} title={meeting.title} meta={[countdown(meeting, now), meetingMeta(meeting, now)].filter(Boolean).join(' · ')}
             onClick={() => openMeeting(meeting)}
             onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openMeeting(meeting); } }}
             trailing={(
               <span className="ov-actions" onClick={stop}>
+                {meetingBadge(meeting, now) && <Badge status="running" label="Live" />}
                 <Button size="sm" variant="tinted" icon="sparkle" onClick={onPrep}>Prep</Button>
                 <span className="ov-more">
                   <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
