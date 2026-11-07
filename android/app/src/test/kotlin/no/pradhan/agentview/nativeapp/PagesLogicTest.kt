@@ -83,6 +83,7 @@ class PagesLogicTest {
         assertEquals(listOf("x.kt", "y.md"), files.keys.toList())
         assertEquals("@@ -1 +1 @@\n-a\n+b\n", files["x.kt"])
         assertEquals(listOf('@', '-', '+', ' '), listOf("@@ x", "-a", "+b", " c").map { diffMark(it) })
+        assertEquals(listOf(DiffLine('@', "@@ -1 +1 @@"), DiffLine('-', "a"), DiffLine('+', "b"), DiffLine(' ', ""), DiffLine(' ', "c")), patchLines("@@ -1 +1 @@\n-a\n+b\n\n c\n\n"))
         assertEquals("Not signed in to GitHub", ghProblem("gh: not logged in to any hosts")?.title)
         assertEquals("""{"event":"approve","body":"ok"}""", reviewBody("approve", "ok"))
         val t = isoMillis("2026-11-07T10:00:00Z")
@@ -121,6 +122,37 @@ class PagesLogicTest {
         assertEquals("Velodrome only deploys the default branch here.", deployWarning(s.envs[1]))
         assertEquals("""{"app":"a","env":"prod","ref":"main"}""", deployBody("a", "prod", "main"))
         assertEquals(DeployJob("j", listOf("x"), done = true, ok = true), parseDeployJob("""{"id":"j","lines":["x"],"done":true,"ok":true,"url":""}"""))
+    }
+
+    @Test fun mcpAddsOtherAccountsConnectors() {
+        val accounts = parseConnectors("""{"main":[{"name":"claude.ai Slack","status":"connected"},{"name":"claude.ai Notion","status":"needs-auth"}],"work":[{"name":"claude.ai Linear","status":"connected"},{"name":"claude.ai Slack","status":"connected"}]}""")
+        val rows = mergeMcp(emptyList(), listOf(McpServer("claude.ai Linear", "needs-auth", type = "claudeai"), McpServer("grafana", "connected")))
+        val all = mcpWithAccounts(rows, "work", accounts)
+        assertEquals(listOf("claude.ai Linear/work", "grafana/null", "claude.ai Slack/main", "claude.ai Notion/main"), all.map { "${it.name}/${it.account}" })
+        assertFalse(all[2].live)
+        assertEquals("needs-auth", all[3].status)
+        val s = mcpSections(all, emptyMap())
+        assertEquals(listOf("claude.ai Linear", "grafana"), s.work.map { it.name })
+        assertEquals(listOf("claude.ai Notion", "claude.ai Slack"), s.personal.map { it.name })
+        assertEquals(listOf("claude.ai Linear"), mcpLoggedInSince(listOf(McpServer("claude.ai Linear", "needs-auth", type = "claudeai")), "work", accounts))
+        assertEquals(emptyList<String>(), mcpLoggedInSince(listOf(McpServer("claude.ai Linear", "needs-auth", type = "claudeai")), "main", accounts))
+        assertTrue(mcpKey(all[0]) != mcpKey(McpRow(McpServer("claude.ai Linear"), account = "main")))
+    }
+
+    @Test fun findingsParseAndPrompt() {
+        assertNull(parseFindings("null"))
+        val r = parseFindings("""{"repo":"/r","target":"12","at":1,"findings":[{"file":"a.kt","line":4,"summary":"Off by one","failure":"x=0 crashes","verdict":"CONFIRMED"}]}""")!!
+        val f = r.findings.single()
+        assertEquals("a.kt:4:Off by one", findingKey(f))
+        assertEquals("Fix this review finding in a.kt:4: Off by one (x=0 crashes)", findingFixPrompt(f))
+        assertEquals("""{"target":"12","key":"a.kt:4:Off by one"}""", dismissBody("12", f))
+        assertEquals("/code-review 12", reviewPrPrompt(12))
+        val m = parseMessage("""{"type":"findings","review":{"repo":"/r","target":"local","at":2,"findings":[]}}""")
+        assertEquals("local", (m as ServerMessage.Findings).review.target)
+    }
+
+    @Test fun themeCyclesThroughSystem() {
+        assertEquals(listOf("dark", "light", ""), listOf("", "dark", "light").map { nextTheme(it) })
     }
 
     @Test fun mcpMergesLiveStateAndGroups() {

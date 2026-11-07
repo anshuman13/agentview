@@ -37,14 +37,18 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
     val s = load.data
     val now = System.currentTimeMillis()
 
-    LaunchedEffect(job?.id, job?.done) {
-        val j = job ?: return@LaunchedEffect
-        if (j.done || j.id.isEmpty()) { reload(); return@LaunchedEffect }
-        delay(3000)
-        job = runCatching { parseDeployJob(hub.read("/api/deploy/job/${j.id}")) }.getOrElse { j.copy(lines = j.lines + (it.message ?: "Lost the deploy"), done = true) }
+    LaunchedEffect(job?.id) {
+        var j = job ?: return@LaunchedEffect
+        while (!j.done && j.id.isNotEmpty()) {
+            delay(3000)
+            val was = j
+            j = runCatching { parseDeployJob(hub.read("/api/deploy/job/${was.id}")) }.getOrElse { was.copy(lines = was.lines + (it.message ?: "Lost the deploy"), done = true) }
+            job = j
+        }
+        reload()
     }
 
-    fun begin(path: String, body: String) = hub.writes.run("Could not start the deploy", { job = parseDeployJob(hub.api.post(path, body, hub.pageChat)) })
+    fun begin(path: String, body: String) = hub.write(path, body, "Could not start the deploy", ::parseDeployJob) { if (it != null) job = it }
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Deploy", onBack, sub = s?.app) {
@@ -113,7 +117,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
         }
     }
     ask?.let { a ->
-        if (a.input != null) TextDialog(a.title, a.input, a.action, { v -> if (v.isNotBlank()) a.run(v.trim()) }, onDismiss = { ask = null })
+        if (a.input != null) TextDialog(a.title, a.input, a.action, { v -> if (v.isNotBlank()) a.run(v.trim()) }, onDismiss = { ask = null }, detail = a.detail)
         else ConfirmDialog(a.title, a.detail, a.action, { a.run("") }, danger = true, onDismiss = { ask = null })
     }
 }

@@ -132,6 +132,12 @@ fun splitDiff(diff: String): Map<String, String> {
     return out
 }
 
+// A unified patch as diff lines: the mark from the first column, hunk headers kept whole.
+fun patchLines(patch: String): List<DiffLine> = patch.trimEnd('\n').split('\n').map { l ->
+    val mark = diffMark(l)
+    DiffLine(mark, if (mark == '@' || l.isEmpty()) l else l.substring(1))
+}
+
 fun diffMark(line: String) = when {
     line.startsWith("@@") -> '@'
     line.startsWith("+") -> '+'

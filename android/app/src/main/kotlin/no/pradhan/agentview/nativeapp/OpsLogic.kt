@@ -1,6 +1,9 @@
 package no.pradhan.agentview.nativeapp
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -214,3 +217,25 @@ fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?): String = listOfNotNull(
 
 fun mcpReconnectCmd(name: String) = buildJsonObject { put("type", "mcp_reconnect"); put("name", name) }.toString()
 fun mcpToggleCmd(name: String, enabled: Boolean) = buildJsonObject { put("type", "mcp_toggle"); put("name", name); put("enabled", enabled) }.toString()
+fun mcpStatusCmd() = buildJsonObject { put("type", "mcp_status") }.toString()
+
+@Serializable data class McpConnector(val name: String, val status: String = "")
+
+fun parseConnectors(body: String): Map<String, List<McpConnector>> =
+    protocolJson.decodeFromString(MapSerializer(String.serializer(), ListSerializer(McpConnector.serializer())), body)
+
+// The chat's rows with its claude.ai connectors tagged with its account, then the other accounts' connectors as rows not loaded here.
+fun mcpWithAccounts(rows: List<McpRow>, account: String?, accounts: Map<String, List<McpConnector>>): List<McpRow> {
+    val mine = rows.map { if (it.server.type == "claudeai" && account != null) it.copy(account = account) else it }
+    val other = accounts.filterKeys { it != account }.flatMap { (a, list) -> list.map { McpRow(McpServer(it.name, it.status, type = "claudeai"), account = a) } }
+        .filter { o -> mine.none { it.name == o.name && it.account == o.account } }
+    return mine + other
+}
+
+// The chat's claude.ai connectors waiting for a login that the account now has.
+fun mcpLoggedInSince(live: List<McpServer>, account: String?, accounts: Map<String, List<McpConnector>>): List<String> {
+    val loggedIn = accounts[account].orEmpty().filter { it.status == "connected" }.map { it.name }.toSet()
+    return live.filter { it.type == "claudeai" && it.status == "needs-auth" && it.name in loggedIn }.map { it.name }
+}
+
+fun mcpKey(r: McpRow) = r.name + "\n" + (r.account ?: "")

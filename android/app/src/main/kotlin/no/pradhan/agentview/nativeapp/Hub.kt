@@ -37,6 +37,8 @@ class Hub(app: Application) : AndroidViewModel(app) {
     val connected: StateFlow<Boolean> = _connected
     val notice = MutableStateFlow<String?>(null)
     val link = MutableStateFlow<DeepLink?>(null)
+    // Review findings by target, a PR number or "local"; null clears one.
+    val findings = MutableStateFlow<Map<String, ReviewFindings>>(emptyMap())
     val workspace = MutableStateFlow(Workspace())
     val loadingEarlier = MutableStateFlow(false)
     val api = Api({ origin.value }, client)
@@ -65,6 +67,7 @@ class Hub(app: Application) : AndroidViewModel(app) {
 
     private fun handle(m: ServerMessage) {
         if (m is ServerMessage.Error) notice.value = m.text
+        if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
     }
 
@@ -166,6 +169,17 @@ class Hub(app: Application) : AndroidViewModel(app) {
 
     fun close() = store.close()
 
+    fun setFindings(target: String, review: ReviewFindings?) {
+        findings.value = if (review == null) findings.value - target else findings.value + (target to review)
+    }
+
+    // Sends a prompt to the chat on screen and shows the chat (web ui/util.ts askClaude).
+    fun askClaude(text: String) {
+        val chat = store.wanted
+        submit(text, false) { notice.value = "That did not reach the chat" }
+        if (!readOnly) link.value = DeepLink(chat = chat)
+    }
+
     fun setTheme(value: String) {
         theme.value = value
         prefs.edit().putString("theme", value).apply()
@@ -176,9 +190,18 @@ class Hub(app: Application) : AndroidViewModel(app) {
 
     suspend fun read(path: String): String = api.get(path, pageChat)
 
-    fun write(path: String, body: String, failure: String, done: (Boolean) -> Unit = {}) = writes.run(failure, { api.post(path, body, pageChat) }, done)
+    fun write(path: String, body: String, failure: String, done: (Boolean) -> Unit = {}) = write(path, body, failure, {}) { done(it != null) }
+
+    // A guarded write whose response is parsed and handed to `done`, or null when it did not go through.
+    fun <T> write(path: String, body: String, failure: String, parse: (String) -> T, done: (T?) -> Unit) {
+        var out: T? = null
+        writes.run(failure, { out = parse(api.post(path, body, pageChat)) }) { done(if (it) out else null) }
+    }
 
     fun command(body: String) = post(body, store.wanted)
+
+    // A command a page sends on its own, skipped without a notice in a read-only check.
+    fun quietCommand(body: String) { if (!readOnly) post(body, store.wanted) }
 
     fun closeChat(id: String) = post(closeCmd(id), id)
 

@@ -12,7 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 
-// Settings (web/src/app/Settings.tsx): About, Appearance and Phone groups.
+// Settings (web/src/app/Settings.tsx): Appearance and Phone groups.
 @Composable
 fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val theme by hub.theme.collectAsState()
@@ -24,10 +24,8 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
         PageHeader("Settings", onBack, large = false)
         PageBody {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp16)) {
-                SectionHeader("About")
-                Group { ListRow("App version", version) }
                 SectionHeader("Appearance")
-                Group { ListRow("Theme", (if (dark) "Dark" else "Light") + if (theme.isEmpty()) " (system)" else "", onClick = { hub.setTheme(if (dark) "light" else "dark") }) }
+                Group { ListRow("Theme", (if (dark) "Dark" else "Light") + if (theme.isEmpty()) " (system)" else "", onClick = { hub.setTheme(nextTheme(theme)) }) }
                 SectionHeader("Phone")
                 Group {
                     ListRow("Installed version", version)
@@ -38,3 +36,6 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
         }
     }
 }
+
+// Theme cycles following the system, then dark, then light.
+fun nextTheme(theme: String) = when (theme) { "" -> "dark"; "dark" -> "light"; else -> "" }

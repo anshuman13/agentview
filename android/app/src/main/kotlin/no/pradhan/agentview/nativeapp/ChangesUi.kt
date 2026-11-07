@@ -51,6 +51,8 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                     Column(Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                         TextField(message, { message = it }, placeholder = "Message${status?.branch?.let { " (commit on $it)" } ?: ""}", minLines = 1, maxLines = 6)
                         Button("Commit", { run("commit", commitBody(message)) { message = "" } }, variant = ButtonVariant.Filled, enabled = staged.isNotEmpty() && message.isNotBlank(), fill = true)
+                        Button("Write message with Claude", { hub.askClaude(DRAFT_PROMPT) }, variant = ButtonVariant.Plain, enabled = staged.isNotEmpty(), fill = true)
+                        Button("Review changes with Claude", { hub.askClaude(REVIEW_LOCAL) }, variant = ButtonVariant.Plain, enabled = files.isNotEmpty(), fill = true)
                     }
                 }
                 item { ErrorHint(load.error) }
@@ -79,6 +81,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                     }
                 }
                 if (status != null && files.isEmpty()) item { EmptyState("No changes") }
+                item { Column { Findings(hub, "local") { open = it.file } } }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
         }

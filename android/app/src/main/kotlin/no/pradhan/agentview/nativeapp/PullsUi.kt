@@ -21,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.AnnotatedString
 
 // Pull Requests (web/src/ops/GitHub.tsx): the repo's open PRs in three groups, and a PR page with review actions.
 @Composable
@@ -29,7 +28,11 @@ fun PullsScreen(hub: Hub, onBack: () -> Unit) {
     val st by hub.store.state.collectAsState()
     val chat = st.shownId
     var fresh by remember { mutableStateOf(false) }
-    val (load, reload) = rememberLoad(chat) { parsePulls(hub.read("/api/gh/prs" + if (fresh) "?fresh=1" else "")) }
+    val (load, reload) = rememberLoad(chat) {
+        val q = if (fresh) "?fresh=1" else ""
+        fresh = false
+        parsePulls(hub.read("/api/gh/prs$q"))
+    }
     var open by rememberSaveable(chat) { mutableStateOf<Int?>(null) }
     val pr = load.data?.firstOrNull { it.number == open }
     if (pr != null) { PullScreen(hub, pr, onBack = { open = null }, onChanged = { fresh = true; reload() }); return }
@@ -122,6 +125,7 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
                 item { ErrorHint(load.error) }
                 if (d == null) { if (load.error.isEmpty()) item { Hint("Loading") } }
                 else {
+                    item { Column { Findings(hub, pr.number.toString()) { openFile = it.file } } }
                     item { SectionHeader("Description") }
                     item { Group { if (d.body.isBlank()) EmptyState("No description") else Column(Modifier.padding(Tokens.sp7)) { Markdown(d.body) } } }
                     item { SectionHeader("Checks", d.checks.size.toString()) }
@@ -180,6 +184,7 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
                 Button("Request changes", { act("request_changes", "review", reviewBody("request_changes", text)) { text = "" } }, size = ButtonSize.Sm, enabled = busy.isEmpty() && text.isNotBlank())
                 Button("Comment", { act("comment", "review", reviewBody("comment", text)) { text = "" } }, size = ButtonSize.Sm, enabled = busy.isEmpty() && text.isNotBlank())
             }
+            Button("Ask Claude to review", { hub.askClaude(reviewPrPrompt(pr.number)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }
     }
     confirm?.let { (title, run) -> ConfirmDialog(title, pr.title, title.substringBefore(' '), run, danger = false, onDismiss = { confirm = null }) }
@@ -187,15 +192,11 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
 
 @Composable
 private fun PatchView(patch: String, path: String) {
-    val lines = remember(patch) { patch.trimEnd('\n').split('\n') }
+    val lines = remember(patch) { patchLines(patch) }
     val lang = langOf(path)
     val scroll = rememberScrollState()
     Column(Modifier.padding(bottom = Tokens.sp4)) {
-        lines.take(PR_DIFF_LINES).forEach { l ->
-            val mark = diffMark(l)
-            val body = if (mark == '@' || l.isEmpty()) l else l.substring(1)
-            CodeLine(if (mark == '@') "" else mark.toString(), if (mark == '@') AnnotatedString(body) else highlighted(body, highlightLine(body, lang).first), mark, wrap = false, scroll = scroll)
-        }
+        lines.take(PR_DIFF_LINES).forEach { l -> DiffCodeLine(l, lang, wrap = false, scroll = scroll) }
         if (lines.size > PR_DIFF_LINES) Hint("${lines.size - PR_DIFF_LINES} more lines")
     }
 }

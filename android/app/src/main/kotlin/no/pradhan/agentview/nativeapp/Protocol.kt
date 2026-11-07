@@ -165,6 +165,7 @@ sealed interface ServerMessage {
     data class Event(val event: ChatEvent) : ServerMessage
     data class Append(val id: String, val offset: Int, val text: String) : ServerMessage
     data class Live(val chats: List<LiveChat>) : ServerMessage
+    data class Findings(val review: ReviewFindings) : ServerMessage
     data class Other(val type: String) : ServerMessage
 }
 
@@ -191,6 +192,7 @@ fun parseMessage(data: String): ServerMessage {
         "live" -> ServerMessage.Live(
             o["chats"]!!.let { protocolJson.decodeFromJsonElement(ListSerializer(LiveChat.serializer()), it) },
         )
+        "findings" -> ServerMessage.Findings(protocolJson.decodeFromJsonElement(ReviewFindings.serializer(), o["review"]!!))
         else -> ServerMessage.Other(type)
     }
 }

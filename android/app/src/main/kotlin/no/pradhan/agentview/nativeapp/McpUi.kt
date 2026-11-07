@@ -18,6 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
@@ -27,14 +29,29 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val st by hub.store.state.collectAsState()
     val chat = st.shownId
     var refresh by remember { mutableStateOf(false) }
-    val (probe, reprobe) = rememberLoad(chat) { parseMcp(hub.read("/api/mcp/probe" + if (refresh) "?refresh=1" else "")) }
+    var accounts by remember { mutableStateOf<Map<String, List<McpConnector>>>(emptyMap()) }
+    val (probe, reprobe) = rememberLoad(chat) {
+        val q = if (refresh) "?refresh=1" else ""
+        refresh = false
+        hub.quietCommand(mcpStatusCmd())
+        coroutineScope {
+            launch {
+                runCatching { parseConnectors(hub.read("/api/mcp/connectors$q")) }.onSuccess { a ->
+                    accounts = a
+                    val s = hub.store.state.value.session
+                    mcpLoggedInSince(s?.mcp ?: emptyList(), s?.account, a).forEach { hub.quietCommand(mcpReconnectCmd(it)) }
+                }
+            }
+            parseMcp(hub.read("/api/mcp/probe$q"))
+        }
+    }
     var groups by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     LaunchedEffect(Unit) { runCatching { groups = protocolJson.decodeFromString(MapSerializer(String.serializer(), String.serializer()), hub.read("/api/mcp/groups")) } }
     var sel by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
     val live = st.session?.mcp ?: emptyList()
     val account = st.session?.account
-    val rows = remember(probe.data, live, account) { mergeMcp(probe.data ?: emptyList(), live).map { if (it.server.type == "claudeai" && account != null) it.copy(account = account) else it } }
+    val rows = remember(probe.data, live, account, accounts) { mcpWithAccounts(mergeMcp(probe.data ?: emptyList(), live), account, accounts) }
     val calls = remember(st.events) { mcpCalls(st.events) }
     val sections = remember(rows, groups) { mcpSections(rows, groups) }
 
@@ -44,7 +61,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
         hub.write("/api/mcp/groups", mcpGroupBody(service, group), "Could not save the group") { ok -> if (!ok) groups = before }
     }
 
-    val current = rows.firstOrNull { it.name == sel }
+    val current = rows.firstOrNull { mcpKey(it) == sel }
     if (current != null) { McpDetail(hub, current, calls[mcpSlug(current.name)], groups, ::setGroup, onBack = { sel = null }); return }
 
     val shown = sections.work + sections.personal
@@ -62,12 +79,12 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                 listOf("Work" to sections.work, "Personal" to sections.personal).forEach { (label, list) ->
                     if (list.isNotEmpty()) {
                         item { SectionHeader(label, list.size.toString()) }
-                        item { McpGroup(list, calls) { sel = it.name } }
+                        item { McpGroup(list, calls) { sel = mcpKey(it) } }
                     }
                 }
                 if (sections.hidden.isNotEmpty()) {
                     item { SectionHeader("Hidden", sections.hidden.size.toString(), open = showHidden, onToggle = { showHidden = !showHidden }) }
-                    if (showHidden) item { McpGroup(sections.hidden, calls) { sel = it.name } }
+                    if (showHidden) item { McpGroup(sections.hidden, calls) { sel = mcpKey(it) } }
                 }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }

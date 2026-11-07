@@ -143,14 +143,10 @@ private fun KeyValue(k: String, v: String) {
 @Composable
 fun DiffView(lines: List<DiffLine>, modifier: Modifier = Modifier) {
     val shown = lines.take(MAX_DIFF_LINES)
-    Column(modifier.heightIn(max = Geometry.scrollMid).well(av).verticalScroll(rememberScrollState())) {
-        Column(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = Tokens.sp2)) {
-            for (l in shown) {
-                val bg = when (l.mark) { '+' -> av.diffAdd.copy(alpha = 0.14f); '-' -> av.diffDel.copy(alpha = 0.14f); else -> Color.Transparent }
-                Text("${l.mark} ${l.text}", style = Mono, color = av.fg, softWrap = false, modifier = Modifier.background(bg).padding(horizontal = Tokens.sp5))
-            }
-            if (lines.size > MAX_DIFF_LINES) Text("${lines.size - MAX_DIFF_LINES} more lines", style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(horizontal = Tokens.sp5))
-        }
+    val scroll = rememberScrollState()
+    Column(modifier.heightIn(max = Geometry.scrollMid).well(av).verticalScroll(rememberScrollState()).padding(vertical = Tokens.sp2)) {
+        for (l in shown) DiffCodeLine(l, Lang.Plain, wrap = false, scroll = scroll, gutter = Tokens.sp8)
+        if (lines.size > MAX_DIFF_LINES) Text("${lines.size - MAX_DIFF_LINES} more lines", style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(horizontal = Tokens.sp5))
     }
 }
 

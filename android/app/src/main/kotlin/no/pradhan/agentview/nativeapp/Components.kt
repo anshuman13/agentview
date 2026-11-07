@@ -571,14 +571,19 @@ fun ConfirmDialog(title: String, detail: String, action: String, onConfirm: () -
 }
 
 @Composable
-fun TextDialog(title: String, initial: String, action: String, onSave: (String) -> Unit, onDismiss: () -> Unit, maxLength: Int = Int.MAX_VALUE) {
+fun TextDialog(title: String, initial: String, action: String, onSave: (String) -> Unit, onDismiss: () -> Unit, maxLength: Int = Int.MAX_VALUE, detail: String? = null) {
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = av.raised,
         shape = RoundedCornerShape(Tokens.shapeLg),
         title = { Text(title, style = Type.headline, color = av.fg) },
-        text = { TextField(text, { if (it.length <= maxLength) text = it }, singleLine = true) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                if (!detail.isNullOrEmpty()) Text(detail, style = Type.body, color = av.fgMuted)
+                TextField(text, { if (it.length <= maxLength) text = it }, singleLine = true)
+            }
+        },
         confirmButton = { Button(action, { onSave(text); onDismiss() }, variant = ButtonVariant.Filled) },
         dismissButton = { Button("Cancel", onDismiss, variant = ButtonVariant.Plain) },
     )

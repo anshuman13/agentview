@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -44,16 +46,18 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
     val loading = remember(chat) { mutableStateMapOf<String, Boolean>() }
     var refresh by remember { mutableStateOf(0) }
 
-    LaunchedEffect(missing.joinToString("\n"), chat, refresh) {
-        val want = if (refresh > 0 && missing.isEmpty()) dirs.keys.toList() else missing
-        for (p in want.filter { loading[it] != true }) launch {
+    suspend fun fetch(paths: List<String>) = coroutineScope {
+        for (p in paths.filter { loading[it] != true }) launch {
             loading[p] = true
-            runCatching { parseDir(hub.read("/api/dir?path=${enc(p)}")) }
-                .onSuccess { dirs[p] = it; error = "" }
-                .onFailure { if (p.isEmpty()) error = it.message ?: "Could not list the files" }
-            loading[p] = false
+            try {
+                runCatching { parseDir(hub.read("/api/dir?path=${enc(p)}")) }
+                    .onSuccess { dirs[p] = it; error = "" }
+                    .onFailure { if (it !is CancellationException && p.isEmpty()) error = it.message ?: "Could not list the files" }
+            } finally { loading[p] = false }
         }
     }
+    LaunchedEffect(missing.joinToString("\n"), chat) { fetch(missing) }
+    LaunchedEffect(refresh) { if (refresh > 0) fetch(dirs.keys.toList()) }
 
     val o = open
     if (o != null) { FileScreen(hub, o, onBack = { open = null }); return }
@@ -160,9 +164,6 @@ fun DiffLinesView(lines: List<DiffLine>, lang: Lang, wrap: Boolean) {
     val scroll = rememberScrollState()
     if (lines.isEmpty()) { EmptyState("No changes"); return }
     LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4)) {
-        items(lines) { l ->
-            val text = if (l.mark == '@') AnnotatedString(l.text) else highlighted(l.text, remember(l) { highlightLine(l.text, lang).first })
-            CodeLine(if (l.mark == '@') "" else l.mark.toString(), text, l.mark, wrap, scroll)
-        }
+        items(lines) { l -> DiffCodeLine(l, lang, wrap, scroll) }
     }
 }
