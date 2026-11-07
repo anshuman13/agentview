@@ -18,15 +18,31 @@ const othersText = (meetings: Meeting[], now = Date.now()) => live(meetings)
   .flatMap((m) => othersOf(m).map((o) => `- ${day(m.starts_at!)} "${m.title}": ${o.who}: ${o.what}`))
   .slice(0, 80);
 
-export function askText(question: string, items: ItemRow[], about?: ItemRow, meetings: Meeting[] = []) {
+const hhmm = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
+// My personal meetings from the start of today to the end of the third day after, so the chat knows what is planned.
+const plansText = (meetings: Meeting[], now = new Date()) => {
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 23, 59, 59, 999).getTime();
+  const plans = live(meetings)
+    .filter((m) => m.profile === 'personal' && m.starts_at != null && m.starts_at >= from && m.starts_at <= to)
+    .sort((a, b) => a.starts_at! - b.starts_at!)
+    .slice(0, 30)
+    .map((m) => `- ${day(m.starts_at!)} ${hhmm(m.starts_at!)} ${m.title}`);
+  return `\nMy personal meetings, today and the next 3 days:\n${plans.length ? plans.join('\n') : 'No personal meetings in the next 3 days.'}`;
+};
+
+export function askText(question: string, profile: Profile, items: ItemRow[], about?: ItemRow, meetings: Meeting[] = []) {
   const open = items.filter((r) => !r.deleted && r.status === 'open').slice(0, 60);
-  const others = othersText(meetings);
+  const personal = profile === 'personal';
+  const others = personal ? [] : othersText(meetings);
   return [
     question,
     about && `\nAbout this item:\n${line(about)}${about.text ? `\n${about.text}` : ''}`,
     open.length ? `\nMy open items in Codex:\n${open.map(line).join('\n')}` : '',
     others.length ? `\nWhat others took on in recent meetings:\n${others.join('\n')}` : '',
-    '\nUse my Slack, Calendar, Gmail and Linear connectors when the question needs them.',
+    personal ? plansText(meetings) : '\nUse my Slack, Calendar, Gmail and Linear connectors when the question needs them.',
+    personal && '\nRead these events in Calendar for location and notes. Then use Calendar, Gmail and web search to suggest concrete alternatives near where I am, each with opening hours and travel time. Change the calendar only after I confirm.',
   ].filter(Boolean).join('\n');
 }
 

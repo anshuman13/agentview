@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
-import { useAssistant, useCodex, useSyncGate } from './data';
+import { codexMeetings, useAssistant, useCodex, useSyncGate } from './data';
 import { reviewCount } from './data/wiki';
 import { ask, askText } from './data/ask';
 import { atTime, reviewedSince, split } from './data/engine';
@@ -118,7 +118,7 @@ export function Assistant() {
   // An item moved to the other profile keeps its id, so the open task follows it.
   const current = list === 'tasks' && open ? snap.items.find((r) => rowKey(r) === open && !r.deleted) ?? snap.items.find((r) => r.id === open.slice(open.indexOf(':') + 1) && !r.deleted) : undefined;
   const close = useCallback(() => setView({ open: null }), []);
-  const askAbout = (r: ItemRow) => ask(askText('Help me with this item.', snap.items, r), r.profile);
+  const askAbout = (r: ItemRow) => ask(askText('Help me with this item.', r.profile, snap.items, r, codexMeetings(snap.meetings)), r.profile);
   const gate = useSyncGate();
   const loading = gate.loading && !snap.items.length;
   const heading = list === 'today' ? `${greeting()}, ${new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric' })}` : LISTS.find((l) => l.id === list)!.label;
@@ -236,7 +236,7 @@ export function Assistant() {
 
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>
-        {list === 'today' && <Overview s={s} dueToday={dueToday} onPrep={() => ask(askText(prepText(s.next!), snap.items), s.next!.profile)} />}
+        {list === 'today' && <Overview s={s} dueToday={dueToday} onPrep={() => ask(askText(prepText(s.next!), s.next!.profile, snap.items, undefined, codexMeetings(snap.meetings)), s.next!.profile)} />}
         {list === 'tasks' && query != null && (
           <div className="as-search">
             <Icon name="search" />

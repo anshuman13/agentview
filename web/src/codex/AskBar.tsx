@@ -100,7 +100,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
   const submit = async (at = due) => {
     if (!typed || busy.current) return;
     if (m === 'ask') {
-      if (ask(askText(typed, items, undefined, meetings), prof, fresh)) reset();
+      if (ask(askText(typed, prof, items, undefined, meetings), prof, fresh)) reset();
       return;
     }
     if (at == null && !noWhen && !asking) return setAsking(true);
@@ -136,7 +136,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
             ))}
           </>
         ) : (
-          recipes(next).map((r) => <Chip key={r.label} icon="sparkle" onClick={() => ask(askText(r.q, items, undefined, meetings), prof)}>{r.label}</Chip>)
+          recipes(next).map((r) => <Chip key={r.label} icon="sparkle" onClick={() => ask(askText(r.q, prof, items, undefined, meetings), prof)}>{r.label}</Chip>)
         )}
       </div>}
       <div className="cp-card as-card">
