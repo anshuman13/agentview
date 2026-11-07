@@ -482,3 +482,4 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-bulk-n { margin-right: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
 .gl-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
 .as-pick > .ui-menu { right: auto; left: 0; white-space: nowrap; }
+.as-stale-open { display: flex; flex-direction: column; width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }

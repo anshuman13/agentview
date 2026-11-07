@@ -1,7 +1,8 @@
 import type { ItemRow } from '../data/sync';
 import { useActions } from '../useActions';
 import { Capped, SectionHead } from '../Fold';
-import { Icon } from '../../ui/Icon';
+import { IconButton } from '../../ui/Button';
+import { Row } from '../../ui/Row';
 import { haptic } from '../../ui/haptic';
 import { openTask } from '../view';
 
@@ -11,16 +12,19 @@ export function Stale({ rows, now, snooze }: { rows: ItemRow[]; now: number; sno
   return (
     <section>
       <SectionHead title="Stale" count={rows.length} />
-      <div className="ov-follow">
+      <div className="as-group">
         <Capped items={rows} render={(r) => (
-          <div key={r.profile + r.id} className="ov-follow-row">
-            <button className="ov-follow-text" onClick={() => openTask(r)}>
-              <span className="ov-t">{r.title}</span>
-              <span className="muted small">untouched {Math.floor((now - r.updated_at) / 86400000)} days</span>
+          <Row key={r.profile + r.id} plain title={
+            <button className="as-stale-open" onClick={() => openTask(r)}>
+              <span className="ui-row-title">{r.title}</span>
+              <span className="ui-row-meta">untouched {Math.floor((now - r.updated_at) / 86400000)} days</span>
             </button>
-            <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
-            <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
-          </div>
+          } trailing={
+            <>
+              <IconButton icon="circle-large-outline" label={`Mark ${r.title} done`} size="sm" onClick={() => { haptic('success'); act.done(r); }} />
+              <IconButton icon="clock" label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" size="sm" onClick={() => snooze(r)} />
+            </>
+          } />
         )} />
       </div>
     </section>
