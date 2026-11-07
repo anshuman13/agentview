@@ -32,6 +32,9 @@
 .ov-ask-history { display: flex; flex-direction: column; }
 .ov-ask-err { color: var(--err); overflow-wrap: anywhere; }
 .ov-block:not(:has(> :not(.ui-section))) { display: none; }
-.ov-today > * + * { border-top: var(--hairline); }
-.ov-today > .ov-ask { border-bottom: 0; }
+.ov-today > .ov-ask { border-bottom: 0; position: relative; }
+.ov-today.as-group > .as-swipe + :is(.as-swipe, .ui-row) { border-top: 0; }
+.ov-today > :is(.ov-ask, .as-swipe)::after { content: ''; position: absolute; right: 0; bottom: 0; left: var(--list-pad); border-bottom: var(--hairline); pointer-events: none; }
+.ov-today > :is(.ov-ask, .as-swipe):has(.ui-row.has-lead)::after { left: calc(var(--list-pad) + 24px + var(--sp-6)); }
+.ov-today > :last-child::after { display: none; }
 .ov-menu-hint { padding: var(--sp-3) var(--sp-6); font-size: var(--type-meta-size); color: var(--fg-muted); }

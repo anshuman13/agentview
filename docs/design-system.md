@@ -158,7 +158,7 @@ the accent is for the action.
 Overview cards (`.as-group`, Needs you), the Meetings list and Meetings day groups (`.mt-days`) are
 inset grouped lists: page `--group-page` (grey #F2F2F7 in light, black in dark), card `--group-card`
 (white in light, #1C1C1E in dark), `--shape-lg` radius, no border, rows 44px minimum with a hairline
-inset to the text start. The Codex task lists (`.ui-group`), the editor Links and the Meetings list (`.as-group` under `.mt-page`) use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case.
+inset to the text start. The Codex task lists (`.ui-group`), the editor Links and the Meetings list (`.as-group` under `.mt-page`) use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case. A grouped card whose rows sit in wrappers (Overview Today: `.ov-ask`, `.as-swipe`) draws the inset hairline on the wrapper at the row's text start (52px with a lead, else `--list-pad`), never on the row and never full width.
 
 ### Section header
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
