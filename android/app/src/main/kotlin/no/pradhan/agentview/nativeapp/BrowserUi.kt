@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp
 
 import android.graphics.BitmapFactory
+import android.os.Handler
+import android.os.Looper
 import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
@@ -32,14 +34,15 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
     var tabs by remember { mutableStateOf(ChromeMsg.Tabs(emptyList(), null)) }
     var frame by remember { mutableStateOf<ImageBitmap?>(null) }
     val socket = remember(origin) {
+        val main = Handler(Looper.getMainLooper())
         LiveSocket(hub.client, "${wsOrigin(origin)}/ws?chrome", onText = { text ->
             when (val m = parseChrome(text)) {
-                is ChromeMsg.State -> { state = m; if (m.state != "on") frame = null }
-                is ChromeMsg.Tabs -> tabs = m
-                is ChromeMsg.Frame -> runCatching { Base64.decode(m.data, Base64.DEFAULT).let { BitmapFactory.decodeByteArray(it, 0, it.size) } }.getOrNull()?.let { frame = it.asImageBitmap() }
+                is ChromeMsg.State -> main.post { state = m; if (m.state != "on") frame = null }
+                is ChromeMsg.Tabs -> main.post { tabs = m }
+                is ChromeMsg.Frame -> runCatching { Base64.decode(m.data, Base64.DEFAULT).let { BitmapFactory.decodeByteArray(it, 0, it.size) } }.getOrNull()?.asImageBitmap()?.let { main.post { frame = it } }
                 null -> Unit
             }
-        })
+        }, onDrop = { state = ChromeMsg.State("off", "server", false); frame = null })
     }
     DisposableEffect(socket) { socket.open(); onDispose { socket.close() } }
     fun send(t: String, extra: Map<String, String> = emptyMap()) {

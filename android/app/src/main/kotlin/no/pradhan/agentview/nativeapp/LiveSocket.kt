@@ -9,13 +9,14 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 
 // A /ws connection that reconnects with the terminal backoff until closed or the server says the target is gone (4404).
-// Messages arrive on OkHttp's thread; open and gone are posted to the main thread.
+// Messages arrive on OkHttp's thread; open, drop and gone are posted to the main thread.
 class LiveSocket(
     private val client: OkHttpClient,
     private val url: String,
     private val onText: (String) -> Unit,
     private val onOpen: () -> Unit = {},
     private val onGone: () -> Unit = {},
+    private val onDrop: () -> Unit = {},
 ) {
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var ws: WebSocket? = null
@@ -41,6 +42,7 @@ class LiveSocket(
 
     private fun retry() {
         if (closed) return
+        main.post { if (!closed) onDrop() }
         main.postDelayed({ open() }, termDelay(attempt++))
     }
 
