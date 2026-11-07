@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { canRead, dropOrphanRuns, dueJobs, jobAllows, nextRun, runDue } from './jobs.js';
+import { canRead, dropOrphanRuns, dueJobs, jobAllows, nextRun, orphansDue, runDue } from './jobs.js';
+import { HOUR } from './time.js';
 import { queueCommands, replyToCommand } from './commands.js';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
@@ -123,6 +124,93 @@ describe('runDue', () => {
     const { db, now } = seed(1);
     await runDue(db, now, async () => ({ result: 'done', added: [], notified: false, cost: 0.04 }), async () => true, reply);
     expect(db.prepare('SELECT cost FROM runs').all()).toEqual([{ cost: 0.04 }]);
+  });
+  describe('concurrency', () => {
+    const seedMany = (ids: string[]) => {
+      const db = openDb(':memory:');
+      const now = Date.now();
+      applyChanges(db, ids.map((id) => ({ table: 'jobs', id, profile: 'work' as const, updated_at: 1, fields: { name: id, schedule: 'daily 09:00', prompt: id, enabled: 1, next_run_at: now - 1 } })));
+      return { db, now };
+    };
+    const finish = async () => (await new Promise((r) => setTimeout(r, 5)), { result: 'done', added: [], notified: false, cost: null });
+    const gate = () => {
+      let open!: () => void;
+      const p = new Promise<void>((r) => (open = r));
+      return { p, open };
+    };
+    const tick = () => new Promise((r) => setTimeout(r, 50));
+    const statuses = (db: ReturnType<typeof openDb>) => db.prepare('SELECT j.id, r.status FROM runs r JOIN jobs j ON j.id = r.job_id ORDER BY j.id').all();
+
+    test('runs at most 2 jobs at once and starts the next when one finishes', async () => {
+      const { db, now } = seedMany(['a', 'b', 'c']);
+      const g = gate();
+      const started: string[] = [];
+      let flying = 0;
+      let peak = 0;
+      const run = async (_db: unknown, job: { id: string }) => {
+        started.push(job.id);
+        peak = Math.max(peak, ++flying);
+        await g.p;
+        flying--;
+        return finish();
+      };
+      const done = runDue(db, now, run as never, async () => true, reply);
+      await tick();
+      expect(started.length).toBe(2);
+      g.open();
+      await done;
+      expect(started.length).toBe(3);
+      expect(peak).toBe(2);
+    });
+    test('a hung job does not hold back the others, and runDue waits for it', async () => {
+      const { db, now } = seedMany(['a', 'b', 'c']);
+      const hang = gate();
+      const run = async (_db: unknown, job: { id: string }) => {
+        if (job.id === 'a') await hang.p;
+        return finish();
+      };
+      let finished = false;
+      const done = runDue(db, now, run as never, async () => true, reply).then(() => (finished = true));
+      await tick();
+      expect(statuses(db)).toEqual([{ id: 'a', status: 'running' }, { id: 'b', status: 'ok' }, { id: 'c', status: 'ok' }]);
+      expect(finished).toBe(false);
+      hang.open();
+      await done;
+      expect(finished).toBe(true);
+    });
+    test('a throwing job ends as an error and the other job still ends ok', async () => {
+      const { db, now } = seedMany(['a', 'b']);
+      const run = async (_db: unknown, job: { id: string }) => {
+        if (job.id === 'a') {
+          await new Promise((r) => setTimeout(r, 5));
+          throw new Error('boom');
+        }
+        return finish();
+      };
+      await runDue(db, now, run as never, async () => true, reply);
+      expect(db.prepare('SELECT status, output FROM runs ORDER BY status').all()).toEqual([{ status: 'error', output: 'boom' }, { status: 'ok', output: 'done' }]);
+    });
+    test('a job turned off while queued is skipped', async () => {
+      const { db, now } = seedMany(['a', 'b', 'c']);
+      const g = gate();
+      const ran: string[] = [];
+      const run = async (_db: unknown, job: { id: string }) => {
+        ran.push(job.id);
+        await g.p;
+        return finish();
+      };
+      const done = runDue(db, now, run as never, async () => true, reply);
+      await tick();
+      applyChanges(db, [{ table: 'jobs', id: 'c', profile: 'work', updated_at: Date.now(), fields: { enabled: 0, next_run_at: null } }]);
+      g.open();
+      await done;
+      expect(ran).toEqual(['a', 'b']);
+    });
+  });
+  test('orphan cleanup is due on the first tick and then once an hour', () => {
+    expect(orphansDue(null, 1000)).toBe(true);
+    expect(orphansDue(1000, 1000 + HOUR - 1)).toBe(false);
+    expect(orphansDue(1000, 1000 + HOUR)).toBe(true);
   });
 });
 

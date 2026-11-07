@@ -13,7 +13,7 @@ import { replyToCommand } from './commands.js';
 import type { Profile } from './db.js';
 import { loop } from './once.js';
 import { applyChanges, type Change } from './sync.js';
-import { DAY, MIN } from './time.js';
+import { DAY, HOUR, MIN } from './time.js';
 import { nextRun } from '../../shared/schedule.js';
 import { ownProfile, PROFILE_PORT } from '../../server/src/chrome/launch.js';
 
@@ -120,45 +120,53 @@ function prune(db: Database, job: Job, now: number) {
   applyChanges(db, old.map((r) => ({ table: 'runs', id: r.id, profile: job.profile, deleted: true, updated_at: now, fields: { output: null } })));
 }
 
+const CONCURRENCY = 2;
+
 export async function runDue(db: Database, now = Date.now(), run: typeof runJob = runJob, notify = pushNtfy, reply = replyToCommand) {
-  for (const due of dueJobs(db, now)) {
-    // An earlier job can run for minutes; skip or update this one if it was turned off, deleted or edited meanwhile.
-    const live = db.prepare('SELECT prompt, tools, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; tools: string | null; next_run_at: number | null; field_times: string } | null;
-    if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) continue;
-    const job = { ...due, prompt: live.prompt, tools: live.tools };
-    const planned = JSON.parse(live.field_times).next_run_at;
-    if (await verifyLimit(ACCOUNT_OF[job.profile])) continue;
-    const id = randomUUID();
-    const started = Date.now();
-    applyChanges(db, [{ table: 'runs', id, profile: job.profile, updated_at: started, fields: { job_id: job.id, started_at: started, status: 'running' } }]);
-    let status = 'ok';
-    let output = '';
-    let notified = false;
-    let cost: number | null = null;
-    try {
-      const { result, added, ...r } = await run(db, job, notify);
-      notified = r.notified;
-      cost = r.cost;
-      output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';
-    } catch (err) {
-      status = 'error';
-      output = errText(err);
-    }
-    const done = Date.now();
-    const changes: Change[] = [{ table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output, cost } }];
-    // An edit made during the run (Off, a new schedule, Run now) set next_run_at itself, so it is kept. Its field time
-    // comes from the client's clock, so only whether it changed is compared.
-    const cur = db.prepare('SELECT schedule, enabled, field_times FROM jobs WHERE id = ? AND profile = ?').get(job.id, job.profile) as { schedule: string | null; enabled: number | null; field_times: string } | null;
-    if (cur && JSON.parse(cur.field_times).next_run_at === planned) {
-      // A schedule with no run left (a one-off) turns the job off.
-      const next = cur.enabled ? nextRun(cur.schedule, done) : null;
-      changes.push({ table: 'jobs', id: job.id, profile: job.profile, updated_at: done, fields: next == null ? { next_run_at: null, enabled: 0 } : { next_run_at: next } });
-    }
-    applyChanges(db, changes);
-    prune(db, job, done);
-    await reply(db, job.id, status === 'ok', output);
-    if (status !== 'ok' || (!notified && /\b(push|notify)\b/i.test(job.prompt ?? ''))) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
+  const queue = dueJobs(db, now);
+  const worker = async () => {
+    for (let due = queue.shift(); due; due = queue.shift()) await runOne(db, due, run, notify, reply).catch(() => {});
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
+}
+
+async function runOne(db: Database, due: Job, run: typeof runJob, notify: typeof pushNtfy, reply: typeof replyToCommand) {
+  // Earlier jobs can run for minutes; skip or update this one if it was turned off, deleted or edited meanwhile.
+  const live = db.prepare('SELECT prompt, tools, next_run_at, field_times FROM jobs WHERE id = ? AND profile = ? AND deleted = 0').get(due.id, due.profile) as { prompt: string | null; tools: string | null; next_run_at: number | null; field_times: string } | null;
+  if (!live || live.next_run_at == null || live.next_run_at > Date.now() || !live.prompt?.trim()) return;
+  const job = { ...due, prompt: live.prompt, tools: live.tools };
+  const planned = JSON.parse(live.field_times).next_run_at;
+  if (await verifyLimit(ACCOUNT_OF[job.profile])) return;
+  const id = randomUUID();
+  const started = Date.now();
+  applyChanges(db, [{ table: 'runs', id, profile: job.profile, updated_at: started, fields: { job_id: job.id, started_at: started, status: 'running' } }]);
+  let status = 'ok';
+  let output = '';
+  let notified = false;
+  let cost: number | null = null;
+  try {
+    const { result, added, ...r } = await run(db, job, notify);
+    notified = r.notified;
+    cost = r.cost;
+    output = [result, added.length ? `Added: ${added.join('; ')}` : ''].filter(Boolean).join('\n\n') || 'Finished with nothing to report';
+  } catch (err) {
+    status = 'error';
+    output = errText(err);
   }
+  const done = Date.now();
+  const changes: Change[] = [{ table: 'runs', id, profile: job.profile, updated_at: done, fields: { finished_at: done, status, output, cost } }];
+  // An edit made during the run (Off, a new schedule, Run now) set next_run_at itself, so it is kept. Its field time
+  // comes from the client's clock, so only whether it changed is compared.
+  const cur = db.prepare('SELECT schedule, enabled, field_times FROM jobs WHERE id = ? AND profile = ?').get(job.id, job.profile) as { schedule: string | null; enabled: number | null; field_times: string } | null;
+  if (cur && JSON.parse(cur.field_times).next_run_at === planned) {
+    // A schedule with no run left (a one-off) turns the job off.
+    const next = cur.enabled ? nextRun(cur.schedule, done) : null;
+    changes.push({ table: 'jobs', id: job.id, profile: job.profile, updated_at: done, fields: next == null ? { next_run_at: null, enabled: 0 } : { next_run_at: next } });
+  }
+  applyChanges(db, changes);
+  prune(db, job, done);
+  await reply(db, job.id, status === 'ok', output);
+  if (status !== 'ok' || (!notified && /\b(push|notify)\b/i.test(job.prompt ?? ''))) await notify(status === 'ok' ? job.name ?? 'Job' : `${job.name ?? 'Job'} failed`, '', output.slice(0, 500), '').catch(() => {});
 }
 
 // A run cut off by a hub restart is marked failed; its job runs again at the next tick.
@@ -173,10 +181,16 @@ export function dropOrphanRuns(db: Database, now = Date.now()) {
   return applyChanges(db, rows.map((r) => ({ table: 'runs', id: r.id, profile: r.profile, deleted: true, updated_at: now, fields: { output: null } }))).applied;
 }
 
+export const orphansDue = (last: number | null, now = Date.now()) => last == null || now - last >= HOUR;
+
 export function startJobs(db: () => Database, every = MIN) {
   endInterrupted(db());
+  let orphansAt: number | null = null;
   loop('jobs', every, async () => {
-    dropOrphanRuns(db());
+    if (orphansDue(orphansAt)) {
+      dropOrphanRuns(db());
+      orphansAt = Date.now();
+    }
     await runDue(db());
   });
 }
