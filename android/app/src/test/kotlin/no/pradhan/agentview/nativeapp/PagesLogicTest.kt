@@ -1,0 +1,222 @@
+package no.pradhan.agentview.nativeapp
+
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class PagesLogicTest {
+    @Test fun treeWalksExpandedFoldersAndHidesIgnored() {
+        val dirs = mapOf(
+            "" to parseDir("""[{"name":"src","dir":true},{"name":".git","dir":true,"hidden":true},{"name":"README.md"}]"""),
+            "src" to listOf(DirEntry("main.kt")),
+        )
+        val (rows, missing) = treeRows(dirs, setOf("src", "docs"), showHidden = false)
+        assertEquals(listOf("src", "src/main.kt", "README.md"), rows.map { it.path })
+        assertEquals(listOf(0, 1, 0), rows.map { it.depth })
+        assertTrue(missing.isEmpty())
+        assertEquals(listOf("src", ".git", "README.md"), treeRows(dirs, emptySet(), true).first.map { it.path })
+        assertEquals(listOf(".git"), treeRows(dirs, setOf(".git"), true).second)
+    }
+
+    @Test fun fileIconsFollowNameThenExtension() {
+        assertEquals(FileHue.Green, fileHue("web/package.json"))
+        assertEquals(FileHue.Purple, fileHue("Hub.kt"))
+        assertEquals(FileHue.Gray, fileHue("notes"))
+        assertEquals("kt", fileTag("app/Hub.kt"))
+        assertEquals("git", fileTag(".gitignore"))
+        assertEquals("mak", fileTag("Makefile"))
+        assertEquals("This file is outside the project folder", fileError("path outside project"))
+        assertEquals(FileData("a", "b"), parseFile("""{"content":"a","original":"b"}"""))
+    }
+
+    @Test fun highlightsKeywordsStringsCommentsAndKeys() {
+        val (spans, open) = highlightLine("val x = \"hi\" // done", Lang.CLike)
+        assertEquals(listOf(Syn.Keyword, Syn.Str, Syn.Comment), spans.map { it.syn })
+        assertFalse(open)
+        val block = highlight("a /* one\ntwo */ fun", Lang.CLike)
+        assertEquals(Syn.Comment, block[1][0].syn)
+        assertEquals(Syn.Keyword, block[1][1].syn)
+        assertEquals(listOf(Syn.Property, Syn.Num), highlightLine("""  "port": 80,""", Lang.Json).first.map { it.syn })
+        assertEquals(listOf(Syn.Property, Syn.Str), highlightLine("name: 'x'", Lang.Yaml).first.map { it.syn })
+        assertEquals(listOf(Syn.Keyword, Syn.Keyword), highlightLine("SELECT 1 x FROM t", Lang.Sql).first.filter { it.syn == Syn.Keyword }.map { it.syn })
+        assertEquals(Lang.CLike, langOf("a/b.tsx"))
+        assertEquals(Lang.Plain, langOf("notes.txt"))
+    }
+
+    @Test fun fileDiffKeepsHeadAndTailAndFoldsUnchangedRuns() {
+        val a = (1..20).joinToString("\n") { "l$it" }
+        val b = a.replace("l10", "ten")
+        val d = fileDiff(a, b)
+        assertEquals(21, d.size)
+        assertEquals(listOf(DiffLine('-', "l10"), DiffLine('+', "ten")), d.filter { it.mark != ' ' })
+        val folded = changesOnly(d)
+        assertEquals(DiffLine('@', "6 unchanged lines"), folded.first())
+        assertEquals(DiffLine('@', "7 unchanged lines"), folded.last())
+        assertEquals(10, folded.size)
+        assertTrue(fileDiff("same", "same").all { it.mark == ' ' })
+    }
+
+    @Test fun gitStatusAndBodies() {
+        val s = parseGitStatus("""{"branch":"main","ahead":1,"behind":0,"files":[{"path":"a/b.kt","status":"M","staged":true},{"path":"new.txt","status":"?","staged":false}]}""")
+        assertEquals("U", letterOf(s.files[1]))
+        assertEquals("""{"paths":["a/b.kt","new.txt"]}""", pathsBody(s.files))
+        assertEquals("""{"message":"Fix it"}""", commitBody("Fix it"))
+        assertEquals("Discard changes in 2 files?", discardTitle(s.files))
+        assertTrue(discardDetail(s.files).startsWith("Untracked files are deleted"))
+    }
+
+    @Test fun pullRequestsGroupAndSplitTheirDiff() {
+        val prs = parsePulls("""[{"number":1,"title":"A","mine":true,"review":"APPROVED","checks":"success","updatedAt":"2026-11-07T10:00:00Z"},{"number":2,"title":"B","reviewRequested":true}]""")
+        assertEquals(listOf(1, 1, 2), prGroups(prs).map { it.prs.size })
+        assertEquals("Approved" to Status.Ok, reviewLabel("APPROVED"))
+        assertNull(reviewLabel("WHATEVER"))
+        assertEquals(DotState.Ok, checkDot(prs[0].checks))
+        val diff = "diff --git a/x.kt b/x.kt\nindex 1..2\n--- a/x.kt\n+++ b/x.kt\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/y.md b/y.md\n@@ -0,0 +1 @@\n+hi\n"
+        val files = splitDiff(diff)
+        assertEquals(listOf("x.kt", "y.md"), files.keys.toList())
+        assertEquals("@@ -1 +1 @@\n-a\n+b\n", files["x.kt"])
+        assertEquals(listOf('@', '-', '+', ' '), listOf("@@ x", "-a", "+b", " c").map { diffMark(it) })
+        assertEquals("Not signed in to GitHub", ghProblem("gh: not logged in to any hosts")?.title)
+        assertEquals("""{"event":"approve","body":"ok"}""", reviewBody("approve", "ok"))
+        val t = isoMillis("2026-11-07T10:00:00Z")
+        assertEquals("now", agoShort(t, t + 30_000))
+        assertEquals("5m", agoShort(t, t + 5 * 60_000))
+        assertEquals("3h ago", agoShort(t, t + 3 * 3_600_000, " ago"))
+        assertEquals("2w", agoShort(t, t + 14 * 86_400_000L))
+    }
+
+    @Test fun observeSettingsAndPanels() {
+        val info = parseObserve("""{"repo":"shop","config":null,"guess":{"grafana":{"lokiSelector":"{app=\"shop\"}"}},"repos":["x","example"],"file":"~/.agentview/observe.json","grafanaServer":true,"snowflake":{"account":"","user":"","hasSecret":false}}""")
+        assertFalse(hasConfig(info))
+        assertEquals("{app=\"shop\"}", lokiSelector(info))
+        assertTrue(observeDraft(info).contains("\"lokiSelector\""))
+        assertEquals("""{"repo":"shop","config":{"a":1}}""", observeConfigBody("shop", """{ "a": 1 }"""))
+        assertEquals("""{"repo":"shop","config":null}""", observeConfigBody("shop", " "))
+        assertTrue(runCatching { observeConfigBody("shop", "{bad") }.isFailure)
+        assertEquals(listOf("a", "shop", "x"), observeRepos(listOf("shop", "a"), info))
+        assertEquals("1,234", panelNum(1234.4))
+        assertEquals("0.12", panelNum(0.1234))
+        assertEquals("5", panelNum(5.0))
+        assertEquals(listOf(0f, 1f, 0.5f), sparkline(listOf(listOf(0.0, 2.0), listOf(1.0, 4.0), listOf(2.0, 3.0))))
+        assertEquals(listOf(0.5f), sparkline(listOf(listOf(0.0, 2.0))))
+    }
+
+    @Test fun deployRowsShowWhatRunsWhere() {
+        val s = parseDeploy("""{"apps":["a"],"app":"a","repo":"o/r","velodrome":"v","head":{"sha":"abcdef123","branch":"main"},"envs":[
+            {"name":"prod","label":"Production","deployed":{"id":1,"sha":"abcdef123","ref":"main","state":"success","at":"2026-11-07T10:00:00Z","by":"ann"},"latest":{"id":2,"state":"in_progress"}},
+            {"name":"staging","label":"Staging","defaultBranchOnly":true}]}""")
+        val now = isoMillis("2026-11-07T12:00:00Z")
+        assertEquals("main · 2h ago by ann · HEAD", envMeta(s.envs[0], s, now))
+        assertEquals("Nothing deployed", envMeta(s.envs[1], s, now))
+        assertEquals("Deploying" to BadgeTone.Running, envBadge(s.envs[0]))
+        assertNull(envBadge(s.envs[1]))
+        assertEquals("This is a production environment.", deployWarning(s.envs[0]))
+        assertEquals("Velodrome only deploys the default branch here.", deployWarning(s.envs[1]))
+        assertEquals("""{"app":"a","env":"prod","ref":"main"}""", deployBody("a", "prod", "main"))
+        assertEquals(DeployJob("j", listOf("x"), done = true, ok = true), parseDeployJob("""{"id":"j","lines":["x"],"done":true,"ok":true,"url":""}"""))
+    }
+
+    @Test fun mcpMergesLiveStateAndGroups() {
+        val probed = parseMcp("""[{"name":"grafana_prod","status":"connected","scope":"user","ms":40,"tools":[{"name":"q","description":"query"}]},{"name":"slack","status":"needs-auth","scope":"user"}]""")
+        val live = listOf(McpServer("grafana_prod", "failed", error = "boom"), McpServer("claude.ai Linear", "connected", type = "claudeai"))
+        val rows = mergeMcp(probed, live)
+        assertEquals(listOf("grafana_prod", "slack", "claude.ai Linear"), rows.map { it.name })
+        assertEquals("user", rows[0].server.scope)
+        assertEquals(1, rows[0].server.tools?.size)
+        assertTrue(rows[0].live && mcpNeedsYou(rows[0]))
+        assertEquals("OAuth via Claude" to BadgeTone.Quiet, mcpState(rows[1]))
+        assertEquals("Failed" to BadgeTone.Failed, mcpState(rows[0]))
+        val sections = mcpSections(rows.map { if (it.server.type == "claudeai") it.copy(account = "main") else it }, mapOf("slack" to "personal", "hide:grafana" to "hidden"))
+        assertEquals(listOf<String>(), sections.work.map { it.name })
+        assertEquals(listOf("claude.ai Linear", "slack"), sections.personal.map { it.name })
+        assertEquals(listOf("grafana_prod"), sections.hidden.map { it.name })
+        val events = listOf(
+            ChatEvent("t1", "tool_use", name = "mcp__grafana_prod__q"), ChatEvent("r1", "tool_result", toolUseId = "t1", isError = true),
+            ChatEvent("t2", "tool_use", name = "mcp__grafana_prod__q"), ChatEvent("t3", "tool_use", name = "Read"),
+        )
+        assertEquals(mapOf("grafana_prod" to (2 to 1)), mcpCalls(events))
+        assertEquals("1 tool · 40 ms · 2 calls · 1 error", mcpMeta(McpRow(probed[0]), 2 to 1))
+        assertEquals("Linear", mcpShortName("claude.ai Linear"))
+        assertEquals("""{"service":"slack","group":"personal"}""", mcpGroupBody("slack", "personal"))
+    }
+
+    @Test fun agentsComeFromTheTranscriptWithTheirInfo() {
+        val input = JsonObject(mapOf("description" to JsonPrimitive("Find bugs"), "prompt" to JsonPrimitive("look")))
+        val events = listOf(
+            ChatEvent("a1", "tool_use", name = "Agent", input = input, at = 1000),
+            ChatEvent("s1", "tool_use", name = "Read", input = JsonObject(mapOf("file_path" to JsonPrimitive("x.kt"))), parent = "a1", at = 2000),
+            ChatEvent("i1", "agent", toolUseId = "a1", status = "running", subagentType = "Explore", startedAt = 1000, progress = "Reading", usage = AgentUsage(12_345, 3)),
+        )
+        val a = buildAgents(events).single()
+        assertEquals("Find bugs", a.description)
+        assertEquals("Explore", a.type)
+        assertEquals("running", a.status)
+        assertEquals("Read x.kt", a.lastStep)
+        assertEquals(2000, a.lastAt)
+        assertEquals("running · 1 step · Reading", agentRowMeta(a))
+        assertEquals("Explore · 4s · 12k tokens · 3 tool uses", agentMeta(a, 5000))
+        val done = buildAgents(events + ChatEvent("r", "tool_result", toolUseId = "a1", text = "All good", at = 9000) + ChatEvent("i2", "agent", toolUseId = "a1", status = "done", endedAt = 9000)).single()
+        assertEquals("done", done.status)
+        assertEquals("All good", reportText(done))
+        assertEquals("1m 5s", elapsed(65_000))
+        assertEquals("1.5k tokens", tokensText(1500))
+    }
+
+    @Test fun terminalScreenHandlesLineEditsAndColours() {
+        val t = TermScreen()
+        t.write("abc\r\nhello\rj")
+        assertEquals(listOf("abc", "jello"), t.lines().map { it.text })
+        t.write("\u001b[K\r\n\u001b[31mred\u001b[0m ok\u001b")
+        t.write("[1mx\b\by")
+        val lines = t.lines()
+        assertEquals(listOf("abc", "j", "red oyx"), lines.map { it.text })
+        assertEquals(listOf(TermRun(0, 3, 1)), lines[2].runs)
+        t.write("\u001b]0;title\u0007\u001b[2J\u001b[Hnew")
+        assertEquals("new", t.lines().last().text)
+        t.write("\u001b[1;3Hx")
+        assertEquals("nex", t.lines().last().text)
+        t.reset()
+        assertTrue(t.lines().isEmpty())
+        assertEquals("""{"t":"i","d":"ls\r"}""", termInput("ls\r"))
+        assertTrue(termGone(4404))
+        assertEquals(10000L, termDelay(9))
+        assertEquals("ws://localhost:7777", wsOrigin("http://localhost:7777"))
+        assertEquals(listOf(TermTab("1", "zsh")), parseTerms("""[{"id":"1","name":"zsh"}]"""))
+    }
+
+    @Test fun chromeMessagesParse() {
+        assertEquals(ChromeMsg.State("off", "nochrome", true), parseChrome("""{"t":"state","state":"off","reason":"nochrome","own":true}"""))
+        assertEquals(ChromeMsg.Tabs(listOf(ChromeTab("1", "Home", "https://x")), "1"), parseChrome("""{"t":"tabs","tabs":[{"id":"1","title":"Home","url":"https://x"}],"current":"1","pinned":null}"""))
+        assertEquals(ChromeMsg.Frame("AAA"), parseChrome("""{"t":"frame","data":"AAA","w":1,"h":1}"""))
+        assertNull(parseChrome("""{"t":"editable","on":true}"""))
+        assertNull(parseChrome("not json"))
+    }
+
+    @Test fun writesAreRefusedInAReadOnlyRun() = runTest {
+        val notices = mutableListOf<String>()
+        var readOnly = true
+        val w = Writes(TestScope(testScheduler), { readOnly }, { notices += it })
+        var ran = false
+        var result: Boolean? = null
+        w.run("x", { ran = true }) { result = it }
+        assertFalse(ran)
+        assertEquals(false, result)
+        assertEquals(listOf(READ_ONLY_SENT), notices)
+        readOnly = false
+        w.run("Could not save", { error("") }) { result = it }
+        advanceUntilIdle()
+        assertEquals(false, result)
+        assertEquals("Could not save", notices.last())
+        w.run("x", { ran = true }) { result = it }
+        advanceUntilIdle()
+        assertTrue(ran)
+        assertEquals(true, result)
+    }
+}

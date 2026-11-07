@@ -44,7 +44,16 @@ data class ChatEvent(
     val next: List<String> = emptyList(),
     val status: String = "",
     val subagentType: String = "",
+    val prompt: String = "",
+    val startedAt: Long = 0,
+    val endedAt: Long? = null,
+    val progress: String? = null,
+    val usage: AgentUsage? = null,
+    val background: Boolean = false,
 )
+
+@Serializable
+data class AgentUsage(val tokens: Long = 0, val toolUses: Int = 0, val durationMs: Long = 0)
 
 // shared/protocol.ts LiveChat, the entries of the 'live' message.
 @Serializable
@@ -91,6 +100,8 @@ data class SessionInfo(
     val compacting: Boolean = false,
     val stopping: Boolean = false,
     val pr: Int? = null,
+    val mcp: List<McpServer> = emptyList(),
+    val account: String? = null,
 )
 
 data class AskOption(val label: String, val description: String = "", val preview: String? = null)
