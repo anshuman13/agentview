@@ -24,6 +24,7 @@ import { useSnackTask } from '../useSnackTask';
 import { useMinute } from '../split';
 import '../../styles/features/wiki.css';
 import '../../styles/features/meetings.css';
+import { Badge } from '../../ui/Badge';
 
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const TOPICS_KEY = 'agentview.meetingTopics';
@@ -91,7 +92,7 @@ export const MeetingRow = memo(function MeetingRow({ m, now, said, noDay }: { m:
       className={(m.ends_at ?? m.starts_at!) <= now ? 'past' : undefined}
       title={<><ProfileDot profile={m.profile} />{m.title}</>}
       meta={said ? <span className="mt-said" title="From the transcript">{said}</span> : meetingMeta(m, now, noDay)}
-      trailing={<>{badge && <span className={`badge${badge === 'Live' ? ' running' : ' quiet'}`}>{badge}</span>}{moreBtn}</>}
+      trailing={<>{badge && <Badge status="running" label={badge} />}{moreBtn}</>}
       onClick={open}
       onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(); } }}
     />

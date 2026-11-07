@@ -4,6 +4,7 @@ import { THEME_NAMES, applyTheme, useTheme, useThemeName } from '../app/theme';
 import { SnackBar } from '../codex/SnackBar';
 import { copyText } from '../codex/view';
 import { AskRow } from '../ui/AskRow';
+import { Badge } from '../ui/Badge';
 import { Button, Chip, IconButton } from '../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { EmptyState, Panel } from '../ui/Panel';
@@ -169,10 +170,13 @@ function Stories() {
         <Panel padding="sm">No title, padding sm</Panel>
       </Block>
       <Block name="Badge">
-        <Story label="neutral"><span className="badge">3</span></Story>
-        <Story label="quiet"><span className="badge quiet">3</span></Story>
-        <Story label="waiting"><span className="badge waiting">3</span></Story>
-        <Story label="running with dot"><span className="badge running">Running</span></Story>
+        {(['waiting', 'sent', 'skipped', 'failed', 'done', 'late', 'new'] as const).map((status) => <Story key={status} label={status}><Badge status={status} /></Story>)}
+        <Story label="needs you"><Badge status="waiting" label="Needs you" /></Story>
+        <Story label="count"><Badge status="failed" count={2} /></Story>
+        <Story label="digits, neutral"><span className="badge">3</span></Story>
+        <Story label="digits, quiet"><span className="badge quiet">3</span></Story>
+        <Story label="running with dot"><Badge status="running" /></Story>
+        <Story label="live"><Badge status="running" label="Live" /></Story>
       </Block>
       <Block name="EmptyState">
         <Panel><EmptyState icon="inbox" title="No items" hint="Items you add show up here" action={<Button size="sm">Add item</Button>} /></Panel>

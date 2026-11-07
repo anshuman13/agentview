@@ -22,7 +22,9 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
+import { Badge, type BadgeSpec } from '../ui/Badge';
 
+const SAVE_BADGE: Record<'unsaved' | 'saved' | 'failed', BadgeSpec> = { unsaved: { status: 'waiting', reason: 'Unsaved' }, saved: { status: 'done' }, failed: { status: 'failed' } };
 const post = <T,>(url: string, body: unknown) => fetchJson<T>(api(url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
 const clock = (iso: string) => {
@@ -521,7 +523,7 @@ export function Observe() {
             label="Settings"
             open={settingsOpen}
             onToggle={() => setSettingsOpen((v) => !v)}
-            action={saveState !== 'idle' && <span className={`badge ${saveState === 'unsaved' ? 'waiting' : 'quiet'}`}>{{ unsaved: 'Unsaved', saved: 'Saved', failed: 'Failed' }[saveState]}</span>}
+            action={saveState !== 'idle' && <Badge {...SAVE_BADGE[saveState]} />}
           />
           {settingsOpen && (
             <div className="obs-body">

@@ -12,6 +12,7 @@ import { copyText, setView, useEscapeBack } from '../view';
 import { useMinute } from '../split';
 import { nextRun } from '../../../../shared/schedule';
 import { DAYS, DAY_NAMES, KINDS, type Kind, at, canRunNow, jobState, parseSchedule, removeJob, runMeta, runNow, runsOf, scheduleOf, useJobs } from './schedule';
+import { Badge } from '../../ui/Badge';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
@@ -28,7 +29,7 @@ function RunRow({ r, latest, query, setQuery }: { r: Run; latest: boolean; query
         plain={!r.output}
         title={at(r.started_at ?? 0)}
         meta={meta || undefined}
-        trailing={<><span className={`badge ${r.status === 'running' ? 'running' : r.status === 'ok' ? 'quiet' : 'waiting'}`}>{r.status === 'running' ? 'Running' : r.status === 'ok' ? 'Succeeded' : 'Failed'}</span>{r.output && <Icon name={open ? 'chevron-down' : 'chevron-right'} small />}</>}
+        trailing={<><Badge status={r.status === 'running' ? 'running' : r.status === 'ok' ? 'done' : 'failed'} reason={r.status === 'ok' ? 'Succeeded' : undefined} />{r.output && <Icon name={open ? 'chevron-down' : 'chevron-right'} small />}</>}
         aria-expanded={r.output ? open : undefined}
         onClick={r.output ? () => setOpen(!open) : undefined}
       />
@@ -97,7 +98,7 @@ export function JobPage({ j }: { j: Job }) {
             label={j.profile === 'work' ? 'Work account' : 'Personal account'}
             action={
               <span className="jb-actions">
-                {state && <span className={`badge ${state[1]}`}>{state[0]}</span>}
+                {state && <Badge {...state} />}
                 <Button size="sm" variant="filled" icon="play" disabled={!canRun} onClick={() => runNow(store, j)}>Run now</Button>
                 <span className="jb-more">
                   <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />

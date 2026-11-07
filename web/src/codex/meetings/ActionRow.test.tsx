@@ -27,9 +27,9 @@ describe('ActionRow', () => {
   });
 
   it('shows at most one badge, for state only', () => {
-    const badges = (h: string) => [...h.matchAll(/badge quiet">([^<]*)</g)].map((b) => b[1]);
+    const badges = (h: string) => [...h.matchAll(/class="badge[^"]*"[^>]*>([^<]*)</g)].map((b) => b[1]);
     expect(badges(render('suggested', { at: 1 }, m))).toEqual(['Needs you']);
-    expect(badges(render('open', { at: 1 }, m))).toEqual(['Overdue']);
+    expect(badges(render('open', { at: 1 }, m))).toEqual(['Late']);
     expect(badges(render('done', { at: 1 }, m))).toEqual(['Done']);
     expect(badges(render('open', {}, m))).toEqual([]);
   });

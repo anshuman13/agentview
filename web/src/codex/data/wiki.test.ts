@@ -175,8 +175,7 @@ describe('meetings', () => {
     expect(meetingMeta(next, now)).toContain(dayLabel(at(1, 9), true));
     expect(meetingMeta(next, now, true)).toBe(time);
     expect(meetingBadge(m({ ends_at: at(0, 13) }), now)).toBe('Live');
-    expect(meetingBadge(m({ recorded_ms: 60000 }), now)).toBe('Recorded');
-    expect(meetingBadge(m({ summary: 'x' }), now)).toBe('Recorded');
+    expect(meetingBadge(m({ recorded_ms: 60000 }), now)).toBeNull();
     expect(meetingBadge(m({}), now)).toBeNull();
     expect(meetingBadge(m({ starts_at: at(0, 13), ends_at: at(0, 14), recorded_ms: 1 }), now)).toBeNull();
   });

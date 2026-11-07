@@ -14,7 +14,7 @@ type Parsed = { groups: DigestGroup<BriefRow>[]; waiting: BriefRow[] };
 
 const counted = (groups: DigestGroup<BriefRow>[], section: string, noun: string) => {
   const n = groups.find((g) => g.outcome === section)?.rows.length ?? 0;
-  return n > 0 && <span className="badge quiet">{n} {noun}{n === 1 ? '' : 's'}</span>;
+  return n > 0 && <span className="muted">{n} {noun}{n === 1 ? '' : 's'}</span>;
 };
 
 // The morning brief as a report card: meeting and task counts in the header, one open or folded list per section, and a link to the Reply queue for the asks that still wait.

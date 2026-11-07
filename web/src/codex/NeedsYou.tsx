@@ -22,6 +22,7 @@ import { haptic } from '../ui/haptic';
 import { copyText, openMeeting, openTask, setView, showSnack, useView } from './view';
 import { when } from './time';
 import type { useSplit } from './split';
+import { type BadgeSpec } from '../ui/Badge';
 
 const WAIT_HANDLED = 'codex.waitingHandled';
 const SLACK_HANDLED = 'codex.slackHandled';
@@ -125,19 +126,19 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
   if (!n.rows.length) return null;
   const snooze = (r: ItemRow) => { haptic('tap'); act.snoozeLater(r, now); };
   const moveToday = (rows: ItemRow[]) => { haptic('success'); act.moveToToday(rows, now); };
-  const taskRow = (r: ItemRow, badge: { label: string; tone: 'waiting' | 'quiet' }, note: string) => (
+  const taskRow = (r: ItemRow, badge: BadgeSpec, note: string) => (
     <CardRow key={r.profile + r.id} title={r.title} meta={note} badge={badge} onOpen={() => openTask(r)}
       action={{ icon: 'check', label: 'Done', run: () => { haptic('success'); act.done(r); } }}
       menu={(choose) => <MenuItem icon="clock" onClick={choose(() => snooze(r))}>Snooze to next 09:00</MenuItem>} />
   );
   const openReview = () => setView({ list: 'wiki', open: 'review', anchor: null, person: null });
-  const needs = { label: 'Needs you', tone: 'waiting' } as const;
+  const needs: BadgeSpec = { status: 'waiting', label: 'Needs you' };
   const slackLink = (url: string | null | undefined, choose: (fn: () => void) => () => void) => safeHref(url) && <MenuItem icon="link" href={safeHref(url)!} onClick={choose(() => undefined)}>Open in Slack</MenuItem>;
   const rowOf = (x: Need) => {
     switch (x.kind) {
-      case 'overdue': return taskRow(x.row, { label: 'Overdue', tone: 'waiting' }, atTime(x.row.at) != null ? `due ${when(atTime(x.row.at)!, now)}` : '');
-      case 'overdueAll': return <CardRow key="overdue" title={`${x.rows.length} overdue`} meta="Open Tasks to go through them" badge={{ label: 'Overdue', tone: 'waiting' }} onOpen={() => setView({ list: 'tasks', open: null })} />;
-      case 'risk': return taskRow(x.row, { label: 'At risk', tone: 'quiet' }, `due ${when(x.due, now)} · ${minutesText(x.short)} short`);
+      case 'overdue': return taskRow(x.row, { status: 'late', reason: 'Overdue' }, atTime(x.row.at) != null ? `due ${when(atTime(x.row.at)!, now)}` : '');
+      case 'overdueAll': return <CardRow key="overdue" title={`${x.rows.length} overdue`} meta="Open Tasks to go through them" badge={{ status: 'late', reason: 'Overdue' }} onOpen={() => setView({ list: 'tasks', open: null })} />;
+      case 'risk': return taskRow(x.row, { status: 'waiting', reason: 'At risk' }, `due ${when(x.due, now)} · ${minutesText(x.short)} short`);
       case 'ask': return <ActionRow key={x.row.profile + x.row.id} row={x.row} />;
       case 'justEnded': {
         const m = x.meeting;

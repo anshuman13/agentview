@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, toolId } from './mcpHelpers';
+import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, stateOf, toolId } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -66,5 +66,16 @@ describe('services', () => {
       ['claude.ai Notes', 'Connectors', ['']],
       ['metrics', 'Tools', ['']],
     ]);
+  });
+});
+
+describe('stateOf', () => {
+  it('maps a server state to a badge status and reason', () => {
+    expect(stateOf({ status: 'connected' })).toEqual(['done', 'Connected']);
+    expect(stateOf({ status: 'failed' })).toEqual(['failed', 'Failed']);
+    expect(stateOf({ status: 'needs-auth', live: true })).toEqual(['waiting', 'Needs login']);
+    expect(stateOf({ status: 'probing' })).toEqual(['waiting', 'Checking']);
+    expect(stateOf({ status: 'needs-auth' })).toEqual(['skipped', 'OAuth via Claude']);
+    expect(stateOf({ status: 'disabled' })).toEqual(['skipped', 'Disabled']);
   });
 });

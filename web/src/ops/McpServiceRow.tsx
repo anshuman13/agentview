@@ -3,11 +3,12 @@ import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Row as ListRow } from '../ui/Row';
 import { plural, rowKey, shortName, stateOf, usageText, type Group, type Row, type Usage } from './mcpHelpers';
+import { Badge } from '../ui/Badge';
 
 export function ServiceRow({ row, selected, usage, onPick, group, onGroup, onHide, isHidden }: { row: Row; selected: boolean; usage?: Usage; onPick: () => void; group: Group; onGroup: (g: Group) => void; onHide: () => void; isHidden?: boolean }) {
   const [menu, setMenu] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
-  const [tone, label] = stateOf(row);
+  const [status, reason] = stateOf(row);
   const other: Group = group === 'work' ? 'personal' : 'work';
   const meta = [
     row.tools && (row.tools.length ? plural(row.tools.length, 'tool') : 'No tools'),
@@ -22,7 +23,7 @@ export function ServiceRow({ row, selected, usage, onPick, group, onGroup, onHid
       meta={meta || undefined}
       trailing={
         <>
-          <span className={`badge quiet ${tone}`}>{label}</span>
+          <Badge status={status} label={row.status === 'needs-auth' && status === 'waiting' ? 'Needs you' : undefined} reason={reason} />
           <span className="as-wrap-more">
             <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
             {menu && (

@@ -15,8 +15,8 @@ describe('ReplyQueue rows', () => {
   it('shows one state badge at most', () => {
     const h = html([row('a', 'needs-you'), row('b', 'faq'), row('c', '')]);
     expect(count(h, 'badge waiting')).toBe(1);
-    expect(count(h, 'badge quiet')).toBe(1);
-    expect(count(h, 'class="badge')).toBe(2);
+    expect(count(h, 'class="badge')).toBe(1);
+    expect(count(h, ' · FAQ')).toBe(1);
   });
 
   it('gives a drafted row Send and More only, with the draft clamped', () => {

@@ -55,7 +55,7 @@ function Asks({ name, rows }: { name: string; rows: ItemRow[] }) {
             key={r.profile + r.id}
             title={r.title || '(Untitled)'}
             meta={`${gmail ? 'Gmail' : 'Slack'} · ${ago(r.updated_at, ' ago')}`}
-            badge={r.status === 'suggested' ? { label: 'Needs you', tone: 'waiting' } : undefined}
+            badge={r.status === 'suggested' ? { status: 'waiting', label: 'Needs you' } : undefined}
             onOpen={() => openTask(r)}
             button={{ label: 'Done', run: () => act.done(r) }}
             menu={(choose) => (

@@ -81,7 +81,7 @@ function PageRow({ page, stats, proposed }: { page: Page; stats: Map<string | nu
       leading={<PageTile page={page} />}
       title={page.title}
       meta={`${page.section || 'Pages'} · ${plural(st.claims, 'claim')} · updated ${shortDate(Math.max(page.updated_at, st.updated))}`}
-      badge={needsReview(page, proposed) ? { label: 'Needs review', tone: 'waiting' } : undefined}
+      badge={needsReview(page, proposed) ? { status: 'waiting', label: 'Needs you', reason: 'Needs review' } : undefined}
       onOpen={open}
       menu={(choose) => (
         <>

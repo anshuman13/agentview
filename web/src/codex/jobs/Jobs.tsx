@@ -18,6 +18,7 @@ import '../../styles/features/jobs.css';
 import { Autopilot } from './Autopilot';
 import { JobPage } from './JobPage';
 import { canRunNow, describe, jobState, removeJob, rowMeta, runNow, useJobs } from './schedule';
+import { Badge } from '../../ui/Badge';
 
 type Jobs = ReturnType<typeof useJobs>;
 
@@ -84,7 +85,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
                     <Row
                       title={j.name || 'Untitled job'}
                       meta={[describe(j.schedule), meta?.startsWith('Next') && meta, cost[j.id] > 0 && `7 days ${money(cost[j.id])}`, mixed && (j.profile === 'work' ? 'Work' : 'Personal')].filter(Boolean).join(' · ')}
-                      trailing={state && <span className={`badge ${state[1]}`}>{state[0]}</span>}
+                      trailing={state && <Badge {...state} />}
                       onClick={() => setView({ open: rowKey(j) })}
                     />
                     <JobActions j={j} runs={runs} now={now} store={store} enable={enable} />

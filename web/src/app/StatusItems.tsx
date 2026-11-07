@@ -6,6 +6,7 @@ import { Icon } from '../ui/Icon';
 import { command, save, spendLines, stored, weekPace } from '../ui/util';
 import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from './offlineBanner';
 import { useMcpHealth } from '../ops/mcpShown';
+import { Badge } from '../ui/Badge';
 
 export function AppUpdate() {
   const [ready, setReady] = useState(0);
@@ -60,7 +61,7 @@ export function Offline() {
   if (connected || state !== 'shown') return null;
   return (
     <div className="offline-badge mobile-only">
-      <span className="badge waiting" role="status">{restarting ? 'Restarting' : 'Offline and reconnecting'}</span>
+      <span role="status"><Badge status="waiting" reason={restarting ? 'Restarting' : 'Offline and reconnecting'} /></span>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { AskRow } from '../ui/AskRow';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { statusTime } from './data/engine';
+import { Badge } from '../ui/Badge';
 
 const DISMISSED = 'codex.weeklyReviewDismissed';
 const SHOWN = 5;
@@ -46,7 +47,7 @@ export function WeeklyReviewCard({ profile, now, title, onHide }: { profile: Pro
             {goals.map((g) => {
               const p = goalProgress(all, g);
               const verdict = goalVerdict(p);
-              return <Row key={g.id} plain title={g.title} meta={`${p.done}/${p.total} tasks`} trailing={<span className={`badge ${verdict === 'Done' ? 'quiet' : 'waiting'}`}>{verdict}</span>} />;
+              return <Row key={g.id} plain title={g.title} meta={`${p.done}/${p.total} tasks`} trailing={<Badge status={verdict === 'Done' ? 'done' : 'late'} reason={verdict === 'Done' ? undefined : verdict} />} />;
             })}
             {noteText && <Row plain title={noteText} />}
           </div>

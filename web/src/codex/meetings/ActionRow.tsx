@@ -19,6 +19,7 @@ import { copyText, openTask, showSnack } from '../view';
 import { Swipe } from '../Swipe';
 import { safeHref } from '../../ui/util';
 import { UNROLL, useActions } from '../useActions';
+import { type BadgeSpec, Badge } from '../../ui/Badge';
 
 // Matches STALE in assistant/src/rollover.ts: at this many rolls a task goes back to review.
 const STALE_ROLLS = 3;
@@ -95,7 +96,7 @@ export function ActionRow({ row, meeting, meta: metaText, extraItems }: { row: I
   };
   const mark = (on: boolean) => on && <Icon name="check" small />;
   const late = status === 'open' && at != null && at < Date.now();
-  const badge = status === 'suggested' ? 'Needs you' : late ? 'Overdue' : done ? 'Done' : '';
+  const badge: BadgeSpec | null = status === 'suggested' ? { status: 'waiting', label: 'Needs you' } : late ? { status: 'late', reason: 'Overdue' } : done ? { status: 'done' } : null;
   const meta = metaText ?? [(status === 'open' || status === 'suggested') && at != null && when(at), cur && firstName(displayName(cur)), row.text].filter(Boolean).join(' · ');
   const primary = {
     open: ['Done', check],
@@ -114,7 +115,7 @@ export function ActionRow({ row, meeting, meta: metaText, extraItems }: { row: I
       title={row.title}
       meta={meta}
       trailing={<>
-        {badge && <span className="badge quiet">{badge}</span>}
+        {badge && <Badge {...badge} />}
         {primary && <Button size="sm" onClick={primary[1]}>{primary[0]}</Button>}
         <IconButton ref={kebab} icon="kebab-horizontal" size="sm" small label="More" aria-haspopup="menu" aria-expanded={menu != null} onClick={() => setMenu(menu === 'more' ? null : 'more')} />
         {menu && <Pop anchor={kebab}>

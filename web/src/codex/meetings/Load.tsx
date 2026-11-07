@@ -8,6 +8,7 @@ import { dayLabel } from '../data/dates';
 import { seriesAudit } from '../data/seriesAudit';
 import { openMeeting } from '../view';
 import type { Meeting } from '../data/wiki';
+import { Badge } from '../../ui/Badge';
 
 export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const items = useAssistantTable('items');
@@ -57,7 +58,7 @@ export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
             {audit.map((s) => (
               <Row key={s.key} title={s.title} onClick={() => openMeeting(s.latest)}
                 meta={s.quiet ? `Nothing for you lately · ${hoursText(s.recentHours)} in 4 weeks` : `${s.count} meetings · ${hoursText(s.hours)} · ${s.decisions} decisions · ${s.actions} actions for me`}
-                trailing={s.quiet && <span className="badge waiting">Quiet</span>} />
+                trailing={s.quiet && <Badge status="waiting" reason="Quiet" />} />
             ))}
           </div>
         </section>

@@ -9,8 +9,9 @@ import { Section } from '../../ui/Section';
 import { Switch } from './Switch';
 import { replyQueue } from '../overview/ReplyQueue';
 import { openTask, setView } from '../view';
+import { Badge, type BadgeSpec } from '../../ui/Badge';
 
-const SEEN: Record<string, string> = { held: 'Waiting for you', sent: 'Sent', dry: 'Would have sent', error: 'Failed', skipped: 'Skipped' };
+const SEEN: Record<string, BadgeSpec> = { held: { status: 'waiting', label: 'Needs you', reason: 'Waiting for you' }, sent: { status: 'sent' }, dry: { status: 'skipped', reason: 'Would have sent' }, error: { status: 'failed' }, skipped: { status: 'skipped' } };
 const when = (t: number) => (t >= new Date().setHours(0, 0, 0, 0) ? clock(t) : dayLabel(t, true));
 const day = (d: string) => dayLabel(new Date(`${d}T00:00`).getTime(), true);
 const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
@@ -54,9 +55,9 @@ export function Autopilot() {
   const items = useAssistantTable('items');
   const waiting = useMemo(() => replyQueue(items, Date.now()).length, [items]);
   // A held reply whose ask I closed or dismissed is no longer waiting on me.
-  const seen = (r: AutopilotReply) => {
+  const seen = (r: AutopilotReply): BadgeSpec => {
     const item = r.status === 'held' ? items.find((i) => i.id === r.id && i.source === 'slack') : null;
-    return item && item.status !== 'suggested' && item.status !== 'open' ? (item.status === 'dismissed' ? 'Dismissed' : 'Closed') : SEEN[r.status] ?? r.status;
+    return item && item.status !== 'suggested' && item.status !== 'open' ? (item.status === 'dismissed' ? { status: 'skipped', reason: 'Dismissed' } : { status: 'done', reason: 'Closed' }) : SEEN[r.status] ?? { status: 'skipped', reason: r.status };
   };
   const [form, setForm] = useState({ from: '', to: '', backup: '', note: '', escalate: '', manager: '' });
   const load = (p: Promise<AutopilotState>) => p.then((s) => { setState(s); setForm({ ...s.config.away, escalate: s.config.escalate.join(', '), manager: s.config.manager ?? '' }); setError(''); }).catch((err) => setError((err as Error).message));
@@ -151,8 +152,7 @@ export function Autopilot() {
               <Section label="Seen" count={state.replies.length} />
               <div className="ui-group">
                 {replies.map((r) => {
-                  const label = seen(r);
-                  const props = { title: `${r.who}${r.chat ? ` · ${r.chat}` : ''}`, lines: 2 as const, trailing: <span className={`badge${label === 'Waiting for you' ? ' waiting' : ' quiet'}`}>{label}</span>,
+                  const props = { title: `${r.who}${r.chat ? ` · ${r.chat}` : ''}`, lines: 2 as const, trailing: <Badge {...seen(r)} />,
                     meta: r.text ? `${when(r.at)} · ${r.text}` : when(r.at) };
                   return askRow(r) || r.url ? <Row key={r.id} {...props} onClick={() => openAsk(r)} /> : <Row key={r.id} plain {...props} />;
                 })}

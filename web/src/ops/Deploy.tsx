@@ -11,12 +11,13 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protocol';
 import { ago, usePoll } from '../ui/util';
 import '../styles/features/deploy.css';
+import { Badge } from '../ui/Badge';
 
 const short = (sha: string) => sha.slice(0, 7);
 const stateBadge = (env: DeployEnv) => {
   const state = env.latest?.state;
   if (!state || state === 'inactive' || (env.latest!.id === env.deployed?.id && state === 'success')) return null;
-  return state === 'success' ? <span className="badge">Deployed</span> : state === 'failure' || state === 'error' ? <span className="badge">Failed</span> : <span className="badge running">Deploying</span>;
+  return state === 'success' ? <Badge status="done" reason="Deployed" /> : state === 'failure' || state === 'error' ? <Badge status="failed" /> : <Badge status="running" reason="Deploying" />;
 };
 
 let jobs: Record<string, DeployJob | null> = {};

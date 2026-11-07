@@ -71,10 +71,10 @@ group('jobState', () => {
   const job = { id: 'j', profile: 'work', enabled: 1, next_run_at: null } as Job;
   const run = (status: string) => ({ id: 'r', job_id: 'j', profile: 'work', status, started_at: 1 }) as Run;
   test('one badge in the order Running, Queued, Failed, Off', () => {
-    expect(jobState(job, [run('running')], 10)).toEqual(['Running', 'running']);
-    expect(jobState({ ...job, next_run_at: 5 }, [run('error')], 10)?.[0]).toBe('Queued');
-    expect(jobState(job, [run('error')], 10)?.[0]).toBe('Failed');
-    expect(jobState({ ...job, enabled: 0 }, [run('ok')], 10)?.[0]).toBe('Off');
+    expect(jobState(job, [run('running')], 10)).toEqual({ status: 'running' });
+    expect(jobState({ ...job, next_run_at: 5 }, [run('error')], 10)).toEqual({ status: 'waiting', reason: 'Queued' });
+    expect(jobState(job, [run('error')], 10)).toEqual({ status: 'failed' });
+    expect(jobState({ ...job, enabled: 0 }, [run('ok')], 10)).toEqual({ status: 'skipped', reason: 'Off' });
     expect(jobState(job, [run('ok')], 10)).toBeNull();
   });
 });

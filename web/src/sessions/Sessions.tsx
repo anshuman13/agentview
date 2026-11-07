@@ -14,6 +14,7 @@ import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { PullState, usePullRequests } from '../ops/pulls';
 import { archiveChat, byUrgency, chatFinder, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, renameChat, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
+import { Badge } from '../ui/Badge';
 
 const PAGE = 5;
 
@@ -410,7 +411,7 @@ function ChatRow({ sessionId, title, opening, meta, badge, selected, pinned, act
   }
   return (
     <div className="chat-row">
-      <Row title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} trailing={badge && <span className={`badge ${badge}`}>{badge === 'running' ? 'Running' : 'Needs you'}</span>} onClick={onOpen} />
+      <Row title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} trailing={badge && <Badge status={badge} label={badge === 'waiting' ? 'Needs you' : undefined} />} onClick={onOpen} />
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>

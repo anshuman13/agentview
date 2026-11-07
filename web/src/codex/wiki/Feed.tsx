@@ -7,6 +7,7 @@ import { Section } from '../../ui/Section';
 import { ago } from '../../ui/util';
 import { setView } from '../view';
 import { MEMORY, SOURCE_ICON } from './shared';
+import { Badge } from '../../ui/Badge';
 
 type FeedKind = 'added' | 'updated' | 'contested';
 
@@ -35,7 +36,7 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
               lines={2}
               title={fact.text}
               meta={<>{page} · {kind === 'contested' && c ? <>by {c.by} · </> : src && <><Icon name={SOURCE_ICON[src.kind]} small /> {src.label} · </>}{ago(at, ' ago')}</>}
-              trailing={kind === 'contested' ? <span className="badge waiting">Contested</span> : undefined}
+              trailing={kind === 'contested' ? <Badge status="waiting" reason="Contested" /> : undefined}
               onClick={() => setView({ open: fact.page_id ?? MEMORY, anchor: fact.id })}
             />
           );

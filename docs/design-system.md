@@ -166,9 +166,14 @@ Padding md `--sp-8`, sm `--sp-2 --sp-6` for panels holding rows. Optional header
 on the left, an action (IconButton sm or Button quiet sm) on the right. No nested panels.
 
 ### Badge
-Counts and short state. Pill, `--size-2xs` high, `--fs-2xs` 600. Neutral `--border-strong`;
-quiet `--hover`; waiting `--warn`; running `--accent-fill` with a dot (EUI badge colours, kept
-to state roles only).
+`<Badge status label? reason? count?>` in `ui/Badge.tsx`; `.badge`. Pill, `--size-2xs` high, `--fs-2xs` 600, foreground `--bg`.
+The visible text is the status word in sentence case, or "N word" with `count` ("2 failed"). No other text.
+- Seven words (Status language): waiting `--warn`; sent and done `--ok`; failed and late `--err`; skipped `--hover` with `--fg-muted`; new `--accent-fill`.
+- Labels: `label` replaces the word only for "Needs you" on waiting and "Live" on running.
+- Reason: `reason` becomes `aria-label` and `title`, never visible text ("Overdue" and "Missed" render Late with that reason).
+- Digits-only exception: count badges (tab bar, nav, Section count, group counts) stay a raw `.badge` with neutral, quiet, waiting or running tone and hold only digits.
+- Running exception: running has no Status language word. It shows "Running" or "Live" in `--accent-fill` with a dot.
+- One Badge per Row, trailing, never beside a second state badge. Counts such as "N to confirm" and filter labels are plain muted text.
 
 ### EmptyState (EuiEmptyPrompt)
 `<EmptyState icon title hint action size>`; `.ui-empty`. Centred: icon in a 48px `--hover`
@@ -240,16 +245,16 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
 - Secondary content (history, a reason, earlier replies) is behind the Menu or on the page, not a per-row Fold.
 - Batch actions ("Send all", "Copy list") go in the Section header as its one action, not as a band above
   the rows. Two batch actions become a Menu on the header.
-- A Badge per row at most one, for state only (FAQ, Needs you, Failed, Needs review on a wiki page row, which has only a More menu with Open and Archive). Badges are not labels for things the
+- A Badge per row at most one, for state only (Needs you, Failed, Needs review on a wiki page row, which has only a More menu with Open and Archive). Badges are not labels for things the
   title already says.
-- Jobs rows follow this: one badge (Running, Queued, Failed, Off), a Run now Button sm, and a More menu with Edit,
+- Jobs rows follow this: one badge (Running, Queued, Failed, Off, set by `jobState`), a Run now Button sm, and a More menu with Edit,
   Disable or Enable, Delete. No switch and no last-run line on the row.
 - On phones a list restores its scroll position when the user returns from an item page, keyed by route (list and profile filter), once per return. Tasks and Meetings.
 - Tasks as built: a Tasks row is the title, a meta line (due, then Repeats, checklist count, up to 2 tags, High or
   Medium, none on done rows), the check as Done, a Needs you Badge on suggested tasks and one More Menu
   (Open, Snooze, Tomorrow, Move, Delete). The checklist is read and toggled on the task page.
 - Meetings as built: a meeting row is the title with the profile dot, a meta line (time with the weekday beyond today,
-  room, N people), at most one Badge (Live, Recorded) and one More Menu (Open calendar, Notes). No avatars, tile or
+  room, N people), at most one Badge (Live) and one More Menu (Open calendar, Notes). No avatars, tile or
   count badges; a transcript hit replaces the meta as a 2-line clamp.
 
 ### Overview page

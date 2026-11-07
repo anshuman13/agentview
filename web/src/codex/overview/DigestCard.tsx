@@ -9,8 +9,11 @@ import { save, stored } from '../../ui/util';
 import { clock } from '../time';
 import { openTask } from '../view';
 import { visibleRows, type DigestGroup, type DigestRow } from './digest';
+import { Badge, type BadgeSpec } from '../../ui/Badge';
 
 type Parsed = { groups: DigestGroup[]; waiting: DigestRow[] };
+
+const GROUP_STATUS: Record<string, BadgeSpec['status']> = { sent: 'sent', skipped: 'skipped', failed: 'failed', escalated: 'waiting' };
 
 export function GroupList<R>({ brief, foldKey, capOpen, group, render }: { brief?: Brief; foldKey?: string; capOpen?: boolean; group: DigestGroup<R>; render: (row: R) => ReactNode }) {
   const key = foldKey ?? `codex.digestFold.${brief!.profile}:${brief!.id}:${group.outcome}`;
@@ -47,7 +50,7 @@ export function DigestCard({ brief, digest, showProfile, onDismiss }: { brief: B
     <section className="ov-digest">
       <Section label={`${brief.text}${showProfile ? ` · ${brief.profile}` : ''}`} action={(
         <>
-          {digest.groups.map((g) => <span key={g.outcome} className="badge quiet">{g.rows.length} {g.outcome}</span>)}
+          {digest.groups.map((g) => g.outcome in GROUP_STATUS && <Badge key={g.outcome} status={GROUP_STATUS[g.outcome]} count={g.rows.length} />)}
           <span>{clock(brief.to_at ?? brief.from_at!)}</span>
           <IconButton icon="close" label="Hide until tomorrow" size="sm" onClick={onDismiss} />
         </>
@@ -56,9 +59,9 @@ export function DigestCard({ brief, digest, showProfile, onDismiss }: { brief: B
         {digest.groups.map((g) => (
           <GroupList key={g.outcome} brief={brief} group={g} render={(r) => {
             const exists = items.has(rowKey({ profile: brief.profile, id: r.id }));
-            const badge = r.outcome === 'failed' ? 'Failed' : r.outcome === 'escalated' ? 'Needs you' : r.outcome === 'sent' && r.edited ? 'Edited' : '';
+            const badge: BadgeSpec | null = r.outcome === 'failed' ? { status: 'failed' } : r.outcome === 'escalated' ? { status: 'waiting', label: 'Needs you' } : r.outcome === 'sent' && r.edited ? { status: 'sent', reason: 'Edited' } : null;
             return (
-              <Row className={exists ? '' : 'inert'} disabled={!exists} title={r.who || 'Slack'} meta={[r.chat, r.reason].filter(Boolean).join(' · ')} trailing={badge && <span className="badge quiet">{badge}</span>} onClick={() => openTask({ profile: brief.profile, id: r.id })}
+              <Row className={exists ? '' : 'inert'} disabled={!exists} title={r.who || 'Slack'} meta={[r.chat, r.reason].filter(Boolean).join(' · ')} trailing={badge && <Badge {...badge} />} onClick={() => openTask({ profile: brief.profile, id: r.id })}
                 action={r.url && <IconButton icon="link-external" label="Open" size="sm" onClick={() => window.open(r.url, '_blank', 'noreferrer')} />} />
             );
           }} />

@@ -10,8 +10,11 @@ import { CallRow } from './McpCallRow';
 import { AddToChat, ClaudeAiLogin, Login } from './McpLogin';
 import { RunForm } from './McpRunForm';
 
+const DOT: Record<string, string> = { done: 'ok', failed: 'bad', waiting: 'warn', skipped: 'off' };
+
 export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usage?: Usage; group: Group; onGroup: (g: Group) => void; onClose: () => void }) {
-  const [tone, label] = stateOf(row);
+  const [status, label] = stateOf(row);
+  const tone = DOT[status];
   const [, scope, where] = scopeInfo(row.scope ?? 'other');
   const [q, setQ] = useState('');
   const [run, setRun] = useState<string | null>(null);

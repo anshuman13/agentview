@@ -19,6 +19,7 @@ import { ProfileDot } from './ProfileDot';
 import { Check } from './TaskCheck';
 import { tagList } from './AddSheet';
 import { checkItems } from './taskChecklist';
+import { Badge } from '../ui/Badge';
 
 export { UNROLL, useActions } from './useActions';
 
@@ -89,7 +90,7 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
       meta={meta}
       trailing={(row.status === 'suggested' || !picking) && (
         <>
-          {row.status === 'suggested' && <span className="badge waiting">Needs you</span>}
+          {row.status === 'suggested' && <Badge status="waiting" label="Needs you" />}
           {!picking && (
             <span className="as-more" onClick={(e) => e.stopPropagation()}>
               <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />

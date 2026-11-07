@@ -4,6 +4,7 @@ import { clock } from '../time';
 import { dayLabel, dayStart } from '../data/dates';
 import { money } from '../../ui/util';
 import { showSnack, useView } from '../view';
+import { type BadgeSpec } from '../../ui/Badge';
 
 export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 export const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
@@ -41,9 +42,9 @@ export const runsOf = (runs: Run[], j: Job) => runs.filter((r) => !r.deleted && 
 
 export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
-export const jobState = (j: Job, runs: Run[], now: number) => {
+export const jobState = (j: Job, runs: Run[], now: number): BadgeSpec | null => {
   const latest = runsOf(runs, j)[0]?.status;
-  return latest === 'running' ? ['Running', 'running'] : queued(j, runs, now) ? ['Queued', 'waiting'] : latest === 'error' ? ['Failed', 'waiting'] : !j.enabled ? ['Off', 'quiet'] : null;
+  return latest === 'running' ? { status: 'running' } : queued(j, runs, now) ? { status: 'waiting', reason: 'Queued' } : latest === 'error' ? { status: 'failed' } : !j.enabled ? { status: 'skipped', reason: 'Off' } : null;
 };
 
 export const rowMeta = (j: Job, runs: Run[], now: number) => (queued(j, runs, now) ? 'Queued' : !j.enabled ? 'Off' : j.next_run_at ? `Next ${at(j.next_run_at)}` : null);

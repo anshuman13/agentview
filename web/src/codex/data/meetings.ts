@@ -239,11 +239,9 @@ export function meetingState(m: Meeting, now = Date.now()): MeetingState {
   return 'waiting';
 }
 
-// The row's one state badge: Live while it runs, Recorded for a past meeting with a recording or a finished transcript.
+// The row's one state badge: Live while it runs.
 export function meetingBadge(m: Meeting, now: number) {
-  const end = m.ends_at ?? m.starts_at!;
-  if (m.starts_at! <= now && end > now) return 'Live';
-  return end <= now && (m.recorded_ms || meetingState(m, now) === 'done') ? 'Recorded' : null;
+  return m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now ? 'Live' : null;
 }
 
 // The row's meta line: time (with the weekday beyond today unless noDay), room, then the number of people.

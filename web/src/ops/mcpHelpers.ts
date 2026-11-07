@@ -1,17 +1,18 @@
 import type { ChatEvent, McpSchema, McpServer } from '../../../shared/protocol';
+import type { BadgeSpec } from '../ui/Badge';
 import { plural } from '../ui/util';
 
-export const STATUS: Record<string, [tone: string, label: string]> = {
-  connected: ['ok', 'Connected'],
-  failed: ['bad', 'Failed'],
-  'needs-auth': ['warn', 'Needs login'],
-  pending: ['wait', 'Connecting'],
-  disabled: ['off', 'Disabled'],
-  probing: ['wait', 'Checking'],
+export const STATUS: Record<string, [status: BadgeSpec['status'], reason: string]> = {
+  connected: ['done', 'Connected'],
+  failed: ['failed', 'Failed'],
+  'needs-auth': ['waiting', 'Needs login'],
+  pending: ['waiting', 'Connecting'],
+  disabled: ['skipped', 'Disabled'],
+  probing: ['waiting', 'Checking'],
 };
-const statusOf = (s: string) => STATUS[s] ?? ['off', s];
+const statusOf = (s: string): [BadgeSpec['status'], string] => STATUS[s] ?? ['skipped', s];
 export const needsYou = (r: { status: string; live?: boolean }) => r.status === 'failed' || (r.status === 'needs-auth' && !!r.live);
-export const stateOf = (r: { status: string; live?: boolean; account?: string }): [tone: string, label: string] => (r.status === 'needs-auth' && !r.live && !r.account ? ['off', 'OAuth via Claude'] : statusOf(r.status));
+export const stateOf = (r: { status: string; live?: boolean; account?: string }): [status: BadgeSpec['status'], reason: string] => (r.status === 'needs-auth' && !r.live && !r.account ? ['skipped', 'OAuth via Claude'] : statusOf(r.status));
 
 const SCOPES: [id: string, title: string, where: string][] = [
   ['user', 'Your servers', '~/.claude.json'],

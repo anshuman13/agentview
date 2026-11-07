@@ -15,6 +15,7 @@ import { ymd } from '../data/dates';
 import { nextNine, SNOOZES } from '../data/when';
 import { copyText, openTask, showSnack } from '../view';
 import { useActions } from '../useActions';
+import { Badge } from '../../ui/Badge';
 
 const mine = (r: ItemRow) => tagList(r.tags).includes('needs-you');
 // The scan tags an answer that rests on a live wiki claim with high confidence as faq: safe to send without reading.
@@ -166,8 +167,8 @@ function Ask({ row }: { row: ItemRow }) {
   return (
     <AskRow data-reply-row={row.profile + row.id} onClick={() => openTask(row)} onKeyDown={key}
       title={row.title}
-      meta={<>{row.people || 'Slack'} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}</>}
-      trailing={(needs || isFaq(row)) && <span className={`badge ${needs ? 'waiting' : 'quiet'}`}>{needs ? 'Needs you' : 'FAQ'}</span>}
+      meta={<>{row.people || 'Slack'} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}{isFaq(row) && ' · FAQ'}</>}
+      trailing={needs && <Badge status="waiting" label="Needs you" />}
       actions={<>
         {has
           ? <Button size="sm" icon={busy ? 'loading' : error ? 'refresh' : 'send'} disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : needs ? 'Send note' : 'Send'}</Button>

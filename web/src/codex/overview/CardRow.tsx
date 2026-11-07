@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Button, IconButton } from '../../ui/Button';
 import { Menu } from '../../ui/Menu';
 import { AskRow } from '../../ui/AskRow';
+import { Badge, type BadgeSpec } from '../../ui/Badge';
 
 // One overview row: the whole row opens the thing, the badge sits in the row, and one icon action plus a More menu sit beside it.
 // A second click of a double tap on the button or action is ignored.
@@ -9,7 +10,7 @@ export function CardRow({ title, meta, leading, badge, onOpen, button, action, m
   title: ReactNode;
   meta: ReactNode;
   leading?: ReactNode;
-  badge?: { label: string; tone: 'waiting' | 'quiet' };
+  badge?: BadgeSpec;
   onOpen: () => void;
   button?: { label: string; run: () => void };
   action?: { icon: string; label: string; run: () => void };
@@ -20,7 +21,7 @@ export function CardRow({ title, meta, leading, badge, onOpen, button, action, m
   const choose = (fn: () => void) => () => { setOpen(false); fn(); };
   return (
     <AskRow leading={leading} title={title} meta={meta} onClick={onOpen} onLongPress={menu ? () => setOpen(true) : undefined}
-      trailing={badge && <span className={`badge ${badge.tone}`}>{badge.label}</span>}
+      trailing={badge && <Badge {...badge} />}
       actions={(button || action || menu) && (
         <>
           {button && <Button size="sm" variant="tinted" onClick={(e) => { if (e.detail < 2) button.run(); }}>{button.label}</Button>}

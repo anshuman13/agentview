@@ -180,7 +180,7 @@ export function WikiPage({ id }: { id: string }) {
               <ShowMore shown={shown} total={total} onMore={more} />
               {older.length > 0 && (
                 <section className="wk-group wk-older">
-                  <Section label={<>Older{stale.size > 0 && <span className="badge quiet">{stale.size} to confirm</span>}</>} count={older.length} open={showOlder} onToggle={() => setShowOlder((v) => !v)} />
+                  <Section label={<>Older{stale.size > 0 && <span className="muted">{stale.size} to confirm</span>}</>} count={older.length} open={showOlder} onToggle={() => setShowOlder((v) => !v)} />
                   {showOlder && <div className="wk-older-hint">Retired or over 90 days old. Claude does not use these.</div>}
                   {showOlder && <ul className="wk-claims">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page.title ?? ''} flash={flash === f.id} stale={stale.has(f.id)} />)}</ul>}
                 </section>
