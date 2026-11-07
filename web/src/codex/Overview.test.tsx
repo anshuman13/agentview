@@ -52,6 +52,20 @@ describe('Overview', () => {
     expect(html.match(/Standup/g)).toHaveLength(1);
   });
 
+  it('shows Join and Starts in N min for a linked meeting in the 10 minute window only', () => {
+    const linked = (url?: string, min = 5) => ({ ...meeting('a', 'Standup', at(min)), calendar_url: url }) as Meeting;
+    const today = (m: Meeting) => render({ next: meeting('n', 'Early', at(-5)), meetingsToday: [m] });
+    const html = today(linked('https://meet.example.com/x'));
+    expect(html).toContain('Starts in 5 min');
+    expect(html).toContain('>Join<');
+    expect(html).toContain('href="https://meet.example.com/x"');
+    for (const m of [linked(), linked('javascript:alert(1)'), linked('https://meet.example.com/x', 11)]) {
+      const out = today(m);
+      expect(out).not.toContain('Starts in');
+      expect(out).not.toContain('>Join<');
+    }
+  });
+
   it('puts the first task due today in Up next with Done when no meeting is left, and overdue tasks only in Today', () => {
     const first = task('1', 'Send invoice', at(10)), second = task('2', 'Call back', at(60)), old = task('3', 'Renew pass', at(-3000));
     const html = render({ overdue: [old] }, [second, first]);

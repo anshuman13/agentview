@@ -228,6 +228,12 @@ export function meetingBadge(m: Meeting, now: number) {
   return m.starts_at! <= now && (m.ends_at ?? m.starts_at!) > now ? 'Live' : null;
 }
 
+// Whole minutes left when the meeting starts within the next 10 minutes, else null.
+export function joinMinutes(m: Meeting, now: number) {
+  const left = m.starts_at! - now;
+  return left > 0 && left <= 600000 ? Math.ceil(left / 60000) : null;
+}
+
 // The row's meta line: time (with the weekday beyond today unless noDay), room, then the number of people.
 export function meetingMeta(m: Meeting, now: number, noDay?: boolean) {
   const n = peopleOf(m).length;

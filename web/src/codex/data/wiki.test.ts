@@ -3,7 +3,7 @@ import type { ItemRow } from './sync';
 import { dayLabel } from './dates';
 import { clock } from '../../../../shared/util';
 import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
-import { actionCount, briefFor, filterMeetings, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingBadge, meetingMeta, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
+import { actionCount, briefFor, filterMeetings, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, joinMinutes, meetingBadge, meetingMeta, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -163,6 +163,18 @@ describe('meetings', () => {
   it('leaves actions assigned to others out of the counts', () => {
     const actions = [{ ...action('a1', 'm', 'open'), assignee: 'Ada Lovelace' }, { ...action('a2', 'm', 'done'), assignee: 'Ada Lovelace' }, { ...action('a3', 'm', 'open'), assignee: null }, { ...action('a4', 'm', 'done'), assignee: '' }, { ...action('a5', 'm', 'suggested'), assignee: 'Ada Lovelace' }];
     expect(actionCount(actions, { profile: 'work', id: 'm' })).toEqual({ total: 2, done: 1, review: 1, unassigned: 0, dismissed: 0 });
+  });
+
+  it('counts whole minutes in the 10 minute join window', () => {
+    const t = at(0, 9);
+    const left = (ms: number) => joinMinutes(meeting('cal:x', t), t - ms);
+    expect(left(600000)).toBe(10);
+    expect(left(600001)).toBeNull();
+    expect(left(540001)).toBe(10);
+    expect(left(540000)).toBe(9);
+    expect(left(1)).toBe(1);
+    expect(left(0)).toBeNull();
+    expect(left(-60000)).toBeNull();
   });
 
   it('builds the row meta line and state badge', () => {
