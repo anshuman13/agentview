@@ -5,48 +5,56 @@ import { errText } from '../../../shared/util.js';
 
 export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : 'http://macmini.netbird.cloud:7790');
 
+type Param = { name: string; mode: 'always'; fallback: string } | { name: string; mode: 'flag' | 'positive' };
+type Route = { timeout: number; body?: boolean; params?: Param[] | 'all' };
+
+const always = (name: string, fallback = ''): Param => ({ name, mode: 'always', fallback });
+const flag = (name: string): Param => ({ name, mode: 'flag' });
+
+const ROUTES: Record<string, Route> = {
+  'GET /changes': { timeout: 30_000, params: [always('since', '0'), flag('full')] },
+  'GET /transcripts/search': { timeout: 30_000, params: 'all' },
+  'GET /transcript': { timeout: 30_000, params: 'all' },
+  'GET /debug': { timeout: 30_000 },
+  'GET /autopilot': { timeout: 30_000 },
+  'GET /history': { timeout: 30_000, params: [always('who')] },
+  'POST /sync': { timeout: 30_000, body: true },
+  'POST /parse': { timeout: 30_000, body: true },
+  'POST /autopilot': { timeout: 30_000, body: true },
+  'POST /calendar/block': { timeout: 120_000, body: true },
+  'POST /transcripts': { timeout: 300_000, body: true },
+  'POST /slack/reply': { timeout: 120_000, body: true, params: [always('id'), flag('edited')] },
+  'POST /slack/skip': { timeout: 30_000, params: [always('id')] },
+  'POST /slack/summary': { timeout: 300_000 },
+  'POST /scan': { timeout: 300_000, params: [always('name')] },
+  'POST /calendar': { timeout: 300_000, params: [{ name: 'fresh', mode: 'positive' }] },
+};
+
+function query(params: Param[], search: URLSearchParams): string {
+  const pairs: string[] = [];
+  for (const p of params) {
+    const value = search.get(p.name);
+    if (p.mode === 'always') pairs.push(`${p.name}=${encodeURIComponent(value ?? p.fallback)}`);
+    else if (p.mode === 'flag') {
+      if (value === '1') pairs.push(`${p.name}=1`);
+    } else if (Number.isFinite(Number(value)) && Number(value) > 0) pairs.push(`${p.name}=${Number(value)}`);
+  }
+  return pairs.length ? `?${pairs.join('&')}` : '';
+}
+
 // The hub's JSON goes through as text: a sync page of a thousand rows is not parsed and serialised again here.
 export async function assistantRoute(method: string, url: URL, body: () => Promise<string>): Promise<{ status: number; text: string }> {
   const route = url.pathname.slice('/api/assistant'.length);
-  let target: string;
-  let init: RequestInit = { signal: AbortSignal.timeout(30_000) };
-  if (route === '/changes' && method === 'GET') target = `/changes?since=${encodeURIComponent(url.searchParams.get('since') ?? '0')}${url.searchParams.get('full') === '1' ? '&full=1' : ''}`;
-  else if ((route === '/transcripts/search' || route === '/transcript') && method === 'GET') target = `${route}${url.search}`;
-  else if (route === '/sync' && method === 'POST') {
-    target = '/sync';
-    init = { ...init, method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
-  } else if (route === '/parse' && method === 'POST') {
-    target = '/parse';
-    init = { signal: AbortSignal.timeout(30_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
-  } else if (route === '/calendar/block' && method === 'POST') {
-    target = '/calendar/block';
-    init = { signal: AbortSignal.timeout(120_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
-  } else if (route === '/transcripts' && method === 'POST') {
-    target = '/transcripts';
-    init = { signal: AbortSignal.timeout(300_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
-  } else if (route === '/debug' && method === 'GET') target = '/debug';
-  else if (route === '/autopilot' && method === 'GET') target = '/autopilot';
-  else if (route === '/autopilot' && method === 'POST') {
-    target = '/autopilot';
-    init = { ...init, method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
-  } else if (route === '/slack/reply' && method === 'POST') {
-    target = `/slack/reply?id=${encodeURIComponent(url.searchParams.get('id') ?? '')}${url.searchParams.get('edited') === '1' ? '&edited=1' : ''}`;
-    init = { signal: AbortSignal.timeout(120_000), method: 'POST', headers: { 'content-type': 'application/json' }, body: await body() };
-  } else if (route === '/slack/skip' && method === 'POST') {
-    target = `/slack/skip?id=${encodeURIComponent(url.searchParams.get('id') ?? '')}`;
-    init = { ...init, method: 'POST' };
-  } else if (route === '/slack/summary' && method === 'POST') {
-    target = '/slack/summary';
-    init = { signal: AbortSignal.timeout(300_000), method: 'POST' };
-  } else if (route === '/scan' && method === 'POST') {
-    target = `/scan?name=${encodeURIComponent(url.searchParams.get('name') ?? '')}`;
-    init = { signal: AbortSignal.timeout(300_000), method: 'POST' };
-  } else if (route === '/history' && method === 'GET') target = `/history?who=${encodeURIComponent(url.searchParams.get('who') ?? '')}`;
-  else if (route === '/calendar' && method === 'POST') {
-    const fresh = Number(url.searchParams.get('fresh'));
-    target = Number.isFinite(fresh) && fresh > 0 ? `/calendar?fresh=${fresh}` : '/calendar';
-    init = { signal: AbortSignal.timeout(300_000), method: 'POST' };
-  } else return { status: 404, text: JSON.stringify({ error: 'Not found' }) };
+  const key = `${method} ${route}`;
+  const entry = Object.hasOwn(ROUTES, key) ? ROUTES[key] : undefined;
+  if (!entry) return { status: 404, text: JSON.stringify({ error: 'Not found' }) };
+  const target = `${route}${entry.params === 'all' ? url.search : query(entry.params ?? [], url.searchParams)}`;
+  const init: RequestInit = { signal: AbortSignal.timeout(entry.timeout) };
+  if (method === 'POST') init.method = 'POST';
+  if (entry.body) {
+    init.headers = { 'content-type': 'application/json' };
+    init.body = await body();
+  }
   try {
     const resp = await fetch(`${HUB}${target}`, init);
     const text = await resp.text();

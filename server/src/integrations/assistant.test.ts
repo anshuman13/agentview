@@ -39,4 +39,34 @@ describe('assistantRoute', () => {
     vi.unstubAllGlobals();
     expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/changes\?since=5&full=1$/);
   });
+
+  it('forwards a POST body with its content type', async () => {
+    const fetchMock = vi.fn(async () => new Response('{"ok":true}', { headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await assistantRoute('POST', new URL('http://x/api/assistant/parse'), async () => '{"a":1}');
+    vi.unstubAllGlobals();
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.method).toBe('POST');
+    expect(init.headers).toEqual({ 'content-type': 'application/json' });
+    expect(init.body).toBe('{"a":1}');
+  });
+
+  it('drops query params a route does not list', async () => {
+    const fetchMock = vi.fn(async () => new Response('{"replies":[]}', { headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await assistantRoute('GET', new URL('http://x/api/assistant/history?who=A%20B&extra=1'), async () => '');
+    vi.unstubAllGlobals();
+    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toMatch(/\/history\?who=A%20B$/);
+  });
+
+  it('returns 404 without fetching for an unknown route or method', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const unknown = await assistantRoute('GET', new URL('http://x/api/assistant/nope'), async () => '');
+    const wrongMethod = await assistantRoute('GET', new URL('http://x/api/assistant/sync'), async () => '');
+    vi.unstubAllGlobals();
+    expect(unknown.status).toBe(404);
+    expect(wrongMethod.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
