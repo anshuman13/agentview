@@ -66,4 +66,70 @@ class ProtocolTest {
     fun backoffCapsAtFifteenSeconds() {
         assertEquals(listOf(1000L, 2000L, 4000L, 8000L, 15000L, 15000L), (0..5).map(::backoffMs))
     }
+
+    @Test
+    fun parsesInitSessionAndPendingRequests() {
+        val m = parseMessage(
+            """{"type":"init","state":{"session":{"id":"c1","running":true,"permissionMode":"auto","cwd":"/x","models":[{"value":"opus","displayName":"Opus"}],"commands":[{"name":"compact","description":"d"}],"context":1234},
+            "events":[],"pending":[
+              {"id":"p1","kind":"permission","toolName":"Bash","title":"Run ls","input":{"command":"ls"},"canAlwaysAllow":true},
+              {"id":"p2","kind":"question","questions":[{"question":"Which?","header":"H","multiSelect":true,"options":[{"label":"A","description":"a"},{"label":"B","description":"","preview":"x"}]}]}]}}""",
+        ) as ServerMessage.Init
+        assertEquals(true, m.session?.running)
+        assertEquals("auto", m.session?.permissionMode)
+        assertEquals("compact", m.session?.commands?.single()?.name)
+        assertEquals(1234L, m.session?.context)
+        val perm = m.pending[0] as Pending.Permission
+        assertEquals("ls", perm.input.s("command"))
+        assertTrue(perm.canAlwaysAllow)
+        assertEquals(false, perm.confirmFirst)
+        val q = m.pending[1] as Pending.Question
+        assertTrue(q.questions.single().multiSelect)
+        assertEquals("x", q.questions.single().options[1].preview)
+        assertNull(q.questions.single().options[0].preview)
+    }
+
+    @Test
+    fun parsesPendingResolvedAndSessionMessages() {
+        val p = parseMessage("""{"type":"pending","request":{"id":"p","kind":"permission","toolName":"Edit","title":"t","input":{}}}""") as ServerMessage.PendingAdded
+        assertEquals("p", p.request.id)
+        assertEquals("p", (parseMessage("""{"type":"resolved","id":"p"}""") as ServerMessage.Resolved).id)
+        assertEquals("s", (parseMessage("""{"type":"session","session":{"id":"s"}}""") as ServerMessage.SessionUpdate).session.id)
+        assertEquals("boom", (parseMessage("""{"type":"error","text":"boom"}""") as ServerMessage.Error).text)
+    }
+
+    @Test
+    fun parsesToolEventsWithInputsAndParents() {
+        val m = parseMessage("""{"type":"event","event":{"id":"t","kind":"tool_use","name":"Edit","input":{"file_path":"/a","n":3},"summary":"s","at":1,"parent":"ag"}}""") as ServerMessage.Event
+        assertEquals("/a", m.event.input.s("file_path"))
+        assertEquals("ag", m.event.parent)
+        val r = parseMessage("""{"type":"event","event":{"id":"r","kind":"result","text":"ok","costUsd":0.25,"isError":false,"at":1}}""") as ServerMessage.Event
+        assertEquals(0.25, r.event.costUsd, 1e-9)
+    }
+
+    @Test
+    fun parsesEarlierBody() {
+        val (events, left) = parseEarlier("""{"events":[{"id":"a","kind":"user","text":"x","at":1}],"earlier":7}""")
+        assertEquals(listOf("a"), events.map { it.id })
+        assertEquals(7, left)
+    }
+
+    @Test
+    fun commandsMatchTheWebProtocol() {
+        assertEquals("""{"type":"steer","text":"go","id":"i"}""", steerCmd("go", "i"))
+        assertEquals("""{"type":"permission","id":"p","allow":true,"always":true}""", permissionCmd("p", true, true))
+        assertEquals("""{"type":"permission","id":"p","allow":false}""", permissionCmd("p", false))
+        assertEquals("""{"type":"answer","id":"q","answers":{"Which?":"A, B"}}""", answerCmd("q", mapOf("Which?" to "A, B")))
+        assertEquals("""{"type":"interrupt"}""", interruptCmd())
+        assertEquals("""{"type":"set_permission_mode","mode":"plan"}""", setModeCmd("plan"))
+        assertEquals("""{"type":"open_session","sessionId":"s"}""", openSessionCmd("s"))
+    }
+}
+
+class LiveSampleTest {
+    @org.junit.Test
+    fun parsesRealLiveMessage() {
+        val m = parseMessage("""{"type":"live","chats":[{"id":"19b","sessionId":"d52","cwd":"/a","title":"T","running":true,"agents":0,"pending":0,"status":"s","lastActive":1794050304965,"mcpFailed":16,"cost":263.5148876000001,"spend":{"today":{"x":1.0},"week":{"x":1.0}},"stalled":false,"last":"It","edits":{"add":44,"del":0}}]}""") as ServerMessage.Live
+        org.junit.Assert.assertEquals(44, m.chats[0].edits?.add)
+    }
 }

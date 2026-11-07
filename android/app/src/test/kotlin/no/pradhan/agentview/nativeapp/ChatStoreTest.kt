@@ -84,4 +84,68 @@ class ChatStoreTest {
         assertNull(s.cache.get("a"))
         assertEquals(listOf("b"), s.state.value.live.map { it.id })
     }
+
+    private fun perm(id: String) = Pending.Permission(id, "Bash", "Run", "", kotlinx.serialization.json.JsonObject(emptyMap()), false, false)
+
+    @Test
+    fun pendingRequestsArriveAndResolve() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(ServerMessage.PendingAdded(perm("early")))
+        assertEquals(0, s.state.value.pending.size)
+        s.handle(ServerMessage.Init("a", listOf(ev("1")), 0, SessionInfo(id = "a", running = true), listOf(perm("p1"))))
+        s.handle(ServerMessage.PendingAdded(perm("p2")))
+        s.handle(ServerMessage.PendingAdded(perm("p2")))
+        assertEquals(listOf("p1", "p2"), s.state.value.pending.map { it.id })
+        s.handle(ServerMessage.Resolved("p1"))
+        assertEquals(listOf("p2"), s.state.value.pending.map { it.id })
+        assertEquals(true, s.state.value.session?.running)
+    }
+
+    @Test
+    fun sessionUpdatesOnlyApplyToTheShownChat() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(ServerMessage.Init("a", listOf(ev("1")), 0, SessionInfo(id = "a", model = "x")))
+        s.handle(ServerMessage.SessionUpdate(SessionInfo(id = "other", model = "y")))
+        assertEquals("x", s.state.value.session?.model)
+        s.handle(ServerMessage.SessionUpdate(SessionInfo(id = "a", model = "z")))
+        assertEquals("z", s.state.value.session?.model)
+    }
+
+    @Test
+    fun switchingChatsClearsSessionAndPending() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(ServerMessage.Init("a", listOf(ev("1")), 0, SessionInfo(id = "a"), listOf(perm("p"))))
+        s.show("b")
+        assertNull(s.state.value.session)
+        assertEquals(0, s.state.value.pending.size)
+    }
+
+    @Test
+    fun earlierRowsGoInFrontWithoutDuplicates() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(ServerMessage.Init("a", listOf(ev("3"), ev("4")), 5))
+        s.prepend("a", listOf(ev("1"), ev("2"), ev("3")), 2)
+        assertEquals(listOf("1", "2", "3", "4"), s.state.value.events.map { it.id })
+        assertEquals(2, s.state.value.earlier)
+        s.prepend("zzz", listOf(ev("0")), 0)
+        assertEquals(4, s.state.value.events.size)
+    }
+
+    @Test
+    fun localSteerRowIsReplacedByTheServerEchoOrDropped() {
+        val s = ChatStore()
+        s.show("a")
+        s.handle(ServerMessage.Init("a", listOf(ev("1")), 0))
+        s.addLocal("a", ChatEvent("m", "user", text = "now", stopping = true))
+        assertEquals(true, s.state.value.events.last().stopping)
+        s.handle(ServerMessage.Event(ChatEvent("m", "user", text = "now")))
+        assertEquals(false, s.state.value.events.last().stopping)
+        s.addLocal("a", ChatEvent("n", "user", text = "x"))
+        s.dropLocal("a", "n")
+        assertEquals(listOf("1", "m"), s.state.value.events.map { it.id })
+    }
 }

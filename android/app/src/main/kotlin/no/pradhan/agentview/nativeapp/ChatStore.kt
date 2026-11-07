@@ -31,6 +31,8 @@ data class StoreState(
     val events: List<ChatEvent> = emptyList(),
     val earlier: Int = 0,
     val settled: Boolean = false,
+    val session: SessionInfo? = null,
+    val pending: List<Pending> = emptyList(),
 )
 
 // Holds the live list and the events of the viewed chat; the server streams events for one chat at a time.
@@ -47,7 +49,7 @@ class ChatStore {
         when (m) {
             is ServerMessage.Init -> {
                 if (wanted.isNotEmpty() && m.chatId != wanted) return
-                state.value = s.copy(shownId = m.chatId, events = m.events, earlier = m.earlier, settled = true)
+                state.value = s.copy(shownId = m.chatId, events = m.events, earlier = m.earlier, settled = true, session = m.session, pending = m.pending)
             }
             is ServerMessage.Event -> {
                 if (!s.settled) return
@@ -64,7 +66,10 @@ class ChatStore {
                 cache.retainOnly(m.chats.map { it.id }.toSet())
                 state.value = s.copy(live = m.chats)
             }
-            is ServerMessage.Other -> {}
+            is ServerMessage.SessionUpdate -> if (s.settled && m.session.id == s.shownId) state.value = s.copy(session = m.session)
+            is ServerMessage.PendingAdded -> if (s.settled && s.pending.none { it.id == m.request.id }) state.value = s.copy(pending = s.pending + m.request)
+            is ServerMessage.Resolved -> if (s.pending.any { it.id == m.id }) state.value = s.copy(pending = s.pending.filter { it.id != m.id })
+            is ServerMessage.Error, is ServerMessage.Other -> {}
         }
     }
 
@@ -75,7 +80,26 @@ class ChatStore {
         if (id == s.shownId) return
         if (s.shownId.isNotEmpty() && s.settled) cache.put(s.shownId, s.events, s.earlier)
         val hit = cache.get(id)
-        state.value = s.copy(shownId = id, events = hit?.events ?: emptyList(), earlier = hit?.earlier ?: 0, settled = false)
+        state.value = s.copy(shownId = id, events = hit?.events ?: emptyList(), earlier = hit?.earlier ?: 0, settled = false, session = null, pending = emptyList())
+    }
+
+    // Older rows fetched for `chat`; dropped when the view moved on while they loaded.
+    fun prepend(chat: String, older: List<ChatEvent>, earlier: Int) {
+        val s = state.value
+        if (s.shownId != chat) return
+        val have = s.events.mapTo(HashSet()) { it.id }
+        state.value = s.copy(events = older.filter { it.id !in have } + s.events, earlier = earlier)
+    }
+
+    // Shows an optimistic user row until the server echoes the message.
+    fun addLocal(chat: String, e: ChatEvent) {
+        val s = state.value
+        if (s.shownId == chat) state.value = s.copy(events = s.events + e)
+    }
+
+    fun dropLocal(chat: String, id: String) {
+        val s = state.value
+        if (s.shownId == chat) state.value = s.copy(events = s.events.filter { it.id != id })
     }
 
     fun close() {
