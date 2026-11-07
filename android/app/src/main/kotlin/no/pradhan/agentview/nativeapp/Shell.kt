@@ -122,7 +122,7 @@ fun App(hub: Hub) {
         Column(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()) {
             if (banner == OfflineState.Shown) OfflineBanner(onRetry = hub::retry)
             NavHost(nav, startDestination = Tab.Codex.route, modifier = Modifier.weight(1f)) {
-                composable(Tab.Codex.route) { Placeholder("Codex") }
+                composable(Tab.Codex.route) { CodexScreen(hub) }
                 composable(Tab.Chat.route) { ChatScreen(hub) }
                 composable(Tab.Sessions.route) { SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
                 composable(Tab.Agents.route) { Placeholder("Agents") }

@@ -227,6 +227,7 @@ fun sendNowCmd(id: String) = cmd("send_now") { put("id", id) }
 fun setModelCmd(model: String) = cmd("set_model") { put("model", model) }
 fun setEffortCmd(effort: String) = cmd("set_effort") { put("effort", effort) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
+fun newSessionCmd(profile: String) = cmd("new_session") { put("profile", profile) }
 fun closeCmd(id: String) = cmd("close") { put("id", id) }
 fun openSessionCmd(sessionId: String) = cmd("open_session") { put("sessionId", sessionId) }
 fun stopTaskCmd(toolUseId: String) = cmd("stop_task") { put("toolUseId", toolUseId) }

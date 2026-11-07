@@ -58,6 +58,10 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
 
     suspend fun archive(sessionId: String) { call(url("/api/sessions?id=${enc(sessionId)}&archive").delete()) }
 
+    // web/src/codex/data/remote.ts: the assistant hub's rows are pulled by version and pushed as per-column changes.
+    suspend fun assistantChanges(since: Long, full: Boolean): String = call(url("/api/assistant/changes?since=$since" + if (full) "&full=1" else "")).decodeToString()
+    suspend fun assistantSync(body: String): String = call(url("/api/assistant/sync").post(body.toRequestBody(json))).decodeToString()
+
     suspend fun earlier(chat: String, before: String, limit: Int = ROW_WINDOW): Pair<List<ChatEvent>, Int> =
         parseEarlier(call(url("/api/chat/events?chat=${enc(chat)}&before=${enc(before)}&limit=$limit")).decodeToString())
 

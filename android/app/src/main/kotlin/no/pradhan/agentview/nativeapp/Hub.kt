@@ -40,6 +40,8 @@ class Hub(app: Application) : AndroidViewModel(app) {
     val workspace = MutableStateFlow(Workspace())
     val loadingEarlier = MutableStateFlow(false)
     val api = Api({ origin.value }, http)
+    val codex = CodexStore(viewModelScope, api::assistantChanges, api::assistantSync, { !readOnly }, { notice.value = it })
+    val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
     // Set by the launch intent to check the screens without changing anything on the server beyond viewing a chat.
     @Volatile var readOnly = false
@@ -86,6 +88,7 @@ class Hub(app: Application) : AndroidViewModel(app) {
         prefs.edit().putString("origin", v).apply()
         origin.value = v
         store.reset()
+        codex.reset()
         workspace.value = Workspace()
         workspaceAt = 0
         stream.resetResume()
@@ -132,6 +135,30 @@ class Hub(app: Application) : AndroidViewModel(app) {
         val chat = withTimeoutOrNull(20_000) { store.state.first { s -> s.live.any { it.sessionId == sessionId } } }?.live?.first { it.sessionId == sessionId } ?: return false
         open(chat.id)
         return true
+    }
+
+    fun setCodexFilter(value: String) {
+        codexFilter.value = value
+        prefs.edit().putString("codexFilter", value).apply()
+    }
+
+    // The profile a new task or question goes to when the filter shows both.
+    var codexProfile: String
+        get() = prefs.getString("codexProfile", WORK) ?: WORK
+        set(v) { prefs.edit().putString("codexProfile", v).apply() }
+
+    // Opens a new chat for the profile and sends the question in it, then shows the chat.
+    fun askCodex(question: String, profile: String) {
+        if (readOnly) { notice.value = "Read-only check, nothing was sent"; return }
+        viewModelScope.launch {
+            val before = store.state.value.live.map { it.id }.toSet()
+            post(newSessionCmd(profile), store.wanted)
+            val chat = withTimeoutOrNull(15_000) { store.state.first { s -> s.live.any { it.id !in before } } }?.live?.first { it.id !in before }
+            if (chat == null) { notice.value = "The Codex chat did not open, the question was not sent"; return@launch }
+            open(chat.id)
+            submit(question, false) { notice.value = "The question was not sent" }
+            link.value = DeepLink(chat = chat.id)
+        }
     }
 
     fun close() = store.close()
