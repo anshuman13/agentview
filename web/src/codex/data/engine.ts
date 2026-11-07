@@ -44,7 +44,9 @@ function takeBatch(rows: Dirty[]) {
   return batch;
 }
 
-let first = true;
+// Scan health lives outside the synced rows, so an idle poll asks the hub for it once a minute.
+const FULL_EVERY = 60_000;
+let fullAt = -Infinity;
 
 export async function runSync(io: SyncIO) {
   let since = await io.since();
@@ -57,9 +59,10 @@ export async function runSync(io: SyncIO) {
   while (more && io.active()) {
     const batch = takeBatch(queue);
     queue = queue.slice(batch.length);
-    const data = await io.post(since, batch.map((b) => b.change), first || undefined);
+    const full = Date.now() - fullAt >= FULL_EVERY;
+    const data = await io.post(since, batch.map((b) => b.change), full || undefined);
     if (!Array.isArray(data?.changes) || typeof data.version !== 'number') throw new Error('Unexpected hub response');
-    first = false;
+    if (full) fullAt = Date.now();
     if (data.paused !== undefined) io.paused?.(Array.isArray(data.paused) ? data.paused : []);
     if (data.scans !== undefined) io.scans?.(Array.isArray(data.scans) ? data.scans : []);
     const refused = Array.isArray(data.rejected) ? data.rejected : [];

@@ -184,7 +184,7 @@ describe('nextNine', () => {
 });
 
 describe('runSync health fields', () => {
-  it('asks for a full reply on the first run only and leaves state alone when the reply has no health', async () => {
+  it('asks for a full reply once a minute and leaves state alone when the reply has no health', async () => {
     const { vi } = await import('vitest');
     vi.resetModules();
     const { runSync } = await import('./engine');
@@ -202,9 +202,13 @@ describe('runSync health fields', () => {
       paused,
       scans,
     };
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
     await runSync(io);
     await runSync(io);
-    expect(fulls).toEqual([true, undefined]);
+    now.mockReturnValue(1_060_000);
+    await runSync(io);
+    now.mockRestore();
+    expect(fulls).toEqual([true, undefined, true]);
     expect(paused).not.toHaveBeenCalled();
     expect(scans).not.toHaveBeenCalled();
   });
