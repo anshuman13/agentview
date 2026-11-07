@@ -8,7 +8,7 @@ import { dayEnd, dayLabel, dayStart } from '../data/dates';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
-import { Menu, MenuItem } from '../../ui/Menu';
+import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
 import { Section, sectionCount } from '../../ui/Section';
 import { safeHref, save, stored, storedStrings } from '../../ui/util';
@@ -41,6 +41,8 @@ export function Avatars({ people, max = 3 }: { people: string[]; max?: number })
     </span>
   );
 }
+
+const MODES: ['log' | 'load' | 'week', string, string][] = [['log', 'Decisions', 'check'], ['load', 'Load', 'graph'], ['week', 'Week', 'calendar']];
 
 const NO_HITS = new Map<string, string>();
 
@@ -101,7 +103,7 @@ export const MeetingRow = memo(function MeetingRow({ m, now, said, noDay }: { m:
 
 
 // The coming week grouped by day, so the next working morning sits at the top.
-function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
+function ComingDays({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const days = useMemo(() => {
     const today = dayStart(now), end = today + 7 * 86400_000;
     const out = new Map<number, Meeting[]>();
@@ -114,7 +116,6 @@ function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const label = (d: number) => d === dayStart(now) ? 'Today' : d === dayEnd(now) ? 'Tomorrow' : dayLabel(d, true);
   return (
     <>
-      <Section label="Upcoming" count={sectionCount(days.reduce((n, [, rows]) => n + rows.length, 0))} />
       {days.map(([d, rows]) => (
         <section key={d}>
           <Section label={label(d)} count={sectionCount(rows.length)} />
@@ -177,6 +178,9 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const [active, setActive] = useState<string[]>([]);
   const [seen, setSeen] = useState(() => stored<Record<string, number>>(SEEN_KEY, {}));
   const [chips, setChips] = useState(() => MEETING_CHIPS.filter((c) => storedStrings(CHIPS_KEY).includes(c)));
+  const [menu, setMenu] = useState(false);
+  const moreBtn = useRef<HTMLButtonElement>(null);
+  const [topicBar, setTopicBar] = useState(false);
   const [mode, setMode] = useState<'' | 'log' | 'load' | 'week'>(() => (takeWeekReturn() ? 'week' : ''));
   const changeTopics = (next: string[]) => {
     setTopics(next);
@@ -206,6 +210,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     setChips(next);
     save(CHIPS_KEY, next);
   };
+  const toggleChip = (c: MeetingChip) => setFilters(chips.includes(c) ? chips.filter((x) => x !== c) : MEETING_CHIPS.filter((x) => x === c || chips.includes(x)));
   const toggle = (t: string) => {
     if (!active.includes(t)) markSeen(t);
     setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
@@ -231,6 +236,12 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
     void store.editRow('meetings', row, { title: 'Notes', starts_at: t, notes: '' });
     setView({ open: rowKey(row) });
   };
+  const pick = (act: () => void) => () => { setMenu(false); act(); };
+  const trackTopic = () => {
+    if (topicBar && !active.length) return setTopicBar(false);
+    setTopicBar(true);
+    setTimeout(() => pullRef.current?.querySelector<HTMLInputElement>('.mt-topics input')?.focus());
+  };
   const [syncing, runSync] = useSnackTask();
   const syncCalendar = () => runSync(async () => {
     const n = await store.syncCalendar();
@@ -241,30 +252,38 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       <header className="wk-head">
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={onMenu}><Icon name="menu" /></button>
         <h1>Meetings</h1>
-        <IconButton className="mt-sync" size="sm" small icon={syncing ? 'loading' : 'sync'} spin={syncing} label="Sync calendar" disabled={syncing} onClick={syncCalendar} />
         <span className="spacer" />
         <label className="wk-search">
           <Icon name="search" small />
           <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
         </label>
-        <div className="mt-seg" role="group" aria-label="View">
-          <button className={`btn mt-dec${mode === 'log' ? ' on' : ''}`} aria-pressed={mode === 'log'} title="Decisions from all meetings" onClick={() => setMode(mode === 'log' ? '' : 'log')}><Icon name="check" small /> <span>Decisions</span></button>
-          <button className={`btn mt-dec${mode === 'load' ? ' on' : ''}`} aria-pressed={mode === 'load'} title="Hours in meetings per week" onClick={() => setMode(mode === 'load' ? '' : 'load')}><Icon name="graph" small /> <span>Load</span></button>
-          <button className={`btn mt-dec${mode === 'week' ? ' on' : ''}`} aria-pressed={mode === 'week'} title="This week in review" onClick={() => setMode(mode === 'week' ? '' : 'week')}><Icon name="calendar" small /> <span>Week</span></button>
-        </div>
-        <button className="btn primary mt-take" onClick={takeNotes}><Icon name="edit" small /> <span>Take notes</span></button>
+        <span className="mt-head-more">
+          <IconButton ref={moreBtn} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+          {menu && (
+            <Menu trigger={moreBtn} onClose={() => setMenu(false)}>
+              {MODES.map(([m, label, icon]) => <MenuItem key={m} icon={mode === m ? 'check' : icon} onClick={pick(() => setMode(mode === m ? '' : m))}>{label}</MenuItem>)}
+              <MenuItem icon="edit" onClick={pick(takeNotes)}>Take notes</MenuItem>
+              <MenuItem icon={syncing ? 'loading' : 'sync'} spin={syncing} disabled={syncing} onClick={pick(syncCalendar)}>Sync calendar</MenuItem>
+              <MenuSeparator />
+              {MEETING_CHIPS.map((c) => <MenuItem key={c} role="menuitemcheckbox" aria-checked={chips.includes(c)} icon={chips.includes(c) ? 'check' : undefined} onClick={pick(() => toggleChip(c))}>{c}</MenuItem>)}
+              <MenuSeparator />
+              <MenuItem onClick={pick(trackTopic)}>Track a topic</MenuItem>
+            </Menu>
+          )}
+        </span>
       </header>
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className="wk-scroll" ref={pullRef}>
         {mode === 'log' ? <Decisions meetings={mine} /> : mode === 'load' ? <Load meetings={mine} now={now} /> : mode === 'week' ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-page mt-page-list">
-          <div className="mt-chips" role="group" aria-label="Filters">
-            {MEETING_CHIPS.map((c) => <Chip key={c} on={chips.includes(c)} aria-pressed={chips.includes(c)} onClick={() => setFilters(chips.includes(c) ? chips.filter((x) => x !== c) : MEETING_CHIPS.filter((x) => x === c || chips.includes(x)))}>{c}</Chip>)}
-          </div>
-          <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
-            onAdd={addTopic} onRemove={removeTopic} />
+          {chips.length > 0 && (
+            <div className="mt-chips" role="group" aria-label="Filters">
+              {chips.map((c) => <Chip key={c} on aria-pressed onClick={() => toggleChip(c)}>{c}</Chip>)}
+            </div>
+          )}
+          {(active.length > 0 || topicBar) && <TopicBar topics={topics} active={active} fresh={fresh} onToggle={toggle}
+            onAdd={addTopic} onRemove={removeTopic} />}
           {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
-          {!query && !chips.length && <Upcoming meetings={mine} now={now} />}
-          {!query && visible.length > 0 && <Section label="Earlier" />}
+          {!query && !chips.length && <ComingDays meetings={mine} now={now} />}
           {visible.map((g) => (
             <section key={g.label}>
               <Section label={g.label} />
@@ -273,7 +292,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />
           {!groups.length && chips.length > 0 && <EmptyState size="md" icon="calendar" title="No meetings match" hint="Try fewer filters" action={<Button size="sm" onClick={() => setFilters([])}>Clear filters</Button>} />}
-          {!groups.length && !chips.length && <EmptyState size="md" icon="calendar" title={query ? 'No meetings match' : 'No past meetings yet'} hint={query ? 'Search covers titles, people, notes, summaries, decisions and transcripts' : 'Coming meetings are in Today and Upcoming'} />}
+          {!groups.length && !chips.length && <EmptyState size="md" icon="calendar" title={query ? 'No meetings match' : 'No past meetings yet'} hint={query ? 'Search covers titles, people, notes, summaries, decisions and transcripts' : 'Coming meetings are listed by day'} />}
         </div>}
       </div>
     </div>

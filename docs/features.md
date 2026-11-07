@@ -142,7 +142,7 @@ The header has one segmented control, Decisions (the log, filtered by person), L
   tasks and sent mail with no reply after 3 workdays, with Copy nudge and Open. The decision log, Week (with Waiting
   on) and person pages copy as Markdown
 
-Four chips above the topics (Mine for meetings I organise, With actions, Not recorded, Series) narrow the past list together with search and topics, hide Upcoming while on, and are remembered per device; Mine fills from the next calendar import on, so older meetings never match it.
+The list header holds the Lists menu, the title, search and a More menu with Decisions, Load, Week, Take notes, Sync calendar, the four filters and Track a topic. The filters (Mine for meetings I organise, With actions, Not recorded, Series) are check items in that menu; they narrow the past list together with search and topics, hide the coming days while on, show as chips above the list only while on (each chip turns its filter off), and are remembered per device; Mine fills from the next calendar import on, so older meetings never match it. The topic bar shows only while a topic is selected or after Track a topic was chosen this visit. Day headers (Today, Tomorrow, weekday, past days) stand alone, upcoming days first, with no Upcoming or Earlier header.
 
 Saved topics filter the list, show a timeline of matching meetings, decisions and claims, and count what is new since
 you last looked. Topics and person pages list questions the meetings left open until you resolve them. Meeting search
