@@ -32,6 +32,24 @@ export function writeJsonSync(file: string, data: unknown) {
 
 export const readJson = <T>(file: string, fallback: T): Promise<T> => readFile(file, 'utf8').then(JSON.parse).catch(() => fallback);
 
+export function jsonFile<T>(file: string, fallback: T) {
+  let lock: Promise<unknown> = Promise.resolve();
+  const serial = <R>(f: () => Promise<R>): Promise<R> => {
+    const run = lock.then(f, f);
+    lock = run.catch(() => undefined);
+    return run;
+  };
+  return {
+    read: () => serial(() => readJson<T>(file, fallback)),
+    update: (fn: (cur: T) => T | Promise<T>) => serial(async () => {
+      const cur = await readJson<T>(file, fallback);
+      const next = await fn(cur);
+      if (next !== cur) await writeJson(file, next, { pretty: true });
+      return next;
+    }),
+  };
+}
+
 export function readJsonSync<T>(file: string, fallback: T): T {
   try {
     return JSON.parse(readFileSync(file, 'utf8'));

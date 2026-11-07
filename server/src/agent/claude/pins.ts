@@ -1,24 +1,20 @@
 import os from 'node:os';
 import path from 'node:path';
-import { readJson, writeJson } from '../../json.js';
-import { removeSession, serial } from './bin.js';
+import { jsonFile } from '../../json.js';
+import { removeSession } from './bin.js';
 import { unseen } from './seen.js';
 
-const file = () => path.join(os.homedir(), '.agentview', 'pins.json');
+const store = jsonFile<string[]>(path.join(os.homedir(), '.agentview', 'pins.json'), []);
 
-const load = () => readJson<string[]>(file(), []);
+export const listPins = () => store.read();
 
-export const listPins = () => serial(load);
+export const pin = async (id: string) => {
+  await store.update((list) => (list.includes(id) ? list : [id, ...list]));
+};
 
-export const pin = (id: string) => serial(async () => {
-  const list = await load();
-  if (!list.includes(id)) await writeJson(file(), [id, ...list], { pretty: true });
-});
-
-export const unpin = (id: string) => serial(async () => {
-  const list = await load();
-  if (list.includes(id)) await writeJson(file(), list.filter((x) => x !== id), { pretty: true });
-});
+export const unpin = async (id: string) => {
+  await store.update((list) => (list.includes(id) ? list.filter((x) => x !== id) : list));
+};
 
 export const removeChat = async (id: string, purge: boolean, archive = false) => {
   const r = await removeSession(id, purge, archive);

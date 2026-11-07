@@ -1,25 +1,22 @@
 import os from 'node:os';
 import path from 'node:path';
-import { readJson, writeJson } from '../../json.js';
-import { serial } from './bin.js';
+import { jsonFile } from '../../json.js';
 
-const file = () => path.join(os.homedir(), '.agentview', 'seen.json');
+const store = jsonFile<Record<string, number>>(path.join(os.homedir(), '.agentview', 'seen.json'), {});
 
-const load = () => readJson<Record<string, number>>(file(), {});
+export const listSeen = () => store.read();
 
-export const listSeen = () => serial(load);
+export const markSeen = async (id: string) => {
+  await store.update((map) => ({ ...map, [id]: Date.now() }));
+};
 
-export const markSeen = (id: string) => serial(async () => {
-  await writeJson(file(), { ...(await load()), [id]: Date.now() }, { pretty: true });
-});
-
-export const unseen = (id: string) => serial(async () => {
-  const map = await load();
-  if (id in map) {
-    delete map[id];
-    await writeJson(file(), map, { pretty: true });
-  }
-});
+export const unseen = async (id: string) => {
+  await store.update((map) => {
+    if (!(id in map)) return map;
+    const { [id]: _, ...rest } = map;
+    return rest;
+  });
+};
 
 export const seenRoute = async (method: string, id: string | null): Promise<{ status: number; body: unknown }> => {
   if (method === 'GET') return { status: 200, body: await listSeen() };
