@@ -92,8 +92,9 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
 
   const showEarlier = async () => {
     if (loading) return;
-    grew.current = box.current?.scrollHeight ?? 0;
+    const mark = () => (grew.current = box.current?.scrollHeight ?? 0);
     if (start > 0) {
+      mark();
       const next = revealMore(shown, items.length);
       setShown(next);
       setStaged(next);
@@ -102,8 +103,8 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     setLoading(true);
     const ok = await loadEarlier();
     setLoading(false);
-    if (ok) { setShown(shown + ROW_WINDOW); setStaged(shown + ROW_WINDOW); }
-    else grew.current = 0;
+    // Marked only now: rows streamed in at the bottom during the load would otherwise spend the mark.
+    if (ok) { mark(); setShown(shown + ROW_WINDOW); setStaged(shown + ROW_WINDOW); }
   };
 
   const onScroll = () => {
