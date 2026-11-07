@@ -1,25 +1,13 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
-import { useAssistantTable } from '../data';
-import { rowKey } from '../data/sync';
-import type { Brief } from '../data/wiki';
-import { Button, IconButton } from '../../ui/Button';
-import { Row } from '../../ui/Row';
+import { Fragment, useState, type ReactNode } from 'react';
+import { Button } from '../../ui/Button';
 import { Section } from '../../ui/Section';
 import { save, stored } from '../../ui/util';
-import { clock } from '../time';
-import { openTask } from '../view';
-import { visibleRows, type DigestGroup, type DigestRow } from './digest';
-import { Badge, type BadgeSpec } from '../../ui/Badge';
+import { visibleRows, type DigestGroup } from './digest';
 
-type Parsed = { groups: DigestGroup[]; waiting: DigestRow[] };
-
-const GROUP_STATUS: Record<string, BadgeSpec['status']> = { sent: 'sent', skipped: 'skipped', failed: 'failed', escalated: 'waiting' };
-
-export function GroupList<R>({ brief, foldKey, capOpen, group, render }: { brief?: Brief; foldKey?: string; capOpen?: boolean; group: DigestGroup<R>; render: (row: R) => ReactNode }) {
-  const key = foldKey ?? `codex.digestFold.${brief!.profile}:${brief!.id}:${group.outcome}`;
-  const [open, setOpen] = useState(() => stored<boolean>(key, group.open));
+export function GroupList<R>({ foldKey, capOpen, group, render }: { foldKey: string; capOpen?: boolean; group: DigestGroup<R>; render: (row: R) => ReactNode }) {
+  const [open, setOpen] = useState(() => stored<boolean>(foldKey, group.open));
   const [all, setAll] = useState(false);
-  const toggle = () => { save(key, !open); setOpen(!open); };
+  const toggle = () => { save(foldKey, !open); setOpen(!open); };
   const rows = visibleRows(group, all, capOpen);
   return (
     <>
@@ -27,47 +15,5 @@ export function GroupList<R>({ brief, foldKey, capOpen, group, render }: { brief
       {open && rows.map((r, i) => <Fragment key={i}>{render(r)}</Fragment>)}
       {open && !all && rows.length < group.rows.length && <Button variant="quiet" size="sm" className="ov-more" onClick={() => setAll(true)}>Show all {group.rows.length}</Button>}
     </>
-  );
-}
-
-// How many of the given item ids are still suggested or open in the brief's profile.
-export function useWaiting(brief: Brief, ids: string[]) {
-  const itemRows = useAssistantTable('items');
-  return ids.filter((id) => {
-    const item = itemRows.find((i) => i.profile === brief.profile && i.id === id);
-    return item && !item.deleted && (item.status === 'suggested' || item.status === 'open');
-  }).length;
-}
-
-export const WaitingLine = ({ count }: { count: number }) => count > 0 && <Button variant="quiet" size="sm" className="ov-more" onClick={() => document.getElementById('reply-queue')?.scrollIntoView({ block: 'start' })}>{count} waiting</Button>;
-
-// The day or away digest as a report card: counts in the header, one folded or open list per outcome, and a link to the Reply queue for what still waits.
-export function DigestCard({ brief, digest, showProfile, onDismiss }: { brief: Brief; digest: Parsed; showProfile: boolean; onDismiss: () => void }) {
-  const itemRows = useAssistantTable('items');
-  const items = useMemo(() => new Set(itemRows.filter((r) => !r.deleted).map(rowKey)), [itemRows]);
-  const waiting = useWaiting(brief, digest.waiting.map((r) => r.id));
-  return (
-    <section className="ov-digest">
-      <Section label={`${brief.text}${showProfile ? ` · ${brief.profile}` : ''}`} action={(
-        <>
-          {digest.groups.map((g) => g.outcome in GROUP_STATUS && <Badge key={g.outcome} status={GROUP_STATUS[g.outcome]} count={g.rows.length} />)}
-          <span>{clock(brief.to_at ?? brief.from_at!)}</span>
-          <IconButton icon="close" label="Hide until tomorrow" size="sm" onClick={onDismiss} />
-        </>
-      )} />
-      <div className="ov-group">
-        {digest.groups.map((g) => (
-          <GroupList key={g.outcome} brief={brief} group={g} render={(r) => {
-            const exists = items.has(rowKey({ profile: brief.profile, id: r.id }));
-            const badge: BadgeSpec | null = r.outcome === 'failed' ? { status: 'failed' } : r.outcome === 'escalated' ? { status: 'waiting', label: 'Needs you' } : r.outcome === 'sent' && r.edited ? { status: 'sent', reason: 'Edited' } : null;
-            return (
-              <Row className={exists ? '' : 'inert'} disabled={!exists} title={r.who || 'Slack'} meta={[r.chat, r.reason].filter(Boolean).join(' · ')} trailing={badge && <Badge {...badge} />} onClick={() => openTask({ profile: brief.profile, id: r.id })}
-                action={r.url && <IconButton icon="link-external" label="Open" size="sm" onClick={() => window.open(r.url, '_blank', 'noreferrer')} />} />
-            );
-          }} />
-        ))}
-        <WaitingLine count={waiting} />
-      </div>
-    </section>
   );
 }

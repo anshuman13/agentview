@@ -184,10 +184,10 @@ Copy (Status language): the title is a sentence-case noun phrase with no trailin
 Status: built; used in `app/App.tsx`, `app/Unreachable.tsx`, `codex/Codex.tsx`, `codex/GoalsPage.tsx`, `codex/Overview.tsx`, `codex/PlanPreview.tsx`, `codex/Search.tsx`, `codex/TagPage.tsx`, `codex/jobs/JobPage.tsx`, `codex/jobs/Jobs.tsx`, `codex/meetings/Decisions.tsx`, `codex/meetings/Load.tsx`, `codex/meetings/MeetingList.tsx`, `codex/meetings/Person.tsx`, `codex/meetings/Review.tsx`, `codex/meetings/SeriesPage.tsx`, `codex/meetings/Week.tsx`, `codex/summary/Summary.tsx`, `codex/wiki/Feed.tsx`, `codex/wiki/ReviewMode.tsx`, `codex/wiki/WikiIndex.tsx`, `codex/wiki/WikiPage.tsx`, `ops/Deploy.tsx`, `ops/Findings.tsx`, `ops/GitHub.tsx`, `ops/McpDetail.tsx`, `ops/McpStatus.tsx`, `ops/Observe.tsx`, `sessions/AgentsPane.tsx`, `sessions/Sessions.tsx`, `workspace/BrowserPane.tsx`, `workspace/Explorer.tsx`.
 
 ### Grouped list (iOS inset grouped)
-Overview cards (`.as-group`, Needs you), the Meetings list and Meetings day groups are
+Overview cards (`.as-group`), the Meetings list and Meetings day groups are
 inset grouped lists: page `--group-page` (grey #F2F2F7 in light, black in dark), card `--group-card`
 (white in light, #1C1C1E in dark), `--shape-lg` radius, no border, rows 44px minimum with a hairline
-inset to the text start. The Codex task lists, Goals, Search, Jobs and Summary (`.ui-group`), the editor Links, the wiki page claims and search hits (`.ui-group`) and the Meetings list (`.as-group` under `.mt-page`) use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case. A grouped card whose rows sit in wrappers (Overview Today: `.ov-ask`, `.as-swipe`) draws the inset hairline on the wrapper at the row's text start (52px with a lead, else `--list-pad`), never on the row and never full width.
+inset to the text start. The Codex task lists, Goals, Search, Jobs and Summary (`.ui-group`), the editor Links, the wiki page claims and search hits (`.ui-group`) and the Meetings list (`.as-group` under `.mt-page`) use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case. A grouped card whose rows sit in wrappers (the Reply queue: `.ov-ask`) draws the inset hairline on the wrapper at the row's text start (52px with a lead, else `--list-pad`), never on the row and never full width.
 
 ### Section header
 A header that heads a list of rows shows its full row count as the quiet Badge (`count={sectionCount(n)}`), including rows behind "Show all N" or a cap, and omits it at 0. A header over a single card, form or free text shows none. Series counts only its repeated rows, the rest are context.
@@ -261,30 +261,23 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
   count badges; a transcript hit replaces the meta as a 2-line clamp.
 
 ### Overview page
-The day at a glance on a phone. Five blocks in a fixed order, nothing else on the page. Each block is a Section
-header plus one Grouped list of Rows (Row density), at most 5 rows then "Show all N". A block with nothing in
-it is not rendered. When Now, Needs you, Reply queue and Today are all empty, the page shows one EmptyState md
-(icon pass, "Nothing today") in the Today slot: the hint names the next day with a meeting or a task ("Next: <when> <title>",
-or "Nothing planned. Add a task to start the day.") and one primary New task Button sm opens the add sheet. Reports and
-Later still render below it.
-1. **Now**: only while a meeting runs or starts within 15 minutes: the Next card. Otherwise absent.
-2. **Needs you**: one list of everything waiting on the user, once each: overdue and at-risk tasks, asks and
-   promises to confirm, DMs, Slack bullets, actions from a meeting that ended in the last two hours (meta "Just
-   ended · <meeting>"), and one count row each for asks older than the stale limit and wiki claims to review.
-   Each row: one Badge at most, one primary Button sm, one More Menu. Header action: one batch action.
-3. **Reply queue**: the Report card already built; unchanged, after Needs you.
-4. **Today**: the ordered list of what to do next (meeting within two hours first, then flagged, then due
-   tasks), the first three numbered. Each row: Done (or Prep) as the button, More Menu with Focus, Tomorrow,
-   Snooze. The header carries one Menu: Plan my day (opens the Plan strip under the header), Copy standup, and
-   from 16:00 Wrap up (the Shutdown row). The last row is "Goals · N · 1 at risk" opening the Goals page; the
-   goal progress lines move there. No separate Meetings today section: meetings beyond two hours are on the
-   Meetings page.
-5. **Reports**: the newest report (morning brief before 11:00, day or away digest after 17:00, weekly review
-   from Friday 14:00) open as its Report card; every other report of the day is one Row (title, time, first
-   line) in a Reports list: job runs, the other briefs, Since last visit. A row opens the report's page.
-6. **Later**: one Fold, closed by default: the Tomorrow card, stale tasks, follow-through, keep in touch.
-Gone: the Context fold, the Slack summary row (the Summary page is in the nav), the standalone wiki-claims and
-stale-asks rows, the Meetings today section, the goal lines above the brief.
+The day at a glance on a phone. Three blocks in a fixed order, nothing else on the page: what is next, what needs
+me, what is left today. After the Skeleton while loading, a block with nothing in it is not rendered.
+1. **Up next**: one card, first match wins. A Section header (Up next) over a Grouped list of one Row. (a) The next
+   meeting today that has not ended: title, one meta line (time, room, N people), a Prep Button sm and one More
+   IconButton sm (Menu: Open calendar, Notes); the whole Row opens the meeting. (b) With no meeting left, the first
+   open task due today by due time (overdue tasks do not count): title, due time as meta, a Done Button sm; the
+   title opens the task. (c) With neither, one EmptyState md (icon pass, "Nothing today"): the hint names the
+   next day with a meeting or a task ("Next: <when> <title>", or "Nothing planned. Add a task to start the day.")
+   and one primary New task Button sm opens the add sheet.
+2. **Needs you**: shown only when the count is above zero. One button Row (Row density) titled "Needs you" with a
+   quiet count Badge and a chevron, no actions. The count is the Needs you list plus the Reply queue. It opens a
+   sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) holding the Needs you list then the Reply queue
+   Report card; Esc, the scrim and the back gesture close it and focus returns to the row.
+3. **Today**: Section header with a count Badge over one Grouped list of Rows in time order: the rest of today's
+   meetings (title, time, a Live badge while it runs, no actions) and open tasks due today or overdue, overdue
+   first (title, due time or a Late Badge, a leading check IconButton sm and one More IconButton sm with Snooze to
+   tomorrow and Open). Seven rows, then a "Show all N" quiet Button sm that expands in place.
 
 Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` > `.wk-scroll` > `.mt-page` and add no wrapper, padding or background of their own. Their Page hero, the MCP grid and the GitHub detail keep their own layout. Agents keeps its fixed sidebar and takes only Row density and Grouped list styling.
 
@@ -319,7 +312,6 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | as-head | - | Section header | Done |
 | as-links-list | - | Grouped list | Done |
 | as-list | - | Grouped list | Done |
-| as-next-head | none | Report card | Done |
 | as-row | codex/Task.tsx | Row | Done |
 | as-swipe-row | codex/Swipe.tsx | keep: layout (swipe gesture container) | Keep |
 | as-tt-menu-row | codex/TaskEditor.tsx | keep: layout (row inside a Menu) | Keep |
@@ -347,10 +339,6 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | obs-hint empty variants | ops/Observe.tsx | EmptyState | Partial (error, warn, ok, mono, setup, loading stay as layout) |
 | obs-ask | ops/Observe.tsx | Button | Partial (Snowflake action stays) |
 | ov-ask-line | - | Row (AskRow) | Done |
-| ov-brief-head | none | Section header | Done |
-| ov-digest-head | none | Report card | Done |
-| ov-digest-row | none | Report card | Done |
-| ov-follow-row | codex/Overview.tsx | Row | Done |
 | sm-line | codex/summary/Summary.tsx | Row | Done |
 | wk-claim | codex/meetings/OpenQuestions.tsx, codex/meetings/Person.tsx, codex/meetings/Pins.tsx, codex/meetings/Raise.tsx | Row | Partial |
 | wk-contest-head | none | Section header | Done |

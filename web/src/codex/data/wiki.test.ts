@@ -3,7 +3,7 @@ import type { ItemRow } from './sync';
 import { dayLabel } from './dates';
 import { clock } from '../../../../shared/util';
 import { decisionLog, approveChanges, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
-import { actionCount, briefFor, filterMeetings, capped, followThrough, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingBadge, meetingMeta, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
+import { actionCount, briefFor, filterMeetings, decisionsWith, commitmentsOf, priorWith, seriesOf, inSeries, seriesMeetings, seriesRepeats, seriesTitle, groupMeetings, meetingBadge, meetingMeta, meetingState, openQuestions, searchMeetings, topicTimeline, trackedTopics } from './meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
 const page = (id: string, title: string): Page => ({ ...common(id), title, section: 'Pages', summary: null, sort: 0, state: null });
@@ -336,15 +336,6 @@ describe('briefFor', () => {
   });
 
 
-  it('follows through on open actions from meetings older than 7 days, skipping dismissed ones', () => {
-    const now = 100 * 86400000;
-    const mt = (id: string, days: number) => ({ ...common(id), title: id, starts_at: now - days * 86400000 }) as unknown as Meeting;
-    const act = (id: string, meeting_id: string, status = 'open') => ({ ...common(id), meeting_id, status }) as unknown as ItemRow;
-    const items = [act('a', 'old'), act('b', 'old'), act('c', 'new'), act('d', 'older'), act('e', 'old', 'done')];
-    const out = followThrough(items, [mt('old', 8), mt('new', 6), mt('older', 20)], ['workb'], now);
-    expect(out.map((x) => x.r.id)).toEqual(['a', 'd']);
-  });
-
   it('lists past topic matches newest first across kinds and counts those newer than since', () => {
     const m = { ...common('m'), title: 'Billing sync', starts_at: 20, summary: null, decisions: '["Drop billing retries"]' } as unknown as Meeting;
     const f = fact('f', 'p1', 'H', 'Billing runs monthly', { at: 30 });
@@ -409,13 +400,6 @@ describe('staleFacts', () => {
     const meeting = { ...common('m'), title: 'Hiring sync', starts_at: 190 * day, summary: null, decisions: null } as unknown as Meeting;
     expect(staleFacts(fs, ps, [], now).map((f) => f.id)).toEqual(['old', 'hire']);
     expect(staleFacts(fs, ps, [meeting], now).map((f) => f.id)).toEqual(['old']);
-  });
-});
-
-describe('capped', () => {
-  it('keeps 3 rows and counts the rest', () => {
-    expect(capped([1, 2, 3, 4])).toEqual({ shown: [1, 2, 3], more: 1 });
-    expect(capped([1, 2])).toEqual({ shown: [1, 2], more: 0 });
   });
 });
 

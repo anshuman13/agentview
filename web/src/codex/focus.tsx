@@ -72,8 +72,6 @@ export function startFocus(r: ItemRow, minutes?: number) {
   if (end) push('POST', { title: r.title, end }); else push('DELETE');
 }
 
-export const FOCUS_MINUTES = LENGTH;
-
 function useNow(on: boolean) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {

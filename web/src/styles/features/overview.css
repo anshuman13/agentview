@@ -1,12 +1,11 @@
-/* Overview cards: follow-through, groups, reply queue. */
-.ov-tm :is(.ui-row-lead, .ui-row-trail) { position: relative; z-index: 1; }
+/* Overview rows, groups, reply queue. */
+.ov-task :is(.ui-row-lead, .ui-row-trail) { position: relative; z-index: 1; }
 .ov-hit { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .ov-hit::after { content: ''; position: absolute; inset: 0; }
 .ov-hit:focus-visible { outline: none; }
 .ov-hit:focus-visible::after { outline: 2px solid var(--accent); outline-offset: -2px; }
 @media (max-width: 480px) {
-  .as-next-actions .btn.sm { height: var(--touch-sm); }
-  .ov-block-today > .ui-section { position: sticky; top: 0; z-index: var(--z-raised); background: var(--bg); }
+  .ov-today > .ui-section { position: sticky; top: 0; z-index: var(--z-raised); background: var(--bg); }
 }
 .ov-more { align-self: flex-start; }
 .ov-group { display: flex; flex-direction: column; border-radius: 12px; background: var(--group-card); overflow: hidden; }
@@ -31,10 +30,4 @@
 .ov-ask-edit { width: 100%; padding: 0; border: 0; background: transparent; color: var(--on-surface); font: inherit; resize: vertical; }
 .ov-ask-history { display: flex; flex-direction: column; }
 .ov-ask-err { color: var(--err); overflow-wrap: anywhere; }
-.ov-block:not(:has(> :not(.ui-section))) { display: none; }
-.ov-today > .ov-ask { border-bottom: 0; position: relative; }
-.ov-today.as-group > .as-swipe + :is(.as-swipe, .ui-row) { border-top: 0; }
-.ov-today > :is(.ov-ask, .as-swipe)::after { content: ''; position: absolute; right: 0; bottom: 0; left: var(--list-pad); border-bottom: var(--hairline); pointer-events: none; }
-.ov-today > :is(.ov-ask, .as-swipe):has(.ui-row.has-lead)::after { left: calc(var(--list-pad) + 24px + var(--sp-6)); }
-.ov-today > :last-child::after { display: none; }
-.ov-menu-hint { padding: var(--sp-3) var(--sp-6); font-size: var(--type-meta-size); color: var(--fg-muted); }
+.ov-actions { display: inline-flex; align-items: center; gap: var(--sp-3); }

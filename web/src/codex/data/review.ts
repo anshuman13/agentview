@@ -3,9 +3,8 @@ import { dayEnd, dayStart, pad, weekStart } from './dates';
 import { atTime, statusTime } from './engine';
 import { goalsOf } from './goals';
 import { packDay, workGaps, type Span } from './plan';
-import { isSaid, parseTimes, type ItemRow, type Profile } from './sync';
-import { isAllDay } from './load';
-import { displayName, MAX_PEOPLE, peopleOf, sameName } from './meetings';
+import { isSaid, parseTimes, type ItemRow } from './sync';
+import { sameName } from './meetings';
 import { listOf, live as liveRows, type Brief, type Chat, type Meeting } from './wiki';
 
 const DAY = 86400000;
@@ -109,45 +108,6 @@ export function personInbox(name: string, items: ItemRow[], chats: Chat[], mail:
   };
 }
 
-const WINDOW = 56 * DAY;
-
-export type Lapsed = { name: string; key: string; last: number; gap: number; since: number; profile: Profile };
-
-// People I met or DMed on 3+ days in the last 8 weeks whose time since the last contact is over 1.5x their median gap, most overdue first.
-// Meetings with more than 8 people do not count as contact. profile is the profile of the latest contact.
-export function keepInTouch(meetings: Meeting[], chats: Chat[], items: ItemRow[], now: number, dismissed: string[] = []): Lapsed[] {
-  const from = now - WINDOW;
-  const days = new Map<string, { name: string; days: Set<number>; at: number; profile: Profile }>();
-  const add = (name: string, t: number | null, profile: Profile) => {
-    if (!name || t == null || t < from || t > now) return;
-    const k = name.includes('@') ? displayName(name).toLowerCase() : name.toLowerCase();
-    const p = days.get(k) ?? { name, days: new Set<number>(), at: t, profile };
-    if (t > p.at) { p.at = t; p.profile = profile; }
-    if (p.name.includes('@') && !name.includes('@')) p.name = name;
-    p.days.add(dayStart(t));
-    days.set(k, p);
-  };
-  for (const m of liveRows(meetings)) {
-    if (m.starts_at == null || isBlock(m.id) || (m.ends_at != null && isAllDay(m))) continue;
-    const people = peopleOf(m);
-    if (people.length <= MAX_PEOPLE) for (const p of people) add(p, m.starts_at, m.profile);
-  }
-  for (const c of liveRows(chats)) if (c.kind === 'dm') add(c.name?.trim() ?? '', c.last_at, c.profile);
-  for (const r of items) if (live(r) && r.source === 'slack' && / · DM$/.test(r.people ?? '')) add(personOf(r.people), createdAt(r), r.profile);
-  const out: Lapsed[] = [];
-  for (const [k, { name, days: set, profile }] of days) {
-    if (set.size < 3) continue;
-    const ts = [...set].sort((a, b) => a - b);
-    const gaps = ts.slice(1).map((t, i) => t - ts[i]).sort((a, b) => a - b);
-    const gap = gaps.length % 2 ? gaps[(gaps.length - 1) / 2] : (gaps[gaps.length / 2 - 1] + gaps[gaps.length / 2]) / 2;
-    const last = ts[ts.length - 1];
-    const since = now - last;
-    const key = `${k}:${last}`;
-    if (since > 1.5 * gap && !dismissed.includes(key)) out.push({ name, key, last, gap, since, profile });
-  }
-  return out.sort((a, b) => b.since / b.gap - a.since / a.gap || a.name.localeCompare(b.name));
-}
-
 // The Monday to Friday day before now's day, as [start, end).
 function prevWorkday(now: number): Span {
   const d = new Date(dayStart(now));
@@ -184,9 +144,3 @@ export function standupText(items: ItemRow[], meetings: Meeting[], plan: ItemRow
     section('Blocked', waiting),
   ].join('\n\n');
 }
-
-// The standup for the profile filter, from the overdue and due-today tasks of the Overview.
-export const standupFor = (snap: { items: ItemRow[]; meetings: Meeting[] }, overdue: ItemRow[], dueToday: ItemRow[], filter: 'all' | Profile, now: number) => {
-  const mine = <T extends { profile: Profile }>(rows: T[]) => rows.filter((r) => filter === 'all' || r.profile === filter);
-  return standupText(mine(snap.items), mine(liveRows(snap.meetings)), [...overdue, ...dueToday], now);
-};

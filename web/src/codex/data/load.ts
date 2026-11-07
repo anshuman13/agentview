@@ -1,7 +1,6 @@
-import { isBlock } from '../../../../shared/util';
 import { decisionLog, factTime, live, type Chat, type Fact, type Meeting } from './wiki';
 import { createdAt } from './review';
-import { openQuestions, peopleOf, questionKey, seriesTitle } from './meetings';
+import { peopleOf, seriesTitle } from './meetings';
 import { statusTime } from './engine';
 import { isSaid, type ItemRow } from './sync';
 
@@ -117,16 +116,5 @@ export function weekReview({ meetings, facts, items }: { meetings: Meeting[]; fa
     claims: live(facts).filter((f) => !f.superseded_by && inWeek(factTime(f))).sort((a, b) => factTime(b) - factTime(a)),
     done: items.filter((r) => !r.deleted && r.status === 'done' && inWeek(statusTime(r))).sort((a, b) => statusTime(b) - statusTime(a)),
     open: items.filter((r) => !r.deleted && r.status === 'open' && r.source !== 'calendar' && r.meeting_id != null && keys.has(`${r.profile}:${r.meeting_id}`)),
-  };
-}
-
-// Counts of what arrived after `since`: past meetings (not all-day), their decisions and open questions, and new current claims.
-export function sinceLastVisit({ meetings, facts }: { meetings: Meeting[]; facts: Fact[] }, since: number, now: number, resolved: string[] = []) {
-  const recent = live(meetings).filter((m) => m.starts_at != null && m.starts_at > since && m.starts_at <= now && !isAllDay(m) && !isBlock(m.id));
-  return {
-    meetings: recent.length,
-    decisions: decisionLog(recent).length,
-    claims: live(facts).filter((f) => !f.superseded_by && factTime(f) > since && factTime(f) <= now).length,
-    questions: openQuestions(recent, now).filter((q) => !resolved.includes(questionKey(q))).length,
   };
 }

@@ -79,13 +79,13 @@ dry run: the app sends the draft as it reads on the phone with the request, so a
 a failed send stays on the draft card with a Retry button and the next scan posts it again (3 tries, then one push). If someone answered the thread first, nothing is posted and the ask
 closes. An ask the scan tiers hold or escalate (a decision, approval, review, something urgent) is tagged needs-you: its draft is
 the concrete step I will take and when, or the one missing detail asked back, or empty (never only "will check, get back to you"); the push says "Needs you" and has no Send action, and the card shows "Needs your decision" with a quiet Send
-note. The Overview has a Reply queue: every Slack ask with a draft, the ones that need me first, then oldest first, each with
+note. The Needs you sheet on Overview has a Reply queue: every Slack ask with a draft, the ones that need me first, then oldest first, each with
 Send, Edit and Skip in place and a History fold that loads the last 3 replies sent to that person (date and first line). A tier answer that rests on a live wiki claim with confidence 0.8 or more is tagged faq: the
 queue row shows an "FAQ answer" badge, such asks sort right after the ones that need me, the push body says "FAQ answer, 90% sure"
 before the claim, and with two or more the queue has one "Send all N FAQ answers" button. The morning brief lists the asks still open oldest first with who asked and the age, the ones
 from yesterday or older under their own heading. At the first scan from 17:00 on a weekday the hub writes a day digest
 (`briefs` kind `day`, `dayDigest`): what I sent (and how many edited), what failed, what I skipped and what still waits, as JSON `rows`
-(`id, who, chat, outcome, reason, edited, url`, reason cut to 6 words), and pushes the counts; Overview shows it as a Report card. The switch off is the kill switch. The scan reads the settings each
+(`id, who, chat, outcome, reason, edited, url`, reason cut to 6 words), and pushes the counts. The switch off is the kill switch. The scan reads the settings each
 time, so no restart is needed. Sent and dry-run replies are in the hub-only `replies`
 table, one row per ask, with tier, confidence, the text and the permalink of the post.
 
@@ -138,7 +138,7 @@ assist mode since I pressed Send myself.
      and drafts a comment per question asked of me, approved like a Slack draft
    - `ai-help`: tier A answers go out with one tap all year, so the FAQ keeps growing from what I send
    - Weekly update and standup already exist as presets; the digest from step 5 becomes the daily "while you were in
-     meetings" card in Overview
+     meetings" card
    - PR review requests: a job that lists PRs waiting on me and adds a task with the diff summary, no auto-comment
 
 ## Checks it runs for me

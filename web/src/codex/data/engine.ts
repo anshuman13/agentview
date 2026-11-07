@@ -1,5 +1,4 @@
 import { FIELDS, TABLE_FIELDS, newId, parseTimes, rowToChange } from './sync';
-import type { Run } from './wiki';
 import type { Change, ItemRow, Merged, Paused, Profile, PulledChange, Reply, ScanHealth, SyncRow } from './sync';
 
 export const errorText = (err: unknown) => (err as Error | undefined)?.message || String(err);
@@ -116,26 +115,6 @@ export function split(items: ItemRow[], profile: 'all' | Profile, now: number) {
     notes: notes.sort((a, b) => b.updated_at - a.updated_at),
     doneToday: doneToday.sort(newest),
   };
-}
-
-const STALE_DAYS = 14;
-
-export function staleTasks(items: ItemRow[], now: number) {
-  const cutoff = now - STALE_DAYS * 86400000;
-  const changed = (r: ItemRow) => Math.max(r.updated_at, statusTime(r));
-  return items.filter((r) => !r.deleted && r.status === 'open' && !isCalendar(r) && changed(r) < cutoff).sort((a, b) => changed(a) - changed(b));
-}
-
-// The newest finished run with output per job since a time, in one pass over the runs.
-export function latestRunByJob(runs: Run[], since: number) {
-  const best = new Map<string, Run>();
-  for (const r of runs) {
-    if (r.deleted || r.status !== 'ok' || !r.output || (r.started_at ?? 0) < since) continue;
-    const key = r.profile + r.job_id;
-    const cur = best.get(key);
-    if (!cur || r.started_at! > cur.started_at!) best.set(key, r);
-  }
-  return best;
 }
 
 export const reviewedSince = (r: ItemRow) => statusTime(r);
