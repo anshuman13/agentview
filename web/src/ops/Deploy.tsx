@@ -12,6 +12,8 @@ import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protoco
 import { ago, usePoll } from '../ui/util';
 import '../styles/features/deploy.css';
 import { Badge } from '../ui/Badge';
+import '../styles/features/wiki.css';
+import '../styles/features/meetings.css';
 
 const short = (sha: string) => sha.slice(0, 7);
 const stateBadge = (env: DeployEnv) => {
@@ -131,7 +133,8 @@ export function Deploy() {
     });
 
   return (
-    <div className="deploy" ref={root}>
+    <div className="wk" ref={root}><div className="wk-scroll"><div className="mt-page">
+      <section>
       <Section label={s?.app ?? 'Velo'} action={
         <>
           {s && s.apps.length > 1 && (
@@ -158,6 +161,7 @@ export function Deploy() {
           <div className="as-group"><Row href={s.velodrome} title="Open in Velodrome" /></div>
         </>
       )}
+      </section>
       {job && (
         <div className={`deploy-log ${job.done ? (job.ok ? 'ok' : 'bad') : ''}`}>
           <Section
@@ -178,6 +182,6 @@ export function Deploy() {
         </div>
       )}
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
-    </div>
+    </div></div></div>
   );
 }

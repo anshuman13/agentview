@@ -1,6 +1,6 @@
 .mcp-page { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); font-size: var(--fs-md); color: var(--fg); position: relative; container-type: inline-size; }
 .mcp-page.with-detail { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); }
-.mcp-main { min-width: 0; overflow: auto; padding: 0 var(--sp-12) var(--sp-20); }
+.mcp-main { min-width: 0; }
 .mcp-stats { display: flex; align-items: center; gap: var(--sp-6); flex-wrap: wrap; font-size: var(--fs-sm); color: var(--fg-muted); }
 .mcp-stats b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
 .mcp-stats .warn b { color: var(--warn); }
@@ -94,7 +94,6 @@
 .mcp-field.bool .d { flex-basis: 100%; }
 
 @media (max-width: 900px) {
-  .mcp-main { padding: 0 var(--sp-8) 28px; }
   .mcp-detail { padding: var(--sp-8); }
 }
 @container (max-width: 720px) {

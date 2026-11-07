@@ -285,6 +285,8 @@ Later still render below it.
 Gone: the Context fold, the Slack summary row (the Summary page is in the nav), the standalone wiki-claims and
 stale-asks rows, the Meetings today section, the goal lines above the brief.
 
+Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` > `.wk-scroll` > `.mt-page` and add no wrapper, padding or background of their own. Their Page hero, the MCP grid and the GitHub detail keep their own layout. Agents keeps its fixed sidebar and takes only Row density and Grouped list styling.
+
 ### Status language
 - Outcomes are nouns in sentence case: Sent, Failed, Skipped, Waiting, Edited. Counts as "1 sent", "2 failed".
 - "Needs you" is the only phrase for work the user must do; use it as a Badge, not in prose.

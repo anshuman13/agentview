@@ -23,6 +23,8 @@ import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
 import { Badge, type BadgeSpec } from '../ui/Badge';
+import '../styles/features/wiki.css';
+import '../styles/features/meetings.css';
 
 const SAVE_BADGE: Record<'unsaved' | 'saved' | 'failed', BadgeSpec> = { unsaved: { status: 'waiting', reason: 'Unsaved' }, saved: { status: 'done' }, failed: { status: 'failed' } };
 const post = <T,>(url: string, body: unknown) => fetchJson<T>(api(url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -489,7 +491,7 @@ export function Observe() {
   const all = [...new Set([...names, ...(info?.repos ?? [])])].filter((n) => n !== 'example').sort();
 
   return (
-    <div className="observe">
+    <div className="wk"><div className="wk-scroll"><div className="mt-page observe">
       <div className="obs-picker">
         <Icon name="repo" small />
         <input
@@ -511,7 +513,7 @@ export function Observe() {
       <Err text={error} />
       {!info && !error && <Loading />}
       {info && (
-        <div className="obs-scroll">
+        <>
           {!info.config && (
             <div className="obs-hint setup">
               No Grafana settings for <b>{info.repo}</b> yet. The settings below are a guess: check them and click Save. They live in {info.file}.
@@ -544,8 +546,8 @@ export function Observe() {
               <div className="obs-actions"><Button variant="primary" size="sm" disabled={saving} onClick={saveConfig}>Save</Button></div>
             </div>
           )}
-        </div>
+        </>
       )}
-    </div>
+    </div></div></div>
   );
 }

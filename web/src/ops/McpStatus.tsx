@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { McpServer } from '../../../shared/protocol';
 import { getState, send, notice, api, useStore } from '../app/store';
@@ -10,6 +10,8 @@ import { post } from './mcpActions';
 import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, merge, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
 import { Detail } from './McpDetail';
 import { ServiceRow } from './McpServiceRow';
+import '../styles/features/wiki.css';
+import '../styles/features/meetings.css';
 
 const CONNECTORS = 'agentview.mcp.connectors';
 
@@ -104,7 +106,7 @@ export function McpPage() {
 
   return (
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
-      <div className="mcp-main">
+      <div className="mcp-main wk"><div className="wk-scroll"><div className="mt-page">
         {extra && createPortal(
           <div className="mcp-stats">
             {probed !== null && <span className={attention ? 'warn' : ''}><b>{ok}</b> connected of {shownRows.length}</span>}
@@ -126,19 +128,19 @@ export function McpPage() {
           const mine = shown.filter((s) => groupOf(s.variants[0].row) === g);
           if (!mine.length) return null;
           return (
-            <Fragment key={g}>
+            <section key={g}>
               <Section label={g === 'work' ? 'Work' : 'Personal'} count={rowCount(mine)} />
               <div className="as-group">{mine.map((s) => renderRows(s, g, false))}</div>
-            </Fragment>
+            </section>
           );
         })}
         {hiddenList.length > 0 && (
-          <>
+          <section>
             <Section label="Hidden" count={rowCount(hiddenList)} open={showHidden} onToggle={() => setShowHidden((v) => !v)} />
             {showHidden && <div className="as-group">{hiddenList.map((s) => renderRows(s, groupOf(s.variants[0].row), true))}</div>}
-          </>
+          </section>
         )}
-      </div>
+      </div></div></div>
       {current && <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} onClose={() => { document.querySelector<HTMLElement>(`[data-row="${CSS.escape(rowKey(current))}"]`)?.focus(); setSel(null); }} />}
     </div>
   );

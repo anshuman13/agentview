@@ -1,20 +1,18 @@
-.observe { display: flex; flex-direction: column; flex: 1; min-height: 0; font-size: var(--fs-md); }
 .observe .muted { color: var(--fg-muted); }
 .observe .error { color: var(--err); }
 .observe .ok { color: var(--ok); }
-.observe .obs-scroll { flex: 1; min-height: 0; overflow: auto; }
-.observe .obs-picker { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-6) var(--sp-4); color: var(--fg-muted); }
+.observe .obs-picker { display: flex; align-items: center; gap: var(--sp-3); padding: 0 0 var(--sp-4); color: var(--fg-muted); }
 .observe .obs-picker .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 
 .observe :is(.obs-picker input, .obs-askbar input, .obs-form input, .obs-form select, .obs-pick select) { min-width: 0; height: var(--size-md); padding: 0 var(--sp-3); font-size: var(--fs-sm); }
 .observe .obs-picker input { flex: 1; padding: 0 var(--sp-4); font-size: var(--fs-md); }
 
-.observe .obs-hint { padding: 3px var(--sp-6); font-size: var(--fs-sm); color: var(--fg-muted); word-break: break-word; display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.observe .obs-hint { padding: 3px 0; font-size: var(--fs-sm); color: var(--fg-muted); word-break: break-word; display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
 .observe .obs-hint.error { color: var(--err); }
 .observe .obs-hint.warn { color: var(--warn); }
 .observe .obs-hint.ok { color: var(--ok); }
 .observe .obs-hint.setup {
-  margin: 0 var(--sp-6) var(--sp-4); padding: var(--sp-4) var(--sp-5); display: block; color: var(--fg); background: var(--bg);
+  margin: 0 0 var(--sp-4); padding: var(--sp-4) var(--sp-5); display: block; color: var(--fg); background: var(--bg);
   border: 1px solid var(--border); border-left: 2px solid var(--warn); border-radius: var(--radius-sm);
 }
 .observe .obs-hint.mono { font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); }
@@ -36,11 +34,11 @@
   background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
 
-.observe .obs-askbar { display: flex; gap: var(--sp-3); padding: var(--sp-2) var(--sp-6) var(--sp-3); }
+.observe .obs-askbar { display: flex; gap: var(--sp-3); padding: var(--sp-2) 0 var(--sp-3); }
 .observe .obs-askbar input { flex: 1; }
 .observe .obs-dashboards { padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
 .observe .obs-dashboards .obs-chip { font-weight: 500; }
-.observe .obs-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-2) var(--sp-6); }
+.observe .obs-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-2) 0; }
 .observe .obs-chip {
   display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--size-row); max-width: 100%; padding: 0 var(--sp-4); font-size: var(--fs-sm);
   color: var(--fg); text-decoration: none; background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -49,7 +47,7 @@
 .observe .obs-link { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--link); text-decoration: none; white-space: nowrap; }
 @media (hover: hover) { .observe .obs-link:hover { text-decoration: underline; } }
 
-.observe .obs-panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-3); padding: var(--sp-2) var(--sp-6); }
+.observe .obs-panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-3); padding: var(--sp-2) 0; }
 .observe .obs-panel { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; padding: var(--sp-3) var(--sp-4); color: var(--fg); text-decoration: none; background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .observe .obs-panel .name { font-size: var(--fs-xs); color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .observe .obs-panel .val { font-size: var(--fs-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -58,37 +56,37 @@
 .observe .obs-panel svg { width: 100%; height: 28px; }
 .observe .obs-panel path { fill: none; stroke: var(--link); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 @media (hover: hover) { .observe a.obs-panel:hover { border-color: var(--border-strong); background: var(--hover); } }
-.observe .obs-logs { margin: var(--sp-1) var(--sp-6); max-height: 260px; line-height: var(--line-xs); }
+.observe .obs-logs { margin: var(--sp-1) 0; max-height: 260px; line-height: var(--line-xs); }
 .observe .obs-logs .line { display: flex; gap: var(--sp-4); padding: 1px var(--sp-4); border-left: 2px solid transparent; }
 .observe .obs-logs .line:is(.level-error, .level-fatal, .level-critical) { border-left-color: var(--err); }
 .observe .obs-logs .line:is(.level-warn, .level-warning) { border-left-color: var(--warn); }
 .observe .obs-logs .ts { flex: none; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 .observe :is(.obs-logs, .obs-patterns) .text { color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .observe :is(.obs-logs .line, .obs-patterns .pattern):hover .text { white-space: normal; word-break: break-all; }
-.observe .obs-patterns { margin: var(--sp-1) var(--sp-6); font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--line-xs); }
+.observe .obs-patterns { margin: var(--sp-1) 0; font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--line-xs); }
 .observe .obs-patterns .pattern { display: flex; gap: var(--sp-4); padding: var(--sp-1) 0; border-bottom: 1px solid var(--border); }
 .observe .obs-patterns .count { flex: none; min-width: var(--touch-sm); text-align: right; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 
-.observe .obs-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3) var(--sp-4); padding: var(--sp-2) var(--sp-6); }
+.observe .obs-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3) var(--sp-4); padding: var(--sp-2) 0; }
 .observe .obs-form label { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; font-size: var(--fs-xs); color: var(--fg-muted); }
-.observe .obs-pickers { display: flex; gap: var(--sp-3); padding: var(--sp-2) var(--sp-6); }
+.observe .obs-pickers { display: flex; gap: var(--sp-3); padding: var(--sp-2) 0; }
 .observe .obs-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-2); }
 .observe .obs-pick select { width: 100%; }
 .observe .obs-pick select:disabled { opacity: 0.5; }
 .observe .obs-editor {
-  display: block; width: calc(100% - 24px); margin: var(--sp-2) var(--sp-6); padding: var(--sp-3) var(--sp-4); resize: vertical;
+  display: block; width: 100%; margin: var(--sp-2) 0; padding: var(--sp-3) var(--sp-4); resize: vertical;
   font-family: var(--mono); font-size: var(--fs-sm); line-height: 17px; white-space: pre; overflow-x: auto;
 }
 .observe .obs-field {
-  display: block; width: calc(100% - 2 * var(--sp-6)); margin: var(--sp-2) var(--sp-6); padding: var(--sp-2) var(--sp-4); resize: vertical;
+  display: block; width: 100%; margin: var(--sp-2) 0; padding: var(--sp-2) var(--sp-4); resize: vertical;
   background: var(--sunken); border: 1px solid var(--border); border-radius: var(--shape-sm);
   font-family: var(--mono); font-size: var(--fs-sm); line-height: 17px; white-space: pre; overflow-x: auto;
 }
-.observe .obs-actions { padding: var(--sp-2) var(--sp-6); }
+.observe .obs-actions { padding: var(--sp-2) 0; }
 .observe .obs-editor:disabled { opacity: 0.6; }
-.observe .obs-save { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-6); font-size: var(--fs-sm); }
+.observe .obs-save { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) 0; font-size: var(--fs-sm); }
 
-.observe .obs-table { margin: var(--sp-1) var(--sp-6) var(--sp-3); max-height: 360px; }
+.observe .obs-table { margin: var(--sp-1) 0 var(--sp-3); max-height: 360px; }
 .observe .obs-table table { border-collapse: collapse; font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--line-xs); white-space: nowrap; }
 .observe .obs-table :is(th, td) { border-bottom: 1px solid var(--border); }
 .observe .obs-table th { position: sticky; top: 0; padding: 3px var(--sp-4); text-align: left; font-weight: 600; color: var(--fg-muted); background: var(--sunken); }

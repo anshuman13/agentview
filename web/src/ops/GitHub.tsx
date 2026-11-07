@@ -14,6 +14,8 @@ import { Skeleton } from '../ui/Skeleton';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { IconButton } from '../ui/Button';
+import '../styles/features/wiki.css';
+import '../styles/features/meetings.css';
 
 const initials = (login: string) => (login.replace(/^app\//, '').match(/[A-Za-z0-9]+/g) ?? ['?']).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
@@ -47,10 +49,10 @@ function PrRow({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
 function PrGroup({ title, prs, onOpen }: { title: string; prs: PullRequest[]; onOpen: (p: PullRequest) => void }) {
   const [open, setOpen] = useState(true);
   return (
-    <>
+    <section>
       <Section label={title} count={prs.length} open={open} onToggle={() => setOpen(!open)} />
-      {open && <div className="as-group gh-group">{prs.length ? prs.map((p) => <PrRow key={p.number} pr={p} onOpen={() => onOpen(p)} />) : <Row plain title="None" />}</div>}
-    </>
+      {open && <div className="as-group">{prs.length ? prs.map((p) => <PrRow key={p.number} pr={p} onOpen={() => onOpen(p)} />) : <Row plain title="None" />}</div>}
+    </section>
   );
 }
 
@@ -66,22 +68,18 @@ function PrList({ onOpen }: { onOpen: (n: number) => void }) {
   const cwd = useStore((s) => s.session.cwd);
   const { prs, error, loading } = useList();
   return (
-    <>
-      <div className="gh-bar">
-        <span className="muted small">{loading && !prs.length ? '' : `${prs.length} open`}</span>
-        <span className="spacer" />
-        <button className="icon-btn" title="Refresh" disabled={loading} onClick={() => load(cwd, true)}><Icon name="refresh" small spin={loading} /></button>
-      </div>
+    <div className="wk"><div className="wk-scroll"><div className="mt-page">
+      <Section label="Pull requests" count={loading && !prs.length ? undefined : prs.length} action={<IconButton icon="refresh" label="Refresh" size="sm" spin={loading} disabled={loading} onClick={() => load(cwd, true)} />} />
       {error ? (
         <Problem error={error} />
       ) : (
-        <div className="gh-scroll">
+        <>
           <PrGroup title="Waiting for my review" prs={prs.filter((p) => p.reviewRequested)} onOpen={(p) => onOpen(p.number)} />
           <PrGroup title="My pull requests" prs={prs.filter((p) => p.mine)} onOpen={(p) => onOpen(p.number)} />
           <PrGroup title="All open" prs={prs} onOpen={(p) => onOpen(p.number)} />
-        </div>
+        </>
       )}
-    </>
+    </div></div></div>
   );
 }
 

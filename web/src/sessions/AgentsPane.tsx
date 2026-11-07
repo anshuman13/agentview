@@ -49,7 +49,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
       {selected && current?.id === selected && (stack || matchMedia('(max-width: 900px)').matches) && <Back close={() => onSelect(null)} />}
       <div className="ag-side">
         <Section label="Agents" count={list.length} />
-        {list.map((a) => {
+        <div className="as-group">{list.map((a) => {
           const last = (a.status === 'running' && a.info?.progress) || a.lastStep;
           const sub = [a.status, a.steps.length > 0 && plural(a.steps.length, 'step'), last].filter(Boolean).join(' · ');
           return (
@@ -64,7 +64,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
               onClick={() => onSelect(a.id)}
             />
           );
-        })}
+        })}</div>
       </div>
       {current && <AgentDetail key={current.id} a={current} cwd={cwd} now={now} stack={stack} onBack={() => onSelect(null)} />}
     </div>
