@@ -71,24 +71,30 @@ export const MeetingRow = memo(function MeetingRow({ m, now, said, noDay }: { m:
   const badge = meetingBadge(m, now);
   const calendar = m.id.startsWith('cal:') ? safeHref(m.calendar_url) : undefined;
   const pick = (act: () => void) => () => { setMenu(false); act(); };
+  const open = () => openMeeting(m);
+  const moreBtn = (
+    <span className="mt-more" onClick={(e) => e.stopPropagation()}>
+      <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+      {menu && (
+        <Menu trigger={more} onClose={() => setMenu(false)}>
+          {calendar && <MenuItem icon="calendar" href={calendar} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
+          <MenuItem icon="edit" onClick={pick(() => openMeetingNotes(m))}>Notes</MenuItem>
+        </Menu>
+      )}
+    </span>
+  );
   return (
-    <div className={`mt-item${(m.ends_at ?? m.starts_at!) <= now ? ' past' : ''}`}>
-      <Row
-        title={<><ProfileDot profile={m.profile} />{m.title}</>}
-        meta={said ? <span className="mt-said" title="From the transcript">{said}</span> : meetingMeta(m, now, noDay)}
-        trailing={badge && <span className={`badge${badge === 'Live' ? ' running' : ' quiet'}`}>{badge}</span>}
-        onClick={() => openMeeting(m)}
-      />
-      <span className="mt-more">
-        <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-        {menu && (
-          <Menu trigger={more} onClose={() => setMenu(false)}>
-            {calendar && <MenuItem icon="calendar" href={calendar} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
-            <MenuItem icon="edit" onClick={pick(() => openMeetingNotes(m))}>Notes</MenuItem>
-          </Menu>
-        )}
-      </span>
-    </div>
+    <Row
+      plain
+      role="button"
+      tabIndex={0}
+      className={(m.ends_at ?? m.starts_at!) <= now ? 'past' : undefined}
+      title={<><ProfileDot profile={m.profile} />{m.title}</>}
+      meta={said ? <span className="mt-said" title="From the transcript">{said}</span> : meetingMeta(m, now, noDay)}
+      trailing={<>{badge && <span className={`badge${badge === 'Live' ? ' running' : ' quiet'}`}>{badge}</span>}{moreBtn}</>}
+      onClick={open}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(); } }}
+    />
   );
 });
 
@@ -107,11 +113,11 @@ function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const label = (d: number) => d === dayStart(now) ? 'Today' : d === dayEnd(now) ? 'Tomorrow' : dayLabel(d, true);
   return (
     <>
-      <div className="mt-up-head">Upcoming</div>
+      <Section label="Upcoming" />
       {days.map(([d, rows]) => (
         <section key={d}>
           <Section label={label(d)} />
-          <div className="mt-days">{rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} noDay />)}</div>
+          <div className="as-group">{rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} noDay />)}</div>
         </section>
       ))}
       {!days.length && <div className="mt-up-none">Nothing on the calendar this week.</div>}
@@ -249,7 +255,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
       </header>
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className="wk-scroll" ref={pullRef}>
-        {mode === 'log' ? <Decisions meetings={mine} /> : mode === 'load' ? <Load meetings={mine} now={now} /> : mode === 'week' ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-list">
+        {mode === 'log' ? <Decisions meetings={mine} /> : mode === 'load' ? <Load meetings={mine} now={now} /> : mode === 'week' ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-page">
           <div className="mt-chips" role="group" aria-label="Filters">
             {MEETING_CHIPS.map((c) => <Chip key={c} on={chips.includes(c)} aria-pressed={chips.includes(c)} onClick={() => setFilters(chips.includes(c) ? chips.filter((x) => x !== c) : MEETING_CHIPS.filter((x) => x === c || chips.includes(x)))}>{c}</Chip>)}
           </div>
@@ -257,11 +263,11 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
             onAdd={addTopic} onRemove={removeTopic} />
           {active.length === 1 && <TopicTimeline topic={active[0]} meetings={mine} facts={myFacts} />}
           {!query && !chips.length && <Upcoming meetings={mine} now={now} />}
-          {!query && visible.length > 0 && <div className="mt-up-head">Earlier</div>}
+          {!query && visible.length > 0 && <Section label="Earlier" />}
           {visible.map((g) => (
             <section key={g.label}>
               <Section label={g.label} />
-              <div className="mt-days">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} said={said.get(rowKey(m))} />)}</div>
+              <div className="as-group">{g.rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} said={said.get(rowKey(m))} />)}</div>
             </section>
           ))}
           <ShowMore shown={shown} total={total} onMore={more} />

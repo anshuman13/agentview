@@ -5,6 +5,7 @@ import { SUMMARY_TEMPLATES, rememberTemplate, summaryInstructions, templateFor, 
 import { talkTime } from '../data/talkTime';
 import type { Meeting } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { Section } from '../../ui/Section';
 import { SearchedOutput } from '../../ui/SearchedOutput';
 import { markSegments, matchLabel, plural } from '../../ui/util';
 import { queryWords } from '../data/match';
@@ -56,7 +57,7 @@ export function Transcript({ got }: { got: { text: string | null; error?: string
   const count = useMemo(() => got?.text && query.trim() ? markSegments(got.text, queryWords(query)).filter((s) => s.hit).length : -1, [got?.text, query]);
   return (
     <section className="mt-sec mt-fold">
-      <button className="mt-fold-head" aria-expanded={open} onClick={() => setOpen((v) => !v)}>Transcript {!open && count >= 0 && <span className="muted small">{matchLabel(count)}</span>} <Icon name={open ? 'chevron-up' : 'chevron-down'} small /></button>
+      <Section label="Transcript" count={!open && count >= 0 ? matchLabel(count) : undefined} open={open} onToggle={() => setOpen((v) => !v)} />
       {open && (!got ? <p className="mt-pending">Loading</p> : got.error ? <p className="mt-pending">Could not load the transcript: {got.error}</p> : got.text ? <SearchedOutput text={got.text} query={query} setQuery={setQuery} label="Search transcript" className="mt-transcript" /> : <p className="mt-pending">No transcript text kept for this meeting.</p>)}
     </section>
   );

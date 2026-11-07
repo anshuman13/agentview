@@ -155,10 +155,10 @@ then at most one action. md for a whole view, sm inside a panel or report. The i
 the accent is for the action.
 
 ### Grouped list (iOS inset grouped)
-Overview cards (`.as-group`, Needs you) and Meetings day groups (`.mt-days`) are
+Overview cards (`.as-group`, Needs you), the Meetings list and Meetings day groups (`.mt-days`) are
 inset grouped lists: page `--group-page` (grey #F2F2F7 in light, black in dark), card `--group-card`
 (white in light, #1C1C1E in dark), `--shape-lg` radius, no border, rows 44px minimum with a hairline
-inset to the text start. The Codex task lists (`.ui-group`) and the editor Links use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case.
+inset to the text start. The Codex task lists (`.ui-group`), the editor Links and the Meetings list (`.as-group` under `.mt-page`) use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case.
 
 ### Section header
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
@@ -279,9 +279,9 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | gh-list | none | Grouped list | Done |
 | mcp-detail-head, mcp-tools-head | none | Section header | Done |
 | mcp-item | ops/McpServiceRow.tsx | Row | Partial |
-| mt-fold-head | codex/meetings/Transcript.tsx (no CSS rule) | Section header | Todo |
-| mt-item | codex/meetings/MeetingList.tsx | Row | Todo |
-| mt-list | codex/GoalsPage.tsx, codex/Search.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/summary/Summary.tsx | Grouped list | Todo |
+| mt-fold-head | - | Section header | Done |
+| mt-item | - | Row | Done |
+| mt-list | codex/GoalsPage.tsx, codex/Search.tsx, codex/jobs/Jobs.tsx, codex/summary/Summary.tsx | Grouped list | Partial |
 | mt-load-head | codex/Goals.tsx, codex/meetings/Review.tsx | Section header | Partial |
 | mt-load-row | - | Row | Done |
 | mt-log-item | codex/meetings/Decisions.tsx, codex/meetings/Review.tsx | Row | Partial |
@@ -289,7 +289,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-row | CSS only | Row (delete the unused rule) | Done |
 | mt-rows | none | Grouped list | Done |
 | mt-series-list | - | Grouped list | Done |
-| mt-up-head | codex/meetings/MeetingList.tsx | Section header | Todo |
+| mt-up-head | - | Section header | Done |
 | obs-head, obs-subhead | none | Section header | Done |
 | ov-ask-line | codex/DoNow.tsx, codex/NeedsYou.tsx, codex/WeeklyReview.tsx, codex/meetings/Person.tsx, codex/overview/CardRow.tsx, codex/overview/ReplyQueue.tsx, codex/summary/Summary.tsx | Row | Todo |
 | ov-brief-head | codex/Fold.tsx | Section header | Todo |

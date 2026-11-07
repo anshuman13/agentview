@@ -265,9 +265,9 @@
 .sm-filter select { border: 0; background: transparent; color: var(--fg); font: inherit; text-align: right; cursor: pointer; }
 
 /* Meetings: day groups as iOS inset grouped cards on a grey page in light. */
-.wk:has(.mt-days) { background: var(--group-page); }
-.wk .mt-days { border-radius: var(--shape-lg); background: var(--group-card); overflow: hidden; }
-.wk .mt-list section > .ui-section .ui-section-head { padding: var(--sp-3) var(--sp-8); font-size: var(--type-footnote-size); font-weight: 400; }
+.wk:has(.mt-days, .mt-page) { background: var(--group-page); }
+.wk :is(.mt-days, .mt-page .as-group) { border: 0; border-radius: var(--shape-lg); background: var(--group-card); overflow: hidden; }
+.wk :is(.mt-list, .mt-page) section > .ui-section .ui-section-head { padding: var(--sp-3) var(--sp-8); font-size: var(--type-footnote-size); font-weight: 400; }
 
 .wk-mode-n { font-size: var(--fs-sm); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 .wk-mode .wk-scroll { padding: var(--sp-6) var(--sp-8); }
