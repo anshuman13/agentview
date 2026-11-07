@@ -15,7 +15,7 @@ let reason = '';
 let nextId = 1;
 const calls = new Map<number, { resolve: (r: any) => void; reject: (e: Error) => void }>();
 const tabs = new Map<string, Tab>();
-const viewers = new Set<WebSocket>();
+export const viewers = new Set<WebSocket>();
 const EDITABLE = "(() => { const a = document.activeElement; return !!a && (a.isContentEditable || /^(INPUT|TEXTAREA)$/.test(a.tagName)); })()";
 const selfOrigins = new Set<string>();
 let pinned: string | null = null;
@@ -198,16 +198,57 @@ function onMessage(m: Msg) {
       break;
     case 'Page.screencastFrame':
       if (m.sessionId !== watching?.session) return;
-      void call('Page.screencastFrameAck', { sessionId: m.params.sessionId }, m.sessionId).catch(() => {});
       viewport = { w: m.params.metadata.deviceWidth, h: m.params.metadata.deviceHeight };
-      frame(m.params.data);
+      frame(m.params.data, { session: m.sessionId, id: m.params.sessionId });
       break;
   }
 }
 
-function frame(data: string) {
+type Ack = { session?: string; id: number };
+const MAX_UNFLUSHED = 3;
+const unflushed = new Map<WebSocket, number>();
+let heldAck: Ack | null = null;
+
+export const hooks = {
+  ack: ({ session, id }: Ack) => void call('Page.screencastFrameAck', { sessionId: id }, session).catch(() => {}),
+};
+
+export function resetFrames() {
+  viewers.clear();
+  unflushed.clear();
+  heldAck = null;
+}
+
+function releaseHeld() {
+  const a = heldAck;
+  heldAck = null;
+  if (a) hooks.ack(a);
+}
+
+// A viewer that stops flushing holds the ack, and so the screencast, until another send callback fires.
+export function frame(data: string, ack?: Ack) {
+  if (ack) releaseHeld();
   const s = JSON.stringify({ t: 'frame', data, w: viewport.w, h: viewport.h });
-  viewers.forEach((v) => v.readyState === WebSocket.OPEN && v.bufferedAmount < 2_000_000 && v.send(s));
+  let took = 0;
+  let left = 1;
+  const settle = () => {
+    if (--left === 0 && ack) hooks.ack(ack);
+  };
+  viewers.forEach((v) => {
+    if (v.readyState !== WebSocket.OPEN || (unflushed.get(v) ?? 0) >= MAX_UNFLUSHED) return;
+    took++;
+    left++;
+    unflushed.set(v, (unflushed.get(v) ?? 0) + 1);
+    v.send(s, () => {
+      if (unflushed.has(v)) unflushed.set(v, unflushed.get(v)! - 1);
+      settle();
+      releaseHeld();
+    });
+  });
+  if (took) return settle();
+  if (!ack) return;
+  if ([...viewers].some((v) => v.readyState === WebSocket.OPEN)) heldAck = ack;
+  else hooks.ack(ack);
 }
 
 function sendTabs() {
@@ -459,6 +500,7 @@ export function openChrome(ws: WebSocket, origin: string | undefined) {
   ws.on('close', () => {
     viewers.delete(ws);
     touches.delete(ws);
+    unflushed.delete(ws);
     const was = sizes.delete(ws);
     if (!viewers.size) return stop();
     if (was) void emulate();

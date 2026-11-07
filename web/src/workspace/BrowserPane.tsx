@@ -33,17 +33,31 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   emptied.current = onEmpty;
 
   const send = (m: object) => ws.current?.readyState === WebSocket.OPEN && ws.current.send(JSON.stringify(m));
+  const phoneNow = useRef(phone);
+  phoneNow.current = phone;
+  const sendSize = () => {
+    const el = host.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    send({ t: 'size', w: Math.round(r.width * dpr), h: Math.round(r.height * dpr), cssW: Math.round(r.width), cssH: Math.round(r.height), dpr, mobile: phoneNow.current && r.width < 700 });
+  };
   const tab = tabs.find((t) => t.id === current);
 
   useEffect(() => {
-    let alive = true;
     let delay = 1000;
-    let timer: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const open = () => {
+      timer = undefined;
       const s = new WebSocket(wsUrl('chrome'));
       ws.current = s;
-      s.onopen = () => { delay = 1000; };
+      s.onopen = () => {
+        if (ws.current !== s) return;
+        delay = 1000;
+        sendSize();
+      };
       s.onmessage = (ev) => {
+        if (ws.current !== s) return;
         const m = JSON.parse(ev.data);
         if (m.t === 'state') {
           setState(m);
@@ -64,18 +78,32 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
         }
       };
       s.onclose = () => {
-        if (!alive) return;
+        if (ws.current !== s) return;
         setState({ state: 'off', reason: 'server', retry: true });
         setHasFrame(false);
         timer = setTimeout(open, delay);
         delay = Math.min(delay * 2, 10000);
       };
     };
+    const close = () => {
+      clearTimeout(timer);
+      timer = undefined;
+      const s = ws.current;
+      ws.current = null;
+      s?.close();
+    };
+    const onVisibility = () => {
+      if (document.hidden) return close();
+      if (ws.current && ws.current.readyState <= WebSocket.OPEN) return;
+      clearTimeout(timer);
+      delay = 1000;
+      open();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
     open();
     return () => {
-      alive = false;
-      clearTimeout(timer);
-      ws.current?.close();
+      document.removeEventListener('visibilitychange', onVisibility);
+      close();
     };
   }, []);
 
@@ -91,11 +119,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   useEffect(() => {
     const el = host.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
-      const r = el.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      send({ t: 'size', w: Math.round(r.width * dpr), h: Math.round(r.height * dpr), cssW: Math.round(r.width), cssH: Math.round(r.height), dpr, mobile: phone && r.width < 700 });
-    });
+    const ro = new ResizeObserver(sendSize);
     ro.observe(el);
     return () => ro.disconnect();
   }, [state.state, phone]);
