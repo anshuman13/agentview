@@ -251,6 +251,13 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
   return [...m.values()].sort((a, b) => b.last - a.last);
 }
 
+// Needs you groups first, then the rest; a frozen key list keeps the rest in that order, with groups missing from it first.
+export function orderGroups(groups: RepoGroup[], frozen: readonly string[] | null = null) {
+  const slot = new Map((frozen ?? []).map((k, i) => [k, i]));
+  const rank = (g: RepoGroup) => (frozen ? slot.get(g.key) ?? -1 : 0);
+  return [...groups].sort((a, b) => Number(b.waiting > 0) - Number(a.waiting > 0) || (a.waiting > 0 ? 0 : rank(a) - rank(b)) || b.last - a.last);
+}
+
 export type ChatState = 'needs' | 'failed' | 'running' | 'done';
 
 // Needs you, Failed and Running come from the live chat; Done is activity newer than the last time the chat was opened.

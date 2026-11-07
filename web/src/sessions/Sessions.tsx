@@ -14,7 +14,7 @@ import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, renameChat, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 
 const PAGE = 5;
@@ -266,7 +266,13 @@ export function OpenChats() {
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const actions = chatActions(setChats, setAsk);
   const { pins, toggle: togglePin } = usePins();
-  const groups = useMemo(() => groupByRepo(live, chats, folders, filter, new Set(pins)), [live, chats, folders, filter, pins]);
+  const pinSet = useMemo(() => new Set(pins), [pins]);
+  const allGroups = useMemo(() => groupByRepo(live, chats, folders, '', pinSet), [live, chats, folders, pinSet]);
+  const snapshot = useRef<{ id: string; keys: string[] } | null>(null);
+  if (!viewing || !live.some((c) => c.id === viewing)) snapshot.current = null;
+  else if (snapshot.current?.id !== viewing || !snapshot.current.keys.length) snapshot.current = { id: viewing, keys: orderGroups(allGroups).map((g) => g.key) };
+  const frozen = snapshot.current?.keys ?? null;
+  const groups = useMemo(() => orderGroups(groupByRepo(live, chats, folders, filter, pinSet), frozen), [live, chats, folders, filter, pinSet, frozen]);
   const pinnedRows = useMemo(() => {
     const find = chatFinder(filter, chats);
     return pins.flatMap((id) => {
@@ -279,8 +285,8 @@ export function OpenChats() {
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
   const order = useMemo(() => {
     const pinned = pins.flatMap((id) => live.filter((c) => c.sessionId === id));
-    return chatOrder(waiting, pinned, groupByRepo(live, chats, folders, '', new Set(pins)));
-  }, [live, chats, folders, pins]);
+    return chatOrder(waiting, pinned, orderGroups(allGroups, frozen));
+  }, [live, pins, allGroups, frozen]);
   const nav = useRef({ order, viewing });
   nav.current = { order, viewing };
   useEffect(() => {

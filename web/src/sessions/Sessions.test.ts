@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, newChatGroups, segmentOf, since, staleKeys, unreadCount } from './folders';
+import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, newChatGroups, orderGroups, segmentOf, since, staleKeys, unreadCount } from './folders';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
@@ -56,6 +56,26 @@ describe('groupByKind', () => {
   it('puts personal repos in their own segment', () => {
     const f = buildFolders([repo('shop'), { ...repo('agentview'), root: 'workspace_personal' }], [], [chat('/u/workspace_personal/x', 1)]);
     expect(f.map((x) => [x.name, segmentOf(x)])).toEqual([['x', 'personal'], ['shop', 'work'], ['agentview', 'personal']]);
+  });
+});
+
+describe('orderGroups', () => {
+  const g = (key: string, last: number, waiting = 0) => ({ key, name: key, open: [], recent: [], last, running: 0, waiting });
+  const keys = (x: ReturnType<typeof orderGroups>) => x.map((y) => y.key);
+  it('puts Needs you first, then newest activity within each part', () => {
+    expect(keys(orderGroups([g('a', 9), g('b', 1, 1), g('c', 5), g('d', 2, 1)]))).toEqual(['d', 'b', 'a', 'c']);
+  });
+  it('keeps the frozen order against newer activity', () => {
+    expect(keys(orderGroups([g('a', 1), g('b', 9), g('c', 5)], ['a', 'b', 'c']))).toEqual(['a', 'b', 'c']);
+  });
+  it('puts a group outside the frozen list first among the rest and skips missing keys', () => {
+    expect(keys(orderGroups([g('a', 1), g('n', 0), g('b', 9)], ['gone', 'a', 'b']))).toEqual(['n', 'a', 'b']);
+  });
+  it('moves a frozen group that gains a Needs you chat to the top', () => {
+    expect(keys(orderGroups([g('a', 1), g('b', 9), g('c', 5, 1)], ['a', 'b', 'c']))).toEqual(['c', 'a', 'b']);
+  });
+  it('returns nothing for no groups', () => {
+    expect(orderGroups([], ['a'])).toEqual([]);
   });
 });
 
