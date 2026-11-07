@@ -208,7 +208,8 @@ How much a list row may carry. The eye should find the one thing to do without r
   back. No refresh on desktop.
 - Edge swipe back: phone widths only (max-width 900px). A right swipe from within 20px of the left edge, at least 70px
   and mostly horizontal, closes the topmost open page or sheet like the Back button. It does nothing on a list, inside
-  a Row swipe or on desktop.
+  a Row swipe or on desktop. Off in the Android app (Tauri, Android 10 or later) where system gesture navigation handles
+  the left edge.
 - Keyboard inset: touch input at phone widths only (max-width 900px). `useKeyboardInset` writes the covered height of the
   visual viewport to `--kb-inset` on the root once it is at least 100px, so URL bar changes are ignored. The New task
   and date sheets pad their overlay by it and sit on top of the keyboard; the task page pads `.wk-scroll` and scrolls

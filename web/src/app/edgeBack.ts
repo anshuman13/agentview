@@ -14,11 +14,17 @@ export function edgeBackEnd(start: Point, end: Point, ms: number, depth: number)
   return depth > 0 && start.x <= EDGE_START && ms < MAX_MS && dx >= MIN_DX && dx >= 2 * Math.abs(dy);
 }
 
+export function edgeBackEnabled(userAgent: string | undefined, tauri: boolean) {
+  const android = Number(/Android (\d+)/.exec(userAgent ?? '')?.[1]);
+  return !(tauri && android >= 10);
+}
+
 // On the phone a right swipe from the left edge closes the topmost open layer, like the native back.
 export function useEdgeBack() {
   useEffect(() => {
     let start: (Point & { t: number }) | null = null;
     const down = (e: TouchEvent) => {
+      if (!edgeBackEnabled(navigator.userAgent, '__TAURI__' in window)) return;
       const t = e.touches[0];
       start = e.touches.length === 1 && t.clientX <= EDGE_START && !(e.target as Element).closest('.as-swipe-row') && !isDragging() && !getSelection()?.toString() ? { x: t.clientX, y: t.clientY, t: Date.now() } : null;
     };
