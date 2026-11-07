@@ -39,7 +39,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
-private enum class Picker { Mode, Model, Effort }
+private enum class Picker { Mode, Model, Effort, Account }
 
 @Composable
 fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean) {
@@ -108,6 +108,8 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                     Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode }, trailingIcon = "chevron-down")
                     Chip(shortModel(modelName(session)), { sheet = Picker.Model }, trailingIcon = "chevron-down")
                     session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it, { sheet = Picker.Effort }, trailingIcon = "chevron-down") }
+                    val account = session?.account ?: "main"
+                    if ((session?.accounts?.size ?: 0) > 1 || account != "main") Chip(ACCOUNT_LABEL[account] ?: account, { sheet = Picker.Account }, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, trailingIcon = "chevron-down")
                 }
                 if (uploading > 0) RowLabel("Uploading", c.fgFaint)
                 if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
@@ -125,6 +127,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
         Picker.Mode -> PickerSheet("Permission mode", PERMISSION_MODES.map { Choice(it, MODES[it]?.label ?: it, MODES[it]?.detail ?: "") }, session?.permissionMode ?: "default", { hub.setMode(it) }) { sheet = null }
         Picker.Model -> PickerSheet("Select model", (session?.models ?: emptyList()).map { Choice(it.value, it.displayName, it.description) }, if (session?.team == true) "team" else session?.model, { hub.setModel(it) }) { sheet = null }
         Picker.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { sheet = null }
+        Picker.Account -> PickerSheet("Select Claude account", (session?.accounts ?: emptyList()).map { Choice(it, ACCOUNT_LABEL[it] ?: it, ACCOUNT_NOTE[it] ?: "") }, session?.account ?: "main", { hub.setAccount(it) }) { sheet = null }
         null -> {}
     }
 }

@@ -7,6 +7,8 @@ const val COMPACT_AT = 200_000
 
 val PERMISSION_MODES = listOf("default", "acceptEdits", "plan", "auto", "dontAsk")
 val EFFORT_LEVELS = listOf("low", "medium", "high", "xhigh", "max")
+val ACCOUNT_LABEL = mapOf("main" to "Personal", "alt" to "Work", "alt2" to "Work Enterprise")
+val ACCOUNT_NOTE = mapOf("alt2" to "Documents only, not for coding")
 val EFFORT_LABEL = mapOf("low" to "Low", "medium" to "Medium", "high" to "High", "xhigh" to "Extra high", "max" to "Max")
 
 class ModeInfo(val label: String, val detail: String)

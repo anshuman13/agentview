@@ -103,6 +103,7 @@ data class SessionInfo(
     val pr: Int? = null,
     val mcp: List<McpServer> = emptyList(),
     val account: String? = null,
+    val accounts: List<String> = emptyList(),
 )
 
 data class AskOption(val label: String, val description: String = "", val preview: String? = null)
@@ -240,6 +241,7 @@ fun allowBlockedCmd(id: String) = cmd("allow_blocked") { put("id", id) }
 fun sendNowCmd(id: String) = cmd("send_now") { put("id", id) }
 fun setModelCmd(model: String) = cmd("set_model") { put("model", model) }
 fun setEffortCmd(effort: String) = cmd("set_effort") { put("effort", effort) }
+fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
 fun newSessionCmd(profile: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile) }
 fun closeCmd(id: String) = cmd("close") { put("id", id) }
