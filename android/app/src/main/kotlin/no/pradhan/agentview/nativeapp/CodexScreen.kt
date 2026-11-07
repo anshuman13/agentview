@@ -73,6 +73,9 @@ fun CodexScreen(hub: Hub) {
     var editKey by rememberSaveable { mutableStateOf<String?>(null) }
     var adding by rememberSaveable { mutableStateOf(false) }
     var needsOpen by rememberSaveable { mutableStateOf(false) }
+    var routeText by rememberSaveable { mutableStateOf("") }
+    var chipText by rememberSaveable { mutableStateOf("") }
+    var decisions by rememberSaveable { mutableStateOf(false) }
     var searching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var refreshing by remember { mutableStateOf(false) }
@@ -100,8 +103,16 @@ fun CodexScreen(hub: Hub) {
 
     val editing = editKey?.let { k -> st.items.firstOrNull { it.key == k && !it.deleted } }
     LaunchedEffect(editing, editKey) { if (editKey != null && editing == null && st.loaded) editKey = null }
-    val sub = page != "overview" && page != "tasks"
-    val back = { if (searching && page == "tasks") { searching = false; query = "" } else page = if (page.startsWith("tag:") ) "tasks" else if (sub) "overview" else page }
+    val route = routesOf(routeText).lastOrNull()
+    val chips = remember(chipText) { chipText.split(',').filter { it.isNotEmpty() }.toSet() }
+    val push = { r: String -> routeText = pushRoute(routeText, r) }
+    val onChip = { c: String -> chipText = (if (c in chips) chips - c else chips + c).joinToString(",") }
+    val sub = route != null || (page != "overview" && page != "tasks")
+    val back = {
+        if (route != null) { routeText = popRoute(routeText); decisions = false }
+        else if (searching && page == "tasks") { searching = false; query = "" }
+        else page = if (page.startsWith("tag:") ) "tasks" else if (sub) "overview" else page
+    }
     BackHandler(enabled = sub || searching) { back() }
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }
 
@@ -109,6 +120,7 @@ fun CodexScreen(hub: Hub) {
         Column(Modifier.fillMaxSize()) {
             CodexTopBar(
                 title = when {
+                    route != null -> routeTitle(route, st)
                     page == "overview" -> greeting(now)
                     page == "tasks" -> "Tasks"
                     page == "goals" -> "Goals"
@@ -117,10 +129,13 @@ fun CodexScreen(hub: Hub) {
                 },
                 back = if (sub) back else null,
                 filter = filterKey, onFilter = hub::setCodexFilter,
-                onSearch = if (page == "overview" || page == "tasks") { { page = "tasks"; searching = true } } else null,
-                menu = { close ->
+                onSearch = if (route == null && (page == "overview" || page == "tasks")) { { page = "tasks"; searching = true } } else null,
+                menu = if (route != null) (if (route == "meetings") { close -> ExtraMenu(route, hub, profile, now, chips, decisions, onChip, { decisions = !decisions }, push, close) } else null) else { close ->
                     DropdownMenuItem(text = { Text("Goals") }, onClick = { close(); page = "goals" })
                     DropdownMenuItem(text = { Text("Search everything") }, onClick = { close(); page = "search" })
+                    DropdownMenuItem(text = { Text("Meetings") }, onClick = { close(); push("meetings") })
+                    DropdownMenuItem(text = { Text("Wiki") }, onClick = { close(); push("wiki") })
+                    DropdownMenuItem(text = { Text("Jobs") }, onClick = { close(); push("jobs") })
                 },
             )
             if (!sub) Row(Modifier.padding(horizontal = Sp.s6), horizontalArrangement = Arrangement.spacedBy(Sp.s4)) {
@@ -131,16 +146,17 @@ fun CodexScreen(hub: Hub) {
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
                 when {
                     !st.loaded -> Empty("Loading Codex...")
-                    page == "overview" -> OverviewPage(hub, st, profile, now, actions, { editKey = it.key }, { needsOpen = true }, { page = "goals" }, { adding = true })
+                    route != null -> ExtraContent(route, hub, st, profile, now, actions, chips, decisions, onChip, push) { editKey = it.key }
+                    page == "overview" -> OverviewPage(hub, st, profile, now, actions, { editKey = it.key }, { needsOpen = true }, { page = "goals" }, { adding = true }, { push("meeting:${it.key}") })
                     page == "tasks" -> TasksPage(st, profile, now, actions, searching, query, { query = it }, { editKey = it.key }, { page = "tag:$it" })
                     page == "goals" -> GoalsPage(st, profile, now, actions, hub, { editKey = it.key })
                     page == "search" -> SearchPage(st, profile, { editKey = it.key })
                     else -> TagPage(st, page.removePrefix("tag:"), now, actions, profile == null, { editKey = it.key })
                 }
             }
-            if (page == "overview" && st.loaded) AskBar(hub, st, profile)
+            if (page == "overview" && route == null && st.loaded) AskBar(hub, st, profile)
         }
-        if (page != "goals" && page != "search") FloatingActionButton(
+        if (route == null && page != "goals" && page != "search") FloatingActionButton(
             onClick = { adding = true },
             Modifier.align(Alignment.BottomEnd).padding(end = Sp.s8, bottom = if (page == "overview") 88.dp else Sp.s8),
             containerColor = av.accent, contentColor = androidx.compose.ui.graphics.Color.White,
@@ -159,7 +175,7 @@ fun CodexScreen(hub: Hub) {
 }
 
 @Composable
-private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String, onFilter: (String) -> Unit, onSearch: (() -> Unit)?, menu: @Composable (() -> Unit) -> Unit) {
+private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String, onFilter: (String) -> Unit, onSearch: (() -> Unit)?, menu: (@Composable (() -> Unit) -> Unit)?) {
     Row(Modifier.fillMaxWidth().padding(start = Sp.s4, end = Sp.s2).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
         if (back != null) IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
         Text(title, Modifier.weight(1f).padding(start = if (back == null) Sp.s4 else 0.dp), style = MaterialTheme.typography.titleLarge, maxLines = 1)
@@ -173,7 +189,7 @@ private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String, onFi
             }
         }
         if (onSearch != null) IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, "Search tasks") }
-        MoreButton { close -> menu(close) }
+        if (menu != null) MoreButton { close -> menu(close) }
     }
 }
 
@@ -196,7 +212,7 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
 }
 
 @Composable
-private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onGoals: () -> Unit, onAdd: () -> Unit) {
+private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onGoals: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit) {
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
     val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now) }
@@ -213,7 +229,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
             if (mt.next != null || task != null) {
                 SectionHeader("Up next")
                 Group {
-                    mt.next?.let { MeetingRow(it, now, upNext = true) }
+                    mt.next?.let { MeetingRow(it, now, upNext = true) { onMeeting(it) } }
                     if (mt.next != null && task != null) Hairline()
                     task?.let { PlainRow(it.title ?: "", it.at?.let { a -> clock(a) }, onClick = { onOpen(it) }, trailing = { TextButton(onClick = { actions.done(it) }) { Text("Done") } }) }
                 }
@@ -238,7 +254,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                 Group {
                     shown.forEachIndexed { i, (_, m, r) ->
                         if (i > 0) Hairline()
-                        if (m != null) MeetingRow(m, now, upNext = false)
+                        if (m != null) MeetingRow(m, now, upNext = false) { onMeeting(m) }
                         else if (r != null) PlainRow(
                             r.title ?: "", if (r in today.late) null else r.at?.let { clock(it) },
                             leading = { CheckCircle(false, "Mark ${r.title} done") { actions.done(r) } },
@@ -273,11 +289,11 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
 }
 
 @Composable
-private fun MeetingRow(m: Row, now: Long, upNext: Boolean) {
+private fun MeetingRow(m: Row, now: Long, upNext: Boolean, onClick: () -> Unit) {
     val live = isLive(m, now)
     val soon = joinMinutes(m, now)
     val meta = if (upNext) listOfNotNull(countdown(m, now), meetingMeta(m, now)).joinToString(" · ") else if (soon != null) "Starts in $soon min" else clock(m.startsAt!!)
-    PlainRow(m.title ?: "Meeting", meta, trailing = { if (live) Text("Live", style = MaterialTheme.typography.labelSmall, color = av.ok, modifier = Modifier.padding(end = Sp.s4)) })
+    PlainRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = { if (live) Text("Live", style = MaterialTheme.typography.labelSmall, color = av.ok, modifier = Modifier.padding(end = Sp.s4)) })
 }
 
 @Composable
