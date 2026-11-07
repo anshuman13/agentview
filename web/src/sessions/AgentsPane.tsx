@@ -1,8 +1,10 @@
 import { send, useStore } from '../app/store';
 import { Back } from '../app/back';
-import { Chip } from '../ui/Button';
+import { Button, Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
+import { Section } from '../ui/Section';
+import { Row as UiRow } from '../ui/Row';
 import { Markdown } from '../chat/Chat';
 import { Row } from '../chat/Transcript';
 import { copyText } from '../codex/view';
@@ -45,20 +47,25 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
   return (
     <div className={`ag ${stack ? 'stack' : ''} ${selected && current?.id === selected ? 'picked' : ''}`}>
       {selected && current?.id === selected && (stack || matchMedia('(max-width: 900px)').matches) && <Back close={() => onSelect(null)} />}
-      <ul className="ag-list">
+      <div className="ag-side">
+        <Section label="Agents" count={list.length} />
         {list.map((a) => {
           const last = (a.status === 'running' && a.info?.progress) || a.lastStep;
           const sub = [a.status, a.steps.length > 0 && plural(a.steps.length, 'step'), last].filter(Boolean).join(' · ');
           return (
-            <li key={a.id} className={`ag-row ${a.status} ${a.id === current?.id ? 'active' : ''}`} onClick={() => onSelect(a.id)}>
-              <span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={a.status === 'running'} /></span>
-              <span className="ag-name" title={a.description}>{a.description}</span>
-              <span className="ag-time">{took(a, now)}</span>
-              <span className="ag-sub" title={sub}>{sub}</span>
-            </li>
+            <UiRow
+              key={a.id}
+              className="ag-item"
+              aria-current={a.id === current?.id ? 'true' : undefined}
+              leading={<span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={a.status === 'running'} /></span>}
+              title={<span title={a.description}>{a.description}</span>}
+              meta={<span title={sub}>{sub}</span>}
+              trailing={took(a, now)}
+              onClick={() => onSelect(a.id)}
+            />
           );
         })}
-      </ul>
+      </div>
       {current && <AgentDetail key={current.id} a={current} cwd={cwd} now={now} stack={stack} onBack={() => onSelect(null)} />}
     </div>
   );
@@ -71,20 +78,13 @@ function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; no
   return (
     <div className="ag-detail">
       <button className={`ag-back ${stack ? '' : 'mobile-only'}`} onClick={onBack}><Icon name="arrow-left" small /> Agents</button>
-      <header className="ag-head">
-        <div className="ag-title">
-          <span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={running} /></span>
-          <h2 title={a.description}>{a.description}</h2>
-          {running && (
-            <button className="btn sm" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>
-              <Icon name="debug-stop" small /> Stop
-            </button>
-          )}
-        </div>
-        <div className="ag-meta">{meta.join(' · ')}</div>
-        {running && a.info?.progress && <div className="ag-progress">{a.info.progress}</div>}
-        {running && <div className="muted small" title={new Date(a.lastAt).toLocaleString()}>Last activity {elapsed(now - a.lastAt)} ago{a.lastStep && ` · ${a.lastStep}`}</div>}
-      </header>
+      <Section
+        label={<><span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={running} /></span> <span title={a.description}>{a.description}</span></>}
+        action={running && <Button size="sm" icon="debug-stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>Stop</Button>}
+      />
+      <div className="ag-meta">{meta.join(' · ')}</div>
+      {running && a.info?.progress && <div className="ag-progress">{a.info.progress}</div>}
+      {running && <div className="muted small" title={new Date(a.lastAt).toLocaleString()}>Last activity {elapsed(now - a.lastAt)} ago{a.lastStep && ` · ${a.lastStep}`}</div>}
       <section className="ag-report">
         {running ? <div className="muted small">The report shows here when the agent finishes.</div> : <><Markdown text={reportText(a)} /><button className="btn sm" onClick={() => copyText(reportText(a), 'Report copied')}><Icon name="copy" small /> Copy report</button></>}
       </section>
