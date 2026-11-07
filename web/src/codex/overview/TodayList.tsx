@@ -73,7 +73,7 @@ export function TodayList({ meetings, overdue, tasks, now, done, open }: { meeti
   const doneText = doneCount(done, open);
   return (
     <section className="ov-today">
-      <Section label="Today" count={rows.length} action={doneText && <span className="badge quiet">{doneText}</span>} />
+      <Section label="Today" action={doneText && <span className="badge quiet">{doneText}</span>} />
       <div className="as-group">
         {shown.map((x) => ('m' in x ? <MeetingRow key={x.key} m={x.m} now={now} /> : <TaskRow key={x.key} r={x.r} late={'late' in x} now={now} />))}
       </div>

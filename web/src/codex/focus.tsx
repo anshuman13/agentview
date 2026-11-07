@@ -6,7 +6,7 @@ import { appendSession } from './data/timeLog';
 import { apiUrl, fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
 import { save, stored } from '../ui/util';
-import { openTask, showSnack } from './view';
+import { showSnack } from './view';
 
 // One focus timer at a time, kept in this browser so it survives a reload.
 type Focus = { profile: Profile; id: string; title: string | null; start: number; end?: number };
@@ -124,13 +124,4 @@ export function FocusBar() {
       <button className="btn sm" aria-label="Stop the focus timer" onClick={stopFocus}><Icon name="debug-stop" small /> Stop</button>
     </div>
   );
-}
-
-// The time left in a timed focus, in the Overview header; it opens the task.
-export function FocusChip() {
-  const f = useFocus();
-  const now = useNow(Boolean(f?.end));
-  if (!f?.end) return null;
-  const title = focusTitle(f.title).slice(7) || '(Untitled)';
-  return <button className="as-focus-chip" onClick={() => openTask(f)}><Icon name="watch" small /><span role="timer" aria-label={title}>{elapsed(f.end - now)}</span></button>;
 }

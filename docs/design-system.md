@@ -265,8 +265,8 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
 The day at a glance on a phone. Three blocks in a fixed order, nothing else on the page: what is next, what needs
 me, what is left today. After the Skeleton while loading, a block with nothing in it is not rendered.
 1. **Up next**: one card, first match wins. A Section header (Up next) over a Grouped list of one Row. (a) The next
-   meeting today that has not ended: title, one meta line (time, room, N people), a Prep Button sm and one More
-   IconButton sm (Menu: Open calendar, Notes); the whole Row opens the meeting. (b) With no meeting left, the first
+   meeting today that has not ended: title, one meta line (time, room, N people), one More
+   IconButton sm (Menu: Prep, Open calendar, Notes) and no Prep Button; the whole Row opens the meeting. (b) With no meeting left, the first
    open task due today by due time (overdue tasks do not count): title, due time as meta, a Done Button sm; the
    title opens the task. (c) With neither, one EmptyState md (icon pass, "Nothing today"): the hint names the
    next day with a meeting or a task ("Next: <when> <title>", or "Nothing planned. Add a task to start the day.")
@@ -275,10 +275,12 @@ me, what is left today. After the Skeleton while loading, a block with nothing i
    quiet count Badge and a chevron, no actions. The count is the Needs you list plus the Reply queue. It opens a
    sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) with a Needs you Section header carrying the total,
    then Tasks and Asks Sections over Grouped lists and the Replies Report card (empty groups have no header); Esc, the scrim and the back gesture close it and focus returns to the row.
-3. **Today**: Section header with a count Badge over one Grouped list of Rows in time order: the rest of today's
+3. **Today**: Section header with no count over one Grouped list of Rows in time order: the rest of today's
    meetings (title, time, a Live badge while it runs, no actions) and open tasks due today or overdue, overdue
    first (title, due time or a Late Badge, a leading check IconButton sm and one More IconButton sm with Snooze to
    tomorrow and Open). Seven rows, then a "Show all N" quiet Button sm that expands in place. From the first task done today the header's action slot holds a quiet "N of M done" Badge (Badge progress exception); it is absent at N = 0.
+
+The page header is the title and the menu button only: with no count line. A running focus timer shows in its bar.
 
 Job runs: a job page shows run history from one Row (Row density) inside a Grouped list, titled Runs, with the last run's time and Badge and a chevron; it opens a sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) of the 10 latest runs, and focus returns to the row on close.
 

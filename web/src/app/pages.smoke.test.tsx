@@ -56,6 +56,13 @@ describe('page smoke', () => {
       expect(empties(html)).toBe(1);
       for (const label of ['Needs you', 'Reply queue', 'Reports']) expect(html).not.toContain(label);
     }],
+    ['Overview header', () => <Assistant />, (html) => {
+      const head = html.match(/<div class="tasks-head">(.*?)<div class="as-ptr"/s)?.[1] ?? '';
+      expect(head).toContain('role="heading"');
+      expect(head).toContain('<span class="ui-section-actions"></span>');
+      expect(head).not.toMatch(/as-focus-chip|muted|ui-section-count/);
+      expect(head.match(/<button/g)).toHaveLength(1);
+    }],
     ['Tasks', tasks, (html) => expect(empties(html)).toBe(1)],
     ['Meetings', () => <Meetings onMenu={() => {}} />, (html) => expect(empties(html)).toBe(2)],
     ['Design', () => <DesignPage />, () => {}],

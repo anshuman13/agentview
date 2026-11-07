@@ -48,7 +48,8 @@ describe('Overview', () => {
     expect(html).toContain('2 people');
     expect(html).toContain('Starts in 30 min');
     expect(html).not.toContain('Live');
-    expect(html).toContain('>Prep<');
+    expect(html).not.toContain('>Prep<');
+    expect(html).toContain('aria-label="More"');
     expect(html).toContain('>Today<');
     expect(html.match(/Review/g)).toHaveLength(1);
     expect(html.match(/Standup/g)).toHaveLength(1);

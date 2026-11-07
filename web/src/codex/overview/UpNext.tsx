@@ -16,7 +16,7 @@ import { clock } from '../time';
 
 const stop = (e: MouseEvent) => e.stopPropagation();
 
-// The one thing to do next: the next meeting today with Prep and More, else the first task due today with Done.
+// The one thing to do next: the next meeting today with More (Prep, Open calendar, Notes), else the first task due today with Done.
 export function UpNext({ meeting, task, now, onPrep }: { meeting?: Meeting; task?: ItemRow; now: number; onPrep: () => void }) {
   const act = useActions();
   const [menu, setMenu] = useState(false);
@@ -34,11 +34,11 @@ export function UpNext({ meeting, task, now, onPrep }: { meeting?: Meeting; task
             trailing={(
               <span className="ov-actions" onClick={stop}>
                 {meetingBadge(meeting, now) && <Badge status="running" label="Live" />}
-                <Button size="sm" variant="tinted" icon="sparkle" onClick={onPrep}>Prep</Button>
                 <span className="ov-more">
                   <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
                   {menu && (
                     <Menu trigger={more} onClose={() => setMenu(false)}>
+                      <MenuItem icon="sparkle" onClick={() => { setMenu(false); onPrep(); }}>Prep</MenuItem>
                       {calendar && <MenuItem icon="calendar" href={calendar} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
                       <MenuItem icon="edit" onClick={() => { setMenu(false); openMeetingNotes(meeting); }}>Notes</MenuItem>
                     </Menu>

@@ -17,7 +17,6 @@ import { EmptyState } from '../ui/Panel';
 import { Button } from '../ui/Button';
 import { Section, sectionCount } from '../ui/Section';
 import { haptic } from '../ui/haptic';
-import { plural } from '../ui/util';
 import { FILTER_LABEL, searchRun, setView, showSnack, useSpotBack, useView, type Filter, type List } from './view';
 import { when } from './time';
 import { Composer, prepText } from './AskBar';
@@ -31,7 +30,6 @@ import { AssistantNav, LISTS } from './nav';
 import { useDrag, type Drop } from './drag';
 import { Back } from '../app/back';
 import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
-import { FocusChip } from './focus';
 import { Skeleton } from '../ui/Skeleton';
 import { prefetch } from '../app/lazy';
 import '../styles/features/assistant.css';
@@ -170,9 +168,6 @@ export function Assistant() {
   // Today holds everything due before midnight; later tasks follow by day, so a dated action never leaves the page.
   const horizon = new Date(now).setHours(24 * (UPCOMING_DAYS + 1), 0, 0, 0);
   const dueToday = [...s.today, ...s.later.filter((r) => atTime(r.at)! < s.endOfDay)];
-  const meetingsLeft = s.meetingsToday.filter((m) => (m.ends_at ?? m.starts_at!) > Date.now()).length;
-  const dayLine = [meetingsLeft > 0 && plural(meetingsLeft, 'meeting'), dueToday.length > 0 && plural(dueToday.length, 'task'), s.overdue.length > 0 && `${s.overdue.length} overdue`].filter(Boolean).join(' · ')
-    || (s.overdue.length + dueToday.length ? '' : [0, 6].includes(new Date().getDay()) ? 'Weekend, nothing due today' : 'Nothing due today');
   const startOfDay = new Date(now).setHours(0, 0, 0, 0);
   const days: Day[] = [{ key: 'today', label: 'Today', day: startOfDay, rows: ranked(dueToday) }];
   for (const r of s.later.filter((r) => atTime(r.at)! >= s.endOfDay)) {
@@ -259,9 +254,7 @@ export function Assistant() {
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
         <Section
           label={<span role="heading" aria-level={1}>{heading}</span>}
-          count={list === 'today' && dayLine ? dayLine : undefined}
           action={<>
-            {list === 'today' && <FocusChip />}
             {list === 'tasks' && query == null && !picked && <button className="icon-btn" title="Select tasks" aria-label="Select tasks" onClick={() => setPicked(new Set())}><Icon name="tasklist" /></button>}
             {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
             {filter !== 'all' && <span className="muted">{FILTER_LABEL[filter]}</span>}
