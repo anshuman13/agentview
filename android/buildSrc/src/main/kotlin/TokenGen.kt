@@ -5,6 +5,8 @@ import java.util.Locale
 // Turns web/src/styles/tokens.css into Kotlin: colours per theme, then sizes, type and elevation.
 // The app is touch only, so the (pointer: coarse) overrides apply.
 object TokenGen {
+    private val NATIVE_SIZES = listOf("buttonMd" to "34", "menuMin" to "200", "bar" to "3", "stroke" to "1.5")
+
     class Block(val selectors: List<String>, val media: String?, val decls: LinkedHashMap<String, String>)
 
     private val skip = listOf("safe-", "z-", "font", "mono", "pulse", "ease", "row-title", "row-meta", "type-", "radius-round")
@@ -181,6 +183,8 @@ object TokenGen {
             appendLine()
             appendLine("object Tokens {")
             scales.forEach { appendLine("    $it") }
+            appendLine("    // Sizes the web keeps in component CSS, not in tokens.css.")
+            NATIVE_SIZES.forEach { (name, dp) -> appendLine("    val $name = ${dp}.dp") }
             appendLine("}")
             appendLine()
             appendLine("object Type {")

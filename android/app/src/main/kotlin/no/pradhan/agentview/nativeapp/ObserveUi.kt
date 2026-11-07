@@ -172,7 +172,7 @@ private fun Sparkline(points: List<List<Double>>) {
     val color = av.accent
     Canvas(Modifier.size(Geometry.spark, Tokens.sizeXl)) {
         if (ys.size < 2) return@Canvas
-        val stroke = Geometry.stroke.toPx()
+        val stroke = Tokens.stroke.toPx()
         val path = Path()
         ys.forEachIndexed { i, y ->
             val o = Offset(i * size.width / (ys.size - 1), stroke + (1 - y) * (size.height - 2 * stroke))

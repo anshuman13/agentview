@@ -375,6 +375,11 @@ object Tokens {
     val focusRing = 2.dp
     val focusOffset = 1.dp
     val focusOffsetInset = -2.dp
+    // Sizes the web keeps in component CSS, not in tokens.css.
+    val buttonMd = 34.dp
+    val menuMin = 200.dp
+    val bar = 3.dp
+    val stroke = 1.5.dp
 }
 
 object Type {

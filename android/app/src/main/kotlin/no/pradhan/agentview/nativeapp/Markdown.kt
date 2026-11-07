@@ -82,7 +82,7 @@ private fun MdBlockView(b: MdBlock) {
         )
         is MdBlock.Code -> CodeBlock(b.text, b.lang)
         is MdBlock.Quote -> Row(Modifier.height(IntrinsicSize.Min)) {
-            Box(Modifier.width(Geometry.bar).fillMaxHeight().background(av.borderStrong))
+            Box(Modifier.width(Tokens.bar).fillMaxHeight().background(av.borderStrong))
             MdBlocks(b.blocks, Modifier.padding(start = Tokens.sp4))
         }
         is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {

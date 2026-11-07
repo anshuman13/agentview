@@ -158,7 +158,7 @@ fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Toke
 private fun UserRow(hub: Hub, it: Item.User, chat: String) {
     val shape = RoundedCornerShape(Tokens.radius)
     Column(
-        Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.borderCard), shape).clip(shape).leftBar(av.prompt, Geometry.bar).padding(horizontal = Tokens.sp7, vertical = Tokens.sp6),
+        Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.borderCard), shape).clip(shape).leftBar(av.prompt, Tokens.bar).padding(horizontal = Tokens.sp7, vertical = Tokens.sp6),
         verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
     ) {
         for (p in userParts(it.text)) when (p) {
@@ -214,7 +214,7 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
     Column(Modifier.fillMaxWidth().clickable { open = !open }.heightIn(min = Tokens.touchSm)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(Geometry.leadWidth), contentAlignment = Alignment.CenterStart) {
-                if (state == "pending") CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Geometry.stroke, color = av.fgFaint)
+                if (state == "pending") CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint)
                 else Box(Modifier.size(Geometry.dot).background(if (state == "err") av.err else toneColor(stepTone(it.use.name)), CircleShape))
             }
             Text(
@@ -271,7 +271,7 @@ private fun FileCard(it: Item.File, cwd: String) {
     val cut = rel.lastIndexOf('/')
     val shape = RoundedCornerShape(Tokens.radius)
     val bar = if (it.error != null && !it.denied) av.err else av.tEdit
-    Column(Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, if (it.error != null && !it.denied) av.err.copy(alpha = 0.4f) else av.borderCard), shape).clip(shape).leftBar(bar, Geometry.bar)) {
+    Column(Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, if (it.error != null && !it.denied) av.err.copy(alpha = 0.4f) else av.borderCard), shape).clip(shape).leftBar(bar, Tokens.bar)) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }.heightIn(min = Tokens.touch).padding(start = Tokens.sp7, end = Tokens.sp6), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
@@ -332,7 +332,7 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
             if (it.running) Button("Stop", { hub.stopTask(it.use.id) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
             if (canOpen) Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.padding(horizontal = Tokens.sp3).size(Tokens.icon).rotate(if (open) 90f else 0f), tint = av.fgFaint)
         }
-        if (shown.isNotEmpty()) Column(Modifier.padding(start = Geometry.subIndent).leftBar(agentBar, Geometry.stroke).padding(start = Tokens.sp7)) {
+        if (shown.isNotEmpty()) Column(Modifier.padding(start = Geometry.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
             if (!open && it.steps.size > shown.size) Text("${it.steps.size - shown.size} earlier steps", Modifier.clickable { open = true }.padding(vertical = Tokens.sp2), style = Type.footnote, color = av.fgFaint)
             val running = it.running
             shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running) } }

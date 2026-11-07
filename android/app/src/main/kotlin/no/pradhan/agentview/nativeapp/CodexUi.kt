@@ -55,7 +55,7 @@ import androidx.compose.ui.text.withStyle
 fun CheckCircle(done: Boolean, label: String, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     Box(Modifier.size(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }, contentAlignment = Alignment.Center) {
-        Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.ok) else Modifier.border(Geometry.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.ok) else Modifier.border(Tokens.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
             if (done) Icon(Icons.Filled.Check, null, Modifier.size(Tokens.iconSm), tint = av.onColor)
         }
     }

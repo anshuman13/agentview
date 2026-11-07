@@ -94,9 +94,7 @@ import androidx.compose.ui.unit.dp
 
 // One-off geometry the web keeps in its feature CSS rather than in tokens.css.
 object Geometry {
-    val buttonMd = 34.dp
     val buttonLg = 50.dp
-    val menuMin = 200.dp
     val emptyHint = 320.dp
     val fab = 56.dp
     val leadWidth = 24.dp
@@ -110,9 +108,7 @@ object Geometry {
     val imageMax = 280.dp
     val tableCell = 140.dp
     val fileError = 140.dp
-    val bar = 3.dp
     val subIndent = 7.dp
-    val stroke = 1.5.dp
     val spark = 120.dp
 }
 
@@ -244,7 +240,7 @@ fun Button(
     }
     val (h, pad, style) = when (size) {
         ButtonSize.Sm -> Triple(Tokens.controlSm, Tokens.sp6, Type.label)
-        ButtonSize.Md -> Triple(Geometry.buttonMd, Tokens.sp8, Type.body.copy(fontWeight = FontWeight.Medium))
+        ButtonSize.Md -> Triple(Tokens.buttonMd, Tokens.sp8, Type.body.copy(fontWeight = FontWeight.Medium))
         ButtonSize.Lg -> Triple(Geometry.buttonLg, Tokens.sp12, Type.body.copy(fontWeight = FontWeight.SemiBold))
     }
     val gap = when (size) { ButtonSize.Sm -> Tokens.sp2; ButtonSize.Md -> Tokens.sp3; ButtonSize.Lg -> Tokens.sp4 }
@@ -384,7 +380,7 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
         t.animateFloat(1f, 0.35f, infiniteRepeatable(tween(Tokens.dur * 6), RepeatMode.Reverse), label = "pulse").value
     } else 1f
     val ring = when (state) { DotState.Idle -> c.fgMuted; DotState.Agent -> c.agent; else -> null }
-    Box(modifier.size(Geometry.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Geometry.stroke, ring, CircleShape) else Modifier))
+    Box(modifier.size(Geometry.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.stroke, ring, CircleShape) else Modifier))
 }
 
 // Text field (web input): sunken fill, hairline border that turns accent on focus.
@@ -476,7 +472,7 @@ fun Sheet(onDismiss: () -> Unit, padded: Boolean = true, full: Boolean = true, c
 fun Menu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     DropdownMenu(
         expanded, onDismiss,
-        modifier = Modifier.widthIn(min = Geometry.menuMin),
+        modifier = Modifier.widthIn(min = Tokens.menuMin),
         shape = RoundedCornerShape(Tokens.shapeLg),
         containerColor = av.raised,
         tonalElevation = 0.dp,
