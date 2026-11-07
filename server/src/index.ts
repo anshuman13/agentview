@@ -30,6 +30,7 @@ import { otherMacs, thisMac } from './http/macs.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './workspace/worktrees.js';
 import { ROW_WINDOW, type AttentionItem, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './http/stream.js';
+import { RingGate } from './http/ringGate.js';
 import { gz, serveWeb } from './http/web.js';
 import { readBody, savePaste } from './http/body.js';
 
@@ -66,6 +67,7 @@ const clients = new Set<Client>();
 const STALL_MS = 60_000;
 const streams = new Map<string, Client>();
 const ring = new Ring();
+const gate = new RingGate(ring, (chat) => [...clients].some((c) => c.view === chat));
 let chats = new Map<string, LiveChat>();
 let lastViewed = '';
 let restarting = false;
@@ -73,7 +75,7 @@ let restarting = false;
 // To every client, or to the viewers of one chat. Each broadcast gets an id so an event stream can resume.
 function broadcast(m: ServerMessage, chat: string | null = null) {
   const data = JSON.stringify(m);
-  const id = ring.push(m.type === 'init' ? null : data, chat);
+  const id = gate.push(m.type === 'init' ? null : data, chat);
   for (const c of clients) if (!chat || (c.view === chat && !c.waiting)) c.sendRaw(data, id);
 }
 
@@ -91,7 +93,10 @@ function reportViewers() {
 
 // Broadcasts for the chat are held back until its state arrives; the host sends the state before any later broadcast.
 function view(client: Client, id: string) {
+  const old = client.view;
   client.view = id;
+  if (old !== id) gate.leave(old);
+  gate.attach(id);
   client.waiting = true;
   lastViewed = id;
   reportViewers();
@@ -426,6 +431,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   });
   ws.on('close', () => {
     clients.delete(client);
+    gate.leave(client.view);
     reportViewers();
   });
 });
@@ -453,6 +459,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
     for (const e of missed) client.sendRaw(e.data, e.id);
     reportViewers();
   } else view(client, chat);
+  gate.attach(chat);
   const wanted = url.searchParams.get('session');
   if (wanted && chats.get(chat)?.sessionId !== wanted) host.req<string>({ op: 'open', sessionId: wanted }).then((c) => client.view === chat && view(client, c), () => {});
   client.send({ type: 'attention', items: attention() });
@@ -462,6 +469,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   req.on('close', () => {
     clearInterval(ping);
     clients.delete(client);
+    gate.leave(client.view);
     if (streams.get(cid) === client) streams.delete(cid);
     reportViewers();
   });

@@ -7,7 +7,7 @@ export class Ring {
   // Ids keep rising across restarts, so an id from an older server never matches a newer entry.
   seq = Date.now();
 
-  constructor(private size = 500) {}
+  constructor(private size = 2000) {}
 
   push(data: string | null, chat: unknown) {
     const id = ++this.seq;

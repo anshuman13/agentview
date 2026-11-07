@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Ring, frame } from './stream.js';
+import { GRACE_MS, RingGate } from './ringGate.js';
 
 describe('Ring', () => {
   it('replays what one chat missed and nothing from other chats', () => {
@@ -41,4 +42,69 @@ describe('Ring', () => {
     expect(ring.since(other, b)).toEqual([]);
   });
 
+  it('holds 2000 entries by default', () => {
+    const ring = new Ring();
+    const first = ring.push('0', null);
+    for (let i = 1; i < 2000; i++) ring.push(String(i), null);
+    expect(ring.since(first - 1, null)).toHaveLength(2000);
+    ring.push('x', null);
+    expect(ring.since(first - 1, null)).toBeNull();
+    expect(ring.since(first, null)).toHaveLength(2000);
+  });
+});
+
+describe('RingGate', () => {
+  const setup = () => {
+    let t = 1_000_000;
+    const viewers = new Set<string>();
+    const ring = new Ring(50);
+    const gate = new RingGate(ring, (c) => viewers.has(c), () => t);
+    return { ring, gate, viewers, advance: (ms: number) => (t += ms) };
+  };
+
+  it('skips appends for an unwatched chat and rings one marker', () => {
+    const { ring, gate } = setup();
+    const start = ring.seq;
+    const mark = ring.push('x', 'other');
+    expect(gate.push('a1', 'a')).toBeUndefined();
+    const afterMarker = ring.seq;
+    expect(gate.push('a2', 'a')).toBeUndefined();
+    expect(ring.seq).toBe(afterMarker);
+    expect(ring.since(start, 'a')).toBeNull();
+    expect(ring.since(start, 'other')?.map((e) => e.data)).toEqual(['x']);
+    expect(ring.since(mark, 'other')).toEqual([]);
+  });
+
+  it('rings appends for a viewed chat and chat-less messages and init anywhere', () => {
+    const { ring, gate, viewers } = setup();
+    viewers.add('a');
+    const start = ring.seq;
+    expect(gate.push('a1', 'a')).toBeDefined();
+    expect(gate.push('live', null)).toBeDefined();
+    expect(gate.push(null, 'b')).toBeDefined();
+    expect(ring.since(start, 'a')?.map((e) => e.data)).toEqual(['a1', 'live']);
+    expect(ring.since(start, 'b')).toBeNull();
+  });
+
+  it('keeps a chat watched for the grace window and prunes after it', () => {
+    const { ring, gate, advance } = setup();
+    gate.leave('a');
+    advance(GRACE_MS - 1);
+    const start = ring.seq;
+    gate.push('a1', 'a');
+    expect(ring.since(start, 'a')?.map((e) => e.data)).toEqual(['a1']);
+    advance(2);
+    gate.push('a2', 'a');
+    expect(gate.graced).toBe(0);
+    expect(ring.since(start, 'a')).toBeNull();
+  });
+
+  it('rings a marker again after a client attaches', () => {
+    const { ring, gate } = setup();
+    gate.push('a1', 'a');
+    gate.attach('a');
+    const before = ring.seq;
+    gate.push('a2', 'a');
+    expect(ring.seq).toBe(before + 1);
+  });
 });

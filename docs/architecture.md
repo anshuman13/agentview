@@ -51,7 +51,8 @@ and refuses at the usage limit. See [assistant.md](assistant.md).
 
 React with a small store (`web/src/app/store.ts`). It listens on one Server-Sent Events stream (`/api/events`) and sends
 commands with `POST /api/cmd`. Each broadcast has an id; after a drop the stream resumes from `Last-Event-ID` through a
-ring buffer, or gets a fresh `init` snapshot when the gap is too old.
+ring buffer, or gets a fresh `init` snapshot when the gap is too old. The ring skips appends for chats nobody has
+open, except for 5 minutes after the last viewer leaves; a skip leaves a marker so a resume into that chat gets an `init`.
 
 Claude's reply streams as `append` messages that carry only the new text and its offset, at most every 80 ms per text
 block. The client adds an append only when the offset fits the text it has; the finished event follows in full, and
