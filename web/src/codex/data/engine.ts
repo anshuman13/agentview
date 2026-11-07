@@ -20,7 +20,13 @@ type SyncIO = {
   applyAll?(changes: PulledChange[]): Promise<void>;
   paused?(p: Paused[]): void;
   scans?(s: ScanHealth[]): void;
+  rejects?: Map<string, number>;
+  parked?(rows: Dirty[]): void;
 };
+
+const PARK_AFTER = 3;
+
+const rejectKey = ({ table, row }: Dirty) => `${table}|${row.profile}|${row.id}|${row.updated_at}|${row.field_times}`;
 
 const BATCH_ROWS = 100;
 const BATCH_BYTES = 1_000_000;
@@ -40,7 +46,9 @@ function takeBatch(rows: Dirty[]) {
 
 export async function runSync(io: SyncIO) {
   let since = await io.since();
-  let queue = await io.dirty();
+  const rejects = io.rejects ?? new Map<string, number>();
+  let queue = (await io.dirty()).filter((d) => (rejects.get(rejectKey(d)) ?? 0) < PARK_AFTER);
+  const parked: Dirty[] = [];
   let more = true;
   let changed = false;
   const rejected: { table: string; id: string; reason: string }[] = [];
@@ -52,8 +60,19 @@ export async function runSync(io: SyncIO) {
     io.paused?.(Array.isArray(data.paused) ? data.paused : []);
     io.scans?.(Array.isArray(data.scans) ? data.scans : []);
     const refused = Array.isArray(data.rejected) ? data.rejected : [];
-    rejected.push(...refused);
-    for (const { row } of batch) if (!refused.some((r) => r.table === row.table && r.id === row.row.id)) await io.clean(row);
+    for (const r of refused) {
+      const sent = batch.find((b) => b.row.table === r.table && b.row.row.id === r.id);
+      const key = sent && rejectKey(sent.row);
+      const count = key ? (rejects.get(key) ?? 0) + 1 : 0;
+      if (key) rejects.set(key, count);
+      if (sent && count >= PARK_AFTER) parked.push(sent.row);
+      else rejected.push(r);
+    }
+    for (const { row } of batch) {
+      if (refused.some((r) => r.table === row.table && r.id === row.row.id)) continue;
+      rejects.delete(rejectKey(row));
+      await io.clean(row);
+    }
     changed ||= batch.length > 0;
     if (queue.length) continue;
     const valid = data.changes.filter((change) => Object.hasOwn(TABLE_FIELDS, change?.table) && typeof change.id === 'string' && ['work', 'personal'].includes(change.profile));
@@ -65,6 +84,7 @@ export async function runSync(io: SyncIO) {
     since = data.version;
     await io.saveSince(since);
   }
+  if (parked.length) io.parked?.(parked);
   if (rejected.length) throw new Error(`${rejected.length} change${rejected.length > 1 ? 's' : ''} rejected: ${rejected[0].reason}`);
   return changed;
 }

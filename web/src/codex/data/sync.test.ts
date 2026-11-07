@@ -172,3 +172,62 @@ describe('wiki tables', () => {
     expect(saved).toEqual([3]);
   });
 });
+
+describe('parking rejected rows', () => {
+  const bad = (over: Record<string, unknown> = {}) => ({ table: 'items', row: localRow({ id: 'bad', dirty: 1, title: 'T', field_times: '{"title":900}', ...over }) });
+  const good = { table: 'items', row: localRow({ id: 'good', dirty: 1, title: 'G', field_times: '{"title":900}' }) };
+
+  function harness(rows: () => { table: string; row: ItemRow }[]) {
+    const posted: string[][] = [];
+    const cleaned: string[] = [];
+    const parked: string[][] = [];
+    const rejects = new Map<string, number>();
+    const run = () => runSync({
+      active: () => true,
+      since: async () => 0,
+      saveSince: async () => {},
+      dirty: async () => rows().filter((d) => !cleaned.includes(d.row.id)),
+      post: async (_since, changes) => {
+        posted.push(changes.map((c) => c.id));
+        return { version: 1, changes: [], rejected: changes.filter((c) => c.id.startsWith('bad')).map((c) => ({ table: 'items', id: c.id, reason: `no ${c.id}` })) };
+      },
+      clean: async (d) => void cleaned.push(d.row.id),
+      apply: async () => {},
+      rejects,
+      parked: (r) => void parked.push(r.map((d) => d.row.id)),
+    });
+    return { run, posted, cleaned, parked, rejects };
+  }
+
+  it('parks a row on its third reject and stops sending it', async () => {
+    let current = bad();
+    const h = harness(() => [current, good]);
+    await expect(h.run()).rejects.toThrow('1 change rejected: no bad');
+    await expect(h.run()).rejects.toThrow('1 change rejected: no bad');
+    expect(h.posted).toEqual([['bad', 'good'], ['bad']]);
+    await expect(h.run()).resolves.toBe(true);
+    expect(h.parked).toEqual([['bad']]);
+    await expect(h.run()).resolves.toBe(false);
+    expect(h.posted[3]).toEqual([]);
+    expect(h.cleaned).toEqual(['good']);
+    expect(h.parked).toHaveLength(1);
+    current = bad({ updated_at: 2000 });
+    await expect(h.run()).rejects.toThrow('1 change rejected: no bad');
+    expect(h.posted[4]).toEqual(['bad']);
+  });
+
+  it('drops the count of a row accepted after rejects', async () => {
+    const h = harness(() => [good]);
+    h.rejects.set('items|work|good|1000|{"title":900}', 2);
+    await h.run();
+    expect(h.rejects.size).toBe(0);
+    expect(h.cleaned).toEqual(['good']);
+  });
+
+  it('reports only the non-parked rejects in the error', async () => {
+    const h = harness(() => [bad(), bad({ id: 'bad2' })]);
+    h.rejects.set('items|work|bad|1000|{"title":900}', 2);
+    await expect(h.run()).rejects.toThrow('1 change rejected: no bad2');
+    expect(h.parked).toEqual([['bad']]);
+  });
+});

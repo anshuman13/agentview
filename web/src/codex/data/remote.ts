@@ -26,6 +26,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   readonly kind = 'remote';
   private tables: Record<string, Map<string, SyncRow>> = Object.fromEntries(['items', ...WIKI_TABLES].map((t) => [t, new Map()]));
   private since = 0;
+  private rejects = new Map<string, number>();
   private loaded = this.load();
   private saving: Promise<void> = Promise.resolve();
   private unsaved = new Map<string, Set<string>>();
@@ -218,6 +219,8 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       },
       paused: (paused) => this.setSync({ paused }),
       scans: (scans) => this.setSync({ scans }),
+      rejects: this.rejects,
+      parked: (rows) => void import('../view').then((v) => v.snackParked(rows)),
     }));
   }
 

@@ -4,7 +4,7 @@ import { TABLE_FIELDS, mergeIncoming } from './sync';
 import { captureParams, doneCutoff, patchSQL, swapSQL, type SqlValue } from './localRows';
 import type { Change, ItemRow, Profile, PulledChange, Reply, SyncRow } from './sync';
 import type { Table, Tables } from './wiki';
-import { showSnack } from '../view';
+import { showSnack, snackParked } from '../view';
 
 type Invoke = <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
@@ -58,6 +58,7 @@ async function post(since: number, changes: Change[]): Promise<Reply> {
 export class LocalStore extends BaseStore implements AssistantStore {
   readonly kind = 'local';
   private unlocking: Promise<void> | null = null;
+  private rejects = new Map<string, number>();
   private timer: ReturnType<typeof setInterval>;
   private onVisible = () => document.visibilityState === 'visible' && this.syncSoon();
 
@@ -263,6 +264,8 @@ export class LocalStore extends BaseStore implements AssistantStore {
       applyAll: (changes) => this.applyChanges(changes),
       paused: (paused) => this.setSync({ paused }),
       scans: (scans) => this.setSync({ scans }),
+      rejects: this.rejects,
+      parked: snackParked,
     });
   }
 

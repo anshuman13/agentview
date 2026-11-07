@@ -166,6 +166,7 @@ export function showSnack(text: string, undo?: () => void, ms = SNACK_MS) {
   clearTimeout(snackTimer);
   snackTimer = setTimeout(hideSnack, ms);
 }
+export const snackParked = (rows: unknown[]) => showSnack(rows.length === 1 ? '1 change not synced, edit it to retry' : `${rows.length} changes not synced, edit them to retry`);
 export const useSnack = () => useSyncExternalStore((f) => (snackSubs.add(f), () => snackSubs.delete(f)), () => snack);
 export const copyText = (text: string, done = 'Copied') => void copyToClipboard(text).then(() => showSnack(done), () => showSnack('Copy failed'));
 export function hideSnack() {
