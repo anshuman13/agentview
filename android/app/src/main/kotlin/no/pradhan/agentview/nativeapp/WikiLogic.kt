@@ -115,15 +115,7 @@ fun searchWiki(pages: List<Row>, facts: List<Row>, query: String): WikiHits {
 
 fun pageNeedsReview(page: Row, facts: List<Row>) = page.str("state") == "proposed" || facts.any { !it.deleted && it.str("state") == "proposed" && it.str("page_id") == page.id }
 
-fun agoText(t: Long, now: Long): String {
-    val s = maxOf(0L, (now - t) / 1000)
-    return when {
-        s < 60 -> "just now"
-        s < 3600 -> "${s / 60} min ago"
-        s < 86_400 -> "${s / 3600} h ago"
-        else -> "${s / 86_400} d ago"
-    }
-}
+fun agoText(t: Long, now: Long): String = agoShort(t, now, " ago")
 
 fun shortDate(t: Long, now: Long): String = when {
     now - t < DAY_MS -> agoText(t, now)

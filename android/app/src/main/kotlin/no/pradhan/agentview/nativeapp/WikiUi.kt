@@ -120,7 +120,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
         MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)
     }
     Column {
-        ListRow(f.str("text") ?: "", meta, onLongClick = if (proposed) null else ({ menu.value = true }), trailing = if (proposed) null else ({ MoreButton(expanded = menu, content = menuContent) }))
+        ListRow(f.str("text") ?: "", meta, lines = Int.MAX_VALUE, onLongClick = if (proposed) null else ({ menu.value = true }), trailing = if (proposed) null else ({ MoreButton(expanded = menu, content = menuContent) }))
         if (contesting) Sheet({ contesting = false }, full = false) {
             FieldLabel("Why is this claim wrong?")
             TextField(note, { note = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is wrong or out of date? Link a source if you have one.", minLines = 2)

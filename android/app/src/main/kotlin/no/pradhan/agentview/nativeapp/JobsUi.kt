@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,6 +54,11 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
     }
 }
 
+fun toolLabels(tools: String): List<String> = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { id ->
+    if (id == "browser") "Chrome" else id.removePrefix("mcp__").removeSuffix("__*").replace("__", " ")
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     val runs = remember(st.runs, job.key) { runsOf(st.runs, job) }
@@ -71,7 +78,11 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
         item { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.body, color = av.fg) }
         if (tools != null) {
             item { SectionHeader("Tools") }
-            item { Text(tools, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.body, color = av.fgMuted) }
+            item {
+                FlowRow(Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    toolLabels(tools).forEach { Chip(it, null, on = true) }
+                }
+            }
         }
         item {
             Group(Modifier.padding(top = Tokens.sp6)) {

@@ -18,6 +18,13 @@ sealed interface Item {
     data class Blocked(override val id: String, val ev: ChatEvent) : Item
 }
 
+const val CMD_PREVIEW = 160
+
+fun cmdPreview(cmd: String): String {
+    val flat = cmd.trim().replace(Regex("\\s*\\n\\s*"), " \u23CE ")
+    return "$ " + if (flat.length > CMD_PREVIEW) flat.take(CMD_PREVIEW).trimEnd() + "\u2026" else flat
+}
+
 data class Label(val verb: String, val obj: String, val mono: Boolean = false, val cmd: String? = null)
 
 enum class Tone { Read, Edit, Run, Web, Mcp, Agent, Other }

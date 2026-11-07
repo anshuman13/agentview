@@ -3,7 +3,21 @@ package no.pradhan.agentview.nativeapp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row as LRow
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -119,7 +133,7 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = 
     val meta = listOfNotNull(
         if ((status == "open" || status == "suggested") && at != null) whenText(at, now) else null,
         r.str("assignee")?.takeIf { it.isNotEmpty() }?.let { displayName(it).substringBefore(' ') },
-        firstLine(r.text).ifEmpty { null },
+        r.text?.replace(Regex("\\s+"), " ")?.trim()?.ifEmpty { null },
         from,
     ).joinToString(" · ")
     val primary: Pair<String, () -> Unit>? = when (status) {
@@ -130,7 +144,7 @@ fun ActionLine(r: Row, m: Row, now: Long, actions: TaskActions, from: String? = 
         "dismissed" -> "Restore" to { actions.restore(r) }
         else -> null
     }
-    ListRow(r.title ?: "(Untitled)", meta, strike = status == "done", trailing = {
+    ListRow(r.title ?: "(Untitled)", meta, lines = Int.MAX_VALUE, metaLines = Int.MAX_VALUE, strike = status == "done", trailing = {
         if (late) RowLabel("Overdue", av.err)
         if (primary != null) Button(primary.first, primary.second, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         if (status == "open" || status == "suggested" || status == "done") MoreButton { close ->
@@ -178,8 +192,51 @@ private fun Fold(label: String, count: Int, open: Boolean, onToggle: () -> Unit)
     SectionHeader(label, count.toString(), action = { Button(if (open) "Hide" else "Show", onToggle, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
 }
 
+@Composable
+private fun RoomMic(hub: Hub, m: Row) {
+    val room = m.str("room") ?: ""
+    Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+        LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+            AvIcon("mic", null, Tokens.iconLg, tint = av.fgMuted)
+            Text(buildAnnotatedString { append("Were you on the room mic, "); pushStyle(SpanStyle(fontWeight = FontWeight.SemiBold)); append(room); pop(); append("?") }, style = Type.body, color = av.fg)
+        }
+        LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            Button("No", { hub.codex.update(m, mapOf("room_me" to 0)) }, size = ButtonSize.Sm)
+            Button("Yes, me", {
+                if (hub.codex.update(m, mapOf("room_me" to 1))) hub.write("/api/assistant/transcripts", buildJsonObject { put("profile", m.profile); put("id", m.id) }.toString(), "Transcript sync failed")
+            }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TalkTimeBar(speakers: List<Speaker>, actions: Int, decisions: Int) {
+    val top = speakers.take(TALK_TOP)
+    val rest = speakers.drop(TALK_TOP).sumOf { it.share }
+    val parts = if (rest > 0) top.map { it.name to it.share } + ("Others" to rest) else top.map { it.name to it.share }
+    val c = av
+    val color = { i: Int -> if (i >= TALK_TOP) c.borderStrong else c.cMeeting.copy(alpha = TALK_ALPHA[i]) }
+    SectionHeader("Talk time", "$actions ${if (actions == 1) "action" else "actions"} · $decisions ${if (decisions == 1) "decision" else "decisions"}")
+    LRow(Modifier.padding(horizontal = Tokens.sp8).fillMaxWidth().height(Tokens.sp5).clip(RoundedCornerShape(Tokens.radiusPill))) {
+        parts.forEachIndexed { i, p -> Box(Modifier.weight(p.second.toFloat().coerceAtLeast(0.001f)).fillMaxHeight().background(color(i))) }
+    }
+    FlowRow(Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp7), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+        parts.forEachIndexed { i, p ->
+            LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(Tokens.dot).clip(RoundedCornerShape(Tokens.radiusXs)).background(color(i)))
+                Text("${p.first} ${Math.round(p.second * 100)}%", style = Type.footnote, color = av.fgMuted)
+            }
+        }
+    }
+}
+
+private const val TALK_TOP = 5
+private val TALK_ALPHA = floatArrayOf(1f, 0.75f, 0.55f, 0.4f, 0.28f)
+
 private class PrepData(val prior: List<Prior>, val brief: Brief, val points: List<Row>, val theirs: List<String>, val questions: List<Question>)
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onSeries: (String) -> Unit, onTask: (Row) -> Unit) {
     val state = meetingState(m, now)
@@ -211,9 +268,11 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     var transcriptOpen by rememberSaveable(m.key) { mutableStateOf(false) }
     var transcript by remember(m.key) { mutableStateOf<Result<String?>?>(null) }
     var newAction by rememberSaveable(m.key) { mutableStateOf("") }
-    LaunchedEffect(transcriptOpen, m.key, m.str("summary")) {
-        if (transcriptOpen) transcript = runCatching { hub.api.transcript(m.profile, m.id) }
+    var contextOpen by rememberSaveable(m.key) { mutableStateOf(false) }
+    LaunchedEffect(transcriptOpen, more, m.key, m.str("summary")) {
+        if (transcriptOpen || (more && state == MState.Done)) transcript = runCatching { hub.api.transcript(m.profile, m.id) }
     }
+    val speakers = remember(transcript) { transcript?.getOrNull()?.let { talkTime(it) } ?: emptyList() }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             LRow(Modifier.fillMaxWidth().padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
@@ -222,6 +281,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
                 else if (link != null && isCal) Button("Calendar", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
             pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted) }
+            if (!m.str("room").isNullOrEmpty() && m.long("room_me") == null) RoomMic(hub, m)
             stateLine(m, now)?.let { Text(it, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.callout, color = if (state == MState.Missing) av.warn else av.accentText) }
         }
         item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
@@ -281,10 +341,13 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
                         }
                     }))
             }
-            if (family.size >= 2) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Series · ${family.size}", family[0].title, onClick = { onSeries(seriesKeyOf(m)) }) } }
-            if (people.isNotEmpty()) {
-                item { SectionHeader("People", people.size.toString()) }
-                item { Group { people.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(displayName(p), onClick = { onPerson(p) }) } } }
+            val earlier = family.filter { (it.startsAt ?: 0L) < (m.startsAt ?: 0L) }
+            item { Fold("Context", (if (speakers.isNotEmpty()) 1 else 0) + (if (earlier.isNotEmpty()) 1 else 0) + (if (family.size >= 2) 1 else 0) + (if (people.isNotEmpty()) 1 else 0), contextOpen) { contextOpen = !contextOpen } }
+            if (contextOpen) {
+                if (speakers.isNotEmpty()) item { TalkTimeBar(speakers, all.count { it.status != "dismissed" }, decisions.size) }
+                if (earlier.isNotEmpty()) item { Pending("${earlier.size} earlier, last on ${dayLabel(earlier.first().startsAt!!)}") }
+                if (family.size >= 2) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Series · ${family.size}", family[0].title, onClick = { onSeries(seriesKeyOf(m)) }) } }
+                if (people.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { people.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(displayName(p), onClick = { onPerson(p) }) } } }
             }
             val unassigned = all.filter { it.status == "unassigned" }
             item { Fold("Unassigned", unassigned.size, unassignedOpen) { unassignedOpen = !unassignedOpen } }

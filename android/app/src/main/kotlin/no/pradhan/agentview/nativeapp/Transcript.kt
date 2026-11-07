@@ -228,7 +228,7 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
             if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(start = Tokens.sp3))
         }
         if (!open) {
-            label.cmd?.let { WordClamp(androidx.compose.ui.text.AnnotatedString("$ " + it.replace(Regex("\\s*\\n\\s*"), " ⏎ ")), Mono, av.fgFaint, 2, modifier = Modifier.padding(start = Tokens.leadWidth)) }
+            label.cmd?.let { Text(cmdPreview(it), Modifier.padding(start = Tokens.leadWidth), style = Mono, color = av.fgFaint, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             if (state == "err") WordClamp(androidx.compose.ui.text.AnnotatedString(firstLine(result!!.text).ifEmpty { "Failed" }), Type.footnote, av.err, 2, modifier = Modifier.padding(start = Tokens.leadWidth))
             if (state == "denied") Text("Denied", Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.fgFaint)
         } else ToolDetail(it.use, result)
