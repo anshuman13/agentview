@@ -173,7 +173,8 @@ fun CodexScreen(hub: Hub) {
         scope.launch { snack.currentSnackbarData?.dismiss(); snack.showSnackbar("Task · $added", duration = SnackbarDuration.Short) }
     }
     if (needsOpen) {
-        val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now, st.facts) }
+        val hidden by hub.handled.collectAsState()
+        val needs = remember(st, profile, now / 60_000, hidden) { needsList(st, profile, now, hidden) }
         val queue = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now) }
         NeedsSheet(needs, queue, now, actions, ops.replies, hub, { needsOpen = false; editKey = it.key }, { needsOpen = false; push("review") }) { needsOpen = false }
     }
@@ -224,8 +225,8 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
 private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onOpen: (Row) -> Unit, onNeeds: () -> Unit, onGoals: () -> Unit, onAdd: () -> Unit, onMeeting: (Row) -> Unit) {
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
-    val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now, st.facts) }
-    val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now).size }
+    val hidden by hub.handled.collectAsState()
+    val needsTotal = remember(st, profile, now / 60_000, hidden) { needsCount(st, profile, now, hidden) }
     val today = remember(s, mt) { overviewToday(s, mt.next, now) }
     val others = mt.today.filter { it != mt.next && (it.endsAt ?: it.startsAt!!) > now }
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }
@@ -253,8 +254,8 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                 EmptyState("Nothing today", hint)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { Button("New task", onAdd, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
             }
-            if (needs.size + waiting > 0) {
-                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Text("${needs.size + waiting}  ›", style = Type.callout, color = av.warn, modifier = Modifier.padding(end = Tokens.sp6)) }) }
+            if (needsTotal > 0) {
+                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Text("$needsTotal  ›", style = Type.callout, color = av.warn, modifier = Modifier.padding(end = Tokens.sp6)) }) }
             }
         }
         if (rows.isNotEmpty()) {

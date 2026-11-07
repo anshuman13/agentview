@@ -58,6 +58,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val addTask = MutableStateFlow(false)
     @Volatile var foreground = false
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
+    val handled = MutableStateFlow(prefs.getStringSet("handled", emptySet()).orEmpty().toSet())
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
     val writes = Writes(viewModelScope, { readOnly }, { notice.value = it })
@@ -83,7 +84,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     init {
         viewModelScope.launch {
             val minute = flow { while (true) { emit(Unit); delay(60_000) } }
-            combine(codex.state, minute, notifyOn, codexFilter) { s, _, on, filter -> if (on) needsYou(s.items, s.meetings, s.chats, filter.takeIf { it != "all" }, System.currentTimeMillis()).size else 0 }
+            combine(codex.state, minute, notifyOn, codexFilter, handled) { s, _, on, filter, hidden -> if (on) needsCount(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden) else 0 }
                 .distinctUntilChanged().collect { notifier.badge(it) }
         }
     }
@@ -93,6 +94,11 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     private val liveLoaded = MutableStateFlow(false)
 
     fun refreshGranted() { granted.value = notifier.granted() }
+
+    fun hideNeed(key: String) {
+        handled.value = handled.value + key
+        prefs.edit().putStringSet("handled", handled.value).apply()
+    }
 
     fun setNotify(on: Boolean) {
         notifyOn.value = on

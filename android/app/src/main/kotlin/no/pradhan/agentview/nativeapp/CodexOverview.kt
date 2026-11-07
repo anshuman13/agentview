@@ -79,44 +79,63 @@ fun actionsOf(items: List<Row>, m: Row) = items.filter { !it.deleted && it.meeti
 const val NEEDS_CAP = 5
 const val JUST_ENDED_MS = 2 * 3_600_000L
 
-sealed class Need(val keys: List<String>) {
+sealed class Need(val keys: List<String>, val marks: List<String> = emptyList()) {
     class Overdue(val row: Row) : Need(listOf("task:${row.key}"))
+    class Risk(val row: Row, val due: Long, val short: Long) : Need(listOf("task:${row.key}"))
+    class Slack(val bullet: Bullet, val profile: String) : Need(listOf(bullet.url?.let { "url:$it" } ?: "slack:${bullet.title}"))
     class OverdueAll(val rows: List<Row>) : Need(emptyList())
-    class Ask(val row: Row) : Need(listOf("task:${row.key}"))
+    class Ask(val row: Row) : Need(listOf("task:${row.key}"), listOfNotNull(row.sourceUrl?.takeIf { it.startsWith("http") }?.let { "url:$it" }))
     class Dm(val chat: Row) : Need(listOf("chat:${chat.key}") + listOfNotNull(chat.str("url")?.let { "url:$it" }))
     class JustEnded(val row: Row, val meeting: Row) : Need(listOf("task:${row.key}"))
     class StaleAsks(val count: Int, val oldest: Long) : Need(listOf("stale-asks"))
     class Wiki(val count: Int) : Need(listOf("wiki-claims"))
 
-    val isTask get() = this is Overdue || this is OverdueAll || this is JustEnded
+    val isTask get() = this is Overdue || this is OverdueAll || this is JustEnded || this is Risk
 }
 
 // Each item once, in rank order: overdue tasks, asks to confirm, DMs waiting on me, then actions of meetings that just ended.
 // Three or more overdue tasks collapse into one entry.
-fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList()): List<Need> {
+fun waitKey(c: Row) = "wait:${c.key}:${c.long("last_at") ?: ""}"
+fun slackKey(b: Bullet) = "slack:${b.key}"
+
+fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: String?, now: Long, facts: List<Row> = emptyList(), briefs: List<Row> = emptyList(), hidden: Set<String> = emptySet()): List<Need> {
     val s = split(items, profile, now)
     val mt = meetingsOf(meetings, profile, now)
     val ended = mt.today.filter { it.endsAt != null && it.endsAt!! <= now && now - it.endsAt!! < JUST_ENDED_MS }
-    val dms = chats.filter { !it.deleted && it.str("kind") == "dm" && it.long("waiting") == 1L && matchesProfile(profile, it) }.sortedByDescending { it.long("last_at") ?: 0L }
+    val dms = chats.filter { !it.deleted && it.str("kind") == "dm" && it.long("waiting") == 1L && matchesProfile(profile, it) && waitKey(it) !in hidden }.sortedByDescending { it.long("last_at") ?: 0L }
+    val brief = briefs.filter { !it.deleted && it.str("kind") == "slack" && matchesProfile(profile, it) }.maxByOrNull { it.long("to_at") ?: 0L }
+    val bullets = brief?.str("text")?.let(::briefBullets)?.filter { slackKey(it) !in hidden } ?: emptyList()
+    val timed = meetings.filter { !it.deleted && matchesProfile(profile, it) && it.startsAt != null && it.endsAt != null && it.endsAt!! > it.startsAt!! && it.endsAt!! - it.startsAt!! < 20 * 3_600_000L }
+    val minute = now / 60_000 * 60_000
+    val blocked = timed.filter { isBlock(it) && it.endsAt!! > minute }.map { "${it.profile}:${it.id}" }.toSet()
+    val dated = (s.overdue + s.today + s.later).filter { it.at != null && "${it.profile}:block:${it.id}" !in blocked }
+    val risk = atRisk(dated.map { it to it.at!! }, timed.map { it.startsAt!! to it.endsAt!! }, minute)
     val old = staleAsks(replyQueue(s.review, null, now), now)
     val claims = proposals(facts.filter { matchesProfile(profile, it) }).size
     val groups = listOf<List<Need>>(
         s.overdue.map { Need.Overdue(it) },
-        s.review.filter { !(it.source == "slack" && drafted(it)) }.map { Need.Ask(it) },
+        risk.map { (row, short) -> Need.Risk(row, row.at!!, short) },
+        s.review.filter { !(it.source == "slack" && drafted(it)) && !isSaid(it) && (it.snoozedUntil ?: 0L) <= now }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
+        bullets.map { Need.Slack(it, brief!!.profile) },
         ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.map { Need.JustEnded(it, m) } },
         if (old.isNotEmpty()) listOf(Need.StaleAsks(old.size, old.minOf { it.statusTime })) else emptyList(),
         if (claims > 0) listOf(Need.Wiki(claims)) else emptyList(),
     )
     val seen = HashSet<String>()
     val ranked = groups.flatten().filter { n ->
-        if (n.keys.any { it in seen }) false else { seen.addAll(n.keys); true }
+        if (n.keys.any { it in seen }) false else { seen.addAll(n.keys + n.marks); true }
     }
     val overdue = ranked.filterIsInstance<Need.Overdue>()
     if (overdue.size < 3) return ranked
     val first = ranked.indexOfFirst { it is Need.Overdue }
     return ranked.subList(0, first) + Need.OverdueAll(overdue.map { it.row }) + ranked.subList(first, ranked.size).filter { it !is Need.Overdue }
 }
+
+fun needsList(st: CodexState, profile: String?, now: Long, hidden: Set<String> = emptySet()) = needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, hidden)
+
+fun needsCount(st: CodexState, profile: String?, now: Long, hidden: Set<String> = emptySet()) =
+    needsList(st, profile, now, hidden).size + replyQueue(split(st.items, profile, now).review, profile, now).size
 
 fun doneCount(done: Int, open: Int) = if (done > 0) "$done of ${done + open} done" else null
 
