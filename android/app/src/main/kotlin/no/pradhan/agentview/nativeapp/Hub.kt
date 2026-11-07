@@ -304,6 +304,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
                 codex.sync()
                 codex.state.value.error?.let { error("the room mic answer did not sync: $it") }
                 api.readTranscript(m.profile, m.id)
+                codex.sync()
                 notice.value = "Read again with the room mic as you"
             } catch (e: Exception) {
                 throw ApiError("Transcript sync failed: ${e.message}")

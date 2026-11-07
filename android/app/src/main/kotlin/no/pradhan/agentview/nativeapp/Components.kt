@@ -503,10 +503,14 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnSc
 fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = false, enabled: Boolean = true, checked: Boolean = false) {
     val color = if (danger) av.danger else av.fg
     DropdownMenuItem(
-        text = { Text(text, style = Type.body) },
+        text = {
+            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+                AvIcon(if (checked) "check" else icon, null, Tokens.iconSm)
+                Text(text, style = Type.body)
+            }
+        },
         onClick = onClick,
         enabled = enabled,
-        leadingIcon = { AvIcon(if (checked) "check" else icon, null, Tokens.icon) },
         colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color, disabledTextColor = color.copy(alpha = 0.5f), disabledLeadingIconColor = color.copy(alpha = 0.5f)),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.sp6),
         modifier = Modifier.heightIn(min = Tokens.touch),

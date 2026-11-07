@@ -39,6 +39,10 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
     fun tomorrow(r: Row) { val at = nextNine(now(), r.profile); change(r, mapOf("at" to at, "rolls" to null, "rolled_from" to null), "Moved to ${whenText(at, now())}") }
     fun snoozeLater(r: Row) = snooze(r, snoozeLaterAt(r.at, now(), r.profile))
     fun due(r: Row, at: Long?) = change(r, mapOf("at" to at) + unrollFor(at, now()), if (at == null) "Due time cleared" else "Due ${whenText(at, now())}")
+    fun clear(rows: List<Row>) {
+        val done = rows.filter { store.update(it, mapOf("deleted" to true)) }
+        if (done.isNotEmpty()) snack("Cleared ${done.size}") { done.forEach { store.update(it, mapOf("deleted" to false)) } }
+    }
     fun delete(r: Row) = change(r, mapOf("deleted" to true), "Deleted")
     fun accept(r: Row) = change(r, mapOf("status" to "open"), "Added to Today")
     fun restore(r: Row) = change(r, mapOf("status" to "suggested"), "Back to review")

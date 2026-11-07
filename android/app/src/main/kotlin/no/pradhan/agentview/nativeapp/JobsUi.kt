@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,8 +55,10 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
     }
 }
 
-fun toolLabels(tools: String): List<String> = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { id ->
-    if (id == "browser") "Chrome" else id.removePrefix("mcp__").removeSuffix("__*").replace("__", " ")
+fun mcpToolId(server: String) = "mcp__${server.replace(Regex("[^A-Za-z0-9_-]"), "_")}__*"
+
+fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String> = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { id ->
+    if (id == "browser") "Chrome" else servers.firstOrNull { mcpToolId(it) == id } ?: id
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -65,6 +68,8 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     val state = jobState(job, st.runs, now)
     var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
+    var servers by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(tools) { if (tools != null) runCatching { servers = parseMcp(hub.read("/api/mcp/probe")).map { it.name } } }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             Text(job.str("name")?.ifEmpty { null } ?: "Untitled job", Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
@@ -80,7 +85,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
             item { SectionHeader("Tools") }
             item {
                 FlowRow(Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                    toolLabels(tools).forEach { Chip(it, null, on = true) }
+                    toolLabels(tools, servers).forEach { Chip(it, null) }
                 }
             }
         }

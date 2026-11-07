@@ -113,9 +113,9 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, path.substringAfterLast('/'), onBack, sub = parentOf(path).ifEmpty { pageFolder(hub) }) {
             MoreButton { close ->
-                if (isDoc) MenuItem("Rendered document", "preview", { close(); preview = !showDoc }, checked = showDoc)
+                if (isDoc) MenuItem("Rendered document", "open-preview", { close(); preview = !showDoc }, checked = showDoc)
                 if (canDiff) MenuItem("Change against the last commit", "diff", { close(); preview = false; mode = if (diff) "file" else "diff" }, checked = diff)
-                if (diff) MenuItem("Changes only", "filter", { close(); changes = !changes }, checked = changes)
+                if (diff) MenuItem("Changes only", "fold", { close(); changes = !changes }, checked = changes)
                 if (!showDoc) MenuItem("Word wrap", "word-wrap", { close(); wrap = !wrap }, checked = wrap)
                 MenuItem("Reload", "refresh", { close(); reload() })
             }

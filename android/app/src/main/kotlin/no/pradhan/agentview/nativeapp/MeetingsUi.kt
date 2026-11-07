@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.SpanStyle
@@ -188,16 +189,21 @@ private fun Pending(text: String) = Text(text, Modifier.padding(horizontal = Tok
 @Composable
 private fun Fold(label: String, count: Int, open: Boolean, onToggle: () -> Unit) {
     if (count == 0) return
-    SectionHeader(label, count.toString(), action = { Button(if (open) "Hide" else "Show", onToggle, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
+    SectionHeader(label, count.toString(), open = open, onToggle = onToggle)
 }
 
 @Composable
 private fun RoomMic(hub: Hub, m: Row) {
     val room = m.str("room") ?: ""
     var busy by remember(m.key) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+    val shape = RoundedCornerShape(Tokens.shapeLg)
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = Tokens.sp2).clip(shape).background(av.cMeeting.copy(alpha = 0.1f))
+            .border(Tokens.hairline, av.cMeeting.copy(alpha = 0.35f), shape).padding(horizontal = Tokens.sp7, vertical = Tokens.sp6),
+        verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
+    ) {
         LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-            AvIcon("mic", null, Tokens.iconLg, tint = av.fgMuted)
+            AvIcon("mic", null, Tokens.icon, tint = av.cMeeting)
             Text(buildAnnotatedString { append("Were you on the room mic, "); pushStyle(SpanStyle(fontWeight = FontWeight.SemiBold)); append(room); pop(); append("?") }, style = Type.body, color = av.fg)
         }
         LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -333,7 +339,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
         }
         item { SectionHeader("My notes") }
         item { NotesField(hub, m) }
-        item { SectionHeader("More", action = { Button(if (more) "Hide" else "Show", { more = !more }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+        item { SectionHeader("More", open = more, onToggle = { more = !more }) }
         if (more) {
             item {
                 TextField(newAction, { newAction = it }, Modifier.padding(horizontal = Tokens.sp6), singleLine = true, placeholder = "Add an action",
@@ -364,7 +370,7 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             item { Fold("Not mine", dismissed.size, notMineOpen) { notMineOpen = !notMineOpen } }
             if (notMineOpen) actionGroup(dismissed, m, now, actions)
             if (state == MState.Done) {
-                item { SectionHeader("Transcript", action = { Button(if (transcriptOpen) "Hide" else "Show", { transcriptOpen = !transcriptOpen }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+                item { SectionHeader("Transcript", open = transcriptOpen, onToggle = { transcriptOpen = !transcriptOpen }) }
                 if (transcriptOpen) {
                     val t = transcript
                     when {

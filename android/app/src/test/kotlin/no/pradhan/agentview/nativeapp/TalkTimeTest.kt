@@ -42,6 +42,6 @@ class LeftoversTest {
     }
 
     @Test fun toolChips() {
-        assertEquals(listOf("Chrome", "linear", "claude_ai_Slack"), toolLabels("browser, mcp__linear__*,mcp__claude_ai_Slack__*"))
+        assertEquals(listOf("Chrome", "linear", "claude.ai Slack", "mcp__x__*"), toolLabels("browser, mcp__linear__*,mcp__claude_ai_Slack__*,mcp__x__*", listOf("linear", "claude.ai Slack")))
     }
 }

@@ -338,7 +338,7 @@ private fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Task
         days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, showProfile, onOpen) }
         if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && s.review.isEmpty()) item { EmptyState("All clear", "Add a task with the button below, like “call the bank tomorrow 9”") }
         if (s.doneToday.isNotEmpty()) {
-            item { SectionHeader("Done", s.doneToday.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen }) }
+            item { SectionHeader("Done", s.doneToday.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen }, action = if (doneOpen) ({ Button("Clear", { actions.clear(s.doneToday) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null) }
             if (doneOpen) item { Group { s.doneToday.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
         }
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp16)) }
