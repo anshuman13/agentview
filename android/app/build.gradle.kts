@@ -58,7 +58,7 @@ dependencies {
 android.sourceSets.getByName("test").kotlin.srcDir("../buildSrc/src/main/kotlin")
 
 tasks.register("generateTokens") {
-    val css = rootProject.file("../agentview/web/src/styles/tokens.css")
+    val css = rootProject.file("../web/src/styles/tokens.css")
     val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/Tokens.kt")
     inputs.file(css)
     outputs.file(out)
@@ -66,7 +66,7 @@ tasks.register("generateTokens") {
 }
 
 tasks.register("generateIcons") {
-    val css = rootProject.file("../agentview/node_modules/@vscode/codicons/dist/codicon.css")
+    val css = rootProject.file("../node_modules/@vscode/codicons/dist/codicon.css")
     val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/Codicons.kt")
     inputs.file(css)
     outputs.file(out)
