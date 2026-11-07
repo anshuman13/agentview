@@ -12,6 +12,7 @@ import { ActionRow } from './meetings/ActionRow';
 import { useActions } from './useActions';
 import { ago, plural, safeHref, save, stored } from '../ui/util';
 import { blockId, isBlock } from '../../../shared/util';
+import { AskRow } from '../ui/AskRow';
 import { Button } from '../ui/Button';
 import { MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
@@ -183,7 +184,7 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
       <div className="as-group ov-queue-group">
         {(showAll ? n.rows : n.rows.slice(0, CAP)).map(rowOf)}
         {!showAll && n.rows.length > CAP && (
-          <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setShowAll(true)}>Show all {n.rows.length}</Button></div></div>
+          <AskRow title={`Show all ${n.rows.length}`} onClick={() => setShowAll(true)} />
         )}
       </div>
     </section>

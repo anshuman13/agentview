@@ -6,7 +6,7 @@ import { commitmentsOf, meetingsOf, nameOf, openQuestions, peopleOf, pinsOf, que
 import { PinList } from './Pins';
 import { useActions } from '../useActions';
 import { Icon } from '../../ui/Icon';
-import { Button } from '../../ui/Button';
+import { AskRow } from '../../ui/AskRow';
 import { MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
@@ -35,7 +35,7 @@ function Group<T>({ rows, name, row }: { rows: T[]; name: string; row: (r: T) =>
   return (
     <div className="as-group">
       {firstRows(rows, all).map(row)}
-      {rows.length > FIRST && !all && <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setShownFor(name)}>Show all {rows.length}</Button></div></div>}
+      {rows.length > FIRST && !all && <AskRow title={`Show all ${rows.length}`} onClick={() => setShownFor(name)} />}
     </div>
   );
 }

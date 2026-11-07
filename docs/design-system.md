@@ -136,7 +136,7 @@ icon, title in body type one line with ellipsis, meta in label type `--meta-fg`,
 IconButton sm or Chip shown on hover. Hairline only between groups.
 `<Row leading title meta trailing lines href onClick>` (web/src/ui/Row.tsx, components/rows.css): 48px
 minimum, title clamps to 1 or 2 lines, a hairline under each row starts at the title, state layers
-as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button Row takes an optional `action` (one IconButton sm) beside it. Status: built; the topic timeline and meeting actions in Meetings and the digest, brief and Prep cards use it.
+as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button Row takes an optional `action` (one IconButton sm) beside it. `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings and the digest, brief and Prep cards use it.
 
 ### Panel (EuiPanel)
 `<Panel title action padding>`; `.ui-panel`. Elevation 1 on `--surface`, `--shape-lg`.
@@ -291,7 +291,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-series-list | - | Grouped list | Done |
 | mt-up-head | - | Section header | Done |
 | obs-head, obs-subhead | none | Section header | Done |
-| ov-ask-line | codex/DoNow.tsx, codex/NeedsYou.tsx, codex/WeeklyReview.tsx, codex/meetings/Person.tsx, codex/overview/CardRow.tsx, codex/overview/ReplyQueue.tsx, codex/summary/Summary.tsx | Row | Todo |
+| ov-ask-line | - | Row (AskRow) | Done |
 | ov-brief-head | none | Section header | Done |
 | ov-digest-head | none | Report card | Done |
 | ov-digest-row | none | Report card | Done |

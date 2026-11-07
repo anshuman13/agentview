@@ -8,6 +8,7 @@ import { plural, save, stored } from '../ui/util';
 import { reviewStart } from './data/reports';
 import { attempt, openTask, setView, useView } from './view';
 import { Button, IconButton } from '../ui/Button';
+import { AskRow } from '../ui/AskRow';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { statusTime } from './data/engine';
@@ -56,7 +57,7 @@ export function WeeklyReviewCard({ profile, now, title, onHide }: { profile: Pro
           <Section label="Tasks done this week" count={rev.done.length} />
           <div className="as-group">
             {shown.map((r) => <Row key={r.profile + r.id} title={r.title} meta={new Date(statusTime(r)).toLocaleDateString([], { weekday: 'short' })} onClick={() => openTask(r)} />)}
-            {!showAll && rev.done.length > SHOWN && <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setAll(true)}>Show all {rev.done.length}</Button></div></div>}
+            {!showAll && rev.done.length > SHOWN && <AskRow title={`Show all ${rev.done.length}`} onClick={() => setAll(true)} />}
           </div>
         </section>
       )}

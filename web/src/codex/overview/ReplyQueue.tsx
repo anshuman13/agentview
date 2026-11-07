@@ -7,6 +7,7 @@ import { isSaid, type ItemRow } from '../data/sync';
 import { tagList } from '../AddSheet';
 import { SectionHead } from '../Fold';
 import { Button, Chip, IconButton } from '../../ui/Button';
+import { AskRow } from '../../ui/AskRow';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { haptic } from '../../ui/haptic';
 import { ago } from '../../ui/util';
@@ -163,33 +164,27 @@ function Ask({ row }: { row: ItemRow }) {
     if (done) focusAfter(e.currentTarget, done);
   };
   return (
-    <div className="ov-ask">
-      <div className="ov-ask-line">
-        <button type="button" className="ui-row" data-reply-row={row.profile + row.id} onClick={() => openTask(row)} onKeyDown={key}>
-          <span className="ui-row-body">
-            <span className="ui-row-title">{row.title}</span>
-            <span className="ui-row-meta">{row.people || 'Slack'} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}</span>
-          </span>
-          {(needs || isFaq(row)) && <span className="ui-row-trail"><span className={`badge ${needs ? 'waiting' : 'quiet'}`}>{needs ? 'Needs you' : 'FAQ'}</span></span>}
-        </button>
-        <span className="ov-ask-actions">
-          {has
-            ? <Button size="sm" icon={busy ? 'loading' : error ? 'refresh' : 'send'} disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : needs ? 'Send note' : 'Send'}</Button>
-            : row.source_url && <Button size="sm" icon="link" onClick={() => window.open(row.source_url!, '_blank', 'noreferrer')}>Open</Button>}
-          <span className="ov-more">
-            <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-            {menu && (
-              <Menu trigger={more} onClose={() => setMenu(false)}>
-                {has && <MenuItem icon="edit" onClick={choose(() => setEditing(true))}>Edit</MenuItem>}
-                {has && row.people && <MenuItem icon="history" onClick={choose(toggleHistory)}>History</MenuItem>}
-                {has && row.source_url && <MenuItem icon="link" href={row.source_url} onClick={() => setMenu(false)}>Open thread</MenuItem>}
-                {snoozeOptions(Date.now(), row.profile).map((o) => <MenuItem key={o.label} icon="clock" disabled={busy} onClick={choose(() => act.snoozeAsk(row, o.at))}>{o.label}</MenuItem>)}
-                <MenuItem icon="close" disabled={busy} onClick={choose(() => void skip())}>Skip</MenuItem>
-              </Menu>
-            )}
-          </span>
+    <AskRow data-reply-row={row.profile + row.id} onClick={() => openTask(row)} onKeyDown={key}
+      title={row.title}
+      meta={<>{row.people || 'Slack'} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}</>}
+      trailing={(needs || isFaq(row)) && <span className={`badge ${needs ? 'waiting' : 'quiet'}`}>{needs ? 'Needs you' : 'FAQ'}</span>}
+      actions={<>
+        {has
+          ? <Button size="sm" icon={busy ? 'loading' : error ? 'refresh' : 'send'} disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : needs ? 'Send note' : 'Send'}</Button>
+          : row.source_url && <Button size="sm" icon="link" onClick={() => window.open(row.source_url!, '_blank', 'noreferrer')}>Open</Button>}
+        <span className="ov-more">
+          <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+          {menu && (
+            <Menu trigger={more} onClose={() => setMenu(false)}>
+              {has && <MenuItem icon="edit" onClick={choose(() => setEditing(true))}>Edit</MenuItem>}
+              {has && row.people && <MenuItem icon="history" onClick={choose(toggleHistory)}>History</MenuItem>}
+              {has && row.source_url && <MenuItem icon="link" href={row.source_url} onClick={() => setMenu(false)}>Open thread</MenuItem>}
+              {snoozeOptions(Date.now(), row.profile).map((o) => <MenuItem key={o.label} icon="clock" disabled={busy} onClick={choose(() => act.snoozeAsk(row, o.at))}>{o.label}</MenuItem>)}
+              <MenuItem icon="close" disabled={busy} onClick={choose(() => void skip())}>Skip</MenuItem>
+            </Menu>
+          )}
         </span>
-      </div>
+      </>}>
       <div className="ov-ask-under">
         {!has ? <span className="ov-ask-draft">no draft, open the thread</span>
           : editing
@@ -198,7 +193,7 @@ function Ask({ row }: { row: ItemRow }) {
         {history && row.people && <HistoryLines data={data} error={historyError} who={row.people} retry={loadLines} />}
         {error && <span className="ov-ask-err">Not sent: {error}</span>}
       </div>
-    </div>
+    </AskRow>
   );
 }
 

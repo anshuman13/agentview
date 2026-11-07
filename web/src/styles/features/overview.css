@@ -21,9 +21,8 @@
 .ov-queue-group > .ov-ask:first-child .ui-row { border-top-left-radius: 11px; }
 .ov-queue-group > .ov-ask:last-child .ui-row { border-bottom-left-radius: 11px; }
 .ov-ask:not(:last-child) { border-bottom: var(--hairline); }
-.ov-ask-line { display: flex; align-items: center; gap: var(--sp-3); padding-right: var(--list-pad); }
-.ov-ask .ui-row { flex: 1; min-width: 0; width: auto; }
-.ov-ask .ui-row::after { display: none; }
+.ov-ask .ui-row-wrap { gap: var(--sp-3); }
+.ov-ask .ui-row-wrap::after { display: none; }
 .ov-ask-actions { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }
 .ov-more { position: relative; display: inline-flex; }
 .ov-ask-under { display: flex; flex-direction: column; gap: var(--sp-2); padding: 0 var(--list-pad) var(--sp-4); font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg); }

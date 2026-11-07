@@ -16,7 +16,7 @@ import { Flag } from './AddSheet';
 import { Swipe } from './Swipe';
 import { CardRow } from './overview/CardRow';
 import { goalsMeta, useGoalsCount } from './Goals';
-import { Button } from '../ui/Button';
+import { AskRow } from '../ui/AskRow';
 import { MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { safeHref } from '../ui/util';
@@ -87,7 +87,7 @@ export function DoNow({ needs, today, nextUp, meeting, now, onPrep }: {
     {weekend && ahead}
     <div className="as-group ov-today">
       {(all ? items : items.slice(0, SHOWN)).map(rowOf)}
-      {!all && items.length > SHOWN && <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setAll(true)}>Show all {items.length}</Button></div></div>}
+      {!all && items.length > SHOWN && <AskRow title={`Show all ${items.length}`} onClick={() => setAll(true)} />}
       {goals.count > 0 && <Row title="Goals" meta={goalsMeta(goals.count, goals.risk)} trailing={<Icon name="chevron-right" small />} onClick={openWeekGoals} />}
     </div>
     {!weekend && ahead}

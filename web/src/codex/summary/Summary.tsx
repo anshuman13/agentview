@@ -5,6 +5,7 @@ import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip } from '../../ui/Button';
 import { EmptyState, Panel } from '../../ui/Panel';
+import { AskRow } from '../../ui/AskRow';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { ago, safeHref } from '../../ui/util';
@@ -116,7 +117,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
                   const url = safeHref(c.url);
                   return url ? <Row key={c.profile + c.id} {...row} href={url} /> : <Row key={c.profile + c.id} {...row} plain />;
                 })}
-                {g.chats.length > FIRST && !openKinds.includes(g.kind) && <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setOpenKinds([...openKinds, g.kind])}>Show all {g.chats.length}</Button></div></div>}
+                {g.chats.length > FIRST && !openKinds.includes(g.kind) && <AskRow title={`Show all ${g.chats.length}`} onClick={() => setOpenKinds([...openKinds, g.kind])} />}
               </div>
             </div>
           ))}
