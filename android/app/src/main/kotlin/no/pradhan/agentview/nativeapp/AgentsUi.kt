@@ -44,12 +44,14 @@ fun AgentsScreen(hub: Hub) {
                     st.shownId.isEmpty() -> item { EmptyState("No chat open", "Open a chat to see the sub-agents Claude starts in it", small = false) }
                     agents.isEmpty() -> item { EmptyState("No agents yet", "Sub-agents Claude starts in this chat show up here, with their prompt, steps and report", small = false) }
                     else -> {
-                        item { SectionHeader("Agents", agents.size.toString()) }
-                        item {
-                            Group {
-                                agents.reversed().forEachIndexed { i, a ->
-                                    if (i > 0) Hairline(lead = true)
-                                    ListRow(a.description, agentRowMeta(a), leading = { StatusDot(agentDot(a.status)) }, trailing = { RowLabel(elapsed((a.endedAt ?: now) - a.startedAt)) }, onClick = { sel = a.id })
+                        for ((name, rows) in agentGroups(agents)) {
+                            item(key = "h:${name ?: ""}") { SectionHeader(name ?: "Agents", rows.size.toString()) }
+                            item(key = "g:${name ?: ""}") {
+                                Group {
+                                    rows.forEachIndexed { i, a ->
+                                        if (i > 0) Hairline(lead = true)
+                                        ListRow(a.description, agentRowMeta(a), leading = { StatusDot(agentDot(a.status)) }, trailing = { RowLabel(agentTrailing(a, now)) }, onClick = { sel = a.id })
+                                    }
                                 }
                             }
                         }
@@ -69,7 +71,7 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, now: Long, 
     val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {
         PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), style = Type.footnote, color = av.fgMuted, maxLines = 2) }) {
-            if (running) Button("Stop", { hub.stopTask(a.id) }, size = ButtonSize.Sm)
+            if (running && a.group == null) Button("Stop", { hub.stopTask(a.id) }, size = ButtonSize.Sm)
         }
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
             if (running) {

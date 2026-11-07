@@ -50,6 +50,7 @@ data class ChatEvent(
     val progress: String? = null,
     val usage: AgentUsage? = null,
     val background: Boolean = false,
+    val group: String? = null,
 )
 
 @Serializable

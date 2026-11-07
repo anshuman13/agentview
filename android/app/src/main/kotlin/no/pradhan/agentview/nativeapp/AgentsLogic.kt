@@ -14,6 +14,7 @@ data class Agent(
     val endedAt: Long?,
     val lastStep: String,
     val lastAt: Long,
+    val group: String? = null,
 )
 
 private fun stepText(it: Item?): String = when (it) {
@@ -47,6 +48,7 @@ private fun agentOf(it: Item.Agent, info: ChatEvent?, lastAt: Long): Agent {
         endedAt = if (running) null else info?.endedAt ?: result?.at,
         lastStep = stepText(it.steps.lastOrNull()),
         lastAt = maxOf(lastAt, use.at),
+        group = info?.group,
     )
 }
 
@@ -93,8 +95,17 @@ fun agentMeta(a: Agent, now: Long): String = listOfNotNull(
     if (a.info?.background == true) "background" else null,
 ).joinToString(" · ")
 
+fun agentGroups(agents: List<Agent>): List<Pair<String?, List<Agent>>> =
+    agents.reversed().groupBy { it.group }.toList().sortedBy { it.first != null }
+
+fun agentTrailing(a: Agent, now: Long): String {
+    val took = elapsed((a.endedAt ?: now) - a.startedAt)
+    val usage = a.info?.usage
+    return if (a.group != null && usage != null) "$took · ${tokensText(usage.tokens)}" else took
+}
+
 fun agentRowMeta(a: Agent): String = listOf(
-    a.status, if (a.item.steps.isNotEmpty()) plural(a.item.steps.size, "step") else "",
+    if (a.group != null) a.status.replaceFirstChar { it.uppercase() } else a.status, if (a.item.steps.isNotEmpty()) plural(a.item.steps.size, "step") else "",
     (if (a.status == "running") a.info?.progress else null) ?: a.lastStep,
 ).filter { it.isNotEmpty() }.joinToString(" · ")
 

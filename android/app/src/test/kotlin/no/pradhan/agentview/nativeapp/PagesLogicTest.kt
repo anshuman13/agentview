@@ -201,6 +201,19 @@ class PagesLogicTest {
         assertEquals("1.5k tokens", tokensText(1500))
     }
 
+    @Test fun workflowAgentsGroupAfterThePlainOnes() {
+        fun use(id: String, at: Long) = ChatEvent(id, "tool_use", name = "Agent", input = JsonObject(mapOf("description" to JsonPrimitive(id))), at = at)
+        val events = listOf(
+            use("w1", 1000), ChatEvent("i1", "agent", toolUseId = "w1", status = "running", startedAt = 1000, group = "build", usage = AgentUsage(1500, 1)),
+            use("p1", 2000),
+        )
+        val groups = agentGroups(buildAgents(events))
+        assertEquals(listOf(null, "build"), groups.map { it.first })
+        val w = groups[1].second.single()
+        assertEquals("Running", agentRowMeta(w))
+        assertEquals("4s · 1.5k tokens", agentTrailing(w, 5000))
+    }
+
     @Test fun terminalScreenHandlesLineEditsAndColours() {
         val t = TermScreen()
         t.write("abc\r\nhello\rj")
