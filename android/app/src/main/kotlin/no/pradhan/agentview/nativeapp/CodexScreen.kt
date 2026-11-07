@@ -153,7 +153,7 @@ fun CodexScreen(hub: Hub) {
                     page == "overview" -> OverviewPage(hub, st, profile, now, actions, { editKey = it.key }, { needsOpen = true }, { page = "goals" }, { adding = true }, { push("meeting:${it.key}") })
                     page == "tasks" -> TasksPage(st, profile, now, actions, searching, query, { query = it }, { editKey = it.key }, { page = "tag:$it" })
                     page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, { editKey = it.key })
-                    page == "search" -> SearchPage(st, profile, { editKey = it.key })
+                    page == "search" -> SearchPage(st, profile, { editKey = it.key }, { push("meeting:${it.key}") })
                     else -> TagPage(st, page.removePrefix("tag:"), now, actions, profile == null, { editKey = it.key })
                 }
             }
@@ -436,7 +436,7 @@ private fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Task
 }
 
 @Composable
-private fun SearchPage(st: CodexState, profile: String?, onOpen: (Row) -> Unit) {
+private fun SearchPage(st: CodexState, profile: String?, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val hits = remember(st.items, st.meetings, profile, query) { searchAll(st.items, st.meetings, query, profile) }
     LazyColumn(Modifier.fillMaxSize()) {
@@ -447,7 +447,7 @@ private fun SearchPage(st: CodexState, profile: String?, onOpen: (Row) -> Unit) 
             item { Group { list.take(30).forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(h.title, listOf(profileLabel(h.row.profile), h.snippet).filter { it.isNotEmpty() }.joinToString(" · "), onClick = open?.let { o -> { o(h.row) } }) } } }
         }
         section("Tasks and notes", hits.tasks, onOpen)
-        section("Meetings", hits.meetings, null)
+        section("Meetings", hits.meetings, onMeeting)
         if (query.isNotBlank() && hits.total == 0) item { EmptyState("No matches") }
     }
 }
