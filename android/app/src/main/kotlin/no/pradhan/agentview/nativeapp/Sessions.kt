@@ -163,15 +163,10 @@ class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit
 private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, onToggle: () -> Unit) {
     val glance = groupGlance(g, seen)
     SectionHeader(g.name, open = open, onToggle = onToggle, style = Type.headline, titleColor = av.fg, action = {
-        if (open) {
-            if (g.running > 0) Badge("${g.running}", BadgeTone.Running)
-            if (g.waiting > 0) Badge("${g.waiting}", BadgeTone.Waiting)
-            Badge("${g.open.count { it.pending == 0 } + g.recent.size}", BadgeTone.Quiet)
-        } else {
-            if (glance.running > 0) Badge("${glance.running}", BadgeTone.Running)
-            if (glance.needs > 0) Badge("${glance.needs}", BadgeTone.Waiting)
-            if (glance.unread > 0) Badge("${glance.unread}", BadgeTone.Quiet)
-            if (glance.last > 0) RowLabel(since(glance.last), av.fgFaint)
+        when {
+            glance.needs > 0 -> Badge("${glance.needs}", BadgeTone.Waiting)
+            glance.running > 0 -> Badge("${glance.running}", BadgeTone.Running)
+            glance.unread > 0 -> Badge("${glance.unread}", BadgeTone.Quiet)
         }
     })
 }
@@ -180,7 +175,7 @@ private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, on
 private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, muted: Boolean = false) {
     val unread = state == ChatState.Done || state == ChatState.Needs
     ListRow(
-        title, meta, lines = 1, muted = muted, selected = selected, onClick = onClick,
+        title, meta, lines = 2, metaLines = 2, muted = muted, selected = selected, onClick = onClick,
         leading = { if (unread) StatusDot(DotState.Unread) },
         trailing = {
             when (state) {
