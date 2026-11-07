@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { live, proposals, type Chat, type Meeting } from './data/wiki';
 import { atTime, errorText, reviewedSince } from './data/engine';
@@ -26,6 +26,14 @@ import type { useSplit } from './split';
 const WAIT_HANDLED = 'codex.waitingHandled';
 const SLACK_HANDLED = 'codex.slackHandled';
 const waitKey = (c: Chat) => `${c.profile}:${c.id}:${c.last_at ?? ''}`;
+const handled = { wait: stored<string[]>(WAIT_HANDLED, []), slack: stored<string[]>(SLACK_HANDLED, []) };
+const listeners = new Set<() => void>();
+const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
+const setHandled = (key: keyof typeof handled, next: string[]) => {
+  handled[key] = next;
+  save(key === 'wait' ? WAIT_HANDLED : SLACK_HANDLED, next);
+  listeners.forEach((fn) => fn());
+};
 const urlKey = (u: string | null | undefined) => (safeHref(u) ? [`url:${safeHref(u)}`] : []);
 
 type Bullet = { title: string; url: string | null; why: string };
@@ -51,8 +59,8 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   const snap = useAssistantData();
   const { facts } = useCodex();
   const { filter } = useView();
-  const [waitDone, setWaitDone] = useState<string[]>(() => stored<string[]>(WAIT_HANDLED, []));
-  const [slackDone, setSlackDone] = useState<string[]>(() => stored<string[]>(SLACK_HANDLED, []));
+  const waitDone = useSyncExternalStore(subscribe, () => handled.wait);
+  const slackDone = useSyncExternalStore(subscribe, () => handled.slack);
   const pending = useRef(new Set<string>());
   const minute = Math.floor(now / 60000);
   const rows = useMemo(() => {
@@ -85,16 +93,10 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     return collapse<Need>(ranked, (x) => x.kind === 'overdue', 3, (xs) => ({ kind: 'overdueAll', rows: xs.flatMap((x) => (x.kind === 'overdue' ? [x.row] : [])), keys: [] }));
   }, [snap.meetings, snap.chats, snap.briefs, snap.items, facts, filter, s, minute, waitDone, slackDone]);
   const hideChat = (c: Chat) => {
-    const next = [...stored<string[]>(WAIT_HANDLED, []).filter((k) => live(snap.chats).some((r) => waitKey(r) === k)), waitKey(c)];
-    setWaitDone(next);
-    save(WAIT_HANDLED, next);
+    setHandled('wait', [...handled.wait.filter((k) => live(snap.chats).some((r) => waitKey(r) === k)), waitKey(c)]);
   };
   const hideBullet = (x: Bullet) => {
-    setSlackDone((h) => {
-      const next = [...h, bulletKey(x)].slice(-50);
-      save(SLACK_HANDLED, next);
-      return next;
-    });
+    setHandled('slack', [...handled.slack, bulletKey(x)].slice(-50));
   };
   const capture = (key: string, title: string, profile: Chat['profile'], fill: (r: ItemRow) => Promise<unknown> | undefined, done: () => void) => {
     if (pending.current.has(key)) return;

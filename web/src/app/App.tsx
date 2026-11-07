@@ -23,6 +23,8 @@ import { useTheme } from './theme';
 import { MoreSheet, TabBar, type Tab, type View } from './TabBar';
 import { touch } from './touch';
 import { Back } from './back';
+import { BadgeMount } from './BadgeMount';
+import { tauriInvoke } from '../codex/data/local';
 
 const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'assistant', icon: 'sparkle', title: 'Codex' },
@@ -290,6 +292,7 @@ export function App() {
   return (
     <div className="workbench" data-tab={tab} data-sidebar={sidebar} data-chat={chatOpen} data-editor={active !== 'empty' || terminal || !chatOpen} data-codex={active === 'assistant'} style={{ '--chat-w': `${chatW}px` } as React.CSSProperties}>
       <AppUpdate />
+      {tauriInvoke() && <BadgeMount />}
       {fromRepos && tab === 'chat' && narrow() && <Back close={() => { slideFrom(-1); setTab('repos'); }} />}
       <SwitchedBanner />
       <Restarting />
