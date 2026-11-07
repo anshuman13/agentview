@@ -96,7 +96,7 @@ function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; no
       )}
       <section className="ag-steps">
         <div className="ag-label">Steps ({a.steps.length})</div>
-        {a.steps.length === 0 && <div className="muted small">No steps yet.</div>}
+        {a.steps.length === 0 && <EmptyState size="sm" title="No steps yet" />}
         <div className="ag-steps-list">{a.steps.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}</div>
       </section>
     </div>

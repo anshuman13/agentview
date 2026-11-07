@@ -18,6 +18,7 @@ import { apiUrl, fetchJson } from '../app/api';
 import { askClaude } from '../ui/util';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
+import { EmptyState } from '../ui/Panel';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
@@ -179,7 +180,7 @@ function Grafana({ info }: { info: ObserveInfo }) {
   };
   return (
     <Pane label="Grafana" action={<IconButton icon="refresh" label="Refresh" size="sm" small onClick={refresh} />}>
-      {!info.grafanaServer && <div className="obs-hint">No grafana MCP server in ~/.claude.json. Add one with: claude mcp add grafana -s user -e GRAFANA_URL=… -e GRAFANA_API_KEY=… -- mcp-grafana</div>}
+      {!info.grafanaServer && <EmptyState size="sm" title="No Grafana server" hint="Add one with: claude mcp add grafana -s user -e GRAFANA_URL=… -e GRAFANA_API_KEY=… -- mcp-grafana" />}
       {info.grafanaServer && <>
       <form
         className="obs-askbar"
@@ -207,23 +208,24 @@ function Grafana({ info }: { info: ObserveInfo }) {
         />
         {dash.busy && <Loading />}
         <Err text={dash.error} />
-        {dash.data?.dashboards.length === 0 && <div className="obs-hint">No dashboards match "{cfg.grafana?.query || info.repo}". Set grafana.query or grafana.dashboards in the settings.</div>}
+        {dash.data?.dashboards.length === 0 && <EmptyState size="sm" title="No dashboards match" hint={`"${cfg.grafana?.query || info.repo}". Set grafana.query or grafana.dashboards in the settings`} />}
       </div>
       <Sub title="Metrics, last 6 hours">
         {panels.busy && <Loading />}
         <Err text={panels.error} />
         {panels.data && panels.data.panels.length > 0 && <div className="obs-panels">{panels.data.panels.map((p) => <PanelCard key={p.title} p={p} />)}</div>}
         {panels.data && panels.data.panels.length === 0 && (
-          <div className="obs-hint">
-            No metric panels configured.
-            <button className="obs-ask" onClick={prompt('look at this service\'s dashboards and suggest 3-4 PromQL panels (request rate, error rate, latency, saturation) as JSON for grafana.panels, an array of {"title","query","unit"}, and check that each query returns data')}><Icon name="sparkle" small /> Suggest panels</button>
-          </div>
+          <EmptyState
+            size="sm"
+            title="No metric panels"
+            action={<Button size="sm" icon="sparkle" onClick={prompt('look at this service\'s dashboards and suggest 3-4 PromQL panels (request rate, error rate, latency, saturation) as JSON for grafana.panels, an array of {"title","query","unit"}, and check that each query returns data')}>Suggest panels</Button>}
+          />
         )}
       </Sub>
       <Sub title="Error logs, last hour" link={logs.data?.link} ask={prompt('query Loki for error lines in the last hour, group them and explain the top causes with one example line each')}>
         {logs.busy && <Loading />}
         <Err text={logs.error} />
-        {logs.data && logs.data.logs.length === 0 && <div className="obs-hint">No error lines in the last hour ({logs.data.scanned} lines scanned)</div>}
+        {logs.data && logs.data.logs.length === 0 && <EmptyState size="sm" title="No error lines" hint={`${logs.data.scanned} lines scanned in the last hour`} />}
         {logs.data && logs.data.logs.length > 0 && (
           <div className="obs-logs">
             {logs.data.logs.map((l, i) => (
@@ -239,7 +241,7 @@ function Grafana({ info }: { info: ObserveInfo }) {
         {pats.busy && <Loading />}
         <Err text={pats.error} />
         {pats.data && <div className="obs-hint">{pats.data.source}</div>}
-        {pats.data && pats.data.patterns.length === 0 && <div className="obs-hint">No error patterns</div>}
+        {pats.data && pats.data.patterns.length === 0 && <EmptyState size="sm" title="No error patterns" />}
         {pats.data && pats.data.patterns.length > 0 && (
           <div className="obs-patterns">
             {pats.data.patterns.map((p) => (
@@ -410,7 +412,7 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
           </table>
         </div>
       )}
-      {result.data && result.data.columns.length === 0 && <div className="obs-hint">No rows</div>}
+      {result.data && result.data.columns.length === 0 && <EmptyState size="sm" title="No rows" />}
     </Pane>
   );
 }

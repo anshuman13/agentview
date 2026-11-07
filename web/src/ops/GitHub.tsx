@@ -46,12 +46,12 @@ function PrRow({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
   );
 }
 
-function PrGroup({ title, prs, onOpen }: { title: string; prs: PullRequest[]; onOpen: (p: PullRequest) => void }) {
+function PrGroup({ title, empty, prs, onOpen }: { title: string; empty: string; prs: PullRequest[]; onOpen: (p: PullRequest) => void }) {
   const [open, setOpen] = useState(true);
   return (
     <section>
       <Section label={title} count={prs.length} open={open} onToggle={() => setOpen(!open)} />
-      {open && <div className="as-group">{prs.length ? prs.map((p) => <PrRow key={p.number} pr={p} onOpen={() => onOpen(p)} />) : <Row plain title="None" />}</div>}
+      {open && <div className="as-group">{prs.length ? prs.map((p) => <PrRow key={p.number} pr={p} onOpen={() => onOpen(p)} />) : <EmptyState size="sm" title={empty} />}</div>}
     </section>
   );
 }
@@ -74,9 +74,9 @@ function PrList({ onOpen }: { onOpen: (n: number) => void }) {
         <Problem error={error} />
       ) : (
         <>
-          <PrGroup title="Waiting for my review" prs={prs.filter((p) => p.reviewRequested)} onOpen={(p) => onOpen(p.number)} />
-          <PrGroup title="My pull requests" prs={prs.filter((p) => p.mine)} onOpen={(p) => onOpen(p.number)} />
-          <PrGroup title="All open" prs={prs} onOpen={(p) => onOpen(p.number)} />
+          <PrGroup title="Waiting for my review" empty="No pull requests waiting for you" prs={prs.filter((p) => p.reviewRequested)} onOpen={(p) => onOpen(p.number)} />
+          <PrGroup title="My pull requests" empty="No pull requests of yours" prs={prs.filter((p) => p.mine)} onOpen={(p) => onOpen(p.number)} />
+          <PrGroup title="All open" empty="No open pull requests" prs={prs} onOpen={(p) => onOpen(p.number)} />
         </>
       )}
     </div></div></div>
@@ -256,27 +256,27 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
             <Findings target={String(pr.number)} />
             <Section label="Description" />
             <div className="as-group gh-group">
-              <div className="gh-pad">{d.body.trim() ? <Markdown text={d.body} /> : <span className="muted">No description</span>}</div>
+              <div className="gh-pad">{d.body.trim() ? <Markdown text={d.body} /> : <EmptyState size="sm" title="No description" />}</div>
             </div>
             <Section label="Checks" count={d.checks.length} />
             <div className="as-group gh-group">
               {d.checks.map((c, i) => <Row key={i} href={c.url || undefined} plain={!c.url} leading={<CheckIcon state={c.state} />} title={c.name} />)}
-              {!d.checks.length && <Row plain title="None" />}
+              {!d.checks.length && <EmptyState size="sm" title="No checks" />}
             </div>
             <Section label="Reviews" count={d.reviews.length} />
             <div className="as-group gh-group">
               {d.reviews.map((r, i) => <Review key={i} r={r} />)}
-              {!d.reviews.length && <Row plain title="None" />}
+              {!d.reviews.length && <EmptyState size="sm" title="No reviews" />}
             </div>
             <Section label="Commits" count={d.commits.length} />
             <div className="as-group gh-group">
               {d.commits.map((c) => <Row key={c.oid} plain title={c.message} meta={c.oid.slice(0, 7)} />)}
-              {!d.commits.length && <Row plain title="None" />}
+              {!d.commits.length && <EmptyState size="sm" title="No commits" />}
             </div>
             <Section label="Files changed" count={d.files.length} />
             <div className="as-group gh-group">
               <Files files={d.files} diffs={diffs} />
-              {!d.files.length && <Row plain title="None" />}
+              {!d.files.length && <EmptyState size="sm" title="No files" />}
             </div>
           </>
         )}

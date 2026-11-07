@@ -3,6 +3,7 @@ import { ACCOUNT_LABEL, MCP_BAD, type Account } from '../../../shared/protocol';
 import { send } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
+import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { openConnectors, use } from './mcpActions';
 import { runnable, scopeInfo, shortName, stateOf, usageText, type Group, type Row, type Usage } from './mcpHelpers';
@@ -76,8 +77,8 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
             {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
           </div>
         ))}
-        {row.tools && row.tools.length > 0 && tools.length === 0 && <div className="muted">No tool matches</div>}
-        {!row.tools?.length && <div className="muted">{row.status === 'connected' ? 'No tools reported' : row.status === 'needs-auth' ? 'Tools appear after you log in' : 'Tools appear once it connects'}</div>}
+        {row.tools && row.tools.length > 0 && tools.length === 0 && <EmptyState size="sm" title="No tool matches" />}
+        {!row.tools?.length && <EmptyState size="sm" title={row.status === 'connected' ? 'No tools reported' : 'No tools yet'} hint={row.status === 'connected' ? undefined : row.status === 'needs-auth' ? 'Log in to load them' : 'They load once the server connects'} />}
       </div>
     </aside>
   );
