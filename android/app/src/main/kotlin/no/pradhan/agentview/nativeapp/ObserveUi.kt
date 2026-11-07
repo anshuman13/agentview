@@ -170,7 +170,7 @@ private fun PanelRow(p: GrafanaPanel, onClick: () -> Unit) {
 private fun Sparkline(points: List<List<Double>>) {
     val ys = remember(points) { sparkline(points) }
     val color = av.accent
-    Canvas(Modifier.size(Geometry.spark, Tokens.sizeXl)) {
+    Canvas(Modifier.size(Tokens.spark, Tokens.sizeXl)) {
         if (ys.size < 2) return@Canvas
         val stroke = Tokens.stroke.toPx()
         val path = Path()

@@ -58,7 +58,9 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val addTask = MutableStateFlow(false)
     @Volatile var foreground = false
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
-    val handled = MutableStateFlow(prefs.getStringSet("handled", emptySet()).orEmpty().toSet())
+    val handled = MutableStateFlow(
+        (prefs.getString("handledOrder", null)?.split("\n")?.filter { it.isNotEmpty() } ?: prefs.getStringSet("handled", emptySet()).orEmpty().toList()).toCollection(LinkedHashSet()) as Set<String>,
+    )
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
     val writes = Writes(viewModelScope, { readOnly }, { notice.value = it })
@@ -96,8 +98,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun refreshGranted() { granted.value = notifier.granted() }
 
     fun hideNeed(key: String) {
-        handled.value = handled.value + key
-        prefs.edit().putStringSet("handled", handled.value).apply()
+        val live = codex.state.value.chats.filter { !it.deleted }.map(::waitKey).toSet()
+        val all = (handled.value - key) + key
+        handled.value = (all.filter { !it.startsWith("wait:") || it in live || it == key } .filter { !it.startsWith("slack:") } + all.filter { it.startsWith("slack:") }.takeLast(50)).toCollection(LinkedHashSet())
+        prefs.edit().putString("handledOrder", handled.value.joinToString("\n")).apply()
     }
 
     fun setNotify(on: Boolean) {

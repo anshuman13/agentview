@@ -37,7 +37,7 @@ import kotlinx.serialization.json.JsonPrimitive
 @Composable
 fun PendingList(pending: List<Pending>, mode: String, hub: Hub) {
     if (pending.isEmpty()) return
-    Column(Modifier.heightIn(max = Geometry.scrollMax).verticalScroll(rememberScrollState()).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+    Column(Modifier.heightIn(max = Tokens.scrollMax).verticalScroll(rememberScrollState()).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         for (p in pending) when {
             p is Pending.Question -> QuestionCard(p, hub)
             p is Pending.Permission && p.toolName == "ExitPlanMode" -> PlanCard(p, mode, hub)
@@ -82,7 +82,7 @@ private fun PlanCard(p: Pending.Permission, mode: String, hub: Hub) {
     Panel {
         Title(p.title)
         val plan = p.input.s("plan")
-        if (plan.isNotEmpty()) Box(Modifier.heightIn(max = Geometry.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5)) { Markdown(plan) }
+        if (plan.isNotEmpty()) Box(Modifier.heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5)) { Markdown(plan) }
         if (p.detail.isNotEmpty()) Desc(p.detail)
         Decision(p, mode, hub, "Approve", "Keep planning")
     }
@@ -106,7 +106,7 @@ private fun PermissionBody(p: Pending.Permission) {
         "Bash" -> {
             val d = input.s("description")
             if (d.isNotEmpty() && d != p.title) Desc(d)
-            CodeBlock(input.s("command"), modifier = Modifier.heightIn(max = Geometry.scrollMid))
+            CodeBlock(input.s("command"), modifier = Modifier.heightIn(max = Tokens.scrollMid))
         }
         "Edit", "Write", "MultiEdit" -> {
             val edits = when (p.toolName) {
@@ -144,7 +144,7 @@ private fun KeyValue(k: String, v: String) {
 fun DiffView(lines: List<DiffLine>, modifier: Modifier = Modifier) {
     val shown = lines.take(MAX_DIFF_LINES)
     val scroll = rememberScrollState()
-    Column(modifier.heightIn(max = Geometry.scrollMid).well(av).verticalScroll(rememberScrollState()).padding(vertical = Tokens.sp2)) {
+    Column(modifier.heightIn(max = Tokens.scrollMid).well(av).verticalScroll(rememberScrollState()).padding(vertical = Tokens.sp2)) {
         for (l in shown) DiffCodeLine(l, Lang.Plain, wrap = false, scroll = scroll, gutter = Tokens.sp8)
         if (lines.size > MAX_DIFF_LINES) Text("${lines.size - MAX_DIFF_LINES} more lines", style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(horizontal = Tokens.sp5))
     }
@@ -203,7 +203,7 @@ private fun OptionRow(multi: Boolean, on: Boolean, label: String, description: S
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
             Text(label, style = Type.body, color = if (muted) av.fgMuted else av.fg)
             if (description.isNotEmpty()) Desc(description)
-            if (preview != null) CodeBlock(preview, modifier = Modifier.heightIn(max = Geometry.scrollShort))
+            if (preview != null) CodeBlock(preview, modifier = Modifier.heightIn(max = Tokens.scrollShort))
         }
     }
 }
@@ -213,7 +213,7 @@ fun BlockedCard(ev: ChatEvent, hub: Hub) {
     val rule = if (ev.rule.startsWith("Bash(")) ev.rule.removePrefix("Bash(").removeSuffix(")").replace(Regex("\\\\([\\\\()])"), "$1") else ev.rule
     Panel {
         Title("Auto mode blocked this")
-        CodeBlock(rule, modifier = Modifier.heightIn(max = Geometry.scrollShort))
+        CodeBlock(rule, modifier = Modifier.heightIn(max = Tokens.scrollShort))
         if (ev.reason.isNotEmpty()) Desc(ev.reason)
         if (ev.allowed) Text("Allowed for this chat", style = Type.footnote, color = av.fgFaint)
         else Primary("Allow and retry") { hub.allowBlocked(ev.id) }

@@ -103,7 +103,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     val c = av
     val card = RoundedCornerShape(Tokens.radius)
     Column(Modifier.fillMaxWidth().background(c.bg).padding(start = Tokens.sp4, end = Tokens.sp4, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-        if (suggestions.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = Geometry.imageMax).well(c).verticalScroll(rememberScrollState())) {
+        if (suggestions.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = Tokens.imageMax).well(c).verticalScroll(rememberScrollState())) {
             for (s in suggestions) Column(
                 Modifier.fillMaxWidth().heightIn(min = Tokens.touchMd).clickable {
                     val r = acceptSuggestion(text.text, trigger!!.start, text.selection.end, "/${s.name}")

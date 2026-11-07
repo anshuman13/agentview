@@ -28,8 +28,8 @@ class NeedsCountTest {
             item("draft", "suggested", null, WORK, "source" to "slack", "draft" to "ok"),
         )
         val st = CodexState(items = items, chats = listOf(chat("a"), chat("b", 0), chat("c").copy(deleted = true)))
-        assertEquals(listOf("Overdue", "Ask", "Dm"), needsList(st, null, NOW).map { it::class.simpleName })
-        assertEquals(4, needsCount(st, null, NOW))
+        assertEquals(listOf("Overdue", "Ask", "Ask", "Dm"), needsList(st, null, NOW).map { it::class.simpleName })
+        assertEquals(5, needsCount(st, null, NOW))
     }
 
     @Test fun hiddenDmsAndBriefBulletsCount() {
@@ -47,5 +47,18 @@ class NeedsCountTest {
         assertEquals(1, risk.size)
         assertEquals(120L, risk[0].short)
         assertEquals(0, needsList(st, null, ms(7, 10)).filterIsInstance<Need.Risk>().size)
+    }
+
+    @Test fun atRiskTasksLeaveTheTodayList() {
+        val mon = ms(9, 10)
+        val big = item("big", "open", ms(9, 11)).copy(f = item("big", "open", ms(9, 11)).f + ("title" to JsonPrimitive("Write ~3h")))
+        val st = CodexState(items = listOf(big))
+        val risky = riskKeys(needsList(st, null, mon))
+        assertEquals(setOf(big.key), risky)
+        val s = split(st.items, null, mon)
+        assertEquals(1, overviewToday(s, null, mon).todo.size + (if (overviewToday(s, null, mon).upNextTask != null) 1 else 0))
+        val t = overviewToday(s, null, mon, risky)
+        assertEquals(0, t.todo.size)
+        assertEquals(null, t.upNextTask)
     }
 }

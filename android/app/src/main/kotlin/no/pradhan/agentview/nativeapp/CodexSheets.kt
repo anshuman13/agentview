@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -264,9 +265,23 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
         is Need.Ask -> ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · "), onClick = { onOpen(n.row) },
             trailing = { Row { Button("Dismiss", { actions.dismiss(n.row) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm); Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } })
         is Need.Risk -> ListRow(n.row.title ?: "", "At risk · due ${whenText(n.due, now)} · ${minutesText(n.short)} short", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
-        is Need.Slack -> ListRow(n.bullet.title, n.bullet.why.ifEmpty { null },
-            trailing = { Button("Make task", { if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(slackKey(n.bullet)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
-        is Need.Dm -> ListRow(n.chat.str("name") ?: "DM", "DM · ${n.chat.str("summary") ?: ""}",
-            trailing = { Button("Make task", { if (hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) != null) hub.hideNeed(waitKey(n.chat)) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
+        is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { hub.hideNeed(slackKey(n.bullet)) }) {
+            if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(slackKey(n.bullet))
+        }
+        is Need.Dm -> NeedCard(n.chat.str("name") ?: "DM", "DM · ${n.chat.str("summary") ?: ""}", n.chat.str("url"), { hub.hideNeed(waitKey(n.chat)) }) {
+            if (hub.codex.capture("Reply to ${n.chat.str("name") ?: "DM"}", "open", n.chat.profile, null, mapOf("text" to listOfNotNull(n.chat.str("summary"), n.chat.str("url")).joinToString("\n\n").ifEmpty { null }, "source" to "slack", "people" to "${n.chat.str("name")} · DM")) != null) hub.hideNeed(waitKey(n.chat))
+        }
     }
+}
+
+@Composable
+private fun NeedCard(title: String, meta: String, url: String?, onDismiss: () -> Unit, onTask: () -> Unit) {
+    val uri = LocalUriHandler.current
+    ListRow(title, meta, trailing = {
+        Row {
+            Button("Dismiss", onDismiss, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
+            Button("Make task", onTask, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (url != null && url.startsWith("http")) MoreButton { close -> MenuItem("Open in Slack", { close(); uri.openUri(url) }) }
+        }
+    })
 }

@@ -380,6 +380,22 @@ object Tokens {
     val menuMin = 200.dp
     val bar = 3.dp
     val stroke = 1.5.dp
+    val buttonLg = 50.dp
+    val emptyHint = 320.dp
+    val fab = 56.dp
+    val leadWidth = 24.dp
+    val dot = 8.dp
+    val handleWidth = 36.dp
+    val handleHeight = 4.dp
+    val scrollShort = 160.dp
+    val scrollMid = 240.dp
+    val scrollTall = 320.dp
+    val scrollMax = 440.dp
+    val imageMax = 280.dp
+    val tableCell = 140.dp
+    val fileError = 140.dp
+    val subIndent = 7.dp
+    val spark = 120.dp
 }
 
 object Type {

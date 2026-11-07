@@ -1,11 +1,13 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -159,7 +161,7 @@ fun CodexScreen(hub: Hub) {
         }
         if (route == null && page != "goals" && page != "search") Fab(
             Icons.Filled.Add, "Add task", { adding = true },
-            Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp8, bottom = if (page == "overview") Geometry.fab + Tokens.sp16 else Tokens.sp8),
+            Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp8, bottom = if (page == "overview") Tokens.fab + Tokens.sp16 else Tokens.sp8),
         )
         SnackHost(snack, Modifier.align(Alignment.BottomCenter))
     }
@@ -227,7 +229,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
     val hidden by hub.handled.collectAsState()
     val needsTotal = remember(st, profile, now / 60_000, hidden) { needsCount(st, profile, now, hidden) }
-    val today = remember(s, mt) { overviewToday(s, mt.next, now) }
+    val today = remember(st, profile, s, mt, hidden) { overviewToday(s, mt.next, now, riskKeys(needsList(st, profile, now, hidden))) }
     val others = mt.today.filter { it != mt.next && (it.endsAt ?: it.startsAt!!) > now }
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }
     var all by remember { mutableStateOf(false) }
@@ -255,7 +257,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { Button("New task", onAdd, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
             }
             if (needsTotal > 0) {
-                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Text("$needsTotal  ›", style = Type.callout, color = av.warn, modifier = Modifier.padding(end = Tokens.sp6)) }) }
+                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Badge("$needsTotal", BadgeTone.Quiet); Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon), tint = av.fgMuted) }) }
             }
         }
         if (rows.isNotEmpty()) {
@@ -295,7 +297,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                 }
             }
         }
-        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Geometry.fab + Tokens.sp20)) }
+        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
     }
 }
 
@@ -348,7 +350,7 @@ private fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Task
             item { SectionHeader("Done", s.doneToday.size.toString(), action = { Button(if (doneOpen) "Hide" else "Show", { doneOpen = !doneOpen }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             if (doneOpen) item { Group { s.doneToday.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, showProfile, onOpen = { onOpen(r) }) } } }
         }
-        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Geometry.fab + Tokens.sp16)) }
+        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp16)) }
     }
 }
 

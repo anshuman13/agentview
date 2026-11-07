@@ -92,26 +92,6 @@ import androidx.compose.ui.unit.dp
 
 // The shared components, one per web primitive (web/src/ui and web/src/styles/components). Screens build only from these and the tokens.
 
-// One-off geometry the web keeps in its feature CSS rather than in tokens.css.
-object Geometry {
-    val buttonLg = 50.dp
-    val emptyHint = 320.dp
-    val fab = 56.dp
-    val leadWidth = 24.dp
-    val dot = 8.dp
-    val handleWidth = 36.dp
-    val handleHeight = 4.dp
-    val scrollShort = 160.dp
-    val scrollMid = 240.dp
-    val scrollTall = 320.dp
-    val scrollMax = 440.dp
-    val imageMax = 280.dp
-    val tableCell = 140.dp
-    val fileError = 140.dp
-    val subIndent = 7.dp
-    val spark = 120.dp
-}
-
 val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSm, lineHeight = Tokens.lineSm)
 
 // Page header with an optional back button: a single line title that ends in an ellipsis.
@@ -167,7 +147,7 @@ fun <T> LazyListScope.lazyGroup(rows: List<T>, key: (T) -> Any, lead: Boolean = 
 }
 
 @Composable
-fun Hairline(lead: Boolean = false) = HorizontalDivider(Modifier.padding(start = Tokens.listPad + if (lead) Geometry.leadWidth + Tokens.sp6 else 0.dp), color = av.border, thickness = Tokens.hairline)
+fun Hairline(lead: Boolean = false) = HorizontalDivider(Modifier.padding(start = Tokens.listPad + if (lead) Tokens.leadWidth + Tokens.sp6 else 0.dp), color = av.border, thickness = Tokens.hairline)
 
 // List row (web Row): leading slot, a title of one or two lines, a meta line and trailing content.
 @OptIn(ExperimentalFoundationApi::class)
@@ -192,7 +172,7 @@ fun ListRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp6),
     ) {
-        if (leading != null) Box(Modifier.width(Geometry.leadWidth), contentAlignment = Alignment.Center) { CompositionLocalProvider(LocalContentColor provides av.fgMuted) { leading() } }
+        if (leading != null) Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.Center) { CompositionLocalProvider(LocalContentColor provides av.fgMuted) { leading() } }
         Column(Modifier.weight(1f)) {
             val color = if (strike || muted) av.fgMuted else av.fg
             val deco = if (strike) TextDecoration.LineThrough else null
@@ -241,7 +221,7 @@ fun Button(
     val (h, pad, style) = when (size) {
         ButtonSize.Sm -> Triple(Tokens.controlSm, Tokens.sp6, Type.label)
         ButtonSize.Md -> Triple(Tokens.buttonMd, Tokens.sp8, Type.body.copy(fontWeight = FontWeight.Medium))
-        ButtonSize.Lg -> Triple(Geometry.buttonLg, Tokens.sp12, Type.body.copy(fontWeight = FontWeight.SemiBold))
+        ButtonSize.Lg -> Triple(Tokens.buttonLg, Tokens.sp12, Type.body.copy(fontWeight = FontWeight.SemiBold))
     }
     val gap = when (size) { ButtonSize.Sm -> Tokens.sp2; ButtonSize.Md -> Tokens.sp3; ButtonSize.Lg -> Tokens.sp4 }
     val shape = if (size == ButtonSize.Lg) RoundedCornerShape(Tokens.shapeLg) else RoundedCornerShape(Tokens.radiusPill)
@@ -380,7 +360,7 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
         t.animateFloat(1f, 0.35f, infiniteRepeatable(tween(Tokens.dur * 6), RepeatMode.Reverse), label = "pulse").value
     } else 1f
     val ring = when (state) { DotState.Idle -> c.fgMuted; DotState.Agent -> c.agent; else -> null }
-    Box(modifier.size(Geometry.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.stroke, ring, CircleShape) else Modifier))
+    Box(modifier.size(Tokens.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.stroke, ring, CircleShape) else Modifier))
 }
 
 // Text field (web input): sunken fill, hairline border that turns accent on focus.
@@ -459,7 +439,7 @@ fun Sheet(onDismiss: () -> Unit, padded: Boolean = true, full: Boolean = true, c
         tonalElevation = 0.dp,
         dragHandle = {
             Box(Modifier.fillMaxWidth().height(Tokens.sizeMd), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(Geometry.handleWidth, Geometry.handleHeight).clip(RoundedCornerShape(Tokens.radiusXs)).background(c.borderStrong))
+                Box(Modifier.size(Tokens.handleWidth, Tokens.handleHeight).clip(RoundedCornerShape(Tokens.radiusXs)).background(c.borderStrong))
             }
         },
     ) {
@@ -520,7 +500,7 @@ fun EmptyState(title: String, hint: String? = null, icon: ImageVector? = null, s
             Icon(icon, null, Modifier.size(if (small) Tokens.iconLg else Tokens.iconXl), tint = av.onSurfaceMuted)
         }
         Text(title, style = Type.headline, color = av.onSurface, textAlign = TextAlign.Center)
-        if (hint != null) Text(hint, Modifier.widthIn(max = Geometry.emptyHint), style = Type.body, color = av.onSurfaceMuted, textAlign = TextAlign.Center)
+        if (hint != null) Text(hint, Modifier.widthIn(max = Tokens.emptyHint), style = Type.body, color = av.onSurfaceMuted, textAlign = TextAlign.Center)
         if (action != null) { Spacer(Modifier.height(Tokens.sp6)); action() }
     }
 }
@@ -542,7 +522,7 @@ fun SnackHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
 // Floating add button (web .as-fab): accent circle with a medium shadow.
 @Composable
 fun Fab(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    androidx.compose.material3.Surface(onClick, modifier.size(Geometry.fab), shape = CircleShape, color = av.accent, contentColor = av.white, shadowElevation = Tokens.shadowMd) {
+    androidx.compose.material3.Surface(onClick, modifier.size(Tokens.fab), shape = CircleShape, color = av.accent, contentColor = av.white, shadowElevation = Tokens.shadowMd) {
         Box(contentAlignment = Alignment.Center) { Icon(icon, label, Modifier.size(Tokens.iconXl)) }
     }
 }

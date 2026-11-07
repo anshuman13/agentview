@@ -115,7 +115,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
     val groups = listOf<List<Need>>(
         s.overdue.map { Need.Overdue(it) },
         risk.map { (row, short) -> Need.Risk(row, row.at!!, short) },
-        s.review.filter { !(it.source == "slack" && drafted(it)) && !isSaid(it) && (it.snoozedUntil ?: 0L) <= now }.map { Need.Ask(it) },
+        s.review.filter { !(it.source == "slack" && drafted(it)) && (it.snoozedUntil ?: 0L) <= now }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
         bullets.map { Need.Slack(it, brief!!.profile) },
         ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.map { Need.JustEnded(it, m) } },
@@ -142,12 +142,15 @@ fun doneCount(done: Int, open: Int) = if (done > 0) "$done of ${done + open} don
 // The tasks the Today list shows for the Overview, split the way Overview.tsx does it.
 class Today(val upNextTask: Row?, val todo: List<Row>, val late: List<Row>, val openCount: Int)
 
-fun overviewToday(s: Split, next: Row?, now: Long): Today {
+fun riskKeys(needs: List<Need>) = needs.filterIsInstance<Need.Risk>().map { it.row.key }.toSet()
+
+fun overviewToday(s: Split, next: Row?, now: Long, risky: Set<String> = emptySet()): Today {
     val due = dueToday(s, now).filter { it.status == "open" }
-    val late = s.overdue.filter { it.status == "open" }
-    val todo = due.sortedBy { it.at ?: 0L }
+    val openLate = s.overdue.filter { it.status == "open" }
+    val late = openLate.filter { it.key !in risky }
+    val todo = due.filter { it.key !in risky }.sortedBy { it.at ?: 0L }
     val task = if (next == null) todo.firstOrNull() else null
-    val open = (due + late).distinctBy { it.key }.size
+    val open = (due + openLate).distinctBy { it.key }.size
     return Today(task, if (task != null) todo.filter { it != task } else todo, late, open)
 }
 

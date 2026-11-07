@@ -88,7 +88,7 @@ private fun MdBlockView(b: MdBlock) {
         is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
             b.items.forEachIndexed { n, item ->
                 Row {
-                    Text(if (b.ordered) "${b.start + n}." else "•", style = body, color = av.fgMuted, modifier = Modifier.width(Geometry.leadWidth).padding(start = Tokens.sp2))
+                    Text(if (b.ordered) "${b.start + n}." else "•", style = body, color = av.fgMuted, modifier = Modifier.width(Tokens.leadWidth).padding(start = Tokens.sp2))
                     MdBlocks(item, Modifier.weight(1f))
                 }
             }
@@ -128,7 +128,7 @@ private fun TableView(t: MdBlock.Table) {
                         inlineText(row.getOrElse(c) { emptyList() }),
                         style = Type.subheadline.copy(color = av.fg),
                         fontWeight = if (r == 0 && t.header.isNotEmpty()) FontWeight.SemiBold else null,
-                        modifier = Modifier.width(Geometry.tableCell).border(BorderStroke(Tokens.hairline, av.border)).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2),
+                        modifier = Modifier.width(Tokens.tableCell).border(BorderStroke(Tokens.hairline, av.border)).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2),
                     )
                 }
             }

@@ -184,7 +184,7 @@ fun ChatImage(hub: Hub, chat: String, path: String) {
         }
     }
     val b = bmp
-    if (b != null) Image(b.asImageBitmap(), path, Modifier.fillMaxWidth().heightIn(max = Geometry.imageMax).clip(RoundedCornerShape(Tokens.radiusSm)), contentScale = ContentScale.Fit, alignment = Alignment.CenterStart)
+    if (b != null) Image(b.asImageBitmap(), path, Modifier.fillMaxWidth().heightIn(max = Tokens.imageMax).clip(RoundedCornerShape(Tokens.radiusSm)), contentScale = ContentScale.Fit, alignment = Alignment.CenterStart)
     else Text("Image: ${path.substringAfterLast('/')}", style = Type.footnote, color = av.fgMuted, modifier = Modifier.background(av.surface, RoundedCornerShape(Tokens.radiusSm)).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2))
 }
 
@@ -213,9 +213,9 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
     val dur = result?.let { r -> duration(r.at - it.use.at) } ?: ""
     Column(Modifier.fillMaxWidth().clickable { open = !open }.heightIn(min = Tokens.touchSm)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(Geometry.leadWidth), contentAlignment = Alignment.CenterStart) {
+            Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) {
                 if (state == "pending") CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint)
-                else Box(Modifier.size(Geometry.dot).background(if (state == "err") av.err else toneColor(stepTone(it.use.name)), CircleShape))
+                else Box(Modifier.size(Tokens.dot).background(if (state == "err") av.err else toneColor(stepTone(it.use.name)), CircleShape))
             }
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
@@ -231,9 +231,9 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
             if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(start = Tokens.sp3))
         }
         if (!open) {
-            label.cmd?.let { Text("$ " + it.replace(Regex("\\s*\\n\\s*"), " ⏎ "), Modifier.padding(start = Geometry.leadWidth), style = Mono, color = av.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            if (state == "err") Text(firstLine(result!!.text).ifEmpty { "Failed" }, Modifier.padding(start = Geometry.leadWidth), style = Type.footnote, color = av.err, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (state == "denied") Text("Denied", Modifier.padding(start = Geometry.leadWidth), style = Type.footnote, color = av.fgFaint)
+            label.cmd?.let { Text("$ " + it.replace(Regex("\\s*\\n\\s*"), " ⏎ "), Modifier.padding(start = Tokens.leadWidth), style = Mono, color = av.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            if (state == "err") Text(firstLine(result!!.text).ifEmpty { "Failed" }, Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.err, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (state == "denied") Text("Denied", Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.fgFaint)
         } else ToolDetail(it.use, result)
     }
 }
@@ -245,7 +245,7 @@ private fun androidx.compose.ui.text.AnnotatedString.Builder.withStyleColor(colo
 @Composable
 private fun ToolDetail(use: ChatEvent, result: ChatEvent?) {
     val input = use.input.s("command").ifEmpty { pretty.encodeToString(kotlinx.serialization.json.JsonObject.serializer(), use.input) }
-    Column(Modifier.fillMaxWidth().padding(start = Geometry.leadWidth, top = Tokens.sp1, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+    Column(Modifier.fillMaxWidth().padding(start = Tokens.leadWidth, top = Tokens.sp1, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
         Pre(input, wrap = false)
         if (result != null) Pre(result.text.ifEmpty { "(no output)" }, error = result.isError && !isDenied(result))
     }
@@ -253,7 +253,7 @@ private fun ToolDetail(use: ChatEvent, result: ChatEvent?) {
 
 @Composable
 private fun Pre(text: String, wrap: Boolean = true, error: Boolean = false) {
-    Box(Modifier.heightIn(max = Geometry.scrollTall).well(av).verticalScroll(rememberScrollState())) {
+    Box(Modifier.heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState())) {
         Text(
             text,
             Modifier.then(if (wrap) Modifier else Modifier.horizontalScroll(rememberScrollState())).padding(horizontal = Tokens.sp5, vertical = Tokens.sp4),
@@ -280,7 +280,7 @@ private fun FileCard(it: Item.File, cwd: String) {
                 },
                 Modifier.weight(1f), style = Type.subheadline, color = av.fg, maxLines = 1, overflow = TextOverflow.StartEllipsis,
             )
-            if (it.error != null) Text(it.error, style = Type.footnote, color = if (it.denied) av.fgFaint else av.err, maxLines = 1, modifier = Modifier.widthIn(max = Geometry.fileError))
+            if (it.error != null) Text(it.error, style = Type.footnote, color = if (it.denied) av.fgFaint else av.err, maxLines = 1, modifier = Modifier.widthIn(max = Tokens.fileError))
             else Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 Text("+${it.add}", style = Type.footnote, color = av.diffAdd)
                 Text("-${it.del}", style = Type.footnote, color = av.diffDel)
@@ -319,7 +319,7 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
     val shown = if (open) it.steps else if (it.running) it.steps.takeLast(3) else emptyList()
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).clickable(enabled = canOpen) { open = !open }, verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(Geometry.leadWidth), contentAlignment = Alignment.CenterStart) { StatusDot(DotState.Agent) }
+            Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) { StatusDot(DotState.Agent) }
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
                     append(desc)
@@ -332,12 +332,12 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
             if (it.running) Button("Stop", { hub.stopTask(it.use.id) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
             if (canOpen) Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.padding(horizontal = Tokens.sp3).size(Tokens.icon).rotate(if (open) 90f else 0f), tint = av.fgFaint)
         }
-        if (shown.isNotEmpty()) Column(Modifier.padding(start = Geometry.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
+        if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
             if (!open && it.steps.size > shown.size) Text("${it.steps.size - shown.size} earlier steps", Modifier.clickable { open = true }.padding(vertical = Tokens.sp2), style = Type.footnote, color = av.fgFaint)
             val running = it.running
             shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running) } }
         }
-        if (open && result != null && !it.running) Box(Modifier.padding(start = Geometry.leadWidth, top = Tokens.sp1, bottom = Tokens.sp4).heightIn(max = Geometry.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5)) {
+        if (open && result != null && !it.running) Box(Modifier.padding(start = Tokens.leadWidth, top = Tokens.sp1, bottom = Tokens.sp4).heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5)) {
             Markdown(result.text.ifEmpty { "(no output)" })
         }
     }
