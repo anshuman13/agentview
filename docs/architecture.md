@@ -75,6 +75,8 @@ Views, panes, pages and popovers load as their own chunks (`web/src/app/lazy.tsx
 parser, off the chat's startup path. Views that render chat markdown wait for it, so replies never show as plain text
 first.
 
+The native Android client in `android/` speaks the same protocol; see [Phone and other Macs](macs.md#native-android-app).
+
 ## Access
 
 Only this Mac and NetBird peers may connect, and requests from other origins are refused (`server/src/http/access.ts`).

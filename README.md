@@ -21,6 +21,7 @@ installed and its login.
 | `npm run dev` | Same, with server reload |
 | `npm run android -w app` | Build dist/AgentView.apk, versioned with the commit sha, and print its path |
 | `npm run phone` | Install the latest Android build on a connected phone |
+| `npm run native [-- <adb serial>]` | Test and build the native Android app (`android/`), and install it on that device |
 | `npm test` | Unit tests (vitest; server, web and shared) |
 | `npm test -w assistant` | Hub tests (bun test) |
 
@@ -50,6 +51,6 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
 
 - [Features](docs/features.md): layout, Codex, timeline, models, workspace, notifications, loops, shortcuts, keyboard
 - [Integrations](docs/integrations.md): Chrome, MCP servers, Grafana and Snowflake
-- [Phone and other Macs](docs/macs.md)
+- [Phone and other Macs](docs/macs.md), including the [native Android app](docs/macs.md#native-android-app)
 - [Assistant plan](docs/assistant.md), [Codex flows](docs/codex-flows.md) and [Codex wiki and meetings](docs/codex-wiki.md)
 - [Architecture](docs/architecture.md) and [decisions](docs/decisions.md)

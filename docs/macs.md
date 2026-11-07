@@ -18,6 +18,22 @@ and the Codex unlock only answers the bundled page itself.
 AgentView only accepts connections from this Mac and the peers `netbird status` lists, and refuses requests and
 websockets from other websites, including other servers on localhost.
 
+## Native Android app
+
+`android/` holds a native Kotlin and Jetpack Compose client, "AgentView N" (package `no.pradhan.agentview.native`).
+It installs beside the Tauri phone app, which stays until the native one covers everything. It talks to the same
+server as the web app: the `/api/events` stream, `POST /api/cmd` and the `/api/assistant/*` hub proxy.
+
+Colors, type and spacing come from `web/src/styles/tokens.css` and the icons from the codicons in `node_modules`:
+`./gradlew generateTokens generateIcons` writes `Tokens.kt` and `Codicons.kt`, so a token change reaches the app on the
+next generate and build. Screens build from the shared components in `Components.kt`.
+
+`npm run native` runs the unit tests and builds a minified release APK signed with the debug key;
+`npm run native -- <adb serial>` also installs it. It needs JDK 17 and the Android SDK
+(`/opt/homebrew/share/android-commandlinetools`). On the emulator, `adb reverse tcp:7777 tcp:7777` lets the app reach
+the server at `http://localhost:7777`, and the launch extra `--ez readonly true` blocks every write for checks
+against live data.
+
 ## Macs
 
 The Mac's name in the status bar (on the phone: the chat header and the More sheet) lists the other Macs on NetBird

@@ -11,7 +11,8 @@
     "up": "./start.sh",
     "test": "vitest run",
     "app": "npm run dev -w app",
-    "phone": "./app/env.sh ./app/phone.sh"
+    "phone": "./app/env.sh ./app/phone.sh",
+    "native": "./android/build.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
