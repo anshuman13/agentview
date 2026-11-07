@@ -185,22 +185,17 @@ private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, on
 
 @Composable
 private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, muted: Boolean = false) {
-    val dot = when (state) {
-        ChatState.Needs -> DotState.Warn
-        ChatState.Failed -> DotState.Bad
-        ChatState.Running -> DotState.Running
-        ChatState.Done -> DotState.Busy
-        null -> null
-    }
+    val unread = state == ChatState.Done || state == ChatState.Needs
     ListRow(
         title, meta, lines = 1, muted = muted, selected = selected, onClick = onClick,
-        leading = { if (dot != null) StatusDot(dot) },
+        leading = { if (unread) StatusDot(DotState.Unread) },
         trailing = {
             when (state) {
-                ChatState.Needs -> RowLabel("Needs you", av.warn)
-                ChatState.Failed -> RowLabel("Failed", av.err)
-                ChatState.Running -> RowLabel("Running", av.accentText)
-                else -> {}
+                ChatState.Needs -> Badge("Needs you", BadgeTone.Waiting)
+                ChatState.Failed -> Badge("Failed", BadgeTone.Failed)
+                ChatState.Running -> Badge("Running", BadgeTone.Running)
+                ChatState.Done -> Badge("Done", BadgeTone.Done)
+                null -> {}
             }
             MoreButton { close ->
                 if (actions.canPin) MenuItem(if (actions.pinned) "Unpin" else "Pin", { close(); actions.onPin() })
