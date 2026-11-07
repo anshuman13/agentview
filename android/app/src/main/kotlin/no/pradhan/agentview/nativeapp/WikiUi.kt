@@ -1,13 +1,20 @@
 package no.pradhan.agentview.nativeapp
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
@@ -24,6 +32,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 private fun pageRoute(r: Row) = "${r.profile}:${r.id}"
 
@@ -82,7 +93,8 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> 
 @Composable
 private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, stale: Boolean = false) {
     val f = c.fact
-    var menu by remember(f.key) { mutableStateOf(false) }
+    val menu = remember(f.key) { mutableStateOf(false) }
+    var note by remember(f.key) { mutableStateOf("") }
     val clip = LocalClipboardManager.current
     val uri = LocalUriHandler.current
     val contest = contestOf(f)
@@ -96,25 +108,36 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
         f.long("at")?.let { bits.add(shortDate(it, now)) }
         append(bits.joinToString(" · "))
     }
+    var contesting by remember(f.key) { mutableStateOf(false) }
+    val retired = f.str("state") == "retired"
+    val links = sourcesOf(f).drop(1).mapNotNull { s -> safeHref(s.url)?.let { s to it } }
+    val menuContent: @Composable ColumnScope.(() -> Unit) -> Unit = { dismiss ->
+        val pick = { act: () -> Unit -> { dismiss(); act() } }
+        MenuItem("Cite", pick {
+            val srcs = sourcesOf(f).map { it.label }
+            val at = f.long("at")?.let { ", ${shortDate(it, now)}" } ?: ""
+            clip.setText(AnnotatedString("$page: ${f.str("text") ?: ""}" + if (srcs.isNotEmpty()) " (${srcs.joinToString(", ")}$at)" else ""))
+            actions.say("Claim copied")
+        }, icon = Icons.Filled.Share)
+        if (contest == null) MenuItem("Contest", pick { contesting = true }, icon = Icons.Filled.Warning)
+        else MenuItem("Resolve", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") }, icon = Icons.Filled.Check)
+        if (links.isNotEmpty()) MenuSeparator()
+        links.forEach { (s, href) -> MenuItem("${s.kindLabel}: ${s.label}", pick { uri.openUri(href) }, icon = Icons.Filled.Share) }
+        f.long("at")?.let { MenuSeparator(); MenuItem("${if (stale) "Still true? " else ""}Updated ${shortDate(it, now)}", {}, enabled = false, icon = Icons.Filled.DateRange) }
+        MenuItem(if (retired) "Restore" else "Retire", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired, icon = if (retired) Icons.Filled.Refresh else Icons.Filled.Lock)
+    }
     Column {
-        Box {
-            ListRow(f.str("text") ?: "", meta, onLongClick = if (proposed) null else ({ menu = true }))
-            Menu(menu, { menu = false }) {
-                val pick = { act: () -> Unit -> { menu = false; act() } }
-                MenuItem("Cite", pick {
-                    val srcs = sourcesOf(f).map { it.label }
-                    val at = f.long("at")?.let { ", ${shortDate(it, now)}" } ?: ""
-                    clip.setText(AnnotatedString("$page: ${f.str("text") ?: ""}" + if (srcs.isNotEmpty()) " (${srcs.joinToString(", ")}$at)" else ""))
-                    actions.say("Claim copied")
-                })
-                if (contest == null) MenuItem("Contest", pick { actions.change(f, mapOf("contested" to "{\"by\":\"you\",\"at\":${now},\"note\":\"\"}"), "Claim contested") })
-                else MenuItem("Resolve", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") })
-                val retired = f.str("state") == "retired"
-                MenuItem(if (retired) "Restore" else "Retire", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)
-                val links = sourcesOf(f).mapNotNull { s -> safeHref(s.url)?.let { s to it } }
-                if (links.isNotEmpty()) MenuSeparator()
-                links.forEach { (s, href) -> MenuItem(s.label, pick { uri.openUri(href) }) }
-                f.long("at")?.let { MenuSeparator(); MenuItem("Updated ${shortDate(it, now)}", {}, enabled = false) }
+        ListRow(f.str("text") ?: "", meta, onLongClick = if (proposed) null else ({ menu.value = true }), trailing = if (proposed) null else ({ MoreButton(expanded = menu, content = menuContent) }))
+        if (contesting) Sheet({ contesting = false }, full = false) {
+            FieldLabel("Why is this claim wrong?")
+            TextField(note, { note = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is wrong or out of date? Link a source if you have one.", minLines = 2)
+            LayoutRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4, Alignment.End)) {
+                Button("Cancel", { contesting = false; note = "" }, variant = ButtonVariant.Plain)
+                Button("Contest", {
+                    contesting = false
+                    actions.change(f, mapOf("contested" to protocolJson.encodeToString(JsonObject.serializer(), buildJsonObject { put("by", "you"); put("at", now); put("note", note.trim()) })), "Claim contested")
+                    note = ""
+                }, variant = ButtonVariant.Filled)
             }
         }
         contest?.note?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, bottom = Tokens.sp3), style = Type.subheadline, color = av.warn) }

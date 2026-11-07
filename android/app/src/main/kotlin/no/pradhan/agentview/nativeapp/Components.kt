@@ -61,6 +61,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -198,8 +199,13 @@ private fun CharSequence.toAnnotated() = this as? AnnotatedString ?: AnnotatedSt
 @Composable
 fun WordClamp(text: AnnotatedString, style: TextStyle, color: Color, maxLines: Int, deco: TextDecoration? = null) {
     var end by remember(text, maxLines) { mutableIntStateOf(text.length) }
+    val width = remember(text, maxLines) { IntArray(1) }
     val shown = if (end >= text.length) text else buildAnnotatedString { append(text.subSequence(0, end)); append("\u2026") }
     Text(shown, style = style, color = color, maxLines = maxLines, overflow = TextOverflow.Clip, textDecoration = deco, onTextLayout = { r ->
+        val w = r.layoutInput.constraints.maxWidth
+        val grew = w > width[0] && width[0] > 0
+        width[0] = w
+        if (grew && end < text.length) { end = text.length; return@Text }
         if (r.hasVisualOverflow && end > 0) {
             val e = if (end >= text.length) r.getLineEnd(maxLines - 1, visibleEnd = true) else text.text.lastIndexOf(' ', end - 1).let { if (it > 0) it else end - 1 }
             end = text.text.substring(0, e.coerceIn(0, text.length)).trimEnd().length
@@ -499,8 +505,8 @@ fun MenuSeparator() = HorizontalDivider(Modifier.padding(vertical = Tokens.sp2),
 
 // The "more" icon button that opens a menu.
 @Composable
-fun MoreButton(label: String = "More", content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit) {
-    var open by remember { mutableStateOf(false) }
+fun MoreButton(label: String = "More", expanded: MutableState<Boolean> = remember { mutableStateOf(false) }, content: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit) {
+    var open by expanded
     Box {
         IconBtn(Icons.Filled.MoreVert, label, { open = true })
         Menu(open, { open = false }) { content { open = false } }

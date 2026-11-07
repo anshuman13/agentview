@@ -1,5 +1,7 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,13 +13,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 
 @Composable
-private fun JobState.color(): Color? = when (this) { JobState.Running -> av.ok; JobState.Queued -> av.warn; JobState.Failed -> av.err; JobState.Off -> av.fgFaint }
+private fun StateBadge(state: JobState) = when (state) {
+    JobState.Running -> Badge("Running", BadgeTone.Running)
+    JobState.Queued -> Badge("Waiting", BadgeTone.Waiting)
+    JobState.Failed -> Badge("Failed", BadgeTone.Failed)
+    JobState.Off -> Badge("Skipped", BadgeTone.Quiet)
+}
 
 fun toggleJob(hub: Hub, j: Row, on: Boolean) = hub.codex.update(j, mapOf("enabled" to if (on) 1 else 0, "next_run_at" to null))
 
@@ -35,7 +42,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
                     val state = jobState(j, st.runs, now)
                     ListRow(j.str("name")?.ifEmpty { null } ?: "Untitled job", listOfNotNull(jobMeta(j, st.runs, now), if (profile == null) profileLabel(j.profile) else null).joinToString(" · "), onClick = { onOpen(j) },
                         trailing = {
-                            if (state != null && state != JobState.Off) RowLabel(state.label, state.color() ?: av.fgMuted)
+                            if (state != null) StateBadge(state)
                             Toggle(isEnabled(j), { toggleJob(hub, j, it) })
                         })
                 }
@@ -54,7 +61,10 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             Text(job.str("name")?.ifEmpty { null } ?: "Untitled job", Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
-            Text(listOfNotNull(describeSchedule(job.str("schedule")), profileLabel(job.profile), state?.label).joinToString(" · "), Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = state?.color() ?: av.fgMuted)
+            LayoutRow(Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+                Text(listOfNotNull(describeSchedule(job.str("schedule")), profileLabel(job.profile)).joinToString(" · "), style = Type.subheadline, color = av.fgMuted)
+                if (state != null) StateBadge(state)
+            }
         }
         item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Enabled", jobMeta(job, st.runs, now), trailing = { Toggle(isEnabled(job), { toggleJob(hub, job, it) }) }) } }
         item { SectionHeader("Prompt") }
@@ -67,12 +77,12 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
             Group(Modifier.padding(top = Tokens.sp6)) {
                 val latest = runs.firstOrNull()
                 if (latest == null) ListRow("Runs", "Not run yet")
-                else ListRow("Runs", latest.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" }, onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
+                else ListRow("Runs", runTime(latest), onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
             }
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
-    if (runsOpen) RunsSheet(runs) { runsOpen = false }
+    if (runsOpen) RunsSheet(runs, { hub.notice.value = it }) { runsOpen = false }
 }
 
 @Composable
@@ -83,7 +93,7 @@ private fun RunStatus(status: String) = when (status) {
 }
 
 @Composable
-private fun RunsSheet(runs: List<Row>, onDismiss: () -> Unit) {
+private fun RunsSheet(runs: List<Row>, say: (String) -> Unit, onDismiss: () -> Unit) {
     val shown = runs.take(10)
     var open by remember { mutableStateOf(shown.firstOrNull()?.id) }
     val clip = LocalClipboardManager.current
@@ -94,12 +104,12 @@ private fun RunsSheet(runs: List<Row>, onDismiss: () -> Unit) {
                 if (i > 0) Hairline()
                 val output = r.str("output")?.ifEmpty { null }
                 val expanded = output != null && open == r.id
-                ListRow(r.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" } ?: "Run", runMeta(r).ifEmpty { null },
+                ListRow(runTime(r) ?: "Run", runMeta(r).ifEmpty { null },
                     onClick = if (output != null) ({ open = if (expanded) null else r.id }) else null,
                     trailing = { RunStatus(r.str("status") ?: ""); if (output != null) Chevron() })
                 if (expanded && output != null) {
-                    Text(output, Modifier.padding(horizontal = Tokens.sp8), style = Type.body, color = av.fg)
-                    Button("Copy output", { clip.setText(AnnotatedString(output)) }, Modifier.padding(start = Tokens.sp4, bottom = Tokens.sp6), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    Button("Copy output", { clip.setText(AnnotatedString(output)); say("Output copied") }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    Text(output, Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp6), style = Type.body, color = av.fg)
                 }
             }
         }

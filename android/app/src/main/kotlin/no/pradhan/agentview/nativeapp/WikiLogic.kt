@@ -40,7 +40,9 @@ fun statsByPage(facts: List<Row>): Map<String?, PageStats> {
     return out
 }
 
-class Source(val kind: String, val label: String, val url: String?)
+class Source(val kind: String, val label: String, val url: String?) {
+    val kindLabel get() = when (kind) { "slack" -> "Slack"; "linear" -> "Linear"; "pr" -> "PR"; "doc" -> "Doc"; "meeting" -> "Meeting"; else -> kind }
+}
 
 fun sourcesOf(f: Row): List<Source> = runCatching {
     (protocolJson.parseToJsonElement(f.str("sources") ?: "[]") as JsonArray).mapNotNull {

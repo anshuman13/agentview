@@ -66,6 +66,8 @@ fun jobMeta(j: Row, runs: List<Row>, now: Long): String {
 
 fun money(n: Double) = if (n > 0 && n < 0.005) "<$0.01" else if (n < 10) "$" + String.format(java.util.Locale.ENGLISH, "%.2f", n) else "$" + Math.round(n)
 
+fun runTime(r: Row): String? = r.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" }
+
 fun runMeta(r: Row): String {
     if (r.str("status") == "running") return "Running"
     val start = r.long("started_at"); val end = r.long("finished_at")
