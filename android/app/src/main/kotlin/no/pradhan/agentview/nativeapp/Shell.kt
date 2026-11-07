@@ -47,10 +47,16 @@ internal fun icon(t: Tab): String = when (t) {
     Tab.Agents -> "hubot"
 }
 
-private fun NavHostController.goTab(route: String) = navigate(route) {
-    popUpTo(graph.findStartDestination().id) { saveState = true }
-    launchSingleTop = true
-    restoreState = true
+private fun isMore(route: String?) = route != null && (route.startsWith("more/") || route == ORIGIN_ROUTE)
+
+// Drops the More pages on top first, so the tab shows its own screen and not the page saved with it.
+private fun NavHostController.goTab(route: String) {
+    while (isMore(currentDestination?.route)) if (!popBackStack()) break
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +90,7 @@ fun App(hub: Hub) {
     }
 
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
-    val inMore = route?.startsWith("more/") == true || route == ORIGIN_ROUTE
+    val inMore = isMore(route)
     val shownChat = state.live.firstOrNull { it.id == state.shownId }
 
     Scaffold(
@@ -137,8 +143,9 @@ fun App(hub: Hub) {
 
     if (more) {
         val go = { r: String -> more = false; nav.navigate(r) { launchSingleTop = true } }
-        Sheet(onDismiss = { more = false }, padded = false, full = false) {
+        Sheet(onDismiss = { more = false }, padded = false) {
             val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
+            SectionHeader("Workspace")
             MORE_TOOLS.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }) }
             SectionHeader("Tools")
             MORE_PAGES.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }) }

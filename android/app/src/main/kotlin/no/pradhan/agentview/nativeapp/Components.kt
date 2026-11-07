@@ -132,7 +132,7 @@ fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, o
 // Inset grouped list card (web .ui-group).
 @Composable
 fun Group(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.padding(horizontal = Tokens.listPad).fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard), content = content)
+    Column(modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp8).fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard), content = content)
 }
 
 // Group for long lists: one lazy item per row, the card corners drawn on the first and last.
@@ -140,7 +140,7 @@ fun <T> LazyListScope.lazyGroup(rows: List<T>, key: (T) -> Any, lead: Boolean = 
     itemsIndexed(rows, key = { _, r -> key(r) }) { i, r ->
         val top = if (i == 0) Tokens.shapeLg else 0.dp
         val bottom = if (i == rows.lastIndex) Tokens.shapeLg else 0.dp
-        Column(Modifier.padding(horizontal = Tokens.listPad).fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(av.groupCard)) {
+        Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = if (i == rows.lastIndex) Tokens.sp8 else 0.dp).fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(av.groupCard)) {
             if (i > 0) Hairline(lead)
             row(r)
         }
