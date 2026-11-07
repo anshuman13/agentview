@@ -105,11 +105,11 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
             Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
                 AttachButton(hub, { uploading += it }) { path -> val t = appendWord(text.text, "[Image: $path] "); set(TextFieldValue(t, TextRange(t.length))) }
                 Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-                    Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode }, trailingIcon = "chevron-down")
-                    Chip(shortModel(modelName(session)), { sheet = Picker.Model }, trailingIcon = "chevron-down")
-                    session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it, { sheet = Picker.Effort }, trailingIcon = "chevron-down") }
                     val account = session?.account ?: "main"
-                    if ((session?.accounts?.size ?: 0) > 1 || account != "main") Chip(ACCOUNT_LABEL[account] ?: account, { sheet = Picker.Account }, tone = if (account == "main") ChipTone.Personal else ChipTone.Work, trailingIcon = "chevron-down")
+                    if ((session?.accounts?.size ?: 0) > 1 || account != "main") Chip(ACCOUNT_LABEL[account] ?: account, { sheet = Picker.Account }, tone = if (account == "main") ChipTone.Personal else ChipTone.Work)
+                    Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode })
+                    Chip(shortModel(modelName(session)), { sheet = Picker.Model })
+                    session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it, { sheet = Picker.Effort }) }
                 }
                 if (uploading > 0) RowLabel("Uploading", c.fgFaint)
                 if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
