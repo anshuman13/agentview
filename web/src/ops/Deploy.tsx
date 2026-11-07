@@ -2,14 +2,22 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { api, useStore } from '../app/store';
 import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
+import { Button, IconButton } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
+import { Row } from '../ui/Row';
+import { Section } from '../ui/Section';
+import { EmptyState } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protocol';
 import { ago, usePoll } from '../ui/util';
 import '../styles/features/deploy.css';
 
 const short = (sha: string) => sha.slice(0, 7);
-const tone = (state?: string) => (state === 'success' ? 'ok' : state === 'failure' || state === 'error' ? 'bad' : !state || state === 'inactive' ? 'off' : 'busy');
-const ST: Record<string, string> = { ok: 'st-ok', bad: 'st-err', busy: 'st-run' };
+const stateBadge = (env: DeployEnv) => {
+  const state = env.latest?.state;
+  if (!state || state === 'inactive' || (env.latest!.id === env.deployed?.id && state === 'success')) return null;
+  return state === 'success' ? <span className="badge">Deployed</span> : state === 'failure' || state === 'error' ? <span className="badge">Failed</span> : <span className="badge running">Deploying</span>;
+};
 
 let jobs: Record<string, DeployJob | null> = {};
 const subs = new Set<() => void>();
@@ -35,12 +43,40 @@ export function track(cwd: string, job: DeployJob, every = 3000) {
 
 const post = (path: string, body: unknown) => fetchJson<DeployJob>(api(path), { method: 'POST', body: JSON.stringify(body) });
 
+function EnvRow({ env, s, onDeploy, onRollback }: { env: DeployEnv; s: DeployStatus; onDeploy: (ref?: string) => void; onRollback: () => void }) {
+  const [menu, setMenu] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const run = (f: () => void) => () => { setMenu(false); f(); };
+  const d = env.deployed;
+  const meta = d ? `${d.ref || s.head.branch} · ${ago(d.at, ' ago')}${d.by ? ` by ${d.by}` : ''}${d.sha === s.head.sha ? ' · HEAD' : ''}` : 'Nothing deployed';
+  return (
+    <Row plain title={env.label} meta={meta} trailing={
+      <>
+        {stateBadge(env)}
+        <Button size="sm" title={`Deploy ${short(s.head.sha)}`} onClick={() => onDeploy(s.head.sha)}>Deploy</Button>
+        <span className="as-wrap-more">
+          <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+          {menu && (
+            <Menu trigger={btn} onClose={() => setMenu(false)}>
+              <MenuItem onClick={run(() => onDeploy())}>Deploy a branch or commit...</MenuItem>
+              {d && <MenuItem href={`https://github.com/${s.repo}/commit/${d.sha}`} onClick={() => setMenu(false)}>Open {short(d.sha)} on GitHub</MenuItem>}
+              <MenuItem disabled={!env.rollbackTo} title={env.rollbackTo ? undefined : 'No earlier deploy to roll back to'} onClick={run(onRollback)}>Roll back</MenuItem>
+            </Menu>
+          )}
+        </span>
+      </>
+    } />
+  );
+}
+
 export function Deploy() {
   const cwd = useStore((s) => s.session.cwd);
   const [status, setStatus] = useState<DeployStatus | null>(null);
   const [error, setError] = useState('');
   const [app, setApp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [appMenu, setAppMenu] = useState(false);
+  const appBtn = useRef<HTMLButtonElement>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const job = useJob(cwd);
   const root = useRef<HTMLDivElement>(null);
@@ -95,46 +131,32 @@ export function Deploy() {
 
   return (
     <div className="deploy" ref={root}>
-      <div className="deploy-head">
-        {s && s.apps.length > 1 ? (
-          <select className="deploy-app" aria-label="App" value={s.app} onChange={(e) => setApp(e.target.value)}>
-            {s.apps.map((a) => <option key={a}>{a}</option>)}
-          </select>
-        ) : (
-          <span className="deploy-app">{s?.app ?? 'Velo'}</span>
-        )}
-        <span className="spacer" />
-        <button className="icon-btn" title="Refresh" onClick={load}><Icon name={loading ? 'loading' : 'refresh'} small spin={loading} /></button>
-      </div>
-      {s && <a className="deploy-link" href={s.velodrome} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open in Velodrome</a>}
-      {error && (error.includes('no Velo app')
-        ? <div className="deploy-hint">No Velo app in this repo (no .deploy/app.yaml), so there is nothing to deploy from here.</div>
-        : <div className="deploy-error" role="alert"><Icon name="error" small /> {error}</div>)}
-      {s?.envs.map((env) => (
-        <div key={env.name} className="deploy-card">
-          <div className="deploy-card-head">
-            <span className={`dot ${tone(env.latest?.state)}`} title={env.latest?.state ?? 'Never deployed'} />
-            <span className="deploy-env">{env.label}</span>
-            <span className="spacer" />
-            {env.latest && env.latest.id !== env.deployed?.id && <a className={`chip ${ST[tone(env.latest.state)] ?? ''}`} href={env.latest.url} target="_blank" rel="noreferrer">{env.latest.state}</a>}
-          </div>
-          {env.deployed ? (
-            <div className="deploy-meta">
-              <a className="mono" href={`https://github.com/${s.repo}/commit/${env.deployed.sha}`} target="_blank" rel="noreferrer">{short(env.deployed.sha)}</a>
-              <span className="muted">{ago(env.deployed.at, ' ago')}{env.deployed.by && ` by ${env.deployed.by}`}</span>
-              {env.deployed.sha === s.head.sha && <span className="chip">HEAD</span>}
-            </div>
-          ) : (
-            <div className="deploy-meta muted">Nothing deployed</div>
+      <Section label={s?.app ?? 'Velo'} action={
+        <>
+          {s && s.apps.length > 1 && (
+            <span className="as-wrap-more">
+              <IconButton ref={appBtn} icon="arrow-swap" label="Switch app" size="sm" aria-haspopup="menu" aria-expanded={appMenu} onClick={() => setAppMenu(!appMenu)} />
+              {appMenu && (
+                <Menu trigger={appBtn} onClose={() => setAppMenu(false)}>
+                  {s.apps.map((a) => <MenuItem key={a} icon={a === s.app ? 'check' : undefined} onClick={() => { setAppMenu(false); setApp(a); }}>{a}</MenuItem>)}
+                </Menu>
+              )}
+            </span>
           )}
-          {env.latest?.description && tone(env.latest.state) !== 'ok' && <div className="deploy-meta muted">{env.latest.description}</div>}
-          <div className="deploy-actions">
-            <button className="btn sm" onClick={() => deploy(env, s.head.sha)} title={`Deploy ${short(s.head.sha)}`}>Deploy HEAD</button>
-            <button className="btn sm" onClick={() => deploy(env)}>Deploy…</button>
-            <button className="btn sm" onClick={() => rollback(env)} disabled={!env.rollbackTo} title={env.rollbackTo ? `Redeploy ${short(env.rollbackTo.sha)}` : 'No earlier deploy to roll back to'}>Rollback</button>
+          <IconButton icon="refresh" label="Refresh" size="sm" spin={loading} onClick={load} />
+        </>
+      } />
+      {error && (error.includes('no Velo app')
+        ? <EmptyState size="sm" title="No Velo app here" hint="This repo has no .deploy/app.yaml." />
+        : <div className="deploy-error" role="alert"><Icon name="error" small /> {error}</div>)}
+      {s && (
+        <>
+          <div className="as-group">
+            {s.envs.map((env) => <EnvRow key={env.name} env={env} s={s} onDeploy={(ref) => deploy(env, ref)} onRollback={() => rollback(env)} />)}
           </div>
-        </div>
-      ))}
+          <div className="as-group"><Row href={s.velodrome} title="Open in Velodrome" /></div>
+        </>
+      )}
       {job && (
         <div className={`deploy-log ${job.done ? (job.ok ? 'ok' : 'bad') : ''}`}>
           <div className="deploy-log-head">
