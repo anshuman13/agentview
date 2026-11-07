@@ -124,7 +124,7 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, large: Boolean = onB
     ) {
         if (onBack != null) IconBtn(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack, tint = av.fg)
         Column(Modifier.weight(1f)) {
-            Text(title, style = if (large) Type.title else Type.headline, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, style = if (large) Type.title else Type.headline, color = av.fg, maxLines = 2, overflow = TextOverflow.Ellipsis)
             subtitle?.invoke()
         }
         actions()
