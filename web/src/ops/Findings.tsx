@@ -1,25 +1,48 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, send, setFindings, setUi, useStore } from '../app/store';
 import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
+import { Button, IconButton } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
+import { EmptyState } from '../ui/Panel';
+import { Row } from '../ui/Row';
+import { Section } from '../ui/Section';
 import { pressable } from '../ui/util';
 import type { Finding, ReviewFindings } from '../../../shared/protocol';
 
 const call = <T,>(path: string, body?: object) => fetchJson<T>(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
 
-export function Block({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
-  return (
-    <>
-      <div className="gh-block">{title}{count !== undefined && <span className="badge quiet">{count}</span>}</div>
-      {children}
-    </>
-  );
-}
-
 // Review Claude's code review findings for a pull request number or "local" for the working tree.
 export const REVIEW_LOCAL = '/code-review';
 
 const findingKey = (f: Finding) => `${f.file}:${f.line}:${f.summary.slice(0, 60)}`;
+
+function FindingRow({ f, open, fix, dismiss }: { f: Finding; open: () => void; fix: () => void; dismiss: () => void }) {
+  const [menu, setMenu] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  return (
+    <Row
+      plain
+      {...pressable(open)}
+      leading={<Icon name={f.verdict === 'CONFIRMED' ? 'error' : 'warning'} small />}
+      title={<span title={f.failure ?? f.summary}>{f.summary}</span>}
+      meta={`${f.file}:${f.line}`}
+      trailing={
+        <>
+          <Button size="sm" onClick={(e) => { e.stopPropagation(); fix(); }}>Fix</Button>
+          <span className="as-wrap-more">
+            <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={(e) => { e.stopPropagation(); setMenu(!menu); }} />
+            {menu && (
+              <Menu trigger={btn} onClose={() => setMenu(false)}>
+                <MenuItem onClick={(e) => { e.stopPropagation(); setMenu(false); dismiss(); }}>Dismiss</MenuItem>
+              </Menu>
+            )}
+          </span>
+        </>
+      }
+    />
+  );
+}
 
 // What /code-review reported, most severe first; a row opens the file on its line.
 export function Findings({ target }: { target: string }) {
@@ -34,22 +57,15 @@ export function Findings({ target }: { target: string }) {
   const fix = (f: Finding) => send({ type: 'prompt', text: `Fix this review finding in ${f.file}:${f.line}: ${f.summary}${f.failure ? ` (${f.failure})` : ''}` });
   const dismiss = (f: Finding) => call<ReviewFindings | null>('/api/findings/dismiss', { target, key: findingKey(f) }).then(setFindings, () => {});
   return (
-    <Block title="Findings" count={review.findings.length}>
-      {review.findings.length === 0 && <div className="muted small gh-pad">No findings</div>}
-      {review.findings.map((f) => (
-        <div key={findingKey(f)} className="gh-finding">
-          <div className="gh-item click" title={f.failure ?? f.summary} {...pressable(() => open(f))}>
-            <Icon name={f.verdict === 'CONFIRMED' ? 'error' : 'warning'} small />
-            <span className="gh-msg">{f.summary}</span>
-          </div>
-          <div className="gh-finding-foot">
-            <span className="gh-sha">{f.file}:{f.line}</span>
-            <button className="btn xs quiet" onClick={() => fix(f)}>Fix</button>
-            <button className="btn xs quiet" onClick={() => dismiss(f)}>Dismiss</button>
-          </div>
+    <>
+      <Section label="Findings" count={review.findings.length} />
+      {review.findings.length === 0 ? (
+        <EmptyState size="sm" title="No findings" />
+      ) : (
+        <div className="as-group gh-group">
+          {review.findings.map((f) => <FindingRow key={findingKey(f)} f={f} open={() => open(f)} fix={() => fix(f)} dismiss={() => dismiss(f)} />)}
         </div>
-      ))}
-    </Block>
+      )}
+    </>
   );
 }
-

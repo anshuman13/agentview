@@ -19,7 +19,6 @@
 .scm-review .scm-claude { flex: 1; }
 
 .scm-tree { flex: 1; min-height: 0; overflow: auto; padding-bottom: var(--sp-4); }
-.scm-tree .gh-block { margin-top: var(--sp-4); }
 .scm-row { height: var(--size-row); display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-6) 0 22px; cursor: pointer; white-space: nowrap; color: var(--fg); }
 @media (hover: hover) { .scm-row:hover { background: var(--hover); } }
 .scm-row.selected { background: var(--accent-soft); }

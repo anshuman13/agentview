@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
-import { Block, Findings } from './Findings';
+import { Findings } from './Findings';
 import { Markdown } from '../chat/Chat';
 import { FileIcon } from '../workspace/FileIcon';
 import { CheckIcon, Counts, StateChip, call, load, setViewOpen, useList } from './pulls';
@@ -11,6 +11,9 @@ import type { PullRequest, PullRequestDetail } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { ago, askClaude, pressable } from '../ui/util';
 import { Skeleton } from '../ui/Skeleton';
+import { Row } from '../ui/Row';
+import { Section } from '../ui/Section';
+import { IconButton } from '../ui/Button';
 
 const initials = (login: string) => (login.replace(/^app\//, '').match(/[A-Za-z0-9]+/g) ?? ['?']).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
@@ -21,35 +24,32 @@ const SETUP: Array<{ test: RegExp; icon: string; title: string; text: string; cm
 ];
 
 const Avatar = ({ login }: { login: string }) => <span className="gh-avatar" title={login}>{initials(login)}</span>;
-function Row({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
+function PrRow({ pr, onOpen }: { pr: PullRequest; onOpen: () => void }) {
   const chat = useStore((s) => s.live.find((c) => c.pr === pr.number));
   return (
-    <div className="gh-pr" data-pr={pr.number} {...pressable(onOpen)} title={`#${pr.number} ${pr.title}`}>
-      <CheckIcon state={pr.checks} />
-      <div className="gh-title"><span className="gh-title-text">{pr.title}</span><span className="gh-num">#{pr.number}</span></div>
-      <div className="gh-meta">
-        <span className="gh-author">{pr.author}</span>
-        <span className="gh-sep">·</span>
-        <span className="gh-branch">{pr.branch}</span>
-        <span className="gh-sep">·</span>
-        <span className="gh-when">{ago(pr.updatedAt)}</span>
-        {chat && <button className="chip outline pill sm gh-open-chat" title={`Open the chat that created this pull request: ${chat.title}`} onClick={(e) => { e.stopPropagation(); send({ type: 'view', id: chat.id }); }}><Icon name="comment" small /> Open chat</button>}
-        {pr.draft ? <span className="chip outline pill sm">Draft</span> : <StateChip state={pr.review} />}
-      </div>
-    </div>
+    <Row
+      plain
+      data-pr={pr.number}
+      {...pressable(onOpen)}
+      leading={<CheckIcon state={pr.checks} />}
+      title={pr.title}
+      meta={`#${pr.number} · ${pr.author} · ${pr.branch} · ${ago(pr.updatedAt)}`}
+      trailing={
+        <>
+          {chat && <IconButton icon="comment" label="Open chat" size="sm" title={`Open the chat that created this pull request: ${chat.title}`} onClick={(e) => { e.stopPropagation(); send({ type: 'view', id: chat.id }); }} />}
+          {pr.draft ? <span className="chip outline pill sm">Draft</span> : <StateChip state={pr.review} />}
+        </>
+      }
+    />
   );
 }
 
-function Section({ title, prs, onOpen }: { title: string; prs: PullRequest[]; onOpen: (p: PullRequest) => void }) {
+function PrGroup({ title, prs, onOpen }: { title: string; prs: PullRequest[]; onOpen: (p: PullRequest) => void }) {
   const [open, setOpen] = useState(true);
   return (
     <>
-      <div className="section-head" aria-expanded={open} {...pressable(() => setOpen(!open))}>
-        <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
-        <span className="label">{title}</span>
-        <span className="badge quiet">{prs.length}</span>
-      </div>
-      {open && (prs.length ? prs.map((p) => <Row key={p.number} pr={p} onOpen={() => onOpen(p)} />) : <div className="gh-empty">None</div>)}
+      <Section label={title} count={prs.length} open={open} onToggle={() => setOpen(!open)} />
+      {open && <div className="as-group gh-group">{prs.length ? prs.map((p) => <PrRow key={p.number} pr={p} onOpen={() => onOpen(p)} />) : <Row plain title="None" />}</div>}
     </>
   );
 }
@@ -75,10 +75,10 @@ function PrList({ onOpen }: { onOpen: (n: number) => void }) {
       {error ? (
         <Problem error={error} />
       ) : (
-        <div className="gh-list">
-          <Section title="Waiting for my review" prs={prs.filter((p) => p.reviewRequested)} onOpen={(p) => onOpen(p.number)} />
-          <Section title="My pull requests" prs={prs.filter((p) => p.mine)} onOpen={(p) => onOpen(p.number)} />
-          <Section title="All open" prs={prs} onOpen={(p) => onOpen(p.number)} />
+        <div className="gh-scroll">
+          <PrGroup title="Waiting for my review" prs={prs.filter((p) => p.reviewRequested)} onOpen={(p) => onOpen(p.number)} />
+          <PrGroup title="My pull requests" prs={prs.filter((p) => p.mine)} onOpen={(p) => onOpen(p.number)} />
+          <PrGroup title="All open" prs={prs} onOpen={(p) => onOpen(p.number)} />
         </div>
       )}
     </>
@@ -126,15 +126,10 @@ const lineClass = (l: string) => (l[0] === '+' ? 'add' : l[0] === '-' ? 'del' : 
 
 function Review({ r }: { r: PullRequestDetail['reviews'][number] }) {
   return (
-    <div className="gh-review">
-      <div className="gh-line">
-        <Avatar login={r.author} />
-        <span className="gh-author">{r.author}</span>
-        <StateChip state={r.state} />
-        <span className="gh-when">{ago(r.at)}</span>
-      </div>
-      {r.body && <Markdown text={r.body} />}
-    </div>
+    <>
+      <Row plain leading={<Avatar login={r.author} />} title={r.author} meta={ago(r.at)} trailing={<StateChip state={r.state} />} />
+      {r.body && <div className="gh-pad"><Markdown text={r.body} /></div>}
+    </>
   );
 }
 
@@ -146,18 +141,19 @@ function Files({ files, diffs }: { files: PullRequestDetail['files']; diffs: Map
         const name = f.path.split('/').pop()!;
         const shown = open === f.path;
         return (
-          <div key={f.path}>
-            <div className="gh-item click" {...pressable(() => setOpen(shown ? null : f.path))} title={f.path}>
-              <Icon name={shown ? 'chevron-down' : 'chevron-right'} small />
-              <FileIcon name={name} />
-              <span className="gh-fname">{name}</span>
-              <span className="gh-fdir">{f.path.slice(0, -name.length - 1)}</span>
-              <Counts a={f.additions} d={f.deletions} />
-            </div>
+          <Fragment key={f.path}>
+            <Row
+              title={name}
+              leading={<FileIcon name={name} />}
+              meta={f.path.slice(0, -name.length - 1)}
+              trailing={<Counts a={f.additions} d={f.deletions} />}
+              aria-expanded={shown}
+              onClick={() => setOpen(shown ? null : f.path)}
+            />
             {shown && (
               <pre className="gh-diff">{(diffs.get(f.path) ?? 'No diff').split('\n').map((l, i) => <div key={i} className={lineClass(l)}>{l || ' '}</div>)}</pre>
             )}
-          </div>
+          </Fragment>
         );
       })}
     </>
@@ -242,16 +238,15 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
         <a className="icon-btn" href={pr.url} target="_blank" rel="noreferrer" title="Open on GitHub"><Icon name="link-external" small /></a>
       </div>
       <div className="gh-scroll">
-        <div className="gh-head">
-          <div className="gh-heading">{pr.title}</div>
-          <div className="gh-line">
-            <Avatar login={pr.author} />
-            <span className="gh-author">{pr.author}</span>
-            {pr.draft && <span className="chip outline pill sm">Draft</span>}
-            <StateChip state={pr.review} />
-            <Counts a={pr.additions} d={pr.deletions} />
-          </div>
-          <div className="gh-line"><Icon name="git-branch" small /><span className="gh-branch">{pr.branch}</span><span className="gh-when">{ago(pr.updatedAt)}</span></div>
+        <div className="as-group gh-group">
+          <Row
+            plain
+            lines={2}
+            leading={<Avatar login={pr.author} />}
+            title={pr.title}
+            meta={`${pr.author} · ${pr.branch} · ${ago(pr.updatedAt)}`}
+            trailing={<><Counts a={pr.additions} d={pr.deletions} />{pr.draft ? <span className="chip outline pill sm">Draft</span> : <StateChip state={pr.review} />}</>}
+          />
         </div>
         {busy && <div className="muted small gh-pad" role="status"><Icon name="loading" small spin /> Running {busy.replace('_', ' ')}…</div>}
         {error && <div className="gh-error" role="alert"><Icon name="error" small /> {error}</div>}
@@ -261,29 +256,30 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
         ) : (
           <>
             <Findings target={String(pr.number)} />
-            <Block title="Description">
+            <Section label="Description" />
+            <div className="as-group gh-group">
               <div className="gh-pad">{d.body.trim() ? <Markdown text={d.body} /> : <span className="muted">No description</span>}</div>
-            </Block>
-            <Block title="Checks" count={d.checks.length}>
-              {d.checks.map((c, i) => (
-                <a key={i} className="gh-item" href={c.url || undefined} target="_blank" rel="noreferrer">
-                  <CheckIcon state={c.state} />
-                  <span className="gh-msg">{c.name}</span>
-                  {c.url && <Icon name="link-external" small />}
-                </a>
-              ))}
-            </Block>
-            <Block title="Reviews" count={d.reviews.length}>
+            </div>
+            <Section label="Checks" count={d.checks.length} />
+            <div className="as-group gh-group">
+              {d.checks.map((c, i) => <Row key={i} href={c.url || undefined} plain={!c.url} leading={<CheckIcon state={c.state} />} title={c.name} />)}
+              {!d.checks.length && <Row plain title="None" />}
+            </div>
+            <Section label="Reviews" count={d.reviews.length} />
+            <div className="as-group gh-group">
               {d.reviews.map((r, i) => <Review key={i} r={r} />)}
-            </Block>
-            <Block title="Commits" count={d.commits.length}>
-              {d.commits.map((c) => (
-                <div key={c.oid} className="gh-item"><span className="gh-sha">{c.oid.slice(0, 7)}</span><span className="gh-msg">{c.message}</span></div>
-              ))}
-            </Block>
-            <Block title="Files changed" count={d.files.length}>
+              {!d.reviews.length && <Row plain title="None" />}
+            </div>
+            <Section label="Commits" count={d.commits.length} />
+            <div className="as-group gh-group">
+              {d.commits.map((c) => <Row key={c.oid} plain title={c.message} meta={c.oid.slice(0, 7)} />)}
+              {!d.commits.length && <Row plain title="None" />}
+            </div>
+            <Section label="Files changed" count={d.files.length} />
+            <div className="as-group gh-group">
               <Files files={d.files} diffs={diffs} />
-            </Block>
+              {!d.files.length && <Row plain title="None" />}
+            </div>
           </>
         )}
       </div>

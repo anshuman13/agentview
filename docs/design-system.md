@@ -273,10 +273,10 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | deploy-log-head | ops/Deploy.tsx (rest of the pane uses Row) | Section header | Partial |
 | ex-head | workspace/Explorer.tsx | Section header | Todo |
 | ex-row, ex-section-row | app/App.tsx, workspace/Explorer.tsx | Row | Todo |
-| gh-head | ops/GitHub.tsx | Section header | Todo |
-| gh-item | ops/Findings.tsx, ops/GitHub.tsx | Row | Todo |
-| gh-line | ops/GitHub.tsx | Row | Todo |
-| gh-list | ops/GitHub.tsx | Grouped list | Todo |
+| gh-head | none | Section header | Done |
+| gh-item | none | Row | Done |
+| gh-line | none | Row | Done |
+| gh-list | none | Grouped list | Done |
 | mcp-detail-head, mcp-tools-head | ops/McpDetail.tsx (service list already uses Section and Row) | Section header | Partial |
 | mcp-item | ops/McpServiceRow.tsx | Row | Partial |
 | mt-fold-head | codex/meetings/Transcript.tsx (no CSS rule) | Section header | Todo |
