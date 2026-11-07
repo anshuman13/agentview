@@ -140,7 +140,7 @@ IconButton sm or Chip shown on hover. Hairline only between groups.
 minimum, title clamps to 1 or 2 lines, a hairline under each row starts at the title, state layers
 as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button Row takes an optional `action` (one IconButton sm) beside it. `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings and the digest, brief and Prep cards use it.
 
-Testing: Row, Section, Chip and AskRow are tested by rendering to static markup and asserting the root element, classes and each branch (plain, href, action) in `web/src/ui/Row.test.ts`, `longPress.test.ts` (the press timer), `Section.test.ts`, `Button.test.ts` and `AskRow.test.ts`. A new branch or class on one of them needs a case in its test.
+Testing: Row, Section, Chip and AskRow are tested by rendering to static markup and asserting the root element, classes and each branch (plain, href, action) in `web/src/ui/Row.test.ts`, `longPress.test.ts` (the press timer), `Section.test.ts`, `Button.test.ts` and `AskRow.test.ts`. A new branch or class on one of them needs a case in its test. `web/src/app/pages.smoke.test.tsx` renders Overview, Tasks, Meetings and `/design` on an empty store; a new top-level page or list gets a case there.
 
 ### Panel (EuiPanel)
 `<Panel title action padding>`; `.ui-panel`. Elevation 1 on `--surface`, `--shape-lg`.
