@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type AttentionItem, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
+import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type AttentionItem, type ChatEvent, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
 import { notify } from './notify';
 import { apiUrl, bundled } from './api';
 import { backoffDelay } from './backoff';
@@ -91,6 +91,9 @@ export async function loadEarlier() {
 export function switchedMac() {
   lastId = '';
   boot = 0;
+  cache.clear();
+  shownId = '';
+  settled = false;
   set((s) => ({ session: { ...s.session, id: '', sessionId: null }, events: [], pending: [], live: [], findings: {}, seen: {}, ui: { ...s.ui, connected: false, openFile: null, openLine: null, beside: null } }));
   connect();
 }
@@ -139,9 +142,37 @@ export function loadSeen() {
   fetch(apiUrl(SEEN_URL)).then((r) => r.json()).then((seen) => seen && typeof seen === 'object' && !Array.isArray(seen) && set({ seen })).catch(() => {});
 }
 
+// The stream connect reloads the server's times over this local one.
 function markSeen(sessionId: string | null | undefined) {
   if (!sessionId) return;
-  fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}`), { method: 'POST' }).then((r) => r.ok && loadSeen()).catch(() => {});
+  set((s) => ({ seen: { ...s.seen, [sessionId]: Date.now() } }));
+  fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}`), { method: 'POST' }).catch(() => {});
+}
+
+// The last rows of the most recently viewed chats, so switching back shows them before the server's init arrives.
+const CACHED_CHATS = 8;
+const cache = new Map<string, { events: ChatEvent[]; earlier: number }>();
+// The chat the rows in `events` belong to, and whether its init has arrived; session.id still names the old chat after a cache hit.
+let shownId = '';
+let settled = false;
+
+function cacheShown() {
+  const { events, earlier } = state;
+  if (!shownId || !settled || !events.length) return;
+  const kept = events.slice(-ROW_WINDOW);
+  cache.delete(shownId);
+  cache.set(shownId, { events: kept, earlier: (earlier ?? 0) + events.length - kept.length });
+  if (cache.size > CACHED_CHATS) cache.delete(cache.keys().next().value!);
+}
+
+function showCached(id: string) {
+  if (id === shownId) return;
+  const hit = cache.get(id);
+  cacheShown();
+  if (!hit) return;
+  shownId = id;
+  settled = false;
+  set({ events: hit.events, earlier: hit.earlier });
 }
 
 function markViewedDone(chats: LiveChat[]) {
@@ -178,6 +209,7 @@ async function post(m: ClientMessage, tries = 1): Promise<boolean | null> {
 }
 
 export function send(m: ClientMessage) {
+  if (m.type === 'view') showCached(m.id);
   if (m.type === 'open_session') markSeen(m.sessionId);
   else if (m.type === 'view') markSeen(state.live.find((c) => c.id === m.id)?.sessionId);
   void post(m, 2).then((ok) => ok === false && notice('Not connected, that did not reach the server'));
@@ -232,16 +264,19 @@ function handle(m: ServerMessage) {
       if (m.boot) boot = m.boot;
       set((s) => {
         const same = s.session.id === m.state.session.id;
+        const shown = shownId === m.state.session.id;
         const old = new Map(s.events.map((e) => [e.id, e]));
         const page = initPage(s.events, same, m.state.events, m.state.earlier);
         const events = page.events.map((e) => {
-          const o = same ? old.get(e.id) : undefined;
+          const o = shown ? old.get(e.id) : undefined;
           return o && equal(o, e) ? o : e;
         });
-        const keep = same && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
+        const keep = shown && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
         const moved = Boolean(s.session.cwd) && s.session.cwd !== m.state.session.cwd;
         return { ...m.state, earlier: page.earlier, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: { ...s.ui, restarting: false, ...(moved && { openFile: null, openLine: null }) } };
       });
+      shownId = m.state.session.id;
+      settled = true;
       break;
     case 'findings':
       setFindings(m.review);
@@ -301,6 +336,7 @@ function handle(m: ServerMessage) {
     case 'live':
       notifyBackground(m.chats);
       markViewedDone(m.chats);
+      for (const id of cache.keys()) if (!m.chats.some((c) => c.id === id)) cache.delete(id);
       set({ live: m.chats });
       break;
     case 'attention':
