@@ -298,10 +298,10 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | ov-follow-row | codex/Overview.tsx | Row | Done |
 | sm-line | codex/summary/Summary.tsx | Row | Todo |
 | wk-contest-head | codex/wiki/Claim.tsx | Section header | Todo |
-| wk-feed-head | codex/wiki/Feed.tsx | Section header | Todo |
-| wk-feed-list | codex/wiki/Feed.tsx, codex/wiki/Review.tsx | Grouped list | Todo |
+| wk-feed-head | none | Section header | Done |
+| wk-feed-list | none | Grouped list | Done |
 | wk-head, wk-head-act | codex/GoalsPage.tsx, codex/Search.tsx, codex/TaskEditor.tsx, codex/jobs/JobPage.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/meetings/MeetingPage.tsx, codex/meetings/Person.tsx, codex/meetings/SeriesPage.tsx, codex/summary/Summary.tsx, codex/wiki/ReviewMode.tsx, codex/wiki/WikiIndex.tsx, codex/wiki/WikiPage.tsx | keep: layout (page title bar with actions, not a list header) | Keep |
-| wk-label-row | codex/wiki/Review.tsx | Row | Todo |
+| wk-label-row | none | Row | Done |
 | wk-older-head | codex/wiki/WikiPage.tsx | Section header | Todo |
 
 No hits: cp-* and the other listed prefixes have no class with these suffixes beyond the rows above.

@@ -1,7 +1,10 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore, useCodex } from '../data';
 import { approveAllChanges, chatOf, factTime, meetingOf, proposals, reviewCount, reviewGroups, sourcesOf, staleFacts, driftFacts, type Fact, type Page } from '../data/wiki';
+import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { Fold } from '../Fold';
 import { setView, showSnack } from '../view';
 import { ClaudeChip, SourceChip } from './Chips';
@@ -154,7 +157,7 @@ export function ToReview({ facts }: { facts: Fact[] }) {
   const shown = all ? cards : cards.slice(0, cap);
   return (
     <section>
-      <div className="wk-label wk-label-row">To review · {reviewCount(pages, facts)}<span className="spacer" /><button className="wk-act" onClick={() => setView({ open: REVIEW, anchor: null })}><Icon name="checklist" small /> One at a time</button></div>
+      <Section label="To review" count={reviewCount(pages, facts)} action={<Button size="sm" variant="quiet" icon="checklist" onClick={() => setView({ open: REVIEW, anchor: null })}>One at a time</Button>} />
       <div className="wk-reviews">
         {shown}
         {!all && cards.length > shown.length && <button className="wk-more" onClick={() => setAll(true)}>Show {cards.length - shown.length} more</button>}
@@ -168,8 +171,8 @@ function Rows<T>({ label, list, row }: { label: string; list: T[]; row: (t: T) =
   if (!list.length) return null;
   return (
     <div>
-      <div className="wk-label">{label} · {list.length}</div>
-      <ol className="wk-feed-list">{(all ? list : list.slice(0, LOOK_CAP)).map(row)}</ol>
+      <Section label={label} count={list.length} />
+      <div className="as-group">{(all ? list : list.slice(0, LOOK_CAP)).map(row)}</div>
       {!all && list.length > LOOK_CAP && <button className="wk-more" onClick={() => setAll(true)}>+{list.length - LOOK_CAP} more</button>}
     </div>
   );
@@ -187,13 +190,13 @@ function staleRow(title: Map<string, string | null>) {
   return (f: Fact) => {
     const months = Math.floor((Date.now() - factTime(f)) / (30 * 86_400_000));
     return (
-      <li key={f.profile + f.id}>
-        <button onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}>
-          <span className="wk-feed-top"><span className="wk-feed-page">{title.get(`${f.profile}:${f.page_id}`)}</span></span>
-          <span className="wk-feed-text">{f.text}</span>
-          <span className="wk-meta"><span>{months} {months === 1 ? 'month' : 'months'}</span></span>
-        </button>
-      </li>
+      <Row
+        key={f.profile + f.id}
+        lines={2}
+        title={f.text}
+        meta={`${title.get(`${f.profile}:${f.page_id}`)} · ${months} ${months === 1 ? 'month' : 'months'}`}
+        onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}
+      />
     );
   };
 }
@@ -201,13 +204,13 @@ function staleRow(title: Map<string, string | null>) {
 // Claims a later meeting decision may have changed; opening one goes to the claim to edit or replace it.
 function driftRow(title: Map<string, string | null>) {
   return ({ fact: f, decision: d }: ReturnType<typeof driftFacts>[number]) => (
-    <li key={f.profile + f.id}>
-      <button onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}>
-        <span className="wk-feed-top"><span className="wk-feed-page">{title.get(`${f.profile}:${f.page_id}`)}</span></span>
-        <span className="wk-feed-text">{f.text}</span>
-        <span className="wk-meta"><span>{d.meeting.title ?? 'Meeting'}, {shortDate(d.at)}: {d.text}</span></span>
-      </button>
-    </li>
+    <Row
+      key={f.profile + f.id}
+      lines={2}
+      title={f.text}
+      meta={`${title.get(`${f.profile}:${f.page_id}`)} · ${d.meeting.title ?? 'Meeting'}, ${shortDate(d.at)}: ${d.text}`}
+      onClick={() => setView({ list: 'wiki', open: f.page_id, anchor: f.id })}
+    />
   );
 }
 

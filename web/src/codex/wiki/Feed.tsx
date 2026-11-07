@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { contestOf, currentClaim, factTime, live, sourcesOf, type Fact, type Page } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { ago } from '../../ui/util';
 import { setView } from '../view';
 import { MEMORY, SOURCE_ICON } from './shared';
@@ -17,31 +19,27 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
   }, [facts]);
   const title = new Map(pages.map((p) => [`${p.profile}:${p.id}`, p.title]));
   const shown = entries.slice(0, 5);
-  const label: Record<FeedKind, string> = { added: 'New', updated: 'Updated', contested: 'Contested' };
   return (
     <aside className="wk-feed">
-      <div className="wk-feed-head">
-        <span className="wk-label">Recently updated</span>
-      </div>
-      {!shown.length && <p className="mt-pending">No claims yet.</p>}
-      <ol className="wk-feed-list">
+      <Section label="Recently updated" />
+      <div className="as-group">
+        {!shown.length && <Row plain title="No claims yet." />}
         {shown.map(({ fact, kind, at }) => {
           const src = sourcesOf(fact)[0];
           const c = contestOf(fact);
+          const page = fact.page_id ? title.get(`${fact.profile}:${fact.page_id}`) : 'Memory';
           return (
-            <li key={fact.profile + fact.id} className={kind}>
-              <button onClick={() => setView({ open: fact.page_id ?? MEMORY, anchor: fact.id })}>
-                <span className="wk-feed-top">{kind === 'contested' && <span className="wk-feed-kind">{label[kind]}</span>}<span className="wk-feed-page">{fact.page_id ? title.get(`${fact.profile}:${fact.page_id}`) : 'Memory'}</span></span>
-                <span className="wk-feed-text">{fact.text}</span>
-                <span className="wk-meta">
-                  {kind === 'contested' && c ? <span>by {c.by}</span> : src && <span><Icon name={SOURCE_ICON[src.kind]} small /> {src.label}</span>}
-                  <span>{ago(at, ' ago')}</span>
-                </span>
-              </button>
-            </li>
+            <Row
+              key={fact.profile + fact.id}
+              lines={2}
+              title={fact.text}
+              meta={<>{page} · {kind === 'contested' && c ? <>by {c.by} · </> : src && <><Icon name={SOURCE_ICON[src.kind]} small /> {src.label} · </>}{ago(at, ' ago')}</>}
+              trailing={kind === 'contested' ? <span className="badge waiting">Contested</span> : undefined}
+              onClick={() => setView({ open: fact.page_id ?? MEMORY, anchor: fact.id })}
+            />
           );
         })}
-      </ol>
+      </div>
     </aside>
   );
 }
