@@ -7,7 +7,7 @@ import { Button, Chip, IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { ago } from '../../ui/util';
-import { openMeeting, openTask, showSnack } from '../view';
+import { copyText, openMeeting, openTask, showSnack } from '../view';
 import { Swipe } from '../Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
 import { useReview } from './Review';
@@ -47,7 +47,7 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
   const cite = () => {
     const srcs = sourcesOf(fact).map((s) => s.label);
     const text = `${page}: ${fact.text}${srcs.length ? ` (${srcs.join(', ')}${fact.at ? `, ${shortDate(fact.at)}` : ''})` : ''}`;
-    navigator.clipboard?.writeText(text).then(() => showSnack('Claim copied'), () => showSnack('Could not copy'));
+    copyText(text, 'Claim copied');
   };
   const confirm = () => {
     const prev = fact.at;
