@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { appendTo, ATTENTION_LABEL, type AttentionItem, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
 import { notify } from './notify';
 import { apiUrl, bundled } from './api';
+import { backoffDelay } from './backoff';
 
 type UiState = {
   connected: boolean;
@@ -298,6 +299,7 @@ let streamChat = '';
 let streamSession: string | null = null;
 let lastId = '';
 let retry: ReturnType<typeof setTimeout> | undefined;
+let attempt = 0;
 let hiddenAt = 0;
 let heard = 0;
 // The server sends a ping event every 20 s; a link that stays silent longer is dead even if the browser says open.
@@ -319,6 +321,7 @@ export function connect() {
   heard = Date.now();
   src.addEventListener('ping', () => (heard = Date.now()));
   src.onopen = () => {
+    attempt = 0;
     setUi({ connected: true, restarting: false });
     loadSeen();
     avlog('stream open');
@@ -330,7 +333,9 @@ export function connect() {
     // The browser retries the URL it was given; after a chat switch, or a new session in this chat, it asks for the wrong one, so reopen by hand.
     const now = getState().session;
     if (streamChat !== now.id || streamSession !== now.sessionId) src.close();
-    if (src.readyState === EventSource.CLOSED) retry = setTimeout(connect, 2_000);
+    if (src.readyState !== EventSource.CLOSED || !canRetry()) return;
+    retry = setTimeout(() => canRetry() && connect(), backoffDelay(attempt));
+    attempt++;
   };
   src.onmessage = (e) => {
     heard = Date.now();
@@ -341,6 +346,13 @@ export function connect() {
       avlog(`bad message ${String(err)}`);
     }
   };
+}
+
+const canRetry = () => navigator.onLine && document.visibilityState === 'visible';
+
+export function retryNow() {
+  attempt = 0;
+  connect();
 }
 
 // Seconds since the stream last delivered anything, for the composer's stale notice.
@@ -362,7 +374,15 @@ if (typeof document !== 'undefined') {
       if (bundled) park = setTimeout(() => { clearTimeout(retry); es?.close(); es = null; }, 10_000);
       return;
     }
+    attempt = 0;
     // Android drops the connection in the background while the WebView still reports it open.
-    if (!es || (hiddenAt && Date.now() - hiddenAt > 10_000)) connect();
+    if (!es || !getState().ui.connected || (hiddenAt && Date.now() - hiddenAt > 10_000)) connect();
   });
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => {
+      if (getState().ui.connected) return;
+      attempt = 0;
+      connect();
+    });
+  }
 }

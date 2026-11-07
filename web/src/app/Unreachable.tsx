@@ -3,7 +3,7 @@ import { apiBase, bundled } from './api';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { useMacName } from './macName';
-import { connect, useStore } from './store';
+import { retryNow, useStore } from './store';
 
 export function useUnreachable() {
   const connected = useStore((s) => s.ui.connected);
@@ -20,6 +20,6 @@ export function useUnreachable() {
 export function Unreachable() {
   const name = useMacName() || apiBase().replace(/^https?:\/\//, '');
   return (
-    <EmptyState size="md" icon="plug" title={`Can't reach ${name}`} hint="NetBird must be connected and AgentView running on that Mac" action={<Button size="sm" onClick={connect}>Retry</Button>} />
+    <EmptyState size="md" icon="plug" title={`Can't reach ${name}`} hint="NetBird must be connected and AgentView running on that Mac" action={<Button size="sm" onClick={retryNow}>Retry</Button>} />
   );
 }
