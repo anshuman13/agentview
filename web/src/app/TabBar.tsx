@@ -1,6 +1,7 @@
 import { Suspense, useRef } from 'react';
 import { Back } from './back';
 import { setUi, useStore } from './store';
+import { unreadCount } from '../sessions/folders';
 import { AgentsBadge } from '../sessions/AgentsBadge';
 import { ChangesBadge } from '../workspace/gitStatus';
 import { GitHubBadge } from '../ops/pulls';
@@ -21,7 +22,7 @@ type TabBarProps = { tab: Tab; more: boolean; inChats: boolean; inMore: boolean;
 
 export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }: TabBarProps) {
   const pendingCount = useStore((s) => s.pending.length);
-  const elsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
+  const elsewhere = useStore((s) => unreadCount(s.live, s.session.id, s.seen, s.attention.length));
   const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pressed = useRef(false);
   const assistantPress = {
@@ -49,7 +50,7 @@ export function TabBar({ tab, more, inChats, inMore, goTab, goSide, toggleMore }
       <button className={inChats && !more ? 'active' : ''} onClick={() => goSide('chats')}>
         <Icon name="comment-discussion" />
         <span>Sessions</span>
-        {elsewhere > 0 && <span className="dot waiting" role="img" aria-label={`${elsewhere} waiting`} />}
+        {elsewhere > 0 && <span className="dot waiting" role="img" aria-label={`${elsewhere} unread`} />}
       </button>
       <button className={tab === 'agents' && !more ? 'active' : ''} onClick={() => goTab('agents')}>
         <Icon name="hubot" />

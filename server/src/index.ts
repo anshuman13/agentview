@@ -16,6 +16,7 @@ import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, 
 import type { McpServerDef } from './integrations/mcpClient.js';
 import { emptyBin, listBin, restoreSession } from './agent/claude/bin.js';
 import { pinsRoute, removeChat } from './agent/claude/pins.js';
+import { seenRoute } from './agent/claude/seen.js';
 import { CODEX_WORK, listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from './workspace/files.js';
 import { github } from './integrations/github.js';
 import { assistantRoute } from './integrations/assistant.js';
@@ -207,6 +208,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/sessions/pins') {
       const r = await pinsRoute(req.method ?? 'GET', url.searchParams.get('id'));
+      return json(r.body, r.status);
+    }
+    if (url.pathname === '/api/sessions/seen') {
+      const r = await seenRoute(req.method ?? 'GET', url.searchParams.get('id'));
       return json(r.body, r.status);
     }
     if (url.pathname === '/api/sessions/bin' && req.method === 'DELETE') {

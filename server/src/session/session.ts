@@ -47,6 +47,7 @@ export class AgentSession implements AgentHost {
   private reviewTarget: string | null = null;
   private limitReset: number | null = null;
   private lastError = false;
+  failed = false;
   private repeater = new RepeatController({
     repeat: () => this.state.session.repeat,
     running: () => this.state.session.running,
@@ -353,6 +354,7 @@ export class AgentSession implements AgentHost {
     this.reviewTarget = reviewTarget(text) ?? this.reviewTarget;
     this.start();
     this.turns++;
+    this.failed = false;
     this.setSession({ running: true });
     if (/^\/compact\b/.test(text.trim())) this.startCompacting();
     this.driver.send(text, id);
@@ -644,6 +646,7 @@ export class AgentSession implements AgentHost {
     }
     this.lastResult = r.ok ? r.text : '';
     this.lastError = !r.ok || Boolean(r.isError);
+    this.failed = this.lastError;
     this.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: this.state.session.model });
     const goal = this.state.session.repeat;
     if (goal?.goal && goalMet(this.lastResult)) this.repeater.set(null, `Goal met after ${goal.round} ${goal.round === 1 ? 'check' : 'checks'}: ${goal.goal}`);

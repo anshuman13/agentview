@@ -24,6 +24,18 @@ function limitNotice(handle: (m: unknown) => void, text = "You've hit your sessi
 
 describe('AgentSession turns', () => {
 
+  it('failed stays set after an errored turn ends and clears when the next turn starts', () => {
+    const { s, result } = fakeSession();
+    s.sendPrompt('go');
+    result('r1', 'error_during_execution');
+    expect(s.state.session.running).toBe(false);
+    expect(s.failed).toBe(true);
+    s.sendPrompt('again');
+    expect(s.failed).toBe(false);
+    result('r2');
+    expect(s.failed).toBe(false);
+  });
+
   it('steer interrupts a running turn and stays running for the steered prompt', async () => {
     const { s, interrupt, result } = fakeSession();
     s.sendPrompt('long task');

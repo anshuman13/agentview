@@ -251,6 +251,31 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
   return [...m.values()].sort((a, b) => b.last - a.last);
 }
 
+export type ChatState = 'needs' | 'failed' | 'running' | 'done';
+
+// Needs you, Failed and Running come from the live chat; Done is activity newer than the last time the chat was opened.
+export function chatState({ live, saved }: { live?: LiveChat; saved?: SavedSession }, seen: Record<string, number>): ChatState | null {
+  if (live?.pending) return 'needs';
+  if (live?.failed) return 'failed';
+  if (live?.running) return live.stalled ? null : 'running';
+  const id = live?.sessionId ?? saved?.sessionId;
+  const at = Math.max(live?.lastActive ?? 0, saved?.lastModified ?? 0);
+  return id && seen[id] !== undefined && at > seen[id] ? 'done' : null;
+}
+
+export const unreadCount = (live: LiveChat[], viewing: string, seen: Record<string, number>, attention: number) =>
+  live.filter((c) => c.id !== viewing && ['done', 'needs'].includes(chatState({ live: c }, seen) ?? '')).length + attention;
+
+export function since(t: number, now = Date.now()) {
+  const m = Math.max(0, Math.floor((now - t) / 60_000));
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  if (m < 1440) return `${Math.floor(m / 60)} h ago`;
+  const day = (x: number) => new Date(x).setHours(0, 0, 0, 0);
+  const d = Math.round((day(now) - day(t)) / 864e5);
+  return d === 1 ? 'yesterday' : d < 7 ? `${d} d ago` : `${Math.floor(d / 7)} w ago`;
+}
+
 export function chatLine(c: LiveChat, events: ChatEvent[] | null) {
   const done = !c.running && !c.pending;
   const last = c.last ?? (events ? replyLine(events) : undefined);

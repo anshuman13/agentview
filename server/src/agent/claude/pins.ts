@@ -2,6 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { readJson, writeJson } from '../../json.js';
 import { removeSession, serial } from './bin.js';
+import { unseen } from './seen.js';
 
 const file = () => path.join(os.homedir(), '.agentview', 'pins.json');
 
@@ -22,6 +23,7 @@ export const unpin = (id: string) => serial(async () => {
 export const removeChat = async (id: string, purge: boolean, archive = false) => {
   const r = await removeSession(id, purge, archive);
   await unpin(id);
+  await unseen(id);
   return r;
 };
 

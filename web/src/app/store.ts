@@ -18,7 +18,7 @@ type UiState = {
 export const embedded = typeof window !== 'undefined' && window.self !== window.top;
 const storedBeside = () => { try { return embedded ? null : localStorage.getItem('agentview.beside') || null; } catch { return null; } };
 
-export type State = ServerState & { live: LiveChat[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; ui: UiState };
+export type State = ServerState & { live: LiveChat[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; ui: UiState };
 
 let state: State = {
   session: { id: '', sessionId: null, model: null, effort: null, team: false, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], loop: { on: false, max: 3, round: 0, phase: null }, repeat: null, pr: null, account: 'main', accounts: [] },
@@ -29,6 +29,7 @@ let state: State = {
   live: [],
   attention: [],
   findings: {},
+  seen: {},
   ui: { connected: false, openFile: null, follow: false, switcherOpen: false, repoPicker: false, beside: storedBeside() },
 };
 
@@ -68,7 +69,7 @@ export function notice(text: string) {
 export function switchedMac() {
   lastId = '';
   boot = 0;
-  set((s) => ({ session: { ...s.session, id: '', sessionId: null }, events: [], pending: [], live: [], findings: {}, ui: { ...s.ui, connected: false, openFile: null, openLine: null, beside: null } }));
+  set((s) => ({ session: { ...s.session, id: '', sessionId: null }, events: [], pending: [], live: [], findings: {}, seen: {}, ui: { ...s.ui, connected: false, openFile: null, openLine: null, beside: null } }));
   connect();
 }
 
@@ -109,6 +110,22 @@ function notifyBackground(chats: LiveChat[]) {
   }
 }
 
+const SEEN_URL = '/api/sessions/seen';
+
+// Seen times live on the Mac, so every device clears the same unread marks.
+export function loadSeen() {
+  fetch(apiUrl(SEEN_URL)).then((r) => r.json()).then((seen) => seen && typeof seen === 'object' && !Array.isArray(seen) && set({ seen })).catch(() => {});
+}
+
+function markSeen(sessionId: string | null | undefined) {
+  if (!sessionId) return;
+  fetch(apiUrl(`${SEEN_URL}?id=${encodeURIComponent(sessionId)}`), { method: 'POST' }).then((r) => r.ok && loadSeen()).catch(() => {});
+}
+
+function markViewedDone(chats: LiveChat[]) {
+  for (const c of chats) if (c.id === state.session.id && state.live.find((x) => x.id === c.id)?.running && !c.running) markSeen(c.sessionId);
+}
+
 let boot = 0;
 // Identifies this tab's event stream so a command lands on the chat this tab views.
 const cid = uid();
@@ -139,6 +156,8 @@ async function post(m: ClientMessage, tries = 1): Promise<boolean | null> {
 }
 
 export function send(m: ClientMessage) {
+  if (m.type === 'open_session') markSeen(m.sessionId);
+  else if (m.type === 'view') markSeen(state.live.find((c) => c.id === m.id)?.sessionId);
   void post(m, 2).then((ok) => ok === false && notice('Not connected, that did not reach the server'));
   return true;
 }
@@ -258,6 +277,7 @@ function handle(m: ServerMessage) {
       break;
     case 'live':
       notifyBackground(m.chats);
+      markViewedDone(m.chats);
       set({ live: m.chats });
       break;
     case 'attention':
@@ -300,6 +320,7 @@ export function connect() {
   src.addEventListener('ping', () => (heard = Date.now()));
   src.onopen = () => {
     setUi({ connected: true, restarting: false });
+    loadSeen();
     avlog('stream open');
   };
   src.onerror = () => {

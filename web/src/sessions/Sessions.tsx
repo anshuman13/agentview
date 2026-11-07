@@ -13,7 +13,7 @@ import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatLine, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, renameChat, repoName, segmentOf, usePins, useWorkspace, worktreeRequest, type Folder, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, renameChat, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 
 const PAGE = 5;
@@ -255,6 +255,7 @@ export function OpenChats() {
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
   const { folders, chats, setChats } = useWorkspace(current + cwd);
+  const savedById = useMemo(() => new Map(chats.map((s) => [s.sessionId, s])), [chats]);
   const [filter, setFilter] = useState('');
   const [collapsed, setCollapsed] = useState(() => stored<Record<string, boolean>>(KEY, {}));
   const [full, setFull] = useState<Set<string>>(new Set());
@@ -279,10 +280,10 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} repo={repo} selected={c.id === viewing} actions={actions} ask={setAsk} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
 
   const savedRow = (s: SavedSession, repo?: string) => (
-    <SavedRow key={s.sessionId} s={s} repo={repo} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={() => togglePin(s.sessionId)} />
+    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={() => togglePin(s.sessionId)} />
   );
 
   useEffect(() => setOpening(null), [current]);
@@ -387,7 +388,7 @@ type ChatRowProps = {
   title: string;
   opening?: boolean;
   meta: ReactNode;
-  badge?: 'running' | 'waiting';
+  state: ChatState | null;
   selected?: boolean;
   pinned?: boolean;
   actions: Actions;
@@ -397,10 +398,13 @@ type ChatRowProps = {
   onClose?: () => void;
 };
 
-function ChatRow({ sessionId, title, opening, meta, badge, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
+const BADGE = { needs: 'waiting', failed: 'failed', running: 'running', done: 'done' } as const;
+
+function ChatRow({ sessionId, title, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
+  const unread = state === 'done' || state === 'needs';
   const pick = (act: () => void) => () => { setMenu(false); act(); };
   if (renaming) {
     const save = (t: string) => {
@@ -411,7 +415,7 @@ function ChatRow({ sessionId, title, opening, meta, badge, selected, pinned, act
   }
   return (
     <div className="chat-row">
-      <Row title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} trailing={badge && <Badge status={badge} label={badge === 'waiting' ? 'Needs you' : undefined} />} onClick={onOpen} />
+      <Row title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />} onClick={onOpen} />
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>
@@ -429,8 +433,14 @@ function ChatRow({ sessionId, title, opening, meta, badge, selected, pinned, act
 
 const metaLine = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ');
 
-function SavedRow({ s, repo, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: () => void }) {
-  return <ChatRow sessionId={s.sessionId} title={s.title} opening={opening} meta={metaLine(repo, ago(s.lastModified))} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
+const branchOf = (saved?: string | null, repoBranch?: string) => {
+  const b = saved || repoBranch;
+  return isDefault(b) ? undefined : b;
+};
+
+function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: () => void }) {
+  const seen = useStore((x) => x.seen);
+  return <ChatRow sessionId={s.sessionId} title={s.title} opening={opening} meta={metaLine(repo, branchOf(s.gitBranch, branch), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
 function WaitingRows({ viewing, ask, pins, togglePin, setChats }: { viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; togglePin: (id: string) => void; setChats: SetChats }) {
@@ -439,18 +449,18 @@ function WaitingRows({ viewing, ask, pins, togglePin, setChats }: { viewing: str
   return <>{live.filter((c) => c.pending).map((c) => <LiveRow key={c.id} c={c} repo={c.cwd.split('/').pop()} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.includes(c.sessionId ?? '')} onPin={() => togglePin(c.sessionId!)} />)}</>;
 }
 
-function LiveRow({ c, repo, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; repo?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: () => void; onBeside?: () => void }) {
+function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: SavedSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: () => void; onBeside?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
+  const seen = useStore((s) => s.seen);
   const line = chatLine(c, events);
-  const state = c.pending ? ago(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : ago(c.lastActive);
+  const when = c.pending ? since(c.lastActive) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : since(Math.max(c.lastActive, saved?.lastModified ?? 0));
   const meta = (
     <>
-      {metaLine(repo, state)}
+      {metaLine(repo, branchOf(saved?.gitBranch, branch), when)}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
   );
-  const badge = c.pending ? 'waiting' : c.running && !c.stalled ? 'running' : undefined;
-  return <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} meta={meta} badge={badge} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />;
+  return <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} meta={meta} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />;
 }
 
 const PR_KINDS = new Set<AttentionItem['kind']>(['review', 'ci', 'changes', 'ready', 'stale']);

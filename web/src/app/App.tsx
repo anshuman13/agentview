@@ -7,6 +7,7 @@ import { GitHubBadge } from '../ops/pulls';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { command, pressable, save, stored } from '../ui/util';
+import { unreadCount } from '../sessions/folders';
 import { haptic } from '../ui/haptic';
 import { slideFrom, useTabSwipe } from './tabSwipe';
 import { useEdgeBack } from './edgeBack';
@@ -41,7 +42,7 @@ const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 export function App() {
   const pendingCount = useStore((s) => s.pending.length);
-  const elsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
+  const elsewhere = useStore((s) => unreadCount(s.live, s.session.id, s.seen, s.attention.length));
   const openFile = useStore((s) => s.ui.openFile);
   const repoPicker = useStore((s) => s.ui.repoPicker);
   const session = useStore((s) => s.session);

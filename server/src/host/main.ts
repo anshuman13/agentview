@@ -107,6 +107,7 @@ function summary(chat: AgentSession): LiveChat {
     cost: chatCost(s.events),
     ...(Object.keys(spend.week).length > 0 && { spend }),
     stalled: stalls.stalled(chat.id),
+    ...(chat.failed && { failed: true }),
     last: replyLine(s.events),
     edits: editsOf(chat),
     ...(s.session.pr && { pr: s.session.pr }),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFolders, chatFinder, findHere, groupByRepo, groupByKind, segmentOf, staleKeys } from './folders';
+import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, segmentOf, since, staleKeys, unreadCount } from './folders';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
@@ -117,4 +117,61 @@ describe('staleKeys', () => {
     expect(staleKeys({ repos: 1_000_000, chats: 960_000, trees: 1_000_000 }, 1_010_000)).toEqual(['chats']);
   });
 
+});
+
+describe('chatState', () => {
+  const live = (o: Partial<LiveChat> = {}): LiveChat => ({ id: 'c1', sessionId: 's1', cwd: '/w/shop', title: 't', running: false, pending: 0, status: '', lastActive: 100, ...o });
+  const seen = { s1: 50 };
+
+  it('ranks needs you, failed, running in that order', () => {
+    expect(chatState({ live: live({ pending: 1, failed: true, running: true }) }, seen)).toBe('needs');
+    expect(chatState({ live: live({ failed: true, running: true }) }, seen)).toBe('failed');
+    expect(chatState({ live: live({ running: true }) }, seen)).toBe('running');
+  });
+
+  it('shows nothing for a stalled running chat', () => {
+    expect(chatState({ live: live({ running: true, stalled: true }) }, seen)).toBeNull();
+  });
+
+  it('is done only when activity is newer than the seen time', () => {
+    expect(chatState({ live: live() }, seen)).toBe('done');
+    expect(chatState({ live: live() }, { s1: 100 })).toBeNull();
+    expect(chatState({ live: live() }, {})).toBeNull();
+    expect(chatState({ live: live({ lastActive: 0 }) }, seen)).toBeNull();
+  });
+
+  it('uses the newer of the live and saved times', () => {
+    const saved = chat('/w/shop', 200, 's1');
+    expect(chatState({ live: live(), saved }, { s1: 150 })).toBe('done');
+    expect(chatState({ live: live({ lastActive: 300 }), saved }, { s1: 250 })).toBe('done');
+  });
+
+  it('marks a saved chat done and never failed', () => {
+    expect(chatState({ saved: chat('/w/shop', 200, 's1') }, seen)).toBe('done');
+    expect(chatState({ saved: chat('/w/shop', 20, 's1') }, seen)).toBeNull();
+  });
+
+  it('clears once the chat is opened', () => {
+    expect(chatState({ live: live() }, { s1: 150 })).toBeNull();
+  });
+
+  it('counts unread chats other than the viewed one', () => {
+    const l = [live(), live({ id: 'c2', sessionId: 's2', pending: 1 }), live({ id: 'c3', sessionId: 's3' })];
+    expect(unreadCount(l, 'c1', { s1: 50, s3: 500 }, 1)).toBe(2);
+    expect(unreadCount(l, 'c2', { s1: 50, s3: 500 }, 0)).toBe(1);
+  });
+});
+
+describe('since', () => {
+  const now = new Date(2026, 5, 15, 14, 0).getTime();
+  const back = (ms: number) => since(now - ms, now);
+
+  it('words the elapsed time', () => {
+    expect(back(30_000)).toBe('just now');
+    expect(back(2 * 60_000)).toBe('2 min ago');
+    expect(back(3 * 3_600_000)).toBe('3 h ago');
+    expect(since(new Date(2026, 5, 14, 9, 0).getTime(), now)).toBe('yesterday');
+    expect(back(3 * 864e5)).toBe('3 d ago');
+    expect(back(14 * 864e5)).toBe('2 w ago');
+  });
 });
