@@ -177,6 +177,8 @@ export type ServerMessage =
   | { type: 'restarting' }
   | { type: 'error'; text: string };
 
+export type LiveAgent = { id: string; description: string; group?: string; startedAt: number };
+
 export type LiveChat = {
   id: string;
   sessionId: string | null;
@@ -184,6 +186,7 @@ export type LiveChat = {
   title: string;
   running: boolean;
   agents?: number;
+  agentList?: LiveAgent[];
   pending: number;
   status: string;
   lastActive: number;

@@ -1,4 +1,4 @@
-import type { ChatEvent, Repeat } from '../../../shared/protocol.js';
+import type { ChatEvent, LiveAgent, Repeat } from '../../../shared/protocol.js';
 import type { Cron, RunningTask } from '../agent/types.js';
 import { RUN_ID } from '../agent/claude/transcript.js';
 import type { AgentSession } from '../session/session.js';
@@ -7,11 +7,15 @@ export type StoppedTask = { description: string; tool: string; runId?: string; s
 export type Stopped = { midTurn: boolean; tasks: StoppedTask[] };
 export type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; queued?: { id: string; text: string }[]; stopped?: Stopped };
 
-export const agentsRunning = (chat: AgentSession) => chat.state.events.filter((e) => e.kind === 'agent' && e.status === 'running').length;
+export const runningAgents = (chat: AgentSession): LiveAgent[] =>
+  chat.state.events
+    .filter((e): e is Extract<ChatEvent, { kind: 'agent' }> => e.kind === 'agent' && e.status === 'running')
+    .map((e) => ({ id: e.toolUseId, description: e.description, ...(e.group && { group: e.group }), startedAt: e.startedAt }))
+    .sort((a, b) => a.startedAt - b.startedAt);
 
 // A long-running background task (a dev server, a watcher) holds a restart, blocks the orphan exit and keeps the chat open on purpose.
 export const busy = (chat: AgentSession) =>
-  chat.state.session.running || chat.state.session.compacting || agentsRunning(chat) > 0 || (chat.driver.runningTasks?.().length ?? 0) > 0;
+  chat.state.session.running || chat.state.session.compacting || runningAgents(chat).length > 0 || (chat.driver.runningTasks?.().length ?? 0) > 0;
 
 export function stoppedOf(events: ChatEvent[], tasks: RunningTask[], midTurn: boolean): Stopped | undefined {
   if (!midTurn && !tasks.length) return undefined;

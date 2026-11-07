@@ -17,7 +17,7 @@ import { replyLine, sumEdits } from '../../../shared/edits.js';
 import { errText } from '../../../shared/util.js';
 import { sendWhenChanged } from './changed.js';
 import { costsOf } from './summaryCache.js';
-import { agentsRunning, busy, parseSaved, stoppedOf, type Saved } from './restore.js';
+import { busy, runningAgents, parseSaved, stoppedOf, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
 import { readJson, writeJsonSync } from '../json.js';
@@ -89,6 +89,7 @@ function editsOf(chat: AgentSession) {
 
 function summary(chat: AgentSession): LiveChat {
   const s = chat.state;
+  const agentList = runningAgents(chat);
   const firstPrompt = s.events.find((e) => e.kind === 'user');
   const { cost, spend } = costsOf(s.events, new Date().setHours(0, 0, 0, 0));
   return {
@@ -97,7 +98,8 @@ function summary(chat: AgentSession): LiveChat {
     cwd: chat.cwd,
     title: chat.title || (firstPrompt?.kind === 'user' ? firstPrompt.text.split('\n')[0].slice(0, 80) : 'New chat'),
     running: s.session.running,
-    agents: agentsRunning(chat),
+    agents: agentList.length,
+    ...(agentList.length > 0 && { agentList }),
     pending: s.pending.length,
     status: s.status,
     lastActive: lastActive(chat),

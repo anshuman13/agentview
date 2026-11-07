@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { parseSaved, resumePrompt, stoppedOf } from './restore.js';
+import { parseSaved, resumePrompt, runningAgents, stoppedOf } from './restore.js';
 
 const events: any[] = [
   { id: 'w1', kind: 'tool_use', name: 'Workflow', input: { scriptPath: '/p/build.js' }, summary: '', at: 0 },
@@ -32,6 +32,13 @@ it('asks Claude to resume workflows by run id', () => {
   expect(text).toContain('wf_abc');
   expect(text).toContain('resumeFromRunId');
   expect(text).toContain('/p/build.js');
+});
+
+it('lists running agents oldest first and leaves out ended ones', () => {
+  const agent = (toolUseId: string, status: string, startedAt: number, group?: string) => ({ kind: 'agent', toolUseId, description: toolUseId, status, startedAt, group });
+  const chat = { state: { events: [agent('b', 'running', 20, 'build'), agent('x', 'done', 5), agent('a', 'running', 10)] } } as any;
+  expect(runningAgents(chat)).toEqual([{ id: 'a', description: 'a', startedAt: 10 }, { id: 'b', description: 'b', group: 'build', startedAt: 20 }]);
+  expect(runningAgents({ state: { events: [agent('x', 'done', 5)] } } as any)).toEqual([]);
 });
 
 it('returns null for input that is not a saved chat list', () => {

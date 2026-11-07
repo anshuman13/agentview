@@ -12,6 +12,8 @@ import { ATTENTION_LABEL, type AttentionItem, type LiveChat, type SavedSession, 
 import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored } from '../ui/util';
 import { Bin } from './Bin';
+import { AgentsBlock } from './AgentRow';
+import { openAgent } from './agents';
 import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
 import { archiveChat, byUrgency, chatFinder, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RenameEvent, type RepoGroup } from './folders';
@@ -65,6 +67,12 @@ export function Sessions() {
   const waitingCount = useStore((s) => s.live.reduce((n, c) => n + (c.pending ? 1 : 0), 0));
   const [filter, setFilter] = useState('');
   const viewing = useStore((s) => s.session.id);
+  useEffect(() => {
+    if (pendingAgent?.chat !== viewing) return;
+    const { id } = pendingAgent;
+    pendingAgent = null;
+    setTimeout(() => openAgent(id), 0);
+  }, [viewing]);
   const [segment, setSegment] = useState(() => stored('agentview.workspace.segment', 'work'));
   const [shut, setShut] = useState<string[]>(() => stored('agentview.workspace.kinds', []));
   const [toggled, setToggled] = useState<Set<string>>(new Set());
@@ -560,7 +568,31 @@ function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
   );
-  return <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={meta} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />;
+  return (
+    <>
+      <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={meta} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
+      {c.agentList && <LiveAgents c={c} />}
+    </>
+  );
+}
+
+const agentsOpen = new Set<string>();
+let pendingAgent: { chat: string; id: string } | null = null;
+
+function LiveAgents({ c }: { c: LiveChat }) {
+  const [open, setOpen] = useState(() => agentsOpen.has(c.id));
+  const viewing = useStore((s) => s.session.id);
+  const toggle = () => {
+    if (open) agentsOpen.delete(c.id);
+    else agentsOpen.add(c.id);
+    setOpen(!open);
+  };
+  const pick = (id: string) => {
+    if (c.id === viewing) return openAgent(id);
+    pendingAgent = { chat: c.id, id };
+    send({ type: 'view', id: c.id });
+  };
+  return <AgentsBlock agents={c.agentList!} open={open} onToggle={toggle} onOpen={pick} />;
 }
 
 const PR_KINDS = new Set<AttentionItem['kind']>(['review', 'ci', 'changes', 'ready', 'stale']);

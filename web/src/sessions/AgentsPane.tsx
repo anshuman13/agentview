@@ -5,7 +5,7 @@ import { Button, Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
-import { Row as UiRow } from '../ui/Row';
+import { AgentRow, STATUS_ICON } from './AgentRow';
 import { Markdown } from '../chat/Chat';
 import { Row } from '../chat/Transcript';
 import { copyText } from '../codex/view';
@@ -14,8 +14,6 @@ import { plural, useTick } from '../ui/util';
 import type { AgentStatus } from '../../../shared/protocol';
 
 const useAgents = () => useStore((s) => agentsOf(s.events));
-
-const STATUS_ICON: Record<AgentStatus, string> = { running: 'loading', done: 'check', failed: 'error', stopped: 'debug-stop' };
 
 const STATUS_LABEL: Record<AgentStatus, string> = { running: 'Running', done: 'Done', failed: 'Failed', stopped: 'Stopped' };
 
@@ -39,14 +37,13 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
     const last = (a.status === 'running' && a.info?.progress) || a.lastStep;
     const sub = [a.group ? STATUS_LABEL[a.status] : a.status, a.steps.length > 0 && plural(a.steps.length, 'step'), last].filter(Boolean).join(' · ');
     return (
-      <UiRow
+      <AgentRow
         key={a.id}
-        className="ag-item"
-        aria-current={a.id === current?.id ? 'true' : undefined}
-        leading={<span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={a.status === 'running'} /></span>}
-        title={<span title={a.description}>{a.description}</span>}
-        meta={<span title={sub}>{sub}</span>}
+        status={a.status}
+        description={a.description}
+        meta={sub}
         trailing={a.group && a.info?.usage ? `${took(a, now)} · ${tokens(a.info.usage.tokens)}` : took(a, now)}
+        current={a.id === current?.id}
         onClick={() => onSelect(a.id)}
       />
     );
