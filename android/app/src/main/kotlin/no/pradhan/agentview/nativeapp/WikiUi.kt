@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -77,8 +80,11 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> 
 }
 
 @Composable
-private fun ClaimRow(c: Claim, now: Long, stale: Boolean = false) {
+private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, stale: Boolean = false) {
     val f = c.fact
+    var menu by remember(f.key) { mutableStateOf(false) }
+    val clip = LocalClipboardManager.current
+    val uri = LocalUriHandler.current
     val contest = contestOf(f)
     val meta: AnnotatedString = buildAnnotatedString {
         val bits = ArrayList<String>()
@@ -90,7 +96,26 @@ private fun ClaimRow(c: Claim, now: Long, stale: Boolean = false) {
         append(bits.joinToString(" · "))
     }
     Column {
-        ListRow(f.str("text") ?: "", meta)
+        Box {
+            ListRow(f.str("text") ?: "", meta, onLongClick = { menu = true })
+            Menu(menu, { menu = false }) {
+                val pick = { act: () -> Unit -> { menu = false; act() } }
+                MenuItem("Cite", pick {
+                    val srcs = sourcesOf(f).map { it.label }
+                    val at = f.long("at")?.let { ", ${shortDate(it, now)}" } ?: ""
+                    clip.setText(AnnotatedString("$page: ${f.str("text") ?: ""}" + if (srcs.isNotEmpty()) " (${srcs.joinToString(", ")}$at)" else ""))
+                    actions.say("Claim copied")
+                })
+                if (contest == null) MenuItem("Contest", pick { actions.change(f, mapOf("contested" to "{\"by\":\"you\",\"at\":${System.currentTimeMillis()},\"note\":\"\"}"), "Claim contested") })
+                else MenuItem("Resolve", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") })
+                val retired = f.str("state") == "retired"
+                MenuItem(if (retired) "Restore" else "Retire", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)
+                val links = sourcesOf(f).mapNotNull { s -> safeHref(s.url)?.let { s to it } }
+                if (links.isNotEmpty()) MenuSeparator()
+                links.forEach { (s, href) -> MenuItem(s.label, pick { uri.openUri(href) }) }
+                f.long("at")?.let { MenuSeparator(); MenuItem("Updated ${shortDate(it, now)}", {}, enabled = false) }
+            }
+        }
         contest?.note?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, bottom = Tokens.sp3), style = Type.subheadline, color = av.warn) }
         c.old.forEach { o ->
             Text(buildAnnotatedString {
@@ -102,7 +127,7 @@ private fun ClaimRow(c: Claim, now: Long, stale: Boolean = false) {
 }
 
 @Composable
-fun WikiPageView(st: CodexState, page: Row, now: Long) {
+fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
     val facts = remember(st.facts, page.profile) { st.facts.filter { it.profile == page.profile } }
     val groups = remember(facts, page.id, now / 60_000) { pageClaims(facts, page.id, now) }
     val older = remember(facts, page.id, now / 60_000) { olderClaims(facts, page.id, now) }
@@ -124,13 +149,13 @@ fun WikiPageView(st: CodexState, page: Row, now: Long) {
         }
         groups.forEach { g ->
             item { SectionHeader(g.heading, g.claims.size.toString()) }
-            item { Group { g.claims.forEachIndexed { i, c -> if (i > 0) Hairline(); ClaimRow(c, now) } } }
+            item { Group { g.claims.forEachIndexed { i, c -> if (i > 0) Hairline(); ClaimRow(c, now, actions, page.title ?: "") } } }
         }
         if (older.isNotEmpty()) {
             item { SectionHeader("Older", older.size.toString(), action = { Button(if (showOlder) "Hide" else "Show", { showOlder = !showOlder }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             if (showOlder) {
                 item { Text("Retired or over 90 days old. Claude does not use these.", Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgFaint) }
-                item { Group { older.forEachIndexed { i, f -> if (i > 0) Hairline(); ClaimRow(Claim(f, emptyList()), now, stale = f.id in staleIds) } } }
+                item { Group { older.forEachIndexed { i, f -> if (i > 0) Hairline(); ClaimRow(Claim(f, emptyList()), now, actions, page.title ?: "", stale = f.id in staleIds) } } }
             }
         }
         if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "They appear here as meetings, Slack threads and issues mention ${page.title}") }

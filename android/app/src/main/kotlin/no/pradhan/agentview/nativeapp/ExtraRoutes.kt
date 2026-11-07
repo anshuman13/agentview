@@ -52,7 +52,7 @@ fun ExtraContent(
         route == "wiki" -> WikiIndexPage(st, profile, now, { push("wiki:${it.key}") }, { f -> claimRoute(f)?.let(push) }, { push("review") })
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == key && !it.deleted }
-            if (p == null) EmptyState("This page is gone") else WikiPageView(st, p, now)
+            if (p == null) EmptyState("This page is gone") else WikiPageView(st, p, now, actions)
         }
         route == "jobs" -> JobsListPage(hub, st, profile, now, { push("autopilot") }) { push("job:${it.key}") }
         else -> {

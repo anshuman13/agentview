@@ -15,7 +15,7 @@ fun withRule(text: String, rule: String?): String {
 }
 
 class TaskActions(private val store: CodexStore, private val snack: (String, (() -> Unit)?) -> Unit, private val now: () -> Long = System::currentTimeMillis) {
-    private fun change(r: Row, patch: Map<String, Any?>, text: String) {
+    fun change(r: Row, patch: Map<String, Any?>, text: String) {
         val before = patch.keys.associateWith { r.col(it) }
         if (store.update(r, patch)) snack(text) { store.update(r, before) }
     }
