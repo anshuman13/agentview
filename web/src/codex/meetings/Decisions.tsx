@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../ui/Icon';
+import { Row } from '../../ui/Row';
 import { EmptyState } from '../../ui/Panel';
 import { decisionsMarkdown } from '../data/meetingMarkdown';
 import { decisionLog, type Meeting } from '../data/wiki';
@@ -25,12 +26,11 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
           {rows.length > 0 && <button className="icon-btn" title="Copy as Markdown" aria-label="Copy as Markdown" onClick={copy}><Icon name="copy" /></button>}
         </div>
       )}
-      {rows.map((d, i) => (
-        <button key={`${d.meeting.profile}:${d.meeting.id}:${i}`} className="mt-log-item" onClick={() => openMeeting(d.meeting)}>
-          <span className="mt-log-text">{d.text}</span>
-          <span className="mt-log-from">{d.meeting.title || 'Meeting'} · {when(d.at)}</span>
-        </button>
-      ))}
+      {rows.length > 0 && (
+        <div className="as-group">
+          {rows.map((d, i) => <Row key={`${d.meeting.profile}:${d.meeting.id}:${i}`} lines={2} title={d.text} meta={`${d.meeting.title || 'Meeting'} · ${when(d.at)}`} onClick={() => openMeeting(d.meeting)} />)}
+        </div>
+      )}
       {!rows.length && <EmptyState size="sm" icon="check" title={who ? 'No decisions with this person.' : 'No decisions yet.'} hint="Decisions come from the meeting summaries." />}
     </div>
   );

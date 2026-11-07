@@ -282,9 +282,9 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-fold-head | - | Section header | Done |
 | mt-item | - | Row | Done |
 | mt-list | codex/GoalsPage.tsx, codex/Search.tsx, codex/jobs/Jobs.tsx, codex/summary/Summary.tsx | Grouped list | Partial |
-| mt-load-head | codex/Goals.tsx, codex/meetings/Review.tsx | Section header | Partial |
+| mt-load-head | codex/Goals.tsx | Section header | Partial |
 | mt-load-row | - | Row | Done |
-| mt-log-item | codex/meetings/Decisions.tsx, codex/meetings/Review.tsx | Row | Partial |
+| mt-log-item | - | Row | Done |
 | mt-person-head | - | Section header | Done |
 | mt-row | CSS only | Row (delete the unused rule) | Done |
 | mt-rows | none | Grouped list | Done |

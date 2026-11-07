@@ -43,10 +43,6 @@
 .mt-log { display: flex; flex-direction: column; gap: var(--sp-4); }
 .mt-log-bar { display: flex; align-items: center; gap: var(--sp-4); }
 .mt-log-bar select { min-width: 0; max-width: 100%; height: 30px; padding: 0 var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg); font: inherit; font-size: var(--fs-sm); }
-.mt-log-item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); width: 100%; padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--wk-card); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
-@media (hover: hover) { .mt-log-item:hover { background: var(--hover); } }
-.mt-log-text { font-size: var(--fs-md); color: var(--fg-strong); overflow-wrap: anywhere; }
-.mt-log-from { font-size: var(--fs-xs); color: var(--fg-muted); overflow-wrap: anywhere; }
 
 .mt-load { display: flex; flex-direction: column; gap: var(--sp-8); }
 .mt-load-head { color: var(--fg-muted); font-size: var(--fs-sm); }

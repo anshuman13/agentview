@@ -1,7 +1,10 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantTable, useAssistantStore } from '../data';
-import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
+import { IconButton } from '../../ui/Button';
+import { Menu, MenuItem } from '../../ui/Menu';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { nextMonday, nudgeText, unanswered, waitingByPerson, weeklyReview } from '../data/review';
 import type { ItemRow } from '../data/sync';
 import type { Patch } from '../data/store';
@@ -9,14 +12,25 @@ import { PickTime, when } from '../time';
 import { copyText, showSnack, useView } from '../view';
 import { safeHref } from '../../ui/util';
 
-const short = (s: string) => (s.length > 24 ? `${s.slice(0, 23).trimEnd()}…` : s);
+function More({ children }: { children: (close: () => void) => ReactNode }) {
+  const [menu, setMenu] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  return (
+    <span className="as-wrap-more">
+      <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+      {menu && <Menu trigger={btn} onClose={() => setMenu(false)}>{children(() => setMenu(false))}</Menu>}
+    </span>
+  );
+}
 
-function Group({ title, rows, children }: { title: string; rows: ItemRow[]; children: (r: ItemRow) => React.ReactNode }) {
+function Group({ title, rows, children }: { title: string; rows: ItemRow[]; children: (r: ItemRow) => ReactNode }) {
   if (!rows.length) return null;
   return (
     <section className="mt-wk-sec">
-      <div className="mt-load-head">{title} ({rows.length})</div>
-      {rows.map((r) => <div key={r.profile + r.id} className="mt-log-item">{children(r)}</div>)}
+      <Section label={title} count={rows.length} />
+      <div className="as-group">
+        {rows.map((r) => <Fragment key={r.profile + r.id}>{children(r)}</Fragment>)}
+      </div>
     </section>
   );
 }
@@ -35,31 +49,46 @@ export function Review({ now }: { now: number }) {
     void store.update(row, patch);
     showSnack(text, () => void store.update(row, before));
   };
+  const reschedule = (row: ItemRow, t: number) => change(row, { at: t, rolls: null, rolled_from: null }, `Due ${when(t)}`);
   const actions = (row: ItemRow) => (
-    <>
-      <span className="mt-log-text">{row.title}{(row.rolls ?? 0) > 0 && <span className="mt-log-from"> · moved {row.rolls}x</span>}</span>
-      <PickTime className="btn sm" title="Reschedule" label="Reschedule" onPick={(t) => change(row, { at: t, rolls: null, rolled_from: null }, `Due ${when(t)}`)} />
-      <button className="btn sm" title="Next Monday 09:00" onClick={() => { const t = nextMonday(now); change(row, { at: t, rolls: null, rolled_from: null }, `Due ${when(t)}`); }}>Next Monday</button>
-      <button className="btn sm" onClick={() => change(row, { deleted: 1 }, 'Dropped')}>Drop</button>
-    </>
+    <Row
+      plain
+      title={row.title}
+      meta={(row.rolls ?? 0) > 0 ? `Moved ${row.rolls}x` : undefined}
+      trailing={<>
+        <PickTime className="btn btn-gray btn-sm" title="Reschedule" label="Reschedule" onPick={(t) => reschedule(row, t)} />
+        <More>{(close) => <>
+          <MenuItem title="Next Monday 09:00" onClick={() => { close(); reschedule(row, nextMonday(now)); }}>Next Monday</MenuItem>
+          <MenuItem danger onClick={() => { close(); change(row, { deleted: 1 }, 'Dropped'); }}>Drop</MenuItem>
+        </>}</More>
+      </>}
+    />
   );
   const empty = !r.done.length && !r.slipped.length && !r.stuck.length && !waiting.length;
   return (
     <>
       <div className="mt-log-bar"><span className="mt-load-share">Weekly review: {r.done.length} done, {r.slipped.length} slipped, {r.stuck.length} stuck</span></div>
-      <Group title="Done this week" rows={r.done}>{(row) => <span className="mt-log-text">{row.title}</span>}</Group>
+      <Group title="Done this week" rows={r.done}>{(row) => <Row plain title={row.title} />}</Group>
       <Group title="Slipped" rows={r.slipped}>{actions}</Group>
       <Group title="Stuck" rows={r.stuck}>{actions}</Group>
       {waiting.length > 0 && (
         <section className="mt-wk-sec">
-          <div className="mt-load-head">Waiting on ({waiting.length})</div>
-          {waiting.map((g) => (
-            <div key={g.name} className="mt-log-item">
-              <span className="mt-log-text">{g.name}: {g.rows.map((x) => `${x.title} (${x.days}d)`).join(', ')}</span>
-              {g.rows.map((x) => x.url && <a key={x.key} className="btn sm" href={safeHref(x.url)} target="_blank" rel="noreferrer" title={`Open ${x.title}`}><Icon name="link-external" small /> {short(x.title)}</a>)}
-              <button className="btn sm" title="Copy a reminder message" onClick={() => copyText(nudgeText(g), 'Nudge copied')}><Icon name="copy" small /> Copy nudge</button>
-            </div>
-          ))}
+          <Section label="Waiting on" count={waiting.length} />
+          <div className="as-group">
+            {waiting.map((g) => {
+              const links = g.rows.filter((x) => x.url);
+              return (
+                <Row
+                  key={g.name}
+                  lines={2}
+                  title={g.name}
+                  meta={g.rows.map((x) => `${x.title} (${x.days}d)`).join(', ')}
+                  onClick={() => copyText(nudgeText(g), 'Nudge copied')}
+                  action={links.length > 0 ? <More>{(close) => links.map((x) => <MenuItem key={x.key} href={safeHref(x.url!)} onClick={close}>Open {x.title}</MenuItem>)}</More> : undefined}
+                />
+              );
+            })}
+          </div>
         </section>
       )}
       {empty && <EmptyState size="sm" icon="calendar" title="Nothing to review." />}
