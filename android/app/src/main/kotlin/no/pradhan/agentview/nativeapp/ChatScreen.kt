@@ -57,10 +57,13 @@ fun ChatScreen(hub: Hub) {
             subtitle = {
                 val toneColor = when (status.tone) { Tone2.Running -> av.accentText; Tone2.Needs -> av.warn; Tone2.Failed -> av.err; Tone2.Idle -> av.fgMuted }
                 val muted = av.fgMuted
-                val line = remember(status, cost, toneColor, muted) {
+                val usage = session?.usage
+                val warn = av.warn
+                val line = remember(status, cost, toneColor, muted, usage) {
                     buildAnnotatedString {
                         withStyle(SpanStyle(color = toneColor)) { append(status.text) }
                         costLabel(cost).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = muted)) { append(" · $it") } }
+                        usageText(usage).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = if (usageHigh(usage)) warn else muted)) { append(" · $it") } }
                     }
                 }
                 WordClamp(line, Type.subheadline, muted, 2)

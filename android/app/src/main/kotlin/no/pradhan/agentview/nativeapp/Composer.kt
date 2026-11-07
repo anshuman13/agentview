@@ -106,7 +106,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 AttachButton(hub, { uploading += it }) { path -> val t = appendWord(text.text, "[Image: $path] "); set(TextFieldValue(t, TextRange(t.length))) }
                 Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
                     val account = session?.account ?: "main"
-                    if ((session?.accounts?.size ?: 0) > 1 || account != "main") Chip(ACCOUNT_LABEL[account] ?: account, { sheet = Picker.Account }, tone = if (account == "main") ChipTone.Personal else ChipTone.Work)
+                    if ((session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null) Chip(ACCOUNT_LABEL[account] ?: account, { hub.refreshUsage(); sheet = Picker.Account }, late = usageHigh(session?.usage), tone = if (account == "main") ChipTone.Personal else ChipTone.Work)
                     Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode })
                     Chip(shortModel(modelName(session)), { sheet = Picker.Model })
                     session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it, { sheet = Picker.Effort }) }
@@ -127,7 +127,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
         Picker.Mode -> PickerSheet("Permission mode", PERMISSION_MODES.map { Choice(it, MODES[it]?.label ?: it, MODES[it]?.detail ?: "") }, session?.permissionMode ?: "default", { hub.setMode(it) }) { sheet = null }
         Picker.Model -> PickerSheet("Select model", (session?.models ?: emptyList()).map { Choice(it.value, it.displayName, it.description) }, if (session?.team == true) "team" else session?.model, { hub.setModel(it) }) { sheet = null }
         Picker.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { sheet = null }
-        Picker.Account -> PickerSheet("Select Claude account", (session?.accounts ?: emptyList()).map { Choice(it, ACCOUNT_LABEL[it] ?: it, ACCOUNT_NOTE[it] ?: "") }, session?.account ?: "main", { hub.setAccount(it) }) { sheet = null }
+        Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { sheet = null }
         null -> {}
     }
 }

@@ -391,6 +391,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun setModel(model: String) = post(setModelCmd(model), store.wanted)
     fun setEffort(effort: String) = post(setEffortCmd(effort), store.wanted)
     fun setAccount(account: String) = post(setAccountCmd(account), store.wanted)
+    fun refreshUsage() = post(usageCmd(), store.wanted)
     fun setMode(mode: String) = post(setModeCmd(mode), store.wanted)
 
     fun loadEarlier() {

@@ -9,6 +9,11 @@ val PERMISSION_MODES = listOf("default", "acceptEdits", "plan", "auto", "dontAsk
 val EFFORT_LEVELS = listOf("low", "medium", "high", "xhigh", "max")
 val ACCOUNT_LABEL = mapOf("main" to "Personal", "alt" to "Work", "alt2" to "Work Enterprise")
 val ACCOUNT_NOTE = mapOf("alt2" to "Documents only, not for coding")
+// The plan usage of the chat's account, as "Week 45% · 5-hour 12%".
+fun usageText(u: PlanUsage?) = listOfNotNull(u?.week?.let { "Week ${it.pct.toInt()}%" }, u?.fiveHour?.let { "5-hour ${it.pct.toInt()}%" }).joinToString(" · ")
+
+fun usageHigh(u: PlanUsage?) = maxOf(u?.week?.pct ?: 0.0, u?.fiveHour?.pct ?: 0.0) >= 80
+
 val EFFORT_LABEL = mapOf("low" to "Low", "medium" to "Medium", "high" to "High", "xhigh" to "Extra high", "max" to "Max")
 
 class ModeInfo(val label: String, val detail: String)

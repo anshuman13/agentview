@@ -104,7 +104,14 @@ data class SessionInfo(
     val mcp: List<McpServer> = emptyList(),
     val account: String? = null,
     val accounts: List<String> = emptyList(),
+    val usage: PlanUsage? = null,
 )
+
+@Serializable
+data class UsageWindow(val pct: Double = 0.0)
+
+@Serializable
+data class PlanUsage(val fiveHour: UsageWindow? = null, val week: UsageWindow? = null)
 
 data class AskOption(val label: String, val description: String = "", val preview: String? = null)
 data class Ask(val question: String, val header: String, val multiSelect: Boolean, val options: List<AskOption>)
@@ -241,6 +248,7 @@ fun allowBlockedCmd(id: String) = cmd("allow_blocked") { put("id", id) }
 fun sendNowCmd(id: String) = cmd("send_now") { put("id", id) }
 fun setModelCmd(model: String) = cmd("set_model") { put("model", model) }
 fun setEffortCmd(effort: String) = cmd("set_effort") { put("effort", effort) }
+fun usageCmd() = cmd("usage")
 fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
 fun newSessionCmd(profile: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile) }
