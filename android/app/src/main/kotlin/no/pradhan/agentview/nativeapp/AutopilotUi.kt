@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -176,23 +175,21 @@ private fun ActivitySheet(s: AutopilotState, items: List<Row>, now: Long, onTask
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val spend = spendLine(s)
     Sheet(close, padded = false) {
-        Column {
-            if (s.replies.isNotEmpty()) {
-                SectionHeader("Seen", s.replies.size.toString())
-                Group {
-                    (if (all) s.replies else s.replies.take(5)).forEachIndexed { i, r ->
-                        if (i > 0) Hairline()
-                        val (label, kind) = replyBadge(r, items)
-                        val link = safeHref(r.url)
-                        val task = items.firstOrNull { !it.deleted && ((r.id.isNotEmpty() && it.id == r.id) || (r.url != null && it.sourceUrl == r.url)) }
-                        ListRow("${r.who ?: ""}${if (r.chat != null) " · ${r.chat}" else ""}", if (r.text != null) "${autopilotWhen(r.at, now)} · ${r.text}" else autopilotWhen(r.at, now),
-                            onClick = if (task != null) ({ close(); onTask(task) }) else link?.let { l -> { uri.openUri(l) } },
-                            trailing = { Badge(label, when (kind) { "waiting" -> BadgeTone.Waiting; "sent", "done" -> BadgeTone.Done; "failed" -> BadgeTone.Failed; else -> BadgeTone.Quiet }) })
-                    }
-                    if (!all && s.replies.size > 5) { Hairline(); ListRow("Show all ${s.replies.size}", onClick = { all = true }) }
+        if (s.replies.isNotEmpty()) {
+            SectionHeader("Seen", s.replies.size.toString())
+            Group {
+                (if (all) s.replies else s.replies.take(5)).forEachIndexed { i, r ->
+                    if (i > 0) Hairline()
+                    val (label, kind) = replyBadge(r, items)
+                    val link = safeHref(r.url)
+                    val task = items.firstOrNull { !it.deleted && ((r.id.isNotEmpty() && it.id == r.id) || (r.url != null && it.sourceUrl == r.url)) }
+                    ListRow("${r.who ?: ""}${if (r.chat != null) " · ${r.chat}" else ""}", if (r.text != null) "${autopilotWhen(r.at, now)} · ${r.text}" else autopilotWhen(r.at, now),
+                        onClick = if (task != null) ({ close(); onTask(task) }) else link?.let { l -> { uri.openUri(l) } },
+                        trailing = { Badge(label, when (kind) { "waiting" -> BadgeTone.Waiting; "sent", "done" -> BadgeTone.Done; "failed" -> BadgeTone.Failed; else -> BadgeTone.Quiet }) })
                 }
+                if (!all && s.replies.size > 5) { Hairline(); ListRow("Show all ${s.replies.size}", onClick = { all = true }) }
             }
-            if (spend.isNotEmpty()) { SectionHeader("Spend"); Text(spend, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted) }
         }
+        if (spend.isNotEmpty()) { SectionHeader("Spend"); Text(spend, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted) }
     }
 }

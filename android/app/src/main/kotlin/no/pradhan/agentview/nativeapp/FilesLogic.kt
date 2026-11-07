@@ -51,8 +51,10 @@ private val BY_NAME = mapOf(
     ".gitignore" to Kind(FileHue.Gray, "git"), ".gitattributes" to Kind(FileHue.Gray, "git"),
     ".npmrc" to Kind(FileHue.Gray, "cfg"), ".nvmrc" to Kind(FileHue.Gray, "cfg"), ".editorconfig" to Kind(FileHue.Gray, "cfg"),
     ".prettierrc" to Kind(FileHue.Gray, "cfg"), ".eslintrc" to Kind(FileHue.Gray, "cfg"),
-    "readme" to Kind(FileHue.Gray, "readme"), "changelog" to Kind(FileHue.Gray, "log"), "procfile" to Kind(FileHue.Gray, "proc"),
+    "procfile" to Kind(FileHue.Gray, "proc"),
 )
+
+private val BARE = mapOf("readme" to Kind(FileHue.Gray, "readme"), "changelog" to Kind(FileHue.Gray, "log"))
 
 private val BY_EXT = listOf(
     re("^readme\\.mdx?$") to Kind(FileHue.Blue, "readme"),
@@ -83,7 +85,7 @@ private val BY_EXT = listOf(
 
 private fun fileKind(name: String): Pair<Kind?, String> {
     val base = name.substringAfterLast('/').lowercase()
-    val kind = BY_NAME[base] ?: BY_NAME[base.substringBefore('.')] ?: BY_EXT.firstOrNull { it.first.containsMatchIn(base) }?.second
+    val kind = BY_NAME[base] ?: BY_NAME[base.substringBefore('.')] ?: BY_EXT.firstOrNull { it.first.containsMatchIn(base) }?.second ?: BARE[base]
     return kind to base
 }
 

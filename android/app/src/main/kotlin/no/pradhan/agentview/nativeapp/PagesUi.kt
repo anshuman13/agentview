@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -102,7 +101,7 @@ fun FileTag(name: String, dir: Boolean = false) {
         FileHue.Green -> c.fileGreen; FileHue.Red -> c.fileRed; FileHue.Pink -> c.filePink; FileHue.Cyan -> c.fileCyan
         FileHue.Gray -> c.fileGray; FileHue.Folder -> c.fileFolder
     }
-    Text(fileTag(name), style = Mono.copy(fontSize = Tokens.fsCaption2), color = color, maxLines = 1, softWrap = false, modifier = Modifier.wrapContentWidth(unbounded = true))
+    Text(fileTag(name), style = Mono.copy(fontSize = Tokens.fsCaption2), color = color, maxLines = 1, softWrap = false)
 }
 
 @Composable

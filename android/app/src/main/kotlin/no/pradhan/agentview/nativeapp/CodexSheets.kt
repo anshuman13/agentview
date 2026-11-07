@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -233,22 +232,20 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActi
     LaunchedEffect(onlyStale, old.size) { if (onlyStale && old.isEmpty()) onlyStale = false }
     LaunchedEffect(needs.size, queue.size) { if (needs.isEmpty() && queue.isEmpty()) onDismiss() }
     Sheet(onDismiss, padded = false) {
-        Column {
-            SectionHeader("Needs you", (needs.size + queue.size).toString())
-            val groups = listOf("Tasks" to needs.filter { it.isTask }, "Asks" to needs.filter { !it.isTask }).filter { it.second.isNotEmpty() }
-            groups.forEach { (label, rows) ->
-                SectionHeader(label, rows.size.toString())
-                val shown = if (label in all) rows else rows.take(NEEDS_CAP)
-                Group {
-                    shown.forEachIndexed { i, n ->
-                        if (i > 0) Hairline()
-                        NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson)
-                    }
-                    if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
+        SectionHeader("Needs you", (needs.size + queue.size).toString())
+        val groups = listOf("Tasks" to needs.filter { it.isTask }, "Asks" to needs.filter { !it.isTask }).filter { it.second.isNotEmpty() }
+        groups.forEach { (label, rows) ->
+            SectionHeader(label, rows.size.toString())
+            val shown = if (label in all) rows else rows.take(NEEDS_CAP)
+            Group {
+                shown.forEachIndexed { i, n ->
+                    if (i > 0) Hairline()
+                    NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson)
                 }
+                if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
             }
-            ReplySection(if (filtered) old else queue, filtered, { onlyStale = false }, now, actions, replies, onOpen)
         }
+        ReplySection(if (filtered) old else queue, filtered, { onlyStale = false }, now, actions, replies, onOpen)
     }
 }
 

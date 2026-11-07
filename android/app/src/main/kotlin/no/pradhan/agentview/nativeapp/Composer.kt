@@ -166,13 +166,11 @@ private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, gly
 @Composable
 private fun PickerSheet(title: String, items: List<Choice>, current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     Sheet(onDismiss, padded = false, full = false) {
-        Column {
-            SectionHeader(title)
-            for (c in items) ListRow(
-                c.label, c.detail,
-                onClick = { onPick(c.value); onDismiss() },
-                trailing = if (c.value == current) { { Icon(Icons.Filled.Check, "Selected", Modifier.size(Tokens.icon), tint = av.accentText) } } else null,
-            )
-        }
+        SectionHeader(title)
+        for (c in items) ListRow(
+            c.label, c.detail,
+            onClick = { onPick(c.value); onDismiss() },
+            trailing = if (c.value == current) { { Icon(Icons.Filled.Check, "Selected", Modifier.size(Tokens.icon), tint = av.accentText) } } else null,
+        )
     }
 }

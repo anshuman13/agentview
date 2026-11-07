@@ -179,7 +179,7 @@ fun ListRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp6),
     ) {
-        if (leading != null) Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.Center) { CompositionLocalProvider(LocalContentColor provides av.fgMuted) { leading() } }
+        if (leading != null) Box(Modifier.widthIn(min = Tokens.leadWidth), contentAlignment = Alignment.Center) { CompositionLocalProvider(LocalContentColor provides av.fgMuted) { leading() } }
         Column(Modifier.weight(1f)) {
             val color = if (strike || muted) av.fgMuted else av.fg
             val deco = if (strike) TextDecoration.LineThrough else null
