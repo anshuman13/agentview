@@ -263,7 +263,7 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-search input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); box-shadow: none; }
 .as-search input:focus { outline: none; box-shadow: none; }
 /* Floating add, like TickTick: sticks to the bottom right of the task list. */
-.as-fab { position: sticky; bottom: var(--sp-4); z-index: var(--z-raised); align-self: flex-end; display: grid; place-items: center; flex: none; width: 56px; height: 56px; margin: auto 0 0; padding: 0; border: 0; border-radius: var(--radius-round); background: var(--accent); color: #fff; box-shadow: var(--shadow-md); cursor: pointer; }
+.as-fab { position: sticky; bottom: var(--sp-4); z-index: var(--z-raised); align-self: flex-end; display: grid; place-items: center; flex: none; width: 56px; height: 56px; margin: auto 0 0; padding: 0; border: 0; border-radius: var(--radius-round); background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow-md); cursor: pointer; }
 .as-fab .codicon { font-size: 24px; }
 .as-fab:active { transform: scale(0.94); }
 .as-quick { padding-top: var(--sp-8); gap: var(--sp-3); overflow: visible; }
@@ -277,7 +277,7 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-quick-voice .icon-btn { width: var(--touch); height: var(--touch); color: var(--fg-muted); }
 .as-quick-voice .icon-btn .codicon { font-size: 22px; }
 .as-quick-voice .icon-btn.on { color: var(--err); }
-.as-quick-send { display: grid; place-items: center; width: 48px; height: 36px; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--accent); color: #fff; cursor: pointer; }
+.as-quick-send { display: grid; place-items: center; width: 48px; height: 36px; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); cursor: pointer; }
 .as-quick-send:disabled { opacity: 0.4; }
 /* Priority flags and tags, coloured like TickTick's: high red, medium orange, low blue. */
 .as-flag { flex: none; color: var(--fg-muted); }
