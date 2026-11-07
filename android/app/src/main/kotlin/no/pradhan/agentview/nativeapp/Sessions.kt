@@ -1,14 +1,12 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,10 +30,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.ui.draw.rotate
 
 private const val RECENT = 5
 
@@ -167,9 +162,7 @@ class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit
 @Composable
 private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, onToggle: () -> Unit) {
     val glance = groupGlance(g, seen)
-    Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).heightIn(min = Tokens.touch).padding(horizontal = Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon).rotate(if (open) 90f else 0f), tint = av.fgMuted)
-        Text(g.name, Modifier.weight(1f), style = Type.headline, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    SectionHeader(g.name, open = open, onToggle = onToggle, style = Type.headline, titleColor = av.fg, action = {
         if (open) {
             if (g.running > 0) Badge("${g.running}", BadgeTone.Running)
             if (g.waiting > 0) Badge("${g.waiting}", BadgeTone.Waiting)
@@ -180,7 +173,7 @@ private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, on
             if (glance.unread > 0) Badge("${glance.unread}", BadgeTone.Quiet)
             if (glance.last > 0) RowLabel(since(glance.last), av.fgFaint)
         }
-    }
+    })
 }
 
 @Composable
