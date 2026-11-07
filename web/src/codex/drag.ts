@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { haptic } from '../ui/haptic';
 
 export type Drop = { section: string; index: number };
 export type Drag<T> = { item: T; key: string; title: string; x: number; y: number; over: Drop | null };
@@ -47,7 +48,7 @@ export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: Reac
     };
     const begin = () => {
       on = active = true;
-      if (touch) navigator.vibrate?.(10);
+      if (touch) haptic('tap');
       show();
       frame = requestAnimationFrame(scroll);
     };
@@ -86,7 +87,10 @@ export function useDrag<T>(onDrop: (item: T, drop: Drop) => void, scroller: Reac
       const over = locate(pos.x, pos.y, key, attr);
       setDrag(null);
       if (touch && !moved && hold.current) hold.current(item);
-      else if (over) drop.current(item, over);
+      else if (over) {
+        if (touch) haptic('tap');
+        drop.current(item, over);
+      }
     };
     const cancel = () => { stop(); if (on) { active = false; setDrag(null); } };
     window.addEventListener(moveEv, onMove, { passive: false });

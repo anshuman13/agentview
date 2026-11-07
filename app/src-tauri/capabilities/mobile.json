@@ -1,0 +1,6 @@
+{
+  "identifier": "mobile",
+  "windows": ["main"],
+  "platforms": ["android", "iOS"],
+  "permissions": ["haptics:default"]
+}

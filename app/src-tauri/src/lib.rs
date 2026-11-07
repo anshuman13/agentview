@@ -88,7 +88,10 @@ fn assistant_query(store: State<Store>, sql: String, params: Vec<Value>) -> Resu
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(mobile)]
+    let builder = builder.plugin(tauri_plugin_haptics::init());
+    builder
         .manage(Store::new())
         .invoke_handler(tauri::generate_handler![assistant_open, assistant_close, assistant_dev_key, assistant_batch, assistant_exec, assistant_exec_many, assistant_query])
         .plugin(tauri::plugin::Builder::<tauri::Wry>::new("agentview-nav").on_navigation(navigate).build())
