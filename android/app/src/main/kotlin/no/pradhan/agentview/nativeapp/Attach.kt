@@ -46,9 +46,9 @@ private fun shrunkJpeg(file: File): ByteArray? {
 
 private fun readUri(ctx: Context, uri: Uri) = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 
-// The add button with Take photo and Choose photo; each image is uploaded to the Mac and its path handed to onPath.
+// The add button with Take photo and Choose photo, or with choose off a camera button; each image is uploaded to the Mac and its path handed to onPath.
 @Composable
-fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Unit) {
+fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, onPath: (String) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
@@ -73,15 +73,18 @@ fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Unit)
         if (ok) upload("camera.jpg", "image/jpeg") { shrunkJpeg(shot) }
     }
 
+    val takePhoto = {
+        shot.delete()
+        runCatching { camera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", shot)) }
+            .onFailure { hub.notice.value = "No camera app to take a photo" }
+        Unit
+    }
+
+    if (!choose) return IconBtn("device-camera", "Take photo", takePhoto)
     Box {
         IconBtn("add", "Attach image", { open = true })
         Menu(open, { open = false }) {
-            MenuItem("Take photo", "device-camera", {
-                open = false
-                shot.delete()
-                runCatching { camera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", shot)) }
-                    .onFailure { hub.notice.value = "No camera app to take a photo" }
-            })
+            MenuItem("Take photo", "device-camera", { open = false; takePhoto() })
             MenuItem("Choose photo", "file-media", {
                 open = false
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))

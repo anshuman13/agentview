@@ -207,7 +207,7 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
             recipes.forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title, onClick = { text = r.text }) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
-            AttachButton(hub, { uploading += it }) { path -> text = appendWord(text, "[Image: $path] ") }
+            AttachButton(hub, { uploading += it }, choose = false) { path -> text = appendWord(text, "[Image: $path] ") }
             TextField(text, { text = it }, Modifier.weight(1f), placeholder = if (uploading > 0) "Uploading image..." else "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
             val dictation = remember { Dictation() }
