@@ -8,6 +8,7 @@ import { listOf, type Meeting } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
 import { Menu, MenuItem } from '../../ui/Menu';
+import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { plural, safeHref } from '../../ui/util';
 import { clock } from '../time';
@@ -84,17 +85,13 @@ export function SeriesPage({ series }: { series: string }) {
                 )} /></div> : <p className="mt-pending">Nothing open</p>}
               </section>
               <section className="mt-sec">
-                <h2>Occurrences</h2>
-                <div className="mt-series-list">
+                <Section label="Occurrences" count={members.length} />
+                <div className="as-group">
                   <Capped items={members} render={(m) => {
                     const decisions = listOf(m.decisions).length;
                     const left = openCount(m);
-                    return (
-                      <button key={m.profile + m.id} className={`mt-log-item${meetingState(m, now) === 'missing' ? ' muted' : ''}`} onClick={() => openMeeting(m)}>
-                        <span className="mt-log-text">{day(m)}, {clock(m.starts_at!)}</span>
-                        {(decisions > 0 || left > 0) && <span className="mt-log-from">{[decisions > 0 && plural(decisions, 'decision'), left > 0 && `${left} open`].filter(Boolean).join(', ')}</span>}
-                      </button>
-                    );
+                    const meta = [decisions > 0 && plural(decisions, 'decision'), left > 0 && `${left} open`].filter(Boolean).join(', ');
+                    return <Row key={m.profile + m.id} className={meetingState(m, now) === 'missing' ? 'mt-occ muted' : 'mt-occ'} title={`${day(m)}, ${clock(m.starts_at!)}`} meta={meta || undefined} onClick={() => openMeeting(m)} />;
                   }} />
                 </div>
               </section>

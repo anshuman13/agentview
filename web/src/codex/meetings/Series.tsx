@@ -4,6 +4,8 @@ import { dayLabel } from '../data/dates';
 import { seriesRepeats } from '../data/meetings';
 import type { ItemRow } from '../data/sync';
 import { listOf, type Meeting } from '../data/wiki';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { openMeeting } from '../view';
 
 export function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
@@ -19,17 +21,17 @@ export function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
   const decisions = prior.slice(0, 3).flatMap((x) => listOf(x.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ x, text })));
   return (
     <section className="mt-sec">
-      <h2>Series</h2>
+      <Section label="Series" />
       <p className="mt-series">{prior.length} earlier, last on {date(prior[0])}</p>
-      {repeats.decisions.length + repeats.questions.length > 0 && <div className="mt-series-list">
-        {repeats.decisions.map((text, i) => <button key={`d${i}`} className="mt-log-item" onClick={() => openMeeting(prior[0])}><span className="mt-log-text">{text}</span><span className="mt-log-from">Decided again, also on {date(prior[0])}</span></button>)}
-        {repeats.questions.map((text, i) => <button key={`q${i}`} className="mt-log-item" onClick={() => openMeeting(prior[0])}><span className="mt-log-text">{text}</span><span className="mt-log-from">Asked again, also on {date(prior[0])}</span></button>)}
+      {repeats.decisions.length + repeats.questions.length > 0 && <div className="as-group">
+        {repeats.decisions.map((text, i) => <Row key={`d${i}`} lines={2} title={text} meta={`Decided again, also on ${date(prior[0])}`} onClick={() => openMeeting(prior[0])} />)}
+        {repeats.questions.map((text, i) => <Row key={`q${i}`} lines={2} title={text} meta={`Asked again, also on ${date(prior[0])}`} onClick={() => openMeeting(prior[0])} />)}
       </div>}
-      {decisions.length > 0 && <div className="mt-series-list">{decisions.map(({ x, text }, i) => (
-        <button key={i} className="mt-log-item" onClick={() => openMeeting(x)}><span className="mt-log-text">{text}</span><span className="mt-log-from">Decided {date(x)}</span></button>
+      {decisions.length > 0 && <div className="as-group">{decisions.map(({ x, text }, i) => (
+        <Row key={i} lines={2} title={text} meta={`Decided ${date(x)}`} onClick={() => openMeeting(x)} />
       ))}</div>}
-      {undone.length > 0 && <div className="mt-series-list">{undone.map(({ x, r }) => (
-        <button key={r.profile + r.id} className="mt-log-item" onClick={() => openMeeting(x)}><span className="mt-log-text">{r.title || r.text}</span><span className="mt-log-from">Still open from {date(x)}</span></button>
+      {undone.length > 0 && <div className="as-group">{undone.map(({ x, r }) => (
+        <Row key={r.profile + r.id} lines={2} title={r.title || r.text} meta={`Still open from ${date(x)}`} onClick={() => openMeeting(x)} />
       ))}</div>}
     </section>
   );

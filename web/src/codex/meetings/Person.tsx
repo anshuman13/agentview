@@ -8,6 +8,7 @@ import { useActions } from '../useActions';
 import { Icon } from '../../ui/Icon';
 import { Button } from '../../ui/Button';
 import { MenuItem } from '../../ui/Menu';
+import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { CardRow } from '../overview/CardRow';
 import { dueText, taskMenu } from '../Task';
@@ -131,8 +132,8 @@ export function Person({ name }: { name: string }) {
       </header>
       <div className="wk-scroll">
         <article className="mt-page">
-          <div className="mt-person-head"><Avatars people={[shown]} /><div><h1 className="wk-title">{shown}</h1>{email && <div className="muted small">{email}</div>}</div></div>
-          <div className="wk-meta mt-when"><span>{plural(mine.length, 'meeting')}</span></div>
+          <Section label={shown} />
+          <Row plain leading={<Avatars people={[shown]} />} title={email || plural(mine.length, 'meeting')} meta={email ? plural(mine.length, 'meeting') : undefined} />
 
           {inbox.dm && (
             <section className="mt-sec">

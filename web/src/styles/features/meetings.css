@@ -63,7 +63,6 @@
 .mt-wk-sec { display: flex; flex-direction: column; gap: var(--sp-4); }
 /* Meeting page */
 .mt-page { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }
-.mt-when { margin-top: var(--sp-6); font-size: var(--fs-md); }
 .mt-people { padding: 0 var(--list-pad); margin-top: var(--sp-4); font-size: var(--fs-md); color: var(--fg-muted); }
 .mt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: 0 var(--list-pad); }
 .mt-more { position: relative; }
@@ -82,7 +81,6 @@
 .mt-add-notes { display: inline-flex; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: transparent; font-family: inherit; font-style: normal; cursor: pointer; }
 @media (hover: hover) { .mt-add-notes:hover { color: var(--fg-muted); } }
 .mt-series { margin: 0 0 var(--sp-4); font-size: var(--fs-md); color: var(--fg-muted); }
-.mt-series-list { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-4); }
 .mt-decisions { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sp-5); }
 .mt-decisions li { position: relative; padding-left: var(--sp-12); font-size: 16px; line-height: 1.5; }
 .mt-decisions li::before { content: ''; position: absolute; left: 2px; top: 0.45em; width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--c-meeting) 60%, transparent); }
@@ -149,8 +147,8 @@
 .mt-pin-btn { position: fixed; z-index: 50; transform: translateX(-50%); box-shadow: var(--shadow-sm); }
 .mt-pins .wk-claim::marker { color: var(--c-knowledge); }
 .mt-pins .wk-claim-text { white-space: pre-wrap; }
-.mt-person-head { display: flex; align-items: center; gap: var(--sp-6); }
-.mt-person-head .mt-avatars > span { width: 36px; height: 36px; font-size: 13px; }
 .mt-topic-new { margin-left: var(--sp-2); padding: 0 var(--sp-2); border-radius: var(--radius-pill); background: var(--hover); color: var(--fg-strong); font-size: var(--fs-xs); }
 .mt-series-from { margin: 0 0 var(--sp-4) var(--sp-5); font-size: var(--fs-xs); color: var(--fg-muted); }
-.mt-log-item.muted .mt-log-text { color: var(--fg-muted); }
+.mt-occ.muted .ui-row-title { color: var(--fg-muted); }
+.mt-sec .as-group > .ui-row:last-child::after { display: none; }
+.mt-sec .as-group > .ov-more { margin: var(--sp-3) var(--sp-5); }

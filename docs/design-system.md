@@ -284,11 +284,11 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-list | codex/GoalsPage.tsx, codex/Search.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/summary/Summary.tsx | Grouped list | Todo |
 | mt-load-head | codex/Goals.tsx, codex/meetings/Review.tsx | Section header | Partial |
 | mt-load-row | - | Row | Done |
-| mt-log-item | codex/meetings/Decisions.tsx, codex/meetings/Review.tsx, codex/meetings/Series.tsx, codex/meetings/SeriesPage.tsx | Row | Partial |
-| mt-person-head | codex/meetings/Person.tsx | Section header | Todo |
+| mt-log-item | codex/meetings/Decisions.tsx, codex/meetings/Review.tsx | Row | Partial |
+| mt-person-head | - | Section header | Done |
 | mt-row | CSS only | Row (delete the unused rule) | Done |
 | mt-rows | none | Grouped list | Done |
-| mt-series-list | codex/meetings/Series.tsx, codex/meetings/SeriesPage.tsx | Grouped list | Todo |
+| mt-series-list | - | Grouped list | Done |
 | mt-up-head | codex/meetings/MeetingList.tsx | Section header | Todo |
 | obs-head, obs-subhead | ops/Observe.tsx | Section header | Todo |
 | ov-ask-line | codex/DoNow.tsx, codex/NeedsYou.tsx, codex/WeeklyReview.tsx, codex/meetings/Person.tsx, codex/overview/CardRow.tsx, codex/overview/ReplyQueue.tsx, codex/summary/Summary.tsx | Row | Todo |
