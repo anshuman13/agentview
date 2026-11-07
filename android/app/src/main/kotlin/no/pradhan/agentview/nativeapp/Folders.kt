@@ -32,6 +32,8 @@ fun folderKey(cwd: String, repos: List<Repo>, trees: List<Worktree>): String {
     return repos.map { it.cwd }.sortedByDescending { it.length }.firstOrNull { inside(cwd, it) } ?: cwd
 }
 
+fun segmentOf(key: String) = if (key.contains("/workspace_personal/") || key.endsWith("/workspace_personal")) PERSONAL else WORK
+
 fun folderName(key: String) = key.substringAfterLast('/').ifEmpty { key }
 
 fun isDefaultBranch(b: String?) = b.isNullOrEmpty() || b == "main" || b == "master"

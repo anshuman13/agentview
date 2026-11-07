@@ -215,6 +215,13 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         prefs.edit().putString("questionsResolved", encodeResolved(next)).apply()
     }
 
+    val chatSegment = MutableStateFlow(prefs.getString("chatSegment", null) ?: WORK)
+
+    fun setChatSegment(value: String) {
+        chatSegment.value = value
+        prefs.edit().putString("chatSegment", value).apply()
+    }
+
     fun setCodexFilter(value: String) {
         codexFilter.value = value
         prefs.edit().putString("codexFilter", value).apply()

@@ -37,6 +37,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val ws by hub.workspace.collectAsState()
     val connected by hub.connected.collectAsState()
     val collapsed: Map<String, Boolean> by hub.collapsed.collectAsState()
+    val segment by hub.chatSegment.collectAsState()
     var filter by rememberSaveable { mutableStateOf("") }
     val full = remember { mutableStateListOf<String>() }
     var opening by remember { mutableStateOf<String?>(null) }
@@ -47,7 +48,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     LaunchedEffect(Unit) { hub.refreshWorkspace() }
 
     val live = state.live
-    val groups = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
+    val all = remember(live, ws, filter) { groupByRepo(live, ws, filter) }
+    val groups = remember(all, segment) { all.filter { segmentOf(it.key) == segment } }
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
     val waiting = remember(live) { live.filter { it.pending > 0 }.sortedWith(byUrgency) }
     val saved = remember(ws.saved) { ws.saved.associateBy { it.sessionId } }
@@ -111,12 +113,17 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         PageHeader("Sessions") { IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
         SearchField(filter, { filter = it }, "Search repos and sessions")
+        Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            listOf(WORK, PERSONAL).forEach { k ->
+                Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
+            }
+        }
         if (live.isEmpty() && ws.saved.isEmpty()) {
             EmptyState(if (connected) "No sessions yet" else "Waiting for the server", if (connected) null else "Check the Mac address.")
             return@Column
         }
         if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty()) {
-            EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No sessions yet")
+            EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
             return@Column
         }
         LazyColumn(Modifier.fillMaxSize()) {
