@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handle(intent: Intent) {
+        if (intent.hasExtra("readonly")) hub.readOnly = intent.getBooleanExtra("readonly", false)
         intent.getStringExtra("origin")?.takeIf { it.isNotBlank() && it.trim().trimEnd('/') != hub.origin.value }?.let(hub::saveOrigin)
         parseDeepLink(intent.dataString)?.let { hub.link.value = it }
     }

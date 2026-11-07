@@ -1,0 +1,70 @@
+package no.pradhan.agentview.nativeapp
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.URLEncoder
+
+class ApiError(message: String) : Exception(message)
+
+fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
+
+// The REST routes of server/src/http/routes.ts that the chat screens read and write.
+class Api(private val origin: () -> String, private val http: OkHttpClient = OkHttpClient()) {
+    private suspend fun call(req: Request.Builder): ByteArray = withContext(Dispatchers.IO) {
+        http.newCall(req.build()).execute().use { r ->
+            val body = r.body.bytes()
+            if (!r.isSuccessful) {
+                val msg = runCatching { protocolJson.parseToJsonElement(body.decodeToString()).jsonObject["error"]?.jsonPrimitive?.contentOrNull }.getOrNull()
+                throw ApiError(msg ?: "Server said ${r.code}")
+            }
+            body
+        }
+    }
+
+    private fun url(path: String) = Request.Builder().url(origin() + path)
+    private val json = "application/json".toMediaType()
+
+    private suspend fun <T> list(path: String, ser: KSerializer<T>) = protocolJson.decodeFromString(ListSerializer(ser), call(url(path)).decodeToString())
+
+    suspend fun sessions() = list("/api/sessions", SavedSession.serializer())
+    suspend fun repos() = list("/api/repos", Repo.serializer())
+    suspend fun worktrees() = list("/api/worktrees", Worktree.serializer())
+    suspend fun pins() = list("/api/sessions/pins", String.serializer())
+    suspend fun seen(): Map<String, Long> = protocolJson.decodeFromString(MapSerializer(String.serializer(), Long.serializer()), call(url("/api/sessions/seen")).decodeToString())
+
+    suspend fun markSeen(sessionId: String) { call(url("/api/sessions/seen?id=${enc(sessionId)}").post("".toRequestBody())) }
+    suspend fun pin(sessionId: String, on: Boolean) {
+        val req = url("/api/sessions/pins?id=${enc(sessionId)}")
+        call(if (on) req.post("".toRequestBody()) else req.delete())
+    }
+
+    suspend fun rename(sessionId: String, title: String) {
+        val body = buildJsonObject { put("title", title) }.toString().toRequestBody(json)
+        call(url("/api/sessions/rename?id=${enc(sessionId)}").post(body))
+    }
+
+    suspend fun archive(sessionId: String) { call(url("/api/sessions?id=${enc(sessionId)}&archive").delete()) }
+
+    suspend fun earlier(chat: String, before: String, limit: Int = ROW_WINDOW): Pair<List<ChatEvent>, Int> =
+        parseEarlier(call(url("/api/chat/events?chat=${enc(chat)}&before=${enc(before)}&limit=$limit")).decodeToString())
+
+    suspend fun paste(name: String, mime: String, bytes: ByteArray): String {
+        val body = call(url("/api/paste?name=${enc(name)}").post(bytes.toRequestBody(mime.toMediaType())))
+        return protocolJson.parseToJsonElement(body.decodeToString()).jsonObject["path"]!!.jsonPrimitive.content
+    }
+
+    suspend fun image(chat: String, path: String): ByteArray = call(url("/api/image?chat=${enc(chat)}&path=${enc(path)}"))
+}
