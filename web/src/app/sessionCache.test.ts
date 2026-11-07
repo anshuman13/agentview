@@ -10,7 +10,7 @@ const es = vi.hoisted(() => {
   return h;
 });
 
-import { connect, getState, send, switchedMac } from './store';
+import { connect, getState, loadEarlier, send, switchedMac } from './store';
 
 const fetchMock = vi.fn((..._args: unknown[]) => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
 vi.stubGlobal('fetch', fetchMock);
@@ -63,6 +63,18 @@ describe('session cache', () => {
     init('a', [...rows('a', 3), ev('a3')]);
     expect(ids()).toEqual(['a0', 'a1', 'a2', 'a3']);
     expect(getState().events.slice(0, 3).every((e, i) => e === cached[i])).toBe(true);
+  });
+
+  it('loads no earlier page for cached rows before their init', async () => {
+    live('a', 'b');
+    init('a', rows('a', 3), 40);
+    view('b');
+    init('b', rows('b', 2));
+    view('a');
+    fetchMock.mockClear();
+    expect(await loadEarlier()).toBe(false);
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/api/chat/events'))).toBe(false);
+    expect(ids()).toEqual(['a0', 'a1', 'a2']);
   });
 
   it('keeps 8 chats: the ninth stored evicts the first', () => {

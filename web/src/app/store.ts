@@ -72,7 +72,8 @@ export async function loadEarlier() {
   const chat = state.session.id;
   const was = boot;
   const first = state.events[0]?.id;
-  if (!first) return false;
+  // After a cache hit the rows belong to the chat being opened while session.id still names the old one.
+  if (!first || shownId !== chat) return false;
   const stale = () => state.session.id !== chat || boot !== was || Boolean(state.ui.restarting);
   try {
     const r = await fetch(api(`/api/chat/events?before=${encodeURIComponent(first)}&limit=${ROW_WINDOW}`));
