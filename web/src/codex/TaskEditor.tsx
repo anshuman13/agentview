@@ -10,7 +10,7 @@ import { Button, Chip, chipClass, IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
-import { ago, fitHeight, reveal, safeHref } from '../ui/util';
+import { fitHeight, reveal, safeHref } from '../ui/util';
 import { clearHistory } from './replyHistory';
 import { copyText, FILTER_LABEL, setView, showSnack } from './view';
 import { useActions } from './useActions';
@@ -141,8 +141,13 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   const [tidying, setTidying] = useState(false);
   const [logging, setLogging] = useState(false);
   const [flagging, setFlagging] = useState(false);
+  const [repeating, setRepeating] = useState(false);
+  const [adder, setAdder] = useState<'priority' | 'repeat' | 'estimate' | null>(null);
+  const [adderOpen, setAdderOpen] = useState(false);
   const [tagging, setTagging] = useState(false);
   const flagBtn = useRef<HTMLButtonElement>(null);
+  const repeatBtn = useRef<HTMLButtonElement>(null);
+  const addBtn = useRef<HTMLButtonElement>(null);
   const tags = tagList(row.tags);
   const setTags = (next: string[]) => act.edit(row, { tags: next.length ? [...new Set(next)].join(' ') : null });
   const box = useRef<HTMLDivElement>(null);
@@ -198,8 +203,18 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
   // Ticking a checklist line flips its box in the notes and saves at once.
   const toggle = (n: number) => { putText(toggleCheck(text, n)); haptic('tap'); };
   const cadence = cadenceOf(text, at);
-  const repeat = (c: Cadence) => { if (c !== 'custom') putText(withRule(text, c === 'never' ? null : cadenceLine(c, at))); };
+  const repeat = (c: Cadence) => { if (c !== 'custom' && c !== cadence) putText(withRule(text, c === 'never' ? null : cadenceLine(c, at))); };
   const addEstimate = (n: number) => putTitle(`${title.trim()} ~${minutesText(n)}`);
+  const closeAdd = () => { setAdderOpen(false); setAdder(null); };
+  const pickPriority = (p: number) => { haptic('tap'); act.edit(row, { priority: p || null }); };
+  const priorityItems = (done: () => void) => PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={(row.priority ?? 0) === p} className="ui-menu-item as-flag-item" onClick={() => { done(); pickPriority(p); }}><Flag priority={p} /><span>{l} priority</span></button>);
+  const repeatItems = (done: () => void) => (
+    <>
+      {([['never', 'Never'], ['daily', 'Daily'], ['weekdays', 'Weekdays'], ['weekly', `Weekly${at != null ? ` on ${new Date(at).toLocaleDateString(undefined, { weekday: 'long' })}` : ''}`], ['monthly', `Monthly${at != null ? ` on the ${new Date(at).getDate()}` : ''}`]] as const).map(([c, l]) => <MenuItem key={c} role="menuitemradio" aria-checked={cadence === c} onClick={() => { done(); repeat(c); }}>{l}</MenuItem>)}
+      {cadence === 'custom' && <MenuItem role="menuitemradio" aria-checked disabled>Custom</MenuItem>}
+    </>
+  );
+  const repeatLabel = { never: 'Never', daily: 'Daily', weekdays: 'Weekdays', weekly: 'Weekly', monthly: 'Monthly', custom: 'Custom' }[cadence];
 
   const logTime = (n: number) => write({ spent: (Number(row.spent) || 0) + n });
   const spent = Number(row.spent) || 0;
@@ -297,6 +312,9 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
                 <>
                   {row.status === 'open' && <MenuItem onClick={() => setSnoozing(true)} icon="clock">Snooze</MenuItem>}
                   {row.status === 'open' && <MenuItem onClick={then(() => act.tomorrow(row))} icon="calendar">Tomorrow</MenuItem>}
+                  {row.status === 'open' && (focused
+                    ? <MenuItem onClick={() => { setMenu(false); stopFocus(); }} icon="debug-stop">Stop focus</MenuItem>
+                    : <MenuItem onClick={() => { setMenu(false); save(); startFocus(row); }} icon="play">Start focus</MenuItem>)}
                   <MenuItem onClick={() => { setMenu(false); move(); }} icon="arrow-swap">Move to {FILTER_LABEL[other]}</MenuItem>
                   {suggested != null && <MenuItem title="Add this estimate, from similar done tasks" onClick={() => { setMenu(false); addEstimate(suggested); }} icon="add">Add estimate ~{minutesText(suggested)}</MenuItem>}
                   {(row.status === 'open' || row.status === 'done') && (
@@ -335,14 +353,14 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             <Icon name="calendar" small /> {dueLabel(at)}{row.remind != null && at != null && <Icon name={row.remind < 0 ? 'bell-slash' : 'bell'} small />}
           </PickDue>
         )}
-        {row.status !== 'note' && (
+        {!!row.priority && (
           <>
-            <Chip ref={flagBtn} quiet on={!!row.priority} aria-label="Priority" title="Priority" aria-haspopup="menu" aria-expanded={flagging} onClick={() => setFlagging(!flagging)}>
-              <Flag priority={row.priority} /> {PRIORITIES.find(([p]) => p === row.priority)?.[1] ?? 'None'}
+            <Chip ref={flagBtn} quiet on aria-label="Priority" title="Priority" aria-haspopup="menu" aria-expanded={flagging} onClick={() => setFlagging(!flagging)}>
+              <Flag priority={row.priority} /> {PRIORITIES.find(([p]) => p === row.priority)?.[1]}
             </Chip>
             {flagging && (
               <Menu trigger={flagBtn} className="as-tt-menu" onClose={() => setFlagging(false)}>
-                {PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={(row.priority ?? 0) === p} className="ui-menu-item as-flag-item" onClick={() => { setFlagging(false); haptic('tap'); act.edit(row, { priority: p || null }); }}><Flag priority={p} /><span>{l} priority</span></button>)}
+                {priorityItems(() => setFlagging(false))}
               </Menu>
             )}
           </>
@@ -353,8 +371,41 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             <IconButton icon="close" label={`Remove #${t}`} small onClick={() => setTags(tags.filter((x) => x !== t))} />
           </span>
         ))}
+        {cadence !== 'never' && (
+          <>
+            <Chip ref={repeatBtn} quiet on icon="sync" aria-label="Repeat" title="Repeat" aria-haspopup="menu" aria-expanded={repeating} disabled={row.status !== 'open'} onClick={() => setRepeating(!repeating)}>{repeatLabel}</Chip>
+            {repeating && (
+              <Menu trigger={repeatBtn} className="as-tt-menu" onClose={() => setRepeating(false)}>
+                {repeatItems(() => setRepeating(false))}
+              </Menu>
+            )}
+          </>
+        )}
         {tagging && <TagInput onAdd={(v) => setTags([...tags, v])} onClose={() => setTagging(false)} />}
-        {!tagging && row.status !== 'note' && <Chip quiet icon="tag" onClick={() => setTagging(true)}>Add tag</Chip>}
+        {!tagging && row.status !== 'note' && (
+          <>
+            <Chip ref={addBtn} quiet icon="add" aria-haspopup="menu" aria-expanded={adderOpen} onClick={() => { setAdderOpen(!adderOpen); setAdder(null); }}>Add</Chip>
+            {adderOpen && (
+              <Menu key={adder ?? 'main'} trigger={addBtn} className="as-tt-menu" onClose={closeAdd}>
+                {adder ? (
+                  <>
+                    <MenuItem onClick={() => setAdder(null)} icon="arrow-left">{{ priority: 'Priority', repeat: 'Repeat', estimate: 'Estimate' }[adder]}</MenuItem>
+                    {adder === 'priority' && priorityItems(closeAdd)}
+                    {adder === 'repeat' && repeatItems(closeAdd)}
+                    {adder === 'estimate' && [15, 30, 60, 120].map((n) => <MenuItem key={n} disabled={!title.trim()} onClick={() => { closeAdd(); addEstimate(n); }}>{minutesText(n)}</MenuItem>)}
+                  </>
+                ) : (
+                  <>
+                    {!row.priority && <MenuItem onClick={() => setAdder('priority')} icon="flag">Priority</MenuItem>}
+                    <MenuItem onClick={() => { closeAdd(); setTagging(true); }} icon="tag">Tag</MenuItem>
+                    {row.status === 'open' && cadence === 'never' && <MenuItem onClick={() => setAdder('repeat')} icon="sync">Repeat</MenuItem>}
+                    {estimate == null && <MenuItem disabled={!title.trim()} onClick={() => setAdder('estimate')} icon="watch">Estimate</MenuItem>}
+                  </>
+                )}
+              </Menu>
+            )}
+          </>
+        )}
       </div>
       <div className="as-tt-body">
         <div className="as-edit-top">
@@ -411,8 +462,8 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
           <Button variant="quiet" size="sm" icon="add" className="as-tt-add" onMouseDown={(e) => e.preventDefault()} onClick={() => setAdding(true)}>Add subtask</Button>
         </div>
         {row.draft && row.source === 'slack' && (row.status === 'suggested' || row.status === 'open') && <Draft row={row} store={store} onEdit={(draft) => act.edit(row, { draft })} />}
-        {(row.people || row.updated_at || estimate != null || spent > 0) && <div className="as-tt-fine">{estimate != null && <span>~{minutesText(estimate)}</span>}{spent > 0 && <span>{minutesText(spent)} spent</span>}{row.people && <span>{row.people}</span>}<span>{ago(row.updated_at, ' ago')}</span></div>}
-        <Fold id="time-log" title="Time log" count={sessions.length}>
+        {(row.people || estimate != null || spent > 0) && <div className="as-tt-fine">{estimate != null && <span>~{minutesText(estimate)}</span>}{spent > 0 && <span>{minutesText(spent)} spent</span>}{row.people && <span>{row.people}</span>}</div>}
+        {(sessions.length > 0 || byHand > 0) && <Fold id="time-log" title="Time log" count={sessions.length || undefined}>
           <div className="as-tt-log">
             {sessions.map((s) => (
               <div key={s.id}>
@@ -423,31 +474,12 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
             ))}
             {byHand > 0 && <div className="as-tt-log-rest"><span>Earlier or added by hand: {minutesText(byHand)}</span></div>}
           </div>
-        </Fold>
+        </Fold>}
         <Fold id="task-history" title="History" count={history.length} remember={false}>
           <div className="as-tt-hist">
             {history.map((h) => <Row key={h.field} disabled title={h.title} meta={historyTime(h.at)} />)}
           </div>
         </Fold>
-      </div>
-      <div className="as-tt-bar">
-        {row.status === 'open' && (
-          <label className={`icon-btn icon-btn-md as-tt-pick${cadence === 'never' ? '' : ' on'}`} title="Repeat">
-            <Icon name="sync" />
-            <select value={cadence} aria-label="Repeat" onChange={(e) => repeat(e.target.value as Cadence)}>
-              <option value="never">Never repeats</option>
-              <option value="daily">Daily</option>
-              <option value="weekdays">Weekdays</option>
-              <option value="weekly">Weekly{at != null ? ` on ${new Date(at).toLocaleDateString(undefined, { weekday: 'long' })}` : ''}</option>
-              <option value="monthly">Monthly{at != null ? ` on the ${new Date(at).getDate()}` : ''}</option>
-              {cadence === 'custom' && <option value="custom" disabled>Custom</option>}
-            </select>
-          </label>
-        )}
-        <span className="spacer" />
-        {row.status === 'open' && (focused
-          ? <IconButton icon="debug-stop" on label="Stop" title="Stop the focus timer" onClick={stopFocus} />
-          : <IconButton icon="play" label="Start focus" title="Start a focus timer" onClick={() => { save(); startFocus(row); }} />)}
       </div>
     </div>
       </div>
