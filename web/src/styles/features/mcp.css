@@ -12,27 +12,16 @@
 }
 :is(.mcp-kv, .ui-empty-hint) code { font-family: var(--mono); font-size: var(--fs-xs); padding: 1px var(--sp-2); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-xs); }
 
-.mcp-section { margin-bottom: var(--sp-12); }
-.mcp-group-head { display: flex; align-items: baseline; gap: var(--sp-4); margin-bottom: var(--sp-5); padding-bottom: var(--sp-3); font-size: var(--fs-lg); font-weight: 600; border-bottom: 1px solid var(--border); }
-.mcp-group-head .count { font-size: var(--fs-sm); font-weight: 400; font-variant-numeric: tabular-nums; }
-.mcp-kind { margin-bottom: var(--sp-8); }
-.mcp-section-head, .mcp-tools-head { font-size: var(--fs-xs); font-weight: 600; letter-spacing: var(--tracking-wider); text-transform: uppercase; color: var(--fg-muted); }
-.mcp-section-head { margin-bottom: var(--sp-3); }
-
-.mcp-list { display: flex; flex-direction: column; }
-.mcp-row { display: flex; align-items: center; gap: var(--sp-5); min-width: 0; min-height: var(--size-xl); padding: var(--sp-1) var(--sp-4); border-radius: var(--radius-sm); }
-@media (hover: hover) { .mcp-row:hover { background: var(--hover); } }
-.mcp-row.selected { background: var(--accent-soft); }
-.mcp-row.skeleton { height: var(--size-xl); margin-bottom: var(--sp-1); background: var(--hover); animation: shimmer var(--pulse) var(--ease) infinite; }
-.mcp-row-name { flex: none; width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding: 0; font-weight: 600; color: var(--fg); background: none; border: 0; }
-.mcp-chips { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.mcp-chips .chip.chip-btn { font-family: var(--mono); font-size: var(--fs-xs); }
-.mcp-row-use { flex: none; font-size: var(--fs-xs); color: var(--link); }
-.mcp-row-use.bad { color: var(--err); }
-.mcp-row-move { flex: none; width: var(--size-sm); height: var(--size-sm); opacity: 0; }
-.mcp-row-move:focus-visible { opacity: 1; }
-@media (hover: hover) { .mcp-row:hover .mcp-row-move { opacity: 1; } }
-@media (hover: none) { .mcp-row-move { opacity: 1; } }
+.mcp-skeleton { height: 48px; border-radius: var(--radius-md); }
+.mcp-item .ui-row-trail { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--sp-3); }
+.mcp-hit { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.mcp-hit::after { content: ''; position: absolute; inset: 0; }
+.mcp-hit:focus-visible { outline: none; }
+.mcp-hit:focus-visible::after { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ui-row.mcp-item.selected { background: var(--accent-soft); }
+.mcp-item .badge.ok { color: var(--ok); }
+.mcp-item .badge.bad { color: var(--err); }
+.mcp-item .badge.warn { color: var(--warn); }
 .mcp-seg { display: flex; gap: var(--sp-2); }
 .mcp-seg .btn.on { border-color: var(--accent); background: var(--accent-soft); }
 
@@ -56,7 +45,7 @@
 .mcp-act-error { align-self: center; font-size: var(--fs-sm); }
 .mcp-login { display: flex; flex-direction: column; gap: var(--sp-3); align-items: flex-start; }
 
-.mcp-tools-head { display: flex; align-items: center; gap: var(--sp-3); height: var(--size-xl); border-top: 1px solid var(--border); padding-top: var(--sp-4); }
+.mcp-tools-head { font-size: var(--fs-xs); font-weight: 600; letter-spacing: var(--tracking-wider); text-transform: uppercase; color: var(--fg-muted); display: flex; align-items: center; gap: var(--sp-3); height: var(--size-xl); border-top: 1px solid var(--border); padding-top: var(--sp-4); }
 .mcp-tools-head input { width: 120px; height: var(--size-row); padding: 0 var(--sp-4); font-size: var(--fs-sm); }
 .mcp-tools, .mcp-calls { display: flex; flex-direction: column; gap: var(--sp-1); }
 .mcp-tools { margin-top: var(--sp-2); }
@@ -115,4 +104,3 @@
   .mcp-page.with-detail { grid-template-columns: minmax(0, 1fr); }
   .mcp-detail { position: absolute; inset: 0; z-index: 2; border-left: 0; }
 }
-.mcp-hidden-head { width: 100%; background: none; border-width: 0 0 1px; color: var(--fg); cursor: pointer; text-align: left; align-items: center; }

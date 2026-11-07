@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { McpServer } from '../../../shared/protocol';
 import { getState, send, notice, api, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
+import { Section } from '../ui/Section';
 import { ago, save, stored, useTick } from '../ui/util';
 import { post } from './mcpActions';
 import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, merge, needsYou, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
@@ -83,7 +84,7 @@ export function McpPage() {
     }
     return [...merged, ...other];
   }, [probed, mcp, account, accounts]);
-  const list = useMemo(() => services(rows), [rows]);
+  const list = useMemo(() => services(rows).sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind)), [rows]);
   const usage = useMemo(() => mcpCalls(getState().events), [toolKey]);
   const usageOf = (r: Row) => usage.get(slug(r.name));
   const current = rows.find((r) => rowKey(r) === sel) ?? null;
@@ -96,6 +97,10 @@ export function McpPage() {
   const attention = shownRows.filter(needsYou).length;
   const extra = document.getElementById('page-mcp-extra');
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
+  const rowCount = (of: Service[]) => of.reduce((n, s) => n + s.variants.length, 0);
+  const renderRows = (s: Service, g: Group, isHidden: boolean) => s.variants.map(({ row }) => (
+    <ServiceRow key={rowKey(row)} row={row} selected={rowKey(row) === sel} usage={usageOf(row)} onPick={() => pick(rowKey(row))} group={g} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} onHide={() => setGroup(hideKey(s), isHidden ? 'shown' : 'hidden')} isHidden={isHidden} />
+  ));
 
   return (
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
@@ -112,7 +117,7 @@ export function McpPage() {
         )}
         {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
         {probed === null && !error && (
-          <div className="mcp-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="mcp-row skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
+          <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
         )}
         {probed !== null && rows.length === 0 && (
           <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint={<>Add one with <code>claude mcp add</code> or connect one on claude.ai, then check again.</>} />
@@ -121,34 +126,17 @@ export function McpPage() {
           const mine = shown.filter((s) => groupOf(s.variants[0].row) === g);
           if (!mine.length) return null;
           return (
-            <section key={g} className="mcp-section">
-              <div className="mcp-group-head">{g === 'work' ? 'Work' : 'Personal'}<span className="muted count">{mine.length}</span></div>
-              {KINDS.map((k) => {
-                const of = mine.filter((s) => s.kind === k);
-                if (!of.length) return null;
-                return (
-                  <div key={k} className="mcp-kind">
-                    <div className="mcp-section-head"><span>{k}</span></div>
-                    <div className="mcp-list">
-                      {of.map((s) => <ServiceRow key={rowKey(s.variants[0].row)} service={s} sel={sel} usageOf={usageOf} onPick={pick} group={g} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} onHide={() => setGroup(hideKey(s), 'hidden')} />)}
-                    </div>
-                  </div>
-                );
-              })}
-            </section>
+            <Fragment key={g}>
+              <Section label={g === 'work' ? 'Work' : 'Personal'} count={rowCount(mine)} />
+              <div className="as-group">{mine.map((s) => renderRows(s, g, false))}</div>
+            </Fragment>
           );
         })}
         {hiddenList.length > 0 && (
-          <section className="mcp-section">
-            <button className="mcp-group-head mcp-hidden-head" onClick={() => setShowHidden((v) => !v)}>
-              <Icon name={showHidden ? 'chevron-down' : 'chevron-right'} small />Hidden<span className="muted count">{hiddenList.length}</span>
-            </button>
-            {showHidden && (
-              <div className="mcp-list">
-                {hiddenList.map((s) => <ServiceRow key={rowKey(s.variants[0].row)} service={s} sel={sel} usageOf={usageOf} onPick={pick} group={groupOf(s.variants[0].row)} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} onHide={() => setGroup(hideKey(s), 'shown')} isHidden />)}
-              </div>
-            )}
-          </section>
+          <>
+            <Section label="Hidden" count={rowCount(hiddenList)} open={showHidden} onToggle={() => setShowHidden((v) => !v)} />
+            {showHidden && <div className="as-group">{hiddenList.map((s) => renderRows(s, groupOf(s.variants[0].row), true))}</div>}
+          </>
         )}
       </div>
       {current && <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} onClose={() => { document.querySelector<HTMLElement>(`[data-row="${CSS.escape(rowKey(current))}"]`)?.focus(); setSel(null); }} />}

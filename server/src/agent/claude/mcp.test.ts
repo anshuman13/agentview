@@ -68,7 +68,7 @@ describe('probeOne', () => {
     const run = async () => ({ info: { version: '2.0' }, tools: [{ name: 'q', description: 'Query', annotations: { readOnlyHint: true } }] });
     expect(await probeOne('db', 'user', { command: 'toolbox', args: ['--stdio'] }, '/repo', run)).toEqual({
       name: 'db', scope: 'user', type: 'stdio', command: 'toolbox --stdio', env: undefined,
-      status: 'connected', version: '2.0', tools: [{ name: 'q', description: 'Query', readOnly: true, destructive: undefined }],
+      status: 'connected', ms: expect.any(Number), version: '2.0', tools: [{ name: 'q', description: 'Query', readOnly: true, destructive: undefined }],
     });
   });
 
@@ -77,6 +77,7 @@ describe('probeOne', () => {
     expect(auth).toMatchObject({ status: 'needs-auth', type: 'http', error: expect.stringContaining('401') });
     const dead = await probeOne('x', 'user', { command: 'nope' }, '/repo', async () => { throw new Error('x exited (127)'); });
     expect(dead).toMatchObject({ status: 'failed', error: 'x exited (127)' });
+    expect(dead.ms).toBeUndefined();
     expect(authError('Unauthorized')).toBe(true);
   });
 });

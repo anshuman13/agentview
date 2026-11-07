@@ -1,29 +1,39 @@
-import { Chip } from '../ui/Button';
-import { Icon } from '../ui/Icon';
-import { plural, rowKey, shortName, stateOf, usageText, type Group, type Row, type Service, type Usage } from './mcpHelpers';
+import { useRef, useState } from 'react';
+import { IconButton } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
+import { Row as ListRow } from '../ui/Row';
+import { plural, rowKey, shortName, stateOf, usageText, type Group, type Row, type Usage } from './mcpHelpers';
 
-export function ServiceRow({ service, sel, usageOf, onPick, group, onGroup, onHide, isHidden }: { service: Service; sel: string | null; usageOf: (r: Row) => Usage | undefined; onPick: (name: string) => void; group: Group; onGroup: (g: Group) => void; onHide: () => void; isHidden?: boolean }) {
-  const calls = service.variants.reduce((n, v) => n + (usageOf(v.row)?.calls.length ?? 0), 0);
-  const errors = service.variants.reduce((n, v) => n + (usageOf(v.row)?.errors ?? 0), 0);
+export function ServiceRow({ row, selected, usage, onPick, group, onGroup, onHide, isHidden }: { row: Row; selected: boolean; usage?: Usage; onPick: () => void; group: Group; onGroup: (g: Group) => void; onHide: () => void; isHidden?: boolean }) {
+  const [menu, setMenu] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const [tone, label] = stateOf(row);
   const other: Group = group === 'work' ? 'personal' : 'work';
+  const meta = [
+    row.tools && (row.tools.length ? plural(row.tools.length, 'tool') : 'No tools'),
+    row.ms != null && `${row.ms} ms`,
+    usage && usageText(usage),
+  ].filter(Boolean).join(' · ');
   return (
-    <div className={`mcp-row ${service.variants.some((v) => rowKey(v.row) === sel) ? 'selected' : ''}`}>
-      <button className="mcp-row-name" data-row={rowKey(service.variants[0].row)} onClick={() => onPick(rowKey(service.variants[0].row))}>{shortName(service.name)}</button>
-      <div className="mcp-chips">
-        {service.variants.map(({ variant, row }) => {
-          const [tone, label] = stateOf(row);
-          const u = usageOf(row);
-          const title = `${row.name} · ${label}${row.tools?.length ? ` · ${plural(row.tools.length, 'tool')}` : ''}${u ? ` · ${usageText(u)}` : ''}`;
-          return (
-            <Chip key={rowKey(row)} size="sm" data-row={rowKey(row)} on={rowKey(row) === sel} late={tone === 'bad'} className={tone === 'warn' ? 'st-warn' : undefined} title={title} onClick={() => onPick(rowKey(row))}>
-              <span className={`dot ${tone}`} />{variant || label}
-            </Chip>
-          );
-        })}
-      </div>
-      {calls > 0 && <span className={`mcp-row-use ${errors ? 'bad' : ''}`}>{plural(calls, 'call')}</span>}
-      <button className="icon-btn mcp-row-move" title={isHidden ? 'Show' : 'Hide'} onClick={onHide}><Icon name={isHidden ? 'eye' : 'eye-closed'} small /></button>
-      {!service.variants[0].row.account && <button className="icon-btn mcp-row-move" title={`Move to ${other === 'work' ? 'Work' : 'Personal'}`} onClick={() => onGroup(other)}><Icon name={other === 'work' ? 'briefcase' : 'home'} small /></button>}
-    </div>
+    <ListRow
+      plain
+      className={`mcp-item ${selected ? 'selected' : ''}`}
+      title={<button type="button" className="mcp-hit" data-row={rowKey(row)} aria-pressed={selected} onClick={onPick}>{shortName(row.name)}</button>}
+      meta={meta || undefined}
+      trailing={
+        <>
+          <span className={`badge quiet ${tone}`}>{label}</span>
+          <span className="as-wrap-more">
+            <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+            {menu && (
+              <Menu trigger={btn} onClose={() => setMenu(false)}>
+                <MenuItem onClick={() => { setMenu(false); onHide(); }}>{isHidden ? 'Show' : 'Hide'}</MenuItem>
+                {!row.account && <MenuItem onClick={() => { setMenu(false); onGroup(other); }}>Move to {other === 'work' ? 'Work' : 'Personal'}</MenuItem>}
+              </Menu>
+            )}
+          </span>
+        </>
+      }
+    />
   );
 }

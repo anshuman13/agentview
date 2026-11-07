@@ -8,6 +8,11 @@ describe('merge', () => {
     const live = JSON.parse(JSON.stringify([{ name: 'gw', status: 'connected', error: undefined }]));
     expect(merge(probed, live)[0]).toMatchObject({ status: 'connected', error: undefined, live: true, scope: 'user' });
   });
+
+  it('keeps the probe latency when the chat reports the server', () => {
+    const probed = [{ name: 'gw', status: 'connected', scope: 'user', ms: 120 }];
+    expect(merge(probed, [{ name: 'gw', status: 'connected' }])[0].ms).toBe(120);
+  });
 });
 
 describe('mcpCalls', () => {

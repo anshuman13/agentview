@@ -125,6 +125,7 @@ export type McpServer = {
   command?: string;
   env?: string[];
   version?: string;
+  ms?: number;
   error?: string;
   tools?: McpTool[];
 };

@@ -114,8 +114,9 @@ export async function probeOne(name: string, scope: string, def: McpServerDef, c
   if (base.type === 'sse') return { ...base, status: 'disabled', error: 'The MCP tab cannot probe SSE servers. Claude Code still connects to it in chats.' };
   const key = `probe:${cwd}:${name}:${JSON.stringify(def)}`;
   try {
+    const t0 = Date.now();
     const { info, tools } = await run(key, def, cwd);
-    return { ...base, status: 'connected', version: info?.version, tools: tools.map((t) => ({ name: t.name, description: t.description, readOnly: t.annotations?.readOnlyHint, destructive: t.annotations?.destructiveHint, inputSchema: t.inputSchema as McpSchema | undefined })) };
+    return { ...base, status: 'connected', ms: Math.round(Date.now() - t0), version: info?.version, tools: tools.map((t) => ({ name: t.name, description: t.description, readOnly: t.annotations?.readOnlyHint, destructive: t.annotations?.destructiveHint, inputSchema: t.inputSchema as McpSchema | undefined })) };
   } catch (err) {
     const msg = errText(err);
     return { ...base, status: authError(msg) ? 'needs-auth' : 'failed', error: msg };
