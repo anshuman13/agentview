@@ -61,7 +61,7 @@ fun AddPoint(person: String, profile: String, ops: CodexOps) {
         val t = text.trim()
         if (t.isNotEmpty() && ops.points.raise(t, person, profile)) text = ""
     }
-    TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), singleLine = true, placeholder = "Raise with ${firstName(person)}",
+    TextField(text, { text = it }, Modifier.padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), singleLine = true, placeholder = if ('@' in person) "Raise a point" else "Raise with ${firstName(person)}",
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { add() }))
 }
 

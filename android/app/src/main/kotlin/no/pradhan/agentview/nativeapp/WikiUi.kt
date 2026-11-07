@@ -86,9 +86,10 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
     val clip = LocalClipboardManager.current
     val uri = LocalUriHandler.current
     val contest = contestOf(f)
+    val proposed = f.str("state") == "proposed"
     val meta: AnnotatedString = buildAnnotatedString {
         val bits = ArrayList<String>()
-        if (f.str("state") == "proposed") bits.add("Proposed")
+        if (proposed) bits.add("Proposed")
         if (contest != null) bits.add("Contested by ${contest.by} - ${agoText(contest.at, now)}")
         sourcesOf(f).forEach { bits.add(it.label) }
         if (stale) bits.add("Still true?")
@@ -97,7 +98,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
     }
     Column {
         Box {
-            ListRow(f.str("text") ?: "", meta, onLongClick = { menu = true })
+            ListRow(f.str("text") ?: "", meta, onLongClick = if (proposed) null else ({ menu = true }))
             Menu(menu, { menu = false }) {
                 val pick = { act: () -> Unit -> { menu = false; act() } }
                 MenuItem("Cite", pick {
@@ -106,7 +107,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
                     clip.setText(AnnotatedString("$page: ${f.str("text") ?: ""}" + if (srcs.isNotEmpty()) " (${srcs.joinToString(", ")}$at)" else ""))
                     actions.say("Claim copied")
                 })
-                if (contest == null) MenuItem("Contest", pick { actions.change(f, mapOf("contested" to "{\"by\":\"you\",\"at\":${System.currentTimeMillis()},\"note\":\"\"}"), "Claim contested") })
+                if (contest == null) MenuItem("Contest", pick { actions.change(f, mapOf("contested" to "{\"by\":\"you\",\"at\":${now},\"note\":\"\"}"), "Claim contested") })
                 else MenuItem("Resolve", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") })
                 val retired = f.str("state") == "retired"
                 MenuItem(if (retired) "Restore" else "Retire", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)

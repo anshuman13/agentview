@@ -76,10 +76,11 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
 }
 
 @Composable
-private fun RunStatus(status: String) = RowLabel(
-    if (status == "ok") "Succeeded" else status,
-    if (status == "error") av.err else if (status == "running" || status == "ok") av.ok else av.fgMuted,
-)
+private fun RunStatus(status: String) = when (status) {
+    "ok" -> Badge("Done", BadgeTone.Done)
+    "running" -> Badge("Running", BadgeTone.Running)
+    else -> Badge("Failed", BadgeTone.Failed)
+}
 
 @Composable
 private fun RunsSheet(runs: List<Row>, onDismiss: () -> Unit) {
@@ -96,9 +97,9 @@ private fun RunsSheet(runs: List<Row>, onDismiss: () -> Unit) {
                 ListRow(r.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" } ?: "Run", runMeta(r).ifEmpty { null },
                     onClick = if (output != null) ({ open = if (expanded) null else r.id }) else null,
                     trailing = { RunStatus(r.str("status") ?: ""); if (output != null) Chevron() })
-                if (expanded) {
-                    Text(output!!, Modifier.padding(horizontal = Tokens.sp8), style = Type.subheadline, color = av.fgMuted)
-                    Button("Copy output", { clip.setText(AnnotatedString(output)) }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (expanded && output != null) {
+                    Text(output, Modifier.padding(horizontal = Tokens.sp8), style = Type.body, color = av.fg)
+                    Button("Copy output", { clip.setText(AnnotatedString(output)) }, Modifier.padding(start = Tokens.sp4, bottom = Tokens.sp6), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             }
         }
