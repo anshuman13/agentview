@@ -2,15 +2,10 @@
 .mt-list, .mt-log, .mt-load { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); display: flex; flex-direction: column; gap: var(--sp-8); }
 .mt-list section { display: flex; flex-direction: column; gap: var(--sp-2); }
 .mt-days { display: flex; flex-direction: column; container-type: inline-size; }
-.mt-rows { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; container-type: inline-size; }
-.mt-row { display: flex; align-items: center; gap: var(--sp-7); padding: var(--sp-4) var(--sp-5); border: 0; border-radius: 12px; background: transparent; color: var(--fg); text-align: left; font: inherit; cursor: pointer; }
-@media (hover: hover) { .mt-row:hover { background: var(--sunken); } }
-.mt-rows > .mt-row { padding: var(--sp-5) var(--sp-7); border-radius: 0; }
-.mt-rows > .mt-row + .mt-row { border-top: 1px solid var(--border); }
 .mt-body { flex: 1; min-width: 0; align-self: center; display: flex; flex-direction: column; justify-content: center; gap: 0; }
 .mt-title { display: flex; align-items: center; gap: var(--sp-4); min-width: 0; font-size: var(--fs-md); line-height: 20px; font-weight: 500; color: var(--fg-strong); }
-:is(.mt-rows, .mt-days) .mt-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-:is(.mt-rows, .mt-days) .mt-title .as-prof { margin-left: var(--sp-4); }
+.mt-days .mt-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.mt-days .mt-title .as-prof { margin-left: var(--sp-4); }
 .mt-said { font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
 .sr-said .ui-row-meta { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
 .mt-item { position: relative; display: flex; align-items: center; padding-right: var(--list-pad); }
@@ -18,7 +13,7 @@
 .mt-item:last-child > .ui-row::after { display: none; }
 .mt-item.past .ui-row-title { color: var(--fg-muted); }
 /* An open menu may extend past the card edge. */
-:is(.mt-days, .mt-rows):has(.ui-menu) { overflow: visible !important; }
+.mt-days:has(.ui-menu) { overflow: visible !important; }
 .mt-more { position: relative; flex: none; display: inline-flex; }
 .mt-series-more { position: relative; flex: none; display: inline-flex; }
 @media (hover: hover) and (pointer: fine) {

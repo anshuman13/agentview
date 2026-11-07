@@ -262,11 +262,6 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .sm-range button.on { background: var(--raised); color: var(--fg-strong); }
 @media (hover: hover) { .sm-range button:not(.on):hover { color: var(--fg); } }
 @media (pointer: coarse) { .sm-range button { height: var(--touch-sm); } }
-.mt-rows:has(> .as-section) { border: 0; border-radius: 0; background: transparent; overflow: visible; }
-.mt-rows > .as-section { padding: 0 var(--sp-2) var(--sp-3); }
-.mt-rows > .as-section .as-section-name { font-weight: 600; color: var(--fg-strong); }
-.mt-rows:has(> .as-section) > .mt-row { padding: var(--sp-4) var(--sp-2); min-height: var(--row-h); }
-.mt-rows:has(> .as-section) > .mt-row + .mt-row { border-top: var(--hairline); }
 .sm-text { font-size: var(--row-meta); color: var(--meta-fg); }
 .sm-brief { border: 0; border-radius: 0; background: transparent; padding: 0 var(--sp-2) var(--sp-6); border-bottom: var(--hairline); }
 

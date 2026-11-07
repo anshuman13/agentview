@@ -5,7 +5,7 @@ import { atTime, latestRunByJob, staleTasks } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { dayLabel } from './data/dates';
 import { Section } from '../ui/Section';
-import { Capped, Fold } from './Fold';
+import { Fold } from './Fold';
 import { Row } from '../ui/Row';
 import { IconButton } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -16,12 +16,11 @@ import { NeedsYou, useNeedsYou } from './NeedsYou';
 import { DoNow } from './DoNow';
 import { useActions } from './useActions';
 import { DayPlan, DRAG_TYPE, usePlanHint } from './DayPlan';
-import { TomorrowCard, useTomorrowCard } from './TomorrowCard';
+import { TomorrowCard, TomorrowGroup, useTomorrowCard } from './TomorrowCard';
 import { GoalLines } from './Goals';
 import { BriefReportCard, useBriefs } from './Brief';
 import { WeeklyReviewCard, useWeeklyReviews } from './WeeklyReview';
 import { pickReports, type ReportEntry } from './data/reports';
-import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/Panel';
@@ -117,24 +116,12 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
   const close = next && next.starts_at! - now < 15 * 60_000 ? next : null;
   const upcoming = s.meetingsToday.filter((m) => m !== s.next && soon(m));
   const drag = !touch();
-  const dueAt = (r: ItemRow) => {
-    const t = atTime(r.at);
-    return t != null && t >= startOfDay && t < s.endOfDay ? clock(t) : null;
-  };
-  const shown = (rs: ItemRow[], timed = false) => (
-    <div className="ov-follow">
-      <Capped items={rs} render={(r) => (
-        <div key={r.profile + r.id} className="ov-follow-row" draggable={drag} onDragStart={drag ? (e) => e.dataTransfer.setData(DRAG_TYPE, `${r.profile}:${r.id}`) : undefined}>
-          <button className="ov-check" aria-label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }}><Icon name="circle-large-outline" small /></button>
-          <button className="ov-follow-text" onClick={() => openTask(r)}>
-            <span className="ov-t">{r.title}</span>
-            {timed && dueAt(r) && <span className="muted small">{dueAt(r)}</span>}
-          </button>
-          <button className="ov-check" aria-label={`Snooze ${r.title} to tomorrow`} title="Tomorrow 09:00" onClick={() => snooze(r)}><Icon name="clock" small /></button>
-        </div>
-      )} />
-    </div>
-  );
+  const tomorrowRows = tomorrow.map((r) => (
+    <Row key={r.profile + r.id} plain className="ov-tm" draggable={drag} onDragStart={drag ? (e) => e.dataTransfer.setData(DRAG_TYPE, `${r.profile}:${r.id}`) : undefined}
+      leading={<IconButton icon="check" size="sm" label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }} />}
+      title={<button type="button" className="ov-hit" onClick={() => openTask(r)}>{r.title}</button>}
+      trailing={<IconButton icon="clock" size="sm" label={`Snooze ${r.title} to tomorrow`} onClick={() => snooze(r)} />} />
+  ));
   // A quiet day shows the next day with meetings or tasks, so the page always says what comes next.
   const quiet = !next && !upcoming.length && !todo.length;
   const nextUp = useMemo(() => {
@@ -226,12 +213,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
         <Stale rows={stale} now={now} snooze={snooze} />
         <FollowThrough f={follow} />
         <KeepInTouch k={touchRows} />
-        {!tomorrowElsewhere && tomorrow.length > 0 && (
-          <section>
-            <div className="as-section later">Tomorrow</div>
-            {tomorrow.length > 0 && shown(tomorrow)}
-          </section>
-        )}
+        {!tomorrowElsewhere && <TomorrowGroup label="Tomorrow" rows={tomorrowRows} />}
       </Fold>
       </div>
       {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}

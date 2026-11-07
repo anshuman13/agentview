@@ -76,19 +76,23 @@ function PlanCard({ flow, plan }: { flow: ReturnType<typeof usePlanFlow>; plan: 
   const group = (label: string, list: Planned[]) => list.length > 0 && (
     <>
       <Section label={label} count={list.length} />
-      {list.map(planned)}
+      <div className="as-group">{list.map(planned)}</div>
     </>
   );
   return (
-    <div className="mt-rows ov-card">
+    <>
       {plan.length ? <>{group('Now', now)}{group('Later', later)}</> : <EmptyState size="sm" title={`No task fits in ${day}'s free time`} />}
       {skipped.length > 0 && (
         <>
           <Section label="Skipped" count={skipped.length} open={!folded} onToggle={() => setFolded(!folded)} />
-          {!folded && skipped.map((s) => (
-            <Row key={rowKey(s.task)} plain title={s.task.title} meta={s.reason}
-              trailing={s.reason === 'Left out' ? <IconButton icon="add" size="sm" label={`Add back ${s.task.title}`} onClick={() => flow.addBack(s.task)} /> : undefined} />
-          ))}
+          {!folded && (
+            <div className="as-group">
+              {skipped.map((s) => (
+                <Row key={rowKey(s.task)} plain title={s.task.title} meta={s.reason}
+                  trailing={s.reason === 'Left out' ? <IconButton icon="add" size="sm" label={`Add back ${s.task.title}`} onClick={() => flow.addBack(s.task)} /> : undefined} />
+              ))}
+            </div>
+          )}
         </>
       )}
       <div className="dp-foot">
@@ -97,6 +101,6 @@ function PlanCard({ flow, plan }: { flow: ReturnType<typeof usePlanFlow>; plan: 
         <Button variant="gray" size="sm" onClick={() => flow.setPlan(null)}>Cancel</Button>
         <Button variant="filled" size="sm" disabled={saving || !plan.length} onClick={() => void flow.create()}>{saving ? 'Creating' : 'Create'}</Button>
       </div>
-    </div>
+    </>
   );
 }

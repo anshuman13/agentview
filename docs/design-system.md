@@ -155,7 +155,7 @@ then at most one action. md for a whole view, sm inside a panel or report. The i
 the accent is for the action.
 
 ### Grouped list (iOS inset grouped)
-Overview cards (`.ov-follow`, `.mt-rows.ov-card`, Needs you) and Meetings day groups (`.mt-days`) are
+Overview cards (`.as-group`, Needs you) and Meetings day groups (`.mt-days`) are
 inset grouped lists: page `--group-page` (grey #F2F2F7 in light, black in dark), card `--group-card`
 (white in light, #1C1C1E in dark), `--shape-lg` radius, no border, rows 44px minimum with a hairline
 inset to the text start. Section labels above cards are Footnote size, `--fg-muted`, sentence case.
@@ -286,8 +286,8 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-load-row | codex/meetings/Load.tsx | Row | Todo |
 | mt-log-item | codex/meetings/Decisions.tsx, codex/meetings/Load.tsx, codex/meetings/Review.tsx, codex/meetings/Series.tsx, codex/meetings/SeriesPage.tsx, codex/meetings/Week.tsx | Row | Todo |
 | mt-person-head | codex/meetings/Person.tsx | Section header | Todo |
-| mt-row | CSS only | Row (delete the unused rule) | Todo |
-| mt-rows | codex/PlanPreview.tsx | Grouped list | Todo |
+| mt-row | CSS only | Row (delete the unused rule) | Done |
+| mt-rows | none | Grouped list | Done |
 | mt-series-list | codex/meetings/Series.tsx, codex/meetings/SeriesPage.tsx | Grouped list | Todo |
 | mt-up-head | codex/meetings/MeetingList.tsx | Section header | Todo |
 | obs-head, obs-subhead | ops/Observe.tsx | Section header | Todo |
@@ -295,7 +295,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | ov-brief-head | codex/Fold.tsx | Section header | Todo |
 | ov-digest-head | codex/meetings/Prep.tsx, codex/overview/BriefCard.tsx, codex/overview/DigestCard.tsx | Report card | Todo |
 | ov-digest-row | codex/overview/BriefCard.tsx, codex/overview/DigestCard.tsx | Report card | Todo |
-| ov-follow-row | codex/Overview.tsx | Row | Todo |
+| ov-follow-row | codex/Overview.tsx | Row | Done |
 | sm-line | codex/summary/Summary.tsx | Row | Todo |
 | wk-contest-head | codex/wiki/Claim.tsx | Section header | Todo |
 | wk-feed-head | codex/wiki/Feed.tsx | Section header | Todo |

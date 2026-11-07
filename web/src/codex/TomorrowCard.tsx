@@ -62,7 +62,7 @@ export function TomorrowCard({ s, tasks, now, hide }: { s: ReturnType<typeof use
   );
 }
 
-function TomorrowGroup({ label, rows }: { label: string; rows: ReactNode[] }) {
+export function TomorrowGroup({ label, rows }: { label: string; rows: ReactNode[] }) {
   const [all, setAll] = useState(false);
   if (rows.length === 0) return null;
   return (

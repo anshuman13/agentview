@@ -24,7 +24,6 @@
 
 .as-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--sp-8) var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-8); }
 .as-scroll section { display: flex; flex-direction: column; }
-.as-scroll > .ov-follow { flex: none; }
 .as-section { display: flex; align-items: baseline; gap: var(--sp-3); padding: 0 0 var(--sp-3); border-bottom: var(--hairline); font-size: var(--row-title); font-weight: 600; color: var(--fg-strong); }
 .as-section > span { font-weight: 400; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
 .as-section.as-toggle { display: flex; align-items: center; min-height: 40px; }
@@ -42,7 +41,6 @@
 
 .as-group { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); overflow: hidden; }
 .as-group:has(.ui-menu) { overflow: visible; }
-.as-group > .mt-row + .mt-row { border-top: 1px solid var(--border); }
 
 /* Task lists are flat rows with hairlines, like Things and Reminders. */
 .as-list { display: flex; flex-direction: column; min-height: 4px; }
@@ -106,8 +104,6 @@
 .dp-when { display: flex; align-items: center; gap: var(--sp-4); }
 .dp-when > input + .muted { flex: none; font-variant-numeric: tabular-nums; }
 .dp-when > input[type='time'] { flex: 1; }
-.mt-rows > div.ui-row { cursor: default; }
-.mt-rows > div.ui-row:hover { --state: 0%; }
 .dp-foot { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--list-pad); font-size: var(--type-label-size); color: var(--on-surface-muted); }
 .as-pick { position: relative; flex: none; display: inline-flex; }
 .as-wrap-more { position: relative; flex: none; display: inline-flex; }
@@ -218,8 +214,6 @@
   .as-snack { bottom: 140px; }
   .as-edit-actions .btn { height: var(--touch-sm); }
   :is(.ov-brief-head, .dp-when, .gl-row) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
-  .ov-check { width: var(--touch-sm); height: var(--touch-sm); margin: -8px 0 -8px -10px; }
-  .ov-check:last-child { margin: -8px -10px -8px 0; }
   /* While a task field has the keyboard, the composer gives its room to the task. */
   .assistant:has(.as-edit :focus, .as-add.on :focus) .as-composer { display: none; }
   .as-edit-title { font-size: var(--fs-xl) !important; line-height: 24px; padding-top: 10px !important; }
@@ -231,7 +225,6 @@
 .workbench[data-codex='true'] .editor-group > :is(.tabs, .panel) { display: none; }
 
 /* Overview */
-.ov-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .gl-lines { display: flex; flex-direction: column; gap: var(--sp-2); }
 .gl-line { display: flex; align-items: baseline; gap: var(--sp-3); white-space: nowrap; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; max-width: 100%; }
 .gl-line { flex-wrap: wrap; }
@@ -466,12 +459,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 
 /* Overview: iOS inset grouped lists. Grey page in light, cards 12px with no border, hairlines inset to the text. */
 .as-editor:has(.assistant:not(.tasks, .wide, .locked)) { background: var(--group-page); }
-.assistant:not(.tasks) .as-scroll :is(.ov-follow, .mt-rows.ov-card) { border: 0; border-radius: var(--shape-lg); background: var(--group-card); }
-.assistant:not(.tasks) .as-scroll .ov-follow-row { position: relative; min-height: var(--touch); padding: var(--sp-4) var(--sp-8); }
-.assistant:not(.tasks) .as-scroll .ov-follow-row + .ov-follow-row { border-top: 0; }
-.assistant:not(.tasks) .as-scroll .ov-follow-row + .ov-follow-row::before {
-  content: ''; position: absolute; top: 0; right: 0; left: var(--sp-8); height: 1px; background: var(--border);
-}
 .assistant:not(.tasks) .as-section { padding: 0 var(--sp-8) var(--sp-3); border-bottom: 0; font-size: var(--type-footnote-size); font-weight: 400; line-height: var(--type-footnote-line); }
 .assistant:not(.tasks) .as-section:not(.late, .review, .next, .done, .later) { color: var(--fg-muted); }
 
