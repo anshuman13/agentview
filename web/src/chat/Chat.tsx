@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import type { Token } from './md';
 import { copyText } from '../ui/util';
+import { cachedHtml, mdKey, storeHtml } from './mdCache';
 
 export { Composer } from './Composer';
 
@@ -35,10 +36,21 @@ const Block = memo(
   (a, b) => a.token.raw === b.token.raw,
 );
 
-export function Markdown({ text }: { text: string }) {
+export function Markdown({ text, id }: { text: string; id?: string }) {
   const m = useMd();
-  const blocks = useMemo(() => m?.splitBlocks(text), [m, text]);
+  const html = useMemo(() => {
+    if (!m || !id) return null;
+    const key = mdKey(id, text);
+    const hit = cachedHtml(key);
+    if (hit !== undefined) return hit;
+    const parts = m.splitBlocks(text);
+    const out = parts ? m.renderBlocks(parts) : (m.md.parse(text, { async: false }) as string);
+    storeHtml(key, out);
+    return out;
+  }, [m, id, text]);
+  const blocks = useMemo(() => (m && html === null ? m.splitBlocks(text) : null), [m, html, text]);
   if (!m) return <div className="md" style={{ whiteSpace: 'pre-wrap' }}>{text}</div>;
+  if (html !== null) return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: html }} />;
   if (!blocks) {
     return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: m.md.parse(text, { async: false }) as string }} />;
   }

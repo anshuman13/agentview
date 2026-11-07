@@ -8,6 +8,12 @@ export function hiddenCount(earlier: number, total: number, shown: number): numb
   return earlier + windowStart(total, shown);
 }
 
+export const FIRST_ROWS = 30;
+
+export function stageRows(rendered: number, target: number, step = FIRST_ROWS): number {
+  return Math.min(target, rendered + step);
+}
+
 export function revealMore(shown: number, total: number, batch = ROW_WINDOW): number {
   return Math.min(Math.max(total, ROW_WINDOW), shown + batch);
 }

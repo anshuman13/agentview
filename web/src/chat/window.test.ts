@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { hiddenCount, revealMore, windowStart } from './window';
+import { ROW_WINDOW } from '../../../shared/protocol';
+import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
+
+describe('staged rows', () => {
+  it('steps by a batch and stops at the target', () => {
+    expect(stageRows(30, 150)).toBe(60);
+    expect(stageRows(120, 150)).toBe(150);
+    expect(stageRows(30, 20)).toBe(20);
+    expect(stageRows(10, 100, 5)).toBe(15);
+  });
+
+  it('reaches the window in four steps from the first rows', () => {
+    let n = FIRST_ROWS, steps = 0;
+    while (n < ROW_WINDOW) { n = stageRows(n, ROW_WINDOW); steps++; }
+    expect(steps).toBe(4);
+    expect(stageRows(n, ROW_WINDOW)).toBe(ROW_WINDOW);
+  });
+});
 
 describe('row window', () => {
   it('reveals another batch and stops at the total', () => {

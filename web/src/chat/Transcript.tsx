@@ -6,7 +6,7 @@ import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
 import { buildTranscript, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural, pressable } from '../ui/util';
-import { hiddenCount, revealMore, windowStart } from './window';
+import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../shared/protocol';
 
 export function Transcript() {
@@ -28,9 +28,12 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
   const [behind, setBehind] = useState(false);
   const lastUser = useRef('');
   const [shown, setShown] = useState(ROW_WINDOW);
+  const [staged, setStaged] = useState(FIRST_ROWS);
   const grew = useRef(0);
   const [loading, setLoading] = useState(false);
   const start = windowStart(items.length, shown);
+  const from = windowStart(items.length, Math.min(staged, shown));
+  const staging = staged < Math.min(shown, items.length);
   const last = events[events.length - 1];
 
   useEffect(() => {
@@ -65,16 +68,35 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
       el.scrollTop += delta;
       grew.current = 0;
     }
-  }, [shown, items.length]);
+  }, [shown, staged, items.length]);
+
+  useEffect(() => {
+    if (!staging) return;
+    const step = () => {
+      if (!stick.current) grew.current = box.current?.scrollHeight ?? 0;
+      setStaged(stageRows(staged, shown));
+    };
+    if (typeof requestIdleCallback === 'function') {
+      const h = requestIdleCallback(step, { timeout: 200 });
+      return () => cancelIdleCallback(h);
+    }
+    const h = setTimeout(step, 50);
+    return () => clearTimeout(h);
+  }, [staging, staged, shown]);
 
   const showEarlier = async () => {
     if (loading) return;
     grew.current = box.current?.scrollHeight ?? 0;
-    if (start > 0) return setShown(revealMore(shown, items.length));
+    if (start > 0) {
+      const next = revealMore(shown, items.length);
+      setShown(next);
+      setStaged(next);
+      return;
+    }
     setLoading(true);
     const ok = await loadEarlier();
     setLoading(false);
-    if (ok) setShown(shown + ROW_WINDOW);
+    if (ok) { setShown(shown + ROW_WINDOW); setStaged(shown + ROW_WINDOW); }
     else grew.current = 0;
   };
 
@@ -103,8 +125,8 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
-      {(start > 0 || earlier > 0) && <div className="tr-more" {...pressable(showEarlier)}>{loading ? 'Loading earlier' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
-      {items.slice(start).map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
+      {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(showEarlier)}>{loading ? 'Loading earlier' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
+      {items.slice(from).map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
       </div>
     </div>
     {!stuck && (behind || running) && <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />Jump to latest</button>}
@@ -147,7 +169,7 @@ function RowImpl({ it, cwd, settled }: { it: Item; cwd: string; settled?: boolea
     case 'phase':
       return <div className="tr-phase"><Icon name="sync" small />{it.text}</div>;
     case 'assistant':
-      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} /></div>;
+      return <div className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} /></div>;
     case 'system':
       return <div className="tr-system">{it.text}</div>;
     case 'step':
@@ -237,7 +259,7 @@ function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: stri
           {shown.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}
         </div>
       )}
-      {open && result && !running && <div className="tr-report"><Markdown text={result.text || '(no output)'} /></div>}
+      {open && result && !running && <div className="tr-report"><Markdown text={result.text || '(no output)'} id={it.id} /></div>}
     </div>
   );
 }
