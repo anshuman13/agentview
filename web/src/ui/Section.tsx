@@ -3,7 +3,7 @@ import { Icon } from './Icon';
 
 export function Section({ label, count, action, open, onToggle }: {
   label: ReactNode;
-  count?: number;
+  count?: number | string;
   action?: ReactNode;
   open?: boolean;
   onToggle?: () => void;

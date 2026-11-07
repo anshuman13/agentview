@@ -160,7 +160,7 @@ The header has one segmented control, Decisions (the log, filtered by person), L
   value audit: meetings, hours, decisions and my actions per series over 8 weeks, with series that brought no decision
   or action of mine in 4 weeks flagged first as Nothing for you lately with the hours they cost; a tap opens the
   latest meeting
-- Week: Goals this week, where up to 3 goals per profile are set and renamed (under All, a Work/Personal choice picks the profile), with an All goals button that opens the goals history (the page follows the Profile filter, lists next week (when it has goals), this week and the 7 before it, each goal with its open and done task counts and a Done badge, and a menu with Rename, Move to next week, Reopen this week for past goals, Open tasks and Delete; Back returns to Week), then the week's decisions, new claims,
+- Week: Goals this week, where up to 3 goals per profile are set and renamed (under All, a Work/Personal choice picks the profile), with an All goals button that opens the goals history (the page follows the Profile filter, lists next week (when it has goals), this week and the 7 before it, each goal as a header with its done/total task count and a row per task (due date, open before done; tap opens the task), and a menu with Rename, Move to next week or Reopen this week for past goals, and Delete; Back returns to Week), then the week's decisions, new claims,
   tasks done and open meeting actions. Its Review lists done, slipped and stuck tasks and Waiting on by person: waiting
   tasks and sent mail with no reply after 3 workdays, with Copy nudge and Open. The decision log, Week (with Waiting
   on) and person pages copy as Markdown

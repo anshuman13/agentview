@@ -25,6 +25,14 @@ export function goalProgress(items: ItemRow[], goal: ItemRow) {
   return { done: tasks.filter((r) => r.status === 'done').length, total: tasks.length };
 }
 
+// A goal's tasks, open ones first then done, and its done/total count (undefined when it has no tasks).
+export function goalSummary(items: ItemRow[], goal: ItemRow) {
+  const tasks = linkedTo(items, goal);
+  const open = tasks.filter((r) => r.status === 'open');
+  const done = tasks.length - open.length;
+  return { tasks: [...open, ...tasks.filter((r) => r.status === 'done')], count: tasks.length ? `${done}/${tasks.length}` : undefined };
+}
+
 // A goal is at risk when its open tasks' estimates, summed, exceed the free work minutes left this week.
 export function goalAtRisk(items: ItemRow[], goal: ItemRow, freeMin: number) {
   const need = linkedTo(items, goal).filter((r) => r.status === 'open').reduce((n, r) => n + taskMin(r.title), 0);

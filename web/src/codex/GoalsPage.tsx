@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantTable, useSyncGate } from './data';
-import { GOAL, MAX_GOALS, goalHistory, goalProgress, goalsOf, goalVerdict, linkedTo, moveBlock, reopenBlock, titleKey } from './data/goals';
+import { GOAL, MAX_GOALS, goalHistory, goalSummary, goalsOf, moveBlock, reopenBlock, titleKey } from './data/goals';
 import { weekStart } from './data/dates';
 import { atTime } from './data/engine';
 import type { ItemRow } from './data/sync';
 import { attempt, leaveOverlay, openTask, openWeek, previousList, showSnack, useEscapeBack, useView } from './view';
 import { useMinute } from './split';
 import { LISTS } from './nav';
+import { dueText } from './Task';
 import { Button, IconButton } from '../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { EmptyState } from '../ui/Panel';
@@ -19,21 +20,17 @@ const MOVE_TEXT = { full: `Next week is full (${MAX_GOALS} goals)`, same: 'Alrea
 
 type Actions = { reopen: (g: ItemRow) => void; move: (g: ItemRow) => void; rename: (g: ItemRow, title: string) => Promise<void>; remove: (g: ItemRow) => void };
 
-function GoalRow({ goal, items, showProfile, now, reopen, move, rename, remove }: { goal: ItemRow; items: ItemRow[]; showProfile: boolean; now: number } & Actions) {
+function GoalGroup({ goal, items, showProfile, now, reopen, move, rename, remove }: { goal: ItemRow; items: ItemRow[]; showProfile: boolean; now: number } & Actions) {
   const [menu, setMenu] = useState(false);
-  const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const cancelled = useRef(false);
-  const p = goalProgress(items, goal);
-  const tasks = linkedTo(items, goal).filter((r) => r.status === 'open');
+  const { tasks, count } = goalSummary(items, goal);
   const start = weekStart(atTime(goal.at) ?? now);
   const thisWeek = weekStart(now);
   const past = start < thisWeek;
   const block = past ? reopenBlock(items, goal, now) : start === thisWeek ? moveBlock(items, goal, now) : null;
-  const week = `Week of ${new Date(start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
-  const meta = [p.total ? `${p.total - p.done} open · ${p.done} done` : 'No tasks', week, showProfile && (goal.profile === 'work' ? 'Work' : 'Personal')].filter(Boolean).join(' · ');
   const finish = (save: boolean) => {
     if (cancelled.current) return;
     cancelled.current = true;
@@ -45,25 +42,25 @@ function GoalRow({ goal, items, showProfile, now, reopen, move, rename, remove }
     <input ref={input} className="gl-input" defaultValue={goal.title ?? ''} maxLength={120} aria-label="Goal" autoFocus onFocus={(e) => e.currentTarget.select()}
       onBlur={() => finish(true)} onKeyDown={(e) => { if (e.key === 'Enter') finish(true); else if (e.key === 'Escape') { e.stopPropagation(); finish(false); } }} />
   );
+  const label = editing ? edit : <>{goal.title}{showProfile && ` · ${goal.profile === 'work' ? 'Work' : 'Personal'}`}</>;
+  const action = (
+    <>
+      <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+      {menu && (
+        <Menu trigger={btn} onClose={() => setMenu(false)}>
+          <MenuItem onClick={() => { setMenu(false); cancelled.current = false; setEditing(true); }}>Rename</MenuItem>
+          {start === thisWeek && <MenuItem disabled={!!block} onClick={() => { setMenu(false); move(goal); }}>{block ? MOVE_TEXT[block] : 'Move to next week'}</MenuItem>}
+          {past && <MenuItem disabled={!!block} onClick={() => { setMenu(false); reopen(goal); }}>{block ? BLOCK_TEXT[block] : 'Reopen this week'}</MenuItem>}
+          <MenuSeparator />
+          <MenuItem danger onClick={() => { setMenu(false); remove(goal); }}>Delete</MenuItem>
+        </Menu>
+      )}
+    </>
+  );
   return (
-    <div className="gl-hist">
-      <div className="gl-hist-row">
-        {editing
-          ? <Row plain title={edit} meta={meta} />
-          : <Row className="inert" disabled title={goal.title} meta={meta} trailing={goalVerdict(p) === 'Done' && <span className="badge quiet">Done</span>} />}
-        <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-        {menu && (
-          <Menu trigger={btn} onClose={() => setMenu(false)}>
-            <MenuItem onClick={() => { setMenu(false); cancelled.current = false; setEditing(true); }}>Rename</MenuItem>
-            {start === thisWeek && <MenuItem disabled={!!block} onClick={() => { setMenu(false); move(goal); }}>{block ? MOVE_TEXT[block] : 'Move to next week'}</MenuItem>}
-            {past && <MenuItem disabled={!!block} onClick={() => { setMenu(false); reopen(goal); }}>{block ? BLOCK_TEXT[block] : 'Reopen this week'}</MenuItem>}
-            {tasks.length > 0 && <MenuItem onClick={() => { setMenu(false); setOpen(!open); }}>{open ? 'Hide tasks' : 'Open tasks'}</MenuItem>}
-            <MenuSeparator />
-            <MenuItem danger onClick={() => { setMenu(false); remove(goal); }}>Delete</MenuItem>
-          </Menu>
-        )}
-      </div>
-      {open && <ul className="gl-tasks">{tasks.map((t) => <li key={t.id}><button className="ov-follow-text" onClick={() => openTask(t)}>{t.title}</button></li>)}</ul>}
+    <div className="gl-group">
+      <Section label={label} count={count} action={action} />
+      {tasks.length ? tasks.map((t) => <Row key={t.id} title={t.title} meta={t.status === 'done' ? 'Done' : dueText(t, now)} onClick={() => openTask(t)} />) : <Row className="inert" disabled title="No tasks yet" />}
     </div>
   );
 }
@@ -116,7 +113,7 @@ export function GoalsPage() {
             <section key={w.start}>
               <Section label={w.label} />
               <div className="ov-group">
-                {w.goals.map((g) => <GoalRow key={g.profile + g.id} goal={g} items={items} showProfile={filter === 'all'} now={now} reopen={reopen} move={move} rename={rename} remove={remove} />)}
+                {w.goals.map((g) => <GoalGroup key={g.profile + g.id} goal={g} items={items} showProfile={filter === 'all'} now={now} reopen={reopen} move={move} rename={rename} remove={remove} />)}
               </div>
             </section>
           ))}

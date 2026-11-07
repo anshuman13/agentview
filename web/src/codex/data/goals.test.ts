@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carryOver, goalAtRisk, goalHistory, goalVerdict, moveBlock, pruneDismissed, reopenBlock, reviewCarry, reviewWindow } from './goals';
+import { carryOver, goalAtRisk, goalHistory, goalSummary, goalVerdict, moveBlock, pruneDismissed, reopenBlock, reviewCarry, reviewWindow } from './goals';
 import { weekFreeMinutes, type Span } from './plan';
 import type { ItemRow } from './sync';
 
@@ -162,5 +162,18 @@ describe('weekly review', () => {
 
   it('keeps only today dismissals', () => {
     expect(pruneDismissed(['work:2026-10-30', 'personal:2026-10-29'], '2026-10-30')).toEqual(['work:2026-10-30']);
+  });
+});
+
+describe('goalSummary', () => {
+  const goal = row({ id: 'g', status: 'goal' });
+  it('lists open tasks before done ones and counts done over total', () => {
+    const items = [goal, row({ id: 'a', status: 'done', goal: 'g' }), row({ id: 'b', status: 'open', goal: 'g' }), row({ id: 'c', status: 'open', goal: 'g' }), row({ id: 'x', status: 'open', goal: 'other' })];
+    const s = goalSummary(items, goal);
+    expect(s.tasks.map((t) => t.id)).toEqual(['b', 'c', 'a']);
+    expect(s.count).toBe('1/3');
+  });
+  it('has no count without tasks', () => {
+    expect(goalSummary([goal], goal)).toEqual({ tasks: [], count: undefined });
   });
 });
