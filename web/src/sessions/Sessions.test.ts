@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, newChatGroups, orderGroups, segmentOf, since, staleKeys, unreadCount } from './folders';
+import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
@@ -221,5 +221,18 @@ describe('newChatGroups', () => {
   });
   it('returns each group with a new chat once', () => {
     expect(newChatGroups(new Set(['a']), [['a', '/w/shop'], ['b', '/w/shop'], ['c', '/w/shop'], ['d', '/w/cafe']])).toEqual(['/w/shop', '/w/cafe']);
+  });
+});
+
+describe('renameTitle', () => {
+  it('saves trimmed text on Enter and blur', () => {
+    expect(renameTitle('Enter', '  New  ', 'Old')).toBe('New');
+    expect(renameTitle('blur', 'New', 'Old')).toBe('New');
+  });
+
+  it('returns nothing on Escape, empty or unchanged text', () => {
+    expect(renameTitle('Escape', 'New', 'Old')).toBeUndefined();
+    expect(renameTitle('Enter', '   ', 'Old')).toBeUndefined();
+    expect(renameTitle('blur', ' Old ', 'Old')).toBeUndefined();
   });
 });

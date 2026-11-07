@@ -232,7 +232,7 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
 - Swipe actions: a Row swipe that completes, snoozes, moves or deletes shows the one snack with Undo for 5 s (`showSnack` with an undo, never a bare write); only the latest swipe can be undone. A swipe action added to a Row ships with its Undo.
 - Long press menu: phone widths only (max-width 480px), touch only. Holding a row 500ms with under 10px of movement
   gives a haptic tap and opens the row's More menu as the bottom sheet; the click after release is swallowed. Only rows
-  that have a More menu take it, and the kebab stays as the visible action.
+  that have a More menu take it, and the kebab stays as the visible action. Exception: a chat row's long press renames the chat in place and does not open the menu.
 - Haptics: `haptic('tap')` on a swipe action, a drag pick-up and a touch drop on a section, a long press and a pull refresh; `haptic('success')` on completing a task. In the phone app they go through the Tauri haptics plugin (tap is light impact, success is success notification) and fall back to `navigator.vibrate`; on the web and on desktop they do nothing where vibrate is missing. Reopening, kebab and button taps give none.
 - Pull to refresh: phone widths only (max-width 900px), at the top of the scroll container, on Overview, Tasks and
   Meetings (Wiki and Jobs share the hook). The indicator is the floating `.as-ptr` spinner chip, not a Row. A pull

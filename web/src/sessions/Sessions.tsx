@@ -14,7 +14,7 @@ import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RenameEvent, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 
 const PAGE = 5;
@@ -428,10 +428,11 @@ const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Acti
 function RenameInput({ value, onSave, onCancel }: { value: string; onSave: (title: string) => void; onCancel: () => void }) {
   const [text, setText] = useState(value);
   const done = useRef(false);
-  const finish = (save: boolean) => {
+  const finish = (event: RenameEvent) => {
     if (done.current) return;
     done.current = true;
-    if (save) onSave(text.trim());
+    const title = renameTitle(event, text, value);
+    if (title) onSave(title);
     else onCancel();
   };
   return (
@@ -443,12 +444,12 @@ function RenameInput({ value, onSave, onCancel }: { value: string; onSave: (titl
       value={text}
       onChange={(e) => setText(e.target.value)}
       onFocus={(e) => e.currentTarget.select()}
-      onBlur={() => finish(true)}
+      onBlur={() => finish('blur')}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') finish(true);
+        if (e.key === 'Enter') finish('Enter');
         if (e.key === 'Escape') {
           e.stopPropagation();
-          finish(false);
+          finish('Escape');
         }
       }}
     />
@@ -489,13 +490,13 @@ function ChatRow({ sessionId, title, opening, meta, state, selected, pinned, act
   if (renaming) {
     const save = (t: string) => {
       setRenaming(false);
-      if (t && t !== title) actions.rename(sessionId!, t);
+      actions.rename(sessionId!, t);
     };
     return <div className="chat-row"><Row plain title={<RenameInput value={title} onSave={save} onCancel={() => setRenaming(false)} />} /></div>;
   }
   return (
     <div className="chat-row">
-      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />} onClick={onOpen} />
+      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />} onClick={onOpen} onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined} onLongPress={sessionId ? () => setRenaming(true) : undefined} />
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>

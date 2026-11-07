@@ -168,6 +168,13 @@ export const archiveChat = (s: { sessionId: string; title: string }, onDone: () 
   run: removeRequest(s.sessionId, '&archive', onDone, onError),
 });
 
+export type RenameEvent = 'Enter' | 'Escape' | 'blur';
+
+export function renameTitle(event: RenameEvent, text: string, current: string) {
+  const title = text.trim();
+  return event !== 'Escape' && title && title !== current ? title : undefined;
+}
+
 export async function renameChat(sessionId: string, title: string) {
   const r = await fetch(apiUrl(`/api/sessions/rename?id=${encodeURIComponent(sessionId)}`), { method: 'POST', body: JSON.stringify({ title }) }).catch(() => null);
   if (!r?.ok) notice('Could not rename the chat');
