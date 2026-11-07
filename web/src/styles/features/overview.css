@@ -5,7 +5,7 @@
 .ov-hit:focus-visible { outline: none; }
 .ov-hit:focus-visible::after { outline: 2px solid var(--accent); outline-offset: -2px; }
 @media (max-width: 480px) {
-  .ov-today > .ui-section { position: sticky; top: 0; z-index: var(--z-raised); background: var(--bg); }
+  .ov-today > .ui-section { position: sticky; top: 0; z-index: var(--z-raised); background: var(--group-page); }
 }
 .ov-more { align-self: flex-start; }
 .ov-group { display: flex; flex-direction: column; border-radius: 12px; background: var(--group-card); overflow: hidden; }
