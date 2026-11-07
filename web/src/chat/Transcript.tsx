@@ -4,7 +4,7 @@ import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
-import { buildTranscript, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
+import { createTranscriptBuilder, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural, pressable } from '../ui/util';
 import { FIRST_ROWS, hiddenCount, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../shared/protocol';
@@ -18,8 +18,14 @@ export function Transcript() {
   return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} />;
 }
 
+function lastUserId(items: Item[]) {
+  for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'user') return items[i].id;
+  return '';
+}
+
 function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean }) {
-  const items = useMemo(() => buildTranscript(events), [events]);
+  const [build] = useState(createTranscriptBuilder);
+  const items = useMemo(() => build(events), [build, events]);
   const box = useRef<HTMLDivElement>(null);
   const rows = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -39,7 +45,7 @@ function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const mine = [...items].reverse().find((i) => i.kind === 'user')?.id ?? '';
+    const mine = lastUserId(items);
     if (mine !== lastUser.current) {
       lastUser.current = mine;
       if (mine) { stick.current = true; setStuck(true); }

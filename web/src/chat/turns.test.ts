@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTurns, chatCost } from './turns';
+import { buildTurns, chatCost, createTurnsBuilder } from './turns';
 import type { ChatEvent } from '../../../shared/protocol';
 
 let n = 0;
@@ -96,5 +96,50 @@ describe('buildTurns', () => {
     const { turns } = buildTurns([user('a'), done(0.5), user('b'), done(0.8)]);
     expect(turns.map((t) => t.ended! - t.at)).toEqual([1, 1]);
     expect(chatCost([user('a'), done(0), user('b'), done(2), user('c'), done(2.25), done(0.1)])).toBeCloseTo(2.35);
+  });
+});
+
+describe('createTurnsBuilder', () => {
+  it('matches a full rebuild while a chat streams, and reuses untouched turns on the fast path', () => {
+    const build = createTurnsBuilder();
+    const u1 = user('fix it');
+    const bash = tool('Bash', { command: 'git commit -m x' });
+    const res = result(bash, '[main abc1234] x');
+    const a1 = say('Looking');
+    const a2 = { ...say('Done'), streaming: true } as ChatEvent;
+    const a2b = { ...a2, text: 'Done. Commit?' } as ChatEvent;
+    const blank = { ...a2, text: '  ' } as ChatEvent;
+    const u2 = user('yes');
+    const base = [u1, bash, res];
+    const steps: ChatEvent[][] = [
+      [u1], base, [...base, a1], [...base, a1, a2], [...base, a1, a2b], [...base, a1, blank], [...base, a1, a2b], [...base, a1, a2b],
+      [...base, a1, a2b, u2], [...base, a1, a2b, u2, say('ok')], [...base, a1, a2b, u2, say('ok'), status({ done: 'pushed' })],
+      [...base, a1], [u2, say('elsewhere')], [], [...base, a1, a2],
+    ];
+    for (const events of steps) expect(build(events)).toEqual(buildTurns(events));
+
+    const first = [u1, say('one'), user('two'), tool('Read', { file_path: '/w/b.ts' }), a1];
+    const before = build(first);
+    const replaced = [...first.slice(0, -1), a2];
+    const after = build(replaced);
+    expect(after).toEqual(buildTurns(replaced));
+    expect(after.turns[0]).toBe(before.turns[0]);
+    expect(after.turns[1]).not.toBe(before.turns[1]);
+    const grown = [...replaced.slice(0, -1), a2b, u2];
+    const grew = build(grown);
+    expect(grew).toEqual(buildTurns(grown));
+    expect(grew.turns[0]).toBe(before.turns[0]);
+  });
+
+  it('rebuilds when the tail has a tool result, events are prepended or the list shrinks', () => {
+    const build = createTurnsBuilder();
+    const bash = tool('Bash', { command: 'ls' });
+    const events = [user('go'), bash, say('hi')];
+    build(events);
+    const withResult = [...events, result(bash, 'out', true)];
+    expect(build(withResult)).toEqual(buildTurns(withResult));
+    const paged = [user('older'), say('before'), ...withResult];
+    expect(build(paged)).toEqual(buildTurns(paged));
+    expect(build(paged.slice(0, 4))).toEqual(buildTurns(paged.slice(0, 4)));
   });
 });

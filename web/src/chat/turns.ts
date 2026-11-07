@@ -2,7 +2,7 @@ import { editCount } from '../../../shared/edits';
 import { BIG_BRO, type ChatEvent } from '../../../shared/protocol';
 import { chatCost } from '../../../shared/cost';
 export { chatCost };
-import { buildTranscript, denied, firstLine, str, type Item, type ToolResult, type ToolUse } from './steps';
+import { buildTranscript, denied, fastFrom, tailStart, firstLine, str, type Item, type ToolResult, type ToolUse } from './steps';
 
 type FileFact = { path: string; add: number; del: number };
 type CommandFact = { id: string; label: string; done?: boolean; error?: string; denied?: boolean };
@@ -54,22 +54,39 @@ function newTurn(id: string, prompt: string, at: number, phase = false): Turn {
   return { id, prompt, phase, at, files: [], commands: [], commits: [], agents: [], notes: [], blocked: [], steps: [] };
 }
 
-export function buildTurns(events: ChatEvent[]) {
+type Snapshot = { turns: Turn[]; next: string[]; advisor: number; lastTool?: ToolUse; fable: number; lastItems: Item[] };
+
+const cloneTurn = (t: Turn): Turn => ({ ...t, notes: [...t.notes], blocked: [...t.blocked], steps: [...t.steps] });
+
+export const buildTurns = (events: ChatEvent[]) => turnsFrom(events).out;
+
+// Builds from events[from] on, resuming from a snapshot taken before `from`. With `split`, also returns a snapshot taken before events[split].
+function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapshot) {
   const results = new Map<string, ToolResult>();
   const resumed = new Map<string, number>();
-  for (const e of events) {
+  for (const e of events.slice(from)) {
     if (e.kind === 'tool_result') results.set(e.toolUseId, e);
     if (e.kind === 'tool_use' && e.agent) resumed.set(e.agent, e.at);
   }
-  const turns: Turn[] = [];
+  const turns: Turn[] = seed ? seed.turns.map((t, i) => (i === seed.turns.length - 1 ? cloneTurn(t) : t)) : [];
+  const seeded = seed && turns.at(-1);
   const turnOf = new Map<string, Turn>();
   const fableCalls = new Set<string>();
-  let next: string[] = [];
-  let advisor = 0;
-  let lastTool: ToolUse | undefined;
+  let next = seed?.next ?? [];
+  let advisor = seed?.advisor ?? 0;
+  let lastTool = seed?.lastTool;
+  let snap: Snapshot | undefined;
+  let splitLast: Turn | undefined;
+  const take = () => {
+    splitLast = turns.at(-1);
+    snap = { turns: turns.map((t) => (t === splitLast ? cloneTurn(t) : t)), next, advisor, lastTool, fable: fableCalls.size, lastItems: [] };
+  };
   const current = () => turns.at(-1) ?? turns[turns.push(newTurn('start', '', events[0]?.at ?? 0)) - 1];
 
-  for (const e of events) {
+  for (let i = from; i <= events.length; i++) {
+    if (i === split) take();
+    const e = events[i];
+    if (!e) break;
     if (e.kind === 'user') {
       next = [];
       const prompt = e.phase ? (e.text.startsWith('Test') ? `Test ${e.text.slice(5)} · Sonnet` : PHASE_TEXT[e.phase] ?? e.text) : e.text;
@@ -126,10 +143,29 @@ export function buildTurns(events: ChatEvent[]) {
   }
 
   const starts = new Set(turns.map((t) => t.id));
-  for (const it of buildTranscript(events)) {
+  if (seed && seeded) seeded.steps = seed.lastItems.filter((it) => it.id !== seeded.reply?.id);
+  const tailIds = new Set(split === undefined ? [] : events.slice(split).map((e) => e.id));
+  for (const it of buildTranscript(events.slice(from))) {
     const turn = turnOf.get(it.id);
     if (turn && !starts.has(it.id) && it.id !== turn.reply?.id) turn.steps.push(it);
+    if (snap && turn && turn === splitLast && !starts.has(it.id) && !tailIds.has(it.id)) snap.lastItems.push(it);
   }
   const kept = turns.filter((t) => t.id !== 'start' || t.reply || t.steps.some((s) => s.kind !== 'system'));
-  return { turns: kept, next, lastTool, advisor, fable: fableCalls.size };
+  return { out: { turns: kept, next, lastTool, advisor, fable: (seed?.fable ?? 0) + fableCalls.size }, snap };
+}
+
+export function createTurnsBuilder() {
+  let prev: ChatEvent[] = [];
+  let out = buildTurns(prev);
+  let start = 0;
+  let snap: Snapshot | undefined;
+  return (events: ChatEvent[]): ReturnType<typeof buildTurns> => {
+    const k = fastFrom(prev, start, events);
+    if (k < 0 || !snap) {
+      start = tailStart(events);
+      ({ out, snap } = turnsFrom(events, 0, start));
+    } else if (k < events.length) out = turnsFrom(events, start, undefined, snap).out;
+    prev = events;
+    return out;
+  };
 }

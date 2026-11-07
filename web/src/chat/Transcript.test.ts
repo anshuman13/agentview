@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTranscript, duration, stepLabel, stepTone } from './steps';
+import { buildTranscript, createTranscriptBuilder, duration, stepLabel, stepTone } from './steps';
 import { editCount, replyLine, sumEdits } from '../../../shared/edits';
 import { chatLine } from '../sessions/folders';
 import type { ChatEvent, LiveChat } from '../../../shared/protocol';
@@ -129,5 +129,47 @@ describe('subagent steps', () => {
     const row = items[1] as Extract<typeof items[number], { kind: 'agent' }>;
     expect(row.result?.text).toBe('report');
     expect(row.steps).toMatchObject([{ kind: 'step', use: { name: 'Read' }, result: { text: 'ok' } }]);
+  });
+});
+
+describe('createTranscriptBuilder', () => {
+  it('matches a full rebuild while a chat streams, and reuses untouched items on the fast path', () => {
+    const build = createTranscriptBuilder();
+    const u = user('go');
+    const read = tool('Read', { file_path: '/w/a.ts' });
+    const res = result(read.id);
+    const a1 = say('one');
+    const a2 = { ...say('two'), streaming: true };
+    const a2b = { ...a2, text: 'two and more' } as ChatEvent;
+    const blank = { ...a2, text: ' ' } as ChatEvent;
+    const u2 = user('next');
+    const other = [user('elsewhere'), say('x')];
+    const steps: ChatEvent[][] = [
+      [u], [u, read], [u, read, res], [u, read, res, a1], [u, read, res, a1, a2], [u, read, res, a1, a2b],
+      [u, read, res, a1, a2b, u2], [u, read, res, a1, a2b, u2, say('three')], [u, read, res, a1, blank],
+      [u, read, res, a1, a2b], [u, read, res, a1, a2b], [u, read, res, a1], [...other], [u, ...other],
+    ];
+    for (const events of steps) expect(build(events)).toEqual(buildTranscript(events));
+    const base = [u, read, res, a1, a2];
+    const before = build(base);
+    const after = build([...base.slice(0, -1), a2b]);
+    expect(after).toEqual(buildTranscript([...base.slice(0, -1), a2b]));
+    after.slice(0, -1).forEach((it, i) => expect(it).toBe(before[i]));
+    expect(after.at(-1)).not.toBe(before.at(-1));
+  });
+
+  it('rebuilds when the tail has a tool result or earlier events change', () => {
+    const build = createTranscriptBuilder();
+    const read = tool('Read', { file_path: '/w/a.ts' });
+    const a = say('hi');
+    const first = [user('go'), read, a];
+    build(first);
+    const withResult = [...first, result(read.id)];
+    expect(build(withResult)).toEqual(buildTranscript(withResult));
+    const paged = [user('older'), ...withResult];
+    expect(build(paged)).toEqual(buildTranscript(paged));
+    const swapped = [...paged.slice(0, 2), say('changed'), ...paged.slice(3)];
+    expect(build(swapped)).toEqual(buildTranscript(swapped));
+    expect(build([])).toEqual([]);
   });
 });

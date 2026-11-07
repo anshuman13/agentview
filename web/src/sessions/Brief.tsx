@@ -11,7 +11,7 @@ import { touch } from '../app/touch';
 import { Row, Transcript } from '../chat/Transcript';
 import { FileIcon } from '../workspace/FileIcon';
 import { relPath } from '../chat/steps';
-import { buildTurns, openFailures, type Turn } from '../chat/turns';
+import { createTurnsBuilder, openFailures, type Turn } from '../chat/turns';
 import { markSeen, readSeen, recap, recapText } from '../chat/recap';
 import { AgentsChip, AgentsPane } from './AgentsPane';
 import { agentCounts, agentsOf, openAgent } from './agents';
@@ -34,6 +34,10 @@ function InboxChip() {
   );
 }
 
+function lastReplyOf(turns: Turn[]) {
+  for (let i = turns.length - 1; i >= 0; i--) if (turns[i].reply) return turns[i].reply;
+}
+
 export function Brief() {
   const events = useStore((s) => s.events);
   const status = useStore((s) => s.status);
@@ -48,7 +52,8 @@ export function Brief() {
   const chatTitle = useStore((s) => s.live.find((c) => c.id === s.session.id)?.title);
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;
-  const { turns, next, lastTool, advisor, fable } = useMemo(() => buildTurns(events), [events]);
+  const [build] = useState(createTurnsBuilder);
+  const { turns, next, lastTool, advisor, fable } = useMemo(() => build(events), [build, events]);
   const [all, setAll] = useState(false);
   const [full, setFull] = useState(() => readFlag('agentview.transcript', false));
   const pick = (v: boolean) => { setFull(v); saveFlag('agentview.transcript', v); };
@@ -67,7 +72,7 @@ export function Brief() {
   const shown = turns.slice(from);
   const extras = [team && 'Team', advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const setNext = (list: string[]) => send({ type: 'plan', next: list });
-  const lastReply = [...turns].reverse().find((t) => t.reply)?.reply;
+  const lastReply = lastReplyOf(turns);
   // After a usage limit the last prompt can be sent again when the limit resets.
   const limit = useMemo(() => {
     const t = turns[turns.length - 1];

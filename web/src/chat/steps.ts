@@ -122,3 +122,41 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
   }
   return items;
 }
+
+const TEXT_KINDS = new Set(['assistant', 'user', 'system', 'plan', 'blocked']);
+const textOnly = (e: ChatEvent) => TEXT_KINDS.has(e.kind) && !('parent' in e && e.parent);
+
+// Where the trailing run of top-level text events starts.
+export function tailStart(events: ChatEvent[]) {
+  let i = events.length;
+  while (i > 0 && textOnly(events[i - 1])) i--;
+  return i;
+}
+
+// The index from which only a text-only tail changed, or -1 when the whole list must be rebuilt.
+export function fastFrom(prev: ChatEvent[], prevStart: number, events: ChatEvent[]) {
+  if (events.length < prev.length) return -1;
+  let k = 0;
+  while (k < prev.length && prev[k] === events[k]) k++;
+  if (k === events.length) return k;
+  return k > 0 && k >= prevStart && tailStart(events) <= k ? k : -1;
+}
+
+export function createTranscriptBuilder() {
+  let prev: ChatEvent[] = [];
+  let items: Item[] = [];
+  let start = 0;
+  return (events: ChatEvent[]): Item[] => {
+    const k = fastFrom(prev, start, events);
+    if (k < 0) items = buildTranscript(events);
+    else if (k < events.length) {
+      const old = new Set(prev.slice(k).map((e) => e.id));
+      let n = items.length;
+      while (n > 0 && old.has(items[n - 1].id)) n--;
+      items = [...items.slice(0, n), ...buildTranscript(events.slice(k))];
+    }
+    if (k !== events.length) start = tailStart(events);
+    prev = events;
+    return items;
+  };
+}
