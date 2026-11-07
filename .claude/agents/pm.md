@@ -1,7 +1,7 @@
 ---
 name: pm
 description: Product manager. Turns a one-line feature brief into a short spec with acceptance criteria, grounded in how the code works today. Read-only except for the spec file.
-model: sonnet
+model: opus
 tools: Read, Grep, Glob, Bash, Write
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Implements an approved spec in its own git worktree, runs the checks, commits on a branch. Returns the branch, commit and what changed.
-model: sonnet
+model: opus
 ---
 
 You implement one approved spec for AgentView in the worktree you are started in. Do not touch the main checkout.
