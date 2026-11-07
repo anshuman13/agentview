@@ -29,4 +29,53 @@ describe('Row', () => {
   it('wraps a row with an action', () => {
     expect(render({ action: createElement('i') })).toMatch(/^<div class="ui-row-wrap"><button/);
   });
+
+  it('opens the link in a new tab', () => {
+    const html = render({ href: 'https://example.com' });
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noreferrer"');
+  });
+
+  it('passes extra props to a plain row', () => {
+    expect(render({ plain: true, 'data-x': '1' })).toMatch(/^<div class="ui-row" data-x="1">/);
+  });
+
+  it('renders a plain row with href as a div', () => {
+    const html = render({ plain: true, href: 'https://example.com' });
+    expect(html).toMatch(/^<div class="ui-row">/);
+    expect(html).not.toContain('<a ');
+  });
+
+  it('renders meta and trailing only when given', () => {
+    const html = render({ meta: 'm', trailing: 'r' });
+    expect(html).toContain('<span class="ui-row-meta">m</span>');
+    expect(html).toContain('<span class="ui-row-trail">r</span>');
+    const bare = render({});
+    expect(bare).not.toContain('ui-row-meta');
+    expect(bare).not.toContain('ui-row-trail');
+  });
+
+  it('gives a default title no two class', () => {
+    expect(render({})).toContain('class="ui-row-title"');
+  });
+
+  it('renders the action after the button', () => {
+    expect(render({ action: createElement('i') })).toMatch(/<\/button><i><\/i><\/div>$/);
+  });
+
+  it('wraps only a button row with an action', () => {
+    expect(render({})).not.toContain('ui-row-wrap');
+    expect(render({ plain: true })).not.toContain('ui-row-wrap');
+    expect(render({ href: 'https://example.com' })).not.toContain('ui-row-wrap');
+  });
+
+  it('has no lead markup without leading', () => {
+    const html = render({});
+    expect(html).not.toContain('has-lead');
+    expect(html).not.toContain('ui-row-lead');
+  });
+
+  it('renders the same props to the same markup', () => {
+    expect(render({ leading: 'x', meta: 'm' })).toBe(render({ leading: 'x', meta: 'm' }));
+  });
 });
