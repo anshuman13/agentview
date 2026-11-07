@@ -28,7 +28,7 @@ import { gitRoute } from './workspace/git.js';
 import { observe } from './integrations/observe.js';
 import { otherMacs, thisMac } from './http/macs.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './workspace/worktrees.js';
-import type { AttentionItem, ClientMessage, LiveChat, ServerMessage } from '../../shared/protocol.js';
+import { ROW_WINDOW, type AttentionItem, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './http/stream.js';
 import { gz, serveWeb } from './http/web.js';
 import { readBody, savePaste } from './http/body.js';
@@ -95,7 +95,7 @@ function view(client: Client, id: string) {
   client.waiting = true;
   lastViewed = id;
   reportViewers();
-  host.call({ op: 'state', id }, (err, state) => {
+  host.call({ op: 'state', id, limit: ROW_WINDOW }, (err, state) => {
     if (client.view !== id) return;
     client.waiting = false;
     if (err) return client.send({ type: 'error', text: err });
@@ -338,6 +338,14 @@ const server = http.createServer(async (req, res) => {
       if (!(await inSettings(chat.cwd, name))) return json({ error: `${name} is not approved in Claude Code, so AgentView does not start it` }, 403);
       const r = await mcpCall(chat.cwd, name, def as McpServerDef, String(body.tool ?? ''), body.args ?? {});
       return json(r, 'error' in r ? 400 : 200);
+    }
+    if (url.pathname === '/api/chat/events') {
+      const limit = parseInt(url.searchParams.get('limit') ?? '', 10);
+      try {
+        return json(await host.req({ op: 'events_before', id: chat.id, before: url.searchParams.get('before') ?? '', ...(!Number.isNaN(limit) && { limit }) }));
+      } catch (err) {
+        return json({ error: err instanceof Error ? err.message : String(err) }, 404);
+      }
     }
     if (url.pathname === '/api/state') return json(await host.req({ op: 'state', id: chat.id }));
     if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));

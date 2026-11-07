@@ -853,3 +853,48 @@ describe('event index', () => {
   });
 
 });
+
+describe('event windows', () => {
+  const filled = (n: number) => {
+    const { s } = fakeSession();
+    for (let i = 0; i < n; i++) s.state.events.push({ id: `e${i}`, kind: 'user', text: '', at: i });
+    return s;
+  };
+
+  it('view cuts the tail with a count of the rest and leaves the state alone', () => {
+    const s = filled(400);
+    const v = s.view(150);
+    expect(v.events).toHaveLength(150);
+    expect(v.earlier).toBe(250);
+    expect(v.events[0].id).toBe('e250');
+    expect(s.state.events).toHaveLength(400);
+    expect(s.view().events).toHaveLength(400);
+    expect(s.view().earlier).toBeUndefined();
+    const small = filled(100).view(150);
+    expect(small.events).toHaveLength(100);
+    expect(small.earlier).toBeUndefined();
+  });
+
+  it('before pages back from an event and clamps the limit', () => {
+    const s = filled(800);
+    const page = s.before('e250');
+    expect(page.events.map((e) => e.id)).toEqual(s.state.events.slice(100, 250).map((e) => e.id));
+    expect(page.earlier).toBe(100);
+    expect(s.before('e250', 10).events).toHaveLength(10);
+    expect(s.before('e799', 0).events).toHaveLength(1);
+    expect(s.before('e799', 9999).events).toHaveLength(500);
+    expect(s.before('e5')).toEqual({ events: s.state.events.slice(0, 5), earlier: 0 });
+    expect(s.before('e0')).toEqual({ events: [], earlier: 0 });
+    expect(() => s.before('gone')).toThrow();
+  });
+
+  it('an init the session emits carries every event and no earlier', () => {
+    const s = filled(400);
+    const seen: { events: unknown[]; earlier?: number }[] = [];
+    s.onMessage((m) => { if (m.type === 'init') seen.push(m.state); });
+    s.replaceHistory({ events: s.state.events, context: s.state.session.context, cache: s.state.session.cache } as never);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].events).toHaveLength(400);
+    expect(seen[0].earlier).toBeUndefined();
+  });
+});

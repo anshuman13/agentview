@@ -144,12 +144,16 @@ export type Effort = (typeof EFFORT_LEVELS)[number];
 
 export const EFFORT_LABEL: Record<Effort, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' };
 
+export const ROW_WINDOW = 150;
+
 export type ServerState = {
   session: SessionInfo;
   status: string;
   events: ChatEvent[];
   pending: PendingRequest[];
   recentFiles: string[];
+  // Events left out of a tail init; absent when the state is full.
+  earlier?: number;
 };
 
 export type Finding = { file: string; line: number; summary: string; failure?: string; category?: string; verdict?: string };

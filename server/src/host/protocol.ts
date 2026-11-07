@@ -9,7 +9,8 @@ export const socketPath = (port: number | string) => path.join(os.homedir(), '.a
 
 export type HostRequest =
   | { op: 'hello' }
-  | { op: 'state'; id: string }
+  | { op: 'state'; id: string; limit?: number }
+  | { op: 'events_before'; id: string; before: string; limit?: number }
   | { op: 'cmd'; id: string; msg: ClientMessage }
   | { op: 'open'; sessionId: string }
   | { op: 'new'; cwd: string; from: string; fork?: string }

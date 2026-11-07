@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react';
-import { appendTo, ATTENTION_LABEL, type AttentionItem, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
+import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type AttentionItem, type ClientMessage, type LiveChat, type ReviewFindings, type ServerMessage, type ServerState } from '../../../shared/protocol';
 import { notify } from './notify';
 import { apiUrl, bundled } from './api';
 import { backoffDelay } from './backoff';
+import { initPage } from './pageEvents';
 
 type UiState = {
   connected: boolean;
@@ -64,6 +65,26 @@ const uid = () => crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new
 
 export function notice(text: string) {
   set((s) => ({ events: [...s.events, { id: uid(), kind: 'system', text, at: Date.now() }] }));
+}
+
+// One page of events before the oldest held one; false when it did not arrive, with a notice unless the chat or server changed meanwhile.
+export async function loadEarlier() {
+  const chat = state.session.id;
+  const was = boot;
+  const first = state.events[0]?.id;
+  if (!first) return false;
+  const stale = () => state.session.id !== chat || boot !== was || Boolean(state.ui.restarting);
+  try {
+    const r = await fetch(api(`/api/chat/events?before=${encodeURIComponent(first)}&limit=${ROW_WINDOW}`));
+    const body = await r.json();
+    if (stale()) return false;
+    if (!r.ok) throw new Error(body.error ?? `${r.status} ${r.statusText}`);
+    set((s) => ({ events: [...body.events, ...s.events], earlier: body.earlier }));
+    return true;
+  } catch (err) {
+    if (!stale()) notice(`Could not load earlier messages: ${err instanceof Error ? err.message : err}`);
+    return false;
+  }
 }
 
 // A different Mac has its own chats and event ids, so the view starts over and the stream reopens.
@@ -212,13 +233,14 @@ function handle(m: ServerMessage) {
       set((s) => {
         const same = s.session.id === m.state.session.id;
         const old = new Map(s.events.map((e) => [e.id, e]));
-        const events = m.state.events.map((e) => {
+        const page = initPage(s.events, same, m.state.events, m.state.earlier);
+        const events = page.events.map((e) => {
           const o = same ? old.get(e.id) : undefined;
           return o && equal(o, e) ? o : e;
         });
         const keep = same && events.length === s.events.length && events.every((e, i) => e === s.events[i]);
         const moved = Boolean(s.session.cwd) && s.session.cwd !== m.state.session.cwd;
-        return { ...m.state, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: { ...s.ui, restarting: false, ...(moved && { openFile: null, openLine: null }) } };
+        return { ...m.state, earlier: page.earlier, events: keep ? s.events : events, findings: moved ? {} : s.findings, ui: { ...s.ui, restarting: false, ...(moved && { openFile: null, openLine: null }) } };
       });
       break;
     case 'findings':

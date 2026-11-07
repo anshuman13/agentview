@@ -1,23 +1,24 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { send, setUi, useStore } from '../app/store';
+import { loadEarlier, send, setUi, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { Markdown } from './Chat';
 import { BlockedCard } from './Pending';
 import { FileIcon } from '../workspace/FileIcon';
 import { buildTranscript, denied, duration, firstLine, relPath, stepLabel, stepTone, type Item, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural, pressable } from '../ui/util';
-import { ROW_WINDOW, revealMore, windowStart } from './window';
-import type { ChatEvent } from '../../../shared/protocol';
+import { hiddenCount, revealMore, windowStart } from './window';
+import { ROW_WINDOW, type ChatEvent } from '../../../shared/protocol';
 
 export function Transcript() {
   const events = useStore((s) => s.events);
   const cwd = useStore((s) => s.session.cwd);
   const running = useStore((s) => s.session.running);
   const chat = useStore((s) => s.session.id);
-  return <TranscriptView key={chat} events={events} cwd={cwd} running={running} />;
+  const earlier = useStore((s) => s.earlier ?? 0);
+  return <TranscriptView key={chat} events={events} earlier={earlier} cwd={cwd} running={running} />;
 }
 
-function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: string; running: boolean }) {
+function TranscriptView({ events, earlier, cwd, running }: { events: ChatEvent[]; earlier: number; cwd: string; running: boolean }) {
   const items = useMemo(() => buildTranscript(events), [events]);
   const box = useRef<HTMLDivElement>(null);
   const rows = useRef<HTMLDivElement>(null);
@@ -28,6 +29,7 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
   const lastUser = useRef('');
   const [shown, setShown] = useState(ROW_WINDOW);
   const grew = useRef(0);
+  const [loading, setLoading] = useState(false);
   const start = windowStart(items.length, shown);
   const last = events[events.length - 1];
 
@@ -58,13 +60,22 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
 
   useLayoutEffect(() => {
     const el = box.current;
-    if (el && grew.current) el.scrollTop += el.scrollHeight - grew.current;
-    grew.current = 0;
-  }, [shown]);
+    const delta = el ? el.scrollHeight - grew.current : 0;
+    if (el && grew.current && delta) {
+      el.scrollTop += delta;
+      grew.current = 0;
+    }
+  }, [shown, items.length]);
 
-  const showEarlier = () => {
+  const showEarlier = async () => {
+    if (loading) return;
     grew.current = box.current?.scrollHeight ?? 0;
-    setShown(revealMore(shown, items.length));
+    if (start > 0) return setShown(revealMore(shown, items.length));
+    setLoading(true);
+    const ok = await loadEarlier();
+    setLoading(false);
+    if (ok) setShown(shown + ROW_WINDOW);
+    else grew.current = 0;
   };
 
   const onScroll = () => {
@@ -92,7 +103,7 @@ function TranscriptView({ events, cwd, running }: { events: ChatEvent[]; cwd: st
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       {items.length === 0 && <div className="tr-empty">No messages yet. Your prompts, Claude's steps and replies show up here.</div>}
-      {start > 0 && <div className="tr-more" {...pressable(showEarlier)}>Show earlier ({start} hidden)</div>}
+      {(start > 0 || earlier > 0) && <div className="tr-more" {...pressable(showEarlier)}>{loading ? 'Loading earlier' : `Show earlier (${hiddenCount(earlier, items.length, shown)} hidden)`}</div>}
       {items.slice(start).map((it) => <Row key={it.id} it={it} cwd={cwd} />)}
       </div>
     </div>

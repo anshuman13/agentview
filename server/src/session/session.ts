@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { ACCOUNT_LABEL, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { Approvals } from './approvals.js';
@@ -75,9 +75,18 @@ export class AgentSession implements AgentHost {
   }
 
   // The state for a client that opens the chat, with accounts logged in since the chat started.
-  view() {
+  view(limit?: number) {
     this.state.session.accounts = this.driver.accounts();
-    return this.state;
+    if (limit === undefined || this.state.events.length <= limit) return this.state;
+    return { ...this.state, events: this.state.events.slice(-limit), earlier: this.state.events.length - limit };
+  }
+
+  // The page of events right before one, oldest first, and how many are left before it.
+  before(id: string, limit = ROW_WINDOW) {
+    const at = this.state.events.findIndex((e) => e.id === id);
+    if (at < 0) throw new Error('That event is no longer held');
+    const start = Math.max(0, at - Math.min(Math.max(Math.floor(limit), 1), 500));
+    return { events: this.state.events.slice(start, at), earlier: start };
   }
 
   onMessage(fn: (m: ServerMessage) => void) {
