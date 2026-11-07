@@ -4,6 +4,8 @@ import { rowKey, type Profile } from './data/sync';
 import { errorText } from './data/engine';
 import { seriesKey, seriesTitleOf } from './data/meetings';
 import type { Meeting } from './data/wiki';
+import { clearScroll, saveScroll, takeScroll } from './scrollStore';
+import { PHONE } from '../ui/Menu';
 
 export type List = 'today' | 'tasks' | 'summary' | 'meetings' | 'jobs' | 'wiki' | 'goals' | 'search';
 export type Filter = 'all' | Profile;
@@ -34,12 +36,22 @@ function saveSpot(list: List) {
   spot = { list, scroll: scroller.scrollTop, index: [...scroller.querySelectorAll(FOCUSABLE)].indexOf(at), text: at.textContent ?? '' };
 }
 
+const LIST_SCROLLER: Partial<Record<List, string>> = { tasks: '.as-scroll', meetings: '.wk-scroll' };
+
+function saveListScroll(list: List) {
+  const selector = LIST_SCROLLER[list];
+  if (!selector || !matchMedia(PHONE).matches) return;
+  const scroller = document.querySelector(selector);
+  if (scroller) saveScroll(`${list}:${view.filter}`, scroller.scrollTop);
+}
+
 export function useSpotBack(scroller: RefObject<HTMLElement | null>, list: List) {
   useLayoutEffect(() => {
-    const s = spot, el = scroller.current;
+    const s = spot, el = scroller.current, top = takeScroll(`${list}:${view.filter}`);
     spot = null;
+    if (el && top !== null) el.scrollTop = top;
     if (!s || s.list !== list || !el) return;
-    el.scrollTop = s.scroll;
+    if (top === null) el.scrollTop = s.scroll;
     const all = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
     const hit = all[s.index]?.textContent === s.text ? all[s.index] : all.find((b) => b.textContent === s.text);
     const at = document.activeElement;
@@ -67,10 +79,14 @@ export const setView = (patch: Partial<View>) => {
   if (next.list !== view.list && patch.tag === undefined) next.tag = null;
   if (next.list !== view.list) {
     spot = null;
+    clearScroll(view.list);
     if (view.list === 'goals' || view.list === 'search') fromWeek = false;
     else prevList = view.list;
   }
-  else if (!depth(view) && depth(next)) saveSpot(view.list);
+  else if (!depth(view) && depth(next)) {
+    saveSpot(view.list);
+    saveListScroll(view.list);
+  }
   document.documentElement.dataset.nav = depth(next) > depth(view) ? 'push' : depth(next) < depth(view) ? 'pop' : 'switch';
   view = next;
   subs.forEach((f) => f());

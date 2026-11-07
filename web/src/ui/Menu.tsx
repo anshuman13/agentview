@@ -4,7 +4,7 @@ import { Icon } from './Icon';
 
 const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ');
 const FOCUSABLE = 'button:not(:disabled), a[href], select:not(:disabled)';
-const PHONE = '(max-width: 480px)';
+export const PHONE ='(max-width: 480px)';
 
 const subscribePhone = (cb: () => void) => {
   const mq = matchMedia(PHONE);

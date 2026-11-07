@@ -211,6 +211,7 @@ How much a list row may carry. The eye should find the one thing to do without r
   title already says.
 - Jobs rows follow this: one badge (Running, Queued, Failed, Off), a Run now Button sm, and a More menu with Edit,
   Disable or Enable, Delete. No switch and no last-run line on the row.
+- On phones a list restores its scroll position when the user returns from an item page, keyed by route (list and profile filter), once per return. Tasks and Meetings.
 - Tasks as built: a Tasks row is the title, a meta line (due, then Repeats, checklist count, up to 2 tags, High or
   Medium, none on done rows), the check as Done, a Needs you Badge on suggested tasks and one More Menu
   (Open, Snooze, Tomorrow, Move, Delete). The checklist is read and toggled on the task page.
