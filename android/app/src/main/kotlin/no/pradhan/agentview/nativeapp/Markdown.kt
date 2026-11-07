@@ -37,7 +37,7 @@ import androidx.compose.ui.text.withStyle
 @Composable
 fun inlineText(inlines: List<Inline>): AnnotatedString {
     val c = av
-    val code = SpanStyle(fontFamily = FontFamily.Monospace, fontSize = Geometry.mono, background = c.hover)
+    val code = SpanStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSm, background = c.hover)
     val link = TextLinkStyles(SpanStyle(color = c.link))
     return remember(inlines, c) {
         buildAnnotatedString {
@@ -77,7 +77,7 @@ private fun MdBlockView(b: MdBlock) {
         is MdBlock.Para -> Text(inlineText(b.inlines), style = body)
         is MdBlock.Heading -> Text(
             inlineText(b.inlines),
-            style = (if (b.level <= 1) Type.title.copy(fontSize = Tokens.fs3xl) else Type.headline).copy(color = av.fg),
+            style = (if (b.level <= 1) Type.headline.copy(fontSize = Tokens.fsXl) else Type.headline).copy(color = av.fg),
             modifier = Modifier.padding(top = Tokens.sp3),
         )
         is MdBlock.Code -> CodeBlock(b.text, b.lang)

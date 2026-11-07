@@ -80,13 +80,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 // The shared components, one per web primitive (web/src/ui and web/src/styles/components). Screens build only from these and the tokens.
 
 // One-off geometry the web keeps in its feature CSS rather than in tokens.css.
 object Geometry {
-    val rowMin = 48.dp
     val buttonMd = 34.dp
     val buttonLg = 50.dp
     val menuMin = 200.dp
@@ -106,11 +104,9 @@ object Geometry {
     val bar = 3.dp
     val subIndent = 7.dp
     val stroke = 1.5.dp
-    val mono = 12.sp
-    val monoLine = 18.sp
 }
 
-val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = Geometry.mono, lineHeight = Geometry.monoLine)
+val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSm, lineHeight = Tokens.lineSm)
 
 // Page header with an optional back button: a single line title that ends in an ellipsis.
 @Composable
@@ -173,7 +169,7 @@ fun ListRow(
 ) {
     val click = if (onClick != null || onLongClick != null) Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = onLongClick) else Modifier
     Row(
-        modifier.fillMaxWidth().background(if (selected) av.hover else Color.Transparent).heightIn(min = Geometry.rowMin).then(click)
+        modifier.fillMaxWidth().background(if (selected) av.hover else Color.Transparent).heightIn(min = Tokens.touch).then(click)
             .padding(start = Tokens.listPad, end = if (trailing != null) Tokens.sp4 else Tokens.listPad, top = Tokens.sp3, bottom = Tokens.sp3),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp6),
@@ -219,22 +215,23 @@ fun Button(
     val c = av
     val (bg, fg) = when (variant) {
         ButtonVariant.Filled -> c.accentFill to c.onAccent
-        ButtonVariant.Tinted -> c.accentSoft to c.accentText
+        ButtonVariant.Tinted -> c.accent.copy(alpha = 0.15f) to c.accentText
         ButtonVariant.Gray -> c.hover to c.accentText
         ButtonVariant.Plain -> Color.Transparent to c.accentText
         ButtonVariant.Danger -> c.err.copy(alpha = 0.14f) to c.err
     }
     val (h, pad, style) = when (size) {
         ButtonSize.Sm -> Triple(Tokens.controlSm, Tokens.sp6, Type.label)
-        ButtonSize.Md -> Triple(Geometry.buttonMd, Tokens.sp8, Type.callout.copy(fontWeight = FontWeight.Medium))
+        ButtonSize.Md -> Triple(Geometry.buttonMd, Tokens.sp8, Type.body.copy(fontWeight = FontWeight.Medium))
         ButtonSize.Lg -> Triple(Geometry.buttonLg, Tokens.sp12, Type.body.copy(fontWeight = FontWeight.SemiBold))
     }
+    val gap = when (size) { ButtonSize.Sm -> Tokens.sp2; ButtonSize.Md -> Tokens.sp3; ButtonSize.Lg -> Tokens.sp4 }
     val shape = if (size == ButtonSize.Lg) RoundedCornerShape(Tokens.shapeLg) else RoundedCornerShape(Tokens.radiusPill)
     Row(
-        modifier.minimumInteractiveComponentSize().then(if (fill) Modifier.fillMaxWidth() else Modifier).height(h).clip(shape).background(bg)
-            .clickable(enabled = enabled, onClick = onClick).alpha(if (enabled) 1f else 0.5f).padding(horizontal = pad),
+        modifier.minimumInteractiveComponentSize().then(if (fill) Modifier.fillMaxWidth() else Modifier).height(h).alpha(if (enabled) 1f else 0.5f).clip(shape).background(bg)
+            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = pad),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Tokens.sp2, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(gap, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, Modifier.size(Tokens.iconSm), tint = fg)
         Text(text, style = style, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -280,8 +277,7 @@ fun Chip(
     val bg = when {
         tone == ChipTone.Accent && on -> c.accentFill
         on || tone == ChipTone.Accent -> c.accentSoft
-        quiet -> Color.Transparent
-        else -> c.border
+        else -> Color.Transparent
     }
     val shape = RoundedCornerShape(Tokens.radiusMd)
     Row(
@@ -339,7 +335,7 @@ fun Badge(text: String, tone: BadgeTone = BadgeTone.Default, modifier: Modifier 
     }
 }
 
-enum class DotState { Faint, Ok, Bad, Warn, Busy, Running, Idle, Agent }
+enum class DotState { Faint, Ok, Bad, Warn, Busy, Running, Unread, Idle, Agent }
 
 // Status dot (web .dot): running and busy pulse.
 @Composable
@@ -351,6 +347,7 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
         DotState.Bad -> c.err
         DotState.Warn -> c.warn
         DotState.Busy, DotState.Running -> c.accent
+        DotState.Unread -> c.accentFill
         DotState.Idle -> Color.Transparent
         DotState.Agent -> Color.Transparent
     }
