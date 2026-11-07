@@ -68,7 +68,7 @@ export function usePullRefresh(scroller: RefObject<HTMLElement | null>, refresh:
 // Marks the header `scrolled` once the scroller moves past a threshold; toggles the class only when the state changes.
 export function useScrolledHeader(scroller: RefObject<HTMLElement | null>, on: unknown, past = 24) {
   useEffect(() => {
-    const el = scroller.current, head = el?.parentElement?.querySelector('.as-head');
+    const el = scroller.current, head = el?.parentElement?.querySelector('.tasks-head');
     if (!el || !head) return;
     const update = () => head.classList.toggle('scrolled', el.scrollTop > past);
     update();

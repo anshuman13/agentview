@@ -217,7 +217,7 @@ export function Assistant() {
     const over = key && droppable && drag?.over?.section === key ? drag.over.index : -1;
     const shown = rs.filter((r) => r.profile + r.id !== drag?.key);
     return (
-      <div className="as-list" data-drop={droppable ? key : undefined}>
+      <div className="ui-group" data-drop={droppable ? key : undefined}>
         {rs.map((r, i) => {
           const k = r.profile + r.id;
           const line = over >= 0 && shown[over] && shown[over].profile + shown[over].id === k;
@@ -255,17 +255,19 @@ export function Assistant() {
 
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
-      <header className="as-head">
+      <div className="tasks-head">
         <button className="icon-btn as-menu" title="Lists" aria-label="Lists" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
-        <div className="as-title-wrap">
-          <h1>{heading}</h1>
-          {list === 'today' && dayLine && <div className="as-dayline">{dayLine}</div>}
-        </div>
-        {list === 'today' && <FocusChip />}
-        {list === 'tasks' && query == null && !picked && <button className="icon-btn" title="Select tasks" aria-label="Select tasks" onClick={() => setPicked(new Set())}><Icon name="tasklist" /></button>}
-        {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
-        {filter !== 'all' && <span className={`as-prof ${filter}`}>{FILTER_LABEL[filter]}</span>}
-      </header>
+        <Section
+          label={<span role="heading" aria-level={1}>{heading}</span>}
+          count={list === 'today' && dayLine ? dayLine : undefined}
+          action={<>
+            {list === 'today' && <FocusChip />}
+            {list === 'tasks' && query == null && !picked && <button className="icon-btn" title="Select tasks" aria-label="Select tasks" onClick={() => setPicked(new Set())}><Icon name="tasklist" /></button>}
+            {list === 'tasks' && query == null && <button className="icon-btn" title="Search tasks (/)" aria-label="Search tasks" onClick={() => setQuery('')}><Icon name="search" /></button>}
+            {filter !== 'all' && <span className="badge quiet">{FILTER_LABEL[filter]}</span>}
+          </>}
+        />
+      </div>
       {list === 'tasks' && ready && query == null && !picked && <WeekStrip chips={chips} today={startOfDay} onJump={jump} />}
       {gate.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
       {calError && <button className="as-error" onClick={() => void retryCalendar()}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}

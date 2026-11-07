@@ -16,16 +16,14 @@ export function TagPage({ tag }: { tag: string }) {
   const rows = useMemo(() => tagTasks(snap.items, tag), [snap.items, tag]);
   return (
     <div className="assistant tasks">
-      <header className="as-head">
+      <div className="tasks-head">
         <button className="icon-btn" title="Back" aria-label="Back" onClick={back}><Icon name="arrow-left" /></button>
-        <div className="as-title-wrap">
-          <button className="as-crumb" onClick={back}>Tasks</button>
-        </div>
-      </header>
+        <Section label={<button className="as-crumb" onClick={back}>Tasks</button>} />
+      </div>
       <div className="as-scroll">
         <Section label={`#${tag}`} count={rows.length || undefined} />
         {rows.length ? (
-          <div className="as-list grouped">
+          <div className="ui-group">
             {rows.map((r) => <TaskRow key={r.profile + r.id} row={r} onOpen={() => setView({ open: rowKey(r) })} />)}
           </div>
         ) : <EmptyState size="sm" title={`No open tasks with #${tag}`} />}

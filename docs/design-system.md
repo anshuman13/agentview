@@ -158,13 +158,13 @@ the accent is for the action.
 Overview cards (`.as-group`, Needs you) and Meetings day groups (`.mt-days`) are
 inset grouped lists: page `--group-page` (grey #F2F2F7 in light, black in dark), card `--group-card`
 (white in light, #1C1C1E in dark), `--shape-lg` radius, no border, rows 44px minimum with a hairline
-inset to the text start. Section labels above cards are Footnote size, `--fg-muted`, sentence case.
+inset to the text start. The Codex task lists (`.ui-group`) and the editor Links use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case.
 
 ### Section header
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
-`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers, the Observe panes, the Deploy log and the MCP detail pane use it.
+`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log and the MCP detail pane use it.
 
 ## Patterns
 
@@ -259,13 +259,13 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | ag-steps-list | sessions/AgentsPane.tsx | keep: layout (step list inside one card) | Keep |
 | as-ctx-list | codex/meetings/Prep.tsx | Grouped list | Todo |
 | as-date-head, as-date-row, as-date-rows | codex/AddSheet.tsx | keep: layout (date picker form rows in a sheet) | Keep |
-| as-dayline | codex/Codex.tsx | Section header | Todo |
-| as-draft-head | codex/TaskEditor.tsx | Section header | Todo |
+| as-dayline | - | Section header | Done |
+| as-draft-head | - | Section header | Done |
 | as-drop-line | codex/Codex.tsx | keep: layout (drag insertion marker) | Keep |
 | as-flag-item | codex/AddSheet.tsx, codex/TaskEditor.tsx | keep: layout (toggle chip in a form) | Keep |
-| as-head | codex/Codex.tsx, codex/TagPage.tsx | Section header | Todo |
-| as-links-list | codex/TaskEditor.tsx | Grouped list | Todo |
-| as-list | codex/Codex.tsx, codex/TagPage.tsx | Grouped list | Todo |
+| as-head | - | Section header | Done |
+| as-links-list | - | Grouped list | Done |
+| as-list | - | Grouped list | Done |
 | as-next-head | codex/overview/NextCard.tsx | Report card | Todo |
 | as-row | codex/Task.tsx (goal tasks already use Row) | Row | Partial |
 | as-swipe-row | codex/Swipe.tsx | keep: layout (swipe gesture container) | Keep |

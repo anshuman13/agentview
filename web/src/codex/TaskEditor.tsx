@@ -91,7 +91,7 @@ export function Draft({ row, store, onEdit }: { row: ItemRow; store: AssistantSt
   };
   return (
     <div className="as-draft">
-      <div className="as-draft-head">{mine ? <><Icon name="person" small /> Needs your decision · holding note</> : 'Reply draft'}</div>
+      <Section label={mine ? <><Icon name="person" small /> Needs your decision · holding note</> : 'Reply draft'} />
       {editing
         ? <textarea className="as-draft-text" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
         : <div className="as-draft-text">{row.draft}</div>}
@@ -124,7 +124,7 @@ function Links({ text }: { text: string }) {
   return (
     <div className="as-links">
       <Section label="Links" count={urls.length} />
-      <div className="as-links-list">{shown.map((u) => <LinkRow key={u} url={u} />)}</div>
+      <div className="ui-group">{shown.map((u) => <LinkRow key={u} url={u} />)}</div>
       {urls.length > LINK_LIMIT && <Button variant="quiet" size="sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `+${urls.length - LINK_LIMIT} more`}</Button>}
     </div>
   );
