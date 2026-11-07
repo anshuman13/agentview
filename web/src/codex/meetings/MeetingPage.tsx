@@ -105,6 +105,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
   useEscapeBack(back);
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(() => notesFocusFor(rowKey(m)));
+  const [moreOpen, setMoreOpen] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const notesBox = useRef<HTMLElement>(null);
   const { busy: reading, read } = useRead(m);
@@ -124,6 +125,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
     showSnack('Notes deleted', () => void store.editRow('meetings', m, { notes: previous }));
   };
   const time = m.starts_at ? `${new Date(m.starts_at).toLocaleDateString([], { weekday: 'short' })} ${clock(m.starts_at)}${m.ends_at ? `-${clock(m.ends_at)}` : ''}` : '';
+  const meta = [time, m.room, people.length ? (people.length === 1 ? '1 person' : `${people.length} people`) : '', m.recorded_ms ? `Recorded ${Math.round(m.recorded_ms / 60000)} min` : ''].filter(Boolean).join(' · ');
   return (
     <div className="wk narrow">
       <header className="wk-head">
@@ -151,24 +153,16 @@ export function MeetingPage({ m }: { m: Meeting }) {
               </span>}
             </>
           )} />
-          <div className="mt-chips">
-            {time && <span className="chip">{time}</span>}
-            {m.room && <span className="chip">{m.room}</span>}
-            {m.recorded_ms ? <span className="chip">Recorded {Math.round(m.recorded_ms / 60000)} min</span> : null}
-            {people.length > 0 && <span className="chip">{people.length === 1 ? '1 person' : `${people.length} people`}</span>}
-            {family.length >= 2 && <Chip title="Open the whole series" onClick={() => openSeries(m)}>{family[0].title} · {family.length}</Chip>}
-          </div>
-          {people.length > 0 && <div className="mt-people"><span>{people.slice(0, 3).map((p, i) => <span key={p}>{i > 0 && ', '}<button className="mt-person" onClick={() => setView({ person: p })}>{displayName(p)}</button></span>)}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
-          <StateLine m={m} now={now} />
-          <RoomMic m={m} />
+          {meta && <p className="mt-meta">{meta}</p>}
+          {state !== 'done' && <StateLine m={m} now={now} />}
+          {m.room && m.room_me == null && <RoomMic m={m} />}
 
           <section className="mt-sec">
             <h2>My actions{count.total > 0 && <span className="mt-of">{count.done} of {count.total} done</span>}</h2>
             {mine.length > 0 && <div className="mt-tasks">{mine.map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>}
             {!mine.length && !review.length && (
-              <p className="mt-pending">{state === 'missing' ? 'No transcript. Add actions below.' : state === 'done' ? 'Nothing for you in the transcript.' : 'Your actions from the transcript land here and in Today.'}</p>
+              <p className="mt-pending">{state === 'missing' ? 'No transcript. Add actions under More.' : state === 'done' ? 'Nothing for you in the transcript.' : 'Your actions from the transcript land here and in Today.'}</p>
             )}
-            <AddAction m={m} />
           </section>
 
           {review.length > 0 && (
@@ -200,29 +194,37 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           {(state === 'upcoming' || state === 'live') && !isSolo(m) && <Prep m={m} section />}
 
-          <Fold id="meeting-context" title="Context" count={(talkers ? 1 : 0) + (prior.length ? 1 : 0)}>
-            {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}
-            <Series m={m} prior={prior} />
-          </Fold>
-
           <section className="mt-sec" ref={notesBox}>
             <h2>My notes</h2>
             <Notes m={m} editing={editing} setEditing={setEditing} />
           </section>
 
-          <Fold id="meeting-unassigned" remember={false} title="Unassigned" count={count.unassigned}>
-            <div className="mt-tasks">{by('unassigned').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
-          </Fold>
-          <Fold id="meeting-others" remember={false} title="Others took" count={others.length}>
-            <ul className="mt-others">{others.map((o, i) => <li key={i}><b>{o.who}</b> {o.what}</li>)}</ul>
-          </Fold>
-          <Fold id="meeting-not-mine" remember={false} title="Not mine" count={count.dismissed}>
-            <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
-          </Fold>
-          {state === 'done' && <Transcript key={rowKey(m)} got={transcript} />}
+          <Section label="More" open={moreOpen} onToggle={() => setMoreOpen(!moreOpen)} />
+          {moreOpen && (
+            <>
+              <AddAction m={m} />
+              <Fold id="meeting-context" title="Context" count={(talkers ? 1 : 0) + (prior.length ? 1 : 0) + (family.length >= 2 ? 1 : 0) + (people.length ? 1 : 0)}>
+                {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}
+                <Series m={m} prior={prior} />
+                {family.length >= 2 && <div className="mt-chips"><Chip title="Open the whole series" onClick={() => openSeries(m)}>{family[0].title} · {family.length}</Chip></div>}
+                {people.length > 0 && <div className="mt-people"><span>{people.slice(0, 3).map((p, i) => <span key={p}>{i > 0 && ', '}<button className="mt-person" onClick={() => setView({ person: p })}>{displayName(p)}</button></span>)}{people.length > 3 ? ` and ${people.length - 3} more` : ''}</span></div>}
+              </Fold>
+
+              <Fold id="meeting-unassigned" remember={false} title="Unassigned" count={count.unassigned}>
+                <div className="mt-tasks">{by('unassigned').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
+              </Fold>
+              <Fold id="meeting-others" remember={false} title="Others took" count={others.length}>
+                <ul className="mt-others">{others.map((o, i) => <li key={i}><b>{o.who}</b> {o.what}</li>)}</ul>
+              </Fold>
+              <Fold id="meeting-not-mine" remember={false} title="Not mine" count={count.dismissed}>
+                <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
+              </Fold>
+              {state === 'done' && <Transcript key={rowKey(m)} got={transcript} />}
+              <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, all), m.profile)} />
+            </>
+          )}
         </article>
       </div>
-      <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, all), m.profile)} />
     </div>
   );
 }

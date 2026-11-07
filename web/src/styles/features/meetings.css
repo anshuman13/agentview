@@ -47,6 +47,8 @@
 /* Meeting page */
 .mt-page { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }
 .mt-people { padding: 0 var(--list-pad); margin-top: var(--sp-4); font-size: var(--fs-md); color: var(--fg-muted); }
+.mt-meta { margin: var(--sp-4) 0 0; padding: 0 var(--list-pad); font-size: var(--fs-md); color: var(--fg-muted); }
+.mt-page .wk-ask { padding-inline: 0; }
 .mt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: 0 var(--list-pad); }
 .mt-more { position: relative; }
 .mt-sec { margin-top: var(--sp-20); }
