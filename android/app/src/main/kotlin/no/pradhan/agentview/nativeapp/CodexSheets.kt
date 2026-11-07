@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -69,7 +70,9 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
     val time = rememberTimePickerState(initialHour = initial?.let(::hourOf) ?: MORNING, initialMinute = initial?.let(::minuteOf) ?: 0, is24Hour = true)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(dayLabel(atHour(chosen, 12))) },
+        containerColor = av.raised,
+        shape = RoundedCornerShape(Tokens.shapeLg),
+        title = { Text(dayLabel(atHour(chosen, 12)), style = Type.headline, color = av.fg) },
         text = { TimePicker(time) },
         confirmButton = { Button("Set", { onPick(atHour(chosen, time.hour, time.minute)); onDismiss() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) },
         dismissButton = {
