@@ -38,13 +38,12 @@ const marked = (text: string, spans: [number, number][]) => {
   return out;
 };
 
-type Chip = { label: string; q: string };
+type Chip = { label: string; q: string; profile?: Profile };
 
-// One chip: prep when a meeting starts within the hour, the weekly update on Thursday and Friday afternoons, otherwise the time-of-day ask.
-const recipes = (next: Meeting | undefined): Chip[] => {
-  const now = new Date();
+// One chip: prep when a meeting starts within the hour (asked in the meeting's profile), the weekly update on Thursday and Friday afternoons, otherwise the time-of-day ask.
+export const recipes = (next: Meeting | undefined, now = new Date()): Chip[] => {
   const h = now.getHours();
-  if (next && next.starts_at! > now.getTime() && next.starts_at! - now.getTime() < 3600_000) return [{ label: 'Prep next meeting', q: prepText(next) }];
+  if (next && next.starts_at! > now.getTime() && next.starts_at! - now.getTime() < 3600_000) return [{ label: 'Prep next meeting', q: prepText(next), profile: next.profile }];
   if ((now.getDay() === 4 || now.getDay() === 5) && h >= 12) return [{ label: 'Draft my weekly update', q: 'Draft my weekly update from what I got done this week and the meetings I was in: done, in progress, next. Short bullets.' }];
   return [
     h < 12 ? { label: 'Plan my day', q: 'Plan my day. Use my calendar for today and my open items, suggest an order with times and point out conflicts.' }
@@ -136,7 +135,7 @@ export function Composer({ items, next, filter }: { items: ItemRow[]; next?: Mee
             ))}
           </>
         ) : (
-          recipes(next).map((r) => <Chip key={r.label} icon="sparkle" onClick={() => ask(askText(r.q, prof, items, undefined, meetings), prof)}>{r.label}</Chip>)
+          recipes(next).map((r) => <Chip key={r.label} icon="sparkle" onClick={() => ask(askText(r.q, r.profile ?? prof, items, undefined, meetings), r.profile ?? prof)}>{r.label}</Chip>)
         )}
       </div>}
       <div className="cp-card as-card">
