@@ -27,6 +27,7 @@ class Hub(app: Application) : AndroidViewModel(app) {
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected
     val notice = MutableStateFlow<String?>(null)
+    val link = MutableStateFlow<DeepLink?>(null)
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 
@@ -42,6 +43,7 @@ class Hub(app: Application) : AndroidViewModel(app) {
 
     fun connect() = stream.start()
     fun disconnect() = stream.stop()
+    fun retry() = stream.start()
 
     fun saveOrigin(value: String) {
         val v = value.trim().trimEnd('/').let { if (it.isEmpty() || "://" in it) it else "http://$it" }

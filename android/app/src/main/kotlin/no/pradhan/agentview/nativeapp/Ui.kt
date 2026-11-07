@@ -43,41 +43,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-private enum class Screen { List, Chat, Settings }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun App(hub: Hub) {
-    var screen by rememberSaveable { mutableStateOf(Screen.List) }
-    val snack = remember { SnackbarHostState() }
-    val notice by hub.notice.collectAsState()
-    LaunchedEffect(notice) { notice?.let { snack.showSnackbar(it); hub.notice.value = null } }
-
-    BackHandler(enabled = screen != Screen.List) {
-        if (screen == Screen.Chat) hub.close()
-        screen = Screen.List
-    }
-
-    Scaffold(snackbarHost = { SnackbarHost(snack) }) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad)) {
-            when (screen) {
-                Screen.List -> ChatList(hub, onOpen = { hub.open(it); screen = Screen.Chat }, onSettings = { screen = Screen.Settings })
-                Screen.Chat -> ChatScreen(hub, onBack = { hub.close(); screen = Screen.List })
-                Screen.Settings -> SettingsScreen(hub, onDone = { screen = Screen.List })
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ChatList(hub: Hub, onOpen: (String) -> Unit, onSettings: () -> Unit) {
+fun ChatList(hub: Hub, onOpen: (String) -> Unit) {
     val state by hub.store.state.collectAsState()
     val connected by hub.connected.collectAsState()
-    TopAppBar(
-        title = { Column { Text("AgentView N"); Text(if (connected) "Connected" else "Connecting...", style = MaterialTheme.typography.labelSmall) } },
-        actions = { TextButton(onClick = onSettings) { Text("Mac") } },
-    )
+    TopAppBar(title = { Text("Sessions") })
     val chats = state.live.sortedByDescending { it.lastActive }
     if (chats.isEmpty()) {
         Text(if (connected) "No live chats" else "Waiting for the server. Check the Mac address.", Modifier.padding(16.dp))
@@ -100,13 +71,14 @@ private val shown = setOf("user", "assistant", "tool_use", "agent")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatScreen(hub: Hub, onBack: () -> Unit) {
+fun ChatScreen(hub: Hub) {
     val state by hub.store.state.collectAsState()
     val chat = state.live.firstOrNull { it.id == state.shownId }
-    TopAppBar(
-        title = { Text(chat?.title?.ifBlank { null } ?: "Chat", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-    )
+    TopAppBar(title = { Text(chat?.title?.ifBlank { null } ?: "Chat", maxLines = 1, overflow = TextOverflow.Ellipsis) })
+    if (chat == null) {
+        Text("Open a chat from Sessions.", Modifier.padding(Sp.s8), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
     val rows = remember(state.events) { state.events.filter { it.kind in shown }.asReversed() }
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)) {
@@ -157,11 +129,11 @@ private fun Composer(running: Boolean, onSend: (String) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsScreen(hub: Hub, onDone: () -> Unit) {
+fun OriginScreen(hub: Hub, onDone: () -> Unit) {
     val origin by hub.origin.collectAsState()
     var text by remember { mutableStateOf(origin) }
     TopAppBar(
-        title = { Text("Mac") },
+        title = { Text("Mac address") },
         navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
     )
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
