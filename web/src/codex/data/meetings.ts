@@ -211,6 +211,9 @@ export function briefFor(meeting: Meeting, items: ItemRow[], facts: Fact[]): Mee
   return { tasks, claims };
 }
 
+// A calendar event with no other attendees; the import always stores cal: people as a JSON list.
+export const isSolo = (m: Meeting) => m.id.startsWith('cal:') && m.people === '[]';
+
 type MeetingState = 'upcoming' | 'live' | 'waiting' | 'done' | 'missing' | 'manual';
 
 // Where a meeting is between the calendar and its transcript.
@@ -218,6 +221,7 @@ export function meetingState(m: Meeting, now = Date.now()): MeetingState {
   if (!m.id.startsWith('cal:')) return 'manual';
   if (m.starts_at != null && m.starts_at > now) return 'upcoming';
   if ((m.ends_at ?? m.starts_at ?? 0) > now) return 'live';
+  if (isSolo(m)) return 'manual';
   if (m.transcript === 'missing') return 'missing';
   if (m.transcript === 'done' || (!m.transcript && m.summary)) return 'done';
   return 'waiting';

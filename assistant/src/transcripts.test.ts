@@ -56,6 +56,12 @@ describe('transcripts', () => {
     expect(db.prepare("SELECT COUNT(*) AS n FROM meta WHERE key LIKE 'transcript:%'").get()).toEqual({ n: 0 });
   });
 
+  it('skips solo meetings but keeps ones with attendees or no people', () => {
+    const db = openDb(':memory:');
+    applyChanges(db, [meeting('cal:solo', 5 * MIN, { people: '[]' }), meeting('cal:team', 5 * MIN, { people: '["Kari"]' }), meeting('cal:old', 5 * MIN)]);
+    expect(dueMeetings(db, 'work', now).map((m) => m.id).sort()).toEqual(['cal:old', 'cal:team']);
+  });
+
   it('saves the summary, sorts actions by owner and adds each once', () => {
     const db = openDb(':memory:');
     applyChanges(db, [meeting('cal:a', MIN, { notes: 'mine' }), meeting('cal:b', MIN), meeting('cal:c', -MIN)]);

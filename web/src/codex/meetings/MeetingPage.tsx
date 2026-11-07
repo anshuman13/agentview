@@ -5,7 +5,7 @@ import { followUpText, hasContent, toMarkdown } from '../data/meetingMarkdown';
 import { parseWhen, stripWhen } from '../data/engine';
 import { rowKey, type ItemRow } from '../data/sync';
 import { listOf, othersOf, type Meeting } from '../data/wiki';
-import { actionCount, actionsOf, displayName, meetingState, peopleOf, pinsOf, seriesMeetings, seriesOf, seriesTitleOf } from '../data/meetings';
+import { actionCount, actionsOf, displayName, isSolo, meetingState, peopleOf, pinsOf, seriesMeetings, seriesOf, seriesTitleOf } from '../data/meetings';
 import { clock, when } from '../time';
 import { useMinute } from '../split';
 import { Button, Chip, IconButton } from '../../ui/Button';
@@ -198,7 +198,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
             </section>
           )}
 
-          {(state === 'upcoming' || state === 'live') && <Prep m={m} section />}
+          {(state === 'upcoming' || state === 'live') && !isSolo(m) && <Prep m={m} section />}
 
           <Fold id="meeting-context" title="Context" count={(talkers ? 1 : 0) + (prior.length ? 1 : 0)}>
             {transcript?.text && <TalkTime text={transcript.text} actions={all.filter((r) => r.status !== 'dismissed').length} decisions={decisions.length} />}

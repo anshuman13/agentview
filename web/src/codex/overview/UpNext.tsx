@@ -1,6 +1,6 @@
 import { useRef, useState, type MouseEvent } from 'react';
 import type { Meeting } from '../data/wiki';
-import { countdown, meetingBadge, meetingMeta } from '../data/meetings';
+import { countdown, isSolo, meetingBadge, meetingMeta } from '../data/meetings';
 import { atTime } from '../data/engine';
 import type { ItemRow } from '../data/sync';
 import { Badge } from '../../ui/Badge';
@@ -38,7 +38,7 @@ export function UpNext({ meeting, task, now, onPrep }: { meeting?: Meeting; task
                   <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
                   {menu && (
                     <Menu trigger={more} onClose={() => setMenu(false)}>
-                      <MenuItem icon="sparkle" onClick={() => { setMenu(false); onPrep(); }}>Prep</MenuItem>
+                      {!isSolo(meeting) && <MenuItem icon="sparkle" onClick={() => { setMenu(false); onPrep(); }}>Prep</MenuItem>}
                       {calendar && <MenuItem icon="calendar" href={calendar} onClick={() => setMenu(false)}>Open calendar</MenuItem>}
                       <MenuItem icon="edit" onClick={() => { setMenu(false); openMeetingNotes(meeting); }}>Notes</MenuItem>
                     </Menu>

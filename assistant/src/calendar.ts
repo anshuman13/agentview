@@ -70,6 +70,17 @@ export function saveMeetings(db: Database, profile: Profile, events: CalendarEve
   })();
 }
 
+export function calendarPrompt(profile: Profile, from: number, to: number) {
+  return [
+    `List my Google Calendar events on my primary calendar from ${new Date(from).toISOString()} to ${new Date(to).toISOString()}.`,
+    'For each event set organizer to true when I organise it and false when someone else does.',
+    profile === 'personal'
+      ? 'Leave out all-day events and events I declined. Keep timed events with no other attendees; send them with an empty people list.'
+      : 'Leave out all-day events, events I declined, and events with no other attendees.',
+    'Then call save_meetings once with all of them. Do not do anything else.',
+  ].join(' ');
+}
+
 async function importCalendar(db: Database, profile: Profile, now = Date.now()) {
   // Calendar days, so a 23 or 25 hour day at a DST change does not shift the window.
   const today = new Date(now);
@@ -81,12 +92,7 @@ async function importCalendar(db: Database, profile: Profile, now = Date.now()) 
     events = [...(events ?? []).filter((e) => !a.events.some((n) => n.id === e.id)), ...a.events];
     return { content: [{ type: 'text', text: 'saved' }] };
   });
-  const prompt = [
-    `List my Google Calendar events on my primary calendar from ${new Date(from).toISOString()} to ${new Date(to).toISOString()}.`,
-    'For each event set organizer to true when I organise it and false when someone else does.',
-    'Leave out all-day events, events I declined, and events with no other attendees.',
-    'Then call save_meetings once with all of them. Do not do anything else.',
-  ].join(' ');
+  const prompt = calendarPrompt(profile, from, to);
   for await (const m of ask(ACCOUNT_OF[profile], prompt, {
     model: 'sonnet',
     maxTurns: 12,

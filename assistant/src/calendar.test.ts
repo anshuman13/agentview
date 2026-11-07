@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { openDb } from './db.js';
 import { applyChanges } from './sync.js';
-import { eventUrl, importDue, lastImport, saveMeetings, syncCalendar } from './calendar.js';
+import { calendarPrompt, eventUrl, importDue, lastImport, saveMeetings, syncCalendar } from './calendar.js';
 
 const ev = (id: string, start: string) => ({ id, title: `M ${id}`, start, end: start.replace('T09', 'T10'), people: ['Kari'] });
 
@@ -79,5 +79,25 @@ describe('importDue', () => {
     expect(importDue(at(26, 18, 10), at(26, 18, 40))).toBe(true);
     expect(importDue(0, at(26, 19))).toBe(false);
     expect(importDue(0, at(25, 10))).toBe(false);
+  });
+});
+
+describe('calendarPrompt', () => {
+  it('keeps solo events for personal and leaves them out for work', () => {
+    const personal = calendarPrompt('personal', 0, 1), work = calendarPrompt('work', 0, 1);
+    expect(personal).toContain('Keep timed events with no other attendees');
+    expect(personal).toContain('all-day');
+    expect(personal).toContain('declined');
+    expect(personal).not.toContain('and events with no other attendees');
+    expect(work).toContain('events I declined, and events with no other attendees.');
+  });
+
+  it('saves a solo event once', () => {
+    const db = openDb(':memory:');
+    const from = Date.parse('2026-10-26T00:00:00Z'), to = from + 9 * 86400_000;
+    const solo = { ...ev('s', '2026-10-27T09:00:00Z'), people: [] };
+    expect(saveMeetings(db, 'personal', [solo], from, to, 1)).toBe(1);
+    expect(saveMeetings(db, 'personal', [solo], from, to, 2)).toBe(0);
+    expect(db.prepare("SELECT id, people FROM meetings WHERE id = 'cal:s'").get()).toEqual({ id: 'cal:s', people: '[]' });
   });
 });

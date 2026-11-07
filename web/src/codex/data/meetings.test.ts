@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { cadenceOf, countdown, nextInSeries, seriesPeople } from './meetings';
+import { cadenceOf, countdown, isSolo, meetingState, nextInSeries, seriesPeople } from './meetings';
 import type { Meeting } from './wiki';
 
 const DAY = 86400000;
@@ -51,4 +51,16 @@ it('counts down to the start, then to the end while it runs', () => {
   expect(countdown(m, now + 90 * MIN - 30000)).toBe('Ends in 1 min');
   expect(countdown(m, now + 90 * MIN)).toBeNull();
   expect(countdown(meeting('d', now), now + MIN)).toBeNull();
+});
+
+it('treats an attendee-less calendar meeting as solo and past ones as manual', () => {
+  const solo = meeting('cal:a', now, { people: '[]', ends_at: now + DAY / 24 });
+  expect(isSolo(solo)).toBe(true);
+  expect(isSolo(meeting('cal:b', now))).toBe(false);
+  expect(isSolo(meeting('local', now, { people: '[]' }))).toBe(false);
+  expect(isSolo(meeting('cal:c', now, { people: null }))).toBe(false);
+  expect(meetingState(solo, now - DAY)).toBe('upcoming');
+  expect(meetingState(solo, now + 60000)).toBe('live');
+  expect(meetingState(solo, now + DAY)).toBe('manual');
+  expect(meetingState(meeting('cal:b', now, { ends_at: now + 1 }), now + DAY)).toBe('waiting');
 });

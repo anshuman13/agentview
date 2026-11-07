@@ -62,10 +62,10 @@ function triesFor(db: Database, profile: Profile, m: Pending) {
 }
 
 // Calendar meetings that ended in the last days and are not processed yet, tried at most TRIES times (REPEAT_TRIES after a previous occurrence without one), RETRY apart.
-// A meeting summarized by hand before it ended is still waiting; one summarized before this state existed is done.
+// A solo meeting (empty people list) is never due. A meeting summarized by hand before it ended is still waiting; one summarized before this state existed is done.
 export function dueMeetings(db: Database, profile: Profile, now = Date.now()): Pending[] {
   const rows = db.prepare(
-    "SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND (transcript = 'waiting' OR (transcript IS NULL AND (summary IS NULL OR summary = ''))) AND ends_at <= ? AND ends_at >= ? ORDER BY ends_at",
+    "SELECT id, title, starts_at, ends_at, room_me FROM meetings WHERE profile = ? AND deleted = 0 AND id LIKE 'cal:%' AND people IS NOT '[]' AND (transcript = 'waiting' OR (transcript IS NULL AND (summary IS NULL OR summary = ''))) AND ends_at <= ? AND ends_at >= ? ORDER BY ends_at",
   ).all(profile, now, now - WITHIN) as Pending[];
   return rows.filter((m) => {
     const [count, last] = triesOf(db, profile, m.id);
