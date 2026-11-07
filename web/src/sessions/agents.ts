@@ -9,6 +9,7 @@ export type Agent = {
   steps: Item[];
   description: string;
   type: string;
+  group?: string;
   model: string | null;
   prompt: string;
   status: AgentStatus;
@@ -43,6 +44,7 @@ function agentOf(it: Extract<Item, { kind: 'agent' }>, info: AgentEvent | undefi
     steps,
     description: info?.description || s('description') || 'Sub-agent',
     type: info?.subagentType || s('subagent_type') || 'general-purpose',
+    group: info?.group,
     model: info?.model ?? (s('model') || null),
     prompt: info?.prompt || s('prompt'),
     status: running ? 'running' : info && info.status !== 'running' ? info.status : ended,

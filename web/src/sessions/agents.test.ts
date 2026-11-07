@@ -45,3 +45,10 @@ describe('reportText', () => {
     expect(reportText(a)).toBe('Agent failed');
   });
 });
+
+describe('workflow agents', () => {
+  it('carries the group from the agent event', () => {
+    const agents = buildAgents([use('w:k', { description: 'impl:chat' }, 1), info('w:k', { group: 'build', description: 'impl:chat' }), use('a', { description: 'Plain' }, 2), info('a', {})]);
+    expect(agents.map((a) => a.group)).toEqual(['build', undefined]);
+  });
+});

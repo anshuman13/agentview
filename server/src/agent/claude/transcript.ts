@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SessionMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { WorkflowRun } from './history.js';
 import { BIG_BRO, type AgentEvent, type AgentUsage, type CacheInfo, type ChatEvent } from '../../../../shared/protocol.js';
 
 const COMPACT_SUMMARY = 'This session is being continued from a previous conversation';
@@ -15,7 +16,7 @@ export function noteLaunch(agents: AgentIds, toolUseId: string, text: string) {
   if (id) agents.set(id, toolUseId);
 }
 
-export function historyFrom(msgs: SessionMessage[], subagents: Record<string, SessionMessage[]> = {}) {
+export function historyFrom(msgs: SessionMessage[], subagents: Record<string, SessionMessage[]> = {}, workflows: WorkflowRun[] = []) {
   const events: ChatEvent[] = [];
   let context: number | null = null;
   let cache: CacheInfo | null = null;
@@ -26,6 +27,8 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   const agentUses = new Set<string>();
   const usages = new Map<string, AgentUsage>();
   const handedBack = new Set<string>();
+  const workflowCalls = new Map<string, { name: string; at: number }>();
+  const runCalls = new Map<string, string>();
   let prev = '';
   const endTurn = () => {
     if (inTurn) events.push({ id: `${prev}:result`, kind: 'result', text: lastText, costUsd: 0, isError: false, at: lastAt });
@@ -67,6 +70,8 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
         events.push({ id, kind: 'user', text: b.text, at });
       } else if (m.type === 'user' && b.type === 'tool_result') {
         const text = toolResultText(b);
+        const runId = workflowCalls.has(b.tool_use_id) ? text.match(/Run ID: (wf_[\w-]+)/)?.[1] : undefined;
+        if (runId) runCalls.set(runId, b.tool_use_id);
         if (text.startsWith(ASYNC_LAUNCH)) noteLaunch(agents, b.tool_use_id, text);
         else if (agentUses.has(b.tool_use_id)) {
           const usage = usageFrom(text);
@@ -80,6 +85,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
         events.push(advisorEvent(b.id, at));
       } else if (m.type === 'assistant' && b.type === 'tool_use') {
         if (AGENT_TOOLS.has(b.name)) agentUses.add(b.id);
+        if (b.name === 'Workflow') workflowCalls.set(b.id, { name: workflowName(b.input), at });
         events.push(toolUseEvent(b.id, b.name, b.input, at, undefined, agents));
       }
     }
@@ -90,7 +96,13 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
   }
   endTurn();
   for (const [parent, sub] of Object.entries(subagents)) events.push(...subagentEvents(sub, parent, subagents));
-  return { events: withAgents(events, subagents, usages, agents), context, cache, agents };
+  const byCall = new Map<string, WorkflowRun[]>();
+  for (const run of workflows) {
+    const call = runCalls.get(run.runId);
+    if (call) byCall.set(call, [...(byCall.get(call) ?? []), run]);
+  }
+  const all = withAgents(events, subagents, usages, agents).flatMap((e) => (e.kind === 'tool_use' ? [e, ...(byCall.get(e.id) ?? []).flatMap((run) => workflowEvents(run, workflowCalls.get(e.id)!.name, e.at))] : [e]));
+  return { events: all, context, cache, agents };
 }
 
 const CLIP = 4096;
@@ -121,6 +133,36 @@ export function usageFrom(text: string): AgentUsage | null {
 
 const stamp = (m: SessionMessage) => Date.parse((m as { timestamp?: string }).timestamp ?? '') || 0;
 
+function derivedUsage(sub: SessionMessage[], startedAt: number, endedAt: number | null): AgentUsage | null {
+  if (!sub.length) return null;
+  const last = [...sub].reverse().find((m) => m.type === 'assistant');
+  const lastUsage = (last?.message as { usage?: any })?.usage;
+  const toolUses = sub.reduce((n, m) => n + (m.type === 'assistant' ? blocksOf(m).filter((b) => b.type === 'tool_use').length : 0), 0);
+  return { tokens: (contextFrom(lastUsage) ?? 0) + (lastUsage?.output_tokens ?? 0), toolUses, durationMs: (endedAt ?? (stamp(sub.at(-1)!) || startedAt)) - startedAt };
+}
+
+export const workflowName = (input: unknown) => {
+  const i = (input ?? {}) as Record<string, unknown>;
+  return [i.name, i.workflow].find((v): v is string => typeof v === 'string' && v.trim() !== '') ?? 'Workflow';
+};
+
+function workflowEvents(run: WorkflowRun, group: string, callAt: number): ChatEvent[] {
+  return run.agents.flatMap((a) => {
+    const id = `${run.runId}:${a.key}`;
+    const first = a.msgs.find((m) => m.type === 'user');
+    const content = (first?.message as { content?: unknown })?.content;
+    const prompt = typeof content === 'string' ? content : blocksOf(first ?? ({} as SessionMessage)).map((b) => (b.type === 'text' ? b.text : '')).join('\n');
+    const startedAt = (a.msgs[0] && stamp(a.msgs[0])) || callAt;
+    const running = a.status === 'running';
+    const endedAt = running ? null : (a.msgs.length && stamp(a.msgs.at(-1)!)) || startedAt;
+    const model = (a.msgs.find((m) => m.type === 'assistant')?.message as { model?: string })?.model;
+    const ev = agentEvent(id, { description: a.label, subagent_type: a.phase, prompt, model }, startedAt);
+    Object.assign(ev, { group, status: a.status, endedAt, usage: derivedUsage(a.msgs, startedAt, endedAt) });
+    const result: ChatEvent[] = running ? [] : [{ id: `${id}:result`, kind: 'tool_result', toolUseId: id, text: (a.result || finalText(a.msgs)).slice(0, 4000), isError: a.status === 'failed', at: endedAt ?? startedAt }];
+    return [toolUseEvent(id, 'Agent', { description: a.label, prompt }, startedAt), ev, ...result, ...subagentEvents(a.msgs, id, {})];
+  });
+}
+
 function withAgents(events: ChatEvent[], subagents: Record<string, SessionMessage[]>, usages: Map<string, AgentUsage>, agents: AgentIds) {
   const results = new Map<string, Extract<ChatEvent, { kind: 'tool_result' }>>();
   const resumed = new Map<string, number>();
@@ -135,12 +177,9 @@ function withAgents(events: ChatEvent[], subagents: Record<string, SessionMessag
     const sub = subagents[e.id] ?? [];
     const result = results.get(e.id);
     const running = !result || (resumed.get(e.id) ?? 0) > result.at;
-    const last = [...sub].reverse().find((m) => m.type === 'assistant');
     const model = (sub.find((m) => m.type === 'assistant')?.message as { model?: string })?.model;
     const endedAt = running ? null : result.at;
-    const tools = sub.reduce((n, m) => n + (m.type === 'assistant' ? blocksOf(m).filter((b) => b.type === 'tool_use').length : 0), 0);
-    const lastUsage = (last?.message as { usage?: any })?.usage;
-    const derived = sub.length ? { tokens: (contextFrom(lastUsage) ?? 0) + (lastUsage?.output_tokens ?? 0), toolUses: tools, durationMs: (endedAt ?? (stamp(sub.at(-1)!) || e.at)) - e.at } : null;
+    const derived = derivedUsage(sub, e.at, endedAt);
     Object.assign(ev, {
       model: model ?? ev.model,
       background: ev.background || launched.has(e.id),

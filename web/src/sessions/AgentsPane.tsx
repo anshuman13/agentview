@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { send, useStore } from '../app/store';
 import { Back } from '../app/back';
 import { Button, Chip } from '../ui/Button';
@@ -15,6 +16,8 @@ import type { AgentStatus } from '../../../shared/protocol';
 const useAgents = () => useStore((s) => agentsOf(s.events));
 
 const STATUS_ICON: Record<AgentStatus, string> = { running: 'loading', done: 'check', failed: 'error', stopped: 'debug-stop' };
+
+const STATUS_LABEL: Record<AgentStatus, string> = { running: 'Running', done: 'Done', failed: 'Failed', stopped: 'Stopped' };
 
 const took = (a: Agent, now: number) => elapsed((a.endedAt ?? now) - a.startedAt);
 
@@ -36,6 +39,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
   const cwd = useStore((s) => s.session.cwd);
   const now = useTick(1000, agents.some((a) => a.status === 'running'));
   const list = [...agents].reverse();
+  const groups = [...new Set(list.map((a) => a.group))].map((g) => [g, list.filter((a) => a.group === g)] as const).sort(([a], [b]) => Number(a !== undefined) - Number(b !== undefined));
   const current = agents.find((a) => a.id === selected) ?? list[0];
 
   if (!agents.length) {
@@ -44,27 +48,33 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
     );
   }
 
+  const agentRow = (a: Agent) => {
+    const last = (a.status === 'running' && a.info?.progress) || a.lastStep;
+    const sub = [a.group ? STATUS_LABEL[a.status] : a.status, a.steps.length > 0 && plural(a.steps.length, 'step'), last].filter(Boolean).join(' · ');
+    return (
+      <UiRow
+        key={a.id}
+        className="ag-item"
+        aria-current={a.id === current?.id ? 'true' : undefined}
+        leading={<span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={a.status === 'running'} /></span>}
+        title={<span title={a.description}>{a.description}</span>}
+        meta={<span title={sub}>{sub}</span>}
+        trailing={a.group && a.info?.usage ? `${took(a, now)} · ${tokens(a.info.usage.tokens)}` : took(a, now)}
+        onClick={() => onSelect(a.id)}
+      />
+    );
+  };
+
   return (
     <div className={`ag ${stack ? 'stack' : ''} ${selected && current?.id === selected ? 'picked' : ''}`}>
       {selected && current?.id === selected && (stack || matchMedia('(max-width: 900px)').matches) && <Back close={() => onSelect(null)} />}
       <div className="ag-side">
-        <Section label="Agents" count={list.length} />
-        <div className="as-group">{list.map((a) => {
-          const last = (a.status === 'running' && a.info?.progress) || a.lastStep;
-          const sub = [a.status, a.steps.length > 0 && plural(a.steps.length, 'step'), last].filter(Boolean).join(' · ');
-          return (
-            <UiRow
-              key={a.id}
-              className="ag-item"
-              aria-current={a.id === current?.id ? 'true' : undefined}
-              leading={<span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={a.status === 'running'} /></span>}
-              title={<span title={a.description}>{a.description}</span>}
-              meta={<span title={sub}>{sub}</span>}
-              trailing={took(a, now)}
-              onClick={() => onSelect(a.id)}
-            />
-          );
-        })}</div>
+        {groups.map(([name, rows]) => (
+          <Fragment key={name ?? ''}>
+            <Section label={name ?? 'Agents'} count={rows.length} />
+            <div className="as-group">{rows.map((a) => agentRow(a))}</div>
+          </Fragment>
+        ))}
       </div>
       {current && <AgentDetail key={current.id} a={current} cwd={cwd} now={now} stack={stack} onBack={() => onSelect(null)} />}
     </div>
@@ -80,7 +90,7 @@ function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; no
       <button className={`ag-back ${stack ? '' : 'mobile-only'}`} onClick={onBack}><Icon name="arrow-left" small /> Agents</button>
       <Section
         label={<><span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={running} /></span> <span title={a.description}>{a.description}</span></>}
-        action={running && <Button size="sm" icon="debug-stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>Stop</Button>}
+        action={running && !a.group && <Button size="sm" icon="debug-stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>Stop</Button>}
       />
       <div className="ag-meta">{meta.join(' · ')}</div>
       {running && a.info?.progress && <div className="ag-progress">{a.info.progress}</div>}

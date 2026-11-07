@@ -9,7 +9,7 @@ import { JsonlTail } from './tail.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
-import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, type SubFile } from './history.js';
+import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, workflowAgents, workflowSize, type SubFile, type WorkflowFile } from './history.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
 import { ENDED, replayText, usageOf } from './tasks.js';
 import { agentResult, agentToolUse, isAgent, patchAgent, taskDone, taskToolUse } from './subagents.js';
@@ -53,6 +53,7 @@ export class ClaudeDriver implements AgentDriver {
   private log: JsonlTail | null = null;
   private chain: { entries: any[]; n: number; msgs: SessionMessage[] } | null = null;
   private subFiles = new Map<string, SubFile>();
+  private workflowFiles = new Map<string, WorkflowFile>();
   private dirty = true;
   private agents: AgentIds = new Map();
   private tasks = new Set<string>();
@@ -127,6 +128,7 @@ export class ClaudeDriver implements AgentDriver {
       this.log = null;
       this.chain = null;
       this.subFiles = new Map();
+      this.workflowFiles = new Map();
       this.dirty = true;
       return;
     }
@@ -159,13 +161,13 @@ export class ClaudeDriver implements AgentDriver {
     if (!t || this.state.session.running) return;
     this.dirty ||= t.read !== 'same' || t.changed;
     if (!this.dirty) return;
-    const { subs } = t;
+    const { subs, runs, size } = t;
     const msgs = await this.messages(sessionId, t.entries).catch(() => null);
     const last = msgs && lastUuid(msgs);
     if (!msgs || !last || this.state.session.running) return;
     this.dirty = false;
-    const subsMoved = !this.q && countAll(subs) !== this.seenSubs;
-    this.seenSubs = countAll(subs);
+    const subsMoved = !this.q && size !== this.seenSubs;
+    this.seenSubs = size;
     if (last === this.seen && !subsMoved) return;
     if (last !== this.seen) {
       // The CLI's last transcript write lands just before `result`, so the watcher fires before the own-turn sync.
@@ -173,7 +175,7 @@ export class ClaudeDriver implements AgentDriver {
       this.seen = last;
       if (baseline) return;
     }
-    this.host.replaceHistory(this.history(msgs, subs));
+    this.host.replaceHistory(this.history(msgs, subs, runs));
     if (this.q) this.restart();
   }
 
@@ -191,12 +193,12 @@ export class ClaudeDriver implements AgentDriver {
 
   async loadHistory() {
     if (!this.resume) return null;
-    const { entries, subs } = await this.readTranscript(this.resume);
+    const { entries, subs, runs, size } = await this.readTranscript(this.resume);
     const msgs = await this.messages(this.resume, entries);
     this.dirty = false;
     this.seen = lastUuid(msgs) ?? '';
-    this.seenSubs = countAll(subs);
-    return this.history(msgs, subs);
+    this.seenSubs = size;
+    return this.history(msgs, subs, runs);
   }
 
   // Only bytes appended since the last read are parsed; unchanged subagent files are not re-read.
@@ -205,10 +207,12 @@ export class ClaudeDriver implements AgentDriver {
     if (this.log?.file !== file) {
       this.log = new JsonlTail(file);
       this.subFiles = new Map();
+      this.workflowFiles = new Map();
     }
     const log = this.log;
-    const [read, { subs, changed }] = await Promise.all([log.read(), subagentMessages(this.cwd, sessionId, this.subFiles)]);
-    return { read, entries: log.entries, subs, changed };
+    const [read, sub, wf] = await Promise.all([log.read(), subagentMessages(this.cwd, sessionId, this.subFiles), workflowAgents(this.cwd, sessionId, this.workflowFiles)]);
+    const { subs, changed } = sub;
+    return { read, entries: log.entries, subs, runs: wf.runs, size: countAll(subs) + workflowSize(wf.runs), changed: changed || wf.changed };
   }
 
   // The conversation chain only changes when the transcript does; a subagent write alone reuses the last one.

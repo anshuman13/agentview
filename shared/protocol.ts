@@ -42,6 +42,7 @@ export type AgentEvent = {
   usage: AgentUsage | null;
   at: number;
   parent?: string;
+  group?: string;
 };
 
 export type ChatEvent =
