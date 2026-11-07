@@ -5,7 +5,7 @@ import { seriesRepeats } from '../data/meetings';
 import type { ItemRow } from '../data/sync';
 import { listOf, type Meeting } from '../data/wiki';
 import { Row } from '../../ui/Row';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { openMeeting } from '../view';
 
 export function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
@@ -21,7 +21,7 @@ export function Series({ m, prior }: { m: Meeting; prior: Meeting[] }) {
   const decisions = prior.slice(0, 3).flatMap((x) => listOf(x.decisions).map((t) => t.trim()).filter(Boolean).map((text) => ({ x, text })));
   return (
     <section className="mt-sec">
-      <Section label="Series" />
+      <Section label="Series" count={sectionCount(repeats.decisions.length + repeats.questions.length)} />
       <p className="mt-series">{prior.length} earlier, last on {date(prior[0])}</p>
       {repeats.decisions.length + repeats.questions.length > 0 && <div className="as-group">
         {repeats.decisions.map((text, i) => <Row key={`d${i}`} lines={2} title={text} meta={`Decided again, also on ${date(prior[0])}`} onClick={() => openMeeting(prior[0])} />)}

@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { Section } from './Section';
+import { Section, sectionCount } from './Section';
 
 const render = (props: Record<string, unknown>) => renderToStaticMarkup(createElement(Section, { label: 'L', ...props } as never));
 
@@ -25,6 +25,12 @@ describe('Section', () => {
     expect(render({ count: 3 })).toContain('<span class="badge quiet">3</span>');
     expect(render({ count: 0 })).toContain('<span class="badge quiet">0</span>');
     expect(render({})).not.toContain('badge');
+  });
+
+  it('sectionCount hides zero', () => {
+    expect(sectionCount(0)).toBeUndefined();
+    expect(sectionCount(3)).toBe(3);
+    expect(render({ count: sectionCount(0) })).not.toContain('badge');
   });
 
   it('renders the action in the actions span only when given', () => {

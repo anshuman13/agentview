@@ -10,7 +10,7 @@ import { Button, Chip, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Menu, MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { safeHref, save, stored, storedStrings } from '../../ui/util';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { openMeeting, openMeetingNotes, setView, showSnack, takeWeekReturn, useSpotBack, useView } from '../view';
@@ -114,10 +114,10 @@ function Upcoming({ meetings, now }: { meetings: Meeting[]; now: number }) {
   const label = (d: number) => d === dayStart(now) ? 'Today' : d === dayEnd(now) ? 'Tomorrow' : dayLabel(d, true);
   return (
     <>
-      <Section label="Upcoming" />
+      <Section label="Upcoming" count={sectionCount(days.reduce((n, [, rows]) => n + rows.length, 0))} />
       {days.map(([d, rows]) => (
         <section key={d}>
-          <Section label={label(d)} />
+          <Section label={label(d)} count={sectionCount(rows.length)} />
           <div className="as-group">{rows.map((m) => <MeetingRow key={m.profile + m.id} m={m} now={now} noDay />)}</div>
         </section>
       ))}

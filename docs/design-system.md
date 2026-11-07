@@ -190,6 +190,8 @@ inset grouped lists: page `--group-page` (grey #F2F2F7 in light, black in dark),
 inset to the text start. The Codex task lists, Goals, Search, Jobs and Summary (`.ui-group`), the editor Links and the Meetings list (`.as-group` under `.mt-page`) use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case. A grouped card whose rows sit in wrappers (Overview Today: `.ov-ask`, `.as-swipe`) draws the inset hairline on the wrapper at the row's text start (52px with a lead, else `--list-pad`), never on the row and never full width.
 
 ### Section header
+A header that heads a list of rows shows its full row count as the quiet Badge (`count={sectionCount(n)}`), including rows behind "Show all N" or a cap, and omits it at 0. A header over a single card, form or free text shows none. Series counts only its repeated rows, the rest are context.
+
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm (a text Button sm plain is allowed too). 44px hit area at max-width 480px. Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with

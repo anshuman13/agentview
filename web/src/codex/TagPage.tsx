@@ -4,7 +4,7 @@ import { tagTasks } from './data/tagTasks';
 import { rowKey } from './data/sync';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
-import { Section } from '../ui/Section';
+import { Section, sectionCount } from '../ui/Section';
 import { setView, useEscapeBack } from './view';
 import { TaskRow } from './Task';
 import { SnackBar } from './SnackBar';
@@ -21,7 +21,7 @@ export function TagPage({ tag }: { tag: string }) {
         <Section label={<button className="as-crumb" onClick={back}>Tasks</button>} />
       </div>
       <div className="as-scroll">
-        <Section label={`#${tag}`} count={rows.length || undefined} />
+        <Section label={`#${tag}`} count={sectionCount(rows.length)} />
         {rows.length ? (
           <div className="ui-group">
             {rows.map((r) => <TaskRow key={r.profile + r.id} row={r} onOpen={() => setView({ open: rowKey(r) })} />)}

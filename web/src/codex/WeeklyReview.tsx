@@ -10,7 +10,7 @@ import { attempt, openTask, setView, useView } from './view';
 import { Button, IconButton } from '../ui/Button';
 import { AskRow } from '../ui/AskRow';
 import { Row } from '../ui/Row';
-import { Section } from '../ui/Section';
+import { Section, sectionCount } from '../ui/Section';
 import { statusTime } from './data/engine';
 import { Badge } from '../ui/Badge';
 
@@ -41,7 +41,7 @@ export function WeeklyReviewCard({ profile, now, title, onHide }: { profile: Pro
       action={<IconButton size="sm" icon="close" label="Hide until tomorrow" onClick={onHide} />}>
       {(goals.length > 0 || noteText) && (
         <section>
-          <Section label="Goals" count={goals.length || undefined}
+          <Section label="Goals" count={sectionCount(goals.length)}
             action={plan.state === 'carry' && <Button variant="quiet" size="sm" onClick={() => void carry()}>Carry over</Button>} />
           <div className="as-group">
             {goals.map((g) => {

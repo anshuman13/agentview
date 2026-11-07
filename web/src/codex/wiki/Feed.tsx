@@ -3,7 +3,7 @@ import { contestOf, currentClaim, factTime, live, sourcesOf, type Fact, type Pag
 import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
 import { Row } from '../../ui/Row';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { ago } from '../../ui/util';
 import { setView } from '../view';
 import { MEMORY, SOURCE_ICON } from './shared';
@@ -23,7 +23,7 @@ export function Feed({ pages, facts }: { pages: Page[]; facts: Fact[] }) {
   const shown = entries.slice(0, 5);
   return (
     <aside className="wk-feed">
-      <Section label="Recently updated" />
+      <Section label="Recently updated" count={sectionCount(entries.length)} />
       <div className="as-group">
         {!shown.length && <EmptyState size="sm" icon="book" title="No claims yet" />}
         {shown.map(({ fact, kind, at }) => {

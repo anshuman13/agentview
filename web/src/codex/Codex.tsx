@@ -15,7 +15,7 @@ import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
 import { Button } from '../ui/Button';
-import { Section } from '../ui/Section';
+import { Section, sectionCount } from '../ui/Section';
 import { haptic } from '../ui/haptic';
 import { plural } from '../ui/util';
 import { FILTER_LABEL, searchRun, setView, showSnack, useSpotBack, useView, type Filter, type List } from './view';
@@ -237,7 +237,7 @@ export function Assistant() {
   };
   const section = (d: Day) => (d.rows.length > 0 || drag || d.key === 'today') && (
     <section key={d.key} data-day={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
-      <Section label={d.label} count={d.rows.length || undefined} />
+      <Section label={d.label} count={sectionCount(d.rows.length)} />
       {rows(d.rows, d.key, d.day != null, d.day != null)}
       {d.day != null && !drag && !picked && <AddTask day={d.day} today={startOfDay} filter={filter} />}
     </section>

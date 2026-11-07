@@ -10,7 +10,7 @@ import { EmptyState } from '../../ui/Panel';
 import { AskRow } from '../../ui/AskRow';
 import { MenuItem } from '../../ui/Menu';
 import { Row } from '../../ui/Row';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { CardRow } from '../overview/CardRow';
 import { dueText, taskMenu } from '../Task';
 import { copyText, openMeeting, openTask, setView, useEscapeBack } from '../view';
@@ -193,7 +193,7 @@ export function Person({ name }: { name: string }) {
           )}
 
           <section className="mt-sec">
-            <Section label="Meetings" count={mine.length || undefined} />
+            <Section label="Meetings" count={sectionCount(mine.length)} />
             {mine.length > 0 ? <Group rows={mine} name={name} row={(m) => <MeetingRow key={m.profile + m.id} m={m} now={now} />} /> : <EmptyState size="sm" title="No meetings" />}
           </section>
 

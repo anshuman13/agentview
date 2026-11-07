@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
 
+export const sectionCount = (n: number) => n || undefined;
+
 export function Section({ label, count, action, open, onToggle }: {
   label: ReactNode;
   count?: number | string;
