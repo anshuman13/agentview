@@ -128,7 +128,7 @@ seen, done or dismissed in the last week, nor an ask in a DM where I sent the la
 
 Typing in a task's title or notes, a wiki note or a meeting's My notes shows up to 3 matches under the field: current
 wiki claims, past meetings and tasks from Slack of the same profile that share at least two key words with the line
-being written, most shared words first. A claim or meeting opens in Codex, a Slack task opens its Slack link.
+being written, most shared words first. A claim or meeting opens in Codex, a Slack task opens its Slack link. Hits are Rows under a Related header with a count.
 
 A task page also shows a Related section under the notes as soon as it opens: up to 5 past meetings and Slack tasks of
 the same profile that share two key words with the saved title, or one key word and a person on the task, most shared

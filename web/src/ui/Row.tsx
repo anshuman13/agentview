@@ -23,6 +23,6 @@ export function Row({ leading, title, meta, trailing, lines = 1, href, plain, cl
     </>
   );
   if (plain) return <div className={cls} {...(rest as ComponentPropsWithoutRef<'div'>)}>{body}</div>;
-  if (href) return <a className={cls} href={href} target="_blank" rel="noreferrer">{body}</a>;
+  if (href) return <a className={cls} href={href} target="_blank" rel="noreferrer" onMouseDown={rest.onMouseDown as React.MouseEventHandler<HTMLAnchorElement> | undefined}>{body}</a>;
   return <button type="button" className={cls} {...rest}>{body}</button>;
 }

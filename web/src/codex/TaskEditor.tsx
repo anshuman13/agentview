@@ -386,7 +386,7 @@ export function TaskEditor({ row, onClose, onAsk }: { row: ItemRow; onClose: () 
         )}
         <Links text={text} />
         {typed !== null && <RelatedStrip text={`${title}\n${typed}`} profile={row.profile} skip={row.id} />}
-        <RelatedToTask row={row} />
+        {typed === null && <RelatedToTask row={row} />}
         <div className="as-edit-checks" data-drop="checks">
           {checks.map((c, i) => (
             <Fragment key={i}>
