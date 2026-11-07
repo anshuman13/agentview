@@ -1,40 +1,21 @@
-import { execFile } from 'node:child_process';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, mkdirSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
-import { attachTerminal, closeTerminal, closeTerminals, createTerminal, listTerminals } from './workspace/terminal.js';
-import { connect as connectChrome, openChrome, openInChrome, ownProfile } from './chrome/chrome.js';
-import { listSessions, renameRoute, savedSession } from './agent/claude/sessions.js';
+import { attachTerminal, closeTerminals } from './workspace/terminal.js';
+import { connect as connectChrome, openChrome, ownProfile } from './chrome/chrome.js';
 import { ntfyTopic, post } from './integrations/notify.js';
-import { cancelFocus, scheduleFocus } from './integrations/focus.js';
-import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, mcpProbe, setMcpGroup } from './agent/claude/mcp.js';
-import type { McpServerDef } from './integrations/mcpClient.js';
-import { emptyBin, listBin, restoreSession } from './agent/claude/bin.js';
-import { pinsRoute, removeChat } from './agent/claude/pins.js';
-import { seenRoute } from './agent/claude/seen.js';
-import { CODEX_WORK, listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from './workspace/files.js';
-import { github } from './integrations/github.js';
-import { assistantRoute } from './integrations/assistant.js';
-import { attention, dismissAttention, onAttention, refreshAttention, startAttention } from './integrations/attention.js';
-import { dismissFinding, getFindings } from './session/findings.js';
-import { deployRoute } from './integrations/deploy.js';
-import { linkTitleRoute } from './integrations/linkTitle.js';
-import { gitRoute } from './workspace/git.js';
-import { observe } from './integrations/observe.js';
-import { otherMacs, thisMac } from './http/macs.js';
-import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from './workspace/worktrees.js';
+import { CODEX_WORK } from './workspace/files.js';
+import { attention, onAttention, startAttention } from './integrations/attention.js';
+import { thisMac } from './http/macs.js';
 import { ROW_WINDOW, type AttentionItem, type ClientMessage, type LiveChat, type ServerMessage } from '../../shared/protocol.js';
 import { Ring, frame } from './http/stream.js';
 import { RingGate } from './http/ringGate.js';
-import { gz, serveWeb } from './http/web.js';
-import { readBody, savePaste } from './http/body.js';
-
-const MAX_FILE_BODY = 5_000_000;
+import { serveWeb } from './http/web.js';
+import { createRoutes, writers } from './http/routes.js';
 import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
 import { Host } from './host/client.js';
 import type { Hello } from './host/protocol.js';
@@ -160,18 +141,29 @@ function attentionSources(extra: string[] = []) {
 const fixChat = (item: AttentionItem) => host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, fresh: true });
 startAttention(attentionSources, fixChat);
 
+const { dispatch } = createRoutes({
+  host,
+  chats: () => chats,
+  lastViewed: () => lastViewed,
+  bySession,
+  closeByUser,
+  restart,
+  streams,
+  handleCommand,
+  openEvents,
+  attentionSources,
+  serveWeb,
+  allowedPeer,
+  requester,
+  thisMac,
+  networkInterfaces: os.networkInterfaces,
+  PORT,
+  APK,
+});
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://x');
-  const jsonText = async (text: string, code = 200) => {
-    if (text.length < 1024 || !/\bgzip\b/.test(String(req.headers['accept-encoding'] ?? ''))) {
-      res.writeHead(code, { 'content-type': 'application/json' });
-      return res.end(text);
-    }
-    const out = await gz(text);
-    res.writeHead(code, { 'content-type': 'application/json', 'content-encoding': 'gzip', vary: 'accept-encoding, origin' });
-    res.end(out);
-  };
-  const json = (body: unknown, code = 200) => jsonText(JSON.stringify(body), code);
+  const { json } = writers(req, res);
   if (!allowedRequest(req.headers, requester(req))) return json({ error: 'Forbidden' }, 403);
   const app = appOrigin(req.headers, requester(req));
   if (app) {
@@ -187,192 +179,7 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
   }
-  try {
-    if (url.pathname.startsWith('/api/assistant/')) {
-      const r = await assistantRoute(req.method ?? 'GET', url, () => readBody(req, 5_000_000));
-      return jsonText(r.text, r.status);
-    }
-    if (url.pathname === '/api/link-title') {
-      const r = await linkTitleRoute(url);
-      return json(r.body, r.status);
-    }
-    const liveCwds = [...chats.values()].map((c) => c.cwd);
-    // Routes that need no chat still work while a chat switch leaves none open.
-    if (url.pathname === '/api/sessions' && req.method === 'DELETE') {
-      const id = url.searchParams.get('id') ?? '';
-      const open = bySession(id);
-      if (open) await closeByUser(open);
-      return json(await removeChat(id, url.searchParams.has('purge'), url.searchParams.has('archive')));
-    }
-    if (url.pathname === '/api/sessions/rename' && req.method === 'POST') {
-      const id = url.searchParams.get('id');
-      const title = JSON.parse(await readBody(req)).title;
-      const r = await renameRoute(id, title);
-      if (r.status === 200) host.notify({ op: 'rename', sessionId: id!, title: title.trim() });
-      return json(r.body, r.status);
-    }
-    if (url.pathname === '/api/sessions/pins') {
-      const r = await pinsRoute(req.method ?? 'GET', url.searchParams.get('id'));
-      return json(r.body, r.status);
-    }
-    if (url.pathname === '/api/sessions/seen') {
-      const r = await seenRoute(req.method ?? 'GET', url.searchParams.get('id'));
-      return json(r.body, r.status);
-    }
-    if (url.pathname === '/api/sessions/bin' && req.method === 'DELETE') {
-      await emptyBin();
-      return json({ ok: true });
-    }
-    if (url.pathname === '/api/sessions/bin') return json(await listBin());
-    if (url.pathname === '/api/sessions/restore' && req.method === 'POST') {
-      await restoreSession(url.searchParams.get('id') ?? '');
-      return json({ ok: true });
-    }
-    if (url.pathname === '/api/worktrees' && req.method === 'DELETE') {
-      await removeWorktree(url.searchParams.get('id') ?? '', liveCwds);
-      return json({ ok: true });
-    }
-    if (url.pathname === '/api/worktrees' && req.method === 'POST') {
-      const body = JSON.parse(await readBody(req));
-      return json({ cwd: await createWorktree(String(body.repo ?? ''), String(body.branch ?? '').trim()) });
-    }
-    if (url.pathname === '/api/paste' && req.method === 'POST') return json({ path: await savePaste(req, url.searchParams.get('name') ?? '') });
-    if (url.pathname === '/api/folders' && req.method === 'POST') {
-      const body = JSON.parse(await readBody(req));
-      return json({ cwd: await createFolder(String(body.root ?? ''), String(body.name ?? '').trim()) });
-    }
-    if (url.pathname === '/api/open' && req.method === 'POST') {
-      const body = JSON.parse(await readBody(req));
-      const target = String(body.url ?? '');
-      if (!/^https?:\/\//.test(target)) return json({ error: 'Only http(s) links open' }, 400);
-      if (body.browser === 'firefox' && process.platform === 'darwin') execFile('open', ['-a', 'Firefox', target], (err) => err && console.error('open in firefox:', err.message));
-      else openInChrome(target);
-      return json({ ok: true });
-    }
-    if (url.pathname === '/api/mcp/connectors') return json(await connectorStatus(url.searchParams.has('refresh')));
-    if (url.pathname === '/api/mcp/groups' && req.method === 'POST') {
-      const body = JSON.parse(await readBody(req));
-      const service = String(body.service ?? '').trim();
-      if (!service) return json({ error: 'service is required' }, 400);
-      return json(await setMcpGroup(service, String(body.group ?? '')));
-    }
-    if (url.pathname === '/api/mcp/groups') return json(await mcpGroups());
-    if (url.pathname === '/api/restart' && req.method === 'POST') {
-      restart(url.searchParams.has('now'), url.searchParams.has('full'));
-      return json({ ok: true });
-    }
-    if (url.pathname === '/api/app') return json({ build: Number(await readFile(`${APK}.txt`, 'utf8').catch(() => '0')) || 0 });
-    if (url.pathname === '/api/app.apk') {
-      const body = await readFile(APK);
-      res.writeHead(200, { 'content-type': 'application/vnd.android.package-archive', 'content-disposition': 'attachment; filename="AgentView.apk"' });
-      return res.end(body);
-    }
-    if (url.pathname === '/api/connect') {
-      const port = [url.searchParams.get('port'), req.headers.host?.match(/:(\d+)$/)?.[1]].find((p) => p && /^\d{1,5}$/.test(p)) ?? String(PORT);
-      const ips = Object.values(os.networkInterfaces())
-        .flat()
-        .filter((a) => a && a.family === 'IPv4' && !a.internal && allowedPeer(a.address))
-        .map((a) => a!.address);
-      const running = [...chats.values()].filter((c) => c.running).length;
-      const { macs, problem } = url.searchParams.has('peer') ? { macs: [] } : await otherMacs(port, requester(req));
-      return json({ hostname: thisMac, urls: ips.map((ip) => `http://${ip}:${port}`), running, macs, netbird: problem });
-    }
-    if (url.pathname === '/api/sessions') {
-      const [list, bin] = await Promise.all([listSessions({ limit: 300 }), listBin()]);
-      const binned = new Set(bin.map((b) => b.sessionId));
-      return json(list.filter((x) => !binned.has(x.sessionId)).map(savedSession));
-    }
-    if (url.pathname === '/api/focus' && req.method === 'POST') {
-      const body = JSON.parse(await readBody(req));
-      const r = scheduleFocus(body?.title, body?.end);
-      return 'error' in r ? json(r, 400) : json(r);
-    }
-    if (url.pathname === '/api/focus' && req.method === 'DELETE') {
-      cancelFocus();
-      return json({ ok: true });
-    }
-    if (url.pathname === '/api/worktrees') return json(await listWorktrees(liveCwds));
-    if (url.pathname === '/api/repos') return json(await listRepos());
-    const chat = chats.get(url.searchParams.get('chat') ?? '') ?? chats.get(lastViewed);
-    if (!chat) return json({ error: 'The agent host is starting' }, 503);
-    if (url.pathname === '/api/events') {
-      const asked = (url.searchParams.has('session') && bySession(url.searchParams.get('session'))) || (chats.has(url.searchParams.get('chat') ?? '') ? url.searchParams.get('chat')! : undefined);
-      return openEvents(req, res, url, asked ?? chat.id, Boolean(asked));
-    }
-    if (url.pathname === '/api/cmd' && req.method === 'POST') {
-      const msg = JSON.parse(await readBody(req)) as ClientMessage;
-      if (typeof msg?.type !== 'string') throw new Error('Bad command');
-      const client = streams.get(url.searchParams.get('cid') ?? '');
-      // Without a stream or a chat there is no telling which chat the command is for.
-      if (!client && !chats.has(url.searchParams.get('chat') ?? '')) return json({ error: 'No stream for this command' }, 409);
-      // The chat the tab showed when the command was made, so a retry after a chat switch still lands there.
-      handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat.id }, msg, url.searchParams.get('chat') || undefined);
-      return json({ ok: true });
-    }
-    if (url.pathname === '/api/terms' && req.method === 'POST') return json(createTerminal(chat.id, chat.cwd));
-    if (url.pathname === '/api/terms' && req.method === 'DELETE') return json(closeTerminal(url.searchParams.get('id') ?? ''));
-    if (url.pathname === '/api/terms') return json(listTerminals(chat.id));
-    if (url.pathname === '/api/files') return json(await listFiles(chat.cwd));
-    if (url.pathname === '/api/dir') return json(await listDir(chat.cwd, url.searchParams.get('path') ?? ''));
-    if (url.pathname === '/api/file' && req.method === 'PUT') return json(await writeFileText(chat.cwd, url.searchParams.get('path') ?? '', await readBody(req, MAX_FILE_BODY)));
-    if (url.pathname === '/api/file') return json(await readFileWithOriginal(chat.cwd, url.searchParams.get('path') ?? ''));
-    if (url.pathname === '/api/image') {
-      const img = await readImage(chat.cwd, url.searchParams.get('path') ?? '');
-      res.writeHead(200, { 'content-type': img.type, 'cache-control': 'no-cache', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'", 'x-content-type-options': 'nosniff' });
-      return res.end(img.body);
-    }
-    if (url.pathname.startsWith('/api/git/')) return json(await gitRoute(chat.cwd, url.pathname.slice(9), url.searchParams, req.method === 'POST' ? JSON.parse(await readBody(req)) : null));
-    if (url.pathname.startsWith('/api/observe')) return json(await observe(req, url, chat.cwd));
-    if (url.pathname === '/api/mcp/config') return json(await mcpConfig(chat.cwd));
-    if (url.pathname === '/api/mcp/add' && req.method === 'POST') {
-      const name = url.searchParams.get('name') ?? '';
-      if (!(await configDef(chat.cwd, name))) return json({ error: `${name} is not in your MCP config` }, 404);
-      return json(await host.req({ op: 'mcp_add', id: chat.id, name }));
-    }
-    if (url.pathname === '/api/mcp/login' && req.method === 'POST') {
-      const r = await host.req<{ authUrl?: string }>({ op: 'mcp_login', id: chat.id, name: url.searchParams.get('name') ?? '' });
-      if (r.authUrl) openInChrome(r.authUrl);
-      return json(r);
-    }
-    if (url.pathname === '/api/mcp/probe') return json(await mcpProbe(chat.cwd, url.searchParams.has('refresh')));
-    if (url.pathname === '/api/mcp/call' && req.method === 'POST') {
-      const body = JSON.parse(await readBody(req));
-      const name = String(body.server ?? '');
-      const def = await configDef(chat.cwd, name);
-      if (!def) return json({ error: `${name} is not in your MCP config` }, 404);
-      if (!(await inSettings(chat.cwd, name))) return json({ error: `${name} is not approved in Claude Code, so AgentView does not start it` }, 403);
-      const r = await mcpCall(chat.cwd, name, def as McpServerDef, String(body.tool ?? ''), body.args ?? {});
-      return json(r, 'error' in r ? 400 : 200);
-    }
-    if (url.pathname === '/api/chat/events') {
-      const limit = parseInt(url.searchParams.get('limit') ?? '', 10);
-      try {
-        return json(await host.req({ op: 'events_before', id: chat.id, before: url.searchParams.get('before') ?? '', ...(!Number.isNaN(limit) && { limit }) }));
-      } catch (err) {
-        return json({ error: err instanceof Error ? err.message : String(err) }, 404);
-      }
-    }
-    if (url.pathname === '/api/state') return json(await host.req({ op: 'state', id: chat.id }));
-    if (url.pathname.startsWith('/api/gh/')) return json(await github(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
-    if (url.pathname === '/api/attention') return json(url.searchParams.has('fresh') ? await refreshAttention(attentionSources([chat.cwd])) : attention());
-    if (url.pathname === '/api/findings') return json(await getFindings(chat.cwd, url.searchParams.get('target') ?? 'local'));
-    if (url.pathname === '/api/findings/dismiss' && req.method === 'POST') {
-      const body = JSON.parse(await readBody(req));
-      return json(await dismissFinding(chat.cwd, String(body.target ?? 'local'), String(body.key ?? '')));
-    }
-    if (url.pathname === '/api/attention/dismiss' && req.method === 'POST') return json(dismissAttention(String(JSON.parse(await readBody(req)).id ?? '')));
-    if (url.pathname === '/api/attention/ask' && req.method === 'POST') {
-      const wanted = JSON.parse(await readBody(req)).id;
-      const item = attention().find((it) => it.id === wanted);
-      if (!item) throw new Error('That item is gone');
-      return json({ id: await host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, from: chat.id }) });
-    }
-    if (url.pathname.startsWith('/api/deploy/')) return json(await deployRoute(chat.cwd, req.method ?? 'GET', url, () => readBody(req)));
-
-    if (!(await serveWeb(req, res, url))) return json({ error: 'web client not built, run npm run dev or npm run build' }, 404);
-  } catch (err) {
-    void json({ error: err instanceof Error ? err.message : String(err) }, 500);
-  }
+  await dispatch(req, res, url);
 });
 
 server.on('connection', (socket) => {
