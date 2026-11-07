@@ -28,7 +28,7 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
         label={
           <>
             <span className={`dot ${tone}`} />
-            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortName(row.name)}</span>
+            <span className="mcp-detail-name">{shortName(row.name)}</span>
           </>
         }
         action={<IconButton icon="close" label="Close" size="sm" small onClick={onClose} />}

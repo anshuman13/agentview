@@ -33,6 +33,7 @@
 }
 .mcp-detail-acts, .mcp-login-acts { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
 .mcp-detail-acts { margin-bottom: var(--sp-8); }
+.mcp-detail-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .mcp-kv { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--sp-3) var(--sp-5); margin: 0 0 18px; font-size: var(--fs-sm); }
 .mcp-kv dt { color: var(--fg-muted); font-size: var(--fs-2xs); letter-spacing: var(--tracking-wider); text-transform: uppercase; padding-top: var(--sp-1); }
 .mcp-kv dd { margin: 0; min-width: 0; }
