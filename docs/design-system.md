@@ -282,9 +282,9 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-fold-head | codex/meetings/Transcript.tsx (no CSS rule) | Section header | Todo |
 | mt-item | codex/meetings/MeetingList.tsx | Row | Todo |
 | mt-list | codex/GoalsPage.tsx, codex/Search.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/summary/Summary.tsx | Grouped list | Todo |
-| mt-load-head | codex/Goals.tsx, codex/meetings/Load.tsx, codex/meetings/Review.tsx, codex/meetings/Week.tsx | Section header | Todo |
-| mt-load-row | codex/meetings/Load.tsx | Row | Todo |
-| mt-log-item | codex/meetings/Decisions.tsx, codex/meetings/Load.tsx, codex/meetings/Review.tsx, codex/meetings/Series.tsx, codex/meetings/SeriesPage.tsx, codex/meetings/Week.tsx | Row | Todo |
+| mt-load-head | codex/Goals.tsx, codex/meetings/Review.tsx | Section header | Partial |
+| mt-load-row | - | Row | Done |
+| mt-log-item | codex/meetings/Decisions.tsx, codex/meetings/Review.tsx, codex/meetings/Series.tsx, codex/meetings/SeriesPage.tsx | Row | Partial |
 | mt-person-head | codex/meetings/Person.tsx | Section header | Todo |
 | mt-row | CSS only | Row (delete the unused rule) | Done |
 | mt-rows | none | Grouped list | Done |

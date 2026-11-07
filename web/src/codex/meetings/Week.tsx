@@ -2,6 +2,8 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useAssistantTable } from '../data';
 import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
+import { Row } from '../../ui/Row';
+import { Section as Head } from '../../ui/Section';
 import { dayLabel } from '../data/dates';
 import { hoursText, weekReview } from '../data/load';
 import { unanswered, waitingByPerson } from '../data/review';
@@ -19,8 +21,8 @@ function Section({ title, rows }: { title: string; rows: ReactNode[] }) {
   if (!rows.length) return null;
   return (
     <section className="mt-wk-sec">
-      <div className="mt-load-head">{title} ({rows.length})</div>
-      {rows.slice(0, MAX)}
+      <Head label={title} count={rows.length} />
+      <div className="as-group">{rows.slice(0, MAX)}</div>
       {rows.length > MAX && <div className="mt-load-share">+{rows.length - MAX} more</div>}
     </section>
   );
@@ -62,25 +64,15 @@ export function Week({ meetings, facts, now }: { meetings: Meeting[]; facts: Fac
       {review ? <Review now={now} /> : <>
       <WeekGoals now={now} />
       <Section title="Decisions" rows={r.decisions.map((d, i) => (
-        <button key={i} className="mt-log-item" onClick={() => openMeeting(d.meeting)}>
-          <span className="mt-log-text">{d.text}</span>
-          <span className="mt-log-from">{d.meeting.title || 'Meeting'} · {when(d.at)}</span>
-        </button>
+        <Row key={i} lines={2} title={d.text} meta={`${d.meeting.title || 'Meeting'} · ${when(d.at)}`} onClick={() => openMeeting(d.meeting)} />
       ))} />
       <Section title="New claims" rows={r.claims.map((f) => (
-        <button key={f.profile + f.id} className="mt-log-item" onClick={() => setView({ list: 'wiki', open: f.page_id ?? null, anchor: null })}>
-          <span className="mt-log-text">{text(f.text)}</span>
-        </button>
+        <Row key={f.profile + f.id} lines={2} title={text(f.text)} onClick={() => setView({ list: 'wiki', open: f.page_id ?? null, anchor: null })} />
       ))} />
-      <Section title="Tasks done" rows={r.done.map((i) => <div key={i.profile + i.id} className="mt-log-item"><span className="mt-log-text">{text(i.title)}</span></div>)} />
+      <Section title="Tasks done" rows={r.done.map((i) => <Row key={i.profile + i.id} plain title={text(i.title)} />)} />
       <Section title="Open meeting actions" rows={r.open.map((i) => {
         const m = byKey.get(`${i.profile}:${i.meeting_id}`);
-        return (
-          <button key={i.profile + i.id} className="mt-log-item" onClick={() => m && openMeeting(m)}>
-            <span className="mt-log-text">{text(i.title)}</span>
-            {m && <span className="mt-log-from">{m.title || 'Meeting'}</span>}
-          </button>
-        );
+        return <Row key={i.profile + i.id} title={text(i.title)} meta={m && (m.title || 'Meeting')} onClick={() => m && openMeeting(m)} />;
       })} />
       {empty && <EmptyState size="sm" icon="calendar" title="Nothing this week yet." />}
       </>}

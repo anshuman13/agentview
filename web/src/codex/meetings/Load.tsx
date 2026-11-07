@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { useAssistantTable } from '../data';
 import { hoursText, meetingLoad } from '../data/load';
 import { dayLabel } from '../data/dates';
@@ -18,42 +19,48 @@ export function Load({ meetings, now }: { meetings: Meeting[]; now: number }) {
   if (!total) return <EmptyState size="sm" icon="calendar" title="No meetings in the last 4 weeks." />;
   return (
     <div className="mt-load">
-      <div className="mt-load-weeks">
+      <div className="as-group">
         {weeks.map((w) => {
           const label = dayLabel(w.start, true).replace(',', '');
           return (
-            <div key={w.start} className="mt-load-row">
-              <span className="mt-load-label">{label}</span>
-              <span className="mt-load-track"><i role="img" aria-label={`${label}: ${hoursText(w.hours)} in meetings`} style={{ width: `${(w.hours / max) * 100}%` }} /></span>
-              <span className="mt-load-num">{hoursText(w.hours)}</span>
-            </div>
+            <Row key={w.start} plain title={label}
+              meta={<span className="mt-load-track"><i role="img" aria-label={`${label}: ${hoursText(w.hours)} in meetings`} style={{ width: `${(w.hours / max) * 100}%` }} /></span>}
+              trailing={<span className="mt-load-num">{hoursText(w.hours)}</span>} />
           );
         })}
       </div>
       <div className="mt-load-share">{recorded} of {total} meetings recorded ({Math.round((recorded / total) * 100)}%)</div>
       {people.length > 0 && (
-        <div className="mt-load-people">
-          <div className="mt-load-head">Most time with</div>
-          {people.map((p) => <div key={p.name} className="mt-load-person"><span>{p.name}</span><span className="mt-load-num">{hoursText(p.hours)}</span></div>)}
-        </div>
+        <section>
+          <Section label="Most time with" />
+          <div className="as-group">
+            {people.map((p) => <Row key={p.name} plain title={p.name} trailing={<span className="mt-load-num">{hoursText(p.hours)}</span>} />)}
+          </div>
+        </section>
       )}
       {series.length > 0 && (
-        <div className="mt-load-people">
-          <div className="mt-load-head">Time by series</div>
-          {series.map((s) => <div key={s.key} className="mt-load-person"><span>{s.title}{s.total > 0 && <span className="mt-load-num"> · done {s.done} of {s.total}{s.oldestOpen != null && `, oldest open ${Math.max(Math.floor((now - s.oldestOpen) / 86_400_000), 0)}d`}</span>}</span><span className="mt-load-num">{s.minutes} min ({s.change == null ? 'new' : `${s.change > 0 ? '+' : ''}${s.change}`})</span></div>)}
-        </div>
+        <section>
+          <Section label="Time by series" />
+          <div className="as-group">
+            {series.map((s) => (
+              <Row key={s.key} plain title={s.title}
+                meta={s.total > 0 ? `done ${s.done} of ${s.total}${s.oldestOpen != null ? `, oldest open ${Math.max(Math.floor((now - s.oldestOpen) / 86_400_000), 0)}d` : ''}` : undefined}
+                trailing={<span className="mt-load-num">{s.minutes} min ({s.change == null ? 'new' : `${s.change > 0 ? '+' : ''}${s.change}`})</span>} />
+            ))}
+          </div>
+        </section>
       )}
       {audit.length > 0 && (
-        <div className="mt-load-audit">
-          <div className="mt-load-head">Series value, last 8 weeks</div>
-          {audit.map((s) => (
-            <button key={s.key} className="mt-log-item" onClick={() => openMeeting(s.latest)}>
-              <span className="mt-log-text">{s.title}</span>
-              <span className="mt-log-from">{s.count} meetings · {hoursText(s.hours)} · {s.decisions} decisions · {s.actions} actions for me</span>
-              {s.quiet && <span className="mt-load-quiet"><Icon name="warning" small /> Nothing for you lately · {hoursText(s.recentHours)} in 4 weeks</span>}
-            </button>
-          ))}
-        </div>
+        <section>
+          <Section label="Series value, last 8 weeks" />
+          <div className="as-group">
+            {audit.map((s) => (
+              <Row key={s.key} title={s.title} onClick={() => openMeeting(s.latest)}
+                meta={s.quiet ? `Nothing for you lately · ${hoursText(s.recentHours)} in 4 weeks` : `${s.count} meetings · ${hoursText(s.hours)} · ${s.decisions} decisions · ${s.actions} actions for me`}
+                trailing={s.quiet && <span className="badge waiting">Quiet</span>} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );
