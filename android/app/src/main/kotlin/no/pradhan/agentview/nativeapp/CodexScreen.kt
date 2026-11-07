@@ -167,7 +167,7 @@ fun CodexScreen(hub: Hub) {
     editing?.let { row ->
         val from = st.meetings.firstOrNull { it.profile == row.profile && it.id == row.meetingId }
         val people = if (row.status == "open") remember(st.meetings, row.key, now / 60_000) { recentPeople(st.meetings, row.profile, from, now) } else emptyList()
-        EditorSheet(row, st.items, now, actions, people, { p -> ops.points.raise(row.title ?: "", p, row.profile) }) { editKey = null }
+        EditorSheet(row, st.items, now, actions, people, { p, t -> ops.points.raise(t, p, row.profile) }) { editKey = null }
     }
     if (adding) AddSheet(hub, profile, now, { adding = false }) { added ->
         scope.launch { snack.currentSnackbarData?.dismiss(); snack.showSnackbar("Task · $added", duration = SnackbarDuration.Short) }

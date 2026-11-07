@@ -86,7 +86,7 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
             row.title ?: "", listOfNotNull(row.people?.ifEmpty { null } ?: "Slack", agoText(row.statusTime, now), if (row.snoozedUntil != null) "Snoozed" else null, if (isFaq(row)) "FAQ" else null).joinToString(" · "),
             onClick = onOpen,
             trailing = {
-                if (needs) RowLabel("Needs you", av.warn)
+                if (needs) Badge("Needs you", BadgeTone.Waiting)
                 if (has) Button(if (error.isNotEmpty()) "Retry" else if (needs) "Send note" else "Send", { send() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !busy)
                 else if (link != null) Button("Open", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 MoreButton { close ->

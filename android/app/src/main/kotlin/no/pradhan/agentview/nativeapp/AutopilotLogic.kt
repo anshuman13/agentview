@@ -2,7 +2,6 @@ package no.pradhan.agentview.nativeapp
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -86,11 +85,11 @@ fun activityValue(s: AutopilotState, now: Long): String {
 // A held reply whose ask I closed or dismissed is no longer waiting on me.
 fun replyBadge(r: AutopilotReply, items: List<Row>): Pair<String, String> {
     val item = if (r.status == "held") items.firstOrNull { it.id == r.id && it.source == "slack" } else null
-    if (item != null && item.status != "suggested" && item.status != "open") return if (item.status == "dismissed") "Dismissed" to "skipped" else "Closed" to "done"
+    if (item != null && item.status != "suggested" && item.status != "open") return if (item.status == "dismissed") "Skipped" to "skipped" else "Done" to "done"
     return when (r.status) {
         "held" -> "Needs you" to "waiting"
         "sent" -> "Sent" to "sent"
-        "dry" -> "Would have sent" to "skipped"
+        "dry" -> "Sent" to "sent"
         "error" -> "Failed" to "failed"
         "skipped" -> "Skipped" to "skipped"
         else -> r.status to "skipped"

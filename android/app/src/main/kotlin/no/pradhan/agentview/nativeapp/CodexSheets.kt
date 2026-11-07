@@ -87,7 +87,7 @@ fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, onRaise: (String) -> Unit, onDismiss: () -> Unit) {
+fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, raiseWith: List<String>, onRaise: (String, String) -> Unit, onDismiss: () -> Unit) {
     var title by remember(row.id) { mutableStateOf(row.title ?: "") }
     var text by remember(row.id) { mutableStateOf(row.text ?: "") }
     var pickDue by remember { mutableStateOf(false) }
@@ -152,7 +152,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
             if (raiseWith.isNotEmpty()) {
                 FieldLabel("Raise next time")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                    raiseWith.forEach { p -> Chip("Raise with ${firstName(p)}", { onRaise(p) }) }
+                    raiseWith.forEach { p -> Chip("Raise with ${firstName(p)}", { onRaise(p, title) }) }
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {

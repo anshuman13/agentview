@@ -85,7 +85,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
             if (questions.isNotEmpty()) {
                 item { SectionHeader("Open questions", questions.size.toString()) }
                 item {
-                    QuestionList(if (allQuestions) questions else questions.take(3), now, onOpen) { hub.resolveQuestion(it, mine, now) }
+                    QuestionList(if (allQuestions) questions else questions.take(3), now, onOpen) { hub.resolveQuestion(it, st.meetings, now) }
                     if (!allQuestions && questions.size > 3) Button("Show all ${questions.size}", { allQuestions = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             }
@@ -350,7 +350,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
         item { AddPoint(name, mine.firstOrNull()?.profile ?: WORK, ops) }
         if (questions.isNotEmpty()) {
             item { SectionHeader("Open questions", questions.size.toString()) }
-            item { QuestionList(questions, now, onMeeting) { hub.resolveQuestion(it, mine, now) } }
+            item { QuestionList(questions, now, onMeeting) { hub.resolveQuestion(it, st.meetings, now) } }
         }
         if (pins.isNotEmpty()) {
             item { SectionHeader("Pinned", pins.size.toString()) }

@@ -129,7 +129,8 @@ class CodexGapsTest {
         assertEquals(1, remote.calls.count { it.startsWith("history") })
         ops.send(ask("c"), "x", false)
         advanceUntilIdle()
-        assertNull(ops.cached("Ada Lovelace"))
+        ops.history("Ada Lovelace")
+        assertEquals(2, remote.calls.count { it.startsWith("history") })
     }
 
     @Test fun autopilotStateReadsTheHubAndPatchesGoThroughWrites() = runTest {
@@ -161,7 +162,7 @@ class CodexGapsTest {
         assertNull(saved)
         assertEquals(listOf("autopilot:{\"enabled\":true}"), remote.calls)
         assertEquals("Needs you" to "waiting", replyBadge(s.replies[0], listOf(item("1", "suggested", null, WORK, "source" to "slack"))))
-        assertEquals("Dismissed" to "skipped", replyBadge(s.replies[0], listOf(item("1", "dismissed", null, WORK, "source" to "slack"))))
+        assertEquals("Skipped" to "skipped", replyBadge(s.replies[0], listOf(item("1", "dismissed", null, WORK, "source" to "slack"))))
     }
 
     @Test fun seriesGroupsRecurringMeetingsAndFindsTheNextOne() {

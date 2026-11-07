@@ -1,9 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -71,8 +68,6 @@ class ReplyOps(
     private val cache = HashMap<String, ReplyHistory>()
     private fun keyOf(who: String) = who.trim().lowercase()
 
-    fun cached(who: String) = cache[keyOf(who)]
-
     suspend fun history(who: String): ReplyHistory {
         cache[keyOf(who)]?.let { return it }
         val h = protocolJson.decodeFromString(ReplyHistory.serializer(), remote.replyHistory(who))
@@ -111,7 +106,5 @@ class ReplyOps(
         }) { done() }
     }
 }
-
-fun replyPatch(vararg pairs: Pair<String, Any?>): String = buildJsonObject { pairs.forEach { (k, v) -> put(k, toJson(v)) } }.toString()
 
 fun ymd(t: Long): String = DateTimeFormatter.ISO_LOCAL_DATE.format(Instant.ofEpochMilli(t).atZone(codexZone))

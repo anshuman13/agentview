@@ -23,7 +23,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -62,10 +65,7 @@ fun AutopilotRow(hub: Hub, waiting: Int, onOpen: () -> Unit) {
 private enum class Which { Info, Away, Covers, Never, Model, Activity }
 
 @Composable
-private fun SettingRow(title: String, meta: String?, onClick: () -> Unit) = ListRow(title, meta, onClick = onClick, trailing = { Text("›", style = Type.callout, color = av.fgMuted) })
-
-@Composable
-private fun statusColor(kind: String): Color = when (kind) { "sent", "done" -> av.ok; "waiting" -> av.warn; "failed" -> av.err; else -> av.fgMuted }
+private fun SettingRow(title: String, meta: String?, onClick: () -> Unit) = ListRow(title, meta, onClick = onClick, trailing = { Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon), tint = av.fgMuted) })
 
 @Composable
 fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit) {
@@ -188,7 +188,7 @@ private fun ActivitySheet(s: AutopilotState, items: List<Row>, now: Long, close:
                         val link = safeHref(r.url)
                         ListRow("${r.who ?: ""}${if (r.chat != null) " · ${r.chat}" else ""}", if (r.text != null) "${autopilotWhen(r.at, now)} · ${r.text}" else autopilotWhen(r.at, now),
                             onClick = link?.let { l -> { uri.openUri(l) } },
-                            trailing = { RowLabel(label, statusColor(kind)) })
+                            trailing = { Badge(label, when (kind) { "waiting" -> BadgeTone.Waiting; "sent", "done" -> BadgeTone.Done; "failed" -> BadgeTone.Failed; else -> BadgeTone.Quiet }) })
                     }
                     if (!all && s.replies.size > 5) { Hairline(); ListRow("Show all ${s.replies.size}", onClick = { all = true }) }
                 }
