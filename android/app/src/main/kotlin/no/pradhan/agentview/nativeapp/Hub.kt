@@ -98,6 +98,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun refreshGranted() { granted.value = notifier.granted() }
 
     fun hideNeed(key: String) {
+        if (readOnly) { notice.value = READ_ONLY_SENT; return }
         val live = codex.state.value.chats.filter { !it.deleted }.map(::waitKey).toSet()
         val all = (handled.value - key) + key
         handled.value = (all.filter { !it.startsWith("wait:") || it in live || it == key } .filter { !it.startsWith("slack:") } + all.filter { it.startsWith("slack:") }.takeLast(50)).toCollection(LinkedHashSet())

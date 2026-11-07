@@ -1,13 +1,11 @@
 package no.pradhan.agentview.nativeapp
 
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -176,9 +174,8 @@ fun CodexScreen(hub: Hub) {
     }
     if (needsOpen) {
         val hidden by hub.handled.collectAsState()
-        val needs = remember(st, profile, now / 60_000, hidden) { needsList(st, profile, now, hidden) }
-        val queue = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now) }
-        NeedsSheet(needs, queue, now, actions, ops.replies, hub, { needsOpen = false; editKey = it.key }, { needsOpen = false; push("review") }) { needsOpen = false }
+        val view = remember(st, profile, now / 60_000, hidden) { needsView(st, profile, now, hidden) }
+        NeedsSheet(view.list, view.queue, now, actions, ops.replies, hub, { needsOpen = false; editKey = it.key }, { needsOpen = false; push("review") }, { needsOpen = false; push("person:$it") }) { needsOpen = false }
     }
 }
 
@@ -228,8 +225,9 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
     val hidden by hub.handled.collectAsState()
-    val needs = remember(st, profile, now / 60_000, hidden) { needsList(st, profile, now, hidden) }
-    val needsTotal = needs.size + remember(s, profile, now / 60_000) { replyQueue(s.review, profile, now).size }
+    val needsView = remember(st, profile, now / 60_000, hidden) { needsView(st, profile, now, hidden) }
+    val needs = needsView.list
+    val needsTotal = needsView.total
     val today = remember(st, profile, s, mt, needs) { overviewToday(s, mt.next, now, riskKeys(needs)) }
     val others = mt.today.filter { it != mt.next && (it.endsAt ?: it.startsAt!!) > now }
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }

@@ -115,7 +115,7 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
     val groups = listOf<List<Need>>(
         s.overdue.map { Need.Overdue(it) },
         risk.map { (row, short) -> Need.Risk(row, row.at!!, short) },
-        s.review.filter { !(it.source == "slack" && drafted(it)) && (it.snoozedUntil ?: 0L) <= now }.map { Need.Ask(it) },
+        s.review.filter { !(it.source == "slack" && drafted(it)) }.map { Need.Ask(it) },
         dms.map { Need.Dm(it) },
         bullets.map { Need.Slack(it, brief!!.profile) },
         ended.flatMap { m -> actionsOf(items, m).filter { it.status == "open" }.map { Need.JustEnded(it, m) } },
@@ -134,8 +134,10 @@ fun needsYou(items: List<Row>, meetings: List<Row>, chats: List<Row>, profile: S
 
 fun needsList(st: CodexState, profile: String?, now: Long, hidden: Set<String> = emptySet()) = needsYou(st.items, st.meetings, st.chats, profile, now, st.facts, st.briefs, hidden)
 
-fun needsCount(st: CodexState, profile: String?, now: Long, hidden: Set<String> = emptySet()) =
-    needsList(st, profile, now, hidden).size + replyQueue(split(st.items, profile, now).review, profile, now).size
+class NeedsView(val list: List<Need>, val queue: List<Row>) { val total get() = list.size + queue.size }
+
+fun needsView(st: CodexState, profile: String?, now: Long, hidden: Set<String> = emptySet()) =
+    NeedsView(needsList(st, profile, now, hidden), replyQueue(split(st.items, profile, now).review, profile, now))
 
 fun doneCount(done: Int, open: Int) = if (done > 0) "$done of ${done + open} done" else null
 

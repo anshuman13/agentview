@@ -28,14 +28,14 @@ class NeedsCountTest {
             item("draft", "suggested", null, WORK, "source" to "slack", "draft" to "ok"),
         )
         val st = CodexState(items = items, chats = listOf(chat("a"), chat("b", 0), chat("c").copy(deleted = true)))
-        assertEquals(listOf("Overdue", "Ask", "Ask", "Dm"), needsList(st, null, NOW).map { it::class.simpleName })
-        assertEquals(5, needsCount(st, null, NOW))
+        assertEquals(listOf("Overdue", "Ask", "Ask", "Ask", "Dm"), needsList(st, null, NOW).map { it::class.simpleName })
+        assertEquals(6, needsView(st, null, NOW).total)
     }
 
     @Test fun hiddenDmsAndBriefBulletsCount() {
         val st = CodexState(chats = listOf(chat("a"), chat("b")), briefs = listOf(brief("**Needs you**\n- [Plan](https://x.test/1): Do it now. Later.\n  - sub\n- **Bold**: why\n\n**Decided**\n- [Other](https://x.test/2): no")))
-        assertEquals(4, needsCount(st, null, NOW))
-        assertEquals(2, needsCount(st, null, NOW, setOf(waitKey(chat("a")), slackKey(Bullet("Plan", "https://x.test/1", "")))))
+        assertEquals(4, needsView(st, null, NOW).total)
+        assertEquals(2, needsView(st, null, NOW, setOf(waitKey(chat("a")), slackKey(Bullet("Plan", "https://x.test/1", "")))).total)
         assertEquals("Do it now.", briefBullets((st.briefs[0].str("text"))!!)[0].why)
     }
 
