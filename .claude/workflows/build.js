@@ -21,6 +21,12 @@ const REVIEW = {
   required: ['verdict', 'issues'],
 }
 
+const CODE_REVIEW = {
+  type: 'object',
+  properties: { verdict: { type: 'string', enum: ['clean', 'changes'] }, issues: { type: 'array', items: { type: 'string' } } },
+  required: ['verdict', 'issues'],
+}
+
 const TEST = {
   type: 'object',
   properties: {
@@ -67,6 +73,19 @@ async function build(s) {
     impl = await agent(
       `Your implementation of this spec failed testing. Work in the same worktree and branch as before (see your earlier result), apply the fixes, rerun the checks, amend the commit and return the updated result.\n\nSpec:\n${s.spec}\n\nYour earlier result:\n${impl}\n\nTester report:\n${test.report}\n\nFixes required:\n- ${test.fixes.join('\n- ')}`,
       { label: `impl:${s.slug}#${round + 1}`, phase: 'Build', agentType: 'implementer' })
+  }
+  if (test?.verdict === 'pass') {
+    const rev = await agent(
+      `Review the commit from this implementation. Spec:\n${s.spec}\n\nImplementer result:\n${impl}`,
+      { label: `code-review:${s.slug}`, phase: 'Build', agentType: 'code-reviewer', schema: CODE_REVIEW })
+    if (rev && rev.verdict !== 'clean' && rev.issues.length) {
+      impl = await agent(
+        `Apply these code review issues in the same worktree and branch as before (see your earlier result), rerun the checks, amend the commit and return the updated result.\n\nSpec:\n${s.spec}\n\nYour earlier result:\n${impl}\n\nIssues:\n- ${rev.issues.join('\n- ')}`,
+        { label: `impl:${s.slug}#review`, phase: 'Build', agentType: 'implementer' })
+      test = await agent(
+        `Spec:\n${s.spec}\n\nImplementer result:\n${impl}`,
+        { label: `test:${s.slug}#review`, phase: 'Build', agentType: 'tester', schema: TEST })
+    }
   }
   return { ...s, built: true, impl, test }
 }
