@@ -13,15 +13,15 @@
 :is(.mcp-kv, .ui-empty-hint) code { font-family: var(--mono); font-size: var(--fs-xs); padding: 1px var(--sp-2); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-xs); }
 
 .mcp-skeleton { height: 48px; border-radius: var(--radius-md); }
-.mcp-item .ui-row-trail { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--sp-3); }
+.mcp-main .ui-row-trail { position: relative; z-index: 1; gap: var(--sp-3); }
 .mcp-hit { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .mcp-hit::after { content: ''; position: absolute; inset: 0; }
 .mcp-hit:focus-visible { outline: none; }
 .mcp-hit:focus-visible::after { outline: 2px solid var(--accent); outline-offset: -2px; }
-.ui-row.mcp-item.selected { background: var(--accent-soft); }
-.mcp-item .badge.ok { color: var(--ok); }
-.mcp-item .badge.bad { color: var(--err); }
-.mcp-item .badge.warn { color: var(--warn); }
+.mcp-main .ui-row[aria-current='true'] { background: var(--accent-soft); }
+.mcp-main .badge.ok { color: var(--ok); }
+.mcp-main .badge.bad { color: var(--err); }
+.mcp-main .badge.warn { color: var(--warn); }
 .mcp-seg { display: flex; gap: var(--sp-2); }
 .mcp-seg .btn.on { border-color: var(--accent); background: var(--accent-soft); }
 

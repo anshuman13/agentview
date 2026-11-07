@@ -278,7 +278,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | gh-line | none | Row | Done |
 | gh-list | none | Grouped list | Done |
 | mcp-detail-head, mcp-tools-head | none | Section header | Done |
-| mcp-item | ops/McpServiceRow.tsx | Row | Partial |
+| mcp-item | - | Row | Done |
 | mt-fold-head | - | Section header | Done |
 | mt-item | - | Row | Done |
 | mt-list | codex/GoalsPage.tsx, codex/Search.tsx, codex/jobs/Jobs.tsx, codex/summary/Summary.tsx | Grouped list | Partial |

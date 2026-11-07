@@ -17,7 +17,7 @@ export function ServiceRow({ row, selected, usage, onPick, group, onGroup, onHid
   return (
     <ListRow
       plain
-      className={`mcp-item ${selected ? 'selected' : ''}`}
+      aria-current={selected || undefined}
       title={<button type="button" className="mcp-hit" data-row={rowKey(row)} aria-pressed={selected} onClick={onPick}>{shortName(row.name)}</button>}
       meta={meta || undefined}
       trailing={
