@@ -4,6 +4,7 @@ import { send, useStore } from './store';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
 import { Icon } from '../ui/Icon';
 import { command, save, spendLines, stored, weekPace } from '../ui/util';
+import { OFFLINE_DELAY_MS, offlineBanner, type OfflineState } from './offlineBanner';
 import { useMcpHealth } from '../ops/mcpShown';
 
 export function AppUpdate() {
@@ -46,18 +47,20 @@ export function Restarting() {
 export function Offline() {
   const connected = useStore((s) => s.ui.connected);
   const restarting = useStore((s) => s.ui.restarting);
-  const [late, setLate] = useState(false);
+  const [state, setState] = useState<OfflineState>('hidden');
   useEffect(() => {
-    setLate(false);
-    if (connected) return;
-    const t = setTimeout(() => setLate(true), 2000);
+    if (connected) {
+      setState((s) => offlineBanner(s, 'up'));
+      return;
+    }
+    setState((s) => offlineBanner(s, 'down'));
+    const t = setTimeout(() => setState((s) => offlineBanner(s, 'elapsed')), OFFLINE_DELAY_MS);
     return () => clearTimeout(t);
   }, [connected]);
-  if (connected || !late) return null;
+  if (connected || state !== 'shown') return null;
   return (
-    <div className="app-update offline mobile-only">
-      <Icon name="plug" small />
-      <span>{restarting ? 'AgentView is restarting' : 'Disconnected from the Mac, reconnecting'}</span>
+    <div className="offline-badge mobile-only">
+      <span className="badge waiting" role="status">{restarting ? 'Restarting' : 'Offline and reconnecting'}</span>
     </div>
   );
 }
