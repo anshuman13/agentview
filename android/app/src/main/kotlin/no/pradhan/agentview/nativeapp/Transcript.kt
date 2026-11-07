@@ -95,6 +95,9 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress to atBottom }.collect { (moving, bottom) -> if (moving) stick = bottom }
     }
+    val blank = rows.isEmpty() && state.earlier > 0
+    var tried by remember(chatId) { mutableStateOf(-1) }
+    LaunchedEffect(blank, loading, state.earlier) { if (blank && state.settled && !loading && state.earlier != tried) { tried = state.earlier; hub.loadEarlier() } }
     val newest = rows.firstOrNull()?.id
     LaunchedEffect(newest, rows.size) { if (stick && newest != null) listState.scrollToItem(0) }
     val sent = items.count { it is Item.User }
@@ -117,7 +120,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                 Button(if (loading) "Loading earlier" else "Show earlier (${state.earlier} hidden)", { hub.loadEarlier() }, enabled = !loading, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
             if (rows.isEmpty()) item(key = "empty") {
-                if (state.settled) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here.") else EmptyState("Loading")
+                if (state.settled && !blank) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here.") else EmptyState("Loading")
             }
         }
         if (!atBottom) JumpButton(Modifier.align(Alignment.BottomCenter).padding(bottom = Tokens.sp5)) {
