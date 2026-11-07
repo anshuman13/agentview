@@ -10,3 +10,8 @@ export function mergeTail(held: ChatEvent[], tail: ChatEvent[], earlier: number)
 export function initPage(held: ChatEvent[], same: boolean, events: ChatEvent[], earlier?: number) {
   return same && earlier !== undefined ? mergeTail(held, events, earlier) : { events, earlier: earlier ?? 0 };
 }
+
+// An older page goes in front only while the events still start where it was asked from; an init meanwhile wins.
+export function prependPage(held: ChatEvent[], first: string, page: ChatEvent[], earlier: number) {
+  return held[0]?.id === first ? { events: [...page, ...held], earlier } : null;
+}

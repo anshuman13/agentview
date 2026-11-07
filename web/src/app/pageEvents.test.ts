@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initPage, mergeTail } from './pageEvents';
+import { initPage, mergeTail, prependPage } from './pageEvents';
 import type { ChatEvent } from '../../../shared/protocol';
 
 const ev = (i: number, text = ''): ChatEvent => ({ id: `e${i}`, kind: 'user', text, at: i });
@@ -42,5 +42,12 @@ describe('initPage', () => {
 
   it('merges a tail init for the same chat', () => {
     expect(initPage(range(100, 400), true, range(250, 400), 250).earlier).toBe(100);
+  });
+});
+
+describe('prependPage', () => {
+  it('prepends while the held events start at the asked id and drops the page after an init moved them', () => {
+    expect(prependPage(range(5, 10), 'e5', range(0, 5), 0)?.events.map((e) => e.id)).toEqual(range(0, 10).map((e) => e.id));
+    expect(prependPage(range(0, 10), 'e5', range(0, 5), 0)).toBeNull();
   });
 });

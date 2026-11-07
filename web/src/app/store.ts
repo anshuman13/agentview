@@ -3,7 +3,7 @@ import { appendTo, ATTENTION_LABEL, ROW_WINDOW, type AttentionItem, type ChatEve
 import { notify } from './notify';
 import { apiUrl, bundled } from './api';
 import { backoffDelay } from './backoff';
-import { initPage } from './pageEvents';
+import { initPage, prependPage } from './pageEvents';
 
 type UiState = {
   connected: boolean;
@@ -79,8 +79,9 @@ export async function loadEarlier() {
     const body = await r.json();
     if (stale()) return false;
     if (!r.ok) throw new Error(body.error ?? `${r.status} ${r.statusText}`);
-    set((s) => ({ events: [...body.events, ...s.events], earlier: body.earlier }));
-    return true;
+    const page = prependPage(state.events, first, body.events, body.earlier);
+    if (page) set(page);
+    return Boolean(page);
   } catch (err) {
     if (!stale()) notice(`Could not load earlier messages: ${err instanceof Error ? err.message : err}`);
     return false;
