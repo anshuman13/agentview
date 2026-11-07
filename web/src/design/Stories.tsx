@@ -72,6 +72,7 @@ function SectionStory() {
       <Story label="collapsible open"><Section label="Today" count={2} open onToggle={() => {}} /></Story>
       <Story label="collapsible closed"><Section label="Earlier" count={2} open={false} onToggle={() => {}} /></Story>
       <Story label="collapsible, toggles"><Section label="Today" open={open} onToggle={() => setOpen(!open)} /></Story>
+      <Story label="focused"><div className="ds-focus"><Section label="Today" count={2} open onToggle={() => {}} /></div></Story>
       <Story label="sticky header in a scroll container">
         <div className="ds-scroll">
           <Section label="Sticky" count={6} />
@@ -97,6 +98,7 @@ function Stories() {
             <Button size={size} variant="quiet">quiet</Button>
           </Story>
         ))}
+        <Story label="focused"><div className="ds-focus ds-cases">{variants.map((variant) => <Button key={variant} variant={variant}>{variant}</Button>)}</div></Story>
       </Block>
       <Block name="IconButton">
         {(['sm', 'md'] as const).map((size) => (
@@ -108,6 +110,7 @@ function Stories() {
             <IconButton icon="link-external" label="Link" size={size} href="https://example.com" />
           </Story>
         ))}
+        <Story label="focused"><div className="ds-focus ds-cases"><IconButton icon="settings-gear" label="Button" /><IconButton icon="link-external" label="Link" href="https://example.com" /></div></Story>
       </Block>
       <Block name="Chip">
         {(['md', 'sm'] as const).map((size) => (
@@ -123,6 +126,7 @@ function Stories() {
             <Chip size={size} href="https://example.com">Link</Chip>
           </Story>
         ))}
+        <Story label="focused"><div className="ds-focus ds-cases"><Chip>Button</Chip><Chip href="https://example.com">Link</Chip></div></Story>
         <Story label="static tag"><span className="chip">Tag</span></Story>
       </Block>
       <Block name="Field">
@@ -132,9 +136,11 @@ function Stories() {
         <Story label="disabled"><input aria-label="Disabled" defaultValue="Disabled" disabled /></Story>
         <Story label="textarea"><textarea aria-label="Textarea" rows={3} defaultValue="Sample text" /></Story>
         <Story label="textarea placeholder"><textarea aria-label="Textarea placeholder" rows={3} placeholder="Placeholder" /></Story>
+        <Story label="focused"><div className="ds-focus ds-cases"><input aria-label="Focused text" defaultValue="Text" /><textarea aria-label="Focused textarea" rows={3} defaultValue="Text" /><select aria-label="Focused select"><option>Option</option></select></div></Story>
       </Block>
       <Block name="Menu">
         <Story label="trigger, sheet on phone width"><MenuStory /></Story>
+        <Story label="focused"><div className="ds-focus"><MenuItem>Focused item</MenuItem></div></Story>
       </Block>
       <Block name="Row">
         <Panel padding="sm">
@@ -146,6 +152,7 @@ function Stories() {
           <Row lines={2} title="Two lines of title text that wraps onto a second line when it is long enough to need one" meta="Sample" />
           <Row title="A long title that ellipsises when it is longer than the width of the row it sits in, however wide that is" meta="Sample" />
         </Panel>
+        <Story label="focused"><Panel padding="sm"><div className="ds-focus"><Row title="Focused row" meta="Sample" /></div></Panel></Story>
       </Block>
       <Block name="AskRow">
         <Panel padding="sm">
@@ -153,6 +160,7 @@ function Stories() {
           <AskRow title="One action" meta="Sample" actions={<Button size="sm" variant="filled">Approve</Button>} />
           <AskRow title="Primary and More" meta="Sample" actions={<><Button size="sm" variant="filled">Approve</Button><IconButton icon="ellipsis" label="More" /></>} />
         </Panel>
+        <Story label="focused"><Panel padding="sm"><div className="ds-focus"><AskRow title="Focused row" meta="Sample" /></div></Panel></Story>
       </Block>
       <Block name="Panel">
         <Panel title="Title" action={<Button size="sm" variant="plain">Action</Button>}>Padding md</Panel>

@@ -12,7 +12,7 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border: 3px solid transparent; border-radius: var(--radius-md); background-clip: padding-box; }
 @media (hover: hover) { ::-webkit-scrollbar-thumb:hover { background: var(--fg-faint); border: 3px solid transparent; background-clip: padding-box; } }
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
-button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 pre { margin: 0; font-family: var(--mono); font-size: var(--fs-sm); }
 pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: var(--fs-md); }
 

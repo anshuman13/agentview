@@ -8,7 +8,7 @@ input, textarea {
   width: 100%;
 }
 input::placeholder, textarea::placeholder { color: var(--fg-faint); }
-input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 textarea { resize: none; }
 select {
   background: var(--sunken); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-sm);

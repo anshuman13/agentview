@@ -10,7 +10,7 @@ button.ui-section-head { cursor: pointer; transition: background var(--dur) var(
   background: linear-gradient(color-mix(in srgb, currentColor var(--state), transparent) 0 0), transparent;
 }
 @media (hover: hover) { button.ui-section-head:hover { --state: var(--state-hover); } }
-button.ui-section-head:focus-visible { --state: var(--state-focus); outline: 2px solid var(--accent); outline-offset: -2px; }
+button.ui-section-head:focus-visible { --state: var(--state-focus); outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
 button.ui-section-head:active { --state: var(--state-press); }
 .ui-section-head > .codicon { transition: transform var(--dur) var(--ease); }
 .ui-section-head[aria-expanded='true'] > .codicon { transform: rotate(90deg); }

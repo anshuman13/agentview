@@ -70,11 +70,19 @@ Level 1 is a hairline drawn with box-shadow, so it never shifts layout. Only 2 a
 ### State layers (Material 3)
 
 Interactive controls lay a tint of their own content colour (`currentColor`) over their fill:
-hover `--state-hover` 8%, focus `--state-focus` 10% plus the 2px `--accent` ring, pressed
+hover `--state-hover` 8%, focus `--state-focus` 10% plus the focus ring (see Tokens), pressed
 `--state-press` 12%. Each control sets `--fill`; buttons.css draws
 `linear-gradient(color-mix(currentColor var(--state), transparent)), var(--fill)`. One rule
 covers every variant, works on any fill, and shows pressed feedback on touch. Disabled is 50%
 opacity with no layer.
+
+### Tokens
+
+- `--focus-ring`: `2px solid --accent`, used as `outline: var(--focus-ring)`.
+- `--focus-offset`: 1px outset. Buttons, IconButtons, Chips, fields, and the base.css fallback for other buttons and links.
+- `--focus-offset-inset`: -2px. Rows, AskRows, menu items and section heads, which sit edge to edge and would clip an outset ring.
+
+The ring shows on `:focus-visible` only, never on mouse focus. No primitive hard-codes a ring colour or width. /design shows each ring in a "focused" Story through the `.ds-focus` wrapper.
 
 ### Motion
 
@@ -130,7 +138,7 @@ Height `--size-2xl`, padding `--sp-4`, label type, `--shape-md`. Quiet: `--fg-mu
 On: `--fg` over `--accent-soft`. Late: `--danger`. Static `.chip` is a read-only tag. 44px hit area at max-width 480px.
 
 ### Field
-Fill `--sunken`, border `--border` (`--accent` on focus), `--shape-sm`, padding `--sp-2 --sp-4`,
+Fill `--sunken`, border `--border` (focus ring on keyboard focus only), `--shape-sm`, padding `--sp-2 --sp-4`,
 placeholder `--on-surface-faint`. Borderless only where the field is the page content.
 
 ### Menu

@@ -13,7 +13,7 @@
   background: linear-gradient(color-mix(in srgb, currentColor var(--state), transparent) 0 0), transparent;
 }
 @media (hover: hover) { .ui-menu-item:hover:not(:disabled) { --state: var(--state-hover); } }
-.ui-menu-item:focus-visible:not(:disabled) { --state: var(--state-focus); outline: 2px solid var(--accent); outline-offset: -2px; }
+.ui-menu-item:focus-visible:not(:disabled) { --state: var(--state-focus); outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
 .ui-menu-item:active:not(:disabled) { --state: var(--state-press); }
 .ui-menu-item:disabled { opacity: 0.5; cursor: default; }
 .ui-menu-item.danger { color: var(--danger); }

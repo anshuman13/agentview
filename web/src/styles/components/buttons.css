@@ -78,7 +78,7 @@ button.link { background: transparent; border: 0; padding: 0; color: var(--link)
 .icon-btn.icon-btn-sm { width: var(--control-sm); height: var(--control-sm); border-radius: var(--radius-md); }
 .icon-btn.icon-btn-md { width: var(--control-md); height: var(--control-md); border-radius: var(--radius-md); }
 .icon-btn.on { color: var(--accent-text); }
-:is(.btn, .icon-btn, .chip-btn):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+:is(.btn, .icon-btn, .chip-btn):focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 @media (pointer: coarse) {
   .btn:is(.btn-sm, .btn-md)::after { content: ''; position: absolute; inset: min(0px, calc((100% - var(--touch)) / 2)) 0; }
   .icon-btn:is(.icon-btn-sm, .icon-btn-md) { width: var(--touch); height: var(--touch); }

@@ -350,6 +350,10 @@
   --state-hover: 8%;
   --state-focus: 10%;
   --state-press: 12%;
+
+  --focus-ring: 2px solid var(--accent);
+  --focus-offset: 1px;
+  --focus-offset-inset: -2px;
 }
 
 /* Touch: Apple's sizes one step down (Body 16, Subheadline 14 for meta, Footnote 12); nothing under 12px; inputs stay at 16px to stop iOS zoom. */
