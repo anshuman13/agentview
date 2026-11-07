@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from './data';
 import { live, proposals, type Chat, type Meeting } from './data/wiki';
 import { atTime, errorText, reviewedSince } from './data/engine';
@@ -23,17 +23,15 @@ import { copyText, openMeeting, openTask, setView, showSnack, useView } from './
 import { when } from './time';
 import type { useSplit } from './split';
 import { type BadgeSpec } from '../ui/Badge';
+import { createStore } from '../ui/createStore';
 
 const WAIT_HANDLED = 'codex.waitingHandled';
 const SLACK_HANDLED = 'codex.slackHandled';
 const waitKey = (c: Chat) => `${c.profile}:${c.id}:${c.last_at ?? ''}`;
-const handled = { wait: stored<string[]>(WAIT_HANDLED, []), slack: stored<string[]>(SLACK_HANDLED, []) };
-const listeners = new Set<() => void>();
-const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
-const setHandled = (key: keyof typeof handled, next: string[]) => {
-  handled[key] = next;
+const handled = createStore({ wait: stored<string[]>(WAIT_HANDLED, []), slack: stored<string[]>(SLACK_HANDLED, []) });
+const setHandled = (key: 'wait' | 'slack', next: string[]) => {
   save(key === 'wait' ? WAIT_HANDLED : SLACK_HANDLED, next);
-  listeners.forEach((fn) => fn());
+  handled.patch({ [key]: next });
 };
 const urlKey = (u: string | null | undefined) => (safeHref(u) ? [`url:${safeHref(u)}`] : []);
 
@@ -60,8 +58,8 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
   const snap = useAssistantData();
   const { facts } = useCodex();
   const { filter } = useView();
-  const waitDone = useSyncExternalStore(subscribe, () => handled.wait);
-  const slackDone = useSyncExternalStore(subscribe, () => handled.slack);
+  const waitDone = handled.use((h) => h.wait);
+  const slackDone = handled.use((h) => h.slack);
   const pending = useRef(new Set<string>());
   const minute = Math.floor(now / 60000);
   const rows = useMemo(() => {
@@ -94,10 +92,10 @@ export function useNeedsYou(s: ReturnType<typeof useSplit>, now: number) {
     return collapse<Need>(ranked, (x) => x.kind === 'overdue', 3, (xs) => ({ kind: 'overdueAll', rows: xs.flatMap((x) => (x.kind === 'overdue' ? [x.row] : [])), keys: [] }));
   }, [snap.meetings, snap.chats, snap.briefs, snap.items, facts, filter, s, minute, waitDone, slackDone]);
   const hideChat = (c: Chat) => {
-    setHandled('wait', [...handled.wait.filter((k) => live(snap.chats).some((r) => waitKey(r) === k)), waitKey(c)]);
+    setHandled('wait', [...handled.get().wait.filter((k) => live(snap.chats).some((r) => waitKey(r) === k)), waitKey(c)]);
   };
   const hideBullet = (x: Bullet) => {
-    setHandled('slack', [...handled.slack, bulletKey(x)].slice(-50));
+    setHandled('slack', [...handled.get().slack, bulletKey(x)].slice(-50));
   };
   const capture = (key: string, title: string, profile: Chat['profile'], fill: (r: ItemRow) => Promise<unknown> | undefined, done: () => void) => {
     if (pending.current.has(key)) return;

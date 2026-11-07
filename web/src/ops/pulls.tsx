@@ -1,18 +1,14 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
 import type { CheckState, PullRequest } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { api, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
+import { createStore } from '../ui/createStore';
 
 type List = { cwd: string; prs: PullRequest[]; error: string; loading: boolean };
-let list: List = { cwd: '', prs: [], error: '', loading: false };
-const subs = new Set<() => void>();
-const setList = (p: Partial<List>) => {
-  list = { ...list, ...p };
-  subs.forEach((f) => f());
-};
-const subscribe = (f: () => void) => (subs.add(f), () => void subs.delete(f));
-export const useList = () => useSyncExternalStore(subscribe, () => list);
+const list = createStore<List>({ cwd: '', prs: [], error: '', loading: false });
+const setList = list.patch;
+export const useList = () => list.use();
 
 export async function call<T>(path: string, body?: object): Promise<T> {
   const r = await fetch(api(path), body ? { method: 'POST', body: JSON.stringify(body) } : undefined);
@@ -27,7 +23,7 @@ export async function load(cwd: string, fresh = false) {
   if (!cwd || (inflight === cwd && !fresh)) return;
   inflight = cwd;
   const req = ++latest;
-  setList(list.cwd === cwd ? { loading: true } : { cwd, prs: [], error: '', loading: true });
+  setList(list.get().cwd === cwd ? { loading: true } : { cwd, prs: [], error: '', loading: true });
   try {
     const prs = await call<PullRequest[]>(`/api/gh/prs${fresh ? '?fresh=1' : ''}`);
     if (req === latest) setList({ prs, error: '', loading: false });

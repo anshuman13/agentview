@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo } from 'react';
 import { api, useStore } from '../app/store';
 import { apiBase, useApiBase } from '../app/api';
 import { MCP_BAD } from '../../../shared/protocol';
+import { createStore } from '../ui/createStore';
 
 const service = (name: string) => (name.search(/[_-]/) > 0 ? name.slice(0, name.search(/[_-]/)) : name);
 
-let groups: Record<string, string> = {};
+const groups = createStore<Record<string, string>>({});
 let loadedFor: string | null = null;
-const subs = new Set<() => void>();
-const subscribe = (l: () => void) => (subs.add(l), () => void subs.delete(l));
 
 function load(force = false) {
   const base = apiBase();
@@ -16,8 +15,7 @@ function load(force = false) {
   loadedFor = base;
   fetch(api('/api/mcp/groups')).then((r) => r.json()).then((g) => {
     if (base !== apiBase() || !g || typeof g !== 'object') return;
-    groups = g;
-    subs.forEach((l) => l());
+    groups.set(g);
   }, () => void (loadedFor === base && (loadedFor = null)));
 }
 
@@ -27,7 +25,7 @@ if (typeof window !== 'undefined') window.addEventListener('agentview:mcp-groups
 function useShownMcp() {
   const mcp = useStore((s) => s.session.mcp);
   const base = useApiBase();
-  const shown = useSyncExternalStore(subscribe, () => groups);
+  const shown = groups.use();
   useEffect(() => load(), [base]);
   return useMemo(() => mcp.filter((m) => shown[`hide:${service(m.name)}`] !== 'hidden'), [mcp, shown]);
 }

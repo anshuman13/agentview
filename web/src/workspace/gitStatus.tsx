@@ -1,11 +1,10 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
 import type { GitStatus } from '../../../shared/protocol';
 import { api, useStore } from '../app/store';
+import { createStore } from '../ui/createStore';
 
-let git: { status: GitStatus | null; error: string } = { status: null, error: '' };
-const subs = new Set<() => void>();
-const subscribe = (l: () => void) => (subs.add(l), () => void subs.delete(l));
-export const useGit = () => useSyncExternalStore(subscribe, () => git);
+const git = createStore<{ status: GitStatus | null; error: string }>({ status: null, error: '' });
+export const useGit = () => git.use();
 
 let seq = 0;
 export async function refresh() {
@@ -14,11 +13,8 @@ export async function refresh() {
     const r = await fetch(api('/api/git/status'));
     const d = await r.json().catch(() => null);
     if (n !== seq) return;
-    git = r.ok && d ? { status: d, error: '' } : { status: null, error: d?.error ?? `Request failed (${r.status})` };
-  } catch {
-    return;
-  }
-  subs.forEach((l) => l());
+    git.set(r.ok && d ? { status: d, error: '' } : { status: null, error: d?.error ?? `Request failed (${r.status})` });
+  } catch {}
 }
 
 export function ChangesBadge() {

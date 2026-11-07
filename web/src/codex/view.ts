@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
+import { createStore } from '../ui/createStore';
 import { useBack } from '../app/back';
 import { rowKey, type Profile } from './data/sync';
 import { errorText } from './data/engine';
@@ -141,9 +142,8 @@ export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => sub
 // Snackbar with Undo, one at a time.
 const SNACK_MS = 5000;
 type Snack = { text: string; undo?: () => void; id: number };
-let snack: Snack | null = null;
+const snack = createStore<Snack | null>(null);
 let snackId = 0;
-const snackSubs = new Set<() => void>();
 let snackTimer: ReturnType<typeof setTimeout> | undefined;
 // A persistent status region so a screen reader hears each snack, even a repeat of the last one.
 let live: HTMLElement | null = null;
@@ -160,18 +160,16 @@ function announce(text: string) {
   setTimeout(() => (el.textContent = text), 100);
 }
 export function showSnack(text: string, undo?: () => void, ms = SNACK_MS) {
-  snack = { text, undo, id: ++snackId };
+  snack.set({ text, undo, id: ++snackId });
   announce(undo ? `${text}. Undo available` : text);
-  snackSubs.forEach((f) => f());
   clearTimeout(snackTimer);
   snackTimer = setTimeout(hideSnack, ms);
 }
 export const snackParked = (rows: unknown[]) => showSnack(rows.length === 1 ? '1 change not synced, edit it to retry' : `${rows.length} changes not synced, edit them to retry`);
-export const useSnack = () => useSyncExternalStore((f) => (snackSubs.add(f), () => snackSubs.delete(f)), () => snack);
+export const useSnack = () => snack.use();
 export const copyText = (text: string, done = 'Copied') => void copyToClipboard(text).then(() => showSnack(done), () => showSnack('Copy failed'));
 export function hideSnack() {
-  snack = null;
-  snackSubs.forEach((f) => f());
+  snack.set(null);
 }
 
 // Escape (unless a field has focus, or inField is set) and the phone back button go back from a wiki page or meeting.

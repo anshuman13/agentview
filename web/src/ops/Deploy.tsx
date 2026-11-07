@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, useStore } from '../app/store';
 import { fetchJson } from '../app/api';
 import { Icon } from '../ui/Icon';
@@ -12,6 +12,7 @@ import type { DeployEnv, DeployJob, DeployStatus } from '../../../shared/protoco
 import { ago, usePoll } from '../ui/util';
 import '../styles/features/deploy.css';
 import { Badge } from '../ui/Badge';
+import { createStore } from '../ui/createStore';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 
@@ -22,21 +23,16 @@ const stateBadge = (env: DeployEnv) => {
   return state === 'success' ? <Badge status="done" reason="Deployed" /> : state === 'failure' || state === 'error' ? <Badge status="failed" /> : <Badge status="running" reason="Deploying" />;
 };
 
-let jobs: Record<string, DeployJob | null> = {};
-const subs = new Set<() => void>();
-const setJob = (cwd: string, job: DeployJob | null) => {
-  jobs = { ...jobs, [cwd]: job };
-  subs.forEach((f) => f());
-};
-const subscribe = (f: () => void) => (subs.add(f), () => void subs.delete(f));
-export const jobOf = (cwd: string) => jobs[cwd] ?? null;
-const useJob = (cwd: string) => useSyncExternalStore(subscribe, jobOf.bind(null, cwd));
+const jobs = createStore<Record<string, DeployJob | null>>({});
+const setJob = (cwd: string, job: DeployJob | null) => jobs.set({ ...jobs.get(), [cwd]: job });
+export const jobOf = (cwd: string) => jobs.get()[cwd] ?? null;
+const useJob = (cwd: string) => jobs.use((j) => j[cwd] ?? null);
 
 export function track(cwd: string, job: DeployJob, every = 3000) {
   setJob(cwd, job);
   if (job.done) return;
   setTimeout(() => {
-    if (jobs[cwd]?.id !== job.id) return;
+    if (jobs.get()[cwd]?.id !== job.id) return;
     fetch(api(`/api/deploy/job/${job.id}`))
       .then((r) => r.json())
       .then((j) => track(cwd, j.error ? { ...job, done: true, lines: [...job.lines, j.error] } : j, every))
