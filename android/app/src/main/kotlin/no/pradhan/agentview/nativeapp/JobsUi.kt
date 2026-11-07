@@ -20,9 +20,11 @@ private fun JobState.color(): Color? = when (this) { JobState.Running -> av.ok; 
 fun toggleJob(hub: Hub, j: Row, on: Boolean) = hub.codex.update(j, mapOf("enabled" to if (on) 1 else 0, "next_run_at" to null))
 
 @Composable
-fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onOpen: (Row) -> Unit) {
+fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopilot: () -> Unit, onOpen: (Row) -> Unit) {
     val jobs = remember(st.jobs, profile) { jobsOf(st.jobs, profile) }
+    val waiting = remember(st.items, profile, now / 60_000) { replyQueue(st.items, profile, now).size }
     LazyColumn(Modifier.fillMaxWidth()) {
+        item { AutopilotRow(hub, waiting, onAutopilot) }
         if (jobs.isEmpty()) item { EmptyState("No jobs yet", "A job runs a prompt on a schedule, can add tasks, and sends you the result") }
         else item {
             Group(Modifier.padding(top = Tokens.sp4)) {
