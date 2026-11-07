@@ -263,6 +263,22 @@ export function chatState({ live, saved }: { live?: LiveChat; saved?: SavedSessi
   return id && seen[id] !== undefined && at > seen[id] ? 'done' : null;
 }
 
+export function groupGlance(g: RepoGroup, seen: Record<string, number>) {
+  const n = { running: 0, needs: 0, unread: 0 };
+  const count = (state: ChatState | null) => {
+    if (state === 'running') n.running++;
+    else if (state === 'needs') n.needs++;
+    else if (state === 'done') n.unread++;
+  };
+  for (const c of g.open) count(chatState({ live: c }, seen));
+  for (const s of g.recent) count(chatState({ saved: s }, seen));
+  return { ...n, last: g.last };
+}
+
+// Group keys that gained a live chat the previous list did not have; a chat that only moved between groups is not new.
+export const newChatGroups = (prev: ReadonlySet<string> | null, live: [id: string, group: string][]) =>
+  prev ? [...new Set(live.filter(([id]) => !prev.has(id)).map(([, key]) => key))] : [];
+
 export const unreadCount = (live: LiveChat[], viewing: string, seen: Record<string, number>, attention: number) =>
   live.filter((c) => c.id !== viewing && ['done', 'needs'].includes(chatState({ live: c }, seen) ?? '')).length + attention;
 

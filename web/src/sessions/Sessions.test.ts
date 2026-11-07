@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, segmentOf, since, staleKeys, unreadCount } from './folders';
+import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, newChatGroups, segmentOf, since, staleKeys, unreadCount } from './folders';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
@@ -173,5 +173,33 @@ describe('since', () => {
     expect(since(new Date(2026, 5, 14, 9, 0).getTime(), now)).toBe('yesterday');
     expect(back(3 * 864e5)).toBe('3 d ago');
     expect(back(14 * 864e5)).toBe('2 w ago');
+  });
+});
+
+describe('groupGlance', () => {
+  const live = (id: string, o: Partial<LiveChat> = {}): LiveChat => ({ id, sessionId: id, cwd: '/w/shop', title: id, running: false, pending: 0, status: '', lastActive: 100, ...o });
+  const f = buildFolders([repo('shop')], [], []);
+  const seen = { fin: 50, fs: 50, old: 500 };
+  it('counts running, needs and unread; failed and stalled count in none', () => {
+    const l = [live('r', { running: true }), live('st', { running: true, stalled: true }), live('p', { pending: 1 }), live('fa', { failed: true }), live('fin', { lastActive: 200 }), live('old')];
+    const g = groupByRepo(l, [chat('/w/shop', 300, 'fs'), chat('/w/shop', 20, 'x')], f)[0];
+    expect(groupGlance(g, seen)).toEqual({ running: 1, needs: 1, unread: 2, last: 300 });
+  });
+  it('lets the live copy win over its saved copy', () => {
+    const g = groupByRepo([live('r', { running: true })], [chat('/w/shop', 300, 'r')], f)[0];
+    expect(groupGlance(g, { r: 50 })).toMatchObject({ running: 1, unread: 0 });
+  });
+  it('is empty for a group with nothing to show', () => {
+    expect(groupGlance({ key: 'k', name: 'k', open: [], recent: [], last: 0, running: 0, waiting: 0 }, {})).toEqual({ running: 0, needs: 0, unread: 0, last: 0 });
+  });
+});
+
+describe('newChatGroups', () => {
+  it('ignores the first list and chats that only moved', () => {
+    expect(newChatGroups(null, [['a', '/w/shop']])).toEqual([]);
+    expect(newChatGroups(new Set(['a']), [['a', '/w/cafe']])).toEqual([]);
+  });
+  it('returns each group with a new chat once', () => {
+    expect(newChatGroups(new Set(['a']), [['a', '/w/shop'], ['b', '/w/shop'], ['c', '/w/shop'], ['d', '/w/cafe']])).toEqual(['/w/shop', '/w/cafe']);
   });
 });

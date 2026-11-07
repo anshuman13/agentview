@@ -13,7 +13,7 @@ import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, invalidateWorkspace, isDefault, renameChat, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, renameChat, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 
 const PAGE = 5;
@@ -248,6 +248,7 @@ export function Sessions() {
 
 const RECENT = 5;
 const KEY = 'agentview.chats.collapsed';
+const PEEK_MS = 8000;
 
 export function OpenChats() {
   const current = useStore((s) => s.session.sessionId);
@@ -274,8 +275,28 @@ export function OpenChats() {
     });
   }, [live, chats, folders, filter, pins]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
-  const isOpen = (g: RepoGroup) => Boolean(filter) || !(collapsed[g.key] ?? !g.open.length);
+  const seen = useStore((s) => s.seen);
+  const [peeking, setPeeking] = useState<ReadonlySet<string>>(new Set());
+  const peekTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const liveIds = useRef<Set<string> | null>(null);
+  const isOpen = (g: RepoGroup) => Boolean(filter) || peeking.has(g.key) || !(collapsed[g.key] ?? !g.open.length);
+  const unpeek = (key: string) => {
+    clearTimeout(peekTimers.current.get(key));
+    peekTimers.current.delete(key);
+    setPeeking((p) => new Set([...p].filter((k) => k !== key)));
+  };
+  useEffect(() => {
+    const fresh = newChatGroups(liveIds.current, live.map((c) => [c.id, findHere(folders, c.cwd).folder?.cwd ?? c.cwd]));
+    if (live.length) liveIds.current = new Set(live.map((c) => c.id));
+    for (const key of fresh.filter((k) => collapsed[k])) {
+      clearTimeout(peekTimers.current.get(key));
+      peekTimers.current.set(key, setTimeout(() => unpeek(key), PEEK_MS));
+      setPeeking((p) => new Set(p).add(key));
+    }
+  }, [live]);
+  useEffect(() => () => peekTimers.current.forEach(clearTimeout), []);
   const toggle = (g: RepoGroup) => {
+    unpeek(g.key);
     const next = { ...collapsed, [g.key]: isOpen(g) };
     setCollapsed(next);
     save(KEY, next);
@@ -318,9 +339,13 @@ export function OpenChats() {
               <span className="twistie"><Icon name={isOpen(g) ? 'chevron-down' : 'chevron-right'} small /></span>
               <span className="name">{g.name}</span>
               <span className="meta">
-                {g.running > 0 && <span className="badge running" title={`${g.running} running`}>{g.running}</span>}
-                {g.waiting > 0 && <span className="badge waiting" title={`${g.waiting} need you`}>{g.waiting}</span>}
-                <span className="count">{g.open.filter((c) => !c.pending).length + g.recent.length}</span>
+                {isOpen(g) ? (
+                  <>
+                    {g.running > 0 && <span className="badge running" title={`${g.running} running`}>{g.running}</span>}
+                    {g.waiting > 0 && <span className="badge waiting" title={`${g.waiting} need you`}>{g.waiting}</span>}
+                    <span className="count">{g.open.filter((c) => !c.pending).length + g.recent.length}</span>
+                  </>
+                ) : <GroupGlance g={g} seen={seen} />}
               </span>
               <span className="acts">
                 <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); send({ type: 'new_session', cwd: g.key }); }}><Icon name="add" small /></button>
@@ -340,6 +365,18 @@ export function OpenChats() {
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </div>
+  );
+}
+
+function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }) {
+  const { running, needs, unread, last } = groupGlance(g, seen);
+  return (
+    <>
+      {running > 0 && <span className="badge running" title={`${running} running`}>{running}</span>}
+      {needs > 0 && <span className="badge waiting" title={`${needs} need you`}>{needs}</span>}
+      {unread > 0 && <span className="badge" title={`${unread} unread`}>{unread}</span>}
+      {last > 0 && <span className="when">{since(last)}</span>}
+    </>
   );
 }
 

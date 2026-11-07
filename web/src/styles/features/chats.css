@@ -90,7 +90,7 @@
 
 .sessions.chats .row.project .acts { display: inline-flex; margin-left: 0; }
 .sessions.chats .row.project .acts .icon-btn, .sessions.chats .row.project .acts .icon-btn .codicon { color: var(--accent-text); }
-.sessions.chats .row.project:has(.acts):hover .count { display: inline; }
+.sessions.chats .row.project:has(.acts):hover :is(.count, .when) { display: inline; }
 .sessions.chats .row .meta { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: var(--sp-2); padding-right: var(--sp-1); font-weight: 400; }
 .sessions.chats .row .meta .count { margin-left: 0; padding: 0 var(--sp-5) 0 var(--sp-1); min-width: 22px; }
 .sessions.chats .bin { margin-top: var(--sp-4); border-top: 1px solid var(--border); padding-top: var(--sp-2); }
