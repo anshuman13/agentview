@@ -69,7 +69,7 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 
 @media (pointer: coarse) {
   a, button, [role='button'], summary, label, select, [tabindex] { -webkit-tap-highlight-color: transparent; }
-  :is(button, [role='button'], .tabbar, .activitybar, .statusbar, .sidebar-title, .as-head, .beside-head, .browser-bar, .cd-bar, .connect-head, .gh-bar, .mcp-detail-head, .mt-up-head, .pane-bar, .panel-head, .pd-head, .section-head, .sessions-bar, .term-bar, .timeline-head, .wk-head) { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+  :is(button, [role='button'], .tabbar, .activitybar, .statusbar, .sidebar-title, .as-head, .beside-head, .browser-bar, .cd-bar, .connect-head, .gh-bar, .mt-up-head, .pane-bar, .panel-head, .pd-head, .section-head, .sessions-bar, .term-bar, .timeline-head, .wk-head) { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
   :is(.as-row, .mcp-tool, .mt-log-item, .scm-row, .wk-hit, .tree .row, .section-head, .sessions .row, .palette li, .switcher li, .cp-pop li, .tc-agent, .tl-recap, .ov-stat, .pd-option, .tab, .term-tab, .statusbar .item, .tabbar button, .more-sheet > button, .more-project, .icon-btn, .btn.quiet):not(:disabled):active { background: var(--hover); transition: background-color 80ms, transform 80ms; }
 }
 @media (pointer: coarse) and (prefers-reduced-motion: no-preference) {

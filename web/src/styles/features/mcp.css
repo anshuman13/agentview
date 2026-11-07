@@ -31,8 +31,6 @@
   min-width: 0; display: flex; flex-direction: column; overflow: auto; padding: var(--sp-12) 22px var(--sp-16); position: relative;
   background: var(--raised); border-left: 1px solid var(--border);
 }
-.mcp-detail-head { display: flex; align-items: center; gap: var(--sp-5); margin-bottom: var(--sp-6); }
-.mcp-detail-head h2 { margin: 0; font-size: var(--fs-3xl); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .mcp-detail-acts, .mcp-login-acts { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
 .mcp-detail-acts { margin-bottom: var(--sp-8); }
 .mcp-kv { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--sp-3) var(--sp-5); margin: 0 0 18px; font-size: var(--fs-sm); }
@@ -45,8 +43,7 @@
 .mcp-act-error { align-self: center; font-size: var(--fs-sm); }
 .mcp-login { display: flex; flex-direction: column; gap: var(--sp-3); align-items: flex-start; }
 
-.mcp-tools-head { font-size: var(--fs-xs); font-weight: 600; letter-spacing: var(--tracking-wider); text-transform: uppercase; color: var(--fg-muted); display: flex; align-items: center; gap: var(--sp-3); height: var(--size-xl); border-top: 1px solid var(--border); padding-top: var(--sp-4); }
-.mcp-tools-head input { width: 120px; height: var(--size-row); padding: 0 var(--sp-4); font-size: var(--fs-sm); }
+.mcp-tools .ui-section input { width: 120px; }
 .mcp-tools, .mcp-calls { display: flex; flex-direction: column; gap: var(--sp-1); }
 .mcp-tools { margin-top: var(--sp-2); }
 .mcp-tool { padding: var(--sp-3) var(--sp-4); border-radius: var(--radius-sm); }

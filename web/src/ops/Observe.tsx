@@ -15,9 +15,10 @@ import type {
 import type { Repo } from '../../../shared/protocol';
 import { api, useStore } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
-import { askClaude, clickOnKey } from '../ui/util';
+import { askClaude } from '../ui/util';
 import { Icon } from '../ui/Icon';
-import { Button } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
+import { Menu, MenuItem } from '../ui/Menu';
 import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
@@ -70,28 +71,42 @@ function useLoad<T>(url: string | null): [Load<T>, () => void] {
 const Loading = () => <div className="obs-hint"><Icon name="loading" small spin /> Loading</div>;
 const Err = ({ text }: { text: string }) => (text ? <div className="obs-hint error" role="alert">{text}</div> : null);
 
-function Section({ title, children, actions, open: initial = true }: { title: string; children: ReactNode; actions?: ReactNode; open?: boolean }) {
+function Pane({ label, action, open: initial = true, children }: { label: string; action?: ReactNode; open?: boolean; children: ReactNode }) {
   const [open, setOpen] = useState(initial);
   return (
-    <div className="obs-section">
-      <div className="obs-head" onClick={() => setOpen((v) => !v)}>
-        <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
-        <span className="name" role="button" tabIndex={0} aria-expanded={open} onKeyDown={clickOnKey}>{title}</span>
-        <span className="acts" onClick={(e) => e.stopPropagation()}>{actions}</span>
-      </div>
+    <>
+      <UiSection label={label} action={action} open={open} onToggle={() => setOpen((v) => !v)} />
       {open && <div className="obs-body">{children}</div>}
-    </div>
+    </>
   );
+}
+
+function SubHead({ label, link, linkLabel, ask }: { label: string; link?: string; linkLabel: string; ask?: () => void }) {
+  const [menu, setMenu] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const action =
+    link && ask ? (
+      <span className="as-wrap-more">
+        <IconButton ref={btn} icon="kebab-vertical" label="More" size="sm" small aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+        {menu && (
+          <Menu trigger={btn} onClose={() => setMenu(false)}>
+            <MenuItem icon="link-external" href={link} onClick={() => setMenu(false)}>{linkLabel}</MenuItem>
+            <MenuItem icon="sparkle" onClick={() => { setMenu(false); ask(); }}>Ask Claude</MenuItem>
+          </Menu>
+        )}
+      </span>
+    ) : link ? (
+      <IconButton href={link} icon="link-external" label={linkLabel} size="sm" small />
+    ) : ask ? (
+      <IconButton icon="sparkle" label="Ask Claude" size="sm" small onClick={ask} />
+    ) : undefined;
+  return <UiSection label={label} action={action} />;
 }
 
 function Sub({ title, link, ask, children }: { title: string; link?: string; ask?: () => void; children: ReactNode }) {
   return (
     <div className="obs-sub">
-      <div className="obs-subhead">
-        <span className="name">{title}</span>
-        {link && <a className="obs-link" href={link} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Open in Grafana</a>}
-        {ask && <button className="obs-ask" onClick={ask}><Icon name="sparkle" small /> Ask Claude</button>}
-      </div>
+      <SubHead label={title} link={link} linkLabel="Open in Grafana" ask={ask} />
       {children}
     </div>
   );
@@ -159,7 +174,7 @@ function Grafana({ info }: { info: ObserveInfo }) {
     setQuestion('');
   };
   return (
-    <Section title="Grafana" actions={<button className="icon-btn" title="Refresh" onClick={refresh}><Icon name="refresh" small /></button>}>
+    <Pane label="Grafana" action={<IconButton icon="refresh" label="Refresh" size="sm" small onClick={refresh} />}>
       {!info.grafanaServer && <div className="obs-hint">No grafana MCP server in ~/.claude.json. Add one with: claude mcp add grafana -s user -e GRAFANA_URL=… -e GRAFANA_API_KEY=… -- mcp-grafana</div>}
       {info.grafanaServer && <>
       <form
@@ -180,11 +195,12 @@ function Grafana({ info }: { info: ObserveInfo }) {
             ))}
           </div>
         )}
-        <div className="obs-subhead">
-          <span className="name">{dash.busy ? 'Looking for dashboards' : `${dash.data?.dashboards.length ?? 0} dashboard${dash.data?.dashboards.length === 1 ? '' : 's'}`}</span>
-          {dash.data?.link && <a className="obs-link" href={dash.data.link} target="_blank" rel="noreferrer"><Icon name="link-external" small /> Search in Grafana</a>}
-          <button className="obs-ask" onClick={prompt('search the dashboards for this service, open the most relevant one and summarize what its panels show right now, with links')}><Icon name="sparkle" small /> Ask Claude</button>
-        </div>
+        <SubHead
+          label={dash.busy ? 'Looking for dashboards' : `${dash.data?.dashboards.length ?? 0} dashboard${dash.data?.dashboards.length === 1 ? '' : 's'}`}
+          link={dash.data?.link}
+          linkLabel="Search in Grafana"
+          ask={prompt('search the dashboards for this service, open the most relevant one and summarize what its panels show right now, with links')}
+        />
         {dash.busy && <Loading />}
         <Err text={dash.error} />
         {dash.data?.dashboards.length === 0 && <div className="obs-hint">No dashboards match "{cfg.grafana?.query || info.repo}". Set grafana.query or grafana.dashboards in the settings.</div>}
@@ -233,7 +249,7 @@ function Grafana({ info }: { info: ObserveInfo }) {
       </Sub>
       {selector && <div className="obs-hint mono">{selector}</div>}
       </>}
-    </Section>
+    </Pane>
   );
 }
 
@@ -309,10 +325,10 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
   const field = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <Section
-      title="Snowflake"
+    <Pane
+      label="Snowflake"
       open={false}
-      actions={<AddToClaude server="snowflake" added={info.inClaude.snowflake} disabled={!connected} title={connected ? 'Write the Snowflake MCP server into ~/.claude.json' : 'Save the connection first'} onDone={onInfo} />}
+      action={<AddToClaude server="snowflake" added={info.inClaude.snowflake} disabled={!connected} title={connected ? 'Write the Snowflake MCP server into ~/.claude.json' : 'Save the connection first'} onDone={onInfo} />}
     >
       <div className="obs-form">
         {FIELDS.map((f) => (
@@ -391,7 +407,7 @@ function Snowflake({ info, onInfo }: { info: ObserveInfo; onInfo: (i: ObserveInf
         </div>
       )}
       {result.data && result.data.columns.length === 0 && <div className="obs-hint">No rows</div>}
-    </Section>
+    </Pane>
   );
 }
 

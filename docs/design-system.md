@@ -164,7 +164,7 @@ inset to the text start. Section labels above cards are Footnote size, `--fg-mut
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
-`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers and Observe's Settings use it.
+`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers, the Observe panes, the Deploy log and the MCP detail pane use it.
 
 ## Patterns
 
@@ -270,14 +270,14 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | as-row | codex/Task.tsx (goal tasks already use Row) | Row | Partial |
 | as-swipe-row | codex/Swipe.tsx | keep: layout (swipe gesture container) | Keep |
 | as-tt-menu-row | codex/TaskEditor.tsx | keep: layout (row inside a Menu) | Keep |
-| deploy-log-head | ops/Deploy.tsx (rest of the pane uses Row) | Section header | Partial |
+| deploy-log-head | none | Section header | Done |
 | ex-head | - | Section header | Done |
 | ex-row, ex-section-row | - | Row | Done |
 | gh-head | none | Section header | Done |
 | gh-item | none | Row | Done |
 | gh-line | none | Row | Done |
 | gh-list | none | Grouped list | Done |
-| mcp-detail-head, mcp-tools-head | ops/McpDetail.tsx (service list already uses Section and Row) | Section header | Partial |
+| mcp-detail-head, mcp-tools-head | none | Section header | Done |
 | mcp-item | ops/McpServiceRow.tsx | Row | Partial |
 | mt-fold-head | codex/meetings/Transcript.tsx (no CSS rule) | Section header | Todo |
 | mt-item | codex/meetings/MeetingList.tsx | Row | Todo |
@@ -290,7 +290,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-rows | none | Grouped list | Done |
 | mt-series-list | - | Grouped list | Done |
 | mt-up-head | codex/meetings/MeetingList.tsx | Section header | Todo |
-| obs-head, obs-subhead | ops/Observe.tsx | Section header | Todo |
+| obs-head, obs-subhead | none | Section header | Done |
 | ov-ask-line | codex/DoNow.tsx, codex/NeedsYou.tsx, codex/WeeklyReview.tsx, codex/meetings/Person.tsx, codex/overview/CardRow.tsx, codex/overview/ReplyQueue.tsx, codex/summary/Summary.tsx | Row | Todo |
 | ov-brief-head | codex/Fold.tsx | Section header | Todo |
 | ov-digest-head | codex/meetings/Prep.tsx, codex/overview/BriefCard.tsx, codex/overview/DigestCard.tsx | Report card | Todo |

@@ -159,13 +159,20 @@ export function Deploy() {
       )}
       {job && (
         <div className={`deploy-log ${job.done ? (job.ok ? 'ok' : 'bad') : ''}`}>
-          <div className="deploy-log-head">
-            <Icon name={job.done ? (job.ok ? 'check' : 'error') : 'loading'} small spin={!job.done} />
-            <span role="status">{job.done ? (job.ok ? 'Deployed' : 'Deploy did not succeed') : 'Deploying'}</span>
-            <span className="spacer" />
-            {job.url && <a href={job.url} target="_blank" rel="noreferrer">Velodrome</a>}
-            {job.done && <button className="icon-btn" title="Close" onClick={() => setJob(cwd, null)}><Icon name="close" small /></button>}
-          </div>
+          <Section
+            label={
+              <>
+                <Icon name={job.done ? (job.ok ? 'check' : 'error') : 'loading'} small spin={!job.done} />
+                <span role="status">{job.done ? (job.ok ? 'Deployed' : 'Deploy did not succeed') : 'Deploying'}</span>
+              </>
+            }
+            action={
+              <>
+                {job.url && <IconButton href={job.url} icon="link-external" label="Open in Velodrome" size="sm" small />}
+                {job.done && <IconButton icon="close" label="Close" size="sm" small onClick={() => setJob(cwd, null)} />}
+              </>
+            }
+          />
           <pre className="mono">{job.lines.join('\n')}</pre>
         </div>
       )}

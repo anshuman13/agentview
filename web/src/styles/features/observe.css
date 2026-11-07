@@ -4,7 +4,7 @@
 .observe .ok { color: var(--ok); }
 .observe .obs-scroll { flex: 1; min-height: 0; overflow: auto; }
 .observe .obs-picker { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-6) var(--sp-4); color: var(--fg-muted); }
-.observe .obs-picker .icon-btn, .observe .obs-head .icon-btn { width: var(--size-sm); height: var(--size-sm); }
+.observe .obs-picker .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 
 .observe :is(.obs-picker input, .obs-askbar input, .obs-form input, .obs-form select, .obs-pick select) { min-width: 0; height: var(--size-md); padding: 0 var(--sp-3); font-size: var(--fs-sm); }
 .observe .obs-picker input { flex: 1; padding: 0 var(--sp-4); font-size: var(--fs-md); }
@@ -19,16 +19,8 @@
 }
 .observe .obs-hint.mono { font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); }
 
-.observe .obs-head {
-  height: var(--size-row); display: flex; align-items: center; gap: var(--sp-1); padding: 0 var(--sp-4) 0 var(--sp-2); cursor: pointer; border-top: 1px solid var(--border);
-  font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wider); color: var(--fg);
-}
-.observe .obs-head .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.observe .obs-head .acts { display: inline-flex; align-items: center; gap: var(--sp-2); text-transform: none; letter-spacing: 0; font-weight: 400; }
 .observe .obs-body { padding: var(--sp-1) 0 var(--sp-5); }
 .observe .obs-sub { padding: var(--sp-1) 0 var(--sp-2); }
-.observe .obs-subhead { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-6) var(--sp-1); min-height: 40px; font-size: var(--fs-sm); color: var(--fg-muted); }
-.observe .obs-subhead .name { flex: 1; min-width: 0; font-weight: 600; }
 
 .observe .obs-add { display: inline-flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-xs); }
 .observe .obs-ask:disabled { opacity: 0.5; cursor: default; }
@@ -107,10 +99,7 @@
   .observe .obs-picker { padding-bottom: var(--sp-5); }
   .observe :is(.obs-picker input, .obs-askbar input, .obs-form input, .obs-form select, .obs-pick select) { height: var(--touch-md); font-size: var(--fs-2xl); }
   .observe :is(.obs-editor, .obs-field) { font-size: var(--fs-2xl); line-height: var(--line-lg); }
-  .observe .obs-head { height: var(--touch); gap: var(--sp-2); }
-  .observe .obs-head .acts { gap: var(--sp-1); }
-  .observe :is(.obs-head, .obs-picker) .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
-  .observe .obs-subhead { min-height: var(--touch-md); flex-wrap: wrap; }
+  .observe .obs-picker .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .observe .obs-ask { height: var(--touch); padding: 0 var(--sp-6); font-size: var(--fs-md); }
   .observe .obs-chip { height: var(--touch-sm); }
   .observe .obs-link { min-height: var(--touch-sm); align-items: center; }

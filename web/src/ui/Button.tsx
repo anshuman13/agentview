@@ -25,19 +25,20 @@ export function Button({ variant = 'gray', size = 'md', icon, className, type = 
   );
 }
 
-export function IconButton({ icon, label, size = 'md', on, small, spin, className, type = 'button', ...rest }: Native & {
+export function IconButton({ icon, label, size = 'md', on, small, spin, className, type = 'button', href, ...rest }: Native & {
   icon: string;
   label: string;
   size?: Size;
   on?: boolean;
   small?: boolean;
   spin?: boolean;
+  href?: string;
 }) {
-  return (
-    <button type={type} aria-label={label} title={rest.title ?? label} className={cx('icon-btn', `icon-btn-${size}`, on && 'on', className)} {...rest}>
-      <Icon name={icon} small={small} spin={spin} />
-    </button>
-  );
+  const cls = cx('icon-btn', `icon-btn-${size}`, on && 'on', className);
+  const title = rest.title ?? label;
+  const glyph = <Icon name={icon} small={small} spin={spin} />;
+  if (href) return <a className={cls} href={href} target="_blank" rel="noreferrer" title={title} aria-label={label}>{glyph}</a>;
+  return <button type={type} aria-label={label} title={title} className={cls} {...rest}>{glyph}</button>;
 }
 
 export function Chip({ on, late, tone, quiet, size = 'md', icon, className, type = 'button', href, target, rel, children, ...rest }: Native & {

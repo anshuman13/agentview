@@ -1,11 +1,8 @@
 .deploy { flex: 1; min-height: 0; overflow: auto; padding: var(--sp-2) var(--sp-6) var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); font-size: var(--fs-md); }
-.deploy-log a { color: var(--link); text-decoration: none; }
-@media (hover: hover) { .deploy-log a:hover { text-decoration: underline; } }
 .deploy-error { display: flex; gap: var(--sp-3); align-items: flex-start; color: var(--err); font-size: var(--fs-sm); word-break: break-word; }
 .deploy-log { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--sunken); }
 .deploy-log.ok { border-left: 2px solid var(--ok); }
 .deploy-log.bad { border-left: 2px solid var(--err); }
-.deploy-log-head { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); }
 .deploy-log pre { margin: 0; padding: var(--sp-3) var(--sp-4); max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
 
 @media (max-width: 900px) {

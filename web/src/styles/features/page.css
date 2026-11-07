@@ -7,7 +7,7 @@
 .page-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 :is(.page-observe, .page-deploy) .page-body { padding: 0 var(--sp-12) var(--sp-12); max-width: 1040px; width: 100%; }
 .page-observe .observe, .page-deploy .deploy { font-size: var(--fs-md); }
-.page-observe .observe :is(.obs-head, .obs-picker) { padding-left: 0; }
+.page-observe .observe .obs-picker { padding-left: 0; }
 @media (max-width: 900px) {
   .page-hero { padding: 18px var(--sp-8) var(--sp-7); }
   .page-hero h1 { font-size: var(--fs-4xl); }

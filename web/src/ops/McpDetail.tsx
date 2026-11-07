@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ACCOUNT_LABEL, MCP_BAD, type Account } from '../../../shared/protocol';
 import { send } from '../app/store';
 import { Icon } from '../ui/Icon';
+import { IconButton } from '../ui/Button';
+import { Section } from '../ui/Section';
 import { openConnectors, use } from './mcpActions';
 import { runnable, scopeInfo, shortName, stateOf, usageText, type Group, type Row, type Usage } from './mcpHelpers';
 import { CallRow } from './McpCallRow';
@@ -18,12 +20,15 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
   const tools = (row.tools ?? []).filter((t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) || t.description?.toLowerCase().includes(q.toLowerCase()));
   return (
     <aside className="mcp-detail">
-      <div className="mcp-detail-head">
-        <span className={`dot ${tone}`} />
-        <h2>{shortName(row.name)}</h2>
-        <span className="spacer" />
-        <button className="icon-btn" title="Close" onClick={onClose}><Icon name="close" small /></button>
-      </div>
+      <Section
+        label={
+          <>
+            <span className={`dot ${tone}`} />
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortName(row.name)}</span>
+          </>
+        }
+        action={<IconButton icon="close" label="Close" size="sm" small onClick={onClose} />}
+      />
       <div className="mcp-detail-acts">
         {row.live && MCP_BAD.includes(row.status) && <button className="btn" onClick={() => send({ type: 'mcp_reconnect', name: row.name })}><Icon name="debug-restart" small /> Reconnect in chat</button>}
         {row.live && row.status === 'disabled' && <button className="btn" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}><Icon name="debug-start" small /> Enable</button>}
@@ -51,16 +56,16 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
       </dl>
       {usage && (
         <>
-          <div className="mcp-tools-head"><span>Used in this chat</span><span className="muted">{usageText(usage)}</span></div>
+          <Section label="Used in this chat" count={usageText(usage)} />
           <div className="mcp-calls">{[...usage.calls].reverse().map((c) => <CallRow key={c.id} call={c} />)}</div>
         </>
       )}
-      <div className="mcp-tools-head">
-        <span>Tools</span><span className="muted">{row.tools?.length ?? 0}</span>
-        <span className="spacer" />
-        {(row.tools?.length ?? 0) > 6 && <input placeholder="Filter" aria-label="Filter tools" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}
-      </div>
       <div className="mcp-tools">
+        <Section
+          label="Tools"
+          count={row.tools?.length ?? 0}
+          action={(row.tools?.length ?? 0) > 6 && <input placeholder="Filter" aria-label="Filter tools" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}
+        />
         {tools.map((t) => (
           <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
             <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="chip sm mcp-tag st-ok">read only</span>}{t.destructive && <span className="chip sm mcp-tag st-warn">destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <button className={`icon-btn mcp-insert ${run === t.name ? 'on' : ''}`} title={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))}><Icon name={run === t.name ? 'close' : 'play'} small /></button>}{row.live && <button className="icon-btn mcp-insert" title={`Ask Claude to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)}><Icon name="comment" small /></button>}</div>
