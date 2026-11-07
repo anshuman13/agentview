@@ -15,6 +15,8 @@ import { clock } from '../time';
 
 const SHOWN = 7;
 
+export const doneCount = (done: number, open: number) => (done > 0 ? `${done} of ${done + open} done` : undefined);
+
 function TaskRow({ r, late, now }: { r: ItemRow; late: boolean; now: number }) {
   const act = useActions();
   const [menu, setMenu] = useState(false);
@@ -53,7 +55,7 @@ function MeetingRow({ m, now }: { m: Meeting; now: number }) {
 }
 
 // Overdue tasks first, then the rest of today's meetings and tasks in time order; 7 rows, then Show all.
-export function TodayList({ meetings, overdue, tasks, now }: { meetings: Meeting[]; overdue: ItemRow[]; tasks: ItemRow[]; now: number }) {
+export function TodayList({ meetings, overdue, tasks, now, done, open }: { meetings: Meeting[]; overdue: ItemRow[]; tasks: ItemRow[]; now: number; done: number; open: number }) {
   const [all, setAll] = useState(false);
   const rows = [
     ...overdue.map((r) => ({ key: r.profile + r.id, at: atTime(r.at) ?? 0, late: true, r })),
@@ -64,9 +66,10 @@ export function TodayList({ meetings, overdue, tasks, now }: { meetings: Meeting
   ];
   if (!rows.length) return null;
   const shown = all ? rows : rows.slice(0, SHOWN);
+  const doneText = doneCount(done, open);
   return (
     <section className="ov-today">
-      <Section label="Today" count={rows.length} />
+      <Section label="Today" count={rows.length} action={doneText && <span className="badge quiet">{doneText}</span>} />
       <div className="as-group">
         {shown.map((x) => ('m' in x ? <MeetingRow key={x.key} m={x.m} now={now} /> : <TaskRow key={x.key} r={x.r} late={'late' in x} now={now} />))}
       </div>

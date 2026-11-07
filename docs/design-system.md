@@ -172,6 +172,7 @@ The visible text is the status word in sentence case, or "N word" with `count` (
 - Labels: `label` replaces the word only for "Needs you" on waiting and "Live" on running.
 - Reason: `reason` becomes `aria-label` and `title`, never visible text ("Overdue" and "Missed" render Late with that reason).
 - Digits-only exception: count badges (tab bar, nav, Section count, group counts) stay a raw `.badge` with neutral, quiet, waiting or running tone and hold only digits.
+- Progress exception: the Today header shows one quiet `.badge` "N of M done" in its Section `action` once N is at least 1.
 - Running exception: running has no Status language word. It shows "Running" or "Live" in `--accent-fill` with a dot.
 - One Badge per Row, trailing, never beside a second state badge. Counts such as "N to confirm" and filter labels are plain muted text.
 
@@ -277,7 +278,7 @@ me, what is left today. After the Skeleton while loading, a block with nothing i
 3. **Today**: Section header with a count Badge over one Grouped list of Rows in time order: the rest of today's
    meetings (title, time, a Live badge while it runs, no actions) and open tasks due today or overdue, overdue
    first (title, due time or a Late Badge, a leading check IconButton sm and one More IconButton sm with Snooze to
-   tomorrow and Open). Seven rows, then a "Show all N" quiet Button sm that expands in place.
+   tomorrow and Open). Seven rows, then a "Show all N" quiet Button sm that expands in place. From the first task done today the header's action slot holds a quiet "N of M done" Badge (Badge progress exception); it is absent at N = 0.
 
 Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` > `.wk-scroll` > `.mt-page` and add no wrapper, padding or background of their own. Their Page hero, the MCP grid and the GitHub detail keep their own layout. Agents keeps its fixed sidebar and takes only Row density and Grouped list styling.
 

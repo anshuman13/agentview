@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Overview } from './Overview';
+import { doneCount } from './overview/TodayList';
 import type { ItemRow } from './data/sync';
 import type { Meeting } from './data/wiki';
 
@@ -23,8 +24,8 @@ const at = (min: number) => now + min * 60000;
 const task = (id: string, title: string, due: number | null) => ({ id, profile: 'work', title, at: due, status: 'open' }) as unknown as ItemRow;
 const meeting = (id: string, title: string, start: number) => ({ id: `cal:${id}`, profile: 'work', title, starts_at: start, ends_at: start + 1800000, room: 'Room 4', people: 'Ada, Bo' }) as unknown as Meeting;
 
-const render = (over: { next?: Meeting; meetingsToday?: Meeting[]; overdue?: ItemRow[]; later?: ItemRow[]; nextLater?: Meeting }, dueToday: ItemRow[] = []) => {
-  const s = { next: undefined, meetingsToday: [], overdue: [], later: [], nextLater: undefined, ...over };
+const render = (over: { next?: Meeting; meetingsToday?: Meeting[]; overdue?: ItemRow[]; doneToday?: ItemRow[]; later?: ItemRow[]; nextLater?: Meeting }, dueToday: ItemRow[] = []) => {
+  const s = { next: undefined, meetingsToday: [], overdue: [], doneToday: [], later: [], nextLater: undefined, ...over };
   return renderToStaticMarkup(<Overview s={s as never} dueToday={dueToday} onPrep={() => {}} />);
 };
 
@@ -78,5 +79,23 @@ describe('Overview', () => {
     expect(html).toContain('Show all 9');
     expect(html).toContain('Chore 6');
     expect(html).not.toContain('Chore 7');
+  });
+
+  it('shows N of M done in the Today header and only when something is done', () => {
+    mocks.needs = []; mocks.queue = [];
+    const done = ['a', 'b', 'c'].map((id) => ({ ...task(id, `Done ${id}`, at(-60)), status: 'done' }) as ItemRow);
+    const open = Array.from({ length: 5 }, (_, i) => task(`o${i}`, `Chore ${i}`, at(10 + i)));
+    expect(render({ doneToday: done }, open)).toContain('3 of 8 done');
+    expect(render({}, open)).not.toContain(' done<');
+    expect(doneCount(3, 5)).toBe('3 of 8 done');
+    expect(doneCount(0, 5)).toBeUndefined();
+  });
+
+  it('never makes a done task the Up next card', () => {
+    mocks.needs = []; mocks.queue = [];
+    const finished = { ...task('d', 'Finished job', at(5)), status: 'done' } as ItemRow;
+    const html = render({}, [finished]);
+    expect(html).not.toContain('Finished job');
+    expect(html).toContain('Nothing today');
   });
 });

@@ -14,7 +14,7 @@ import { useView } from './view';
 import { when } from './time';
 import type { useSplit } from './split';
 import { UpNext } from './overview/UpNext';
-import { TodayList } from './overview/TodayList';
+import { TodayList, doneCount } from './overview/TodayList';
 import { NeedsYouSheet } from './overview/NeedsYouSheet';
 
 export { Review } from './overview/Review';
@@ -40,8 +40,11 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
     requestAnimationFrame(() => needsRow.current?.querySelector('button')?.focus({ preventScroll: true }));
   };
   const risky = new Set(needs.rows.flatMap((n) => (n.kind === 'risk' ? [n.row.profile + n.row.id] : [])));
-  const todo = dueToday.filter((r) => !risky.has(r.profile + r.id)).sort((a, b) => (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0));
-  const late = s.overdue.filter((r) => !risky.has(r.profile + r.id));
+  const openDue = dueToday.filter((r) => r.status === 'open');
+  const openLate = s.overdue.filter((r) => r.status === 'open');
+  const openCount = new Set([...openDue, ...openLate].map((r) => r.profile + r.id)).size;
+  const todo = openDue.filter((r) => !risky.has(r.profile + r.id)).sort((a, b) => (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0));
+  const late = openLate.filter((r) => !risky.has(r.profile + r.id));
   const task = s.next ? undefined : todo[0];
   const others = s.meetingsToday.filter((m) => m !== s.next && (m.ends_at ?? m.starts_at!) > now);
   const nextHint = () => {
@@ -62,7 +65,7 @@ export function Overview({ s, dueToday, onPrep }: { s: Split; dueToday: ItemRow[
           <Row title="Needs you" onClick={() => setSheet(true)} trailing={<><span className="badge quiet">{count}</span><Icon name="chevron-right" small /></>} />
         </div>
       )}
-      <TodayList meetings={others} overdue={late} tasks={task ? todo.filter((r) => r !== task) : todo} now={now} />
+      <TodayList meetings={others} overdue={late} tasks={task ? todo.filter((r) => r !== task) : todo} now={now} done={s.doneToday.length} open={openCount} />
       {sheet && <NeedsYouSheet needs={needs} queue={queue} now={now} onClose={closeSheet} />}
       {adding && <AddSheet filter={filter} onClose={() => setAdding(false)} />}
     </>
