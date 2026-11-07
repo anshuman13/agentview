@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -195,16 +194,18 @@ private fun Fold(label: String, count: Int, open: Boolean, onToggle: () -> Unit)
 @Composable
 private fun RoomMic(hub: Hub, m: Row) {
     val room = m.str("room") ?: ""
+    var busy by remember(m.key) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
         LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
             AvIcon("mic", null, Tokens.iconLg, tint = av.fgMuted)
             Text(buildAnnotatedString { append("Were you on the room mic, "); pushStyle(SpanStyle(fontWeight = FontWeight.SemiBold)); append(room); pop(); append("?") }, style = Type.body, color = av.fg)
         }
         LRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            Button("No", { hub.codex.update(m, mapOf("room_me" to 0)) }, size = ButtonSize.Sm)
-            Button("Yes, me", {
-                if (hub.codex.update(m, mapOf("room_me" to 1))) hub.write("/api/assistant/transcripts", buildJsonObject { put("profile", m.profile); put("id", m.id) }.toString(), "Transcript sync failed")
-            }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
+            Button("No", { hub.codex.update(m, mapOf("room_me" to 0)) }, size = ButtonSize.Sm, enabled = !busy)
+            Button(if (busy) "Reading" else "Yes, me", {
+                busy = true
+                hub.readWithRoomMic(m) { busy = false }
+            }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = !busy)
         }
     }
 }
@@ -259,6 +260,9 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
         } else null
     }
     val pins = remember(st.items, m.key) { pinsOf(st.items, listOf(m)) }
+    val prior = remember(st.meetings, m.key) { seriesOf(st.meetings, m) }
+    val repeats = remember(st.meetings, m.key, now / 60_000) { prior.firstOrNull()?.let { seriesRepeats(m, it, now) } }
+    val undone = remember(st.items, prior) { openAcrossSeries(st.items, prior).sortedBy { p -> prior.indexOfFirst { it.id == p.first.id } } }
     val family = remember(st.meetings, m.key, now / 60_000) { seriesMeetings(st.meetings, m.profile, seriesTitle(m.title), now) }
     val raiseTo = remember(st.meetings, m.key, now / 60_000) { recentPeople(st.meetings, m.profile, m, now) }
     var pinning by rememberSaveable(m.key) { mutableStateOf(false) }
@@ -269,8 +273,9 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
     var transcript by remember(m.key) { mutableStateOf<Result<String?>?>(null) }
     var newAction by rememberSaveable(m.key) { mutableStateOf("") }
     var contextOpen by rememberSaveable(m.key) { mutableStateOf(false) }
-    LaunchedEffect(transcriptOpen, more, m.key, m.str("summary")) {
-        if (transcriptOpen || (more && state == MState.Done)) transcript = runCatching { hub.api.transcript(m.profile, m.id) }
+    val done = state == MState.Done
+    LaunchedEffect(m.key, done, m.str("summary")) {
+        if (done) transcript = runCatching { hub.api.transcript(m.profile, m.id) }
     }
     val speakers = remember(transcript) { transcript?.getOrNull()?.let { talkTime(it) } ?: emptyList() }
     LazyColumn(Modifier.fillMaxWidth()) {
@@ -281,8 +286,8 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
                 else if (link != null && isCal) Button("Calendar", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
             pageMeta(m).takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted) }
-            if (!m.str("room").isNullOrEmpty() && m.long("room_me") == null) RoomMic(hub, m)
             stateLine(m, now)?.let { Text(it, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.callout, color = if (state == MState.Missing) av.warn else av.accentText) }
+            if (!m.str("room").isNullOrEmpty() && m.long("room_me") == null) RoomMic(hub, m)
         }
         item { SectionHeader("My actions", if (count.total > 0) "${count.done} of ${count.total} done" else null) }
         if (mine.isNotEmpty()) actionGroup(mine, m, now, actions)
@@ -341,11 +346,10 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
                         }
                     }))
             }
-            val earlier = family.filter { (it.startsAt ?: 0L) < (m.startsAt ?: 0L) }
-            item { Fold("Context", (if (speakers.isNotEmpty()) 1 else 0) + (if (earlier.isNotEmpty()) 1 else 0) + (if (family.size >= 2) 1 else 0) + (if (people.isNotEmpty()) 1 else 0), contextOpen) { contextOpen = !contextOpen } }
+            item { Fold("Context", (if (speakers.isNotEmpty()) 1 else 0) + (if (prior.isNotEmpty()) 1 else 0) + (if (family.size >= 2) 1 else 0) + (if (people.isNotEmpty()) 1 else 0), contextOpen) { contextOpen = !contextOpen } }
             if (contextOpen) {
                 if (speakers.isNotEmpty()) item { TalkTimeBar(speakers, all.count { it.status != "dismissed" }, decisions.size) }
-                if (earlier.isNotEmpty()) item { Pending("${earlier.size} earlier, last on ${dayLabel(earlier.first().startsAt!!)}") }
+                if (prior.isNotEmpty()) seriesRows(prior, repeats, decisions = prior.take(3).flatMap { x -> jsonList(x.str("decisions")).map { it.trim() }.filter { it.isNotEmpty() }.map { x to it } }, undone = undone, onMeeting = onMeeting)
                 if (family.size >= 2) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Series · ${family.size}", family[0].title, onClick = { onSeries(seriesKeyOf(m)) }) } }
                 if (people.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { people.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(displayName(p), onClick = { onPerson(p) }) } } }
             }
@@ -442,4 +446,15 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
+}
+
+private fun LazyListScope.seriesRows(prior: List<Row>, repeats: Repeats?, decisions: List<Pair<Row, String>>, undone: List<Pair<Row, Row>>, onMeeting: (Row) -> Unit) {
+    val last = prior[0]
+    val date = { x: Row -> dayLabel(x.startsAt!!) }
+    val again = repeats?.let { r -> r.decisions.map { it to "Decided again, also on ${date(last)}" } + r.questions.map { it to "Asked again, also on ${date(last)}" } } ?: emptyList()
+    item { SectionHeader("Series", again.size.takeIf { it > 0 }?.toString()) }
+    item { Pending("${prior.size} earlier, last on ${date(last)}") }
+    if (again.isNotEmpty()) item { Group { again.forEachIndexed { i, (t, meta) -> if (i > 0) Hairline(); ListRow(t, meta, lines = 2, onClick = { onMeeting(last) }) } } }
+    if (decisions.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { decisions.forEachIndexed { i, (x, t) -> if (i > 0) Hairline(); ListRow(t, "Decided ${date(x)}", lines = 2, onClick = { onMeeting(x) }) } } }
+    if (undone.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { undone.forEachIndexed { i, (x, r) -> if (i > 0) Hairline(); ListRow(r.title ?: r.str("text") ?: "", "Still open from ${date(x)}", lines = 2, onClick = { onMeeting(x) }) } } }
 }

@@ -43,7 +43,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
@@ -508,7 +507,7 @@ fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = 
         onClick = onClick,
         enabled = enabled,
         leadingIcon = { AvIcon(if (checked) "check" else icon, null, Tokens.icon) },
-        colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color, disabledTextColor = color.copy(alpha = 0.5f)),
+        colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color, disabledTextColor = color.copy(alpha = 0.5f), disabledLeadingIconColor = color.copy(alpha = 0.5f)),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.sp6),
         modifier = Modifier.heightIn(min = Tokens.touch),
     )

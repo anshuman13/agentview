@@ -297,6 +297,20 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         writes.run(failure, { out = parse(api.post(path, body, pageChat)) }) { done(if (it) out else null) }
     }
 
+    fun readWithRoomMic(m: Row, done: (Boolean) -> Unit) {
+        writes.run("Transcript sync failed", {
+            try {
+                codex.update(m, mapOf("room_me" to 1))
+                codex.sync()
+                codex.state.value.error?.let { error("the room mic answer did not sync: $it") }
+                api.readTranscript(m.profile, m.id)
+                notice.value = "Read again with the room mic as you"
+            } catch (e: Exception) {
+                throw ApiError("Transcript sync failed: ${e.message}")
+            }
+        }, done)
+    }
+
     fun command(body: String) = post(body, store.wanted)
 
     // A command a page sends on its own, skipped without a notice in a read-only check.

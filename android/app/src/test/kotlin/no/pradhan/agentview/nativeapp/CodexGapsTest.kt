@@ -166,6 +166,15 @@ class CodexGapsTest {
         assertEquals("Skipped" to "skipped", replyBadge(AutopilotReply(id = "2", status = "dry"), emptyList()))
     }
 
+    @Test fun seriesOfNeedsSharedGuestsAndListsNewestFirst() {
+        val a = mtg("cal:a", "Sync #1", at(25, 9, 0, 10), "people" to """["x@o.com","y@o.com"]""", "decisions" to """["Ship it"]""")
+        val b = mtg("cal:b", "Sync #2", at(1, 9), "people" to """["x@o.com","y@o.com"]""", "decisions" to """["ship it"]""")
+        val c = mtg("cal:c", "Sync #3", at(14, 9), "people" to """["x@o.com","y@o.com"]""")
+        val stranger = mtg("cal:s", "Sync #4", at(2, 9), "people" to """["p@o.com","q@o.com"]""")
+        assertEquals(listOf("cal:b", "cal:a"), seriesOf(listOf(a, b, c, stranger), c).map { it.id })
+        assertEquals(listOf("ship it"), seriesRepeats(b, a, NOW).decisions)
+    }
+
     @Test fun seriesGroupsRecurringMeetingsAndFindsTheNextOne() {
         val a = mtg("cal:a", "Sync #1", at(25, 9, 0, 10), "people" to """["x@o.com","y@o.com"]""")
         val b = mtg("cal:b", "Sync #2", at(1, 9), "people" to """["x@o.com","y@o.com"]""")

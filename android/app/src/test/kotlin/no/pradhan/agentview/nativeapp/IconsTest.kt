@@ -27,4 +27,8 @@ class IconsTest {
     @Test fun sourceIconsExist() {
         listOf("meeting", "slack", "linear", "pr", "doc").forEach { assertTrue(Codicons.codepoints.containsKey(Source(it, "", null).icon)) }
     }
+
+    @Test fun tabIconsExist() {
+        Tab.entries.forEach { assertTrue(Codicons.codepoints.containsKey(icon(it))) }
+    }
 }

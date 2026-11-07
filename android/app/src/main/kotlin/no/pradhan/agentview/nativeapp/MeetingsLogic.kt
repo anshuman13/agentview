@@ -101,7 +101,7 @@ private fun words(s: String): List<String> {
 fun displayName(s: String) = if ('@' in s) words(s).joinToString(" ") { it[0].uppercase() + it.drop(1).lowercase() }.ifEmpty { s.trim() } else s.trim()
 fun sameName(a: String, b: String) = words(a).joinToString(" ").lowercase() == words(b).joinToString(" ").lowercase()
 
-private fun sharesGuests(people: List<String>, other: List<String>): Boolean {
+fun sharesGuests(people: List<String>, other: List<String>): Boolean {
     if (people.isEmpty() || other.isEmpty()) return people.size == other.size
     return people.count { p -> other.any { sameName(p, it) } } * 2 >= minOf(people.size, other.size)
 }

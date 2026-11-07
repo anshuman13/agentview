@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -41,7 +40,7 @@ import kotlinx.coroutines.delay
 
 private const val ORIGIN_ROUTE = "origin"
 
-private fun icon(t: Tab): String = when (t) {
+internal fun icon(t: Tab): String = when (t) {
     Tab.Codex -> "sparkle"
     Tab.Chat -> "comment"
     Tab.Sessions -> "comment-discussion"
@@ -114,7 +113,7 @@ fun App(hub: Hub) {
                             colors = colors,
                         )
                     }
-                    NavigationBarItem(selected = more || inMore, onClick = { more = true }, icon = { AvIcon("menu", null, Tokens.iconLg) }, label = { Text("More", style = Type.label) }, colors = colors)
+                    NavigationBarItem(selected = more || inMore, onClick = { more = true }, icon = { AvIcon("ellipsis", null, Tokens.iconLg) }, label = { Text("More", style = Type.label) }, colors = colors)
                 }
             }
         },

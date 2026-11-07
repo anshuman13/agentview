@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -127,9 +126,9 @@ fun CodexScreen(hub: Hub) {
                 menu = if (route != null) (if (route == "meetings") { close -> ExtraMenu(route, hub, profile, now, chips, decisions, onChip, { decisions = !decisions }, push, close) } else null) else { close ->
                     MenuItem("Goals", "target", { close(); page = "goals" })
                     MenuItem("Search everything", "search", { close(); page = "search" })
-                    MenuItem("Meetings", "calendar", { close(); push("meetings") })
+                    MenuItem("Meetings", "record", { close(); push("meetings") })
                     MenuItem("Wiki", "book", { close(); push("wiki") })
-                    MenuItem("Jobs", "play", { close(); push("jobs") })
+                    MenuItem("Jobs", "history", { close(); push("jobs") })
                 },
             )
             if (!sub) Row(Modifier.padding(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {

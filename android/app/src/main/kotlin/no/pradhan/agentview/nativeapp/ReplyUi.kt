@@ -83,7 +83,7 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
     val link = safeHref(row.sourceUrl)
     Column {
         ListRow(
-            row.title ?: "", listOfNotNull(row.people?.ifEmpty { null } ?: "Slack", agoText(row.statusTime, now), if (row.snoozedUntil != null) "Snoozed" else null, if (isFaq(row)) "FAQ" else null).joinToString(" · "),
+            row.title ?: "", listOfNotNull(row.people?.ifEmpty { null } ?: "Slack", agoShort(row.statusTime, now), if (row.snoozedUntil != null) "Snoozed" else null, if (isFaq(row)) "FAQ" else null).joinToString(" · "),
             onClick = onOpen,
             trailing = {
                 if (needs) Badge("Needs you", BadgeTone.Waiting)

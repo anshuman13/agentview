@@ -94,3 +94,24 @@ fun visibleQuestions(questions: List<Question>, resolved: List<String>) = questi
 
 // The lines of a summary that can be pinned, list markers and emphasis removed.
 fun summaryLines(summary: String?): List<String> = (summary ?: "").lines().map { it.trim().replace(LEAD, "").replace(Regex("\\*+"), "").trim() }.filter { it.isNotEmpty() }
+
+// Earlier meetings of the same recurring series: equal series title and at least half of the smaller guest list in common. Newest first.
+fun seriesOf(meetings: List<Row>, m: Row): List<Row> {
+    val title = seriesTitle(m.title)
+    val start = m.startsAt
+    if (title.isEmpty() || start == null) return emptyList()
+    val people = peopleOf(m)
+    return liveRows(meetings).filter { x -> x.profile == m.profile && x.id != m.id && (x.startsAt ?: Long.MAX_VALUE) < start && seriesTitle(x.title) == title && sharesGuests(people, peopleOf(x)) }.sortedByDescending { it.startsAt }
+}
+
+class Repeats(val decisions: List<String>, val questions: List<String>)
+
+// What a meeting repeats from the previous one in its series: decisions made again and questions still being asked.
+fun seriesRepeats(m: Row, prev: Row, now: Long): Repeats {
+    val before = jsonList(prev.str("decisions")).map { it.trim().lowercase() }.toSet()
+    val asked = openQuestions(listOf(prev), now).map { it.text.lowercase() }
+    return Repeats(
+        jsonList(m.str("decisions")).filter { it.isNotBlank() && it.trim().lowercase() in before },
+        openQuestions(listOf(m), now).map { it.text }.filter { t -> asked.any { a -> t.lowercase().contains(a) || a.contains(t.lowercase()) } },
+    )
+}

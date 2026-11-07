@@ -22,7 +22,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset

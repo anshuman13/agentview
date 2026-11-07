@@ -24,6 +24,7 @@ fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 // The REST routes of server/src/http/routes.ts that the chat screens read and write.
 class Api(private val origin: () -> String, private val http: OkHttpClient = OkHttpClient()) : AssistantRemote {
     private val slow = http.newBuilder().readTimeout(120, java.util.concurrent.TimeUnit.SECONDS).build()
+    private val long = http.newBuilder().readTimeout(300, java.util.concurrent.TimeUnit.SECONDS).build()
 
     private suspend fun call(req: Request.Builder, client: OkHttpClient = http): ByteArray = withContext(Dispatchers.IO) {
         client.newCall(req.build()).execute().use { r ->
@@ -79,6 +80,11 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
         protocolJson.parseToJsonElement(call(url("/api/assistant/transcript?profile=${enc(profile)}&id=${enc(id)}")).decodeToString()).jsonObject["text"]?.jsonPrimitive?.contentOrNull
     } catch (e: ApiError) {
         if (e.code == 404) null else throw e
+    }
+
+    suspend fun readTranscript(profile: String, id: String) {
+        val body = buildJsonObject { put("profile", profile); put("id", id) }.toString().toRequestBody(json)
+        call(url("/api/assistant/transcripts").post(body), long)
     }
 
     suspend fun earlier(chat: String, before: String, limit: Int = ROW_WINDOW): Pair<List<ChatEvent>, Int> =
