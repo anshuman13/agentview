@@ -25,12 +25,12 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     val st by hub.store.state.collectAsState()
     val chat = st.shownId
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
+    var message by rememberSaveable(chat) { mutableStateOf("") }
+    var ask by androidx.compose.runtime.remember { mutableStateOf<List<GitFile>?>(null) }
     val o = open
     if (o != null) { FileScreen(hub, o, onBack = { open = null }); return }
     val (load, reload) = rememberLoad(chat) { parseGitStatus(hub.read("/api/git/status")) }
     LaunchedEffect(chat) { while (true) { delay(5000); reload() } }
-    var message by rememberSaveable(chat) { mutableStateOf("") }
-    var ask by androidx.compose.runtime.remember { mutableStateOf<List<GitFile>?>(null) }
     val status = load.data
     val files = status?.files ?: emptyList()
     val staged = files.filter { it.staged }
