@@ -9,7 +9,7 @@ import { defaultBlock, estimateMin, fitBlock, focusTitle, minutesText, packDay, 
 import { clock } from './time';
 import { attempt, showSnack, useView } from './view';
 import { PlanPreview, usePlanFlow } from './PlanPreview';
-import type { Planned } from './planFlow';
+import { unblocked, type Planned } from './planFlow';
 import { Chip } from '../ui/Button';
 
 const hhmm = (n: number) => minutesText(Math.round(n / 60_000));
@@ -69,12 +69,12 @@ export function DayPlan({ meetings, open, late = [], now, planRequest = 0 }: { m
   const gaps = workGaps(busy, now);
   // Packs the open tasks without a block, or only those in keep, into the free time left from this moment; tasks for this week's
   // goals, due or not, go first.
+  const candidates = unblocked([...late, ...open, ...goalTasks], blocks);
   const pack = (keep?: Set<string>): Planned[] => {
-    const blocked = new Set(blocks.map((m) => `${m.profile}:${m.id}`));
-    const tasks = [...late, ...open, ...goalTasks].filter((r) => !blocked.has(`${r.profile}:${blockId(r.id)}`) && (!keep || keep.has(rowKey(r)))).map((r) => ({ title: r.title, due: atTime(r.at), goal: forGoal(r), r }));
+    const tasks = candidates.filter((r) => !keep || keep.has(rowKey(r))).map((r) => ({ title: r.title, due: atTime(r.at), goal: forGoal(r), r }));
     return packDay(tasks, workGaps(busy, Date.now())).map((p) => ({ task: p.task.r, span: p.span }));
   };
-  const flow = usePlanFlow(pack);
+  const flow = usePlanFlow(pack, candidates, 'today');
   const { plan } = flow;
   const hint = planHint(gaps.length, late.length + open.length + goalTasks.length);
   const handled = useRef(planRequest);
@@ -129,7 +129,7 @@ export function DayPlan({ meetings, open, late = [], now, planRequest = 0 }: { m
         {!gaps.length && <span className="as-ctx">{planHint(0, 1)}</span>}
         {!hint && <Chip on={!!plan} onClick={() => (plan ? flow.setPlan(null) : planDay())}>Plan my day</Chip>}
       </div>
-      <PlanPreview flow={flow} day="today" />
+      <PlanPreview flow={flow} />
       {pick && (
         <div className="ov-card dp-block">
           {open.length ? (

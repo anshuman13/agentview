@@ -104,8 +104,11 @@
 .dp-block select, .dp-block input { min-width: 0; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
 .dp-block input[type='number'] { width: 72px; }
 .dp-when { display: flex; align-items: center; gap: var(--sp-4); }
-.dp-when > .muted:has(+ .ov-t), .dp-when > input + .muted { flex: none; font-variant-numeric: tabular-nums; }
+.dp-when > input + .muted { flex: none; font-variant-numeric: tabular-nums; }
 .dp-when > input[type='time'] { flex: 1; }
+.mt-rows > div.ui-row { cursor: default; }
+.mt-rows > div.ui-row:hover { --state: 0%; }
+.dp-foot { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--list-pad); font-size: var(--type-label-size); color: var(--on-surface-muted); }
 .as-pick { position: relative; flex: none; display: inline-flex; }
 .as-pick input { position: absolute; inset: 0; width: 100%; opacity: 0; pointer-events: none; }
 .as-pick select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }

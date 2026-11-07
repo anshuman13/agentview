@@ -41,7 +41,7 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
   length and title; blocking a task again replaces its earlier event, and blocks show only in the Plan strip, not as
   meetings. The strip shows once a block exists today or a plan is open; Plan my day, a chip in the strip or an item in the Today menu (disabled with a hint when there is no free time or no task), packs tasks into the free gaps by their estimate (30 minutes without one): tasks linked to this
   week's goals first, due or not, then overdue and due tasks by due time. It shows the plan to trim before Create adds
-  the blocks
+  the blocks, as Now (starting within an hour) and Later sections, with a folded Skipped section for tasks that did not fit or were left out (add one back from there)
 - From 16:00, with open tasks, Wrap up in the Today menu shows one row with today's done and open counts and Move all to tomorrow under the list, hidden until chosen; its header (not remembered) opens the first 5 open tasks to move, snooze or drop, with +N more expanding in place; a Note for tomorrow line under Move all saves on Enter or leaving it, one per profile and day (the filter's profile, work for All), and clearing it deletes the note
 - The Overview ask bar shows one chip when empty: Prep next meeting within an hour of one, Draft my weekly update on Thursday and Friday afternoons, otherwise Plan my day, What's next or Wrap up my day
 - Copy standup, in the More menu of the Today section header, copies three sections: Yesterday (tasks done and meeting decisions on the previous workday), Today

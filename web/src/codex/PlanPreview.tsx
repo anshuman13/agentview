@@ -6,16 +6,37 @@ import { focusTitle } from './data/plan';
 import { clock } from './time';
 import { showSnack } from './view';
 import { Button, IconButton } from '../ui/Button';
-import { createPlanned, type Planned } from './planFlow';
+import { createPlanned, skippedOf, splitPlan, type Planned } from './planFlow';
+import type { ItemRow } from './data/sync';
+import { Row } from '../ui/Row';
+import { Section } from '../ui/Section';
+import { EmptyState } from '../ui/Panel';
 
-// The state of a plan preview: pack(keep) gives the plan for all tasks, or only those in keep; Create blocks time for each task.
-export function usePlanFlow(pack: (keep?: Set<string>) => Planned[]) {
+// The state of a plan preview: pack(keep) gives the plan for all candidates, or only those in keep; Create blocks time for each task.
+// The candidates not in the plan are the skipped tasks, left out by the user or without room; tasks already created are not.
+export function usePlanFlow(pack: (keep?: Set<string>) => Planned[], candidates: ItemRow[], day: 'today' | 'tomorrow') {
   const store = useAssistantStore();
   const [plan, setPlan] = useState<Planned[] | null>(null);
+  const [leftOut, setLeftOut] = useState(new Set<string>());
+  const [created, setCreated] = useState(new Set<string>());
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
-  const start = () => setPlan(pack());
-  const leaveOut = (p: Planned) => setPlan(pack(new Set((plan ?? []).filter((x) => x !== p).map((x) => rowKey(x.task)))));
+  const start = () => {
+    setLeftOut(new Set());
+    setCreated(new Set());
+    setPlan(pack());
+  };
+  const keys = (list: Planned[]) => new Set(list.map((x) => rowKey(x.task)));
+  const leaveOut = (p: Planned) => {
+    setLeftOut(new Set(leftOut).add(rowKey(p.task)));
+    setPlan(pack(keys((plan ?? []).filter((x) => x !== p))));
+  };
+  const addBack = (r: ItemRow) => {
+    const back = new Set(leftOut);
+    back.delete(rowKey(r));
+    setLeftOut(back);
+    setPlan(pack(keys(plan ?? []).add(rowKey(r))));
+  };
   const create = async () => {
     if (!plan?.length || busy.current) return;
     busy.current = true;
@@ -30,32 +51,51 @@ export function usePlanFlow(pack: (keep?: Set<string>) => Planned[]) {
       setPlan(null);
     } else {
       showSnack(`Blocked ${res.made} of ${plan.length}, then stopped: ${errorText(res.error)}`);
+      setCreated(keys(plan.slice(0, res.made)));
       setPlan(res.left);
     }
     busy.current = false;
     setSaving(false);
   };
-  return { plan, setPlan, saving, start, leaveOut, create };
+  const skipped = skippedOf(plan ?? [], candidates.filter((r) => !created.has(rowKey(r))), leftOut, day);
+  return { plan, setPlan, saving, skipped, day, start, leaveOut, addBack, create };
 }
 
-export function PlanPreview({ flow, day }: { flow: ReturnType<typeof usePlanFlow>; day: string }) {
-  const { plan, saving } = flow;
-  if (!plan) return null;
+export function PlanPreview({ flow }: { flow: ReturnType<typeof usePlanFlow> }) {
+  return flow.plan ? <PlanCard flow={flow} plan={flow.plan} /> : null;
+}
+
+function PlanCard({ flow, plan }: { flow: ReturnType<typeof usePlanFlow>; plan: Planned[] }) {
+  const [folded, setFolded] = useState(true);
+  const { skipped, saving, day } = flow;
+  const { now, later } = splitPlan(plan, Date.now(), day);
+  const planned = (p: Planned) => (
+    <Row key={rowKey(p.task)} plain title={p.task.title} meta={`${clock(p.span[0])}-${clock(p.span[1])}`}
+      trailing={<IconButton icon="close" size="sm" label={`Leave out ${p.task.title}`} onClick={() => flow.leaveOut(p)} />} />
+  );
+  const group = (label: string, list: Planned[]) => list.length > 0 && (
+    <>
+      <Section label={label} count={list.length} />
+      {list.map(planned)}
+    </>
+  );
   return (
-    <div className="ov-card dp-block">
-      {plan.length ? plan.map((p) => (
-        <div key={rowKey(p.task)} className="dp-when">
-          <span className="muted small">{clock(p.span[0])}-{clock(p.span[1])}</span>
-          <span className="ov-t">{p.task.title}</span>
-          <span className="spacer" />
-          <IconButton icon="close" size="sm" small label={`Leave out ${p.task.title}`} title="Leave out" onClick={() => flow.leaveOut(p)} />
-        </div>
-      )) : <span className="as-ctx">No task fits in {day}'s free time</span>}
-      <div className="dp-when">
-        <span className="muted small">{plan.length ? 'Creates one "Focus:" event per task, no attendees' : ''}</span>
+    <div className="mt-rows ov-card">
+      {plan.length ? <>{group('Now', now)}{group('Later', later)}</> : <EmptyState size="sm" title={`No task fits in ${day}'s free time`} />}
+      {skipped.length > 0 && (
+        <>
+          <Section label="Skipped" count={skipped.length} open={!folded} onToggle={() => setFolded(!folded)} />
+          {!folded && skipped.map((s) => (
+            <Row key={rowKey(s.task)} plain title={s.task.title} meta={s.reason}
+              trailing={s.reason === 'Left out' ? <IconButton icon="add" size="sm" label={`Add back ${s.task.title}`} onClick={() => flow.addBack(s.task)} /> : undefined} />
+          ))}
+        </>
+      )}
+      <div className="dp-foot">
+        <span>{plan.length ? 'Creates one "Focus:" event per task, no attendees' : ''}</span>
         <span className="spacer" />
-        <Button size="sm" onClick={() => flow.setPlan(null)}>Cancel</Button>
-        <Button size="sm" variant="primary" disabled={saving || !plan.length} onClick={() => void flow.create()}>{saving ? 'Creating' : 'Create'}</Button>
+        <Button variant="gray" size="sm" onClick={() => flow.setPlan(null)}>Cancel</Button>
+        <Button variant="filled" size="sm" disabled={saving || !plan.length} onClick={() => void flow.create()}>{saving ? 'Creating' : 'Create'}</Button>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { openTask } from './view';
 import { Capped } from './Fold';
 import { MeetingRow } from './meetings/MeetingList';
 import { PlanPreview, usePlanFlow } from './PlanPreview';
-import { packUnblocked } from './planFlow';
+import { packUnblocked, unblocked } from './planFlow';
 import type { useSplit } from './split';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
@@ -34,7 +34,7 @@ export function TomorrowCard({ s, tasks, now, hide }: { s: ReturnType<typeof use
   const blocks = timed.filter((m) => isBlock(m.id));
   const gaps = workGaps(busy, s.endOfDay);
   const pack = (keep?: Set<string>) => packUnblocked(tasks, blocks, gaps, keep);
-  const flow = usePlanFlow(pack);
+  const flow = usePlanFlow(pack, unblocked(tasks, blocks), 'tomorrow');
   const timedSet = new Set(timedMeetings(s.meetingsTomorrow));
   const meetings = [...s.meetingsTomorrow].sort((a, b) => Number(!timedSet.has(a)) - Number(!timedSet.has(b)) || a.starts_at! - b.starts_at!);
   const rows = [
@@ -59,7 +59,7 @@ export function TomorrowCard({ s, tasks, now, hide }: { s: ReturnType<typeof use
           {plannable && <Button size="sm" onClick={flow.start}>Plan tomorrow</Button>}
           <IconButton icon="close" size="sm" small label="Hide tomorrow until the next day" onClick={hide} />
         </>} />
-      <PlanPreview flow={flow} day="tomorrow" />
+      <PlanPreview flow={flow} />
       {rows.length > 0 && <div className="mt-rows ov-card"><Capped items={rows} render={(r) => r} /></div>}
     </section>
   );

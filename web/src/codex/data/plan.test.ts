@@ -4,7 +4,7 @@ import { parseWhen, stripWhen } from './engine';
 import { parseRepeat } from './recur';
 import { goalProgress, goalsOf } from './goals';
 import type { ItemRow } from './sync';
-import { createPlanned, packUnblocked, type Planned } from '../planFlow';
+import { createPlanned, packUnblocked, skippedOf, splitPlan, type Planned } from '../planFlow';
 
 const at = (h: number, m = 0) => new Date(2026, 9, 30, h, m).getTime();
 
@@ -232,5 +232,25 @@ describe('createPlanned', () => {
   it('keeps the remaining plan after a failure', async () => {
     const res = await createPlanned(plan, () => plan, async (p) => { if (p.task.id === 'b') throw new Error('no'); });
     expect(res).toMatchObject({ kind: 'failed', made: 1, left: [plan[1]] });
+  });
+});
+
+describe('splitPlan and skippedOf', () => {
+  const task = (id: string) => ({ profile: 'work', id } as ItemRow);
+  const plan: Planned[] = [{ task: task('b'), span: [at(14), at(15)] }, { task: task('a'), span: [at(9), at(10)] }, { task: task('c'), span: [at(9, 50), at(10, 20)] }];
+  it('puts blocks starting within an hour or already started in Now, in time order', () => {
+    const { now, later } = splitPlan(plan, at(9, 30), 'today');
+    expect(now.map((p) => p.task.id)).toEqual(['a', 'c']);
+    expect(later.map((p) => p.task.id)).toEqual(['b']);
+  });
+  it('has no Now for tomorrow', () => {
+    const { now, later } = splitPlan(plan, at(9, 30), 'tomorrow');
+    expect(now).toEqual([]);
+    expect(later.map((p) => p.task.id)).toEqual(['a', 'c', 'b']);
+  });
+  it('lists the candidates outside the plan with why', () => {
+    const rest = [task('a'), task('d'), task('e')];
+    expect(skippedOf([plan[1]], rest, new Set(['work:e']), 'today').map((s) => [s.task.id, s.reason])).toEqual([['d', 'No room today'], ['e', 'Left out']]);
+    expect(skippedOf([], [task('d')], new Set(), 'tomorrow')[0].reason).toBe('No room tomorrow');
   });
 });
