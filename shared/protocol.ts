@@ -279,6 +279,7 @@ export type ClientMessage =
   | { type: 'rewind'; id: string }
   | { type: 'stop_task'; toolUseId: string }
   | { type: 'view'; id: string }
+  | { type: 'retry' }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
   | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal' }

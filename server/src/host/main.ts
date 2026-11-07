@@ -336,6 +336,8 @@ function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | voi
     case 'permission':
       chat.answerPermission(msg.id, msg.allow, msg.always);
       return;
+    case 'retry':
+      return chat.retryLast();
     case 'allow_blocked':
       return chat.allowBlocked(String(msg.id));
     case 'set_model':

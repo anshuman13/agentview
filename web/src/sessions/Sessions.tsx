@@ -14,7 +14,7 @@ import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RenameEvent, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RenameEvent, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 import { Swipe } from '../codex/Swipe';
 import { showSnack } from '../codex/view';
@@ -494,8 +494,15 @@ const BADGE = { needs: 'waiting', failed: 'failed', running: 'running', done: 'd
 function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const unread = state === 'done' || state === 'needs';
+  useEffect(() => {
+    if (!retrying) return;
+    if (state !== 'failed') return setRetrying(false);
+    const t = setTimeout(() => setRetrying(false), 3000);
+    return () => clearTimeout(t);
+  }, [retrying, state]);
   const pick = (act: () => void) => () => { setMenu(false); act(); };
   const rowKey = (e: React.KeyboardEvent<HTMLElement>) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -512,6 +519,11 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
     };
     return <div className="chat-row"><Row plain title={<RenameInput value={title} onSave={save} onCancel={() => setRenaming(false)} />} /></div>;
   }
+  const retry = () => {
+    setRetrying(true);
+    send({ type: 'view', id: live!.id });
+    send({ type: 'retry' });
+  };
   const swipe = chatSwipe(!!pinned, live);
   const swipePin = async () => {
     const on = swipe.right === 'pin';
@@ -523,12 +535,17 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>
-          {sessionId && onPin && <MenuItem icon={pinned ? 'pinned' : 'pin'} onClick={pick(() => void onPin(!pinned))}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>}
-          <MenuItem icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>
-          {onBeside && <MenuItem icon="split-horizontal" className="desktop-only" onClick={pick(onBeside)}>Open beside</MenuItem>}
-          {onClose && <MenuItem icon="close" onClick={pick(onClose)}>Close chat</MenuItem>}
-          <MenuSeparator />
-          <MenuItem icon="archive" danger disabled={!sessionId} onClick={pick(() => actions.archive({ sessionId: sessionId!, title }))}>Archive</MenuItem>
+          {chatMenuItems({ failed: state === 'failed' && !!live, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose }).map((key) => {
+            switch (key) {
+              case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={pick(retry)}>Retry</MenuItem>;
+              case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={pick(() => void onPin!(!pinned))}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
+              case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={pick(() => setRenaming(true))}>Rename</MenuItem>;
+              case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={pick(onBeside!)}>Open beside</MenuItem>;
+              case 'close': return <MenuItem key={key} icon="close" onClick={pick(onClose!)}>Close chat</MenuItem>;
+              case 'separator': return <MenuSeparator key={key} />;
+              case 'archive': return <MenuItem key={key} icon="archive" danger disabled={!sessionId} onClick={pick(() => actions.archive({ sessionId: sessionId!, title }))}>Archive</MenuItem>;
+            }
+          })}
         </Menu>
       )}
     </div>

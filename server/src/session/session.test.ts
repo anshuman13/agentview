@@ -36,6 +36,24 @@ describe('AgentSession turns', () => {
     expect(s.failed).toBe(false);
   });
 
+  it('retryLast resends the last user text and rejects when there is nothing to retry', async () => {
+    const { s, result } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send');
+    await expect(s.retryLast()).rejects.toThrow('Nothing to retry');
+    s.sendPrompt('go');
+    await expect(s.retryLast()).rejects.toThrow('Nothing to retry');
+    result('r1', 'error_during_execution');
+    send.mockClear();
+    await s.retryLast();
+    expect(send).toHaveBeenCalledOnce();
+    expect(s.state.events.filter((e) => e.kind === 'user').map((e) => e.kind === 'user' && e.text)).toEqual(['go', 'go']);
+    result('r2');
+    s.pushEvent({ id: 'u2', kind: 'user', text: '/compact', at: 0 });
+    send.mockClear();
+    await expect(s.retryLast()).rejects.toThrow('Nothing to retry');
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('steer interrupts a running turn and stays running for the steered prompt', async () => {
     const { s, interrupt, result } = fakeSession();
     s.sendPrompt('long task');

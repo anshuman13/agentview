@@ -451,6 +451,12 @@ export class AgentSession implements AgentHost {
     this.sendPrompt(text, id);
   }
 
+  async retryLast() {
+    const last = this.state.events.filter((e): e is UserEvent => e.kind === 'user').at(-1);
+    if (!last || !last.text.trim() || last.text.trim().startsWith('/') || this.state.session.running) throw new Error('Nothing to retry');
+    return this.prompt(last.text);
+  }
+
   private loopCommand(text: string, id: string) {
     return this.repeater.command(text, () => this.pushEvent({ id, kind: 'user', text, at: Date.now() }));
   }
