@@ -7,6 +7,10 @@ import org.junit.Test
 class ExtrasLogicTest {
     private fun chat(id: String, running: Boolean = false, pending: Int = 0) = LiveChat(id = id, title = "Fix tests", cwd = "/Users/me/agentview/", running = running, pending = pending)
 
+    @Test fun skipsTheChatOnScreen() {
+        assertEquals(emptyList<Notice>(), notices(listOf(chat("a")), listOf(chat("a", pending = 1)), "a"))
+    }
+
     @Test fun approvalWhenPendingGrows() {
         val n = notices(listOf(chat("a")), listOf(chat("a", pending = 1)))
         assertEquals(listOf(Notice(NoticeKind.Approval, "a", "Claude needs you in agentview", "Fix tests")), n)

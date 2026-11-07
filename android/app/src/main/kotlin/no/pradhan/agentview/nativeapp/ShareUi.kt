@@ -24,7 +24,7 @@ fun ShareSheet(hub: Hub, item: SharedItem) {
         else Group {
             state.live.forEachIndexed { i, c ->
                 if (i > 0) Hairline()
-                ListRow(c.title.ifEmpty { "Chat" }, c.cwd.trimEnd('/').substringAfterLast('/'), onClick = { hub.shareToChat(c.id, item); done() })
+                ListRow(c.title.ifEmpty { "Chat" }, repoName(c), onClick = { hub.shareToChat(c.id, item); done() })
             }
         }
     }

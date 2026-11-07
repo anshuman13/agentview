@@ -22,12 +22,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         askNotifications()
-        if (savedInstanceState == null) handle(intent)
+        if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) handle(intent)
+        hub.requestNotifications = ::requestNotifications
         // Reconnect each time the app returns to the foreground; close the stream in the background.
         lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) { hub.foreground = true; hub.connect() }
+            override fun onStart(owner: LifecycleOwner) { hub.foreground = true; hub.refreshGranted(); hub.notifier.clearChats(); hub.connect() }
             // With notifications on the stream stays open for as long as the system keeps the process.
-            override fun onStop(owner: LifecycleOwner) { hub.foreground = false; if (!hub.notifyOn.value) hub.disconnect() }
+            override fun onStop(owner: LifecycleOwner) { hub.foreground = false; if (!hub.wantsStream()) hub.disconnect() }
         })
         setContent {
             val theme by hub.theme.collectAsState()
@@ -35,7 +36,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { hub.refreshGranted() }
 
     // Android 13+ asks once, like the web app asks on the first click.
     private fun askNotifications() {
@@ -43,6 +44,16 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT < 33 || hub.notifier.granted() || prefs.getBoolean("notifyAsked", false)) return
         prefs.edit().putBoolean("notifyAsked", true).apply()
         permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    private fun requestNotifications() {
+        val asked = getSharedPreferences("agentview", 0).getBoolean("notifyAsked", false)
+        if (Build.VERSION.SDK_INT >= 33 && (!asked || shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS))) {
+            getSharedPreferences("agentview", 0).edit().putBoolean("notifyAsked", true).apply()
+            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName))
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

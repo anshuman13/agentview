@@ -18,6 +18,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val theme by hub.theme.collectAsState()
     val origin by hub.origin.collectAsState()
     val notify by hub.notifyOn.collectAsState()
+    val granted by hub.granted.collectAsState()
     val ctx = LocalContext.current
     val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "Unknown"
     val dark = when (theme) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
@@ -29,7 +30,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                 Group { ListRow("Theme", (if (dark) "Dark" else "Light") + if (theme.isEmpty()) " (system)" else "", onClick = { hub.setTheme(nextTheme(theme)) }) }
                 SectionHeader("Phone")
                 Group {
-                    ListRow("Notifications", "When Claude finishes or needs you", trailing = { Toggle(notify, hub::setNotify) })
+                    ListRow("Notifications", "When Claude finishes or needs you", trailing = { Toggle(notify && granted, hub::setNotify) })
                     Hairline()
                     ListRow("Installed version", version)
                     Hairline()

@@ -50,6 +50,10 @@ class Notifier(private val app: Application) {
         manager.notify(id, built)
     }
 
+    fun clear(chat: String) = NoticeKind.entries.forEach { manager.cancel((it.channel + chat).hashCode()) }
+
+    fun clearChats() = manager.activeNotifications.filter { it.id != BADGE_ID }.forEach { manager.cancel(it.id) }
+
     // The launcher shows this count on the app icon while the notification is active.
     @android.annotation.SuppressLint("MissingPermission")
     fun badge(count: Int) {

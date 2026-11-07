@@ -9,10 +9,11 @@ enum class NoticeKind(val channel: String, val label: String) {
 
 data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String)
 
-private fun repoName(c: LiveChat) = c.cwd.trimEnd('/').substringAfterLast('/')
+fun repoName(c: LiveChat) = c.cwd.trimEnd('/').substringAfterLast('/')
 
 // web/src/app/store.ts notifyBackground: a chat that gained a pending request, or stopped running, since the last list.
-fun notices(was: List<LiveChat>, now: List<LiveChat>): List<Notice> = now.mapNotNull { c ->
+fun notices(was: List<LiveChat>, now: List<LiveChat>, shownId: String = ""): List<Notice> = now.mapNotNull { c ->
+    if (c.id == shownId) return@mapNotNull null
     val before = was.firstOrNull { it.id == c.id } ?: return@mapNotNull null
     when {
         c.pending > before.pending -> Notice(NoticeKind.Approval, c.id, "Claude needs you in ${repoName(c)}", c.title)

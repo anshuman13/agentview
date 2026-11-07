@@ -7,6 +7,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -78,18 +80,27 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     init {
         viewModelScope.launch {
-            combine(codex.state.map { s -> needsYou(s.items, s.meetings, s.chats, null, System.currentTimeMillis()).size }, notifyOn) { n, on -> if (on) n else 0 }
+            val minute = flow { while (true) { emit(Unit); delay(60_000) } }
+            combine(codex.state, minute, notifyOn) { s, _, on -> if (on) needsYou(s.items, s.meetings, s.chats, null, System.currentTimeMillis()).size else 0 }
                 .distinctUntilChanged().collect { notifier.badge(it) }
         }
     }
 
+    val granted = MutableStateFlow(notifier.granted())
+    var requestNotifications: () -> Unit = {}
+
+    fun refreshGranted() { granted.value = notifier.granted() }
+
     fun setNotify(on: Boolean) {
         notifyOn.value = on
         prefs.edit().putBoolean("notify", on).apply()
+        if (on && !notifier.granted()) requestNotifications()
     }
 
+    fun wantsStream() = notifyOn.value && notifier.granted()
+
     private fun handle(m: ServerMessage) {
-        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats).forEach(notifier::post)
+        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, store.state.value.shownId).forEach(notifier::post)
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
@@ -153,6 +164,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     fun open(id: String) {
         saved[CHAT_KEY] = id
+        notifier.clear(id)
         store.show(id)
         markSeen(store.state.value.live.firstOrNull { it.id == id }?.sessionId)
         post(viewCmd(id), id, viewing = true)
@@ -189,7 +201,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         }
     }
 
-    private suspend fun openNewChat(profile: String): LiveChat? {
+    private suspend fun openNewChat(profile: String? = null): LiveChat? {
         val before = store.state.value.live.map { it.id }.toSet()
         post(newSessionCmd(profile), store.wanted)
         val chat = withTimeoutOrNull(15_000) { store.state.first { s -> s.live.any { it.id !in before } } }?.live?.first { it.id !in before }
@@ -200,7 +212,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun newChat() {
         if (readOnly) { notice.value = READ_ONLY_SENT; return }
         viewModelScope.launch {
-            val chat = openNewChat(codexProfile)
+            val chat = openNewChat()
             if (chat == null) notice.value = "The chat did not open" else link.value = DeepLink(chat = chat.id)
         }
     }

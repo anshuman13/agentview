@@ -88,7 +88,8 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     val listState = rememberLazyListState()
     val loading by hub.loadingEarlier.collectAsState()
     val scope = rememberCoroutineScope()
-    var stick by remember { mutableStateOf(true) }
+    var stick by rememberSaveable { mutableStateOf(true) }
+    var users by remember { mutableStateOf(0) }
     val atBottom by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 80 } }
 
     LaunchedEffect(listState) {
@@ -96,7 +97,11 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     }
     val newest = rows.firstOrNull()?.id
     LaunchedEffect(newest, rows.size) { if (stick && newest != null) listState.scrollToItem(0) }
-    LaunchedEffect(items.count { it is Item.User }) { stick = true; if (rows.isNotEmpty()) listState.scrollToItem(0) }
+    val sent = items.count { it is Item.User }
+    LaunchedEffect(sent) {
+        if (users > 0) { stick = true; if (rows.isNotEmpty()) listState.scrollToItem(0) }
+        users = sent
+    }
 
     Box(modifier) {
         LazyColumn(
