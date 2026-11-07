@@ -6,9 +6,25 @@ import { SCANNERS } from './scan.js';
 import { exchange, type Change } from '../sync.js';
 import { fail, readJson, send, type Ctx, type Routes } from './http.js';
 
-function sendPulled({ res, device, getDb }: Ctx, since: number, changes: Change[] = []) {
+const SETUP_TTL = 60_000;
+let unconfigured: { names: string[]; at: number } | null = null;
+
+export function resetScannerCache() {
+  unconfigured = null;
+}
+
+export function unconfiguredScanners(now = Date.now(), scanners = SCANNERS) {
+  if (!unconfigured || now - unconfigured.at >= SETUP_TTL) {
+    unconfigured = { names: Object.keys(scanners).filter((n) => !scanners[n].setUp()), at: now };
+  }
+  return unconfigured.names;
+}
+
+function sendPulled({ res, device, getDb }: Ctx, since: number, changes: Change[] = [], full = false) {
   const pulled = exchange(getDb(), since, changes);
-  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, rejected: pulled.rejected, device, paused: pausedScans(getDb()), scans: scanHealth(getDb(), Object.keys(SCANNERS).filter((n) => !SCANNERS[n].setUp())) });
+  const idle = pulled.version === since && changes.length === 0 && !full;
+  const health = idle ? {} : { paused: pausedScans(getDb()), scans: scanHealth(getDb(), unconfiguredScanners()) };
+  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, rejected: pulled.rejected, device, ...health });
 }
 
 export const syncRoutes: Routes = {
@@ -21,14 +37,14 @@ export const syncRoutes: Routes = {
 
   'POST /sync': async (c) => {
     try {
-      const data = (await readJson(c.req, 5_000_000)) as { since: number; changes: Change[] };
+      const data = (await readJson(c.req, 5_000_000)) as { since: number; changes: Change[]; full?: unknown };
       if (!Number.isInteger(data.since) || data.since < 0) {
         throw new BadRequest('Missing or invalid since field');
       }
       if (!Array.isArray(data.changes)) {
         throw new BadRequest('Invalid changes field');
       }
-      sendPulled(c, data.since, data.changes);
+      sendPulled(c, data.since, data.changes, data.full === true);
     } catch (err) {
       fail(c.res, err);
     }
@@ -41,7 +57,7 @@ export const syncRoutes: Routes = {
       return;
     }
     try {
-      sendPulled(c, since);
+      sendPulled(c, since, [], c.url.searchParams.get('full') === '1');
     } catch (err) {
       fail(c.res, err);
     }

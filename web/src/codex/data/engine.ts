@@ -14,7 +14,7 @@ type SyncIO = {
   since(): Promise<number>;
   saveSince(since: number): Promise<void>;
   dirty(): Promise<Dirty[]>;
-  post(since: number, changes: Change[]): Promise<Reply>;
+  post(since: number, changes: Change[], full?: boolean): Promise<Reply>;
   clean(d: Dirty): Promise<void>;
   apply(change: PulledChange): Promise<void>;
   applyAll?(changes: PulledChange[]): Promise<void>;
@@ -44,6 +44,8 @@ function takeBatch(rows: Dirty[]) {
   return batch;
 }
 
+let first = true;
+
 export async function runSync(io: SyncIO) {
   let since = await io.since();
   const rejects = io.rejects ?? new Map<string, number>();
@@ -55,10 +57,11 @@ export async function runSync(io: SyncIO) {
   while (more && io.active()) {
     const batch = takeBatch(queue);
     queue = queue.slice(batch.length);
-    const data = await io.post(since, batch.map((b) => b.change));
+    const data = await io.post(since, batch.map((b) => b.change), first || undefined);
     if (!Array.isArray(data?.changes) || typeof data.version !== 'number') throw new Error('Unexpected hub response');
-    io.paused?.(Array.isArray(data.paused) ? data.paused : []);
-    io.scans?.(Array.isArray(data.scans) ? data.scans : []);
+    first = false;
+    if (data.paused !== undefined) io.paused?.(Array.isArray(data.paused) ? data.paused : []);
+    if (data.scans !== undefined) io.scans?.(Array.isArray(data.scans) ? data.scans : []);
     const refused = Array.isArray(data.rejected) ? data.rejected : [];
     for (const r of refused) {
       const sent = batch.find((b) => b.row.table === r.table && b.row.row.id === r.id);

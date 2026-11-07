@@ -182,3 +182,30 @@ describe('nextNine', () => {
     expect(day(nextNine(new Date(2026, 10, 2, 15), 'work'))).toBe('Tue Nov 03 2026 9');
   });
 });
+
+describe('runSync health fields', () => {
+  it('asks for a full reply on the first run only and leaves state alone when the reply has no health', async () => {
+    const { vi } = await import('vitest');
+    vi.resetModules();
+    const { runSync } = await import('./engine');
+    const fulls: unknown[] = [];
+    const paused = vi.fn();
+    const scans = vi.fn();
+    const io = {
+      active: () => true,
+      since: async () => 0,
+      saveSince: async () => {},
+      dirty: async () => [],
+      post: async (_since: number, _changes: unknown[], full?: boolean) => (fulls.push(full), { version: 0, changes: [] }),
+      clean: async () => {},
+      apply: async () => {},
+      paused,
+      scans,
+    };
+    await runSync(io);
+    await runSync(io);
+    expect(fulls).toEqual([true, undefined]);
+    expect(paused).not.toHaveBeenCalled();
+    expect(scans).not.toHaveBeenCalled();
+  });
+});

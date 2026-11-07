@@ -199,7 +199,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
         const tables = this.hubHasWiki() ? Object.keys(this.tables) : ['items'];
         return tables.flatMap((table) => [...this.tables[table].values()].filter((r) => r.dirty).map((row): Dirty => ({ table, row })));
       },
-      post: (since, changes: Change[]) => (changes.length ? hub('/api/assistant/sync', { since, changes }, { signal: AbortSignal.timeout(HUB_TIMEOUT) }) : hub(`/api/assistant/changes?since=${since}`, undefined, { signal: AbortSignal.timeout(HUB_TIMEOUT) })),
+      post: (since, changes: Change[], full) => (changes.length ? hub('/api/assistant/sync', { since, changes, full }, { signal: AbortSignal.timeout(HUB_TIMEOUT) }) : hub(`/api/assistant/changes?since=${since}${full ? '&full=1' : ''}`, undefined, { signal: AbortSignal.timeout(HUB_TIMEOUT) })),
       clean: async ({ table, row }) => {
         const map = this.tables[table];
         const now = map.get(rowKey(row));

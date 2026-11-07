@@ -44,11 +44,11 @@ const SCHEMA = `${['items', ...WIKI_TABLES].map(table).join('\n')}
   CREATE TABLE IF NOT EXISTS sync_state (key TEXT PRIMARY KEY, value TEXT);
 `;
 
-async function post(since: number, changes: Change[]): Promise<Reply> {
+async function post(since: number, changes: Change[], full?: boolean): Promise<Reply> {
   const resp = await fetch(`${HUB}/sync`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ since, changes }),
+    body: JSON.stringify({ since, changes, full }),
     signal: AbortSignal.timeout(30000),
   });
   if (!resp.ok) throw new Error(`Hub returned HTTP ${resp.status}`);
