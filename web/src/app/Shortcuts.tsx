@@ -18,6 +18,8 @@ export const SHORTCUTS: { group: string; rows: { key: string; label: string }[] 
     { key: '⇧⌘P or F1', label: 'Command palette' },
     { key: '⌘I', label: 'Focus the assistant' },
     { key: '⌘E', label: 'Switch between file and browser' },
+    { key: 'j / k or arrows', label: 'Move between chats in Sessions; Enter opens' },
+    { key: '⇧⌘] / ⇧⌘[', label: 'Next or previous open chat in Sessions, wraps' },
   ] },
   { group: 'Panels', rows: [
     { key: '⌘B', label: 'Toggle the sidebar' },

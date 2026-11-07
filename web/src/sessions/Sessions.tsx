@@ -12,11 +12,13 @@ import { ATTENTION_LABEL, type AttentionItem, type LiveChat, type SavedSession, 
 import { inside } from '../../../shared/util';
 import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
+import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
 import { archiveChat, byUrgency, chatFinder, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, renameChat, repoName, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 
 const PAGE = 5;
+const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 function FilterInput({ value, set }: { value: string; set: (v: string) => void }) {
   return <input placeholder="Search repos and chats" value={value} onChange={(e) => set(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && set('')} />;
@@ -275,6 +277,33 @@ export function OpenChats() {
     });
   }, [live, chats, folders, filter, pins]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
+  const order = useMemo(() => {
+    const pinned = pins.flatMap((id) => live.filter((c) => c.sessionId === id));
+    return chatOrder(waiting, pinned, groupByRepo(live, chats, folders, '', new Set(pins)));
+  }, [live, chats, folders, pins]);
+  const nav = useRef({ order, viewing });
+  nav.current = { order, viewing };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.shiftKey && (e.code === 'BracketRight' || e.code === 'BracketLeft') && (MAC ? e.metaKey : e.ctrlKey) && !e.altKey) {
+        e.preventDefault();
+        const id = stepChat(nav.current.order, nav.current.viewing, e.code === 'BracketRight' ? 1 : -1);
+        if (id) send({ type: 'view', id });
+        return;
+      }
+      if ((e.key !== 'j' && e.key !== 'k') || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const at = document.activeElement;
+      if (at && at !== document.body) return;
+      const visible = (q: string) => document.querySelector<HTMLElement>(q)?.offsetParent != null;
+      if (visible('.tasks') || visible('[data-reply-row]')) return;
+      const first = document.querySelector<HTMLElement>('.chats [data-chat-row]');
+      if (!first) return;
+      e.preventDefault();
+      first.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
   const seen = useStore((s) => s.seen);
   const [peeking, setPeeking] = useState<ReadonlySet<string>>(new Set());
   const peekTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -443,6 +472,14 @@ function ChatRow({ sessionId, title, opening, meta, state, selected, pinned, act
   const more = useRef<HTMLButtonElement>(null);
   const unread = state === 'done' || state === 'needs';
   const pick = (act: () => void) => () => { setMenu(false); act(); };
+  const rowKey = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const step = e.key === 'j' || e.key === 'ArrowDown' ? 1 : e.key === 'k' || e.key === 'ArrowUp' ? -1 : 0;
+    if (!step) return;
+    if (e.key.startsWith('Arrow')) e.preventDefault();
+    const rows = [...document.querySelectorAll<HTMLElement>('.chats [data-chat-row]')];
+    rows[rows.indexOf(e.currentTarget) + step]?.focus();
+  };
   if (renaming) {
     const save = (t: string) => {
       setRenaming(false);
@@ -452,7 +489,7 @@ function ChatRow({ sessionId, title, opening, meta, state, selected, pinned, act
   }
   return (
     <div className="chat-row">
-      <Row title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />} onClick={onOpen} />
+      <Row data-chat-row onKeyDown={rowKey} title={`${opening ? 'Opening… ' : ''}${title}`} meta={meta} aria-current={selected || undefined} leading={<span className={`chat-dot ${unread ? 'on' : ''}`} role={unread ? 'img' : undefined} aria-label={unread ? 'Unread' : undefined} />} trailing={state && <Badge status={BADGE[state]} label={state === 'needs' ? 'Needs you' : undefined} />} onClick={onOpen} />
       <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
       {menu && (
         <Menu trigger={more} onClose={() => setMenu(false)}>
