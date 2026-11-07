@@ -241,11 +241,6 @@
 .wk-older .wk-claim { color: var(--fg-muted); }
 
 /* List tokens (--row-h, --row-title, --row-meta, --meta-fg, --hairline): flat rows, hairlines, quiet meta. */
-.sm-range { display: flex; gap: 2px; padding: 2px; border-radius: var(--radius-md); background: var(--sunken); }
-.sm-range button { height: 28px; padding: 0 var(--sp-6); border: 0; border-radius: calc(var(--radius-md) - 2px); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
-.sm-range button.on { background: var(--raised); color: var(--fg-strong); }
-@media (hover: hover) { .sm-range button:not(.on):hover { color: var(--fg); } }
-@media (pointer: coarse) { .sm-range button { height: var(--touch-sm); } }
 .sm-text { font-size: var(--row-meta); color: var(--meta-fg); }
 .sm-brief { border: 0; border-radius: 0; background: transparent; padding: 0 var(--sp-2) var(--sp-6); border-bottom: var(--hairline); }
 

@@ -5,10 +5,9 @@
 .ov-hit:focus-visible { outline: none; }
 .ov-hit:focus-visible::after { outline: 2px solid var(--accent); outline-offset: -2px; }
 @media (max-width: 480px) {
-  .ov-wait .btn.sm, .as-next-actions .btn.sm { height: var(--touch-sm); }
+  .as-next-actions .btn.sm { height: var(--touch-sm); }
   .ov-block-today > .ui-section { position: sticky; top: 0; z-index: var(--z-raised); background: var(--bg); }
 }
-.ov-report { padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden; }
 .ov-more { align-self: flex-start; }
 .ov-group { display: flex; flex-direction: column; border-radius: 12px; background: var(--group-card); overflow: hidden; }
 .ov-group:empty { display: none; }

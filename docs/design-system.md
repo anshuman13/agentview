@@ -312,3 +312,12 @@ No hits: cp-* and the other listed prefixes have no class with these suffixes be
 Audited 7 Nov 2026 with `grep -rhoE "(^|[^a-z0-9-])(mt|ov|as|gh|wk|ex|ag|obs|sm|cp|mcp|deploy)-[a-z0-9-]*(row|head|header|line|dayline|list|item)s?(-[a-z0-9]+)?" web/src | sort | uniq -c`, then `grep -rlE "(^|[^a-z0-9-])<class>([^a-z0-9-]|$)" web/src --include="*.tsx"` per class for Files.
 
 Each migration commit updates its row in the same diff.
+
+#### Removed rules
+
+Removed 7 Nov 2026 from web/src/styles/features. A class was dead when its name appeared in no file under web/src outside features (`grep -rwF "<class>" web/src --exclude-dir=features`), had no dynamic prefix match, and was not added by CodeMirror or xterm.
+
+- assistant.css: as-chip-x, as-delete, as-edit-actions, as-edit-ago, as-edit-due, as-edit-meta, as-people, as-quote
+- meetings.css: mt-body, mt-cal, mt-repeat, mt-title
+- overview.css: ov-report, ov-wait
+- wiki.css: sm-range

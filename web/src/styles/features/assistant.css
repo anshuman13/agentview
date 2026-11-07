@@ -47,7 +47,6 @@
 .as-swipe.right .as-swipe-bg { opacity: 1; background: color-mix(in srgb, var(--ok) 22%, var(--bg)); color: var(--ok); }
 .as-swipe.left .as-swipe-bg { opacity: 1; background: color-mix(in srgb, var(--warn) 22%, var(--bg)); color: var(--warn); }
 .as-swipe.left.delete .as-swipe-bg { background: color-mix(in srgb, var(--err) 26%, var(--bg)); color: var(--err); }
-.as-delete { color: var(--err); }
 .as-swipe.right .as-swipe-bg span:last-child, .as-swipe.left .as-swipe-bg span:first-child { visibility: hidden; }
 .as-swipe-row { position: relative; touch-action: pan-y; transition: transform var(--dur) var(--ease); }
 .as-swipe:is(.right, .left) .as-swipe-row { background: var(--bg); }
@@ -59,7 +58,6 @@
 .as-ctx:empty { display: none; }
 .as-ctx > span { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }
 .as-ctx > span + span::before { content: "·"; margin-right: var(--sp-1); color: var(--fg-faint); }
-.as-ctx > :is(.as-people, .as-quote) { flex: 0 1 auto; min-width: 0; display: block; overflow: hidden; text-overflow: ellipsis; }
 .as-ctx > .as-due { color: var(--accent-text); font-weight: 500; }
 .as-ctx > .as-due.late { color: var(--err); }
 .as-check { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border: 0; background: transparent; color: var(--fg-faint); border-radius: var(--radius-round); }
@@ -143,14 +141,6 @@
 .as-check-gap { position: relative; height: 0; }
 .as-check-gap::before { content: ''; position: absolute; left: var(--sp-2); right: var(--sp-2); top: -1px; height: 2px; border-radius: 1px; background: var(--accent); }
 .as-sub-input { min-height: 36px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); outline: none; }
-.as-edit-meta, .as-edit-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); margin-left: 38px; }
-.as-edit-meta .as-pick > button { display: inline-flex; align-items: center; gap: var(--sp-3); padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-.as-edit-due { display: inline-flex; align-items: center; }
-.as-chip-x { display: grid; place-items: center; width: 28px; height: 28px; border: 0; background: transparent; color: var(--fg-faint); cursor: pointer; }
-.as-edit-ago { margin-left: auto; font-size: var(--fs-sm); color: var(--fg-faint); }
-.as-edit-actions .spacer { flex: 1; }
-.as-edit-actions .as-delete { color: var(--fg-faint); }
-@media (hover: hover) { .as-edit-actions .as-delete:hover { color: var(--err); } }
 .as-check.on { color: var(--ok); }
 .as-check.on .codicon.icon { animation: as-pop 260ms var(--ease); }
 .as-edit.work .as-check:not(.on), .as-edit.work .as-check:not(.on) .codicon.icon { color: var(--work); }
@@ -195,7 +185,6 @@
   .as-composer { padding: var(--sp-3) var(--sp-6) var(--sp-6); }
   .as-card textarea, .as-mirror { font-size: var(--fs-2xl); }
   .as-snack { bottom: 140px; }
-  .as-edit-actions .btn { height: var(--touch-sm); }
   :is(.ui-section-actions, .dp-when, .gl-row) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   /* While a task field has the keyboard, the composer gives its room to the task. */
   .assistant:has(.as-edit :focus, .as-add.on :focus) .as-composer { display: none; }
@@ -426,9 +415,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
   .tasks-head.scrolled { border-bottom-color: var(--border-card); }
   .tasks-head.scrolled [role='heading'], .tasks .tasks-head.scrolled [role='heading'] { font-size: var(--fs-lg); }
 }
-@media (max-width: 900px) and (prefers-reduced-motion: no-preference) {
-}
-.as-people { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .as-rel { margin: var(--sp-2) 0; }
 .as-edit .as-rel { margin-left: 38px; }
 
