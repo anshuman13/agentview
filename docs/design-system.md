@@ -154,7 +154,7 @@ icon, title in body type one line with ellipsis, meta in label type `--meta-fg`,
 IconButton sm or Chip shown on hover. Hairline only between groups.
 `<Row leading title meta trailing lines href onClick>` (web/src/ui/Row.tsx, components/rows.css): 48px
 minimum, title clamps to 1 or 2 lines, a hairline under each row starts at the title, state layers
-as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button Row takes an optional `action` (one IconButton sm) beside it. `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings and the digest, brief and Prep cards use it.
+as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button Row takes an optional `action` (one IconButton sm) beside it. `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings, the digest, brief and Prep cards, and the wiki page claims and search hits use it.
 
 Testing: Row, Section, Chip and AskRow are tested by rendering to static markup and asserting the root element, classes and each branch (plain, href, action) in `web/src/ui/Row.test.ts`, `longPress.test.ts` (the press timer), `Section.test.ts`, `Button.test.ts` and `AskRow.test.ts`. A new branch or class on one of them needs a case in its test. `web/src/app/pages.smoke.test.tsx` renders Overview, Tasks, Meetings and `/design` on an empty store; a new top-level page or list gets a case there. `web/src/design/a11y.test.tsx` checks the `/design` markup for accessible names and menu roles.
 
@@ -187,7 +187,7 @@ Status: built; used in `app/App.tsx`, `app/Unreachable.tsx`, `codex/Codex.tsx`, 
 Overview cards (`.as-group`, Needs you), the Meetings list and Meetings day groups are
 inset grouped lists: page `--group-page` (grey #F2F2F7 in light, black in dark), card `--group-card`
 (white in light, #1C1C1E in dark), `--shape-lg` radius, no border, rows 44px minimum with a hairline
-inset to the text start. The Codex task lists, Goals, Search, Jobs and Summary (`.ui-group`), the editor Links and the Meetings list (`.as-group` under `.mt-page`) use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case. A grouped card whose rows sit in wrappers (Overview Today: `.ov-ask`, `.as-swipe`) draws the inset hairline on the wrapper at the row's text start (52px with a lead, else `--list-pad`), never on the row and never full width.
+inset to the text start. The Codex task lists, Goals, Search, Jobs and Summary (`.ui-group`), the editor Links, the wiki page claims and search hits (`.ui-group`) and the Meetings list (`.as-group` under `.mt-page`) use it. Section labels above cards are Footnote size, `--fg-muted`, sentence case. A grouped card whose rows sit in wrappers (Overview Today: `.ov-ask`, `.as-swipe`) draws the inset hairline on the wrapper at the row's text start (52px with a lead, else `--list-pad`), never on the row and never full width.
 
 ### Section header
 A header that heads a list of rows shows its full row count as the quiet Badge (`count={sectionCount(n)}`), including rows behind "Show all N" or a cap, and omits it at 0. A header over a single card, form or free text shows none. Series counts only its repeated rows, the rest are context.
@@ -349,6 +349,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | ov-digest-row | none | Report card | Done |
 | ov-follow-row | codex/Overview.tsx | Row | Done |
 | sm-line | codex/summary/Summary.tsx | Row | Done |
+| wk-claim | codex/meetings/OpenQuestions.tsx, codex/meetings/Person.tsx, codex/meetings/Pins.tsx, codex/meetings/Raise.tsx | Row | Partial |
 | wk-contest-head | none | Section header | Done |
 | wk-feed-head | none | Section header | Done |
 | wk-feed-list | none | Grouped list | Done |

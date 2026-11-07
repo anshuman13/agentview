@@ -1,18 +1,17 @@
-import { memo, useRef, useState } from 'react';
+import { memo, useRef, useState, type ReactNode } from 'react';
 import { useAssistantStore } from '../data';
 import { chatOf, contestOf, sourcesOf, type Fact } from '../data/wiki';
 import type { Mentions } from '../data/mentions';
 import { dayLabel } from '../data/dates';
 import { Button, Chip, IconButton } from '../../ui/Button';
-import { Section } from '../../ui/Section';
+import { Row } from '../../ui/Row';
 import { Menu, MenuItem } from '../../ui/Menu';
-import { Icon } from '../../ui/Icon';
 import { ago } from '../../ui/util';
 import { openMeeting, openTask, showSnack } from '../view';
 import { Swipe } from '../Swipe';
 import { ClaudeChip, SourceChip } from './Chips';
 import { useReview } from './Review';
-import { shortDate } from './shared';
+import { actionsFor, shortDate, type ClaimButton, type ClaimMenuItem } from './shared';
 
 export const Claim = memo(function Claim({ fact, old, page, flash, mentions, stale }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions; stale?: boolean }) {
   const store = useAssistantStore();
@@ -56,71 +55,64 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
     showSnack('Claim confirmed', () => void store.editRow('facts', fact, { at: prev }));
   };
   const retire = () => { void store.editRow('facts', fact, { state: 'retired' }); showSnack('Claim retired', () => void store.editRow('facts', fact, { state: null })); };
+  const { buttons, menu: items } = actionsFor(fact, { stale, editing, contesting });
+  const restore = () => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); };
   const pick = (act: () => void) => () => { setMenu(false); act(); };
+  const menuItem: Record<ClaimMenuItem, ReactNode> = {
+    edit: <MenuItem key="edit" icon="edit" onClick={pick(startEdit)}>Edit</MenuItem>,
+    cite: <MenuItem key="cite" icon="link" onClick={pick(cite)}>Cite</MenuItem>,
+    contest: <MenuItem key="contest" icon="report" onClick={pick(() => setContesting(true))}>Contest</MenuItem>,
+    resolve: <MenuItem key="resolve" icon="check" onClick={pick(resolve)}>Resolve</MenuItem>,
+    retire: <MenuItem key="retire" icon="archive" danger onClick={pick(retire)}>Retire</MenuItem>,
+    restore: <MenuItem key="restore" icon="history" onClick={pick(restore)}>Restore</MenuItem>,
+  };
+  const button: Record<ClaimButton, ReactNode> = {
+    reject: <IconButton key="reject" size="sm" icon="close" label="Reject" onClick={() => review.reject([fact])} />,
+    approve: <IconButton key="approve" size="sm" icon="check" label="Approve" onClick={() => review.approve([fact])} />,
+    confirm: <Button key="confirm" variant="tinted" size="sm" onClick={confirm}>Confirm</Button>,
+    more: (
+      <span key="more" className="wk-stale-more">
+        <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+        {menu && <Menu trigger={more} onClose={() => setMenu(false)}>{items.map((i) => menuItem[i])}</Menu>}
+      </span>
+    ),
+  };
   return (
-    <li className={`wk-claim${c ? ' contested' : ''}${proposed ? ' proposed' : ''}${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
+    <li className={`wk-item${flash ? ' flash' : ''}`} id={`claim-${fact.id}`}>
       <Swipe onRight={proposed ? () => review.approve([fact]) : undefined} onLeft={proposed ? () => review.reject([fact]) : undefined} rightLabel="Approve" leftLabel="Reject" leftIcon="close">
-      {editing ? (
-          <div className="wk-contest-form">
-            <textarea autoFocus rows={2} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') setEditing(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
-            <div className="wk-contest-btns">
-              <button className="btn" onClick={() => setEditing(false)}>Cancel</button>
-              <button className="btn primary" onClick={save}>Save</button>
-            </div>
-          </div>
-        ) : <span className="wk-claim-text">{fact.text}</span>}
-        <span className="wk-claim-foot">
-          {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
-          {mentions && mentions.shown.length > 0 && (
-            <span className="wk-mentions">
-              {(moreMentions ? [...mentions.shown, ...mentions.rest] : mentions.shown).map((m) => (
-                <Chip key={m.kind + m.id} size="sm" icon={m.kind === 'task' ? 'checklist' : 'calendar'} title={m.title} onClick={() => (m.kind === 'task' ? openTask(m) : openMeeting(m))}>
-                  <span className="wk-mention-title">{m.title}</span>
-                  {m.at != null && <span className="wk-mention-day">{dayLabel(m.at)}</span>}
-                </Chip>
-              ))}
-              {!moreMentions && mentions.rest.length > 0 && <Chip size="sm" className="wk-mention-more" onClick={() => setMoreMentions(true)}>+{mentions.rest.length} more</Chip>}
+        <Row plain lines={2}
+          title={editing ? (
+            <span className="wk-contest-form">
+              <textarea autoFocus rows={2} value={draft} aria-label="Claim" onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.nativeEvent.isComposing) return; if (e.key === 'Escape') setEditing(false); if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }} />
+              <span className="wk-contest-btns">
+                <button className="btn" onClick={() => setEditing(false)}>Cancel</button>
+                <button className="btn primary" onClick={save}>Save</button>
+              </span>
             </span>
-          )}
-          {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
-          {stale && <span className="chip">Still true?</span>}
-          {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
-          <span className="spacer" />
-          <span className="wk-claim-acts">
-            {stale ? (
-              <>
-                <Button variant="tinted" size="sm" onClick={confirm}>Confirm</Button>
-                <span className="wk-stale-more">
-                  <IconButton ref={more} icon="kebab-vertical" label="More" size="sm" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-                  {menu && (
-                    <Menu trigger={more} onClose={() => setMenu(false)}>
-                      {!editing && <MenuItem icon="edit" onClick={pick(startEdit)}>Edit</MenuItem>}
-                      <MenuItem icon="link" onClick={pick(cite)}>Cite</MenuItem>
-                      {!c && !contesting && <MenuItem icon="report" onClick={pick(() => setContesting(true))}>Contest</MenuItem>}
-                      <MenuItem icon="archive" danger onClick={pick(retire)}>Retire</MenuItem>
-                    </Menu>
-                  )}
+          ) : fact.text}
+          meta={editing ? undefined : (
+            <>
+              {proposed && <span>Proposed</span>}
+              {c && <span>Contested by {c.by} - {ago(c.at, ' ago')}</span>}
+              {sourcesOf(fact).map((s, i) => <SourceChip key={i} s={s} />)}
+              {mentions && mentions.shown.length > 0 && (
+                <span className="wk-mentions">
+                  {(moreMentions ? [...mentions.shown, ...mentions.rest] : mentions.shown).map((m) => (
+                    <Chip key={m.kind + m.id} size="sm" icon={m.kind === 'task' ? 'checklist' : 'calendar'} title={m.title} onClick={() => (m.kind === 'task' ? openTask(m) : openMeeting(m))}>
+                      <span className="wk-mention-title">{m.title}</span>
+                      {m.at != null && <span className="wk-mention-day">{dayLabel(m.at)}</span>}
+                    </Chip>
+                  ))}
+                  {!moreMentions && mentions.rest.length > 0 && <Chip size="sm" className="wk-mention-more" onClick={() => setMoreMentions(true)}>+{mentions.rest.length} more</Chip>}
                 </span>
-              </>
-            ) : proposed ? (
-              <>
-                <span className="wk-proposed">Proposed</span>
-                <button className="icon-btn mt-reject" title="Reject" aria-label="Reject" onClick={() => review.reject([fact])}><Icon name="close" small /></button>
-                <button className="icon-btn" title="Approve" aria-label="Approve" onClick={() => review.approve([fact])}><Icon name="check" small /></button>
-              </>
-            ) : (
-              <>
-                {!editing && <button className="icon-btn" title="Edit the claim text" aria-label="Edit the claim text" onClick={startEdit}><Icon name="edit" small /></button>}
-                <button className="icon-btn wk-hov" title="Copy as a citation" aria-label="Copy as a citation" onClick={cite}><Icon name="link" small /></button>
-                {fact.state === 'retired'
-                  ? <button className="wk-act" title="Show this claim with the current ones again" onClick={() => { void store.editRow('facts', fact, { state: null }); showSnack('Claim restored', () => void store.editRow('facts', fact, { state: 'retired' })); }}><Icon name="history" small /> Restore</button>
-                  : <button className="wk-act wk-hov" title="Move this claim to Older; Claude stops using it" onClick={retire}><Icon name="archive" small /> Retire</button>}
-              </>
-            )}
-            {!proposed && !stale && !c && !contesting && <button className="wk-act" title="Say this claim is wrong or out of date" onClick={() => setContesting(true)}><Icon name="report" small /> Contest</button>}
-          </span>
-        </span>
+              )}
+              {chatOf(fact) && <ClaudeChip chat={chatOf(fact)!} />}
+              {stale && <span className="chip">Still true?</span>}
+              {fact.at != null && <span className="wk-claim-date">{shortDate(fact.at)}</span>}
+            </>
+          )}
+          trailing={buttons.map((b) => button[b])} />
       </Swipe>
       {contesting && (
         <div className="wk-contest-form">
@@ -132,12 +124,7 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
           </div>
         </div>
       )}
-      {c && (
-        <div className="wk-contest">
-          <Section label={`Contested by ${c.by} · ${ago(c.at, ' ago')}`} action={<Button size="sm" icon="check" title="The claim is right, or the agent has replaced it" onClick={resolve}>Resolve</Button>} />
-          {c.note && <div className="wk-contest-note">{c.note}</div>}
-        </div>
-      )}
+      {c?.note && <div className="wk-contest-note">{c.note}</div>}
       {old.map((o) => (
         <div key={o.id} className="wk-old">
           <s>{o.text}</s>

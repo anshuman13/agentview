@@ -8,7 +8,7 @@ import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip, IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { EmptyState } from '../../ui/Panel';
 import { ShowMore, capGroups, useWindow } from '../../ui/useWindow';
 import { copyText, setView, showSnack, useEscapeBack, useView } from '../view';
@@ -170,8 +170,8 @@ export function WikiPage({ id }: { id: string }) {
                 const open = g.claims.filter((c) => c.fact.state === 'proposed').map((c) => c.fact);
                 return (
                 <section key={g.heading} id={`h-${slug(g.heading)}`} className="wk-group">
-                  <h2>{g.heading}{open.length > 1 && <button className="wk-act wk-head-act" onClick={() => review.approve(open)}><Icon name="check" small /> Approve {open.length}</button>}</h2>
-                  <ul className="wk-claims">
+                  <Section label={g.heading} count={sectionCount(g.claims.length)} action={open.length > 1 && <Button size="sm" variant="plain" onClick={() => review.approve(open)}>Approve {open.length}</Button>} />
+                  <ul className="ui-group wk-list">
                     {g.claims.map(({ fact, old }) => <Claim key={fact.profile + fact.id} fact={fact} old={old} page={page.title ?? ''} flash={flash === fact.id} mentions={mentions.get(fact.profile + fact.id)} />)}
                   </ul>
                 </section>
@@ -179,10 +179,10 @@ export function WikiPage({ id }: { id: string }) {
               })}
               <ShowMore shown={shown} total={total} onMore={more} />
               {older.length > 0 && (
-                <section className="wk-group wk-older">
+                <section className="wk-older">
                   <Section label={<>Older{stale.size > 0 && <span className="muted">{stale.size} to confirm</span>}</>} count={older.length} open={showOlder} onToggle={() => setShowOlder((v) => !v)} />
                   {showOlder && <div className="wk-older-hint">Retired or over 90 days old. Claude does not use these.</div>}
-                  {showOlder && <ul className="wk-claims">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page.title ?? ''} flash={flash === f.id} stale={stale.has(f.id)} />)}</ul>}
+                  {showOlder && <ul className="ui-group wk-list">{older.map((f) => <Claim key={f.profile + f.id} fact={f} old={NO_OLD} page={page.title ?? ''} flash={flash === f.id} stale={stale.has(f.id)} />)}</ul>}
                 </section>
               )}
               {!groups.length && !older.length && <EmptyState size="sm" icon="book" title="No claims yet" hint={`They appear here as meetings, Slack threads and issues mention ${page.title}`} />}

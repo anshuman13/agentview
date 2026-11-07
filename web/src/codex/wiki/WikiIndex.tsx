@@ -3,9 +3,10 @@ import { useAssistantStore, useCodex } from '../data';
 import { ask, wikiAskText } from '../data/ask';
 import { currentClaim, factTime, live, needsReview, newPage, NO_STATS, proposedPageIds, searchWiki, statsByPage, type Fact, type Page, type PageStats } from '../data/wiki';
 import { Icon } from '../../ui/Icon';
+import { Row } from '../../ui/Row';
 import { EmptyState } from '../../ui/Panel';
 import { MenuItem, MenuSeparator } from '../../ui/Menu';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { ShowMore, useWindow } from '../../ui/useWindow';
 import { CardRow } from '../overview/CardRow';
 import { setView, showSnack, useFocusBack, useSpotBack } from '../view';
@@ -125,19 +126,16 @@ function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[];
     <>
       {r.pages.length > 0 && (
         <section>
-          <div className="wk-label">Pages</div>
+          <Section label="Pages" count={sectionCount(r.pages.length)} />
           <div className="wk-cards">{r.pages.map((p) => <PageCard key={p.profile + p.id} page={p} stats={stats} />)}</div>
         </section>
       )}
       {r.claims.length > 0 && (
         <section>
-          <div className="wk-label">Claims · {r.claims.length}</div>
-          <div className="wk-hits">
+          <Section label="Claims" count={sectionCount(r.claims.length)} />
+          <div className="ui-group">
             {r.claims.slice(0, n).map((f) => (
-              <button key={f.profile + f.id} className="wk-hit" onClick={() => setView({ open: f.page_id ?? MEMORY, anchor: f.id })}>
-                <span className="wk-feed-page">{f.page_id ? title.get(f.page_id) : 'Memory'}</span>
-                <span className="wk-hit-text">{f.text}</span>
-              </button>
+              <Row key={f.profile + f.id} lines={2} title={f.text} meta={f.page_id ? title.get(f.page_id) : 'Memory'} onClick={() => setView({ open: f.page_id ?? MEMORY, anchor: f.id })} />
             ))}
           </div>
           <ShowMore shown={n} total={r.claims.length} onMore={more} />
@@ -199,7 +197,7 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
                         </div>
                       </>
                     )}
-                    {!s.pages.length && <div className="wk-label">{s.name}</div>}
+                    {!s.pages.length && <Section label={s.name} />}
                     <div className="wk-cards">
                       {i === 0 && <MemoryCard stats={stats} />}
                       <NewPageCard section={s.name} sort={Math.max(0, ...s.pages.map((p) => p.sort ?? 0)) + 1} />
