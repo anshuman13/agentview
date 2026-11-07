@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="new-chat" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_new_chat" android:shortcutLongLabel="@string/shortcut_new_chat">
+        <intent android:action="android.intent.action.VIEW" android:data="agentview://open?action=new-chat" android:targetPackage="no.pradhan.agentview.native" android:targetClass="no.pradhan.agentview.nativeapp.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="codex" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_codex" android:shortcutLongLabel="@string/shortcut_codex">
+        <intent android:action="android.intent.action.VIEW" android:data="agentview://open?view=assistant" android:targetPackage="no.pradhan.agentview.native" android:targetClass="no.pradhan.agentview.nativeapp.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="add-task" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_add_task" android:shortcutLongLabel="@string/shortcut_add_task">
+        <intent android:action="android.intent.action.VIEW" android:data="agentview://open?action=add-task" android:targetPackage="no.pradhan.agentview.native" android:targetClass="no.pradhan.agentview.nativeapp.MainActivity" />
+    </shortcut>
+</shortcuts>

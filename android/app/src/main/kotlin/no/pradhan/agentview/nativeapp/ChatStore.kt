@@ -1,0 +1,123 @@
+package no.pradhan.agentview.nativeapp
+
+import kotlinx.coroutines.flow.MutableStateFlow
+
+const val ROW_WINDOW = 150
+const val CACHED_CHATS = 8
+
+// The last rows of the most recently viewed chats (web/src/app/store.ts cache).
+class RecentChats(private val size: Int = CACHED_CHATS) {
+    data class Entry(val events: List<ChatEvent>, val earlier: Int)
+
+    private val map = LinkedHashMap<String, Entry>()
+    val ids: List<String> get() = map.keys.toList()
+
+    fun put(id: String, events: List<ChatEvent>, earlier: Int) {
+        if (events.isEmpty()) return
+        val kept = events.takeLast(ROW_WINDOW)
+        map.remove(id)
+        map[id] = Entry(kept, earlier + events.size - kept.size)
+        while (map.size > size) map.remove(map.keys.first())
+    }
+
+    fun get(id: String) = map[id]
+    fun retainOnly(live: Set<String>) { map.keys.retainAll(live) }
+    fun clear() = map.clear()
+}
+
+data class StoreState(
+    val live: List<LiveChat> = emptyList(),
+    val shownId: String = "",
+    val events: List<ChatEvent> = emptyList(),
+    val earlier: Int = 0,
+    val settled: Boolean = false,
+    val session: SessionInfo? = null,
+    val pending: List<Pending> = emptyList(),
+)
+
+// Holds the live list and the events of the viewed chat; the server streams events for one chat at a time.
+class ChatStore {
+    val state = MutableStateFlow(StoreState())
+    val cache = RecentChats()
+
+    // The chat the user asked for; an init for any other chat is a leftover of an earlier view.
+    var wanted = ""
+        private set
+
+    private var switching = false
+
+    // The next init for a chat other than the wanted one is the answer to new_session or open_session.
+    fun expectSwitch() { switching = true }
+    fun cancelSwitch() { switching = false }
+
+    fun handle(m: ServerMessage) {
+        val s = state.value
+        when (m) {
+            is ServerMessage.Init -> {
+                if (switching && m.chatId != wanted) { wanted = m.chatId; switching = false }
+                else if (wanted.isNotEmpty() && m.chatId != wanted) return
+                state.value = s.copy(shownId = m.chatId, events = m.events, earlier = m.earlier, settled = true, session = m.session, pending = m.pending)
+            }
+            is ServerMessage.Event -> {
+                if (!s.settled) return
+                val i = s.events.indexOfLast { it.id == m.event.id }
+                state.value = s.copy(events = if (i < 0) s.events + m.event else s.events.toMutableList().also { it[i] = m.event })
+            }
+            is ServerMessage.Append -> {
+                if (!s.settled) return
+                val i = s.events.indexOfLast { it.id == m.id }
+                val ev = if (i < 0) null else appendTo(s.events[i], m.offset, m.text)
+                if (ev != null) state.value = s.copy(events = s.events.toMutableList().also { it[i] = ev })
+            }
+            is ServerMessage.Live -> {
+                cache.retainOnly(m.chats.map { it.id }.toSet())
+                state.value = s.copy(live = m.chats)
+            }
+            is ServerMessage.SessionUpdate -> if (s.settled && m.session.id == s.shownId) state.value = s.copy(session = m.session)
+            is ServerMessage.PendingAdded -> if (s.settled && s.pending.none { it.id == m.request.id }) state.value = s.copy(pending = s.pending + m.request)
+            is ServerMessage.Resolved -> if (s.pending.any { it.id == m.id }) state.value = s.copy(pending = s.pending.filter { it.id != m.id })
+            is ServerMessage.Error, is ServerMessage.Findings, is ServerMessage.Other -> {}
+        }
+    }
+
+    // Shows the cached rows of a chat at once; its init replaces them.
+    fun show(id: String) {
+        wanted = id
+        val s = state.value
+        if (id == s.shownId) return
+        if (s.shownId.isNotEmpty() && s.settled) cache.put(s.shownId, s.events, s.earlier)
+        val hit = cache.get(id)
+        state.value = s.copy(shownId = id, events = hit?.events ?: emptyList(), earlier = hit?.earlier ?: 0, settled = false, session = null, pending = emptyList())
+    }
+
+    // Older rows fetched for `chat`; dropped when the view moved on while they loaded.
+    fun prepend(chat: String, older: List<ChatEvent>, earlier: Int) {
+        val s = state.value
+        if (s.shownId != chat) return
+        val have = s.events.mapTo(HashSet()) { it.id }
+        state.value = s.copy(events = older.filter { it.id !in have } + s.events, earlier = earlier)
+    }
+
+    // Shows an optimistic user row until the server echoes the message.
+    fun addLocal(chat: String, e: ChatEvent) {
+        val s = state.value
+        if (s.shownId == chat) state.value = s.copy(events = s.events + e)
+    }
+
+    fun dropLocal(chat: String, id: String) {
+        val s = state.value
+        if (s.shownId == chat) state.value = s.copy(events = s.events.filter { it.id != id })
+    }
+
+    fun close() {
+        val s = state.value
+        if (s.shownId.isNotEmpty() && s.settled) cache.put(s.shownId, s.events, s.earlier)
+    }
+
+    fun reset() {
+        wanted = ""
+        switching = false
+        cache.clear()
+        state.value = StoreState()
+    }
+}
