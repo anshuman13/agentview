@@ -1,12 +1,15 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Guard } from '../app/Guard';
-import { THEME_NAMES, useTheme } from '../app/theme';
+import { THEME_NAMES, applyTheme, useTheme, useThemeName } from '../app/theme';
+import { SnackBar } from '../codex/SnackBar';
+import { copyText } from '../codex/view';
 import { AskRow } from '../ui/AskRow';
 import { Button, Chip, IconButton } from '../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { EmptyState, Panel } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
+import { blockLink, designSearch, parseDesignQuery, type Width } from './url';
 
 const sizes = ['sm', 'md', 'lg'] as const;
 const variants = ['filled', 'tinted', 'gray', 'plain', 'danger'] as const;
@@ -20,11 +23,22 @@ function Story({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const replaceUrl = (search: string, hash = location.hash) => history.replaceState(null, '', `${location.pathname}${search}${hash}`);
+
 function Block({ name, children }: { name: string; children: ReactNode }) {
+  const theme = useThemeName();
+  const id = name.toLowerCase();
+  const copyLink = () => {
+    const { bare, width } = parseDesignQuery(location.search);
+    replaceUrl(location.search, `#${id}`);
+    copyText(blockLink(location.origin, location.search, id, theme, bare ? 'phone' : width));
+  };
   return (
     <Guard retry>
-      <Section label={name} />
-      <div className="ds-block">{children}</div>
+      <div id={id} className="ds-block-anchor">
+        <Section label={name} action={<IconButton icon="link" label={`Copy link to ${name}`} size="sm" onClick={copyLink} />} />
+        <div className="ds-block">{children}</div>
+      </div>
     </Guard>
   );
 }
@@ -69,6 +83,7 @@ function SectionStory() {
 }
 
 function Stories() {
+  useEffect(() => { document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView(); }, []);
   return (
     <>
       <Block name="Button">
@@ -163,19 +178,30 @@ function Stories() {
 }
 
 export function DesignPage() {
-  const bare = new URLSearchParams(location.search).has('bare');
+  const query = parseDesignQuery(location.search);
   const [theme, toggle] = useTheme();
-  const [phone, setPhone] = useState(false);
+  const [width, setWidth] = useState<Width>(query.width);
+  useEffect(() => { if (query.theme) applyTheme(query.theme); }, []);
+  const phone = width === 'phone';
+  const pick = (w: Width) => {
+    setWidth(w);
+    replaceUrl(designSearch(location.search, { width: w }));
+  };
+  const toggleTheme = () => {
+    toggle();
+    replaceUrl(designSearch(location.search, { theme: document.documentElement.dataset.theme as typeof theme }));
+  };
   return (
     <div className="ds-page">
-      {!bare && (
+      {!query.bare && (
         <div className="ds-toolbar">
-          <Chip on={theme === 'light'} onClick={toggle}>{THEME_NAMES[theme]}</Chip>
-          <Chip on={!phone} onClick={() => setPhone(false)}>Desktop</Chip>
-          <Chip on={phone} onClick={() => setPhone(true)}>Phone</Chip>
+          <Chip on={theme === 'light'} onClick={toggleTheme}>{THEME_NAMES[theme]}</Chip>
+          <Chip on={!phone} onClick={() => pick('desktop')}>Desktop</Chip>
+          <Chip on={phone} onClick={() => pick('phone')}>Phone</Chip>
         </div>
       )}
-      {phone && !bare ? <iframe key={theme} className="ds-phone" title="Phone width" src="/design?bare" /> : <Stories />}
+      {phone && !query.bare ? <iframe key={`${theme}${location.hash}`} className="ds-phone" title="Phone width" src={`/design?bare&theme=${theme}${location.hash}`} /> : <Stories />}
+      <SnackBar />
     </div>
   );
 }

@@ -9,11 +9,12 @@
         var bgs = { dark: '#1c1a17', light: '#ffffff' };
         var old = { midnight: 'dark', aubergine: 'dark', forest: 'dark', gradianto: 'dark', 'dark-modern': 'dark', 'solarized-dark': 'dark', paper: 'light', 'solarized-light': 'light' };
         var wanted = new URLSearchParams(location.search).get('theme');
-        if (bgs[wanted]) localStorage.setItem('agentview.theme', wanted);
+        var shared = location.pathname.indexOf('/design') === 0;
+        if (bgs[wanted] && !shared) localStorage.setItem('agentview.theme', wanted);
         var stored = localStorage.getItem('agentview.theme');
         if (old[stored]) localStorage.setItem('agentview.theme', (stored = old[stored]));
         var system = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-        var theme = bgs[stored] ? stored : system;
+        var theme = shared && bgs[wanted] ? wanted : bgs[stored] ? stored : system;
         document.documentElement.dataset.theme = theme;
         if (theme !== system) document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.removeAttribute('media'); m.setAttribute('content', bgs[theme]); });
       } catch (e) {

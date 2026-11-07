@@ -14,7 +14,7 @@ function currentTheme(): Theme {
 
 export const isDark = (t: Theme) => t === 'dark';
 
-function applyTheme(theme: Theme) {
+export function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => { m.removeAttribute('media'); m.setAttribute('content', bg); });
