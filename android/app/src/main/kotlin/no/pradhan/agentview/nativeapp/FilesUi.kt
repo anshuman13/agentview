@@ -75,27 +75,22 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
                 else if (dirs[""] == null) item { Hint("Loading") }
                 else if (rows.isEmpty()) item { EmptyState("No files") }
                 item { Spacer(Modifier.padding(top = Tokens.sp4)) }
-                if (rows.isNotEmpty()) item {
-                    Group {
-                        rows.forEachIndexed { i, r ->
-                            if (i > 0) Hairline()
-                            val isOpen = r.dir && r.path in expanded
-                            ListRow(
-                                r.name,
-                                modifier = Modifier.padding(start = Tokens.sp6 * r.depth),
-                                lines = 1,
-                                muted = r.hidden,
-                                leading = {
-                                    if (r.dir) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon).rotate(if (isOpen) 90f else 0f), tint = av.fileFolder)
-                                    else FileTag(r.name)
-                                },
-                                onClick = {
-                                    if (r.dir) expanded = if (isOpen) expanded - r.path else expanded + r.path
-                                    else open = r.path
-                                },
-                            )
-                        }
-                    }
+                lazyGroup(rows, key = { it.path }) { r ->
+                    val isOpen = r.dir && r.path in expanded
+                    ListRow(
+                        r.name,
+                        modifier = Modifier.padding(start = Tokens.sp6 * r.depth),
+                        lines = 1,
+                        muted = r.hidden,
+                        leading = {
+                            if (r.dir) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon).rotate(if (isOpen) 90f else 0f), tint = av.fileFolder)
+                            else FileTag(r.name)
+                        },
+                        onClick = {
+                            if (r.dir) expanded = if (isOpen) expanded - r.path else expanded + r.path
+                            else open = r.path
+                        },
+                    )
                 }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }

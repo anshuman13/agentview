@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -154,6 +156,18 @@ fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, o
 @Composable
 fun Group(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier.padding(horizontal = Tokens.sp6).fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard), content = content)
+}
+
+// Group for long lists: one lazy item per row, the card corners drawn on the first and last.
+fun <T> LazyListScope.lazyGroup(rows: List<T>, key: (T) -> Any, lead: Boolean = false, row: @Composable (T) -> Unit) {
+    itemsIndexed(rows, key = { _, r -> key(r) }) { i, r ->
+        val top = if (i == 0) Tokens.shapeLg else 0.dp
+        val bottom = if (i == rows.lastIndex) Tokens.shapeLg else 0.dp
+        Column(Modifier.padding(horizontal = Tokens.sp6).fillMaxWidth().clip(RoundedCornerShape(top, top, bottom, bottom)).background(av.groupCard)) {
+            if (i > 0) Hairline(lead)
+            row(r)
+        }
+    }
 }
 
 @Composable
