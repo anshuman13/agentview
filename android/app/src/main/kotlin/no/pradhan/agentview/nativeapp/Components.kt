@@ -69,7 +69,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
@@ -127,7 +134,7 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, large: Boolean = onB
 
 // Section header (web Section): muted label, a quiet count badge, a chevron when it folds, actions at the end.
 @Composable
-fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, onToggle: (() -> Unit)? = null, color: Color = av.fgMuted, action: (@Composable RowScope.() -> Unit)? = null) {
+fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, onToggle: (() -> Unit)? = null, color: Color = av.fgMuted, style: TextStyle = Type.label, titleColor: Color = color, action: (@Composable RowScope.() -> Unit)? = null) {
     Row(Modifier.fillMaxWidth().padding(end = Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         Row(
             Modifier.weight(1f).heightIn(min = Tokens.touchMd).then(if (onToggle != null) Modifier.clickable(onClick = onToggle) else Modifier).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4),
@@ -135,7 +142,7 @@ fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, o
             horizontalArrangement = Arrangement.spacedBy(Tokens.sp4),
         ) {
             if (onToggle != null) Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon).rotate(if (open == true) 90f else 0f), tint = color)
-            Text(label, style = Type.label, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            Text(label, style = style, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             if (count != null) Badge(count, BadgeTone.Quiet)
         }
         if (action != null) CompositionLocalProvider(LocalContentColor provides av.fgMuted) { action() }
@@ -281,7 +288,7 @@ fun Chip(
     }
     val shape = RoundedCornerShape(Tokens.radiusMd)
     Row(
-        modifier.height(Tokens.touchSm).clip(shape).background(bg).then(if (quiet) Modifier.border(Tokens.hairline, c.borderStrong, shape) else Modifier)
+        modifier.height(Tokens.touchSm).clip(shape).background(bg).then(if (quiet) Modifier.dashedBorder(Tokens.hairline, c.borderStrong, Tokens.radiusMd) else Modifier)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = Tokens.sp4),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
@@ -290,6 +297,12 @@ fun Chip(
         Text(text, style = Type.footnote, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (trailingIcon != null) Icon(trailingIcon, trailingLabel, Modifier.size(Tokens.iconSm), tint = fg)
     }
+}
+
+fun Modifier.dashedBorder(width: Dp, color: Color, radius: Dp) = drawBehind {
+    val w = width.toPx()
+    val r = radius.toPx()
+    drawRoundRect(color, Offset(w / 2, w / 2), Size(size.width - w, size.height - w), CornerRadius(r, r), Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 3, w * 3))))
 }
 
 enum class Status { Neutral, Ok, Warn, Err, Run, Agent }
@@ -356,7 +369,7 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
         t.animateFloat(1f, 0.35f, infiniteRepeatable(tween(Tokens.dur * 6), RepeatMode.Reverse), label = "pulse").value
     } else 1f
     val ring = when (state) { DotState.Idle -> c.fgMuted; DotState.Agent -> c.agent; else -> null }
-    Box(modifier.size(Geometry.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.hairline, ring, CircleShape) else Modifier))
+    Box(modifier.size(Geometry.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Geometry.stroke, ring, CircleShape) else Modifier))
 }
 
 // Text field (web input): sunken fill, hairline border that turns accent on focus.
@@ -379,7 +392,7 @@ fun TextField(
     val c = av
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(if (pill) Tokens.radiusPill else Tokens.radius)
+    val shape = RoundedCornerShape(if (pill) Tokens.radiusPill else Tokens.radiusSm)
     BasicTextField(
         value, onValueChange,
         modifier.fillMaxWidth(),

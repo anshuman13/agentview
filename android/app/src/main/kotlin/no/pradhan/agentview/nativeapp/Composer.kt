@@ -139,7 +139,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
                 if (running && typed) Button("Stop and send", { submit(true) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 val canSend = typed && uploading == 0
-                if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp4 + Tokens.sp1).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
+                if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp5).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
                 else SendCircle(if (running) "Queue" else "Send", canSend, { submit(false) }) { Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(Tokens.iconSm), tint = if (canSend) c.sunken else c.fgFaint) }
             }
         }

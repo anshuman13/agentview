@@ -52,7 +52,7 @@ import androidx.compose.ui.text.withStyle
 @Composable
 fun CheckCircle(done: Boolean, label: String, onClick: () -> Unit) {
     Box(Modifier.size(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.ok) else Modifier.border(Tokens.hairline * 1.5f, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.ok) else Modifier.border(Geometry.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
             if (done) Icon(Icons.Filled.Check, null, Modifier.size(Tokens.iconSm), tint = av.onColor)
         }
     }
