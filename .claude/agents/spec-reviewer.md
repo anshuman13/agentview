@@ -2,6 +2,7 @@
 name: spec-reviewer
 description: Reviews a feature spec against the codebase before anyone implements it. Finds what is vague, wrong about the code, too big or missing. Read-only.
 model: opus
+effort: medium
 tools: Read, Grep, Glob, Bash
 ---
 
