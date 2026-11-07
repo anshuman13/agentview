@@ -1,4 +1,3 @@
-.jb-row { cursor: pointer; }
 .jb-presets { display: flex; gap: var(--sp-4); margin-top: var(--sp-6); }
 .ui-empty + .jb-presets { justify-content: center; margin-top: 0; }
 .jb-list { border-radius: var(--shape-lg); background: var(--group-card); }
@@ -15,19 +14,11 @@
 .jb-switch > span { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--fg-strong); transition: transform var(--dur); }
 .jb-switch.on { background: var(--accent); }
 .jb-switch.on > span { transform: translateX(16px); }
-.jb-auto { margin-bottom: var(--sp-6); }
-.jb-auto-form { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-2) var(--sp-6) var(--sp-6); border-top: 1px solid var(--border); }
+.jb-auto-form { display: flex; flex-direction: column; gap: var(--sp-5); margin-top: var(--sp-3); }
+.jb-fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--list-pad); }
+.jb-fields > input:not([type='date']) { flex: 1 1 100%; }
+.jb-wrap .ui-row-meta { white-space: normal; }
 .jb-auto-form input:not([type='date']) { height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
-.jb-auto-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); font-size: var(--fs-sm); color: var(--fg-muted); }
-.jb-fold { width: 100%; padding: var(--sp-3) 0; border: 0; background: transparent; font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
-.jb-auto-away { display: flex; flex-direction: column; gap: var(--sp-4); padding-left: var(--sp-4); border-left: 2px solid var(--border); }
-.jb-chips { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
-.jb-chip { padding: 4px var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
-.jb-chip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--fg-strong); }
-.jb-auto-how { display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-sm); line-height: 1.45; }
-.jb-auto-how p { margin: 0; }
-.jb-auto-quote { margin: 0; padding: var(--sp-4) var(--sp-5); border-left: 2px solid var(--accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; background: var(--sunken); font-size: var(--fs-sm); line-height: 1.45; }
-.jb-auto-log { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-3); }
 .mt-page > .ui-section { padding-right: 0; }
 .mt-page > .ui-section .ui-section-head { padding-left: 0; }
 .jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
@@ -43,4 +34,3 @@
 .jb-run-body { padding: 0 var(--list-pad) var(--sp-6); }
 .jb-output { margin-top: var(--sp-3); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.55; color: var(--fg); }
 .jb-run-tools { display: flex; }
-.jb-seen { display: block; width: 100%; border: 0; border-top: 1px solid var(--border); background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; }

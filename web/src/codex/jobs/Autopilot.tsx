@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantTable } from '../data';
 import type { AutopilotConfig, AutopilotReply, AutopilotState } from '../data/store';
 import { clock } from '../time';
 import { dayLabel } from '../data/dates';
-import { Button } from '../../ui/Button';
-import { Icon } from '../../ui/Icon';
+import { Button, Chip } from '../../ui/Button';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { Switch } from './Switch';
 import { replyQueue } from '../overview/ReplyQueue';
 import { openTask, setView } from '../view';
@@ -42,15 +43,6 @@ function spendLine(s: AutopilotState) {
   return `Hub Claude use: today ${usd(s.spend!.today.usd)} · 7 days ${usd(w.usd)} (${by})${jobs > 0 ? ` · jobs ${usd(jobs)}` : ''}`;
 }
 
-function Fold({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: ReactNode }) {
-  return (
-    <>
-      <button className="jb-auto-line jb-fold" aria-expanded={open} onClick={onToggle}><span>{title}</span><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></button>
-      {open && <div className="jb-auto-away">{children}</div>}
-    </>
-  );
-}
-
 // The switch for replying on my behalf in Slack: what it does and sends, dry run, then the away dates, the coverage, the people never to answer and what it saw.
 export function Autopilot() {
   const store = useAssistantStore();
@@ -85,74 +77,87 @@ export function Autopilot() {
   const toggle = (f: typeof fold) => setFold(fold === f ? null : f);
   const dates = !!(c?.away.from && c.away.to);
   const awayText = dates ? `Away ${day(c!.away.from)} to ${day(c!.away.to)}${c!.away.backup ? `, ${c!.away.backup} covers` : ''}` : 'Set dates to turn on away mode';
+  const askRow = (r: AutopilotReply) => items.find((i) => i.id === r.id) ?? items.find((i) => !!r.url && i.source_url === r.url);
   const openAsk = (r: AutopilotReply) => {
-    const row = items.find((i) => i.id === r.id) ?? items.find((i) => !!r.url && i.source_url === r.url);
+    const row = askRow(r);
     if (row) openTask(row);
     else if (r.url) window.open(r.url, '_blank', 'noreferrer');
   };
   const replies = state ? (all ? state.replies : state.replies.slice(0, 5)) : [];
+  const model = c?.model ?? 'sonnet';
+  const spend = state ? spendLine(state) : '';
+  const flip = () => setOpen(!open);
   return (
-    <section className="mt-rows jb-auto" aria-label="Autopilot">
-      <div className="mt-row jb-row" role="button" tabIndex={0} aria-expanded={open} onClick={() => setOpen(!open)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(!open); } }}>
-        <span className="mt-body">
-          <span className="mt-title">Reply for me in Slack</span>
-          <span className="wk-meta"><span>{error || (state ? modeLine(state, waiting) : 'Loading')}</span></span>
-        </span>
-        {c && <Switch on={c.enabled} label="Reply for me in Slack" onChange={(on) => void save({ enabled: on })} />}
+    <section aria-label="Autopilot">
+      <div className="as-group">
+        <Row plain role="button" tabIndex={0} aria-expanded={open} onClick={flip} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); flip(); } }}
+          title="Reply for me in Slack" meta={error || (state ? modeLine(state, waiting) : 'Loading')}
+          trailing={c && <Switch on={c.enabled} label="Reply for me in Slack" onChange={(on) => void save({ enabled: on })} />} />
       </div>
       {open && state && c && (
         <div className="jb-auto-form">
-          <div className="jb-auto-how">
-            <div className="muted small">How it works</div>
-            {dates ? (
+          <div className="as-group">
+            <Row plain className="jb-wrap" title="How it works" trailing={<Button size="sm" onClick={() => setView({ list: 'today', open: null, person: null })}>Open the Reply queue</Button>}
+              meta={dates
+                ? <><span>{`From ${day(c.away.from)} to ${day(c.away.to)} it answers simple questions itself when the thread or your wiki has the answer, and sends one holding note${c.away.backup ? `, naming ${c.away.backup}` : ''}.`}</span><br /><span>Urgent asks and people on the never-answer list always come to you.</span></>
+                : <><span>Each ask gets a draft. Send, Edit or Skip it from the Reply queue or the push.</span><br /><span>Nothing goes out on its own.</span></>} />
+          </div>
+          <div className="as-group">
+            <Row plain title="Dry run" meta="logs what it would send; your own Send always posts" trailing={<Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} />} />
+          </div>
+          <div className="as-group">
+            <Row plain title="Drafts while away by" trailing={
+              <span role="group" aria-label="Draft model">
+                {(['sonnet', 'opus'] as const).map((m) => <Chip key={m} on={model === m} aria-pressed={model === m} onClick={() => { if (model !== m) void save({ model: m }); }}>{m === 'opus' ? 'Opus' : 'Sonnet'}</Chip>)}
+              </span>} />
+          </div>
+          <div className="as-group">
+            <Section label={awayText} open={fold === 'away'} onToggle={() => toggle('away')} />
+            {fold === 'away' && (
+              <div className="jb-fields">
+                <div className="jb-when">
+                  <input type="date" aria-label="Away from" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} onBlur={saveForm} />
+                  <span>to</span>
+                  <input type="date" aria-label="Away to" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} onBlur={saveForm} />
+                </div>
+                <input aria-label="Backup" placeholder="Who covers while you are away" value={form.backup} onChange={(e) => setForm({ ...form, backup: e.target.value })} onBlur={saveForm} />
+                <input aria-label="Away note" placeholder="Extra line for the holding note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} onBlur={saveForm} />
+              </div>
+            )}
+            <Section label={`Covers ${c.dms ? 'DMs and ' : ''}${state.covered.length} of ${state.watched.length} channels`} open={fold === 'covers'} onToggle={() => toggle('covers')} />
+            {fold === 'covers' && (
               <>
-                <p>{`From ${day(c.away.from)} to ${day(c.away.to)} it answers simple questions itself when the thread or your wiki has the answer, and sends one holding note${c.away.backup ? `, naming ${c.away.backup}` : ''}.`}</p>
-                <p>Urgent asks and people on the never-answer list always come to you.</p>
-              </>
-            ) : (
-              <>
-                <p>Each ask gets a draft. Send, Edit or Skip it from the Reply queue or the push.</p>
-                <p>Nothing goes out on its own.</p>
+                <div className="jb-fields" role="group" aria-label="Covers">
+                  <Chip on={c.dms} aria-pressed={c.dms} onClick={() => void save({ dms: !c.dms })}>DMs</Chip>
+                  {state.watched.map((n) => <Chip key={n} on={state.covered.includes(n)} aria-pressed={state.covered.includes(n)} onClick={() => toggleChannel(n)}>#{n}</Chip>)}
+                </div>
+                <Row plain className="jb-wrap" title="Slack scan" meta={scanLine(state)} />
               </>
             )}
-            <Button size="sm" onClick={() => setView({ list: 'today', open: null, person: null })}>Open the Reply queue</Button>
+            {spend && <Row plain className="jb-wrap" title="Spend" meta={spend} />}
+            <Section label={c.escalate.length || c.manager ? `Never answers ${[...(c.manager ? [c.manager] : []), ...c.escalate].length === 1 ? (c.manager || c.escalate[0]) : `${c.escalate.length + (c.manager ? 1 : 0)} people`}` : 'Never answers: nobody yet'} open={fold === 'never'} onToggle={() => toggle('never')} />
+            {fold === 'never' && (
+              <>
+                <div className="jb-fields">
+                  <input aria-label="Manager" placeholder="Your manager, name or Slack user id" value={form.manager} onChange={(e) => setForm({ ...form, manager: e.target.value })} onBlur={saveForm} />
+                  <input aria-label="Never answer" placeholder="Names or Slack user ids, comma separated" value={form.escalate} onChange={(e) => setForm({ ...form, escalate: e.target.value })} onBlur={saveForm} />
+                </div>
+                <Row plain className="jb-wrap" title="Who is skipped" meta="Their asks always go to your phone. A name matches whole words, a user id (U...) matches exactly." />
+              </>
+            )}
           </div>
-          <label className="jb-auto-line"><span>Dry run: logs what it would send, sends nothing. Your own Send always posts.</span><Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} /></label>
-          <div className="jb-auto-line"><span>Drafts while away by</span><div className="jb-chips" role="group" aria-label="Draft model">
-            {(['sonnet', 'opus'] as const).map((m) => <button key={m} className={`jb-chip${(c.model ?? 'sonnet') === m ? ' on' : ''}`} aria-pressed={(c.model ?? 'sonnet') === m} onClick={() => void save({ model: m })}>{m === 'opus' ? 'Opus' : 'Sonnet'}</button>)}
-          </div></div>
-          <Fold title={awayText} open={fold === 'away'} onToggle={() => toggle('away')}>
-            <div className="jb-when">
-              <input type="date" aria-label="Away from" value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} onBlur={saveForm} />
-              <span>to</span>
-              <input type="date" aria-label="Away to" value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} onBlur={saveForm} />
-            </div>
-            <input aria-label="Backup" placeholder="Who covers while you are away" value={form.backup} onChange={(e) => setForm({ ...form, backup: e.target.value })} onBlur={saveForm} />
-            <input aria-label="Away note" placeholder="Extra line for the holding note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} onBlur={saveForm} />
-          </Fold>
-          <Fold title={`Covers ${c.dms ? 'DMs and ' : ''}${state.covered.length} of ${state.watched.length} channels`} open={fold === 'covers'} onToggle={() => toggle('covers')}>
-            <div className="jb-chips" role="group" aria-label="Covers">
-              <button className={`jb-chip${c.dms ? ' on' : ''}`} aria-pressed={c.dms} onClick={() => void save({ dms: !c.dms })}>DMs</button>
-              {state.watched.map((n) => <button key={n} className={`jb-chip${state.covered.includes(n) ? ' on' : ''}`} aria-pressed={state.covered.includes(n)} onClick={() => toggleChannel(n)}>#{n}</button>)}
-            </div>
-            <div className="muted small">{scanLine(state)}</div>
-          </Fold>
-          {spendLine(state) && <div className="muted small">{spendLine(state)}</div>}
-          <Fold title={c.escalate.length || c.manager ? `Never answers ${[...(c.manager ? [c.manager] : []), ...c.escalate].length === 1 ? (c.manager || c.escalate[0]) : `${c.escalate.length + (c.manager ? 1 : 0)} people`}` : 'Never answers: nobody yet'} open={fold === 'never'} onToggle={() => toggle('never')}>
-            <input aria-label="Manager" placeholder="Your manager, name or Slack user id" value={form.manager} onChange={(e) => setForm({ ...form, manager: e.target.value })} onBlur={saveForm} />
-            <input aria-label="Never answer" placeholder="Names or Slack user ids, comma separated" value={form.escalate} onChange={(e) => setForm({ ...form, escalate: e.target.value })} onBlur={saveForm} />
-            <div className="muted small">Their asks always go to your phone. A name matches whole words, a user id (U...) matches exactly.</div>
-          </Fold>
           {replies.length > 0 && (
-            <div className="jb-auto-log">
-              <div className="muted small">Seen</div>
-              {replies.map((r) => (
-                <button key={r.id} className="jb-run jb-seen" onClick={() => openAsk(r)}>
-                  <div className="wk-meta"><span>{seen(r)}</span><span>{r.who}{r.chat ? ` · ${r.chat}` : ''}</span><span>{when(r.at)}</span></div>
-                  {r.text && <div className="jb-output">{r.text}</div>}
-                </button>
-              ))}
-              {!all && state.replies.length > 5 && <button className="btn sm" onClick={() => setAll(true)}>Show all {state.replies.length}</button>}
+            <div>
+              <Section label="Seen" count={state.replies.length} />
+              <div className="as-group">
+                {replies.map((r) => {
+                  const label = seen(r);
+                  const props = { title: `${r.who}${r.chat ? ` · ${r.chat}` : ''}`, lines: 2 as const, trailing: <span className={`badge${label === 'Waiting for you' ? ' waiting' : ' quiet'}`}>{label}</span>,
+                    meta: r.text ? `${when(r.at)} · ${r.text}` : when(r.at) };
+                  return askRow(r) || r.url ? <Row key={r.id} {...props} onClick={() => openAsk(r)} /> : <Row key={r.id} plain {...props} />;
+                })}
+                {!all && state.replies.length > 5 && <div className="jb-fields"><Button variant="quiet" size="sm" onClick={() => setAll(true)}>Show all {state.replies.length}</Button></div>}
+              </div>
             </div>
           )}
         </div>
