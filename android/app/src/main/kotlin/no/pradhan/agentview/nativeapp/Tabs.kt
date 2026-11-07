@@ -24,6 +24,8 @@ val MORE_PAGES = listOf(
 )
 
 fun routeFor(link: DeepLink): String? = when {
+    link.action == Shortcut.ADD_TASK -> Tab.Codex.route
+    link.action == Shortcut.NEW_CHAT -> Tab.Chat.route
     link.chat != null || link.session != null -> Tab.Chat.route
     link.page != null -> "more/${link.page}"
     else -> when (link.view) {

@@ -1,0 +1,51 @@
+package no.pradhan.agentview.nativeapp
+
+import java.net.URLEncoder
+
+enum class NoticeKind(val channel: String, val label: String) {
+    Approval("approvals", "Approvals"),
+    Finished("finished", "Finished chats"),
+}
+
+data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String)
+
+private fun repoName(c: LiveChat) = c.cwd.trimEnd('/').substringAfterLast('/')
+
+// web/src/app/store.ts notifyBackground: a chat that gained a pending request, or stopped running, since the last list.
+fun notices(was: List<LiveChat>, now: List<LiveChat>): List<Notice> = now.mapNotNull { c ->
+    val before = was.firstOrNull { it.id == c.id } ?: return@mapNotNull null
+    when {
+        c.pending > before.pending -> Notice(NoticeKind.Approval, c.id, "Claude needs you in ${repoName(c)}", c.title)
+        before.running && !c.running -> Notice(NoticeKind.Finished, c.id, "Claude finished in ${repoName(c)}", c.title)
+        else -> null
+    }
+}
+
+fun chatLink(id: String) = "agentview://open?chat=${URLEncoder.encode(id, "UTF-8")}"
+
+// web/src/app/launcherBadge.ts badgeArg
+fun badgeArg(count: Int) = count.coerceIn(0, 99)
+
+data class SharedItem(val text: String?, val subject: String?, val images: List<String>)
+
+data class ShareTask(val title: String, val body: String, val url: String?)
+
+private val URL_RE = Regex("https?://\\S+")
+private const val TITLE_MAX = 120
+
+fun shareTask(subject: String?, text: String?): ShareTask {
+    val t = text?.trim().orEmpty()
+    val url = URL_RE.find(t)?.value
+    val lines = (if (url != null) t.replace(url, "") else t).lines().map { it.trim() }.filter { it.isNotEmpty() }
+    val sub = subject?.trim()?.takeIf { it.isNotEmpty() }
+    val title = (sub ?: lines.firstOrNull() ?: url ?: "Shared item").take(TITLE_MAX)
+    return ShareTask(title, (if (sub != null) lines else lines.drop(1)).joinToString("\n"), url)
+}
+
+fun shareChatText(subject: String?, text: String?): String =
+    listOfNotNull(subject?.trim()?.takeIf { it.isNotEmpty() && it != text?.trim() }, text?.trim()?.takeIf { it.isNotEmpty() }).joinToString("\n")
+
+object Shortcut {
+    const val NEW_CHAT = "new-chat"
+    const val ADD_TASK = "add-task"
+}

@@ -32,6 +32,8 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,7 +53,8 @@ import androidx.compose.ui.text.withStyle
 
 @Composable
 fun CheckCircle(done: Boolean, label: String, onClick: () -> Unit) {
-    Box(Modifier.size(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
+    val haptic = LocalHapticFeedback.current
+    Box(Modifier.size(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }, contentAlignment = Alignment.Center) {
         Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.ok) else Modifier.border(Geometry.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
             if (done) Icon(Icons.Filled.Check, null, Modifier.size(Tokens.iconSm), tint = av.onColor)
         }
@@ -90,13 +93,14 @@ fun taskMeta(row: Row, now: Long, inDay: Boolean, showProfile: Boolean): android
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean, inDay: Boolean = false, onOpen: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
     var menu by remember { mutableStateOf(false) }
     val isDone = row.status == "done"
     val swipeable = row.status == "open"
     val current by rememberUpdatedState(row)
     val state = rememberSwipeToDismissBoxState(confirmValueChange = { v ->
         when (v) {
-            SwipeToDismissBoxValue.StartToEnd -> actions.done(current)
+            SwipeToDismissBoxValue.StartToEnd -> { haptic.performHapticFeedback(HapticFeedbackType.Confirm); actions.done(current) }
             SwipeToDismissBoxValue.EndToStart -> actions.snooze(current, nextNine(now, current.profile))
             else -> {}
         }

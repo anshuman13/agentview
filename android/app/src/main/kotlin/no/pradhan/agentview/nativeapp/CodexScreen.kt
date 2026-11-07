@@ -65,6 +65,8 @@ fun CodexScreen(hub: Hub) {
     var page by rememberSaveable { mutableStateOf("overview") }
     var editKey by rememberSaveable { mutableStateOf<String?>(null) }
     var adding by rememberSaveable { mutableStateOf(false) }
+    val addRequest by hub.addTask.collectAsState()
+    LaunchedEffect(addRequest) { if (addRequest) { adding = true; hub.addTask.value = false } }
     var needsOpen by rememberSaveable { mutableStateOf(false) }
     var routeText by rememberSaveable { mutableStateOf("") }
     var chipText by rememberSaveable { mutableStateOf("") }

@@ -1,14 +1,19 @@
 package no.pradhan.agentview.nativeapp
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -23,14 +28,16 @@ import java.util.UUID
 // Same default as the Tauri phone app (web/src/app/api.ts MAC_URL).
 const val DEFAULT_ORIGIN = "http://macmini.netbird.cloud:7777"
 const val WORKSPACE_MIN_AGE_MS = 30_000L
+private const val CHAT_KEY = "chat"
 
 private val collapsedSer = MapSerializer(String.serializer(), Boolean.serializer())
 
-class Hub(app: Application) : AndroidViewModel(app) {
+class Hub(private val app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("agentview", 0)
     private val cid = UUID.randomUUID().toString()
     val client = OkHttpClient()
-    val store = ChatStore()
+    val store = ChatStore().also { s -> saved.get<String>(CHAT_KEY)?.takeIf { it.isNotEmpty() }?.let(s::show) }
+    val notifier = Notifier(app)
 
     val origin = MutableStateFlow(prefs.getString("origin", null) ?: DEFAULT_ORIGIN)
     private val _connected = MutableStateFlow(false)
@@ -43,6 +50,10 @@ class Hub(app: Application) : AndroidViewModel(app) {
     val loadingEarlier = MutableStateFlow(false)
     val api = Api({ origin.value }, client)
     val codex = CodexStore(viewModelScope, api::assistantChanges, api::assistantSync, { !readOnly }, { notice.value = it })
+    val notifyOn = MutableStateFlow(prefs.getBoolean("notify", true))
+    val shared = MutableStateFlow<SharedItem?>(null)
+    val addTask = MutableStateFlow(false)
+    @Volatile var foreground = false
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
     val writes = Writes(viewModelScope, { readOnly }, { notice.value = it })
@@ -65,7 +76,20 @@ class Hub(app: Application) : AndroidViewModel(app) {
         onData = { data -> runCatching { parseMessage(data) }.onSuccess { handle(it) } },
     )
 
+    init {
+        viewModelScope.launch {
+            combine(codex.state.map { s -> needsYou(s.items, s.meetings, s.chats, null, System.currentTimeMillis()).size }, notifyOn) { n, on -> if (on) n else 0 }
+                .distinctUntilChanged().collect { notifier.badge(it) }
+        }
+    }
+
+    fun setNotify(on: Boolean) {
+        notifyOn.value = on
+        prefs.edit().putBoolean("notify", on).apply()
+    }
+
     private fun handle(m: ServerMessage) {
+        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats).forEach(notifier::post)
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
@@ -128,6 +152,7 @@ class Hub(app: Application) : AndroidViewModel(app) {
     }
 
     fun open(id: String) {
+        saved[CHAT_KEY] = id
         store.show(id)
         markSeen(store.state.value.live.firstOrNull { it.id == id }?.sessionId)
         post(viewCmd(id), id, viewing = true)
@@ -157,14 +182,53 @@ class Hub(app: Application) : AndroidViewModel(app) {
     fun askCodex(question: String, profile: String) {
         if (readOnly) { notice.value = "Read-only check, nothing was sent"; return }
         viewModelScope.launch {
-            val before = store.state.value.live.map { it.id }.toSet()
-            post(newSessionCmd(profile), store.wanted)
-            val chat = withTimeoutOrNull(15_000) { store.state.first { s -> s.live.any { it.id !in before } } }?.live?.first { it.id !in before }
+            val chat = openNewChat(profile)
             if (chat == null) { notice.value = "The Codex chat did not open, the question was not sent"; return@launch }
-            open(chat.id)
             submit(question, false) { notice.value = "The question was not sent" }
             link.value = DeepLink(chat = chat.id)
         }
+    }
+
+    private suspend fun openNewChat(profile: String): LiveChat? {
+        val before = store.state.value.live.map { it.id }.toSet()
+        post(newSessionCmd(profile), store.wanted)
+        val chat = withTimeoutOrNull(15_000) { store.state.first { s -> s.live.any { it.id !in before } } }?.live?.first { it.id !in before }
+        if (chat != null) open(chat.id)
+        return chat
+    }
+
+    fun newChat() {
+        if (readOnly) { notice.value = READ_ONLY_SENT; return }
+        viewModelScope.launch {
+            val chat = openNewChat(codexProfile)
+            if (chat == null) notice.value = "The chat did not open" else link.value = DeepLink(chat = chat.id)
+        }
+    }
+
+    private suspend fun attachUri(uri: String): String? {
+        val r = app.contentResolver
+        val mime = r.getType(Uri.parse(uri)) ?: "image/jpeg"
+        val bytes = withContext(Dispatchers.IO) { runCatching { r.openInputStream(Uri.parse(uri))?.use { it.readBytes() } }.getOrNull() } ?: return null
+        return attach("shared.${mime.substringAfter('/', "jpg").substringBefore('+')}", mime, bytes)
+    }
+
+    // Sends shared text and images to a chat and shows the chat.
+    fun shareToChat(chat: String, item: SharedItem) {
+        if (readOnly) { notice.value = READ_ONLY_SENT; return }
+        viewModelScope.launch {
+            open(chat)
+            val paths = item.images.mapNotNull { attachUri(it) }
+            val text = (listOf(shareChatText(item.subject, item.text)) + paths.map { "[Image: $it]" }).filter { it.isNotEmpty() }.joinToString("\n")
+            submit(text, false) { notice.value = "That did not reach the chat" }
+            link.value = DeepLink(chat = chat)
+        }
+    }
+
+    // Adds shared text as an open Codex task; true once it is saved.
+    fun shareToTask(item: SharedItem, profile: String): Boolean {
+        val t = shareTask(item.subject, item.text)
+        val extra = buildMap<String, Any?> { if (t.url != null) put("source_url", t.url); put("source", "share") }
+        return codex.capture(if (t.body.isNotEmpty()) "${t.title}\n${t.body}" else t.title, "open", profile, null, extra) != null
     }
 
     fun close() = store.close()

@@ -33,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,12 +70,15 @@ fun App(hub: Hub) {
     val state by hub.store.state.collectAsState()
     val connected by hub.connected.collectAsState()
     val link by hub.link.collectAsState()
-    var more by remember { mutableStateOf(false) }
+    val shared by hub.shared.collectAsState()
+    var more by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(notice) { notice?.let { snack.showSnackbar(it); hub.notice.value = null } }
 
     LaunchedEffect(link) {
         val l = link ?: return@LaunchedEffect
         l.chat?.let { hub.open(it) }
+        if (l.action == Shortcut.NEW_CHAT) hub.newChat()
+        if (l.action == Shortcut.ADD_TASK) hub.addTask.value = true
         routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.navigate(r) { launchSingleTop = true } else nav.goTab(r) }
         hub.link.value = null
     }
@@ -136,6 +140,8 @@ fun App(hub: Hub) {
             }
         }
     }
+
+    shared?.let { ShareSheet(hub, it) }
 
     if (more) {
         val go = { r: String -> more = false; nav.navigate(r) { launchSingleTop = true } }
