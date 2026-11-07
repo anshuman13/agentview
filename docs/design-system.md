@@ -164,7 +164,7 @@ inset to the text start. Section labels above cards are Footnote size, `--fg-mut
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
-`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers use it.
+`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers and Observe's Settings use it.
 
 ## Patterns
 

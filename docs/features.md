@@ -332,6 +332,8 @@ Without a Grafana MCP server, Observe makes no Grafana requests. Observe's Grafa
 A failing panel shows its error without affecting the others. With no panels, a button asks Claude to suggest some from the
 service's dashboards. The refresh button reloads the panels too.
 
+Observe's Settings section is a Section header (open by default only for a project with no saved config) with a JSON field and a Save button. The header shows a badge: Unsaved after an edit, Saved after a save, Failed with the error under the field when the JSON is invalid or the save fails. An edit made while saving is kept. Changing the project clears the badge.
+
 ## Shortcuts
 
 ⌘ on a Mac, Ctrl elsewhere. Letter shortcuts stay out of the way of text fields. Closing a task page, an inline editor

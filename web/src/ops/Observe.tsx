@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type {
   GrafanaDashboards,
   GrafanaLogs,
@@ -17,6 +17,8 @@ import { api, useStore } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
 import { askClaude, clickOnKey } from '../ui/util';
 import { Icon } from '../ui/Icon';
+import { Button } from '../ui/Button';
+import { Section as UiSection } from '../ui/Section';
 import { errText } from '../../../shared/util';
 import '../styles/features/observe.css';
 
@@ -403,7 +405,11 @@ export function Observe() {
   const [info, setInfo] = useState<ObserveInfo | null>(null);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState('');
-  const [saveMsg, setSaveMsg] = useState('');
+  const draftRef = useRef('');
+  const [saveState, setSaveState] = useState<'idle' | 'unsaved' | 'saved' | 'failed'>('idle');
+  const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     fetchJson<Repo[]>(apiUrl('/api/repos')).then((x) => setNames(x.map((r) => r.name)), () => {});
@@ -414,14 +420,27 @@ export function Observe() {
   const show = (i: ObserveInfo) => {
     setInfo(i);
     setInput(i.repo);
-    setDraft(JSON.stringify(i.config ?? i.guess, null, 2));
+    edit(JSON.stringify(i.config ?? i.guess, null, 2));
+  };
+
+  const edit = (text: string) => {
+    draftRef.current = text;
+    setDraft(text);
   };
 
   useEffect(() => {
     let live = true;
     setInfo(null);
     setError('');
-    fetchJson<ObserveInfo>(api(`/api/observe${picked ? `?repo=${encodeURIComponent(picked)}` : ''}`)).then((i) => live && show(i), (e) => live && setError(e.message));
+    setSaveState('idle');
+    setSaveError('');
+    fetchJson<ObserveInfo>(api(`/api/observe${picked ? `?repo=${encodeURIComponent(picked)}` : ''}`)).then(
+      (i) => {
+        if (!live) return;
+        show(i);
+        setSettingsOpen(!i.config);
+      }, (e) => live && setError(e.message),
+    );
     return () => void (live = false);
   }, [picked, chat]);
 
@@ -432,14 +451,21 @@ export function Observe() {
 
   const saveConfig = async () => {
     if (!info) return;
-    setSaveMsg('');
+    const sent = draft;
+    setSaving(true);
+    setSaveError('');
     try {
-      const config = draft.trim() ? JSON.parse(draft) : null;
-      show(await post<ObserveInfo>('/api/observe/config', { repo: info.repo, config }));
-      setSaveMsg('Saved');
+      const config = sent.trim() ? JSON.parse(sent) : null;
+      const saved = await post<ObserveInfo>('/api/observe/config', { repo: info.repo, config });
+      setInfo(saved);
+      setInput(saved.repo);
+      if (draftRef.current === sent) edit(JSON.stringify(saved.config ?? saved.guess, null, 2));
+      setSaveState(draftRef.current === sent ? 'saved' : 'unsaved');
     } catch (e) {
-      setSaveMsg(errText(e));
+      setSaveError(errText(e));
+      setSaveState('failed');
     }
+    setSaving(false);
   };
 
   const all = [...new Set([...names, ...(info?.repos ?? [])])].filter((n) => n !== 'example').sort();
@@ -475,14 +501,31 @@ export function Observe() {
           )}
           <Grafana key={`g-${info.repo}`} info={info} />
           <Snowflake info={info} onInfo={setInfo} />
-          <Section title="Settings" open={!info.config}>
-            <textarea className="obs-editor" aria-label="Observe settings" value={draft} spellCheck={false} rows={14} onChange={(e) => setDraft(e.target.value)} />
-            <div className="obs-save">
-              <button className="btn primary" onClick={saveConfig}>Save</button>
-              {saveMsg && <span className={saveMsg === 'Saved' ? 'muted' : 'error'}>{saveMsg}</span>}
+          <UiSection
+            label="Settings"
+            open={settingsOpen}
+            onToggle={() => setSettingsOpen((v) => !v)}
+            action={saveState !== 'idle' && <span className={`badge ${saveState === 'unsaved' ? 'waiting' : 'quiet'}`}>{{ unsaved: 'Unsaved', saved: 'Saved', failed: 'Failed' }[saveState]}</span>}
+          />
+          {settingsOpen && (
+            <div className="obs-body">
+              <textarea
+                className="obs-field"
+                aria-label="Observe settings"
+                value={draft}
+                spellCheck={false}
+                rows={14}
+                onChange={(e) => {
+                  edit(e.target.value);
+                  setSaveState('unsaved');
+                  setSaveError('');
+                }}
+              />
+              <Err text={saveError} />
+              <div className="obs-hint">Grafana MCP: {info.grafanaServer ? 'found in ~/.claude.json' : 'missing from ~/.claude.json'}</div>
+              <div className="obs-actions"><Button variant="primary" size="sm" disabled={saving} onClick={saveConfig}>Save</Button></div>
             </div>
-            <div className="obs-hint">Grafana MCP: {info.grafanaServer ? 'found in ~/.claude.json' : 'missing from ~/.claude.json'}</div>
-          </Section>
+          )}
         </div>
       )}
     </div>

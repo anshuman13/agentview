@@ -87,6 +87,12 @@
   display: block; width: calc(100% - 24px); margin: var(--sp-2) var(--sp-6); padding: var(--sp-3) var(--sp-4); resize: vertical;
   font-family: var(--mono); font-size: var(--fs-sm); line-height: 17px; white-space: pre; overflow-x: auto;
 }
+.observe .obs-field {
+  display: block; width: calc(100% - 2 * var(--sp-6)); margin: var(--sp-2) var(--sp-6); padding: var(--sp-2) var(--sp-4); resize: vertical;
+  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--shape-sm);
+  font-family: var(--mono); font-size: var(--fs-sm); line-height: 17px; white-space: pre; overflow-x: auto;
+}
+.observe .obs-actions { padding: var(--sp-2) var(--sp-6); }
 .observe .obs-editor:disabled { opacity: 0.6; }
 .observe .obs-save { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-6); font-size: var(--fs-sm); }
 
@@ -100,7 +106,7 @@
 @media (max-width: 900px) {
   .observe .obs-picker { padding-bottom: var(--sp-5); }
   .observe :is(.obs-picker input, .obs-askbar input, .obs-form input, .obs-form select, .obs-pick select) { height: var(--touch-md); font-size: var(--fs-2xl); }
-  .observe .obs-editor { font-size: var(--fs-2xl); line-height: var(--line-lg); }
+  .observe :is(.obs-editor, .obs-field) { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .observe .obs-head { height: var(--touch); gap: var(--sp-2); }
   .observe .obs-head .acts { gap: var(--sp-1); }
   .observe :is(.obs-head, .obs-picker) .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
