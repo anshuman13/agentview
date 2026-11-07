@@ -166,7 +166,7 @@ private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, gly
 @Composable
 private fun PickerSheet(title: String, items: List<Choice>, current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     Sheet(onDismiss, padded = false, full = false) {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column {
             SectionHeader(title)
             for (c in items) ListRow(
                 c.label, c.detail,

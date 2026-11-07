@@ -33,6 +33,12 @@ class PagesLogicTest {
         assertEquals("git", fileTag(".gitignore"))
         assertEquals("make", fileTag("Makefile"))
         assertEquals("json", fileTag("package.json"))
+        val tags = mapOf("a.swift" to "swift", "a.svelte" to "svelte", "a.astro" to "astro", "a.proto" to "proto", "a.graphql" to "graphql", "a.plist" to "plist",
+            ".env.local" to "env", "README" to "readme", "README.md" to "readme", "CHANGELOG" to "log", "Procfile" to "proc", "LICENSE" to "lic", "Dockerfile" to "docker",
+            "a.tsx" to "tsx", "notes" to "file", "a.verylongext" to "file")
+        tags.forEach { (n, t) -> assertEquals(n, t, fileTag(n)) }
+        assertEquals(FileHue.Gray, fileHue(".env.local"))
+        assertEquals(FileHue.Yellow, fileHue("LICENSE"))
         assertEquals("This file is outside the project folder", fileError("path outside project"))
         assertEquals(FileData("a", "b"), parseFile("""{"content":"a","original":"b"}"""))
     }

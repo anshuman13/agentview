@@ -92,7 +92,7 @@ fun PinList(pins: List<Row>, ops: CodexOps, onOpen: ((Row) -> Unit)? = null) {
 fun PinSheet(m: Row, ops: CodexOps, onDismiss: () -> Unit) {
     val lines = remember(m.str("summary")) { summaryLines(m.str("summary")) }
     Sheet(onDismiss, padded = false) {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column {
             SectionHeader("Pin from the summary")
             if (lines.isEmpty()) EmptyState("No summary to pin from")
             Group { lines.forEachIndexed { i, l -> if (i > 0) Hairline(); ListRow(l, lines = 4, onClick = { ops.points.pin(l, m); onDismiss() }) } }

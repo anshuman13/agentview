@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Text
@@ -75,7 +74,7 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
     }
     if (picking) Sheet(onDismiss = { picking = false }, padded = false) {
         SectionHeader("Project")
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column {
             observeRepos(ws.repos.map { it.name }, info).forEach { n ->
                 ListRow(n, selected = n == info?.repo, onClick = { picking = false; picked = n })
             }

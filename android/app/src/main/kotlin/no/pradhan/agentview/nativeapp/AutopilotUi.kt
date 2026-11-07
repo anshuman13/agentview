@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -177,7 +176,7 @@ private fun ActivitySheet(s: AutopilotState, items: List<Row>, now: Long, onTask
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val spend = spendLine(s)
     Sheet(close, padded = false) {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column {
             if (s.replies.isNotEmpty()) {
                 SectionHeader("Seen", s.replies.size.toString())
                 Group {

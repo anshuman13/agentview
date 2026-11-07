@@ -39,48 +39,62 @@ fun fileError(error: String) = if (error == "path outside project") "This file i
 // web/src/workspace/FileIcon.tsx colours, by name then extension.
 enum class FileHue { Blue, Yellow, Purple, Orange, Green, Red, Pink, Cyan, Gray, Folder }
 
-private val HUE_BY_NAME = mapOf(
-    "package.json" to FileHue.Green, "package-lock.json" to FileHue.Gray, "yarn.lock" to FileHue.Gray, "pnpm-lock.yaml" to FileHue.Gray,
-    "cargo.lock" to FileHue.Gray, "poetry.lock" to FileHue.Gray, "uv.lock" to FileHue.Gray, "go.sum" to FileHue.Gray,
-    "dockerfile" to FileHue.Blue, "makefile" to FileHue.Gray, "license" to FileHue.Yellow,
+private class Kind(val hue: FileHue, val label: String? = null)
+
+private fun re(p: String) = Regex(p, RegexOption.IGNORE_CASE)
+
+private val BY_NAME = mapOf(
+    "package.json" to Kind(FileHue.Green, "json"), "package-lock.json" to Kind(FileHue.Gray, "json"),
+    "yarn.lock" to Kind(FileHue.Gray, "lock"), "pnpm-lock.yaml" to Kind(FileHue.Gray, "lock"), "cargo.lock" to Kind(FileHue.Gray, "lock"),
+    "poetry.lock" to Kind(FileHue.Gray, "lock"), "uv.lock" to Kind(FileHue.Gray, "lock"), "go.sum" to Kind(FileHue.Gray, "lock"),
+    "dockerfile" to Kind(FileHue.Blue, "docker"), "makefile" to Kind(FileHue.Gray, "make"), "license" to Kind(FileHue.Yellow, "lic"),
+    ".gitignore" to Kind(FileHue.Gray, "git"), ".gitattributes" to Kind(FileHue.Gray, "git"),
+    ".npmrc" to Kind(FileHue.Gray, "cfg"), ".nvmrc" to Kind(FileHue.Gray, "cfg"), ".editorconfig" to Kind(FileHue.Gray, "cfg"),
+    ".prettierrc" to Kind(FileHue.Gray, "cfg"), ".eslintrc" to Kind(FileHue.Gray, "cfg"),
+    "readme" to Kind(FileHue.Gray, "readme"), "changelog" to Kind(FileHue.Gray, "log"), "procfile" to Kind(FileHue.Gray, "proc"),
 )
 
-private val HUE_BY_EXT = listOf(
-    Regex("^readme\\.mdx?$", RegexOption.IGNORE_CASE) to FileHue.Blue,
-    Regex("\\.mdx?$", RegexOption.IGNORE_CASE) to FileHue.Blue,
-    Regex("\\.tsx?$", RegexOption.IGNORE_CASE) to FileHue.Blue,
-    Regex("\\.(jsx?|mjs|cjs)$", RegexOption.IGNORE_CASE) to FileHue.Yellow,
-    Regex("\\.json[c5]?$", RegexOption.IGNORE_CASE) to FileHue.Yellow,
-    Regex("\\.(css|scss|sass|less)$", RegexOption.IGNORE_CASE) to FileHue.Purple,
-    Regex("\\.(html?|vue|svelte|astro)$", RegexOption.IGNORE_CASE) to FileHue.Orange,
-    Regex("\\.py$", RegexOption.IGNORE_CASE) to FileHue.Blue,
-    Regex("\\.go$", RegexOption.IGNORE_CASE) to FileHue.Cyan,
-    Regex("\\.(rs|swift)$", RegexOption.IGNORE_CASE) to FileHue.Orange,
-    Regex("\\.kts?$", RegexOption.IGNORE_CASE) to FileHue.Purple,
-    Regex("\\.(java|rb|c|cc|cpp|h|hpp|cs)$", RegexOption.IGNORE_CASE) to FileHue.Red,
-    Regex("\\.(sh|bash|zsh|fish|bat|ps1)$", RegexOption.IGNORE_CASE) to FileHue.Green,
-    Regex("\\.ya?ml$", RegexOption.IGNORE_CASE) to FileHue.Purple,
-    Regex("\\.sql$", RegexOption.IGNORE_CASE) to FileHue.Pink,
-    Regex("\\.(png|jpe?g|gif|svg|webp|ico|bmp|avif)$", RegexOption.IGNORE_CASE) to FileHue.Purple,
-    Regex("\\.pdf$", RegexOption.IGNORE_CASE) to FileHue.Red,
-    Regex("\\.(xml|plist|graphql|gql|prisma|proto)$", RegexOption.IGNORE_CASE) to FileHue.Orange,
+private val BY_EXT = listOf(
+    re("^readme\\.mdx?$") to Kind(FileHue.Blue, "readme"),
+    re("\\.mdx?$") to Kind(FileHue.Blue, "md"),
+    re("\\.tsx?$") to Kind(FileHue.Blue),
+    re("\\.(jsx?|mjs|cjs)$") to Kind(FileHue.Yellow),
+    re("\\.json[c5]?$") to Kind(FileHue.Yellow, "json"),
+    re("\\.(css|scss|sass|less)$") to Kind(FileHue.Purple),
+    re("\\.(html?|vue|svelte|astro)$") to Kind(FileHue.Orange),
+    re("\\.py$") to Kind(FileHue.Blue),
+    re("\\.go$") to Kind(FileHue.Cyan),
+    re("\\.rs$") to Kind(FileHue.Orange),
+    re("\\.swift$") to Kind(FileHue.Orange),
+    re("\\.kts?$") to Kind(FileHue.Purple),
+    re("\\.(java|rb|c|cc|cpp|h|hpp|cs)$") to Kind(FileHue.Red),
+    re("\\.(sh|bash|zsh|fish|bat|ps1)$") to Kind(FileHue.Green),
+    re("\\.ya?ml$") to Kind(FileHue.Purple, "yaml"),
+    re("\\.(toml|ini|cfg|conf|properties)$") to Kind(FileHue.Gray, "cfg"),
+    re("\\.sql$") to Kind(FileHue.Pink),
+    re("\\.(png|jpe?g|gif|svg|webp|ico|bmp|avif)$") to Kind(FileHue.Purple, "img"),
+    re("\\.pdf$") to Kind(FileHue.Red),
+    re("\\.(zip|tar|gz|tgz|bz2|7z|rar)$") to Kind(FileHue.Gray, "zip"),
+    re("\\.(lock|lockb)$") to Kind(FileHue.Gray, "lock"),
+    re("\\.env(\\..*)?$") to Kind(FileHue.Gray, "env"),
+    re("\\.(txt|log|csv)$") to Kind(FileHue.Gray),
+    re("\\.(xml|plist|graphql|gql|prisma|proto)$") to Kind(FileHue.Orange),
 )
 
-fun fileHue(name: String): FileHue {
+private fun fileKind(name: String): Pair<Kind?, String> {
     val base = name.substringAfterLast('/').lowercase()
-    HUE_BY_NAME[base]?.let { return it }
-    HUE_BY_NAME[base.substringBefore('.')]?.let { return it }
-    return HUE_BY_EXT.firstOrNull { it.first.containsMatchIn(base) }?.second ?: FileHue.Gray
+    val kind = BY_NAME[base] ?: BY_NAME[base.substringBefore('.')] ?: BY_EXT.firstOrNull { it.first.containsMatchIn(base) }?.second
+    return kind to base
 }
 
-// The short tag shown as a file's icon: its extension, or the first letters of a dotfile or extensionless name.
+fun fileHue(name: String) = fileKind(name).first?.hue ?: FileHue.Gray
+
+// The short whole-word label shown as a file's icon.
 fun fileTag(name: String): String {
-    val base = name.substringAfterLast('/')
-    val ext = base.substringAfterLast('.', "")
-    val tag = (if (ext.isNotEmpty() && base.indexOf('.') > 0) ext else base.trimStart('.')).lowercase()
-    return TAG_ALIASES[tag] ?: tag.take(4)
+    val (kind, base) = fileKind(name)
+    kind?.label?.let { return it }
+    val ext = if (base.indexOf('.') > 0) base.substringAfterLast('.') else ""
+    return if (ext.isNotEmpty() && (kind != null || ext.length <= 4)) ext else "file"
 }
-
-private val TAG_ALIASES = mapOf("markdown" to "md", "makefile" to "make", "license" to "law", "dockerfile" to "dock", "gitignore" to "git", "gitattributes" to "git", "editorconfig" to "cfg", "prettierrc" to "cfg", "eslintrc" to "cfg", "npmrc" to "cfg", "nvmrc" to "cfg")
 
 fun isMarkdown(path: String) = Regex("\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE).containsMatchIn(path)

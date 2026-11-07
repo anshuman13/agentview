@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
@@ -101,7 +100,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
         if (patch.isNotEmpty()) actions.edit(latest, patch)
     }
     Sheet(onDismiss = { commit(); onDismiss() }) {
-        Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+        Column(Modifier.imePadding().padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
             FieldLabel("Title")
             TextField(title, { title = it }, placeholder = "Title", style = Type.headline.copy(fontSize = Tokens.fs3xl))
             FieldLabel("Notes")
@@ -234,7 +233,7 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActi
     LaunchedEffect(onlyStale, old.size) { if (onlyStale && old.isEmpty()) onlyStale = false }
     LaunchedEffect(needs.size, queue.size) { if (needs.isEmpty() && queue.isEmpty()) onDismiss() }
     Sheet(onDismiss, padded = false) {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column {
             SectionHeader("Needs you", (needs.size + queue.size).toString())
             val groups = listOf("Tasks" to needs.filter { it.isTask }, "Asks" to needs.filter { !it.isTask }).filter { it.second.isNotEmpty() }
             groups.forEach { (label, rows) ->
