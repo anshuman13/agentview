@@ -106,13 +106,13 @@ export function GoalsPage() {
         </div>
       </header>
       <div className="wk-scroll">
-        <div className="mt-list">
+        <div className="mt-page">
           {gate.loading && !items.length ? <Skeleton /> : !weeks.length ? (
             <EmptyState size="sm" icon="target" title="No goals yet" hint="Set goals in Meetings > Week" action={<Button size="sm" onClick={openWeek}>Open Week</Button>} />
           ) : weeks.map((w) => (
             <section key={w.start}>
               <Section label={w.label} />
-              <div className="ov-group">
+              <div className="ui-group">
                 {w.goals.map((g) => <GoalGroup key={g.profile + g.id} goal={g} items={items} showProfile={filter === 'all'} now={now} reopen={reopen} move={move} rename={rename} remove={remove} />)}
               </div>
             </section>

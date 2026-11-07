@@ -1,13 +1,6 @@
 .jb-presets { display: flex; gap: var(--sp-4); margin-top: var(--sp-6); }
 .ui-empty + .jb-presets { justify-content: center; margin-top: 0; }
-.jb-list { border-radius: var(--shape-lg); background: var(--group-card); }
-.jb-item:first-child .ui-row { border-top-left-radius: var(--shape-lg); }
-.jb-item:last-child .ui-row { border-bottom-left-radius: var(--shape-lg); }
-.jb-item { display: flex; align-items: center; gap: var(--sp-3); padding-right: var(--list-pad); }
-.jb-item:not(:last-child) { border-bottom: var(--hairline); }
-.jb-item .ui-row { flex: 1; min-width: 0; width: auto; }
-.jb-item .ui-row::after { display: none; }
-.jb-item.off .ui-row-title { color: var(--fg-muted); }
+.ui-row-wrap.off .ui-row-title { color: var(--fg-muted); }
 .jb-actions { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }
 .jb-more { position: relative; display: inline-flex; }
 .jb-switch { flex: none; width: 36px; height: 20px; padding: 2px; border: 0; border-radius: var(--radius-pill); background: var(--border-strong); cursor: pointer; transition: background var(--dur); }

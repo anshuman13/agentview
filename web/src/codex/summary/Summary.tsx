@@ -71,14 +71,14 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
         <button className="btn primary mt-take" disabled={busy} onClick={summarize}><Icon name={busy ? 'loading' : 'sparkle'} small /> <span>{busy ? 'Summarizing' : 'Summarize'}</span></button>
       </header>
       <div className="wk-scroll">
-        <div className="mt-list">
+        <div className="mt-page">
           <div className="sm-report">
             <div className="sm-body">
               <Section label={report.title} />
               {report.groups.map((g) => (
                 <div key={g.name} className="sm-group">
                   <Section label={g.name} count={g.lines.length} />
-                  <div className="as-group">
+                  <div className="ui-group">
                     {g.lines.map((l) => <Row key={l.row.profile + l.row.id} title={l.text} meta={dayLabel(l.at)} onClick={() => openTask(l.row)} />)}
                   </div>
                 </div>
@@ -110,7 +110,7 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
           {groups.map((g) => (
             <div key={g.kind}>
               <Section label={g.label} count={g.chats.length} />
-              <div className="as-group">
+              <div className="ui-group">
                 {(openKinds.includes(g.kind) ? g.chats : g.chats.slice(0, FIRST)).map((c) => {
                   const summary = c.summary ?? '';
                   const row = { title: <span title={summary}>{c.name || 'Untitled'}</span>, meta: `${c.last_at ? `${ago(c.last_at)} ago · ` : ''}${summary.split('\n')[0]}` };

@@ -72,15 +72,15 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
       </header>
       {pull.indicator}
       <div className="wk-scroll" ref={pull.ref}>
-        <div className="mt-list">
+        <div className="mt-page">
           <Autopilot />
           {jobs.length > 0 && (
-            <div className="jb-list">
+            <div className="ui-group">
               {jobs.map((j) => {
                 const meta = rowMeta(j, runs, now);
                 const state = jobState(j, runs, now);
                 return (
-                  <div key={rowKey(j)} className={`jb-item${j.enabled ? '' : ' off'}`}>
+                  <div key={rowKey(j)} className={`ui-row-wrap${j.enabled ? '' : ' off'}`}>
                     <Row
                       title={j.name || 'Untitled job'}
                       meta={[describe(j.schedule), meta?.startsWith('Next') && meta, cost[j.id] > 0 && `7 days ${money(cost[j.id])}`, mixed && (j.profile === 'work' ? 'Work' : 'Personal')].filter(Boolean).join(' · ')}

@@ -17,7 +17,7 @@ function Hits({ label, group, open, onAll, said }: { label: string; group: Group
   return (
     <section>
       <Section label={label} count={group.total} />
-      <div className="mt-days">
+      <div className="ui-group sr-hits">
         {group.hits.map((h) => (
           <Row key={h.profile + h.id} className={said ? 'sr-said' : undefined} title={h.title} meta={[h.profile === 'work' ? 'Work' : 'Personal', h.when, h.snippet].filter(Boolean).join(' \u00b7 ')} onClick={() => open(h)} />
         ))}
@@ -57,7 +57,7 @@ export function Search() {
         <h1>Search</h1>
       </header>
       <div className="wk-scroll">
-        <div className="mt-list">
+        <div className="mt-page">
           <input autoFocus type="search" enterKeyHint="search" value={query} placeholder="Search tasks, meetings, transcripts, wiki and jobs" aria-label="Search" onChange={(e) => setQuery(e.target.value)} />
           <Hits label="Tasks and notes" group={r.tasks} onAll={more('tasks')} open={(h) => (h.page ? openMeeting({ profile: h.profile, id: h.page }) : openTask(h))} />
           <Hits label="Meetings" group={r.meetings} onAll={more('meetings')} open={openMeeting} />

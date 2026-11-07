@@ -89,29 +89,29 @@ export function Autopilot() {
   const flip = () => setOpen(!open);
   return (
     <section aria-label="Autopilot">
-      <div className="as-group">
+      <div className="ui-group">
         <Row plain role="button" tabIndex={0} aria-expanded={open} onClick={flip} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); flip(); } }}
           title="Reply for me in Slack" meta={error || (state ? modeLine(state, waiting) : 'Loading')}
           trailing={c && <Switch on={c.enabled} label="Reply for me in Slack" onChange={(on) => void save({ enabled: on })} />} />
       </div>
       {open && state && c && (
         <div className="jb-auto-form">
-          <div className="as-group">
+          <div className="ui-group">
             <Row plain className="jb-wrap" title="How it works" trailing={<Button size="sm" onClick={() => setView({ list: 'today', open: null, person: null })}>Open the Reply queue</Button>}
               meta={dates
                 ? <><span>{`From ${day(c.away.from)} to ${day(c.away.to)} it answers simple questions itself when the thread or your wiki has the answer, and sends one holding note${c.away.backup ? `, naming ${c.away.backup}` : ''}.`}</span><br /><span>Urgent asks and people on the never-answer list always come to you.</span></>
                 : <><span>Each ask gets a draft. Send, Edit or Skip it from the Reply queue or the push.</span><br /><span>Nothing goes out on its own.</span></>} />
           </div>
-          <div className="as-group">
+          <div className="ui-group">
             <Row plain title="Dry run" meta="logs what it would send; your own Send always posts" trailing={<Switch on={c.dry_run} label="Dry run" onChange={(on) => void save({ dry_run: on })} />} />
           </div>
-          <div className="as-group">
+          <div className="ui-group">
             <Row plain title="Drafts while away by" trailing={
               <span role="group" aria-label="Draft model">
                 {(['sonnet', 'opus'] as const).map((m) => <Chip key={m} on={model === m} aria-pressed={model === m} onClick={() => { if (model !== m) void save({ model: m }); }}>{m === 'opus' ? 'Opus' : 'Sonnet'}</Chip>)}
               </span>} />
           </div>
-          <div className="as-group">
+          <div className="ui-group">
             <Section label={awayText} open={fold === 'away'} onToggle={() => toggle('away')} />
             {fold === 'away' && (
               <div className="jb-fields">
@@ -149,7 +149,7 @@ export function Autopilot() {
           {replies.length > 0 && (
             <div>
               <Section label="Seen" count={state.replies.length} />
-              <div className="as-group">
+              <div className="ui-group">
                 {replies.map((r) => {
                   const label = seen(r);
                   const props = { title: `${r.who}${r.chat ? ` · ${r.chat}` : ''}`, lines: 2 as const, trailing: <span className={`badge${label === 'Waiting for you' ? ' waiting' : ' quiet'}`}>{label}</span>,

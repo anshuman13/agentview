@@ -213,7 +213,6 @@
 .gl-line { flex-wrap: wrap; }
 .gl-row { display: flex; align-items: center; gap: var(--sp-3); }
 .gl-group > .ui-section { position: relative; }
-.ov-group:has(.gl-group .ui-menu) { overflow: visible; }
 .gl-group > .ui-row:disabled { --state: 0%; color: inherit; cursor: default; }
 .gl-input { flex: 1; width: 100%; min-width: 0; padding: var(--sp-3) var(--sp-5); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; font-size: var(--fs-md); }
 .fc-ahead { display: flex; flex-direction: column; border-radius: 12px; background: var(--group-card); font-size: var(--fs-md); overflow: hidden; }
