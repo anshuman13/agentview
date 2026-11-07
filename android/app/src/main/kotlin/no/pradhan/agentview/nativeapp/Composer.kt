@@ -141,8 +141,9 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
                 if (running && typed) Button("Stop and send", { submit(true) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 val canSend = typed && uploading == 0
+                val haptic = LocalHapticFeedback.current
                 if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp5).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
-                else SendCircle(if (running) "Queue" else "Send", canSend, { submit(false) }) { Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(Tokens.iconSm), tint = if (canSend) c.sunken else c.fgFaint) }
+                else SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); submit(false) }) { Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(Tokens.iconSm), tint = if (canSend) c.sunken else c.fgFaint) }
             }
         }
     }
@@ -157,8 +158,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
 
 @Composable
 private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, glyph: @Composable () -> Unit) {
-    val haptic = LocalHapticFeedback.current
-    Box(Modifier.size(Tokens.touch).clickable(enabled = enabled, onClickLabel = label) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }, contentAlignment = Alignment.Center) {
+    Box(Modifier.size(Tokens.touch).clickable(enabled = enabled, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
         Box(Modifier.size(Tokens.sizeXl).clip(CircleShape).background(if (enabled) av.fg else av.hover), contentAlignment = Alignment.Center) { glyph() }
     }
 }

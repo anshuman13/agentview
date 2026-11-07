@@ -10,6 +10,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -81,20 +82,21 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     init {
         viewModelScope.launch {
             val minute = flow { while (true) { emit(Unit); delay(60_000) } }
-            combine(codex.state, minute, notifyOn) { s, _, on -> if (on) needsYou(s.items, s.meetings, s.chats, null, System.currentTimeMillis()).size else 0 }
+            combine(codex.state, minute, notifyOn, codexFilter) { s, _, on, filter -> if (on) needsYou(s.items, s.meetings, s.chats, filter.takeIf { it != "all" }, System.currentTimeMillis()).size else 0 }
                 .distinctUntilChanged().collect { notifier.badge(it) }
         }
     }
 
     val granted = MutableStateFlow(notifier.granted())
-    var requestNotifications: () -> Unit = {}
+    val wantsPermission = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val liveLoaded = MutableStateFlow(false)
 
     fun refreshGranted() { granted.value = notifier.granted() }
 
     fun setNotify(on: Boolean) {
         notifyOn.value = on
         prefs.edit().putBoolean("notify", on).apply()
-        if (on && !notifier.granted()) requestNotifications()
+        if (on && !notifier.granted()) wantsPermission.tryEmit(Unit)
     }
 
     fun wantsStream() = notifyOn.value && notifier.granted()
@@ -104,6 +106,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
+        if (m is ServerMessage.Live) liveLoaded.value = true
     }
 
     val collapsed = MutableStateFlow(
@@ -120,7 +123,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun setDraft(chat: String, text: String) { if (text.isEmpty()) drafts.remove(chat) else drafts[chat] = text }
 
     fun connect() = stream.start()
-    fun disconnect() = stream.stop()
+    fun disconnect() { liveLoaded.value = false; stream.stop() }
     fun retry() = stream.start()
 
     fun saveOrigin(value: String) {
@@ -128,6 +131,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (v.isEmpty()) return
         prefs.edit().putString("origin", v).apply()
         origin.value = v
+        liveLoaded.value = false
         store.reset()
         codex.reset()
         workspace.value = Workspace()
@@ -202,6 +206,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     }
 
     private suspend fun openNewChat(profile: String? = null): LiveChat? {
+        if (withTimeoutOrNull(10_000) { liveLoaded.first { it } } == null) return null
         val before = store.state.value.live.map { it.id }.toSet()
         post(newSessionCmd(profile), store.wanted)
         val chat = withTimeoutOrNull(15_000) { store.state.first { s -> s.live.any { it.id !in before } } }?.live?.first { it.id !in before }
