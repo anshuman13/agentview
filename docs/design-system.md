@@ -140,7 +140,7 @@ IconButton sm or Chip shown on hover. Hairline only between groups.
 minimum, title clamps to 1 or 2 lines, a hairline under each row starts at the title, state layers
 as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button Row takes an optional `action` (one IconButton sm) beside it. `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings and the digest, brief and Prep cards use it.
 
-Testing: Row, Section, Chip and AskRow are tested by rendering to static markup and asserting the root element, classes and each branch (plain, href, action) in `web/src/ui/Row.test.ts`, `Section.test.ts`, `Button.test.ts` and `AskRow.test.ts`. A new branch or class on one of them needs a case in its test.
+Testing: Row, Section, Chip and AskRow are tested by rendering to static markup and asserting the root element, classes and each branch (plain, href, action) in `web/src/ui/Row.test.ts`, `longPress.test.ts` (the press timer), `Section.test.ts`, `Button.test.ts` and `AskRow.test.ts`. A new branch or class on one of them needs a case in its test.
 
 ### Panel (EuiPanel)
 `<Panel title action padding>`; `.ui-panel`. Elevation 1 on `--surface`, `--shape-lg`.
@@ -202,6 +202,9 @@ How much a list row may carry. The eye should find the one thing to do without r
   Destructive items go last in the Menu. A row never shows Edit as a button; editing happens on the page or
   inline after a tap on the text.
 - Every Row, Section action and Chip has a 44px touch target at max-width 480px and on coarse pointers (`--touch`). Rows are 48px on desktop and at least 44px on touch; IconButtons and Chips keep their painted size and get a hit-area layer.
+- Long press menu: phone widths only (max-width 480px), touch only. Holding a row 500ms with under 10px of movement
+  gives a haptic tap and opens the row's More menu as the bottom sheet; the click after release is swallowed. Only rows
+  that have a More menu take it, and the kebab stays as the visible action.
 - Pull to refresh: phone widths only (max-width 900px), at the top of the scroll container, on Overview, Tasks and
   Meetings (Wiki and Jobs share the hook). The indicator is the floating `.as-ptr` spinner chip, not a Row. A pull
   starts after 10px of downward, mostly vertical movement and refreshes at 64px of finger travel; shorter settles

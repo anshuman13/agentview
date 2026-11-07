@@ -19,7 +19,7 @@ export function CardRow({ title, meta, leading, badge, onOpen, button, action, m
   const more = useRef<HTMLButtonElement>(null);
   const choose = (fn: () => void) => () => { setOpen(false); fn(); };
   return (
-    <AskRow leading={leading} title={title} meta={meta} onClick={onOpen}
+    <AskRow leading={leading} title={title} meta={meta} onClick={onOpen} onLongPress={menu ? () => setOpen(true) : undefined}
       trailing={badge && <span className={`badge ${badge.tone}`}>{badge.label}</span>}
       actions={(button || action || menu) && (
         <>

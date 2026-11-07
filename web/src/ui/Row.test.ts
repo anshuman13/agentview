@@ -10,6 +10,11 @@ describe('Row', () => {
     expect(render({})).toContain('<button type="button" class="ui-row">');
   });
 
+  it('renders the same markup with and without onLongPress', () => {
+    expect(render({ onLongPress: () => {} })).toBe(render({}));
+    expect(render({ href: 'https://example.com', onLongPress: () => {} })).toMatch(/^<a class="ui-row" href=/);
+  });
+
   it('renders a link row with href', () => {
     expect(render({ href: 'https://example.com' })).toMatch(/^<a class="ui-row" href=/);
   });
