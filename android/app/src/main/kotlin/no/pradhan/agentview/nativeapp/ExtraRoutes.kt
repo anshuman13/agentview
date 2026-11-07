@@ -47,7 +47,7 @@ fun ExtraContent(
         }
         route.startsWith("series:") -> SeriesPage(st, key, now, actions, openMeeting)
         route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
-        route == "autopilot" -> AutopilotPage(hub, st, now, onReplies)
+        route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, ops, openMeeting, { p, id -> push("wiki:$p:$id") }, onTask)
         route == "wiki" -> WikiIndexPage(st, profile, now, { push("wiki:${it.key}") }, { f -> claimRoute(f)?.let(push) }, { push("review") })
         route.startsWith("wiki:") -> {

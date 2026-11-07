@@ -174,7 +174,7 @@ fun CodexScreen(hub: Hub) {
     }
     if (needsOpen) {
         val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now, st.facts) }
-        val queue = remember(st.items, profile, now / 60_000) { replyQueue(st.items, profile, now) }
+        val queue = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now) }
         NeedsSheet(needs, queue, now, actions, ops.replies, hub, { needsOpen = false; editKey = it.key }, { needsOpen = false; push("review") }) { needsOpen = false }
     }
 }
@@ -225,7 +225,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
     val s = remember(st.items, profile, now / 60_000) { split(st.items, profile, now) }
     val mt = remember(st.meetings, profile, now / 60_000) { meetingsOf(st.meetings, profile, now) }
     val needs = remember(st, profile, now / 60_000) { needsYou(st.items, st.meetings, st.chats, profile, now, st.facts) }
-    val waiting = remember(st.items, profile, now / 60_000) { replyQueue(st.items, profile, now).size }
+    val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now).size }
     val today = remember(s, mt) { overviewToday(s, mt.next, now) }
     val others = mt.today.filter { it != mt.next && (it.endsAt ?: it.startsAt!!) > now }
     val goals = remember(st.items, profile, now / 60_000) { goalsOf(st.items, now, profile) }

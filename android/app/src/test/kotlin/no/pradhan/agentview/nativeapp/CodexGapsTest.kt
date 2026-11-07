@@ -163,6 +163,7 @@ class CodexGapsTest {
         assertEquals(listOf("autopilot:{\"enabled\":true}"), remote.calls)
         assertEquals("Needs you" to "waiting", replyBadge(s.replies[0], listOf(item("1", "suggested", null, WORK, "source" to "slack"))))
         assertEquals("Skipped" to "skipped", replyBadge(s.replies[0], listOf(item("1", "dismissed", null, WORK, "source" to "slack"))))
+        assertEquals("Skipped" to "skipped", replyBadge(AutopilotReply(id = "2", status = "dry"), emptyList()))
     }
 
     @Test fun seriesGroupsRecurringMeetingsAndFindsTheNextOne() {

@@ -89,7 +89,7 @@ fun replyBadge(r: AutopilotReply, items: List<Row>): Pair<String, String> {
     return when (r.status) {
         "held" -> "Needs you" to "waiting"
         "sent" -> "Sent" to "sent"
-        "dry" -> "Sent" to "sent"
+        "dry" -> "Skipped" to "skipped"
         "error" -> "Failed" to "failed"
         "skipped" -> "Skipped" to "skipped"
         else -> r.status to "skipped"
@@ -97,13 +97,12 @@ fun replyBadge(r: AutopilotReply, items: List<Row>): Pair<String, String> {
 }
 
 // The form of the Away, Never answers sheets as one config patch; null when nothing changed.
-class AutopilotForm(val from: String = "", val to: String = "", val backup: String = "", val note: String = "", val escalate: String = "", val manager: String = "")
+data class AutopilotForm(val from: String = "", val to: String = "", val backup: String = "", val note: String = "", val escalate: String = "", val manager: String = "")
 
 fun formOf(s: AutopilotState) = AutopilotForm(s.config.away.from, s.config.away.to, s.config.away.backup, s.config.away.note, s.config.escalate.joinToString(", "), s.config.manager ?: "")
 
 fun formPatch(form: AutopilotForm, s: AutopilotState): String? {
-    val was = formOf(s)
-    if (form.from == was.from && form.to == was.to && form.backup == was.backup && form.note == was.note && form.escalate == was.escalate && form.manager == was.manager) return null
+    if (form == formOf(s)) return null
     return buildJsonObject {
         put("away", buildJsonObject { put("from", form.from); put("to", form.to); put("backup", form.backup); put("note", form.note) })
         put("escalate", JsonArray(form.escalate.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map(::JsonPrimitive)))

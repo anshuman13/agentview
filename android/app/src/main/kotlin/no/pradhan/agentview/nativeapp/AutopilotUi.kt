@@ -68,7 +68,7 @@ private enum class Which { Info, Away, Covers, Never, Model, Activity }
 private fun SettingRow(title: String, meta: String?, onClick: () -> Unit) = ListRow(title, meta, onClick = onClick, trailing = { Icon(Icons.Filled.KeyboardArrowRight, null, Modifier.size(Tokens.icon), tint = av.fgMuted) })
 
 @Composable
-fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit) {
+fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, onTask: (Row) -> Unit) {
     val ap = rememberAutopilot(hub)
     var sheet by rememberSaveable { mutableStateOf<String?>(null) }
     val s = ap.state
@@ -100,7 +100,7 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit) {
                 listOf("sonnet" to "Sonnet", "opus" to "Opus").forEach { (m, label) -> Chip(label, { if (s.config.model != m) ap.save(modelPatch(m)) }, on = s.config.model == m) }
             }
         }
-        else -> ActivitySheet(s, st.items, now, close)
+        else -> ActivitySheet(s, st.items, now, onTask, close)
     }
 }
 
@@ -140,23 +140,23 @@ private fun FormSheet(away: Boolean, s: AutopilotState, save: (String) -> Unit, 
         Column(Modifier.padding(horizontal = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             if (away) {
                 FieldLabel("Away from")
-                Button(form.from.ifEmpty { "Not set" }.let { if (form.from.isEmpty()) it else autopilotDay(form.from) }, { picking = "from" })
+                Button(if (form.from.isEmpty()) "Not set" else autopilotDay(form.from), { picking = "from" })
                 FieldLabel("Away to")
                 Button(if (form.to.isEmpty()) "Not set" else autopilotDay(form.to), { picking = "to" })
                 FieldLabel("Backup")
-                TextField(form.backup, { form = AutopilotForm(form.from, form.to, it, form.note, form.escalate, form.manager) }, singleLine = true, placeholder = "Who covers while you are away")
+                TextField(form.backup, { form = form.copy(backup = it) }, singleLine = true, placeholder = "Who covers while you are away")
                 FieldLabel("Away note")
-                TextField(form.note, { form = AutopilotForm(form.from, form.to, form.backup, it, form.escalate, form.manager) }, singleLine = true, placeholder = "Extra line for the holding note")
+                TextField(form.note, { form = form.copy(note = it) }, singleLine = true, placeholder = "Extra line for the holding note")
             } else {
                 FieldLabel("Manager")
-                TextField(form.manager, { form = AutopilotForm(form.from, form.to, form.backup, form.note, form.escalate, it) }, singleLine = true, placeholder = "Your manager, name or Slack user id")
+                TextField(form.manager, { form = form.copy(manager = it) }, singleLine = true, placeholder = "Your manager, name or Slack user id")
                 FieldLabel("Never answer")
-                TextField(form.escalate, { form = AutopilotForm(form.from, form.to, form.backup, form.note, it, form.manager) }, singleLine = true, placeholder = "Names or Slack user ids, comma separated")
+                TextField(form.escalate, { form = form.copy(escalate = it) }, singleLine = true, placeholder = "Names or Slack user ids, comma separated")
             }
         }
     }
     picking?.let { which ->
-        DayDialog(if (which == "from") form.from else form.to, { d -> form = if (which == "from") AutopilotForm(d, form.to, form.backup, form.note, form.escalate, form.manager) else AutopilotForm(form.from, d, form.backup, form.note, form.escalate, form.manager) }) { picking = null }
+        DayDialog(if (which == "from") form.from else form.to, { d -> form = if (which == "from") form.copy(from = d) else form.copy(to = d) }) { picking = null }
     }
 }
 
@@ -173,7 +173,7 @@ private fun CoversSheet(s: AutopilotState, save: (String) -> Unit, close: () -> 
 }
 
 @Composable
-private fun ActivitySheet(s: AutopilotState, items: List<Row>, now: Long, close: () -> Unit) {
+private fun ActivitySheet(s: AutopilotState, items: List<Row>, now: Long, onTask: (Row) -> Unit, close: () -> Unit) {
     var all by remember { mutableStateOf(false) }
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val spend = spendLine(s)
@@ -186,8 +186,9 @@ private fun ActivitySheet(s: AutopilotState, items: List<Row>, now: Long, close:
                         if (i > 0) Hairline()
                         val (label, kind) = replyBadge(r, items)
                         val link = safeHref(r.url)
+                        val task = items.firstOrNull { !it.deleted && ((r.id.isNotEmpty() && it.id == r.id) || (r.url != null && it.sourceUrl == r.url)) }
                         ListRow("${r.who ?: ""}${if (r.chat != null) " · ${r.chat}" else ""}", if (r.text != null) "${autopilotWhen(r.at, now)} · ${r.text}" else autopilotWhen(r.at, now),
-                            onClick = link?.let { l -> { uri.openUri(l) } },
+                            onClick = if (task != null) ({ close(); onTask(task) }) else link?.let { l -> { uri.openUri(l) } },
                             trailing = { Badge(label, when (kind) { "waiting" -> BadgeTone.Waiting; "sent", "done" -> BadgeTone.Done; "failed" -> BadgeTone.Failed; else -> BadgeTone.Quiet }) })
                     }
                     if (!all && s.replies.size > 5) { Hairline(); ListRow("Show all ${s.replies.size}", onClick = { all = true }) }
