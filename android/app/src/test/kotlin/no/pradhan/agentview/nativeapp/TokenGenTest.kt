@@ -79,6 +79,13 @@ class TokenGenTest {
         assertTrue(out.contains("    val body = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))"))
     }
 
+    @Test fun addsDiffTints() {
+        val out = TokenGen.generate(":root { --diff-add: #30d158; } :root[data-theme='light'] { --diff-add: #248a3d; }", "x")
+        assertTrue(out.contains("    diffAddSoft = Color(0x1A30D158),"))
+        assertTrue(out.contains("    diffAddSoft = Color(0x1A248A3D),"))
+        assertTrue(!out.contains("diffDelSoft"))
+    }
+
     @Test fun committedTokensMatchTheWeb() {
         val web = File("../../agentview/web/src/styles/tokens.css")
         if (!web.exists()) return

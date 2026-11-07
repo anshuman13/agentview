@@ -11,6 +11,12 @@ object TokenGen {
     private val textUnits = listOf("fs-", "line-")
     private const val TOUCH = "(pointer: coarse)"
 
+    // Tints the web mixes in feature CSS (features/github.css .gh-diff), added as tokens when their base is defined.
+    private val derived = linkedMapOf(
+        "diff-add-soft" to ("diff-add" to "color-mix(in srgb, var(--diff-add) 10%, transparent)"),
+        "diff-del-soft" to ("diff-del" to "color-mix(in srgb, var(--diff-del) 10%, transparent)"),
+    )
+
     fun parse(css: String): List<Block> = blocks(css.replace(Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL), ""), null)
 
     private fun blocks(css: String, media: String?): List<Block> {
@@ -45,6 +51,7 @@ object TokenGen {
             if (b.media != null && b.media != TOUCH) continue
             if (b.selectors.any { it == ":root" || it == ":root[data-theme='$theme']" }) out.putAll(b.decls)
         }
+        for ((k, v) in derived) if (v.first in out && k !in out) out[k] = v.second
         return out
     }
 

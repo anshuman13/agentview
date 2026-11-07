@@ -94,6 +94,8 @@ class AvColors(
     val onSurfaceMuted: Color,
     val onSurfaceFaint: Color,
     val danger: Color,
+    val diffAddSoft: Color,
+    val diffDelSoft: Color,
 )
 
 val DarkColors = AvColors(
@@ -181,6 +183,8 @@ val DarkColors = AvColors(
     onSurfaceMuted = Color(0x99EBEBF5),
     onSurfaceFaint = Color(0x73EBEBF5),
     danger = Color(0xFFFF453A),
+    diffAddSoft = Color(0x1A30D158),
+    diffDelSoft = Color(0x1AFF453A),
 )
 
 val LightColors = AvColors(
@@ -268,6 +272,8 @@ val LightColors = AvColors(
     onSurfaceMuted = Color(0xFF6C6C70),
     onSurfaceFaint = Color(0x993C3C43),
     danger = Color(0xFFD70015),
+    diffAddSoft = Color(0x1A248A3D),
+    diffDelSoft = Color(0x1AD70015),
 )
 
 object Tokens {
