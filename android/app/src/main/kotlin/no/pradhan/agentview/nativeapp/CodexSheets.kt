@@ -262,8 +262,8 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
             trailing = { MoreButton { close -> MenuItem("Snooze to next 09:00", { close(); actions.snoozeLater(n.row) }) } }, onClick = { onOpen(n.row) })
         is Need.OverdueAll -> ListRow("${n.rows.size} overdue", "Move them all to today", trailing = { Button("Move to today", { actions.moveToToday(n.rows) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
         is Need.JustEnded -> ListRow(n.row.title ?: "", "Just ended · ${n.meeting.title}", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
-        is Need.Ask -> ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · "), onClick = { onOpen(n.row) },
-            trailing = { Row { Button("Dismiss", { actions.dismiss(n.row) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm); Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } })
+        is Need.Ask -> ListRow(n.row.title ?: "", listOfNotNull(n.row.people, firstLine(n.row.text).ifEmpty { null }).joinToString(" · ").atWord(), metaLines = 4, onClick = { onOpen(n.row) },
+            below = { Button("Dismiss", { actions.dismiss(n.row) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm); Button("Add", { actions.accept(n.row) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })
         is Need.Risk -> ListRow(n.row.title ?: "", "At risk · due ${whenText(n.due, now)} · ${minutesText(n.short)} short", leading = { CheckCircle(false, "Done") { actions.done(n.row) } }, onClick = { onOpen(n.row) })
         is Need.Slack -> NeedCard(n.bullet.title, "Slack" + (n.bullet.why.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), n.bullet.url, { hub.hideNeed(slackKey(n.bullet)) }) {
             if (hub.codex.capture(listOf(n.bullet.title, n.bullet.why).filter { it.isNotEmpty() }.joinToString(": "), "open", n.profile, null, mapOf("text" to n.bullet.url)) != null) hub.hideNeed(slackKey(n.bullet))
@@ -274,14 +274,14 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
     }
 }
 
+private fun String.atWord(max: Int = 110) = if (length <= max) this else substring(0, max).substringBeforeLast(' ').trimEnd(',', '.', ';', ':') + "…"
+
 @Composable
 private fun NeedCard(title: String, meta: String, url: String?, onDismiss: () -> Unit, onTask: () -> Unit) {
     val uri = LocalUriHandler.current
-    ListRow(title, meta, trailing = {
-        Row {
-            Button("Dismiss", onDismiss, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
-            Button("Make task", onTask, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-            if (url != null && url.startsWith("http")) MoreButton { close -> MenuItem("Open in Slack", { close(); uri.openUri(url) }) }
-        }
+    ListRow(title, meta.atWord(), metaLines = 4, below = {
+        Button("Dismiss", onDismiss, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
+        Button("Make task", onTask, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        if (url != null && url.startsWith("http")) MoreButton { close -> MenuItem("Open in Slack", { close(); uri.openUri(url) }) }
     })
 }

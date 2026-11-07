@@ -158,6 +158,8 @@ fun ListRow(
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
     lines: Int = 2,
+    metaLines: Int = 1,
+    below: (@Composable RowScope.() -> Unit)? = null,
     strike: Boolean = false,
     muted: Boolean = false,
     selected: Boolean = false,
@@ -181,8 +183,11 @@ fun ListRow(
                 else -> Text(title.toString(), style = Type.body, color = color, maxLines = lines, overflow = TextOverflow.Ellipsis, textDecoration = deco)
             }
             if (!meta.isNullOrEmpty()) when (meta) {
-                is AnnotatedString -> Text(meta, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                else -> Text(meta.toString(), style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                is AnnotatedString -> Text(meta, style = Type.meta, color = av.metaFg, maxLines = metaLines, overflow = TextOverflow.Ellipsis)
+                else -> Text(meta.toString(), style = Type.meta, color = av.metaFg, maxLines = metaLines, overflow = TextOverflow.Ellipsis)
+            }
+            if (below != null) Row(Modifier.fillMaxWidth().padding(top = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+                CompositionLocalProvider(LocalContentColor provides av.fgMuted) { below() }
             }
         }
         if (trailing != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
