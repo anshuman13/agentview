@@ -14,7 +14,7 @@ import { ago, pressable, save, stored, plural } from '../ui/util';
 import { Bin } from './Bin';
 import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
-import { archiveChat, byUrgency, chatFinder, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type RenameEvent, type RepoGroup } from './folders';
+import { archiveChat, byUrgency, chatFinder, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RenameEvent, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
 import { Swipe } from '../codex/Swipe';
 import { showSnack } from '../codex/view';
@@ -270,9 +270,8 @@ export function OpenChats() {
   const { pins, setPin } = usePins();
   const pinSet = useMemo(() => new Set(pins), [pins]);
   const allGroups = useMemo(() => groupByRepo(live, chats, folders, '', pinSet), [live, chats, folders, pinSet]);
-  const snapshot = useRef<{ id: string; keys: string[] } | null>(null);
-  if (!viewing || !live.some((c) => c.id === viewing)) snapshot.current = null;
-  else if (snapshot.current?.id !== viewing || !snapshot.current.keys.length) snapshot.current = { id: viewing, keys: orderGroups(allGroups).map((g) => g.key) };
+  const snapshot = useRef<HeldOrder>(null);
+  snapshot.current = holdOrder(snapshot.current, viewing, live.some((c) => c.id === viewing), allGroups, chats.length > 0);
   const frozen = snapshot.current?.keys ?? null;
   const groups = useMemo(() => orderGroups(groupByRepo(live, chats, folders, filter, pinSet), frozen), [live, chats, folders, filter, pinSet, frozen]);
   const pinnedRows = useMemo(() => {

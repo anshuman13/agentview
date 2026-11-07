@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
+import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
@@ -76,6 +76,22 @@ describe('orderGroups', () => {
   });
   it('returns nothing for no groups', () => {
     expect(orderGroups([], ['a'])).toEqual([]);
+  });
+});
+
+describe('holdOrder', () => {
+  const g = (key: string, last: number) => ({ key, name: key, open: [], recent: [], last, running: 0, waiting: 0 });
+  it('keeps the order while the same chat is open', () => {
+    const held = holdOrder(null, 'c', true, [g('a', 1), g('b', 9)], true);
+    expect(holdOrder(held, 'c', true, [g('a', 99), g('b', 9)], true)).toBe(held);
+  });
+  it('retakes the order once the saved chats load', () => {
+    const early = holdOrder(null, 'c', true, [g('live', 5)], false);
+    const later = holdOrder(early, 'c', true, [g('live', 5), g('old', 1), g('busy', 9)], true);
+    expect(orderGroups([g('live', 5), g('old', 1), g('busy', 9)], later!.keys).map((x) => x.key)).toEqual(['busy', 'live', 'old']);
+  });
+  it('drops the order when no open chat is viewed', () => {
+    expect(holdOrder(holdOrder(null, 'c', true, [g('a', 1)], true), 'c', false, [g('a', 1)], true)).toBeNull();
   });
 });
 

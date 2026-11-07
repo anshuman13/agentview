@@ -276,6 +276,15 @@ export function orderGroups(groups: RepoGroup[], frozen: readonly string[] | nul
   return [...groups].sort((a, b) => Number(b.waiting > 0) - Number(a.waiting > 0) || (a.waiting > 0 ? 0 : rank(a) - rank(b)) || b.last - a.last);
 }
 
+export type HeldOrder = { id: string; keys: string[]; loaded: boolean } | null;
+
+// The group order taken when a chat opens, retaken once the saved chats load so their repos do not all count as new.
+export function holdOrder(prev: HeldOrder, viewing: string, open: boolean, groups: RepoGroup[], loaded: boolean): HeldOrder {
+  if (!viewing || !open) return null;
+  if (prev?.id === viewing && prev.keys.length && prev.loaded === loaded) return prev;
+  return { id: viewing, keys: orderGroups(groups).map((g) => g.key), loaded };
+}
+
 export type ChatState = 'needs' | 'failed' | 'running' | 'done';
 
 // Needs you, Failed and Running come from the live chat; Done is activity newer than the last time the chat was opened.
