@@ -10,12 +10,13 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { QuickPick } from '../ui/QuickPick';
 import { ATTENTION_LABEL, type AttentionItem, type LiveChat, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
-import { ago, pressable, save, stored, plural } from '../ui/util';
+import { ago, pressable, save, stored } from '../ui/util';
 import { Bin } from './Bin';
 import { chatOrder, stepChat } from './chatNav';
 import { PullState, usePullRequests } from '../ops/pulls';
 import { archiveChat, byUrgency, chatFinder, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, deleteChat, findHere, flip, groupByKind, groupByRepo, groupGlance, holdOrder, invalidateWorkspace, isDefault, newChatGroups, orderGroups, renameChat, renameTitle, removeRequest, repoName, restoreChat, segmentOf, since, usePins, useWorkspace, worktreeRequest, type ChatState, type Folder, type HeldOrder, type RenameEvent, type RepoGroup } from './folders';
 import { Badge } from '../ui/Badge';
+import { RepoRow } from './RepoRow';
 import { Swipe } from '../codex/Swipe';
 import { showSnack } from '../codex/view';
 
@@ -140,29 +141,9 @@ export function Sessions() {
   const isOpen = (d: Folder) => Boolean(d.hit) || (d.cwd === here || liveCwds.some((c) => inside(c, d.cwd))) !== toggled.has(d.cwd);
 
   const folderRows = (d: Folder, active: boolean, icon: string) => {
-    const kids = d.chats.length > 0 || d.trees.length > 0;
-    const branch = d.repo && !isDefault(d.repo.branch) ? d.repo.branch : '';
     return (
       <div key={d.cwd}>
-        <div className={`row project repo-row ${active ? '' : 'dim'} ${branch ? 'two' : ''} ${d.cwd === here ? 'here' : ''}`} title={d.cwd} {...pressable(() => kids && flip(setToggled, d.cwd))}>
-          <span className="twistie">{kids && <Icon name={isOpen(d) ? 'chevron-down' : 'chevron-right'} small />}</span>
-          <Icon name={icon} small />
-          <span className="label">
-            <span className="name">{d.name}</span>
-            {branch && <span className="chip sm branch-chip" title={branch}>{branch}</span>}
-          </span>
-          <span className="badges">
-            <span className="dirty" title={d.repo?.dirty ? `${d.repo.dirty} uncommitted` : undefined}>{d.repo?.dirty ? 'M' : ''}</span>
-            <span className="count" title={d.chats.length ? plural(d.chats.length, 'chat') : undefined}>{d.chats.length || ''}</span>
-            <span className="when">{d.last ? ago(d.last) : ''}</span>
-          </span>
-          <span className="acts">
-            {d.repo?.paseo && (
-              <button className="icon-btn" title="New worktree" disabled={Boolean(creating)} onClick={(e) => { e.stopPropagation(); newTree(d); }}><Icon name="git-branch-create" small /></button>
-            )}
-            <button className="icon-btn" title={`New chat in ${d.name}`} onClick={(e) => { e.stopPropagation(); start(d.cwd); }}><Icon name="add" small /></button>
-          </span>
-        </div>
+        <RepoRow d={d} active={active} here={d.cwd === here} open={isOpen(d)} icon={icon} creating={Boolean(creating)} toggle={() => flip(setToggled, d.cwd)} newTree={() => newTree(d)} start={() => start(d.cwd)} />
         {creating?.repo === d.cwd && (
           <div className="row session worktree removing" title={creating.branch}>
             <Icon name="git-branch" small />
@@ -354,17 +335,15 @@ export function OpenChats() {
   return (
     <div className="sessions chats">
       <div className="sessions-bar">
-        <button className="new-chat" onClick={() => setUi({ repoPicker: true })}><Icon name="add" small /> New session in a repo</button>
-      </div>
-      <div className="sessions-bar">
         <FilterInput value={filter} set={setFilter} />
+        <IconButton icon="add" label="New session in a repo" onClick={() => setUi({ repoPicker: true })} />
       </div>
       <NeedsYou n={waiting.length}>
         {waiting.map((c) => row(c, c.cwd.split('/').pop()))}
       </NeedsYou>
       {pinnedRows.length > 0 && (
         <div className="tree needs">
-          <div className="group">Pinned <span className="badge waiting">{pinnedRows.length}</span></div>
+          <div className="group">Pinned</div>
           {pinnedRows.map((p) => (p.c ? row(p.c, p.repo) : savedRow(p.s!, p.repo)))}
         </div>
       )}
@@ -374,15 +353,7 @@ export function OpenChats() {
             <div className="row project" title={g.key} {...pressable(() => toggle(g))}>
               <span className="twistie"><Icon name={isOpen(g) ? 'chevron-down' : 'chevron-right'} small /></span>
               <span className="name">{g.name}</span>
-              <span className="meta">
-                {isOpen(g) ? (
-                  <>
-                    {g.running > 0 && <span className="badge running" title={`${g.running} running`}>{g.running}</span>}
-                    {g.waiting > 0 && <span className="badge waiting" title={`${g.waiting} need you`}>{g.waiting}</span>}
-                    <span className="count">{g.open.filter((c) => !c.pending).length + g.recent.length}</span>
-                  </>
-                ) : <GroupGlance g={g} seen={seen} />}
-              </span>
+              <span className="meta"><GroupGlance g={g} seen={seen} /></span>
               <span className="acts">
                 <button className="icon-btn" title={`New chat in ${g.name}`} onClick={(e) => { e.stopPropagation(); send({ type: 'new_session', cwd: g.key }); }}><Icon name="add" small /></button>
               </span>
@@ -405,15 +376,11 @@ export function OpenChats() {
 }
 
 function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }) {
-  const { running, needs, unread, last } = groupGlance(g, seen);
-  return (
-    <>
-      {running > 0 && <span className="badge running" title={`${running} running`}>{running}</span>}
-      {needs > 0 && <span className="badge waiting" title={`${needs} need you`}>{needs}</span>}
-      {unread > 0 && <span className="badge" title={`${unread} unread`}>{unread}</span>}
-      {last > 0 && <span className="when">{since(last)}</span>}
-    </>
-  );
+  const { running, needs, unread } = groupGlance(g, seen);
+  if (needs > 0) return <span className="badge waiting" title={`${needs} need you`}>{needs}</span>;
+  if (running > 0) return <span className="badge running" title={`${running} running`}>{running}</span>;
+  if (unread > 0) return <span className="badge quiet" title={`${unread} unread`}>{unread}</span>;
+  return null;
 }
 
 type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;

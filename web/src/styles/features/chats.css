@@ -1,12 +1,6 @@
 .sessions { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 .sessions-bar { display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-6) var(--sp-3) var(--sp-4); }
 .sessions-bar input { flex: 1; min-width: 0; height: var(--size-md); padding: 0 var(--sp-4); font-size: var(--fs-md); line-height: var(--size-row); }
-.sessions-bar .new-chat {
-  flex: 1; height: var(--size-md); display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-3);
-  font-size: var(--fs-sm); color: var(--fg); border-radius: var(--radius-sm);
-}
-.sessions.chats .sessions-bar .new-chat { height: 30px; font-size: var(--fs-md); font-weight: 600; color: var(--on-accent); background: var(--accent-fill); border: 0; }
-@media (hover: hover) { .sessions.chats .sessions-bar .new-chat:hover { background: var(--accent-hover); } }
 .sessions .hint { padding: 0 var(--sp-6) var(--sp-3) var(--sp-4); font-size: var(--fs-xs); color: var(--fg-muted); }
 .sessions .hint.error { color: var(--err); display: flex; gap: var(--sp-2); align-items: center; cursor: pointer; }
 .sessions .tree .hint { padding: var(--sp-3) var(--sp-6) var(--sp-3) var(--sp-12); }
@@ -39,10 +33,6 @@
 .sessions .row.removing .when { display: none; }
 .sessions .row .busy { display: inline-flex; margin: 0 var(--sp-5) 0 auto; }
 .sessions .row .dirty { flex: none; font-size: var(--fs-xs); color: var(--warn); margin-left: var(--sp-3); }
-.sessions .row .badges { flex: none; display: inline-flex; align-items: center; margin-left: auto; padding-right: var(--sp-5); font-weight: 400; }
-.sessions .row .badges .dirty { width: var(--icon-sm); margin: 0; text-align: center; }
-.sessions .row .badges .count { width: var(--size-md); margin: 0; padding: 0; }
-.sessions .row.project:hover .badges { display: none; }
 .sessions .row.more { font-size: var(--fs-sm); color: var(--fg-muted); }
 @media (hover: hover) { .sessions .row.more:hover { color: var(--fg); text-decoration: underline; } }
 .sessions .group, .sessions .row.group-row {
@@ -103,12 +93,10 @@
 .sessions.workspace .row.repo-row.dim .name { color: var(--fg-muted); }
 .sessions.workspace .row.repo-row.here .name { color: var(--accent-text); }
 .sessions.workspace .row.repo-row.two { height: auto; min-height: var(--size-row); padding-top: var(--sp-1); padding-bottom: 3px; align-items: flex-start; }
-.sessions.workspace .row.repo-row.two > :is(.twistie, .icon, .badges, .acts) { margin-top: 3px; }
+.sessions.workspace .row.repo-row.two > :is(.twistie, .icon, .acts) { margin-top: 3px; }
 .sessions.workspace .row.repo-row .branch-chip {
   align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.sessions.workspace .row.repo-row .badges .when { min-width: 28px; padding: 0; margin: 0; }
-.sessions.workspace .row.repo-row .badges .count { width: var(--size-sm); }
 .sessions.workspace .row:is(.session, .more) { padding-left: 54px; }
 
 @media (max-width: 900px) {
@@ -117,7 +105,7 @@
   .sessions .row .acts .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .sessions-bar input { height: var(--touch-md); font-size: var(--fs-2xl); }
   .sessions-bar .icon-btn { width: var(--touch-md); height: var(--touch-md); }
-  .sessions .sessions-bar .new-chat, .side-switch button, .sessions .side-switch button { height: var(--touch); font-size: var(--fs-lg); }
+  .side-switch button, .sessions .side-switch button { height: var(--touch); font-size: var(--fs-lg); }
   .sessions .row.live.two { min-height: 48px; padding-top: var(--sp-3); padding-bottom: var(--sp-3); }
   .sessions .lines { line-height: var(--line-md); }
   .sessions .lines .l2 { font-size: var(--fs-md); }

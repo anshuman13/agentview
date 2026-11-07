@@ -1,5 +1,8 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { buildFolders, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
+import { buildFolders, type Folder, chatFinder, chatState, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount } from './folders';
+import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
@@ -250,5 +253,24 @@ describe('renameTitle', () => {
     expect(renameTitle('Escape', 'New', 'Old')).toBeUndefined();
     expect(renameTitle('Enter', '   ', 'Old')).toBeUndefined();
     expect(renameTitle('blur', ' Old ', 'Old')).toBeUndefined();
+  });
+});
+
+describe('RepoRow', () => {
+  const folder = (branch: string): Folder => buildFolders([{ ...repo('shop'), branch, dirty: 3 }], [], [chat('/w/shop', 5)])[0];
+  const render = (d: Folder) => renderToStaticMarkup(createElement(RepoRow, { d, active: true, here: false, open: true, icon: 'folder', creating: false, toggle() {}, newTree() {}, start() {} }));
+
+  it('shows the name and a non-default branch, with the changes in the title only', () => {
+    const html = render(folder('feature-x'));
+    expect(html).toContain('shop');
+    expect(html).toContain('feature-x');
+    expect(html).toContain('title="/w/shop\n3 uncommitted"');
+    expect(html).not.toMatch(/class="(dirty|count|when)"/);
+  });
+
+  it('shows the name only on the default branch', () => {
+    const html = render(folder('main'));
+    expect(html).toContain('shop');
+    expect(html).not.toContain('branch-chip');
   });
 });
