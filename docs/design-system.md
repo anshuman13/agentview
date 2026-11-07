@@ -162,9 +162,9 @@ inset to the text start. The Codex task lists (`.ui-group`), the editor Links an
 
 ### Section header
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
-trailing IconButton sm. Collapsible headers rotate a chevron; no fill, state layer on hover.
+trailing IconButton sm (a text Button sm plain is allowed too). Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
-`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log, the MCP detail pane, every Fold and the report card and next-meeting card heads use it.
+`onToggle` the header is a button with `aria-expanded`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log, the MCP detail pane, every Fold, the report card and next-meeting card heads and the Week goals card use it.
 
 ## Patterns
 
@@ -282,7 +282,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-fold-head | - | Section header | Done |
 | mt-item | - | Row | Done |
 | mt-list | codex/GoalsPage.tsx, codex/Search.tsx, codex/jobs/Jobs.tsx, codex/summary/Summary.tsx | Grouped list | Partial |
-| mt-load-head | codex/Goals.tsx | Section header | Partial |
+| mt-load-head | - | Section header | Done |
 | mt-load-row | - | Row | Done |
 | mt-log-item | - | Row | Done |
 | mt-person-head | - | Section header | Done |

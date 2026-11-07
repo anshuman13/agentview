@@ -443,6 +443,5 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .tasks .tk-row.selected .as-check.picked, .tasks .tk-row.selected .as-check.picked .codicon.icon { color: var(--accent); }
 .as-bulk { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--tk-pad, var(--sp-8)); border-top: 1px solid var(--border); background: var(--raised); }
 .as-bulk-n { margin-right: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
-.gl-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
 .as-pick > .ui-menu { right: auto; left: 0; white-space: nowrap; }
 .as-stale-open { display: flex; flex-direction: column; width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
