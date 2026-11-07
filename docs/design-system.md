@@ -204,6 +204,9 @@ How much a list row may carry. The eye should find the one thing to do without r
   Meetings (Wiki and Jobs share the hook). The indicator is the floating `.as-ptr` spinner chip, not a Row. A pull
   starts after 10px of downward, mostly vertical movement and refreshes at 64px of finger travel; shorter settles
   back. No refresh on desktop.
+- Edge swipe back: phone widths only (max-width 900px). A right swipe from within 20px of the left edge, at least 70px
+  and mostly horizontal, closes the topmost open page or sheet like the Back button. It does nothing on a list, inside
+  a Row swipe or on desktop.
 - Secondary content (history, a reason, earlier replies) is behind the Menu or on the page, not a per-row Fold.
 - Batch actions ("Send all", "Copy list") go in the Section header as its one action, not as a band above
   the rows. Two batch actions become a Menu on the header.
