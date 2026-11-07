@@ -13,6 +13,20 @@ const subscribePhone = (cb: () => void) => {
 };
 const usePhone = () => useSyncExternalStore(subscribePhone, () => matchMedia(PHONE).matches, () => false);
 
+const TYPE_RESET = 700;
+
+export function typeAhead(labels: string[], from: number, buffer: string): number {
+  const lower = buffer.toLowerCase();
+  const cycle = [...lower].every(c => c === lower[0]);
+  const text = cycle ? lower.slice(0, 1) : lower;
+  const start = cycle ? from + 1 : Math.max(from, 0);
+  for (let i = 0; i < labels.length; i++) {
+    const at = (start + i) % labels.length;
+    if (labels[at].trim().toLowerCase().startsWith(text)) return at;
+  }
+  return -1;
+}
+
 export const menuClass = (phone: boolean, className?: string) => cx('ui-menu', phone && 'sheet', className);
 
 export function Menu({ trigger, onClose, className, children }: {
@@ -25,6 +39,7 @@ export function Menu({ trigger, onClose, className, children }: {
   const box = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
+  const typed = useRef({ text: '', timer: 0 });
   useEffect(() => {
     box.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
     const away = (e: PointerEvent) => {
@@ -50,12 +65,26 @@ export function Menu({ trigger, onClose, className, children }: {
     };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', esc);
+    const pending = typed.current;
     return () => {
+      clearTimeout(pending.timer);
       document.removeEventListener('pointerdown', away);
       document.removeEventListener('keydown', esc);
     };
   }, [trigger]);
+  const type = (e: KeyboardEvent) => {
+    const items = [...(box.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
+    if (!items.length) return;
+    e.preventDefault();
+    const pending = typed.current;
+    clearTimeout(pending.timer);
+    pending.text += e.key;
+    pending.timer = window.setTimeout(() => { pending.text = ''; }, TYPE_RESET);
+    const next = typeAhead(items.map(i => i.textContent ?? ''), items.indexOf(document.activeElement as HTMLElement), pending.text);
+    if (next >= 0) items[next].focus();
+  };
   const move = (e: KeyboardEvent) => {
+    if (e.key.length === 1 && e.key !== ' ' && !e.nativeEvent.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey && (e.target as HTMLElement).tagName !== 'SELECT') return type(e);
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key) || (e.target as HTMLElement).tagName === 'SELECT') return;
     const items = [...(box.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
     if (!items.length) return;
