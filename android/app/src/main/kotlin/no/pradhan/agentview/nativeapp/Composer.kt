@@ -1,9 +1,5 @@
 package no.pradhan.agentview.nativeapp
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,18 +29,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
@@ -57,8 +48,6 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     var dismissed by remember(chatId) { mutableStateOf("") }
     var sheet by remember { mutableStateOf<Picker?>(null) }
     var uploading by remember { mutableIntStateOf(0) }
-    val scope = rememberCoroutineScope()
-    val ctx = LocalContext.current
     val compacting = session?.compacting == true
     val typed = text.text.isNotBlank()
 
@@ -67,18 +56,6 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     val trigger = commandTrigger(text.text, text.selection.end)
     val key = trigger?.let { "${it.start}:${it.query}" } ?: ""
     val suggestions = if (trigger != null && key != dismissed) rankCommands(session?.commands ?: emptyList(), trigger.query) else emptyList()
-
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            uploading++
-            val mime = ctx.contentResolver.getType(uri) ?: "image/jpeg"
-            val bytes = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }
-            val path = bytes?.let { hub.attach("photo.${mime.substringAfter('/', "jpg").substringBefore('+')}", mime, it) }
-            uploading--
-            if (path != null) { val t = appendWord(text.text, "[Image: $path] "); set(TextFieldValue(t, TextRange(t.length))) }
-        }
-    }
 
     fun submit(steer: Boolean) {
         val t = text.text
@@ -126,7 +103,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 },
             )
             Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-                IconBtn("add", "Attach image", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
+                AttachButton(hub, { uploading += it }) { path -> val t = appendWord(text.text, "[Image: $path] "); set(TextFieldValue(t, TextRange(t.length))) }
                 Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
                     Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode }, trailingIcon = "chevron-down")
                     Chip(shortModel(modelName(session)), { sheet = Picker.Model }, trailingIcon = "chevron-down")

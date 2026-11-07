@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -191,9 +192,10 @@ private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String, onFi
 @Composable
 private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
     var text by rememberSaveable { mutableStateOf("") }
+    var uploading by remember { mutableIntStateOf(0) }
     val send = {
         val q = text.trim()
-        if (q.isNotEmpty()) {
+        if (q.isNotEmpty() && uploading == 0) {
             val p = profile ?: hub.codexProfile
             hub.askCodex(askText(q, p, st.items.filter { !it.deleted && it.profile == p }, null, st.meetings.filter { it.profile == p }), p)
             text = ""
@@ -205,11 +207,12 @@ private fun AskBar(hub: Hub, st: CodexState, profile: String?) {
             recipes.forEachIndexed { i, r -> if (i > 0) Hairline(); ListRow(r.title, onClick = { text = r.text }) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
-            TextField(text, { text = it }, Modifier.weight(1f), placeholder = "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
+            AttachButton(hub, { uploading += it }) { path -> text = appendWord(text, "[Image: $path] ") }
+            TextField(text, { text = it }, Modifier.weight(1f), placeholder = if (uploading > 0) "Uploading image..." else "Ask Codex about your day, or / for recipes", singleLine = true, pill = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }))
             val dictation = remember { Dictation() }
             VoiceButton({ spoken, final -> dictation.apply(text, text.length, spoken, final)?.let { text = it.first } }, { hub.notice.value = it })
-            IconBtn("send", "Send", { send() }, enabled = text.isNotBlank(), on = text.isNotBlank())
+            IconBtn("send", "Send", { send() }, enabled = text.isNotBlank() && uploading == 0, on = text.isNotBlank() && uploading == 0)
         }
     }
 }
