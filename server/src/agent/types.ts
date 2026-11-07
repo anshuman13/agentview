@@ -64,7 +64,7 @@ export interface AgentHost {
   readonly state: ServerState;
   crons: Cron[];
   emit(m: ServerMessage): void;
-  pushEvent(ev: ChatEvent): void;
+  pushEvent(ev: ChatEvent, opts?: { release?: boolean }): void;
   eventById(id: string): ChatEvent | undefined;
   agentOf(toolUseId: string): AgentEvent | undefined;
   system(text: string): void;

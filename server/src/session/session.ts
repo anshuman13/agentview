@@ -99,12 +99,12 @@ export class AgentSession implements AgentHost {
     for (const l of this.listeners) l(m);
   }
 
-  pushEvent(ev: ChatEvent) {
+  pushEvent(ev: ChatEvent, opts?: { release?: boolean }) {
     this.state.events.push(ev);
     this.index.pushed(ev);
     if (this.state.events.length > MAX_EVENTS + 500) this.state.events = trimHistory(this.state.events);
     this.emit({ type: 'event', event: ev });
-    if (ev.kind === 'tool_result' && !ev.parent) this.release();
+    if (ev.kind === 'tool_result' && !ev.parent && opts?.release !== false) this.release();
   }
 
   private release() {

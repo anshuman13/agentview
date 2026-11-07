@@ -149,7 +149,7 @@ export const workflowName = (input: unknown) => {
   return [i.name, i.workflow, meta, file].find((v): v is string => typeof v === 'string' && v.trim() !== '') ?? 'Workflow';
 };
 
-function workflowEvents(run: WorkflowRun, group: string, callAt: number): ChatEvent[] {
+export function workflowEvents(run: WorkflowRun, group: string, callAt: number): ChatEvent[] {
   return run.agents.flatMap((a) => {
     const id = `${run.runId}:${a.key}`;
     const first = a.msgs.find((m) => m.type === 'user');
@@ -207,7 +207,7 @@ function subagentEvents(msgs: SessionMessage[], parent: string, subagents: Recor
         events.push(toolUseEvent(b.id, b.name, b.input, at, parent));
       } else if (m.type === 'user' && b.type === 'tool_result') {
         const text = toolResultText(b);
-        events.push({ id: randomUUID(), kind: 'tool_result', toolUseId: b.tool_use_id, text: agentUses.has(b.tool_use_id) ? agentReport(text, subagents[b.tool_use_id]) : text.slice(0, 4000), isError: Boolean(b.is_error), at, parent });
+        events.push({ id: `${base}:${i}`, kind: 'tool_result', toolUseId: b.tool_use_id, text: agentUses.has(b.tool_use_id) ? agentReport(text, subagents[b.tool_use_id]) : text.slice(0, 4000), isError: Boolean(b.is_error), at, parent });
       }
     }
   }

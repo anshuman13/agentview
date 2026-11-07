@@ -295,7 +295,7 @@ the footer shows the check count the way it shows loop rounds.
 
 The Agents tab in the task box header lists the subagents of the chat with their status, elapsed time and tokens.
 Click one for its report, prompt and steps. On the phone it is a tab of its own.
-Agents started by a Workflow call are listed under a section named after the workflow, and update live while it runs.
+Agents started by a Workflow call are listed under a section named after the workflow, and update live while it runs, while the chat is open, also during a turn.
 
 ## Deep links
 

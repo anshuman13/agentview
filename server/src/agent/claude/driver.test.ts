@@ -3,6 +3,7 @@ import { appendFileSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AgentSession } from '../../session/session.js';
 import { claudeSession } from './driver.js';
+import { workflowAgents } from './history.js';
 import { JsonlTail } from './tail.js';
 import { contextFrom, historyFrom } from './transcript.js';
 import type { ServerMessage } from '../../../../shared/protocol.js';
@@ -88,6 +89,47 @@ describe('transcript sync', () => {
     expect(await t.read()).toBe('reload');
     expect(t.entries).toEqual([{ b: 1 }, { a: 2 }, { a: 3 }, { a: 4 }, { a: 5 }]);
   });
+
+  it('shows workflow agents live with an open query, once each, without releasing queued messages', async () => {
+    const { s, sessionId, sent } = await setup();
+    const driver = s.driver as unknown as { q: object | null; syncWorkflows: () => Promise<void> };
+    driver.q = {};
+    const release = vi.spyOn(s as unknown as { release: () => void }, 'release');
+    const wf = path.join(dir, sessionId, 'subagents', 'workflows', 'wf_live');
+    const journal = path.join(wf, 'journal.jsonl');
+    const stepId = (e: { kind: string }) => e.kind === 'tool_result' && 'toolUseId' in e && e.toolUseId === 't1';
+    await driver.syncWorkflows();
+    expect(sent).toEqual([]);
+    mkdirSync(wf, { recursive: true });
+    writeFileSync(journal, JSON.stringify({ type: 'started', key: 'k1', agentId: 'a1', label: 'impl', phase: 'build' }) + '\n');
+    await driver.syncWorkflows();
+    expect(sent).toEqual([]);
+    s.pushEvent({ id: 'w1', kind: 'tool_use', name: 'Workflow', input: { name: 'ship' }, summary: '', at: 1 });
+    s.pushEvent({ id: 'w1:r', kind: 'tool_result', toolUseId: 'w1', text: 'Started.\nRun ID: wf_live', isError: false, at: 2 });
+    sent.length = 0;
+    release.mockClear();
+    await driver.syncWorkflows();
+    expect(sent.filter((m) => m.type === 'init')).toEqual([]);
+    expect(sent.map((m) => m.type === 'event' && m.event.id)).toEqual(['wf_live:k1', 'wf_live:k1:agent']);
+    expect(s.eventById('wf_live:k1:agent')).toMatchObject({ status: 'running', group: 'ship' });
+    const step = { type: 'user', uuid: 'u-step', timestamp: new Date(1_800_000_100_000).toISOString(), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] } };
+    writeFileSync(path.join(wf, 'agent-a1.jsonl'), JSON.stringify(step) + '\n');
+    appendFileSync(journal, JSON.stringify({ type: 'result', key: 'k1', agentId: 'a1', result: 'Built' }) + '\n');
+    sent.length = 0;
+    await driver.syncWorkflows();
+    const ids = sent.map((m) => m.type === 'event' && m.event.id);
+    expect(ids).toEqual(expect.arrayContaining(['wf_live:k1:agent', 'wf_live:k1:result', 'u-step:0']));
+    expect(s.eventById('wf_live:k1:agent')).toMatchObject({ status: 'done' });
+    expect(release).not.toHaveBeenCalled();
+    sent.length = 0;
+    await driver.syncWorkflows();
+    expect(sent).toEqual([]);
+    expect(s.state.events.filter(stepId)).toHaveLength(1);
+    const { runs } = await workflowAgents(cwd, sessionId);
+    const msg = (uuid: string, type: string, content: unknown) => ({ type, uuid, session_id: 's', parent_tool_use_id: null, timestamp: new Date(1_800_000_000_000).toISOString(), message: { content } }) as never;
+    const rebuilt = historyFrom([msg('a', 'assistant', [{ type: 'tool_use', id: 'w1', name: 'Workflow', input: { name: 'ship' } }]), msg('r', 'user', [{ type: 'tool_result', tool_use_id: 'w1', content: 'Run ID: wf_live' }])], {}, runs).events;
+    expect(rebuilt.filter(stepId).map((e) => e.id)).toEqual(['u-step:0']);
+  });
 });
 
 describe('history', () => {
@@ -106,4 +148,5 @@ describe('history', () => {
     expect(events.at(-1)).toMatchObject({ text: 'Fixed' });
     expect(context).toBe(1005);
   });
+
 });

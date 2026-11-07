@@ -9,13 +9,13 @@ import { JsonlTail } from './tail.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
 import { inSettings, mcpFrom } from './mcp.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
-import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, workflowAgents, workflowSize, type SubFile, type WorkflowFile } from './history.js';
+import { countAll, lastUuid, projectDir, sessionMessages, subagentMessages, workflowAgents, workflowSize, type SubFile, type WorkflowFile, type WorkflowRun } from './history.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
 import { ENDED, replayText, usageOf } from './tasks.js';
 import { agentResult, agentToolUse, isAgent, patchAgent, taskDone, taskToolUse } from './subagents.js';
 import { sessionUsage } from './usage.js';
 import { LiveText } from './stream.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, type AgentIds } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, RUN_ID, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, historyFrom, noteLaunch, notificationResults, toolResultText, toolUseEvent, workflowEvents, workflowName, type AgentIds } from './transcript.js';
 
 type McpAuth = { mcpAuthenticate(name: string): Promise<{ authUrl?: string; callbackPort?: number }> };
 
@@ -54,6 +54,8 @@ export class ClaudeDriver implements AgentDriver {
   private chain: { entries: any[]; n: number; msgs: SessionMessage[] } | null = null;
   private subFiles = new Map<string, SubFile>();
   private workflowFiles = new Map<string, WorkflowFile>();
+  private liveWorkflowFiles = new Map<string, WorkflowFile>();
+  private workflowTimer: NodeJS.Timeout | undefined;
   private dirty = true;
   private agents: AgentIds = new Map();
   private tasks = new Map<string, RunningTask>();
@@ -133,6 +135,8 @@ export class ClaudeDriver implements AgentDriver {
       this.chain = null;
       this.subFiles = new Map();
       this.workflowFiles = new Map();
+      this.liveWorkflowFiles = new Map();
+      clearTimeout(this.workflowTimer);
       this.dirty = true;
       return;
     }
@@ -145,11 +149,45 @@ export class ClaudeDriver implements AgentDriver {
         if (file && !file.startsWith(sessionId)) return;
         clearTimeout(this.transcriptTimer);
         this.transcriptTimer = setTimeout(() => void this.syncTranscript(false), 300);
+        if (!file?.includes('/subagents/workflows/')) return;
+        clearTimeout(this.workflowTimer);
+        this.workflowTimer = setTimeout(() => void this.syncWorkflows(), 300);
       }).on('error', () => this.watchHistory(false));
     } catch {
       return;
     }
     void this.syncTranscript(false);
+    void this.syncWorkflows();
+  }
+
+  // Adds and updates the agents of running workflows without a rebuild, so they show while a turn runs.
+  private async syncWorkflows() {
+    const sessionId = this.state.session.sessionId;
+    if (!sessionId || this.closed) return;
+    const wf = await workflowAgents(this.cwd, sessionId, this.liveWorkflowFiles).catch(() => null);
+    if (!wf?.runs.length || this.closed || this.state.session.sessionId !== sessionId) return;
+    const calls = new Map<string, string>();
+    for (const e of this.state.events) {
+      if (e.kind !== 'tool_result') continue;
+      const runId = e.text.match(RUN_ID)?.[1];
+      if (runId) calls.set(runId, e.toolUseId);
+    }
+    for (const run of wf.runs) {
+      const call = this.host.eventById(calls.get(run.runId) ?? '');
+      if (call?.kind !== 'tool_use' || call.name !== 'Workflow') continue;
+      this.pushWorkflowRun(run, workflowName(call.input), call.at);
+    }
+  }
+
+  private pushWorkflowRun(run: WorkflowRun, group: string, callAt: number) {
+    for (const ev of workflowEvents(run, group, callAt)) {
+      const have = this.host.eventById(ev.id);
+      if (!have) this.host.pushEvent(ev, { release: false });
+      else if (JSON.stringify(have) !== JSON.stringify(ev)) {
+        Object.assign(have, ev);
+        this.host.emit({ type: 'event', event: have });
+      }
+    }
   }
 
   settled() {
