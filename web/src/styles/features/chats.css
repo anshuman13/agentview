@@ -124,6 +124,11 @@
   .sessions.workspace .row.repo-row.two { min-height: var(--touch-sm); align-items: center; }
 }
 
+@media (max-width: 480px) {
+  .sessions .row.project, .sessions .group, .sessions .row.group-row { height: var(--touch); }
+  .sessions .group, .sessions .row.group-row { line-height: var(--touch); }
+}
+
 .chat-row { display: flex; align-items: center; padding-right: var(--list-pad); }
 .chat-row > .ui-row { flex: 1; min-width: 0; padding-left: var(--sp-12); }
 .chat-row > .ui-row[aria-current='true'] { --state: var(--state-hover); }
