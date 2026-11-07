@@ -272,9 +272,9 @@ The phone behaviours below are summarised in [Phone](features.md#phone).
 - Jobs rows follow this: one badge (Running, Queued, Failed, Off, set by `jobState`), a Run now Button sm, and a More menu with Edit,
   Disable or Enable, Delete. No switch and no last-run line on the row.
 - On phones a list restores its scroll position when the user returns from an item page, keyed by route (list and profile filter), once per return. Tasks and Meetings.
-- Tasks as built: a Tasks row is the title, a meta line (due, then Repeats, checklist count, up to 2 tags, High or
-  Medium, none on done rows), the check as Done, a Needs you Badge on suggested tasks and one More Menu
-  (Open, Snooze, Tomorrow, Move, Delete). The checklist is read and toggled on the task page.
+- Tasks as built: a Tasks row is the title, a meta line (due, then at most one of Repeats, checklist count, High or
+  Medium; no tags, none on done rows), the check as Done, a Needs you Badge on suggested tasks and one More Menu
+  (Open, Snooze, Tomorrow, Move, Delete). A day group is a Section header over one Grouped list; the round + is the only add control. The checklist is read and toggled on the task page.
 - Meetings as built: a meeting row is the title with the profile dot, a meta line (time with the weekday beyond today,
   room, N people), at most one Badge (Live) and one More Menu (Open calendar, Notes). No avatars, tile or
   count badges; a transcript hit replaces the meta as a 2-line clamp.

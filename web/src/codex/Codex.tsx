@@ -1,4 +1,4 @@
-import { Fragment, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
 import { useAssistant, useCodex, useSyncGate } from './data';
@@ -22,12 +22,12 @@ import { when } from './time';
 import { Composer, prepText } from './AskBar';
 import { AddSheet } from './AddSheet';
 import { TagPage } from './TagPage';
-import { AddTask, TaskRow, UNROLL, useActions } from './Task';
+import { UNROLL, useActions } from './Task';
+import { DayGroup, TaskList, type Day } from './TaskGroup';
 import { Overview, Review } from './Overview';
-import { WeekStrip } from './WeekStrip';
 import { useSplit } from './split';
 import { AssistantNav, LISTS } from './nav';
-import { useDrag, type Drop } from './drag';
+import { isDragging, useDrag, type Drop } from './drag';
 import { Back } from '../app/back';
 import { usePullRefresh, useScrolledHeader } from './usePullRefresh';
 import { Skeleton } from '../ui/Skeleton';
@@ -47,11 +47,9 @@ const DAY = 86400_000;
 
 const UPCOMING_DAYS = 7;
 
-type Day = { key: string; label: string; day: number | null; rows: ItemRow[] };
 // Rows keep the order they were dragged into; the rest follow by due time.
 const ranked = (rs: ItemRow[]) => [...rs].sort((a, b) => (a.rank ?? 1e15) - (b.rank ?? 1e15) || (atTime(a.at) ?? 0) - (atTime(b.at) ?? 0));
-// A day's tasks split by part of the day; tasks without a time come first.
-const PARTS = ['Anytime', 'Morning', 'Afternoon', 'Evening'];
+// A day's tasks sort by part of the day; tasks without a time come first.
 const partOf = (r: ItemRow) => { const at = atTime(r.at); if (at == null) return 0; const h = new Date(at).getHours(); return h < 12 ? 1 : h < 17 ? 2 : 3; };
 const sameRow = (a: ItemRow, b: ItemRow) => a.profile === b.profile && a.id === b.id;
 const pickable = (r: ItemRow) => !r.deleted && (r.status === 'open' || r.status === 'suggested');
@@ -92,6 +90,13 @@ export function Assistant() {
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, [!!picked]);
+  // The n key and the palette open the add sheet, except during a drag or selection.
+  useEffect(() => {
+    if (list !== 'tasks') return;
+    const add = () => { if (!isDragging() && !picked) setAdding(true); };
+    window.addEventListener('tasks:add', add);
+    return () => window.removeEventListener('tasks:add', add);
+  }, [list, !!picked]);
   useEffect(() => {
     const live = new Set(snap.items.filter(pickable).map((r) => r.profile + r.id));
     setPicked((p) => (p && [...p].some((k) => !live.has(k)) ? new Set([...p].filter((k) => live.has(k))) : p));
@@ -182,15 +187,6 @@ export function Assistant() {
   for (const d of days) d.rows = d.day == null ? ranked(d.rows) : ranked(d.rows).sort((a, b) => partOf(a) - partOf(b));
   const tomorrow = new Date(now).setHours(24, 0, 0, 0);
   if (drag && !days.some((d) => d.day === tomorrow)) days.splice(1, 0, { key: String(tomorrow), label: 'Tomorrow', day: tomorrow, rows: [] });
-  const chips = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(now).setHours(24 * i, 0, 0, 0);
-    const g = days.find((d) => (i === 0 ? d.key === 'today' : d.key === String(day)));
-    return { key: g?.key ?? String(day), day, count: g ? g.rows.filter((r) => r.status !== 'done' && !r.deleted).length : 0 };
-  });
-  const jump = (key: string) => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    scroller.current?.querySelector(`[data-day="${key}"]`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-  };
   // Dropping sets the order of the day's rows and moves the task to that day.
   function dropRow(row: ItemRow, d: Drop) {
     const target = days.find((x) => x.key === d.section);
@@ -208,35 +204,9 @@ export function Assistant() {
   const toggle = (k: string) => setPicked((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
   const chosen = picked ? snap.items.filter((r) => pickable(r) && picked.has(r.profile + r.id)) : [];
   const bulk = (kind: BulkKind) => { act.bulk(chosen, kind); setPicked(null); };
-  const rows = (rs: ItemRow[], key?: string, droppable = true, parts = false) => {
-    const over = key && droppable && drag?.over?.section === key ? drag.over.index : -1;
-    const shown = rs.filter((r) => r.profile + r.id !== drag?.key);
-    return (
-      <div className="ui-group" data-drop={droppable ? key : undefined}>
-        {rs.map((r, i) => {
-          const k = r.profile + r.id;
-          const line = over >= 0 && shown[over] && shown[over].profile + shown[over].id === k;
-          const part = parts && (i === 0 || partOf(rs[i - 1]) !== partOf(r)) && rs.filter((x) => partOf(x) === partOf(r)).length;
-          return (
-            <Fragment key={k}>
-              {part && <div className="as-part">{PARTS[partOf(r)]} <span>{part}</span></div>}
-              {line && <div className="as-drop-line" />}
-              <TaskRow row={r} inDay={parts} picking={!!picked} selected={picked?.has(k)} onOpen={() => picked ? pickable(r) && toggle(k) : setView({ open: rowKey(r) })} onGrab={key ? start(r, k, r.title ?? '') : undefined} lifted={drag?.key === k} />
-            </Fragment>
-          );
-        })}
-        {over >= 0 && over >= shown.length && <div className="as-drop-line" />}
-        {droppable && drag && !rs.length && <div className="as-drop-empty">Drop here</div>}
-      </div>
-    );
-  };
-  const section = (d: Day) => (d.rows.length > 0 || drag || d.key === 'today') && (
-    <section key={d.key} data-day={d.key} className={drag?.over?.section === d.key && d.day != null ? 'as-target' : undefined}>
-      <Section label={d.label} count={sectionCount(d.rows.length)} />
-      {rows(d.rows, d.key, d.day != null, d.day != null)}
-      {d.day != null && !drag && !picked && <AddTask day={d.day} today={startOfDay} filter={filter} />}
-    </section>
-  );
+  const openRow = (r: ItemRow) => picked ? pickable(r) && toggle(r.profile + r.id) : setView({ open: rowKey(r) });
+  const rows = (rs: ItemRow[], key?: string, droppable = true) => <TaskList rows={rs} sectionKey={key} droppable={droppable} drag={drag} picked={picked} onOpen={openRow} start={start} />;
+  const section = (d: Day) => <DayGroup key={d.key} d={d} drag={drag} picked={picked} onOpen={openRow} start={start} />;
   const fresh = s.review.filter((r) => now - reviewedSince(r) < DAY);
   const older = s.review.filter((r) => now - reviewedSince(r) >= DAY);
   const empty = !s.overdue.length && days.every((d) => !d.rows.length) && !s.review.length;
@@ -261,7 +231,6 @@ export function Assistant() {
           </>}
         />
       </div>
-      {list === 'tasks' && ready && query == null && !picked && <WeekStrip chips={chips} today={startOfDay} onJump={jump} />}
       {gate.error && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.</button>}
       {calError && <button className="as-error" onClick={() => void retryCalendar()}><Icon name="warning" small /> Calendar not updated: {calError}. Tap to retry.</button>}
 

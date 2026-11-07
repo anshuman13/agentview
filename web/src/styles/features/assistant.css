@@ -172,7 +172,7 @@
   .as-snack { bottom: 140px; }
   :is(.ui-section-actions, .dp-when, .gl-row) > .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   /* While a task field has the keyboard, the composer gives its room to the task. */
-  .assistant:has(.as-edit :focus, .as-add.on :focus) .as-composer { display: none; }
+  .assistant:has(.as-edit :focus) .as-composer { display: none; }
   .as-edit-title { font-size: var(--fs-xl) !important; line-height: 24px; padding-top: 10px !important; }
   .as-edit-text { font-size: var(--fs-lg) !important; }
   .as-edit-read { font-size: var(--fs-lg); }
@@ -201,15 +201,6 @@
 .assistant.tasks { --tk-pad: var(--sp-16); --tk-indent: 30px; max-width: calc(732px + 2 * var(--tk-pad)); container: tasks / inline-size; }
 .tasks .tasks-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
 .tasks .tasks-head [role='heading'] { font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
-.as-week { flex: none; display: flex; gap: var(--sp-2); padding: 0 var(--tk-pad) var(--sp-4); }
-.as-week-chip { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: var(--sp-3) 0; border: 0; border-radius: var(--radius-md); font: inherit; color: var(--fg-strong); background: transparent; cursor: pointer; }
-.as-week-chip.today { background: var(--accent); color: var(--on-accent); }
-.as-week-chip.zero { opacity: 0.45; cursor: default; }
-.as-week-dow { font-size: var(--fs-xs); text-transform: uppercase; }
-.as-week-num { font-size: var(--fs-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
-.as-week-count { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; opacity: 0.8; }
-.as-week-dot { position: absolute; top: var(--sp-2); right: var(--sp-2); width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--warn); }
-@media (hover: hover) { .as-week-chip:not(.today, .zero):hover { background: var(--hover); } }
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
 .tasks .as-scroll { padding: var(--sp-4) var(--tk-pad) var(--sp-16); gap: var(--sp-8); }
 .tasks .as-scroll section { gap: var(--sp-2); }
@@ -219,8 +210,6 @@
 .tasks .as-scroll .ui-group { min-height: 4px; padding-left: var(--sp-4); }
 .tasks .as-scroll .ui-group:empty { display: none; }
 .as-scroll .ui-group > :last-child .tk-row::after { display: none; }
-.tasks .as-part { padding: var(--sp-4) 0 var(--sp-1) var(--tk-indent); font-size: var(--fs-xs); font-weight: 500; color: var(--fg-faint); }
-.tasks .as-part > span { font-variant-numeric: tabular-nums; }
 .tasks .tk-row { --lead-w: 18px; gap: var(--sp-3); padding: var(--sp-2) 0; }
 .tasks .tk-row::after { display: block; }
 .tasks .tk-row.has-lead::after { left: var(--tk-indent); }
@@ -282,18 +271,10 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-search { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-2) 0 var(--sp-4); padding: 0 var(--sp-2) 0 var(--sp-5); min-height: 44px; border: 1px solid var(--border-card); border-radius: 12px; background: var(--surface); color: var(--fg-muted); }
 .as-search input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); box-shadow: none; }
 .as-search input:focus { outline: none; box-shadow: none; }
-.as-add { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 44px; margin-top: var(--sp-2); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); font: inherit; font-size: var(--fs-md); cursor: pointer; text-align: left; }
-@media (hover: hover) { button.as-add:hover { color: var(--accent-text); } }
-.as-add-quiet { display: flex; align-items: center; justify-content: center; width: 32px; min-height: 32px; margin: var(--sp-1) 0 0 var(--sp-4); padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg-faint); opacity: 0.6; cursor: pointer; }
-@media (hover: hover) { button.as-add-quiet:hover { color: var(--accent-text); opacity: 1; } }
-/* Floating add on touch, like TickTick: sticks to the bottom right of the task list. */
-.as-fab { display: none; }
-@media (pointer: coarse) {
-  .as-fab { position: sticky; bottom: var(--sp-4); z-index: var(--z-raised); align-self: flex-end; display: grid; place-items: center; flex: none; width: 56px; height: 56px; margin: auto 0 0; padding: 0; border: 0; border-radius: var(--radius-round); background: var(--accent); color: #fff; box-shadow: var(--shadow-md); cursor: pointer; }
-  .as-fab .codicon { font-size: 24px; }
-  .as-fab:active { transform: scale(0.94); }
-  .assistant:has(.as-add.on :focus) .as-fab { display: none; }
-}
+/* Floating add, like TickTick: sticks to the bottom right of the task list. */
+.as-fab { position: sticky; bottom: var(--sp-4); z-index: var(--z-raised); align-self: flex-end; display: grid; place-items: center; flex: none; width: 56px; height: 56px; margin: auto 0 0; padding: 0; border: 0; border-radius: var(--radius-round); background: var(--accent); color: #fff; box-shadow: var(--shadow-md); cursor: pointer; }
+.as-fab .codicon { font-size: 24px; }
+.as-fab:active { transform: scale(0.94); }
 /* Bottom sheets for quick add and dates, like TickTick: a card that rises from the bottom over a scrim. */
 .as-sheet-overlay { position: fixed; inset: 0; z-index: var(--z-sheet); display: flex; flex-direction: column; justify-content: flex-end; background: color-mix(in srgb, var(--scrim-strong) calc(var(--sheet-fade, 1) * 100%), transparent); }
 .as-sheet { display: flex; flex-direction: column; max-height: 92%; overflow-y: auto; padding: 0 var(--sp-8) calc(var(--sp-8) + var(--safe-bottom)); border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; background: var(--group-card); color: var(--fg); }
@@ -360,11 +341,6 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .as-date-row em { font-style: normal; color: var(--fg-muted); }
 .as-date-row input, .as-date-row select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .as-date-row .icon-btn { position: relative; z-index: 1; width: 32px; height: 32px; margin-right: calc(-1 * var(--sp-3)); }
-.as-add.on { color: var(--accent-text); background: var(--surface); border: 1px solid var(--border-card); cursor: text; }
-.as-add-prof { display: grid; place-items: center; width: 28px; height: 28px; margin-left: -6px; padding: 0; border: 0; border-radius: var(--radius-round); background: transparent; cursor: pointer; }
-.as-add-prof .prof-dot { width: 10px; height: 10px; margin: 0; }
-.as-add input { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--fg); font: inherit; box-shadow: none; }
-.as-add input:focus { outline: none; box-shadow: none; }
 .tasks .as-drop-empty { padding: var(--sp-5) var(--sp-7); }
 .tasks .as-target > .ui-group { outline: 1px solid var(--accent); outline-offset: -1px; }
 .tasks .as-composer { padding: var(--sp-4) var(--tk-pad) var(--sp-10); }

@@ -58,7 +58,6 @@ or "not set up"; Slack and Gmail have a "Scan now" button.
 
 ### Tasks
 
-A strip under the Tasks header (hidden in search, selection mode and while the hub is not ready) shows today and the next six days as chips with the weekday, day number and open task count, following the profile filter; today's chip is highlighted and a day with 3 or more meetings or 4 or more hours of them has a dot. Tapping a chip with tasks scrolls to that day's section (smoothly, instantly with reduced motion); a chip with 0 is dimmed and does nothing.
 
 A tap opens the task as its own page, with a back button in the header: title and notes are editable for every task, including ones from Slack or a meeting (see the layout below); Back, Esc, ⌘Enter or a phone swipe-back closes it, saves, and returns to the list at the same scroll with focus on its row (Meetings does the same on phones). A first line over 120 characters is cut at the last space and the rest goes to the top of the notes. Slack and Gmail promises I made myself show under "You said" next to the
 asks under "Is this yours?", where an ask has Copy draft for the reply the scan wrote and Open for its source.
@@ -67,16 +66,14 @@ A focused "Is this yours?" row takes y or Enter for Mine, n or Delete for Not mi
 The Slack scan does not suggest an ask or promise again when one from the same person and chat with a similar title was
 seen, done or dismissed in the last week, nor an ask in a DM where I sent the last message, and it closes that person's suggested DM asks when I sent the last message; an ask answered in the same scan is not saved. The Gmail scan skips an ask or promise from the same sender with a similar title in the same way, and both scans dismiss suggestions nobody reviewed within a week.
 
-- Each day (Today, then Mon 2 Nov and so on) splits its tasks under small Anytime, Morning (before 12:00), Afternoon (before 17:00) and Evening headers with counts, keeping the manual order inside each
-- Closed task rows are calm like TickTick: a check circle coloured by profile (blue Work, magenta Personal), the title (one line), a meta line of the exact time such as 14:30 (none for the 09:00 and 19:00 slots, Nd late in red for overdue) then Repeats, the checklist count, up to 2 tags and High or Medium priority as text, a Needs you badge on suggested tasks, and a More menu (Open, Snooze, Tomorrow, Move to the other profile, Delete; Not done on done rows; Open and Delete on notes) shown on hover or focus on desktop; the source, people, Replied and the estimate show on the task page. Notes keep a preview line
-- A #tag on a task row opens the tag page: a Section header with the tag and an open-task count, the tasks as Rows in a grouped card, and an EmptyState when none are open
-- Today ends with an Add task button and later days with a small + (its dot switches between work and personal when both are shown), which takes times like
-  "friday 10" (also "next tue 3pm", "end of week" or "eow" for Friday 17:00, and "in 3 days 3pm") and stays open for the next one. A bare time like "3pm" in a later day's Add task lands on that day. A typed duration like "30m", "1.5h" or "1h30m" (not after in, every, for or about) becomes the task's estimate, saved as "~30m" in the title; this applies to the phone quick add and the Ask bar in task mode too
-- On the phone a round blue + floats at the bottom right of Tasks, like TickTick. A tap opens a quick-add sheet with the title, a description,
+- Closed task rows are calm like TickTick: a check circle coloured by profile (blue Work, magenta Personal), the title (one line), a meta line of the exact time such as 14:30 (none for the 09:00 and 19:00 slots, Nd late in red for overdue) then at most one of Repeats, the checklist count or High or Medium priority as text (no tags on the row), a Needs you badge on suggested tasks, and a More menu (Open, Snooze, Tomorrow, Move to the other profile, Delete; Not done on done rows; Open and Delete on notes) shown on hover or focus on desktop; the source, people, Replied and the estimate show on the task page. Notes keep a preview line
+- A #tag chip on the task page opens the tag page: a Section header with the tag and an open-task count, the tasks as Rows in a grouped card, and an EmptyState when none are open
+- The + sheet takes times like "friday 10" (also "next tue 3pm", "end of week" or "eow" for Friday 17:00, and "in 3 days 3pm") and stays open for the next one. A typed duration like "30m", "1.5h" or "1h30m" (not after in, every, for or about) becomes the task's estimate, saved as "~30m" in the title; this applies to the phone quick add and the Ask bar in task mode too
+- A round blue + floats at the bottom right of Tasks, like TickTick, and is the only add control; the n key and the palette's add task open the same sheet. A tap opens a quick-add sheet with the title, a description,
   a date button, a Work/Personal toggle (when both are shown) and send; Enter or send saves and keeps the sheet open for the next task.
   Typed times like "friday 10" still work when no date is picked. The flag sets High, Medium or Low priority, the tag button
   starts a #tag in the title (each #word becomes a tag), and the mic dictates the title; a long press on the + opens the sheet already listening
-- Tasks have a priority (a red, orange or blue flag on the row), tags (shown as #tag on the row) and a reminder. On the task page the priority chip
+- Tasks have a priority (a red, orange or blue flag on the row), tags and a reminder. On the task page the priority chip
   sets the priority, the Add tag chip adds tags (the x on a tag chip removes it), and the reminder is in the date sheet on the phone and
   in More on desktop: on time (the default), 5 or 30 minutes, 1 hour or 1 day early, or none. The hub pushes the reminder at that time
 - On the phone, picking a date (from the quick add or a task's date chip) opens a date sheet: Today, Tomorrow, Next Monday and This evening
