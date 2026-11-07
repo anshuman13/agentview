@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -125,16 +127,17 @@ fun CodexScreen(hub: Hub) {
                 filter = filterKey, onFilter = hub::setCodexFilter,
                 onSearch = if (route == null && (page == "overview" || page == "tasks")) { { page = "tasks"; searching = true } } else null,
                 menu = if (route != null) (if (route == "meetings") { close -> ExtraMenu(route, hub, profile, now, chips, decisions, onChip, { decisions = !decisions }, push, close) } else null) else { close ->
-                    MenuItem("Goals", "target", { close(); page = "goals" })
                     MenuItem("Search everything", "search", { close(); page = "search" })
-                    MenuItem("Meetings", "record", { close(); push("meetings") })
-                    MenuItem("Wiki", "book", { close(); push("wiki") })
-                    MenuItem("Jobs", "history", { close(); push("jobs") })
                 },
             )
-            if (!sub) Row(Modifier.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            if (!sub) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                val claims = remember(st.facts, profile) { proposals(st.facts.filter { matchesProfile(profile, it) }).size }
                 Chip("Overview", { page = "overview" }, on = page == "overview")
                 Chip("Tasks", { page = "tasks" }, on = page == "tasks")
+                Chip("Meetings", { push("meetings") })
+                Chip("Jobs", { push("jobs") })
+                Chip(if (claims > 0) "Wiki $claims" else "Wiki", { push("wiki") })
+                Chip("Goals", { page = "goals" })
             }
             st.error?.let { Text("Sync failed: $it. Tap to retry.", Modifier.fillMaxWidth().clickable { refresh() }.padding(Tokens.sp8), style = Type.subheadline, color = av.warn) }
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {

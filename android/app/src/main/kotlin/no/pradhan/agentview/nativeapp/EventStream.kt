@@ -43,10 +43,11 @@ class EventStream(
     private val onConnected: (Boolean) -> Unit,
     private val onData: (String) -> Unit,
 ) {
-    private val http = OkHttpClient.Builder().readTimeout(60, TimeUnit.SECONDS).build()
+    private val http = OkHttpClient.Builder().readTimeout(45, TimeUnit.SECONDS).build()
     private var job: Job? = null
     private var call: Call? = null
     private var lastId = ""
+    @Volatile var lastSeen = 0L
 
     fun start() {
         stop()
@@ -62,7 +63,11 @@ class EventStream(
                         onConnected(true)
                         val parser = SseParser({ lastId = it }, onData)
                         val src = r.body.source()
-                        while (isActive) parser.line(src.readUtf8Line() ?: break)
+                        while (isActive) {
+                            val line = src.readUtf8Line() ?: break
+                            lastSeen = System.currentTimeMillis()
+                            parser.line(line)
+                        }
                     }
                 } catch (_: Exception) {
                 }

@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp
 
 import android.app.Application
+import android.net.ConnectivityManager
+import android.net.Network
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -91,6 +93,22 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         }
     }
 
+    // A switch between Wi-Fi and mobile data leaves the old stream hanging, so it is reopened at once.
+    private val netWatch = object : ConnectivityManager.NetworkCallback() {
+        private var last: Network? = null
+        override fun onAvailable(network: Network) {
+            if (last != null && last != network && (foreground || wantsStream())) stream.start()
+            last = network
+        }
+    }
+
+    init { app.getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(netWatch) }
+
+    override fun onCleared() {
+        runCatching { app.getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(netWatch) }
+        super.onCleared()
+    }
+
     val granted = MutableStateFlow(notifier.granted())
     val wantsPermission = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val liveLoaded = MutableStateFlow(false)
@@ -134,7 +152,8 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     fun draft(chat: String) = drafts[chat] ?: ""
     fun setDraft(chat: String, text: String) { if (text.isEmpty()) drafts.remove(chat) else drafts[chat] = text }
 
-    fun connect() = stream.start()
+    // Keeps a stream that had a ping in the last 25 s when the app comes back, so it does not download everything again.
+    fun connect() { if (!_connected.value || System.currentTimeMillis() - stream.lastSeen > 25_000) stream.start() }
     fun disconnect() { liveLoaded.value = false; stream.stop() }
     fun retry() = stream.start()
 
