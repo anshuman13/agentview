@@ -13,6 +13,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 
 @Composable
 private fun JobState.color(): Color? = when (this) { JobState.Running -> av.ok; JobState.Queued -> av.warn; JobState.Failed -> av.err; JobState.Off -> av.fgFaint }
@@ -47,7 +49,7 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
 fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     val runs = remember(st.runs, job.key) { runsOf(st.runs, job) }
     val state = jobState(job, st.runs, now)
-    var openRun by rememberSaveable(job.key) { mutableStateOf<String?>(null) }
+    var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
@@ -61,19 +63,44 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
             item { SectionHeader("Tools") }
             item { Text(tools, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.body, color = av.fgMuted) }
         }
-        item { SectionHeader("Runs", runs.size.toString()) }
-        if (runs.isEmpty()) item { EmptyState("No runs yet") }
-        else item {
-            Group {
-                runs.take(10).forEachIndexed { i, r ->
-                    if (i > 0) Hairline()
-                    val status = r.str("status") ?: ""
-                    ListRow(r.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" } ?: "Run", runMeta(r), onClick = { openRun = if (openRun == r.id) null else r.id },
-                        trailing = { Text(status, style = Type.label, color = if (status == "error") av.err else if (status == "running") av.ok else av.fgMuted, modifier = Modifier.padding(end = Tokens.sp4)) })
-                    if (openRun == r.id) Text(r.str("output")?.ifEmpty { null } ?: "No output", Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp4), style = Type.subheadline, color = av.fgMuted)
-                }
+        item {
+            Group(Modifier.padding(top = Tokens.sp6)) {
+                val latest = runs.firstOrNull()
+                if (latest == null) ListRow("Runs", "Not run yet")
+                else ListRow("Runs", latest.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" }, onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
             }
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
+    }
+    if (runsOpen) RunsSheet(runs) { runsOpen = false }
+}
+
+@Composable
+private fun RunStatus(status: String) = RowLabel(
+    if (status == "ok") "Succeeded" else status,
+    if (status == "error") av.err else if (status == "running" || status == "ok") av.ok else av.fgMuted,
+)
+
+@Composable
+private fun RunsSheet(runs: List<Row>, onDismiss: () -> Unit) {
+    val shown = runs.take(10)
+    var open by remember { mutableStateOf(shown.firstOrNull()?.id) }
+    val clip = LocalClipboardManager.current
+    Sheet(onDismiss, padded = false) {
+        SectionHeader("Runs", shown.size.toString())
+        Group {
+            shown.forEachIndexed { i, r ->
+                if (i > 0) Hairline()
+                val output = r.str("output")?.ifEmpty { null }
+                val expanded = output != null && open == r.id
+                ListRow(r.long("started_at")?.let { "${weekdayDate(it)} ${clock(it)}" } ?: "Run", runMeta(r).ifEmpty { null },
+                    onClick = if (output != null) ({ open = if (expanded) null else r.id }) else null,
+                    trailing = { RunStatus(r.str("status") ?: ""); if (output != null) Chevron() })
+                if (expanded) {
+                    Text(output!!, Modifier.padding(horizontal = Tokens.sp8), style = Type.subheadline, color = av.fgMuted)
+                    Button("Copy output", { clip.setText(AnnotatedString(output)) }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                }
+            }
+        }
     }
 }
