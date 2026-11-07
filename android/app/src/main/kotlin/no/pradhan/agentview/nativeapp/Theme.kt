@@ -20,7 +20,9 @@ object Sp {
     val s2 = 4.dp
     val s3 = 6.dp
     val s4 = 8.dp
+    val s5 = 10.dp
     val s6 = 12.dp
+    val s7 = 14.dp
     val s8 = 16.dp
     val s12 = 24.dp
     val s16 = 32.dp
