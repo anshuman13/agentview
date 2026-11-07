@@ -265,6 +265,8 @@ function handle(m: ServerMessage) {
       // A new server boot means new code on the dev server too; reload so the client matches it.
       if (m.boot && boot && m.boot !== boot) return location.reload();
       if (m.boot) boot = m.boot;
+      // A chat opened another way (a saved chat, a new one) still leaves the one before it cached.
+      if (shownId !== m.state.session.id) cacheShown();
       set((s) => {
         const same = s.session.id === m.state.session.id;
         const shown = shownId === m.state.session.id;

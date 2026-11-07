@@ -65,6 +65,15 @@ describe('session cache', () => {
     expect(getState().events.slice(0, 3).every((e, i) => e === cached[i])).toBe(true);
   });
 
+  it('caches the chat left by opening a saved one', () => {
+    live('a', 'b');
+    init('a', rows('a', 2));
+    send({ type: 'open_session', sessionId: 's-b' });
+    init('b', rows('b', 1));
+    view('a');
+    expect(ids()).toEqual(['a0', 'a1']);
+  });
+
   it('loads no earlier page for cached rows before their init', async () => {
     live('a', 'b');
     init('a', rows('a', 3), 40);
