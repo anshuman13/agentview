@@ -3,6 +3,7 @@ import path from 'node:path';
 import { ACCOUNT_LABEL, ROW_WINDOW, ACCOUNT_NOTE, COMPACT_AT, EFFORT_LEVELS, type Account, type ChatEvent, type Effort, type Repeat, type ServerMessage, type ServerState, type SessionInfo } from '../../../shared/protocol.js';
 import { clock, errText } from '../../../shared/util.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, Decision, DriverFactory, History, TurnResult } from '../agent/types.js';
+import { resumePrompt, type Stopped } from '../host/restore.js';
 import { Approvals } from './approvals.js';
 import { advance, looping, loopOff, needsApproval, planChangeText, planStep, withLoop, type LoopStep } from './loop.js';
 import { RepeatController, after, fireTime, goalMet, limitReset, restorePrompt } from './repeat.js';
@@ -438,7 +439,14 @@ export class AgentSession implements AgentHost {
   restoreCrons(crons: Cron[], why = 'AgentView restarted') {
     this.crons = crons;
     this.system(`${why}, so Claude is recreating ${crons.length} scheduled ${crons.length === 1 ? 'job' : 'jobs'}`);
-    const text = restorePrompt(crons, why);
+    this.promptOrQueue(restorePrompt(crons, why));
+  }
+
+  resumeStopped(stopped: Stopped) {
+    this.promptOrQueue(resumePrompt(stopped));
+  }
+
+  private promptOrQueue(text: string) {
     if (this.state.session.running) this.queue(text);
     else this.sendPrompt(text);
   }

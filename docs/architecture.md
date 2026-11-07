@@ -22,8 +22,11 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 - The host hashes its own import graph at boot. On a restart request, and whenever an API server connects, it
   restarts only if that hash changed, after running turns end (at most 10 minutes). `POST /api/restart?full`
   forces it.
-- Before exiting, the host writes `~/.agentview/restore.json` (open chats, loops, crons); the next host reopens
-  them from there.
+- Background tasks (workflow runs, background agents, `run_in_background` shell commands) hold the restart like
+  running turns do, and a long-running one holds it to the 10-minute limit.
+- Before exiting, the host writes `~/.agentview/restore.json` (open chats, loops, crons, and any stopped work: the
+  tasks that were running and whether a turn was in progress); the next host reopens them from there and asks
+  each chat with stopped work to resume it.
 - With no API server for five minutes and nothing running, the host saves and exits.
 
 ## Server folders

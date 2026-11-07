@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AgentSession } from './session.js';
 import { prFrom } from './pr.js';
+import { busy } from '../host/restore.js';
 import { fireTime } from './repeat.js';
 import { claudeSession, type ClaudeDriver } from '../agent/claude/driver.js';
 import { historyFrom } from '../agent/claude/transcript.js';
@@ -896,5 +897,34 @@ describe('event windows', () => {
     expect(seen).toHaveLength(1);
     expect(seen[0].events).toHaveLength(400);
     expect(seen[0].earlier).toBeUndefined();
+  });
+});
+
+describe('restart resume', () => {
+  const start = (handle: (m: unknown) => void, id: string, tool_use_id: string) =>
+    handle({ type: 'system', subtype: 'task_started', task_id: id, tool_use_id, task_type: 'local_bash', description: 'sleep 60' });
+
+  it('lists a started background task until its notification, and busy follows it', () => {
+    const { s, handle, result } = fakeSession();
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'sleep 60', run_in_background: true } }] } });
+    start(handle, 't1', 'tu1');
+    result('r1');
+    expect(s.driver.runningTasks()).toMatchObject([{ toolUseId: 'tu1', description: 'sleep 60' }]);
+    expect(busy(s)).toBe(true);
+    handle({ type: 'system', subtype: 'task_notification', task_id: 't1', tool_use_id: 'tu1', status: 'completed', summary: 'done' });
+    expect(s.driver.runningTasks()).toEqual([]);
+    result('r2');
+    expect(busy(s)).toBe(false);
+  });
+
+  it('resumeStopped adds one user event with the run id, and an untouched chat has none', () => {
+    const { s } = fakeSession();
+    const users = () => s.state.events.filter((e) => e.kind === 'user');
+    expect(users()).toHaveLength(0);
+    s.resumeStopped({ midTurn: true, tasks: [{ description: 'build', tool: 'Workflow', runId: 'wf_abc', scriptPath: '/p/build.js' }] });
+    expect(users()).toHaveLength(1);
+    const text = users()[0].kind === 'user' ? users()[0].text : '';
+    expect(text).toContain('wf_abc');
+    expect(text).toContain('resumeFromRunId');
   });
 });

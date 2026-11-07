@@ -14,6 +14,8 @@ export type AskOptions = {
 
 export type Cron = { schedule: string; prompt: string; recurring: boolean };
 
+export type RunningTask = { toolUseId: string; tool: string; description: string };
+
 export type History = { events: ChatEvent[]; context: number | null; cache: CacheInfo | null };
 
 export type TurnResult = { id: string; ok: boolean; text: string; costUsd: number; isError: boolean };
@@ -42,6 +44,8 @@ export interface AgentDriver {
   stopTask(toolUseId: string): Promise<boolean>;
   mcpStatus(): Promise<McpServer[] | null>;
   refreshUsage?(): Promise<void>;
+  // Background tasks (workflow runs, background agents and shell commands) that die with the CLI process.
+  runningTasks?(): RunningTask[];
   reconnectMcp(name: string): Promise<void>;
   toggleMcp(name: string, enabled: boolean): Promise<void>;
   addMcp(name: string, def: unknown): Promise<{ error?: string }>;

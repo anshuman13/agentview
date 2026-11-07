@@ -1,5 +1,38 @@
 import { expect, it } from 'vitest';
-import { parseSaved } from './restore.js';
+import { parseSaved, resumePrompt, stoppedOf } from './restore.js';
+
+const events: any[] = [
+  { id: 'w1', kind: 'tool_use', name: 'Workflow', input: { scriptPath: '/p/build.js' }, summary: '', at: 0 },
+  { id: 'r1', kind: 'tool_result', toolUseId: 'w1', text: 'Started.\nRun ID: wf_abc', isError: false, at: 0 },
+];
+
+it('records a running workflow with its run id and script path', () => {
+  const tasks = [{ toolUseId: 'w1', tool: 'Workflow', description: 'build' }, { toolUseId: 'b1', tool: 'Bash', description: 'watch' }];
+  expect(stoppedOf(events, tasks, false)).toEqual({
+    midTurn: false,
+    tasks: [{ description: 'build', tool: 'Workflow', runId: 'wf_abc', scriptPath: '/p/build.js' }, { description: 'watch', tool: 'Bash' }],
+  });
+});
+
+it('records nothing for an idle chat without tasks', () => {
+  expect(stoppedOf(events, [], false)).toBeUndefined();
+  expect(stoppedOf(events, [], true)).toEqual({ midTurn: true, tasks: [] });
+});
+
+it('keeps a valid stopped entry and drops a malformed one', () => {
+  const stopped = { midTurn: true, tasks: [{ description: 'build', tool: 'Workflow', runId: 'wf_abc' }] };
+  expect(parseSaved(JSON.stringify({ chats: [{ sessionId: 'a', stopped }] }))?.chats[0].stopped).toEqual(stopped);
+  const bad = parseSaved(JSON.stringify({ chats: [{ sessionId: 'a', stopped: { midTurn: true, tasks: [{ tool: 'Bash' }] } }, { sessionId: 'b', stopped: { tasks: 'x' } }] }));
+  expect(bad?.chats.map((c) => c.sessionId)).toEqual(['a', 'b']);
+  expect(bad?.chats.some((c) => 'stopped' in c)).toBe(false);
+});
+
+it('asks Claude to resume workflows by run id', () => {
+  const text = resumePrompt({ midTurn: true, tasks: [{ description: 'build', tool: 'Workflow', runId: 'wf_abc', scriptPath: '/p/build.js' }] });
+  expect(text).toContain('wf_abc');
+  expect(text).toContain('resumeFromRunId');
+  expect(text).toContain('/p/build.js');
+});
 
 it('returns null for input that is not a saved chat list', () => {
   expect(parseSaved('{}')).toBeNull();

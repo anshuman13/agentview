@@ -3,7 +3,7 @@ import path from 'node:path';
 import { watch, type FSWatcher } from 'node:fs';
 import { query, type McpServerConfig, type SessionMessage, type Query, type SDKMessage, type SDKUserMessage, type PermissionMode, type PermissionResult, type HookInput, type HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import { ACCOUNT_LABEL, type Account, type Effort } from '../../../../shared/protocol.js';
-import type { AgentDriver, AgentHost, History } from '../types.js';
+import type { AgentDriver, AgentHost, History, RunningTask } from '../types.js';
 import { AgentSession } from '../../session/session.js';
 import { JsonlTail } from './tail.js';
 import { STATUS_REMINDER, TEAM, agentOptions, userMessage } from './options.js';
@@ -56,7 +56,7 @@ export class ClaudeDriver implements AgentDriver {
   private workflowFiles = new Map<string, WorkflowFile>();
   private dirty = true;
   private agents: AgentIds = new Map();
-  private tasks = new Set<string>();
+  private tasks = new Map<string, RunningTask>();
   private sent: { id: string; text: string }[] = [];
   private rewindIds = new Map<string, string>();
   private taskIds = new Map<string, string>();
@@ -94,6 +94,10 @@ export class ClaudeDriver implements AgentDriver {
     this.detach();
     this.live.end();
     q.close();
+  }
+
+  runningTasks() {
+    return [...this.tasks.values()];
   }
 
   private detach() {
@@ -511,9 +515,11 @@ export class ClaudeDriver implements AgentDriver {
         } else if (msg.subtype === 'permission_denied') {
           if (msg.decision_reason_type !== 'rule') host.blocked(msg.tool_use_id, msg.tool_name, msg.decision_reason || msg.message);
         } else if (msg.subtype === 'task_started') {
-          this.tasks.add(msg.task_id);
-          if (msg.tool_use_id) {
-            const toolUseId = agentToolUse(this.host, msg.tool_use_id);
+          const toolUseId = msg.tool_use_id && agentToolUse(this.host, msg.tool_use_id);
+          const call = toolUseId ? host.eventById(toolUseId) : undefined;
+          const use = call?.kind === 'tool_use' ? call : undefined;
+          this.tasks.set(msg.task_id, { toolUseId: toolUseId || '', tool: use?.name ?? msg.task_type ?? 'task', description: msg.description || use?.summary || '' });
+          if (toolUseId) {
             this.taskIds.set(toolUseId, msg.task_id);
             host.adopt(toolUseId);
             patchAgent(this.host, toolUseId, (a) => ({

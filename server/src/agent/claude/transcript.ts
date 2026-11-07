@@ -4,6 +4,7 @@ import type { WorkflowRun } from './history.js';
 import { BIG_BRO, type AgentEvent, type AgentUsage, type CacheInfo, type ChatEvent } from '../../../../shared/protocol.js';
 
 const COMPACT_SUMMARY = 'This session is being continued from a previous conversation';
+export const RUN_ID = /Run ID: (wf_[\w-]+)/;
 export const ASYNC_LAUNCH = 'Async agent launched';
 export const AGENT_TOOLS = new Set(['Agent', 'Task']);
 const TRAILER = /\s*agentId: \w+[^\n]*\n<usage>[\s\S]*<\/usage>\s*$/;
@@ -70,7 +71,7 @@ export function historyFrom(msgs: SessionMessage[], subagents: Record<string, Se
         events.push({ id, kind: 'user', text: b.text, at });
       } else if (m.type === 'user' && b.type === 'tool_result') {
         const text = toolResultText(b);
-        const runId = workflowCalls.has(b.tool_use_id) ? text.match(/Run ID: (wf_[\w-]+)/)?.[1] : undefined;
+        const runId = workflowCalls.has(b.tool_use_id) ? text.match(RUN_ID)?.[1] : undefined;
         if (runId) runCalls.set(runId, b.tool_use_id);
         if (text.startsWith(ASYNC_LAUNCH)) noteLaunch(agents, b.tool_use_id, text);
         else if (agentUses.has(b.tool_use_id)) {

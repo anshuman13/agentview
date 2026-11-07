@@ -17,7 +17,7 @@ import { replyLine, sumEdits } from '../../../shared/edits.js';
 import { errText } from '../../../shared/util.js';
 import { sendWhenChanged } from './changed.js';
 import { costsOf } from './summaryCache.js';
-import { parseSaved, type Saved } from './restore.js';
+import { agentsRunning, busy, parseSaved, stoppedOf, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
 import { readJson, writeJsonSync } from '../json.js';
@@ -86,8 +86,6 @@ function editsOf(chat: AgentSession) {
   editsCache.set(chat, { events, length: events.length, edits });
   return edits;
 }
-
-const agentsRunning = (chat: AgentSession) => chat.state.events.filter((e) => e.kind === 'agent' && e.status === 'running').length;
 
 function summary(chat: AgentSession): LiveChat {
   const s = chat.state;
@@ -162,7 +160,6 @@ async function closeByUser(chat: AgentSession) {
   return next.id;
 }
 
-const busy = (chat: AgentSession) => chat.state.session.running || chat.state.session.compacting || agentsRunning(chat) > 0;
 const idle = (chat: AgentSession) => !busy(chat) && chat.crons.length === 0 && !chat.state.session.repeat && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== lastViewed;
 
 let orphaned = 0;
@@ -252,7 +249,8 @@ function saveAndExit() {
   if (!serving) process.exit(0);
   const open: Saved[] = [...live.values()].flatMap(({ chat }) => {
     const { sessionId, repeat } = chat.state.session;
-    return sessionId ? [{ sessionId, crons: chat.crons, repeat, queued: chat.queuedMessages }] : [];
+    const stopped = stoppedOf(chat.state.events, chat.driver.runningTasks?.() ?? [], chat.state.session.running);
+    return sessionId ? [{ sessionId, crons: chat.crons, repeat, queued: chat.queuedMessages, ...(stopped && { stopped }) }] : [];
   });
   const chats = [...open, ...unrestored.filter((u) => !open.some((c) => c.sessionId === u.sessionId))];
   writeJsonSync(RESTORE, { view: lastViewed?.state.session.sessionId, chats });
@@ -269,7 +267,7 @@ function restart(now: boolean, force: boolean) {
   if (restarting) return true;
   broadcast({ type: 'restarting' });
   for (const { chat } of live.values()) chat.holdRepeat();
-  // Background agents live in the Claude process, so they hold the restart too.
+  // Background agents and tasks live in the Claude process, so they hold the restart too.
   // A turn that never ends (a card nobody answers) must not hold the restart and every loop for good.
   const deadline = Date.now() + 10 * 60_000;
   restarting = setInterval(() => {
@@ -294,6 +292,7 @@ async function restore() {
     if (!chat) return;
     if (s.crons.length) chat.restoreCrons(s.crons);
     if (s.repeat) chat.resumeRepeat(s.repeat);
+    if (s.stopped) chat.resumeStopped(s.stopped);
     for (const q of s.queued ?? []) void chat.prompt(q.text, q.id);
   }));
   await rm(RESTORE, { force: true });
