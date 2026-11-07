@@ -188,7 +188,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     // Opens a saved session; true once its live chat exists and is shown.
     suspend fun openSaved(sessionId: String): Boolean {
-        if (readOnly) { notice.value = READ_ONLY_SENT; return false }
+        if (readOnly) { notice.value = READ_ONLY_OPEN; return false }
         markSeen(sessionId)
         post(openSessionCmd(sessionId), store.wanted)
         val chat = withTimeoutOrNull(20_000) { store.state.first { s -> s.live.any { it.sessionId == sessionId } } }?.live?.first { it.sessionId == sessionId } ?: return false
