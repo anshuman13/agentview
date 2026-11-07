@@ -154,7 +154,7 @@ icon, title in body type one line with ellipsis, meta in label type `--meta-fg`,
 IconButton sm or Chip shown on hover. Hairline only between groups.
 `<Row leading title meta trailing lines href onClick>` (web/src/ui/Row.tsx, components/rows.css): 48px
 minimum, title clamps to 1 or 2 lines, a hairline under each row starts at the title, state layers
-as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button Row takes an optional `action` (one IconButton sm) beside it. `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings, the digest, brief and Prep cards, and the wiki page claims and search hits use it.
+as buttons, a button, a link (with href) or a plain div that holds its own controls and passes its props on (`plain`). A button Row takes an optional `action` (one IconButton sm) beside it. `AskRow` (web/src/ui/AskRow.tsx) is a Row with up to two actions at the end (one primary item and a More menu), used for Show all and the overview ask rows. Status: built; the topic timeline and meeting actions in Meetings, the digest, brief and Prep cards, the wiki page claims and search hits, and the Settings page use it.
 
 Testing: Row, Section, Chip and AskRow are tested by rendering to static markup and asserting the root element, classes and each branch (plain, href, action) in `web/src/ui/Row.test.ts`, `longPress.test.ts` (the press timer), `Section.test.ts`, `Button.test.ts` and `AskRow.test.ts`. A new branch or class on one of them needs a case in its test. `web/src/app/pages.smoke.test.tsx` renders Overview, Tasks, Meetings and `/design` on an empty store; a new top-level page or list gets a case there. `web/src/design/a11y.test.tsx` checks the `/design` markup for accessible names and menu roles, and `web/src/design/stories.test.tsx` checks that every primitive in this section has a Block in `/design`.
 
@@ -195,7 +195,7 @@ A header that heads a list of rows shows its full row count as the quiet Badge (
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm (a text Button sm plain is allowed too). 44px hit area at max-width 480px. Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
-`onToggle` the header is a button with `aria-expanded`. At max-width 480px a header that heads a group in Tasks, Meetings or the Today block is sticky at the top of its scroll container, opaque `--bg`, `--z-raised`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log, the MCP detail pane, every Fold, the report card and next-meeting card heads and the Week goals card use it.
+`onToggle` the header is a button with `aria-expanded`. At max-width 480px a header that heads a group in Tasks, Meetings or the Today block is sticky at the top of its scroll container, opaque `--bg`, `--z-raised`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log, the MCP detail pane, every Fold, the report card and next-meeting card heads and the Week goals card and the Settings page use it.
 
 ## Patterns
 
@@ -339,6 +339,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | obs-hint empty variants | ops/Observe.tsx | EmptyState | Partial (error, warn, ok, mono, setup, loading stay as layout) |
 | obs-ask | ops/Observe.tsx | Button | Partial (Snowflake action stays) |
 | ov-ask-line | - | Row (AskRow) | Done |
+| settings-* | - | Section and Row | Done |
 | sm-line | codex/summary/Summary.tsx | Row | Done |
 | wk-claim | codex/meetings/OpenQuestions.tsx, codex/meetings/Person.tsx, codex/meetings/Pins.tsx, codex/meetings/Raise.tsx | Row | Partial |
 | wk-contest-head | none | Section header | Done |
