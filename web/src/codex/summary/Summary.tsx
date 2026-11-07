@@ -5,6 +5,8 @@ import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip } from '../../ui/Button';
 import { EmptyState, Panel } from '../../ui/Panel';
+import { Row } from '../../ui/Row';
+import { Section } from '../../ui/Section';
 import { ago, safeHref } from '../../ui/util';
 import { clock } from '../time';
 import { dayLabel } from '../data/dates';
@@ -13,8 +15,11 @@ import { buildReport, type DateRange, type StatusFilter } from './report';
 import '../../styles/features/wiki.css';
 import '../../styles/features/meetings.css';
 
-const CHATS = 8;
+const FIRST = 5;
 const BRIEF_LINES = 8;
+const KINDS = [['dm', 'DMs'], ['mention', 'Mentions'], ['channel', 'Channels']] as const;
+type Kind = (typeof KINDS)[number][0];
+const kindOf = (kind: string | null): Kind => (kind === 'dm' || kind === 'mention' ? kind : 'channel');
 
 // The first lines of a markdown text, cut at a blank line when there is one and with an open code fence closed.
 const head = (lines: string[]) => {
@@ -46,13 +51,14 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
   const snap = useAssistantData();
   const { brief, asks, busy, summarize } = useSlack();
   const { filter } = useView();
-  const [allChats, setAllChats] = useState(false);
+  const [openKinds, setOpenKinds] = useState<Kind[]>([]);
   const [allBrief, setAllBrief] = useState(false);
   const [range, setRange] = useState<DateRange>('week');
   const [status, setStatus] = useState<StatusFilter>('all');
   const since = range === 'today' ? new Date().setHours(0, 0, 0, 0) : Date.now() - 7 * 86400000;
   const report = buildReport(snap.items.filter((r) => filter === 'all' || r.profile === filter), range, status);
   const chats = snap.chats.filter((c) => !c.deleted && (filter === 'all' || c.profile === filter) && c.summary?.trim() && (c.last_at ?? 0) >= since).sort((a, b) => (b.last_at ?? 0) - (a.last_at ?? 0));
+  const groups = KINDS.map(([kind, label]) => ({ kind, label, chats: chats.filter((c) => kindOf(c.kind) === kind) })).filter((g) => g.chats.length);
   const briefLines = brief?.text?.split('\n') ?? [];
   const longBrief = briefLines.length > BRIEF_LINES;
   return (
@@ -98,21 +104,20 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
               {longBrief && <Chip quiet className="ov-more" onClick={() => setAllBrief(!allBrief)}>{allBrief ? 'Show less' : 'Show all'}</Chip>}
             </section>
           )}
-          {chats.length > 0 && (
-            <div className="mt-rows">
-              <div className="as-section"><span className="as-section-name">Chats</span><span>{chats.length}</span></div>
-              {(allChats ? chats : chats.slice(0, CHATS)).map((c) => (
-                <a key={c.profile + c.id} className="mt-row sm-chat" href={safeHref(c.url)} target="_blank" rel="noreferrer">
-                  <span className="mt-body">
-                    <span className="mt-title">{c.name}</span>
-                    <span className="sm-text">{c.summary}</span>
-                    <span className="wk-meta"><span>{c.kind === 'dm' ? 'DM' : c.kind === 'mention' ? 'Mention' : 'Channel'}</span>{c.last_at ? <span>{ago(c.last_at, ' ago')}</span> : null}</span>
-                  </span>
-                </a>
-              ))}
-              {chats.length > CHATS && <Chip quiet className="ov-more" onClick={() => setAllChats(!allChats)}>{allChats ? 'Show less' : `Show ${chats.length - CHATS} more`}</Chip>}
+          {groups.map((g) => (
+            <div key={g.kind}>
+              <Section label={g.label} count={g.chats.length} />
+              <div className="as-group">
+                {(openKinds.includes(g.kind) ? g.chats : g.chats.slice(0, FIRST)).map((c) => {
+                  const summary = c.summary ?? '';
+                  const row = { title: <span title={summary}>{c.name || 'Untitled'}</span>, meta: `${c.last_at ? `${ago(c.last_at)} ago · ` : ''}${summary.split('\n')[0]}` };
+                  const url = safeHref(c.url);
+                  return url ? <Row key={c.profile + c.id} {...row} href={url} /> : <Row key={c.profile + c.id} {...row} plain />;
+                })}
+                {g.chats.length > FIRST && !openKinds.includes(g.kind) && <div className="ov-ask"><div className="ov-ask-line"><Button variant="quiet" size="sm" onClick={() => setOpenKinds([...openKinds, g.kind])}>Show all {g.chats.length}</Button></div></div>}
+              </div>
             </div>
-          )}
+          ))}
           {!chats.length && !brief?.text && <EmptyState size="md" icon="comment-discussion" title="Nothing read yet." hint="Slack is read every 15 minutes on weekdays from 07 to 19." />}
         </div>
       </div>

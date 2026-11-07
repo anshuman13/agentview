@@ -228,8 +228,6 @@ li.contested .wk-feed-kind { color: var(--warn); }
 
 .sm-brief a { display: inline-block; padding: 6px 0; }
 .sm-brief { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-6) var(--sp-7); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-.sm-chat { text-decoration: none; }
-.sm-chat .mt-body { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
 .sm-text { color: var(--fg-muted); font-size: var(--fs-sm); line-height: 1.45; }
 
 .wk-claim.proposed::marker { color: var(--accent-text); }
@@ -269,8 +267,7 @@ li.contested .wk-feed-kind { color: var(--warn); }
 .mt-rows > .as-section .as-section-name { font-weight: 600; color: var(--fg-strong); }
 .mt-rows:has(> .as-section) > .mt-row { padding: var(--sp-4) var(--sp-2); min-height: var(--row-h); }
 .mt-rows:has(> .as-section) > .mt-row + .mt-row { border-top: var(--hairline); }
-.sm-chat .mt-title { font-size: var(--row-title); }
-.sm-text, .sm-chat .wk-meta { font-size: var(--row-meta); color: var(--meta-fg); }
+.sm-text { font-size: var(--row-meta); color: var(--meta-fg); }
 .sm-brief { border: 0; border-radius: 0; background: transparent; padding: 0 var(--sp-2) var(--sp-6); border-bottom: var(--hairline); }
 
 .wk-more { align-self: flex-start; border: 0; background: transparent; padding: var(--sp-3) var(--sp-4); color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
