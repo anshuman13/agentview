@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { isBlock } from '../../../shared/util';
 import { useAssistantData } from './data';
-import { live, type Meeting } from './data/wiki';
+import { live } from './data/wiki';
 import { split } from './data/engine';
 import { useView } from './view';
 import { dayEnd, dayStart } from './data/dates';
@@ -37,24 +37,15 @@ export function useSplit() {
   const minute = useMinute();
   return useMemo(() => {
     const now = Date.now();
-    const rows = live(snap.meetings).filter((m) => m.starts_at != null && (filter === 'all' || m.profile === filter));
-    const all = rows.filter((m) => !isBlock(m.id));
+    const all = live(snap.meetings).filter((m) => m.starts_at != null && (filter === 'all' || m.profile === filter) && !isBlock(m.id));
     const ahead = all.filter((m) => (m.ends_at ?? m.starts_at!) > now).sort((a, b) => a.starts_at! - b.starts_at!);
     const endOfDay = dayEnd(now);
     const today = ahead.filter((m) => m.starts_at! < endOfDay);
     const next = today[0];
     const startOfDay = dayStart(now);
-    const endOfTomorrow = dayEnd(endOfDay);
-    const byStart = (a: Meeting, b: Meeting) => a.starts_at! - b.starts_at!;
-    // Open actions from earlier meetings with the same title.
-    const earlier = next ? new Set(all.filter((m) => m.profile === next.profile && m.title === next.title && m.starts_at! < next.starts_at!).map((m) => m.id)) : null;
-    const carried = earlier ? snap.items.filter((r) => !r.deleted && r.status === 'open' && r.meeting_id && r.profile === next!.profile && r.meeting_id !== next!.id && earlier.has(r.meeting_id)).length : 0;
     return {
-      ...sharedSplit(snap.items, filter, now), next, then: today[1], carried, endOfDay, endOfTomorrow,
-      meetingsToday: all.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay).sort(byStart),
-      busyToday: rows.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay),
-      busyTomorrow: rows.filter((m) => m.starts_at! >= endOfDay && m.starts_at! < endOfTomorrow),
-      meetingsTomorrow: all.filter((m) => m.starts_at! >= endOfDay && m.starts_at! < endOfTomorrow).sort(byStart),
+      ...sharedSplit(snap.items, filter, now), next, endOfDay,
+      meetingsToday: all.filter((m) => m.starts_at! >= startOfDay && m.starts_at! < endOfDay).sort((a, b) => a.starts_at! - b.starts_at!),
       nextLater: today.find((m) => m !== next && m.starts_at! > now) ?? ahead.find((m) => m.starts_at! >= endOfDay),
     };
   }, [snap.items, snap.meetings, filter, minute]);

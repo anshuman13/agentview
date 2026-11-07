@@ -39,7 +39,7 @@ afterEach(() => setView({ list: 'today' }));
 const overview = () => {
   const now = Date.now();
   const end = new Date(now).setHours(23, 59, 59, 999);
-  const s = { ...sharedSplit([], 'all', now), next: undefined, then: undefined, carried: 0, endOfDay: end, endOfTomorrow: end + 86400000, meetingsToday: [], busyToday: [], busyTomorrow: [], meetingsTomorrow: [], nextLater: undefined };
+  const s = { ...sharedSplit([], 'all', now), next: undefined, endOfDay: end, meetingsToday: [], nextLater: undefined };
   return <Overview s={s as never} dueToday={[]} onPrep={() => {}} />;
 };
 

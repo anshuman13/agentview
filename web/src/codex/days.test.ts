@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayLabel, greeting, heavyDay, moveTo } from './days';
+import { dayLabel, greeting, moveTo } from './days';
 
 const d = (day: number, h = 0, m = 0) => new Date(2026, 10, day, h, m).getTime();
 
@@ -22,11 +22,4 @@ describe('days', () => {
     expect(moveTo({ at: String(d(2, 8)) }, d(6), today)).toBe(d(6, 8));
   });
 
-  it('marks a day with 3 meetings or 4 hours of them', () => {
-    const m = (day: number, h: number, mins: number) => ({ starts_at: d(day, h), ends_at: d(day, h) + mins * 60000 });
-    expect(heavyDay([m(4, 9, 30), m(4, 11, 30)], d(4))).toBe(false);
-    expect(heavyDay([m(4, 9, 30), m(4, 11, 30), m(4, 14, 30)], d(4))).toBe(true);
-    expect(heavyDay([m(4, 9, 120), m(4, 13, 120)], d(4))).toBe(true);
-    expect(heavyDay([m(5, 9, 30), m(5, 10, 30), m(5, 11, 30), m(5, 9, 300)], d(4))).toBe(false);
-  });
 });

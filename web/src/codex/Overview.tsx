@@ -14,7 +14,7 @@ import { useView } from './view';
 import { when } from './time';
 import type { useSplit } from './split';
 import { UpNext } from './overview/UpNext';
-import { TodayList, doneCount } from './overview/TodayList';
+import { TodayList } from './overview/TodayList';
 import { NeedsYouSheet } from './overview/NeedsYouSheet';
 
 export { Review } from './overview/Review';
