@@ -6,12 +6,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -103,7 +105,9 @@ fun FileTag(name: String, dir: Boolean = false) {
         FileHue.Green -> c.fileGreen; FileHue.Red -> c.fileRed; FileHue.Pink -> c.filePink; FileHue.Cyan -> c.fileCyan
         FileHue.Gray -> c.fileGray; FileHue.Folder -> c.fileFolder
     }
-    Text(fileTag(name), style = Mono.copy(fontSize = Tokens.fsCaption), color = color, maxLines = 1, softWrap = false)
+    Box(Modifier.width(Tokens.leadWidth * 2), contentAlignment = Alignment.CenterStart) {
+        Text(fileTag(name), style = Mono.copy(fontSize = Tokens.fsCaption), color = color, maxLines = 1, softWrap = false)
+    }
 }
 
 @Composable
@@ -138,7 +142,7 @@ fun CodeLine(number: String, text: AnnotatedString, mark: Char = ' ', wrap: Bool
 
 // One diff line as a CodeLine, its mark in the gutter and its text highlighted for `lang`.
 @Composable
-fun DiffCodeLine(l: DiffLine, lang: Lang, wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24, onLongClick: (() -> Unit)? = null) {
+fun DiffCodeLine(l: DiffLine, lang: Lang, wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24, onLongClick: (() -> Unit)? = null, number: String? = null) {
     val text = if (l.mark == '@') AnnotatedString(l.text) else highlighted(l.text, remember(l, lang) { highlightLine(l.text, lang).first })
-    CodeLine(if (l.mark == '@') "" else l.mark.toString(), text, l.mark, wrap, scroll, gutter, onLongClick)
+    CodeLine(number ?: if (l.mark == '@') "" else l.mark.toString(), text, l.mark, wrap, scroll, gutter, onLongClick)
 }

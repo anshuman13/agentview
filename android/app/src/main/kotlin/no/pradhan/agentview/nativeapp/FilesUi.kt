@@ -167,10 +167,11 @@ fun NumberedDiffView(rows: List<DiffRow>, lang: Lang, wrap: Boolean, onComment: 
     val scroll = rememberScrollState()
     val haptic = LocalHapticFeedback.current
     if (rows.isEmpty()) { EmptyState("No changes"); return }
+    val digits = (rows.maxOfOrNull { it.no } ?: 0).toString().length
     LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4)) {
         items(rows) { r ->
             val long = if (r.line.mark == '@') null else { { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onComment(r) } }
-            DiffCodeLine(r.line, lang, wrap, scroll, onLongClick = long)
+            DiffCodeLine(r.line, lang, wrap, scroll, onLongClick = long, number = if (r.line.mark == '@') "" else "${r.no.toString().padStart(digits)} ${r.line.mark}")
         }
     }
 }
