@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.launch
@@ -245,8 +246,11 @@ private fun RepoMark(name: String) {
 
 @Composable
 private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedString, state: ChatState?, selected: Boolean, actions: RowActions, onClick: () -> Unit, onResume: (() -> Unit)? = null) {
+    // Like Slack's unread channels, a chat with a reply or question you have not opened has a bold title.
+    val unread = state == ChatState.Done || state == ChatState.Needs
     ListRow(
-        title, meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
+        if (unread) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(title) } } else title,
+        meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
         trailing = {
             if (onResume != null) Button("Resume", onResume, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
             when (state) {
