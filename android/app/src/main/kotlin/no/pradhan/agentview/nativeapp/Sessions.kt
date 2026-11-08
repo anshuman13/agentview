@@ -183,7 +183,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
     val unread = state == ChatState.Done || state == ChatState.Needs
     ListRow(
         title, meta, lines = 2, metaLines = 2, selected = selected, onClick = onClick,
-        leading = { if (unread) StatusDot(DotState.Unread) },
+        leading = if (unread) ({ StatusDot(DotState.Unread) }) else null,
         trailing = {
             when (state) {
                 ChatState.Needs -> Badge("Needs you", BadgeTone.Waiting)
