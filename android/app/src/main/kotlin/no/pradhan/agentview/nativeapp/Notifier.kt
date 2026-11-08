@@ -92,12 +92,13 @@ class Notifier(private val app: Application) {
     @android.annotation.SuppressLint("MissingPermission")
     fun waiting(snap: WaitingSnapshot, badge: Int = snap.total) {
         if (badge == 0 || !granted()) { manager.cancel(WAITING_ID); return }
-        val style = NotificationCompat.InboxStyle().setBigContentTitle("Needs you").setSummaryText("$badge waiting")
+        val text = if (snap.total > 0) "${snap.total} ${if (snap.total == 1) "chat" else "chats"} waiting" else "$badge ${if (badge == 1) "item" else "items"} in Needs you"
+        val style = NotificationCompat.InboxStyle().setBigContentTitle("Needs you").setSummaryText(text)
         snap.lines.forEach { style.addLine(it.text()) }
         val built = NotificationCompat.Builder(app, WAITING_CHANNEL)
             .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("Needs you")
-            .setContentText("$badge waiting")
+            .setContentText(text)
             .setStyle(style)
             .setNumber(badge)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
