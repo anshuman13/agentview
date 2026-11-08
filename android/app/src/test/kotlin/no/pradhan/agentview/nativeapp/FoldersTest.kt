@@ -104,12 +104,12 @@ class FoldersTest {
     fun statusFilterNarrowsRecentAndCounts() {
         val ws = Workspace(repos, trees, listOf(saved("s1", "/w/agentview", 50)), seen = mapOf("s1" to 10L))
         val groups = groupByRepo(listOf(live("r", "/w/agentview", running = true, active = 9), live("n", "/w/shop", pending = 1, active = 8)), ws)
-        val none = emptyMap<String, SavedSession>()
-        fun ids(f: StatusFilter) = recentRows(groups, "", emptySet(), f, ws.saved.associateBy { it.sessionId }, ws.seen).map { it.key }
+        val bySession = ws.saved.associateBy { it.sessionId }
+        fun ids(f: StatusFilter) = recentRows(groups, "", emptySet(), f, bySession, ws.seen).map { it.key }
         assertEquals(listOf("r"), ids(StatusFilter.Running))
         assertEquals(listOf("n"), ids(StatusFilter.Needs))
         assertEquals(listOf("s1"), ids(StatusFilter.Done))
-        assertEquals(1, statusCount(groups, StatusFilter.Done, ws.saved.associateBy { it.sessionId }, ws.seen))
+        assertEquals(1, statusCount(groups, StatusFilter.Done, bySession, ws.seen))
         assertEquals(DotState.Warn, dotFor(ChatState.Needs))
         assertEquals(DotState.Idle, dotFor(null))
     }

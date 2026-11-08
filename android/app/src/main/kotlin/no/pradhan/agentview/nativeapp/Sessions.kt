@@ -137,7 +137,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             Column(Modifier.fillMaxSize()) {
                 PageHeader(repo.name, onBack = { repoKey = null })
                 statusChips(listOf(repo))
-                val rows = repo.items().filter { status.matches(it.state(saved, seen)) }
+                val rows = repo.items().map { it.copy(repo = null) }.filter { status.matches(it.state(saved, seen)) }
                 if (rows.isEmpty()) EmptyState(if (byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", action = { Button("New chat", { hub.newChat(repo.key) }, variant = ButtonVariant.Tinted, icon = "add") })
                 else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
                     lazyGroup(rows, { "c-${it.key}" }) { row(it) }
