@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Text
@@ -35,11 +34,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
-private enum class Picker { Mode, Model, Effort, Account }
+private enum class Picker { Settings, Mode, Model, Effort, Account }
 
 @Composable
 fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, waiting: Boolean) {
@@ -74,15 +74,15 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
 
     val c = av
     val card = RoundedCornerShape(Tokens.radius)
-    Column(Modifier.fillMaxWidth().background(c.bg).padding(start = Tokens.sp4, end = Tokens.sp4, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+    Column(Modifier.fillMaxWidth().background(c.bg).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
         if (suggestions.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max = Tokens.imageMax).well(c).verticalScroll(rememberScrollState())) {
             for (s in suggestions) Column(
-                Modifier.fillMaxWidth().heightIn(min = Tokens.touchMd).clickable {
+                Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable {
                     val r = acceptSuggestion(text.text, trigger!!.start, text.selection.end, "/${s.name}")
                     set(TextFieldValue(r.first, TextRange(r.second)))
                 }.padding(horizontal = Tokens.sp6, vertical = Tokens.sp3),
             ) {
-                Text("/${s.name}", style = Mono.copy(fontSize = Tokens.fsLg), color = c.fg)
+                Text("/${s.name}", style = Type.body.copy(fontFamily = FontFamily.Monospace), color = c.fg)
                 if (s.description.isNotEmpty()) Text(s.description, style = Type.footnote, color = c.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -90,26 +90,25 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
             BasicTextField(
                 value = text,
                 onValueChange = { set(it) },
-                modifier = Modifier.fillMaxWidth().padding(start = Tokens.sp6, end = Tokens.sp6, top = Tokens.sp5, bottom = Tokens.sp1),
-                textStyle = Type.body.copy(fontSize = Tokens.fsLg, lineHeight = Tokens.lineMd, color = c.fg),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4),
+                textStyle = Type.body.copy(color = c.fg),
                 cursorBrush = SolidColor(c.accent),
                 maxLines = 6,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 decorationBox = { inner ->
-                    Box(Modifier.heightIn(min = Tokens.sp16)) {
-                        if (text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body.copy(fontSize = Tokens.fsLg, lineHeight = Tokens.lineMd), c.fgFaint, 2)
+                    Box(Modifier.heightIn(min = Tokens.sp20)) {
+                        if (text.text.isEmpty()) WordClamp(androidx.compose.ui.text.AnnotatedString(placeholder), Type.body, c.fgFaint, 2)
                         inner()
                     }
                 },
             )
-            Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(start = Tokens.sp2, end = Tokens.sp4, bottom = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
                 AttachButton(hub, { uploading += it }) { path -> val t = appendWord(text.text, "[Image: $path] "); set(TextFieldValue(t, TextRange(t.length))) }
-                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-                    val account = session?.account ?: "main"
-                    if ((session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null) Chip(ACCOUNT_LABEL[account] ?: account, { hub.refreshUsage(); sheet = Picker.Account }, late = usageHigh(session?.usage), tone = if (account == "main") ChipTone.Personal else ChipTone.Work)
-                    Chip(MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", { sheet = Picker.Mode })
-                    Chip(shortModel(modelName(session)), { sheet = Picker.Model })
-                    session?.effort?.let { Chip(EFFORT_LABEL[it] ?: it, { sheet = Picker.Effort }) }
+                Row(Modifier.weight(1f)) {
+                    if (!(running && typed)) {
+                        val account = session?.account ?: "main"
+                        Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default"), { sheet = Picker.Settings }, Modifier.weight(1f, fill = false), late = usageHigh(session?.usage), tone = if (account == "main") ChipTone.Personal else ChipTone.Work)
+                    }
                 }
                 if (uploading > 0) RowLabel("Uploading", c.fgFaint)
                 if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
@@ -117,13 +116,21 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                 if (running && typed) Button("Stop and send", { submit(true) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 val canSend = typed && uploading == 0
                 val haptic = LocalHapticFeedback.current
-                if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp5).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
-                else SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); submit(false) }) { AvIcon("send", null, Tokens.iconSm, tint = if (canSend) c.sunken else c.fgFaint) }
+                if (running && !typed) SendCircle("Stop", true, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
+                else SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); submit(false) }) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.sunken else c.fgFaint) }
             }
         }
     }
 
     when (sheet) {
+        Picker.Settings -> Sheet({ sheet = null }, padded = false, full = false) {
+            SectionHeader("Chat settings")
+            val account = session?.account ?: "main"
+            if ((session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); sheet = Picker.Account })
+            ListRow("Permission mode", MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", onClick = { sheet = Picker.Mode })
+            ListRow("Model", shortModel(modelName(session)), onClick = { sheet = Picker.Model })
+            session?.effort?.let { ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { sheet = Picker.Effort }) }
+        }
         Picker.Mode -> PickerSheet("Permission mode", PERMISSION_MODES.map { Choice(it, MODES[it]?.label ?: it, MODES[it]?.detail ?: "") }, session?.permissionMode ?: "default", { hub.setMode(it) }) { sheet = null }
         Picker.Model -> PickerSheet("Select model", (session?.models ?: emptyList()).map { Choice(it.value, it.displayName, it.description) }, if (session?.team == true) "team" else session?.model, { hub.setModel(it) }) { sheet = null }
         Picker.Effort -> PickerSheet("Select effort", EFFORT_LEVELS.map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { sheet = null }
@@ -135,7 +142,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
 @Composable
 private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, glyph: @Composable () -> Unit) {
     Box(Modifier.size(Tokens.touch).clickable(enabled = enabled, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(Tokens.sizeXl).clip(CircleShape).background(if (enabled) av.fg else av.hover), contentAlignment = Alignment.Center) { glyph() }
+        Box(Modifier.size(Tokens.sp20).clip(CircleShape).background(if (enabled) av.fg else av.hover), contentAlignment = Alignment.Center) { glyph() }
     }
 }
 

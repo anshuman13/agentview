@@ -61,6 +61,12 @@ class ComposerLogicTest {
     }
 
     @Test
+    fun settingsChipShowsModelAndNonDefaultMode() {
+        assertEquals("Opus 4.8", settingsLabel("claude-opus-4-8", "default"))
+        assertEquals("Opus 4.8 · Plan", settingsLabel("claude-opus-4-8", "plan"))
+    }
+
+    @Test
     fun sendKindDependsOnRunningAndSteer() {
         assertEquals(SendKind.Prompt, sendKind(false, true))
         assertEquals(SendKind.Queue, sendKind(true, false))

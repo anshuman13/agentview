@@ -83,6 +83,9 @@ fun shortModel(name: String): String {
     return Regex("^claude-([a-z]+)-(\\d+)-(\\d+).*$").replace(plain) { m -> "${m.groupValues[1].replaceFirstChar { it.uppercase() }} ${m.groupValues[2]}.${m.groupValues[3]}" }
 }
 
+// The settings chip text: the short model name, plus the mode when it is not Default.
+fun settingsLabel(model: String, mode: String) = if (mode == "default") shortModel(model) else "${shortModel(model)} · ${MODES[mode]?.label ?: mode}"
+
 fun modelName(s: SessionInfo?): String {
     if (s == null) return "Model"
     if (s.team) return "Team"
