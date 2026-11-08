@@ -49,8 +49,8 @@ import androidx.compose.ui.text.withStyle
 fun CheckCircle(done: Boolean, label: String, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     Box(Modifier.size(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }, contentAlignment = Alignment.Center) {
-        Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.ok) else Modifier.border(Tokens.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
-            if (done) AvIcon("check", null, Tokens.size2xs, tint = av.onColor)
+        Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.okContainer) else Modifier.border(Tokens.stroke, av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
+            if (done) AvIcon("check", null, Tokens.size2xs, tint = av.onOkContainer)
         }
     }
 }
@@ -76,7 +76,7 @@ fun taskMeta(row: Row, now: Long, inDay: Boolean, showProfile: Boolean): android
     val preview = if (row.status == "note" && !isRepeat(row.text)) firstLine(row.text) else ""
     val bits = listOfNotNull(extra, tags.ifEmpty { null }, if (showProfile) profileLabel(row.profile) else null)
     return buildAnnotatedString {
-        if (due != null) withStyle(SpanStyle(color = if (at != null && at < now) av.err else if (daysFrom(at ?: now, now) == 0L) av.accentText else av.fgMuted)) { append(due) }
+        if (due != null) withStyle(SpanStyle(color = if (at != null && at < now) av.err else av.fgMuted)) { append(due) }
         if (due != null && bits.isNotEmpty()) append(" · ")
         append(bits.joinToString(" · "))
         if (due == null && bits.isEmpty()) append(preview)
@@ -125,9 +125,9 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
         state = state,
         backgroundContent = {
             val dir = state.dismissDirection
-            Box(Modifier.fillMaxSize().background(if (dir == SwipeToDismissBoxValue.StartToEnd) av.ok else if (dir == SwipeToDismissBoxValue.EndToStart) av.warn else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = if (dir == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
-                if (dir == SwipeToDismissBoxValue.StartToEnd) Row(verticalAlignment = Alignment.CenterVertically) { AvIcon("check", null, Tokens.icon, tint = av.onColor); Text("  Done", color = av.onColor, style = Type.callout) }
-                else if (dir == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("${whenText(later, now)}  ", color = av.onColor, style = Type.callout); AvIcon("calendar", null, Tokens.icon, tint = av.onColor) }
+            Box(Modifier.fillMaxSize().background(if (dir == SwipeToDismissBoxValue.StartToEnd) av.okContainer else if (dir == SwipeToDismissBoxValue.EndToStart) av.warnContainer else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = if (dir == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
+                if (dir == SwipeToDismissBoxValue.StartToEnd) Row(verticalAlignment = Alignment.CenterVertically) { AvIcon("check", null, Tokens.icon, tint = av.onOkContainer); Text("  Done", color = av.onOkContainer, style = Type.callout) }
+                else if (dir == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("${whenText(later, now)}  ", color = av.onWarnContainer, style = Type.callout); AvIcon("calendar", null, Tokens.icon, tint = av.onWarnContainer) }
             }
         },
         content = { body() },

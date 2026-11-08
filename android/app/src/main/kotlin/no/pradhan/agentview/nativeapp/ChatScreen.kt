@@ -64,7 +64,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
             live.title.ifBlank { "Untitled" },
             large = false,
             subtitle = {
-                val toneColor = when (status.tone) { Tone2.Running -> av.accentText; Tone2.Needs -> av.warn; Tone2.Failed -> av.err; Tone2.Idle -> av.fgMuted }
+                val toneColor = when (status.tone) { Tone2.Running -> av.agent; Tone2.Needs -> av.warn; Tone2.Failed -> av.err; Tone2.Idle -> av.fgMuted }
                 val muted = av.fgMuted
                 val usage = session?.usage
                 val warn = av.warn

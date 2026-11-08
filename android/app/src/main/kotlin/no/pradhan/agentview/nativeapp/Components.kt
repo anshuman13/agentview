@@ -51,7 +51,6 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -171,7 +170,7 @@ fun ListRow(
 ) {
     val click = if (onClick != null || onLongClick != null) Modifier.combinedClickable(onClick = { onClick?.invoke() }, onLongClick = onLongClick) else Modifier
     Row(
-        modifier.fillMaxWidth().background(if (selected) av.hover else Color.Transparent).heightIn(min = if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click)
+        modifier.fillMaxWidth().background(if (selected) av.accentSoft else Color.Transparent).heightIn(min = if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click)
             .padding(start = Tokens.listPad, end = if (trailing != null) Tokens.sp4 else Tokens.listPad, top = Tokens.sp5, bottom = Tokens.sp5),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp8),
@@ -233,11 +232,11 @@ fun Button(
 ) {
     val c = av
     val (bg, fg) = when (variant) {
-        ButtonVariant.Filled -> c.accentFill to c.onAccent
-        ButtonVariant.Tinted -> c.accent.copy(alpha = 0.15f) to c.accentText
-        ButtonVariant.Gray -> c.hover to c.accentText
+        ButtonVariant.Filled -> c.accent to c.onAccent
+        ButtonVariant.Tinted -> c.accentSoft to c.onSecondaryContainer
+        ButtonVariant.Gray -> c.sunken to c.accentText
         ButtonVariant.Plain -> Color.Transparent to c.accentText
-        ButtonVariant.Danger -> c.err.copy(alpha = 0.14f) to c.err
+        ButtonVariant.Danger -> c.errContainer to c.onErrContainer
     }
     val (h, pad, style) = when (size) {
         ButtonSize.Sm -> Triple(Tokens.controlSm, Tokens.sp6, Type.callout)
@@ -247,7 +246,7 @@ fun Button(
     val gap = when (size) { ButtonSize.Sm -> Tokens.sp2; ButtonSize.Md -> Tokens.sp3; ButtonSize.Lg -> Tokens.sp4 }
     val shape = if (size == ButtonSize.Lg) RoundedCornerShape(Tokens.shapeLg) else RoundedCornerShape(Tokens.radiusPill)
     Row(
-        modifier.minimumInteractiveComponentSize().then(if (fill) Modifier.fillMaxWidth() else Modifier).height(h).alpha(if (enabled) 1f else 0.5f).clip(shape).background(bg)
+        modifier.minimumInteractiveComponentSize().then(if (fill) Modifier.fillMaxWidth() else Modifier).height(h).alpha(if (enabled) 1f else 0.38f).clip(shape).background(bg)
             .clickable(enabled = enabled, onClick = onClick).padding(horizontal = pad),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(gap, Alignment.CenterHorizontally),
@@ -276,12 +275,12 @@ private val CodiconFont = FontFamily(Font(R.font.codicon))
 @Composable
 fun IconBtn(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, on: Boolean = false, enabled: Boolean = true, tint: Color? = null) {
     Box(
-        modifier.size(Tokens.touch).clickable(interactionSource = remember { MutableInteractionSource() }, indication = ripple(bounded = false, radius = Tokens.controlMd / 2), enabled = enabled, onClickLabel = label, onClick = onClick).alpha(if (enabled) 1f else 0.4f),
+        modifier.size(Tokens.touch).clickable(interactionSource = remember { MutableInteractionSource() }, indication = ripple(bounded = false, radius = Tokens.controlMd / 2), enabled = enabled, onClickLabel = label, onClick = onClick).alpha(if (enabled) 1f else 0.38f),
         contentAlignment = Alignment.Center,
     ) { AvIcon(icon, label, Tokens.iconLg, tint = tint ?: if (on) av.accentText else av.fgMuted) }
 }
 
-enum class ChipTone { Default, Work, Personal, Accent }
+enum class ChipTone { Default, Work, Personal }
 
 // Chip (web Chip): quiet by default, filled when on, red when late, dashed-quiet for an unset value.
 @Composable
@@ -300,18 +299,12 @@ fun Chip(
     val c = av
     val fg = when {
         late -> c.err
-        tone == ChipTone.Accent && on -> c.onAccent
-        tone == ChipTone.Accent -> c.accentText
         tone == ChipTone.Work -> c.work
         tone == ChipTone.Personal -> c.personal
-        on -> c.fg
+        on -> c.onSecondaryContainer
         else -> c.fgMuted
     }
-    val bg = when {
-        tone == ChipTone.Accent && on -> c.accentFill
-        on || tone == ChipTone.Accent -> c.accentSoft
-        else -> Color.Transparent
-    }
+    val bg = if (on) c.accentSoft else Color.Transparent
     val shape = RoundedCornerShape(Tokens.radiusMd)
     Row(
         modifier.minimumInteractiveComponentSize().height(Tokens.size2xl).clip(shape).background(bg).then(if (quiet) Modifier.dashedBorder(Tokens.hairline, c.borderStrong, Tokens.radiusMd) else Modifier)
@@ -363,14 +356,13 @@ fun Status.onContainer(): Color = when (this) {
     Status.Info -> av.onInfoContainer
 }
 
-// Static tag (web .chip with a status tone): tinted text on a 14% fill of the same tone.
+// Static tag (web .chip with a status tone): the status container with its on-container text.
 @Composable
 fun Tag(text: String, status: Status = Status.Neutral, modifier: Modifier = Modifier) {
-    val tone = status.color()
     Text(
         text,
-        modifier.clip(RoundedCornerShape(Tokens.radiusSm)).background(if (status == Status.Neutral) av.border else tone.copy(alpha = 0.14f)).padding(horizontal = Tokens.sp3),
-        style = Type.footnote.copy(lineHeight = Tokens.lineSm), color = tone, maxLines = 1,
+        modifier.clip(RoundedCornerShape(Tokens.radiusSm)).background(status.container()).padding(horizontal = Tokens.sp3),
+        style = Type.footnote.copy(lineHeight = Tokens.lineSm), color = status.onContainer(), maxLines = 1,
     )
 }
 
@@ -384,13 +376,13 @@ fun Chevron() = AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
 fun Badge(text: String, tone: BadgeTone = BadgeTone.Default, modifier: Modifier = Modifier) {
     val c = av
     val (bg, fg) = when (tone) {
-        BadgeTone.Default -> c.borderStrong to c.fg
-        BadgeTone.Quiet -> c.hover to c.fgMuted
-        BadgeTone.Waiting -> c.warn to c.bg
-        BadgeTone.Done -> c.ok to c.bg
-        BadgeTone.Failed -> c.err to c.bg
-        BadgeTone.New -> c.accentFill to c.bg
-        BadgeTone.Running -> c.accentFill to c.onAccent
+        BadgeTone.Default -> c.sunken to c.fg
+        BadgeTone.Quiet -> c.sunken to c.fgMuted
+        BadgeTone.Waiting -> c.warnContainer to c.onWarnContainer
+        BadgeTone.Done -> c.okContainer to c.onOkContainer
+        BadgeTone.Failed -> c.errContainer to c.onErrContainer
+        BadgeTone.New -> c.infoContainer to c.onInfoContainer
+        BadgeTone.Running -> c.agentContainer to c.onAgentContainer
     }
     Box(modifier.defaultMinSize(minWidth = Tokens.size2xs, minHeight = Tokens.size2xs).clip(RoundedCornerShape(Tokens.radiusPill)).background(bg).padding(horizontal = Tokens.sp2), contentAlignment = Alignment.Center) {
         Text(text, style = Type.label.copy(fontWeight = FontWeight.SemiBold, lineHeight = Tokens.lineXs), color = fg, maxLines = 1)
@@ -408,8 +400,8 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
         DotState.Ok -> c.ok
         DotState.Bad -> c.err
         DotState.Warn -> c.warn
-        DotState.Busy, DotState.Running -> c.accent
-        DotState.Unread -> c.accentFill
+        DotState.Busy, DotState.Running -> c.agent
+        DotState.Unread -> c.info
         DotState.Idle -> Color.Transparent
         DotState.Agent -> Color.Transparent
     }
@@ -490,7 +482,7 @@ fun Sheet(onDismiss: () -> Unit, padded: Boolean = true, full: Boolean = true, c
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = full),
-        containerColor = c.groupCard,
+        containerColor = c.containerLow,
         contentColor = c.fg,
         scrimColor = c.scrimStrong,
         shape = RoundedCornerShape(topStart = Tokens.radiusSheet, topEnd = Tokens.radiusSheet),
@@ -531,7 +523,7 @@ fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = 
         },
         onClick = onClick,
         enabled = enabled,
-        colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color, disabledTextColor = color.copy(alpha = 0.5f), disabledLeadingIconColor = color.copy(alpha = 0.5f)),
+        colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.sp6),
         modifier = Modifier.heightIn(min = Tokens.touch),
     )
@@ -567,24 +559,24 @@ fun EmptyState(title: String, hint: String? = null, icon: String? = null, small:
     }
 }
 
-// Snackbar (web .as-snack): inverted colours with an accent action.
+// Snackbar (web .as-snack): inverse surface with an inverse primary action.
 @Composable
 fun SnackHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
     SnackbarHost(state, modifier) { data ->
         Snackbar(
             data,
             shape = RoundedCornerShape(Tokens.radius),
-            containerColor = av.fg,
-            contentColor = av.bg,
-            actionColor = av.accent,
+            containerColor = av.inverseSurface,
+            contentColor = av.inverseOnSurface,
+            actionColor = av.inversePrimary,
         )
     }
 }
 
-// Floating add button (web .as-fab): accent circle with a medium shadow.
+// Floating add button (web .as-fab): primary container circle with a medium shadow.
 @Composable
 fun Fab(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    androidx.compose.material3.Surface(onClick, modifier.size(Tokens.fab), shape = CircleShape, color = av.accent, contentColor = av.white, shadowElevation = Tokens.shadowMd) {
+    androidx.compose.material3.Surface(onClick, modifier.size(Tokens.fab), shape = CircleShape, color = av.primaryContainer, contentColor = av.onPrimaryContainer, shadowElevation = Tokens.shadowMd) {
         Box(contentAlignment = Alignment.Center) { AvIcon(icon, label, Tokens.iconXl) }
     }
 }
@@ -599,13 +591,12 @@ fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
 // Inset well for code, output and diffs.
 fun Modifier.well(c: AvColors): Modifier {
     val shape = RoundedCornerShape(Tokens.radiusSm)
-    return fillMaxWidth().clip(shape).background(c.sunken).border(BorderStroke(Tokens.hairline, c.border), shape)
+    return fillMaxWidth().clip(shape).background(c.containerLowest).border(BorderStroke(Tokens.hairline, c.border), shape)
 }
 
 @Composable
 fun Toggle(checked: Boolean, onChange: (Boolean) -> Unit) {
-    val c = av
-    Switch(checked, onChange, colors = SwitchDefaults.colors(checkedTrackColor = c.ok, checkedThumbColor = c.white, uncheckedTrackColor = c.hover, uncheckedThumbColor = c.white, uncheckedBorderColor = Color.Transparent))
+    Switch(checked, onChange)
 }
 
 // Confirm and text dialogs (web Confirm): raised card, plain actions, the destructive one in red.

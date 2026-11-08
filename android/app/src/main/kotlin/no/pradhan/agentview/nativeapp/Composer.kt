@@ -110,8 +110,8 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
                         Chip(settingsLabel(modelName(session), session?.permissionMode ?: "default"), { sheet = Picker.Settings }, Modifier.weight(1f, fill = false), late = usageHigh(session?.usage), tone = if (account == "main") ChipTone.Personal else ChipTone.Work)
                     }
                 }
-                if (uploading > 0) RowLabel("Uploading", c.fgFaint)
-                if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgFaint)
+                if (uploading > 0) RowLabel("Uploading", c.fgMuted)
+                if (pct != null && pct >= 50) RowLabel("$pct%", if (pct >= 75) c.warn else c.fgMuted)
                 VoiceButton({ spoken, final -> dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> set(TextFieldValue(t, TextRange(caret))) } }, { hub.notice.value = it })
                 if (running && typed) Button("Stop and send", { submit(true) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 val canSend = typed && uploading == 0

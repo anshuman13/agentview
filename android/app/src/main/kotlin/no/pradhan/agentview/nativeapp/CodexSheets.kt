@@ -190,7 +190,7 @@ fun AddSheet(hub: Hub, profile: String?, now: Long, onDismiss: () -> Unit, onAdd
             TextField(title, { title = it }, Modifier.focusRequester(focus), placeholder = "What would you like to do?", singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { add() }))
             TextField(notes, { notes = it }, placeholder = "Description", minLines = 2)
             val hint = listOfNotNull(parsed.at?.let { "Due ${whenText(it, now)}" }, parsed.repeat?.substringAfter("Repeats: "), parsed.tags.takeIf { it.isNotEmpty() }?.joinToString(" ") { "#$it" }).joinToString(" · ")
-            if (hint.isNotEmpty()) Text(hint, style = Type.subheadline, color = av.accentText)
+            if (hint.isNotEmpty()) Text(hint, style = Type.subheadline, color = av.fgMuted)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 Chip(if (picked) dueLabel(due, now) else "Date", { pickDue = true }, icon = "calendar", on = picked, quiet = !picked)
                 Chip("Priority: ${priorityLabel(priority)}", { priority = (priority + 3) % 4 }, on = priority > 0)

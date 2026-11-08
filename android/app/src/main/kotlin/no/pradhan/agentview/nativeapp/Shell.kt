@@ -144,7 +144,7 @@ fun App(hub: Hub) {
     } + Dest("More", "ellipsis", more || inMore, 0) { more = true }
 
     Scaffold(
-        containerColor = if (route == Tab.Codex.route && !more) av.groupPage else av.bg,
+        containerColor = av.bg,
         contentColor = av.fg,
         snackbarHost = { SnackHost(snack) },
         bottomBar = {
@@ -155,7 +155,7 @@ fun App(hub: Hub) {
             ) {
                 NavigationBar(containerColor = av.surface) {
                     val colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = av.accentText, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
+                        selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
                         unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
                     )
                     dests.forEach { d -> NavigationBarItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
@@ -166,7 +166,7 @@ fun App(hub: Hub) {
         Row(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding().windowInsetsPadding(WindowInsets.navigationBars)) {
             if (rail) NavigationRail(containerColor = av.surface) {
                 val colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = av.accentText, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
+                    selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
                     unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
                 )
                 dests.forEach { d -> NavigationRailItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
@@ -206,8 +206,8 @@ fun App(hub: Hub) {
 
 @Composable
 private fun OfflineBanner(onRetry: () -> Unit) {
-    Row(Modifier.fillMaxWidth().background(av.warnSoft).padding(start = Tokens.listPad, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("Offline. Trying to reconnect...", color = av.warn, style = Type.subheadline)
+    Row(Modifier.fillMaxWidth().background(av.warnContainer).padding(start = Tokens.listPad, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("Offline. Trying to reconnect...", color = av.onWarnContainer, style = Type.subheadline)
         Button("Retry", onRetry, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
     }
 }

@@ -54,7 +54,7 @@ private fun Desc(text: String) = Text(text, style = Type.subheadline, color = av
 
 @Composable
 private fun Hint(mode: String) {
-    MODE_HINTS[mode]?.let { Text(it, style = Type.footnote, color = av.fgFaint) }
+    MODE_HINTS[mode]?.let { Text(it, style = Type.footnote, color = av.fgMuted) }
 }
 
 @Composable
@@ -134,7 +134,7 @@ private fun KeyValue(k: String, v: String) {
     var open by rememberSaveable(k, v) { mutableStateOf(false) }
     val long = v.length > 160 || v.lines().size > 3
     Column {
-        Text(k, style = Mono, color = av.fgFaint)
+        Text(k, style = Mono, color = av.fgMuted)
         Text(v, style = Type.subheadline, color = av.fg, maxLines = if (long && !open) 3 else Int.MAX_VALUE)
         if (long) Button(if (open) "Show less" else "Show more", { open = !open }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
     }
@@ -146,7 +146,7 @@ fun DiffView(lines: List<DiffLine>, modifier: Modifier = Modifier) {
     val scroll = rememberScrollState()
     Column(modifier.heightIn(max = Tokens.scrollMid).well(av).verticalScroll(rememberScrollState()).padding(vertical = Tokens.sp2)) {
         for (l in shown) DiffCodeLine(l, Lang.Plain, wrap = false, scroll = scroll, gutter = Tokens.sp8)
-        if (lines.size > MAX_DIFF_LINES) Text("${lines.size - MAX_DIFF_LINES} more lines", style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(horizontal = Tokens.sp5))
+        if (lines.size > MAX_DIFF_LINES) Text("${lines.size - MAX_DIFF_LINES} more lines", style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(horizontal = Tokens.sp5))
     }
 }
 
@@ -170,8 +170,8 @@ private fun QuestionCard(q: Pending.Question, hub: Hub) {
     val result = (picked + listOfNotNull(other?.trim())).filter { it.isNotEmpty() }.joinToString(", ")
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(qq.header.ifEmpty { "Question" }, style = Type.label, color = av.fgFaint, modifier = Modifier.weight(1f))
-            if (total > 1) Text("${step + 1} of $total", style = Type.label, color = av.fgFaint)
+            Text(qq.header.ifEmpty { "Question" }, style = Type.label, color = av.fgMuted, modifier = Modifier.weight(1f))
+            if (total > 1) Text("${step + 1} of $total", style = Type.label, color = av.fgMuted)
         }
         Text(qq.question, style = Type.body, color = av.fg)
         Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
@@ -215,7 +215,7 @@ fun BlockedCard(ev: ChatEvent, hub: Hub) {
         Title("Auto mode blocked this")
         CodeBlock(rule, modifier = Modifier.heightIn(max = Tokens.scrollShort))
         if (ev.reason.isNotEmpty()) Desc(ev.reason)
-        if (ev.allowed) Text("Allowed for this chat", style = Type.footnote, color = av.fgFaint)
+        if (ev.allowed) Text("Allowed for this chat", style = Type.footnote, color = av.fgMuted)
         else Primary("Allow and retry") { hub.allowBlocked(ev.id) }
     }
 }

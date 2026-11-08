@@ -288,16 +288,16 @@ private fun FileCard(it: Item.File, cwd: String) {
     val cut = rel.lastIndexOf('/')
     val shape = RoundedCornerShape(Tokens.radius)
     val bar = if (it.error != null && !it.denied) av.err else av.tEdit
-    Column(Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, if (it.error != null && !it.denied) av.err.copy(alpha = 0.4f) else av.borderCard), shape).clip(shape).leftBar(bar, Tokens.bar)) {
+    Column(Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape).leftBar(bar, Tokens.bar)) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }.heightIn(min = Tokens.touch).padding(start = Tokens.sp7, end = Tokens.sp6), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
-                    withStyleColor(av.fgFaint) { append(if (cut >= 0) rel.substring(0, cut + 1) else "") }
+                    withStyleColor(av.fgMuted) { append(if (cut >= 0) rel.substring(0, cut + 1) else "") }
                     append(rel.substring(cut + 1))
                 },
                 Modifier.weight(1f), style = Type.subheadline, color = av.fg, maxLines = 1, overflow = TextOverflow.StartEllipsis,
             )
-            if (it.error != null) WordClamp(androidx.compose.ui.text.AnnotatedString(it.error), Type.footnote, if (it.denied) av.fgFaint else av.err, 1, modifier = Modifier.widthIn(max = Tokens.fileError))
+            if (it.error != null) WordClamp(androidx.compose.ui.text.AnnotatedString(it.error), Type.footnote, if (it.denied) av.fgMuted else av.err, 1, modifier = Modifier.widthIn(max = Tokens.fileError))
             else Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 Text("+${it.add}", style = Type.footnote, color = av.diffAdd)
                 Text("-${it.del}", style = Type.footnote, color = av.diffDel)
@@ -330,7 +330,7 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpen
         result?.isError == true -> "failed"
         else -> "done" + if (dur.isNotEmpty()) " $dur" else ""
     }
-    val agentBar = av.agent.copy(alpha = 0.45f)
+    val agentBar = av.agent
     val shown = if (it.running) it.steps.takeLast(3) else emptyList()
     Column(Modifier.fillMaxWidth().clickable { onOpenAgent(it.use.id) }) {
         Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
@@ -338,7 +338,7 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpen
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
                     append(desc)
-                    withStyleColor(if (result?.isError == true && !isDenied(result)) av.err else av.fgFaint) {
+                    withStyleColor(if (result?.isError == true && !isDenied(result)) av.err else av.fgMuted) {
                         append(" · ${if (type.isNotEmpty()) "$type · " else ""}$state${if (it.steps.isNotEmpty()) " · ${it.steps.size} ${if (it.steps.size == 1) "step" else "steps"}" else ""}")
                     }
                 },

@@ -129,7 +129,7 @@ fun CodeLine(number: String, text: AnnotatedString, mark: Char = ' ', wrap: Bool
     val c = av
     val bg = when (mark) { '+' -> c.diffAddSoft; '-' -> c.diffDelSoft; '@' -> c.hover; else -> Color.Transparent }
     Row(Modifier.fillMaxWidth().background(bg).then(if (wrap) Modifier else Modifier.horizontalScroll(scroll))) {
-        Text(number, Modifier.widthIn(min = gutter).padding(start = Tokens.sp4, end = Tokens.sp4), style = Mono, color = c.fgFaint, maxLines = 1)
+        Text(number, Modifier.widthIn(min = gutter).padding(start = Tokens.sp4, end = Tokens.sp4), style = Mono, color = c.fgMuted, maxLines = 1)
         Text(text, style = Mono, color = if (mark == '@') c.fgMuted else c.fg, softWrap = wrap)
     }
 }

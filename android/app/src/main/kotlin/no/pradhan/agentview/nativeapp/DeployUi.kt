@@ -28,7 +28,7 @@ private data class DeployAsk(val title: String, val detail: String, val action: 
 @Composable
 private fun envMetaLine(env: DeployEnv, s: DeployStatus, now: Long): AnnotatedString {
     val badge = envBadge(env)
-    val color = when (badge?.second) { BadgeTone.Done -> av.ok; BadgeTone.Failed -> av.err; else -> av.accentText }
+    val color = when (badge?.second) { BadgeTone.Done -> av.ok; BadgeTone.Failed -> av.err; else -> av.agent }
     return buildAnnotatedString {
         if (badge != null) { withStyle(SpanStyle(color = color)) { append(badge.first) }; append(" · ") }
         append(envMeta(env, s, now))

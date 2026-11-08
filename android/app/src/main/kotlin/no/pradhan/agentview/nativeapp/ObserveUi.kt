@@ -158,7 +158,7 @@ private fun PanelRow(p: GrafanaPanel, onClick: () -> Unit) {
 @Composable
 private fun Sparkline(points: List<List<Double>>) {
     val ys = remember(points) { sparkline(points) }
-    val color = av.accent
+    val color = av.fgMuted
     Canvas(Modifier.size(Tokens.spark, Tokens.sizeXl)) {
         if (ys.size < 2) return@Canvas
         val stroke = Tokens.stroke.toPx()
@@ -177,7 +177,7 @@ private fun LogRow(l: LogLine) {
     val color = when (l.level) { "error", "critical", "fatal" -> c.err; "warn", "warning" -> c.warn; else -> c.fg }
     Text(
         buildAnnotatedString {
-            withStyle(SpanStyle(color = c.fgFaint)) { append(logClock(l.ts) + "  ") }
+            withStyle(SpanStyle(color = c.fgMuted)) { append(logClock(l.ts) + "  ") }
             withStyle(SpanStyle(color = color)) { append(l.line) }
         },
         Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Mono, maxLines = 2, overflow = TextOverflow.Ellipsis,

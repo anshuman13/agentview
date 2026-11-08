@@ -103,7 +103,7 @@ fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
     val clip = LocalClipboardManager.current
     Column(modifier.well(av)) {
         Row(Modifier.fillMaxWidth().padding(start = Tokens.sp5, end = Tokens.sp2), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(lang, style = Type.footnote, color = av.fgFaint)
+            Text(lang, style = Type.footnote, color = av.fgMuted)
             IconBtn("copy", "Copy code", { clip.setText(AnnotatedString(text)) })
         }
         Text(
