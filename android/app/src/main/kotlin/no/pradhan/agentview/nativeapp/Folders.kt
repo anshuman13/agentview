@@ -71,10 +71,10 @@ fun matchesWords(words: List<String>, vararg texts: String?): Boolean {
 }
 
 // A chat matches when every word of the query is in its title, repo or the title or first prompt of its saved copy.
-fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = ""): List<RepoGroup> {
+fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", includePinned: Boolean = false): List<RepoGroup> {
     val words = queryWords(filter)
     val saved = ws.saved.associateBy { it.sessionId }
-    val pinned = ws.pins.toSet()
+    val pinned = if (includePinned) emptySet() else ws.pins.toSet()
     val m = LinkedHashMap<String, RepoGroup>()
     fun add(cwd: String, title: String, sessionId: String?, last: Long): RepoGroup? {
         val key = folderKey(cwd, ws.repos, ws.trees)

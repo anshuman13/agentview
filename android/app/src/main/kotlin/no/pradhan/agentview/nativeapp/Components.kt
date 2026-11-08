@@ -378,7 +378,10 @@ fun Tag(text: String, status: Status = Status.Neutral, modifier: Modifier = Modi
 enum class BadgeTone { Default, Quiet, Waiting, Done, Failed, New, Running }
 
 @Composable
-fun Chevron() = AvIcon("chevron-right", null, Tokens.iconSm, Modifier.padding(end = Tokens.sp4), tint = av.fgMuted)
+fun Chevron(count: String? = null) {
+    if (count != null) Text(count, style = Type.body, color = av.fgMuted)
+    AvIcon("chevron-right", null, Tokens.iconSm, Modifier.padding(end = Tokens.sp4), tint = av.fgMuted)
+}
 
 // Badge (web Badge): a small pill with a count or a status word.
 @Composable

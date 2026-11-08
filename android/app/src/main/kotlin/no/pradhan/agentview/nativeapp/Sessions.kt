@@ -118,7 +118,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         busy.flatMap { g -> g.open.filter { it.pending == 0 }.map { Triple<LiveChat?, SavedSession?, String>(it, null, g.name) to it.lastActive } + g.recent.map { Triple<LiveChat?, SavedSession?, String>(null, it, g.name) to it.lastModified } }
             .sortedByDescending { it.second }.map { it.first }.let { if (filter.isBlank()) it.take(RECENT) else it }
     }
-    val repo = repoKey?.let { k -> all.firstOrNull { it.key == k } ?: groupByRepo(live, ws).firstOrNull { it.key == k } }
+    val unfiltered = remember(live, ws) { groupByRepo(live, ws, includePinned = true) }
+    val repo = repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 
     if (repo != null) {
         BackHandler { repoKey = null }
@@ -170,7 +171,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 if (repoRows.isNotEmpty() || idle.isNotEmpty()) item(key = "repos-head") { SectionHeader("Repos", (busy.size + idle.size).toString()) }
                 lazyGroup(repoRows, { "g-${it.key}" }, lead = true) { g -> RepoRow(g, seen) { repoKey = g.key } }
                 if (idle.isNotEmpty() && filter.isBlank()) item(key = "idle") {
-                    Group { ListRow(if (showIdle) "Show fewer repos" else "More repos", trailing = { if (!showIdle) Text("${idle.size}", style = Type.body, color = av.fgMuted); Chevron() }, onClick = { showIdle = !showIdle }) }
+                    Group { ListRow(if (showIdle) "Show fewer repos" else "More repos", trailing = { Chevron(if (!showIdle) "${idle.size}" else null) }, onClick = { showIdle = !showIdle }) }
                 }
             }
         }
@@ -206,9 +207,9 @@ private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) 
 // A coloured tile with the repo's first letter, the colour fixed by the name.
 @Composable
 private fun RepoMark(name: String) {
-    val hues = listOf(av.hueBlue, av.hueViolet, av.hueTeal, av.hueAmber, av.hueMagenta, av.hueGreen, av.hueOrange, av.hueSky)
-    Box(Modifier.size(Tokens.leadWidth + Tokens.sp2).clip(RoundedCornerShape(Tokens.shapeMd)).background(hues[Math.floorMod(name.hashCode(), hues.size)]), contentAlignment = Alignment.Center) {
-        Text(name.trimStart('.', '_', '-').take(1).uppercase(), style = Type.label, color = av.onColor)
+    val hues = listOf(av.hueBlue, av.hueViolet, av.hueTeal, av.hueAmber, av.hueMagenta, av.hueGreen, av.hueSky)
+    Box(Modifier.size(Tokens.leadWidth).clip(RoundedCornerShape(Tokens.shapeMd)).background(hues[Math.floorMod(name.hashCode(), hues.size)]), contentAlignment = Alignment.Center) {
+        Text(name.trimStart('.', '_', '-').take(1).uppercase(), style = Type.label, color = av.bg)
     }
 }
 
