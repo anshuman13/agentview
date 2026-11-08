@@ -187,7 +187,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   cards: turns, files changed, failed commands and whether a permission is waiting. Tap it to dismiss
 - `/tries 3 <prompt>` (2 to 4) starts the prompt in that many new chats, each in its own worktree on a `tries/` branch
   off the default branch, so the best attempt can be kept. Paseo makes the worktrees; without Paseo they are plain git
-  worktrees in a hidden `.tries` folder next to the repo
+  worktrees in a hidden `.tries` folder next to the repo. These show under Workspace and a clean one can be removed at once
 - "Fork chat" in the chat settings menu (or the palette) starts a new chat that carries the whole conversation so
   far, so two directions can be tried from the same point
 - "Continue in terminal" in the same menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for

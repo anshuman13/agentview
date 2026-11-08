@@ -80,12 +80,31 @@ async function mergedPr(cwd: string) {
   return (JSON.parse(stdout || '[]') as Array<{ number: number }>)[0]?.number;
 }
 
-export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
+type Space = { id: string; project: string; repo: string; name: string; cwd: string };
+
+async function paseoSpaces(): Promise<Space[]> {
   const listed = await Promise.all([paseo(['workspace', 'ls', '--json'], 30_000), paseoProjects()]).catch((err) => { if (paseoMissing(err)) return null; throw err; });
   if (!listed) return [];
   const [{ stdout }, projects] = listed;
-  const spaces = (JSON.parse(stdout) as Array<{ workspaceId: string; project: string; name: string; isolation: string; cwd: string }>)
-    .filter((w) => w.isolation === 'worktree');
+  return (JSON.parse(stdout) as Array<{ workspaceId: string; project: string; name: string; isolation: string; cwd: string }>)
+    .filter((w) => w.isolation === 'worktree')
+    .map((w) => ({ id: w.workspaceId, project: w.project, repo: projects.find((p) => p.name === w.project || p.projectId === w.project)?.path ?? '', name: w.name, cwd: w.cwd }));
+}
+
+// /tries without Paseo leaves plain git worktrees in a hidden .tries folder in each root; a clean one can go at once.
+async function triesSpaces(): Promise<Space[]> {
+  const dirs = await Promise.all(ROOTS.map(async (root) => (await readdir(path.join(root, '.tries'), { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory()).map((d) => path.join(root, '.tries', d.name))));
+  const spaces = await Promise.all(dirs.flat().map(async (cwd) => {
+    const repo = (await git(cwd, 'worktree', 'list', '--porcelain').catch(() => '')).split('\n')[0].replace(/^worktree /, '');
+    const name = await git(cwd, 'rev-parse', '--abbrev-ref', 'HEAD').catch(() => '');
+    return repo && repo !== cwd ? { id: `git:${cwd}`, project: path.basename(repo), repo, name: name || path.basename(cwd), cwd } : null;
+  }));
+  return spaces.filter((w): w is Space => w !== null);
+}
+
+export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
+  const spaces = [...(await paseoSpaces()), ...(await triesSpaces())];
+  if (!spaces.length) return [];
   const chats = await listSessions({ limit: 1000 });
   return Promise.all(
     spaces.map(async (w) => {
@@ -96,7 +115,7 @@ export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
       const lastActive = Math.max(lastCommit, ...lastChat, ...edits);
       const open = openCwds.some((c) => inside(c, w.cwd));
       const merged = dirty.length ? undefined : await mergedPr(w.cwd);
-      return { id: w.workspaceId, project: w.project, repo: projects.find((p) => p.name === w.project || p.projectId === w.project)?.path ?? '', name: w.name, cwd: w.cwd, dirty: dirty.length, lastActive, merged, removable: canRemove({ open, dirty: dirty.length, lastActive, merged }) };
+      return { ...w, dirty: dirty.length, lastActive, merged, removable: canRemove({ open, dirty: dirty.length, lastActive, merged }) || (w.id.startsWith('git:') && !open && !dirty.length) };
     }),
   );
 }
@@ -104,8 +123,9 @@ export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
 export async function removeWorktree(id: string, openCwds: string[]) {
   const w = (await listWorktrees(openCwds)).find((x) => x.id === id);
   if (!w) throw new Error('Worktree not found');
-  if (!w.removable) throw new Error('This worktree is open, or was used in the last 12 hours and its PR has not merged');
-  await paseo(['workspace', 'archive', id], 60_000).catch(notInstalled);
+  if (!w.removable) throw new Error('This worktree is open, has uncommitted changes, or was used in the last 12 hours and its PR has not merged');
+  if (id.startsWith('git:')) await git(w.repo, 'worktree', 'remove', w.cwd);
+  else await paseo(['workspace', 'archive', id], 60_000).catch(notInstalled);
 }
 
 async function paseoProjects() {
