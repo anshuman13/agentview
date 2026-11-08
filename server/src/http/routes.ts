@@ -26,12 +26,13 @@ import type { ClientMessage, LiveChat } from '../../../shared/protocol.js';
 import { gz } from './web.js';
 import { readBody, savePaste } from './body.js';
 import type { Host } from '../host/client.js';
+import { isPhone } from '../presence.js';
 
 const MAX_FILE_BODY = 5_000_000;
 
 export const HANDLED = Symbol('handled');
 
-export type CommandClient = { send: (m: any) => void; sendRaw: (data: string, id?: number) => void; view: string };
+export type CommandClient = { send: (m: any) => void; sendRaw: (data: string, id?: number) => void; view: string; phone?: boolean };
 
 export type RouteDeps = {
   host: Pick<Host, 'notify' | 'req'>;
@@ -174,12 +175,12 @@ export function createRoutes(d: RouteDeps) {
       d.openEvents(req, res, url, asked ?? chat.id, Boolean(asked));
       return HANDLED;
     }),
-    'POST /api/cmd': entry(({ url, body, chat }) => {
+    'POST /api/cmd': entry(({ req, url, body, chat }) => {
       const msg = body as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
       const client = d.streams.get(url.searchParams.get('cid') ?? '');
       if (!client && !d.chats().has(url.searchParams.get('chat') ?? '')) return { status: 409, body: { error: 'No stream for this command' } };
-      d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat.id }, msg, url.searchParams.get('chat') || undefined);
+      d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat.id, phone: isPhone(url.searchParams.get('client'), req.headers['user-agent']) }, msg, url.searchParams.get('chat') || undefined);
       return { ok: true };
     }, true),
     'POST /api/terms': entry(({ chat }) => createTerminal(chat.id, chat.cwd)),

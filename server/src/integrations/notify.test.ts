@@ -124,4 +124,15 @@ describe('notifyAway', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(sent).toHaveBeenCalledTimes(2);
   });
+
+  it('skips the ntfy push while a desktop client is active', async () => {
+    const chat = { id: 'c1', cwd: '/x/repo', title: 'T' } as any;
+    notifyAway({ type: 'event', event: { kind: 'result', text: 'Done' } } as any, () => chat, () => true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sent).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(60_000);
+    notifyAway({ type: 'event', event: { kind: 'result', text: 'Done again' } } as any, () => chat, () => false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sent).toHaveBeenCalledTimes(1);
+  });
 });

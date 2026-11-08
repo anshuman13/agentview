@@ -9,6 +9,7 @@ import { claudeSession } from '../agent/claude/driver.js';
 import { loggedInAccounts, rememberAccount, verifyLimit } from '../agent/claude/accounts.js';
 import { configDef } from '../agent/claude/mcp.js';
 import type { AgentSession } from '../session/session.js';
+import { desktopActive } from '../presence.js';
 import { notifyAway, notifyStall, stallWatch } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
 import { ownProfile } from '../chrome/chrome.js';
@@ -57,6 +58,7 @@ const broadcast = (m: ServerMessage, chat?: AgentSession) => push({ chat: chat?.
 let serving = false;
 const live = new Map<string, { chat: AgentSession; watcher: { close(): void } }>();
 let counts: Record<string, number> = {};
+let desktopAt = 0;
 let lastViewed: AgentSession;
 let restarting: NodeJS.Timeout | null = null;
 
@@ -134,7 +136,7 @@ async function createChat(cwd: string, resume?: string, title = '', fork = false
   await chat.loadHistory();
   chat.onMessage((m) => {
     broadcast(m, chat);
-    notifyAway(m, () => (viewers(chat) ? null : summary(chat)));
+    notifyAway(m, () => (viewers(chat) ? null : summary(chat)), () => desktopActive(desktopAt));
     if (m.type === 'session' && chat.state.session.sessionId) rememberAccount(chat.state.session.sessionId, chat.state.session.account);
     if (m.type === 'session' && chat === lastViewed) remember(chat);
     const woke = stalls.seen(chat.id, chat.state.session.running);
@@ -414,6 +416,9 @@ async function handle(req: HostRequest): Promise<unknown> {
     }
     case 'mcp_login':
       return get(req.id).loginMcp(req.name);
+    case 'desktop':
+      desktopAt = req.at;
+      return;
     case 'viewers': {
       counts = req.counts;
       const last = live.get(req.last)?.chat;

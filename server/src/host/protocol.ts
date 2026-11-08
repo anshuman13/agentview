@@ -20,6 +20,7 @@ export type HostRequest =
   | { op: 'mcp_add'; id: string; name: string }
   | { op: 'mcp_login'; id: string; name: string }
   | { op: 'viewers'; counts: Record<string, number>; last: string }
+  | { op: 'desktop'; at: number }
   | { op: 'restart'; now: boolean; force: boolean };
 
 export type Hello = { last: string; restarting: boolean; chats: LiveChat[] };

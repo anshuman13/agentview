@@ -15,7 +15,8 @@ function detail(m: ServerMessage) {
   return null;
 }
 
-export function notifyAway(m: ServerMessage, away: () => LiveChat | null) {
+// With a desktop client active in the last 3 minutes the menu bar notification still shows but the ntfy push is skipped.
+export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false) {
   const body = detail(m);
   if (body === null) return;
   const chat = away();
@@ -26,12 +27,12 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null) {
   if (prev && prev.key === key && Date.now() - prev.at < 30_000) return;
   last.set(`${chat.id}:${kind}`, { at: Date.now(), key });
   const title = `Claude ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
-  post(title, chat.title, body.slice(0, 200), `${APP}/?chat=${chat.id}`);
+  post(title, chat.title, body.slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
 }
 
 // The menu bar app shows the notification and opens url when it is clicked. Without it only the ntfy push goes out.
-export function post(title: string, subtitle: string, body: string, url = `${APP}/?view=chats`) {
-  void pushNtfy(title, subtitle, body, url);
+export function post(title: string, subtitle: string, body: string, url = `${APP}/?view=chats`, push = true) {
+  if (push) void pushNtfy(title, subtitle, body, url);
   if (process.platform !== 'darwin') return;
   try {
     const fd = fs.openSync(FIFO, fs.constants.O_WRONLY | fs.constants.O_NONBLOCK);

@@ -18,6 +18,7 @@ import { serveWeb } from './http/web.js';
 import { createRoutes, writers } from './http/routes.js';
 import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
 import { Host } from './host/client.js';
+import { createPresence, isPhone } from './presence.js';
 import type { Hello } from './host/protocol.js';
 
 const PORT = Number(process.env.PORT ?? 7777);
@@ -40,7 +41,17 @@ process.on('unhandledRejection', (err) => console.error('unhandled:', err));
 for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) process.once(sig, () => process.exit(0));
 
 // The chats live in the agent host (host/main.ts); this process serves the web client and relays to it.
-type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: string; waiting?: boolean; close?: () => void };
+type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: string; waiting?: boolean; close?: () => void; phone?: boolean };
+const presence = createPresence();
+let presenceSent = 0;
+// Tells the host a desktop client is active, at most every 5 s.
+function touchDesktop(client: Client) {
+  if (client.phone) return;
+  presence.touch();
+  if (presence.at() - presenceSent < 5_000) return;
+  presenceSent = presence.at();
+  host.notify({ op: 'desktop', at: presence.at() });
+}
 const BOOT = Date.now();
 // serve.sh leaves this when the web build fails and the previous build is served.
 const BUILD_FAILED = path.join(os.homedir(), '.agentview', 'web-build-failed');
@@ -218,8 +229,9 @@ wss.on('connection', (ws: WebSocket, req) => {
   if (params.has('chrome')) return openChrome(ws, req.headers.origin);
   const chat = (chats.has(params.get('chat') ?? '') ? params.get('chat')! : undefined) ?? (params.has('session') ? bySession(params.get('session')) : undefined) ?? lastViewed;
   const sendRaw = (data: string) => ws.readyState === WebSocket.OPEN && ws.send(data);
-  const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat };
+  const client: Client = { send: (m) => sendRaw(JSON.stringify(m)), sendRaw, view: chat, phone: isPhone(params.get('client'), req.headers['user-agent']) };
   clients.add(client);
+  touchDesktop(client);
   view(client, chat);
   // A phone coming back after its chat was idle-closed should get that chat back, not whatever was viewed last.
   const wanted = params.get('session');
@@ -258,8 +270,9 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
   let stalled = 0;
   const write = (data: string) => { if (!res.write(data)) stalled ||= Date.now(); };
   res.on('drain', () => (stalled = 0));
-  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => write(frame(data, id)), view: chat, close: () => res.destroy() };
+  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => write(frame(data, id)), view: chat, close: () => res.destroy(), phone: isPhone(url.searchParams.get('client'), req.headers['user-agent']) };
   clients.add(client);
+  touchDesktop(client);
   streams.set(cid, client);
   const missed = found ? ring.since(Number(req.headers['last-event-id'] ?? url.searchParams.get('last')), chat) : null;
   if (missed) {
@@ -285,6 +298,7 @@ function openEvents(req: http.IncomingMessage, res: http.ServerResponse, url: UR
 }
 
 function handleCommand(client: Client, msg: ClientMessage, target?: string) {
+  touchDesktop(client);
   const fail = (err: unknown) => client.send({ type: 'error', text: err instanceof Error ? err.message : String(err) });
   switch (msg.type) {
     case 'close':
