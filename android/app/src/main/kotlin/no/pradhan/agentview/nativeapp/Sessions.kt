@@ -111,50 +111,54 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         )
     }
 
-    Column(Modifier.fillMaxSize()) {
-        PageHeader("Sessions") { IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
-        SearchField(filter, { filter = it }, "Search repos and sessions")
-        Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-            listOf(WORK, PERSONAL).forEach { k ->
-                Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
-            }
-        }
-        if (live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()) {
-            EmptyState(if (connected) "No sessions yet" else "Waiting for the server", if (connected) null else "Check the Mac address.")
-            return@Column
-        }
-        if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty()) {
-            EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
-            return@Column
-        }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.sp8)) {
-            if (waiting.isNotEmpty()) {
-                item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
-                items(waiting.size, key = { "needs-${waiting[it].id}" }) { Box { liveRow(waiting[it], folderName(folderKey(waiting[it].cwd, ws.repos, ws.trees))) } }
-            }
-            if (pinned.isNotEmpty()) {
-                item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
-                items(pinned.size, key = { "pin-${pinned[it].first?.id ?: pinned[it].second?.sessionId}" }) { i ->
-                    val (c, s) = pinned[i]
-                    val repo = folderName(folderKey(c?.cwd ?: s!!.cwd, ws.repos, ws.trees))
-                    Box { if (c != null) liveRow(c, repo) else savedRow(s!!, repo) }
+    val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            PageHeader("Sessions") { IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
+            SearchField(filter, { filter = it }, "Search repos and sessions")
+            Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                listOf(WORK, PERSONAL).forEach { k ->
+                    Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
                 }
             }
-            for (g in groups) {
-                val open = filter.isNotBlank() || !(collapsed[g.key] ?: g.open.isEmpty())
-                item(key = "g-${g.key}") { GroupHeader(g, open, seen, { hub.newChat(g.key); onOpen() }) { hub.setCollapsed(g.key, open) } }
-                if (open) {
-                    val chats = g.open.filter { it.pending == 0 }
-                    items(chats.size, key = { "o-${chats[it].id}" }) { Box { liveRow(chats[it]) } }
-                    val recent = if (g.key in full || filter.isNotBlank()) g.recent else g.recent.take(RECENT)
-                    items(recent.size, key = { "r-${recent[it].sessionId}" }) { Box { savedRow(recent[it]) } }
-                    if (filter.isBlank() && g.recent.size > RECENT) item(key = "m-${g.key}") {
-                        val all = g.key in full
-                        Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()) {
+                EmptyState(if (waitingForServer) "Waiting for the server" else "No sessions yet", if (waitingForServer) "Check the Mac address." else null)
+                return@Column
+            }
+            if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty()) {
+                EmptyState(if (filter.isNotBlank()) "No repo or session matches" else "No ${profileLabel(segment).lowercase()} sessions yet")
+                return@Column
+            }
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
+                if (waiting.isNotEmpty()) {
+                    item(key = "needs-head") { SectionHeader("Needs you", waiting.size.toString(), color = av.warn) }
+                    items(waiting.size, key = { "needs-${waiting[it].id}" }) { Box { liveRow(waiting[it], folderName(folderKey(waiting[it].cwd, ws.repos, ws.trees))) } }
+                }
+                if (pinned.isNotEmpty()) {
+                    item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
+                    items(pinned.size, key = { "pin-${pinned[it].first?.id ?: pinned[it].second?.sessionId}" }) { i ->
+                        val (c, s) = pinned[i]
+                        val repo = folderName(folderKey(c?.cwd ?: s!!.cwd, ws.repos, ws.trees))
+                        Box { if (c != null) liveRow(c, repo) else savedRow(s!!, repo) }
+                    }
+                }
+                for (g in groups) {
+                    val open = filter.isNotBlank() || !(collapsed[g.key] ?: g.open.isEmpty())
+                    item(key = "g-${g.key}") { GroupHeader(g, open, seen, { hub.newChat(g.key); onOpen() }) { hub.setCollapsed(g.key, open) } }
+                    if (open) {
+                        val chats = g.open.filter { it.pending == 0 }
+                        items(chats.size, key = { "o-${chats[it].id}" }) { Box { liveRow(chats[it]) } }
+                        val recent = if (g.key in full || filter.isNotBlank()) g.recent else g.recent.take(RECENT)
+                        items(recent.size, key = { "r-${recent[it].sessionId}" }) { Box { savedRow(recent[it]) } }
+                        if (filter.isBlank() && g.recent.size > RECENT) item(key = "m-${g.key}") {
+                            val all = g.key in full
+                            Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                        }
                     }
                 }
             }
         }
+        if (!waitingForServer) Fab("add", "New chat", { hub.newChat() }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
     }
 
     renaming?.let { (id, title) -> RenameDialog(title, onSave = { hub.rename(id, it) }, onDismiss = { renaming = null }) }

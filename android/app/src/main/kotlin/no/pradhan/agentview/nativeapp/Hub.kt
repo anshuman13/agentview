@@ -58,6 +58,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val notifyOn = MutableStateFlow(prefs.getBoolean("notify", true))
     val shared = MutableStateFlow<SharedItem?>(null)
     val addTask = MutableStateFlow(false)
+    val navHidden = MutableStateFlow(false)
     @Volatile var foreground = false
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
     val handled = MutableStateFlow(

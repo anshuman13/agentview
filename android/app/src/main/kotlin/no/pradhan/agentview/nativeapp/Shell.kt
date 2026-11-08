@@ -1,9 +1,19 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.expandVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -16,7 +26,9 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -30,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -46,6 +59,16 @@ internal fun icon(t: Tab): String = when (t) {
     Tab.Sessions -> "comment-discussion"
     Tab.Agents -> "hubot"
 }
+
+private const val RAIL_MIN_DP = 600
+
+private class Dest(val label: String, val icon: String, val selected: Boolean, val badge: Int, val onClick: () -> Unit)
+
+@Composable
+private fun DestIcon(d: Dest) = BadgedBox(badge = { if (d.badge > 0) Badge("${d.badge}", BadgeTone.Waiting) }) { AvIcon(d.icon, null, Tokens.iconLg) }
+
+@Composable
+private fun DestLabel(d: Dest) = Text(d.label, style = Type.label)
 
 private fun isMore(route: String?) = route != null && (route.startsWith("more/") || route == ORIGIN_ROUTE)
 
@@ -92,49 +115,58 @@ fun App(hub: Hub) {
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
     val inMore = isMore(route)
     val shownChat = state.live.firstOrNull { it.id == state.shownId }
+    val rail = LocalConfiguration.current.screenWidthDp >= RAIL_MIN_DP
+    val navHidden by hub.navHidden.collectAsState()
+    LaunchedEffect(route, state.shownId) { hub.navHidden.value = false }
+    val dests = Tab.entries.map { t ->
+        val badge = when (t) {
+            Tab.Chat -> shownChat?.pending ?: 0
+            Tab.Sessions -> state.live.filter { it.id != state.shownId }.sumOf { it.pending }
+            else -> 0
+        }
+        Dest(t.label, icon(t), route == t.route && !more, badge) { more = false; nav.goTab(t.route) }
+    } + Dest("More", "ellipsis", more || inMore, 0) { more = true }
 
     Scaffold(
         containerColor = if (route == Tab.Codex.route && !more) av.groupPage else av.bg,
         contentColor = av.fg,
         snackbarHost = { SnackHost(snack) },
         bottomBar = {
-            Column {
-                HorizontalDivider(color = av.border, thickness = Tokens.hairline)
+            if (!rail) AnimatedVisibility(
+                visible = !navHidden,
+                enter = slideInVertically(tween(Tokens.dur * 2)) { it } + expandVertically(tween(Tokens.dur * 2)),
+                exit = slideOutVertically(tween(Tokens.dur * 2)) { it } + shrinkVertically(tween(Tokens.dur * 2)),
+            ) {
                 NavigationBar(containerColor = av.surface) {
                     val colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = av.fg, selectedTextColor = av.fg, indicatorColor = av.surface,
+                        selectedIconColor = av.accentText, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
                         unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
                     )
-                    Tab.entries.forEach { t ->
-                        val badge = when (t) {
-                            Tab.Chat -> shownChat?.pending ?: 0
-                            Tab.Sessions -> state.live.filter { it.id != state.shownId }.sumOf { it.pending }
-                            else -> 0
-                        }
-                        NavigationBarItem(
-                            selected = route == t.route && !more,
-                            onClick = { more = false; nav.goTab(t.route) },
-                            icon = { BadgedBox(badge = { if (badge > 0) Badge("$badge", BadgeTone.Waiting) }) { AvIcon(icon(t), null, Tokens.iconLg) } },
-                            label = { Text(t.label, style = Type.label) },
-                            colors = colors,
-                        )
-                    }
-                    NavigationBarItem(selected = more || inMore, onClick = { more = true }, icon = { AvIcon("ellipsis", null, Tokens.iconLg) }, label = { Text("More", style = Type.label) }, colors = colors)
+                    dests.forEach { d -> NavigationBarItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
                 }
             }
         },
     ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()) {
-            if (banner == OfflineState.Shown) OfflineBanner(onRetry = hub::retry)
-            NavHost(nav, startDestination = Tab.Codex.route, modifier = Modifier.weight(1f)) {
-                composable(Tab.Codex.route) { CodexScreen(hub) }
-                composable(Tab.Chat.route) { ChatScreen(hub) }
-                composable(Tab.Sessions.route) { SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
-                composable(Tab.Agents.route) { AgentsScreen(hub) }
-                (MORE_TOOLS + MORE_PAGES).forEach { m ->
-                    composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
+        Row(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding().windowInsetsPadding(WindowInsets.navigationBars)) {
+            if (rail) NavigationRail(containerColor = av.surface) {
+                val colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = av.accentText, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
+                    unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
+                )
+                dests.forEach { d -> NavigationRailItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
+            }
+            Column(Modifier.weight(1f).fillMaxHeight()) {
+                if (banner == OfflineState.Shown) OfflineBanner(onRetry = hub::retry)
+                NavHost(nav, startDestination = Tab.Codex.route, modifier = Modifier.weight(1f)) {
+                    composable(Tab.Codex.route) { CodexScreen(hub) }
+                    composable(Tab.Chat.route) { ChatScreen(hub) }
+                    composable(Tab.Sessions.route) { SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
+                    composable(Tab.Agents.route) { AgentsScreen(hub) }
+                    (MORE_TOOLS + MORE_PAGES).forEach { m ->
+                        composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
+                    }
+                    composable(ORIGIN_ROUTE) { Column(Modifier.fillMaxSize()) { OriginScreen(hub, onDone = { nav.popBackStack() }) } }
                 }
-                composable(ORIGIN_ROUTE) { Column(Modifier.fillMaxSize()) { OriginScreen(hub, onDone = { nav.popBackStack() }) } }
             }
         }
     }
