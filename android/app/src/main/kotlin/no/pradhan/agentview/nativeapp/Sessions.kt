@@ -116,6 +116,15 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         if (item.live != null) liveRow(item.live, item.repo) else savedRow(item.saved!!, item.repo)
     }
 
+    @Composable
+    fun statusChips(of: List<RepoGroup>) {
+        Row(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            StatusFilter.entries.forEach { f ->
+                Chip("${f.label} ${statusCount(of, f, saved, seen)}", { status = f }, on = status == f)
+            }
+        }
+    }
+
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
     val recentRows = remember(groups, filter, ws.pins, status, saved, seen) { recentRows(groups, filter, pins, status, saved, seen) }
@@ -127,7 +136,8 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 PageHeader(repo.name, onBack = { repoKey = null })
-                val rows = (repo.open.map { ChatItem(it, null) } + repo.recent.map { ChatItem(null, it) }).filter { status.matches(it.state(saved, seen)) }
+                statusChips(listOf(repo))
+                val rows = repo.items().filter { status.matches(it.state(saved, seen)) }
                 if (rows.isEmpty()) EmptyState(if (byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", action = { Button("New chat", { hub.newChat(repo.key) }, variant = ButtonVariant.Tinted, icon = "add") })
                 else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
                     lazyGroup(rows, { "c-${it.key}" }) { row(it) }
@@ -144,12 +154,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                     Chip("${profileLabel(k)} ${all.count { segmentOf(it.key) == k }}", { hub.setChatSegment(k) }, on = segment == k, tone = if (k == WORK) ChipTone.Work else ChipTone.Personal)
                 }
             }
-            Row(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-                StatusFilter.entries.forEach { f ->
-                    val n = if (f == StatusFilter.All) groups.sumOf { it.open.size + it.recent.size } else statusCount(groups, f, saved, seen)
-                    Chip("${f.label} $n", { status = f }, on = status == f)
-                }
-            }
+            statusChips(groups)
             if (live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()) {
                 EmptyState(if (waitingForServer) "Waiting for the server" else "No sessions yet", if (waitingForServer) "Check the Mac address." else null)
                 return@Column

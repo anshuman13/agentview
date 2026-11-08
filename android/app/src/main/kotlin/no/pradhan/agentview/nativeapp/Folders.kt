@@ -130,8 +130,10 @@ fun ChatItem.state(saved: Map<String, SavedSession>, seen: Map<String, Long>) = 
 
 fun ChatItem.stalled() = live?.stalled == true
 
+fun RepoGroup.items() = open.map { ChatItem(it, null, name) } + recent.map { ChatItem(null, it, name) }
+
 fun statusCount(groups: List<RepoGroup>, status: StatusFilter, saved: Map<String, SavedSession>, seen: Map<String, Long>) =
-    groups.sumOf { g -> g.open.count { status.matches(chatState(it, it.sessionId?.let(saved::get), seen)) } + g.recent.count { status.matches(chatState(null, it, seen)) } }
+    groups.sumOf { g -> g.items().count { status.matches(it.state(saved, seen)) } }
 
 fun dotFor(s: ChatState?) = when (s) {
     ChatState.Running -> DotState.Running
