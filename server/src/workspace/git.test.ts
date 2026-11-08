@@ -49,8 +49,24 @@ describe('gitRoute', () => {
     expect((await status()).files).toEqual([]);
   });
 
+  it('reverts staged, modified, added and untracked files to HEAD', async () => {
+    writeFileSync(path.join(repo, 'a.txt'), 'changed\n');
+    await route('stage', { paths: ['a.txt'] });
+    writeFileSync(path.join(repo, 'a.txt'), 'changed again\n');
+    writeFileSync(path.join(repo, 'added.txt'), 'x\n');
+    await route('stage', { paths: ['added.txt'] });
+    writeFileSync(path.join(repo, 'loose.txt'), 'y\n');
+    await route('revert', { paths: ['a.txt', 'added.txt', 'loose.txt'] });
+    expect(readFileSync(path.join(repo, 'a.txt'), 'utf8')).toBe('b\n');
+    expect(existsSync(path.join(repo, 'added.txt'))).toBe(false);
+    expect(existsSync(path.join(repo, 'loose.txt'))).toBe(false);
+    expect((await status()).files).toEqual([]);
+  });
+
   it('rejects paths outside the folder and mutations without a body', async () => {
     await expect(route('stage', { paths: ['../x'] })).rejects.toThrow('outside');
+    await expect(route('revert', { paths: ['../x'] })).rejects.toThrow('outside');
+    await expect(route('revert', { paths: [] })).rejects.toThrow('No paths');
     await expect(route('stage')).rejects.toThrow('POST');
     await expect(route('commit', { message: ' ' })).rejects.toThrow('empty');
   });

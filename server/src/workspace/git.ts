@@ -65,6 +65,16 @@ async function discard(cwd: string, paths: string[]) {
   if (tracked.length) await git(cwd, ['checkout', '-q', '--', ...tracked]);
 }
 
+async function revert(cwd: string, paths: string[]) {
+  const loose = await untracked(cwd, paths);
+  const inHead = new Set((await git(cwd, ['ls-tree', '-r', '--name-only', '-z', 'HEAD', '--', ...paths], [0, 128])).split('\0').filter(Boolean));
+  const tracked = paths.filter((p) => !loose.has(p) && inHead.has(p));
+  const added = paths.filter((p) => !loose.has(p) && !inHead.has(p));
+  if (loose.size) await git(cwd, ['clean', '-f', '-q', '--', ...loose]);
+  if (added.length) await git(cwd, ['rm', '-f', '-q', '--ignore-unmatch', '--', ...added]);
+  if (tracked.length) await git(cwd, ['checkout', '-q', 'HEAD', '--', ...tracked]);
+}
+
 export async function gitRoute(cwd: string, route: string, query: URLSearchParams, body: Record<string, unknown> | null) {
   if (route === 'status') return gitStatus(cwd);
   if (route === 'diff') return { diff: await diff(cwd, query.get('path') ?? '', query.get('staged') === 'true') };
@@ -78,6 +88,7 @@ export async function gitRoute(cwd: string, route: string, query: URLSearchParam
   const paths = relPaths(cwd, body.paths);
   if (route === 'stage') await git(cwd, ['add', '-A', '--', ...paths]);
   else if (route === 'unstage') await git(cwd, ['reset', '-q', '--', ...paths]);
+  else if (route === 'revert') await revert(cwd, paths);
   else if (route === 'discard') await discard(cwd, paths);
   else throw new Error(`Unknown git action: ${route}`);
   return { ok: true };
