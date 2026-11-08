@@ -193,6 +193,7 @@ export type LiveChat = {
   mcpFailed?: number;
   stalled?: boolean;
   failed?: boolean;
+  model?: string;
   last?: string;
   edits?: { add: number; del: number };
   cost?: number;

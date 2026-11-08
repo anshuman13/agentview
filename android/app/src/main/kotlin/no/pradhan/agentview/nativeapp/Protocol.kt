@@ -70,6 +70,7 @@ data class LiveChat(
     val failed: Boolean = false,
     val sessionId: String? = null,
     val stalled: Boolean = false,
+    val model: String? = null,
     val edits: Edits? = null,
     val cost: Double? = null,
     val pr: Int? = null,

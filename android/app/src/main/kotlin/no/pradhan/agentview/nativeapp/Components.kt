@@ -421,7 +421,7 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
         val t = rememberInfiniteTransition(label = "dot")
         t.animateFloat(1f, 0.6f, infiniteRepeatable(tween(Tokens.dur * 6), RepeatMode.Reverse), label = "pulse").value
     } else 1f
-    val ring = when (state) { DotState.Idle -> c.fgMuted; DotState.Agent -> c.agent; else -> null }
+    val ring = if (state == DotState.Agent) c.agent else null
     Box(modifier.size(Tokens.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.stroke, ring, CircleShape) else Modifier))
 }
 

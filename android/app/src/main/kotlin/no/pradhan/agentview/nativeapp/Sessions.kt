@@ -82,7 +82,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
         ChatRow(
             title = c.title.ifBlank { "Untitled" },
             meta = buildAnnotatedString {
-                append(metaLine(repo, branch, when_))
+                append(metaLine(repo, branch, c.model?.let(::shortModel), when_))
                 if (line != null) {
                     append(" · ")
                     withStyle(SpanStyle(color = av.ok)) { append("+${line.add}") }

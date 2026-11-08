@@ -113,4 +113,10 @@ class FoldersTest {
         assertEquals(DotState.Warn, dotFor(ChatState.Needs))
         assertEquals(DotState.Idle, dotFor(null))
     }
+
+    @Test
+    fun liveChatModelParsesAndShortens() {
+        val c = protocolJson.decodeFromString<LiveChat>("""{"id":"a","model":"claude-opus-4-8"}""")
+        assertEquals("Opus 4.8", shortModel(c.model!!))
+    }
 }
