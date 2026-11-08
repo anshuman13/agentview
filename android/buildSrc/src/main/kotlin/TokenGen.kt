@@ -40,6 +40,34 @@ object TokenGen {
         "icon-sm" to "18px", "icon" to "20px", "icon-md" to "24px", "icon-lg" to "24px",
     )
 
+    // Material 3 colour roles for the native app, applied to each theme's vars before resolve (docs/design-system.md, Phone).
+    private val NATIVE_COLORS = mapOf(
+        "dark" to mapOf(
+            "bg" to "#111418", "group-page" to "#111418", "container-lowest" to "#0C0E13", "container-low" to "#191C20", "surface" to "#1D2024",
+            "group-card" to "#1D2024", "raised" to "#272A2F", "sunken" to "#32353A", "hover" to "#32353A", "fg" to "#E1E2E8", "fg-strong" to "#E1E2E8",
+            "fg-muted" to "#C2C7CF", "fg-faint" to "#8C9199", "border-strong" to "#8C9199", "border" to "#42474E", "border-card" to "#42474E",
+            "accent" to "#9ECAFF", "accent-fill" to "#9ECAFF", "accent-text" to "#9ECAFF", "on-accent" to "#003258", "primary-container" to "#00497D",
+            "on-primary-container" to "#D1E4FF", "accent-soft" to "#3B4858", "on-secondary-container" to "#D7E3F7", "inverse-surface" to "#E1E2E8",
+            "inverse-on-surface" to "#2E3135", "inverse-primary" to "#0061A4", "ok" to "#78DC77", "ok-container" to "#005313",
+            "on-ok-container" to "#94F990", "warn" to "#FFB870", "warn-container" to "#693C00", "on-warn-container" to "#FFDDBA", "warn-soft" to "#693C00",
+            "err" to "#FFB4AB", "err-container" to "#93000A", "on-err-container" to "#FFDAD6", "on-err" to "#690005", "agent" to "#C6BFFF",
+            "agent-container" to "#463F8F", "on-agent-container" to "#E4DFFF", "on-agent" to "#2F2176", "info" to "#6CD3F0", "info-container" to "#004E5F",
+            "on-info-container" to "#B1EBFF", "work" to "#82B1FF", "personal" to "#E8A3FF",
+        ),
+        "light" to mapOf(
+            "bg" to "#F8F9FF", "group-page" to "#F8F9FF", "container-lowest" to "#FFFFFF", "container-low" to "#F2F3FA", "surface" to "#ECEEF4",
+            "group-card" to "#ECEEF4", "raised" to "#E6E8EE", "sunken" to "#E1E2E8", "hover" to "#E1E2E8", "fg" to "#191C20", "fg-strong" to "#191C20",
+            "fg-muted" to "#42474E", "fg-faint" to "#73777F", "border-strong" to "#73777F", "border" to "#C2C7CF", "border-card" to "#C2C7CF",
+            "accent" to "#0061A4", "accent-fill" to "#0061A4", "accent-text" to "#0061A4", "on-accent" to "#FFFFFF", "primary-container" to "#D1E4FF",
+            "on-primary-container" to "#001D36", "accent-soft" to "#D7E3F7", "on-secondary-container" to "#101C2B", "inverse-surface" to "#2E3135",
+            "inverse-on-surface" to "#EFF0F7", "inverse-primary" to "#9ECAFF", "ok" to "#1B6D24", "ok-container" to "#A3F69C",
+            "on-ok-container" to "#002204", "warn" to "#845400", "warn-container" to "#FFDDB3", "on-warn-container" to "#2A1800", "warn-soft" to "#FFDDB3",
+            "err" to "#BA1A1A", "err-container" to "#FFDAD6", "on-err-container" to "#410002", "on-err" to "#FFFFFF", "agent" to "#5B53A9",
+            "agent-container" to "#E4DFFF", "on-agent-container" to "#170065", "on-agent" to "#FFFFFF", "info" to "#00677F", "info-container" to "#B8EAFF",
+            "on-info-container" to "#001F28", "work" to "#2160C4", "personal" to "#8E3FAA",
+        ),
+    )
+
     // Type roles on a 4dp line grid: size, line height, and a weight when it differs from the CSS.
     private val NATIVE_TYPE = mapOf(
         "large-title" to Triple(32, 40, null), "display" to Triple(28, 36, null), "title" to Triple(22, 28, null),
@@ -187,7 +215,9 @@ object TokenGen {
         val blocks = parse(css)
         val dark = vars(blocks, "dark")
         dark.putAll(NATIVE_OVERRIDES)
+        dark.putAll(NATIVE_COLORS.getValue("dark"))
         val light = vars(blocks, "light")
+        light.putAll(NATIVE_COLORS.getValue("light"))
         val colors = dark.keys.mapNotNull { k ->
             val d = resolve(dark.getValue(k), dark)?.let(::color) ?: return@mapNotNull null
             val l = light[k]?.let { resolve(it, light) }?.let(::color) ?: return@mapNotNull null

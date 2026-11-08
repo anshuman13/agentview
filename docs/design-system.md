@@ -315,7 +315,7 @@ Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` 
 
 ## Phone (native Android)
 
-Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NATIVE_SIZES` and `NATIVE_TYPE` after reading `tokens.css`, so Material wins over the web touch tokens there and `Tokens.kt` stays generated.
+Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NATIVE_COLORS`, `NATIVE_SIZES` and `NATIVE_TYPE` after reading `tokens.css`, so Material wins over the web touch tokens there and `Tokens.kt` stays generated.
 
 ### Foundations
 - **Spacing** is on the 4dp grid: sp2 4, sp4 8, sp6 12, sp8 16, sp12 24, sp16 32. sp1, sp3, sp5 and sp7 exist only so old call sites compile; new code does not use them. The screen margin is 16dp (`listPad`) on both sides and groups sit 24dp apart.
@@ -336,7 +336,59 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 | label | 12/16 | 500 |
 | Mono | 14/20 | 400 |
 
-- **Separation** is by tone: `bg` page, `surface` for bars, `groupCard` for cards, `raised` for menus and dialogs. Hairlines only sit between rows of a group.
+- **Separation** is by tone (see Colour below): `bg` page, `surface` for bars and cards, `raised` for menus and dialogs. Hairlines only sit between rows of a group.
+
+### Colour
+Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for both themes, and `Theme.kt` maps every `colorScheme` slot, so Switch, pickers, dialogs and sheets need no call-site colours.
+
+| Role | Token | Dark | Light | Use |
+|---|---|---|---|---|
+| background | `bg`, `groupPage` | #111418 | #F8F9FF | page |
+| containerLowest | `containerLowest` | #0C0E13 | #FFFFFF | code, diff and output wells |
+| containerLow | `containerLow` | #191C20 | #F2F3FA | sheets |
+| container | `surface`, `groupCard` | #1D2024 | #ECEEF4 | grouped cards, nav bar, rail, user bubble, terminal |
+| containerHigh | `raised` | #272A2F | #E6E8EE | composer, menus, dialogs, pickers |
+| containerHighest | `sunken`, `hover` | #32353A | #E1E2E8 | text fields, Gray button, Default and Quiet badges, empty-state icon disc |
+| onSurface | `fg`, `fgStrong` | #E1E2E8 | #191C20 | text |
+| onSurfaceVariant | `fgMuted`, `metaFg` | #C2C7CF | #42474E | secondary text |
+| outline | `fgFaint`, `borderStrong` | #8C9199 | #73777F | icons, disabled, check rings; never text |
+| outlineVariant | `border`, `borderCard` | #42474E | #C2C7CF | hairlines |
+| primary | `accent`, `accentFill`, `accentText`, `link` | #9ECAFF | #0061A4 | primary action, links, selection |
+| onPrimary | `onAccent` | #003258 | #FFFFFF | text on primary |
+| primaryContainer | `primaryContainer` | #00497D | #D1E4FF | FAB |
+| onPrimaryContainer | `onPrimaryContainer` | #D1E4FF | #001D36 | FAB glyph |
+| secondaryContainer | `accentSoft` | #3B4858 | #D7E3F7 | nav indicator, selected chip, Tinted button, selected row |
+| onSecondaryContainer | `onSecondaryContainer` | #D7E3F7 | #101C2B | content on those |
+| inverseSurface | `inverseSurface` | #E1E2E8 | #2E3135 | snackbar |
+| inverseOnSurface | `inverseOnSurface` | #2E3135 | #EFF0F7 | snackbar text |
+| inversePrimary | `inversePrimary` | #0061A4 | #9ECAFF | snackbar action |
+
+Status pairs: the colour is for text and icons on the surfaces; the container holds a badge or banner with its on-container text.
+
+| Status | Colour | Container | On-container |
+|---|---|---|---|
+| ok | #78DC77 / #1B6D24 | #005313 / #A3F69C | #94F990 / #002204 |
+| warn | #FFB870 / #845400 | #693C00 / #FFDDB3 | #FFDDBA / #2A1800 |
+| err | #FFB4AB / #BA1A1A | #93000A / #FFDAD6 | #FFDAD6 / #410002 (`onErr` #690005 / #FFFFFF) |
+| agent (running, agents) | #C6BFFF / #5B53A9 | #463F8F / #E4DFFF | #E4DFFF / #170065 (`onAgent` #2F2176 / #FFFFFF) |
+| info (new, unread, upcoming) | #6CD3F0 / #00677F | #004E5F / #B8EAFF | #B1EBFF / #001F28 |
+
+Profile dots: work #82B1FF / #2160C4, personal #E8A3FF / #8E3FAA. Scrim is `scrimStrong`.
+
+Contrast ratios (worst case is text on `sunken`; `ContrastTest` checks them).
+
+| Theme | Text on surfaces | Icons only | Fill pairs | Profile dots |
+|---|---|---|---|---|
+| Dark | fg 9.5, fgMuted 7.3, accent and status at least 7.16 (info is lowest) | fgFaint 3.9 | onAccent/accent 7.7, onPrimaryContainer 7.2, onSecondaryContainer 7.2, inverse 10.1, inversePrimary on inverse 5.0, on-containers 6.9 or higher, onErr/err 7.7, onAgent/agent 7.7 | work 5.7, personal 6.5 |
+| Light | fg 13.2, fgMuted 7.2, accent and status at least 4.98 | fgFaint 3.5 | onAccent/accent 6.5, on-containers 13.2 or higher, inverse 11.5, inversePrimary 7.7, onErr/err 6.5, onAgent/agent 6.5 | work 4.6, personal 4.7 |
+
+Rules:
+- Text is `fg` or `fgMuted`, never `fgFaint`.
+- Accent is only for the primary action, links and selection, never for status.
+- A status colour always appears with an icon or a word. There is no decorative colour.
+- Profile hues are only 8dp dots beside the profile word.
+- Toggle on is primary blue, not green.
+- Terminal ANSI 0 and 8 follow `fgFaint`, and terminal default text follows `fg`, so both shift with the theme.
 
 ### Interaction
 - Every clickable has the default Material ripple (`indication = null` only on a scrim); IconBtn's is circular.

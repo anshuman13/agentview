@@ -331,7 +331,7 @@ fun Modifier.dashedBorder(width: Dp, color: Color, radius: Dp) = drawBehind {
     drawRoundRect(color, Offset(w / 2, w / 2), Size(size.width - w, size.height - w), CornerRadius(r, r), Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 3, w * 3))))
 }
 
-enum class Status { Neutral, Ok, Warn, Err, Run, Agent }
+enum class Status { Neutral, Ok, Warn, Err, Run, Agent, Info }
 
 @Composable
 fun Status.color(): Color = when (this) {
@@ -339,8 +339,28 @@ fun Status.color(): Color = when (this) {
     Status.Ok -> av.ok
     Status.Warn -> av.warn
     Status.Err -> av.err
-    Status.Run -> av.accentText
-    Status.Agent -> av.agent
+    Status.Run, Status.Agent -> av.agent
+    Status.Info -> av.info
+}
+
+@Composable
+fun Status.container(): Color = when (this) {
+    Status.Neutral -> av.sunken
+    Status.Ok -> av.okContainer
+    Status.Warn -> av.warnContainer
+    Status.Err -> av.errContainer
+    Status.Run, Status.Agent -> av.agentContainer
+    Status.Info -> av.infoContainer
+}
+
+@Composable
+fun Status.onContainer(): Color = when (this) {
+    Status.Neutral -> av.fg
+    Status.Ok -> av.onOkContainer
+    Status.Warn -> av.onWarnContainer
+    Status.Err -> av.onErrContainer
+    Status.Run, Status.Agent -> av.onAgentContainer
+    Status.Info -> av.onInfoContainer
 }
 
 // Static tag (web .chip with a status tone): tinted text on a 14% fill of the same tone.

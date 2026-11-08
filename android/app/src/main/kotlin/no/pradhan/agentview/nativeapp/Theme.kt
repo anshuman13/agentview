@@ -10,6 +10,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 
 val LocalAv = staticCompositionLocalOf { DarkColors }
 val av: AvColors @Composable get() = LocalAv.current
@@ -28,13 +29,15 @@ fun AgentViewTheme(theme: String = "", content: @Composable () -> Unit) {
     val c = if (dark) DarkColors else LightColors
     val base = if (dark) darkColorScheme() else lightColorScheme()
     val scheme = base.copy(
-        primary = c.accentFill, onPrimary = c.onAccent, primaryContainer = c.accentSoft, onPrimaryContainer = c.accentText,
-        secondary = c.fgMuted, onSecondary = c.bg, secondaryContainer = c.accentSoft, onSecondaryContainer = c.fg,
-        tertiary = c.agent, error = c.err, onError = c.onColor,
-        background = c.bg, onBackground = c.fg, surface = c.bg, onSurface = c.fg, surfaceVariant = c.surface, onSurfaceVariant = c.fgMuted,
-        surfaceContainerLowest = c.bg, surfaceContainerLow = c.groupCard, surfaceContainer = c.surface, surfaceContainerHigh = c.raised, surfaceContainerHighest = c.raised,
-        surfaceBright = c.raised, surfaceDim = c.bg, inverseSurface = c.fg, inverseOnSurface = c.bg, inversePrimary = c.accentText,
-        outline = c.borderStrong, outlineVariant = c.border, scrim = c.scrimStrong, surfaceTint = c.raised,
+        primary = c.accent, onPrimary = c.onAccent, primaryContainer = c.primaryContainer, onPrimaryContainer = c.onPrimaryContainer,
+        secondary = c.fgMuted, onSecondary = c.bg, secondaryContainer = c.accentSoft, onSecondaryContainer = c.onSecondaryContainer,
+        tertiary = c.agent, onTertiary = c.onAgent, tertiaryContainer = c.agentContainer, onTertiaryContainer = c.onAgentContainer,
+        error = c.err, onError = c.onErr, errorContainer = c.errContainer, onErrorContainer = c.onErrContainer,
+        background = c.bg, onBackground = c.fg, surface = c.bg, onSurface = c.fg, surfaceVariant = c.sunken, onSurfaceVariant = c.fgMuted,
+        surfaceContainerLowest = c.containerLowest, surfaceContainerLow = c.containerLow, surfaceContainer = c.surface,
+        surfaceContainerHigh = c.raised, surfaceContainerHighest = c.sunken, surfaceBright = c.raised, surfaceDim = c.bg,
+        inverseSurface = c.inverseSurface, inverseOnSurface = c.inverseOnSurface, inversePrimary = c.inversePrimary,
+        outline = c.borderStrong, outlineVariant = c.border, scrim = c.scrimStrong, surfaceTint = Color.Transparent,
     )
     val selection = TextSelectionColors(handleColor = c.accent, backgroundColor = c.accentSoft)
     CompositionLocalProvider(LocalAv provides c, LocalTextSelectionColors provides selection) {
