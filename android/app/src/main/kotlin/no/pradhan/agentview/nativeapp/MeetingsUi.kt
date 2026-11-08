@@ -53,7 +53,7 @@ fun safeHref(url: String?) = url?.takeIf { it.startsWith("https://") || it.start
 private fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boolean = false, onClick: () -> Unit) {
     val live = isLive(m, now)
     val meta = listOfNotNull(meetingMeta(m, now, noDay), if (showProfile) profileLabel(m.profile) else null).joinToString(" · ")
-    ListRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = { if (live) RowLabel("Live", av.ok) })
+    ListRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = { if (live) Badge("Live", BadgeTone.Running) })
 }
 
 @Composable
@@ -81,7 +81,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
                         ListRow(d.text, "${d.meeting.title ?: "Meeting"} · ${whenText(d.at, now)}", onClick = { onOpen(d.meeting) })
                     }
                 }
-                if (log.size > shown) Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (log.size > shown) Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
             return@LazyColumn
         }
@@ -98,7 +98,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
                 item { SectionHeader("Open questions", questions.size.toString()) }
                 item {
                     QuestionList(if (allQuestions) questions else questions.take(3), now, onOpen) { hub.resolveQuestion(it, st.meetings, now) }
-                    if (!allQuestions && questions.size > 3) Button("Show all ${questions.size}", { allQuestions = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    if (!allQuestions && questions.size > 3) Button("Show all ${questions.size}", { allQuestions = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 }
             }
             coming.forEach { g ->
@@ -116,7 +116,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
             item { Group { rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile) { onOpen(m) } } } }
         }
         val total = groups.sumOf { it.rows.size }
-        if (total > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
+        if (total > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         if (groups.isEmpty()) item {
             if (chips.isNotEmpty()) EmptyState("No meetings match", "Try fewer filters")
             else EmptyState(if (query.isNotEmpty()) "No meetings match" else "No past meetings yet", if (query.isNotEmpty()) "Search covers titles, people, notes, summaries and decisions" else "Coming meetings are listed by day")
@@ -434,7 +434,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, ops: CodexOps,
                     ListRow(m.title ?: "Meeting", m.startsAt?.let { "${weekdayDate(it)} · ${clock(it)}" }, onClick = { onMeeting(m) })
                 }
             }
-            if (mine.size > 5 && !all) Button("Show all ${mine.size}", { all = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            if (mine.size > 5 && !all) Button("Show all ${mine.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }
         if (claims.isNotEmpty()) {
             item { SectionHeader("In the wiki", claims.size.toString()) }

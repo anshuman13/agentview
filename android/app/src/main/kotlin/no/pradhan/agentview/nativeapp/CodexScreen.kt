@@ -130,7 +130,7 @@ fun CodexScreen(hub: Hub) {
                     MenuItem("Search everything", "search", { close(); page = "search" })
                 },
             )
-            if (!sub) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            if (!sub) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 val claims = remember(st.facts, profile) { proposals(st.facts.filter { matchesProfile(profile, it) }).size }
                 Chip("Overview", { page = "overview" }, on = page == "overview")
                 Chip("Tasks", { page = "tasks" }, on = page == "tasks")
@@ -139,7 +139,7 @@ fun CodexScreen(hub: Hub) {
                 Chip(if (claims > 0) "Wiki $claims" else "Wiki", { push("wiki") })
                 Chip("Goals", { page = "goals" })
             }
-            st.error?.let { Text("Sync failed: $it. Tap to retry.", Modifier.fillMaxWidth().clickable { refresh() }.padding(Tokens.sp8), style = Type.subheadline, color = av.warn) }
+            st.error?.let { Group { ListRow("Sync failed", it, trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
                 when {
                     !st.loaded -> EmptyState("Loading Codex...")
@@ -252,15 +252,14 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                     mt.nextLater != null -> "Next: ${whenText(mt.nextLater.startsAt!!, now)} ${mt.nextLater.title}"
                     else -> "Nothing planned. Add a task to start the day."
                 }
-                EmptyState("Nothing today", hint)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { Button("New task", onAdd, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
+                EmptyState("Nothing today", hint, icon = "pass") { Button("New task", onAdd, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }
             }
             if (needsTotal > 0) {
-                Group(Modifier.padding(top = Tokens.sp6)) { ListRow("Needs you", onClick = onNeeds, trailing = { Badge("$needsTotal", BadgeTone.Quiet); Chevron() }) }
+                Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Needs you", onClick = onNeeds, trailing = { Badge("$needsTotal", BadgeTone.Quiet); Chevron() }) }
             }
         }
         if (rows.isNotEmpty()) {
-            item { SectionHeader("Today", action = doneCount(s.doneToday.size, today.openCount)?.let { t -> { Text(t, style = Type.subheadline, color = av.fgFaint, modifier = Modifier.padding(end = Tokens.sp4)) } }) }
+            item { SectionHeader("Today", action = doneCount(s.doneToday.size, today.openCount)?.let { t -> { Badge(t, BadgeTone.Quiet) } }) }
             val shown = if (all) rows else rows.take(TODAY_SHOWN)
             item {
                 Group {
@@ -271,7 +270,7 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                             r.title ?: "", if (r in today.late) null else r.at?.let { clock(it) },
                             leading = { CheckCircle(false, "Mark ${r.title} done") { actions.done(r) } },
                             trailing = {
-                                if (r in today.late) RowLabel("Overdue", av.err)
+                                if (r in today.late) Badge("Late", BadgeTone.Failed)
                                 MoreButton { close ->
                                     MenuItem("Snooze to tomorrow", "clock", { close(); actions.snoozeLater(r) })
                                     MenuItem("Open", "arrow-right", { close(); onOpen(r) })
@@ -281,17 +280,17 @@ private fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, 
                         )
                     }
                 }
-                if (rows.size > shown.size) Button("Show all ${rows.size}", { all = true }, Modifier.padding(start = Tokens.sp4), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (rows.size > shown.size) Button("Show all ${rows.size}", { all = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
         }
         if (goals.isNotEmpty()) {
-            item { SectionHeader("Goals this week", action = { Button("All goals", onGoals, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+            item { SectionHeader("Goals this week") }
             item {
                 Group {
                     goals.forEachIndexed { i, g ->
                         if (i > 0) Hairline()
                         val p = goalProgress(st.items, g)
-                        ListRow(g.title ?: "", if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet", onClick = onGoals)
+                        ListRow(g.title ?: "", if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet", onClick = onGoals, trailing = { Chevron() })
                     }
                 }
             }
@@ -305,7 +304,7 @@ private fun MeetingRow(m: Row, now: Long, upNext: Boolean, onClick: () -> Unit) 
     val live = isLive(m, now)
     val soon = joinMinutes(m, now)
     val meta = if (upNext) listOfNotNull(countdown(m, now), meetingMeta(m, now)).joinToString(" · ") else if (soon != null) "Starts in $soon min" else clock(m.startsAt!!)
-    ListRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = { if (live) RowLabel("Live", av.ok) })
+    ListRow(m.title ?: "Meeting", meta, onClick = onClick, trailing = { if (live) Badge("Live", BadgeTone.Running) })
 }
 
 @Composable
@@ -329,7 +328,7 @@ private fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Task
             return@LazyColumn
         }
         if (tags.isNotEmpty() && !searching) item {
-            androidx.compose.foundation.lazy.LazyRow(Modifier.padding(vertical = Tokens.sp2), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            androidx.compose.foundation.lazy.LazyRow(Modifier.padding(vertical = Tokens.sp2), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 items(tags) { t -> Chip("#$t", { onTag(t) }) }
             }
         }
@@ -340,7 +339,7 @@ private fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Task
         days.firstOrNull()?.takeIf { it.rows.isNotEmpty() }?.let { d -> daySection(d, now, actions, showProfile, onOpen) }
         reviewSection("Needs you", fresh, now, actions, showProfile, onOpen)
         if (older.isNotEmpty()) {
-            item { SectionHeader("Older to review", older.size.toString(), action = { Button(if (olderOpen) "Hide" else "Show", { olderOpen = !olderOpen }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+            item { SectionHeader("Older to review", older.size.toString(), open = olderOpen, onToggle = { olderOpen = !olderOpen }) }
             if (olderOpen) reviewSection(null, older, now, actions, showProfile, onOpen)
         }
         days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, showProfile, onOpen) }
@@ -366,7 +365,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.reviewSection(label: 
             rows.forEachIndexed { i, r ->
                 if (i > 0) Hairline()
                 ListRow(r.title ?: "", listOfNotNull(r.people?.takeIf { it.isNotEmpty() }, if (showProfile) profileLabel(r.profile) else null).joinToString(" · "), onClick = { onOpen(r) },
-                    trailing = { Row { Button("Dismiss", { actions.dismiss(r) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm); Button("Add", { actions.accept(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } })
+                    trailing = {
+                        Button("Add", { actions.accept(r) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                        MoreButton { close -> MenuItem("Dismiss", "close", { close(); actions.dismiss(r) }) }
+                    })
             }
         }
     }

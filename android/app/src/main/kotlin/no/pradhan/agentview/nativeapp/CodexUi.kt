@@ -107,7 +107,10 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
                 title = row.title ?: "(Untitled)",
                 meta = taskMeta(row, now, inDay, showProfile),
                 leading = if (row.status == "note") null else { { CheckCircle(isDone, if (isDone) "Mark not done" else "Mark ${row.title} done") { if (isDone) actions.reopen(row) else actions.done(row) } } },
-                trailing = if (row.status == "suggested") { { RowLabel("Needs you", av.warn) } } else null,
+                trailing = {
+                    if (row.status == "suggested") Badge("Needs you", BadgeTone.Waiting)
+                    IconBtn("kebab-vertical", "More", { menu = true })
+                },
                 strike = isDone,
                 onClick = onOpen,
                 onLongClick = { menu = true },
