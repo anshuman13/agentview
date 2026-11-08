@@ -70,6 +70,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
     val showProfile = profile == null
     val questions = remember(mine, resolved, minute) { visibleQuestions(openQuestions(mine, now), resolved) }
     var allQuestions by rememberSaveable { mutableStateOf(false) }
+    var showPast by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxWidth()) {
         if (decisions) {
             item { SectionHeader("Decisions", log.size.toString()) }
@@ -107,16 +108,19 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
             }
             if (coming.isEmpty()) item { EmptyState("Nothing on the calendar this week") }
         }
+        val folded = query.isEmpty() && chips.isEmpty() && !showPast
+        val older = groups.filter { it.label != "Today" }.sumOf { it.rows.size }
+        if (folded && older > 0) item { Group(Modifier.padding(top = Tokens.sp8)) { ListRow("Past meetings", "$older before today", trailing = { Chevron() }, onClick = { showPast = true }) } }
+        val listed = if (folded) groups.filter { it.label == "Today" } else groups
         var left = shown
-        for (g in groups) {
+        for (g in listed) {
             if (left <= 0) break
             val rows = g.rows.take(left)
             left -= rows.size
             item { SectionHeader(g.label) }
             item { Group { rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile) { onOpen(m) } } } }
         }
-        val total = groups.sumOf { it.rows.size }
-        if (total > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
+        if (listed.sumOf { it.rows.size } > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         if (groups.isEmpty()) item {
             if (chips.isNotEmpty()) EmptyState("No meetings match", "Try fewer filters")
             else EmptyState(if (query.isNotEmpty()) "No meetings match" else "No past meetings yet", if (query.isNotEmpty()) "Search covers titles, people, notes, summaries and decisions" else "Coming meetings are listed by day")
