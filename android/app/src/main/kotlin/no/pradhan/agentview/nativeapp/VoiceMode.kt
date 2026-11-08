@@ -57,20 +57,11 @@ class VoiceMode(private val ctx: Context, private val hub: Hub, private val scop
         _state.value = VoiceState(VoicePhase.Listening)
         val r = SpeechRecognizer.createSpeechRecognizer(ctx)
         rec = r
-        r.setRecognitionListener(object : RecognitionListener {
-            override fun onPartialResults(b: Bundle?) { b.best().takeIf { it.isNotEmpty() }?.let { _state.value = VoiceState(VoicePhase.Listening, it) } }
-            override fun onResults(b: Bundle?) {
-                val q = b.best()
-                if (q.isEmpty()) fail("No speech heard") else ask(q)
-            }
-            override fun onError(error: Int) { speechError(error)?.let { fail(it) } }
-            override fun onReadyForSpeech(p: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(v: Float) {}
-            override fun onBufferReceived(b: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-            override fun onEvent(t: Int, p: Bundle?) {}
-        })
+        r.setRecognitionListener(listener(
+            onPartial = { _state.value = VoiceState(VoicePhase.Listening, it) },
+            onResult = { if (it.isEmpty()) fail("No speech heard") else ask(it) },
+            onError = { speechError(it)?.let { m -> fail(m) } },
+        ))
         r.startListening(dictationIntent())
     }
 

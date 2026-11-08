@@ -64,6 +64,18 @@ internal fun dictationIntent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH
     .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
     .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
 
+internal fun listener(onPartial: (String) -> Unit, onResult: (String) -> Unit, onError: (Int) -> Unit) = object : RecognitionListener {
+    override fun onPartialResults(b: Bundle?) { b.best().takeIf { it.isNotEmpty() }?.let(onPartial) }
+    override fun onResults(b: Bundle?) = onResult(b.best())
+    override fun onError(error: Int) = onError(error)
+    override fun onReadyForSpeech(p: Bundle?) {}
+    override fun onBeginningOfSpeech() {}
+    override fun onRmsChanged(v: Float) {}
+    override fun onBufferReceived(b: ByteArray?) {}
+    override fun onEndOfSpeech() {}
+    override fun onEvent(t: Int, p: Bundle?) {}
+}
+
 // Tap to dictate and tap again to stop. The mic permission is asked on first use.
 @Composable
 fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit) {
@@ -83,17 +95,11 @@ fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit) {
     fun start() {
         if (!SpeechRecognizer.isRecognitionAvailable(ctx)) { notice("Speech recognition is not available on this device"); return }
         val r = SpeechRecognizer.createSpeechRecognizer(ctx)
-        r.setRecognitionListener(object : RecognitionListener {
-            override fun onPartialResults(b: Bundle?) { b.best().takeIf { it.isNotEmpty() }?.let { pending[0] = it; text(it, false) } }
-            override fun onResults(b: Bundle?) { b.best().takeIf { it.isNotEmpty() }?.let { pending[0] = it }; flush() }
-            override fun onError(error: Int) { speechError(error)?.let(notice); flush() }
-            override fun onReadyForSpeech(p: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(v: Float) {}
-            override fun onBufferReceived(b: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-            override fun onEvent(t: Int, p: Bundle?) {}
-        })
+        r.setRecognitionListener(listener(
+            onPartial = { pending[0] = it; text(it, false) },
+            onResult = { if (it.isNotEmpty()) pending[0] = it; flush() },
+            onError = { speechError(it)?.let(notice); flush() },
+        ))
         rec[0]?.destroy()
         rec[0] = r
         pending[0] = ""

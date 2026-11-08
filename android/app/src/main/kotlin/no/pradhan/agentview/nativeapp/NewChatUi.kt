@@ -18,15 +18,6 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
     var repo by remember { mutableStateOf(repoKey) }
     var model by remember(models) { mutableStateOf(startModel(models, hub.lastModel)) }
     Sheet(onDismiss, "New chat", padded = false, full = false) {
-        if (repoKey == null && repos.isNotEmpty()) {
-            SectionHeader("Repo")
-            Group {
-                repos.forEachIndexed { i, r ->
-                    if (i > 0) Hairline()
-                    ListRow(r.name, onClick = { repo = r.key }, trailing = if (r.key == repo) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
-                }
-            }
-        }
         if (models.isNotEmpty()) {
             SectionHeader("Model")
             Group {
@@ -36,6 +27,19 @@ fun NewChatSheet(hub: Hub, repoKey: String?, repos: List<RepoChoice>, onDismiss:
                 }
             }
         }
-        Button("Start chat", { hub.newChat(repo, model); onDismiss() }, Modifier.padding(Tokens.listPad), variant = ButtonVariant.Filled, size = ButtonSize.Lg, fill = true)
+        Button("Start chat", {
+            model?.let { hub.lastModel = it }
+            hub.newChat(repo, model.takeIf { it != models.firstOrNull()?.value })
+            onDismiss()
+        }, Modifier.padding(Tokens.listPad), variant = ButtonVariant.Filled, size = ButtonSize.Lg, fill = true)
+        if (repoKey == null && repos.isNotEmpty()) {
+            SectionHeader("Repo")
+            Group {
+                repos.forEachIndexed { i, r ->
+                    if (i > 0) Hairline()
+                    ListRow(r.name, onClick = { repo = r.key }, trailing = if (r.key == repo) { { AvIcon("check", "Selected", Tokens.icon, tint = av.accentText) } } else null)
+                }
+            }
+        }
     }
 }
