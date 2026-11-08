@@ -11,9 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,12 +25,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.launch
-
 
 @Composable
 fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
@@ -118,7 +117,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter) { recentRows(groups.filter { it.open.isNotEmpty() || it.recent.isNotEmpty() }, filter) }
+    val recentRows = remember(groups, filter) { recentRows(groups, filter) }
     val unfiltered = remember(live, ws) { groupByRepo(live, ws, includePinned = true) }
     val repo = repoKey?.let { k -> unfiltered.firstOrNull { it.key == k } }
 

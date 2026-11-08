@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -34,8 +33,6 @@ import java.util.UUID
 const val DEFAULT_ORIGIN = "http://macmini.netbird.cloud:7777"
 const val WORKSPACE_MIN_AGE_MS = 30_000L
 private const val CHAT_KEY = "chat"
-
-private val collapsedSer = MapSerializer(String.serializer(), Boolean.serializer())
 
 class Hub(private val app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("agentview", 0)
@@ -138,15 +135,6 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
         if (m is ServerMessage.Live) liveLoaded.value = true
-    }
-
-    val collapsed = MutableStateFlow(
-        runCatching { protocolJson.decodeFromString(collapsedSer, prefs.getString("collapsed", "{}")!!) }.getOrDefault(emptyMap()),
-    )
-
-    fun setCollapsed(key: String, value: Boolean) {
-        collapsed.value = collapsed.value + (key to value)
-        prefs.edit().putString("collapsed", protocolJson.encodeToString(collapsedSer, collapsed.value)).apply()
     }
 
     private val drafts = HashMap<String, String>()

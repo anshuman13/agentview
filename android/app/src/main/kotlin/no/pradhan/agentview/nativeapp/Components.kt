@@ -116,7 +116,7 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composab
 
 // Section header (web Section): muted label, a quiet count badge, a chevron when it folds, actions at the end.
 @Composable
-fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, onToggle: (() -> Unit)? = null, color: Color = av.fgMuted, style: TextStyle = Type.callout, titleColor: Color = color, action: (@Composable RowScope.() -> Unit)? = null) {
+fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, onToggle: (() -> Unit)? = null, color: Color = av.fgMuted, action: (@Composable RowScope.() -> Unit)? = null) {
     Row(Modifier.fillMaxWidth().padding(top = Tokens.sp3, end = Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         Row(
             Modifier.weight(1f).heightIn(min = Tokens.touchMd).then(if (onToggle != null) Modifier.clickable(onClick = onToggle) else Modifier).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4),
@@ -124,7 +124,7 @@ fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, o
             horizontalArrangement = Arrangement.spacedBy(Tokens.sp4),
         ) {
             if (onToggle != null) AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (open == true) 90f else 0f), tint = color)
-            Text(label, style = style, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            Text(label, style = Type.callout, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             if (count != null) Badge(count, BadgeTone.Quiet)
         }
         if (action != null) CompositionLocalProvider(LocalContentColor provides av.fgMuted) { action() }
