@@ -1,0 +1,13 @@
+package no.pradhan.agentview.nativeapp
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class DevServersTest {
+    @Test fun decodesPortList() {
+        val ports = protocolJson.decodeFromString<List<DevPort>>("""[{"port":5173,"name":"node","local":true},{"port":3000,"name":"bun","local":false}]""")
+        assertEquals(listOf(5173, 3000), ports.map { it.port })
+        assertEquals("node · localhost only, forwarded over NetBird", devPortMeta(ports[0]))
+        assertEquals("bun", devPortMeta(ports[1]))
+    }
+}

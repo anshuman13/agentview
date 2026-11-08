@@ -57,6 +57,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     var dialog by remember { mutableStateOf<String?>(null) }
     val agents = remember(state.events) { buildAgents(state.events) }
     var agentsOpen by remember { mutableStateOf(false) }
+    var serversOpen by remember { mutableStateOf(false) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val ticking = agentsOpen && agents.any { it.status == "running" }
     LaunchedEffect(ticking) { while (ticking) { now = System.currentTimeMillis(); delay(1000) } }
@@ -97,6 +98,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
             }
             MoreButton { close ->
                 MenuItem("Review changes", "source-control", { close(); review = 0 }, enabled = left.isNotEmpty())
+                MenuItem("Dev servers", "globe", { close(); serversOpen = true })
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
                 MenuSeparator()
@@ -115,6 +117,8 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     if (agentsOpen) Sheet(onDismiss = { agentsOpen = false }, title = "Agents", padded = false, full = false) {
         AgentList(agents, now) { agentsOpen = false; onOpenAgent(it) }
     }
+
+    if (serversOpen) DevServersSheet(hub) { serversOpen = false }
 
     when (dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { dialog = null })

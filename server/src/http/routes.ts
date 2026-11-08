@@ -21,6 +21,7 @@ import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { gitRoute } from '../workspace/git.js';
 import { observe } from '../integrations/observe.js';
 import { otherMacs } from './macs.js';
+import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
 import type { ClientMessage, LiveChat } from '../../../shared/protocol.js';
 import { gz } from './web.js';
@@ -163,6 +164,8 @@ export function createRoutes(d: RouteDeps) {
     }),
     'ANY /api/worktrees': entry(() => listWorktrees(liveCwds())),
     'ANY /api/repos': entry(() => listRepos()),
+    'ANY /api/ports': entry(() => listPorts()),
+    'ANY /api/ports/open': entry(({ req, url }) => openPort(Number(url.searchParams.get('port')), req.headers.host)),
   };
 
   const openPrefixes: Prefix<Ctx>[] = [
