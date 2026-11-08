@@ -185,6 +185,17 @@ fun dayDividers(items: List<Item>, now: Long, zone: java.time.ZoneId = codexZone
     return out
 }
 
+// The day label each row falls under, for the date pill shown while scrolling. Rows before the first divider have none.
+fun dayOfRows(items: List<Item>, days: Map<String, String>): Map<String, String> {
+    val out = HashMap<String, String>()
+    var label: String? = null
+    for (it in items) {
+        days[it.id]?.let { d -> label = d }
+        label?.let { l -> out[it.id] = l }
+    }
+    return out
+}
+
 // Slack-style New line: the first reply or step that arrived after this phone last showed the chat and before it was opened.
 fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: Long): String? {
     if (seen <= 0) return null

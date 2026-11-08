@@ -122,4 +122,10 @@ class StepsTest {
         )
         assertEquals("# T\n\n**You:** fix it\n\nDone.\n", chatMarkdown("T", events))
     }
+
+    @Test fun dayOfRowsFollowsTheLastDivider() {
+        val ids = listOf("a", "b", "c", "d")
+        val items = ids.map { Item.Assistant(it, it, false) }
+        assertEquals(mapOf("b" to "Yesterday", "c" to "Yesterday", "d" to "Today"), dayOfRows(items, mapOf("b" to "Yesterday", "d" to "Today")))
+    }
 }

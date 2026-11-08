@@ -88,6 +88,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     val items = remember(state.events) { buildTranscript(state.events) }
     val rows = remember(items) { items.asReversed() }
     val days = remember(items) { dayDividers(items, System.currentTimeMillis()) }
+    val dayOf = remember(items, days) { dayOfRows(items, days) }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, state.events.associate { it.id to it.at }, seen.first, seen.second) }
     DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
@@ -150,6 +151,8 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                 if (state.settled && !(blank && (loading || tried != state.earlier))) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here.") else EmptyState("Loading")
             }
         }
+        val pill by remember(dayOf) { derivedStateOf { if (listState.isScrollInProgress) listState.layoutInfo.visibleItemsInfo.lastOrNull()?.key?.let { dayOf[it] } else null } }
+        pill?.let { DayPill(it, Modifier.align(Alignment.TopCenter).padding(top = Tokens.sp4)) }
         if (!atBottom) JumpButton(Modifier.align(Alignment.BottomCenter).padding(bottom = Tokens.sp4)) {
             stick = true
             hub.navHidden.value = false
@@ -165,6 +168,15 @@ private fun DayDivider(label: String) {
         Text(label, style = Type.label, color = av.fgMuted, fontWeight = FontWeight.SemiBold)
         HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
     }
+}
+
+// Slack's floating date while scrolling a chat that spans several days.
+@Composable
+private fun DayPill(label: String, modifier: Modifier) {
+    Text(
+        label, modifier.clip(RoundedCornerShape(Tokens.shapeFull)).background(av.raised).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeFull)).padding(horizontal = Tokens.sp6, vertical = Tokens.sp2),
+        style = Type.label, color = av.fg, fontWeight = FontWeight.SemiBold,
+    )
 }
 
 @Composable
