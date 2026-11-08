@@ -124,8 +124,7 @@ fun Composer(hub: Hub, chatId: String, session: SessionInfo?, running: Boolean, 
     }
 
     when (sheet) {
-        Picker.Settings -> Sheet({ sheet = null }, padded = false, full = false) {
-            SectionHeader("Chat settings")
+        Picker.Settings -> Sheet({ sheet = null }, "Chat settings", padded = false, full = false) {
             val account = session?.account ?: "main"
             if ((session?.accounts?.size ?: 0) > 1 || account != "main" || session?.usage != null) ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); sheet = Picker.Account })
             ListRow("Permission mode", MODES[session?.permissionMode ?: "default"]?.label ?: session?.permissionMode ?: "Default", onClick = { sheet = Picker.Mode })
@@ -149,8 +148,7 @@ private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, gly
 
 @Composable
 private fun PickerSheet(title: String, items: List<Choice>, current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    Sheet(onDismiss, padded = false, full = false) {
-        SectionHeader(title)
+    Sheet(onDismiss, title, padded = false, full = false) {
         for (c in items) ListRow(
             c.label, c.detail,
             onClick = { onPick(c.value); onDismiss() },

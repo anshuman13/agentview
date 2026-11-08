@@ -71,7 +71,7 @@ fun DeployScreen(hub: Hub, onBack: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (load.error.contains("no Velo app")) item { EmptyState("No Velo app here", "This repo has no .deploy/app.yaml") }
                 else item { ErrorHint(load.error) }
-                if (s == null && load.error.isEmpty()) item { EmptyState("Loading") }
+                if (s == null && load.error.isEmpty()) item { Loading("Loading") }
                 if (s != null) {
                     item { SectionHeader(s.app.ifEmpty { "Velo" }) }
                     item {

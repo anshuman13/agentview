@@ -193,7 +193,7 @@ fun App(hub: Hub) {
 
     if (more) {
         val go = { r: String -> more = false; nav.openMore(r) }
-        Sheet(onDismiss = { more = false }, padded = false) {
+        Sheet(onDismiss = { more = false }, title = "More", padded = false) {
             val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
             SectionHeader("Workspace")
             MORE_TOOLS.forEach { ListRow(it.label, leading = icon(it.icon), onClick = { go("more/${it.route}") }) }

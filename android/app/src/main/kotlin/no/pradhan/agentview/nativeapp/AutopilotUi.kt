@@ -89,8 +89,7 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
     when (which) {
         Which.Away, Which.Never -> FormSheet(which == Which.Away, s, { patch -> ap.save(patch) }, close)
         Which.Covers -> CoversSheet(s, { ap.save(it) }, close)
-        Which.Model -> Sheet(close, padded = false) {
-            SectionHeader("Model")
+        Which.Model -> Sheet(close, "Model", padded = false) {
             FlowRow(Modifier.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 listOf("sonnet" to "Sonnet", "opus" to "Opus").forEach { (m, label) -> Chip(label, { if (s.config.model != m) ap.save(modelPatch(m)) }, on = s.config.model == m) }
             }
@@ -102,8 +101,7 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
 @Composable
 private fun InfoSheet(s: AutopilotState?, onReplies: () -> Unit, close: () -> Unit) {
     val a = s?.config?.away
-    Sheet(close, padded = false) {
-        SectionHeader("How it works")
+    Sheet(close, "How it works", padded = false) {
         val text = if (a != null && a.from.isNotEmpty() && a.to.isNotEmpty())
             "From ${autopilotDay(a.from)} to ${autopilotDay(a.to)} it answers simple questions itself when the thread or your wiki has the answer, and sends one holding note${if (a.backup.isNotEmpty()) ", naming ${a.backup}" else ""}.\nUrgent asks and people on the never-answer list always come to you."
         else "Each ask gets a draft. Send, Edit or Skip it from the Reply queue or the push.\nNothing goes out on its own."
@@ -130,8 +128,7 @@ private fun FormSheet(away: Boolean, s: AutopilotState, save: (String) -> Unit, 
     var form by remember { mutableStateOf(formOf(s)) }
     var picking by remember { mutableStateOf<String?>(null) }
     val done = { formPatch(form, s)?.let(save); close() }
-    Sheet(done, padded = false) {
-        SectionHeader(if (away) "Away" else "Never answers")
+    Sheet(done, if (away) "Away" else "Never answers", padded = false) {
         Column(Modifier.padding(horizontal = Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             if (away) {
                 FieldLabel("Away from")
@@ -157,8 +154,7 @@ private fun FormSheet(away: Boolean, s: AutopilotState, save: (String) -> Unit, 
 
 @Composable
 private fun CoversSheet(s: AutopilotState, save: (String) -> Unit, close: () -> Unit) {
-    Sheet(close, padded = false) {
-        SectionHeader("Covers")
+    Sheet(close, "Covers", padded = false) {
         Group {
             ListRow("DMs", trailing = { Toggle(s.config.dms) { save(togglePatch("dms", it)) } })
             s.watched.forEach { n ->
@@ -174,7 +170,7 @@ private fun ActivitySheet(s: AutopilotState, items: List<Row>, now: Long, onTask
     var all by remember { mutableStateOf(false) }
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val spend = spendLine(s)
-    Sheet(close, padded = false) {
+    Sheet(close, "Activity", padded = false) {
         if (s.replies.isNotEmpty()) {
             SectionHeader("Seen", s.replies.size.toString())
             Group {

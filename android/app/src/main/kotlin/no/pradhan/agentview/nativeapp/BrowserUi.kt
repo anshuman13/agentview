@@ -51,7 +51,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
     val tab = tabs.tabs.firstOrNull { it.id == tabs.current }
 
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Browser", onBack, large = false, subtitle = tab?.let { { androidx.compose.material3.Text(it.title.ifEmpty { it.url }, style = Type.footnote, color = av.fgMuted, maxLines = 1) } }) {
+        PageHeader("Browser", onBack, subtitle = tab?.let { { androidx.compose.material3.Text(it.title.ifEmpty { it.url }, maxLines = 1) } }) {
             if (state.state == "on") MoreButton { close ->
                 MenuItem("Back", "arrow-left", { close(); send("back") })
                 MenuItem("Reload", "refresh", { close(); send("reload") })

@@ -39,6 +39,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +47,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -95,18 +97,18 @@ import androidx.compose.ui.unit.dp
 
 val Mono = TextStyle(fontFamily = FontFamily.Monospace, fontSize = Tokens.fsSubheadline, lineHeight = Tokens.lineMd)
 
-// Page header with an optional back button: one line at a tab root, two with back, ending in an ellipsis.
+// Page header with an optional back button: 64dp, a one-line title ending in an ellipsis and an optional muted subtitle.
 @Composable
-fun PageHeader(title: String, onBack: (() -> Unit)? = null, large: Boolean = onBack == null, subtitle: (@Composable () -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
+fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composable () -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = Tokens.tabbarH).padding(start = if (onBack == null) Tokens.listPad else Tokens.sp2, end = Tokens.sp2),
+        Modifier.fillMaxWidth().height(Tokens.tabbarH).padding(start = if (onBack == null) Tokens.listPad else Tokens.sp2, end = Tokens.sp2),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp2),
     ) {
         if (onBack != null) IconBtn("arrow-left", "Back", onBack, tint = av.fg)
-        Column(Modifier.weight(1f)) {
-            Text(title, style = if (large) Type.title else Type.headline, color = av.fg, maxLines = if (large) 1 else 2, overflow = TextOverflow.Ellipsis)
-            subtitle?.invoke()
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+            Text(title, style = Type.title, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null) CompositionLocalProvider(LocalContentColor provides av.fgMuted) { ProvideTextStyle(Type.subheadline, subtitle) }
         }
         actions()
     }
@@ -307,8 +309,13 @@ fun Chip(
     val bg = if (on) c.accentSoft else Color.Transparent
     val dot = when (tone) { ChipTone.Work -> c.work; ChipTone.Personal -> c.personal; ChipTone.Default -> null }
     val shape = RoundedCornerShape(Tokens.radiusMd)
+    val outline = when {
+        quiet -> Modifier.dashedBorder(Tokens.hairline, c.borderStrong, Tokens.radiusMd)
+        !on -> Modifier.border(Tokens.hairline, c.border, shape)
+        else -> Modifier
+    }
     Row(
-        modifier.minimumInteractiveComponentSize().height(Tokens.size2xl).clip(shape).background(bg).then(if (quiet) Modifier.dashedBorder(Tokens.hairline, c.borderStrong, Tokens.radiusMd) else Modifier)
+        modifier.minimumInteractiveComponentSize().height(Tokens.size2xl).clip(shape).background(bg).then(outline)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = Tokens.sp6),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
@@ -371,7 +378,7 @@ fun Tag(text: String, status: Status = Status.Neutral, modifier: Modifier = Modi
 enum class BadgeTone { Default, Quiet, Waiting, Done, Failed, New, Running }
 
 @Composable
-fun Chevron() = AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
+fun Chevron() = AvIcon("chevron-right", null, Tokens.iconSm, Modifier.padding(end = Tokens.sp4), tint = av.fgMuted)
 
 // Badge (web Badge): a small pill with a count or a status word.
 @Composable
@@ -409,7 +416,7 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
     }
     val pulse = if (state == DotState.Busy || state == DotState.Running) {
         val t = rememberInfiniteTransition(label = "dot")
-        t.animateFloat(1f, 0.35f, infiniteRepeatable(tween(Tokens.dur * 6), RepeatMode.Reverse), label = "pulse").value
+        t.animateFloat(1f, 0.6f, infiniteRepeatable(tween(Tokens.dur * 6), RepeatMode.Reverse), label = "pulse").value
     } else 1f
     val ring = when (state) { DotState.Idle -> c.fgMuted; DotState.Agent -> c.agent; else -> null }
     Box(modifier.size(Tokens.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.stroke, ring, CircleShape) else Modifier))
@@ -476,10 +483,10 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
 @Composable
 fun FieldLabel(text: String) = Text(text, style = Type.label, color = av.fgMuted)
 
-// Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle.
+// Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Sheet(onDismiss: () -> Unit, padded: Boolean = true, full: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Boolean = true, count: String? = null, action: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     val c = av
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -495,7 +502,14 @@ fun Sheet(onDismiss: () -> Unit, padded: Boolean = true, full: Boolean = true, c
             }
         },
     ) {
-        Column(Modifier.navigationBarsPadding().verticalScroll(rememberScrollState()).padding(start = if (padded) Tokens.sp8 else 0.dp, end = if (padded) Tokens.sp8 else 0.dp, bottom = Tokens.sp8), content = content)
+        Column(Modifier.navigationBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp8)) {
+            Row(Modifier.fillMaxWidth().height(Tokens.rowOne).padding(start = Tokens.listPad, end = if (action != null) Tokens.sp2 else Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                Text(title, Modifier.weight(1f, fill = false), style = Type.title, color = c.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (count != null) Badge(count, BadgeTone.Quiet)
+                if (action != null) { Spacer(Modifier.weight(1f)); action() }
+            }
+            Column(Modifier.padding(horizontal = if (padded) Tokens.sp8 else 0.dp), content = content)
+        }
     }
 }
 
@@ -519,7 +533,7 @@ fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = 
     DropdownMenuItem(
         text = {
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                AvIcon(if (checked) "check" else icon, null, Tokens.iconSm)
+                AvIcon(if (checked) "check" else icon, null, Tokens.iconMd)
                 Text(text, style = Type.body)
             }
         },
@@ -540,7 +554,16 @@ fun MoreButton(label: String = "More", expanded: MutableState<Boolean> = remembe
     var open by expanded
     Box {
         IconBtn("kebab-vertical", label, { open = true })
-        Menu(open, { open = false }) { content { open = false } }
+        Box(Modifier.matchParentSize().padding(end = Tokens.sp4)) { Menu(open, { open = false }) { content { open = false } } }
+    }
+}
+
+// Loading state: a spinner above one muted line.
+@Composable
+fun Loading(text: String) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = Tokens.sp24), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+        CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = av.accent, strokeWidth = Tokens.sp1)
+        Text(text, style = Type.subheadline, color = av.fgMuted, textAlign = TextAlign.Center)
     }
 }
 
@@ -598,7 +621,7 @@ fun Modifier.well(c: AvColors): Modifier {
 
 @Composable
 fun Toggle(checked: Boolean, onChange: (Boolean) -> Unit) {
-    Switch(checked, onChange)
+    Switch(checked, onChange, Modifier.padding(end = Tokens.sp4))
 }
 
 // Confirm and text dialogs (web Confirm): raised card, plain actions, the destructive one in red.

@@ -127,7 +127,7 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
     Column {
         ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, onClick = { expanded = !expanded }, onLongClick = if (proposed) null else ({ menu.value = true }),
             trailing = if (proposed) ({ Badge("New", BadgeTone.New) }) else ({ MoreButton(expanded = menu, content = menuContent) }))
-        if (contesting) Sheet({ contesting = false }, full = false) {
+        if (contesting) Sheet({ contesting = false }, "Contest claim", full = false) {
             FieldLabel("Why is this claim wrong?")
             TextField(note, { note = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is wrong or out of date? Link a source if you have one.", minLines = 2)
             LayoutRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4, Alignment.End)) {

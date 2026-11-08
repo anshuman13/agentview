@@ -55,7 +55,7 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
                     }
                 }
                 item { ErrorHint(load.error) }
-                if (info == null) { if (load.error.isEmpty()) item { EmptyState("Loading") } }
+                if (info == null) { if (load.error.isEmpty()) item { Loading("Loading") } }
                 else {
                     item(key = "grafana:${info.repo}:$tick") { Grafana(hub, info) }
                     item { SectionHeader("Snowflake") }
@@ -70,8 +70,7 @@ fun ObserveScreen(hub: Hub, onBack: () -> Unit) {
             }
         }
     }
-    if (picking) Sheet(onDismiss = { picking = false }, padded = false) {
-        SectionHeader("Project")
+    if (picking) Sheet(onDismiss = { picking = false }, title = "Project", padded = false) {
         observeRepos(ws.repos.map { it.name }, info).forEach { n ->
             ListRow(n, selected = n == info?.repo, onClick = { picking = false; picked = n })
         }
@@ -103,7 +102,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         } else if (dash.data != null) Group { EmptyState("No dashboards match", "Set grafana.query or grafana.dashboards in the settings") }
 
         SectionHeader("Metrics, last 6 hours")
-        if (panels.busy && panels.data == null) EmptyState("Loading")
+        if (panels.busy && panels.data == null) Loading("Loading")
         ErrorHint(panels.error)
         panels.data?.let { p ->
             Group {
@@ -116,7 +115,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         }
 
         SectionHeader("Error logs, last hour", action = linkAction("Open", logs.data?.link, link))
-        if (logs.busy && logs.data == null) EmptyState("Loading")
+        if (logs.busy && logs.data == null) Loading("Loading")
         ErrorHint(logs.error)
         logs.data?.let { l ->
             Group {
@@ -128,7 +127,7 @@ private fun Grafana(hub: Hub, info: ObserveInfo) {
         }
 
         SectionHeader("Error patterns", action = linkAction("Open", pats.data?.link, link))
-        if (pats.busy && pats.data == null) EmptyState("Loading")
+        if (pats.busy && pats.data == null) Loading("Loading")
         ErrorHint(pats.error)
         pats.data?.let { p ->
             Group {

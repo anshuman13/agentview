@@ -320,7 +320,7 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 ### Foundations
 - **Spacing** is on the 4dp grid: sp2 4, sp4 8, sp6 12, sp8 16, sp12 24, sp16 32. sp1, sp3, sp5 and sp7 exist only so old call sites compile; new code does not use them. The screen margin is 16dp (`listPad`) on both sides and groups sit 24dp apart.
 - **Touch targets** are 48dp with 8dp between targets. Painted controls may be smaller (Chip 32, Button sm 32) and reach 48 through `minimumInteractiveComponentSize`.
-- **Icons** are 24dp as standard (IconBtn, nav, FAB, row leading, search), 20 inline in text and 18 in chips, buttons and menu items.
+- **Icons** are 24dp as standard (IconBtn, nav, FAB, row leading, search), 20 inline in text and 18 in chips and buttons. Menu items use 24.
 - **Rows** are 56dp with a title only and 72dp with meta; three-line rows grow to about 88dp. Leading element and text are 16dp apart.
 - **Type** is on a 4dp line grid. Reading text is never below 14sp; 12sp is for badges, nav labels and captions. Text uses `fg` or `fgMuted`, never `fgFaint` (3.3:1 to 3.9:1 on bg and surface, below 4.5:1), which is for icons and disabled states.
 
@@ -335,6 +335,11 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 | caption | 12/16 | 400 |
 | label | 12/16 | 500 |
 | Mono | 14/20 | 400 |
+
+- **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle. The scope chip shows only on tab roots, never on a page with a back button.
+- **Sheet** opens with a title row (56dp, 22sp, an optional count and one trailing icon action), and its rows sit in Groups.
+- **Menu icons** are 24dp, and a menu opened from a kebab keeps 12dp from the screen edge.
+- **Loading and EmptyState**: a loading page shows `Loading` (spinner and one line). A page-level EmptyState has an icon and `small = false`. A section's EmptyState is small and sits under its SectionHeader, never inside a Group.
 
 - **Separation** is by tone (see Colour below): `bg` page, `surface` for bars and cards, `raised` for menus and dialogs. Hairlines only sit between rows of a group.
 

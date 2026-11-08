@@ -112,8 +112,7 @@ private fun RunsSheet(runs: List<Row>, say: (String) -> Unit, onDismiss: () -> U
     val shown = runs.take(10)
     var open by remember { mutableStateOf(shown.firstOrNull()?.id) }
     val clip = LocalClipboardManager.current
-    Sheet(onDismiss, padded = false) {
-        SectionHeader("Runs", shown.size.toString())
+    Sheet(onDismiss, "Runs", padded = false, count = shown.size.toString()) {
         Group {
             shown.forEachIndexed { i, r ->
                 if (i > 0) Hairline()

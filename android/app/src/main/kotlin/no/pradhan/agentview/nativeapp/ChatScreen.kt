@@ -62,7 +62,6 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         PageHeader(
             live.title.ifBlank { "Untitled" },
-            large = false,
             subtitle = {
                 val toneColor = when (status.tone) { Tone2.Running -> av.agent; Tone2.Needs -> av.warn; Tone2.Failed -> av.err; Tone2.Idle -> av.fgMuted }
                 val muted = av.fgMuted
@@ -95,7 +94,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         Composer(hub, live.id, session, running, state.pending.isNotEmpty())
     }
 
-    if (agentsOpen) Sheet(onDismiss = { agentsOpen = false }, padded = false) {
+    if (agentsOpen) Sheet(onDismiss = { agentsOpen = false }, title = "Agents", padded = false) {
         AgentList(agents, now) { agentsOpen = false; onOpenAgent(it) }
     }
 

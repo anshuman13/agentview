@@ -92,7 +92,7 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
         if (text != (latest.text ?: "")) patch["text"] = text.trim().ifEmpty { null }
         if (patch.isNotEmpty()) actions.edit(latest, patch)
     }
-    Sheet(onDismiss = { commit(); onDismiss() }) {
+    Sheet(onDismiss = { commit(); onDismiss() }, title = "Task") {
         Column(Modifier.imePadding().padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
             FieldLabel("Title")
             TextField(title, { title = it }, placeholder = "Title", style = Type.headline.copy(fontSize = Tokens.fs3xl))
@@ -186,7 +186,7 @@ fun AddSheet(hub: Hub, profile: String?, now: Long, onDismiss: () -> Unit, onAdd
             }
         }
     }
-    Sheet(onDismiss) {
+    Sheet(onDismiss, "New task") {
         Column(Modifier.imePadding().padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
             TextField(title, { title = it }, Modifier.focusRequester(focus), placeholder = "What would you like to do?", singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { add() }))
             TextField(notes, { notes = it }, placeholder = "Description", minLines = 2)
@@ -226,8 +226,7 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, now: Long, actions: TaskActi
     val filtered = onlyStale && old.isNotEmpty()
     LaunchedEffect(onlyStale, old.size) { if (onlyStale && old.isEmpty()) onlyStale = false }
     LaunchedEffect(needs.size, queue.size) { if (needs.isEmpty() && queue.isEmpty()) onDismiss() }
-    Sheet(onDismiss, padded = false) {
-        SectionHeader("Needs you", (needs.size + queue.size).toString())
+    Sheet(onDismiss, "Needs you", padded = false) {
         val groups = listOf("Tasks" to needs.filter { it.isTask }, "Asks" to needs.filter { !it.isTask }).filter { it.second.isNotEmpty() }
         groups.forEach { (label, rows) ->
             SectionHeader(label, rows.size.toString())

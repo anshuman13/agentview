@@ -62,7 +62,7 @@ fun pageFolder(hub: Hub): String {
 @Composable
 fun WorkspaceHeader(hub: Hub, title: String, onBack: (() -> Unit)?, sub: String? = null, actions: @Composable RowScope.() -> Unit = {}) {
     val folder = pageFolder(hub)
-    PageHeader(title, onBack, large = false, subtitle = { Text(sub ?: folder, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }, actions = actions)
+    PageHeader(title, onBack, subtitle = { Text(sub ?: folder, maxLines = 1, overflow = TextOverflow.Ellipsis) }, actions = actions)
 }
 
 // A page body on the grouped background.

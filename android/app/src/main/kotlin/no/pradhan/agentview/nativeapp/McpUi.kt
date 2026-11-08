@@ -71,7 +71,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 item { ErrorHint(probe.error) }
-                if (probe.data == null && probe.error.isEmpty()) item { EmptyState("Checking the servers") }
+                if (probe.data == null && probe.error.isEmpty()) item { Loading("Checking the servers") }
                 if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Add one with claude mcp add or connect one on claude.ai, then check again.") }
                 listOf("Work" to sections.work, "Personal" to sections.personal).forEach { (label, list) ->
                     if (list.isNotEmpty()) {

@@ -26,7 +26,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "Unknown"
     val dark = when (theme) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Settings", onBack, large = false)
+        PageHeader("Settings", onBack)
         PageBody {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp16)) {
                 SectionHeader("Appearance")

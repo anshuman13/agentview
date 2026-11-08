@@ -142,7 +142,7 @@ fun CodexScreen(hub: Hub) {
             st.error?.let { Group { ListRow("Sync failed", it, trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) {
                 when {
-                    !st.loaded -> EmptyState("Loading Codex...")
+                    !st.loaded -> Loading("Loading Codex...")
                     route != null -> ExtraContent(route, hub, st, profile, now, actions, ops, chips, decisions, onChip, push, { routeText = popRoute(routeText) }, { routeText = popRoute(routeText); needsOpen = true }) { editKey = it.key }
                     page == "overview" -> OverviewPage(hub, st, profile, now, actions, { editKey = it.key }, { needsOpen = true }, { page = "goals" }, { adding = true }, { push("meeting:${it.key}") })
                     page == "tasks" -> TasksPage(st, profile, now, actions, searching, query, { query = it }, { editKey = it.key }, { page = "tag:$it" })

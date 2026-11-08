@@ -9,7 +9,7 @@ import androidx.compose.runtime.getValue
 fun ShareSheet(hub: Hub, item: SharedItem) {
     val state by hub.store.state.collectAsState()
     val done = { hub.shared.value = null }
-    Sheet(done, padded = false, full = false) {
+    Sheet(done, "Share", padded = false, full = false) {
         if (!item.text.isNullOrBlank()) {
             SectionHeader("Codex")
             Group {

@@ -57,7 +57,7 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () 
     var prompt by rememberSaveable(a.id) { mutableStateOf(false) }
     val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {
-        PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), style = Type.subheadline, color = av.fgMuted, maxLines = 1) }) {
+        PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), maxLines = 1) }) {
             if (running && a.group == null) Button("Stop", { hub.stopTask(a.id) }, size = ButtonSize.Sm)
         }
         val pad = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2)
