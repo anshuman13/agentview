@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row as LayoutRow
@@ -22,7 +23,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -42,7 +43,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> 
     val titles = remember(pages) { pages.associate { it.id to it.title } }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
-            SearchField(query, { query = it }, "Search the wiki")
+            SearchField(query, { query = it }, "Search the wiki", Modifier.padding(top = Tokens.sp4))
         }
         if (query.isNotBlank()) {
             if (hits.pages.isEmpty() && hits.claims.isEmpty()) item { EmptyState("Nothing in the wiki matches “$query”") }
@@ -58,11 +59,10 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> 
         }
         val waiting = proposals(facts).size
         if (waiting > 0) {
-            item { SectionHeader("To review", waiting.toString(), action = { Button("One at a time", onReview, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
-            item { Group { ListRow("$waiting ${if (waiting == 1) "claim waits" else "claims wait"} for you", "Approve, skip or reject each", onClick = onReview) } }
+            item { Group { ListRow("Review claims", onClick = onReview, trailing = { Badge("$waiting", BadgeTone.Quiet); Chevron() }) } }
         }
         overview?.let { o ->
-            item { Group(Modifier.padding(top = Tokens.sp6)) { ListRow(o.title ?: "Overview", o.str("summary")?.let { firstLine(it) }, onClick = { onOpen(o) }) } }
+            item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow(o.title ?: "Overview", o.str("summary")?.let { firstLine(it) }, onClick = { onOpen(o) }) } }
         }
         if (sections.isEmpty() && overview == null) item { EmptyState("No pages yet") }
         sections.forEach { s ->
@@ -73,7 +73,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, onOpen: (Row) -> 
                         if (i > 0) Hairline()
                         val n = stats[p.id]?.claims ?: 0
                         ListRow(p.title ?: "Untitled", "$n ${if (n == 1) "claim" else "claims"}" + if (profile == null) " · ${profileLabel(p.profile)}" else "", onClick = { onOpen(p) },
-                            trailing = { if (pageNeedsReview(p, facts)) RowLabel("Needs you", av.warn) })
+                            trailing = { if (pageNeedsReview(p, facts)) Badge("Needs you", BadgeTone.Waiting) })
                     }
                 }
             }
@@ -91,14 +91,19 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
     val uri = LocalUriHandler.current
     val contest = contestOf(f)
     val proposed = f.str("state") == "proposed"
+    var expanded by remember(f.key) { mutableStateOf(false) }
     val meta: AnnotatedString = buildAnnotatedString {
-        val bits = ArrayList<String>()
-        if (proposed) bits.add("Proposed")
-        if (contest != null) bits.add("Contested by ${contest.by} - ${agoText(contest.at, now)}")
-        sourcesOf(f).forEach { bits.add(it.label) }
-        if (stale) bits.add("Still true?")
-        f.long("at")?.let { bits.add(shortDate(it, now)) }
-        append(bits.joinToString(" · "))
+        if (contest != null) {
+            withStyle(SpanStyle(color = av.warn)) { append(contest.note.takeIf { it.isNotEmpty() } ?: "Contested by ${contest.by} - ${agoText(contest.at, now)}") }
+        } else {
+            val bits = ArrayList<String>()
+            if (!proposed) {
+                if (stale) bits.add("Still true?")
+                sourcesOf(f).firstOrNull()?.let { bits.add(it.label) }
+                f.long("at")?.let { bits.add(shortDate(it, now)) }
+            }
+            append(bits.joinToString(" · "))
+        }
     }
     var contesting by remember(f.key) { mutableStateOf(false) }
     val retired = f.str("state") == "retired"
@@ -115,11 +120,13 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
         else MenuItem("Resolve", "check", pick { actions.change(f, mapOf("contested" to null), "Marked as resolved") })
         if (links.isNotEmpty()) MenuSeparator()
         links.forEach { (s, href) -> MenuItem("${s.kindLabel}: ${s.label}", s.icon, pick { uri.openUri(href) }) }
+        c.old.forEach { o -> MenuItem("Replaced ${o.long("at")?.let { shortDate(it, now) } ?: ""}".trim(), "history", {}, enabled = false) }
         f.long("at")?.let { MenuSeparator(); MenuItem("${if (stale) "Still true? " else ""}Updated ${shortDate(it, now)}", "history", {}, enabled = false) }
         MenuItem(if (retired) "Restore" else "Retire", if (retired) "history" else "archive", pick { actions.change(f, mapOf("state" to if (retired) null else "retired"), if (retired) "Claim restored" else "Claim retired") }, danger = !retired)
     }
     Column {
-        ListRow(f.str("text") ?: "", meta, lines = Int.MAX_VALUE, onLongClick = if (proposed) null else ({ menu.value = true }), trailing = if (proposed) null else ({ MoreButton(expanded = menu, content = menuContent) }))
+        ListRow(f.str("text") ?: "", meta, lines = if (expanded) Int.MAX_VALUE else 3, metaLines = if (contest != null) 2 else 1, onClick = { expanded = !expanded }, onLongClick = if (proposed) null else ({ menu.value = true }),
+            trailing = if (proposed) ({ Badge("New", BadgeTone.New) }) else ({ MoreButton(expanded = menu, content = menuContent) }))
         if (contesting) Sheet({ contesting = false }, full = false) {
             FieldLabel("Why is this claim wrong?")
             TextField(note, { note = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is wrong or out of date? Link a source if you have one.", minLines = 2)
@@ -132,13 +139,6 @@ private fun ClaimRow(c: Claim, now: Long, actions: TaskActions, page: String, st
                 }, variant = ButtonVariant.Filled)
             }
         }
-        contest?.note?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, bottom = Tokens.sp3), style = Type.subheadline, color = av.warn) }
-        c.old.forEach { o ->
-            Text(buildAnnotatedString {
-                withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(o.str("text") ?: "") }
-                o.long("at")?.let { append("  Replaced ${shortDate(it, now)}") }
-            }, Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, bottom = Tokens.sp3), style = Type.subheadline, color = av.fgFaint)
-        }
     }
 }
 
@@ -150,31 +150,31 @@ fun WikiPageView(st: CodexState, page: Row, now: Long, actions: TaskActions) {
     val stat = remember(facts) { statsByPage(facts)[page.id] }
     var showOlder by rememberSaveable(page.key) { mutableStateOf(false) }
     val staleIds = older.filter { it.str("state") != "retired" }.map { it.id }.toSet()
-    val section = page.str("section")?.takeIf { it.isNotEmpty() && it != "overview" }
+    var summaryOpen by rememberSaveable(page.key) { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
-            Text(page.title ?: "Untitled", Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
-            val n = stat?.claims ?: 0
-            val chips = listOfNotNull(
-                section, "$n ${if (n == 1) "claim" else "claims"}",
-                stat?.updated?.takeIf { it > 0 }?.let { "Updated ${shortDate(maxOf(page.updatedAt, it), now)}" },
-                stat?.contested?.takeIf { it > 0 }?.let { "$it contested" },
-            )
-            Text(chips.joinToString(" · "), Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted)
-            page.str("summary")?.takeIf { it.isNotEmpty() }?.let { Text(it, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.body, color = av.fg) }
+            Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                Text(page.title ?: "Untitled", style = Type.title)
+                val n = stat?.claims ?: 0
+                val meta = listOfNotNull(
+                    "$n ${if (n == 1) "claim" else "claims"}",
+                    stat?.updated?.takeIf { it > 0 }?.let { "Updated ${shortDate(maxOf(page.updatedAt, it), now)}" },
+                )
+                Text(meta.joinToString(" · "), style = Type.subheadline, color = av.fgMuted, maxLines = 1)
+                page.str("summary")?.takeIf { it.isNotEmpty() }?.let {
+                    Text(it, Modifier.clickable { summaryOpen = !summaryOpen }, style = Type.body, color = av.fg, maxLines = if (summaryOpen) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
+                }
+            }
         }
         groups.forEach { g ->
             item { SectionHeader(g.heading, g.claims.size.toString()) }
-            item { Group { g.claims.forEachIndexed { i, c -> if (i > 0) Hairline(); ClaimRow(c, now, actions, page.title ?: "") } } }
+            lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, page.title ?: "") }
         }
         if (older.isNotEmpty()) {
-            item { SectionHeader("Older", older.size.toString(), action = { Button(if (showOlder) "Hide" else "Show", { showOlder = !showOlder }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
-            if (showOlder) {
-                item { Text("Retired or over 90 days old. Claude does not use these.", Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgFaint) }
-                item { Group { older.forEachIndexed { i, f -> if (i > 0) Hairline(); ClaimRow(Claim(f, emptyList()), now, actions, page.title ?: "", stale = f.id in staleIds) } } }
-            }
+            item { SectionHeader("Not used by Claude", older.size.toString(), open = showOlder, onToggle = { showOlder = !showOlder }) }
+            if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, page.title ?: "", stale = it.id in staleIds) }
         }
-        if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "They appear here as meetings, Slack threads and issues mention ${page.title}") }
+        if (groups.isEmpty() && older.isEmpty()) item { EmptyState("No claims yet", "Claims come from meetings and threads", icon = "book") }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
 }

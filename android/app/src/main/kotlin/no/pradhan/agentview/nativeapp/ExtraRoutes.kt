@@ -20,8 +20,7 @@ fun routeTitle(route: String, st: CodexState): String = when {
     route.startsWith("series:") -> "Series"
     route == "review" -> "Review claims"
     route == "autopilot" -> "Reply for me in Slack"
-    route == "wiki" -> "Wiki"
-    route.startsWith("wiki:") -> st.pages.firstOrNull { it.key == keyOf(route) }?.title ?: "Wiki"
+    route == "wiki" || route.startsWith("wiki:") -> "Wiki"
     route == "jobs" -> "Jobs"
     else -> "Job"
 }
