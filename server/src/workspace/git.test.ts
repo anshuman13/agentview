@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { gitRoute, parseStatus } from './git.js';
+import { gitRoute, parseStatus, parseNumstat } from './git.js';
 
 const repo = mkdtempSync(path.join(os.tmpdir(), 'agentview-git-'));
 const sh = (...args: string[]) => execFileSync('git', args, { cwd: repo });
@@ -69,5 +69,16 @@ describe('gitRoute', () => {
     await expect(route('revert', { paths: [] })).rejects.toThrow('No paths');
     await expect(route('stage')).rejects.toThrow('POST');
     await expect(route('commit', { message: ' ' })).rejects.toThrow('empty');
+  });
+});
+
+describe('parseNumstat', () => {
+  it('reads counts, binaries and renames', () => {
+    expect(parseNumstat('3\t1\tsrc/a.ts\n-\t-\timg/logo.png\n0\t0\tsrc/{old => new}/b.ts\n2\t0\tdocs/x.md => docs/y.md\n')).toEqual([
+      { path: 'src/a.ts', add: 3, del: 1 },
+      { path: 'img/logo.png', add: 0, del: 0 },
+      { path: 'src/new/b.ts', add: 0, del: 0 },
+      { path: 'docs/y.md', add: 2, del: 0 },
+    ]);
   });
 });

@@ -48,6 +48,8 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
         }, onBack = { pager = null; reload() })
         return
     }
+    val (branchLoad, reloadBranch) = rememberLoad(chat) { parseBranchDiff(hub.read("/api/git/branch")) }
+    var shownPatch by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     LaunchedEffect(chat) { while (true) { delay(5000); reload() } }
     val status = load.data
     val files = status?.files ?: emptyList()
@@ -59,7 +61,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Source Control", onBack) {
-            IconBtn("refresh", "Refresh", reload)
+            IconBtn("refresh", "Refresh", { reload(); reloadBranch() })
             MoreButton { close ->
                 MenuItem("Write message with Claude", "sparkle", { close(); hub.askClaude(DRAFT_PROMPT) }, enabled = staged.isNotEmpty())
                 MenuItem("Review changes with Claude", "sparkle", { close(); hub.askClaude(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
@@ -105,6 +107,21 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                     }
                 }
                 if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
+                branchLoad.data?.takeIf { it.files.isNotEmpty() }?.let { b ->
+                    val patches = splitDiff(b.diff)
+                    item { SectionHeader("Committed since ${b.base}", b.files.size.toString()) }
+                    item {
+                        Group {
+                            b.files.forEachIndexed { i, f ->
+                                if (i > 0) Hairline(lead = true)
+                                val name = f.path.substringAfterLast('/')
+                                val shown = shownPatch == f.path
+                                ListRow(name, parentOf(f.path).ifEmpty { null }, lines = 1, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.add, f.del) }, onClick = { shownPatch = if (shown) null else f.path })
+                                if (shown) PatchView(patches[f.path] ?: if (b.diff.isEmpty()) "Diff too large to show" else "No diff", f.path)
+                            }
+                        }
+                    }
+                }
                 item { Column { Findings(hub, "local") { open = it.file } } }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }

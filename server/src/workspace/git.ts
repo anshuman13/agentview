@@ -75,8 +75,32 @@ async function revert(cwd: string, paths: string[]) {
   if (tracked.length) await git(cwd, ['checkout', '-q', 'HEAD', '--', ...tracked]);
 }
 
+export type BranchFile = { path: string; add: number; del: number };
+
+// `git diff --numstat` lines; binary files count as 0 and 0, a rename keeps its new path.
+export function parseNumstat(out: string): BranchFile[] {
+  return out.split('\n').filter(Boolean).map((l) => {
+    const [add, del, ...rest] = l.split('\t');
+    const p = rest.join('\t').replace(/\{[^{}]* => ([^{}]*)\}/, '$1').replace(/^.* => /, '').replace(/\/\//g, '/');
+    return { path: p, add: Number(add) || 0, del: Number(del) || 0 };
+  });
+}
+
+const MAX_BRANCH_DIFF = 2_000_000;
+
+// What this branch committed since it left the default branch, for review before a PR.
+async function branchDiff(cwd: string) {
+  const base = (await git(cwd, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).catch(() => 'origin/main')).trim();
+  const since = (await git(cwd, ['merge-base', base, 'HEAD']).catch(() => '')).trim();
+  const name = base.replace(/^origin\//, '');
+  if (!since) return { base: name, files: [], diff: '' };
+  const [numstat, diff] = await Promise.all([git(cwd, ['diff', '--numstat', since, 'HEAD']), git(cwd, ['diff', since, 'HEAD'])]);
+  return { base: name, files: parseNumstat(numstat), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff };
+}
+
 export async function gitRoute(cwd: string, route: string, query: URLSearchParams, body: Record<string, unknown> | null) {
   if (route === 'status') return gitStatus(cwd);
+  if (route === 'branch') return branchDiff(cwd);
   if (route === 'diff') return { diff: await diff(cwd, query.get('path') ?? '', query.get('staged') === 'true') };
   if (!body) throw new Error('Use POST');
   if (route === 'commit') {

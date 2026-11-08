@@ -205,7 +205,7 @@ private fun PullScreen(hub: Hub, pr: PullRequest, onBack: () -> Unit, onChanged:
 }
 
 @Composable
-private fun PatchView(patch: String, path: String) {
+fun PatchView(patch: String, path: String) {
     val lines = remember(patch) { patchLines(patch) }
     val lang = langOf(path)
     val scroll = rememberScrollState()

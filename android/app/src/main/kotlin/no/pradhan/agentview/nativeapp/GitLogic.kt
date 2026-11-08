@@ -230,3 +230,9 @@ fun fixPrPrompt(number: Int, d: PullRequestDetail): String? {
     )
     return "PR #$number: fix ${parts.joinToString(" and ")}. Read the logs and review comments with gh, push the fix, and tell me what changed."
 }
+
+// shared: server/src/workspace/git.ts branchDiff, the commits this branch made since the default branch.
+@Serializable data class BranchFile(val path: String, val add: Int = 0, val del: Int = 0)
+@Serializable data class BranchDiff(val base: String = "", val files: List<BranchFile> = emptyList(), val diff: String = "")
+
+fun parseBranchDiff(body: String): BranchDiff = protocolJson.decodeFromString(BranchDiff.serializer(), body)

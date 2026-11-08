@@ -26,4 +26,12 @@ class BranchPrTest {
         assertEquals("PR #7: fix the failing checks (lint, build) and the changes ana requested. Read the logs and review comments with gh, push the fix, and tell me what changed.", fixPrPrompt(7, d))
         assertNull(fixPrPrompt(7, PullRequestDetail(checks = listOf(PrCheck("test", "success")))))
     }
+
+    @Test fun readsTheBranchDiff() {
+        val diff = "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1,2 @@\n x\n+y\n"
+        val b = parseBranchDiff("""{"base":"main","files":[{"path":"README.md","add":1,"del":0}],"diff":${kotlinx.serialization.json.JsonPrimitive(diff)}}""")
+        assertEquals("main", b.base)
+        assertEquals(1, b.files.single().add)
+        assertEquals(true, splitDiff(b.diff)["README.md"]?.contains("+y"))
+    }
 }
