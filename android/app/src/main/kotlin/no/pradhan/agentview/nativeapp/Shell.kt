@@ -226,9 +226,9 @@ fun App(hub: Hub) {
 @Composable
 private fun TwoPane(hub: Hub, onOpenAgent: (String) -> Unit) {
     Row(Modifier.fillMaxSize()) {
-        Box(Modifier.width(Tokens.sidebarW).fillMaxHeight().background(av.surface)) { SessionsScreen(hub, onOpen = {}) }
+        Box(Modifier.weight(2f).fillMaxHeight()) { SessionsScreen(hub, onOpen = {}) }
         Box(Modifier.width(Tokens.hairline).fillMaxHeight().background(av.border))
-        Box(Modifier.weight(1f).fillMaxHeight()) { ChatScreen(hub, onOpenAgent) }
+        Box(Modifier.weight(3f).fillMaxHeight()) { ChatScreen(hub, onOpenAgent) }
     }
 }
 
