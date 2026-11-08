@@ -206,3 +206,15 @@ fun commentPrompt(path: String, row: DiffRow, comment: String): String {
 }
 
 fun appendPrompt(draft: String, prompt: String) = if (draft.isBlank()) prompt else draft.trimEnd() + "\n\n" + prompt
+
+// The open PR of the chat's branch, and its merge readiness for the strip under the chat header.
+fun branchPr(prs: List<PullRequest>, branch: String) = prs.firstOrNull { branch.isNotEmpty() && it.branch == branch }
+
+fun checksLabel(state: String) = when (state) {
+    "success" -> "Checks passed"
+    "failure" -> "Checks failed"
+    "pending" -> "Checks running"
+    else -> null
+}
+
+fun prStripMeta(pr: PullRequest) = listOfNotNull("#${pr.number}", "Draft".takeIf { pr.draft }, checksLabel(pr.checks), reviewLabel(pr.review)?.first).joinToString(" · ")

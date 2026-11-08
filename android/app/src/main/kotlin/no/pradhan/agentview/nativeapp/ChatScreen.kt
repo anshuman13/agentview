@@ -73,6 +73,9 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
         return
     }
     val sessionId = live.sessionId ?: session?.sessionId
+    val (prLoad) = rememberLoad(live.id, cwd) { branchPr(parsePulls(hub.read("/api/gh/prs")), parseGitStatus(hub.read("/api/git/status")).branch) }
+    var prOpen by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
+    prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
 
     Column(Modifier.fillMaxSize()) {
         PageHeader(
@@ -104,6 +107,10 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 MenuSeparator()
                 MenuItem("Archive", "archive", { close(); dialog = "archive" }, danger = true, enabled = sessionId != null)
             }
+        }
+        prLoad.data?.let { pr ->
+            ListRow(pr.title, prStripMeta(pr), leading = { StatusDot(checkDot(pr.checks)) }, trailing = { AvIcon("chevron-right", tint = av.fgMuted) }, lines = 1, onClick = { prOpen = pr.number })
+            Hairline()
         }
         if (!connected && state.events.isNotEmpty()) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
         Transcript(hub, state, live.id, cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth(), queued.filter { it.chat == live.id })

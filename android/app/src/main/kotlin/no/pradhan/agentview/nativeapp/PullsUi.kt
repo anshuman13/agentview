@@ -26,7 +26,7 @@ import androidx.compose.ui.text.withStyle
 
 // Pull Requests (web/src/ops/GitHub.tsx): the repo's open PRs in three groups, and a PR page with review actions.
 @Composable
-fun PullsScreen(hub: Hub, onBack: () -> Unit) {
+fun PullsScreen(hub: Hub, onBack: () -> Unit, initial: Int? = null) {
     val st by hub.store.state.collectAsState()
     val chat = st.shownId
     var fresh by remember { mutableStateOf(false) }
@@ -35,9 +35,9 @@ fun PullsScreen(hub: Hub, onBack: () -> Unit) {
         fresh = false
         parsePulls(hub.read("/api/gh/prs$q"))
     }
-    var open by rememberSaveable(chat) { mutableStateOf<Int?>(null) }
+    var open by rememberSaveable(chat) { mutableStateOf(initial) }
     val pr = load.data?.firstOrNull { it.number == open }
-    if (pr != null) { PullScreen(hub, pr, onBack = { open = null }, onChanged = { fresh = true; reload() }); return }
+    if (pr != null) { PullScreen(hub, pr, onBack = { if (initial != null) onBack() else open = null }, onChanged = { fresh = true; reload() }); return }
     val now = System.currentTimeMillis()
 
     Column(Modifier.fillMaxSize()) {
