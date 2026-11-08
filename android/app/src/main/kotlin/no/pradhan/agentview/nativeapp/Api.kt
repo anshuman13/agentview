@@ -22,7 +22,7 @@ class ApiError(message: String, val code: Int = 0) : Exception(message)
 fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
 // The REST routes of server/src/http/routes.ts that the chat screens read and write.
-class Api(private val origin: () -> String, private val http: OkHttpClient = OkHttpClient()) : AssistantRemote {
+class Api(private val origin: () -> String, private val http: OkHttpClient = OkHttpClient()) : AssistantRemote, NoticeRemote {
     private val slow = http.newBuilder().readTimeout(120, java.util.concurrent.TimeUnit.SECONDS).build()
     private val long = http.newBuilder().readTimeout(300, java.util.concurrent.TimeUnit.SECONDS).build()
 
@@ -101,4 +101,9 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
     private fun scoped(path: String, chat: String) = if (chat.isEmpty()) path else path + (if ('?' in path) "&" else "?") + "chat=${enc(chat)}"
     suspend fun get(path: String, chat: String = ""): String = call(url(scoped(path, chat))).decodeToString()
     suspend fun post(path: String, body: String, chat: String = ""): String = call(url(scoped(path, chat)).post(body.toRequestBody(json))).decodeToString()
+
+    override suspend fun pending(chat: String): List<Pending> =
+        (protocolJson.parseToJsonElement(get("/api/state", chat)).jsonObject["pending"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { parsePending(it) } ?: emptyList()
+
+    override suspend fun send(chat: String, body: String) { post("/api/cmd?cid=${enc(java.util.UUID.randomUUID().toString())}&client=phone", body, chat) }
 }

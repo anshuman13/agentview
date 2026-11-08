@@ -6,6 +6,7 @@ import android.net.Network
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -67,14 +68,16 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val theme = MutableStateFlow(prefs.getString("theme", null) ?: "")
 
     // Set by the launch intent to check the screens without changing anything on the server beyond viewing a chat.
-    @Volatile var readOnly = false
+    var readOnly: Boolean
+        get() = AppState.readOnly
+        set(v) { AppState.readOnly = v }
     private var workspaceAt = 0L
 
     private val stream = EventStream(
         viewModelScope,
         url = { last ->
             val chat = store.wanted
-            "${origin.value}/api/events?cid=$cid" + (if (chat.isNotEmpty()) "&chat=${enc(chat)}" else "") + (if (last.isNotEmpty()) "&last=$last" else "")
+            "${origin.value}/api/events?cid=$cid&client=phone" + (if (chat.isNotEmpty()) "&chat=${enc(chat)}" else "") + (if (last.isNotEmpty()) "&last=$last" else "")
         },
         onConnected = { up ->
             _connected.value = up
@@ -82,14 +85,6 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
         },
         onData = { data -> runCatching { parseMessage(data) }.onSuccess { handle(it) } },
     )
-
-    init {
-        viewModelScope.launch {
-            val minute = flow { while (true) { emit(Unit); delay(60_000) } }
-            combine(codex.state, minute, notifyOn, codexFilter, handled) { s, _, on, filter, hidden -> if (on) needsList(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden).size else 0 }
-                .distinctUntilChanged().collect { notifier.badge(it) }
-        }
-    }
 
     // A switch between Wi-Fi and mobile data leaves the old stream hanging, so it is reopened at once.
     private val netWatch = object : ConnectivityManager.NetworkCallback() {
@@ -111,6 +106,17 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val wantsPermission = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val liveLoaded = MutableStateFlow(false)
 
+    init {
+        viewModelScope.launch {
+            combine(store.state.map { waitingSnapshot(it.live) }.distinctUntilChanged(), liveLoaded, notifyOn) { snap, loaded, on -> Triple(snap, loaded, on) }.collect { (snap, loaded, on) ->
+                if (!loaded) return@collect
+                WaitingStore.write(app, snap)
+                WaitingWidget().updateAll(app)
+                if (on) notifier.waiting(snap) else notifier.waiting(WaitingSnapshot())
+            }
+        }
+    }
+
     fun refreshGranted() { granted.value = notifier.granted() }
 
     fun hideNeed(key: String) {
@@ -129,8 +135,14 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     fun wantsStream() = notifyOn.value && notifier.granted()
 
+    // A permission notification gets Allow and Deny, a question one Reply; the kind of request is read from the chat first.
+    private fun notify(n: Notice) {
+        if (n.kind != NoticeKind.Approval) return notifier.post(n)
+        viewModelScope.launch { notifier.post(n.copy(ask = withContext(Dispatchers.IO) { noticeAsk(api, n.chatId) })) }
+    }
+
     private fun handle(m: ServerMessage) {
-        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, store.state.value.shownId).forEach(notifier::post)
+        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, store.state.value.shownId).forEach(::notify)
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         store.handle(m)
@@ -449,7 +461,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     private fun post(body: String, chat: String, viewing: Boolean = false, done: ((Boolean) -> Unit)? = null) {
         if (readOnly && !viewing) { notice.value = READ_ONLY_SENT; done?.invoke(true); return }
         viewModelScope.launch(Dispatchers.IO) {
-            val url = "${origin.value}/api/cmd?cid=$cid&chat=${enc(chat)}"
+            val url = "${origin.value}/api/cmd?cid=$cid&client=phone&chat=${enc(chat)}"
             val err = try {
                 client.newCall(Request.Builder().url(url).post(body.toRequestBody("application/json".toMediaType())).build()).execute().use { if (it.isSuccessful) null else "Server said ${it.code}" }
             } catch (e: Exception) {

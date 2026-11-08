@@ -11,12 +11,18 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 
-private const val BADGE_CHANNEL = "needs"
-private const val BADGE_ID = 1
+private const val WAITING_CHANNEL = "needs"
+private const val WAITING_ID = 1
+const val EXTRA_CHAT = "chat"
+const val EXTRA_NOTICE_ID = "noticeId"
+const val EXTRA_CHANNEL = "channel"
+const val EXTRA_READONLY = "readonly"
+const val KEY_REPLY = "reply"
 
-// Notifications while the app is in the background (web/src/app/notify.ts) and the launcher count (launcherBadge.ts).
+// Notifications while the app is in the background (web/src/app/notify.ts) and the ongoing list of chats that wait for you.
 class Notifier(private val app: Application) {
     private val manager = NotificationManagerCompat.from(app)
 
@@ -25,50 +31,80 @@ class Notifier(private val app: Application) {
             val importance = if (k == NoticeKind.Approval) NotificationManager.IMPORTANCE_HIGH else NotificationManager.IMPORTANCE_DEFAULT
             manager.createNotificationChannel(NotificationChannel(k.channel, k.label, importance))
         }
-        manager.createNotificationChannel(NotificationChannel(BADGE_CHANNEL, "Needs you", NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(true) })
+        manager.createNotificationChannel(NotificationChannel(WAITING_CHANNEL, "Needs you", NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(true) })
     }
 
     fun granted() = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(app, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
-    private fun open(chat: String?, code: Int): PendingIntent {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(chat?.let(::chatLink) ?: "agentview://open?view=assistant"), app, MainActivity::class.java)
+    private fun open(link: String, code: Int): PendingIntent {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link), app, MainActivity::class.java)
         return PendingIntent.getActivity(app, code, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    }
+
+    private fun action(op: String, chat: String, id: Int, channel: String, label: String, reply: Boolean = false): NotificationCompat.Action {
+        val intent = Intent(op).setClass(app, NoticeReceiver::class.java)
+            .putExtra(EXTRA_CHAT, chat).putExtra(EXTRA_NOTICE_ID, id).putExtra(EXTRA_CHANNEL, channel).putExtra(EXTRA_READONLY, AppState.readOnly)
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (reply) PendingIntent.FLAG_MUTABLE else PendingIntent.FLAG_IMMUTABLE
+        val builder = NotificationCompat.Action.Builder(0, label, PendingIntent.getBroadcast(app, (op + chat).hashCode(), intent, flags))
+        if (reply) builder.addRemoteInput(RemoteInput.Builder(KEY_REPLY).setLabel("Reply").build())
+        return builder.build()
     }
 
     @android.annotation.SuppressLint("MissingPermission")
     fun post(n: Notice) {
         if (!granted()) return
         val id = (n.kind.channel + n.chatId).hashCode()
-        val built = NotificationCompat.Builder(app, n.kind.channel)
+        val builder = NotificationCompat.Builder(app, n.kind.channel)
             .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle(n.title)
             .setContentText(n.body)
-            .setContentIntent(open(n.chatId, id))
+            .setContentIntent(open(chatLink(n.chatId), id))
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .build()
-        manager.notify(id, built)
+        val replies = n.ask == NoticeAsk.Question || n.kind == NoticeKind.Finished
+        if (n.ask == NoticeAsk.Permission) {
+            builder.addAction(action(NoticeOp.ALLOW, n.chatId, id, n.kind.channel, "Allow"))
+            builder.addAction(action(NoticeOp.DENY, n.chatId, id, n.kind.channel, "Deny"))
+        }
+        if (replies) builder.addAction(action(NoticeOp.REPLY, n.chatId, id, n.kind.channel, "Reply", reply = true))
+        manager.notify(id, builder.build())
+    }
+
+    // After an action: the notification goes away, or shows why nothing was sent.
+    @android.annotation.SuppressLint("MissingPermission")
+    fun settle(id: Int, channel: String, chat: String, result: ActionResult) {
+        when (result) {
+            ActionResult.Sent -> manager.cancel(id)
+            else -> {
+                if (!granted()) return
+                val text = if (result is ActionResult.Failed) result.text else READ_ONLY_SENT
+                manager.notify(id, NotificationCompat.Builder(app, channel).setSmallIcon(R.drawable.ic_notify).setContentTitle(text).setContentIntent(open(chatLink(chat), id)).setAutoCancel(true).build())
+            }
+        }
     }
 
     fun clear(chat: String) = NoticeKind.entries.forEach { manager.cancel((it.channel + chat).hashCode()) }
 
-    fun clearChats() = manager.activeNotifications.filter { it.id != BADGE_ID }.forEach { manager.cancel(it.id) }
+    fun clearChats() = manager.activeNotifications.filter { it.id != WAITING_ID }.forEach { manager.cancel(it.id) }
 
-    // The launcher shows this count on the app icon while the notification is active.
+    // One ongoing, silent list of the chats that wait for you; the launcher shows its count on the app icon.
     @android.annotation.SuppressLint("MissingPermission")
-    fun badge(count: Int) {
-        val n = badgeArg(count)
-        if (n == 0 || !granted()) { manager.cancel(BADGE_ID); return }
-        val built = NotificationCompat.Builder(app, BADGE_CHANNEL)
+    fun waiting(snap: WaitingSnapshot) {
+        if (snap.total == 0 || !granted()) { manager.cancel(WAITING_ID); return }
+        val style = NotificationCompat.InboxStyle().setBigContentTitle("Needs you").setSummaryText("${snap.total} waiting")
+        snap.lines.forEach { style.addLine(it.text()) }
+        val built = NotificationCompat.Builder(app, WAITING_CHANNEL)
             .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("Needs you")
-            .setContentText("$n waiting")
-            .setNumber(n)
+            .setContentText("${snap.total} waiting")
+            .setStyle(style)
+            .setNumber(snap.total)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
+            .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setContentIntent(open(null, BADGE_ID))
+            .setContentIntent(open("agentview://open?view=sessions", WAITING_ID))
             .build()
-        manager.notify(BADGE_ID, built)
+        manager.notify(WAITING_ID, built)
     }
 }

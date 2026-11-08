@@ -3,4 +3,5 @@
     <string name="shortcut_new_chat">New chat</string>
     <string name="shortcut_codex">Codex</string>
     <string name="shortcut_add_task">Add task</string>
+    <string name="widget_waiting">Chats waiting for you</string>
 </resources>
