@@ -128,7 +128,9 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
                 Box(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) { ItemRow(hub, it, chatId, cwd, !running, onOpenAgent) }
             }
             if (state.earlier > 0) item(key = "earlier") {
-                Button(if (loading) "Loading earlier" else "Show earlier (${state.earlier} hidden)", { hub.loadEarlier() }, enabled = !loading, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
+                    Text(if (loading) "Loading earlier" else "Show earlier (${state.earlier} hidden)", style = Type.callout, color = av.accentText)
+                }
             }
             if (rows.isEmpty()) item(key = "empty") {
                 if (state.settled && !(blank && (loading || tried != state.earlier))) EmptyState("No messages yet", "Your prompts, Claude's steps and replies show up here.") else EmptyState("Loading")
@@ -236,12 +238,12 @@ private fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
                 if (state == "pending") CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint)
                 else Box(Modifier.size(Tokens.dot).background(if (state == "err") av.err else toneColor(stepTone(it.use.name)), CircleShape))
             }
-            WordClamp(
+            Text(
                 androidx.compose.ui.text.buildAnnotatedString {
                     if (label.verb.isNotEmpty()) withStyleColor(toneColor(stepTone(it.use.name))) { append(label.verb + " ") }
                     withStyleColor(av.fg, mono = label.mono) { append(label.obj) }
                 },
-                Type.subheadline, av.fgMuted, 2, modifier = Modifier.weight(1f),
+                Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgFaint, modifier = Modifier.padding(start = Tokens.sp3))
         }
