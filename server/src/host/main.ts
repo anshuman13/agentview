@@ -2,6 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 import { mkdirSync, unlinkSync, watch, type FSWatcher } from 'node:fs';
 import { readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { getSessionInfo } from '../agent/claude/sessions.js';
@@ -12,6 +13,7 @@ import type { AgentSession } from '../session/session.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway, notifyStall, stallWatch } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
+import { parseTries, startTries, TRIES_USAGE } from '../workspace/tries.js';
 import { ownProfile } from '../chrome/chrome.js';
 import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '../../../shared/protocol.js';
 import { replyLine, sumEdits } from '../../../shared/edits.js';
@@ -312,12 +314,24 @@ async function prompt(cwd: string, text: string, from?: string, fresh = false) {
   return chat.id;
 }
 
+function runTries(chat: AgentSession, text: string, tries: Exclude<ReturnType<typeof parseTries>, null>, id: string = randomUUID()) {
+  chat.pushEvent({ id, kind: 'user', text, at: Date.now() });
+  if (tries === 'usage') return chat.system(TRIES_USAGE);
+  chat.system(`Starting ${tries.n} worktrees for this prompt`);
+  void startTries(chat.cwd, tries.n, tries.prompt, (cwd, p) => prompt(cwd, p, chat.id, true)).then(
+    (ids) => chat.system(`Started ${ids.length} chats, one per tries/ branch; they are listed in Sessions`),
+    (err) => chat.system(`Tries failed: ${errText(err)}`),
+  );
+}
+
 // Chat-level commands from a client. The ones whose failure the client should hear about return their promise.
 function command(chat: AgentSession, msg: ClientMessage): Promise<unknown> | void {
   switch (msg.type) {
     case 'prompt': {
       if (typeof msg.text !== 'string') return;
       const id = typeof msg.id === 'string' ? msg.id.slice(0, 64) : undefined;
+      const tries = parseTries(msg.text);
+      if (tries) return runTries(chat, msg.text, tries, id);
       // The composer sends steer to stop Claude; a prompt during a run (Fix, Compact) waits its turn.
       void chat.prompt(msg.text, id);
       return;
