@@ -106,7 +106,7 @@ export function parseTodos(out: string, max = 100): Todo[] {
   for (const l of out.split('\n')) {
     const m = /^(.+?):(\d+):(.*)$/.exec(l);
     if (!m || /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lock)$|\.min\./.test(m[1])) continue;
-    const text = /\b(?:TODO|FIXME)\b(?:\([^)]*\))?[:\s]*(.*)$/.exec(m[3])?.[1]?.replace(/\s*(\*\/|-->)\s*$/, '').trim();
+    const text = /(?:\/\/|#|\/\*|<!--|^\s*\*|--)\s*(?:TODO|FIXME)\b(?:\([^)]*\))?[:\s]*(.*)$/.exec(m[3])?.[1]?.replace(/\s*(\*\/|-->)\s*$/, '').trim();
     if (text === undefined || m[3].length > 400) continue;
     todos.push({ path: m[1], line: Number(m[2]), text });
     if (todos.length >= max) break;

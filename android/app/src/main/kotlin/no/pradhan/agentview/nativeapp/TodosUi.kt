@@ -11,7 +11,7 @@ data class Todos(val todos: List<Todo> = emptyList())
 
 fun todoPrompt(t: Todo) = "Resolve the TODO at ${t.path}:${t.line}" + (if (t.text.isNotEmpty()) " (\"${t.text}\")" else "") + ". Read the code around it, make the change, remove the comment and tell me what you did."
 
-// TODO and FIXME comments in the repo as ready-made tasks; a tap puts a prompt for one in the composer.
+// To-do and fix-me comments in the repo as ready-made tasks; a tap puts a prompt for one in the composer.
 @Composable
 fun TodosSheet(hub: Hub, cwd: String, onDismiss: () -> Unit) {
     val (todos) = rememberLoad(cwd) { protocolJson.decodeFromString<Todos>(hub.read("/api/git/todos")).todos }

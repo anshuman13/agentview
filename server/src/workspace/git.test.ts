@@ -84,8 +84,8 @@ describe('parseNumstat', () => {
 });
 
 describe('parseTodos', () => {
-  it('reads the text after TODO or FIXME and skips lock files', () => {
-    const out = ['src/a.ts:12:  // TODO: retry on 429', 'web/b.css:3:/* FIXME(ana) dark mode */', 'package-lock.json:9:"TODO": 1', 'x.md:1:Fix the TODOS list', 'y.py:4:# TODO'].join('\n');
+  it('reads TODO and FIXME comments and skips lock files and strings', () => {
+    const out = ['src/a.ts:12:  // TODO: retry on 429', 'web/b.css:3:/* FIXME(ana) dark mode */', 'package-lock.json:9:"TODO": 1', 'x.md:1:Fix the TODOS list', 'y.py:4:# TODO', 'z.kt:7:val p = "Resolve the TODO at x"'].join('\n');
     expect(parseTodos(out)).toEqual([
       { path: 'src/a.ts', line: 12, text: 'retry on 429' },
       { path: 'web/b.css', line: 3, text: 'dark mode' },
