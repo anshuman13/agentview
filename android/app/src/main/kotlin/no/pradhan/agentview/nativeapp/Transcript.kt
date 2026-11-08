@@ -39,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -87,6 +88,9 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
     val items = remember(state.events) { buildTranscript(state.events) }
     val rows = remember(items) { items.asReversed() }
     val days = remember(items) { dayDividers(items, System.currentTimeMillis()) }
+    val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
+    val newId = remember(items, seen) { newMarker(items, state.events.associate { it.id to it.at }, seen.first, seen.second) }
+    DisposableEffect(chatId) { onDispose { hub.leftChat(chatId) } }
     val listState = rememberLazyListState()
     val loading by hub.loadingEarlier.collectAsState()
     val scope = rememberCoroutineScope()
@@ -133,6 +137,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
             itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
                 Column(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) {
                     days[it.id]?.let { DayDivider(it) }
+                    if (it.id == newId) NewLine()
                     ItemRow(hub, it, chatId, cwd, !running, onOpenAgent)
                 }
             }
@@ -159,6 +164,14 @@ private fun DayDivider(label: String) {
         HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
         Text(label, style = Type.label, color = av.fgMuted, fontWeight = FontWeight.SemiBold)
         HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
+    }
+}
+
+@Composable
+private fun NewLine() {
+    Row(Modifier.fillMaxWidth().padding(bottom = Tokens.sp4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        HorizontalDivider(Modifier.weight(1f), color = av.danger, thickness = Tokens.hairline)
+        Text("New", style = Type.label, color = av.danger, fontWeight = FontWeight.SemiBold)
     }
 }
 

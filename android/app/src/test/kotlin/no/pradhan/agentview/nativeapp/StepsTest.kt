@@ -106,4 +106,12 @@ class StepsTest {
         assertEquals(mapOf("a" to "31 December 2025", "b" to "Friday, 6 November", "d" to "Yesterday", "e" to "Today"), dayDividers(items, now, zone))
         assertEquals(emptyMap<String, String>(), dayDividers(listOf(user("x", "2026-11-08T09:00"), user("y", "2026-11-08T21:00")), now, zone))
     }
+
+    @Test fun newMarkerIsFirstReplyAfterLastVisit() {
+        val items = listOf(Item.User("u1", "a", 10, false, false), Item.Assistant("a1", "x", false), Item.User("u2", "b", 30, false, false), Item.Assistant("a2", "y", false), Item.Assistant("a3", "z", false))
+        val ats = mapOf("u1" to 10L, "a1" to 20L, "u2" to 30L, "a2" to 40L, "a3" to 60L)
+        assertEquals("a2", newMarker(items, ats, seen = 25, openedAt = 50))
+        assertNull(newMarker(items, ats, seen = 0, openedAt = 50))
+        assertNull(newMarker(items, ats, seen = 45, openedAt = 50))
+    }
 }

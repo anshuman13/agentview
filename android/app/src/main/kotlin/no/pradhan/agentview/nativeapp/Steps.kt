@@ -184,3 +184,9 @@ fun dayDividers(items: List<Item>, now: Long, zone: java.time.ZoneId = codexZone
     }
     return out
 }
+
+// Slack-style New line: the first reply or step that arrived after this phone last showed the chat and before it was opened.
+fun newMarker(items: List<Item>, ats: Map<String, Long>, seen: Long, openedAt: Long): String? {
+    if (seen <= 0) return null
+    return items.firstOrNull { it !is Item.User && (ats[it.id] ?: 0L).let { at -> at > seen && at <= openedAt } }?.id
+}

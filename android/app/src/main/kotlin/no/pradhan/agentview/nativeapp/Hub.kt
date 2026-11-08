@@ -90,6 +90,10 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
     val writes = Writes(viewModelScope, { readOnly }, { notice.value = it })
     val theme = MutableStateFlow(prefs.getString("theme", null) ?: "")
 
+    // When this phone last showed each chat, for the New line.
+    fun leftAt(chat: String) = prefs.getLong("seen:$chat", 0L)
+    fun leftChat(chat: String) = prefs.edit().putLong("seen:$chat", System.currentTimeMillis()).apply()
+
     // Set by the launch intent to check the screens without changing anything on the server beyond viewing a chat.
     var readOnly: Boolean
         get() = AppState.readOnly
