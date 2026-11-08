@@ -59,7 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.draw.rotate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,7 +81,7 @@ internal fun gapAbove(older: Item?, it: Item): Dp? {
 private fun Modifier.gap(d: Dp?) = if (d == null) this else padding(top = d)
 
 @Composable
-fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running: Boolean, modifier: Modifier = Modifier) {
+fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running: Boolean, onOpenAgent: (String) -> Unit, modifier: Modifier = Modifier) {
     val items = remember(state.events) { buildTranscript(state.events) }
     val rows = remember(items) { items.asReversed() }
     val listState = rememberLazyListState()
@@ -126,7 +125,7 @@ fun Transcript(hub: Hub, state: StoreState, chatId: String, cwd: String, running
             contentPadding = PaddingValues(horizontal = Tokens.listPad, vertical = Tokens.sp8),
         ) {
             itemsIndexed(rows, key = { _, it -> it.id }, contentType = { _, it -> it::class }) { i, it ->
-                Box(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) { ItemRow(hub, it, chatId, cwd, !running) }
+                Box(Modifier.gap(gapAbove(rows.getOrNull(i + 1), it))) { ItemRow(hub, it, chatId, cwd, !running, onOpenAgent) }
             }
             if (state.earlier > 0) item(key = "earlier") {
                 Button(if (loading) "Loading earlier" else "Show earlier (${state.earlier} hidden)", { hub.loadEarlier() }, enabled = !loading, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
@@ -154,7 +153,7 @@ private fun JumpButton(modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat)
         is Item.Phase -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -165,7 +164,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = av.fgFaint)
         is Item.Step -> StepRow(it, cwd, settled)
         is Item.File -> FileCard(it, cwd)
-        is Item.Agent -> AgentRow(hub, it, chat, cwd)
+        is Item.Agent -> AgentRow(hub, it, chat, cwd, onOpenAgent)
         is Item.Blocked -> BlockedCard(it.ev, hub)
     }
 }
@@ -317,8 +316,7 @@ fun editPairs(use: ChatEvent): List<Pair<String, String>> = when (use.name) {
 }
 
 @Composable
-private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
-    var open by rememberSaveable(it.id) { mutableStateOf(false) }
+private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpenAgent: (String) -> Unit) {
     val desc = it.use.input.s("description").ifEmpty { "Sub-agent" }
     val type = it.use.input.s("subagent_type")
     val result = it.result
@@ -330,11 +328,10 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
         result?.isError == true -> "failed"
         else -> "done" + if (dur.isNotEmpty()) " $dur" else ""
     }
-    val canOpen = it.steps.isNotEmpty() || result != null
     val agentBar = av.agent.copy(alpha = 0.45f)
-    val shown = if (open) it.steps else if (it.running) it.steps.takeLast(3) else emptyList()
-    Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = canOpen) { open = !open }, verticalAlignment = Alignment.CenterVertically) {
+    val shown = if (it.running) it.steps.takeLast(3) else emptyList()
+    Column(Modifier.fillMaxWidth().clickable { onOpenAgent(it.use.id) }) {
+        Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) { StatusDot(DotState.Agent) }
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
@@ -346,17 +343,14 @@ private fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String) {
                 Modifier.weight(1f), style = Type.subheadline, color = av.fg, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             if (it.running) Button("Stop", { hub.stopTask(it.use.id) }, variant = ButtonVariant.Gray, size = ButtonSize.Sm)
-            if (canOpen) AvIcon("chevron-right", null, Tokens.icon, Modifier.padding(horizontal = Tokens.sp3).rotate(if (open) 90f else 0f), tint = av.fgFaint)
+            AvIcon("chevron-right", null, Tokens.icon, Modifier.padding(horizontal = Tokens.sp3), tint = av.fgFaint)
         }
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(agentBar, Tokens.stroke).padding(start = Tokens.sp7)) {
-            if (!open && it.steps.size > shown.size) Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable { open = true }, verticalAlignment = Alignment.CenterVertically) {
+            if (it.steps.size > shown.size) Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch), verticalAlignment = Alignment.CenterVertically) {
                 Text("${it.steps.size - shown.size} earlier steps", style = Type.footnote, color = av.fgFaint)
             }
             val running = it.running
-            shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running) } }
-        }
-        if (open && result != null && !it.running) Box(Modifier.padding(start = Tokens.leadWidth, top = Tokens.sp1, bottom = Tokens.sp4).heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp6)) {
-            Markdown(result.text.ifEmpty { "(no output)" })
+            shown.forEachIndexed { i, s -> Box(Modifier.gap(gapAbove(shown.getOrNull(i - 1), s)?.coerceAtMost(Tokens.sp2))) { ItemRow(hub, s, chat, cwd, !running, onOpenAgent) } }
         }
     }
 }

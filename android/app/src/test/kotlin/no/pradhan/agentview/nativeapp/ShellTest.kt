@@ -28,6 +28,15 @@ class ShellTest {
         assertEquals("more/mcp", routeFor(DeepLink(page = "mcp")))
         assertEquals("sessions", routeFor(DeepLink(view = "chats")))
         assertEquals("more/github", routeFor(DeepLink(view = "github")))
+        assertEquals("chat", routeFor(DeepLink(view = "agents")))
         assertNull(routeFor(DeepLink(view = "zzz")))
+    }
+
+    @Test fun agentBadgeCountsRunningElseTotal() {
+        val use = ChatEvent(id = "u", kind = "tool_use")
+        fun agent(status: String) = Agent("a", Item.Agent("a", use, null, false, emptyList()), null, "", "", null, "", status, 0, null, "", 0)
+        val five = listOf("running", "running", "done", "done", "failed").map(::agent)
+        assertEquals(2 to true, agentBadge(five))
+        assertEquals(5 to false, agentBadge(five.map { it.copy(status = "done") }))
     }
 }

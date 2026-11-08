@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.shrinkVertically
@@ -49,6 +50,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import kotlinx.coroutines.delay
 
 private const val ORIGIN_ROUTE = "origin"
@@ -57,7 +60,6 @@ internal fun icon(t: Tab): String = when (t) {
     Tab.Codex -> "sparkle"
     Tab.Chat -> "comment"
     Tab.Sessions -> "comment-discussion"
-    Tab.Agents -> "hubot"
 }
 
 private const val RAIL_MIN_DP = 600
@@ -72,8 +74,20 @@ private fun DestLabel(d: Dest) = Text(d.label, style = Type.label)
 
 private fun isMore(route: String?) = route != null && (route.startsWith("more/") || route == ORIGIN_ROUTE)
 
-// Drops the More pages on top first, so the tab shows its own screen and not the page saved with it.
+private fun isAgent(route: String?) = route != null && route.startsWith("agent/")
+
+private fun NavHostController.popAgents() {
+    while (isAgent(currentDestination?.route)) if (!popBackStack()) break
+}
+
+private fun NavHostController.openMore(route: String) {
+    popAgents()
+    navigate(route) { launchSingleTop = true }
+}
+
+// Drops the agent pages and More pages on top first, so the tab shows its own screen and not the page saved with it.
 private fun NavHostController.goTab(route: String) {
+    popAgents()
     while (isMore(currentDestination?.route)) if (!popBackStack()) break
     navigate(route) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
@@ -100,7 +114,7 @@ fun App(hub: Hub) {
         l.chat?.let { hub.open(it) }
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
         if (l.action == Shortcut.ADD_TASK) hub.addTask.value = true
-        routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.navigate(r) { launchSingleTop = true } else nav.goTab(r) }
+        routeFor(l)?.let { r -> if (r.startsWith("more/")) nav.openMore(r) else nav.goTab(r) }
         hub.link.value = null
     }
 
@@ -114,9 +128,11 @@ fun App(hub: Hub) {
 
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
     val inMore = isMore(route)
+    val inAgent = isAgent(route)
     val shownChat = state.live.firstOrNull { it.id == state.shownId }
     val rail = LocalConfiguration.current.screenWidthDp >= RAIL_MIN_DP
     val navHidden by hub.navHidden.collectAsState()
+    val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
     LaunchedEffect(route, state.shownId) { hub.navHidden.value = false }
     val dests = Tab.entries.map { t ->
         val badge = when (t) {
@@ -124,7 +140,7 @@ fun App(hub: Hub) {
             Tab.Sessions -> state.live.filter { it.id != state.shownId }.sumOf { it.pending }
             else -> 0
         }
-        Dest(t.label, icon(t), route == t.route && !more, badge) { more = false; nav.goTab(t.route) }
+        Dest(t.label, icon(t), (route == t.route || (t == Tab.Chat && inAgent)) && !more, badge) { more = false; nav.goTab(t.route) }
     } + Dest("More", "ellipsis", more || inMore, 0) { more = true }
 
     Scaffold(
@@ -133,7 +149,7 @@ fun App(hub: Hub) {
         snackbarHost = { SnackHost(snack) },
         bottomBar = {
             if (!rail) AnimatedVisibility(
-                visible = !navHidden,
+                visible = !navHidden && !inAgent,
                 enter = slideInVertically(tween(Tokens.dur * 2)) { it } + expandVertically(tween(Tokens.dur * 2)),
                 exit = slideOutVertically(tween(Tokens.dur * 2)) { it } + shrinkVertically(tween(Tokens.dur * 2)),
             ) {
@@ -159,9 +175,11 @@ fun App(hub: Hub) {
                 if (banner == OfflineState.Shown) OfflineBanner(onRetry = hub::retry)
                 NavHost(nav, startDestination = Tab.Codex.route, modifier = Modifier.weight(1f)) {
                     composable(Tab.Codex.route) { CodexScreen(hub) }
-                    composable(Tab.Chat.route) { ChatScreen(hub) }
+                    composable(Tab.Chat.route) { ChatScreen(hub, onOpenAgent = openAgent) }
                     composable(Tab.Sessions.route) { SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
-                    composable(Tab.Agents.route) { AgentsScreen(hub) }
+                    composable("agent/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
+                        AgentScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)
+                    }
                     (MORE_TOOLS + MORE_PAGES).forEach { m ->
                         composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
                     }
@@ -174,7 +192,7 @@ fun App(hub: Hub) {
     shared?.let { ShareSheet(hub, it) }
 
     if (more) {
-        val go = { r: String -> more = false; nav.navigate(r) { launchSingleTop = true } }
+        val go = { r: String -> more = false; nav.openMore(r) }
         Sheet(onDismiss = { more = false }, padded = false) {
             val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
             SectionHeader("Workspace")

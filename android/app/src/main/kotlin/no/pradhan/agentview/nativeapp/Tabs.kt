@@ -4,7 +4,6 @@ enum class Tab(val route: String, val label: String) {
     Codex("assistant", "Codex"),
     Chat("chat", "Chat"),
     Sessions("sessions", "Sessions"),
-    Agents("agents", "Agents"),
 }
 
 class MoreItem(val route: String, val label: String, val icon: String)
@@ -30,6 +29,7 @@ fun routeFor(link: DeepLink): String? = when {
     link.page != null -> "more/${link.page}"
     else -> when (link.view) {
         "assistant" -> Tab.Codex.route
+        "agents" -> Tab.Chat.route
         "chats", "sessions" -> Tab.Sessions.route
         "explorer" -> "more/files"
         "changes", "github" -> "more/${link.view}"

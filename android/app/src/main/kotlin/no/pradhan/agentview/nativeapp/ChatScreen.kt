@@ -6,11 +6,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -18,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import kotlinx.coroutines.delay
 
 data class StatusLine(val text: String, val tone: Tone2)
 enum class Tone2 { Running, Needs, Failed, Idle }
@@ -33,7 +37,7 @@ fun statusLine(live: LiveChat, session: SessionInfo?): StatusLine = when {
 fun costLabel(cost: Double) = if (cost > 0) "$" + String.format(java.util.Locale.US, "%.2f", cost) else ""
 
 @Composable
-fun ChatScreen(hub: Hub) {
+fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     val state by hub.store.state.collectAsState()
     val live = state.live.firstOrNull { it.id == state.shownId }
     if (live == null) {
@@ -47,6 +51,11 @@ fun ChatScreen(hub: Hub) {
     val running = session?.running ?: live.running
     val cost = remember(state.events, live.cost) { live.cost ?: chatCost(state.events) }
     var dialog by remember { mutableStateOf<String?>(null) }
+    val agents = remember(state.events) { buildAgents(state.events) }
+    var agentsOpen by remember { mutableStateOf(false) }
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val ticking = agentsOpen && agents.any { it.status == "running" }
+    LaunchedEffect(ticking) { while (ticking) { now = System.currentTimeMillis(); delay(1000) } }
     val status = statusLine(live, session)
     val sessionId = live.sessionId ?: session?.sessionId
 
@@ -69,6 +78,10 @@ fun ChatScreen(hub: Hub) {
                 WordClamp(line, Type.subheadline, muted, 1)
             },
         ) {
+            if (agents.isNotEmpty()) {
+                val (count, anyRunning) = agentBadge(agents)
+                BadgedBox(badge = { Badge("$count", if (anyRunning) BadgeTone.Running else BadgeTone.Quiet) }) { IconBtn("hubot", "Agents", { agentsOpen = true }) }
+            }
             MoreButton { close ->
                 MenuItem("Rename", "edit", { close(); dialog = "rename" }, enabled = sessionId != null)
                 MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) dialog = "close" else hub.closeChat(live.id) })
@@ -77,9 +90,13 @@ fun ChatScreen(hub: Hub) {
             }
         }
         HorizontalDivider(color = av.border, thickness = Tokens.hairline)
-        Transcript(hub, state, live.id, session?.cwd ?: live.cwd, running, Modifier.weight(1f).fillMaxWidth())
+        Transcript(hub, state, live.id, session?.cwd ?: live.cwd, running, onOpenAgent, Modifier.weight(1f).fillMaxWidth())
         PendingList(state.pending, session?.permissionMode ?: "default", hub)
         Composer(hub, live.id, session, running, state.pending.isNotEmpty())
+    }
+
+    if (agentsOpen) Sheet(onDismiss = { agentsOpen = false }, padded = false) {
+        AgentList(agents, now) { agentsOpen = false; onOpenAgent(it) }
     }
 
     when (dialog) {

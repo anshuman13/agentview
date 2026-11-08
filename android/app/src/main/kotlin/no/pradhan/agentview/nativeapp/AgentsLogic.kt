@@ -109,6 +109,12 @@ fun agentRowMeta(a: Agent): String = listOf(
     (if (a.status == "running") a.info?.progress else null) ?: a.lastStep,
 ).filter { it.isNotEmpty() }.joinToString(" · ")
 
+// The Agents button badge: the running count, or the total when none run.
+fun agentBadge(agents: List<Agent>): Pair<Int, Boolean> {
+    val running = agents.count { it.status == "running" }
+    return if (running > 0) running to true else agents.size to false
+}
+
 fun agentDot(status: String) = when (status) {
     "running" -> DotState.Running
     "done" -> DotState.Ok

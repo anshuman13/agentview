@@ -23,50 +23,37 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.delay
 
-// The Agents tab (web/src/sessions/AgentsPane.tsx): the sub-agents of the chat on screen, and one agent's report, prompt and steps.
+// One agent's report, prompt and steps (web/src/sessions/AgentsPane.tsx), and the list of the chat's sub-agents shown in the Chat sheet. Not a tab.
 @Composable
-fun AgentsScreen(hub: Hub) {
+fun AgentScreen(hub: Hub, id: String, onBack: () -> Unit, onOpenAgent: (String) -> Unit) {
     val st by hub.store.state.collectAsState()
-    val agents = remember(st.events) { buildAgents(st.events) }
-    val running = agents.any { it.status == "running" }
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(running) { while (running) { now = System.currentTimeMillis(); delay(1000) } }
-    var sel by rememberSaveable(st.shownId) { mutableStateOf<String?>(null) }
-    val current = agents.firstOrNull { it.id == sel }
-    if (current != null) { AgentPage(hub, current, st.session?.cwd ?: "", st.shownId, now) { sel = null }; return }
-    val title = st.live.firstOrNull { it.id == st.shownId }?.title
-
+    val agent = remember(st.events, id) { buildAgents(st.events).firstOrNull { it.id == id } }
+    if (agent != null) { AgentPage(hub, agent, st.session?.cwd ?: "", st.shownId, onBack, onOpenAgent); return }
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Agents", subtitle = title?.let { { WordClamp(androidx.compose.ui.text.AnnotatedString(it), Type.footnote, av.fgMuted, 2) } })
-        PageBody {
-            LazyColumn(Modifier.fillMaxSize()) {
-                when {
-                    st.shownId.isEmpty() -> item { EmptyState("No chat open", "Open a chat to see the sub-agents Claude starts in it", small = false) }
-                    agents.isEmpty() -> item { EmptyState("No agents yet", "Sub-agents Claude starts in this chat show up here, with their prompt, steps and report", small = false) }
-                    else -> {
-                        for ((name, rows) in agentGroups(agents)) {
-                            item(key = "h:${name ?: ""}") { SectionHeader(name ?: "Agents", rows.size.toString()) }
-                            item(key = "g:${name ?: ""}") {
-                                Group {
-                                    rows.forEachIndexed { i, a ->
-                                        if (i > 0) Hairline(lead = true)
-                                        ListRow(a.description, agentRowMeta(a), leading = { StatusDot(agentDot(a.status)) }, trailing = { RowLabel(agentTrailing(a, now)) }, onClick = { sel = a.id })
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
+        PageHeader("Agent", onBack)
+        EmptyState("Agent not found", "It is not in the chat on screen")
+    }
+}
+
+@Composable
+fun AgentList(agents: List<Agent>, now: Long, onOpen: (String) -> Unit) {
+    for ((name, rows) in agentGroups(agents)) {
+        SectionHeader(name ?: "Agents", rows.size.toString())
+        Group {
+            rows.forEachIndexed { i, a ->
+                if (i > 0) Hairline(lead = true)
+                ListRow(a.description, agentRowMeta(a), leading = { StatusDot(agentDot(a.status)) }, trailing = { RowLabel(agentTrailing(a, now)) }, onClick = { onOpen(a.id) })
             }
         }
     }
 }
 
 @Composable
-private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, now: Long, onBack: () -> Unit) {
+private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () -> Unit, onOpenAgent: (String) -> Unit) {
     BackHandler(onBack = onBack)
     val running = a.status == "running"
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(running) { while (running) { now = System.currentTimeMillis(); delay(1000) } }
     var prompt by rememberSaveable(a.id) { mutableStateOf(false) }
     val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {
@@ -89,7 +76,7 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, now: Long, 
             }
             item { SectionHeader("Steps", a.item.steps.size.toString()) }
             if (a.item.steps.isEmpty()) item { Box(pad) { EmptyState("No steps yet") } }
-            items(a.item.steps, key = { it.id }) { s -> Box(Modifier.padding(horizontal = Tokens.listPad)) { ItemRow(hub, s, chat, cwd, !running) } }
+            items(a.item.steps, key = { it.id }) { s -> Box(Modifier.padding(horizontal = Tokens.listPad)) { ItemRow(hub, s, chat, cwd, !running, onOpenAgent) } }
             item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
         }
     }
