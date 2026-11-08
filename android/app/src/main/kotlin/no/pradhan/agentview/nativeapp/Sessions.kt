@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,13 +11,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,17 +32,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlinx.coroutines.launch
 
-private const val RECENT = 5
+private const val RECENT = 6
 
 @Composable
 fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val state by hub.store.state.collectAsState()
     val ws by hub.workspace.collectAsState()
     val connected by hub.connected.collectAsState()
-    val collapsed: Map<String, Boolean> by hub.collapsed.collectAsState()
     val segment by hub.chatSegment.collectAsState()
     var filter by rememberSaveable { mutableStateOf("") }
-    val full = remember { mutableStateListOf<String>() }
     var opening by remember { mutableStateOf<String?>(null) }
     var renaming by remember { mutableStateOf<Pair<String, String>?>(null) }
     var archiving by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -57,6 +57,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val pins = ws.pins.toSet()
     val seen = ws.seen
     var showIdle by rememberSaveable { mutableStateOf(false) }
+    var repoKey by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
@@ -112,7 +113,27 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     }
 
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
-    Box(Modifier.fillMaxSize()) {
+    val (busy, idle) = groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() }
+    val recentRows = remember(busy, filter) {
+        busy.flatMap { g -> g.open.filter { it.pending == 0 }.map { Triple<LiveChat?, SavedSession?, String>(it, null, g.name) to it.lastActive } + g.recent.map { Triple<LiveChat?, SavedSession?, String>(null, it, g.name) to it.lastModified } }
+            .sortedByDescending { it.second }.map { it.first }.let { if (filter.isBlank()) it.take(RECENT) else it }
+    }
+    val repo = repoKey?.let { k -> all.firstOrNull { it.key == k } ?: groupByRepo(live, ws).firstOrNull { it.key == k } }
+
+    if (repo != null) {
+        BackHandler { repoKey = null }
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                PageHeader(repo.name, onBack = { repoKey = null })
+                val rows = repo.open.map<LiveChat, Pair<LiveChat?, SavedSession?>> { it to null } + repo.recent.map { null to it }
+                if (rows.isEmpty()) EmptyState("No chats in ${repo.name} yet", action = { Button("New chat", { hub.newChat(repo.key); onOpen() }, variant = ButtonVariant.Tinted, icon = "add") })
+                else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
+                    lazyGroup(rows, { if (it.first != null) "o-${it.first!!.id}" else "r-${it.second!!.sessionId}" }) { (c, s) -> if (c != null) liveRow(c) else savedRow(s!!) }
+                }
+            }
+            Fab("add", "New chat in ${repo.name}", { hub.newChat(repo.key); onOpen() }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
+        }
+    } else Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             PageHeader("Sessions") { IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
             SearchField(filter, { filter = it }, "Search repos and sessions")
@@ -137,30 +158,19 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 if (pinned.isNotEmpty()) {
                     item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
                     lazyGroup(pinned, { "pin-${it.first?.id ?: it.second?.sessionId}" }) { (c, s) ->
-                        val repo = folderName(folderKey(c?.cwd ?: s!!.cwd, ws.repos, ws.trees))
-                        if (c != null) liveRow(c, repo) else savedRow(s!!, repo)
+                        val name = folderName(folderKey(c?.cwd ?: s!!.cwd, ws.repos, ws.trees))
+                        if (c != null) liveRow(c, name) else savedRow(s!!, name)
                     }
                 }
-                val (busy, idle) = groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() }
-                for (g in busy) {
-                    val open = filter.isNotBlank() || !(collapsed[g.key] ?: g.open.isEmpty())
-                    item(key = "g-${g.key}") { GroupHeader(g, open, seen, { hub.newChat(g.key); onOpen() }) { hub.setCollapsed(g.key, open) } }
-                    if (open) {
-                        val recent = if (g.key in full || filter.isNotBlank()) g.recent else g.recent.take(RECENT)
-                        val rows = g.open.filter { it.pending == 0 }.map<LiveChat, Pair<LiveChat?, SavedSession?>> { it to null } + recent.map { null to it }
-                        lazyGroup(rows, { if (it.first != null) "o-${it.first!!.id}" else "r-${it.second!!.sessionId}" }) { (c, s) -> if (c != null) liveRow(c) else savedRow(s!!) }
-                        if (filter.isBlank() && g.recent.size > RECENT) item(key = "m-${g.key}") {
-                            val all = g.key in full
-                            Button(if (all) "Show less" else "Show ${g.recent.size - RECENT} more", { if (all) full.remove(g.key) else full.add(g.key) }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                        }
-                    }
+                if (recentRows.isNotEmpty()) {
+                    item(key = "recent-head") { SectionHeader(if (filter.isBlank()) "Recent" else "Chats") }
+                    lazyGroup(recentRows, { (c, s) -> if (c != null) "rc-${c.id}" else "rs-${s!!.sessionId}" }) { (c, s, name) -> if (c != null) liveRow(c, name) else savedRow(s!!, name) }
                 }
-                if (idle.isNotEmpty()) {
-                    val idleOpen = showIdle || filter.isNotBlank()
-                    item(key = "idle-head") { SectionHeader("Repos without chats", idle.size.toString(), open = idleOpen, onToggle = { showIdle = !showIdle }) }
-                    if (idleOpen) lazyGroup(idle.sortedBy { it.name.lowercase() }, { "g-${it.key}" }) { g ->
-                        ListRow(g.name, trailing = { IconBtn("add", "New chat in ${g.name}", { hub.newChat(g.key); onOpen() }) }, onClick = { hub.newChat(g.key); onOpen() })
-                    }
+                val repoRows = if (showIdle || filter.isNotBlank()) busy + idle.sortedBy { it.name.lowercase() } else busy
+                if (repoRows.isNotEmpty() || idle.isNotEmpty()) item(key = "repos-head") { SectionHeader("Repos", (busy.size + idle.size).toString()) }
+                lazyGroup(repoRows, { "g-${it.key}" }, lead = true) { g -> RepoRow(g, seen) { repoKey = g.key } }
+                if (idle.isNotEmpty() && filter.isBlank()) item(key = "idle") {
+                    Group { ListRow(if (showIdle) "Show fewer repos" else "More repos", trailing = { if (!showIdle) Text("${idle.size}", style = Type.body, color = av.fgMuted); Chevron() }, onClick = { showIdle = !showIdle }) }
                 }
             }
         }
@@ -175,16 +185,31 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
 class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit)
 
 @Composable
-private fun GroupHeader(g: RepoGroup, open: Boolean, seen: Map<String, Long>, onNew: () -> Unit, onToggle: () -> Unit) {
+private fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) {
     val glance = groupGlance(g, seen)
-    SectionHeader(g.name, open = open, onToggle = onToggle, style = Type.headline, titleColor = av.fg, action = {
+    val chats = g.open.size + g.recent.size
+    val meta = when {
+        chats == 0 -> "No chats"
+        g.open.isNotEmpty() -> "${g.open.size} open · ${since(g.last)}"
+        else -> "$chats ${if (chats == 1) "chat" else "chats"} · ${since(g.last)}"
+    }
+    ListRow(g.name, meta, leading = { RepoMark(g.name) }, onClick = onClick, trailing = {
         when {
             glance.needs > 0 -> Badge("${glance.needs}", BadgeTone.Waiting)
             glance.running > 0 -> Badge("${glance.running}", BadgeTone.Running)
             glance.unread > 0 -> Badge("${glance.unread}", BadgeTone.Quiet)
         }
-        IconBtn("add", "New chat in ${g.name}", onNew)
+        Chevron()
     })
+}
+
+// A coloured tile with the repo's first letter, the colour fixed by the name.
+@Composable
+private fun RepoMark(name: String) {
+    val hues = listOf(av.hueBlue, av.hueViolet, av.hueTeal, av.hueAmber, av.hueMagenta, av.hueGreen, av.hueOrange, av.hueSky)
+    Box(Modifier.size(Tokens.leadWidth + Tokens.sp2).clip(RoundedCornerShape(Tokens.shapeMd)).background(hues[Math.floorMod(name.hashCode(), hues.size)]), contentAlignment = Alignment.Center) {
+        Text(name.trimStart('.', '_', '-').take(1).uppercase(), style = Type.label, color = av.onColor)
+    }
 }
 
 @Composable

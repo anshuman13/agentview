@@ -36,7 +36,7 @@ fun segmentOf(key: String) = if (key.contains("/workspace_personal/") || key.end
 
 fun folderName(key: String) = key.substringAfterLast('/').ifEmpty { key }
 
-fun isDefaultBranch(b: String?) = b.isNullOrEmpty() || b == "main" || b == "master"
+fun isDefaultBranch(b: String?) = b.isNullOrEmpty() || b == "main" || b == "master" || b == "HEAD"
 
 enum class ChatState { Needs, Failed, Running, Done }
 
