@@ -192,6 +192,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   adds that chat's transcript path to the prompt so Claude can read it (the chat shows the prompt as typed)
 - "Fork chat" in the chat settings menu (web and phone, or the palette) starts a new chat that carries the whole conversation so
   far, so two directions can be tried from the same point
+- In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
+  is saved with that one block of changed lines put back to the last commit
 - On the phone, the last reply of each finished turn has Save as note, which saves the chat title and the reply as a
   Codex note in the chat's profile (like Slack's saved messages)
 - "Share chat" in the phone chat menu sends the loaded prompts and replies as Markdown to the Android share sheet

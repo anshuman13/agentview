@@ -196,6 +196,30 @@ fun fileDiffLines(original: String, content: String): List<DiffLine> =
 
 fun diffCounts(lines: List<DiffLine>) = lines.count { it.mark == '+' } to lines.count { it.mark == '-' }
 
+// Change blocks are the runs of - and + lines between unchanged ones, numbered from 0; -1 for an unchanged line.
+fun blockOf(lines: List<DiffLine>, line: DiffLine): Int {
+    var block = -1
+    var inBlock = false
+    for (l in lines) {
+        if (l.mark == ' ') inBlock = false else if (!inBlock) { block++; inBlock = true }
+        if (l === line) return if (l.mark == ' ') -1 else block
+    }
+    return -1
+}
+
+// The file text with one change block put back to its committed lines, like Zed's reject on one hunk.
+fun revertBlock(lines: List<DiffLine>, k: Int): String {
+    val out = ArrayList<String>()
+    var block = -1
+    var inBlock = false
+    for (l in lines) {
+        if (l.mark == ' ') { inBlock = false; out += l.text; continue }
+        if (!inBlock) { block++; inBlock = true }
+        if (l.mark == (if (block == k) '-' else '+')) out += l.text
+    }
+    return out.joinToString("\n")
+}
+
 fun revertTitle(path: String) = "Revert ${path.substringAfterLast('/')}?"
 const val REVERT_DETAIL = "The file goes back to its last commit, or is deleted when it is new. This cannot be undone."
 

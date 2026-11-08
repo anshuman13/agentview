@@ -444,6 +444,8 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     fun write(path: String, body: String, failure: String, done: (Boolean) -> Unit = {}) = write(path, body, failure, {}) { done(it != null) }
 
+    fun saveFile(path: String, content: String, done: (Boolean) -> Unit) = writes.run("Could not save ${path.substringAfterLast('/')}", { api.put("/api/file?path=${enc(path)}", content, pageChat) }, done)
+
     // A guarded write whose response is parsed and handed to `done`, or null when it did not go through.
     fun <T> write(path: String, body: String, failure: String, parse: (String) -> T, done: (T?) -> Unit) {
         var out: T? = null

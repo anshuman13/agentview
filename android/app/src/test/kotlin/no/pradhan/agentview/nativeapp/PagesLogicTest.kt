@@ -297,4 +297,15 @@ class ReviewDiffTest {
         assertEquals("one\n\ntwo", appendPrompt("one\n", "two"))
         assertEquals("two", appendPrompt(" ", "two"))
     }
+
+    @Test fun revertBlockPutsBackOneChange() {
+        val original = "a\nb\nc\nd\ne\n"
+        val content = "a\nB\nc\nd\nE\n"
+        val lines = fileDiff(original, content)
+        val second = lines.first { it.mark == '+' && it.text == "E" }
+        assertEquals(1, blockOf(lines, second))
+        assertEquals(-1, blockOf(lines, lines.first { it.text == "c" }))
+        assertEquals("a\nB\nc\nd\ne\n", revertBlock(lines, 1))
+        assertEquals("a\nb\nc\nd\nE\n", revertBlock(lines, 0))
+    }
 }

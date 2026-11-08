@@ -173,7 +173,7 @@ fun ChangesPager(hub: Hub, paths: List<String>, start: Int, reviewed: Set<String
     val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = start.coerceIn(0, maxOf(0, paths.size - 1))) { paths.size }
     val counts = remember { androidx.compose.runtime.mutableStateMapOf<String, Pair<Int, Int>>() }
     var ask by remember { mutableStateOf<String?>(null) }
-    var comment by remember { mutableStateOf<Pair<String, DiffRow>?>(null) }
+    var comment by remember { mutableStateOf<Triple<String, DiffRow, (() -> Unit)?>?>(null) }
     if (paths.isEmpty()) { LaunchedEffect(Unit) { onBack() }; return }
     val path = paths[pager.currentPage.coerceIn(0, paths.lastIndex)]
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -192,7 +192,7 @@ fun ChangesPager(hub: Hub, paths: List<String>, start: Int, reviewed: Set<String
         })
         androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.weight(1f), key = { paths.getOrElse(it) { "" } }) { page ->
             val p = paths[page]
-            ReviewPage(hub, p, onCounts = { counts[p] = it }, onComment = { comment = p to it })
+            ReviewPage(hub, p, onCounts = { counts[p] = it }, onComment = { row, revert -> comment = Triple(p, row, revert) })
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp8)) {
             val kept = path in reviewed
@@ -206,14 +206,14 @@ fun ChangesPager(hub: Hub, paths: List<String>, start: Int, reviewed: Set<String
     ask?.let { p ->
         ConfirmDialog(revertTitle(p), REVERT_DETAIL, "Revert", { hub.write("/api/git/revert", pathsBody(listOf(GitFile(p))), "Could not revert") { if (it) onReverted(p) } }, onDismiss = { ask = null })
     }
-    comment?.let { (p, row) ->
-        CommentSheet(p, row, onSend = { text -> hub.draftPrompt(commentPrompt(p, row, text)) }, onDismiss = { comment = null })
+    comment?.let { (p, row, revert) ->
+        CommentSheet(p, row, onSend = { text -> hub.draftPrompt(commentPrompt(p, row, text)) }, onRevert = revert?.takeIf { !hub.readOnly }, onDismiss = { comment = null })
     }
 }
 
 @Composable
-private fun ReviewPage(hub: Hub, path: String, onCounts: (Pair<Int, Int>) -> Unit, onComment: (DiffRow) -> Unit) {
-    val (load, _) = rememberLoad(path, hub.pageChat) { parseFile(hub.read("/api/file?path=${enc(path)}")) }
+private fun ReviewPage(hub: Hub, path: String, onCounts: (Pair<Int, Int>) -> Unit, onComment: (DiffRow, (() -> Unit)?) -> Unit) {
+    val (load, reload) = rememberLoad(path, hub.pageChat) { parseFile(hub.read("/api/file?path=${enc(path)}")) }
     val file = load.data
     when {
         file == null && load.error.isNotEmpty() -> ErrorHint(load.error)
@@ -225,19 +225,23 @@ private fun ReviewPage(hub: Hub, path: String, onCounts: (Pair<Int, Int>) -> Uni
             val lines = remember(file) { fileDiffLines(file.original, file.content) }
             val rows = remember(lines) { diffRows(lines, true) }
             LaunchedEffect(lines) { onCounts(diffCounts(lines)) }
-            NumberedDiffView(rows, langOf(path), true, onComment)
+            NumberedDiffView(rows, langOf(path), true) { row ->
+                val k = blockOf(lines, row.line)
+                onComment(row, if (k < 0 || file.original.isEmpty()) null else ({ hub.saveFile(path, revertBlock(lines, k)) { if (it) reload() } }))
+            }
         }
     }
 }
 
 @Composable
-private fun CommentSheet(path: String, row: DiffRow, onSend: (String) -> Unit, onDismiss: () -> Unit) {
+private fun CommentSheet(path: String, row: DiffRow, onSend: (String) -> Unit, onRevert: (() -> Unit)?, onDismiss: () -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
     Sheet(onDismiss, "Comment on ${path.substringAfterLast('/')}:${row.no}") {
         Column(Modifier.padding(horizontal = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp8)) {
             Text(row.line.text, style = Mono, color = av.fgMuted, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             TextField(text, { text = it }, placeholder = "Comment", minLines = 2, maxLines = 6)
             Button("Send to composer", { onSend(text); onDismiss() }, variant = ButtonVariant.Filled, enabled = text.isNotBlank(), fill = true)
+            if (onRevert != null) Button("Revert this change", { onRevert(); onDismiss() }, variant = ButtonVariant.Danger, icon = "discard", fill = true)
         }
     }
 }
