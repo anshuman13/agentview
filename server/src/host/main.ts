@@ -16,7 +16,7 @@ import { MCP_BAD, type ClientMessage, type LiveChat, type ServerMessage } from '
 import { replyLine, sumEdits } from '../../../shared/edits.js';
 import { errText } from '../../../shared/util.js';
 import { sendWhenChanged } from './changed.js';
-import { costsOf } from './summaryCache.js';
+import { costsOf, modelField } from './summaryCache.js';
 import { busy, runningAgents, parseSaved, stoppedOf, type Saved } from './restore.js';
 import { codeHash } from './hash.js';
 import { lines, socketPath, type Hello, type HostRequest } from './protocol.js';
@@ -108,7 +108,7 @@ function summary(chat: AgentSession): LiveChat {
     ...(Object.keys(spend.week).length > 0 && { spend }),
     stalled: stalls.stalled(chat.id),
     ...(chat.failed && { failed: true }),
-    ...(s.session.model && { model: s.session.model }),
+    ...modelField(s.session.model),
     last: replyLine(s.events),
     edits: editsOf(chat),
     ...(s.session.pr && { pr: s.session.pr }),

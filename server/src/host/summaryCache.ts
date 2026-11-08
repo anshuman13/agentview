@@ -13,3 +13,5 @@ export function costsOf(events: ChatEvent[], dayStart: number): Costs {
   costCache.set(events, { length: events.length, dayStart, costs });
   return costs;
 }
+
+export const modelField = (model: string | null | undefined) => (model ? { model } : {});

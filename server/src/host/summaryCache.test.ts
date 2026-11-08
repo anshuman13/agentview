@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { chatCost, costByModel } from '../../../shared/cost.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
-import { costScans, costsOf } from './summaryCache.js';
+import { costScans, costsOf, modelField } from './summaryCache.js';
 
 const result = (costUsd: number, model = 'm') => ({ kind: 'result', costUsd, at: Date.now(), model, durationMs: 1 }) as unknown as ChatEvent;
 const day = new Date().setHours(0, 0, 0, 0);
@@ -45,4 +45,9 @@ it('matches direct scans', () => {
   const got = costsOf(events, day);
   expect(got.cost).toBe(chatCost(events));
   expect(got.spend).toEqual(costByModel(events, day, Date.now()));
+});
+
+it('includes the model only when the session has one', () => {
+  expect(modelField('opus')).toEqual({ model: 'opus' });
+  expect(modelField(null)).toEqual({});
 });
