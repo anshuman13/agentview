@@ -90,21 +90,21 @@ class Notifier(private val app: Application) {
 
     // One ongoing, silent list of the chats that wait for you; the launcher shows its count on the app icon.
     @android.annotation.SuppressLint("MissingPermission")
-    fun waiting(snap: WaitingSnapshot) {
-        if (snap.total == 0 || !granted()) { manager.cancel(WAITING_ID); return }
-        val style = NotificationCompat.InboxStyle().setBigContentTitle("Needs you").setSummaryText("${snap.total} waiting")
+    fun waiting(snap: WaitingSnapshot, badge: Int = snap.total) {
+        if (badge == 0 || !granted()) { manager.cancel(WAITING_ID); return }
+        val style = NotificationCompat.InboxStyle().setBigContentTitle("Needs you").setSummaryText("$badge waiting")
         snap.lines.forEach { style.addLine(it.text()) }
         val built = NotificationCompat.Builder(app, WAITING_CHANNEL)
             .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("Needs you")
-            .setContentText("${snap.total} waiting")
+            .setContentText("$badge waiting")
             .setStyle(style)
-            .setNumber(snap.total)
+            .setNumber(badge)
             .setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setContentIntent(open("agentview://open?view=sessions", WAITING_ID))
+            .setContentIntent(open(sessionsLink, WAITING_ID))
             .build()
         manager.notify(WAITING_ID, built)
     }

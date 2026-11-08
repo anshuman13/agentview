@@ -43,6 +43,8 @@ fun waitingSnapshot(live: List<LiveChat>): WaitingSnapshot {
 
 fun WaitingLine.text() = if (repo.isEmpty()) title else "$title · $repo"
 
+const val sessionsLink = "agentview://open?view=sessions"
+
 fun chatLink(id: String) = "agentview://open?chat=${URLEncoder.encode(id, "UTF-8")}"
 
 data class SharedItem(val text: String?, val subject: String?, val images: List<String>)

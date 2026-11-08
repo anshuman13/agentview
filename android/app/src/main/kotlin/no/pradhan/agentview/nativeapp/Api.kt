@@ -103,7 +103,7 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = OkH
     suspend fun post(path: String, body: String, chat: String = ""): String = call(url(scoped(path, chat)).post(body.toRequestBody(json))).decodeToString()
 
     override suspend fun pending(chat: String): List<Pending> =
-        (protocolJson.parseToJsonElement(get("/api/state", chat)).jsonObject["pending"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { parsePending(it) } ?: emptyList()
+        (protocolJson.parseToJsonElement(get("/api/state?limit=0", chat)).jsonObject["pending"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { parsePending(it) } ?: emptyList()
 
     override suspend fun send(chat: String, body: String) { post("/api/cmd?cid=${enc(java.util.UUID.randomUUID().toString())}&client=phone", body, chat) }
 }

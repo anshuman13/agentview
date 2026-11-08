@@ -2,11 +2,8 @@ package no.pradhan.agentview.nativeapp
 
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -25,9 +22,6 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.color.ColorProvider
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.serialization.encodeToString
 
 // The waiting chats the ongoing notification lists, kept where the widget can read them without the app running.
@@ -36,13 +30,6 @@ object WaitingStore {
 
     fun write(context: Context, snap: WaitingSnapshot) {
         context.getSharedPreferences("agentview", 0).edit().putString(KEY, protocolJson.encodeToString(snap)).apply()
-    }
-
-    fun changes(context: Context): Flow<WaitingSnapshot> = callbackFlow {
-        val prefs = context.getSharedPreferences("agentview", 0)
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> if (key == KEY) trySend(read(context)) }
-        prefs.registerOnSharedPreferenceChangeListener(listener)
-        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
     fun read(context: Context): WaitingSnapshot =
@@ -54,15 +41,14 @@ private fun pick(pair: (AvColors) -> Color) = ColorProvider(day = pair(LightColo
 class WaitingWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            val snap by WaitingStore.changes(context).collectAsState(WaitingStore.read(context))
-            WaitingContent(context, snap)
+            WaitingContent(context, WaitingStore.read(context))
         }
     }
 }
 
 @Composable
 private fun WaitingContent(context: Context, snap: WaitingSnapshot) {
-    val open = Intent(Intent.ACTION_VIEW, Uri.parse("agentview://open?view=sessions"), context, MainActivity::class.java)
+    val open = Intent(Intent.ACTION_VIEW, Uri.parse(sessionsLink), context, MainActivity::class.java)
     Column(GlanceModifier.fillMaxSize().background(pick { it.surface }).cornerRadius(Tokens.radiusSheet).padding(Tokens.sp5).clickable(actionStartActivity(open))) {
         Text(
             if (snap.total == 0) "Nothing waiting" else "Needs you · ${snap.total}",

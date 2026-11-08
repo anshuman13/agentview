@@ -10,6 +10,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -97,6 +99,7 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     override fun onCleared() {
         runCatching { app.getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(netWatch) }
+        notifier.waiting(WaitingSnapshot(), 0)
         super.onCleared()
     }
 
@@ -106,11 +109,13 @@ class Hub(private val app: Application, private val saved: SavedStateHandle) : A
 
     init {
         viewModelScope.launch {
-            combine(store.state.map { waitingSnapshot(it.live) }.distinctUntilChanged(), liveLoaded, notifyOn) { snap, loaded, on -> Triple(snap, loaded, on) }.collect { (snap, loaded, on) ->
+            val minute = flow { while (true) { emit(Unit); delay(60_000) } }
+            val needs = combine(codex.state, minute, codexFilter, handled) { s, _, filter, hidden -> needsList(s, filter.takeIf { it != "all" }, System.currentTimeMillis(), hidden).size }.distinctUntilChanged()
+            combine(store.state.map { waitingSnapshot(it.live) }.distinctUntilChanged(), liveLoaded, notifyOn, needs) { snap, loaded, on, badge -> Triple(snap, loaded, if (on) badge else -1) }.collect { (snap, loaded, badge) ->
                 if (!loaded) return@collect
                 WaitingStore.write(app, snap)
                 WaitingWidget().updateAll(app)
-                if (on) notifier.waiting(snap) else notifier.waiting(WaitingSnapshot())
+                if (badge >= 0) notifier.waiting(snap, badge) else notifier.waiting(WaitingSnapshot(), 0)
             }
         }
     }
