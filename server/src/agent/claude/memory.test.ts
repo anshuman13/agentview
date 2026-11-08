@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -16,8 +16,11 @@ describe('chatMemory', () => {
     mkdirSync(mem, { recursive: true });
     writeFileSync(path.join(cwd, 'CLAUDE.md'), '# Repo\n');
     writeFileSync(path.join(mem, 'MEMORY.md'), '- [Git](git.md)\n');
-    writeFileSync(path.join(mem, 'git.md'), '---\nname: git-workflow\ndescription: push after rebase\n---\n\nAlways rebase.\n');
-    const files = await chatMemory(cwd, [account, path.join(root, 'missing')]);
+    writeFileSync(path.join(mem, 'git.md'), '---\nname: git-workflow\ndescription: "push after rebase"\n---\n\nAlways rebase.\n');
+    const linked = path.join(root, 'linked');
+    mkdirSync(linked);
+    symlinkSync(path.join(account, 'projects'), path.join(linked, 'projects'));
+    const files = await chatMemory(cwd, [account, linked, path.join(root, 'missing')]);
     expect(files.map((f) => [f.name, f.description, f.text])).toEqual([
       ['CLAUDE.md', '', '# Repo'],
       ['MEMORY.md', '', '- [Git](git.md)'],
