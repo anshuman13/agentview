@@ -10,4 +10,9 @@ class DevServersTest {
         assertEquals("node · localhost only, forwarded over NetBird", devPortMeta(ports[0]))
         assertEquals("bun", devPortMeta(ports[1]))
     }
+
+    @Test fun decodesDevScript() {
+        assertEquals("pnpm dev", protocolJson.decodeFromString<DevScript?>("""{"script":"dev","command":"pnpm dev"}""")?.command)
+        assertEquals(null, protocolJson.decodeFromString<DevScript?>("null"))
+    }
 }

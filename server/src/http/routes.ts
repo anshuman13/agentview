@@ -22,6 +22,7 @@ import { gitRoute } from '../workspace/git.js';
 import { observe } from '../integrations/observe.js';
 import { otherMacs } from './macs.js';
 import { listPorts, openPort } from './preview.js';
+import { devScript } from '../workspace/devScript.js';
 import { createFolder, createWorktree, listRepos, listWorktrees, removeWorktree } from '../workspace/worktrees.js';
 import type { ClientMessage, LiveChat } from '../../../shared/protocol.js';
 import { gz } from './web.js';
@@ -186,7 +187,12 @@ export function createRoutes(d: RouteDeps) {
       d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: chat.id, phone: isPhone(url.searchParams.get('client'), req.headers['user-agent']) }, msg, url.searchParams.get('chat') || undefined);
       return { ok: true };
     }, true),
-    'POST /api/terms': entry(({ chat }) => createTerminal(chat.id, chat.cwd)),
+    'POST /api/terms': entry(async ({ url, chat }) => {
+      if (!url.searchParams.has('dev')) return createTerminal(chat.id, chat.cwd);
+      const dev = await devScript(chat.cwd);
+      return dev ? createTerminal(chat.id, chat.cwd, { name: dev.script, command: dev.command }) : { status: 404, body: { error: 'No dev script in package.json' } };
+    }),
+    'ANY /api/devscript': entry(({ chat }) => devScript(chat.cwd)),
     'DELETE /api/terms': entry(({ url }) => closeTerminal(url.searchParams.get('id') ?? '')),
     'ANY /api/terms': entry(({ chat }) => listTerminals(chat.id)),
     'ANY /api/files': entry(({ chat }) => listFiles(chat.cwd)),
