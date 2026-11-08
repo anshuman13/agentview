@@ -19,6 +19,12 @@ class OfflineTest {
     @get:Rule val tmp = TemporaryFolder()
 
     private fun q(id: String, chat: String = "c1") = Queued(id, chat, "text $id")
+
+    @Test fun draftSnippetTakesFirstLineClipped() {
+        assertNull(draftSnippet(" \n  "))
+        assertEquals("fix the build", draftSnippet("\n  fix the build\nand more"))
+        assertEquals("abcdefghi…", draftSnippet("abcdefghijklmnop", 10))
+    }
     private fun ev(id: String, text: String = "") = ChatEvent(id, "assistant", text = text)
 
     @Test

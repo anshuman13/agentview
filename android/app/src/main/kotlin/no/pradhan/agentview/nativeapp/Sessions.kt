@@ -83,9 +83,14 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
             else -> since(maxOf(c.lastActive, s?.lastModified ?: 0))
         }
         val branch = (s?.gitBranch ?: repoBranch(c.cwd)).takeIf { !isDefaultBranch(it) }
+        val draft = draftSnippet(hub.draft(c.id))
         ChatRow(
             title = c.title.ifBlank { "Untitled" },
             meta = buildAnnotatedString {
+                if (draft != null) {
+                    withStyle(SpanStyle(color = av.err)) { append("Draft: ") }
+                    append("$draft · ")
+                }
                 append(metaLine(repo, branch, c.model?.let(::shortModel), when_))
                 if (line != null) {
                     append(" · ")

@@ -39,6 +39,12 @@ class Drafts(private val kv: KeyValue) {
     }
 }
 
+// What a Sessions row shows of an unsent draft, like Slack's "Draft:" in the sidebar.
+fun draftSnippet(text: String, max: Int = 40): String? {
+    val line = text.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: return null
+    return if (line.length > max) line.take(max - 1).trimEnd() + "…" else line
+}
+
 @Serializable
 data class Queued(val id: String, val chat: String, val text: String, val steer: Boolean = false, val at: Long = 0)
 
