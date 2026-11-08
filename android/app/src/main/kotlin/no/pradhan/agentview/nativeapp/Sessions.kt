@@ -56,6 +56,7 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
     val byStatus = status != StatusFilter.All
     var showIdle by rememberSaveable { mutableStateOf(false) }
     var repoKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var newChat by remember { mutableStateOf<RepoChoice?>(null) }
 
     fun repoBranch(cwd: String) = ws.repos.firstOrNull { it.cwd == folderKey(cwd, ws.repos, ws.trees) }?.branch
 
@@ -138,16 +139,16 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 PageHeader(repo.name, onBack = { repoKey = null })
                 statusChips(listOf(repo))
                 val rows = repo.items().map { it.copy(repo = null) }.filter { status.matches(it.state(saved, seen)) }
-                if (rows.isEmpty()) EmptyState(if (byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", action = { Button("New chat", { hub.newChat(repo.key) }, variant = ButtonVariant.Tinted, icon = "add") })
+                if (rows.isEmpty()) EmptyState(if (byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", action = { Button("New chat", { newChat = RepoChoice(repo.key, repo.name) }, variant = ButtonVariant.Tinted, icon = "add") })
                 else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
                     lazyGroup(rows, { "c-${it.key}" }) { row(it) }
                 }
             }
-            Fab("add", "New chat in ${repo.name}", { hub.newChat(repo.key) }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
+            Fab("add", "New chat in ${repo.name}", { newChat = RepoChoice(repo.key, repo.name) }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
         }
     } else Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            PageHeader("Sessions") { IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
+            PageHeader("Sessions") { IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) }); IconBtn("refresh", "Refresh", { hub.refreshWorkspace(force = true) }) }
             SearchField(filter, { filter = it }, "Search repos and sessions")
             Row(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
                 listOf(WORK, PERSONAL).forEach { k ->
@@ -192,9 +193,10 @@ fun SessionsScreen(hub: Hub, onOpen: () -> Unit) {
                 }
             }
         }
-        if (!waitingForServer) Fab("add", "New chat", { hub.newChat() }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
+        if (!waitingForServer) Fab("add", "New chat", { newChat = RepoChoice(null, "") }, Modifier.align(Alignment.BottomEnd).padding(Tokens.listPad))
     }
 
+    newChat?.let { NewChatSheet(hub, it.key, groups.map { RepoChoice(it.key, it.name) }, onDismiss = { newChat = null }) }
     renaming?.let { (id, title) -> RenameDialog(title, onSave = { hub.rename(id, it) }, onDismiss = { renaming = null }) }
     archiving?.let { (id, title) -> ConfirmDialog("Archive this chat?", "$title\n\nYou can restore it from the bin for 24 hours.", "Archive", { hub.archive(id) }) { archiving = null } }
     closing?.let { c -> ConfirmDialog("Close this chat?", "${c.title}\n\nClaude is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(c.id) }) { closing = null } }
