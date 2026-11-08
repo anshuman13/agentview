@@ -1,7 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -46,14 +45,13 @@ private fun rememberAutopilot(hub: Hub): Autopilot {
     return model
 }
 
-// The row on the Jobs page: the mode in one line and the switch; a tap opens the page.
+// The row on the Jobs page: the mode in one line; a tap opens the page.
 @Composable
 fun AutopilotRow(hub: Hub, waiting: Int, onOpen: () -> Unit) {
     val ap = rememberAutopilot(hub)
     val s = ap.state
     Group(Modifier.padding(top = Tokens.sp4)) {
-        ListRow("Reply for me in Slack", ap.error.ifEmpty { if (s != null) modeLine(s, waiting) else "Loading" }, onClick = onOpen,
-            trailing = { if (s != null) Toggle(s.config.enabled) { ap.save(togglePatch("enabled", it)) } })
+        ListRow("Reply for me in Slack", ap.error.ifEmpty { if (s != null) modeLine(s, waiting) else "Loading" }, onClick = onOpen, trailing = { Chevron() })
     }
 }
 
@@ -70,17 +68,19 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
     val which = sheet?.let { Which.valueOf(it) }
     LazyColumn(Modifier.fillMaxWidth()) {
         if (ap.error.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Could not load or save", ap.error) } }
-        item { Group(Modifier.padding(top = Tokens.sp4)) { SettingRow("How it works", null) { sheet = Which.Info.name } } }
         if (s != null) item {
             Group(Modifier.padding(top = Tokens.sp4)) {
+                ListRow("On", trailing = { Toggle(s.config.enabled) { ap.save(togglePatch("enabled", it)) } }); Hairline()
                 SettingRow("Away", awayValue(s)) { sheet = Which.Away.name }; Hairline()
                 SettingRow("Covers", coversValue(s)) { sheet = Which.Covers.name }; Hairline()
                 SettingRow("Never answers", neverValue(s)) { sheet = Which.Never.name }; Hairline()
                 SettingRow("Model", modelValue(s)) { sheet = Which.Model.name }; Hairline()
                 ListRow("Dry run", trailing = { Toggle(s.config.dry_run) { ap.save(togglePatch("dry_run", it)) } }); Hairline()
-                SettingRow("Activity", activityValue(s, now)) { sheet = Which.Activity.name }
+                SettingRow("Activity", activityValue(s, now)) { sheet = Which.Activity.name }; Hairline()
+                SettingRow("How it works", null) { sheet = Which.Info.name }
             }
         }
+        else item { Group(Modifier.padding(top = Tokens.sp4)) { SettingRow("How it works", null) { sheet = Which.Info.name } } }
     }
     if (which == null) return
     val close = { sheet = null }
@@ -89,9 +89,9 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
     when (which) {
         Which.Away, Which.Never -> FormSheet(which == Which.Away, s, { patch -> ap.save(patch) }, close)
         Which.Covers -> CoversSheet(s, { ap.save(it) }, close)
-        Which.Model -> Sheet(close) {
+        Which.Model -> Sheet(close, padded = false) {
             SectionHeader("Model")
-            FlowRow(Modifier.padding(horizontal = Tokens.sp8), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            FlowRow(Modifier.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 listOf("sonnet" to "Sonnet", "opus" to "Opus").forEach { (m, label) -> Chip(label, { if (s.config.model != m) ap.save(modelPatch(m)) }, on = s.config.model == m) }
             }
         }
@@ -102,13 +102,13 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
 @Composable
 private fun InfoSheet(s: AutopilotState?, onReplies: () -> Unit, close: () -> Unit) {
     val a = s?.config?.away
-    Sheet(close) {
+    Sheet(close, padded = false) {
         SectionHeader("How it works")
         val text = if (a != null && a.from.isNotEmpty() && a.to.isNotEmpty())
             "From ${autopilotDay(a.from)} to ${autopilotDay(a.to)} it answers simple questions itself when the thread or your wiki has the answer, and sends one holding note${if (a.backup.isNotEmpty()) ", naming ${a.backup}" else ""}.\nUrgent asks and people on the never-answer list always come to you."
         else "Each ask gets a draft. Send, Edit or Skip it from the Reply queue or the push.\nNothing goes out on its own."
-        Text(text, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.body, color = av.fgMuted)
-        Button("Open the Reply queue", { close(); onReplies() }, Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp4), variant = ButtonVariant.Tinted)
+        Text(text, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Type.body, color = av.fgMuted)
+        Button("Open the Reply queue", { close(); onReplies() }, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), variant = ButtonVariant.Tinted)
     }
 }
 
@@ -130,9 +130,9 @@ private fun FormSheet(away: Boolean, s: AutopilotState, save: (String) -> Unit, 
     var form by remember { mutableStateOf(formOf(s)) }
     var picking by remember { mutableStateOf<String?>(null) }
     val done = { formPatch(form, s)?.let(save); close() }
-    Sheet(done) {
+    Sheet(done, padded = false) {
         SectionHeader(if (away) "Away" else "Never answers")
-        Column(Modifier.padding(horizontal = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Column(Modifier.padding(horizontal = Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             if (away) {
                 FieldLabel("Away from")
                 Button(if (form.from.isEmpty()) "Not set" else autopilotDay(form.from), { picking = "from" })
@@ -155,14 +155,16 @@ private fun FormSheet(away: Boolean, s: AutopilotState, save: (String) -> Unit, 
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CoversSheet(s: AutopilotState, save: (String) -> Unit, close: () -> Unit) {
-    Sheet(close) {
+    Sheet(close, padded = false) {
         SectionHeader("Covers")
-        FlowRow(Modifier.padding(horizontal = Tokens.sp8), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            Chip("DMs", { save(togglePatch("dms", !s.config.dms)) }, on = s.config.dms)
-            s.watched.forEach { n -> Chip("#$n", { save(channelsPatch(s, n)) }, on = n in s.covered) }
+        Group {
+            ListRow("DMs", trailing = { Toggle(s.config.dms) { save(togglePatch("dms", it)) } })
+            s.watched.forEach { n ->
+                Hairline()
+                ListRow("#$n", trailing = { Toggle(n in s.covered) { save(channelsPatch(s, n)) } })
+            }
         }
     }
 }

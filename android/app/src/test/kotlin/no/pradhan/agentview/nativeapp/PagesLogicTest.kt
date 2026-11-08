@@ -162,10 +162,6 @@ class PagesLogicTest {
         assertEquals("local", (m as ServerMessage.Findings).review.target)
     }
 
-    @Test fun themeCyclesThroughSystem() {
-        assertEquals(listOf("dark", "light", ""), listOf("", "dark", "light").map { nextTheme(it) })
-    }
-
     @Test fun mcpMergesLiveStateAndGroups() {
         val probed = parseMcp("""[{"name":"grafana_prod","status":"connected","scope":"user","ms":40,"tools":[{"name":"q","description":"query"}]},{"name":"slack","status":"needs-auth","scope":"user"}]""")
         val live = listOf(McpServer("grafana_prod", "failed", error = "boom"), McpServer("claude.ai Linear", "connected", type = "claudeai"))

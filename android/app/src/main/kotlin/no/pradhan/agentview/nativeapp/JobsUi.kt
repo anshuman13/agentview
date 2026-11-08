@@ -1,8 +1,6 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,16 +35,22 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, onAutopi
     val waiting = remember(st.items, profile, now / 60_000) { replyQueue(split(st.items, profile, now).review, profile, now).size }
     LazyColumn(Modifier.fillMaxWidth()) {
         item { AutopilotRow(hub, waiting, onAutopilot) }
-        if (jobs.isEmpty()) item { EmptyState("No jobs yet", "A job runs a prompt on a schedule, can add tasks, and sends you the result") }
+        if (jobs.isEmpty()) item { EmptyState("No jobs yet", "Runs a prompt on a schedule") }
         else item {
-            Group(Modifier.padding(top = Tokens.sp4)) {
+            Group {
                 jobs.forEachIndexed { i, j ->
                     if (i > 0) Hairline()
                     val state = jobState(j, st.runs, now)
+                    val menu = remember(j.key) { mutableStateOf(false) }
                     ListRow(j.str("name")?.ifEmpty { null } ?: "Untitled job", listOfNotNull(jobMeta(j, st.runs, now), if (profile == null) profileLabel(j.profile) else null).joinToString(" · "), onClick = { onOpen(j) },
+                        onLongClick = { menu.value = true },
                         trailing = {
                             if (state != null) StateBadge(state)
-                            Toggle(isEnabled(j), { toggleJob(hub, j, it) })
+                            MoreButton(expanded = menu) { close ->
+                                val on = isEnabled(j)
+                                MenuItem(if (on) "Disable" else "Enable", if (on) "circle-slash" else "play", { close(); toggleJob(hub, j, !on) })
+                                MenuItem("Open", "arrow-right", { close(); onOpen(j) })
+                            }
                         })
                 }
             }
@@ -61,7 +65,6 @@ fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String>
     if (id == "browser") "Chrome" else servers.firstOrNull { mcpToolId(it) == id } ?: id
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
     val runs = remember(st.runs, job.key) { runsOf(st.runs, job) }
@@ -80,17 +83,10 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long) {
         }
         item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Enabled", jobMeta(job, st.runs, now), trailing = { Toggle(isEnabled(job), { toggleJob(hub, job, it) }) }) } }
         item { SectionHeader("Prompt") }
-        item { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), style = Type.body, color = av.fg) }
-        if (tools != null) {
-            item { SectionHeader("Tools") }
-            item {
-                FlowRow(Modifier.padding(horizontal = Tokens.sp8, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                    toolLabels(tools, servers).forEach { Chip(it, null) }
-                }
-            }
-        }
+        item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
         item {
-            Group(Modifier.padding(top = Tokens.sp6)) {
+            Group(Modifier.padding(top = Tokens.sp4)) {
+                if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }
                 val latest = runs.firstOrNull()
                 if (latest == null) ListRow("Runs", "Not run yet")
                 else ListRow("Runs", runTime(latest), onClick = { runsOpen = true }, trailing = { RunStatus(latest.str("status") ?: ""); Chevron() })
