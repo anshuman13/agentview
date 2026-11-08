@@ -10,6 +10,7 @@ import { configDef, connectorStatus, inSettings, mcpCall, mcpConfig, mcpGroups, 
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import { emptyBin, listBin, restoreSession } from '../agent/claude/bin.js';
 import { pinsRoute, removeChat } from '../agent/claude/pins.js';
+import { chatMemory } from '../agent/claude/memory.js';
 import { seenRoute } from '../agent/claude/seen.js';
 import { listDir, listFiles, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
@@ -238,6 +239,7 @@ export function createRoutes(d: RouteDeps) {
       return d.host.req({ op: 'state', id: chat.id, ...(!Number.isNaN(limit) && { limit }) });
     }),
     'ANY /api/attention': entry(({ url, chat }) => (url.searchParams.has('fresh') ? refreshAttention(d.attentionSources([chat.cwd])) : attention())),
+    'ANY /api/memory': entry(({ chat }) => chatMemory(chat.cwd)),
     'ANY /api/findings': entry(({ url, chat }) => getFindings(chat.cwd, url.searchParams.get('target') ?? 'local')),
     'POST /api/findings/dismiss': entry(({ body, chat }) => dismissFinding(chat.cwd, String(body.target ?? 'local'), String(body.key ?? '')), true),
     'POST /api/attention/dismiss': entry(({ body }) => dismissAttention(String(body.id ?? '')), true),

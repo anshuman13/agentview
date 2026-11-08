@@ -9,4 +9,11 @@ class TodosTest {
         assertEquals("Resolve the TODO at src/a.ts:12 (\"retry on 429\"). Read the code around it, make the change, remove the comment and tell me what you did.", todoPrompt(t[0]))
         assertEquals("Resolve the TODO at b.py:4. Read the code around it, make the change, remove the comment and tell me what you did.", todoPrompt(t[1]))
     }
+
+    @Test fun memoryWhereNamesRepoAccountAndMemory() {
+        val cwd = "/Users/me/repo"
+        assertEquals("Repo instructions", memoryWhere(MemoryFile("$cwd/CLAUDE.md", "CLAUDE.md"), cwd))
+        assertEquals("Global instructions · .claude-alt", memoryWhere(MemoryFile("/Users/me/.claude-alt/CLAUDE.md", "CLAUDE.md"), cwd))
+        assertEquals("Memory · .claude", memoryWhere(MemoryFile("/Users/me/.claude/projects/-Users-me-repo/memory/git.md", "git"), cwd))
+    }
 }

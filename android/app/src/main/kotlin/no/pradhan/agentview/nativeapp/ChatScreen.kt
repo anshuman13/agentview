@@ -62,6 +62,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     var imagesOpen by remember { mutableStateOf(false) }
     var todosOpen by remember { mutableStateOf(false) }
     var remindOpen by remember { mutableStateOf(false) }
+    var memoryOpen by remember { mutableStateOf(false) }
     val images = remember(state.events) { chatImages(state.events) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val ticking = agentsOpen && agents.any { it.status == "running" }
@@ -109,6 +110,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
                 MenuItem("Images", "file-media", { close(); imagesOpen = true }, enabled = images.isNotEmpty())
                 MenuItem("Dev servers", "globe", { close(); serversOpen = true })
                 MenuItem("TODOs", "checklist", { close(); todosOpen = true })
+                MenuItem("Memory", "book", { close(); memoryOpen = true })
                 MenuItem("Share chat", "share", {
                     close()
                     val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, state.events))
@@ -142,6 +144,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit) {
     if (imagesOpen) ImagesSheet(hub, live.id, images, cwd) { imagesOpen = false }
     if (serversOpen) DevServersSheet(hub) { serversOpen = false }
     if (todosOpen) TodosSheet(hub, cwd) { todosOpen = false }
+    if (memoryOpen) MemorySheet(hub, cwd) { memoryOpen = false }
     if (remindOpen) Sheet(onDismiss = { remindOpen = false }, title = "Remind me", padded = false, full = false) {
         val choices = remember { remindChoices(System.currentTimeMillis()) }
         Group { choices.forEachIndexed { i, (label, at) -> if (i > 0) Hairline(); ListRow(label, lines = 1, onClick = { hub.remindChat(live.title, sessionId!!, cwd, at); remindOpen = false }) } }
