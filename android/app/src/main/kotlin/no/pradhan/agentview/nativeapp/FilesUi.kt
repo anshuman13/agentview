@@ -76,7 +76,7 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
                     val isOpen = r.dir && r.path in expanded
                     ListRow(
                         r.name,
-                        modifier = Modifier.padding(start = Tokens.sp6 * r.depth),
+                        modifier = Modifier.padding(start = Tokens.sp6 * minOf(r.depth, 6)),
                         lines = 1,
                         muted = r.hidden,
                         leading = {

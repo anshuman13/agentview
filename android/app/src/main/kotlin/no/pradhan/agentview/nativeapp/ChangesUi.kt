@@ -11,10 +11,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 
 // Source Control (web/src/workspace/Changes.tsx): branch, commit box, staged and unstaged files, a file opens as its diff.
@@ -36,7 +39,13 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     fun run(action: String, body: String, done: () -> Unit = {}) = hub.write("/api/git/$action", body, "Could not $action") { if (it) done(); reload() }
 
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "Source Control", onBack) { IconBtn("refresh", "Refresh", reload) }
+        WorkspaceHeader(hub, "Source Control", onBack) {
+            IconBtn("refresh", "Refresh", reload)
+            MoreButton { close ->
+                MenuItem("Write message with Claude", "sparkle", { close(); hub.askClaude(DRAFT_PROMPT) }, enabled = staged.isNotEmpty())
+                MenuItem("Review changes with Claude", "sparkle", { close(); hub.askClaude(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
+            }
+        }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 item {
@@ -49,8 +58,6 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                     Column(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                         TextField(message, { message = it }, placeholder = "Message${status?.branch?.let { " (commit on $it)" } ?: ""}", minLines = 1, maxLines = 6)
                         Button("Commit", { run("commit", commitBody(message)) { message = "" } }, variant = ButtonVariant.Filled, enabled = staged.isNotEmpty() && message.isNotBlank(), fill = true)
-                        Button("Write message with Claude", { hub.askClaude(DRAFT_PROMPT) }, variant = ButtonVariant.Plain, enabled = staged.isNotEmpty(), fill = true)
-                        Button("Review changes with Claude", { hub.askClaude(REVIEW_LOCAL) }, variant = ButtonVariant.Plain, enabled = files.isNotEmpty(), fill = true)
                     }
                 }
                 item { ErrorHint(load.error) }
@@ -98,22 +105,25 @@ private fun letterColor(letter: String): Color = when (letter) {
 
 @Composable
 private fun FileGroup(files: List<GitFile>, onOpen: (GitFile) -> Unit, menu: @Composable androidx.compose.foundation.layout.ColumnScope.(GitFile, () -> Unit) -> Unit) {
+    val haptic = LocalHapticFeedback.current
     Group {
         files.forEachIndexed { i, f ->
             if (i > 0) Hairline(lead = true)
             val name = f.path.substringAfterLast('/')
             val letter = letterOf(f)
+            val menu = remember { mutableStateOf(false) }
             ListRow(
                 name, parentOf(f.path).ifEmpty { null }, lines = 2, metaLines = 2, strike = f.status == "D",
                 leading = { FileTag(name) },
                 trailing = {
                     RowLabel(letter, letterColor(letter))
-                    MoreButton { close ->
+                    MoreButton(expanded = menu) { close ->
                         MenuItem("Open File", "go-to-file", { close(); onOpen(f) })
                         menu(f, close)
                     }
                 },
                 onClick = { onOpen(f) },
+                onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu.value = true },
             )
         }
     }

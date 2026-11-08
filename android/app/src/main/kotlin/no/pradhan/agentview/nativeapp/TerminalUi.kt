@@ -48,7 +48,7 @@ fun TerminalScreen(hub: Hub, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Terminal", onBack) { IconBtn("refresh", "Refresh", reload) }
-        if (tabs.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+        if (tabs.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             tabs.forEach { t -> Chip(t.name.ifEmpty { "Terminal" }, { active = t.id }, on = t.id == id) }
         }
         when {
@@ -91,10 +91,10 @@ private fun TermView(hub: Hub, id: String, onGone: () -> Unit) {
             }
         }
         HorizontalDivider(color = av.border, thickness = Tokens.hairline)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.sp6, vertical = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             TERM_KEYS.forEach { (label, seq) -> Chip(label, { send(seq) }) }
         }
-        Row(Modifier.fillMaxWidth().padding(start = Tokens.sp6, end = Tokens.sp2, bottom = Tokens.sp4)) {
+        Row(Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp4)) {
             TextField(
                 input, { input = it }, Modifier.weight(1f), placeholder = "Type a command", singleLine = true, style = TermMono,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, autoCorrectEnabled = false),

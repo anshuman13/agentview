@@ -1,7 +1,7 @@
 package no.pradhan.agentview.nativeapp
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -70,25 +70,26 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, now: Long, 
     var prompt by rememberSaveable(a.id) { mutableStateOf(false) }
     val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {
-        PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), style = Type.footnote, color = av.fgMuted, maxLines = 2) }) {
+        PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), style = Type.subheadline, color = av.fgMuted, maxLines = 1) }) {
             if (running && a.group == null) Button("Stop", { hub.stopTask(a.id) }, size = ButtonSize.Sm)
         }
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+        val pad = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2)
+        LazyColumn(Modifier.fillMaxSize()) {
             if (running) {
-                a.info?.progress?.let { item { Text(it, style = Type.subheadline, color = av.fg) } }
-                item { Text("Last activity ${elapsed(now - a.lastAt)} ago" + if (a.lastStep.isNotEmpty()) " · ${a.lastStep}" else "", style = Type.footnote, color = av.fgMuted) }
-                item { Text("The report shows here when the agent finishes.", style = Type.footnote, color = av.fgMuted) }
+                a.info?.progress?.let { item { Text(it, pad, style = Type.subheadline, color = av.fg) } }
+                item { Text("Last activity ${elapsed(now - a.lastAt)} ago" + if (a.lastStep.isNotEmpty()) " · ${a.lastStep}" else "", pad, style = Type.footnote, color = av.fgMuted) }
+                item { Text("The report shows here when the agent finishes.", pad, style = Type.footnote, color = av.fgMuted) }
             } else {
-                item { Markdown(reportText(a), Modifier.padding(vertical = Tokens.sp4)) }
-                item { Button("Copy report", { clip.setText(AnnotatedString(reportText(a))) }, size = ButtonSize.Sm) }
+                item { Markdown(reportText(a), pad) }
+                item { Box(pad) { Button("Copy report", { clip.setText(AnnotatedString(reportText(a))) }, size = ButtonSize.Sm) } }
             }
             if (a.prompt.isNotEmpty()) {
                 item { SectionHeader("Prompt", open = prompt, onToggle = { prompt = !prompt }) }
-                if (prompt) item { Markdown(a.prompt) }
+                if (prompt) item { Markdown(a.prompt, pad) }
             }
             item { SectionHeader("Steps", a.item.steps.size.toString()) }
-            if (a.item.steps.isEmpty()) item { EmptyState("No steps yet") }
-            items(a.item.steps, key = { it.id }) { s -> ItemRow(hub, s, chat, cwd, !running) }
+            if (a.item.steps.isEmpty()) item { Box(pad) { EmptyState("No steps yet") } }
+            items(a.item.steps, key = { it.id }) { s -> Box(Modifier.padding(horizontal = Tokens.listPad)) { ItemRow(hub, s, chat, cwd, !running) } }
             item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
         }
     }
