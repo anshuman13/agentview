@@ -412,7 +412,7 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier) {
         DotState.Ok -> c.ok
         DotState.Bad -> c.err
         DotState.Warn -> c.warn
-        DotState.Busy, DotState.Running -> c.agent
+        DotState.Busy, DotState.Running -> c.accent
         DotState.Unread -> c.info
         DotState.Idle -> Color.Transparent
         DotState.Agent -> Color.Transparent
